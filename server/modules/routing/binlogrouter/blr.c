@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -59,6 +59,9 @@
  *
  * @endverbatim
  */
+
+#include "blr.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,10 +74,10 @@
 #include <maxscale/utils.h>
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
-#include "blr.h"
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/worker.h>
 #include <time.h>
 
 #include <maxscale/log_manager.h>
@@ -86,36 +89,37 @@
 #include <maxscale/alloc.h>
 
 /* The router entry points */
-static  ROUTER  *createInstance(SERVICE *service, char **options);
+static  MXS_ROUTER  *createInstance(SERVICE *service, char **options);
 static void free_instance(ROUTER_INSTANCE *instance);
-static  void    *newSession(ROUTER *instance, SESSION *session);
-static  void    closeSession(ROUTER *instance, void *router_session);
-static  void    freeSession(ROUTER *instance, void *router_session);
-static  int     routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
-static  void    diagnostics(ROUTER *instance, DCB *dcb);
-static  void    clientReply(ROUTER  *instance,
-                            void    *router_session,
-                            GWBUF   *queue,
-                            DCB     *backend_dcb);
-static  void    errorReply(ROUTER  *instance,
-                           void    *router_session,
-                           GWBUF   *message,
-                           DCB     *backend_dcb,
-                           error_action_t     action,
-                           bool    *succp);
+static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static  int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
+static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  json_t* diagnostics_json(const MXS_ROUTER *instance);
+static  void clientReply(MXS_ROUTER *instance,
+                         MXS_ROUTER_SESSION *router_session,
+                         GWBUF *queue,
+                         DCB *backend_dcb);
+static  void errorReply(MXS_ROUTER *instance,
+                        MXS_ROUTER_SESSION *router_session,
+                        GWBUF *message,
+                        DCB *backend_dcb,
+                        mxs_error_action_t action,
+                        bool *succp);
 
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
 static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
-int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
-static void destroyInstance(ROUTER *instance);
+static void destroyInstance(MXS_ROUTER *instance);
 bool blr_extract_key(const char *linebuf, int nline, ROUTER_INSTANCE *router);
 bool blr_get_encryption_key(ROUTER_INSTANCE *router);
 int blr_parse_key_file(ROUTER_INSTANCE *router);
+static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst);
 
 static void stats_func(void *);
 
@@ -130,7 +134,7 @@ static const MXS_ENUM_VALUE enc_algo_values[] =
 {
     {"aes_cbc", BLR_AES_CBC},
 #if OPENSSL_VERSION_NUMBER > 0x10000000L
-    {"aes_ctr",BLR_AES_CTR},
+    {"aes_ctr", BLR_AES_CTR},
 #endif
     {NULL}
 };
@@ -149,7 +153,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     spinlock_init(&instlock);
     instances = NULL;
 
-    static ROUTER_OBJECT MyObject =
+    static MXS_ROUTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -157,6 +161,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostics,
+        diagnostics_json,
         clientReply,
         errorReply,
         getCapabilities,
@@ -167,9 +172,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
-        ROUTER_VERSION,
+        MXS_ROUTER_VERSION,
         "Binlogrouter",
         "V2.1.0",
+        RCAP_TYPE_NO_RSESSION | RCAP_TYPE_CONTIGUOUS_OUTPUT |
+        RCAP_TYPE_RESULTSET_OUTPUT | RCAP_TYPE_NO_AUTH,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -183,6 +190,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"master_version", MXS_MODULE_PARAM_STRING},
             {"master_hostname", MXS_MODULE_PARAM_STRING},
             {"mariadb10-compatibility", MXS_MODULE_PARAM_BOOL, "false"},
+            {"maxwell-compatibility", MXS_MODULE_PARAM_BOOL, "false"},
             {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
             {"file", MXS_MODULE_PARAM_COUNT, "1"},
             {"transaction_safety", MXS_MODULE_PARAM_BOOL, "false"},
@@ -190,14 +198,20 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"encrypt_binlog", MXS_MODULE_PARAM_BOOL, "false"},
             {"encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc", MXS_MODULE_OPT_NONE, enc_algo_values},
             {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"lowwater", MXS_MODULE_PARAM_COUNT, DEF_LOW_WATER},
-            {"highwater", MXS_MODULE_PARAM_COUNT, DEF_HIGH_WATER},
+            {"mariadb_gtid", MXS_MODULE_PARAM_BOOL, "false"},
             {"shortburst", MXS_MODULE_PARAM_COUNT, DEF_SHORT_BURST},
             {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
             {"heartbeat", MXS_MODULE_PARAM_COUNT, BLR_HEARTBEAT_DEFAULT_INTERVAL},
             {"send_slave_heartbeat", MXS_MODULE_PARAM_BOOL, "false"},
-            {"binlogdir", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_W_OK},
+            {
+                "binlogdir",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_R_OK |
+                MXS_MODULE_OPT_PATH_W_OK |
+                MXS_MODULE_OPT_PATH_CREAT
+            },
             {"ssl_cert_verification_depth", MXS_MODULE_PARAM_COUNT, "9"},
             {MXS_END_MODULE_PARAMS}
         }
@@ -219,7 +233,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static  ROUTER  *
+static  MXS_ROUTER  *
 createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *inst;
@@ -229,8 +243,8 @@ createInstance(SERVICE *service, char **options)
     int rc = 0;
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
-    if (service->credentials.name == NULL ||
-        service->credentials.authdata == NULL)
+    if (!service->credentials.name[0] ||
+        !service->credentials.authdata[0])
     {
         MXS_ERROR("%s: Error: Service is missing user credentials."
                   " Add the missing username or passwd parameter to the service.",
@@ -289,7 +303,7 @@ createInstance(SERVICE *service, char **options)
     inst->m_errno = 0;
     inst->m_errmsg = NULL;
 
-    inst->pending_transaction = 0;
+    memset(&inst->pending_transaction, '\0', sizeof(PENDING_TRANSACTION));
     inst->last_safe_pos = 0;
     inst->last_event_pos = 0;
 
@@ -312,14 +326,13 @@ createInstance(SERVICE *service, char **options)
     inst->current_pos = 0;
     inst->current_safe_event = 0;
     inst->master_event_state = BLR_EVENT_DONE;
+    inst->last_mariadb_gtid[0] = '\0';
 
     strcpy(inst->binlog_name, "");
     strcpy(inst->prevbinlog, "");
 
-    CONFIG_PARAMETER *params = service->svc_config_param;
+    MXS_CONFIG_PARAMETER *params = service->svc_config_param;
 
-    inst->low_water = config_get_integer(params, "lowwater");
-    inst->high_water = config_get_integer(params, "highwater");
     inst->initbinlog = config_get_integer(params, "file");
 
     inst->short_burst = config_get_integer(params, "shortburst");
@@ -329,6 +342,7 @@ createInstance(SERVICE *service, char **options)
     inst->heartbeat = config_get_integer(params, "heartbeat");
     inst->ssl_cert_verification_depth = config_get_integer(params, "ssl_cert_verification_depth");
     inst->mariadb10_compat = config_get_bool(params, "mariadb10-compatibility");
+    inst->maxwell_compat = config_get_bool(params, "maxwell-compatibility");
     inst->trx_safe = config_get_bool(params, "transaction_safety");
     inst->set_master_version = config_copy_string(params, "master_version");
     inst->set_master_hostname = config_copy_string(params, "master_hostname");
@@ -350,6 +364,9 @@ createInstance(SERVICE *service, char **options)
     inst->request_semi_sync = config_get_bool(params, "semisync");
     inst->master_semi_sync = 0;
 
+    /* Enable MariaDB GTID tracking */
+    inst->mariadb_gtid = config_get_bool(params, "mariadb_gtid");
+
     /* Binlog encryption */
     inst->encryption.enabled = config_get_bool(params, "encrypt_binlog");
     inst->encryption.encryption_algorithm = config_get_enum(params, "encryption_algorithm", enc_algo_values);
@@ -358,6 +375,10 @@ createInstance(SERVICE *service, char **options)
     /* Encryption CTX */
     inst->encryption_ctx = NULL;
 
+    /* MariaDB GTID repo init val */
+    inst->gtid_repo = NULL;
+
+    /* Set router uuid */
     inst->uuid = config_copy_string(params, "uuid");
 
     if (inst->uuid == NULL)
@@ -378,6 +399,11 @@ createInstance(SERVICE *service, char **options)
                     defuuid[8], defuuid[9], defuuid[10], defuuid[11],
                     defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
         }
+        else
+        {
+            free_instance(inst);
+            return NULL;
+        }
     }
 
     /*
@@ -390,8 +416,6 @@ createInstance(SERVICE *service, char **options)
      *  password=
      *  master-id=
      *  filestem=
-     *  lowwater=
-     *  highwater=
      */
     if (options)
     {
@@ -484,6 +508,10 @@ createInstance(SERVICE *service, char **options)
                 {
                     inst->mariadb10_compat = config_truth_value(value);
                 }
+                else if (strcmp(options[i], "maxwell-compatibility") == 0)
+                {
+                    inst->maxwell_compat = config_truth_value(value);
+                }
                 else if (strcmp(options[i], "filestem") == 0)
                 {
                     MXS_FREE(inst->fileroot);
@@ -504,6 +532,10 @@ createInstance(SERVICE *service, char **options)
                 else if (strcmp(options[i], "encrypt_binlog") == 0)
                 {
                     inst->encryption.enabled = config_truth_value(value);
+                }
+                else if (strcmp(options[i], "mariadb_gtid") == 0)
+                {
+                    inst->mariadb_gtid = config_truth_value(value);
                 }
                 else if (strcmp(options[i], "encryption_algorithm") == 0)
                 {
@@ -526,14 +558,6 @@ createInstance(SERVICE *service, char **options)
                 {
                     MXS_FREE(inst->encryption.key_management_filename);
                     inst->encryption.key_management_filename = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "lowwater") == 0)
-                {
-                    inst->low_water = atoi(value);
-                }
-                else if (strcmp(options[i], "highwater") == 0)
-                {
-                    inst->high_water = atoi(value);
                 }
                 else if (strcmp(options[i], "shortburst") == 0)
                 {
@@ -659,13 +683,33 @@ createInstance(SERVICE *service, char **options)
         mkdir_rval = mkdir(inst->binlogdir, 0700);
         if (mkdir_rval == -1)
         {
-            char err_msg[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Service %s, Failed to create binlog directory '%s': [%d] %s",
                       service->name,
                       inst->binlogdir,
                       errno,
-                      strerror_r(errno, err_msg, sizeof(err_msg)));
+                      mxs_strerror(errno));
 
+            free_instance(inst);
+            return NULL;
+        }
+    }
+
+    /* Enable MariaDB the GTID maps store */
+    if (inst->mariadb10_compat &&
+        inst->mariadb_gtid)
+    {
+        if (!inst->trx_safe)
+        {
+            MXS_ERROR("MariaDB GTID can be enabled only"
+                      " with Transaction Safety feature."
+                      " Please enable it with option 'transaction_safety = on'");
+            free_instance(inst);
+            return NULL;
+        }
+
+        /* Create/Open R/W GTID sqlite3 storage */
+        if (!blr_open_gtid_maps_storage(inst))
+        {
             free_instance(inst);
             return NULL;
         }
@@ -683,6 +727,7 @@ createInstance(SERVICE *service, char **options)
             MXS_ERROR("%s: Error for server_alloc in createInstance",
                       inst->service->name);
 
+            sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
             return NULL;
         }
@@ -695,7 +740,7 @@ createInstance(SERVICE *service, char **options)
 
             server_free(service->dbref->server);
             MXS_FREE(service->dbref);
-
+            sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
             return NULL;
         }
@@ -787,7 +832,7 @@ createInstance(SERVICE *service, char **options)
                 server_free(service->dbref->server);
                 MXS_FREE(service->dbref);
                 service->dbref = NULL;
-
+                sqlite3_close_v2(inst->gtid_maps);
                 free_instance(inst);
                 return NULL;
             }
@@ -832,6 +877,7 @@ createInstance(SERVICE *service, char **options)
                 service->dbref = NULL;
             }
 
+            sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
             return NULL;
         }
@@ -862,7 +908,7 @@ createInstance(SERVICE *service, char **options)
     if (inst->trx_safe)
     {
         MXS_NOTICE("%s: Service has transaction safety option set to ON",
-                 service->name);
+                   service->name);
     }
 
     /* Log whether the binlog encryption option value is on */
@@ -891,7 +937,7 @@ createInstance(SERVICE *service, char **options)
                 MXS_ERROR("The replication from master cannot be started"
                           " due to errors in current binlog file");
                 /* Don't start replication, just return */
-                return (ROUTER *)inst;
+                return (MXS_ROUTER *)inst;
             }
         }
 
@@ -913,14 +959,14 @@ createInstance(SERVICE *service, char **options)
             inst->m_errmsg = mxs_strdup("HY000 Binlog encryption is Off but binlog file has "
                                         "the START_ENCRYPTION_EVENT");
 
-            return (ROUTER *)inst;
+            return (MXS_ROUTER *)inst;
         }
 
         /* Start replication from master server */
         blr_start_master(inst);
     }
 
-    return (ROUTER *)inst;
+    return (MXS_ROUTER *)inst;
 }
 
 static void
@@ -958,8 +1004,8 @@ free_instance(ROUTER_INSTANCE *instance)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static void *
-newSession(ROUTER *instance, SESSION *session)
+static MXS_ROUTER_SESSION *
+newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave;
@@ -1001,6 +1047,9 @@ newSession(ROUTER *instance, SESSION *session)
     slave->heartbeat = 0;
     slave->lastEventReceived = 0;
     slave->encryption_ctx = NULL;
+    slave->mariadb_gtid = NULL;
+
+    slave->gtid_maps = NULL;
 
     /**
      * Add this session to the list of active sessions.
@@ -1027,8 +1076,8 @@ newSession(ROUTER *instance, SESSION *session)
  * @param router_cli_ses    The particular session to free
  *
  */
-static void freeSession(ROUTER* router_instance,
-                        void*   router_client_ses)
+static void freeSession(MXS_ROUTER* router_instance,
+                        MXS_ROUTER_SESSION* router_client_ses)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_client_ses;
@@ -1084,9 +1133,12 @@ static void freeSession(ROUTER* router_instance,
     {
         MXS_FREE(slave->encryption_ctx);
     }
+    if (slave->mariadb_gtid)
+    {
+        MXS_FREE(slave->mariadb_gtid);
+    }
     MXS_FREE(slave);
 }
-
 
 /**
  * Close a session with the router, this is the mechanism
@@ -1096,7 +1148,7 @@ static void freeSession(ROUTER* router_instance,
  * @param router_session    The session being closed
  */
 static void
-closeSession(ROUTER *instance, void *router_session)
+closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_session;
@@ -1127,10 +1179,10 @@ closeSession(ROUTER *instance, void *router_session)
 
         if (slave->state > 0)
         {
-            MXS_NOTICE("%s: Slave %s:%d, server id %d, disconnected after %ld seconds. "
+            MXS_NOTICE("%s: Slave [%s]:%d, server id %d, disconnected after %ld seconds. "
                        "%d SQL commands, %d events sent (%lu bytes), binlog '%s', "
                        "last position %lu",
-                       router->service->name, slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port),
+                       router->service->name, slave->dcb->remote, dcb_get_port(slave->dcb),
                        slave->serverid,
                        time(0) - slave->connect_time,
                        slave->stats.n_queries,
@@ -1182,7 +1234,7 @@ closeSession(ROUTER *instance, void *router_session)
  * @return The number of bytes sent
  */
 static int
-routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
+routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_session;
@@ -1238,7 +1290,7 @@ spin_reporter(void *dcb, char *desc, int value)
  * @param dcb       DCB to send diagnostics to
  */
 static void
-diagnostics(ROUTER *router, DCB *dcb)
+diagnostics(MXS_ROUTER *router, DCB *dcb)
 {
     ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
     ROUTER_SLAVE *session;
@@ -1347,7 +1399,7 @@ diagnostics(ROUTER *router, DCB *dcb)
                router_inst->current_pos);
     if (router_inst->trx_safe)
     {
-        if (router_inst->pending_transaction)
+        if (router_inst->pending_transaction.state != BLRM_NO_TRANSACTION)
         {
             dcb_printf(dcb, "\tCurrent open transaction pos:                %lu\n",
                        router_inst->binlog_position);
@@ -1424,6 +1476,13 @@ diagnostics(ROUTER *router, DCB *dcb)
 
             dcb_printf(dcb, "\tLast event from master:                      0x%x, %s\n",
                        router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
+
+            if (router_inst->mariadb_gtid &&
+                router_inst->last_mariadb_gtid[0])
+            {
+                dcb_printf(dcb, "\tLast seen MariaDB GTID:                      %s\n",
+                           router_inst->last_mariadb_gtid);
+            }
         }
 
         if (router_inst->lastEventTimestamp)
@@ -1530,8 +1589,8 @@ diagnostics(ROUTER *router, DCB *dcb)
                 dcb_printf(dcb, "\t\tSlave UUID:                              %s\n", session->uuid);
             }
             dcb_printf(dcb,
-                       "\t\tSlave_host_port:                         %s:%d\n",
-                       session->dcb->remote, ntohs((session->dcb->ipv4).sin_port));
+                       "\t\tSlave_host_port:                         [%s]:%d\n",
+                       session->dcb->remote, dcb_get_port(session->dcb));
             dcb_printf(dcb,
                        "\t\tUsername:                                %s\n",
                        session->dcb->user);
@@ -1650,9 +1709,9 @@ diagnostics(ROUTER *router, DCB *dcb)
                 {
                     dcb_printf(dcb, "\t\tSlave_mode:                              catchup. %s%s\n",
                                ((session->cstate & CS_EXPECTCB) == 0 ? "" :
-                               "Waiting for DCB queue to drain."),
+                                "Waiting for DCB queue to drain."),
                                ((session->cstate & CS_BUSY) == 0 ? "" :
-                               " Busy in slave catchup."));
+                                " Busy in slave catchup."));
                 }
             }
 #if SPINLOCK_PROFILE
@@ -1669,6 +1728,338 @@ diagnostics(ROUTER *router, DCB *dcb)
 }
 
 /**
+ * Display router diagnostics
+ *
+ * @param instance  Instance of the router
+ */
+static json_t* diagnostics_json(const MXS_ROUTER *router)
+{
+    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
+    int minno = 0;
+    double min5, min10, min15, min30;
+    char buf[40];
+    struct tm tm;
+
+    json_t* rval = json_object();
+
+    minno = router_inst->stats.minno;
+    min30 = 0.0;
+    min15 = 0.0;
+    min10 = 0.0;
+    min5 = 0.0;
+    for (int j = 0; j < BLR_NSTATS_MINUTES; j++)
+    {
+        minno--;
+        if (minno < 0)
+        {
+            minno += BLR_NSTATS_MINUTES;
+        }
+        min30 += router_inst->stats.minavgs[minno];
+        if (j < 15)
+        {
+            min15 += router_inst->stats.minavgs[minno];
+        }
+        if (j < 10)
+        {
+            min10 += router_inst->stats.minavgs[minno];
+        }
+        if (j < 5)
+        {
+            min5 += router_inst->stats.minavgs[minno];
+        }
+    }
+    min30 /= 30.0;
+    min15 /= 15.0;
+    min10 /= 10.0;
+    min5 /= 5.0;
+
+    /* SSL options */
+    if (router_inst->ssl_enabled)
+    {
+        json_t* obj = json_object();
+
+        json_object_set_new(obj, "ssl_ca_cert", json_string(router_inst->service->dbref->server->server_ssl->ssl_ca_cert));
+        json_object_set_new(obj, "ssl_cert", json_string(router_inst->service->dbref->server->server_ssl->ssl_cert));
+        json_object_set_new(obj, "ssl_key", json_string(router_inst->service->dbref->server->server_ssl->ssl_key));
+        json_object_set_new(obj, "ssl_version", json_string(router_inst->ssl_version ? router_inst->ssl_version : "MAX"));
+
+        json_object_set_new(rval, "master_ssl", obj);
+    }
+
+    /* Binlog Encryption options */
+    if (router_inst->encryption.enabled)
+    {
+        json_t* obj = json_object();
+
+        json_object_set_new(obj, "key", json_string(
+                                                    router_inst->encryption.key_management_filename));
+        json_object_set_new(obj, "algorithm", json_string(
+                                                          blr_get_encryption_algorithm(router_inst->encryption.encryption_algorithm)));
+        json_object_set_new(obj, "key_length",
+                            json_integer(8 * router_inst->encryption.key_len));
+
+        json_object_set_new(rval, "master_encryption", obj);
+    }
+
+    json_object_set_new(rval, "master_state", json_string(blrm_states[router_inst->master_state]));
+
+    localtime_r(&router_inst->stats.lastReply, &tm);
+    asctime_r(&tm, buf);
+
+
+    json_object_set_new(rval, "binlogdir", json_string(router_inst->binlogdir));
+    json_object_set_new(rval, "heartbeat", json_integer(router_inst->heartbeat));
+    json_object_set_new(rval, "master_starts", json_integer(router_inst->stats.n_masterstarts));
+    json_object_set_new(rval, "master_reconnects", json_integer(router_inst->stats.n_delayedreconnects));
+    json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name));
+    json_object_set_new(rval, "binlog_position", json_integer(router_inst->current_pos));
+
+    if (router_inst->trx_safe)
+    {
+        if (router_inst->pending_transaction.state != BLRM_NO_TRANSACTION)
+        {
+            json_object_set_new(rval, "current_trx_position", json_integer(router_inst->binlog_position));
+        }
+    }
+
+    json_object_set_new(rval, "slaves", json_integer(router_inst->stats.n_slaves));
+    json_object_set_new(rval, "session_events", json_integer(router_inst->stats.n_binlogs_ses));
+    json_object_set_new(rval, "total_events", json_integer(router_inst->stats.n_binlogs));
+    json_object_set_new(rval, "bad_crc_count", json_integer(router_inst->stats.n_badcrc));
+
+    minno = router_inst->stats.minno - 1;
+    if (minno == -1)
+    {
+        minno += BLR_NSTATS_MINUTES;
+    }
+
+    json_object_set_new(rval, "events_0", json_real(router_inst->stats.minavgs[minno]));
+    json_object_set_new(rval, "events_5", json_real(min5));
+    json_object_set_new(rval, "events_10", json_real(min10));
+    json_object_set_new(rval, "events_15", json_real(min15));
+    json_object_set_new(rval, "events_30", json_real(min30));
+
+    json_object_set_new(rval, "fake_events", json_integer(router_inst->stats.n_fakeevents));
+
+    json_object_set_new(rval, "artificial_events", json_integer(router_inst->stats.n_artificial));
+
+    json_object_set_new(rval, "binlog_errors", json_integer(router_inst->stats.n_binlog_errors));
+    json_object_set_new(rval, "binlog_rotates", json_integer(router_inst->stats.n_rotates));
+    json_object_set_new(rval, "heartbeat_events", json_integer(router_inst->stats.n_heartbeats));
+    json_object_set_new(rval, "events_read", json_integer(router_inst->stats.n_reads));
+    json_object_set_new(rval, "residual_packets", json_integer(router_inst->stats.n_residuals));
+
+    double average_packets = router_inst->stats.n_reads != 0 ?
+        ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0;
+
+    json_object_set_new(rval, "average_events_per_packets", json_real(average_packets));
+
+    spinlock_acquire(&router_inst->lock);
+    if (router_inst->stats.lastReply)
+    {
+        if (buf[strlen(buf) - 1] == '\n')
+        {
+            buf[strlen(buf) - 1] = '\0';
+        }
+
+        json_object_set_new(rval, "latest_event", json_string(buf));
+
+        if (!router_inst->mariadb10_compat)
+        {
+            json_object_set_new(rval, "latest_event_type", json_string(
+                                                                       (router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
+                                                                       event_names[router_inst->lastEventReceived] : "unknown"));
+        }
+        else
+        {
+            char *ptr = NULL;
+            if (router_inst->lastEventReceived <= MAX_EVENT_TYPE)
+            {
+                ptr = event_names[router_inst->lastEventReceived];
+            }
+            else
+            {
+                /* Check MariaDB 10 new events */
+                if (router_inst->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN &&
+                    router_inst->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10)
+                {
+                    ptr = event_names_mariadb10[(router_inst->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+                }
+            }
+
+
+            json_object_set_new(rval, "latest_event_type", json_string((ptr != NULL) ? ptr : "unknown"));
+
+            if (router_inst->mariadb_gtid &&
+                router_inst->last_mariadb_gtid[0])
+            {
+                json_object_set_new(rval, "latest_gtid", json_string(router_inst->last_mariadb_gtid));
+            }
+        }
+
+        if (router_inst->lastEventTimestamp)
+        {
+            time_t last_event = (time_t)router_inst->lastEventTimestamp;
+            localtime_r(&last_event, &tm);
+            asctime_r(&tm, buf);
+            if (buf[strlen(buf) - 1] == '\n')
+            {
+                buf[strlen(buf) - 1] = '\0';
+            }
+
+            json_object_set_new(rval, "latest_event_timestamp", json_string(buf));
+        }
+    }
+    spinlock_release(&router_inst->lock);
+
+    json_object_set_new(rval, "active_logs", json_boolean(router_inst->active_logs));
+    json_object_set_new(rval, "reconnect_pending", json_boolean(router_inst->reconnect_pending));
+
+    json_t* ev = json_object();
+
+    for (int i = 0; i <= MAX_EVENT_TYPE; i++)
+    {
+        json_object_set_new(ev, event_names[i], json_integer(router_inst->stats.events[i]));
+    }
+
+    if (router_inst->mariadb10_compat)
+    {
+        /* Display MariaDB 10 new events */
+        for (int i = MARIADB_NEW_EVENTS_BEGIN; i <= MAX_EVENT_TYPE_MARIADB10; i++)
+        {
+            json_object_set_new(ev, event_names_mariadb10[(i - MARIADB_NEW_EVENTS_BEGIN)],
+                                json_integer(router_inst->stats.events[i]));
+        }
+    }
+
+    json_object_set_new(rval, "event_types", ev);
+
+    if (router_inst->slaves)
+    {
+        json_t* arr = json_array();
+        spinlock_acquire(&router_inst->lock);
+
+        for (ROUTER_SLAVE *session = router_inst->slaves; session; session = session->next)
+        {
+            json_t* slave = json_object();
+            minno = session->stats.minno;
+            min30 = 0.0;
+            min15 = 0.0;
+            min10 = 0.0;
+            min5 = 0.0;
+            for (int j = 0; j < BLR_NSTATS_MINUTES; j++)
+            {
+                minno--;
+                if (minno < 0)
+                {
+                    minno += BLR_NSTATS_MINUTES;
+                }
+                min30 += session->stats.minavgs[minno];
+                if (j < 15)
+                {
+                    min15 += session->stats.minavgs[minno];
+                }
+                if (j < 10)
+                {
+                    min10 += session->stats.minavgs[minno];
+                }
+                if (j < 5)
+                {
+                    min5 += session->stats.minavgs[minno];
+                }
+            }
+            min30 /= 30.0;
+            min15 /= 15.0;
+            min10 /= 10.0;
+            min5 /= 5.0;
+
+            json_object_set_new(rval, "server_id", json_integer(session->serverid));
+
+            if (session->hostname)
+            {
+                json_object_set_new(rval, "hostname", json_string(session->hostname));
+            }
+            if (session->uuid)
+            {
+                json_object_set_new(rval, "uuid", json_string(session->uuid));
+            }
+
+            json_object_set_new(rval, "address", json_string(session->dcb->remote));
+            json_object_set_new(rval, "port", json_integer(dcb_get_port(session->dcb)));
+            json_object_set_new(rval, "user", json_string(session->dcb->user));
+            json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->ssl));
+            json_object_set_new(rval, "state", json_string(blrs_states[session->state]));
+            json_object_set_new(rval, "next_sequence", json_integer(session->seqno));
+            json_object_set_new(rval, "binlog_file", json_string(session->binlogfile));
+            json_object_set_new(rval, "binlog_pos", json_integer(session->binlog_pos));
+            json_object_set_new(rval, "crc", json_boolean(!session->nocrc));
+
+            json_object_set_new(rval, "requests", json_integer(session->stats.n_requests));
+            json_object_set_new(rval, "events_sent", json_integer(session->stats.n_events));
+            json_object_set_new(rval, "bytes_sent", json_integer(session->stats.n_bytes));
+            json_object_set_new(rval, "data_bursts", json_integer(session->stats.n_bursts));
+
+            if (router_inst->send_slave_heartbeat)
+            {
+                json_object_set_new(rval, "heartbeat_period", json_integer(session->heartbeat));
+            }
+
+            minno = session->stats.minno - 1;
+            if (minno == -1)
+            {
+                minno += BLR_NSTATS_MINUTES;
+            }
+
+            if (session->lastEventTimestamp
+                && router_inst->lastEventTimestamp && session->lastEventReceived != HEARTBEAT_EVENT)
+            {
+                unsigned long seconds_behind;
+                time_t session_last_event = (time_t)session->lastEventTimestamp;
+
+                if (router_inst->lastEventTimestamp > session->lastEventTimestamp)
+                {
+                    seconds_behind = router_inst->lastEventTimestamp - session->lastEventTimestamp;
+                }
+                else
+                {
+                    seconds_behind = 0;
+                }
+
+                localtime_r(&session_last_event, &tm);
+                asctime_r(&tm, buf);
+                trim(buf);
+                json_object_set_new(rval, "last_binlog_event_timestamp", json_string(buf));
+                json_object_set_new(rval, "seconds_behind_master", json_integer(seconds_behind));
+            }
+
+            const char *mode = "connected";
+
+            if (session->state)
+            {
+                if ((session->cstate & CS_WAIT_DATA) == CS_WAIT_DATA)
+                {
+                    mode = "wait-for-data";
+                }
+                else
+                {
+                    mode = "catchup";
+                }
+            }
+
+            json_object_set_new(slave, "mode", json_string(mode));
+
+            json_array_append_new(arr, slave);
+        }
+        spinlock_release(&router_inst->lock);
+
+        json_object_set_new(rval, "slaves", arr);
+
+    }
+
+    return rval;
+}
+
+/**
  * Client Reply routine - in this case this is a message from the
  * master server, It should be sent to the state machine that manages
  * master packets as it may be binlog records or part of the registration
@@ -1681,7 +2072,7 @@ diagnostics(ROUTER *router, DCB *dcb)
  * @param       queue           The GWBUF with reply data
  */
 static  void
-clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
+clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue, DCB *backend_dcb)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
 
@@ -1726,13 +2117,14 @@ extract_message(GWBUF *errpkt)
  *
  */
 static void
-errorReply(ROUTER *instance,
-           void *router_session,
+errorReply(MXS_ROUTER *instance,
+           MXS_ROUTER_SESSION *router_session,
            GWBUF *message,
            DCB *backend_dcb,
-           error_action_t action,
+           mxs_error_action_t action,
            bool *succp)
 {
+    ss_dassert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     int error;
     socklen_t len;
@@ -1743,8 +2135,7 @@ errorReply(ROUTER *instance,
     mysql_errno = (unsigned long) extract_field(((uint8_t *)GWBUF_DATA(message) + 5), 16);
     errmsg = extract_message(message);
 
-    /** Don't handle same error twice on same DCB */
-    if (backend_dcb->dcb_errhandle_called)
+    if (action == ERRACT_REPLY_CLIENT)
     {
         /** Check router state and set errno an message */
         if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
@@ -1770,7 +2161,7 @@ errorReply(ROUTER *instance,
                 dcb_close(backend_dcb);
 
                 MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                          "%s while connecting to master %s:%d",
+                          "%s while connecting to master [%s]:%d",
                           router->service->name, router->m_errno, router->m_errmsg,
                           blrm_states[BLRM_TIMESTAMP], msg,
                           router->service->dbref->server->name,
@@ -1779,16 +2170,11 @@ errorReply(ROUTER *instance,
         }
         if (errmsg)
         {
-            free(errmsg);
+            MXS_FREE(errmsg);
         }
 
-        /** we optimistically assume that previous call succeed */
         *succp = true;
         return;
-    }
-    else
-    {
-        backend_dcb->dcb_errhandle_called = true;
     }
 
     len = sizeof(error);
@@ -1796,8 +2182,7 @@ errorReply(ROUTER *instance,
         getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 &&
         error != 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
+        sprintf(msg, "%s ", mxs_strerror(error));
     }
     else
     {
@@ -1819,7 +2204,7 @@ errorReply(ROUTER *instance,
         spinlock_release(&router->lock);
 
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%s attempting reconnect to master %s:%d",
+                  "%s attempting reconnect to master [%s]:%d",
                   router->service->name, mysql_errno, errmsg,
                   blrm_states[router->master_state], msg,
                   router->service->dbref->server->name,
@@ -1828,7 +2213,7 @@ errorReply(ROUTER *instance,
     else
     {
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%s attempting reconnect to master %s:%d",
+                  "%s attempting reconnect to master [%s]:%d",
                   router->service->name, router->m_errno,
                   router->m_errmsg ? router->m_errmsg : "(memory failure)",
                   blrm_states[router->master_state], msg,
@@ -1898,9 +2283,9 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 }
 
 
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_NO_RSESSION | RCAP_TYPE_CONTIGUOUS_OUTPUT | RCAP_TYPE_RESULTSET_OUTPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /**
@@ -2290,7 +2675,7 @@ static int blr_check_binlog(ROUTER_INSTANCE *router)
      * router->current_pos is the last event found.
      */
 
-    n = blr_read_events_all_events(router, 0, 0);
+    n = blr_read_events_all_events(router, NULL, 0);
 
     MXS_DEBUG("blr_read_events_all_events() ret = %i\n", n);
 
@@ -2434,7 +2819,7 @@ blr_free_ssl_data(ROUTER_INSTANCE *inst)
  * @param service   The service this router instance belongs to
  */
 static void
-destroyInstance(ROUTER *instance)
+destroyInstance(MXS_ROUTER *instance)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
 
@@ -2457,6 +2842,8 @@ destroyInstance(ROUTER *instance)
         inst->master_state = BLRM_SLAVE_STOPPED;
     }
 
+    spinlock_release(&inst->lock);
+
     if (inst->client)
     {
         if (inst->client->state == DCB_STATE_POLLING)
@@ -2466,21 +2853,23 @@ destroyInstance(ROUTER *instance)
         }
     }
 
-    MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
-               "read up to log %s, pos %lu, transaction safe pos %lu",
-               inst->service->name,
-               inst->service->dbref->server->name,
-               inst->service->dbref->server->port,
-               inst->binlog_name, inst->current_pos, inst->binlog_position);
+    MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master [%s]:%d, "
+             "read up to log %s, pos %lu, transaction safe pos %lu",
+             inst->service->name,
+             inst->service->dbref->server->name,
+             inst->service->dbref->server->port,
+             inst->binlog_name, inst->current_pos, inst->binlog_position);
 
-    if (inst->trx_safe && inst->pending_transaction)
+    if (inst->trx_safe &&
+        inst->pending_transaction.state > BLRM_NO_TRANSACTION)
     {
         MXS_WARNING("%s stopped by shutdown: detected mid-transaction in binlog file %s, "
                     "pos %lu, incomplete transaction starts at pos %lu",
                     inst->service->name, inst->binlog_name, inst->current_pos, inst->binlog_position);
     }
 
-    spinlock_release(&inst->lock);
+    /* Close GTID maps database */
+    sqlite3_close_v2(inst->gtid_maps);
 }
 
 /**
@@ -2507,71 +2896,71 @@ unsigned int from_hex(char c)
  */
 bool blr_extract_key(const char *buffer, int nline, ROUTER_INSTANCE *router)
 {
-  char *p = (char *)buffer;
-  int length = 0;
-  uint8_t *key = (uint8_t *)router->encryption.key_value;
+    char *p = (char *)buffer;
+    int length = 0;
+    uint8_t *key = (uint8_t *)router->encryption.key_value;
 
-  while (isspace(*p) && *p != '\n')
-  {
-      p++;
-  }
+    while (isspace(*p) && *p != '\n')
+    {
+        p++;
+    }
 
-  /* Skip comments */
-  if (*p == '#')
-  {
-      return false;
-  }
+    /* Skip comments */
+    if (*p == '#')
+    {
+        return false;
+    }
 
-  unsigned int id = strtoll(p, &p, 10);
+    unsigned int id = strtoll(p, &p, 10);
 
-  /* key range is 1 .. 255 */
-  if (id < 1 || id > 255)
-  {
-      MXS_WARNING("Invalid Key Id (values 1..255) found in file %s. Line %d, index 0.",
-                  router->encryption.key_management_filename,
-                  nline);
-      return false;
-  }
+    /* key range is 1 .. 255 */
+    if (id < 1 || id > 255)
+    {
+        MXS_WARNING("Invalid Key Id (values 1..255) found in file %s. Line %d, index 0.",
+                    router->encryption.key_management_filename,
+                    nline);
+        return false;
+    }
 
-  /* Continue only if read id is BINLOG_SYSTEM_DATA_CRYPTO_SCHEME (value is 1) */
-  if (id != BINLOG_SYSTEM_DATA_CRYPTO_SCHEME)
-  {
-      return false;
-  }
+    /* Continue only if read id is BINLOG_SYSTEM_DATA_CRYPTO_SCHEME (value is 1) */
+    if (id != BINLOG_SYSTEM_DATA_CRYPTO_SCHEME)
+    {
+        return false;
+    }
 
-  /* Look for ';' separator */
-  if (*p != ';')
-  {
-      MXS_ERROR("Syntax error in Encryption Key file at line %d, index %lu. File %s",
-                nline,
-                p - buffer,
-                router->encryption.key_management_filename);
-      return false;
-  }
+    /* Look for ';' separator */
+    if (*p != ';')
+    {
+        MXS_ERROR("Syntax error in Encryption Key file at line %d, index %lu. File %s",
+                  nline,
+                  p - buffer,
+                  router->encryption.key_management_filename);
+        return false;
+    }
 
-  p++;
+    p++;
 
-  /* Now read the hex data */
+    /* Now read the hex data */
 
-  while (isxdigit(p[0]) && isxdigit(p[1]) && length <= BINLOG_AES_MAX_KEY_LEN)
-  {
-      key[length++] =  from_hex(p[0]) * 16 + from_hex(p[1]);
-      p += 2;
-  }
+    while (isxdigit(p[0]) && isxdigit(p[1]) && length <= BINLOG_AES_MAX_KEY_LEN)
+    {
+        key[length++] =  from_hex(p[0]) * 16 + from_hex(p[1]);
+        p += 2;
+    }
 
-  if (isxdigit(*p) ||
-     (length != 16 && length != 24 && length != 32))
-  {
-      MXS_ERROR("Found invalid Encryption Key at line %d, index %lu. File %s",
-                nline,
-                p - buffer,
-                router->encryption.key_management_filename);
-      return false;
-  }
+    if (isxdigit(*p) ||
+        (length != 16 && length != 24 && length != 32))
+    {
+        MXS_ERROR("Found invalid Encryption Key at line %d, index %lu. File %s",
+                  nline,
+                  p - buffer,
+                  router->encryption.key_management_filename);
+        return false;
+    }
 
-  router->encryption.key_len = length;
+    router->encryption.key_len = length;
 
-  return true;
+    return true;
 }
 
 /**
@@ -2587,8 +2976,8 @@ bool blr_get_encryption_key(ROUTER_INSTANCE *router)
     if (router->encryption.key_management_filename == NULL)
     {
         MXS_ERROR("Service %s, encryption key is not set. "
-                   "Please specify key filename with 'encryption_key_file'",
-                   router->service->name);
+                  "Please specify key filename with 'encryption_key_file'",
+                  router->service->name);
         return false;
     }
     else
@@ -2630,10 +3019,9 @@ int blr_parse_key_file(ROUTER_INSTANCE *router)
 
     if (!file)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open KEY file '%s': %s",
                   router->encryption.key_management_filename,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
         return -1;
     }
 
@@ -2666,12 +3054,60 @@ int blr_parse_key_file(ROUTER_INSTANCE *router)
     if (!found_keyid)
     {
         MXS_ERROR("No Key with Id = 1 has been found in file %s. Read %d lines.",
-                   router->encryption.key_management_filename,
-                   n_lines);
+                  router->encryption.key_management_filename,
+                  n_lines);
         return n_lines;
     }
     else
     {
         return 0;
     }
+}
+
+/**
+ * Create / Open R/W GTID maps database
+ *
+ */
+static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst)
+{
+    char dbpath[PATH_MAX + 1];
+    snprintf(dbpath, sizeof(dbpath), "/%s/%s",
+             inst->binlogdir, GTID_MAPS_DB);
+
+    /* Open/Create the GTID maps database */
+    if (sqlite3_open_v2(dbpath,
+                        &inst->gtid_maps,
+                        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                        NULL) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to open GTID maps SQLite database '%s': %s", dbpath,
+                  sqlite3_errmsg(inst->gtid_maps));
+        return false;
+    }
+
+    char* errmsg;
+    /* Create the gtid_maps table */
+    int rc = sqlite3_exec(inst->gtid_maps,
+                          "CREATE TABLE IF NOT EXISTS "
+                          "gtid_maps(gtid varchar(255), "
+                          "binlog_file varchar(255), "
+                          "start_pos bigint, "
+                          "end_pos bigint, "
+                          "primary key(gtid));",
+                          NULL, NULL, &errmsg);
+    if (rc != SQLITE_OK)
+    {
+        MXS_ERROR("Service %s, failed to create GTID index table 'gtid_maps': %s",
+                  inst->service->name,
+                  sqlite3_errmsg(inst->gtid_maps));
+        sqlite3_free(errmsg);
+        /* Close GTID maps database */
+        sqlite3_close_v2(inst->gtid_maps);
+        return false;
+    }
+
+    MXS_NOTICE("%s: Service has MariaDB GTID otion set to ON",
+               inst->service->name);
+
+    return true;
 }

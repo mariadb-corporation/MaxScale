@@ -3,7 +3,7 @@
 # Copyright (c) 2016 MariaDB Corporation Ab
 #
 # Use of this software is governed by the Business Source License included
-# in the LICENSE.TXT file and at www.mariadb.com/bsl.
+# in the LICENSE.TXT file and at www.mariadb.com/bsl11.
 #
 # Change Date: 2019-07-01
 #
@@ -36,7 +36,7 @@ producer = KafkaProducer(bootstrap_servers=[opts.kafka_broker])
 
 while True:
    try:
-      buf = sys.stdin.read(128)
+      buf = sys.stdin.readline()
 
       if len(buf) == 0:
          break
@@ -45,9 +45,10 @@ while True:
 
       while True:
          rbuf = rbuf.lstrip()
-         data = decoder.raw_decode(rbuf.decode('ascii'))
+         data = decoder.raw_decode(rbuf.decode('utf_8'))
          rbuf = rbuf[data[1]:]
          producer.send(topic=opts.kafka_topic, value=json.dumps(data[0]).encode())
+         producer.flush()
 
    # JSONDecoder will return a ValueError if a partial JSON object is read
    except ValueError as err:
@@ -57,5 +58,3 @@ while True:
    except Exception as ex:
       print(ex)
       break
-
-producer.flush()

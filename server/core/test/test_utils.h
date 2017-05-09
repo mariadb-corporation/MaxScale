@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -15,12 +15,16 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/poll.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/config.h>
+
+#include "../maxscale/poll.h"
 #include "../maxscale/statistics.h"
+#include "../maxscale/worker.hh"
+
 
 void init_test_env(char *path)
 {
@@ -28,9 +32,14 @@ void init_test_env(char *path)
 
     const char* logdir = path ? path : TEST_LOG_DIR;
 
+    config_get_global_options()->n_threads = 1;
+
     ts_stats_init();
     mxs_log_init(NULL, logdir, MXS_LOG_TARGET_DEFAULT);
+    dcb_global_init();
     poll_init();
+    maxscale::MessageQueue::init();
+    maxscale::Worker::init();
     hkinit();
 }
 

@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -43,16 +43,21 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "binlogrouter"
+
 #include <maxscale/cdefs.h>
+
+#include <stdint.h>
+#include <openssl/aes.h>
+#include <pthread.h>
+#include <zlib.h>
+
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
-#include <pthread.h>
-#include <stdint.h>
-#include <maxscale/memlog.h>
 #include <maxscale/thread.h>
-#include <zlib.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
+#include <maxscale/sqlite3.h>
 
 MXS_BEGIN_DECLS
 
@@ -69,20 +74,30 @@ MXS_BEGIN_DECLS
 /* BINLOG_EVENT_LEN_OFFSET points to event_size in event_header */
 #define BINLOG_EVENT_LEN_OFFSET     9
 #define BINLOG_FATAL_ERROR_READING  1236
+#define BINLOG_DATA_TRUNCATED       2032
 
 /* Binlog Encryption */
-#define BINLOG_ENC_ALGO_NAME_LEN        13
-#define BINLOG_FLAG_ENCRYPT              1
-#define BINLOG_FLAG_DECRYPT              0
-#define BINLOG_AES_MAX_KEY_LEN          32
-#define BINLOG_MAX_CRYPTO_SCHEME         2
-#define BINLOG_SYSTEM_DATA_CRYPTO_SCHEME 1
-#define BINLOG_MAX_KEYFILE_LINE_LEN     130
+#define BINLOG_ENC_ALGO_NAME_LEN           13
+#define BINLOG_FLAG_ENCRYPT                 1
+#define BINLOG_FLAG_DECRYPT                 0
+#define BINLOG_AES_MAX_KEY_LEN             32
+#define BINLOG_MAX_CRYPTO_SCHEME            2
+#define BINLOG_SYSTEM_DATA_CRYPTO_SCHEME    1
+#define BINLOG_MAX_KEYFILE_LINE_LEN       130
 
 /* Event detail routine */
 #define BLR_REPORT_CHECKSUM_FORMAT "CRC32 0x"
-#define BLR_REPORT_REP_HEADER 0x02
+#define BLR_REPORT_REP_HEADER            0x02
+#define BLR_CHECK_ONLY                   0x04
 
+/* MariaDB GTID string len */
+#define GTID_MAX_LEN 42
+
+/* GTID slite3 query buffer size */
+#define GTID_SQL_BUFFER_SIZE 1024
+
+/* GTID slite3 database name */
+#define GTID_MAPS_DB "gtid_maps.db"
 /**
  * Supported Encryption algorithms
  *
@@ -243,6 +258,10 @@ enum blr_aes_mode
 /* MariadDB 10 GTID event flags */
 #define MARIADB_FL_DDL                 32
 #define MARIADB_FL_STANDALONE           1
+
+/* Maxwell-related SQL queries */
+#define MYSQL_CONNECTOR_SERVER_VARS_QUERY  "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout"
+#define MYSQL_CONNECTOR_SQL_MODE_QUERY     "SET sql_mode='NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES'"
 
 /* Saved credential file name's tail */
 static const char BLR_DBUSERS_DIR[] = "cache/users";
@@ -434,8 +453,11 @@ typedef struct router_slave
     blr_thread_role_t lsi_sender_role; /*< Master or slave code sent */
     THREAD            lsi_sender_tid;  /*< Who sent */
     char              lsi_binlog_name[BINLOG_FNAMELEN + 1]; /*< Which binlog file */
-    uint32_t          lsi_binlog_pos; /*< What position */
-    void              *encryption_ctx;      /*< Encryption context */
+    uint32_t          lsi_binlog_pos;  /*< What position */
+    void              *encryption_ctx; /*< Encryption context */
+    bool              gtid_strict_mode;/*< MariaDB 10 Slave sets gtid_strict_mode */
+    char              *mariadb_gtid;   /*< MariaDB 10 Slave connects with GTID */
+    sqlite3           *gtid_maps;      /*< GTID storage client handle, read only*/
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
@@ -475,23 +497,26 @@ typedef struct
  */
 typedef struct
 {
-    GWBUF           *server_id;     /*< Master server id */
-    GWBUF           *heartbeat;     /*< Heartbeat period */
-    GWBUF           *chksum1;       /*< Binlog checksum 1st response */
-    GWBUF           *chksum2;       /*< Binlog checksum 2nd response */
-    GWBUF           *gtid_mode;     /*< GTID Mode response */
-    GWBUF           *uuid;          /*< Master UUID */
-    GWBUF           *setslaveuuid;  /*< Set Slave UUID */
-    GWBUF           *setnames;      /*< Set NAMES latin1 */
-    GWBUF           *utf8;          /*< Set NAMES utf8 */
-    GWBUF           *select1;       /*< select 1 */
-    GWBUF           *selectver;     /*< select version() */
-    GWBUF           *selectvercom;  /*< select @@version_comment */
-    GWBUF           *selecthostname;/*< select @@hostname */
-    GWBUF           *map;           /*< select @@max_allowed_packet */
-    GWBUF           *mariadb10;     /*< set @mariadb_slave_capability */
-    uint8_t         *fde_event;     /*< Format Description Event */
-    int             fde_len;        /*< Length of fde_event */
+    GWBUF           *server_id;         /*< Master server id */
+    GWBUF           *heartbeat;         /*< Heartbeat period */
+    GWBUF           *chksum1;           /*< Binlog checksum 1st response */
+    GWBUF           *chksum2;           /*< Binlog checksum 2nd response */
+    GWBUF           *gtid_mode;         /*< GTID Mode response */
+    GWBUF           *uuid;              /*< Master UUID */
+    GWBUF           *setslaveuuid;      /*< Set Slave UUID */
+    GWBUF           *setnames;          /*< Set NAMES latin1 */
+    GWBUF           *utf8;              /*< Set NAMES utf8 */
+    GWBUF           *select1;           /*< select 1 */
+    GWBUF           *selectver;         /*< select version() */
+    GWBUF           *selectvercom;      /*< select @@version_comment */
+    GWBUF           *selecthostname;    /*< select @@hostname */
+    GWBUF           *map;               /*< select @@max_allowed_packet */
+    GWBUF           *mariadb10;         /*< set @mariadb_slave_capability */
+    GWBUF           *server_vars;       /*< MySQL Connector master server variables */
+    GWBUF           *binlog_vars;       /*< SELECT @@global.log_bin, @@global.binlog_format, @@global.binlog_row_image; */
+    GWBUF           *lower_case_tables; /*< select @@lower_case_table_names */
+    uint8_t         *fde_event;         /*< Format Description Event */
+    int             fde_len;            /*< Length of fde_event */
 } MASTER_RESPONSES;
 
 /**
@@ -499,13 +524,48 @@ typedef struct
  */
 typedef struct binlog_encryption_setup
 {
-  bool enabled;
-  int encryption_algorithm;
-  char *key_management_filename;
-  uint8_t key_value[BINLOG_AES_MAX_KEY_LEN];
-  unsigned long key_len;
-  uint8_t key_id;
+    bool enabled;
+    int encryption_algorithm;
+    char *key_management_filename;
+    uint8_t key_value[BINLOG_AES_MAX_KEY_LEN];
+    unsigned long key_len;
+    uint8_t key_id;
 } BINLOG_ENCRYPTION_SETUP;
+
+/** Transaction States */
+typedef enum
+{
+    BLRM_NO_TRANSACTION,       /*< No transaction */
+    BLRM_TRANSACTION_START,    /*< A transaction is open*/
+    BLRM_COMMIT_SEEN,          /*< Received COMMIT event in the current trx */
+    BLRM_XID_EVENT_SEEN        /*< Received XID event of current transaction */
+} master_transaction_t;
+
+/** Transaction Details */
+typedef struct pending_transaction
+{
+    char gtid[GTID_MAX_LEN + 1];   /** MariaDB 10.x GTID */
+    master_transaction_t state;    /** Transaction state */
+    uint64_t start_pos;            /** The BEGIN pos */
+    uint64_t end_pos;              /** The next_pos in COMMIT event*/
+} PENDING_TRANSACTION;
+
+/** MariaDB GTID info */
+typedef struct mariadb_gtid_info
+{
+    char *gtid;        /** MariaDB 10.x GTID */
+    char *file;        /** The binlog file */
+    uint64_t start;    /** The BEGIN pos */
+    uint64_t end;      /** The next_pos in COMMIT event*/
+} MARIADB_GTID_INFO;
+
+/** MariaDB GTID elements */
+typedef struct mariadb_gtid_elems
+{
+    uint32_t domain_id;   /*< The replication domain */
+    uint32_t server_id;   /*< The serverid */
+    uint64_t seq_no;      /*< The sequence number */
+} MARIADB_GTID_ELEMS;
 
 /**
  * The per instance data for the router.
@@ -524,10 +584,11 @@ typedef struct router_instance
     char                    *fileroot;      /*< Root of binlog filename */
     bool                    master_chksum;  /*< Does the master provide checksums */
     bool                    mariadb10_compat; /*< MariaDB 10.0 compatibility */
+    bool                    maxwell_compat; /*< Zendesk's Maxwell compatibility */
     char                    *master_uuid;   /*< Set UUID of the master, sent to slaves */
     DCB                     *master;        /*< DCB for master connection */
     DCB                     *client;        /*< DCB for dummy client */
-    SESSION                 *session;       /*< Fake session for master connection */
+    MXS_SESSION             *session;       /*< Fake session for master connection */
     unsigned int            master_state;   /*< State of the master FSM */
     uint8_t                 lastEventReceived; /*< Last even received */
     uint32_t                lastEventTimestamp; /*< Timestamp from last event */
@@ -535,7 +596,7 @@ typedef struct router_instance
     char                    *binlogdir;     /*< The directory with the binlog files */
     SPINLOCK                binlog_lock;    /*< Lock to control update of the binlog position */
     int                     trx_safe;       /*< Detect and handle partial transactions */
-    int                     pending_transaction; /*< Pending transaction */
+    PENDING_TRANSACTION     pending_transaction; /*< Pending transaction */
     enum blr_event_state    master_event_state; /*< Packet read state */
     REP_HEADER              stored_header; /*< Relication header of the event the master is sending */
     GWBUF                  *stored_event; /*< Buffer where partial events are stored */
@@ -557,8 +618,6 @@ typedef struct router_instance
     int               rotating;     /*< Rotation in progress flag */
     BLFILE            *files;       /*< Files used by the slaves */
     SPINLOCK          fileslock;    /*< Lock for the files queue above */
-    unsigned int      low_water;    /*< Low water mark for client DCB */
-    unsigned int      high_water;   /*< High water mark for client DCB */
     unsigned int      short_burst;  /*< Short burst for slave catchup */
     unsigned int      long_burst;   /*< Long burst for slave catchup */
     unsigned long     burst_size;   /*< Maximum size of burst to send */
@@ -588,6 +647,12 @@ typedef struct router_instance
     int               master_semi_sync;     /*< Semi-Sync replication status of master server */
     BINLOG_ENCRYPTION_SETUP encryption;     /*< Binlog encryption setup */
     void              *encryption_ctx;      /*< Encryption context */
+    char              last_mariadb_gtid[GTID_MAX_LEN  + 1]; /*< Last seen MariaDB 10 GTID */
+    bool              mariadb_gtid;         /*< Save received MariaDB GTIDs into repo.
+                                             * This allows MariaDB 10 slave servers
+                                             * connecting with GTID */
+    HASHTABLE         *gtid_repo;           /*< Storage for MariaDB GTIDs */
+    sqlite3           *gtid_maps;           /*< GTID storage */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 
@@ -621,6 +686,23 @@ typedef struct binlog_encryption_ctx
                                       * form the encrryption IV for the event */
     char     *binlog_file;           /**< Current binlog file being encrypted */
 } BINLOG_ENCRYPTION_CTX;
+
+/**
+ * Holds information about:
+ * truncating a corrupted file
+ * or replace an event at specified pos
+ * or replace a transaction that start
+ * at specified pos
+ */
+
+typedef struct binlog_pos_fix
+{
+    bool        fix;            /**< Truncate file to last safe pos */
+    uint64_t    pos;            /**< Position of the event to be replaced
+                                 * by an Ignorable Event */
+    bool        replace_trx;    /**< Replace all events belonging to
+                                 * a transaction starting at pos */
+} BINLOG_FILE_FIX;
 
 /**
  * Defines and offsets for binlog encryption
@@ -660,29 +742,60 @@ typedef struct binlog_encryption_ctx
 #define BLRM_SUUID              0x000C
 #define BLRM_LATIN1             0x000D
 #define BLRM_UTF8               0x000E
-#define BLRM_SELECT1            0x000F
-#define BLRM_SELECTVER          0x0010
-#define BLRM_SELECTVERCOM       0x0011
-#define BLRM_SELECTHOSTNAME     0x0012
-#define BLRM_MAP                0x0013
-#define BLRM_REGISTER           0x0014
-#define BLRM_CHECK_SEMISYNC     0x0015
-#define BLRM_REQUEST_SEMISYNC   0x0016
-#define BLRM_REQUEST_BINLOGDUMP 0x0017
-#define BLRM_BINLOGDUMP         0x0018
-#define BLRM_SLAVE_STOPPED      0x0019
+#define BLRM_RESULTS_CHARSET    0x000F
+#define BLRM_SQL_MODE           0x0010
+#define BLRM_SELECT1            0x0011
+#define BLRM_SELECTVER          0x0012
+#define BLRM_SELECTVERCOM       0x0013
+#define BLRM_SELECTHOSTNAME     0x0014
+#define BLRM_MAP                0x0015
+#define BLRM_SERVER_VARS        0x0016
+#define BLRM_BINLOG_VARS        0x0017
+#define BLRM_LOWER_CASE_TABLES  0x0018
+#define BLRM_REGISTER_READY     0x0019
+#define BLRM_REGISTER           0x001A
+#define BLRM_CHECK_SEMISYNC     0x001B
+#define BLRM_REQUEST_SEMISYNC   0x001C
+#define BLRM_REQUEST_BINLOGDUMP 0x001D
+#define BLRM_BINLOGDUMP         0x001E
+#define BLRM_SLAVE_STOPPED      0x001F
 
-#define BLRM_MAXSTATE           0x0019
+#define BLRM_MAXSTATE           0x001F
 
 static char *blrm_states[] =
 {
-    "Unconfigured", "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
-    "Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
-    "binlog checksum rerieval", "Set MariaDB slave capability", "GTID Mode retrieval",
-    "Master UUID retrieval", "Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
-    "select version()", "select @@version_comment", "select @@hostname",
-    "select @@max_allowed_packet", "Register slave", "Semi-Sync Support retrivial",
-    "Request Semi-Sync Replication", "Request Binlog Dump", "Binlog Dump", "Slave stopped"
+    "Unconfigured",
+    "Unconnected",
+    "Connecting",
+    "Authenticated",
+    "Timestamp retrieval",
+    "Server ID retrieval",
+    "HeartBeat Period setup",
+    "binlog checksum config",
+    "binlog checksum rerieval",
+    "Set MariaDB slave capability",
+    "GTID Mode retrieval",
+    "Master UUID retrieval",
+    "Set Slave UUID",
+    "Set Names latin1",
+    "Set Names utf8",
+    "Set results charset null",
+    "Set sql_mode",
+    "select 1",
+    "select version()",
+    "select @@version_comment",
+    "select @@hostname",
+    "select @@max_allowed_packet",
+    "Query server variables",
+    "Query binlog variables",
+    "Query @@lower_case_table_names",
+    "Ready to Register",
+    "Register slave",
+    "Semi-Sync Support retrivial",
+    "Request Semi-Sync Replication",
+    "Request Binlog Dump",
+    "Binlog Dump",
+    "Slave stopped"
 };
 
 #define BLRS_CREATED            0x0000
@@ -754,7 +867,8 @@ extern int  blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *, uint32_t po
 extern int  blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
-extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned long, REP_HEADER *, char *, const SLAVE_ENCRYPTION_CTX *);
+extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned long, REP_HEADER *, char *,
+                              const SLAVE_ENCRYPTION_CTX *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
 extern unsigned long blr_file_size(BLFILE *);
 extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
@@ -763,7 +877,7 @@ extern int blr_send_custom_error(DCB *, int, int, char *, char *, unsigned int);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
 uint32_t extract_field(uint8_t *src, int bits);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
-int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+int blr_read_events_all_events(ROUTER_INSTANCE *, BINLOG_FILE_FIX *, int);
 int blr_save_dbusers(const ROUTER_INSTANCE *router);
 char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 void blr_file_append(ROUTER_INSTANCE *router, char *file);
@@ -782,6 +896,10 @@ extern const char *blr_get_encryption_algorithm(int);
 extern int blr_check_encryption_algorithm(char *);
 extern const char *blr_encryption_algorithm_list(void);
 extern bool blr_get_encryption_key(ROUTER_INSTANCE *);
+extern const char *blr_skip_leading_sql_comments(const char *);
+extern bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *,
+                                   const char *,
+                                   MARIADB_GTID_INFO *);
 
 MXS_END_DECLS
 

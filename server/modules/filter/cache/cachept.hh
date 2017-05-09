@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -30,7 +30,7 @@ public:
 
     json_t* get_info(uint32_t what) const;
 
-    cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey) const;
+    cache_result_t get_key(const char* zDefault_db, const GWBUF* pQuery, CACHE_KEY* pKey) const;
 
     cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue) const;
 

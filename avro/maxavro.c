@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "maxavro.h"
+#include "maxavro_internal.h"
 #include <maxscale/log_manager.h>
 #include <errno.h>
 
@@ -37,6 +37,39 @@
  * @return True if value was read successfully
  */
 bool maxavro_read_integer(MAXAVRO_FILE* file, uint64_t *dest)
+{
+    uint64_t rval = 0;
+    uint8_t nread = 0;
+    uint8_t byte;
+    do
+    {
+        if (nread >= MAX_INTEGER_SIZE)
+        {
+            file->last_error = MAXAVRO_ERR_VALUE_OVERFLOW;
+            return false;
+        }
+
+        if (file->buffer_ptr < file->buffer_end)
+        {
+            byte = *file->buffer_ptr;
+            file->buffer_ptr++;
+        }
+        else
+        {
+            return false;
+        }
+        rval |= (uint64_t)(byte & 0x7f) << (nread++ * 7);
+    }
+    while (more_bytes(byte));
+
+    if (dest)
+    {
+        *dest = avro_decode(rval);
+    }
+    return true;
+}
+
+bool maxavro_read_integer_from_file(MAXAVRO_FILE* file, uint64_t *dest)
 {
     uint64_t rval = 0;
     uint8_t nread = 0;
@@ -103,28 +136,59 @@ uint64_t avro_length_integer(uint64_t val)
  *
  * @see maxavro_get_error
  */
-char* maxavro_read_string(MAXAVRO_FILE* file)
+char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
 {
     char *key = NULL;
     uint64_t len;
 
     if (maxavro_read_integer(file, &len))
     {
-        key = malloc(len + 1);
+        key = MXS_MALLOC(len + 1);
         if (key)
         {
-            size_t nread = fread(key, 1, len, file->file);
-            if (nread == len)
+            memcpy(key, file->buffer_ptr, len);
+            key[len] = '\0';
+            file->buffer_ptr += len;
+            *size = len;
+        }
+        else
+        {
+            file->last_error = MAXAVRO_ERR_MEMORY;
+        }
+    }
+    return key;
+}
+
+
+/**
+ * @brief Read an Avro string
+ *
+ * The strings are encoded as one Avro integer followed by that many bytes of
+ * data.
+ * @param file File to read from
+ * @return Pointer to newly allocated string or NULL if an error occurred
+ *
+ * @see maxavro_get_error
+ */
+char* maxavro_read_string_from_file(MAXAVRO_FILE* file, size_t* size)
+{
+    char *key = NULL;
+    uint64_t len;
+
+    if (maxavro_read_integer_from_file(file, &len))
+    {
+        key = MXS_MALLOC(len + 1);
+        if (key)
+        {
+            if (fread(key, 1, len, file->file) == len)
             {
                 key[len] = '\0';
+                *size = len;
             }
             else
             {
-                if (nread != 0)
-                {
-                    file->last_error = MAXAVRO_ERR_IO;
-                }
-                free(key);
+                file->last_error = MAXAVRO_ERR_IO;
+                MXS_FREE(key);
                 key = NULL;
             }
         }
@@ -149,14 +213,8 @@ bool maxavro_skip_string(MAXAVRO_FILE* file)
 
     if (maxavro_read_integer(file, &len))
     {
-        if (fseek(file->file, len, SEEK_CUR) != 0)
-        {
-            file->last_error = MAXAVRO_ERR_IO;
-        }
-        else
-        {
-            return true;
-        }
+        file->buffer_ptr += len;
+        return true;
     }
 
     return false;
@@ -186,13 +244,16 @@ uint64_t avro_length_string(const char* str)
  */
 bool maxavro_read_float(MAXAVRO_FILE* file, float *dest)
 {
-    size_t nread = fread(dest, 1, sizeof(*dest), file->file);
-    if (nread != sizeof(*dest) && nread != 0)
+    bool rval = false;
+
+    if (file->buffer_ptr + sizeof(*dest) < file->buffer_end)
     {
-        file->last_error = MAXAVRO_ERR_IO;
-        return false;
+        memcpy(dest, file->buffer_ptr, sizeof(*dest));
+        file->buffer_ptr += sizeof(*dest);
+        rval = true;
     }
-    return nread == sizeof(*dest);
+
+    return rval;
 }
 
 /**
@@ -217,13 +278,16 @@ uint64_t avro_length_float(float val)
  */
 bool maxavro_read_double(MAXAVRO_FILE* file, double *dest)
 {
-    size_t nread = fread(dest, 1, sizeof(*dest), file->file);
-    if (nread != sizeof(*dest) && nread != 0)
+    bool rval = false;
+
+    if (file->buffer_ptr + sizeof(*dest) < file->buffer_end)
     {
-        file->last_error = MAXAVRO_ERR_IO;
-        return false;
+        memcpy(dest, file->buffer_ptr, sizeof(*dest));
+        file->buffer_ptr += sizeof(*dest);
+        rval = true;
     }
-    return nread == sizeof(*dest);
+
+    return rval;
 }
 
 /**
@@ -246,13 +310,12 @@ uint64_t avro_length_double(double val)
  * @return A read map or NULL if an error occurred. The return value needs to be
  * freed with maxavro_map_free().
  */
-MAXAVRO_MAP* maxavro_map_read(MAXAVRO_FILE *file)
+MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE *file)
 {
-
     MAXAVRO_MAP* rval = NULL;
     uint64_t blocks;
 
-    if (!maxavro_read_integer(file, &blocks))
+    if (!maxavro_read_integer_from_file(file, &blocks))
     {
         return NULL;
     }
@@ -261,24 +324,21 @@ MAXAVRO_MAP* maxavro_map_read(MAXAVRO_FILE *file)
     {
         for (long i = 0; i < blocks; i++)
         {
+            size_t size;
             MAXAVRO_MAP* val = calloc(1, sizeof(MAXAVRO_MAP));
-            if (val && (val->key = maxavro_read_string(file)) && (val->value = maxavro_read_string(file)))
+            if (val && (val->key = maxavro_read_string_from_file(file, &size)) && (val->value = maxavro_read_string_from_file(file, &size)))
             {
                 val->next = rval;
                 rval = val;
             }
             else
             {
-                if (val == NULL)
-                {
-                    file->last_error = MAXAVRO_ERR_MEMORY;
-                }
                 maxavro_map_free(val);
                 maxavro_map_free(rval);
                 return NULL;
             }
         }
-        if (!maxavro_read_integer(file, &blocks))
+        if (!maxavro_read_integer_from_file(file, &blocks))
         {
             maxavro_map_free(rval);
             return NULL;
@@ -299,9 +359,9 @@ void maxavro_map_free(MAXAVRO_MAP *value)
     {
         MAXAVRO_MAP* tmp = value;
         value = value->next;
-        free(tmp->key);
-        free(tmp->value);
-        free(tmp);
+        MXS_FREE(tmp->key);
+        MXS_FREE(tmp->value);
+        MXS_FREE(tmp);
     }
 }
 

@@ -3,7 +3,7 @@
 # Copyright (c) 2016 MariaDB Corporation Ab
 #
 # Use of this software is governed by the Business Source License included
-# in the LICENSE.TXT file and at www.mariadb.com/bsl.
+# in the LICENSE.TXT file and at www.mariadb.com/bsl11.
 #
 # Change Date: 2019-07-01
 #
@@ -52,4 +52,4 @@ else:
     sock.send(bytes("QUERY-LAST-TRANSACTION".encode()))
 
 response = sock.recv(1024)
-print(response.decode('ascii'))
+print(response.decode('utf_8'))

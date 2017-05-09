@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -29,8 +29,6 @@ public:
                                            const CACHE_STORAGE_CONFIG& config,
                                            int argc, char* argv[]);
     ~RocksDBStorage();
-
-    static cache_result_t Get_key(const char* zDefault_db, const GWBUF& query, CACHE_KEY* pKey);
 
     void get_config(CACHE_STORAGE_CONFIG* pConfig);
     cache_result_t get_info(uint32_t flags, json_t** ppInfo) const;

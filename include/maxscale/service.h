@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -16,30 +16,16 @@
  * @file service.h
  *
  * The service level definitions within the gateway
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 14/06/13     Mark Riddoch            Initial implementation
- * 18/06/13     Mark Riddoch            Addition of statistics and function
- *                                      prototypes
- * 23/06/13     Mark Riddoch            Added service user and users
- * 06/02/14     Massimiliano Pinto      Added service flag for root user access
- * 25/02/14     Massimiliano Pinto      Added service refresh limit feature
- * 07/05/14     Massimiliano Pinto      Added version_string field to service
- *                                      struct
- * 29/05/14     Mark Riddoch            Filter API mechanism
- * 26/06/14     Mark Riddoch            Added WeightBy support
- * 09/09/14     Massimiliano Pinto      Added service option for localhost authentication
- * 09/10/14     Massimiliano Pinto      Added service resources via hashtable
- * 31/05/16     Martin Brampton         Add fields to support connection throttling
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
+
 #include <time.h>
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/dh.h>
+
 #include <maxscale/protocol.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
@@ -50,17 +36,19 @@
 #include <maxscale/resultset.h>
 #include <maxscale/config.h>
 #include <maxscale/queuemanager.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
 struct server;
-struct router;
-struct router_object;
+struct mxs_router;
+struct mxs_router_object;
 struct users;
+
+#define MAX_SERVICE_USER_LEN 1024
+#define MAX_SERVICE_PASSWORD_LEN 1024
+#define MAX_SERVICE_WEIGHTBY_LEN 1024
+#define MAX_SERVICE_VERSION_LEN 1024
 
 /**
  * The service statistics structure
@@ -81,8 +69,8 @@ typedef struct
 */
 typedef struct
 {
-    char *name;     /**< The user name to use to extract information */
-    char *authdata; /**< The authentication data requied */
+    char name[MAX_SERVICE_USER_LEN];     /**< The user name to use to extract information */
+    char authdata[MAX_SERVICE_PASSWORD_LEN]; /**< The authentication data requied */
 } SERVICE_USER;
 
 /**
@@ -110,7 +98,7 @@ typedef struct server_ref_t
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
 
 /** Value of service timeout if timeout checks are disabled */
-#define SERVICE_NO_SESSION_TIMEOUT LONG_MAX
+#define SERVICE_NO_SESSION_TIMEOUT 0
 
 /**
  * Parameters that are automatically detected but can also be configured by the
@@ -145,9 +133,9 @@ typedef struct service
                                         * that this service will listen on */
     char *routerModule;                /**< Name of router module to use */
     char **routerOptions;              /**< Router specific option strings */
-    struct router_object *router;      /**< The router we are using */
-    void *router_instance;             /**< The router instance for this service */
-    char *version_string;              /**< version string for this service listeners */
+    struct mxs_router_object *router;  /**< The router we are using */
+    struct mxs_router *router_instance;/**< The router instance for this service */
+    char version_string[MAX_SERVICE_VERSION_LEN]; /**< version string for this service listeners */
     SERVER_REF *dbref;                 /**< server references */
     int         n_dbref;               /**< Number of server references */
     SERVICE_USER credentials;          /**< The cedentials of the service user */
@@ -155,7 +143,7 @@ typedef struct service
     SERVICE_STATS stats;               /**< The service statistics */
     int enable_root;                   /**< Allow root user  access */
     int localhost_match_wildcard_host; /**< Match localhost against wildcard */
-    CONFIG_PARAMETER* svc_config_param;/**<  list of config params and values */
+    MXS_CONFIG_PARAMETER* svc_config_param;/**<  list of config params and values */
     int svc_config_version;            /**<  Version number of configuration */
     bool svc_do_shutdown;              /**< tells the service to exit loops etc. */
     bool users_from_all;               /**< Load users from one server or all of them */
@@ -163,14 +151,15 @@ typedef struct service
                                         * when querying them from the server. MySQL Workbench seems
                                         * to escape at least the underscore character. */
     SERVICE_REFRESH_RATE rate_limit;   /**< The refresh rate limit for users table */
-    FILTER_DEF **filters;              /**< Ordered list of filters */
+    MXS_FILTER_DEF **filters;          /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
-    long conn_idle_timeout;            /**< Session timeout in seconds */
-    char *weightby;                    /**< Service weighting parameter name */
+    int64_t conn_idle_timeout;         /**< Session timeout in seconds */
+    char weightby[MAX_SERVICE_WEIGHTBY_LEN]; /**< Service weighting parameter name */
     struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /**< If starting of the service should be retried later */
     bool log_auth_warnings;            /**< Log authentication failures and warnings */
     uint64_t capabilities;             /**< The capabilities of the service. */
+    int max_retry_interval;            /**< Maximum retry interval */
 } SERVICE;
 
 typedef enum count_spec_t
@@ -261,23 +250,90 @@ bool serviceHasBackend(SERVICE *service, SERVER *server);
 bool serviceHasListener(SERVICE *service, const char *protocol,
                         const char* address, unsigned short port);
 
+/**
+ * @brief Check if a MaxScale service listens on a port
+ *
+ * @param port The port to check
+ * @return True if a MaxScale service uses the port
+ */
+bool service_port_is_used(unsigned short port);
+
 int   serviceGetUser(SERVICE *service, char **user, char **auth);
-int   serviceSetUser(SERVICE *service, char *user, char *auth);
+int   serviceSetUser(SERVICE *service, const char *user, const char *auth);
 bool  serviceSetFilters(SERVICE *service, char *filters);
 int   serviceEnableRootUser(SERVICE *service, int action);
 int   serviceSetTimeout(SERVICE *service, int val);
 int   serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout);
-void  serviceSetRetryOnFailure(SERVICE *service, char* value);
-void  serviceWeightBy(SERVICE *service, char *weightby);
-char* serviceGetWeightingParameter(SERVICE *service);
+void  serviceSetRetryOnFailure(SERVICE *service, const char* value);
+void  serviceWeightBy(SERVICE *service, const char *weightby);
+const char* serviceGetWeightingParameter(SERVICE *service);
 int   serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action);
 int   serviceStripDbEsc(SERVICE* service, int action);
 int   serviceAuthAllServers(SERVICE *service, int action);
+void  serviceSetVersionString(SERVICE *service, const char* value);
 int   service_refresh_users(SERVICE *service);
 
 /**
  * Diagnostics
  */
+
+/**
+ * @brief Print service authenticator diagnostics
+ *
+ * @param dcb     DCB to print to
+ * @param service The service to diagnose
+ */
+void service_print_users(DCB *, const SERVICE *);
+
+/**
+ * @brief Convert a service to JSON
+ *
+ * @param service Service to convert
+ * @param host    Hostname of this server
+ *
+ * @return JSON representation of the service
+ */
+json_t* service_to_json(const SERVICE* service, const char* host);
+
+/**
+ * @brief Convert all services to JSON
+ *
+ * @param host Hostname of this server
+ *
+ * @return A JSON array with all services
+ */
+json_t* service_list_to_json(const char* host);
+
+/**
+ * @brief Convert service listeners to JSON
+ *
+ * @param service Service whose listeners are converted
+ * @param host    Hostname of this server
+ *
+ * @return Array of JSON format listeners
+ */
+json_t* service_listeners_to_json(const SERVICE* service, const char* host);
+
+/**
+ * @brief Get links to services that relate to a server
+ *
+ * @param server Server to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of service links
+ */
+json_t* service_relations_to_server(const SERVER* server, const char* host);
+
+/**
+ * @brief Get links to services that relate to a filter
+ *
+ * @param filter Filter to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of service links
+ */
+json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host);
+
 void       dprintAllServices(DCB *dcb);
 void       dprintService(DCB *dcb, SERVICE *service);
 void       dListServices(DCB *dcb);

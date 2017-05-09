@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -23,27 +23,32 @@
  *
  * @endverbatim
  */
+
+#include "maxinfo.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <maxscale/alloc.h>
-#include <maxscale/service.h>
-#include <maxscale/session.h>
-#include <maxscale/router.h>
-#include <maxscale/modules.h>
-#include <maxscale/monitor.h>
-#include <maxscale/version.h>
+#include <maxscale/atomic.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/atomic.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/dcb.h>
-#include <maxscale/maxscale.h>
-#include <maxscale/poll.h>
-#include "maxinfo.h"
-#include <maxscale/log_manager.h>
 #include <maxscale/resultset.h>
-#include <maxscale/config.h>
+#include <maxscale/router.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/version.h>
+
+#include "../../../core/maxscale/maxscale.h"
+#include "../../../core/maxscale/modules.h"
+#include "../../../core/maxscale/monitor.h"
+#include "../../../core/maxscale/poll.h"
+#include "../../../core/maxscale/session.h"
 
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
@@ -67,37 +72,37 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 {
     switch (tree->op)
     {
-        case MAXOP_SHOW:
-            exec_show(dcb, tree);
-            break;
-        case MAXOP_SELECT:
-            exec_select(dcb, tree);
-            break;
+    case MAXOP_SHOW:
+        exec_show(dcb, tree);
+        break;
+    case MAXOP_SELECT:
+        exec_select(dcb, tree);
+        break;
 
-        case MAXOP_FLUSH:
-            exec_flush(dcb, tree);
-            break;
-        case MAXOP_SET:
-            exec_set(dcb, tree);
-            break;
-        case MAXOP_CLEAR:
-            exec_clear(dcb, tree);
-            break;
-        case MAXOP_SHUTDOWN:
-            exec_shutdown(dcb, tree);
-            break;
-        case MAXOP_RESTART:
-            exec_restart(dcb, tree);
-            break;
+    case MAXOP_FLUSH:
+        exec_flush(dcb, tree);
+        break;
+    case MAXOP_SET:
+        exec_set(dcb, tree);
+        break;
+    case MAXOP_CLEAR:
+        exec_clear(dcb, tree);
+        break;
+    case MAXOP_SHUTDOWN:
+        exec_shutdown(dcb, tree);
+        break;
+    case MAXOP_RESTART:
+        exec_restart(dcb, tree);
+        break;
 
-        case MAXOP_TABLE:
-        case MAXOP_COLUMNS:
-        case MAXOP_LITERAL:
-        case MAXOP_PREDICATE:
-        case MAXOP_LIKE:
-        case MAXOP_EQUAL:
-        default:
-            maxinfo_send_error(dcb, 0, "Unexpected operator in parse tree");
+    case MAXOP_TABLE:
+    case MAXOP_COLUMNS:
+    case MAXOP_LITERAL:
+    case MAXOP_PREDICATE:
+    case MAXOP_LIKE:
+    case MAXOP_EQUAL:
+    default:
+        maxinfo_send_error(dcb, 0, "Unexpected operator in parse tree");
     }
 }
 
@@ -548,7 +553,7 @@ void exec_shutdown_monitor(DCB *dcb, MAXINFO_TREE *tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        MONITOR* monitor = monitor_find(tree->value);
+        MXS_MONITOR* monitor = monitor_find(tree->value);
         if (monitor)
         {
             monitorStop(monitor);
@@ -658,7 +663,7 @@ void exec_restart_monitor(DCB *dcb, MAXINFO_TREE *tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        MONITOR* monitor = monitor_find(tree->value);
+        MXS_MONITOR* monitor = monitor_find(tree->value);
         if (monitor)
         {
             monitorStart(monitor, monitor->parameters);
@@ -850,17 +855,17 @@ variable_row(RESULTSET *result, void *data)
         resultset_row_set(row, 0, variables[context->index].name);
         switch (variables[context->index].type)
         {
-            case VT_STRING:
-                resultset_row_set(row, 1,
-                                  (char *)(*variables[context->index].func)());
-                break;
-            case VT_INT:
-                snprintf(buf, 80, "%ld",
-                         (long)(*variables[context->index].func)());
-                resultset_row_set(row, 1, buf);
-                break;
-            default:
-                ss_dassert(!true);
+        case VT_STRING:
+            resultset_row_set(row, 1,
+                              (char *)(*variables[context->index].func)());
+            break;
+        case VT_INT:
+            snprintf(buf, 80, "%ld",
+                     (long)(*variables[context->index].func)());
+            resultset_row_set(row, 1, buf);
+            break;
+        default:
+            ss_dassert(!true);
         }
         context->index++;
         return row;
@@ -1132,17 +1137,17 @@ status_row(RESULTSET *result, void *data)
         resultset_row_set(row, 0, status[context->index].name);
         switch (status[context->index].type)
         {
-            case VT_STRING:
-                resultset_row_set(row, 1,
-                                  (char *)(*status[context->index].func)());
-                break;
-            case VT_INT:
-                snprintf(buf, 80, "%ld",
-                         (long)(*status[context->index].func)());
-                resultset_row_set(row, 1, buf);
-                break;
-            default:
-                ss_dassert(!true);
+        case VT_STRING:
+            resultset_row_set(row, 1,
+                              (char *)(*status[context->index].func)());
+            break;
+        case VT_INT:
+            snprintf(buf, 80, "%ld",
+                     (long)(*status[context->index].func)());
+            resultset_row_set(row, 1, buf);
+            break;
+        default:
+            ss_dassert(!true);
         }
         context->index++;
         return row;

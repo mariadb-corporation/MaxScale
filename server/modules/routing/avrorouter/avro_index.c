@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -33,6 +33,7 @@
  */
 
 #include "avrorouter.h"
+
 #include <maxscale/debug.h>
 #include <glob.h>
 
@@ -72,6 +73,7 @@ int index_query_cb(void *data, int rows, char** values, char** names)
 void avro_index_file(AVRO_INSTANCE *router, const char* filename)
 {
     MAXAVRO_FILE *file = maxavro_file_open(filename);
+
     if (file)
     {
         char *name = strrchr(filename, '/');
@@ -86,18 +88,22 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
 
             snprintf(sql, sizeof(sql), "SELECT position FROM "INDEX_TABLE_NAME
                      " WHERE filename=\"%s\";", name);
+
             if (sqlite3_exec(router->sqlite_handle, sql, index_query_cb, &pos, &errmsg) != SQLITE_OK)
             {
                 MXS_ERROR("Failed to read last indexed position of file '%s': %s",
                           name, errmsg);
+                sqlite3_free(errmsg);
+                maxavro_file_close(file);
+                return;
             }
-            else if (pos > 0)
+
+            /** Continue from last position */
+            if (pos > 0 && !maxavro_record_set_pos(file, pos))
             {
-                /** Continue from last position */
-                maxavro_record_set_pos(file, pos);
+                maxavro_file_close(file);
+                return;
             }
-            sqlite3_free(errmsg);
-            errmsg = NULL;
 
             gtid_pos_t prev_gtid = {0, 0, 0, 0, 0};
 
@@ -164,6 +170,10 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
         }
 
         maxavro_file_close(file);
+    }
+    else
+    {
+        MXS_ERROR("Failed to open file '%s' when generating file index.", filename);
     }
 }
 

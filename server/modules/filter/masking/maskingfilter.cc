@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -13,7 +13,7 @@
 
 #define MXS_MODULE_NAME "masking"
 #include "maskingfilter.hh"
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/modulecmd.h>
 #include "maskingrules.hh"
 
@@ -41,19 +41,11 @@ bool masking_command_reload(const MODULECMD_ARG* pArgs)
     DCB* pDcb = pArgs->argv[0].value.dcb;
     ss_dassert(pDcb);
 
-    const FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
+    const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
     ss_dassert(pFilterDef);
+    MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(filter_def_get_instance(pFilterDef));
 
-    if (strcmp(pFilterDef->module, "masking") == 0)
-    {
-        MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(pFilterDef->filter);
-
-        MXS_EXCEPTION_GUARD(pFilter->reload(pDcb));
-    }
-    else
-    {
-        dcb_printf(pDcb, "Filter %s exists, but it is not a masking filter.", pFilterDef->name);
-    }
+    MXS_EXCEPTION_GUARD(pFilter->reload(pDcb));
 
     return true;
 }
@@ -69,28 +61,38 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static modulecmd_arg_type_t reload_argv[] =
     {
         { MODULECMD_ARG_OUTPUT, "The output dcb" },
-        { MODULECMD_ARG_FILTER, "Masking name" }
+        { MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Masking name" }
     };
 
-    modulecmd_register_command("masking", "reload", masking_command_reload,
+    modulecmd_register_command(MXS_MODULE_NAME, "reload", masking_command_reload,
                                MXS_ARRAY_NELEMS(reload_argv), reload_argv);
 
     MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);
+
+    typedef MaskingFilter::Config Config;
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A masking filter that is capable of masking/obfuscating returned column values.",
         "V1.0.0",
+        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT,
         &MaskingFilter::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
-            {MXS_END_MODULE_PARAMS}
+            { Config::rules_name, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
+            { Config::warn_type_mismatch_name,
+              MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
+              MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values },
+            { Config::large_payload_name,
+              MXS_MODULE_PARAM_ENUM, Config::large_payload_default,
+              MXS_MODULE_OPT_NONE, Config::large_payload_values },
+            { MXS_END_MODULE_PARAMS }
         }
     };
 
@@ -113,26 +115,24 @@ MaskingFilter::~MaskingFilter()
 }
 
 // static
-MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
+MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* pParams)
 {
     MaskingFilter* pFilter = NULL;
 
-    MaskingFilter::Config config(zName);
-    if (process_params(pzOptions, ppParams, config))
-    {
-        auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules_file().c_str());
+    Config config(zName, pParams);
 
-        if (sRules.get())
-        {
-            pFilter = new MaskingFilter(config, sRules);
-        }
+    auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules().c_str());
+
+    if (sRules.get())
+    {
+        pFilter = new MaskingFilter(config, sRules);
     }
 
     return pFilter;
 }
 
 
-MaskingFilterSession* MaskingFilter::newSession(SESSION* pSession)
+MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession)
 {
     return MaskingFilterSession::create(pSession, this);
 }
@@ -144,9 +144,15 @@ void MaskingFilter::diagnostics(DCB* pDcb)
 }
 
 // static
+json_t* MaskingFilter::diagnostics_json() const
+{
+    return NULL;
+}
+
+// static
 uint64_t MaskingFilter::getCapabilities()
 {
-    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
+    return RCAP_TYPE_NONE;
 }
 
 std::tr1::shared_ptr<MaskingRules> MaskingFilter::rules() const
@@ -156,7 +162,7 @@ std::tr1::shared_ptr<MaskingRules> MaskingFilter::rules() const
 
 void MaskingFilter::reload(DCB* pOut)
 {
-    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules_file().c_str());
+    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
 
     if (sRules.get())
     {
@@ -169,48 +175,4 @@ void MaskingFilter::reload(DCB* pOut)
         dcb_printf(pOut, "Could not reload the rules. Check the log file for more "
                    "detailed information.\n");
     }
-}
-
-// static
-bool MaskingFilter::process_params(char **pzOptions, CONFIG_PARAMETER *pParams, Config& config)
-{
-    bool error = false;
-
-    for (const CONFIG_PARAMETER* pParam = pParams; pParam; pParam = pParam->next)
-    {
-        if (strcmp(pParam->name, "rules_file") == 0)
-        {
-            string rules_file;
-
-            if (*pParam->value != '/')
-            {
-                // A relative path is interpreted relative to the data directory.
-                rules_file += get_datadir();
-                rules_file += "/";
-            }
-
-            rules_file += pParam->value;
-
-            config.set_rules_file(rules_file);
-        }
-        else if (!filter_standard_parameter(pParam->name))
-        {
-            MXS_ERROR("Unknown configuration entry '%s'.", pParam->name);
-            error = true;
-        }
-    }
-
-    if (!error)
-    {
-        if (config.rules_file().empty())
-        {
-            MXS_ERROR("In order to use the masking filter, the location of the rules file "
-                      "must be specified. Add a configuration entry 'rules_file=...' in "
-                      "the section [%s], in the MariaDB MaxScale configuration file.",
-                      config.name().c_str());
-            error = true;
-        }
-    }
-
-    return !error;
 }

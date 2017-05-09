@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -22,11 +22,14 @@
  *
  * @endverbatim
  */
+#include "maxscale/secrets.h"
+
 #include <getopt.h>
 #include <stdio.h>
-#include <maxscale/secrets.h>
+
 #include <maxscale/log_manager.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
+#include <maxscale/random_jkiss.h>
 
 struct option options[] =
 {
@@ -92,8 +95,9 @@ int main(int argc, char **argv)
     }
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
+    random_jkiss_init();
 
-    if (secrets_writeKeys(directory) != 0)
+    if (secrets_write_keys(directory) != 0)
     {
         fprintf(stderr, "Failed to create the .secrets file.\n");
         rval = EXIT_FAILURE;

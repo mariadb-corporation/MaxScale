@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -30,10 +30,11 @@
  * @endverbatim
  */
 
+#include "avrorouter.h"
+
 #include <binlog_common.h>
 #include <blr_constants.h>
 #include <sys/stat.h>
-#include "avrorouter.h"
 #include <maxscale/log_manager.h>
 #include <maxscale/pcre2.h>
 #include <ini.h>
@@ -67,7 +68,11 @@ bool avro_open_binlog(const char *binlogdir, const char *file, int *dest)
 
     if ((fd = open(path, O_RDONLY)) == -1)
     {
-        MXS_ERROR("Failed to open binlog file %s.", path);
+        if (errno != ENOENT)
+        {
+            MXS_ERROR("Failed to open binlog file %s: %d, %s", path, errno,
+                      mxs_strerror(errno));
+        }
         return false;
     }
 
@@ -100,7 +105,7 @@ void avro_close_binlog(int fd)
  * @param filepath Path to the created file
  * @param json_schema The schema of the table in JSON format
  */
-AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema)
+AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec, size_t block_size)
 {
     AVRO_TABLE *table = MXS_CALLOC(1, sizeof(AVRO_TABLE));
     if (table)
@@ -117,11 +122,12 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema)
 
         if (access(filepath, F_OK) == 0)
         {
-            rc = avro_file_writer_open(filepath, &table->avro_file);
+            rc = avro_file_writer_open_bs(filepath, &table->avro_file, block_size);
         }
         else
         {
-            rc = avro_file_writer_create(filepath, table->avro_schema, &table->avro_file);
+            rc = avro_file_writer_create_with_codec(filepath, table->avro_schema,
+                                                    &table->avro_file, codec, block_size);
         }
 
         if (rc)
@@ -159,7 +165,6 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
 {
     FILE *config_file;
     char filename[PATH_MAX + 1];
-    char err_msg[MXS_STRERROR_BUFLEN];
 
     snprintf(filename, sizeof(filename), "%s/"AVRO_PROGRESS_FILE".tmp", router->avrodir);
 
@@ -169,7 +174,7 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
     if (config_file == NULL)
     {
         MXS_ERROR("Failed to open file '%s': %d, %s", filename,
-                  errno, strerror_r(errno, err_msg, sizeof(err_msg)));
+                  errno, mxs_strerror(errno));
         return false;
     }
 
@@ -188,7 +193,7 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
     if (rc == -1)
     {
         MXS_ERROR("Failed to rename file '%s' to '%s': %d, %s", filename, newname,
-                  errno, strerror_r(errno, err_msg, sizeof(err_msg)));
+                  errno, mxs_strerror(errno));
         return false;
     }
 
@@ -278,25 +283,25 @@ bool avro_load_conversion_state(AVRO_INSTANCE *router)
 
     switch (rc)
     {
-        case 0:
-            rval = true;
-            MXS_NOTICE("Loaded stored binary log conversion state: File: [%s] Position: [%ld] GTID: [%lu-%lu-%lu:%lu]",
-                       router->binlog_name, router->current_pos, router->gtid.domain,
-                       router->gtid.server_id, router->gtid.seq, router->gtid.event_num);
-            break;
+    case 0:
+        rval = true;
+        MXS_NOTICE("Loaded stored binary log conversion state: File: [%s] Position: [%ld] GTID: [%lu-%lu-%lu:%lu]",
+                   router->binlog_name, router->current_pos, router->gtid.domain,
+                   router->gtid.server_id, router->gtid.seq, router->gtid.event_num);
+        break;
 
-        case -1:
-            MXS_ERROR("Failed to open file '%s'. ", filename);
-            break;
+    case -1:
+        MXS_ERROR("Failed to open file '%s'. ", filename);
+        break;
 
-        case -2:
-            MXS_ERROR("Failed to allocate enough memory when parsing file '%s'. ", filename);
-            break;
+    case -2:
+        MXS_ERROR("Failed to allocate enough memory when parsing file '%s'. ", filename);
+        break;
 
-        default:
-            MXS_ERROR("Failed to parse stored conversion state '%s', error "
-                      "on line %d. ", filename, rc);
-            break;
+    default:
+        MXS_ERROR("Failed to parse stored conversion state '%s', error "
+                  "on line %d. ", filename, rc);
+        break;
     }
 
     return rval;
@@ -418,11 +423,10 @@ static GWBUF* read_event_data(AVRO_INSTANCE *router, REP_HEADER* hdr, uint64_t p
         {
             if (n == -1)
             {
-                char err_msg[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Error reading the event at %lu in %s. "
                           "%s, expected %d bytes.",
                           pos, router->binlog_name,
-                          strerror_r(errno, err_msg, sizeof(err_msg)),
+                          mxs_strerror(errno),
                           hdr->event_size - BINLOG_EVENT_HDR_LEN);
             }
             else
@@ -508,15 +512,13 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
         {
             switch (n)
             {
-                case 0:
-                    break;
-                case -1:
+            case 0:
+                break;
+            case -1:
                 {
-                    char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
-                    strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-                    MXS_ERROR("Failed to read binlog file %s at position %llu"
-                              " (%s).", router->binlog_name,
-                              pos, err_msg);
+                    MXS_ERROR("Failed to read binlog file %s at position %llu (%s).",
+                              router->binlog_name, pos,
+                              mxs_strerror(errno));
 
                     if (errno == EBADF)
                         MXS_ERROR("Bad file descriptor in read binlog for file %s"
@@ -524,12 +526,12 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                                   router->binlog_name, router->binlog_fd);
                     break;
                 }
-                default:
-                    MXS_ERROR("Short read when reading the header. "
-                              "Expected 19 bytes but got %d bytes. "
-                              "Binlog file is %s, position %llu",
-                              n, router->binlog_name, pos);
-                    break;
+            default:
+                MXS_ERROR("Short read when reading the header. "
+                          "Expected 19 bytes but got %d bytes. "
+                          "Binlog file is %s, position %llu",
+                          n, router->binlog_name, pos);
+                break;
             }
 
             router->current_pos = pos;
@@ -624,7 +626,6 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
         {
             int event_header_length;
             int event_header_ntypes;
-            int n_events;
 
             /** Extract the event header lengths */
             event_header_length = ptr[2 + 50 + 4];
@@ -634,28 +635,23 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
 
             switch (event_header_ntypes)
             {
-                case 168: /* mariadb 10 LOG_EVENT_TYPES*/
-                    event_header_ntypes -= 163;
-                    break;
+            case 168: /* mariadb 10 LOG_EVENT_TYPES*/
+                event_header_ntypes -= 163;
+                break;
 
-                case 165: /* mariadb 5 LOG_EVENT_TYPES*/
-                    event_header_ntypes -= 160;
-                    break;
+            case 165: /* mariadb 5 LOG_EVENT_TYPES*/
+                event_header_ntypes -= 160;
+                break;
 
-                default: /* mysql 5.6 LOG_EVENT_TYPES = 35 */
-                    event_header_ntypes -= 35;
-                    break;
+            default: /* mysql 5.6 LOG_EVENT_TYPES = 35 */
+                event_header_ntypes -= 35;
+                break;
             }
 
-            n_events = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
-
-            if (event_header_ntypes < n_events)
+            uint8_t *checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
+            if (checksum[0] == 1)
             {
-                uint8_t *checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
-                if (checksum[0] == 1)
-                {
-                    found_chksum = true;
-                }
+                found_chksum = true;
             }
         }
         /* Decode CLOSE/STOP Event */
@@ -744,7 +740,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                 router->trx_count >= router->trx_target)
             {
                 update_used_tables(router);
-                avro_flush_all_tables(router, false);
+                avro_flush_all_tables(router, AVROROUTER_SYNC);
                 avro_save_conversion_state(router);
                 notify_all_clients(router);
                 total_rows += router->row_count;
@@ -884,9 +880,6 @@ void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush)
         }
         hashtable_iterator_free(iter);
     }
-
-    /** Update the GTID index */
-    avro_update_index(router);
 }
 
 /**

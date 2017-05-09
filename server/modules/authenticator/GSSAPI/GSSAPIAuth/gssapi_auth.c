@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -11,17 +11,17 @@
  * Public License.
  */
 
-#include <maxscale/gw_authenticator.h>
+#define MXS_MODULE_NAME "GSSAPIAuth"
+
+#include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/sqlite3.h>
 #include "../gssapi_auth.h"
-
-/** Default timeout is one minute */
-#define MXS_SQLITE_BUSY_TIMEOUT 60000
 
 /**
  * MySQL queries for retrieving the list of users
@@ -29,16 +29,16 @@
 
 /** Query that gets all users that authenticate via the gssapi plugin */
 const char *gssapi_users_query =
-    "SELECT u.user, u.host, d.db, u.select_priv FROM "
+    "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
     "mysql.user AS u LEFT JOIN mysql.db AS d "
     "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'gssapi' "
     "UNION "
-    "SELECT u.user, u.host, t.db, u.select_priv FROM "
+    "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
     "mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
     "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'gssapi' "
     "ORDER BY user";
 
-#define GSSAPI_USERS_QUERY_NUM_FIELDS 4
+#define GSSAPI_USERS_QUERY_NUM_FIELDS 5
 
 /**
  * SQLite queries for authenticating users
@@ -53,19 +53,25 @@ const char *gssapi_users_query =
 /** CREATE TABLE statement for the in-memory table */
 const char create_sql[] =
     "CREATE TABLE IF NOT EXISTS " GSSAPI_TABLE_NAME
-    "(user varchar(255), host varchar(255), db varchar(255), anydb boolean)";
+    "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, princ text)";
 
 /** The query that is executed when a user is authenticated */
 static const char gssapi_auth_query[] =
     "SELECT * FROM " GSSAPI_TABLE_NAME
-    " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db) LIMIT 1";
+    " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
+    " AND ('%s' = '%s' OR princ = '%s') LIMIT 1";
 
 /** Delete query used to clean up the database before loading new users */
 static const char delete_query[] = "DELETE FROM " GSSAPI_TABLE_NAME;
 
-/** The insert query template which adds users to the gssapi_users table */
+/**
+ * The insert query template which adds users to the gssapi_users table.
+ *
+ * Note that the last two values are strings that can be NULL and thus they have
+ * no quoted around them. The quotes for strings are added in add_gssapi_user().
+ */
 static const char insert_sql_pattern[] =
-    "INSERT INTO " GSSAPI_TABLE_NAME " VALUES ('%s', '%s', %s, %s)";
+    "INSERT INTO " GSSAPI_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
 
 /** Used for NULL value creation in the INSERT query */
 static const char null_token[] = "NULL";
@@ -276,20 +282,20 @@ static int gssapi_auth_extract(DCB *dcb, GWBUF *read_buffer)
 
     switch (auth->state)
     {
-        case GSSAPI_AUTH_INIT:
-            copy_client_information(dcb, read_buffer);
-            rval = MXS_AUTH_SUCCEEDED;
-            break;
+    case GSSAPI_AUTH_INIT:
+        copy_client_information(dcb, read_buffer);
+        rval = MXS_AUTH_SUCCEEDED;
+        break;
 
-        case GSSAPI_AUTH_DATA_SENT:
-            store_client_token(dcb, read_buffer);
-            rval = MXS_AUTH_SUCCEEDED;
-            break;
+    case GSSAPI_AUTH_DATA_SENT:
+        store_client_token(dcb, read_buffer);
+        rval = MXS_AUTH_SUCCEEDED;
+        break;
 
-        default:
-            MXS_ERROR("Unexpected authentication state: %d", auth->state);
-            ss_dassert(false);
-            break;
+    default:
+        MXS_ERROR("Unexpected authentication state: %d", auth->state);
+        ss_dassert(false);
+        break;
     }
 
     return rval;
@@ -314,9 +320,10 @@ static gss_name_t server_name = GSS_C_NO_NAME;
  *
  * @param token Client token
  * @param len Length of the token
+ * @param output Pointer where the client principal name is stored
  * @return True if client token is valid
  */
-static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len)
+static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, char **output)
 {
     OM_uint32 major = 0, minor = 0;
     gss_buffer_desc server_buf = {0, 0};
@@ -348,21 +355,41 @@ static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len)
         gss_ctx_id_t handle = NULL;
         gss_buffer_desc in = {0, 0};
         gss_buffer_desc out = {0, 0};
+        gss_buffer_desc client_name = {0, 0};
         gss_OID_desc *oid;
-
+        gss_name_t client;
 
         in.value = token;
         in.length = len;
 
         major = gss_accept_sec_context(&minor, &handle, GSS_C_NO_CREDENTIAL,
                                        &in, GSS_C_NO_CHANNEL_BINDINGS,
-                                       &server_name, &oid, &out,
+                                       &client, &oid, &out,
                                        0, 0, NULL);
         if (GSS_ERROR(major))
         {
-            return false;
             report_error(major, minor);
+            return false;
         }
+
+        major = gss_display_name(&minor, client, &client_name, NULL);
+
+        if (GSS_ERROR(major))
+        {
+            report_error(major, minor);
+            return false;
+        }
+
+        char *princ_name = MXS_MALLOC(client_name.length + 1);
+
+        if (!princ_name)
+        {
+            return false;
+        }
+
+        memcpy(princ_name, (const char*)client_name.value, client_name.length);
+        princ_name[client_name.length] = '\0';
+        *output = princ_name;
     }
     while (major & GSS_S_CONTINUE_NEEDED);
 
@@ -383,17 +410,28 @@ static int auth_cb(void *data, int columns, char** rows, char** row_names)
  * @param auth Authenticator session
  * @param dcb Client DCB
  * @param session MySQL session
+ * @param princ Client principal name
  * @return True if the user has access to the database
  */
-static bool validate_user(gssapi_auth_t *auth, DCB *dcb, MYSQL_session *session)
+static bool validate_user(gssapi_auth_t *auth, DCB *dcb, MYSQL_session *session, const char *princ)
 {
-    size_t len = sizeof(gssapi_auth_query) + strlen(session->user) +
-                 strlen(session->db) + strlen(dcb->remote);
+    ss_dassert(princ);
+    size_t len = sizeof(gssapi_auth_query) + strlen(session->user) * 2 +
+                 strlen(session->db) * 2 + strlen(dcb->remote) + strlen(princ) * 2;
     char sql[len + 1];
     bool rval = false;
     char *err;
 
-    sprintf(sql, gssapi_auth_query, session->user, dcb->remote, session->db, session->db);
+    char princ_user[strlen(princ) + 1];
+    strcpy(princ_user, princ);
+    char *at = strchr(princ_user, '@');
+    if (at)
+    {
+        *at = '\0';
+    }
+
+    sprintf(sql, gssapi_auth_query, session->user, dcb->remote, session->db,
+            session->db, princ_user, session->user, princ);
 
     /**
      * Try authentication twice; first time with the current users, second
@@ -450,12 +488,15 @@ int gssapi_auth_authenticate(DCB *dcb)
          * token that we must validate */
 
         MYSQL_session *ses = (MYSQL_session*)dcb->data;
+        char *princ = NULL;
 
-        if (validate_gssapi_token(instance->principal_name, ses->auth_token, ses->auth_token_len) &&
-            validate_user(auth, dcb, ses))
+        if (validate_gssapi_token(instance->principal_name, ses->auth_token, ses->auth_token_len, &princ) &&
+            validate_user(auth, dcb, ses, princ))
         {
             rval = MXS_AUTH_SUCCEEDED;
         }
+
+        MXS_FREE(princ);
     }
 
     return rval;
@@ -502,7 +543,7 @@ static void delete_old_users(sqlite3 *handle)
  * @param anydb  Global access to databases
  */
 static void add_gssapi_user(sqlite3 *handle, const char *user, const char *host,
-                            const char *db, bool anydb)
+                            const char *db, bool anydb, const char *princ)
 {
     size_t dblen = db ? strlen(db) + 2 : sizeof(null_token); /** +2 for single quotes */
     char dbstr[dblen + 1];
@@ -516,9 +557,22 @@ static void add_gssapi_user(sqlite3 *handle, const char *user, const char *host,
         strcpy(dbstr, null_token);
     }
 
-    size_t len = sizeof(insert_sql_pattern) + strlen(user) + strlen(host) + dblen + 1;
+    size_t princlen = princ && *princ ? strlen(princ) + 2 : sizeof(null_token); /** +2 for single quotes */
+    char princstr[princlen + 1];
+
+    if (princ && *princ)
+    {
+        sprintf(princstr, "'%s'", princ);
+    }
+    else
+    {
+        strcpy(princstr, null_token);
+    }
+
+    size_t len = sizeof(insert_sql_pattern) + strlen(user) + strlen(host) + dblen + princlen + 1;
+
     char insert_sql[len + 1];
-    sprintf(insert_sql, insert_sql_pattern, user, host, dbstr, anydb ? "1" : "0");
+    sprintf(insert_sql, insert_sql_pattern, user, host, dbstr, anydb ? "1" : "0", princstr);
 
     char *err;
     if (sqlite3_exec(handle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
@@ -545,7 +599,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
     int rval = MXS_AUTH_LOADUSERS_ERROR;
     GSSAPI_INSTANCE *inst = (GSSAPI_INSTANCE*)listener->auth_instance;
 
-    if (serviceGetUser(listener->service, &user, &pw) && (pw = decryptPassword(pw)))
+    if (serviceGetUser(listener->service, &user, &pw) && (pw = decrypt_password(pw)))
     {
         for (SERVER_REF *servers = listener->service->dbref; servers; servers = servers->next)
         {
@@ -572,7 +626,8 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
                         while ((row = mysql_fetch_row(res)))
                         {
                             add_gssapi_user(inst->handle, row[0], row[1], row[2],
-                                            row[3] && strcasecmp(row[3], "Y") == 0);
+                                            row[3] && strcasecmp(row[3], "Y") == 0,
+                                            row[4]);
                         }
 
                         rval = MXS_AUTH_LOADUSERS_OK;
@@ -600,7 +655,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         gssapi_auth_init,                /* Initialize authenticator */
         gssapi_auth_alloc,               /* Allocate authenticator data */
@@ -609,16 +664,20 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gssapi_auth_authenticate,        /* Authenticate user credentials */
         gssapi_auth_free_data,           /* Free the client data held in DCB */
         gssapi_auth_free,                /* Free authenticator data */
-        gssapi_auth_load_users           /* Load database users */
+        gssapi_auth_load_users,          /* Load database users */
+        users_default_diagnostic,        /* Default user diagnostic */
+        users_default_diagnostic_json,   /* Default user diagnostic */
+        NULL                             /* No user reauthentication */
     };
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "GSSAPI authenticator",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

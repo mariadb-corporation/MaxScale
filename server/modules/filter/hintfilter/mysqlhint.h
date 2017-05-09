@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -90,11 +90,11 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM  down;
-    GWBUF       *request;
-    int     query_len;
-    HINTSTACK   *stack;
-    NAMEDHINTS  *named_hints;   /* The named hints defined in this session */
+    MXS_DOWNSTREAM  down;
+    GWBUF          *request;
+    int             query_len;
+    HINTSTACK      *stack;
+    NAMEDHINTS     *named_hints;   /* The named hints defined in this session */
 } HINT_SESSION;
 
 /* Some useful macros */

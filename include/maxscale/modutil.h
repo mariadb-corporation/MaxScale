@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,16 +14,6 @@
 
 /**
  * @file modutil.h A set of useful routines for module writers
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 04/06/14     Mark Riddoch            Initial implementation
- * 24/06/14     Mark Riddoch            Add modutil_MySQL_Query to enable multipacket queries
- * 24/10/14     Massimiliano Pinto      Add modutil_send_mysql_err_packet to send a mysql ERR_Packet
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
@@ -40,8 +30,6 @@ MXS_BEGIN_DECLS
 #define PTR_IS_ERR(b) (b[4] == 0xff)
 #define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
 #define IS_FULL_RESPONSE(buf) (modutil_count_signal_packets(buf,0,0) == 2)
-#define PTR_EOF_MORE_RESULTS(b) ((PTR_IS_EOF(b) && ptr[7] & 0x08))
-
 
 extern int      modutil_is_SQL(GWBUF *);
 extern int      modutil_is_SQL_prepare(GWBUF *);
@@ -63,8 +51,50 @@ GWBUF*          modutil_create_mysql_err_msg(int             packet_number,
                                              int             merrno,
                                              const char      *statemsg,
                                              const char      *msg);
-int modutil_count_signal_packets(GWBUF*, int, int, int*);
+
+/**
+ * @brief Count the number of EOF and ERR packets in the buffer.
+ *
+ * Only complete packets are inspected and the buffer is assumed to only contain
+ * whole packets. If partial packets are in the buffer, they are ignored.
+ * The caller must handle the detection of partial packets in buffers.
+ *
+ * @param reply      Buffer to use
+ * @param n_found    Number of previous found packets
+ * @param more       Set to true of more results exist
+ *
+ * @return Total number of EOF and ERR packets including the ones already found
+ */
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more);
+
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
+
+/**
+ * Given a buffer containing a MySQL statement, this function will return
+ * a pointer to the first character that is not whitespace. In this context,
+ * comments are also counted as whitespace. For instance:
+ *
+ *    "SELECT"                    => "SELECT"
+ *    "  SELECT                   => "SELECT"
+ *    " / * A comment * / SELECT" => "SELECT"
+ *    "-- comment\nSELECT"        => "SELECT"
+ *
+ *  @param sql  Pointer to buffer containing a MySQL statement
+ *  @param len  Length of sql.
+ *
+ *  @return The first non whitespace (including comments) character. If the
+ *          entire buffer is only whitespace, the returned pointer will point
+ *          to the character following the buffer (i.e. sql + len).
+ */
+char* modutil_MySQL_bypass_whitespace(char* sql, size_t len);
+
+/**
+ * @brief Write a COM_PING to a DCB and ignore the response
+ *
+ * @param dcb The backend DCB where the COM_PING is written
+ * @return True if command was successfully sent
+ */
+bool modutil_ignorable_ping(DCB *dcb);
 
 /** Character and token searching functions */
 char* strnchr_esc(char* ptr, char c, int len);

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#define MXS_MODULE_NAME "ccrfilter"
+
 #include <stdio.h>
 #include <maxscale/filter.h>
 #include <maxscale/modinfo.h>
@@ -46,14 +49,15 @@
  * @endverbatim
  */
 
-static  FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
-static  void   *newSession(FILTER *instance, SESSION *session);
-static  void   closeSession(FILTER *instance, void *session);
-static  void   freeSession(FILTER *instance, void *session);
-static  void   setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static  int    routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static  void   diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static  MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
+static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
+static  void   closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static  void   freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static  void   setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static  int    routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static  void   diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static  json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static uint64_t getCapabilities(MXS_FILTER* instance);
 
 #define CCR_DEFAULT_TIME "60"
 
@@ -86,10 +90,18 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM down;              /*< The downstream filter */
-    int        hints_left;        /*< Number of hints left to add to queries*/
-    time_t     last_modification; /*< Time of the last data modifying operation */
+    MXS_DOWNSTREAM down;              /*< The downstream filter */
+    int            hints_left;        /*< Number of hints left to add to queries*/
+    time_t         last_modification; /*< Time of the last data modifying operation */
 } CCR_SESSION;
+
+static const MXS_ENUM_VALUE option_values[] =
+{
+    {"ignorecase", REG_ICASE},
+    {"case",       0},
+    {"extended",   REG_EXTENDED},
+    {NULL}
+};
 
 /**
  * The module entry point routine. It is this routine that
@@ -101,7 +113,7 @@ typedef struct
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -112,6 +124,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No clientReply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -120,9 +133,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A routing hint filter that send queries to the master after data modification",
         "V1.1.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -133,6 +147,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"time", MXS_MODULE_PARAM_COUNT, CCR_DEFAULT_TIME},
             {"match", MXS_MODULE_PARAM_STRING},
             {"ignore", MXS_MODULE_PARAM_STRING},
+            {
+             "options",
+             MXS_MODULE_PARAM_ENUM,
+             "ignorecase",
+             MXS_MODULE_OPT_NONE,
+             option_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -150,68 +171,39 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static FILTER *
-createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+static MXS_FILTER *
+createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    CCR_INSTANCE *my_instance;
-    int i;
-    int cflags = REG_ICASE;
+    CCR_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(CCR_INSTANCE));
 
-    if ((my_instance = MXS_CALLOC(1, sizeof(CCR_INSTANCE))) != NULL)
+    if (my_instance)
     {
         my_instance->count = config_get_integer(params, "count");
-        my_instance->time = config_get_integer(params, "count");
+        my_instance->time = config_get_integer(params, "time");
         my_instance->stats.n_add_count = 0;
         my_instance->stats.n_add_time = 0;
         my_instance->stats.n_modified = 0;
-        my_instance->match = NULL;
-        my_instance->nomatch = NULL;
 
-        if (options)
-        {
-            for (i = 0; options[i]; i++)
-            {
-                if (!strcasecmp(options[i], "ignorecase"))
-                {
-                    cflags |= REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "case"))
-                {
-                    cflags &= ~REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "extended"))
-                {
-                    cflags |= REG_EXTENDED;
-                }
-                else
-                {
-                    MXS_ERROR("ccrfilter: unsupported option '%s'.", options[i]);
-                }
-            }
-        }
+        int cflags = config_get_enum(params, "options", option_values);
 
-        const char *match = config_get_string(params, "match");
-
-        if (*match && (my_instance->match = MXS_STRDUP(match)))
+        if ((my_instance->match = config_copy_string(params, "match")))
         {
             if (regcomp(&my_instance->re, my_instance->match, cflags))
             {
-                MXS_ERROR("ccrfilter: Failed to compile regex '%s'.", my_instance->match);
+                MXS_ERROR("Failed to compile regex '%s'.", my_instance->match);
             }
         }
 
-        const char *ignore = config_get_string(params, "ignore");
-
-        if (*ignore && (my_instance->nomatch = MXS_STRDUP(ignore)))
+        if ((my_instance->nomatch = config_copy_string(params, "ignore")))
         {
             if (regcomp(&my_instance->nore, my_instance->nomatch, cflags))
             {
-                MXS_ERROR("ccrfilter: Failed to compile regex '%s'.", my_instance->nomatch);
+                MXS_ERROR("Failed to compile regex '%s'.", my_instance->nomatch);
             }
         }
     }
 
-    return (FILTER *)my_instance;
+    return (MXS_FILTER *)my_instance;
 }
 
 /**
@@ -222,10 +214,9 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  *
  * @return Session specific data for this session
  */
-static void *
-newSession(FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
-    CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     CCR_SESSION  *my_session = MXS_MALLOC(sizeof(CCR_SESSION));
 
     if (my_session)
@@ -234,7 +225,7 @@ newSession(FILTER *instance, SESSION *session)
         my_session->last_modification = 0;
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -245,7 +236,7 @@ newSession(FILTER *instance, SESSION *session)
  * @param session   The session being closed
  */
 static  void
-closeSession(FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
 }
 
@@ -256,7 +247,7 @@ closeSession(FILTER *instance, void *session)
  * @param session   The session being closed
  */
 static void
-freeSession(FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     MXS_FREE(session);
 }
@@ -269,7 +260,7 @@ freeSession(FILTER *instance, void *session)
  * @param downstream  The downstream filter or router
  */
 static void
-setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     CCR_SESSION *my_session = (CCR_SESSION *)session;
 
@@ -291,7 +282,7 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param queue     The query data
  */
 static int
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     CCR_SESSION  *my_session = (CCR_SESSION *)session;
@@ -304,7 +295,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
          * Not a simple SELECT statement, possibly modifies data. If we're processing a statement
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement.
          */
-        if ((qc_get_operation(queue) & ~QUERY_OP_SELECT) != 0)
+        if (qc_query_is_type(qc_get_type_mask(queue), QUERY_TYPE_WRITE))
         {
             if ((sql = modutil_get_SQL(queue)) != NULL)
             {
@@ -314,8 +305,18 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                     if (my_instance->match == NULL ||
                         (my_instance->match && regexec(&my_instance->re, sql, 0, NULL, 0) == 0))
                     {
-                        my_session->hints_left = my_instance->count;
-                        my_session->last_modification = now;
+                        if (my_instance->count)
+                        {
+                            my_session->hints_left = my_instance->count;
+                            MXS_INFO("Write operation detected, next %d queries routed to master", my_instance->count);
+                        }
+
+                        if (my_instance->time)
+                        {
+                            my_session->last_modification = now;
+                            MXS_INFO("Write operation detected, queries routed to master for %d seconds", my_instance->time);
+                        }
+
                         my_instance->stats.n_modified++;
                     }
                 }
@@ -328,11 +329,18 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
             my_session->hints_left--;
             my_instance->stats.n_add_count++;
+            MXS_INFO("%d queries left", my_instance->time);
         }
-        else if (difftime(now, my_session->last_modification) < my_instance->time)
+        else if (my_instance->time)
         {
-            queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
-            my_instance->stats.n_add_time++;
+            double dt = difftime(now, my_session->last_modification);
+
+            if (dt < my_instance->time)
+            {
+                queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
+                my_instance->stats.n_add_time++;
+                MXS_INFO("%.0f seconds left", dt);
+            }
         }
     }
 
@@ -353,10 +361,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param dcb       The DCB for diagnostic output
  */
 static void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
-    CCR_SESSION  *my_session = (CCR_SESSION *)fsession;
 
     dcb_printf(dcb, "Configuration:\n\tCount: %d\n", my_instance->count);
     dcb_printf(dcb, "\tTime: %d seconds\n", my_instance->time);
@@ -378,11 +385,47 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 }
 
 /**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param instance  The filter instance
+ * @param fsession  Filter session, may be NULL
+ * @param dcb       The DCB for diagnostic output
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "count", json_integer(my_instance->count));
+    json_object_set_new(rval, "time", json_integer(my_instance->time));
+
+    if (my_instance->match)
+    {
+        json_object_set_new(rval, "match", json_string(my_instance->match));
+    }
+
+    if (my_instance->nomatch)
+    {
+        json_object_set_new(rval, "nomatch", json_string(my_instance->nomatch));
+    }
+
+    json_object_set_new(rval, "data_modifications", json_integer(my_instance->stats.n_modified));
+    json_object_set_new(rval, "hints_added_count", json_integer(my_instance->stats.n_add_count));
+    json_object_set_new(rval, "hints_added_time", json_integer(my_instance->stats.n_add_time));
+
+    return rval;
+}
+
+/**
  * Capability routine.
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }

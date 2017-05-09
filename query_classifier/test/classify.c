@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -20,7 +20,7 @@
 #include <maxscale/buffer.h>
 #include <mysql.h>
 #include <unistd.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 
 char* append(char* types, const char* type_name, size_t* lenp)
@@ -208,7 +208,7 @@ int test(FILE* input, FILE* expected)
             memmove(strbuff, tok + 1, strsz - qlen);
             strsz -= qlen;
             memset(strbuff + strsz, 0, buffsz - strsz);
-            qc_query_type_t type = qc_get_type(buff);
+            qc_query_type_t type = qc_get_type_mask(buff);
             char expbuff[256];
             int expos = 0;
 
@@ -314,10 +314,10 @@ int main(int argc, char** argv)
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup(lib, NULL) && qc_process_init())
+            if (qc_setup(lib, NULL) && qc_process_init(QC_INIT_BOTH))
             {
                 rc = run(input_name, expected_name);
-                qc_process_end();
+                qc_process_end(QC_INIT_BOTH);
             }
             else
             {

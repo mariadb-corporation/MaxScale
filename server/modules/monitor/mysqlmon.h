@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -48,7 +48,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/config.h>
-#include <maxscale/externcmd.h>
 #include <maxscale/hashtable.h>
 
 MXS_BEGIN_DECLS
@@ -58,7 +57,6 @@ MXS_BEGIN_DECLS
  */
 typedef struct
 {
-    SPINLOCK lock; /**< The monitor spinlock */
     THREAD thread; /**< Monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
     int status; /**< Monitor status */
@@ -71,15 +69,49 @@ typedef struct
     int availableWhenDonor; /**< Monitor flag for Galera Cluster Donor availability */
     int disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
     bool mysql51_replication; /**< Use MySQL 5.1 replication */
-    MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
+    MXS_MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
-    bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+    uint64_t events; /*< enabled events */
     HASHTABLE *server_info; /**< Contains server specific information */
-    bool failover; /**< If simple failover is enabled */
+    bool detect_standalone_master; /**< If standalone master are detected */
     int failcount; /**< How many monitoring cycles servers must be
                                    down before failover is initiated */
+    bool allow_cluster_recovery; /**< Allow failed servers to rejoin the cluster */
     bool warn_failover; /**< Log a warning when failover happens */
+    bool load_journal; /**< Whether journal file should be loaded */
+    time_t journal_max_age; /**< Maximum age of journal file */
+    MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
+
+/**
+ * @brief Store a journal of server states
+ *
+ * @param monitor Monitor to journal
+ */
+void store_server_journal(MXS_MONITOR *monitor);
+
+/**
+ * @brief Load a journal of server states
+ *
+ * @param monitor Monitor where journal is loaded
+ */
+void load_server_journal(MXS_MONITOR *monitor);
+
+/**
+ * @brief Remove stored journal file
+ *
+ * @param monitor Monitor whose journal is removed
+ */
+void remove_server_journal(MXS_MONITOR *monitor);
+
+/**
+ * @brief Check whether the journal is too old
+ *
+ * @param monitor Monitor to check
+ * @return True if journal is stale or an error occurred while reading the file.
+ * False if the file is still valid.
+ */
+bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age);
 
 MXS_END_DECLS
 

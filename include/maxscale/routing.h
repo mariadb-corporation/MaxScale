@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -43,7 +43,7 @@ typedef enum routing_capability
     /** Result sets are delivered in one buffer; implies RCAP_TYPE_STMT_OUTPUT. */
     RCAP_TYPE_RESULTSET_OUTPUT      = 0x0050, /* 0b0000000001110000 */
 
-} routing_capability_t;
+} mxs_routing_capability_t;
 
 #define RCAP_TYPE_NONE 0
 

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,6 +14,8 @@
 /**
  * @file auroramon.c - Amazon RDS Aurora monitor
  */
+
+#define MXS_MODULE_NAME "auroramon"
 
 #include <maxscale/modinfo.h>
 #include <maxscale/thread.h>
@@ -27,7 +29,8 @@ typedef struct aurora_monitor
     bool   shutdown;            /**< True if the monitor is stopped */
     THREAD thread;              /**< Monitor thread */
     char*  script;              /**< Launchable script */
-    bool   events[MAX_MONITOR_EVENT]; /**< Enabled monitor events */
+    uint64_t   events;          /**< Enabled monitor events */
+    MXS_MONITOR* monitor;
 } AURORA_MONITOR;
 
 /**
@@ -40,7 +43,7 @@ typedef struct aurora_monitor
  * @param monitor  Monitor object
  * @param database Server whose status should be updated
  */
-void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
+void update_server_status(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *database)
 {
     if (!SERVER_IN_MAINT(database->server))
     {
@@ -49,7 +52,7 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
         database->mon_prev_status = database->server->status;
 
         /** Try to connect to or ping the database */
-        connect_result_t rval = mon_connect_to_db(monitor, database);
+        mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor, database);
 
         if (rval == MONITOR_CONN_OK)
         {
@@ -77,7 +80,7 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
             }
             else
             {
-                MXS_ERROR("Failed to query server %s (%s:%d): %d, %s",
+                MXS_ERROR("Failed to query server %s ([%s]:%d): %d, %s",
                           database->server->unique_name, database->server->name,
                           database->server->port, mysql_errno(database->con),
                           mysql_error(database->con));
@@ -102,39 +105,6 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
 }
 
 /**
- * @brief Check if this is an event that the Aurora monitor handles
- * @param event Event to check
- * @return True if the event is monitored, false if it is not
- * */
-bool is_aurora_event(monitor_event_t event)
-{
-    static monitor_event_t aurora_events[] =
-    {
-        MASTER_DOWN_EVENT,
-        MASTER_UP_EVENT,
-        SLAVE_DOWN_EVENT,
-        SLAVE_UP_EVENT,
-        SERVER_DOWN_EVENT,
-        SERVER_UP_EVENT,
-        LOST_MASTER_EVENT,
-        LOST_SLAVE_EVENT,
-        NEW_MASTER_EVENT,
-        NEW_SLAVE_EVENT,
-        MAX_MONITOR_EVENT
-    };
-
-    for (int i = 0; aurora_events[i] != MAX_MONITOR_EVENT; i++)
-    {
-        if (event == aurora_events[i])
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
  * @brief Main monitoring loop
  *
  * @param arg The MONITOR object for this monitor
@@ -142,8 +112,8 @@ bool is_aurora_event(monitor_event_t event)
 static void
 monitorMain(void *arg)
 {
-    MONITOR *monitor = (MONITOR*)arg;
-    AURORA_MONITOR *handle = monitor->handle;
+    AURORA_MONITOR *handle = (AURORA_MONITOR*)arg;
+    MXS_MONITOR *monitor = handle->monitor;
 
     if (mysql_thread_init())
     {
@@ -156,7 +126,7 @@ monitorMain(void *arg)
         lock_monitor_servers(monitor);
         servers_status_pending_to_current(monitor);
 
-        for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+        for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
         {
             update_server_status(monitor, ptr);
 
@@ -170,25 +140,9 @@ monitorMain(void *arg)
         /**
          * After updating the status of all servers, check if monitor events
          * need to be launched.
-         *
-         * TODO: Move this functionality into monitor.c, it is duplicated in
-         * every monitor.
          */
-        for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
-        {
-            if (mon_status_changed(ptr))
-            {
-                monitor_event_t evtype = mon_get_event_type(ptr);
-                if (is_aurora_event(evtype))
-                {
-                    mon_log_state_change(ptr);
-                    if (handle->script && handle->events[evtype])
-                    {
-                        monitor_launch_script(monitor, ptr, handle->script);
-                    }
-                }
-            }
-        }
+        mon_process_state_changes(monitor, handle->script, handle->events);
+
         servers_status_current_to_pending(monitor);
         release_monitor_servers(monitor);
 
@@ -201,8 +155,8 @@ monitorMain(void *arg)
                 // Admin has changed something, skip sleep
                 break;
             }
-            thread_millisleep(MON_BASE_INTERVAL_MS);
-            ms += MON_BASE_INTERVAL_MS;
+            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
+            ms += MXS_MON_BASE_INTERVAL_MS;
         }
     }
 
@@ -231,14 +185,14 @@ static void auroramon_free(AURORA_MONITOR *handle)
  * @return Monitor handle
  */
 static void *
-startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    bool have_events = false, script_error = false;
     AURORA_MONITOR *handle = mon->handle;
 
     if (handle)
     {
         handle->shutdown = false;
+        MXS_FREE(handle->script);
     }
     else
     {
@@ -248,35 +202,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         }
 
         handle->shutdown = false;
-        handle->script = NULL;
-        memset(handle->events, false, sizeof(handle->events));
-
-        while (params)
-        {
-            if (strcmp(params->name, "script") == 0)
-            {
-                if (externcmd_can_execute(params->value))
-                {
-                    handle->script = MXS_STRDUP_A(params->value);
-                }
-                else
-                {
-                    script_error = true;
-                }
-            }
-            else if (strcmp(params->name, "events") == 0)
-            {
-                if (mon_parse_event_string(handle->events, sizeof(handle->events), params->value) != 0)
-                {
-                    script_error = true;
-                }
-                else
-                {
-                    have_events = true;
-                }
-            }
-            params = params->next;
-        }
+        handle->monitor = mon;
 
         if (!check_monitor_permissions(mon, "SELECT @@aurora_server_id, server_id FROM "
                                        "information_schema.replica_host_status "
@@ -286,23 +212,12 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
             auroramon_free(handle);
             return NULL;
         }
-
-        if (script_error)
-        {
-            MXS_ERROR("Errors were found in the script configuration parameters "
-                      "for the monitor '%s'.", mon->name);
-            auroramon_free(handle);
-            return NULL;
-        }
-
-        /** If no specific events are given, enable them all */
-        if (!have_events)
-        {
-            memset(handle->events, true, sizeof(handle->events));
-        }
     }
 
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    handle->script = config_copy_string(params, "script");
+    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
         auroramon_free(handle);
@@ -318,7 +233,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MONITOR *mon)
+stopMonitor(MXS_MONITOR *mon)
 {
     AURORA_MONITOR *handle = (AURORA_MONITOR *) mon->handle;
 
@@ -333,8 +248,19 @@ stopMonitor(MONITOR *mon)
  * @param mon   The monitor
  */
 static void
-diagnostics(DCB *dcb, const MONITOR *mon)
+diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param dcb   DCB to send output
+ * @param mon   The monitor
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
+{
+    return NULL;
 }
 
 /**
@@ -346,26 +272,41 @@ diagnostics(DCB *dcb, const MONITOR *mon)
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_OBJECT MyObject =
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_BETA_RELEASE,
-        MONITOR_VERSION,
+        MXS_MONITOR_VERSION,
         "Aurora monitor",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {
+                "script",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
+            {
+                "events",
+                MXS_MODULE_PARAM_ENUM,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MODULE_OPT_NONE,
+                mxs_monitor_event_enum_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };

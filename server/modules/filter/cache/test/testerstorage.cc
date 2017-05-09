@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -178,7 +178,7 @@ int TesterStorage::run(size_t n_threads,
 
         CacheKey key;
 
-        sprintf(key.data, "%lu", i);
+        key.data = i;
 
         vector<uint8_t> value(size, static_cast<uint8_t>(i));
 

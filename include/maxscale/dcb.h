@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,45 +14,16 @@
 
 /**
  * @file dcb.h  The Descriptor Control Block
- *
- * The function pointer table used by descriptors to call relevant functions
- * within the protocol specific code.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 01/06/2013   Mark Riddoch            Initial implementation
- * 11/06/2013   Mark Riddoch            Updated GWPROTOCOL structure with new
- *                                      entry points
- * 18/06/2013   Mark Riddoch            Addition of the listener entry point
- * 02/07/2013   Massimiliano Pinto      Addition of delayqlock, delayq and authlock
- *                                      for handling backend asynchronous protocol connection
- *                                      and a generic lock for backend authentication
- * 12/07/2013   Massimiliano Pinto      Added auth entry point
- * 15/07/2013   Massimiliano Pinto      Added session entry point
- * 16/07/2013   Massimiliano Pinto      Added command type for dcb
- * 07/02/2014   Massimiliano Pinto      Added ipv4 data struct into for dcb
- * 07/05/2014   Mark Riddoch            Addition of callback mechanism
- * 08/05/2014   Mark Riddoch            Addition of writeq high and low watermarks
- * 27/08/2014   Mark Riddoch            Addition of write event queuing
- * 23/09/2014   Mark Riddoch            New poll processing queue
- * 19/06/2015   Martin Brampton         Provision of persistent connections
- * 20/01/2016   Martin Brampton         Moved GWPROTOCOL to gw_protocol.h
- * 01/02/2016   Martin Brampton         Added fields for SSL and authentication
- * 27/06/2016   Martin Brampton         Changed DCB to conform to list manager
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/buffer.h>
 #include <maxscale/protocol.h>
-#include <maxscale/gw_authenticator.h>
-#include <maxscale/gw_ssl.h>
+#include <maxscale/authenticator.h>
+#include <maxscale/ssl.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/gwbitmask.h>
+#include <maxscale/poll_core.h>
 #include <netinet/in.h>
 
 MXS_BEGIN_DECLS
@@ -130,11 +101,10 @@ typedef struct dcbstats
  */
 typedef struct
 {
-    GWBITMASK       bitmask;        /*< The bitmask of threads */
     struct dcb      *next;          /*< Next pointer for the zombie list */
 } DCBMM;
 
-#define DCBMM_INIT {GWBITMASK_INIT}
+#define DCBMM_INIT { NULL }
 
 /* DCB states */
 typedef enum
@@ -215,13 +185,11 @@ typedef enum
  */
 typedef struct dcb
 {
+    MXS_POLL_DATA   poll;
     skygw_chk_t     dcb_chk_top;
     bool            dcb_errhandle_called; /*< this can be called only once */
     bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
-    bool            draining_flag;  /**< Set while write queue is drained */
-    bool            drain_called_while_busy; /**< Set as described */
     dcb_role_t      dcb_role;
-    SPINLOCK        dcb_initlock;
     DCBEVENTQ       evq;            /**< The event queue for this DCB */
     int             fd;             /**< The descriptor */
     dcb_state_t     state;          /**< Current descriptor state */
@@ -229,7 +197,7 @@ typedef struct dcb
     int             flags;          /**< DCB flags */
     char            *remote;        /**< Address of remote end */
     char            *user;          /**< User name for connection */
-    struct sockaddr_in ipv4;        /**< remote end IPv4 address */
+    struct sockaddr_storage ip;     /**< remote IPv4/IPv6 address */
     char            *protoname;     /**< Name of the protocol */
     void            *protocol;      /**< The protocol specific state */
     size_t           protocol_packet_length; /**< How long the protocol specific packet is */
@@ -237,61 +205,36 @@ typedef struct dcb
     struct session  *session;       /**< The owning session */
     struct servlistener *listener;  /**< For a client DCB, the listener data */
     MXS_PROTOCOL    func;           /**< The protocol functions for this descriptor */
-    GWAUTHENTICATOR authfunc;       /**< The authenticator functions for this descriptor */
-
+    MXS_AUTHENTICATOR authfunc;     /**< The authenticator functions for this descriptor */
     int             writeqlen;      /**< Current number of byes in the write queue */
-    SPINLOCK        writeqlock;     /**< Write Queue spinlock */
     GWBUF           *writeq;        /**< Write Data Queue */
-    SPINLOCK        delayqlock;     /**< Delay Backend Write Queue spinlock */
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
     GWBUF           *dcb_readqueue; /**< read queue for storing incomplete reads */
     GWBUF           *dcb_fakequeue; /**< Fake event queue for generated events */
 
     DCBSTATS        stats;          /**< DCB related statistics */
-    unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
     struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
     time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
     struct service  *service;       /**< The related service */
     void            *data;          /**< Specific client data, shared between DCBs of this session */
     void            *authenticator_data; /**< The authenticator data for this DCB */
     DCBMM           memdata;        /**< The data related to DCB memory management */
-    SPINLOCK        cb_lock;        /**< The lock for the callbacks linked list */
     DCB_CALLBACK    *callbacks;     /**< The list of callbacks for the DCB */
-    SPINLOCK        pollinlock;
-    int             pollinbusy;
-    int             readcheck;
-
-    SPINLOCK        polloutlock;
-    int             polloutbusy;
-    int             writecheck;
-    long            last_read;      /*< Last time the DCB received data */
-    int             high_water;     /**< High water mark */
-    int             low_water;      /**< Low water mark */
+    int64_t         last_read;      /*< Last time the DCB received data */
     struct server   *server;        /**< The associated backend server */
     SSL*            ssl;            /*< SSL struct for connection */
     bool            ssl_read_want_read;    /*< Flag */
     bool            ssl_read_want_write;    /*< Flag */
     bool            ssl_write_want_read;    /*< Flag */
     bool            ssl_write_want_write;    /*< Flag */
-    int             dcb_port;       /**< port of target server */
     bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
     struct
     {
-        int id; /**< The owning thread's ID */
         struct dcb *next; /**< Next DCB in owning thread's list */
         struct dcb *tail; /**< Last DCB in owning thread's list */
     } thread;
     skygw_chk_t     dcb_chk_tail;
 } DCB;
-
-#define DCB_INIT {.dcb_chk_top = CHK_NUM_DCB, .dcb_initlock = SPINLOCK_INIT, \
-    .evq = DCBEVENTQ_INIT, .ipv4 = {0}, .func = {0}, .authfunc = {0}, \
-    .writeqlock = SPINLOCK_INIT, .delayqlock = SPINLOCK_INIT, \
-    .stats = {0}, .memdata = DCBMM_INIT, \
-    .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
-    .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
-    .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB, \
-    .authenticator_data = NULL, .thread = {0}}
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason
@@ -370,8 +313,7 @@ int dcb_isvalid(DCB *);                     /* Check the DCB is in the linked li
 int dcb_count_by_usage(DCB_USAGE);          /* Return counts of DCBs */
 int dcb_persistent_clean_count(DCB *, int, bool);      /* Clean persistent and return count */
 void dcb_hangup_foreach (struct server* server);
-size_t dcb_get_session_id(DCB* dcb);
-bool dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
+uint32_t dcb_get_session_id(DCB* dcb);
 char *dcb_role_name(DCB *);                  /* Return the name of a role */
 int dcb_accept_SSL(DCB* dcb);
 int dcb_connect_SSL(DCB* dcb);
@@ -383,13 +325,40 @@ void dcb_process_idle_sessions(int thr);
 /**
  * @brief Call a function for each connected DCB
  *
+ * @deprecated You should not use this function, use dcb_foreach_parallel instead
+ *
  * @param func Function to call. The function should return @c true to continue iteration
  * and @c false to stop iteration earlier. The first parameter is a DCB and the second
  * is the value of @c data that the user provided.
  * @param data User provided data passed as the second parameter to @c func
  * @return True if all DCBs were iterated, false if the callback returned false
  */
-bool dcb_foreach(bool (*func)(DCB *, void *), void *data);
+bool dcb_foreach(bool (*func)(DCB *dcb, void *data), void *data);
+
+/**
+ * @brief Call a function for each connected DCB
+ *
+ * @note This function can call @c func from multiple thread at one time.
+ *
+ * @param func Function to call. The function should return @c true to continue iteration
+ *             and @c false to stop iteration earlier. The first is a DCB and
+ *             the second is this thread's value in the @c data array that
+ *             the user provided.
+ *
+ * @param data Array of user provided data passed as the second parameter to @c func.
+ *             The array must have more space for pointers thann the return
+ *             value of `config_threadcount()`. The value passed to @c func will
+ *             be the value of the array at the index of the current thread's ID.
+ */
+void dcb_foreach_parallel(bool (*func)(DCB *dcb, void *data), void **data);
+
+/**
+ * @brief Return the port number this DCB is connected to
+ *
+ * @param dcb DCB to inspect
+ * @return Port number the DCB is connected to or -1 if information is not available
+ */
+int dcb_get_port(const DCB *dcb);
 
 /**
  * DCB flags values

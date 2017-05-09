@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -41,6 +41,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "tee"
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <maxscale/filter.h>
@@ -58,7 +60,6 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
-#include <maxscale/listmanager.h>
 
 #define MYSQL_COM_QUIT                  0x01
 #define MYSQL_COM_INITDB                0x02
@@ -97,16 +98,17 @@ static unsigned char required_packets[] =
 /*
  * The filter entry points
  */
-static FILTER *createInstance(const char* name, char **options, CONFIG_PARAMETER *);
-static void *newSession(FILTER *instance, SESSION *session);
-static void closeSession(FILTER *instance, void *session);
-static void freeSession(FILTER *instance, void *session);
-static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static void setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
-static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
-static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static MXS_FILTER *createInstance(const char* name, char **options, MXS_CONFIG_PARAMETER *);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
+static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
  * The instance structure for the TEE filter - this holds the configuration
@@ -133,9 +135,8 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM down; /* The downstream filter */
-    UPSTREAM up; /* The upstream filter */
-    FILTER_DEF* dummy_filterdef;
+    MXS_DOWNSTREAM down; /* The downstream filter */
+    MXS_UPSTREAM up; /* The upstream filter */
     int active; /* filter is active? */
     bool use_ok;
     int client_multistatement;
@@ -146,7 +147,7 @@ typedef struct
     int replies[2]; /* Number of queries received */
     int reply_packets[2]; /* Number of OK, ERR, LOCAL_INFILE_REQUEST or RESULT_SET packets received */
     DCB *branch_dcb; /* Client DCB for "branch" service */
-    SESSION *branch_session; /* The branch service session */
+    MXS_SESSION *branch_session; /* The branch service session */
     TEE_INSTANCE *instance;
     int n_duped; /* Number of duplicated queries */
     int n_rejected; /* Number of rejected queries */
@@ -164,7 +165,7 @@ typedef struct
 
 typedef struct orphan_session_tt
 {
-    SESSION* session; /*< The child branch session whose parent was freed before
+    MXS_SESSION* session; /*< The child branch session whose parent was freed before
                * the child session was in a suitable state. */
     struct orphan_session_tt* next;
 } orphan_session_t;
@@ -186,7 +187,7 @@ int route_single_query(TEE_INSTANCE* my_instance,
                        GWBUF* buffer,
                        GWBUF* clone);
 int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer);
-void create_orphan(SESSION* ses);
+void create_orphan(MXS_SESSION* ses);
 
 static void
 orphan_free(void* data)
@@ -253,7 +254,7 @@ orphan_free(void* data)
 #ifdef SS_DEBUG
     if (o_stopping + o_ready > 0)
     {
-        MXS_DEBUG("tee.c: %d orphans in "
+        MXS_DEBUG("%d orphans in "
                   "SESSION_STATE_STOPPING, %d orphans in "
                   "SESSION_STATE_ROUTER_READY. ", o_stopping, o_ready);
     }
@@ -277,7 +278,7 @@ orphan_free(void* data)
     }
 
 #ifdef SS_DEBUG
-    MXS_DEBUG("tee.c: %d orphans freed.", o_freed);
+    MXS_DEBUG("%d orphans freed.", o_freed);
 #endif
 }
 
@@ -304,7 +305,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     spinlock_init(&debug_lock);
 #endif
 
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -315,6 +316,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -323,9 +325,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A tee piece in the filter plumbing",
         "V1.0.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -339,10 +342,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"user", MXS_MODULE_PARAM_STRING},
             {
                 "options",
-                 MXS_MODULE_PARAM_ENUM,
-                 "ignorecase",
-                 MXS_MODULE_OPT_NONE,
-                 option_values
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -361,8 +364,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static FILTER *
-createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+static MXS_FILTER *
+createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     TEE_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(TEE_INSTANCE));
 
@@ -378,7 +381,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
         if (my_instance->match && regcomp(&my_instance->re, my_instance->match, cflags))
         {
-            MXS_ERROR("tee: Invalid regular expression '%s' for the match parameter.",
+            MXS_ERROR("Invalid regular expression '%s' for the match parameter.",
                       my_instance->match);
             MXS_FREE(my_instance->match);
             MXS_FREE(my_instance->nomatch);
@@ -390,7 +393,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
         if (my_instance->nomatch && regcomp(&my_instance->nore, my_instance->nomatch, cflags))
         {
-            MXS_ERROR("tee: Invalid regular expression '%s' for the nomatch paramter.",
+            MXS_ERROR("Invalid regular expression '%s' for the nomatch paramter.",
                       my_instance->nomatch);
             if (my_instance->match)
             {
@@ -405,7 +408,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         }
     }
 
-    return (FILTER *) my_instance;
+    return (MXS_FILTER *) my_instance;
 }
 
 /**
@@ -417,8 +420,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static void *
-newSession(FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
     TEE_SESSION *my_session;
@@ -478,10 +481,10 @@ newSession(FILTER *instance, SESSION *session)
         if (my_session->active)
         {
             DCB* dcb;
-            SESSION* ses;
+            MXS_SESSION* ses;
             if ((dcb = dcb_clone(session->client_dcb)) == NULL)
             {
-                freeSession(instance, (void *) my_session);
+                freeSession(instance, (MXS_FILTER_SESSION *) my_session);
                 my_session = NULL;
 
                 MXS_ERROR("Creating client DCB for Tee "
@@ -493,7 +496,7 @@ newSession(FILTER *instance, SESSION *session)
             if ((ses = session_alloc(my_instance->service, dcb)) == NULL)
             {
                 dcb_close(dcb);
-                freeSession(instance, (void *) my_session);
+                freeSession(instance, (MXS_FILTER_SESSION *) my_session);
                 my_session = NULL;
                 MXS_ERROR("Creating client session for Tee "
                           "filter failed. Terminating session.");
@@ -508,7 +511,7 @@ newSession(FILTER *instance, SESSION *session)
         }
     }
 retblock:
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -521,12 +524,12 @@ retblock:
  * @param session   The session being closed
  */
 static void
-closeSession(FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
-    ROUTER_OBJECT *router;
+    MXS_ROUTER_OBJECT *router;
     void *router_instance, *rsession;
-    SESSION *bsession;
+    MXS_SESSION *bsession;
 #ifdef SS_DEBUG
     MXS_INFO("Tee close: %d", atomic_add(&debug_seq, 1));
 #endif
@@ -536,24 +539,9 @@ closeSession(FILTER *instance, void *session)
         if ((bsession = my_session->branch_session) != NULL)
         {
             CHK_SESSION(bsession);
-            spinlock_acquire(&bsession->ses_lock);
-
-            if (bsession->state != SESSION_STATE_STOPPING)
-            {
-                bsession->state = SESSION_STATE_STOPPING;
-            }
-            router = bsession->service->router;
-            router_instance = bsession->service->router_instance;
-            rsession = bsession->router_session;
-            spinlock_release(&bsession->ses_lock);
-
-            /** Close router session and all its connections */
-            router->closeSession(router_instance, rsession);
+            bsession->ses_is_child = false;
+            session_close(bsession);
         }
-        /* No need to free the session, this is done as
-         * a side effect of closing the client DCB of the
-         * session.
-         */
 
         if (my_session->waiting[PARENT])
         {
@@ -579,11 +567,11 @@ closeSession(FILTER *instance, void *session)
  * @param session   The filter session
  */
 static void
-freeSession(FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
-    SESSION* ses = my_session->branch_session;
-    session_state_t state;
+    MXS_SESSION* ses = my_session->branch_session;
+    mxs_session_state_t state;
 #ifdef SS_DEBUG
     MXS_INFO("Tee free: %d", atomic_add(&debug_seq, 1));
 #endif
@@ -612,10 +600,6 @@ freeSession(FILTER *instance, void *session)
             create_orphan(ses);
         }
     }
-    if (my_session->dummy_filterdef)
-    {
-        filter_free(my_session->dummy_filterdef);
-    }
     if (my_session->tee_replybuf)
     {
         gwbuf_free(my_session->tee_replybuf);
@@ -636,7 +620,7 @@ freeSession(FILTER *instance, void *session)
  * @param downstream    The downstream filter or router.
  */
 static void
-setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     my_session->down = *downstream;
@@ -651,7 +635,7 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param downstream    The downstream filter or router.
  */
 static void
-setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
+setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     my_session->up = *upstream;
@@ -676,7 +660,7 @@ setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
  * @param queue     The query data
  */
 static int
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
     TEE_SESSION *my_session = (TEE_SESSION *) session;
@@ -696,11 +680,11 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param reply     The response data
  */
 static int
-clientReply(FILTER* instance, void *session, GWBUF *reply)
+clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply)
 {
     int rc = 1, branch, eof;
     TEE_SESSION *my_session = (TEE_SESSION *) session;
-    
+
     return my_session->up.clientReply(my_session->up.instance,
                                       my_session->up.session,
                                       reply);
@@ -718,7 +702,7 @@ clientReply(FILTER* instance, void *session, GWBUF *reply)
  * @param   dcb     The DCB for diagnostic output
  */
 static void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
     TEE_SESSION *my_session = (TEE_SESSION *) fsession;
@@ -755,13 +739,61 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 }
 
 /**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    TEE_INSTANCE *my_instance = (TEE_INSTANCE*)instance;
+    TEE_SESSION *my_session = (TEE_SESSION*)fsession;
+
+    json_t* rval = json_object();
+
+    if (my_instance->source)
+    {
+        json_object_set_new(rval, "source", json_string(my_instance->source));
+    }
+
+    json_object_set_new(rval, "service", json_string(my_instance->service->name));
+
+    if (my_instance->userName)
+    {
+        json_object_set_new(rval, "user", json_string(my_instance->userName));
+    }
+
+    if (my_instance->match)
+    {
+        json_object_set_new(rval, "match", json_string(my_instance->match));
+    }
+
+    if (my_instance->nomatch)
+    {
+        json_object_set_new(rval, "exclude", json_string(my_instance->nomatch));
+    }
+
+    if (my_session)
+    {
+        json_object_set_new(rval, "duplicated", json_integer(my_session->n_duped));
+        json_object_set_new(rval, "rejected", json_integer(my_session->n_duped));
+    }
+
+    return rval;
+}
+
+/**
  * Capability routine.
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /**
@@ -812,14 +844,15 @@ int detect_loops(TEE_INSTANCE *instance, HASHTABLE* ht, SERVICE* service)
 
     for (i = 0; i < svc->n_filters; i++)
     {
-        if (strcmp(svc->filters[i]->module, "tee") == 0)
+        const char* module = filter_def_get_module_name(svc->filters[i]);
+        if (strcmp(module, "tee") == 0)
         {
             /*
              * Found a Tee filter, recurse down its path
              * if the service name isn't already in the hashtable.
              */
 
-            TEE_INSTANCE* ninst = (TEE_INSTANCE*) svc->filters[i]->filter;
+            TEE_INSTANCE* ninst = (TEE_INSTANCE*)filter_def_get_instance(svc->filters[i]);
             if (ninst == NULL)
             {
                 /**
@@ -830,7 +863,7 @@ int detect_loops(TEE_INSTANCE *instance, HASHTABLE* ht, SERVICE* service)
             }
             SERVICE* tgt = ninst->service;
 
-            if (detect_loops((TEE_INSTANCE*) svc->filters[i]->filter, ht, tgt))
+            if (detect_loops(ninst, ht, tgt))
             {
                 return true;
             }
@@ -894,7 +927,7 @@ int route_single_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF
 
             if (my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
             {
-                SESSION_ROUTE_QUERY(my_session->branch_session, clone);
+                MXS_SESSION_ROUTE_QUERY(my_session->branch_session, clone);
             }
             else
             {
@@ -927,20 +960,20 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
 
     switch (command)
     {
-        case 0x1b:
-            my_session->client_multistatement = *((unsigned char*) buffer->start + 5);
-            MXS_INFO("tee: client %s multistatements",
-                     my_session->client_multistatement ? "enabled" : "disabled");
-        case 0x03:
-        case 0x16:
-        case 0x17:
-        case 0x04:
-        case 0x0a:
-            memset(my_session->multipacket, (char) true, 2 * sizeof(bool));
-            break;
-        default:
-            memset(my_session->multipacket, (char) false, 2 * sizeof(bool));
-            break;
+    case 0x1b:
+        my_session->client_multistatement = *((unsigned char*) buffer->start + 5);
+        MXS_INFO("client %s multistatements",
+                 my_session->client_multistatement ? "enabled" : "disabled");
+    case 0x03:
+    case 0x16:
+    case 0x17:
+    case 0x04:
+    case 0x0a:
+        memset(my_session->multipacket, (char) true, 2 * sizeof(bool));
+        break;
+    default:
+        memset(my_session->multipacket, (char) false, 2 * sizeof(bool));
+        break;
     }
 
     memset(my_session->replies, 0, 2 * sizeof(int));
@@ -952,7 +985,7 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
     return 1;
 }
 
-void create_orphan(SESSION* ses)
+void create_orphan(MXS_SESSION* ses)
 {
     orphan_session_t* orphan = MXS_MALLOC(sizeof(orphan_session_t));
     if (orphan)

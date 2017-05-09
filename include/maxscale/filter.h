@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -13,105 +13,273 @@
  */
 
 /**
- * @file filter.h -  The filter interface mechanisms
- *
- * Revision History
- *
- * Date         Who                     Description
- * 27/05/2014   Mark Riddoch            Initial implementation
- *
+ * @file include/maxscale/filter.h - The public filter interface
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/config.h>
-#include <maxscale/routing.h>
-#include <maxscale/dcb.h>
-#include <maxscale/session.h>
-#include <maxscale/buffer.h>
 #include <stdint.h>
+#include <maxscale/buffer.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
+#include <maxscale/routing.h>
+#include <maxscale/session.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
 /**
- * The FILTER handle points to module specific data, so the best we can do
- * is to make it a void * externally.
+ * MXS_FILTER is an opaque type representing a particular filter instance.
+ *
+ * MaxScale itself does not do anything with it, except for receiving it
+ * from the @c createInstance function of a filter module and subsequently
+ * passing it back to the API functions of the filter.
  */
-typedef void *FILTER;
+typedef struct mxs_filter
+{
+} MXS_FILTER;
+
+/**
+ * MXS_FILTER_SESSION is an opaque type representing the session related
+ * data of a particular filter instance.
+ *
+ * MaxScale itself does not do anything with it, except for receiving it
+ * from the @c newSession function of a filter module and subsequently
+ * passing it back to the API functions of the filter.
+ */
+typedef struct mxs_filter_session
+{
+} MXS_FILTER_SESSION;
 
 /**
  * @verbatim
- * The "module object" structure for a query router module
+ * The "module object" structure for a filter module. All entry points
+ * marked with `(optional)` are optional entry points which can be set to NULL
+ * if no implementation is required.
  *
  * The entry points are:
- *      createInstance          Called by the service to create a new
- *                              instance of the filter
- *      newSession              Called to create a new user session
- *                              within the filter
- *      closeSession            Called when a session is closed
- *      freeSession             Called when a session is freed
- *      setDownstream           Sets the downstream component of the
- *                              filter pipline
- *      routeQuery              Called on each query that requires
- *                              routing
- *      clientReply             Called for each reply packet
- *      diagnostics             Called to force the filter to print
- *                              diagnostic output
+ *      createInstance   Called by the service to create a new instance of the filter
+ *      newSession       Called to create a new user session within the filter
+ *      closeSession     Called when a session is closed
+ *      freeSession      Called when a session is freed
+ *      setDownstream    Sets the downstream component of the filter pipline
+ *      setUpstream      Sets the upstream component of the filter pipline
+ *      routeQuery       Called on each query that requires routing
+ *      clientReply      Called for each reply packet (optional)
+ *      diagnostics      Called for diagnostic output
+ *      getCapabilities  Called to obtain the capabilities of the filter (optional)
+ *      destroyInstance  Called for destroying a filter instance (optional)
  *
  * @endverbatim
  *
  * @see load_module
  */
-typedef struct filter_object
+typedef struct mxs_filter_object
 {
-    FILTER *(*createInstance)(const char *name,
-                              char **options,
-                              CONFIG_PARAMETER *params);
-    void   *(*newSession)(FILTER *instance, SESSION *session);
-    void   (*closeSession)(FILTER *instance, void *fsession);
-    void   (*freeSession)(FILTER *instance, void *fsession);
-    void   (*setDownstream)(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-    void   (*setUpstream)(FILTER *instance, void *fsession, UPSTREAM *downstream);
-    int    (*routeQuery)(FILTER *instance, void *fsession, GWBUF *queue);
-    int    (*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
-    void   (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
-    uint64_t (*getCapabilities)(void);
-    void   (*destroyInstance)(FILTER *instance);
-} FILTER_OBJECT;
+
+    /**
+     * @brief Create a new instance of the filter
+     *
+     * This function is called when a new filter instance is created. The return
+     * value of this function will be passed as the first parameter to the
+     * other API functions.
+     *
+     * @param name    Name of the filter instance
+     * @param options Filter options
+     * @param params  Filter parameters
+     *
+     * @return New filter instance on NULL on error
+     */
+    MXS_FILTER *(*createInstance)(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
+
+    /**
+     * Called to create a new user session within the filter
+     *
+     * This function is called when a new filter session is created for a client.
+     * The return value of this function will be passed as the second parameter
+     * to the @c routeQuery, @c clientReply, @c closeSession, @c freeSession,
+     * @c setDownstream and @c setUpstream functions.
+     *
+     * @param instance Filter instance
+     * @param session Client MXS_SESSION object
+     *
+     * @return New filter session or NULL on error
+     */
+    MXS_FILTER_SESSION *(*newSession)(MXS_FILTER *instance, MXS_SESSION *session);
+
+    /**
+     * @brief Called when a session is closed
+     *
+     * The filter should close all objects but not free any memory.
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     */
+    void     (*closeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+
+    /**
+     * @brief Called when a session is freed
+     *
+     * The session should free all allocated memory in this function.
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     */
+    void     (*freeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+
+    /**
+     * @brief Sets the downstream component of the filter pipeline
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     */
+    void     (*setDownstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+
+    /**
+     * @brief Sets the upstream component of the filter pipeline
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     */
+    void     (*setUpstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *downstream);
+
+    /**
+     * @brief Called on each query that requires routing
+     *
+     * TODO: Document how routeQuery should be used
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     * @param queue    Request from the client
+     *
+     * @return If successful, the function returns 1. If an error occurs
+     * and the session should be closed, the function returns 0.
+     */
+    int32_t  (*routeQuery)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+
+    /**
+     * @brief Called for each reply packet
+     *
+     * TODO: Document how clientReply should be used
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     * @param queue    Response from the server
+     *
+     * @return If successful, the function returns 1. If an error occurs
+     * and the session should be closed, the function returns 0.
+     */
+    int32_t  (*clientReply)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+
+    /**
+     * @brief Called for diagnostic output
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session, NULL if general information about the filter is queried
+     * @param dcb      DCB where the diagnostic information should be written
+     */
+    void     (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+
+    /**
+     * @brief Called for diagnostic output
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session, NULL if general information about the filter is queried
+     *
+     * @return JSON formatted information about the filter
+     *
+     * @see jansson.h
+     */
+    json_t* (*diagnostics_json)(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+
+    /**
+     * @brief Called to obtain the capabilities of the filter
+     *
+     * @return Zero or more bitwise-or'd values from the mxs_routing_capability_t enum
+     *
+     * @see routing.h
+     */
+    uint64_t (*getCapabilities)(MXS_FILTER *instance);
+
+    /**
+     * @brief Called for destroying a filter instance
+     *
+     * @param instance Filter instance
+     */
+    void     (*destroyInstance)(MXS_FILTER *instance);
+
+} MXS_FILTER_OBJECT;
 
 /**
- * The filter API version. If the FILTER_OBJECT structure or the filter API
+ * The filter API version. If the MXS_FILTER_OBJECT structure or the filter API
  * is changed these values must be updated in line with the rules in the
  * file modinfo.h.
  */
-#define FILTER_VERSION  {2, 2, 0}
-/**
- * The definition of a filter from the configuration file.
- * This is basically the link between a plugin to load and the
- * optons to pass to that plugin.
- */
-typedef struct filter_def
-{
-    char *name;                    /**< The Filter name */
-    char *module;                  /**< The module to load */
-    char **options;                /**< The options set for this filter */
-    CONFIG_PARAMETER *parameters; /**< The filter parameters */
-    FILTER filter;                 /**< The runtime filter */
-    FILTER_OBJECT *obj;            /**< The "MODULE_OBJECT" for the filter */
-    SPINLOCK spin;                 /**< Spinlock to protect the filter definition */
-    struct filter_def *next;       /**< Next filter in the chain of all filters */
-} FILTER_DEF;
+#define MXS_FILTER_VERSION  {2, 2, 0}
 
-FILTER_DEF *filter_alloc(const char *, const char *);
-void filter_free(FILTER_DEF *);
-bool filter_load(FILTER_DEF* filter);
-FILTER_DEF *filter_find(const char *);
-void filter_add_option(FILTER_DEF *, const char *);
-void filter_add_parameter(FILTER_DEF *, const char *, const char *);
-DOWNSTREAM *filter_apply(FILTER_DEF *, SESSION *, DOWNSTREAM *);
-UPSTREAM *filter_upstream(FILTER_DEF *, void *, UPSTREAM *);
-int filter_standard_parameter(const char *);
+/**
+ * MXS_FILTER_DEF represents a filter definition from the configuration file.
+ * Its exact definition is private to MaxScale.
+ */
+struct mxs_filter_def;
+typedef struct mxs_filter_def MXS_FILTER_DEF;
+
+/**
+ * Lookup a filter definition using the unique section name in
+ * the configuration file.
+ *
+ * @param name The name of a filter.
+ *
+ * @return A filter definition or NULL if not found.
+ */
+MXS_FILTER_DEF *filter_def_find(const char *name);
+
+/**
+ * Get the name of a filter definition. This corresponds to
+ * to a filter section in the configuration file.
+ *
+ * @param filter_def  A filter definition.
+ *
+ * @return The filter name.
+ */
+const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def);
+
+/**
+ * Get module name of a filter definition.
+ *
+ * @param filter_def  A filter definition.
+ *
+ * @return The module name.
+ */
+const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def);
+
+/**
+ * Get the filter instance of a particular filter definition.
+ *
+ * @return A filter instance.
+ */
+MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
+
+/**
+ * @brief Convert a filter to JSON
+ *
+ * @param filter Filter to convert
+ * @param host Hostname of this server
+ *
+ * @return Filter converted to JSON format
+ */
+json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host);
+
+/**
+ * @brief Convert all filters into JSON
+ *
+ * @param host Hostname of this server
+ *
+ * @return A JSON array containing all filters
+ */
+json_t* filter_list_to_json(const char* host);
+
 void dprintAllFilters(DCB *);
-void dprintFilter(DCB *, const FILTER_DEF *);
+void dprintFilter(DCB *, const MXS_FILTER_DEF *);
 void dListFilters(DCB *);
 
 /**

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -40,6 +40,8 @@
  * @endverbatim
  */
 
+#include "blr.h"
+
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +50,6 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
-#include "blr.h"
 
 
 static void printVersion(const char *progname);
@@ -57,18 +58,20 @@ static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *a
 
 static struct option long_options[] =
 {
-    {"debug",     no_argument, 0, 'd'},
-    {"version",   no_argument, 0, 'V'},
-    {"fix",       no_argument, 0, 'f'},
-    {"mariadb10", no_argument, 0, 'M'},
-    {"header",    no_argument, 0, 'H'},
-    {"key_file",  required_argument, 0, 'K'},
-    {"aes_algo",  required_argument, 0, 'A'},
-    {"help",      no_argument, 0, '?'},
+    {"debug",            no_argument, 0, 'd'},
+    {"version",          no_argument, 0, 'V'},
+    {"fix",              no_argument, 0, 'f'},
+    {"mariadb10",        no_argument, 0, 'M'},
+    {"header",           no_argument, 0, 'H'},
+    {"key_file",         required_argument, 0, 'K'},
+    {"aes_algo",         required_argument, 0, 'A'},
+    {"replace-event",    required_argument, 0, 'R'},
+    {"remove-trx",       required_argument, 0, 'T'},
+    {"help",             no_argument, 0, '?'},
     {0, 0, 0, 0}
 };
 
-char *binlog_check_version = "2.1.0";
+char *binlog_check_version = "2.2.1";
 
 int
 maxscale_uptime()
@@ -80,14 +83,14 @@ int main(int argc, char **argv)
 {
     int option_index = 0;
     int debug_out = 0;
-    int fix_file = 0;
     int mariadb10_compat = 0;
     char *key_file = NULL;
     char *aes_algo = NULL;
     int report_header = 0;
     char c;
+    BINLOG_FILE_FIX binlog_file = {0, false, false};
 
-    while ((c = getopt_long(argc, argv, "dVfMHK:A:?", long_options, &option_index)) >= 0)
+    while ((c = getopt_long(argc, argv, "dVfMHK:A:R:T:?", long_options, &option_index)) >= 0)
     {
         switch (c)
         {
@@ -102,7 +105,7 @@ int main(int argc, char **argv)
             exit(EXIT_SUCCESS);
             break;
         case 'f':
-            fix_file = 1;
+            binlog_file.fix = true;
             break;
         case 'M':
             mariadb10_compat = 1;
@@ -112,6 +115,11 @@ int main(int argc, char **argv)
             break;
         case 'A':
             aes_algo = optarg;
+            break;
+        case 'R':
+        case 'T':
+            binlog_file.pos = atol(optarg);
+            binlog_file.replace_trx = (c == 'T') ? true : false;
             break;
         case '?':
             printUsage(*argv);
@@ -161,7 +169,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    int fd = open(path, fix_file ? O_RDWR : O_RDONLY, 0666);
+    int fd = open(path, binlog_file.fix ? O_RDWR : O_RDONLY, 0666);
     if (fd == -1)
     {
         printf("ERROR: Failed to open binlog file %s: %s.\n",
@@ -169,6 +177,7 @@ int main(int argc, char **argv)
         MXS_FREE(inst);
         mxs_log_flush_sync();
         mxs_log_finish();
+        exit(EXIT_FAILURE);
     }
 
     inst->binlog_fd = fd;
@@ -200,8 +209,22 @@ int main(int argc, char **argv)
 
     MXS_NOTICE("Checking %s (%s), size %lu bytes", path, inst->binlog_name, filelen);
 
-    /* read binary log */
-    int ret = blr_read_events_all_events(inst, fix_file, debug_out | report_header);
+    /* Look first for a transaction that has an event at pos binlog_file.pos */
+    if (binlog_file.fix && binlog_file.pos && binlog_file.replace_trx)
+    {
+        /* Don't modify anything */
+        binlog_file.fix = false;
+
+        /* The routine call overwrites binlog_file.pos with transaction BEGIN pos */
+        blr_read_events_all_events(inst, &binlog_file, BLR_CHECK_ONLY);
+
+        binlog_file.fix = true;
+
+        mxs_log_flush_sync();
+    }
+
+    /* Now read/check/fix the binary log */
+    int ret = blr_read_events_all_events(inst, &binlog_file, debug_out | report_header);
 
     mxs_log_flush_sync();
 
@@ -213,7 +236,7 @@ int main(int argc, char **argv)
     mxs_log_flush_sync();
     mxs_log_finish();
 
-    return 0;
+    return ret;
 }
 
 /**
@@ -234,15 +257,17 @@ printUsage(const char *progname)
     printVersion(progname);
 
     printf("The MaxScale binlog check utility.\n\n");
-    printf("Usage: %s [-f] [-d] [-v] [<binlog file>]\n\n", progname);
-    printf("  -f|--fix          Fix binlog file, require write permissions (truncate)\n");
-    printf("  -d|--debug        Print debug messages\n");
-    printf("  -M|--mariadb10    MariaDB 10 binlog compatibility\n");
-    printf("  -V|--version      Print version information and exit\n");
-    printf("  -K|--key_file     AES Key file for MariaDB 10.1 binlog file decryption\n");
-    printf("  -A|--aes_algo     AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC, AES_CTR)\n");
-    printf("  -H|--header       Print content of binlog event header\n");
-    printf("  -?|--help         Print this help text\n");
+    printf("Usage: %s [-f] [-M] [-d] [-V] [-H] [-K file] [-A algo] [-R pos] [-T pos] [<binlog file>]\n\n", progname);
+    printf("  -f|--fix              Fix binlog file, require write permissions (truncate)\n");
+    printf("  -d|--debug            Print debug messages\n");
+    printf("  -M|--mariadb10        MariaDB 10 binlog compatibility\n");
+    printf("  -V|--version          Print version information and exit\n");
+    printf("  -K|--key_file         AES Key file for MariaDB 10.1 binlog file decryption\n");
+    printf("  -A|--aes_algo         AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC, AES_CTR)\n");
+    printf("  -H|--header           Print content of binlog event header\n");
+    printf("  -R|--replace-event    Replace the event at pos with an IGNORABLE event\n");
+    printf("  -T|--remove-trx       Replace all events in the transaction the specified pos belongs to, with IGNORABLE events\n");
+    printf("  -?|--help             Print this help text\n");
 }
 
 /**
@@ -250,7 +275,7 @@ printUsage(const char *progname)
  *
  * @param inst        The current binlog instance
  * @param key_file    The AES Key filename
- * @param aes_algo    The AES algorithm 
+ * @param aes_algo    The AES algorithm
  * @return            1 on failure, 0 on success
  */
 static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *aes_algo)
@@ -271,34 +296,34 @@ static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *a
         }
         else
         {
-           /* Check aes algorithm */
-           if (aes_algo)
-           {
-              int ret = blr_check_encryption_algorithm(aes_algo);
-              if (ret > -1)
-              {
-                  inst->encryption.encryption_algorithm = ret;
-              }
-              else
-              {
-                 MXS_ERROR("Invalid encryption_algorithm '%s'. "
-                           "Supported algorithms: %s",
-                           aes_algo,
-                           blr_encryption_algorithm_list());
-                 return 1;
-              }
-           }
-           else
-           {
-              inst->encryption.encryption_algorithm = BINLOG_DEFAULT_ENC_ALGO;
-           }
+            /* Check aes algorithm */
+            if (aes_algo)
+            {
+                int ret = blr_check_encryption_algorithm(aes_algo);
+                if (ret > -1)
+                {
+                    inst->encryption.encryption_algorithm = ret;
+                }
+                else
+                {
+                    MXS_ERROR("Invalid encryption_algorithm '%s'. "
+                              "Supported algorithms: %s",
+                              aes_algo,
+                              blr_encryption_algorithm_list());
+                    return 1;
+                }
+            }
+            else
+            {
+                inst->encryption.encryption_algorithm = BINLOG_DEFAULT_ENC_ALGO;
+            }
 
-           MXS_NOTICE("Decrypting binlog file with algorithm: %s,"
-                      " KEY len %lu bits",
-                      blr_get_encryption_algorithm(inst->encryption.encryption_algorithm),
-                      8 * inst->encryption.key_len);
+            MXS_NOTICE("Decrypting binlog file with algorithm: %s,"
+                       " KEY len %lu bits",
+                       blr_get_encryption_algorithm(inst->encryption.encryption_algorithm),
+                       8 * inst->encryption.key_len);
 
-           return 0;
+            return 0;
         }
     }
     else

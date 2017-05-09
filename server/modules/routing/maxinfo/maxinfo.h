@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -25,6 +25,8 @@
  *
  * @endverbatim
  */
+
+#define MXS_MODULE_NAME "maxinfo"
 
 #include <maxscale/cdefs.h>
 #include <maxscale/service.h>
@@ -56,9 +58,9 @@ typedef struct maxinfo_instance
 
 typedef struct maxinfo_session
 {
-    SESSION     *session;   /*< The MaxScale session */
-    DCB     *dcb;       /*< DCB of the client side */
-    GWBUF       *queue;     /*< Queue for building contiguous requests */
+    MXS_SESSION    *session;   /*< The MaxScale session */
+    DCB            *dcb;       /*< DCB of the client side */
+    GWBUF          *queue;     /*< Queue for building contiguous requests */
     struct maxinfo_session
         *next;      /*< The next pointer for the list of sessions */
 } INFO_SESSION;

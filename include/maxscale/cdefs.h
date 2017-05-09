@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -25,9 +25,9 @@
  * - Global constants applicable across the line can be defined here.
  */
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 # define MXS_BEGIN_DECLS extern "C" {
-# define MXS_END_DECLS	 }
+# define MXS_END_DECLS   }
 #else
 # define MXS_BEGIN_DECLS
 # define MXS_END_DECLS
@@ -38,6 +38,14 @@
 
 #undef OPENSSL_THREAD_DEFINES
 #define OPENSSL_THREAD_DEFINES 1
+
+/**
+ * Fix compile errors for PRId64
+ * in Centos 6
+ */
+#ifndef __STDC_FORMAT_MACROS
+# define __STDC_FORMAT_MACROS
+#endif
 
 /**
  * Define intended for use with strerror.

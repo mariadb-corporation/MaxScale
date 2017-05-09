@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -43,7 +43,7 @@ MXS_BEGIN_DECLS
  */
 typedef struct
 {
-    uint64_t    type;  /**< The argument type */
+    uint64_t    type;        /**< The argument type and options */
     const char *description; /**< The argument description */
 } modulecmd_arg_type_t;
 
@@ -68,13 +68,15 @@ typedef struct
 /**
  * Options for arguments, bits 9 through 32
  */
-#define MODULECMD_ARG_OPTIONAL (1 << 8) /**< The argument is optional */
+#define MODULECMD_ARG_OPTIONAL            (1 << 8) /**< The argument is optional */
+#define MODULECMD_ARG_NAME_MATCHES_DOMAIN (1 << 9) /**< Argument module name must match domain name */
 
 /**
  * Helper macros
  */
 #define MODULECMD_GET_TYPE(t) ((t)->type & 0xff)
 #define MODULECMD_ARG_IS_REQUIRED(t) (((t)->type & MODULECMD_ARG_OPTIONAL) == 0)
+#define MODULECMD_ALLOW_NAME_MISMATCH(t) (((t)->type & MODULECMD_ARG_NAME_MATCHES_DOMAIN) == 0)
 #define MODULECMD_ARG_PRESENT(t) (MODULECMD_GET_TYPE(t) != MODULECMD_ARG_NONE)
 
 /** Argument list node */
@@ -83,14 +85,14 @@ struct arg_node
     modulecmd_arg_type_t  type;
     union
     {
-        char       *string;
-        bool        boolean;
-        SERVICE    *service;
-        SERVER     *server;
-        SESSION    *session;
-        DCB        *dcb;
-        MONITOR    *monitor;
-        FILTER_DEF *filter;
+        char           *string;
+        bool           boolean;
+        SERVICE        *service;
+        SERVER         *server;
+        MXS_SESSION    *session;
+        DCB            *dcb;
+        MXS_MONITOR    *monitor;
+        MXS_FILTER_DEF *filter;
     } value;
 };
 

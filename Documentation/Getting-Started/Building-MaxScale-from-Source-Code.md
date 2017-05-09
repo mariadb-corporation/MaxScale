@@ -5,12 +5,13 @@ requirements are as follows:
 
 * CMake version 2.8 or later (Packaging requires version 2.8.12 or later)
 * GCC version 4.4.7 or later
-* libaio
+* SQLite3 version 3.3 or later
 * libcurl
 * OpenSSL
 * Bison 2.7 or later
 * Flex 2.5.35 or later
 * libuuid
+* libmicrohttpd
 
 ## Required packages
 
@@ -20,33 +21,36 @@ The following packages are required on CentOS/RHEL 7. Older releases may require
 other packages in addition to these.
 
 ```
-git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl make libtool \
-openssl-devel libaio libaio-devel libcurl-devel pcre-devel tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel
+git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl make \
+libtool openssl openssl-devel libcurl-devel pcre-devel tcl tcl-devel \
+systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel
 ```
 
 You can install the packages with the following commands.
 
 ```
-sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl \
-     make libtool openssl-devel libaio libaio-devel librabbitmq-devel \
-     libcurl-devel pcre-devel tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel
+sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake \
+     libgcc perl make libtool openssl openssl-devel libcurl-devel pcre-devel \
+     tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite3 sqlite3-devel \
+      libmicrohttpd-devel
 ```
 
 ### Required packages on Ubuntu and Debian systems
 
-The following packages are required on Ubuntu 14.04. Different releases may require
-other packages in addition to these.
+The following packages are required on Ubuntu 16.04. Different releases may
+require other packages in addition to these.
 
 ```
-git build-essential libssl-dev libaio-dev ncurses-dev bison flex \
-cmake perl libtool libcurl4-openssl-dev libpcre3-dev tlc tcl-dev uuid uuid-dev
+git build-essential libssl-dev ncurses-dev bison flex cmake perl libtool \
+libcurl4-openssl-dev libpcre3-dev tlc tcl-dev uuid uuid-dev sqlite3-dev libmicrohttpd-dev
 ```
 
 You can install the packages with the following command.
 
 ```
-sudo apt-get install git build-essential libssl-dev libaio-dev ncurses-dev \
-bison flex cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid uuid-dev
+sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
+     cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
+     uuid-dev libsqlite3-dev libmicrohttpd-dev
 ```
 
 ## Preparing the MariaDB MaxScale build
@@ -104,7 +108,13 @@ make test
 sudo make install
 ```
 
-Other useful targets for Make are `documentation`, which generates the Doxygen documentation, and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
+Other useful targets for Make are `documentation`, which generates the Doxygen documentation,
+and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
+
+**Note**: If you configure CMake multiple times, it's possible that you will run
+  into problems when building MaxScale. Most of the time this manifests as a
+  missing _pcre2.h_ header file. When this happens, delete everything in the
+  build directory and run the CMake command again.
 
 # Building MariaDB MaxScale packages
 

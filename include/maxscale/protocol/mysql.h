@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -62,6 +62,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/utils.h>
 #include <mysql.h>
+#include <mysql_com.h>
 
 MXS_BEGIN_DECLS
 
@@ -69,8 +70,12 @@ MXS_BEGIN_DECLS
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
-#define MYSQL_HEADER_LEN 4L
-#define MYSQL_CHECKSUM_LEN 4L
+
+#define MYSQL_HEADER_LEN 4
+#define MYSQL_CHECKSUM_LEN 4
+#define MYSQL_EOF_PACKET_LEN 9
+#define MYSQL_OK_PACKET_MIN_LEN 11
+#define MYSQL_ERR_PACKET_MIN_LEN 9
 
 /**
  * Offsets and sizes of various parts of the client packet. If the offset is
@@ -81,15 +86,29 @@ MXS_BEGIN_DECLS
 #define MYSQL_CHARSET_OFFSET    12
 #define MYSQL_CLIENT_CAP_OFFSET 4
 #define MYSQL_CLIENT_CAP_SIZE   4
+#define MARIADB_CAP_OFFSET MYSQL_CHARSET_OFFSET + 19
 
 #define GW_MYSQL_PROTOCOL_VERSION 10 // version is 10
 #define GW_MYSQL_HANDSHAKE_FILLER 0x00
-#define GW_MYSQL_SERVER_CAPABILITIES_BYTE1 0xff
-#define GW_MYSQL_SERVER_CAPABILITIES_BYTE2 0xf7
 #define GW_MYSQL_SERVER_LANGUAGE 0x08
-#define GW_MYSQL_MAX_PACKET_LEN 0xffffffL;
+#define GW_MYSQL_MAX_PACKET_LEN 0xffffffL
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
+
+/**
+ * Prepared statement payload response offsets for a COM_STMT_PREPARE response:
+ *
+ * [0]     OK (1)            -- always 0x00
+ * [1-4]   statement_id (4)  -- statement-id
+ * [5-6]   num_columns (2)   -- number of columns
+ * [7-8]   num_params (2)    -- number of parameters
+ * [9]     filler
+ * [10-11] warning_count (2) -- number of warnings
+ */
+#define MYSQL_PS_ID_OFFSET     MYSQL_HEADER_LEN + 1
+#define MYSQL_PS_COLS_OFFSET   MYSQL_HEADER_LEN + 5
+#define MYSQL_PS_PARAMS_OFFSET MYSQL_HEADER_LEN + 7
+#define MYSQL_PS_WARN_OFFSET   MYSQL_HEADER_LEN + 10
 
 /** Name of the default server side authentication plugin */
 #define DEFAULT_MYSQL_AUTH_PLUGIN "mysql_native_password"
@@ -187,7 +206,8 @@ typedef struct mysql_session
 typedef enum
 {
     GW_MYSQL_CAPABILITIES_NONE =                   0,
-    GW_MYSQL_CAPABILITIES_LONG_PASSWORD =          (1 << 0),
+    /** This is sent by pre-10.2 clients */
+    GW_MYSQL_CAPABILITIES_CLIENT_MYSQL =           (1 << 0),
     GW_MYSQL_CAPABILITIES_FOUND_ROWS =             (1 << 1),
     GW_MYSQL_CAPABILITIES_LONG_FLAG =              (1 << 2),
     GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB =        (1 << 3),
@@ -207,34 +227,59 @@ typedef enum
     GW_MYSQL_CAPABILITIES_MULTI_RESULTS =          (1 << 17),
     GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS =       (1 << 18),
     GW_MYSQL_CAPABILITIES_PLUGIN_AUTH =            (1 << 19),
+    GW_MYSQL_CAPABILITIES_CONNECT_ATTRS =          (1 << 20),
+    GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA =       (1 << 21),
+    GW_MYSQL_CAPABILITIES_EXPIRE_PASSWORD =        (1 << 22),
+    GW_MYSQL_CAPABILITIES_SESSION_TRACK =          (1 << 23),
+    GW_MYSQL_CAPABILITIES_DEPRECATE_EOF =          (1 << 24),
     GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT = (1 << 30),
     GW_MYSQL_CAPABILITIES_REMEMBER_OPTIONS =       (1 << 31),
-    GW_MYSQL_CAPABILITIES_CLIENT = (GW_MYSQL_CAPABILITIES_LONG_PASSWORD |
-                                    GW_MYSQL_CAPABILITIES_FOUND_ROWS |
-                                    GW_MYSQL_CAPABILITIES_LONG_FLAG |
-                                    GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB |
-                                    GW_MYSQL_CAPABILITIES_LOCAL_FILES |
-                                    GW_MYSQL_CAPABILITIES_PLUGIN_AUTH |
-                                    GW_MYSQL_CAPABILITIES_TRANSACTIONS |
-                                    GW_MYSQL_CAPABILITIES_PROTOCOL_41 |
-                                    GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS |
-                                    GW_MYSQL_CAPABILITIES_MULTI_RESULTS |
-                                    GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS |
-                                    GW_MYSQL_CAPABILITIES_SECURE_CONNECTION),
-    GW_MYSQL_CAPABILITIES_CLIENT_COMPRESS = (GW_MYSQL_CAPABILITIES_LONG_PASSWORD |
-                                             GW_MYSQL_CAPABILITIES_FOUND_ROWS |
-                                             GW_MYSQL_CAPABILITIES_LONG_FLAG |
-                                             GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB |
-                                             GW_MYSQL_CAPABILITIES_LOCAL_FILES |
-                                             GW_MYSQL_CAPABILITIES_PLUGIN_AUTH |
-                                             GW_MYSQL_CAPABILITIES_TRANSACTIONS |
-                                             GW_MYSQL_CAPABILITIES_PROTOCOL_41 |
-                                             GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS |
-                                             GW_MYSQL_CAPABILITIES_MULTI_RESULTS |
-                                             GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS |
-                                             GW_MYSQL_CAPABILITIES_COMPRESS
-                                            ),
+    GW_MYSQL_CAPABILITIES_CLIENT = (
+        GW_MYSQL_CAPABILITIES_CLIENT_MYSQL |
+        GW_MYSQL_CAPABILITIES_FOUND_ROWS |
+        GW_MYSQL_CAPABILITIES_LONG_FLAG |
+        GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB |
+        GW_MYSQL_CAPABILITIES_LOCAL_FILES |
+        GW_MYSQL_CAPABILITIES_PLUGIN_AUTH |
+        GW_MYSQL_CAPABILITIES_TRANSACTIONS |
+        GW_MYSQL_CAPABILITIES_PROTOCOL_41 |
+        GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS |
+        GW_MYSQL_CAPABILITIES_MULTI_RESULTS |
+        GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS |
+        GW_MYSQL_CAPABILITIES_SECURE_CONNECTION),
+    GW_MYSQL_CAPABILITIES_SERVER = (
+        GW_MYSQL_CAPABILITIES_CLIENT_MYSQL |
+        GW_MYSQL_CAPABILITIES_FOUND_ROWS |
+        GW_MYSQL_CAPABILITIES_LONG_FLAG |
+        GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB |
+        GW_MYSQL_CAPABILITIES_NO_SCHEMA |
+        GW_MYSQL_CAPABILITIES_ODBC |
+        GW_MYSQL_CAPABILITIES_LOCAL_FILES |
+        GW_MYSQL_CAPABILITIES_IGNORE_SPACE |
+        GW_MYSQL_CAPABILITIES_PROTOCOL_41 |
+        GW_MYSQL_CAPABILITIES_INTERACTIVE |
+        GW_MYSQL_CAPABILITIES_IGNORE_SIGPIPE |
+        GW_MYSQL_CAPABILITIES_TRANSACTIONS |
+        GW_MYSQL_CAPABILITIES_RESERVED |
+        GW_MYSQL_CAPABILITIES_SECURE_CONNECTION |
+        GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS |
+        GW_MYSQL_CAPABILITIES_MULTI_RESULTS |
+        GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS |
+        GW_MYSQL_CAPABILITIES_PLUGIN_AUTH),
 } gw_mysql_capabilities_t;
+
+/**
+ * Capabilities supported by MariaDB 10.2 and later, stored in the last 4 bytes
+ * of the 10 byte filler of the initial handshake packet.
+ *
+ * The actual capability bytes use by the server are left shifted by an extra 32
+ * bits to get one 64 bit capability that combines the old and new capabilities.
+ * Since we only use these in the non-shifted form, the definitions declared here
+ * are right shifted by 32 bytes and can be directly copied into the extra capabilities.
+ */
+#define MXS_MARIA_CAP_PROGRESS             (1 << 0)
+#define MXS_MARIA_CAP_COM_MULTI            (1 << 1)
+#define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1 << 2)
 
 typedef enum enum_server_command mysql_server_cmd_t;
 
@@ -249,7 +294,7 @@ typedef struct server_command_st
 {
     mysql_server_cmd_t        scom_cmd;
     int                       scom_nresponse_packets; /*< packets in response */
-    ssize_t                   scom_nbytes_to_read;    /*< bytes left to read in current packet */
+    size_t                    scom_nbytes_to_read;    /*< bytes left to read in current packet */
     struct server_command_st* scom_next;
 } server_command_t;
 
@@ -266,7 +311,6 @@ typedef struct
 #endif
     int                    fd;                           /*< The socket descriptor */
     struct dcb*            owner_dcb;                    /*< The DCB of the socket we are running on */
-    SPINLOCK               protocol_lock;                /*< Protocol lock */
     mysql_server_cmd_t     current_command;              /*< Current command being executed */
     server_command_t       protocol_command;             /*< session command list */
     server_command_t*      protocol_cmd_history;         /*< session command history */
@@ -275,10 +319,12 @@ typedef struct
     uint8_t                scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble, created or received */
     uint32_t               server_capabilities;          /*< server capabilities, created or received */
     uint32_t               client_capabilities;          /*< client capabilities, created or received */
-    unsigned long          tid;                          /*< MySQL Thread ID, in handshake */
+    uint32_t               extra_capabilities;           /*< MariaDB 10.2 capabilities */
+    uint32_t               tid;                          /*< MySQL Thread ID, in handshake */
     unsigned int           charset;                      /*< MySQL character set at connect time */
-    bool                   ignore_reply;                 /*< If the reply should be discarded */
+    int                    ignore_replies;               /*< How many replies should be discarded */
     GWBUF*                 stored_query;                 /*< Temporarily stored queries */
+    bool                   collect_result;               /*< Collect the next result set as one buffer */
 #if defined(SS_DEBUG)
     skygw_chk_t            protocol_chk_tail;
 #endif
@@ -301,7 +347,7 @@ static inline uint8_t MYSQL_GET_PACKET_NO(const uint8_t* header)
     return header[3];
 }
 
-static inline uint32_t MYSQL_GET_PACKET_LEN(const uint8_t* header)
+static inline uint32_t MYSQL_GET_PAYLOAD_LEN(const uint8_t* header)
 {
     return gw_mysql_get_byte3(header);
 }
@@ -375,17 +421,13 @@ void   protocol_remove_srv_command(MySQLProtocol* p);
 bool   protocol_waits_response(MySQLProtocol* p);
 mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p, bool removep);
 int  get_stmt_nresponse_packets(GWBUF* buf, mysql_server_cmd_t cmd);
-bool protocol_get_response_status (MySQLProtocol* p, int* npackets, ssize_t* nbytes);
-void protocol_set_response_status (MySQLProtocol* p, int  npackets, ssize_t  nbytes);
+bool protocol_get_response_status (MySQLProtocol* p, int* npackets, size_t* nbytes);
+void protocol_set_response_status (MySQLProtocol* p, int  npackets, size_t  nbytes);
 void protocol_archive_srv_command(MySQLProtocol* p);
 
-char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db, int);
+char* create_auth_fail_str(char *username, char *hostaddr, bool password, char *db, int);
 
-void init_response_status (
-    GWBUF* buf,
-    mysql_server_cmd_t cmd,
-    int* npackets,
-    ssize_t* nbytes);
+void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 bool read_complete_packet(DCB *dcb, GWBUF **readbuf);
 bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
 
@@ -401,7 +443,44 @@ int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char*
 /** Check for OK packet */
 bool mxs_mysql_is_ok_packet(GWBUF *buffer);
 
-/** Check for result set */
+/**
+ * @brief Check if a buffer contains a result set
+ *
+ * @param buffer Buffer to check
+ *
+ * @return True if the @c buffer contains the start of a result set
+ */
 bool mxs_mysql_is_result_set(GWBUF *buffer);
+
+/**
+ * @brief Check if the buffer contains a prepared statement OK packet
+ *
+ * @param buffer Buffer to check
+ *
+ * @return True if the @c buffer contains a prepared statement OK packet
+ */
+bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer);
+
+/**
+ * @brief Check if the OK packet is followed by another result
+ *
+ * @param buffer Buffer to check
+ *
+ * @return True if more results are expected
+ */
+bool mxs_mysql_more_results_after_ok(GWBUF *buffer);
+
+/** Get current command for a session */
+mysql_server_cmd_t mxs_mysql_current_command(MXS_SESSION* session);
+/**
+ * @brief Calculate how many packets a session command will receive
+ *
+ * @param buf Buffer containing the response
+ * @param cmd Command that was executed
+ * @param npackets Pointer where the number of packets is stored
+ * @param nbytes Pointer where number of bytes is stored
+ */
+void mysql_num_response_packets(GWBUF *buf, uint8_t cmd,
+                                int* npackets, size_t *nbytes);
 
 MXS_END_DECLS

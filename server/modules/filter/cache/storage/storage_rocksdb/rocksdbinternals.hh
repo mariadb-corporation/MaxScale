@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -19,7 +19,7 @@
 
 #if (ROCKSDB_MAJOR != 4) || (ROCKSDB_MINOR != 9)
 #error RocksDBStorage was created with knowledge of RocksDB 4.9 internals.\
-       The version used is something else. Ensure the knowledge is still applicable.
+The version used is something else. Ensure the knowledge is still applicable.
 #endif
 
 namespace RocksDBInternals

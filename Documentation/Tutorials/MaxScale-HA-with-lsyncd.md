@@ -2,7 +2,7 @@
 
 ***This guide was written for lsyncd 2.1.5.***
 
-This document guides you in setting up multiple MariaDB MaxScale instances and synchronizing the configuration files with lsyncd. Lsyncd is a rsync wrapper which can synchronize files across the network. The lsyncd daemon uses a configuration file to control the files to synchronize and the remote targets where these files are synchronized to.
+This document guides you in setting up multiple MariaDB MaxScale instances and synchronizing the configuration files with _lsyncd_. Lsyncd is a _rsync_ wrapper which can synchronize files across the network. The lsyncd daemon uses a configuration file to control the files to synchronize and the remote targets where these files are synchronized to.
 
 Copying the configuration file and running the lsyncd daemon on all the hosts keeps all the configuration files in sync. Modifications in the configuration file on one of the hosts will be copied on the other hosts. This allows administrators to easily provide a highly available, disaster resistant MariaDB MaxScale installation with up-to-date configuration files on all the hosts.
 

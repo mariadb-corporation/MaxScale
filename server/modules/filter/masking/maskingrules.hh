@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -88,13 +88,36 @@ public:
              const std::vector<SAccount>& exempted);
         ~Rule();
 
-        const std::string& column() const { return m_column; }
-        const std::string& table() const { return m_table; }
-        const std::string& database() const { return m_database; }
-        const std::string& value() const { return m_value; }
-        const std::string& fill() const { return m_fill; }
-        const std::vector<SAccount>& applies_to() const { return m_applies_to; }
-        const std::vector<SAccount>& exempted() const { return m_exempted; }
+        std::string match() const;
+
+        const std::string& column() const
+        {
+            return m_column;
+        }
+        const std::string& table() const
+        {
+            return m_table;
+        }
+        const std::string& database() const
+        {
+            return m_database;
+        }
+        const std::string& value() const
+        {
+            return m_value;
+        }
+        const std::string& fill() const
+        {
+            return m_fill;
+        }
+        const std::vector<SAccount>& applies_to() const
+        {
+            return m_applies_to;
+        }
+        const std::vector<SAccount>& exempted() const
+        {
+            return m_exempted;
+        }
 
         /**
          * Create a Rule instance

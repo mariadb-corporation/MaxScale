@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -12,15 +12,15 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-
-MXS_BEGIN_DECLS
-
 /**
- * @file lmits.h
+ * @file limits.h
  *
  * This file contains defines for hard limits of MaxScale.
  */
+
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 
 /**

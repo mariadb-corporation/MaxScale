@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -60,14 +60,9 @@ typedef enum cache_thread_model
 
 typedef void* CACHE_STORAGE;
 
-enum
-{
-    CACHE_KEY_MAXLEN = 128
-};
-
 typedef struct cache_key
 {
-    char data[CACHE_KEY_MAXLEN];
+    uint64_t data;
 } CACHE_KEY;
 
 /**
@@ -175,18 +170,6 @@ typedef struct cache_storage_api
     CACHE_STORAGE* (*createInstance)(const char *name,
                                      const CACHE_STORAGE_CONFIG* config,
                                      int argc, char* argv[]);
-
-    /**
-     * Create a key for a GWBUF.
-     *
-     * @param query      An SQL query. Must be one contiguous buffer.
-     * @param key        Pointer to key.
-     *
-     * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
-     */
-    cache_result_t (*getKey)(const char* default_db,
-                             const GWBUF* query,
-                             CACHE_KEY* key);
 
     /**
      * Frees an CACHE_STORAGE instance earlier created with createInstance.

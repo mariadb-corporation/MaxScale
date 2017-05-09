@@ -3,7 +3,7 @@
 # Copyright (c) 2016 MariaDB Corporation Ab
 #
 # Use of this software is governed by the Business Source License included
-# in the LICENSE.TXT file and at www.mariadb.com/bsl.
+# in the LICENSE.TXT file and at www.mariadb.com/bsl11.
 #
 # Change Date: 2019-07-01
 #
@@ -37,7 +37,7 @@ def read_json():
             rbuf += buf
             while True:
                 rbuf = rbuf.lstrip()
-                data = decoder.raw_decode(rbuf.decode('ascii'))
+                data = decoder.raw_decode(rbuf.decode('utf_8'))
                 rbuf = rbuf[data[1]:]
                 print(json.dumps(data[0]))
         except ValueError as err:

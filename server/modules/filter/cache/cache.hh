@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -41,8 +41,12 @@ public:
     virtual ~Cache();
 
     void show(DCB* pDcb) const;
+    json_t* show_json() const;
 
-    const CACHE_CONFIG& config() const { return m_config; }
+    const CACHE_CONFIG& config() const
+    {
+        return m_config;
+    }
 
     virtual json_t* get_info(uint32_t what = INFO_ALL) const = 0;
 
@@ -63,7 +67,7 @@ public:
      *
      * @return True of cached results should be used.
      */
-    bool should_use(const SESSION* pSession);
+    bool should_use(const MXS_SESSION* pSession);
 
     /**
      * Specifies whether a particular SessioCache should refresh the data.
@@ -84,11 +88,31 @@ public:
     virtual void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession) = 0;
 
     /**
-     * See @Storage::get_key
+     * Returns a key for the statement. Takes the current config into account.
+     *
+     * @param zDefault_db  The default database, can be NULL.
+     * @param pQuery       A statement.
+     * @param pKey         On output a key.
+     *
+     * @return CACHE_RESULT_OK if a key could be created.
      */
-    virtual cache_result_t get_key(const char* zDefaultDb,
-                                   const GWBUF* pQuery,
-                                   CACHE_KEY* pKey) const = 0;
+    cache_result_t get_key(const char* zDefault_db,
+                           const GWBUF* pQuery,
+                           CACHE_KEY* pKey) const;
+
+    /**
+     * Returns a key for the statement. Does not take the current config
+     * into account.
+     *
+     * @param zDefault_db  The default database, can be NULL.
+     * @param pQuery       A statement.
+     * @param pKey         On output a key.
+     *
+     * @return CACHE_RESULT_OK if a key could be created.
+     */
+    static cache_result_t get_default_key(const char* zDefault_db,
+                                          const GWBUF* pQuery,
+                                          CACHE_KEY* pKey);
 
     /**
      * See @Storage::get_value

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,14 +14,6 @@
 
 /**
  * @file hint.h The generic hint data that may be attached to buffers
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 10/07/14     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
@@ -37,8 +29,8 @@ typedef enum
     HINT_ROUTE_TO_MASTER = 1,
     HINT_ROUTE_TO_SLAVE,
     HINT_ROUTE_TO_NAMED_SERVER,
-    HINT_ROUTE_TO_UPTODATE_SERVER,
-    HINT_ROUTE_TO_ALL, /*< not implemented yet */
+    HINT_ROUTE_TO_UPTODATE_SERVER, /*< not supported by RWSplit and HintRouter */
+    HINT_ROUTE_TO_ALL, /*< not supported by RWSplit, supported by HintRouter */
     HINT_PARAMETER
 } HINT_TYPE;
 
@@ -58,11 +50,11 @@ typedef struct hint
     struct hint     *next;  /*< Another hint for this buffer */
 } HINT;
 
-extern  HINT    *hint_alloc(HINT_TYPE, void *, unsigned int);
-extern  HINT    *hint_create_parameter(HINT *, char *, char *);
-extern  HINT    *hint_create_route(HINT *, HINT_TYPE, char *);
-extern  void    hint_free(HINT *);
-extern  HINT    *hint_dup(HINT *);
-bool            hint_exists(HINT **, HINT_TYPE);
+HINT *hint_alloc(HINT_TYPE, void *, unsigned int);
+HINT *hint_create_parameter(HINT *, char *, const char *);
+HINT *hint_create_route(HINT *, HINT_TYPE, const char *);
+void hint_free(HINT *);
+HINT *hint_dup(const HINT *);
+bool hint_exists(HINT **, HINT_TYPE);
 
 MXS_END_DECLS

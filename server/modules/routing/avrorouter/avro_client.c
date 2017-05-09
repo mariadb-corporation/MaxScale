@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -24,6 +24,8 @@
  * @endverbatim
  */
 
+#include "avrorouter.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -37,7 +39,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>
-#include "avrorouter.h"
 #include <maxavro.h>
 #include <maxscale/alloc.h>
 
@@ -70,45 +71,45 @@ avro_client_handle_request(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *qu
 
     switch (client->state)
     {
-        case AVRO_CLIENT_ERRORED:
-            /* force disconnection */
-            return 0;
-            break;
-        case AVRO_CLIENT_UNREGISTERED:
-            if (avro_client_do_registration(router, client, queue) == 0)
-            {
-                client->state = AVRO_CLIENT_ERRORED;
-                dcb_printf(client->dcb, "ERR, code 12, msg: Registration failed\n");
-                /* force disconnection */
-                dcb_close(client->dcb);
-                rval = 0;
-            }
-            else
-            {
-                /* Send OK ack to client */
-                dcb_printf(client->dcb, "OK\n");
-
-                client->state = AVRO_CLIENT_REGISTERED;
-                MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
-                         client->dcb->service->name,
-                         client->dcb->remote != NULL ? client->dcb->remote : "");
-            }
-            break;
-        case AVRO_CLIENT_REGISTERED:
-        case AVRO_CLIENT_REQUEST_DATA:
-            if (client->state == AVRO_CLIENT_REGISTERED)
-            {
-                client->state = AVRO_CLIENT_REQUEST_DATA;
-            }
-
-            /* Process command from client */
-            avro_client_process_command(router, client, queue);
-
-            break;
-        default:
+    case AVRO_CLIENT_ERRORED:
+        /* force disconnection */
+        return 0;
+        break;
+    case AVRO_CLIENT_UNREGISTERED:
+        if (avro_client_do_registration(router, client, queue) == 0)
+        {
             client->state = AVRO_CLIENT_ERRORED;
+            dcb_printf(client->dcb, "ERR, code 12, msg: Registration failed\n");
+            /* force disconnection */
+            dcb_close(client->dcb);
             rval = 0;
-            break;
+        }
+        else
+        {
+            /* Send OK ack to client */
+            dcb_printf(client->dcb, "OK\n");
+
+            client->state = AVRO_CLIENT_REGISTERED;
+            MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
+                     client->dcb->service->name,
+                     client->dcb->remote != NULL ? client->dcb->remote : "");
+        }
+        break;
+    case AVRO_CLIENT_REGISTERED:
+    case AVRO_CLIENT_REQUEST_DATA:
+        if (client->state == AVRO_CLIENT_REGISTERED)
+        {
+            client->state = AVRO_CLIENT_REQUEST_DATA;
+        }
+
+        /* Process command from client */
+        avro_client_process_command(router, client, queue);
+
+        break;
+    default:
+        client->state = AVRO_CLIENT_ERRORED;
+        rval = 0;
+        break;
     }
 
     gwbuf_free(queue);
@@ -222,15 +223,15 @@ void extract_gtid_request(gtid_pos_t *gtid, const char *start, int len)
             char *end;
             switch (read)
             {
-                case 0:
-                    gtid->domain = strtol(ptr, &end, 10);
-                    break;
-                case 1:
-                    gtid->server_id = strtol(ptr, &end, 10);
-                    break;
-                case 2:
-                    gtid->seq = strtol(ptr, &end, 10);
-                    break;
+            case 0:
+                gtid->domain = strtol(ptr, &end, 10);
+                break;
+            case 1:
+                gtid->server_id = strtol(ptr, &end, 10);
+                break;
+            case 2:
+                gtid->seq = strtol(ptr, &end, 10);
+                break;
             }
             read++;
             ptr = end;
@@ -614,7 +615,7 @@ static bool stream_json(AVRO_CLIENT *client)
             set_current_gtid(client, row);
             json_decref(row);
         }
-        bytes += file->block_size;
+        bytes += file->buffer_size;
     }
     while (maxavro_next_block(file) && bytes < AVRO_DATA_BURST_SIZE);
 
@@ -638,7 +639,7 @@ static bool stream_binary(AVRO_CLIENT *client)
 
     while (rc > 0 && bytes < AVRO_DATA_BURST_SIZE)
     {
-        bytes += file->block_size;
+        bytes += file->buffer_size;
         if ((buffer = maxavro_record_read_binary(file)))
         {
             rc = dcb->func.write(dcb, buffer);
@@ -773,15 +774,20 @@ static bool avro_client_stream_data(AVRO_CLIENT *client)
         char filename[PATH_MAX + 1];
         snprintf(filename, PATH_MAX, "%s/%s", router->avrodir, client->avro_binfile);
 
+        bool ok = true;
+
         spinlock_acquire(&client->file_lock);
-        if (client->file_handle == NULL)
+        if (client->file_handle == NULL &&
+            (client->file_handle = maxavro_file_open(filename)) == NULL)
         {
-            client->file_handle = maxavro_file_open(filename);
+            ok = false;
         }
         spinlock_release(&client->file_lock);
 
-        switch (client->format)
+        if (ok)
         {
+            switch (client->format)
+            {
             case AVRO_FORMAT_JSON:
                 /** Currently only JSON format supports seeking to a GTID */
                 if (client->requested_gtid &&
@@ -801,20 +807,21 @@ static bool avro_client_stream_data(AVRO_CLIENT *client)
             default:
                 MXS_ERROR("Unexpected format: %d", client->format);
                 break;
+            }
+
+
+            if (maxavro_get_error(client->file_handle) != MAXAVRO_ERR_NONE)
+            {
+                MXS_ERROR("Reading Avro file failed with error '%s'.",
+                          maxavro_get_error_string(client->file_handle));
+            }
+
+            /* update client struct */
+            memcpy(&client->avro_file, client->file_handle, sizeof(client->avro_file));
+
+            /* may be just use client->avro_file->records_read and remove this var */
+            client->last_sent_pos = client->avro_file.records_read;
         }
-
-
-        if (maxavro_get_error(client->file_handle) != MAXAVRO_ERR_NONE)
-        {
-            MXS_ERROR("Reading Avro file failed with error '%s'.",
-                      maxavro_get_error_string(client->file_handle));
-        }
-
-        /* update client struct */
-        memcpy(&client->avro_file, client->file_handle, sizeof(client->avro_file));
-
-        /* may be just use client->avro_file->records_read and remove this var */
-        client->last_sent_pos = client->avro_file.records_read;
     }
     else
     {
@@ -840,12 +847,14 @@ GWBUF* read_avro_json_schema(const char *avrofile, const char* dir)
         if (file)
         {
             int nread;
-            while ((nread = fread(buffer, 1, sizeof(buffer), file)) > 0)
+            while ((nread = fread(buffer, 1, sizeof(buffer) - 1, file)) > 0)
             {
                 while (isspace(buffer[nread - 1]))
                 {
                     nread--;
                 }
+
+                buffer[nread++] = '\n';
 
                 GWBUF * newbuf = gwbuf_alloc_and_load(nread, buffer);
 
@@ -859,9 +868,8 @@ GWBUF* read_avro_json_schema(const char *avrofile, const char* dir)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to open file '%s': %d, %s", buffer, errno,
-                      strerror_r(errno, err, sizeof(err)));
+                      mxs_strerror(errno));
         }
     }
     return rval;
@@ -985,16 +993,16 @@ int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata)
 
             switch (client->format)
             {
-                case AVRO_FORMAT_JSON:
-                    schema = read_avro_json_schema(client->avro_binfile, client->router->avrodir);
-                    break;
+            case AVRO_FORMAT_JSON:
+                schema = read_avro_json_schema(client->avro_binfile, client->router->avrodir);
+                break;
 
-                case AVRO_FORMAT_AVRO:
-                    schema = read_avro_binary_schema(client->avro_binfile, client->router->avrodir);
-                    break;
+            case AVRO_FORMAT_AVRO:
+                schema = read_avro_binary_schema(client->avro_binfile, client->router->avrodir);
+                break;
 
-                default:
-                    MXS_ERROR("Unknown client format: %d", client->format);
+            default:
+                MXS_ERROR("Unknown client format: %d", client->format);
             }
 
             if (schema)

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,14 +14,6 @@
 
 /**
  * @file utils.h Utility functions headers
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 22/03/16 Martin Brampton     Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
@@ -43,13 +35,59 @@ MXS_BEGIN_DECLS
  */
 #define MXS_PTR(a, b) (((uint8_t*)(a)) + (b))
 
+/** The type of the socket */
+enum mxs_socket_type
+{
+    MXS_SOCKET_LISTENER, /**< */
+    MXS_SOCKET_NETWORK,
+};
+
 bool utils_init(); /*< Call this first before using any other function */
 void utils_end();
 
-int setnonblocking(int fd);
-int  parse_bindconfig(const char *, struct sockaddr_in *);
-int setipaddress(struct in_addr *, char *);
+/**
+ * @brief Create a network socket and a socket configuration
+ *
+ * This helper function can be used to open both listener socket and network
+ * connection sockets. For listener sockets, the @c host and @c port parameters
+ * tell where the socket will bind to. For network sockets, the parameters tell
+ * where the connection is created.
+ *
+ * After calling this function, the only thing that needs to be done is to
+ * give @c addr and the return value of this function as the parameters to
+ * either bind() (for listeners) or connect() (for outbound network connections).
+ *
+ * @param type Type of the socket, either MXS_SOCKET_LISTENER for a listener
+ *             socket or MXS_SOCKET_NETWORK for a network connection socket
+ * @param addr Pointer to a struct sockaddr_storage where the socket
+ *             configuration is stored
+ * @param host The target host for which the socket is created
+ * @param port The target port on the host
+ *
+ * @return The opened socket or -1 on failure
+ */
+int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr,
+                        const char *host, uint16_t port);
 
+/**
+ * @brief Create a UNIX domain socket
+ *
+ * This opens and prepares a UNIX domain socket for use. The @c addr parameter
+ * can be given to the bind() function to bind the socket.
+ *
+ * @param type Type of the socket, either MXS_SOCKET_LISTENER for a listener
+ *             socket or MXS_SOCKET_NETWORK for a network connection socket
+ * @param addr Pointer to a struct sockaddr_un where the socket configuration
+ *             is stored
+ * @param path Path to the socket
+ *
+ * @return The opened socket or -1 on failure
+ */
+int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr,
+                     const char *path);
+
+int setnonblocking(int fd);
+int setblocking(int fd);
 char  *gw_strend(register const char *s);
 static char gw_randomchar();
 int gw_generate_random_str(char *output, int len);
@@ -61,7 +99,9 @@ void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_le
 int gw_getsockerrno(int fd);
 char *create_hex_sha1_sha1_passwd(char *passwd);
 
+/** String formatting functions */
 char* trim(char *str);
+void replace_whitespace(char* str);
 char* squeeze_whitespace(char* str);
 bool strip_escape_chars(char*);
 

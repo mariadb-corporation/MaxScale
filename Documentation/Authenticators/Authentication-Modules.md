@@ -4,7 +4,7 @@ This document describes the modular authentication in MaxScale. It contains
 protocol specific information on authentication and how it is handled in
 MaxScale.
 
-The constants described in this document are defined in the gw_authenticator.h
+The constants described in this document are defined in the authenticator.h
 header unless otherwise mentioned.
 
 ## Authenticator initialization

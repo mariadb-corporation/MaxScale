@@ -19,7 +19,7 @@ the _kadmin_ or _kadmin.local_ tools.
 kadmin.local -q "addprinc -nokey mariadb/example.com@EXAMPLE.COM"
 ```
 
-The _-nokey_ option will make the principal a passwordless one. This allows the
+The `-nokey` option will make the principal a passwordless one. This allows the
 _maxscale_ user to acquire a ticket for it without a password being prompted.
 
 The next step is to export this principal into the Kerberos keytab file.
@@ -74,3 +74,8 @@ Client side GSSAPI authentication is only supported when the backend
 connections use GSSAPI authentication.
 
 See the [Limitations](../About/Limitations.md) document for more details.
+
+## Building the module
+
+The GSSAPI authenticator modules require the GSSAPI and the SQLite3 development
+libraries (krb5-devel and sqlite-devel on CentOS 7).

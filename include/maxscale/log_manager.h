@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -13,10 +13,13 @@
  */
 
 #include <maxscale/cdefs.h>
+
 #include <assert.h>
 #include <stdbool.h>
 #include <syslog.h>
 #include <unistd.h>
+
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -64,8 +67,6 @@ typedef struct mxs_log_info
 } mxs_log_info_t;
 
 extern int mxs_log_enabled_priorities;
-extern ssize_t mxs_log_session_count[];
-extern __thread mxs_log_info_t mxs_log_tls;
 
 /**
  * Check if specified log type is enabled in general or if it is enabled
@@ -74,9 +75,7 @@ extern __thread mxs_log_info_t mxs_log_tls;
  * @param priority One of the syslog LOG_ERR, LOG_WARNING, etc. constants.
  */
 #define MXS_LOG_PRIORITY_IS_ENABLED(priority) \
-    (((mxs_log_enabled_priorities & (1 << priority)) ||      \
-      (mxs_log_session_count[priority] > 0 && \
-       mxs_log_tls.li_enabled_priorities & (1 << priority))) ? true : false)
+    ((mxs_log_enabled_priorities & (1 << priority)) ? true : false)
 
 /**
  * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
@@ -109,6 +108,7 @@ void mxs_log_set_augmentation(int bits);
 void mxs_log_set_throttling(const MXS_LOG_THROTTLING* throttling);
 
 void mxs_log_get_throttling(MXS_LOG_THROTTLING* throttling);
+json_t* mxs_logs_to_json(const char* host);
 
 static inline bool mxs_log_priority_is_enabled(int priority)
 {
@@ -199,5 +199,22 @@ enum
     MXS_OOM_MESSAGE_MAXLEN = 80 /** Maximum length of an OOM message, including the
                                     trailing NULL. If longer, it will be cut. */
 };
+
+/**
+ * Return a thread specific pointer to a string describing the error
+ * code passed as argument. The string is obtained using strerror_r.
+ *
+ * @param error  One of the errno error codes.
+ *
+ * @return Thread specific pointer to string describing the error code.
+ *
+ * @attention The function is thread safe, but not re-entrant. That is,
+ * calling it twice with different error codes between two sequence points
+ * will not work. E.g:
+ *
+ *     printf("EINVAL = %s, EACCESS = %s",
+ *            mxs_strerror(EINVAL), mxs_strerror(EACCESS));
+ */
+const char* mxs_strerror(int error);
 
 MXS_END_DECLS

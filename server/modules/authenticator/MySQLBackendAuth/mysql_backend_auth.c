@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -29,7 +29,9 @@
  * @endverbatim
  */
 
-#include <maxscale/gw_authenticator.h>
+#define MXS_MODULE_NAME "MySQLBackendAuth"
+
+#include <maxscale/authenticator.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
@@ -81,7 +83,7 @@ void auth_backend_destroy(void *data)
  * @param dcb Request handler DCB connected to the client
  * @param buffer Buffer containing data from client
  * @return Authentication status
- * @see gw_quthenticator.h
+ * @see authenticator.h
  * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
  */
 static int auth_backend_extract(DCB *dcb, GWBUF *buf)
@@ -91,22 +93,22 @@ static int auth_backend_extract(DCB *dcb, GWBUF *buf)
 
     switch (mba->state)
     {
-        case MBA_NEED_OK:
-            if (mxs_mysql_is_ok_packet(buf))
-            {
-                rval = MXS_AUTH_SUCCEEDED;
-                mba->state = MBA_AUTH_OK;
-            }
-            else
-            {
-                mba->state = MBA_AUTH_FAILED;
-            }
-            break;
+    case MBA_NEED_OK:
+        if (mxs_mysql_is_ok_packet(buf))
+        {
+            rval = MXS_AUTH_SUCCEEDED;
+            mba->state = MBA_AUTH_OK;
+        }
+        else
+        {
+            mba->state = MBA_AUTH_FAILED;
+        }
+        break;
 
-        default:
-            MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
-            ss_dassert(false);
-            break;
+    default:
+        MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
+        ss_dassert(false);
+        break;
     }
 
     return rval;
@@ -117,7 +119,7 @@ static int auth_backend_extract(DCB *dcb, GWBUF *buf)
  *
  * @param dcb Backend DCB
  * @return Authentication status
- * @see gw_authenticator.h
+ * @see authenticator.h
  */
 static int auth_backend_authenticate(DCB *dcb)
 {
@@ -158,7 +160,7 @@ static bool auth_backend_ssl(DCB *dcb)
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         NULL,                      /* No initialize entry point */
         auth_backend_create,       /* Create authenticator */
@@ -167,16 +169,20 @@ MXS_MODULE* MXS_CREATE_MODULE()
         auth_backend_authenticate, /* Authenticate user credentials */
         NULL,                      /* The shared data is freed by the client DCB */
         auth_backend_destroy,      /* Destroy authenticator */
-        NULL                       /* We don't need to load users */
+        NULL,                      /* We don't need to load users */
+        NULL,                      /* No diagnostic */
+        NULL,
+        NULL                       /* No user reauthentication */
     };
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "The MySQL MaxScale to backend server authenticator",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,10 +14,11 @@
 #define MXS_MODULE_NAME "cache"
 #include "cachefilter.hh"
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/modulecmd.h>
 #include "cachemt.hh"
 #include "cachept.hh"
+#include "maxscale/jansson.hh"
 
 using std::auto_ptr;
 using std::string;
@@ -49,6 +50,8 @@ void cache_config_finish(CACHE_CONFIG& config)
     config.hard_ttl = 0;
     config.soft_ttl = 0;
     config.debug = 0;
+    config.thread_model = CACHE_THREAD_MODEL_MT;
+    config.selects = CACHE_SELECTS_VERIFY_CACHEABLE;
 }
 
 /**
@@ -91,21 +94,27 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
     DCB* pDcb = pArgs->argv[0].value.dcb;
     ss_dassert(pDcb);
 
-    const FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
+    const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
     ss_dassert(pFilterDef);
+    CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(filter_def_get_instance(pFilterDef));
 
-    if (strcmp(pFilterDef->module, "cache") == 0)
-    {
-        CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(pFilterDef->filter);
-
-        pFilter->cache().show(pDcb);
-    }
-    else
-    {
-        dcb_printf(pDcb, "Filter %s exists, but it is not a cache.", pFilterDef->name);
-    }
+    MXS_EXCEPTION_GUARD(pFilter->cache().show(pDcb));
 
     return true;
+}
+
+int cache_process_init()
+{
+    uint32_t jit_available;
+    pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
+
+    if (!jit_available)
+    {
+        MXS_WARNING("pcre2 JIT is not available; regex matching will not be "
+                    "as efficient as it could be.");
+    }
+
+    return 0;
 }
 
 }
@@ -115,10 +124,18 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
 //
 
 // Enumeration values for `cached_data`
-static const MXS_ENUM_VALUE cached_data_values[] =
+static const MXS_ENUM_VALUE parameter_cached_data_values[] =
 {
     {"shared",          CACHE_THREAD_MODEL_MT},
     {"thread_specific", CACHE_THREAD_MODEL_ST},
+    {NULL}
+};
+
+// Enumeration values for `selects`
+static const MXS_ENUM_VALUE parameter_selects_values[] =
+{
+    {"assume_cacheable", CACHE_SELECTS_ASSUME_CACHEABLE},
+    {"verify_cacheable", CACHE_SELECTS_VERIFY_CACHEABLE},
     {NULL}
 };
 
@@ -127,10 +144,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static modulecmd_arg_type_t show_argv[] =
     {
         { MODULECMD_ARG_OUTPUT, "The output dcb" },
-        { MODULECMD_ARG_FILTER, "Cache name" }
+        { MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name" }
     };
 
-    modulecmd_register_command("cache", "show", cache_command_show,
+    modulecmd_register_command(MXS_MODULE_NAME, "show", cache_command_show,
                                MXS_ARRAY_NELEMS(show_argv), show_argv);
 
     MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
@@ -139,20 +156,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A caching filter that is capable of caching and returning cached data.",
         VERSION_STRING,
+        RCAP_TYPE_TRANSACTION_TRACKING,
         &CacheFilter::s_object,
-        NULL, /* Process init. */
+        cache_process_init, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
             {
                 "storage",
-                 MXS_MODULE_PARAM_STRING,
-                 NULL,
-                 MXS_MODULE_OPT_REQUIRED
+                MXS_MODULE_PARAM_STRING,
+                CACHE_DEFAULT_STORAGE
             },
             {
                 "storage_options",
@@ -161,48 +178,55 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "hard_ttl",
                 MXS_MODULE_PARAM_COUNT,
-                CACHE_DEFAULT_MAX_RESULTSET_SIZE
+                CACHE_DEFAULT_HARD_TTL
             },
             {
                 "soft_ttl",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_SOFT_TTL
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_SOFT_TTL
             },
             {
                 "max_resultset_rows",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_MAX_RESULTSET_ROWS
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_MAX_RESULTSET_ROWS
             },
             {
                 "max_resultset_size",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_MAX_RESULTSET_SIZE
+                MXS_MODULE_PARAM_SIZE,
+                CACHE_DEFAULT_MAX_RESULTSET_SIZE
             },
             {
                 "max_count",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_MAX_COUNT
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_MAX_COUNT
             },
             {
                 "max_size",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_THREAD_MODEL
+                MXS_MODULE_PARAM_SIZE,
+                CACHE_DEFAULT_MAX_SIZE
             },
             {
                 "rules",
-                 MXS_MODULE_PARAM_PATH
+                MXS_MODULE_PARAM_PATH
             },
             {
                 "debug",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_DEBUG
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_DEBUG
             },
             {
                 "cached_data",
-                 MXS_MODULE_PARAM_ENUM,
-                 CACHE_DEFAULT_THREAD_MODEL,
-                 MXS_MODULE_OPT_NONE,
-                 cached_data_values
+                MXS_MODULE_PARAM_ENUM,
+                CACHE_DEFAULT_THREAD_MODEL,
+                MXS_MODULE_OPT_NONE,
+                parameter_cached_data_values
+            },
+            {
+                "selects",
+                MXS_MODULE_PARAM_ENUM,
+                CACHE_DEFAULT_SELECTS,
+                MXS_MODULE_OPT_NONE,
+                parameter_selects_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -226,7 +250,7 @@ CacheFilter::~CacheFilter()
 }
 
 // static
-CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
+CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams)
 {
     CacheFilter* pFilter = new CacheFilter;
 
@@ -268,7 +292,7 @@ CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, CONFIG_PAR
     return pFilter;
 }
 
-CacheFilterSession* CacheFilter::newSession(SESSION* pSession)
+CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession)
 {
     return CacheFilterSession::Create(m_sCache.get(), pSession);
 }
@@ -280,27 +304,35 @@ void CacheFilter::diagnostics(DCB* pDcb)
 }
 
 // static
+json_t* CacheFilter::diagnostics_json() const
+{
+    return m_sCache->show_json();
+}
+
 uint64_t CacheFilter::getCapabilities()
 {
-    return RCAP_TYPE_TRANSACTION_TRACKING;
+    return RCAP_TYPE_NONE;
 }
 
 // static
-bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config)
+bool CacheFilter::process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config)
 {
     bool error = false;
 
     config.debug = config_get_integer(ppParams, "debug");
     config.hard_ttl = config_get_integer(ppParams, "hard_ttl");
     config.soft_ttl = config_get_integer(ppParams, "soft_ttl");
-    config.max_size = config_get_integer(ppParams, "max_size");
+    config.max_size = config_get_size(ppParams, "max_size");
     config.max_count = config_get_integer(ppParams, "max_count");
     config.storage = MXS_STRDUP(config_get_string(ppParams, "storage"));
     config.max_resultset_rows = config_get_integer(ppParams, "max_resultset_rows");
-    config.max_resultset_size = config_get_integer(ppParams, "max_resultset_size");
+    config.max_resultset_size = config_get_size(ppParams, "max_resultset_size");
     config.thread_model = static_cast<cache_thread_model_t>(config_get_enum(ppParams,
                                                                             "cached_data",
-                                                                            cached_data_values));
+                                                                            parameter_cached_data_values));
+    config.selects = static_cast<cache_selects_t>(config_get_enum(ppParams,
+                                                                  "selects",
+                                                                  parameter_selects_values));
 
     if (!config.storage)
     {
@@ -315,35 +347,11 @@ bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, C
         error = true;
     }
 
-    const CONFIG_PARAMETER *pParam = config_get_param(ppParams, "rules");
+    config.rules = config_copy_string(ppParams, "rules");
+
+    const MXS_CONFIG_PARAMETER *pParam = config_get_param(ppParams, "storage_options");
 
     if (pParam)
-    {
-        if (*pParam->value == '/')
-        {
-            config.rules = MXS_STRDUP(pParam->value);
-        }
-        else
-        {
-            const char* datadir = get_datadir();
-            size_t len = strlen(datadir) + 1 + strlen(pParam->value) + 1;
-
-            char *rules = (char*)MXS_MALLOC(len);
-
-            if (rules)
-            {
-                sprintf(rules, "%s/%s", datadir, pParam->value);
-                config.rules = rules;
-            }
-        }
-
-        if (!config.rules)
-        {
-            error = true;
-        }
-    }
-
-    if ((pParam = config_get_param(ppParams, "storage_options")))
     {
         config.storage_options = MXS_STRDUP(pParam->value);
 
@@ -398,12 +406,26 @@ bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, C
             config.soft_ttl = config.hard_ttl;
         }
 
-        if (config.max_size < config.max_resultset_size)
+        if (config.max_resultset_size == 0)
         {
-            MXS_ERROR("The value of 'max_size' must be at least as larged as that "
-                      "of 'max_resultset_size'.");
+            if (config.max_size != 0)
+            {
+                // If a specific size has been configured for 'max_size' but 'max_resultset_size'
+                // has not been specifically set, then we silently set it to the same as 'max_size'.
+                config.max_resultset_size = config.max_size;
+            }
+        }
+        else
+        {
+            ss_dassert(config.max_resultset_size != 0);
 
-            error = true;
+            if ((config.max_size != 0) && (config.max_resultset_size > config.max_size))
+            {
+                MXS_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
+                            "the value of 'max_size' %ld. Adjusting the value of 'max_resultset_size' "
+                            "down to %ld.", config.max_resultset_size, config.max_size, config.max_size);
+                config.max_resultset_size = config.max_size;
+            }
         }
     }
 

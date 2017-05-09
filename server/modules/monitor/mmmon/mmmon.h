@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -28,7 +28,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/config.h>
-#include <maxscale/externcmd.h>
 
 /**
  * @file mmmon.h - The Multi-Master monitor
@@ -41,15 +40,15 @@ MXS_BEGIN_DECLS
  */
 typedef struct
 {
-    SPINLOCK lock; /**< The monitor spinlock */
     THREAD thread; /**< Monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
     int status; /**< Monitor status */
     unsigned long id; /**< Monitor ID */
     int detectStaleMaster; /**< Monitor flag for Stale Master detection */
-    MONITOR_SERVERS *master; /**< Master server for Master/Slave replication */
+    MXS_MONITOR_SERVERS *master; /**< Master server for Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
-    bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+    uint64_t events; /*< enabled events */
+    MXS_MONITOR* monitor;
 } MM_MONITOR;
 
 MXS_END_DECLS

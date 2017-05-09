@@ -1,5 +1,7 @@
 # Maxrows
 
+This filter was introduced in MariaDB MaxScale 2.1.
+
 ## Overview
 The maxrows filter is capable of restricting the amount of rows that a SELECT,
  a prepared statement or stored procedure could return to the client application.
@@ -44,14 +46,38 @@ The default value is `-1`.
 
 #### `max_resultset_size`
 
-Specifies the maximum size a resultset can have, measured in kibibytes,
-in order to be sent to the client. A resultset larger than this, will
+Specifies the maximum size a resultset can have in order
+to be sent to the client. A resultset larger than this, will
 not be sent: an empty resultset will be sent instead.
+The size can be specified as described
+[here](../Getting-Started/Configuration-Guide.md#sizes).
 
 ```
-max_resultset_size=128
+max_resultset_size=128Ki
 ```
-The default value is 64.
+The default value is 64Ki
+
+#### `max_resultset_return`
+
+Specifies what the filter sends to the client when the
+rows or size limit is hit, possible values:
+
+- an empty result set
+- an error packet with input SQL
+- an OK packet
+
+
+```
+max_resultset_size=empty|error|ok
+```
+The default result type is 'empty'
+
+Example output with ERR packet:
+
+```
+MariaDB [(test)]> select * from test.t4;
+ERROR 1415 (0A000): Row limit/size exceeded for query: select * from test.t4
+```
 
 #### `debug`
 
@@ -67,4 +93,17 @@ Default is `0`. To log everything, give `debug` a value of `3`.
 
 ```
 debug=2
+```
+
+## Example Configuration
+
+Here is an example of filter configuration where the max number of returned
+rows is 10000 and max allowed resultset size is 256KB
+
+```
+[MaxRows]
+type=filter
+module=maxrows
+max_resultset_rows=10000
+max_resultset_size=256000
 ```

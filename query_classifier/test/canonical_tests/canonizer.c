@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -17,7 +17,7 @@
 #include <string.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/buffer.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/utils.h>
 
 int main(int argc, char** argv)
@@ -47,10 +47,10 @@ int main(int argc, char** argv)
     set_process_datadir(strdup("/tmp"));
 
     qc_setup("qc_sqlite", NULL);
-    qc_process_init();
+    qc_process_init(QC_INIT_BOTH);
 
-    infile = fopen(argv[1],"rb");
-    outfile = fopen(argv[2],"wb");
+    infile = fopen(argv[1], "rb");
+    outfile = fopen(argv[2], "wb");
 
     if (infile == NULL || outfile == NULL)
     {
@@ -83,6 +83,6 @@ int main(int argc, char** argv)
     }
     fclose(infile);
     fclose(outfile);
-    qc_process_end();
+    qc_process_end(QC_INIT_BOTH);
     return 0;
 }

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -15,8 +15,9 @@
 #include "cachefiltersession.hh"
 #include <new>
 #include <maxscale/alloc.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/query_classifier.h>
 #include "storage.hh"
 
 namespace
@@ -34,15 +35,158 @@ inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64
 
 }
 
-CacheFilterSession::CacheFilterSession(SESSION* pSession, Cache* pCache, char* zDefaultDb)
+namespace
+{
+
+const char* NON_CACHEABLE_FUNCTIONS[] =
+{
+    "benchmark",
+    "connection_id",
+    "convert_tz",
+    "curdate",
+    "current_date",
+    "current_timestamp",
+    "curtime",
+    "database",
+    "encrypt",
+    "found_rows",
+    "get_lock",
+    "is_free_lock",
+    "is_used_lock",
+    "last_insert_id",
+    "load_file",
+    "localtime",
+    "localtimestamp",
+    "master_pos_wait",
+    "now",
+    "rand",
+    "release_lock",
+    "session_user",
+    "sleep",
+    "sysdate",
+    "system_user",
+    "unix_timestamp",
+    "user",
+    "uuid",
+    "uuid_short",
+};
+
+const char* NON_CACHEABLE_VARIABLES[] =
+{
+    "current_date",
+    "current_timestamp",
+    "localtime",
+    "localtimestamp",
+};
+
+const size_t N_NON_CACHEABLE_FUNCTIONS = sizeof(NON_CACHEABLE_FUNCTIONS)/sizeof(NON_CACHEABLE_FUNCTIONS[0]);
+const size_t N_NON_CACHEABLE_VARIABLES = sizeof(NON_CACHEABLE_VARIABLES)/sizeof(NON_CACHEABLE_VARIABLES[0]);
+
+int compare_name(const void* pLeft, const void* pRight)
+{
+    return strcasecmp((const char*)pLeft, *(const char**)pRight);
+}
+
+inline bool uses_name(const char* zName, const char** pzNames, size_t nNames)
+{
+    return bsearch(zName, pzNames, nNames, sizeof(const char*), compare_name) != NULL;
+}
+
+bool uses_non_cacheable_function(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    const QC_FUNCTION_INFO* pInfo;
+    size_t nInfos;
+
+    qc_get_function_info(pPacket, &pInfo, &nInfos);
+
+    const QC_FUNCTION_INFO* pEnd = pInfo + nInfos;
+
+    while (!rv && (pInfo != pEnd))
+    {
+        rv = uses_name(pInfo->name, NON_CACHEABLE_FUNCTIONS, N_NON_CACHEABLE_FUNCTIONS);
+
+        ++pInfo;
+    }
+
+    return rv;
+}
+
+bool uses_non_cacheable_variable(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    const QC_FIELD_INFO* pInfo;
+    size_t nInfos;
+
+    qc_get_field_info(pPacket, &pInfo, &nInfos);
+
+    const QC_FIELD_INFO* pEnd = pInfo + nInfos;
+
+    while (!rv && (pInfo != pEnd))
+    {
+        rv = uses_name(pInfo->column, NON_CACHEABLE_VARIABLES, N_NON_CACHEABLE_VARIABLES);
+
+        ++pInfo;
+    }
+
+    return rv;
+}
+
+}
+
+namespace
+{
+
+bool is_select_statement(GWBUF* pStmt)
+{
+    bool is_select = false;
+
+    char* pSql;
+    int len;
+
+    ss_debug(int rc =) modutil_extract_SQL(pStmt, &pSql, &len);
+    ss_dassert(rc == 1);
+
+    char* pSql_end = pSql + len;
+
+    pSql = modutil_MySQL_bypass_whitespace(pSql, len);
+
+    const char SELECT[] = "SELECT";
+
+    const char* pSelect = SELECT;
+    const char* pSelect_end = pSelect + sizeof(SELECT) - 1;
+
+    while ((pSql < pSql_end) && (pSelect < pSelect_end) && (toupper(*pSql) == *pSelect))
+    {
+        ++pSql;
+        ++pSelect;
+    }
+
+    if (pSelect == pSelect_end)
+    {
+        if ((pSql == pSql_end) || !isalpha(*pSql))
+        {
+            is_select = true;
+        }
+    }
+
+    return is_select;
+}
+
+}
+
+CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb)
     : maxscale::FilterSession(pSession)
     , m_state(CACHE_EXPECTING_NOTHING)
     , m_pCache(pCache)
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
     , m_refreshing(false)
+    , m_is_read_only(true)
 {
-    memset(m_key.data, 0, CACHE_KEY_MAXLEN);
+    m_key.data = 0;
 
     reset_response_state();
 }
@@ -54,7 +198,7 @@ CacheFilterSession::~CacheFilterSession()
 }
 
 //static
-CacheFilterSession* CacheFilterSession::Create(Cache* pCache, SESSION* pSession)
+CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSession)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
 
@@ -93,7 +237,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
     ss_dassert(GWBUF_IS_CONTIGUOUS(pPacket));
     ss_dassert(GWBUF_LENGTH(pPacket) >= MYSQL_HEADER_LEN + 1);
-    ss_dassert(MYSQL_GET_PACKET_LEN(pData) + MYSQL_HEADER_LEN == GWBUF_LENGTH(pPacket));
+    ss_dassert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == GWBUF_LENGTH(pPacket));
 
     bool fetch_from_server = true;
 
@@ -107,7 +251,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     case MYSQL_COM_INIT_DB:
         {
             ss_dassert(!m_zUseDb);
-            size_t len = MYSQL_GET_PACKET_LEN(pData) - 1; // Remove the command byte.
+            size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1; // Remove the command byte.
             m_zUseDb = (char*)MXS_MALLOC(len + 1);
 
             if (m_zUseDb)
@@ -128,111 +272,103 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
         }
         break;
 
-    case MYSQL_COM_QUERY:
+    case MYSQL_COM_STMT_PREPARE:
+        if (log_decisions())
         {
-            // We do not care whether the query was fully parsed or not.
-            // If a query cannot be fully parsed, the worst thing that can
-            // happen is that caching is not used, even though it would be
-            // possible.
-            if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
+            MXS_NOTICE("MYSQL_COM_STMT_PREPARE, ignoring.");
+        }
+        break;
+
+    case MYSQL_COM_STMT_EXECUTE:
+        if (log_decisions())
+        {
+            MXS_NOTICE("MYSQL_COM_STMT_EXECUTE, ignoring.");
+        }
+        break;
+
+    case MYSQL_COM_QUERY:
+        if (should_consult_cache(pPacket))
+        {
+            if (m_pCache->should_store(m_zDefaultDb, pPacket))
             {
-                SESSION *session = m_pSession;
-
-                if ((session_is_autocommit(session) && !session_trx_is_active(session)) ||
-                    session_trx_is_read_only(session))
+                if (m_pCache->should_use(m_pSession))
                 {
-                    if (m_pCache->should_store(m_zDefaultDb, pPacket))
+                    GWBUF* pResponse;
+                    cache_result_t result = get_cached_response(pPacket, &pResponse);
+
+                    if (CACHE_RESULT_IS_OK(result))
                     {
-                        if (m_pCache->should_use(m_pSession))
+                        if (CACHE_RESULT_IS_STALE(result))
                         {
-                            GWBUF* pResponse;
-                            cache_result_t result = get_cached_response(pPacket, &pResponse);
+                            // The value was found, but it was stale. Now we need to
+                            // figure out whether somebody else is already fetching it.
 
-                            if (CACHE_RESULT_IS_OK(result))
+                            if (m_pCache->must_refresh(m_key, this))
                             {
-                                if (CACHE_RESULT_IS_STALE(result))
+                                // We were the first ones who hit the stale item. It's
+                                // our responsibility now to fetch it.
+                                if (log_decisions())
                                 {
-                                    // The value was found, but it was stale. Now we need to
-                                    // figure out whether somebody else is already fetching it.
-
-                                    if (m_pCache->must_refresh(m_key, this))
-                                    {
-                                        // We were the first ones who hit the stale item. It's
-                                        // our responsibility now to fetch it.
-                                        if (log_decisions())
-                                        {
-                                            MXS_NOTICE("Cache data is stale, fetching fresh from server.");
-                                        }
-
-                                        // As we don't use the response it must be freed.
-                                        gwbuf_free(pResponse);
-
-                                        m_refreshing = true;
-                                        fetch_from_server = true;
-                                    }
-                                    else
-                                    {
-                                        // Somebody is already fetching the new value. So, let's
-                                        // use the stale value. No point in hitting the server twice.
-                                        if (log_decisions())
-                                        {
-                                            MXS_NOTICE("Cache data is stale but returning it, fresh "
-                                                       "data is being fetched already.");
-                                        }
-                                        fetch_from_server = false;
-                                    }
+                                    MXS_NOTICE("Cache data is stale, fetching fresh from server.");
                                 }
-                                else
-                                {
-                                    if (log_decisions())
-                                    {
-                                        MXS_NOTICE("Using fresh data from cache.");
-                                    }
-                                    fetch_from_server = false;
-                                }
-                            }
-                            else
-                            {
+
+                                // As we don't use the response it must be freed.
+                                gwbuf_free(pResponse);
+
+                                m_refreshing = true;
                                 fetch_from_server = true;
                             }
-
-                            if (fetch_from_server)
-                            {
-                                m_state = CACHE_EXPECTING_RESPONSE;
-                            }
                             else
                             {
-                                m_state = CACHE_EXPECTING_NOTHING;
-                                gwbuf_free(pPacket);
-                                DCB *dcb = m_pSession->client_dcb;
-
-                                // TODO: This is not ok. Any filters before this filter, will not
-                                // TODO: see this data.
-                                rv = dcb->func.write(dcb, pResponse);
+                                // Somebody is already fetching the new value. So, let's
+                                // use the stale value. No point in hitting the server twice.
+                                if (log_decisions())
+                                {
+                                    MXS_NOTICE("Cache data is stale but returning it, fresh "
+                                               "data is being fetched already.");
+                                }
+                                fetch_from_server = false;
                             }
+                        }
+                        else
+                        {
+                            if (log_decisions())
+                            {
+                                MXS_NOTICE("Using fresh data from cache.");
+                            }
+                            fetch_from_server = false;
                         }
                     }
                     else
                     {
-                        m_state = CACHE_IGNORING_RESPONSE;
+                        fetch_from_server = true;
                     }
-                }
-                else
-                {
-                    if (log_decisions())
+
+                    if (fetch_from_server)
                     {
-                        MXS_NOTICE("autocommit = %s and transaction state %s => Not using or "
-                                   "storing to cache.",
-                                   session_is_autocommit(m_pSession) ? "ON" : "OFF",
-                                   session_trx_state_to_string(session_get_trx_state(m_pSession)));
+                        m_state = CACHE_EXPECTING_RESPONSE;
+                    }
+                    else
+                    {
+                        m_state = CACHE_EXPECTING_NOTHING;
+                        gwbuf_free(pPacket);
+                        DCB *dcb = m_pSession->client_dcb;
+
+                        // TODO: This is not ok. Any filters before this filter, will not
+                        // TODO: see this data.
+                        rv = dcb->func.write(dcb, pResponse);
                     }
                 }
             }
-            break;
-
-        default:
-            break;
+            else
+            {
+                m_state = CACHE_IGNORING_RESPONSE;
+            }
         }
+        break;
+
+    default:
+        break;
     }
 
     if (fetch_from_server)
@@ -250,21 +386,23 @@ int CacheFilterSession::clientReply(GWBUF* pData)
     if (m_res.pData)
     {
         gwbuf_append(m_res.pData, pData);
+        m_res.length += gwbuf_length(pData); // pData may be a chain, so not GWBUF_LENGTH().
     }
     else
     {
         m_res.pData = pData;
+        m_res.length = gwbuf_length(pData);
     }
 
     if (m_state != CACHE_IGNORING_RESPONSE)
     {
-        if (cache_max_resultset_size_exceeded(m_pCache->config(), gwbuf_length(m_res.pData)))
+        if (cache_max_resultset_size_exceeded(m_pCache->config(), m_res.length))
         {
             if (log_decisions())
             {
-                MXS_NOTICE("Current size %uB of resultset, at least as much "
+                MXS_NOTICE("Current size %luB of resultset, at least as much "
                            "as maximum allowed size %luKiB. Not caching.",
-                           gwbuf_length(m_res.pData),
+                           m_res.length,
                            m_pCache->config().max_resultset_size / 1024);
             }
 
@@ -318,6 +456,15 @@ void CacheFilterSession::diagnostics(DCB* pDcb)
     dcb_printf(pDcb, "\n");
 }
 
+json_t* CacheFilterSession::diagnostics_json() const
+{
+    // Not printing anything. Session of the same instance share the same cache, in
+    // which case the same information would be printed once per session, or all
+    // threads (but not sessions) share the same cache, in which case the output
+    // would be nonsensical.
+    return NULL;
+}
+
 /**
  * Called when resultset field information is handled.
  */
@@ -330,14 +477,15 @@ int CacheFilterSession::handle_expecting_fields()
 
     bool insufficient = false;
 
-    size_t buflen = gwbuf_length(m_res.pData);
+    size_t buflen = m_res.length;
+    ss_dassert(m_res.length == gwbuf_length(m_res.pData));
 
     while (!insufficient && (buflen - m_res.offset >= MYSQL_HEADER_LEN))
     {
         uint8_t header[MYSQL_HEADER_LEN + 1];
         gwbuf_copy_data(m_res.pData, m_res.offset, MYSQL_HEADER_LEN + 1, header);
 
-        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(header);
+        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
         if (m_res.offset + packetlen <= buflen)
         {
@@ -346,7 +494,7 @@ int CacheFilterSession::handle_expecting_fields()
 
             switch (command)
             {
-            case 0xfe: // EOF, the one after the fields.
+            case MYSQL_REPLY_EOF: // The EOF after the fields.
                 m_res.offset += packetlen;
                 m_state = CACHE_EXPECTING_ROWS;
                 rv = handle_expecting_rows();
@@ -392,7 +540,8 @@ int CacheFilterSession::handle_expecting_response()
 
     int rv = 1;
 
-    size_t buflen = gwbuf_length(m_res.pData);
+    size_t buflen = m_res.length;
+    ss_dassert(m_res.length == gwbuf_length(m_res.pData));
 
     if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
     {
@@ -403,15 +552,14 @@ int CacheFilterSession::handle_expecting_response()
 
         switch ((int)MYSQL_GET_COMMAND(header))
         {
-        case 0x00: // OK
-        case 0xff: // ERR
+        case MYSQL_REPLY_OK:
             store_result();
-
+        case MYSQL_REPLY_ERR:
             rv = send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;
 
-        case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
+        case MYSQL_REPLY_LOCAL_INFILE: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
             rv = send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;
@@ -466,23 +614,21 @@ int CacheFilterSession::handle_expecting_rows()
 
     bool insufficient = false;
 
-    size_t buflen = gwbuf_length(m_res.pData);
+    size_t buflen = m_res.length;
+    ss_dassert(m_res.length == gwbuf_length(m_res.pData));
 
     while (!insufficient && (buflen - m_res.offset >= MYSQL_HEADER_LEN))
     {
         uint8_t header[MYSQL_HEADER_LEN + 1];
         gwbuf_copy_data(m_res.pData, m_res.offset, MYSQL_HEADER_LEN + 1, header);
 
-        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(header);
+        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
         if (m_res.offset + packetlen <= buflen)
         {
-            // We have at least one complete packet.
-            int command = (int)MYSQL_GET_COMMAND(header);
-
-            switch (command)
+            if ((packetlen == MYSQL_EOF_PACKET_LEN) && (MYSQL_GET_COMMAND(header) == MYSQL_REPLY_EOF))
             {
-            case 0xfe: // EOF, the one after the rows.
+                // The last EOF packet
                 m_res.offset += packetlen;
                 ss_dassert(m_res.offset == buflen);
 
@@ -490,10 +636,10 @@ int CacheFilterSession::handle_expecting_rows()
 
                 rv = send_upstream();
                 m_state = CACHE_EXPECTING_NOTHING;
-                break;
-
-            case 0xfb: // NULL
-            default: // length-encoded-string
+            }
+            else
+            {
+                // Length encode strings, 0xfb denoting NULL.
                 m_res.offset += packetlen;
                 ++m_res.nRows;
 
@@ -507,7 +653,6 @@ int CacheFilterSession::handle_expecting_rows()
                     m_res.offset = buflen; // To abort the loop.
                     m_state = CACHE_IGNORING_RESPONSE;
                 }
-                break;
             }
         }
         else
@@ -530,7 +675,8 @@ int CacheFilterSession::handle_expecting_use_response()
 
     int rv = 1;
 
-    size_t buflen = gwbuf_length(m_res.pData);
+    size_t buflen = m_res.length;
+    ss_dassert(m_res.length == gwbuf_length(m_res.pData));
 
     if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
     {
@@ -540,7 +686,7 @@ int CacheFilterSession::handle_expecting_use_response()
 
         switch (command)
         {
-        case 0x00: // OK
+        case MYSQL_REPLY_OK:
             // In case m_zUseDb could not be allocated in routeQuery(), we will
             // in fact reset the default db here. That's ok as it will prevent broken
             // entries in the cache.
@@ -549,7 +695,7 @@ int CacheFilterSession::handle_expecting_use_response()
             m_zUseDb = NULL;
             break;
 
-        case 0xff: // ERR
+        case MYSQL_REPLY_ERR:
             MXS_FREE(m_zUseDb);
             m_zUseDb = NULL;
             break;
@@ -602,6 +748,7 @@ int CacheFilterSession::send_upstream()
 void CacheFilterSession::reset_response_state()
 {
     m_res.pData = NULL;
+    m_res.length = 0;
     m_res.nTotalFields = 0;
     m_res.nFields = 0;
     m_res.nRows = 0;
@@ -668,4 +815,134 @@ void CacheFilterSession::store_result()
         m_pCache->refreshed(m_key, this);
         m_refreshing = false;
     }
+}
+
+/**
+ * Whether the cache should be consulted.
+ *
+ * @param pParam The GWBUF being handled.
+ *
+ * @return True, if the cache should be consulted, false otherwise.
+ */
+bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
+{
+    bool consult_cache = false;
+
+    uint32_t type_mask = qc_get_trx_type_mask(pPacket); // Note, only trx-related type mask
+
+    const char* zReason = NULL;
+
+    if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
+    {
+        if (log_decisions())
+        {
+            zReason = "transaction start";
+        }
+
+        // When a transaction is started, we initially assume it is read-only.
+        m_is_read_only = true;
+    }
+    else if (!session_trx_is_active(m_pSession))
+    {
+        if (log_decisions())
+        {
+            zReason = "no transaction";
+        }
+        consult_cache = true;
+    }
+    else if (session_trx_is_read_only(m_pSession))
+    {
+        if (log_decisions())
+        {
+            zReason = "explicitly read-only transaction";
+        }
+        consult_cache = true;
+    }
+    else if (m_is_read_only)
+    {
+        if (log_decisions())
+        {
+            zReason = "ordinary transaction that has so far been read-only";
+        }
+        consult_cache = true;
+    }
+    else
+    {
+        if (log_decisions())
+        {
+            zReason = "ordinary transaction with non-read statements";
+        }
+    }
+
+    if (consult_cache)
+    {
+        if (is_select_statement(pPacket))
+        {
+            if (m_pCache->config().selects == CACHE_SELECTS_VERIFY_CACHEABLE)
+            {
+                // Note that the type mask must be obtained a new. A few lines
+                // above we only got the transaction state related type mask.
+                type_mask = qc_get_type_mask(pPacket);
+
+                if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
+                {
+                    consult_cache = false;
+                    zReason = "user variables are read";
+                }
+                else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+                {
+                    consult_cache = false;
+                    zReason = "system variables are read";
+                }
+                else if (uses_non_cacheable_function(pPacket))
+                {
+                    consult_cache = false;
+                    zReason = "uses non-cacheable function";
+                }
+                else if (uses_non_cacheable_variable(pPacket))
+                {
+                    consult_cache = false;
+                    zReason = "uses non-cacheable variable";
+                }
+            }
+        }
+        else
+        {
+            // A bit broad, as e.g. SHOW will cause the read only state to be turned
+            // off. However, during normal use this will always be an UPDATE, INSERT
+            // or DELETE.
+            m_is_read_only = false;
+            consult_cache = false;
+            zReason = "statement is not SELECT";
+        }
+    }
+
+    if (log_decisions())
+    {
+        char* pSql;
+        int length;
+        const int max_length = 40;
+
+        // At this point we know it's a COM_QUERY and that the buffer is contiguous
+        modutil_extract_SQL(pPacket, &pSql, &length);
+
+        const char* zFormat;
+
+        if (length <= max_length)
+        {
+            zFormat = "%s, \"%.*s\", %s.";
+        }
+        else
+        {
+            zFormat = "%s, \"%.*s...\", %s.";
+            length = max_length - 3; // strlen("...");
+        }
+
+        const char* zDecision = (consult_cache ? "CONSULT" : "IGNORE ");
+
+        ss_dassert(zReason);
+        MXS_NOTICE(zFormat, zDecision, length, pSql, zReason);
+    }
+
+    return consult_cache;
 }

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -13,66 +13,137 @@
  */
 
 /**
- * @file config.h The configuration handling elements
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 21/06/13     Mark Riddoch            Initial implementation
- * 07/05/14     Massimiliano Pinto      Added version_string to global configuration
- * 23/05/14     Massimiliano Pinto      Added id to global configuration
- * 17/10/14     Mark Riddoch            Added poll tuning configuration parameters
- * 05/03/15     Massimiliano Pinto      Added sysname, release, sha1_mac to gateway struct
- *
- * @endverbatim
+ * @file include/maxscale/config.h The configuration handling elements
  */
 
 #include <maxscale/cdefs.h>
+
 #include <limits.h>
-#include <sys/utsname.h>
 #include <openssl/sha.h>
-#include <maxscale/gw_ssl.h>
+#include <sys/utsname.h>
+
 #include <maxscale/modinfo.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
-#define DEFAULT_NBPOLLS         3       /**< Default number of non block polls before we block */
-#define DEFAULT_POLLSLEEP       1000    /**< Default poll wait time (milliseconds) */
+/** Default port where the REST API listens */
+#define DEFAULT_ADMIN_HTTP_PORT 8989
+#define DEFAULT_ADMIN_HOST      "::"
+
 #define _RELEASE_STR_LENGTH     256     /**< release len */
-#define DEFAULT_NTHREADS        1 /**< Default number of polling threads */
+#define MAX_ADMIN_USER_LEN      1024
+#define MAX_ADMIN_PW_LEN        1024
+#define MAX_ADMIN_HOST_LEN      1024
+
+/** JSON Pointers to key parts of JSON objects */
+#define MXS_JSON_PTR_ID         "/data/id"
+#define MXS_JSON_PTR_PARAMETERS "/data/attributes/parameters"
+
+/** Pointers to relation lists */
+#define MXS_JSON_PTR_RELATIONSHIPS_SERVERS  "/data/relationships/servers/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_SERVICES "/data/relationships/services/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_MONITORS "/data/relationships/monitors/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_FILTERS  "/data/relationships/filters/data"
+
+/** Parameter value JSON Pointers */
+#define MXS_JSON_PTR_PARAM_PORT                  MXS_JSON_PTR_PARAMETERS "/port"
+#define MXS_JSON_PTR_PARAM_ADDRESS               MXS_JSON_PTR_PARAMETERS "/address"
+#define MXS_JSON_PTR_PARAM_PROTOCOL              MXS_JSON_PTR_PARAMETERS "/protocol"
+#define MXS_JSON_PTR_PARAM_AUTHENTICATOR         MXS_JSON_PTR_PARAMETERS "/authenticator"
+#define MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS MXS_JSON_PTR_PARAMETERS "/authenticator_options"
+#define MXS_JSON_PTR_PARAM_SSL_KEY               MXS_JSON_PTR_PARAMETERS "/ssl_key"
+#define MXS_JSON_PTR_PARAM_SSL_CERT              MXS_JSON_PTR_PARAMETERS "/ssl_cert"
+#define MXS_JSON_PTR_PARAM_SSL_CA_CERT           MXS_JSON_PTR_PARAMETERS "/ssl_ca_cert"
+#define MXS_JSON_PTR_PARAM_SSL_VERSION           MXS_JSON_PTR_PARAMETERS "/ssl_version"
+#define MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH MXS_JSON_PTR_PARAMETERS "/ssl_cert_verify_depth"
+
+#define MXS_JSON_PTR_MODULE  "/data/attributes/module"
+
 /**
- * Maximum length for configuration parameter value.
+ * Common configuration parameters names
+ *
+ * All of the constants resolve to a lowercase version without the CN_ prefix.
+ * For example CN_PASSWORD resolves to the static string "password". This means
+ * that the sizeof(CN_<name>) returns the actual size of that string.
  */
-enum
-{
-    MAX_PARAM_LEN = 256
-};
-
-typedef enum
-{
-    UNDEFINED_TYPE     = 0x00,
-    STRING_TYPE        = 0x01,
-    COUNT_TYPE         = 0x02,
-    PERCENT_TYPE       = 0x04,
-    BOOL_TYPE          = 0x08,
-    SQLVAR_TARGET_TYPE = 0x10
-} config_param_type_t;
-
-typedef enum
-{
-    TYPE_UNDEFINED = 0,
-    TYPE_MASTER,
-    TYPE_ALL
-} target_t;
-
-enum
-{
-    MAX_RLAG_NOT_AVAILABLE = -1,
-    MAX_RLAG_UNDEFINED = -2
-};
-
-#define PARAM_IS_TYPE(p,t) ((p) & (t))
+extern const char CN_ADDRESS[];
+extern const char CN_ADMIN_AUTH[];
+extern const char CN_ADMIN_HOST[];
+extern const char CN_ADMIN_PASSWORD[];
+extern const char CN_ADMIN_PORT[];
+extern const char CN_ADMIN_USER[];
+extern const char CN_ADMIN_SSL_KEY[];
+extern const char CN_ADMIN_SSL_CERT[];
+extern const char CN_ADMIN_SSL_CA_CERT[];
+extern const char CN_ATTRIBUTES[];
+extern const char CN_AUTHENTICATOR[];
+extern const char CN_AUTHENTICATOR_OPTIONS[];
+extern const char CN_AUTH_ALL_SERVERS[];
+extern const char CN_AUTH_CONNECT_TIMEOUT[];
+extern const char CN_AUTH_READ_TIMEOUT[];
+extern const char CN_AUTH_WRITE_TIMEOUT[];
+extern const char CN_AUTO[];
+extern const char CN_CONNECTION_TIMEOUT[];
+extern const char CN_DATA[];
+extern const char CN_DEFAULT[];
+extern const char CN_ENABLE_ROOT_USER[];
+extern const char CN_FEEDBACK[];
+extern const char CN_FILTERS[];
+extern const char CN_FILTER[];
+extern const char CN_GATEWAY[];
+extern const char CN_ID[];
+extern const char CN_LISTENER[];
+extern const char CN_LISTENERS[];
+extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
+extern const char CN_LOG_AUTH_WARNINGS[];
+extern const char CN_LOG_THROTTLING[];
+extern const char CN_MAXSCALE[];
+extern const char CN_MAX_CONNECTIONS[];
+extern const char CN_MAX_RETRY_INTERVAL[];
+extern const char CN_MODULE[];
+extern const char CN_MODULES[];
+extern const char CN_MONITORS[];
+extern const char CN_MONITOR[];
+extern const char CN_MS_TIMESTAMP[];
+extern const char CN_NAME[];
+extern const char CN_NON_BLOCKING_POLLS[];
+extern const char CN_OPTIONS[];
+extern const char CN_PARAMETERS[];
+extern const char CN_PASSWORD[];
+extern const char CN_POLL_SLEEP[];
+extern const char CN_PORT[];
+extern const char CN_PROTOCOL[];
+extern const char CN_QUERY_CLASSIFIER[];
+extern const char CN_QUERY_CLASSIFIER_ARGS[];
+extern const char CN_RELATIONSHIPS[];
+extern const char CN_LINKS[];
+extern const char CN_REQUIRED[];
+extern const char CN_RETRY_ON_FAILURE[];
+extern const char CN_ROUTER[];
+extern const char CN_ROUTER_OPTIONS[];
+extern const char CN_SELF[];
+extern const char CN_SERVERS[];
+extern const char CN_SERVER[];
+extern const char CN_SERVICES[];
+extern const char CN_SERVICE[];
+extern const char CN_SESSIONS[];
+extern const char CN_SKIP_PERMISSION_CHECKS[];
+extern const char CN_SOCKET[];
+extern const char CN_STATE[];
+extern const char CN_STATUS[];
+extern const char CN_SSL[];
+extern const char CN_SSL_CA_CERT[];
+extern const char CN_SSL_CERT[];
+extern const char CN_SSL_CERT_VERIFY_DEPTH[];
+extern const char CN_SSL_KEY[];
+extern const char CN_SSL_VERSION[];
+extern const char CN_STRIP_DB_ESC[];
+extern const char CN_THREADS[];
+extern const char CN_TYPE[];
+extern const char CN_USER[];
+extern const char CN_VERSION_STRING[];
+extern const char CN_WEIGHTBY[];
 
 /**
  * The config parameter
@@ -82,7 +153,7 @@ typedef struct config_parameter
     char                    *name;          /**< The name of the parameter */
     char                    *value;         /**< The value of the parameter */
     struct config_parameter *next;          /**< Next pointer in the linked list */
-} CONFIG_PARAMETER;
+} MXS_CONFIG_PARAMETER;
 
 /**
  * The config context structure, used to build the configuration
@@ -91,7 +162,7 @@ typedef struct config_parameter
 typedef struct config_context
 {
     char                  *object;     /**< The name of the object being configured */
-    CONFIG_PARAMETER      *parameters; /**< The list of parameter values */
+    MXS_CONFIG_PARAMETER  *parameters; /**< The list of parameter values */
     void                  *element;    /**< The element created from the data */
     bool                   was_persisted; /**< True if this object was persisted */
     struct config_context *next;       /**< Next pointer in the linked list */
@@ -120,23 +191,22 @@ typedef struct
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
-} GATEWAY_CONF;
-
+    char          admin_user[MAX_ADMIN_USER_LEN];      /**< Admin interface user */
+    char          admin_password[MAX_ADMIN_PW_LEN];    /**< Admin interface password */
+    char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
+    uint16_t      admin_port;                          /**< Admin interface port */
+    bool          admin_auth;                          /**< Admin interface authentication */
+    char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
+    char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
+    char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */
+} MXS_CONFIG;
 
 /**
- * @brief Creates an empty configuration context
+ * @brief Get global MaxScale configuration
  *
- * @param section Context name
- * @return New context or NULL on memory allocation failure
+ * @return The global configuration
  */
-CONFIG_CONTEXT* config_context_create(const char *section);
-
-/**
- * @brief Free a configuration context
- *
- * @param context The context to free
- */
-void config_context_free(CONFIG_CONTEXT *context);
+MXS_CONFIG* config_get_global_options();
 
 /**
  * @brief Get a configuration parameter
@@ -145,40 +215,7 @@ void config_context_free(CONFIG_CONTEXT *context);
  * @param name Name of parameter to get
  * @return The parameter or NULL if the parameter was not found
  */
-CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name);
-
-/**
- * @brief Add a parameter to a configuration context
- *
- * @param obj Context where the parameter should be added
- * @param key Key to add
- * @param value Value for the key
- * @return True on success, false on memory allocation error
- */
-bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
-
-/**
- * @brief Append to an existing parameter
- *
- * @param obj Configuration context
- * @param key Parameter name
- * @param value Value to append to the parameter
- * @return True on success, false on memory allocation error
- */
-bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
-
-/**
- * @brief Check if all SSL parameters are defined
- *
- * Helper function to check whether all of the required SSL parameters are defined
- * in the configuration context. The checked parameters are 'ssl', 'ssl_key',
- * 'ssl_cert' and 'ssl_ca_cert'. The 'ssl' parameter must also have a value of
- * 'required'.
- *
- * @param obj Configuration context
- * @return True if all required parameters are present
- */
-bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
+MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name);
 
 /**
  * @brief Helper function for checking SSL parameters
@@ -187,20 +224,6 @@ bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
  * @return True if the parameter is an SSL parameter
  */
 bool config_is_ssl_parameter(const char *key);
-
-/**
- * @brief Construct an SSL structure
- *
- * The SSL structure is used by both listeners and servers.
- *
- * TODO: Rename to something like @c config_construct_ssl
- *
- * @param obj Configuration context
- * @param require_cert Whether certificates are required
- * @param error_count Pointer to an int which is incremented for each error
- * @return New SSL_LISTENER structure or NULL on error
- */
-SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
 
 /**
  * @brief Check if a configuration parameter is valid
@@ -231,7 +254,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
  *
  * @return The value as a boolean or false if none was found
  */
-bool config_get_bool(const CONFIG_PARAMETER *params, const char *key);
+bool config_get_bool(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get an integer value
@@ -243,7 +266,7 @@ bool config_get_bool(const CONFIG_PARAMETER *params, const char *key);
  *
  * @return The integer value of the parameter or 0 if no parameter was found
  */
-int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
+int config_get_integer(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get a size in bytes
@@ -259,7 +282,7 @@ int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
  *
  * @return Number of bytes or 0 if no parameter was found
  */
-uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key);
+uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get a string value
@@ -269,7 +292,7 @@ uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key);
  *
  * @return The raw string value or an empty string if no parameter was found
  */
-const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
+const char* config_get_string(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get a enumeration value
@@ -284,7 +307,8 @@ const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
  * detected. If -1 is used, config_get_param() should be used to detect whether
  * the parameter exists
  */
-int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *values);
+int config_get_enum(const MXS_CONFIG_PARAMETER *params, const char *key,
+                    const MXS_ENUM_VALUE *values);
 
 /**
  * @brief Get a service value
@@ -294,7 +318,7 @@ int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_E
  *
  * @return Pointer to configured service
  */
-struct service* config_get_service(const CONFIG_PARAMETER *params, const char *key);
+struct service* config_get_service(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get a server value
@@ -304,7 +328,36 @@ struct service* config_get_service(const CONFIG_PARAMETER *params, const char *k
  *
  * @return Pointer to configured server
  */
-struct server* config_get_server(const CONFIG_PARAMETER *params, const char *key);
+struct server* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key);
+
+/**
+ * @brief Get an array of servers. The caller should free the produced array,
+ * but not the array elements.
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ * @param output Where to save the output
+ * @return How many servers were found, equal to output array size
+ */
+int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
+                           struct server*** output);
+
+/**
+ * Parse a list of server names and write the results in an array of strings
+ * with one server name in each. The output array and its elements should be
+ * deallocated by the caller. The server names are not checked to be actual
+ * configured servers.
+ * 
+ * The output array may contain more elements than the the value returned, but these
+ * extra elements are null and in the end of the array. If no server names were
+ * parsed or if an error occurs, nothing is written to the output parameter.
+ *
+ * @param servers A list of server names
+ * @param output_array Where to save the output
+ * @return How many servers were found and set into the array. 0 on error or if
+ * none were found.
+ */
+int config_parse_server_list(const char *servers, char ***output_array);
 
 /**
  * @brief Get copy of parameter value if it is defined
@@ -320,33 +373,65 @@ struct server* config_get_server(const CONFIG_PARAMETER *params, const char *key
  * @note The use of this function should be avoided after startup as the function
  * will abort the process if memory allocation fails.
  */
-char* config_copy_string(const CONFIG_PARAMETER *params, const char *key);
+char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
- * @brief Generate default module parameters
+ * @brief Convert string truth value
  *
- * Adds any default parameters to @c ctx that aren't already in it.
+ * Used for truth values with @c 1, @c yes or @c true for a boolean true value and @c 0, @c no
+ * or @c false for a boolean false value.
  *
- * @param ctx    Configuration context where the parameters are added
- * @param params Module parameters
+ * @param str String to convert to a truth value
  *
- * TODO: Move this to a header internal to the MaxScale core
+ * @return 1 if @c value is true, 0 if value is false and -1 if the value is not
+ * a valid truth value
  */
-void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params);
+int config_truth_value(const char *value);
 
-char*               config_clean_string_list(const char* str);
-CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);
-void                config_enable_feedback_task(void);
-void                config_disable_feedback_task(void);
-unsigned long       config_get_gateway_id(void);
-GATEWAY_CONF*       config_get_global_options();
-bool                config_load(const char *);
-unsigned int        config_nbpolls();
-unsigned int        config_pollsleep();
-bool                config_reload();
-int                 config_threadcount();
-int                 config_truth_value(const char *);
-void                config_parameter_free(CONFIG_PARAMETER* p1);
-bool                is_internal_service(const char *router);
+/**
+ * @brief Get worker thread count
+ *
+ * @return Number of worker threads
+ */
+int config_threadcount(void);
+
+/**
+ * @brief Get number of non-blocking polls
+ *
+ * @return Number of non-blocking polls
+ */
+unsigned int config_nbpolls(void);
+
+/**
+ * @brief Get poll sleep interval
+ *
+ * @return The time each thread waits for a blocking poll
+ */
+unsigned int config_pollsleep(void);
+
+/**
+ * @brief Enable feedback task
+ */
+void config_enable_feedback_task(void);
+
+/**
+ * @brief Disable feedback task
+ */
+void config_disable_feedback_task(void);
+
+/**
+ * @brief Reload the configuration
+ *
+ * @return True if reloading was successful
+ */
+bool config_reload(void);
+
+/**
+ * @brief List all path parameters as JSON
+ *
+ * @param host Hostname of this server
+ * @return JSON object representing the paths used by MaxScale
+ */
+json_t* config_paths_to_json(const char* host);
 
 MXS_END_DECLS

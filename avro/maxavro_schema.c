@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxavro.h"
+#include "maxavro_internal.h"
 #include <jansson.h>
 #include <string.h>
 #include <maxscale/debug.h>
@@ -120,26 +120,48 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
 
     if (rval)
     {
+        bool error = false;
         json_error_t err;
         json_t *schema = json_loads(json, 0, &err);
 
         if (schema)
         {
             json_t *field_arr = NULL;
-            json_unpack(schema, "{s:o}", "fields", &field_arr);
-            size_t arr_size = json_array_size(field_arr);
-            rval->fields = malloc(sizeof(MAXAVRO_SCHEMA_FIELD) * arr_size);
-            rval->num_fields = arr_size;
 
-            for (int i = 0; i < arr_size; i++)
+            if (json_unpack(schema, "{s:o}", "fields", &field_arr) == 0)
             {
-                json_t *object = json_array_get(field_arr, i);
-                char *key;
-                json_t *value_obj;
+                size_t arr_size = json_array_size(field_arr);
+                rval->fields = malloc(sizeof(MAXAVRO_SCHEMA_FIELD) * arr_size);
+                rval->num_fields = arr_size;
 
-                json_unpack(object, "{s:s s:o}", "name", &key, "type", &value_obj);
-                rval->fields[i].name = strdup(key);
-                rval->fields[i].type = unpack_to_type(value_obj, &rval->fields[i]);
+                for (int i = 0; i < arr_size; i++)
+                {
+                    json_t *object = json_array_get(field_arr, i);
+                    char *key;
+                    json_t *value_obj;
+
+                    if (object && json_unpack(object, "{s:s s:o}", "name", &key, "type", &value_obj) == 0)
+                    {
+                        rval->fields[i].name = strdup(key);
+                        rval->fields[i].type = unpack_to_type(value_obj, &rval->fields[i]);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Failed to unpack JSON Object \"name\": %s", json);
+                        error = true;
+
+                        for (int j = 0; j < i; j++)
+                        {
+                            MXS_FREE(rval->fields[j].name);
+                        }
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                MXS_ERROR("Failed to unpack JSON Object \"fields\": %s", json);
+                error = true;
             }
 
             json_decref(schema);
@@ -147,12 +169,20 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
         else
         {
             MXS_ERROR("Failed to read JSON schema: %s", json);
+            error = true;
+        }
+
+        if (error)
+        {
+            MXS_FREE(rval);
+            rval = NULL;
         }
     }
     else
     {
         MXS_ERROR("Memory allocation failed.");
     }
+
     return rval;
 }
 
@@ -160,7 +190,7 @@ static void maxavro_schema_field_free(MAXAVRO_SCHEMA_FIELD *field)
 {
     if (field)
     {
-        free(field->name);
+        MXS_FREE(field->name);
         if (field->type == MAXAVRO_TYPE_ENUM)
         {
             json_decref((json_t*)field->extra);
@@ -180,7 +210,7 @@ void maxavro_schema_free(MAXAVRO_SCHEMA* schema)
         {
             maxavro_schema_field_free(&schema->fields[i]);
         }
-        free(schema->fields);
-        free(schema);
+        MXS_FREE(schema->fields);
+        MXS_FREE(schema);
     }
 }

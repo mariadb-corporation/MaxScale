@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -17,6 +17,10 @@
  */
 
 #include <maxscale/cdefs.h>
+
+#include <stdint.h>
+
+#include <maxscale/debug.h>
 
 MXS_BEGIN_DECLS
 
@@ -79,6 +83,7 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_PATH, /**< Path to a file or a directory */
     MXS_MODULE_PARAM_SERVICE, /**< Service name */
     MXS_MODULE_PARAM_SERVER, /**< Server name */
+    MXS_MODULE_PARAM_SERVERLIST /**< List of server names, separated by ',' */
 };
 
 /** Maximum and minimum values for integer types */
@@ -99,15 +104,16 @@ enum mxs_module_param_options
     MXS_MODULE_OPT_PATH_R_OK   = (1 << 2), /**< PATH: Read permission to path required */
     MXS_MODULE_OPT_PATH_W_OK   = (1 << 3), /**< PATH: Write permission to path required */
     MXS_MODULE_OPT_PATH_F_OK   = (1 << 4), /**< PATH: Path must exist */
-    MXS_MODULE_OPT_ENUM_UNIQUE = (1 << 5)  /**< ENUM: Only one value can be defined */
+    MXS_MODULE_OPT_PATH_CREAT  = (1 << 5), /**< PATH: Create path if it doesn't exist */
+    MXS_MODULE_OPT_ENUM_UNIQUE = (1 << 6)  /**< ENUM: Only one value can be defined */
 };
 
 /** String to enum value mappings */
 typedef struct mxs_enum_value
 {
     const char *name; /**< Name of the enum value */
-    int         enum_value; /**< The integer value of the enum */
-}MXS_ENUM_VALUE;
+    uint64_t    enum_value; /**< The integer value of the enum */
+} MXS_ENUM_VALUE;
 
 /** Module parameter declaration */
 typedef struct mxs_module_param
@@ -132,6 +138,7 @@ typedef struct mxs_module
     MXS_MODULE_VERSION  api_version;   /**< Module API version */
     const char         *description;   /**< Module description */
     const char         *version;       /**< Module version */
+    uint64_t            module_capabilities; /**< Declared module capabilities */
     void               *module_object; /**< Module type specific API implementation */
     /**
      * If non-NULL, this function is called once at process startup. If the
@@ -175,6 +182,13 @@ typedef struct mxs_module
 #define MXS_END_MODULE_PARAMS 0
 
 /**
+ * This value should be given to the @c module_capabilities member if the module
+ * declares no capabilities. Currently only routers and filters can declare
+ * capabilities.
+ */
+#define MXS_NO_MODULE_CAPABILITIES 0
+
+/**
  * Name of the module entry point
  *
  * All modules should declare the module entry point in the following style:
@@ -184,7 +198,7 @@ typedef struct mxs_module
  * MXS_MODULE* MXS_CREATE_MODULE()
  * {
  *     // Module specific API implementation
- *    static FILTER_OBJECT my_object = { ... };
+ *    static MXS_FILTER_OBJECT my_object = { ... };
  *
  *     // An implementation of the MXS_MODULE structure
  *    static MXS_MODULE info = { ... };
@@ -204,5 +218,77 @@ typedef struct mxs_module
 
 /** Name of the symbol that MaxScale will load */
 #define MXS_MODULE_SYMBOL_NAME "mxs_get_module_object"
+
+static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_type type)
+{
+    switch (type)
+    {
+    case MXS_MODULE_PARAM_COUNT:
+        return "count";
+    case MXS_MODULE_PARAM_INT:
+        return "int";
+    case MXS_MODULE_PARAM_SIZE:
+        return "size";
+    case MXS_MODULE_PARAM_BOOL:
+        return "bool";
+    case MXS_MODULE_PARAM_STRING:
+        return "string";
+    case MXS_MODULE_PARAM_ENUM:
+        return "enum";
+    case MXS_MODULE_PARAM_PATH:
+        return "path";
+    case MXS_MODULE_PARAM_SERVICE:
+        return "service";
+    case MXS_MODULE_PARAM_SERVER:
+        return "server";
+    case MXS_MODULE_PARAM_SERVERLIST:
+        return "serverlist";
+    default:
+        ss_dassert(!true);
+        return "unknown";
+    }
+}
+
+static inline const char* mxs_module_api_to_string(MXS_MODULE_API type)
+{
+    switch (type)
+    {
+    case MXS_MODULE_API_PROTOCOL:
+        return "protocol";
+    case MXS_MODULE_API_ROUTER:
+        return "router";
+    case MXS_MODULE_API_MONITOR:
+        return "monitor";
+    case MXS_MODULE_API_FILTER:
+        return "filter";
+    case MXS_MODULE_API_AUTHENTICATOR:
+        return "authenticator";
+    case MXS_MODULE_API_QUERY_CLASSIFIER:
+        return "query_classifier";
+    default:
+        ss_dassert(!true);
+        return "unknown";
+    }
+}
+
+static inline const char* mxs_module_status_to_string(MXS_MODULE_STATUS type)
+{
+    switch (type)
+    {
+    case MXS_MODULE_IN_DEVELOPMENT:
+        return "In development";
+    case MXS_MODULE_ALPHA_RELEASE:
+        return "Alpha";
+    case MXS_MODULE_BETA_RELEASE:
+        return "Beta";
+    case MXS_MODULE_GA:
+        return "GA";
+    case MXS_MODULE_EXPERIMENTAL:
+        return "Experimental";
+    default:
+        ss_dassert(!true);
+        return "Unknown";
+    }
+}
 
 MXS_END_DECLS

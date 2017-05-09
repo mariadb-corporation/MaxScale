@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -35,21 +35,6 @@ public:
         MXS_EXCEPTION_GUARD(pStorage = StorageType::Create_instance(zName, *pConfig, argc, argv));
 
         return reinterpret_cast<CACHE_STORAGE*>(pStorage);
-    }
-
-    static cache_result_t getKey(const char* zDefault_db,
-                                 const GWBUF* pQuery,
-                                 CACHE_KEY* pKey)
-    {
-        // zdefault_db may be NULL.
-        ss_dassert(pQuery);
-        ss_dassert(pKey);
-
-        cache_result_t result = CACHE_RESULT_ERROR;
-
-        MXS_EXCEPTION_GUARD(result = StorageType::Get_key(zDefault_db, *pQuery, pKey));
-
-        return result;
     }
 
     static void freeInstance(CACHE_STORAGE* pInstance)
@@ -196,7 +181,6 @@ CACHE_STORAGE_API StorageModule<StorageType>::s_api =
 {
     &StorageModule<StorageType>::initialize,
     &StorageModule<StorageType>::createInstance,
-    &StorageModule<StorageType>::getKey,
     &StorageModule<StorageType>::freeInstance,
     &StorageModule<StorageType>::getConfig,
     &StorageModule<StorageType>::getInfo,

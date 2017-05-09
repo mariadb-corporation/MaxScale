@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -25,10 +25,16 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "readwritesplit"
+
 #include <maxscale/cdefs.h>
+
+#include <math.h>
+
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
-#include <math.h>
+#include <maxscale/router.h>
+#include <maxscale/service.h>
 
 MXS_BEGIN_DECLS
 
@@ -104,6 +110,55 @@ typedef enum select_criteria
     LAST_CRITERIA               /*< not used except for an index */
 } select_criteria_t;
 
+static inline const char* select_criteria_to_str(select_criteria_t type)
+{
+    switch (type)
+    {
+    case LEAST_GLOBAL_CONNECTIONS:
+        return "LEAST_GLOBAL_CONNECTIONS";
+
+    case LEAST_ROUTER_CONNECTIONS:
+        return "LEAST_ROUTER_CONNECTIONS";
+
+    case LEAST_BEHIND_MASTER:
+        return "LEAST_BEHIND_MASTER";
+
+    case LEAST_CURRENT_OPERATIONS:
+        return "LEAST_CURRENT_OPERATIONS";
+
+    default:
+        return "UNDEFINED_CRITERIA";
+    }
+}
+
+/**
+ * Controls how master failure is handled
+ */
+enum failure_mode
+{
+    RW_FAIL_INSTANTLY, /**< Close the connection as soon as the master is lost */
+    RW_FAIL_ON_WRITE, /**< Close the connection when the first write is received */
+    RW_ERROR_ON_WRITE /**< Don't close the connection but send an error for writes */
+};
+
+static inline const char* failure_mode_to_str(enum failure_mode type)
+{
+    switch (type)
+    {
+    case RW_FAIL_INSTANTLY:
+        return "fail_instantly";
+
+    case RW_FAIL_ON_WRITE:
+        return "fail_on_write";
+
+    case RW_ERROR_ON_WRITE:
+        return "error_on_write";
+
+    default:
+        ss_dassert(false);
+        return "UNDEFINED_MODE";
+    }
+}
 
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
@@ -179,6 +234,39 @@ typedef struct sescmd_cursor_st
 #endif
 } sescmd_cursor_t;
 
+/** Enum for tracking client reply state */
+typedef enum
+{
+    REPLY_STATE_START,       /**< Query sent to backend */
+    REPLY_STATE_DONE,        /**< Complete reply received */
+    REPLY_STATE_RSET_COLDEF, /**< Resultset response, waiting for column definitions */
+    REPLY_STATE_RSET_ROWS    /**< Resultset response, waiting for rows */
+} reply_state_t;
+
+/**
+ * Helper function to convert reply_state_t to string
+ */
+static inline const char* rstostr(reply_state_t state)
+{
+    switch (state)
+    {
+    case REPLY_STATE_START:
+        return "REPLY_STATE_START";
+
+    case REPLY_STATE_DONE:
+        return "REPLY_STATE_DONE";
+
+    case REPLY_STATE_RSET_COLDEF:
+        return "REPLY_STATE_RSET_COLDEF";
+
+    case REPLY_STATE_RSET_ROWS:
+        return "REPLY_STATE_RSET_ROWS";
+    }
+
+    ss_dassert(false);
+    return "UNKNOWN";
+}
+
 /**
  * Reference to BACKEND.
  *
@@ -194,24 +282,14 @@ typedef struct backend_ref_st
     bref_state_t    bref_state;
     int             bref_num_result_wait;
     sescmd_cursor_t bref_sescmd_cur;
-    GWBUF*          bref_pending_cmd; /**< For stmt which can't be routed due active sescmd execution */
     unsigned char   reply_cmd;  /**< The reply the backend server sent to a session command.
                                  * Used to detect slaves that fail to execute session command. */
+    reply_state_t   reply_state; /**< Reply state of the current query */
 #if defined(SS_DEBUG)
     skygw_chk_t     bref_chk_tail;
 #endif
     int closed_at; /** DEBUG: Line number where this backend reference was closed */
 } backend_ref_t;
-
-/**
- * Controls how master failure is handled
- */
-enum failure_mode
-{
-    RW_FAIL_INSTANTLY, /**< Close the connection as soon as the master is lost */
-    RW_FAIL_ON_WRITE, /**< Close the connection when the first write is received */
-    RW_ERROR_ON_WRITE /**< Don't close the connection but send an error for writes */
-};
 
 typedef struct rwsplit_config_st
 {
@@ -220,7 +298,7 @@ typedef struct rwsplit_config_st
     int               max_slave_connections; /**< Maximum number of slaves for each connection*/
     select_criteria_t slave_selection_criteria; /**< The slave selection criteria */
     int               max_slave_replication_lag; /**< Maximum replication lag */
-    target_t          use_sql_variables_in; /**< Whether to send user variables
+    mxs_target_t      use_sql_variables_in; /**< Whether to send user variables
                                                 * to master or all nodes */
     int               max_sescmd_history; /**< Maximum amount of session commands to store */
     bool              disable_sescmd_history; /**< Disable session command history */
@@ -230,6 +308,8 @@ typedef struct rwsplit_config_st
     enum failure_mode master_failure_mode; /**< Master server failure handling mode.
                                                * @see enum failure_mode */
     bool              retry_failed_reads; /**< Retry failed reads on other servers */
+    int               connection_keepalive; /**< Send pings to servers that have
+                                             * been idle for too long */
 } rwsplit_config_t;
 
 #if defined(PREP_STMT_CACHING)
@@ -254,6 +334,15 @@ typedef struct prep_stmt_st
 
 #endif /*< PREP_STMT_CACHING */
 
+/** States of a LOAD DATA LOCAL INFILE */
+enum ld_state
+{
+    LOAD_DATA_INACTIVE, /**< Not active */
+    LOAD_DATA_START,    /**< Current query starts a load */
+    LOAD_DATA_ACTIVE,   /**< Load is active */
+    LOAD_DATA_END       /**< Current query contains an empty packet that ends the load */
+};
+
 /**
  * The client session structure used within this router.
  */
@@ -262,7 +351,6 @@ struct router_client_session
 #if defined(SS_DEBUG)
     skygw_chk_t      rses_chk_top;
 #endif
-    SPINLOCK         rses_lock;      /*< protects rses_deleted */
     bool             rses_closed;    /*< true when closeSession is called */
     rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT]; /*< Properties listed by their type */
     backend_ref_t*   rses_master_ref;
@@ -270,12 +358,14 @@ struct router_client_session
     rwsplit_config_t rses_config;    /*< copied config info from router instance */
     int              rses_nbackends;
     int              rses_nsescmd;  /*< Number of executed session commands */
-    bool             rses_load_active; /*< If LOAD DATA LOCAL INFILE is being currently executed */
+    enum ld_state    load_data_state; /*< Current load data state */
     bool             have_tmp_tables;
     uint64_t         rses_load_data_sent; /*< How much data has been sent */
     DCB*             client_dcb;
     int              pos_generator;
     backend_ref_t    *forced_node; /*< Current server where all queries should be sent */
+    int              expected_responses; /**< Number of expected responses to the current query */
+    GWBUF*           query_queue; /**< Queued commands waiting to be executed */
 #if defined(PREP_STMT_CACHING)
     HASHTABLE*       rses_prep_stmt[2];
 #endif
@@ -291,11 +381,11 @@ struct router_client_session
  */
 typedef struct
 {
-    int     n_sessions; /*< Number sessions created */
-    int     n_queries;  /*< Number of queries forwarded */
-    int     n_master;   /*< Number of stmts sent to master */
-    int     n_slave;    /*< Number of stmts sent to slave */
-    int     n_all;      /*< Number of stmts sent to all */
+    uint64_t n_sessions; /*< Number sessions created */
+    uint64_t n_queries;  /*< Number of queries forwarded */
+    uint64_t n_master;   /*< Number of stmts sent to master */
+    uint64_t n_slave;    /*< Number of stmts sent to slave */
+    uint64_t n_all;      /*< Number of stmts sent to all */
 } ROUTER_STATS;
 
 /**
@@ -304,7 +394,6 @@ typedef struct
 typedef struct router_instance
 {
     SERVICE*                service;     /*< Pointer to service */
-    SPINLOCK                lock;        /*< Lock for the instance data */
     rwsplit_config_t        rwsplit_config; /*< expanded config info from SERVICE */
     int                     rwsplit_version; /*< version number for router's config */
     ROUTER_STATS            stats;       /*< Statistics for this router */
@@ -313,6 +402,22 @@ typedef struct router_instance
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
+
+/**
+ * @brief Route a stored query
+ *
+ * When multiple queries are executed in a pipeline fashion, the readwritesplit
+ * stores the extra queries in a queue. This queue is emptied after reading a
+ * reply from the backend server.
+ *
+ * @param rses Router client session
+ * @return True if a stored query was routed successfully
+ */
+bool route_stored_query(ROUTER_CLIENT_SES *rses);
+
+/** Reply state change debug logging */
+#define LOG_RS(a, b) MXS_DEBUG("[%s]:%d %s -> %s", (a)->ref->server->name, \
+    (a)->ref->server->port, rstostr((a)->reply_state), rstostr(b));
 
 MXS_END_DECLS
 

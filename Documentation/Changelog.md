@@ -1,7 +1,30 @@
-#Changelog
+# Changelog
+
 ## MariaDB MaxScale 2.1
-* MaxAdmin now defaults to Emacs editing mode instead of VIM. To activate VIM mode start
-  MaxAdmin with -i.
+* MariaDB MaxScale is licensed under MariaDB BSL 1.1.
+* Hierarchical configuration files are now supported.
+* Logging is now performed in a way compatible with logrotate(8).
+* Persistent connections are reset upon resuse.
+* Galera monitor now consistently chooses the same node as master.
+* Galera Monitor can set the preferred donor nodes list.
+* The configuration can now be altered dynamically and the changes are persisted.
+* There is now a monitor for Amazon Aurora clusters.
+* MySQL Monitor now has a multi-master mode.
+* MySQL Monitor now has a failover mode.
+* Named Server Filter now supports wildcards for source option.
+* Binlog Server can now be configured to encrypt binlog files.
+* New filters, _cache_, _ccrfilter_, _insertstream_, _masking_, and _maxrows_ are introduced.
+* GSSAPI based authentication can be used
+* Prepared statements are now in the database firewall filtered exactly like non-prepared
+  statements.
+* The firewall filter can now filter based on function usage.
+* MaxScale now supports IPv6
+
+For more details, please refer to:
+* [MariaDB MaxScale 2.1.3 Release Notes](Release-Notes/MaxScale-2.1.3-Release-Notes.md)
+* [MariaDB MaxScale 2.1.2 Release Notes](Release-Notes/MaxScale-2.1.2-Release-Notes.md)
+* [MariaDB MaxScale 2.1.1 Release Notes](Release-Notes/MaxScale-2.1.1-Release-Notes.md)
+* [MariaDB MaxScale 2.1.0 Release Notes](Release-Notes/MaxScale-2.1.0-Release-Notes.md)
 
 ## MariaDB MaxScale 2.0
 * MariaDB MaxScale is licensed under MariaDB BSL.
@@ -14,6 +37,8 @@
   as JSON objects (beta level functionality).
 
 For more details, please refer to:
+* [MariaDB MaxScale 2.0.5 Release Notes](Release-Notes/MaxScale-2.0.5-Release-Notes.md)
+* [MariaDB MaxScale 2.0.4 Release Notes](Release-Notes/MaxScale-2.0.4-Release-Notes.md)
 * [MariaDB MaxScale 2.0.3 Release Notes](Release-Notes/MaxScale-2.0.3-Release-Notes.md)
 * [MariaDB MaxScale 2.0.2 Release Notes](Release-Notes/MaxScale-2.0.2-Release-Notes.md)
 * [MariaDB MaxScale 2.0.1 Release Notes](Release-Notes/MaxScale-2.0.1-Release-Notes.md)

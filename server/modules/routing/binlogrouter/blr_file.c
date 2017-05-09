@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -48,6 +48,9 @@
  *
  * @endverbatim
  */
+
+#include "blr.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -62,10 +65,9 @@
 #include <maxscale/router.h>
 #include <maxscale/atomic.h>
 #include <maxscale/spinlock.h>
-#include "blr.h"
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 #include <inttypes.h>
@@ -83,10 +85,14 @@ static inline const EVP_CIPHER *aes_ctr(unsigned int klen)
 {
     switch (klen)
     {
-        case 16: return EVP_aes_128_ctr();
-        case 24: return EVP_aes_192_ctr();
-        case 32: return EVP_aes_256_ctr();
-        default: return 0;
+    case 16:
+        return EVP_aes_128_ctr();
+    case 24:
+        return EVP_aes_192_ctr();
+    case 32:
+        return EVP_aes_256_ctr();
+    default:
+        return 0;
     }
 }
 #endif
@@ -101,10 +107,14 @@ static inline const EVP_CIPHER *aes_cbc(uint klen)
 {
     switch (klen)
     {
-        case 16: return EVP_aes_128_cbc();
-        case 24: return EVP_aes_192_cbc();
-        case 32: return EVP_aes_256_cbc();
-        default: return 0;
+    case 16:
+        return EVP_aes_128_cbc();
+    case 24:
+        return EVP_aes_192_cbc();
+    case 32:
+        return EVP_aes_256_cbc();
+    default:
+        return 0;
     }
 }
 
@@ -118,10 +128,14 @@ static inline const EVP_CIPHER *aes_ecb(uint klen)
 {
     switch (klen)
     {
-        case 16: return EVP_aes_128_ecb();
-        case 24: return EVP_aes_192_ecb();
-        case 32: return EVP_aes_256_ecb();
-        default: return 0;
+    case 16:
+        return EVP_aes_128_ecb();
+    case 24:
+        return EVP_aes_192_ecb();
+    case 32:
+        return EVP_aes_256_ecb();
+    default:
+        return 0;
     }
 }
 
@@ -158,6 +172,7 @@ static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();
 extern void encode_value(unsigned char *data, unsigned int value, int len);
 extern void blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr);
+bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
 
 typedef struct binlog_event_desc
 {
@@ -182,11 +197,11 @@ static uint8_t *blr_create_start_encryption_event(ROUTER_INSTANCE *router,
                                                   uint32_t event_pos,
                                                   bool do_checksum);
 static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
-                                     uint8_t *event,
-                                     uint32_t event_size,
-                                     uint32_t pos,
-                                     const uint8_t *nonce,
-                                     int action);
+                                          uint8_t *event,
+                                          uint32_t event_size,
+                                          uint32_t pos,
+                                          const uint8_t *nonce,
+                                          int action);
 static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
                             uint8_t *event,
                             uint32_t event_size,
@@ -293,10 +308,9 @@ blr_file_init(ROUTER_INSTANCE *router)
     root_len = strlen(router->fileroot);
     if ((dirp = opendir(path)) == NULL)
     {
-        char err_msg[BLRM_STRERROR_R_MSG_SIZE];
         MXS_ERROR("%s: Unable to read the binlog directory %s, %s.",
                   router->service->name, router->binlogdir,
-                  strerror_r(errno, err_msg, sizeof(err_msg)));
+                  mxs_strerror(errno));
         return 0;
     }
     while ((dp = readdir(dirp)) != NULL)
@@ -419,20 +433,20 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
         else
         {
             MXS_ERROR("%s: Failed to write magic string to created binlog file %s, %s.",
-                      router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
+                      router->service->name, path, mxs_strerror(errno));
             close(fd);
 
             if (!unlink(path))
             {
                 MXS_ERROR("%s: Failed to delete file %s, %s.",
-                          router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
+                          router->service->name, path, mxs_strerror(errno));
             }
         }
     }
     else
     {
         MXS_ERROR("%s: Failed to create binlog file %s, %s.",
-                  router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
+                  router->service->name, path, mxs_strerror(errno));
     }
 
     return created;
@@ -553,7 +567,9 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
 
         gwbuf_free(encrypted);
         encrypted = NULL;
-    } else {
+    }
+    else
+    {
         /* Write current received event form master */
         n = pwrite(router->binlog_fd, buf, size, router->last_written);
     }
@@ -561,19 +577,18 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     /* Check write operation result*/
     if (n != size)
     {
-        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, router->binlog_position,
                   router->binlog_name,
-                  strerror_r(errno, err_msg, sizeof(err_msg)));
+                  mxs_strerror(errno));
         /* Remove any partial event that was written */
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
                       router->service->name, router->binlog_position,
                       router->binlog_name,
-                      strerror_r(errno, err_msg, sizeof(err_msg)));
+                      mxs_strerror(errno));
         }
         return 0;
     }
@@ -812,7 +827,7 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         {
         case 0:
             MXS_INFO("Reached end of binlog file '%s' at %lu.",
-                      file->binlogname, pos);
+                     file->binlogname, pos);
 
             /* set ok indicator */
             hdr->ok = SLAVE_POS_READ_OK;
@@ -820,9 +835,8 @@ blr_read_binlog(ROUTER_INSTANCE *router,
             break;
         case -1:
             {
-                char err_msg[MXS_STRERROR_BUFLEN];
                 snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file '%s'; (%s), event at %lu",
-                         file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
+                         file->binlogname, mxs_strerror(errno), pos);
 
                 if (errno == EBADF)
                 {
@@ -876,17 +890,16 @@ blr_read_binlog(ROUTER_INSTANCE *router,
                 {
                 case 0:
                     MXS_INFO("Reached end of binlog file at %lu.",
-                              pos);
+                             pos);
 
                     /* set ok indicator */
                     hdr->ok = SLAVE_POS_READ_OK;
                     break;
                 case -1:
                     {
-                        char err_msg[MXS_STRERROR_BUFLEN];
                         snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                                  "Failed to reread header in binlog file '%s'; (%s), event at %lu",
-                                 file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
+                                 file->binlogname, mxs_strerror(errno), pos);
 
                         if (errno == EBADF)
                         {
@@ -957,7 +970,7 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         if (n ==  0)
         {
             MXS_INFO("Reached end of binlog file at %lu while reading remaining bytes.",
-                      pos);
+                     pos);
 
             /* set ok indicator */
             hdr->ok = SLAVE_POS_READ_OK;
@@ -967,13 +980,12 @@ blr_read_binlog(ROUTER_INSTANCE *router,
 
         if (n == -1)
         {
-            char err_msg[MXS_STRERROR_BUFLEN];
             snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                      "Error reading the binlog event at %lu in binlog file '%s';"
                      "(%s), expected %d bytes.",
                      pos,
                      file->binlogname,
-                     strerror_r(errno, err_msg, sizeof(err_msg)),
+                     mxs_strerror(errno),
                      hdr->event_size - BINLOG_EVENT_HDR_LEN);
         }
         else
@@ -1181,8 +1193,11 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
     {
         return;
     }
-    write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf));
-    // TODO: Check result.
+    if (write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf)) == -1)
+    {
+        MXS_ERROR("Failed to write cached response: %d, %s",
+                  errno, mxs_strerror(errno));
+    }
 
     close(fd);
 }
@@ -1235,7 +1250,11 @@ blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
         close(fd);
         return NULL;
     }
-    read(fd, GWBUF_DATA(buf), statb.st_size);
+    if (read(fd, GWBUF_DATA(buf), statb.st_size) == -1)
+    {
+        MXS_ERROR("Failed to read cached response: %d, %s",
+                  errno, mxs_strerror(errno));
+    }
     close(fd);
     return buf;
 }
@@ -1272,13 +1291,15 @@ blr_file_next_exists(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
  *
  * Routine detects errors and pending transactions
  *
- * @param router  The router instance
- * @param fix     Whether to fix or not errors
- * @param debug   Whether to enable or not the debug for events
- * @return        0 on success, >0 on failure
+ * @param router    The router instance
+ * @param action    Whether to fix errors or blank events at pos
+ * @param debug     Whether to enable or not the debug for events
+ * @return          0 on success, >0 on failure
  */
 int
-blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
+blr_read_events_all_events(ROUTER_INSTANCE *router,
+                           BINLOG_FILE_FIX *action,
+                           int debug)
 {
     unsigned long filelen = 0;
     struct stat statb;
@@ -1290,7 +1311,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
     unsigned long long last_known_commit = 4;
 
     REP_HEADER hdr;
-    int pending_transaction = 0;
+    int pending_transaction = BLRM_NO_TRANSACTION;
     int n;
     int db_name_len;
     uint8_t *ptr;
@@ -1312,6 +1333,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
     BINLOG_EVENT_DESC fde_event;
     int fde_seen = 0;
     int start_encryption_seen = 0;
+    bool fix = action ? action->fix : false;
+    bool replace_trx_events = false;
 
     memset(&first_event, '\0', sizeof(first_event));
     memset(&last_event, '\0', sizeof(last_event));
@@ -1342,9 +1365,13 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             switch (n)
             {
             case 0:
-                MXS_DEBUG("End of binlog file [%s] at %llu.",
-                          router->binlog_name,
-                          pos);
+                if (!(debug & BLR_CHECK_ONLY))
+                {
+                    MXS_DEBUG("End of binlog file [%s] at %llu.",
+                              router->binlog_name,
+                              pos);
+                }
+
                 if (n_transactions)
                 {
                     average_events = (double)((double)total_events / (double)n_transactions) * (1.0);
@@ -1355,7 +1382,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 }
 
                 /* Report Binlog First and Last event */
-                if (pos > 4)
+                if (pos > 4 && !(debug & BLR_CHECK_ONLY))
                 {
                     if (first_event.event_type == 0)
                     {
@@ -1368,7 +1395,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 }
 
                 /* Report Transaction Summary */
-                if (n_transactions != 0)
+                if (!(debug & BLR_CHECK_ONLY) && n_transactions != 0)
                 {
                     char total_label[2] = "";
                     char average_label[2] = "";
@@ -1405,11 +1432,9 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 break;
             case -1:
                 {
-                    char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
-                    strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
                     MXS_ERROR("Failed to read binlog file %s at position %llu"
-                              " (%s).", router->binlog_name,
-                              pos, err_msg);
+                              " (%s).", router->binlog_name, pos,
+                              mxs_strerror(errno));
 
                     if (errno == EBADF)
                     {
@@ -1437,7 +1462,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 router->binlog_position = last_known_commit;
                 router->current_safe_event = last_known_commit;
                 router->current_pos = pos;
-                router->pending_transaction = 1;
+                router->pending_transaction.state = BLRM_TRANSACTION_START;
 
                 MXS_ERROR("Binlog '%s' ends at position %lu and has an incomplete transaction at %lu. ",
                           router->binlog_name, router->current_pos, router->binlog_position);
@@ -1482,42 +1507,42 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
 
         if (start_encryption_seen)
         {
-             uint8_t iv[AES_BLOCK_SIZE + 1] = "";
-             char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
-             /* The event size, 4 bytes, is written in clear: use it */
-             uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
+            uint8_t iv[AES_BLOCK_SIZE + 1] = "";
+            char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
+            /* The event size, 4 bytes, is written in clear: use it */
+            uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
 
-             /**
-              * Events are encrypted.
-              *
-              * Print the IV for the current encrypted event.
-              */
+            /**
+             * Events are encrypted.
+             *
+             * Print the IV for the current encrypted event.
+             */
 
-             if (debug & BLR_REPORT_REP_HEADER)
-             {
-                 /* Get binlog file "nonce" and other data from router encryption_ctx */
-                 BINLOG_ENCRYPTION_CTX *enc_ctx = router->encryption_ctx;
+            if (debug & BLR_REPORT_REP_HEADER)
+            {
+                /* Get binlog file "nonce" and other data from router encryption_ctx */
+                BINLOG_ENCRYPTION_CTX *enc_ctx = router->encryption_ctx;
 
-                 /* Encryption IV is 12 bytes nonce + 4 bytes event position */
-                 memcpy(iv, enc_ctx->nonce, BLRM_NONCE_LENGTH);
-                 gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)pos);
+                /* Encryption IV is 12 bytes nonce + 4 bytes event position */
+                memcpy(iv, enc_ctx->nonce, BLRM_NONCE_LENGTH);
+                gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)pos);
 
-                 /* Human readable version */
-                 gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
+                /* Human readable version */
+                gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
 
-                 MXS_DEBUG("** Encrypted Event @ %lu: the IV is %s, size is %lu, next pos is %lu\n",
-                           (unsigned long)pos,
-                           iv_hex, (unsigned long)event_size,
-                           (unsigned long)(pos + event_size));
-             }
+                MXS_DEBUG("** Encrypted Event @ %lu: the IV is %s, size is %lu, next pos is %lu\n",
+                          (unsigned long)pos,
+                          iv_hex, (unsigned long)event_size,
+                          (unsigned long)(pos + event_size));
+            }
 
-             /* Set event size only in hdr struct, before decryption */
-             hdr.event_size = event_size;
+            /* Set event size only in hdr struct, before decryption */
+            hdr.event_size = event_size;
 
         }
         else
         {
-            char errmsg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
+            char errmsg[BINLOG_ERROR_MSG_LEN + 1] = "";
             /* fill replication header struct */
             hdr.timestamp = EXTRACT32(hdbuf);
             hdr.event_type = hdbuf[4];
@@ -1625,12 +1650,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         {
             if (n == -1)
             {
-                char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
-                strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
                 MXS_ERROR("Error reading the event at %llu in %s. "
                           "%s, expected %d bytes.",
                           pos, router->binlog_name,
-                          err_msg, hdr.event_size - BINLOG_EVENT_HDR_LEN);
+                          mxs_strerror(errno),
+                          hdr.event_size - BINLOG_EVENT_HDR_LEN);
             }
             else
             {
@@ -1688,16 +1712,16 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         /* decrypt events */
         if (start_encryption_seen)
         {
-             uint8_t iv[AES_BLOCK_SIZE + 1] = "";
-             char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
-             uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
-             uint8_t *decrypt_ptr;
-             unsigned long next_pos;
-             char errmsg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
+            uint8_t iv[AES_BLOCK_SIZE + 1] = "";
+            char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
+            uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
+            uint8_t *decrypt_ptr;
+            unsigned long next_pos;
+            char errmsg[BINLOG_ERROR_MSG_LEN + 1] = "";
 
-             /**
-              * Events are encrypted.
-              */
+            /**
+             * Events are encrypted.
+             */
 
             if ((decrypted_event = blr_prepare_encrypted_event(router,
                                                                data,
@@ -1769,7 +1793,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 buf_t[strlen(buf_t) - 1] = '\0';
             }
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("- Format Description event FDE @ %llu, size %lu, time %lu (%s)",
                           pos, (unsigned long)hdr.event_size, fde_event.event_time, buf_t);
@@ -1810,7 +1834,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             /* Now remove from the calculated number of events the extra 5 bytes */
             n_events -= fde_extra_bytes;
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("       FDE ServerVersion [%50s]", ptr + 2);
 
@@ -1824,7 +1848,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             checksum = ptr + hdr.event_size - event_header_length - fde_extra_bytes;
             check_alg = checksum[0];
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("       FDE Checksum alg desc %i, alg type %s",
                           check_alg,
@@ -1845,8 +1869,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         if ((debug & BLR_REPORT_REP_HEADER))
         {
             char *event_desc = blr_get_event_description(router, hdr.event_type);
-            MXS_DEBUG("%8s==== Event Header ====\n%39sEvent time %lu\n%39sEvent Type %u (%s)\n%39sServer Id %lu\n%39sNextPos %lu\n%39sFlags %u",
-                      " ", " ", (unsigned long)hdr.timestamp, " ", hdr.event_type,
+            MXS_DEBUG("%8s==== Event Header ====\n%39sEvent Pos %lu\n%39sEvent time %lu\n%39s"
+                      "Event size %lu\n%39sEvent Type %u (%s)\n%39s"
+                      "Server Id %lu\n%39sNextPos %lu\n%39sFlags %u",
+                      " ", " ", (unsigned long) pos, " ", (unsigned long)hdr.timestamp, " ",
+                      (unsigned long)hdr.event_size, " ", hdr.event_type,
                       event_desc ? event_desc : "NULL", " ",
                       (unsigned long)hdr.serverid, " ", (unsigned long)hdr.next_pos, " ", hdr.flags);
             if (found_chksum)
@@ -1887,7 +1914,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             memcpy(&new_encryption_ctx->binlog_key_version,
                    &ste_event.binlog_key_version, BLRM_KEY_VERSION_LENGTH);
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 /* Hex representation of nonce */
                 gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
@@ -1942,15 +1969,67 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             memcpy(file, ptr + 8, slen);
             file[slen] = 0;
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("- Rotate event @ %llu, next file is [%s] @ %lu",
                           pos, file, new_pos);
             }
         }
 
+        /* Find and report Transaction start for event replacing only */
+        if (action &&
+            action->pos > 4 &&
+            action->replace_trx &&
+            pos == action->pos &&
+            pending_transaction)
+        {
+            MXS_NOTICE(">>> Position %lu belongs to a transaction started at pos %lu.",
+                       (unsigned long)pos, (unsigned long)last_known_commit);
+            MXS_NOTICE("This position will be used for replacing all related events.");
+
+            /* Set Transaction start as the stating pos for events replacing */
+            action->pos = last_known_commit;
+
+            /* Free resources */
+            gwbuf_free(result);
+            gwbuf_free(decrypted_event);
+
+            return 0;
+        }
+
+        /**
+         * Replace one event at pos or transaction events from pos:
+         * All events will be replaced by IGNORABLE events
+         */
+        if (fix &&
+            action->pos > 4 &&
+            (pos == action->pos || replace_trx_events))
+        {
+            char *event_desc = blr_get_event_description(router, hdr.event_type);
+
+            if (action->replace_trx && !replace_trx_events)
+            {
+                MXS_NOTICE("=== Replacing all events of Transaction at pos %lu"
+                           " with IGNORABLE EVENT event type",
+                           action->pos);
+            }
+
+            MXS_NOTICE("=== Replace event (%s) at pos %lu with an IGNORABLE EVENT\n",
+                       event_desc ? event_desc : "unknown",
+                       (unsigned long)pos);
+
+            router->last_written = pos;
+            router->master_chksum = found_chksum;
+
+            /* Create and write Ingonrable event into binlog file at action->pos */
+            blr_write_special_event(router, pos, hdr.event_size, &hdr, BLRM_IGNORABLE);
+
+            /* Set replace indicator: when COMMIT is seen later, it will be set to false */
+            replace_trx_events = action->replace_trx ? true : false;
+        }
+
         /* If MariaDB 10 compatibility:
-         * check for MARIADB10_GTID_EVENT with flags = 0
+         * check for MARIADB10_GTID_EVENT with flags
          * This marks the transaction starts instead of
          * QUERY_EVENT with "BEGIN"
          */
@@ -1968,7 +2047,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
 
                 if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
                 {
-                    if (pending_transaction > 0)
+                    if (pending_transaction > BLRM_NO_TRANSACTION)
                     {
                         MXS_ERROR("Transaction cannot be @ pos %llu: "
                                   "Another MariaDB 10 transaction (GTID %u-%u-%lu)"
@@ -1982,12 +2061,25 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                     }
                     else
                     {
-                        pending_transaction = 1;
+                        char mariadb_gtid[GTID_MAX_LEN + 1];
+                        snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                                 domainid, hdr.serverid,
+                                 n_sequence);
+
+                        pending_transaction = BLRM_TRANSACTION_START;
+
+                        router->pending_transaction.start_pos = pos;
+                        router->pending_transaction.end_pos = 0;
+
+                        /* Set MariaDB GTID */
+                        if (router->mariadb_gtid)
+                        {
+                            strcpy(router->pending_transaction.gtid, mariadb_gtid);
+                        }
 
                         transaction_events = 0;
                         event_bytes = 0;
-
-                        if (debug)
+                        if (!(debug & BLR_CHECK_ONLY))
                         {
                             MXS_DEBUG("> MariaDB 10 Transaction (GTID %u-%u-%lu)"
                                       " starts @ pos %llu",
@@ -2026,7 +2118,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 /* A transaction starts with this event */
                 if (strncmp(statement_sql, "BEGIN", 5) == 0)
                 {
-                    if (pending_transaction > 0)
+                    if (pending_transaction > BLRM_NO_TRANSACTION)
                     {
                         MXS_ERROR("Transaction cannot be @ pos %llu: "
                                   "Another transaction was opened at %llu",
@@ -2039,12 +2131,14 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                     }
                     else
                     {
-                        pending_transaction = 1;
+                        pending_transaction = BLRM_TRANSACTION_START;
+
+                        router->pending_transaction.start_pos = pos;
+                        router->pending_transaction.end_pos = 0;
 
                         transaction_events = 0;
                         event_bytes = 0;
-
-                        if (debug)
+                        if (!(debug & BLR_CHECK_ONLY))
                         {
                             MXS_DEBUG("> Transaction starts @ pos %llu", pos);
                         }
@@ -2054,11 +2148,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 /* Commit received for non transactional tables, i.e. MyISAM */
                 if (strncmp(statement_sql, "COMMIT", 6) == 0)
                 {
-                    if (pending_transaction > 0)
+                    if (pending_transaction > BLRM_NO_TRANSACTION)
                     {
-                        pending_transaction = 3;
+                        pending_transaction = BLRM_COMMIT_SEEN;
 
-                        if (debug)
+                        if (!(debug & BLR_CHECK_ONLY))
                         {
                             MXS_DEBUG("       Transaction @ pos %llu, closing @ %llu",
                                       last_known_commit, pos);
@@ -2079,11 +2173,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         if (hdr.event_type == XID_EVENT)
         {
             /* Commit received for a transactional tables, i.e. InnoDB */
-
-            if (pending_transaction > 0)
+            if (pending_transaction > BLRM_NO_TRANSACTION)
             {
-                pending_transaction = 2;
-                if (debug)
+                pending_transaction = BLRM_XID_EVENT_SEEN;
+
+                if (!(debug & BLR_CHECK_ONLY))
                 {
                     MXS_DEBUG("       Transaction XID @ pos %llu, closing @ %llu",
                               last_known_commit, pos);
@@ -2091,15 +2185,32 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             }
         }
 
-        if (pending_transaction > 1)
+        if (pending_transaction > BLRM_TRANSACTION_START)
         {
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("< Transaction @ pos %llu, is now closed @ %llu. %lu events seen",
                           last_known_commit, pos, transaction_events);
             }
-            pending_transaction = 0;
+
+            pending_transaction = BLRM_NO_TRANSACTION;
+
+            router->pending_transaction.end_pos = hdr.next_pos;
+
             last_known_commit = pos;
+
+            /* Reset the event replacing indicator */
+            replace_trx_events = false;
+
+            if (router->mariadb10_compat &&
+                router->mariadb_gtid)
+            {
+                /* Update Last Seen MariaDB GTID */
+                strcpy(router->last_mariadb_gtid, router->pending_transaction.gtid);
+
+                /* Save MariaDB 10 GTID */
+                blr_save_mariadb_gtid(router);
+            }
 
             total_events += transaction_events;
 
@@ -2210,7 +2321,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         router->binlog_position = last_known_commit;
         router->current_safe_event = last_known_commit;
         router->current_pos = pos;
-        router->pending_transaction = 1;
+        router->pending_transaction.state = BLRM_TRANSACTION_START;
 
         MXS_WARNING("an error has been found. "
                     "Setting safe pos to %lu, current pos %lu",
@@ -2281,6 +2392,9 @@ blr_cache_read_master_data(ROUTER_INSTANCE *router)
     router->saved_master.selecthostname = blr_cache_read_response(router, "selecthostname");
     router->saved_master.map = blr_cache_read_response(router, "map");
     router->saved_master.mariadb10 = blr_cache_read_response(router, "mariadb10");
+    router->saved_master.server_vars = blr_cache_read_response(router, "server_vars");
+    router->saved_master.binlog_vars = blr_cache_read_response(router, "binlog_vars");
+    router->saved_master.lower_case_tables = blr_cache_read_response(router, "lower_case_tables");
 }
 
 /**
@@ -2344,7 +2458,6 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 
     char filename[len + sizeof('/') + sizeof(MASTER_INI)]; // sizeof includes NULL
     char tmp_file[len + sizeof('/') + sizeof(MASTER_INI) + sizeof('.') + sizeof(TMP)];
-    char err_msg[MXS_STRERROR_BUFLEN];
     char *ssl_ca;
     char *ssl_cert;
     char *ssl_key;
@@ -2358,14 +2471,15 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     if (config_file == NULL)
     {
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
-                 strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                 mxs_strerror(errno), errno);
         return 2;
     }
 
     if (chmod(tmp_file, S_IRUSR | S_IWUSR) < 0)
     {
+        fclose(config_file);
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
-                 strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                 mxs_strerror(errno), errno);
         return 2;
     }
 
@@ -2401,11 +2515,13 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     {
         fprintf(config_file, "master_ssl=%d\n", router->ssl_enabled);
         fprintf(config_file, "master_ssl_key=%s\n", ssl_key);
-        fprintf(config_file, "master_ssl_cert=%s\n",ssl_cert);
+        fprintf(config_file, "master_ssl_cert=%s\n", ssl_cert);
         fprintf(config_file, "master_ssl_ca=%s\n", ssl_ca);
     }
     if (ssl_version && strlen(ssl_version))
+    {
         fprintf(config_file, "master_tls_version=%s\n", ssl_version);
+    }
 
     fclose(config_file);
 
@@ -2415,14 +2531,14 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     if (rc == -1)
     {
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
-                 strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                 mxs_strerror(errno), errno);
         return 3;
     }
 
     if (chmod(filename, S_IRUSR | S_IWUSR) < 0)
     {
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
-                 strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                 mxs_strerror(errno), errno);
         return 3;
     }
 
@@ -2523,12 +2639,12 @@ blr_create_ignorable_event(uint32_t event_size,
          * The algorithm is first to compute the checksum of an empty buffer
          * and then the checksum of the real event: 4 byte less than event_size
          */
-         uint32_t chksum;
-         chksum = crc32(0L, NULL, 0);
-         chksum = crc32(chksum, new_event, event_size - BINLOG_EVENT_CRC_SIZE);
+        uint32_t chksum;
+        chksum = crc32(0L, NULL, 0);
+        chksum = crc32(chksum, new_event, event_size - BINLOG_EVENT_CRC_SIZE);
 
-         // checksum is stored after current event data using 4 bytes
-         encode_value(new_event + event_size - BINLOG_EVENT_CRC_SIZE, chksum, 32);
+        // checksum is stored after current event data using 4 bytes
+        encode_value(new_event + event_size - BINLOG_EVENT_CRC_SIZE, chksum, 32);
     }
     return new_event;
 }
@@ -2544,7 +2660,8 @@ blr_create_ignorable_event(uint32_t event_size,
  * @return              1 on success, 0 on error
  */
 static int
-blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t event_size, REP_HEADER *hdr, int type)
+blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t event_size, REP_HEADER *hdr,
+                        int type)
 {
     int n;
     uint8_t *new_event;
@@ -2552,92 +2669,91 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
 
     switch (type)
     {
-        case BLRM_IGNORABLE:
-            new_event_desc = "IGNORABLE";
-            MXS_INFO("Hole detected while writing in binlog '%s' @ %lu: an %s event "
-                     "of %lu bytes will be written at pos %lu",
-                     router->binlog_name,
-                     router->current_pos,
-                     new_event_desc,
-                     (unsigned long)event_size,
-                     (unsigned long)file_offset);
+    case BLRM_IGNORABLE:
+        new_event_desc = "IGNORABLE";
+        MXS_INFO("Hole detected while writing in binlog '%s' @ %lu: an %s event "
+                 "of %lu bytes will be written at pos %lu",
+                 router->binlog_name,
+                 router->current_pos,
+                 new_event_desc,
+                 (unsigned long)event_size,
+                 (unsigned long)file_offset);
 
-            /* Create the Ignorable event */
-            if ((new_event = blr_create_ignorable_event(event_size,
-                                                         hdr,
-                                                         file_offset,
-                                                         router->master_chksum)) == NULL)
-            {
-                   return 0;
-            }
-            if (router->encryption.enabled && router->encryption_ctx != NULL)
-            {
-                GWBUF *encrypted;
-                uint8_t *encr_ptr;
-                if ((encrypted = blr_prepare_encrypted_event(router,
-                                                             new_event,
-                                                             event_size,
-                                                             router->current_pos,
-                                                             NULL,
-                                                             BINLOG_FLAG_ENCRYPT)) == NULL)
-                {
-                    return 0;
-                }
-
-                memcpy(new_event, GWBUF_DATA(encrypted), event_size);
-                gwbuf_free(encrypted);
-            }
-            break;
-        case BLRM_START_ENCRYPTION:
-            new_event_desc = "MARIADB10_START_ENCRYPTION";
-            MXS_INFO("New event %s is being added in binlog '%s' @ %lu: "
-                     "%lu bytes will be written at pos %lu",
-                     new_event_desc,
-                     router->binlog_name,
-                     router->current_pos,
-                     (unsigned long)event_size,
-                     (unsigned long)file_offset);
-
-            /* Create the MARIADB10_START_ENCRYPTION event */
-            if ((new_event = blr_create_start_encryption_event(router,
-                                                               file_offset,
-                                                               router->master_chksum)) == NULL)
-            {
-                   return 0;
-            }
-            break;
-        default:
-            new_event_desc = "UNKNOWN";
-            MXS_ERROR("Cannot create special binlog event of %s type and size %lu "
-                       "in binlog file '%s' @ %lu",
-                       new_event_desc,
-                       (unsigned long)event_size,
-                       router->binlog_name,
-                       router->current_pos);
+        /* Create the Ignorable event */
+        if ((new_event = blr_create_ignorable_event(event_size,
+                                                    hdr,
+                                                    file_offset,
+                                                    router->master_chksum)) == NULL)
+        {
             return 0;
-            break;
+        }
+        if (router->encryption.enabled && router->encryption_ctx != NULL)
+        {
+            GWBUF *encrypted;
+            uint8_t *encr_ptr;
+            if ((encrypted = blr_prepare_encrypted_event(router,
+                                                         new_event,
+                                                         event_size,
+                                                         router->current_pos,
+                                                         NULL,
+                                                         BINLOG_FLAG_ENCRYPT)) == NULL)
+            {
+                return 0;
+            }
+
+            memcpy(new_event, GWBUF_DATA(encrypted), event_size);
+            gwbuf_free(encrypted);
+        }
+        break;
+    case BLRM_START_ENCRYPTION:
+        new_event_desc = "MARIADB10_START_ENCRYPTION";
+        MXS_INFO("New event %s is being added in binlog '%s' @ %lu: "
+                 "%lu bytes will be written at pos %lu",
+                 new_event_desc,
+                 router->binlog_name,
+                 router->current_pos,
+                 (unsigned long)event_size,
+                 (unsigned long)file_offset);
+
+        /* Create the MARIADB10_START_ENCRYPTION event */
+        if ((new_event = blr_create_start_encryption_event(router,
+                                                           file_offset,
+                                                           router->master_chksum)) == NULL)
+        {
+            return 0;
+        }
+        break;
+    default:
+        new_event_desc = "UNKNOWN";
+        MXS_ERROR("Cannot create special binlog event of %s type and size %lu "
+                  "in binlog file '%s' @ %lu",
+                  new_event_desc,
+                  (unsigned long)event_size,
+                  router->binlog_name,
+                  router->current_pos);
+        return 0;
+        break;
     }
 
     /* Write the event */
     if ((n = pwrite(router->binlog_fd, new_event, event_size, router->last_written)) != event_size)
     {
-       char err_msg[MXS_STRERROR_BUFLEN];
-       MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
-                 "Truncating to previous record.",
-                 router->service->name, new_event_desc, (unsigned long)file_offset,
-                 router->binlog_name,
-                 strerror_r(errno, err_msg, sizeof(err_msg)));
+        MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
+                  "Truncating to previous record.",
+                  router->service->name, new_event_desc, (unsigned long)file_offset,
+                  router->binlog_name,
+                  mxs_strerror(errno));
 
-       /* Remove any partial event that was written */
-       if (ftruncate(router->binlog_fd, router->binlog_position))
-       {
-           MXS_ERROR("%s: Failed to truncate %s special binlog record at %lu of %s, %s. ",
-                     router->service->name, new_event_desc, (unsigned long)file_offset,
-                     router->binlog_name,
-                     strerror_r(errno, err_msg, sizeof(err_msg)));
-       }
-       MXS_FREE(new_event);
-       return 0;
+        /* Remove any partial event that was written */
+        if (ftruncate(router->binlog_fd, router->binlog_position))
+        {
+            MXS_ERROR("%s: Failed to truncate %s special binlog record at %lu of %s, %s. ",
+                      router->service->name, new_event_desc, (unsigned long)file_offset,
+                      router->binlog_name,
+                      mxs_strerror(errno));
+        }
+        MXS_FREE(new_event);
+        return 0;
     }
 
     MXS_FREE(new_event);
@@ -2686,7 +2802,7 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
         event_size += BINLOG_EVENT_CRC_SIZE;
     }
 
-    new_event= MXS_CALLOC(1, event_size);
+    new_event = MXS_CALLOC(1, event_size);
     if (new_event == NULL)
     {
         return NULL;
@@ -2811,11 +2927,11 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
     EVP_CIPHER_CTX_set_padding(&ctx, 0);
 
     /* Encryt/Decrypt the input data */
-    if(!EVP_CipherUpdate(&ctx,
-                         out_ptr + 4,
-                         &outlen,
-                         buffer,
-                         size))
+    if (!EVP_CipherUpdate(&ctx,
+                          out_ptr + 4,
+                          &outlen,
+                          buffer,
+                          size))
     {
         MXS_ERROR("Error in EVP_CipherUpdate");
         EVP_CIPHER_CTX_cleanup(&ctx);
@@ -2833,8 +2949,8 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
                                 (out_ptr + 4 + outlen),
                                 (int*)&flen))
         {
-           MXS_ERROR("Error in EVP_CipherFinal_ex");
-           finale_ret = 0;
+            MXS_ERROR("Error in EVP_CipherFinal_ex");
+            finale_ret = 0;
         }
     }
     else
@@ -2852,16 +2968,16 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
                                              router->encryption.key_value,
                                              router->encryption.key_len))
             {
-               MXS_ERROR("Error in blr_aes_create_tail_for_cbc");
-               finale_ret = 0;
+                MXS_ERROR("Error in blr_aes_create_tail_for_cbc");
+                finale_ret = 0;
             }
         }
     }
 
     if (!finale_ret)
     {
-      MXS_FREE(outbuf);
-      outbuf = NULL;
+        MXS_FREE(outbuf);
+        outbuf = NULL;
     }
 
     EVP_CIPHER_CTX_cleanup(&ctx);
@@ -2917,10 +3033,10 @@ static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
      * 5: Copy saved_event_size 4 bytes into encrypted_data + 9
      */
 
-     /* (1): Save event size (buf + 9, 4 bytes) */
-     memcpy(&event_size, buf + BINLOG_EVENT_LEN_OFFSET, 4);
-     /* (2): move first 4 bytes of buf to buf + 9 */
-     memmove(buf + BINLOG_EVENT_LEN_OFFSET, buf, 4);
+    /* (1): Save event size (buf + 9, 4 bytes) */
+    memcpy(&event_size, buf + BINLOG_EVENT_LEN_OFFSET, 4);
+    /* (2): move first 4 bytes of buf to buf + 9 */
+    memmove(buf + BINLOG_EVENT_LEN_OFFSET, buf, 4);
 
 #ifdef SS_DEBUG
     char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
@@ -2936,30 +3052,30 @@ static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
               (unsigned long)(pos + size));
 #endif
 
-     /**
-      * (3): encrypt the event stored in buf starting from (buf + 4):
-      * with len (event_size - 4)
-      *
-      * NOTE: the encrypted_data buffer returned by blr_aes_encrypt() contains:
-      * (size - 4) encrypted bytes + (4) bytes event size in clear
-      *
-      * The encrypted buffer has same size of the original event (size variable)
-      */
+    /**
+     * (3): encrypt the event stored in buf starting from (buf + 4):
+     * with len (event_size - 4)
+     *
+     * NOTE: the encrypted_data buffer returned by blr_aes_encrypt() contains:
+     * (size - 4) encrypted bytes + (4) bytes event size in clear
+     *
+     * The encrypted buffer has same size of the original event (size variable)
+     */
 
-     if ((encrypted = blr_aes_crypt(router, buf + 4, size - 4, iv, action)) == NULL)
-     {
-         return NULL;
-     }
+    if ((encrypted = blr_aes_crypt(router, buf + 4, size - 4, iv, action)) == NULL)
+    {
+        return NULL;
+    }
 
-     enc_ptr = GWBUF_DATA(encrypted);
+    enc_ptr = GWBUF_DATA(encrypted);
 
-     /* (4): move encrypted_data + 9 (4 bytes) to  encrypted_data[0] */
-     memmove(enc_ptr, enc_ptr + BINLOG_EVENT_LEN_OFFSET, 4);
+    /* (4): move encrypted_data + 9 (4 bytes) to  encrypted_data[0] */
+    memmove(enc_ptr, enc_ptr + BINLOG_EVENT_LEN_OFFSET, 4);
 
-     /* (5): Copy saved_event_size 4 bytes into encrypted_data + 9 */
-     memcpy(enc_ptr + BINLOG_EVENT_LEN_OFFSET, &event_size, 4);
+    /* (5): Copy saved_event_size 4 bytes into encrypted_data + 9 */
+    memcpy(enc_ptr + BINLOG_EVENT_LEN_OFFSET, &event_size, 4);
 
-     return encrypted;
+    return encrypted;
 }
 
 /**
@@ -2983,7 +3099,7 @@ const char *blr_get_encryption_algorithm(int algo)
 /**
  * Return the encryption algorithm value
  *
- * @param name   The alogorithm string
+ * @param name   The algorithm string
  * @return       The numeric value or -1 on error
  */
 int blr_check_encryption_algorithm(char *name)
@@ -3050,11 +3166,11 @@ static int blr_aes_create_tail_for_cbc(uint8_t *output,
 
     /* Initialise with AES_ECB and NULL iv */
     if (!EVP_CipherInit_ex(&t_ctx,
-                      ciphers[BLR_AES_ECB](key_len),
-                      NULL,
-                      key,
-                      NULL, /* NULL iv */
-                      BINLOG_FLAG_ENCRYPT))
+                           ciphers[BLR_AES_ECB](key_len),
+                           NULL,
+                           key,
+                           NULL, /* NULL iv */
+                           BINLOG_FLAG_ENCRYPT))
     {
         MXS_ERROR("Error in EVP_CipherInit_ex CBC for last block (ECB)");
         EVP_CIPHER_CTX_cleanup(&t_ctx);
@@ -3111,13 +3227,13 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
 {
     /* event pos & size checks */
     if (hdr->event_size == 0 || ((hdr->next_pos != (pos + hdr->event_size)) &&
-                                     (hdr->event_type != ROTATE_EVENT)))
+                                 (hdr->event_type != ROTATE_EVENT)))
     {
         snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                     "Client requested master to start replication from invalid "
-                     "position %lu in binlog file '%s'", pos,
-                     binlogname);
-         return 0;
+                 "Client requested master to start replication from invalid "
+                 "position %lu in binlog file '%s'", pos,
+                 binlogname);
+        return 0;
     }
 
     /* event type checks */
@@ -3130,9 +3246,9 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
                      hdr->event_type, pos, binlogname);
             return 0;
         }
-     }
-     else
-     {
+    }
+    else
+    {
         if (hdr->event_type > MAX_EVENT_TYPE)
         {
             snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
@@ -3171,4 +3287,134 @@ static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *out
     {
         *p = tolower(*p);
     }
+}
+
+/**
+ * Save MariaDB GTID found in complete transaction
+ *
+ * @param    inst The router instance
+ * @return   true on success, false otherwise
+ */
+bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
+{
+    static const char insert_tpl[] = "INSERT OR IGNORE INTO gtid_maps("
+                             "gtid, "
+                             "binlog_file, "
+                             "start_pos, end_pos) "
+                             "VALUES (\"%s\", \"%s\", %lu, %lu);";
+    MARIADB_GTID_INFO gtid_info;
+    char *errmsg;
+    char insert_sql[GTID_SQL_BUFFER_SIZE];
+
+    gtid_info.gtid = inst->pending_transaction.gtid;
+    gtid_info.file = inst->binlog_name;
+    gtid_info.start = inst->pending_transaction.start_pos;
+    gtid_info.end = inst->pending_transaction.end_pos;
+
+    /* Save GTID into repo */
+    snprintf(insert_sql,
+             GTID_SQL_BUFFER_SIZE,
+             insert_tpl,
+             gtid_info.gtid,
+             gtid_info.file,
+             gtid_info.start,
+             gtid_info.end);
+
+    /* Save GTID into repo */
+    if (sqlite3_exec(inst->gtid_maps, insert_sql, NULL, NULL,
+                     &errmsg) != SQLITE_OK)
+    {
+        MXS_ERROR("Service %s: failed to insert GTID %s for %s:%lu,%lu "
+                  "into gtid_maps database: %s",
+                  inst->service->name,
+                  gtid_info.gtid,
+                  gtid_info.file,
+                  gtid_info.start,
+                  gtid_info.end,
+                  errmsg);
+        return false;
+    }
+    sqlite3_free(errmsg);
+
+    MXS_DEBUG("Saved MariaDB GTID '%s', %s:%lu,%lu, insert SQL [%s]",
+              gtid_info.gtid,
+              inst->binlog_name,
+              gtid_info.start,
+              gtid_info.end,
+              insert_sql);
+
+    return true;
+}
+
+/**
+ * GTID select callbck for sqlite3 database
+ *
+ * @param data      Data pointer from caller
+ * @param cols      Number of columns
+ * @param values    The values
+ * @param names     The column names
+ *
+ * @return          0 on success, 1 otherwise
+ */
+static int gtid_select_cb(void *data, int cols, char** values, char** names)
+{
+    MARIADB_GTID_INFO *result = (MARIADB_GTID_INFO *)data;
+
+    ss_dassert(cols >= 4);
+
+    if (values[0] &&
+        values[1] &&
+        values[2] &&
+        values[3])
+    {
+        result->gtid = MXS_STRDUP_A(values[0]);
+        result->file = MXS_STRDUP_A(values[1]);
+        result->start = atoll(values[2]);
+        result->end = atoll(values[3]);
+    }
+
+    ss_dassert(result->start > 0 && result->end > result->start);
+
+    return 0;
+}
+
+/**
+ * Get MariaDB GTID from repo
+ *
+ * @param    slave   The current slave instance
+ * @param    gtid    The GTID to look for
+ * @param    result  The (allocated) ouput data to fill
+ * @return   True if with found GTID or false
+ */
+
+bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
+                            const char *gtid,
+                            MARIADB_GTID_INFO *result)
+{
+    char *errmsg = NULL;
+    char select_query[GTID_SQL_BUFFER_SIZE];
+    static const char select_tpl[] = "SELECT gtid, binlog_file, start_pos, end_pos "
+                                     "FROM gtid_maps "
+                                     "WHERE gtid = '%s' LIMIT 1;";
+    ss_dassert(gtid != NULL);
+
+    snprintf(select_query,
+             GTID_SQL_BUFFER_SIZE,
+             select_tpl,
+             gtid);
+
+    /* Find the GTID */
+    if (sqlite3_exec(slave->gtid_maps,
+                     select_query,
+                     gtid_select_cb,
+                     result,
+                     &errmsg) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to select GTID %s from GTID maps DB: %s, select [%s]",
+                  gtid, errmsg, select_query);
+        sqlite3_free(errmsg);
+        return false;
+    }
+
+    return result->gtid ? true : false;
 }

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -82,18 +82,15 @@ void serviceRemoveBackend(SERVICE *service, const SERVER *server);
 /**
  * @brief Serialize a service to a file
  *
- * This partially converts @c service into an INI format file. Only the servers
- * of the service are serialized. This allows the service to keep using the servers
- * added at runtime even after a restart.
+ * This converts @c service into an INI format file.
  *
  * NOTE: This does not persist the complete service configuration and requires
  * that an existing service configuration is in the main configuration file.
- * Changes to service parameters are not persisted.
  *
  * @param service Service to serialize
  * @return False if the serialization of the service fails, true if it was successful
  */
-bool service_serialize_servers(const SERVICE *service);
+bool service_serialize(const SERVICE *service);
 
 /**
  * Internal utility functions
@@ -118,8 +115,6 @@ void service_update_weights();
 void  serviceAddRouterOption(SERVICE *service, char *option);
 void  serviceClearRouterOptions(SERVICE *service);
 void  service_update(SERVICE *service, char *router, char *user, char *auth);
-bool  service_set_param_value(SERVICE* service, CONFIG_PARAMETER* param, char* valstr,
-                              count_spec_t count_spec, config_param_type_t type);
 
 /**
  * @brief Add parameters to a service
@@ -129,7 +124,15 @@ bool  service_set_param_value(SERVICE* service, CONFIG_PARAMETER* param, char* v
  * @param service Service where the parameters are added
  * @param param Parameters to add
  */
-void service_add_parameters(SERVICE *service, const CONFIG_PARAMETER *param);
+void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param);
+
+/**
+ * @brief Set listener rebinding interval
+ *
+ * @param service Service to configure
+ * @param value String value o
+ */
+void service_set_retry_interval(SERVICE *service, int value);
 
 /**
  * Internal debugging diagnostics

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -22,16 +22,25 @@ class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
 public:
     ~CacheFilter();
 
-    static CacheFilter* create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams);
+    static CacheFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
 
-    Cache& cache() { ss_dassert(m_sCache.get()); return *m_sCache.get(); }
-    const Cache& cache() const { ss_dassert(m_sCache.get()); return *m_sCache.get(); }
+    Cache& cache()
+    {
+        ss_dassert(m_sCache.get());
+        return *m_sCache.get();
+    }
+    const Cache& cache() const
+    {
+        ss_dassert(m_sCache.get());
+        return *m_sCache.get();
+    }
 
-    CacheFilterSession* newSession(SESSION* pSession);
+    CacheFilterSession* newSession(MXS_SESSION* pSession);
 
     void diagnostics(DCB* pDcb);
+    json_t* diagnostics_json() const;
 
-    static uint64_t getCapabilities();
+    uint64_t getCapabilities();
 
 private:
     CacheFilter();
@@ -39,7 +48,7 @@ private:
     CacheFilter(const CacheFilter&);
     CacheFilter& operator = (const CacheFilter&);
 
-    static bool process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config);
+    static bool process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config);
 
 private:
     CACHE_CONFIG         m_config;

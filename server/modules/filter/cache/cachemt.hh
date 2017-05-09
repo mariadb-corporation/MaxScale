@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -46,5 +46,5 @@ private:
     CacheMT& operator = (const CacheMT&);
 
 private:
-    mutable SPINLOCK m_lockPending; // Lock used for protecting 'pending'.
+    mutable SPINLOCK m_lock_pending; // Lock used for protecting 'pending'.
 };

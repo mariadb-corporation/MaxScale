@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -17,7 +17,7 @@
 #include <sys/param.h>
 #include <new>
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include "cachefilter.h"
 #include "lrustoragest.hh"
@@ -223,11 +223,3 @@ Storage* StorageFactory::createRawStorage(const char* zName,
 
     return pStorage;
 }
-
-cache_result_t StorageFactory::get_key(const char* zDefaultDb,
-                                       const GWBUF* pQuery,
-                                       CACHE_KEY* pKey) const
-{
-    return m_pApi->getKey(zDefaultDb, pQuery, pKey);
-}
-

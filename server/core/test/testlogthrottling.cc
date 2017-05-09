@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/random_jkiss.h>
 
 using std::cerr;
 using std::cout;
@@ -112,6 +113,7 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
     in.seekg(0, ios_base::end);
 
     THREAD_ARG args[N_THREADS];
+    pthread_t tids[N_THREADS];
 
     // Create the threads.
     for (size_t i = 0; i < N_THREADS; ++i)
@@ -121,8 +123,7 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
         parg->n_generate = n_generate;
         parg->priority = priority;
 
-        pthread_t tid;
-        int rc = pthread_create(&tid, 0, thread_main, parg);
+        int rc = pthread_create(&tids[i], 0, thread_main, parg);
         ensure(rc == 0);
     }
 
@@ -144,6 +145,12 @@ bool run(const MXS_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
 
     mxs_log_flush_sync();
 
+    for (size_t i = 0; i < N_THREADS; ++i)
+    {
+        void* rv;
+        pthread_join(tids[i], &rv);
+    }
+
     return check_messages(in, n_expect);
 }
 
@@ -152,7 +159,7 @@ int main(int argc, char* argv[])
     int rc;
 
     std::ios::sync_with_stdio();
-
+    random_jkiss_init();
     rc = sem_init(&u_semstart, 0, 0);
     ensure(rc == 0);
 

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include "storagefactory.hh"
@@ -50,7 +50,7 @@ int TestStorage::run(int argc, char** argv)
     {
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup(NULL, NULL) && qc_process_init())
+            if (qc_setup(NULL, NULL) && qc_process_init(QC_INIT_BOTH))
             {
                 const char* zModule = NULL;
                 size_t threads = m_threads;
@@ -113,6 +113,8 @@ int TestStorage::run(int argc, char** argv)
                 {
                     cerr << "error: Could not initialize factory " << zModule << "." << endl;
                 }
+
+                qc_process_end(QC_INIT_BOTH);
             }
             else
             {

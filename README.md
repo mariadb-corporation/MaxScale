@@ -41,6 +41,7 @@ For information about installing and using MaxScale, please refer to the
 documentation. The official documentation can be found on the
 [MariaDB Knowledge Base](https://mariadb.com/kb/en/mariadb-enterprise/maxscale/).
 
+- [MariaDB MaxScale 2.1 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/6308/)
 - [MariaDB MaxScale 2.0 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-20-contents/)
 - [MariaDB MaxScale 1.4 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-14/maxscale-maxscale-contents/)
 

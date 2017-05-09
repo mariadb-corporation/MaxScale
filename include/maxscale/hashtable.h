@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -15,17 +15,6 @@
 /**
  * @file hashtable.h A general purpose hashtable mechanism for use within the
  * gateway
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 23/06/2013   Mark Riddoch            Initial implementation
- * 23/07/2013   Mark Riddoch            Addition of iterator mechanism
- * 08/01/2014   Massimiliano Pinto      Added function pointers for key/value copy and free
- *                                      the routine hashtable_memory_fns() changed accordingly
- *
- * @endverbatim
  */
 #include <maxscale/cdefs.h>
 #include <maxscale/debug.h>

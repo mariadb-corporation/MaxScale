@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include "readwritesplit.h"
+
 #include <my_config.h>
 #include <stdio.h>
 #include <strings.h>
@@ -18,7 +21,6 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "readwritesplit.h"
 #include "rwsplit_internal.h"
 
 #include <mysql.h>
@@ -62,7 +64,7 @@
  * It is certainly MySQL specific. Packet types are DB specific, but can be
  * assumed to be enums, which can be handled as integers without knowing
  * which DB is involved until the packet type needs to be interpreted.
- * 
+ *
  */
 
 /**
@@ -71,10 +73,10 @@
  * Examine the packet in the buffer to extract the type, if possible. At the
  * same time set the second parameter to indicate whether the packet was
  * empty.
- * 
+ *
  * It is assumed that the packet length and type are contained within a single
  * buffer, the one indicated by the first parameter.
- * 
+ *
  * @param querybuf  Buffer containing the packet
  * @param non_empty_packet  bool indicating whether the packet is non-empty
  * @return The packet type, or MYSQL_COM_UNDEFINED; also the second parameter is set
@@ -109,7 +111,7 @@ determine_packet_type(GWBUF *querybuf, bool *non_empty_packet)
  * provided so that code that is not DB specific can find out whether a packet
  * contains a SQL query. Clearly, to be effective different functions must be
  * called for different DB types.
- * 
+ *
  * @param packet_type   Type of packet (integer)
  * @return bool indicating whether packet contains a SQL query
  */
@@ -129,7 +131,7 @@ is_packet_a_query(int packet_type)
  * provided so that code that is not DB specific can find out whether a packet
  * contains a one way messsage. Clearly, to be effective different functions must be
  * called for different DB types.
- * 
+ *
  * @param packet_type   Type of packet (integer)
  * @return bool indicating whether packet contains a one way message
  */
@@ -137,7 +139,7 @@ bool
 is_packet_a_one_way_message(int packet_type)
 {
     return (packet_type == MYSQL_COM_STMT_SEND_LONG_DATA ||
-        packet_type == MYSQL_COM_QUIT || packet_type == MYSQL_COM_STMT_CLOSE);
+            packet_type == MYSQL_COM_QUIT || packet_type == MYSQL_COM_STMT_CLOSE);
 }
 
 /*
@@ -150,7 +152,7 @@ is_packet_a_one_way_message(int packet_type)
  * The router session and the query buffer are used to log the transaction
  * status, along with the query type (which is a generic description that
  * should be usable across all DB types).
- * 
+ *
  * @param rses      Router session
  * @param querybuf  Query buffer
  * @param qtype     Query type
@@ -158,30 +160,38 @@ is_packet_a_one_way_message(int packet_type)
 void
 log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t qtype)
 {
-     if (!rses->rses_load_active)
-     {
-         uint8_t *packet = GWBUF_DATA(querybuf);
-         unsigned char ptype = packet[4];
-         size_t len = MXS_MIN(GWBUF_LENGTH(querybuf),
-                MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
-         char *data = (char *)&packet[5];
-         char *contentstr = strndup(data, MXS_MIN(len, RWSPLIT_TRACE_MSG_LEN));
-         char *qtypestr = qc_typemask_to_string(qtype);
-         SESSION *ses = rses->client_dcb->session;
-         MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %s%s %s",
-           (session_is_autocommit(ses) ? "[enabled]" : "[disabled]"),
-           (session_trx_is_active(ses) ? "[open]" : "[not open]"),
-           STRPACKETTYPE(ptype), (qtypestr == NULL ? "N/A" : qtypestr),
-           contentstr, (querybuf->hint == NULL ? "" : ", Hint:"),
-           (querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
-         MXS_FREE(contentstr);
-         MXS_FREE(qtypestr);
-     }
-     else
-     {
-         MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.",
-           rses->rses_load_data_sent);
-     }
+    if (rses->load_data_state == LOAD_DATA_INACTIVE)
+    {
+        unsigned char command = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
+        char *qtypestr = qc_typemask_to_string(qtype);
+
+        char *sql;
+        int len = 0;
+        modutil_extract_SQL(querybuf, &sql, &len);
+
+        if (len > RWSPLIT_TRACE_MSG_LEN)
+        {
+            len = RWSPLIT_TRACE_MSG_LEN;
+        }
+
+        MXS_SESSION *ses = rses->client_dcb->session;
+        const char *autocommit = session_is_autocommit(ses) ? "[enabled]" : "[disabled]";
+        const char *transaction = session_trx_is_active(ses) ? "[open]" : "[not open]";
+        const char *querytype = qtypestr == NULL ? "N/A" : qtypestr;
+        const char *hint = querybuf->hint == NULL ? "" : ", Hint:";
+        const char *hint_type = querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type);
+
+        MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %.*s%s %s",
+                 autocommit, transaction, STRPACKETTYPE(command), querytype, len,
+                 sql, hint, hint_type);
+
+        MXS_FREE(qtypestr);
+    }
+    else
+    {
+        MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.",
+                 rses->rses_load_data_sent);
+    }
 }
 
 /*
@@ -196,119 +206,59 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
  *
  * If the choice of sending to all backends is in conflict with other bit
  * settings in route_target, then error messages are written to the log.
- * 
+ *
  * Otherwise, the function route_session_write is called to carry out the
  * actual routing.
- * 
+ *
  * @param route_target  Bit map indicating where packet should be routed
  * @param inst          Router instance
  * @param rses          Router session
  * @param querybuf      Query buffer containing packet
  * @param packet_type   Integer (enum) indicating type of packet
- * @param qtype         Query type 
+ * @param qtype         Query type
  * @return bool indicating whether the session can continue
  */
-bool
-handle_target_is_all(route_target_t route_target,
-        ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-        GWBUF *querybuf, int packet_type, qc_query_type_t qtype)
+bool handle_target_is_all(route_target_t route_target, ROUTER_INSTANCE *inst,
+                          ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+                          int packet_type, qc_query_type_t qtype)
 {
-    bool result;
+    bool result = false;
 
-    /** Multiple, conflicting routing target. Return error */
     if (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target))
     {
-        backend_ref_t *bref = rses->rses_backend_ref;
+        /**
+         * Conflicting routing targets. Return an error to the client.
+         */
 
-        /* NOTE: modutil_get_query is MySQL specific */
         char *query_str = modutil_get_query(querybuf);
         char *qtype_str = qc_typemask_to_string(qtype);
 
-        /* NOTE: packet_type is MySQL specific */
         MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with session data "
-          "modification is not supported if configuration parameter "
-          "use_sql_variables_in=all .", STRPACKETTYPE(packet_type),
-          qtype_str, (query_str == NULL ? "(empty)" : query_str));
+                  "modification is not supported if configuration parameter "
+                  "use_sql_variables_in=all .", STRPACKETTYPE(packet_type),
+                  qtype_str, (query_str == NULL ? "(empty)" : query_str));
 
-        MXS_INFO("Unable to route the query without losing session data "
-         "modification from other servers. <");
+        GWBUF *errbuf = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
+                                                     "Routing query to backend failed. "
+                                                     "See the error log for further details.");
 
-        while (bref != NULL && !BREF_IS_IN_USE(bref))
+        if (errbuf)
         {
-            bref++;
-        }
-
-        if (bref != NULL && BREF_IS_IN_USE(bref))
-        {
-            /** Create and add MySQL error to eventqueue */
-            modutil_reply_parse_error(bref->bref_dcb,
-                      MXS_STRDUP_A("Routing query to backend failed. "
-                           "See the error log for further "
-                           "details."), 0);
+            rses->client_dcb->func.write(rses->client_dcb, errbuf);
             result = true;
         }
-        else
-        {
-            /**
-             * If there were no available backend references
-             * available return false - session will be closed
-             */
-            MXS_ERROR("Sending error message to client "
-              "failed. Router doesn't have any "
-              "available backends. Session will be "
-              "closed.");
-            result = false;
-        }
-        /* Test shouldn't be needed */
-        if (query_str)
-        {
-            MXS_FREE(query_str);
-        }
-        if (qtype_str)
-        {
-            MXS_FREE(qtype_str);
-        }
-        return result;
-    }
-    /**
-     * It is not sure if the session command in question requires
-     * response. Statement is examined in route_session_write.
-     * Router locking is done inside the function.
-     */
-    result = route_session_write(rses, gwbuf_clone(querybuf), inst,
-                packet_type, qtype);
 
-    if (result)
-    {
-        atomic_add(&inst->stats.n_all, 1);
-    }
-    return result;
-}
-
-/* This is MySQL specific */
-/**
- * @brief Write an error message to the log indicating failure
- * 
- * Used when an attempt to lock the router session fails.
- *
- * @param querybuf      Query buffer containing packet
- * @param packet_type   Integer (enum) indicating type of packet
- * @param qtype         Query type 
- */
-void
-session_lock_failure_handling(GWBUF *querybuf, int packet_type, qc_query_type_t qtype)
-{
-    if (packet_type != MYSQL_COM_QUIT)
-    {
-        /* NOTE: modutil_get_query is MySQL specific */
-        char *query_str = modutil_get_query(querybuf);
-
-        MXS_ERROR("Can't route %s:%s:\"%s\" to "
-              "backend server. Router is closed.",
-              STRPACKETTYPE(packet_type), STRQTYPE(qtype),
-              (query_str == NULL ? "(empty)" : query_str));
         MXS_FREE(query_str);
+        MXS_FREE(qtype_str);
     }
+    else if (route_session_write(rses, gwbuf_clone(querybuf), inst, packet_type, qtype))
+    {
+
+        result = true;
+        atomic_add_uint64(&inst->stats.n_all, 1);
+    }
+
+    return result;
 }
 
 /*
@@ -316,7 +266,7 @@ session_lock_failure_handling(GWBUF *querybuf, int packet_type, qc_query_type_t 
  */
 /**
  * @brief Write an error message to the log for closed session
- * 
+ *
  * This happens if a request is received for a session that is already
  * closing down.
  *
@@ -337,42 +287,11 @@ void closed_session_reply(GWBUF *querybuf)
 }
 
 /*
- * Probably MySQL specific because of modutil function
- */
-/**
- * @brief First step to handle request in a live session
- * 
- * Used when a request is about to be routed. Note that the query buffer is 
- * passed by name and is likely to be modified by this function.
- *
- * @param querybuf      Query buffer containing packet
- * @param rses          Router session
- */
-void live_session_reply(GWBUF **querybuf, ROUTER_CLIENT_SES *rses)
-{
-    GWBUF *tmpbuf = *querybuf;
-    if (GWBUF_IS_TYPE_UNDEFINED(tmpbuf))
-    {
-        /* Note that many modutil functions are MySQL specific */
-        *querybuf = modutil_get_complete_packets(&tmpbuf);
-        if (tmpbuf)
-        {
-            rses->client_dcb->dcb_readqueue = gwbuf_append(rses->client_dcb->dcb_readqueue, tmpbuf);
-        }
-        *querybuf = gwbuf_make_contiguous(*querybuf);
-
-        /** Mark buffer to as MySQL type */
-        gwbuf_set_type(*querybuf, GWBUF_TYPE_MYSQL);
-        gwbuf_set_type(*querybuf, GWBUF_TYPE_SINGLE_STMT);
-    }
-}
-
-/*
  * Uses MySQL specific mechanisms
  */
 /**
  * @brief Check the reply from a backend server to a session command
- * 
+ *
  * If the reply is an error, a message may be logged.
  *
  * @param writebuf      Query buffer containing reply data
@@ -381,24 +300,24 @@ void live_session_reply(GWBUF **querybuf, ROUTER_CLIENT_SES *rses)
  */
 void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend_ref_t *bref)
 {
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR) &&
-            MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
-        {
-            uint8_t *buf = (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
-            uint8_t *replybuf = (uint8_t *)GWBUF_DATA(writebuf);
-            size_t len = MYSQL_GET_PACKET_LEN(buf);
-            size_t replylen = MYSQL_GET_PACKET_LEN(replybuf);
-            char *err = strndup(&((char *)replybuf)[8], 5);
-            char *replystr = strndup(&((char *)replybuf)[13], replylen - 4 - 5);
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR) &&
+        MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
+    {
+        uint8_t *buf = (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
+        uint8_t *replybuf = (uint8_t *)GWBUF_DATA(writebuf);
+        size_t len = MYSQL_GET_PAYLOAD_LEN(buf);
+        size_t replylen = MYSQL_GET_PAYLOAD_LEN(replybuf);
+        char *err = strndup(&((char *)replybuf)[8], 5);
+        char *replystr = strndup(&((char *)replybuf)[13], replylen - 4 - 5);
 
-            ss_dassert(len + 4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
+        ss_dassert(len + 4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
 
-            MXS_ERROR("Failed to execute session command in %s:%d. Error was: %s %s",
-                      bref->ref->server->name,
-                      bref->ref->server->port, err, replystr);
-            MXS_FREE(err);
-            MXS_FREE(replystr);
-        }
+        MXS_ERROR("Failed to execute session command in [%s]:%d. Error was: %s %s",
+                  bref->ref->server->name,
+                  bref->ref->server->port, err, replystr);
+        MXS_FREE(err);
+        MXS_FREE(replystr);
+    }
 }
 
 /**
@@ -410,7 +329,7 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
  *  commands.
  *
  * Router session must be locked.
- * 
+ *
  * @param backend_ref   Router session backend database data
  * @return bool - true for success, false for failure
  */
@@ -420,38 +339,29 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
  */
 bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
 {
-    DCB *dcb;
-    bool succp;
-    int rc = 0;
-    sescmd_cursor_t *scur;
-    GWBUF *buf;
-    if (backend_ref == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return false;
-    }
+    ss_dassert(backend_ref);
+    CHK_BACKEND_REF(backend_ref);
+    bool succp = false;
+
     if (BREF_IS_CLOSED(backend_ref))
     {
-        succp = false;
-        goto return_succp;
+        return succp;
     }
-    dcb = backend_ref->bref_dcb;
 
+    DCB *dcb = backend_ref->bref_dcb;
     CHK_DCB(dcb);
-    CHK_BACKEND_REF(backend_ref);
 
     /**
      * Get cursor pointer and copy of command buffer to cursor.
      */
-    scur = &backend_ref->bref_sescmd_cur;
+    sescmd_cursor_t *scur = &backend_ref->bref_sescmd_cur;
 
     /** Return if there are no pending ses commands */
     if (sescmd_cursor_get_command(scur) == NULL)
     {
         succp = true;
         MXS_INFO("Cursor had no pending session commands.");
-
-        goto return_succp;
+        return succp;
     }
 
     if (!sescmd_cursor_is_active(scur))
@@ -460,28 +370,33 @@ bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
         sescmd_cursor_set_active(scur, true);
     }
 
+    int rc = 0;
+    GWBUF *buf;
+
     switch (scur->scmd_cur_cmd->my_sescmd_packet_type)
     {
-        case MYSQL_COM_CHANGE_USER:
-            /** This makes it possible to handle replies correctly */
-            gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
-            buf = sescmd_cursor_clone_querybuf(scur);
-            rc = dcb->func.auth(dcb, NULL, dcb->session, buf);
-            break;
+    case MYSQL_COM_CHANGE_USER:
+        /** This makes it possible to handle replies correctly */
+        gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
+        buf = sescmd_cursor_clone_querybuf(scur);
+        rc = dcb->func.auth(dcb, NULL, dcb->session, buf);
+        break;
 
-        case MYSQL_COM_INIT_DB:
+    case MYSQL_COM_INIT_DB:
         {
             /**
              * Record database name and store to session.
+             *
+             * TODO: Do this in the client protocol module
              */
             GWBUF *tmpbuf;
-            MYSQL_session *data;
+            MYSQL_session* data;
             unsigned int qlen;
 
-            data = dcb->session->client_dcb->data;
+            data = (MYSQL_session*)dcb->session->client_dcb->data;
             *data->db = 0;
             tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
-            qlen = MYSQL_GET_PACKET_LEN((unsigned char *) GWBUF_DATA(tmpbuf));
+            qlen = MYSQL_GET_PAYLOAD_LEN((unsigned char *) GWBUF_DATA(tmpbuf));
             if (qlen)
             {
                 --qlen; // The COM_INIT_DB byte
@@ -496,29 +411,28 @@ bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
                 data->db[qlen] = 0;
             }
         }
-        /** Fallthrough */
-        case MYSQL_COM_QUERY:
-        default:
-            /**
-             * Mark session command buffer, it triggers writing
-             * MySQL command to protocol
-             */
+    /** Fallthrough */
+    case MYSQL_COM_QUERY:
+    default:
+        /**
+         * Mark session command buffer, it triggers writing
+         * MySQL command to protocol
+         */
 
-            gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
-            buf = sescmd_cursor_clone_querybuf(scur);
-            rc = dcb->func.write(dcb, buf);
-            break;
+        gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
+        buf = sescmd_cursor_clone_querybuf(scur);
+        rc = dcb->func.write(dcb, buf);
+        break;
     }
 
     if (rc == 1)
     {
         succp = true;
+        ss_dassert(backend_ref->reply_state == REPLY_STATE_DONE);
+        LOG_RS(backend_ref, REPLY_STATE_START);
+        backend_ref->reply_state = REPLY_STATE_START;
     }
-    else
-    {
-        succp = false;
-    }
-return_succp:
+
     return succp;
 }
 
@@ -580,7 +494,7 @@ bool send_readonly_error(DCB *dcb)
 {
     bool succp = false;
     const char* errmsg = "The MariaDB server is running with the --read-only"
-        " option so it cannot execute this statement";
+                         " option so it cannot execute this statement";
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT,
                                               "HY000", errmsg);
 

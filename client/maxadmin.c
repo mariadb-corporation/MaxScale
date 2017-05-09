@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,17 +14,6 @@
 /**
  * @file maxadmin.c  - The MaxScale administration client
  *
- * @verbatim
- * Revision History
- *
- * Date        Who                   Description
- * 13/06/14    Mark Riddoch          Initial implementation
- * 15/06/14    Mark Riddoch          Addition of source command
- * 26/06/14    Mark Riddoch          Fix issue with final OK split across
- *                                   multiple reads
- * 17/05/16    Massimiliano Pinto    Addition of UNIX socket support
- *
- * @endverbatim
  */
 
 #include <assert.h>
@@ -147,51 +136,51 @@ main(int argc, char **argv)
     {
         switch (c)
         {
-            case 'h':
-                use_inet_socket = true;
-                hostname = strdup(optarg);
-                break;
+        case 'h':
+            use_inet_socket = true;
+            hostname = strdup(optarg);
+            break;
 
-            case 'p':
-                use_inet_socket = true;
-                // If password was not given, ask for it later
-                if (optarg != NULL)
-                {
-                    passwd = strdup(optarg);
-                    memset(optarg, '\0', strlen(optarg));
-                }
-                break;
+        case 'p':
+            use_inet_socket = true;
+            // If password was not given, ask for it later
+            if (optarg != NULL)
+            {
+                passwd = strdup(optarg);
+                memset(optarg, '\0', strlen(optarg));
+            }
+            break;
 
-            case 'P':
-                use_inet_socket = true;
-                port = strdup(optarg);
-                break;
+        case 'P':
+            use_inet_socket = true;
+            port = strdup(optarg);
+            break;
 
-            case 'u':
-                use_inet_socket = true;
-                user = strdup(optarg);
-                break;
+        case 'u':
+            use_inet_socket = true;
+            user = strdup(optarg);
+            break;
 
-            case 'S':
-                use_unix_socket = true;
-                socket_path = strdup(optarg);
-                break;
+        case 'S':
+            use_unix_socket = true;
+            socket_path = strdup(optarg);
+            break;
 
-            case 'v':
-                PrintVersion(*argv);
-                exit(EXIT_SUCCESS);
+        case 'v':
+            PrintVersion(*argv);
+            exit(EXIT_SUCCESS);
 
-            case 'e':
-                use_emacs = 1;
-                break;
+        case 'e':
+            use_emacs = 1;
+            break;
 
-            case 'i':
-                use_emacs = 0;
-                break;
+        case 'i':
+            use_emacs = 0;
+            break;
 
-            case '?':
-                DoUsage(argv[0]);
-                exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
+        case '?':
+            DoUsage(argv[0]);
+            exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
         }
     }
 
@@ -297,15 +286,7 @@ main(int argc, char **argv)
                 strcat(cmd, argv[i]);
             }
         }
-
-        if (access(cmd, R_OK) == 0)
-        {
-            DoSource(so, cmd);
-        }
-        else
-        {
-            sendCommand(so, cmd);
-        }
+        sendCommand(so, cmd);
 
         free(cmd);
         exit(0);
@@ -994,7 +975,10 @@ bool getPassword(char *passwd, size_t len)
         if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
         {
             printf("Password: ");
-            fgets(passwd, len, stdin);
+            if (fgets(passwd, len, stdin) == NULL)
+            {
+                printf("Failed to read password\n");
+            }
 
             tty_attr.c_lflag = c_lflag;
 

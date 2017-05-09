@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -36,13 +36,6 @@ void StorageReal::get_config(CACHE_STORAGE_CONFIG* pConfig)
 cache_result_t StorageReal::get_info(uint32_t flags, json_t** ppInfo) const
 {
     return m_pApi->getInfo(m_pStorage, flags, ppInfo);
-}
-
-cache_result_t StorageReal::get_key(const char* zDefaultDb,
-                                    const GWBUF* pQuery,
-                                    CACHE_KEY* pKey) const
-{
-    return m_pApi->getKey(zDefaultDb, pQuery, pKey);
 }
 
 cache_result_t StorageReal::get_value(const CACHE_KEY& key,

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#define MXS_MODULE_NAME "maxscaled"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -147,10 +150,8 @@ static bool authenticate_socket(MAXSCALED *protocol, DCB *dcb)
     }
     else
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-
         MXS_ERROR("Could not get socket family of client connection: %s",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
     }
 
     return authenticated;
@@ -192,6 +193,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_PROTOCOL_VERSION,
         "A maxscale protocol for the administration interface",
         "V2.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -265,7 +267,7 @@ static int maxscaled_read_event(DCB* dcb)
 
                 case MAXSCALED_STATE_DATA:
                     {
-                        SESSION_ROUTE_QUERY(dcb->session, head);
+                        MXS_SESSION_ROUTE_QUERY(dcb->session, head);
                         dcb_printf(dcb, "OK");
                     }
                     break;
@@ -421,7 +423,7 @@ static int maxscaled_listen(DCB *listener, char *config)
     /* check for default UNIX socket */
     if (strncmp(config, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN) == 0)
     {
-       socket_path = MAXADMIN_DEFAULT_SOCKET;
+        socket_path = MAXADMIN_DEFAULT_SOCKET;
     }
     else
     {

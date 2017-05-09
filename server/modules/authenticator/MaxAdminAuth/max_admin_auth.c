@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -26,7 +26,9 @@
  * @endverbatim
  */
 
-#include <maxscale/gw_authenticator.h>
+#define MXS_MODULE_NAME "MaxAdminAuth"
+
+#include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.h>
@@ -49,7 +51,7 @@ static void max_admin_auth_free_client_data(DCB *dcb);
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         NULL,                                 /* No initialize entry point */
         NULL,                                 /* No create entry point */
@@ -58,16 +60,20 @@ MXS_MODULE* MXS_CREATE_MODULE()
         max_admin_auth_authenticate,          /* Authenticate user credentials */
         max_admin_auth_free_client_data,      /* Free the client data held in DCB */
         NULL,                                 /* No destroy entry point */
-        users_default_loadusers               /* Load generic users */
+        users_default_loadusers,              /* Load generic users */
+        users_default_diagnostic,             /* Default user diagnostic */
+        users_default_diagnostic_json,        /* Default user diagnostic */
+        NULL                                  /* No user reauthentication */
     };
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "The MaxScale Admin client authenticator implementation",
         "V2.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

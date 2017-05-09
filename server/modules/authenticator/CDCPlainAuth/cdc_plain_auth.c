@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -25,15 +25,19 @@
  * @endverbatim
  */
 
-#include <maxscale/gw_authenticator.h>
+#define MXS_MODULE_NAME "CDCPlainAuth"
+
+#include <maxscale/authenticator.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <cdc.h>
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
+#include <maxscale/paths.h>
+#include <maxscale/secrets.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
-#include <maxscale/modulecmd.h>
 
 /* Allowed time interval (in seconds) after last update*/
 #define CDC_USERS_REFRESH_TIME 30
@@ -103,15 +107,14 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args)
 
         if (fd != -1)
         {
-            if (write(fd, final_data, sizeof(final_data)) != sizeof(final_data))
+            if (write(fd, final_data, sizeof(final_data)) == sizeof(final_data))
             {
                 MXS_NOTICE("Added user '%s' to service '%s'", user, service->name);
                 rval = true;
             }
             else
             {
-                char err[MXS_STRERROR_BUFLEN];
-                char *real_err = strerror_r(errno, err, sizeof(err));
+                const char *real_err = mxs_strerror(errno);
                 MXS_NOTICE("Failed to write to file '%s': %s", path, real_err);
                 modulecmd_set_error("Failed to write to file '%s': %s", path, real_err);
             }
@@ -120,8 +123,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
-            char *real_err = strerror_r(errno, err, sizeof(err));
+            const char *real_err = mxs_strerror(errno);
             MXS_NOTICE("Failed to open file '%s': %s", path, real_err);
             modulecmd_set_error("Failed to open file '%s': %s", path, real_err);
         }
@@ -154,7 +156,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     modulecmd_register_command("cdc", "add_user", cdc_add_new_user, 3, args);
 
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         NULL,                           /* No initialize entry point */
         NULL,                           /* No create entry point */
@@ -163,16 +165,20 @@ MXS_MODULE* MXS_CREATE_MODULE()
         cdc_auth_authenticate,          /* Authenticate user credentials */
         cdc_auth_free_client_data,      /* Free the client data held in DCB */
         NULL,                           /* No destroy entry point */
-        cdc_replace_users               /* Load CDC users */
+        cdc_replace_users,              /* Load CDC users */
+        users_default_diagnostic,       /* Default diagnostic */
+        users_default_diagnostic_json,  /* Default diagnostic */
+        NULL                            /* No user reauthentication */
     };
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "The CDC client to MaxScale authenticator implementation",
         "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -432,7 +438,7 @@ cdc_set_service_user(SERV_LISTENER *listener)
         return 1;
     }
 
-    dpwd = decryptPassword(service->credentials.authdata);
+    dpwd = decrypt_password(service->credentials.authdata);
 
     if (!dpwd)
     {
@@ -480,11 +486,6 @@ cdc_read_users(USERS *users, char *usersfile)
     char *user_passwd;
     /* user maxlen ':' password hash  '\n' '\0' */
     char read_buffer[CDC_USER_MAXLEN + 1 + SHA_DIGEST_LENGTH + 1 + 1];
-    char *all_users_data = NULL;
-    struct  stat    statb;
-    int fd;
-    int filelen = 0;
-    unsigned char hash[SHA_DIGEST_LENGTH] = "";
 
     int max_line_size = sizeof(read_buffer) - 1;
 
@@ -493,27 +494,11 @@ cdc_read_users(USERS *users, char *usersfile)
         return -1;
     }
 
-    fd = fileno(fp);
-
-    if (fstat(fd, &statb) == 0)
-    {
-        filelen = statb.st_size;
-    }
-
-    if ((all_users_data = MXS_MALLOC(filelen + 1)) == NULL)
-    {
-        return -1;
-    }
-
-    *all_users_data = '\0';
-
     while (!feof(fp))
     {
         if (fgets(read_buffer, max_line_size, fp) != NULL)
         {
             char *tmp_ptr = read_buffer;
-            /* append data for hash */
-            strcat(all_users_data, read_buffer);
 
             if ((tmp_ptr = strchr(read_buffer, ':')) != NULL)
             {
@@ -532,13 +517,6 @@ cdc_read_users(USERS *users, char *usersfile)
             }
         }
     }
-
-    /* compute SHA1 digest for users' data */
-    SHA1((const unsigned char *) all_users_data, strlen(all_users_data), hash);
-
-    memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
-
-    MXS_FREE(all_users_data);
 
     fclose(fp);
 

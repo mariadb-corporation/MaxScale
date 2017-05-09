@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -12,93 +12,107 @@
  */
 
 #define MXS_MODULE_NAME "qc_sqlite"
-#include <maxscale/modules.h>
 #include <maxscale/query_classifier.h>
 
-qc_parse_result_t qc_parse(GWBUF* querybuf)
+#include "../../server/core/maxscale/config.h"
+
+int32_t qc_dummy_parse(GWBUF* querybuf, uint32_t collect, int32_t* pResult)
 {
-    return QC_QUERY_INVALID;
+    *pResult = QC_QUERY_INVALID;
+    return QC_RESULT_OK;
 }
 
-uint32_t qc_get_type(GWBUF* querybuf)
+int32_t qc_dummy_get_type_mask(GWBUF* querybuf, uint32_t* pType_mask)
 {
-    return QUERY_TYPE_UNKNOWN;
+    *pType_mask = QUERY_TYPE_UNKNOWN;
+    return QC_RESULT_OK;
 }
 
-char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
+int32_t qc_dummy_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** ppzNames, int32_t* pSize)
 {
-    *tblsize = 0;
-    return NULL;
+    *ppzNames = NULL;
+    *pSize = 0;
+    return QC_RESULT_OK;
 }
 
-char* qc_get_created_table_name(GWBUF* querybuf)
+int32_t qc_dummy_get_created_table_name(GWBUF* querybuf, char** pzName)
 {
-    return NULL;
+    *pzName = NULL;
+    return QC_RESULT_OK;
 }
 
-bool qc_is_real_query(GWBUF* querybuf)
+int32_t qc_dummy_is_drop_table_query(GWBUF* querybuf, int32_t* pIs_drop_table)
 {
-    return false;
+    *pIs_drop_table = 0;
+    return QC_RESULT_OK;
 }
 
-bool qc_is_drop_table_query(GWBUF* querybuf)
+int32_t qc_dummy_query_has_clause(GWBUF* buf, int32_t *pHas_clause)
 {
-    return false;
+    *pHas_clause = 0;
+    return QC_RESULT_OK;
 }
 
-bool qc_query_has_clause(GWBUF* buf)
+int32_t qc_dummy_get_database_names(GWBUF* querybuf, char*** ppzNames, int32_t* pSize)
 {
-    return false;
+    *ppzNames = NULL;
+    *pSize = 0;
+    return QC_RESULT_OK;
 }
 
-char** qc_get_database_names(GWBUF* querybuf, int* size)
+int32_t qc_dummy_get_operation(GWBUF* querybuf, int32_t* pOp)
 {
-    *size = 0;
-    return NULL;
+    *pOp = QUERY_OP_UNDEFINED;
+    return QC_RESULT_OK;
 }
 
-qc_query_op_t qc_get_operation(GWBUF* querybuf)
+int32_t qc_dummy_get_prepare_name(GWBUF* query, char** pzName)
 {
-    return QUERY_OP_UNDEFINED;
+    *pzName = NULL;
+    return QC_RESULT_OK;
 }
 
-char* qc_sqlite_get_prepare_name(GWBUF* query)
+int32_t qc_dummy_get_field_info(GWBUF* query, const QC_FIELD_INFO** ppInfos, uint32_t* nInfos)
 {
-    return NULL;
+    *ppInfos = NULL;
+    *nInfos = 0;
+    return QC_RESULT_OK;
 }
 
-qc_query_op_t qc_sqlite_get_prepare_operation(GWBUF* query)
+int32_t qc_dummy_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** ppInfos, uint32_t* nInfos)
 {
-    return QUERY_OP_UNDEFINED;
+    *ppInfos = NULL;
+    *nInfos = 0;
+    return QC_RESULT_OK;
 }
 
-void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
+int32_t qc_dummy_setup(const char* args)
 {
-    *infos = NULL;
-    *n_infos = 0;
+    return QC_RESULT_OK;
 }
 
-bool qc_setup(const char* args)
+int32_t qc_dummy_process_init(void)
 {
-    return true;
-}
-
-int qc_dummy_process_init(void)
-{
-    return 0;
+    return QC_RESULT_OK;
 }
 
 void qc_dummy_process_end(void)
 {
 }
 
-int qc_dummy_thread_init(void)
+int32_t qc_dummy_thread_init(void)
 {
-    return 0;
+    return QC_RESULT_OK;
 }
 
 void qc_dummy_thread_end(void)
 {
+}
+
+int32_t qc_dummy_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
+{
+    *preparable_stmt = NULL;
+    return QC_RESULT_OK;
 }
 
 extern "C"
@@ -107,24 +121,24 @@ extern "C"
     {
         static QUERY_CLASSIFIER qc =
         {
-            qc_setup,
+            qc_dummy_setup,
             qc_dummy_process_init,
             qc_dummy_process_end,
             qc_dummy_thread_init,
             qc_dummy_thread_end,
-            qc_parse,
-            qc_get_type,
-            qc_get_operation,
-            qc_get_created_table_name,
-            qc_is_drop_table_query,
-            qc_is_real_query,
-            qc_get_table_names,
+            qc_dummy_parse,
+            qc_dummy_get_type_mask,
+            qc_dummy_get_operation,
+            qc_dummy_get_created_table_name,
+            qc_dummy_is_drop_table_query,
+            qc_dummy_get_table_names,
             NULL,
-            qc_query_has_clause,
-            qc_get_database_names,
-            qc_get_prepare_name,
-            qc_get_prepare_operation,
-            qc_get_field_info,
+            qc_dummy_query_has_clause,
+            qc_dummy_get_database_names,
+            qc_dummy_get_prepare_name,
+            qc_dummy_get_field_info,
+            qc_dummy_get_function_info,
+            qc_dummy_get_preparable_stmt,
         };
 
         static MXS_MODULE info =
@@ -134,6 +148,7 @@ extern "C"
             QUERY_CLASSIFIER_VERSION,
             "Dummy Query Classifier",
             "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
             &qc,
             qc_dummy_process_init,
             qc_dummy_process_end,

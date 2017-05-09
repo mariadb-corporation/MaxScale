@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -11,16 +11,17 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "MySQLBackend"
+
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/limits.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <maxscale/utils.h>
-#include <netinet/tcp.h>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/protocol.h>
-#include <mysql_auth.h>
 
 /*
  * MySQL Protocol module for handling the protocol between the gateway
@@ -51,7 +52,7 @@
  *
  */
 
-static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *in_session);
+static int gw_create_backend_connection(DCB *backend, SERVER *server, MXS_SESSION *in_session);
 static int gw_read_backend_event(DCB* dcb);
 static int gw_write_backend_event(DCB *dcb);
 static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
@@ -60,7 +61,7 @@ static int gw_backend_close(DCB *dcb);
 static int gw_backend_hangup(DCB *dcb);
 static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
-static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
+static int gw_change_user(DCB *backend_dcb, SERVER *server, MXS_SESSION *in_session, GWBUF *queue);
 static char *gw_backend_default_auth();
 static GWBUF* process_response_data(DCB* dcb, GWBUF** readbuf, int nbytes_to_process);
 extern char* create_auth_failed_msg(GWBUF* readbuf, char* hostaddr, uint8_t* sha1);
@@ -76,6 +77,9 @@ static int gw_send_change_user_to_backend(char          *dbname,
                                           char          *user,
                                           uint8_t       *passwd,
                                           MySQLProtocol *conn);
+static void gw_send_proxy_protocol_header(DCB *backend_dcb);
+static bool get_ip_string_and_port(struct sockaddr_storage *sa, char *ip, int iplen,
+                                   in_port_t *port_out);
 
 /*
  * The module entry point routine. It is this routine that
@@ -111,6 +115,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_PROTOCOL_VERSION,
         "The MySQL to backend server protocol",
         "V2.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -166,7 +171,7 @@ static char *gw_backend_default_auth()
  */
 static int gw_create_backend_connection(DCB *backend_dcb,
                                         SERVER *server,
-                                        SESSION *session)
+                                        MXS_SESSION *session)
 {
     MySQLProtocol *protocol = NULL;
     int rv = -1;
@@ -177,9 +182,6 @@ static int gw_create_backend_connection(DCB *backend_dcb,
 
     if (protocol == NULL)
     {
-        MXS_DEBUG("%lu [gw_create_backend_connection] Failed to create "
-                  "protocol object for backend connection.",
-                  pthread_self());
         MXS_ERROR("Failed to create protocol object for backend connection.");
         goto return_fd;
     }
@@ -187,12 +189,10 @@ static int gw_create_backend_connection(DCB *backend_dcb,
     /** Copy client flags to backend protocol */
     if (backend_dcb->session->client_dcb->protocol)
     {
-        /** Copy client flags to backend protocol */
-        protocol->client_capabilities =
-            ((MySQLProtocol *)(backend_dcb->session->client_dcb->protocol))->client_capabilities;
-        /** Copy client charset to backend protocol */
-        protocol->charset =
-            ((MySQLProtocol *)(backend_dcb->session->client_dcb->protocol))->charset;
+        MySQLProtocol *client = (MySQLProtocol*)backend_dcb->session->client_dcb->protocol;
+        protocol->client_capabilities = client->client_capabilities;
+        protocol->charset = client->charset;
+        protocol->extra_capabilities = client->extra_capabilities;
     }
     else
     {
@@ -209,48 +209,44 @@ static int gw_create_backend_connection(DCB *backend_dcb,
     /*< Set protocol state */
     switch (rv)
     {
-        case 0:
-            ss_dassert(fd > 0);
-            protocol->fd = fd;
-            protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
-            MXS_DEBUG("%lu [gw_create_backend_connection] Established "
-                      "connection to %s:%i, protocol fd %d client "
-                      "fd %d.",
-                      pthread_self(),
-                      server->name,
-                      server->port,
-                      protocol->fd,
-                      session->client_dcb->fd);
-            break;
+    case 0:
+        ss_dassert(fd > 0);
+        protocol->fd = fd;
+        protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
+        MXS_DEBUG("Established "
+                  "connection to %s:%i, protocol fd %d client "
+                  "fd %d.",
+                  server->name,
+                  server->port,
+                  protocol->fd,
+                  session->client_dcb->fd);
 
-        case 1:
-            /* The state MYSQL_PENDING_CONNECT is likely to be transitory,    */
-            /* as it means the calls have been successful but the connection  */
-            /* has not yet completed and the calls are non-blocking.          */
-            ss_dassert(fd > 0);
-            protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
-            protocol->fd = fd;
-            MXS_DEBUG("%lu [gw_create_backend_connection] Connection "
-                      "pending to %s:%i, protocol fd %d client fd %d.",
-                      pthread_self(),
-                      server->name,
-                      server->port,
-                      protocol->fd,
-                      session->client_dcb->fd);
-            break;
+        if (server->use_proxy_protocol)
+        {
+            gw_send_proxy_protocol_header(backend_dcb);
+        }
+        break;
 
-        default:
-            /* Failure - the state reverts to its initial value */
-            ss_dassert(fd == -1);
-            ss_dassert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
-            MXS_DEBUG("%lu [gw_create_backend_connection] Connection "
-                      "failed to %s:%i, protocol fd %d client fd %d.",
-                      pthread_self(),
-                      server->name,
-                      server->port,
-                      protocol->fd,
-                      session->client_dcb->fd);
-            break;
+    case 1:
+        /* The state MYSQL_PENDING_CONNECT is likely to be transitory,    */
+        /* as it means the calls have been successful but the connection  */
+        /* has not yet completed and the calls are non-blocking.          */
+        ss_dassert(fd > 0);
+        protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
+        protocol->fd = fd;
+        MXS_DEBUG("Connection "
+                  "pending to %s:%i, protocol fd %d client fd %d.",
+                  server->name,
+                  server->port,
+                  protocol->fd,
+                  session->client_dcb->fd);
+        break;
+
+    default:
+        /* Failure - the state reverts to its initial value */
+        ss_dassert(fd == -1);
+        ss_dassert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
+        break;
     } /*< switch */
 
 return_fd:
@@ -271,88 +267,20 @@ return_fd:
  * backend server. In failure, fd == -1 and socket is closed.
  *
  */
-static int
-gw_do_connect_to_backend(char *host, int port, int *fd)
+static int gw_do_connect_to_backend(char *host, int port, int *fd)
 {
-    struct sockaddr_in serv_addr;
-    int rv;
-    int so = 0;
-    int bufsize;
+    struct sockaddr_storage serv_addr = {};
+    int rv = -1;
 
-    memset(&serv_addr, 0, sizeof serv_addr);
-    serv_addr.sin_family = (int)AF_INET;
-    so = socket((int)AF_INET, (int)SOCK_STREAM, 0);
-
-    if (so < 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Establishing connection to backend server "
-                  "%s:%d failed.\n\t\t             Socket creation failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        goto return_rv;
-    }
     /* prepare for connect */
-    setipaddress(&serv_addr.sin_addr, host);
-    serv_addr.sin_port = htons(port);
-    bufsize = MXS_BACKEND_SO_SNDBUF;
+    int so = open_network_socket(MXS_SOCKET_NETWORK, &serv_addr, host, port);
 
-    if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
+    if (so == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        /** Close socket */
-        close_socket(so);
-        goto return_rv;
-    }
-    bufsize = MXS_BACKEND_SO_RCVBUF;
-
-    if (setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        /** Close socket */
-        close_socket(so);
-        goto return_rv;
+        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
+        return rv;
     }
 
-    int one = 1;
-    if (setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        /** Close socket */
-        close_socket(so);
-        goto return_rv;
-    }
-
-    /* set socket to as non-blocking here */
-    setnonblocking(so);
     rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
     if (rv != 0)
@@ -363,24 +291,16 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
         }
         else
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_ERROR("Failed to connect backend server %s:%d, "
-                      "due %d, %s.",
-                      host,
-                      port,
-                      errno,
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
-            /** Close socket */
-            close_socket(so);
-            goto return_rv;
+            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
+                      host, port, errno, mxs_strerror(errno));
+            close(so);
+            return rv;
         }
     }
-    *fd = so;
-    MXS_DEBUG("%lu [gw_do_connect_to_backend] Connected to backend server "
-              "%s:%d, fd %d.",
-              pthread_self(), host, port, so);
 
-return_rv:
+    *fd = so;
+    MXS_DEBUG("Connected to backend server [%s]:%d, fd %d.", host, port, so);
+
     return rv;
 
 }
@@ -406,7 +326,7 @@ bool is_error_response(GWBUF *buffer)
 void log_error_response(DCB *dcb, GWBUF *buffer)
 {
     uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
-    size_t len = MYSQL_GET_PACKET_LEN(data);
+    size_t len = MYSQL_GET_PAYLOAD_LEN(data);
     uint16_t errcode = MYSQL_GET_ERRCODE(data);
     char bufstr[len];
     memcpy(bufstr, data + 7, len - 3);
@@ -452,21 +372,52 @@ mxs_auth_state_t handle_server_response(DCB *dcb, GWBUF *buffer)
     {
         switch (dcb->authfunc.authenticate(dcb))
         {
-            case MXS_AUTH_INCOMPLETE:
-            case MXS_AUTH_SSL_INCOMPLETE:
-                rval = MXS_AUTH_STATE_RESPONSE_SENT;
-                break;
+        case MXS_AUTH_INCOMPLETE:
+        case MXS_AUTH_SSL_INCOMPLETE:
+            rval = MXS_AUTH_STATE_RESPONSE_SENT;
+            break;
 
-            case MXS_AUTH_SUCCEEDED:
-                rval = MXS_AUTH_STATE_COMPLETE;
+        case MXS_AUTH_SUCCEEDED:
+            rval = MXS_AUTH_STATE_COMPLETE;
 
-            default:
-                break;
+        default:
+            break;
         }
     }
 
     gwbuf_free(buffer);
     return rval;
+}
+
+/**
+ * @brief Prepare protocol for a write
+ *
+ * This prepares both the buffer and the protocol itself for writing a query
+ * to the backend.
+ *
+ * @param dcb    The backend DCB to write to
+ * @param buffer Buffer that will be written
+ */
+static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
+{
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+
+    /** Copy the current command being executed to this backend */
+    if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
+    {
+        MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
+        proto->current_command = client_proto->current_command;
+    }
+
+    if (GWBUF_IS_TYPE_SESCMD(buffer))
+    {
+        mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(GWBUF_DATA(buffer));
+        protocol_add_srv_command(proto, cmd);
+    }
+    if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
+    {
+        proto->collect_result = true;
+    }
 }
 
 /*******************************************************************************
@@ -519,9 +470,8 @@ gw_read_backend_event(DCB *dcb)
     MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
     CHK_PROTOCOL(proto);
 
-    MXS_DEBUG("%lu [gw_read_backend_event] Read dcb %p fd %d protocol state %d, %s.",
-              pthread_self(), dcb, dcb->fd, proto->protocol_auth_state,
-              STRPROTOCOLSTATE(proto->protocol_auth_state));
+    MXS_DEBUG("Read dcb %p fd %d protocol state %d, %s.", dcb, dcb->fd,
+              proto->protocol_auth_state, STRPROTOCOLSTATE(proto->protocol_auth_state));
 
     int rc = 0;
     if (proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
@@ -582,6 +532,7 @@ gw_read_backend_event(DCB *dcb)
                 if (localq)
                 {
                     /** Send the queued commands to the backend */
+                    prepare_for_write(dcb, localq);
                     rc = backend_write_delayqueue(dcb, localq);
                 }
             }
@@ -602,6 +553,34 @@ gw_read_backend_event(DCB *dcb)
     return rc;
 }
 
+static void do_handle_error(DCB *dcb, mxs_error_action_t action, const char *errmsg)
+{
+    bool succp = false;
+    MXS_SESSION *session = dcb->session;
+
+    if (!dcb->dcb_errhandle_called)
+    {
+        GWBUF *errbuf = mysql_create_custom_error(1, 0, errmsg);
+        void *rsession = session->router_session;
+        MXS_ROUTER_OBJECT *router = session->service->router;
+        MXS_ROUTER *router_instance = session->service->router_instance;
+
+        router->handleError(router_instance, rsession, errbuf,
+                            dcb, action, &succp);
+
+        gwbuf_free(errbuf);
+        dcb->dcb_errhandle_called = true;
+    }
+    /**
+     * If error handler fails it means that routing session can't continue
+     * and it must be closed. In success, only this DCB is closed.
+     */
+    if (!succp)
+    {
+        session->state = SESSION_STATE_STOPPING;
+    }
+}
+
 /**
  * @brief Authentication of backend - read the reply, or handle an error
  *
@@ -609,45 +588,18 @@ gw_read_backend_event(DCB *dcb)
  * @param local_session     The current MySQL session data structure
  * @return
  */
-static void
-gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
+static void gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
 {
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     CHK_SESSION(session);
 
-    /* Only reload the users table if authentication failed and the
-     * client session is not stopping. It is possible that authentication
-     * fails because the client has closed the connection before all
-     * backends have done authentication. */
-    if (state == MXS_AUTH_STATE_FAILED && session->state != SESSION_STATE_STOPPING)
+    if (!dcb->dcb_errhandle_called)
     {
-        service_refresh_users(session->service);
-    }
-
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, "Authentication with backend "
-                                              "failed. Session will be closed.");
-
-    if (session->router_session)
-    {
-        bool succp = false;
-
-        session->service->router->handleError(session->service->router_instance,
-                                              session->router_session,
-                                              errbuf, dcb, ERRACT_REPLY_CLIENT, &succp);
-
-        spinlock_acquire(&session->ses_lock);
+        do_handle_error(dcb, ERRACT_REPLY_CLIENT,
+                        "Authentication with backend failed. Session will be closed.");
         session->state = SESSION_STATE_STOPPING;
-        spinlock_release(&session->ses_lock);
-        ss_dassert(dcb->dcb_errhandle_called);
-    }
-    else
-    {
-        /** A NULL router_session is valid if a router declares the
-         * RCAP_TYPE_NO_RSESSION capability flag */
         dcb->dcb_errhandle_called = true;
     }
-
-    gwbuf_free(errbuf);
 }
 
 /**
@@ -689,7 +641,43 @@ static inline bool session_ok_to_route(DCB *dcb)
 static inline bool expecting_resultset(MySQLProtocol *proto)
 {
     return proto->current_command == MYSQL_COM_QUERY ||
-        proto->current_command == MYSQL_COM_STMT_FETCH;
+           proto->current_command == MYSQL_COM_STMT_FETCH;
+}
+
+static inline bool expecting_ps_response(MySQLProtocol *proto)
+{
+    return proto->current_command == MYSQL_COM_STMT_PREPARE;
+}
+
+static inline bool complete_ps_response(GWBUF *buffer)
+{
+    ss_dassert(GWBUF_IS_CONTIGUOUS(buffer));
+    uint16_t cols = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_PS_COLS_OFFSET);
+    uint16_t params = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_PS_PARAMS_OFFSET);
+    int expected_eof = 0;
+
+    if (cols > 0)
+    {
+        expected_eof++;
+    }
+
+    if (params > 0)
+    {
+        expected_eof++;
+    }
+
+    bool more;
+    int n_eof = modutil_count_signal_packets(buffer, 0, &more);
+
+    MXS_DEBUG("Expecting %u EOF, have %u", n_eof, expected_eof);
+
+    return n_eof == expected_eof;
+}
+
+static inline bool collecting_resultset(MySQLProtocol *proto, uint64_t capabilities)
+{
+    return rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) ||
+           proto->collect_result;
 }
 
 /**
@@ -703,7 +691,7 @@ static int
 gw_read_and_write(DCB *dcb)
 {
     GWBUF *read_buffer = NULL;
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     int nbytes_read;
     int return_code = 0;
 
@@ -714,30 +702,7 @@ gw_read_and_write(DCB *dcb)
 
     if (return_code < 0)
     {
-        GWBUF* errbuf;
-        bool succp;
-#if defined(SS_DEBUG)
-        MXS_ERROR("Backend read error handling #2.");
-#endif
-        errbuf = mysql_create_custom_error(1,
-                                           0,
-                                           "Read from backend failed");
-
-        session->service->router->handleError(
-            session->service->router_instance,
-            session->router_session,
-            errbuf,
-            dcb,
-            ERRACT_NEW_CONNECTION,
-            &succp);
-        gwbuf_free(errbuf);
-
-        if (!succp)
-        {
-            spinlock_acquire(&session->ses_lock);
-            session->state = SESSION_STATE_STOPPING;
-            spinlock_release(&session->ses_lock);
-        }
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Read from backend failed");
         return 0;
     }
 
@@ -754,6 +719,7 @@ gw_read_and_write(DCB *dcb)
 
     /** Ask what type of output the router/filter chain expects */
     uint64_t capabilities = service_get_capabilities(session->service);
+    bool result_collected = false;
 
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
     {
@@ -770,7 +736,10 @@ gw_read_and_write(DCB *dcb)
 
         read_buffer = tmp;
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT))
+        MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+
+        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
+            proto->collect_result)
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
             {
@@ -784,16 +753,34 @@ gw_read_and_write(DCB *dcb)
                 return 0;
             }
 
-            MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-
-            if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) &&
-                expecting_resultset(proto) && mxs_mysql_is_result_set(read_buffer))
+            if (collecting_resultset(proto, capabilities))
             {
-                int more = 0;
-                if (modutil_count_signal_packets(read_buffer, 0, 0, &more) != 2)
+                if (expecting_resultset(proto) &&
+                    mxs_mysql_is_result_set(read_buffer))
                 {
-                    dcb->dcb_readqueue = read_buffer;
-                    return 0;
+                    bool more = false;
+                    if (modutil_count_signal_packets(read_buffer, 0, &more) != 2)
+                    {
+                        dcb->dcb_readqueue = gwbuf_append(read_buffer, dcb->dcb_readqueue);
+                        return 0;
+                    }
+
+                    // Collected the complete result
+                    proto->collect_result = false;
+                    result_collected = true;
+                }
+                else if (expecting_ps_response(proto) &&
+                         mxs_mysql_is_prep_stmt_ok(read_buffer))
+                {
+                    if (!complete_ps_response(read_buffer))
+                    {
+                        dcb->dcb_readqueue = gwbuf_append(read_buffer, dcb->dcb_readqueue);
+                        return 0;
+                    }
+
+                    // Collected the complete result
+                    proto->collect_result = false;
+                    result_collected = true;
                 }
             }
         }
@@ -801,17 +788,21 @@ gw_read_and_write(DCB *dcb)
 
     MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
 
-    if (proto->ignore_reply)
+    if (proto->ignore_replies > 0)
     {
-
-        /** The reply to a COM_CHANGE_USER is in packet */
-        GWBUF *query = proto->stored_query;
-        uint8_t result = *((uint8_t*)GWBUF_DATA(read_buffer) + 4);
-        proto->stored_query = NULL;
-        proto->ignore_reply = false;
+        /**
+         * The reply to an ignorable command is in the packet. Extract the
+         * response type and discard the response.
+         */
+        uint8_t result;
+        gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN, 1, &result);
+        proto->ignore_replies--;
+        ss_dassert(proto->ignore_replies >= 0);
         gwbuf_free(read_buffer);
 
         int rval = 0;
+        GWBUF *query = proto->stored_query;
+        proto->stored_query = NULL;
 
         if (result == MYSQL_REPLY_OK)
         {
@@ -819,8 +810,11 @@ gw_read_and_write(DCB *dcb)
         }
         else if (query)
         {
-            /** The COM_CHANGE USER failed, generate a fake hangup event to
-             * close the DCB and send an error to the client. */
+            /**
+             * The ignorable command failed when we had a queued query from the
+             * client. Generate a fake hangup event to close the DCB and send
+             * an error to the client.
+             */
             gwbuf_free(query);
             poll_fake_hangup_event(dcb);
         }
@@ -835,7 +829,7 @@ gw_read_and_write(DCB *dcb)
          * If protocol has session command set, concatenate whole
          * response into one buffer.
          */
-        if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, false) != MYSQL_COM_UNDEFINED)
+        if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, true) != MYSQL_COM_UNDEFINED)
         {
             stmt = process_response_data(dcb, &read_buffer, gwbuf_length(read_buffer));
             /**
@@ -851,15 +845,14 @@ gw_read_and_write(DCB *dcb)
 
             if (!stmt)
             {
-                MXS_ERROR("%lu [gw_read_backend_event] "
-                          "Read buffer unexpectedly null, even though response "
-                          "not marked as complete. User: %s",
-                          pthread_self(), dcb->session->client_dcb->user);
+                MXS_ERROR("Read buffer unexpectedly null, even though response "
+                          "not marked as complete. User: %s", dcb->session->client_dcb->user);
                 return 0;
             }
         }
         else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT) &&
-                 !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
+                 !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) &&
+                 !result_collected)
         {
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
         }
@@ -871,7 +864,6 @@ gw_read_and_write(DCB *dcb)
 
         if (session_ok_to_route(dcb))
         {
-            gwbuf_set_type(stmt, GWBUF_TYPE_MYSQL);
             session->service->router->clientReply(session->service->router_instance,
                                                   session->router_session,
                                                   stmt, dcb);
@@ -924,9 +916,8 @@ static int gw_write_backend_event(DCB *dcb)
         }
         else
         {
-            MXS_DEBUG("%lu [gw_write_backend_event] Dcb %p in state %s "
-                      "but there's nothing to write either.",
-                      pthread_self(), dcb, STRDCBSTATE(dcb->state));
+            MXS_DEBUG("Dcb %p in state %s but there's nothing to write either.",
+                      dcb, STRDCBSTATE(dcb->state));
         }
     }
     else
@@ -936,14 +927,17 @@ static int gw_write_backend_event(DCB *dcb)
         if (backend_protocol->protocol_auth_state == MXS_AUTH_STATE_PENDING_CONNECT)
         {
             backend_protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
+            if (dcb->server->use_proxy_protocol)
+            {
+                gw_send_proxy_protocol_header(dcb);
+            }
         }
         else
         {
             dcb_drain_writeq(dcb);
         }
 
-        MXS_DEBUG("%lu [gw_write_backend_event] wrote to dcb %p fd %d, return %d",
-                  pthread_self(), dcb, dcb->fd, rc);
+        MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->fd, rc);
     }
 
     return rc;
@@ -978,13 +972,14 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
             gwbuf_free(backend_protocol->stored_query);
         }
         dcb->was_persistent = false;
-        backend_protocol->ignore_reply = true;
+        backend_protocol->ignore_replies++;
+        ss_dassert(backend_protocol->ignore_replies > 0);
         backend_protocol->stored_query = queue;
 
         GWBUF *buf = gw_create_change_user_packet(dcb->session->client_dcb->data, dcb->protocol);
         return dcb_write(dcb, buf) ? 1 : 0;
     }
-    else if (backend_protocol->ignore_reply)
+    else if (backend_protocol->ignore_replies > 0)
     {
         if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
         {
@@ -1009,56 +1004,32 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
      */
     switch (backend_protocol->protocol_auth_state)
     {
-        case MXS_AUTH_STATE_HANDSHAKE_FAILED:
-        case MXS_AUTH_STATE_FAILED:
-            if (dcb->session->state != SESSION_STATE_STOPPING)
-            {
-                MXS_ERROR("Unable to write to backend '%s' due to "
-                          "%s failure. Server in state %s.",
-                          dcb->server->unique_name,
-                          backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
-                          "handshake" : "authentication",
-                          STRSRVSTATUS(dcb->server));
-            }
+    case MXS_AUTH_STATE_HANDSHAKE_FAILED:
+    case MXS_AUTH_STATE_FAILED:
+        if (dcb->session->state != SESSION_STATE_STOPPING)
+        {
+            MXS_ERROR("Unable to write to backend '%s' due to "
+                      "%s failure. Server in state %s.",
+                      dcb->server->unique_name,
+                      backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
+                      "handshake" : "authentication",
+                      STRSRVSTATUS(dcb->server));
+        }
 
-            gwbuf_free(queue);
-            rc = 0;
+        gwbuf_free(queue);
+        rc = 0;
 
-            break;
+        break;
 
-        case MXS_AUTH_STATE_COMPLETE:
+    case MXS_AUTH_STATE_COMPLETE:
         {
             uint8_t* ptr = GWBUF_DATA(queue);
             mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(ptr);
 
-            /** Copy the current command being executed to this backend */
-            if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
-            {
-                MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
-                backend_protocol->current_command = client_proto->current_command;
-            }
+            MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
+                      dcb, dcb->fd, STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
 
-            MXS_DEBUG("%lu [gw_MySQLWrite_backend] write to dcb %p "
-                      "fd %d protocol state %s.",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd,
-                      STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
-
-
-            /**
-             * Statement type is used in readwrite split router.
-             * Command is *not* set for readconn router.
-             *
-             * Server commands are stored to MySQLProtocol structure
-             * if buffer always includes a single statement.
-             */
-            if (GWBUF_IS_TYPE_SINGLE_STMT(queue) &&
-                GWBUF_IS_TYPE_SESCMD(queue))
-            {
-                /** Record the command to backend's protocol */
-                protocol_add_srv_command(backend_protocol, cmd);
-            }
+            prepare_for_write(dcb, queue);
 
             if (cmd == MYSQL_COM_QUIT && dcb->server->persistpoolmax)
             {
@@ -1068,39 +1039,27 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
             }
             else
             {
+                if (GWBUF_IS_IGNORABLE(queue))
+                {
+                    /** The response to this command should be ignored */
+                    backend_protocol->ignore_replies++;
+                    ss_dassert(backend_protocol->ignore_replies > 0);
+                }
+
                 /** Write to backend */
                 rc = dcb_write(dcb, queue);
             }
         }
         break;
 
-        default:
+    default:
         {
-            MXS_DEBUG("%lu [gw_MySQLWrite_backend] delayed write to "
-                      "dcb %p fd %d protocol state %s.",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd,
-                      STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
-            /**
-             * In case of session commands, store command to DCB's
-             * protocol struct.
-             */
-            if (GWBUF_IS_TYPE_SINGLE_STMT(queue) &&
-                GWBUF_IS_TYPE_SESCMD(queue))
-            {
-                uint8_t* ptr = GWBUF_DATA(queue);
-                mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(ptr);
+            MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
+                      dcb, dcb->fd, STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
 
-                /** Record the command to backend's protocol */
-                protocol_add_srv_command(backend_protocol, cmd);
-            }
-            /*<
-             * Now put the incoming data to the delay queue unless backend is
-             * connected with auth ok
-             */
+            /** Store data until authentication is complete */
+            prepare_for_write(dcb, queue);
             backend_set_delayqueue(dcb, queue);
-
             rc = 1;
         }
         break;
@@ -1117,18 +1076,11 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
  */
 static int gw_error_backend_event(DCB *dcb)
 {
-    SESSION* session;
-    void* rsession;
-    ROUTER_OBJECT* router;
-    ROUTER* router_instance;
-    GWBUF* errbuf;
-    bool succp;
-    session_state_t ses_state;
-
     CHK_DCB(dcb);
-    session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     CHK_SESSION(session);
-    if (SESSION_STATE_DUMMY == session->state)
+
+    if (session->state == SESSION_STATE_DUMMY)
     {
         if (dcb->persistentstart == 0)
         {
@@ -1137,98 +1089,31 @@ static int gw_error_backend_event(DCB *dcb)
                       "Closing connection.");
         }
         dcb_close(dcb);
-        return 1;
     }
-    rsession = session->router_session;
-    router = session->service->router;
-    router_instance = session->service->router_instance;
-
-    /**
-     * Avoid running redundant error handling procedure.
-     * dcb_close is already called for the DCB. Thus, either connection is
-     * closed by router and COM_QUIT sent or there was an error which
-     * have already been handled.
-     */
-    if (dcb->state != DCB_STATE_POLLING)
+    else if (dcb->state != DCB_STATE_POLLING || session->state != SESSION_STATE_ROUTER_READY)
     {
-        int error, len;
+        int error;
+        int len = sizeof(error);
 
-        len = sizeof(error);
-
-        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0)
+        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0 && error != 0)
         {
-            if (error != 0)
+            if (dcb->state != DCB_STATE_POLLING)
             {
-                char errstring[MXS_STRERROR_BUFLEN];
-                MXS_ERROR("DCB in state %s got error '%s'.",
-                          STRDCBSTATE(dcb->state),
-                          strerror_r(error, errstring, sizeof(errstring)));
+                MXS_ERROR("DCB in state %s got error '%s'.", STRDCBSTATE(dcb->state),
+                          mxs_strerror(errno));
             }
-        }
-        return 1;
-    }
-    errbuf = mysql_create_custom_error(1,
-                                       0,
-                                       "Lost connection to backend server.");
-
-    spinlock_acquire(&session->ses_lock);
-    ses_state = session->state;
-    spinlock_release(&session->ses_lock);
-
-    /**
-     * Session might be initialized when DCB already is in the poll set.
-     * Thus hangup can occur in the middle of session initialization.
-     * Only complete and successfully initialized sessions allow for
-     * calling error handler.
-     */
-    while (ses_state == SESSION_STATE_READY)
-    {
-        spinlock_acquire(&session->ses_lock);
-        ses_state = session->state;
-        spinlock_release(&session->ses_lock);
-    }
-
-    if (ses_state != SESSION_STATE_ROUTER_READY)
-    {
-        int error, len;
-
-        len = sizeof(error);
-        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0)
-        {
-            if (error != 0)
+            else
             {
-                char errstring[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Error '%s' in session that is not ready for routing.",
-                          strerror_r(error, errstring, sizeof(errstring)));
+                          mxs_strerror(errno));
             }
         }
-        gwbuf_free(errbuf);
-        goto retblock;
     }
-
-#if defined(SS_DEBUG)
-    MXS_INFO("Backend error event handling.");
-#endif
-    router->handleError(router_instance,
-                        rsession,
-                        errbuf,
-                        dcb,
-                        ERRACT_NEW_CONNECTION,
-                        &succp);
-    gwbuf_free(errbuf);
-
-    /**
-     * If error handler fails it means that routing session can't continue
-     * and it must be closed. In success, only this DCB is closed.
-     */
-    if (!succp)
+    else
     {
-        spinlock_acquire(&session->ses_lock);
-        session->state = SESSION_STATE_STOPPING;
-        spinlock_release(&session->ses_lock);
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
     }
 
-retblock:
     return 1;
 }
 
@@ -1244,96 +1129,33 @@ retblock:
  */
 static int gw_backend_hangup(DCB *dcb)
 {
-    SESSION* session;
-    void* rsession;
-    ROUTER_OBJECT* router;
-    ROUTER* router_instance;
-    bool succp;
-    GWBUF* errbuf;
-    session_state_t ses_state;
-
     CHK_DCB(dcb);
+    MXS_SESSION *session = dcb->session;
+    CHK_SESSION(session);
+
     if (dcb->persistentstart)
     {
         dcb->dcb_errhandle_called = true;
-        goto retblock;
     }
-    session = dcb->session;
-
-    if (session == NULL)
+    else if (session->state != SESSION_STATE_ROUTER_READY)
     {
-        goto retblock;
-    }
-
-    CHK_SESSION(session);
-
-    rsession = session->router_session;
-    router = session->service->router;
-    router_instance = session->service->router_instance;
-
-    errbuf = mysql_create_custom_error(1,
-                                       0,
-                                       "Lost connection to backend server.");
-
-    spinlock_acquire(&session->ses_lock);
-    ses_state = session->state;
-    spinlock_release(&session->ses_lock);
-
-    /**
-     * Session might be initialized when DCB already is in the poll set.
-     * Thus hangup can occur in the middle of session initialization.
-     * Only complete and successfully initialized sessions allow for
-     * calling error handler.
-     */
-    while (ses_state == SESSION_STATE_READY)
-    {
-        spinlock_acquire(&session->ses_lock);
-        ses_state = session->state;
-        spinlock_release(&session->ses_lock);
-    }
-
-    if (ses_state != SESSION_STATE_ROUTER_READY)
-    {
-        int error, len;
-
-        len = sizeof(error);
+        int error;
+        int len = sizeof(error);
         if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0)
         {
-            if (error != 0 && ses_state != SESSION_STATE_STOPPING)
+            if (error != 0 && session->state != SESSION_STATE_STOPPING)
             {
-                char errstring[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Hangup in session that is not ready for routing, "
                           "Error reported is '%s'.",
-                          strerror_r(error, errstring, sizeof(errstring)));
+                          mxs_strerror(errno));
             }
         }
-        gwbuf_free(errbuf);
-        /*
-         * I'm pretty certain this is best removed and
-         * causes trouble if present, but have left it
-         * here just for now as a comment. Martin
-         */
-        /* dcb_close(dcb); */
-        goto retblock;
     }
-
-    router->handleError(router_instance,
-                        rsession,
-                        errbuf,
-                        dcb,
-                        ERRACT_NEW_CONNECTION,
-                        &succp);
-
-    gwbuf_free(errbuf);
-    /** There are no required backends available, close session. */
-    if (!succp)
+    else
     {
-        spinlock_acquire(&session->ses_lock);
-        session->state = SESSION_STATE_STOPPING;
-        spinlock_release(&session->ses_lock);
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
     }
 
-retblock:
     return 1;
 }
 
@@ -1344,56 +1166,30 @@ retblock:
  */
 static int gw_backend_close(DCB *dcb)
 {
-    SESSION* session;
-    GWBUF* quitbuf;
-
     CHK_DCB(dcb);
-    session = dcb->session;
-
-    MXS_DEBUG("%lu [gw_backend_close]", pthread_self());
-
-    quitbuf = mysql_create_com_quit(NULL, 0);
-    gwbuf_set_type(quitbuf, GWBUF_TYPE_MYSQL);
+    ss_dassert(dcb->session);
 
     /** Send COM_QUIT to the backend being closed */
+    GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
     mysql_send_com_quit(dcb, 0, quitbuf);
 
+    /** Free protocol data */
     mysql_protocol_done(dcb);
 
-    if (session)
-    {
-        CHK_SESSION(session);
-        /**
-         * The lock is needed only to protect the read of session->state and
-         * session->client_dcb values. Client's state may change by other thread
-         * but client's close and adding client's DCB to zombies list is executed
-         * only if client's DCB's state does _not_ change in parallel.
-         */
-        spinlock_acquire(&session->ses_lock);
-        /**
-         * If session->state is STOPPING, start closing client session.
-         * Otherwise only this backend connection is closed.
-         */
-        if (session->state == SESSION_STATE_STOPPING &&
-            session->client_dcb != NULL)
-        {
-            if (session->client_dcb->state == DCB_STATE_POLLING)
-            {
-                spinlock_release(&session->ses_lock);
+    MXS_SESSION* session = dcb->session;
+    CHK_SESSION(session);
 
-                /** Close client DCB */
-                dcb_close(session->client_dcb);
-            }
-            else
-            {
-                spinlock_release(&session->ses_lock);
-            }
-        }
-        else
-        {
-            spinlock_release(&session->ses_lock);
-        }
+    /**
+     * If session state is SESSION_STATE_STOPPING, start closing client session.
+     * Otherwise only this backend connection is closed.
+     */
+    if (session->client_dcb &&
+        session->state == SESSION_STATE_STOPPING &&
+        session->client_dcb->state == DCB_STATE_POLLING)
+    {
+        dcb_close(session->client_dcb);
     }
+
     return 1;
 }
 
@@ -1448,31 +1244,7 @@ static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
 
     if (rc == 0)
     {
-        SESSION *session = dcb->session;
-        CHK_SESSION(session);
-        ROUTER_OBJECT *router = session->service->router;
-        ROUTER *router_instance = session->service->router_instance;
-        void *rsession = session->router_session;
-        bool succp = false;
-        GWBUF* errbuf = mysql_create_custom_error(
-                            1, 0, "Failed to write buffered data to back-end server. "
-                            "Buffer was empty or back-end was disconnected during "
-                            "operation. Attempting to find a new backend.");
-
-        router->handleError(router_instance,
-                            rsession,
-                            errbuf,
-                            dcb,
-                            ERRACT_NEW_CONNECTION,
-                            &succp);
-        gwbuf_free(errbuf);
-
-        if (!succp)
-        {
-            spinlock_acquire(&session->ses_lock);
-            session->state = SESSION_STATE_STOPPING;
-            spinlock_release(&session->ses_lock);
-        }
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
     }
 
     return rc;
@@ -1491,7 +1263,7 @@ static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
  */
 static int gw_change_user(DCB *backend,
                           SERVER *server,
-                          SESSION *in_session,
+                          MXS_SESSION *in_session,
                           GWBUF *queue)
 {
     MYSQL_session *current_session = NULL;
@@ -1562,8 +1334,6 @@ static int gw_change_user(DCB *backend,
         memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
     }
 
-    spinlock_acquire(&in_session->ses_lock);
-
     /* save current_database name */
     strcpy(current_database, current_session->db);
 
@@ -1577,13 +1347,22 @@ static int gw_change_user(DCB *backend,
      * Decode the token and check the password.
      * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
      */
-    auth_ret = gw_check_mysql_scramble_data(backend->session->client_dcb,
+    DCB *dcb = backend->session->client_dcb;
+
+    if (dcb->authfunc.reauthenticate == NULL)
+    {
+        /** Authenticator does not support reauthentication */
+        rv = 0;
+        goto retblock;
+    }
+
+    auth_ret = dcb->authfunc.reauthenticate(dcb, username,
                                             auth_token, auth_token_len,
                                             client_protocol->scramble,
                                             sizeof(client_protocol->scramble),
-                                            username, client_sha1);
+                                            client_sha1, sizeof(client_sha1));
+
     strcpy(current_session->db, current_database);
-    spinlock_release(&in_session->ses_lock);
 
     if (auth_ret != 0)
     {
@@ -1591,24 +1370,19 @@ static int gw_change_user(DCB *backend,
         {
             /* Try authentication again with new repository data */
             /* Note: if no auth client authentication will fail */
-            spinlock_acquire(&in_session->ses_lock);
             *current_session->db = 0;
-            auth_ret = gw_check_mysql_scramble_data(
-                           backend->session->client_dcb,
-                           auth_token, auth_token_len,
-                           client_protocol->scramble,
-                           sizeof(client_protocol->scramble),
-                           username, client_sha1);
+
+            auth_ret = dcb->authfunc.reauthenticate(dcb, username,
+                                                    auth_token, auth_token_len,
+                                                    client_protocol->scramble,
+                                                    sizeof(client_protocol->scramble),
+                                                    client_sha1, sizeof(client_sha1));
+
             strcpy(current_session->db, current_database);
-            spinlock_release(&in_session->ses_lock);
         }
     }
 
-    /* let's free the auth_token now */
-    if (auth_token)
-    {
-        MXS_FREE(auth_token);
-    }
+    MXS_FREE(auth_token);
 
     if (auth_ret != 0)
     {
@@ -1634,7 +1408,7 @@ static int gw_change_user(DCB *backend,
         message = create_auth_fail_str(username,
                                        backend->session->client_dcb->remote,
                                        password_set,
-                                       "",
+                                       false,
                                        auth_ret);
         if (message == NULL)
         {
@@ -1691,11 +1465,11 @@ static GWBUF* process_response_data(DCB* dcb,
                                     int nbytes_to_process)
 {
     int npackets_left = 0; /*< response's packet count */
-    ssize_t nbytes_left = 0; /*< nbytes to be read for the packet */
+    size_t nbytes_left = 0; /*< nbytes to be read for the packet */
     MySQLProtocol* p;
     GWBUF* outbuf = NULL;
     int initial_packets = npackets_left;
-    ssize_t initial_bytes = nbytes_left;
+    size_t initial_bytes = nbytes_left;
 
     /** Get command which was stored in gw_MySQLWrite_backend */
     p = DCB_PROTOCOL(dcb, MySQLProtocol);
@@ -1718,11 +1492,7 @@ static GWBUF* process_response_data(DCB* dcb,
 
         srvcmd = protocol_get_srv_command(p, false);
 
-        MXS_DEBUG("%lu [process_response_data] Read command %s for DCB %p fd %d.",
-                  pthread_self(),
-                  STRPACKETTYPE(srvcmd),
-                  dcb,
-                  dcb->fd);
+        MXS_DEBUG("Read command %s for DCB %p fd %d.", STRPACKETTYPE(srvcmd), dcb, dcb->fd);
         /**
          * Read values from protocol structure, fails if values are
          * uninitialized.
@@ -1820,9 +1590,8 @@ static GWBUF* process_response_data(DCB* dcb,
                  wait for more data from the backend server.*/
                 if (*readbuf == NULL || gwbuf_length(*readbuf) < 3)
                 {
-                    MXS_DEBUG("%lu [%s] Read %d packets. Waiting for %d more "
-                              "packets for a total of %d packets.",
-                              pthread_self(), __FUNCTION__,
+                    MXS_DEBUG("[%s] Read %d packets. Waiting for %d more "
+                              "packets for a total of %d packets.", __FUNCTION__,
                               initial_packets - npackets_left,
                               npackets_left, initial_packets);
 
@@ -1848,7 +1617,7 @@ static GWBUF* process_response_data(DCB* dcb,
 static bool sescmd_response_complete(DCB* dcb)
 {
     int npackets_left;
-    ssize_t nbytes_left;
+    size_t nbytes_left;
     MySQLProtocol* p;
     bool succp;
 
@@ -1871,21 +1640,6 @@ static bool sescmd_response_complete(DCB* dcb)
     return succp;
 }
 
-static void inline
-close_socket(int sock)
-{
-    /*< Close newly created socket. */
-    if (close(sock) != 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to close socket %d due %d, %s.",
-                  sock,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-    }
-
-}
-
 /**
  * Create COM_CHANGE_USER packet and store it to GWBUF
  *
@@ -1904,7 +1658,6 @@ gw_create_change_user_packet(MYSQL_session*  mses,
     char* user;
     uint8_t* pwd;
     GWBUF* buffer;
-    int compress = 0;
     uint8_t* payload = NULL;
     uint8_t* payload_start = NULL;
     long bytes;
@@ -1929,13 +1682,6 @@ gw_create_change_user_packet(MYSQL_session*  mses,
 
     /* get charset the client sent and use it for connection auth */
     charset = protocol->charset;
-
-    if (compress)
-    {
-#ifdef DEBUG_MYSQL_CONN
-        fprintf(stderr, ">>>> Backend Connection with compression\n");
-#endif
-    }
 
     /**
      * Protocol MySQL COM_CHANGE_USER for CLIENT_PROTOCOL_41
@@ -1976,7 +1722,7 @@ gw_create_change_user_packet(MYSQL_session*  mses,
      * Set correct type to GWBUF so that it will be handled like session
      * commands
      */
-    buffer->gwbuf_type = GWBUF_TYPE_MYSQL | GWBUF_TYPE_SINGLE_STMT | GWBUF_TYPE_SESCMD;
+    buffer->gwbuf_type = GWBUF_TYPE_SESCMD;
     payload = GWBUF_DATA(buffer);
     memset(payload, '\0', bytes);
     payload_start = payload;
@@ -2087,4 +1833,137 @@ gw_send_change_user_to_backend(char          *dbname,
         rc = 1;
     }
     return rc;
+}
+
+/* Send proxy protocol header. See
+ * http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
+ * for more information. Currently only supports the text version (v1) of
+ * the protocol. Binary version may be added when the feature has been confirmed
+ * to work.
+ *
+ * @param backend_dcb The target dcb.
+ */
+static void gw_send_proxy_protocol_header(DCB *backend_dcb)
+{
+    // TODO: Add support for chained proxies. Requires reading the client header.
+
+    const DCB *client_dcb = backend_dcb->session->client_dcb;
+    const int client_fd = client_dcb->fd;
+    const sa_family_t family = client_dcb->ip.ss_family;
+    const char *family_str = NULL;
+
+    struct sockaddr_storage sa_peer;
+    struct sockaddr_storage sa_local;
+    socklen_t sa_peer_len = sizeof(sa_peer);
+    socklen_t sa_local_len = sizeof(sa_local);
+
+    /* Fill in peer's socket address.  */
+    if (getpeername(client_fd, (struct sockaddr *)&sa_peer, &sa_peer_len) == -1)
+    {
+        MXS_ERROR("'%s' failed on file descriptor '%d'.", "getpeername()", client_fd);
+        return;
+    }
+
+    /* Fill in this socket's local address. */
+    if (getsockname(client_fd, (struct sockaddr *)&sa_local, &sa_local_len) == -1)
+    {
+        MXS_ERROR("'%s' failed on file descriptor '%d'.", "getsockname()", client_fd);
+        return;
+    }
+    ss_dassert(sa_peer.ss_family == sa_local.ss_family);
+
+    char peer_ip[INET6_ADDRSTRLEN];
+    char maxscale_ip[INET6_ADDRSTRLEN];
+    in_port_t peer_port;
+    in_port_t maxscale_port;
+
+    if (!get_ip_string_and_port(&sa_peer, peer_ip, sizeof(peer_ip), &peer_port) ||
+        !get_ip_string_and_port(&sa_local, maxscale_ip, sizeof(maxscale_ip), &maxscale_port))
+    {
+        MXS_ERROR("Could not convert network address to string form.");
+        return;
+    }
+
+    switch (family)
+    {
+    case AF_INET:
+        family_str = "TCP4";
+        break;
+
+    case AF_INET6:
+        family_str = "TCP6";
+        break;
+
+    default:
+        family_str = "UNKNOWN";
+        break;
+    }
+
+    int rval;
+    char proxy_header[108]; // 108 is the worst-case length
+    if (family == AF_INET || family == AF_INET6)
+    {
+        rval = snprintf(proxy_header, sizeof(proxy_header), "PROXY %s %s %s %d %d\r\n",
+                        family_str, peer_ip, maxscale_ip, peer_port, maxscale_port);
+    }
+    else
+    {
+        rval = snprintf(proxy_header, sizeof(proxy_header), "PROXY %s\r\n", family_str);
+    }
+    if (rval < 0 || rval >= sizeof(proxy_header))
+    {
+        MXS_ERROR("Proxy header printing error, produced '%s'.", proxy_header);
+        return;
+    }
+
+    GWBUF *headerbuf = gwbuf_alloc_and_load(strlen(proxy_header), proxy_header);
+    if (headerbuf)
+    {
+        if (!dcb_write(backend_dcb, headerbuf))
+        {
+            gwbuf_free(headerbuf);
+        }
+    }
+    return;
+}
+
+/* Read IP and port from socket address structure, return IP as string and port
+ * as host byte order integer.
+ *
+ * @param sa A sockaddr_storage containing either an IPv4 or v6 address
+ * @param ip Pointer to output array
+ * @param iplen Output array length
+ * @param port_out Port number output
+ */
+static bool get_ip_string_and_port(struct sockaddr_storage *sa,
+                                   char *ip, int iplen, in_port_t *port_out)
+{
+    bool success = false;
+    in_port_t port;
+
+    switch (sa->ss_family)
+    {
+    case AF_INET:
+        {
+            struct sockaddr_in *sock_info = (struct sockaddr_in *)sa;
+            struct in_addr *addr = &(sock_info->sin_addr);
+            success = (inet_ntop(AF_INET, addr, ip, iplen) != NULL);
+            port = ntohs(sock_info->sin_port);
+        }
+        break;
+
+    case AF_INET6:
+        {
+            struct sockaddr_in6 *sock_info = (struct sockaddr_in6 *)sa;
+            struct in6_addr *addr = &(sock_info->sin6_addr);
+            success = (inet_ntop(AF_INET6, addr, ip, iplen) != NULL);
+            port = ntohs(sock_info->sin6_port);
+        }
+        break;
+    }
+    if (success)
+    {
+        *port_out = port;
+    }
+    return success;
 }

@@ -4,7 +4,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -55,6 +55,13 @@ typedef struct
     size_t num_fields;
 } MAXAVRO_SCHEMA;
 
+enum maxavro_codec
+{
+    MAXAVRO_CODEC_NULL,
+    MAXAVRO_CODEC_DEFLATE,
+    MAXAVRO_CODEC_SNAPPY, /**< Not yet implemented */
+};
+
 enum maxavro_error
 {
     MAXAVRO_ERR_NONE,
@@ -68,14 +75,17 @@ typedef struct
     FILE* file;
     char* filename; /*< The filename */
     MAXAVRO_SCHEMA* schema;
+    enum maxavro_codec codec;
     uint64_t blocks_read; /*< Total number of data blocks read */
     uint64_t records_read; /*< Total number of records read */
     uint64_t bytes_read; /*< Total number of bytes read */
     uint64_t records_in_block;
     uint64_t records_read_from_block;
     uint64_t bytes_read_from_block;
-    uint64_t block_size; /*< Size of the block in bytes */
-
+    uint64_t buffer_size; /*< Size of the block in bytes */
+    uint8_t *buffer; /**< The uncompressed data */
+    uint8_t *buffer_end; /**< The byte after the end of the buffer*/
+    uint8_t *buffer_ptr; /**< Pointer to @c buffer which is moved as records are read */
     /** The position @c ftell returns before the first record is read  */
     long header_end_pos;
     long data_start_pos;
@@ -124,48 +134,24 @@ typedef struct avro_map_value
     int blocks; /*< Number of added key-value blocks */
 } MAXAVRO_MAP;
 
-/** Data block generation */
-MAXAVRO_DATABLOCK* maxavro_datablock_allocate(MAXAVRO_FILE *file, size_t buffersize);
-void maxavro_datablock_free(MAXAVRO_DATABLOCK* block);
-bool maxavro_datablock_finalize(MAXAVRO_DATABLOCK* block);
+/** Opening and closing files */
+MAXAVRO_FILE* maxavro_file_open(const char* filename);
+void maxavro_file_close(MAXAVRO_FILE *file);
 
-/** Adding values to a datablock. The caller must ensure that the inserted
- * values conform to the file schema and that the required amount of fields
- * is added before finalizing the block. */
-bool maxavro_datablock_add_integer(MAXAVRO_DATABLOCK *file, uint64_t val);
-bool maxavro_datablock_add_string(MAXAVRO_DATABLOCK *file, const char* str);
-bool maxavro_datablock_add_float(MAXAVRO_DATABLOCK *file, float val);
-bool maxavro_datablock_add_double(MAXAVRO_DATABLOCK *file, double val);
-
-/** Reading primitives */
-bool maxavro_read_integer(MAXAVRO_FILE *file, uint64_t *val);
-char* maxavro_read_string(MAXAVRO_FILE *file);
-bool maxavro_skip_string(MAXAVRO_FILE* file);
-bool maxavro_read_float(MAXAVRO_FILE *file, float *dest);
-bool maxavro_read_double(MAXAVRO_FILE *file, double *dest);
-
-/** Reading complex types */
-MAXAVRO_MAP* maxavro_map_read(MAXAVRO_FILE *file);
-void maxavro_map_free(MAXAVRO_MAP *value);
-
-/** Reading and seeking records */
+/** Reading records */
 json_t* maxavro_record_read_json(MAXAVRO_FILE *file);
 GWBUF* maxavro_record_read_binary(MAXAVRO_FILE *file);
+
+/** Navigation of the file */
 bool maxavro_record_seek(MAXAVRO_FILE *file, uint64_t offset);
 bool maxavro_record_set_pos(MAXAVRO_FILE *file, long pos);
 bool maxavro_next_block(MAXAVRO_FILE *file);
 
-/** File operations */
-MAXAVRO_FILE* maxavro_file_open(const char* filename);
-void maxavro_file_close(MAXAVRO_FILE *file);
+/** Get binary format header */
 GWBUF* maxavro_file_binary_header(MAXAVRO_FILE *file);
 
 /** File error functions */
 enum maxavro_error maxavro_get_error(MAXAVRO_FILE *file);
 const char* maxavro_get_error_string(MAXAVRO_FILE *file);
-
-/** Schema creation */
-MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json);
-void maxavro_schema_free(MAXAVRO_SCHEMA* schema);
 
 #endif

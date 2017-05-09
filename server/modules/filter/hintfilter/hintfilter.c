@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#define MXS_MODULE_NAME "hintfilter"
+
 #include <stdio.h>
 #include <maxscale/filter.h>
 #include <maxscale/alloc.h>
@@ -23,14 +26,15 @@
  *
  */
 
-static FILTER *createInstance(const char* name, char **options, CONFIG_PARAMETER *params);
-static void *newSession(FILTER *instance, SESSION *session);
-static void closeSession(FILTER *instance, void *session);
-static void freeSession(FILTER *instance, void *session);
-static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static MXS_FILTER *createInstance(const char* name, char **options, MXS_CONFIG_PARAMETER *params);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
  * The module entry point routine. It is this routine that
@@ -42,7 +46,7 @@ static uint64_t getCapabilities(void);
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -53,6 +57,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No clientReply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -61,9 +66,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_ALPHA_RELEASE,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A hint parsing filter",
         "V1.0.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -87,8 +93,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static FILTER *
-createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+static MXS_FILTER *
+createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     HINT_INSTANCE *my_instance;
 
@@ -96,7 +102,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
     {
         my_instance->sessions = 0;
     }
-    return (FILTER *)my_instance;
+    return (MXS_FILTER *)my_instance;
 }
 
 /**
@@ -106,8 +112,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static void *
-newSession(FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     HINT_INSTANCE *my_instance = (HINT_INSTANCE *)instance;
     HINT_SESSION *my_session;
@@ -120,7 +126,7 @@ newSession(FILTER *instance, SESSION *session)
         my_session->named_hints = NULL;
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -131,7 +137,7 @@ newSession(FILTER *instance, SESSION *session)
  * @param session   The session being closed
  */
 static void
-closeSession(FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     HINT_SESSION *my_session = (HINT_SESSION *)session;
     NAMEDHINTS* named_hints;
@@ -162,7 +168,7 @@ closeSession(FILTER *instance, void *session)
  * @param session   The session being closed
  */
 static void
-freeSession(FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     MXS_FREE(session);
     return;
@@ -176,7 +182,7 @@ freeSession(FILTER *instance, void *session)
  * @param downstream    The downstream filter or router
  */
 static void
-setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     HINT_SESSION *my_session = (HINT_SESSION *)session;
 
@@ -194,7 +200,7 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param queue     The query data
  */
 static int
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     HINT_SESSION *my_session = (HINT_SESSION *)session;
 
@@ -223,7 +229,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param   dcb     The DCB for diagnostic output
  */
 static void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     HINT_INSTANCE *my_instance = (HINT_INSTANCE *)instance;
     HINT_SESSION *my_session = (HINT_SESSION *)fsession;
@@ -231,11 +237,23 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 }
 
 /**
+ * Diagnostics routine
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t*
+diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    return NULL;
+}
+
+/**
  * Capability routine.
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }

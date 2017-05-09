@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -11,10 +11,10 @@
  * Public License.
  */
 #include <maxscale/log_manager.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
 #include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -23,13 +23,17 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
-#include <maxscale/atomic.h>
 
+#include <maxscale/atomic.h>
+#include <maxscale/config.h>
+#include <maxscale/platform.h>
 #include <maxscale/hashtable.h>
+#include <maxscale/json_api.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/debug.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
+
 #include "maxscale/mlist.h"
 
 #define MAX_PREFIXLEN 250
@@ -124,18 +128,6 @@ static struct
  * Used from logging macros.
  */
 int mxs_log_enabled_priorities = 0;
-
-/**
- * Thread-specific struct variable for storing current session id and currently
- * enabled log files for the session.
- */
-__thread mxs_log_info_t mxs_log_tls = {0, 0};
-
-/**
- * Global counter for each log file type. It indicates for how many sessions
- * each log type is currently enabled.
- */
-ssize_t mxs_log_session_count[LOG_DEBUG + 1] = {0};
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -787,22 +779,7 @@ static int logmanager_write_log(int            priority,
 
     /** Length of string that will be written, limited by bufsize */
     size_t safe_str_len;
-    /** Length of session id */
-    size_t sesid_str_len;
-    size_t cmplen = 0;
-    /**
-     * 2 braces, 2 spaces and terminating char
-     * If session id is stored to mxs_log_tls structure, allocate
-     * room for session id too.
-     */
-    if ((priority == LOG_INFO) && (mxs_log_tls.li_sesid != 0))
-    {
-        sesid_str_len = 5 * sizeof(char) + get_decimal_len(mxs_log_tls.li_sesid);
-    }
-    else
-    {
-        sesid_str_len = 0;
-    }
+
     if (do_highprecision)
     {
         timestamp_len = get_timestamp_len_hp();
@@ -811,18 +788,17 @@ static int logmanager_write_log(int            priority,
     {
         timestamp_len = get_timestamp_len();
     }
-    cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 
     bool overflow = false;
     /** Find out how much can be safely written with current block size */
-    if (timestamp_len - sizeof(char) + cmplen + str_len > lf->lf_buf_size)
+    if (timestamp_len - sizeof(char) + str_len > lf->lf_buf_size)
     {
         safe_str_len = lf->lf_buf_size;
         overflow = true;
     }
     else
     {
-        safe_str_len = timestamp_len - sizeof(char) + cmplen + str_len;
+        safe_str_len = timestamp_len - sizeof(char) + str_len;
     }
     /**
      * Seek write position and register to block buffer.
@@ -861,7 +837,7 @@ static int logmanager_write_log(int            priority,
     }
     else
     {
-        wp = (char*)MXS_MALLOC(sizeof(char) * (timestamp_len - sizeof(char) + cmplen + str_len + 1));
+        wp = (char*)MXS_MALLOC(sizeof(char) * (timestamp_len - sizeof(char) + str_len + 1));
     }
 
     if (wp == NULL)
@@ -889,20 +865,13 @@ static int logmanager_write_log(int            priority,
     {
         timestamp_len = snprint_timestamp(wp, timestamp_len);
     }
-    if (sesid_str_len != 0)
-    {
-        /**
-         * Write session id
-         */
-        snprintf(wp + timestamp_len, sesid_str_len, "[%lu]  ", mxs_log_tls.li_sesid);
-        sesid_str_len -= 1; /*< don't calculate terminating char anymore */
-    }
+
     /**
      * Write next string to overwrite terminating null character
      * of the timestamp string.
      */
-    snprintf(wp + timestamp_len + sesid_str_len,
-             safe_str_len - timestamp_len - sesid_str_len,
+    snprintf(wp + timestamp_len,
+             safe_str_len - timestamp_len,
              "%s",
              str);
 
@@ -919,18 +888,18 @@ static int logmanager_write_log(int            priority,
 
         switch (priority)
         {
-            case LOG_EMERG:
-            case LOG_ALERT:
-            case LOG_CRIT:
-            case LOG_ERR:
-            case LOG_WARNING:
-            case LOG_NOTICE:
-                syslog(priority, "%s", message);
-                break;
+        case LOG_EMERG:
+        case LOG_ALERT:
+        case LOG_CRIT:
+        case LOG_ERR:
+        case LOG_WARNING:
+        case LOG_NOTICE:
+            syslog(priority, "%s", message);
+            break;
 
-            default:
-                // LOG_INFO and LOG_DEBUG messages are never written to syslog.
-                break;
+        default:
+            // LOG_INFO and LOG_DEBUG messages are never written to syslog.
+            break;
         }
     }
     /** remove double line feed */
@@ -1642,9 +1611,8 @@ static bool logfile_write_header(skygw_file_t* file)
 
     if ((header_items != 1) || (line_items != 1))
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         LOG_ERROR("MaxScale Log: Writing header failed due to %d, %s\n",
-                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  errno, mxs_strerror(errno));
         written = false;
     }
 
@@ -1819,15 +1787,13 @@ static bool check_file_and_path(const char* filename, bool* writable)
             {
                 if (file_is_symlink(filename))
                 {
-                    char errbuf[MXS_STRERROR_BUFLEN];
                     LOG_ERROR("MaxScale Log: Error, Can't access file pointed to by %s due to %d, %s.\n",
-                              filename, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                              filename, errno, mxs_strerror(errno));
                 }
                 else
                 {
-                    char errbuf[MXS_STRERROR_BUFLEN];
                     LOG_ERROR("MaxScale Log: Error, Can't access %s due to %d, %s.\n",
-                              filename, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                              filename, errno, mxs_strerror(errno));
                 }
 
                 if (writable)
@@ -1924,9 +1890,8 @@ static bool logfile_init(logfile_t*    logfile,
 
         if (mkdir(dir, S_IRWXU | S_IRWXG) != 0 && (errno != EEXIST))
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             LOG_ERROR("MaxScale Log: Error, creating directory %s failed due to %d, %s.\n",
-                      dir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                      dir, errno, mxs_strerror(errno));
 
             succ = false;
             goto return_with_succ;
@@ -1995,22 +1960,22 @@ static void logfile_done(logfile_t* lf)
 {
     switch (lf->lf_state)
     {
-        case RUN:
-            CHK_LOGFILE(lf);
-        /** fallthrough */
-        case INIT:
-            /** Test if list is initialized before freeing it */
-            if (lf->lf_blockbuf_list.mlist_versno != 0)
-            {
-                mlist_done(&lf->lf_blockbuf_list);
-            }
-            logfile_free_memory(lf);
-            lf->lf_state = DONE;
-        /** fallthrough */
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+    case RUN:
+        CHK_LOGFILE(lf);
+    /** fallthrough */
+    case INIT:
+        /** Test if list is initialized before freeing it */
+        if (lf->lf_blockbuf_list.mlist_versno != 0)
+        {
+            mlist_done(&lf->lf_blockbuf_list);
+        }
+        logfile_free_memory(lf);
+        lf->lf_state = DONE;
+    /** fallthrough */
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
@@ -2109,9 +2074,8 @@ static bool logfile_write_footer(skygw_file_t* file, const char* suffix)
 
     if ((header_items != 1) || (line_items != 1))
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         LOG_ERROR("MaxScale Log: Writing footer failed due to %d, %s\n",
-                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  errno, mxs_strerror(errno));
         written = false;
     }
 
@@ -2122,30 +2086,30 @@ static void filewriter_done(filewriter_t* fw, bool write_footer)
 {
     switch (fw->fwr_state)
     {
-        case RUN:
-            CHK_FILEWRITER(fw);
-            if (log_config.use_stdout)
+    case RUN:
+        CHK_FILEWRITER(fw);
+        if (log_config.use_stdout)
+        {
+            skygw_file_free(fw->fwr_file);
+        }
+        else
+        {
+            if (write_footer)
             {
-                skygw_file_free(fw->fwr_file);
+                logfile_write_footer(fw->fwr_file, "MariaDB MaxScale is shut down.");
             }
-            else
-            {
-                if (write_footer)
-                {
-                    logfile_write_footer(fw->fwr_file, "MariaDB MaxScale is shut down.");
-                }
 
-                skygw_file_close(fw->fwr_file);
-            }
-        case INIT:
-            fw->fwr_logmes = NULL;
-            fw->fwr_clientmes = NULL;
-            fw->fwr_state = DONE;
-            break;
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+            skygw_file_close(fw->fwr_file);
+        }
+    case INIT:
+        fw->fwr_logmes = NULL;
+        fw->fwr_clientmes = NULL;
+        fw->fwr_state = DONE;
+        break;
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
@@ -2237,10 +2201,9 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             if (err)
             {
                 // TODO: Log this to syslog.
-                char errbuf[MXS_STRERROR_BUFLEN];
                 LOG_ERROR("MaxScale Log: Error, writing to the log-file %s failed due to %d, %s. "
                           "Disabling writing to the log.\n",
-                          lf->lf_full_file_name, err, strerror_r(err, errbuf, sizeof(errbuf)));
+                          lf->lf_full_file_name, err, mxs_strerror(err));
 
                 mxs_log_set_maxlog_enabled(false);
             }
@@ -2397,15 +2360,15 @@ static void fnames_conf_done(fnames_conf_t* fn)
 {
     switch (fn->fn_state)
     {
-        case RUN:
-            CHK_FNAMES_CONF(fn);
-        case INIT:
-            fnames_conf_free_memory(fn);
-            fn->fn_state = DONE;
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+    case RUN:
+        CHK_FNAMES_CONF(fn);
+    case INIT:
+        fnames_conf_free_memory(fn);
+        fn->fn_state = DONE;
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
@@ -2624,25 +2587,25 @@ static const char* priority_name(int priority)
 {
     switch (priority)
     {
-        case LOG_EMERG:
-            return "emercency";
-        case LOG_ALERT:
-            return "alert";
-        case LOG_CRIT:
-            return "critical";
-        case LOG_ERR:
-            return "error";
-        case LOG_WARNING:
-            return "warning";
-        case LOG_NOTICE:
-            return "notice";
-        case LOG_INFO:
-            return "informational";
-        case LOG_DEBUG:
-            return "debug";
-        default:
-            assert(!true);
-            return "unknown";
+    case LOG_EMERG:
+        return "emercency";
+    case LOG_ALERT:
+        return "alert";
+    case LOG_CRIT:
+        return "critical";
+    case LOG_ERR:
+        return "error";
+    case LOG_WARNING:
+        return "warning";
+    case LOG_NOTICE:
+        return "notice";
+    case LOG_INFO:
+        return "informational";
+    case LOG_DEBUG:
+        return "debug";
+    default:
+        assert(!true);
+        return "unknown";
     }
 }
 
@@ -2706,51 +2669,51 @@ static log_prefix_t priority_to_prefix(int priority)
 
     switch (priority)
     {
-        case LOG_EMERG:
-            prefix.text = PREFIX_EMERG;
-            prefix.len = sizeof(PREFIX_EMERG);
-            break;
+    case LOG_EMERG:
+        prefix.text = PREFIX_EMERG;
+        prefix.len = sizeof(PREFIX_EMERG);
+        break;
 
-        case LOG_ALERT:
-            prefix.text = PREFIX_ALERT;
-            prefix.len = sizeof(PREFIX_ALERT);
-            break;
+    case LOG_ALERT:
+        prefix.text = PREFIX_ALERT;
+        prefix.len = sizeof(PREFIX_ALERT);
+        break;
 
-        case LOG_CRIT:
-            prefix.text = PREFIX_CRIT;
-            prefix.len = sizeof(PREFIX_CRIT);
-            break;
+    case LOG_CRIT:
+        prefix.text = PREFIX_CRIT;
+        prefix.len = sizeof(PREFIX_CRIT);
+        break;
 
-        case LOG_ERR:
-            prefix.text = PREFIX_ERROR;
-            prefix.len = sizeof(PREFIX_ERROR);
-            break;
+    case LOG_ERR:
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
 
-        case LOG_WARNING:
-            prefix.text = PREFIX_WARNING;
-            prefix.len = sizeof(PREFIX_WARNING);
-            break;
+    case LOG_WARNING:
+        prefix.text = PREFIX_WARNING;
+        prefix.len = sizeof(PREFIX_WARNING);
+        break;
 
-        case LOG_NOTICE:
-            prefix.text = PREFIX_NOTICE;
-            prefix.len = sizeof(PREFIX_NOTICE);
-            break;
+    case LOG_NOTICE:
+        prefix.text = PREFIX_NOTICE;
+        prefix.len = sizeof(PREFIX_NOTICE);
+        break;
 
-        case LOG_INFO:
-            prefix.text = PREFIX_INFO;
-            prefix.len = sizeof(PREFIX_INFO);
-            break;
+    case LOG_INFO:
+        prefix.text = PREFIX_INFO;
+        prefix.len = sizeof(PREFIX_INFO);
+        break;
 
-        case LOG_DEBUG:
-            prefix.text = PREFIX_DEBUG;
-            prefix.len = sizeof(PREFIX_DEBUG);
-            break;
+    case LOG_DEBUG:
+        prefix.text = PREFIX_DEBUG;
+        prefix.len = sizeof(PREFIX_DEBUG);
+        break;
 
-        default:
-            assert(!true);
-            prefix.text = PREFIX_ERROR;
-            prefix.len = sizeof(PREFIX_ERROR);
-            break;
+    default:
+        assert(!true);
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
     }
 
     --prefix.len; // Remove trailing NULL.
@@ -2764,19 +2727,19 @@ static enum log_flush priority_to_flush(int priority)
 
     switch (priority)
     {
-        case LOG_EMERG:
-        case LOG_ALERT:
-        case LOG_CRIT:
-        case LOG_ERR:
-            return LOG_FLUSH_YES;
+    case LOG_EMERG:
+    case LOG_ALERT:
+    case LOG_CRIT:
+    case LOG_ERR:
+        return LOG_FLUSH_YES;
 
-        default:
-            assert(!true);
-        case LOG_WARNING:
-        case LOG_NOTICE:
-        case LOG_INFO:
-        case LOG_DEBUG:
-            return LOG_FLUSH_NO;
+    default:
+        assert(!true);
+    case LOG_WARNING:
+    case LOG_NOTICE:
+    case LOG_INFO:
+    case LOG_DEBUG:
+        return LOG_FLUSH_NO;
     }
 }
 
@@ -3020,7 +2983,8 @@ int mxs_log_message(int priority,
                         assert(!true);
                     }
 
-                    assert(len == augmentation_len);
+                    (void)len;
+                    ss_dassert(len == augmentation_len);
                 }
 
                 va_start(valist, format);
@@ -3044,4 +3008,35 @@ int mxs_log_message(int priority,
     }
 
     return err;
+}
+
+const char* mxs_strerror(int error)
+{
+    static thread_local char errbuf[MXS_STRERROR_BUFLEN];
+
+    return strerror_r(error, errbuf, sizeof(errbuf));
+}
+
+json_t* mxs_logs_to_json(const char* host)
+{
+    json_t* param = json_object();
+    json_object_set_new(param, "highprecision", json_boolean(log_config.do_highprecision));
+    json_object_set_new(param, "maxlog", json_boolean(log_config.do_maxlog));
+    json_object_set_new(param, "syslog", json_boolean(log_config.do_syslog));
+
+    json_t* throttling = json_object();
+    json_object_set_new(throttling, "count", json_integer(log_config.throttling.count));
+    json_object_set_new(throttling, "suppress_ms", json_integer(log_config.throttling.suppress_ms));
+    json_object_set_new(throttling, "window_ms", json_integer(log_config.throttling.window_ms));
+    json_object_set_new(param, "throttling", throttling);
+
+    json_t* attr = json_object();
+    json_object_set_new(attr, CN_PARAMETERS, param);
+
+    json_t* data = json_object();
+    json_object_set_new(data, CN_ATTRIBUTES, attr);
+    json_object_set_new(data, CN_ID, json_string("logs"));
+    json_object_set_new(data, CN_TYPE, json_string("logs"));
+
+    return mxs_json_resource(host, MXS_JSON_API_LOGS, data);
 }

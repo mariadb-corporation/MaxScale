@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -31,6 +31,8 @@
  *
  * @endverbatim
  */
+
+#define MXS_MODULE_NAME "HTTPD"
 
 #include "httpd.h"
 #include <ctype.h>
@@ -89,6 +91,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_PROTOCOL_VERSION,
         "An experimental HTTPD implementation for use in administration",
         "V1.2.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -123,7 +126,7 @@ static char *httpd_default_auth()
  */
 static int httpd_read_event(DCB* dcb)
 {
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
 
     int numchars = 1;
     char buf[HTTPD_REQUESTLINE_MAXLEN - 1] = "";
@@ -289,7 +292,7 @@ static int httpd_read_event(DCB* dcb)
     {
         strcpy((char *)GWBUF_DATA(uri), url);
         gwbuf_set_type(uri, GWBUF_TYPE_HTTP);
-        SESSION_ROUTE_QUERY(session, uri);
+        MXS_SESSION_ROUTE_QUERY(session, uri);
     }
 
     /* force the client connecton close */

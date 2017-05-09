@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -31,6 +31,9 @@
  *
  * @endverbatim
  */
+
+#include "blr.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +42,6 @@
 #include <maxscale/router.h>
 #include <maxscale/atomic.h>
 #include <maxscale/spinlock.h>
-#include "blr.h"
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 

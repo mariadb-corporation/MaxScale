@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -48,13 +48,6 @@ bool CacheSimple::Create(const CACHE_CONFIG& config,
     }
 
     return pRules != NULL;
-}
-
-cache_result_t CacheSimple::get_key(const char* zDefaultDb,
-                                    const GWBUF* pQuery,
-                                    CACHE_KEY* pKey) const
-{
-    return m_pStorage->get_key(zDefaultDb, pQuery, pKey);
 }
 
 cache_result_t CacheSimple::get_value(const CACHE_KEY& key,

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -35,6 +35,7 @@ public:
     struct CACHE_RESPONSE_STATE
     {
         GWBUF* pData;        /**< Response data, possibly incomplete. */
+        size_t length;       /**< Length of pData. */
         size_t nTotalFields; /**< The number of fields a resultset contains. */
         size_t nFields;      /**< How many fields we have received, <= n_totalfields. */
         size_t nRows;        /**< How many rows we have received. */
@@ -58,7 +59,7 @@ public:
      *
      * @return A new instance or NULL if memory allocation fails.
      */
-    static CacheFilterSession* Create(Cache* pCache, SESSION* pSession);
+    static CacheFilterSession* Create(Cache* pCache, MXS_SESSION* pSession);
 
     /**
      * The session has been closed.
@@ -84,6 +85,11 @@ public:
      */
     void diagnostics(DCB *dcb);
 
+    /**
+     * Print diagnostics of the session cache.
+     */
+    json_t* diagnostics_json() const;
+
 private:
     int handle_expecting_fields();
     int handle_expecting_nothing();
@@ -105,8 +111,10 @@ private:
 
     void store_result();
 
+    bool should_consult_cache(GWBUF* pPacket);
+
 private:
-    CacheFilterSession(SESSION* pSession, Cache* pCache, char* zDefaultDb);
+    CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
 
     CacheFilterSession(const CacheFilterSession&);
     CacheFilterSession& operator = (const CacheFilterSession&);
@@ -119,5 +127,6 @@ private:
     char*                 m_zDefaultDb;  /**< The default database. */
     char*                 m_zUseDb;      /**< Pending default database. Needs server response. */
     bool                  m_refreshing;  /**< Whether the session is updating a stale cache entry. */
+    bool                  m_is_read_only;/**< Whether the current trx has been read-only in pratice. */
 };
 

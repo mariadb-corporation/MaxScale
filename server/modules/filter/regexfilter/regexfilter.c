@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -10,6 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#define MXS_MODULE_NAME "regexfilter"
 
 #include <maxscale/cdefs.h>
 #include <string.h>
@@ -40,14 +42,15 @@
  * @endverbatim
  */
 
-static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
-static void *newSession(FILTER *instance, SESSION *session);
-static void closeSession(FILTER *instance, void *session);
-static void freeSession(FILTER *instance, void *session);
-static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static uint64_t getCapabilities(MXS_FILTER* instance);
 
 static char *regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study,
                            const char *replace);
@@ -72,7 +75,7 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM down; /* The downstream filter */
+    MXS_DOWNSTREAM down; /* The downstream filter */
     SPINLOCK lock;
     int no_change; /* No. of unchanged requests */
     int replacements; /* No. of changed requests */
@@ -99,7 +102,7 @@ static const MXS_ENUM_VALUE option_values[] =
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -110,6 +113,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No clientReply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -118,9 +122,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A query rewrite filter that uses regular expressions to rewrite queries",
         "V1.1.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -177,8 +182,8 @@ void free_instance(REGEX_INSTANCE *instance)
  *
  * @return The instance data for this new instance
  */
-static FILTER *
-createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+static MXS_FILTER *
+createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     REGEX_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(REGEX_INSTANCE));
 
@@ -196,7 +201,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         {
             if ((my_instance->logfile = fopen(logfile, "a")) == NULL)
             {
-                MXS_ERROR("regexfilter: Failed to open file '%s'.", logfile);
+                MXS_ERROR("Failed to open file '%s'.", logfile);
                 free_instance(my_instance);
                 return NULL;
             }
@@ -218,7 +223,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         {
             char errbuffer[1024];
             pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) & errbuffer, sizeof(errbuffer));
-            MXS_ERROR("regexfilter: Compiling regular expression '%s' failed at %lu: %s",
+            MXS_ERROR("Compiling regular expression '%s' failed at %lu: %s",
                       my_instance->match, erroffset, errbuffer);
             free_instance(my_instance);
             return NULL;
@@ -227,14 +232,14 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         if ((my_instance->match_data =
                  pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
         {
-            MXS_ERROR("regexfilter: Failure to create PCRE2 matching data. "
+            MXS_ERROR("Failure to create PCRE2 matching data. "
                       "This is most likely caused by a lack of available memory.");
             free_instance(my_instance);
             return NULL;
         }
     }
 
-    return (FILTER *) my_instance;
+    return (MXS_FILTER *) my_instance;
 }
 
 /**
@@ -244,8 +249,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static void *
-newSession(FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     REGEX_INSTANCE *my_instance = (REGEX_INSTANCE *) instance;
     REGEX_SESSION *my_session;
@@ -272,7 +277,7 @@ newSession(FILTER *instance, SESSION *session)
         }
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -283,7 +288,7 @@ newSession(FILTER *instance, SESSION *session)
  * @param session   The session being closed
  */
 static void
-closeSession(FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
 }
 
@@ -294,7 +299,7 @@ closeSession(FILTER *instance, void *session)
  * @param session   The session being closed
  */
 static void
-freeSession(FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     MXS_FREE(session);
     return;
@@ -308,7 +313,7 @@ freeSession(FILTER *instance, void *session)
  * @param downstream    The downstream filter or router
  */
 static void
-setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     REGEX_SESSION *my_session = (REGEX_SESSION *) session;
     my_session->down = *downstream;
@@ -325,7 +330,7 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param queue     The query data
  */
 static int
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     REGEX_INSTANCE *my_instance = (REGEX_INSTANCE *) instance;
     REGEX_SESSION *my_session = (REGEX_SESSION *) session;
@@ -376,7 +381,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param   dcb     The DCB for diagnostic output
  */
 static void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     REGEX_INSTANCE *my_instance = (REGEX_INSTANCE *) instance;
     REGEX_SESSION *my_session = (REGEX_SESSION *) fsession;
@@ -405,6 +410,45 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 }
 
 /**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    REGEX_INSTANCE *my_instance = (REGEX_INSTANCE*)instance;
+    REGEX_SESSION *my_session = (REGEX_SESSION*)fsession;
+
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "match", json_string(my_instance->match));
+    json_object_set_new(rval, "replace", json_string(my_instance->replace));
+
+    if (my_session)
+    {
+        json_object_set_new(rval, "altered", json_integer(my_session->no_change));
+        json_object_set_new(rval, "unaltered", json_integer(my_session->replacements));
+    }
+
+    if (my_instance->source)
+    {
+        json_object_set_new(rval, "source", json_string(my_instance->source));
+    }
+
+    if (my_instance->user)
+    {
+        json_object_set_new(rval, "user", json_string(my_instance->user));
+    }
+
+    return rval;
+}
+
+/**
  * Perform a regular expression match and substitution on the SQL
  *
  * @param   sql The original SQL text
@@ -425,19 +469,22 @@ regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, con
         result_size = strlen(sql) + strlen(replace);
         result = MXS_MALLOC(result_size);
 
+        size_t result_size_tmp = result_size;
         while (result &&
                pcre2_substitute(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0,
                                 PCRE2_SUBSTITUTE_GLOBAL, match_data, NULL,
                                 (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
-                                (PCRE2_UCHAR*) result, (PCRE2_SIZE*) & result_size) == PCRE2_ERROR_NOMEMORY)
+                                (PCRE2_UCHAR*) result, (PCRE2_SIZE*) & result_size_tmp) == PCRE2_ERROR_NOMEMORY)
         {
+            result_size_tmp = 1.5 * result_size;
             char *tmp;
-            if ((tmp = MXS_REALLOC(result, (result_size *= 1.5))) == NULL)
+            if ((tmp = MXS_REALLOC(result, result_size_tmp)) == NULL)
             {
                 MXS_FREE(result);
                 result = NULL;
             }
             result = tmp;
+            result_size = result_size_tmp;
         }
     }
     return result;
@@ -488,7 +535,7 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old)
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -31,11 +31,11 @@
 #define CACHE_DEBUG_MAX          (CACHE_DEBUG_RULES | CACHE_DEBUG_USAGE | CACHE_DEBUG_DECISIONS)
 
 #if !defined(UINT32_MAX)
-#define UINT32_MAX		(4294967295U)
+#define UINT32_MAX      (4294967295U)
 #endif
 
 #if !defined(UINT64_MAX)
-#define UINT64_MAX		(18446744073709551615UL)
+#define UINT64_MAX      (18446744073709551615UL)
 #endif
 
 // Count
@@ -54,6 +54,16 @@
 #define CACHE_DEFAULT_MAX_SIZE           "0"
 // Thread model
 #define CACHE_DEFAULT_THREAD_MODEL       "shared"
+// Cacheable selects
+#define CACHE_DEFAULT_SELECTS            "verify_cacheable"
+// Storage
+#define CACHE_DEFAULT_STORAGE            "storage_inmemory"
+
+typedef enum cache_selects
+{
+    CACHE_SELECTS_ASSUME_CACHEABLE,
+    CACHE_SELECTS_VERIFY_CACHEABLE,
+} cache_selects_t;
 
 typedef struct cache_config
 {
@@ -70,4 +80,5 @@ typedef struct cache_config
     uint64_t max_size;                 /**< Maximum size of the cache.*/
     uint32_t debug;                    /**< Debug settings. */
     cache_thread_model_t thread_model; /**< Thread model. */
+    cache_selects_t selects;           /**< Assume/verify that selects are cacheable. */
 } CACHE_CONFIG;

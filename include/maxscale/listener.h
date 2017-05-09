@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,22 +14,13 @@
 
 /**
  * @file listener.h
- *
- * The listener definitions for MaxScale
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 19/01/16     Martin Brampton         Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
 #include <maxscale/protocol.h>
-#include <maxscale/gw_ssl.h>
+#include <maxscale/ssl.h>
 #include <maxscale/hashtable.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -50,15 +41,20 @@ typedef struct servlistener
     char *address;              /**< Address to listen with */
     char *authenticator;        /**< Name of authenticator */
     char *auth_options;         /**< Authenticator options */
-    void *auth_instance;        /**< Authenticator instance created in GWAUTHENTICATOR::initialize() */
+    void *auth_instance;        /**< Authenticator instance created in MXS_AUTHENTICATOR::initialize() */
     SSL_LISTENER *ssl;          /**< Structure of SSL data or NULL */
     struct dcb *listener;       /**< The DCB for the listener */
     struct users *users;        /**< The user data for this listener */
-    HASHTABLE *resources;       /**< hastable for listener resources, i.e. database names */
     struct service* service;    /**< The service which used by this listener */
     SPINLOCK lock;
+    int active;                /**< True if the port has not been deleted */
     struct  servlistener *next; /**< Next service protocol */
-} SERV_LISTENER;
+} SERV_LISTENER; // TODO: Rename to LISTENER
+
+typedef struct listener_iterator
+{
+    SERV_LISTENER* current;
+} LISTENER_ITERATOR;
 
 /**
  * @brief Serialize a listener to a file
@@ -72,12 +68,57 @@ typedef struct servlistener
  */
 bool listener_serialize(const SERV_LISTENER *listener);
 
+/**
+ * @brief Convert listener to JSON
+ *
+ * @param listener Listener to convert
+ *
+ * @return Converted listener
+ */
+json_t* listener_to_json(const SERV_LISTENER* listener);
+
 SERV_LISTENER* listener_alloc(struct service* service, const char* name, const char *protocol,
-               const char *address, unsigned short port, const char *authenticator,
-               const char* auth_options, SSL_LISTENER *ssl);
+                              const char *address, unsigned short port, const char *authenticator,
+                              const char* auth_options, SSL_LISTENER *ssl);
 void listener_free(SERV_LISTENER* listener);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);
 int listener_init_SSL(SSL_LISTENER *ssl_listener);
+
+/**
+ * @brief Check if listener is active
+ *
+ * @param listener Listener to check
+ *
+ * @return True if listener is active
+ */
+bool listener_is_active(SERV_LISTENER* listener);
+
+/**
+ * @brief Modify listener active state
+ *
+ * @param listener Listener to modify
+ * @param active True to activate, false to disable
+ */
+void listener_set_active(SERV_LISTENER* listener, bool active);
+
+/**
+ * @brief Initialize a listener iterator for iterating service listeners
+ *
+ * @param service Service whose listeners are iterated
+ * @param iter    Pointer to iterator to initialize
+ *
+ * @return The first value pointed by the iterator
+ */
+SERV_LISTENER* listener_iterator_init(const struct service* service, LISTENER_ITERATOR* iter);
+
+/**
+ * @brief Get the next listener
+ *
+ * @param iter Listener iterator
+ *
+ * @return The next listener or NULL on end of list
+ */
+SERV_LISTENER* listener_iterator_next(LISTENER_ITERATOR* iter);
 
 MXS_END_DECLS

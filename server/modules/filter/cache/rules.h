@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -54,8 +54,8 @@ typedef struct cache_rule
     } simple;                         // Details, only for CACHE_OP_[EQ|NEQ]
     struct
     {
-        pcre2_code       *code;
-        pcre2_match_data *data;
+        pcre2_code        *code;
+        pcre2_match_data **datas;
     } regexp;                         // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
     uint32_t               debug;     // The debug level.
     struct cache_rule     *next;
@@ -137,22 +137,24 @@ void cache_rules_print(const CACHE_RULES *rules, DCB* dcb, size_t indent);
  * Returns boolean indicating whether the result of the query should be stored.
  *
  * @param rules      The CACHE_RULES object.
+ * @param thread_id  The thread id of current thread.
  * @param default_db The current default database, NULL if there is none.
  * @param query      The query, expected to contain a COM_QUERY.
  *
  * @return True, if the results should be stored.
  */
-bool cache_rules_should_store(CACHE_RULES *rules, const char *default_db, const GWBUF* query);
+bool cache_rules_should_store(CACHE_RULES *rules, int thread_id, const char *default_db, const GWBUF* query);
 
 /**
  * Returns boolean indicating whether the cache should be used, that is consulted.
  *
- * @param rules    The CACHE_RULES object.
- * @param session  The current session.
+ * @param rules      The CACHE_RULES object.
+ * @param thread_id  The thread id of current thread.
+ * @param session    The current session.
  *
  * @return True, if the cache should be used.
  */
-bool cache_rules_should_use(CACHE_RULES *rules, const SESSION *session);
+bool cache_rules_should_use(CACHE_RULES *rules, int thread_id, const MXS_SESSION *session);
 
 MXS_END_DECLS
 
@@ -180,7 +182,7 @@ public:
      *
      * @return The corresponding rules object, or NULL in case of error.
      */
-    static CacheRules* load(const char *zpath, uint32_t debug);
+    static CacheRules* load(const char *zPath, uint32_t debug);
 
     /**
      * Returns the json rules object.
@@ -200,7 +202,7 @@ public:
      *
      * @return True, if the results should be stored.
      */
-    bool should_store(const char* zdefault_db, const GWBUF* pquery) const;
+    bool should_store(const char* zDefault_db, const GWBUF* pQuery) const;
 
     /**
      * Returns boolean indicating whether the cache should be used, that is consulted.
@@ -209,16 +211,16 @@ public:
      *
      * @return True, if the cache should be used.
      */
-    bool should_use(const SESSION* psession) const;
+    bool should_use(const MXS_SESSION* pSession) const;
 
 private:
-    CacheRules(CACHE_RULES* prules);
+    CacheRules(CACHE_RULES* pRules);
 
     CacheRules(const CacheRules&);
     CacheRules& operator = (const CacheRules&);
 
 private:
-    CACHE_RULES* prules_;
+    CACHE_RULES* m_pRules;
 };
 
 #endif

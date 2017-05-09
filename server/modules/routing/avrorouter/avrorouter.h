@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -18,6 +18,9 @@
  * MaxScale AVRO router
  *
  */
+
+#define MXS_MODULE_NAME "avrorouter"
+
 #include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -183,6 +186,13 @@ enum avro_data_format
     AVRO_FORMAT_AVRO,
 };
 
+enum mxs_avro_codec_type
+{
+    MXS_AVRO_CODEC_NULL,
+    MXS_AVRO_CODEC_DEFLATE,
+    MXS_AVRO_CODEC_SNAPPY, /**< Not yet implemented */
+} ;
+
 typedef struct gtid_pos
 {
     uint32_t timestamp; /*< GTID event timestamp */
@@ -271,6 +281,8 @@ typedef struct avro_instance
     uint64_t        row_count; /*< Row events processed */
     uint64_t        row_target; /*< Minimum about of row events that will trigger
                                  * a flush of all tables */
+    uint64_t        block_size; /**< Avro datablock size */
+    enum mxs_avro_codec_type codec; /**< Avro codec type, defaults to `null` */
     struct avro_instance  *next;
 } AVRO_INSTANCE;
 
@@ -288,7 +300,8 @@ extern void avro_client_rotate(AVRO_INSTANCE *router, AVRO_CLIENT *client, uint8
 extern bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
 extern void avro_close_binlog(int fd);
 extern avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router);
-extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema);
+extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema,
+                                    const char *codec, size_t block_size);
 extern void avro_table_free(AVRO_TABLE *table);
 extern char* json_new_schema_from_table(TABLE_MAP *map);
 extern void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map);

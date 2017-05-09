@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -36,6 +36,8 @@
  * or diagnostic being made for the session script.
  */
 
+#define MXS_MODULE_NAME "luafilter"
+
 #include <maxscale/cdefs.h>
 #include <lauxlib.h>
 #include <lua.h>
@@ -53,16 +55,17 @@
 /*
  * The filter entry points
  */
-static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static void *newSession(FILTER *instance, SESSION *session);
-static void closeSession(FILTER *instance, void *session);
-static void freeSession(FILTER *instance, void *session);
-static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static void setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
-static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
-static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  MXS_DOWNSTREAM *downstream);
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  MXS_UPSTREAM *upstream);
+static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static uint64_t getCapabilities(MXS_FILTER *instance);
 
 /**
  * The module entry point routine. It is this routine that
@@ -74,7 +77,7 @@ static uint64_t getCapabilities(void);
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -85,6 +88,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -93,9 +97,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_EXPERIMENTAL,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "Lua Filter",
         "V1.0.0",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -125,14 +130,14 @@ static int id_gen(lua_State* state)
     return 1;
 }
 
-static int lua_qc_get_type(lua_State* state)
+static int lua_qc_get_type_mask(lua_State* state)
 {
     int ibuf = lua_upvalueindex(1);
     GWBUF *buf = *((GWBUF**)lua_touserdata(state, ibuf));
 
     if (buf)
     {
-        uint32_t type = qc_get_type(buf);
+        uint32_t type = qc_get_type_mask(buf);
         char *mask = qc_typemask_to_string(type);
         lua_pushstring(state, mask);
         MXS_FREE(mask);
@@ -180,12 +185,12 @@ typedef struct
  */
 typedef struct
 {
-    SESSION* session;
+    MXS_SESSION* session;
     lua_State* lua_state;
     GWBUF* current_query;
     SPINLOCK lock;
-    DOWNSTREAM down;
-    UPSTREAM up;
+    MXS_DOWNSTREAM down;
+    MXS_UPSTREAM up;
 } LUA_SESSION;
 
 /**
@@ -197,11 +202,10 @@ typedef struct
  * @param params  Filter parameters
  * @return The instance data for this new instance
  */
-static FILTER *
-createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+static MXS_FILTER *
+createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     LUA_INSTANCE *my_instance;
-    bool error = false;
 
     if ((my_instance = (LUA_INSTANCE*) MXS_CALLOC(1, sizeof(LUA_INSTANCE))) == NULL)
     {
@@ -210,17 +214,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
     spinlock_init(&my_instance->lock);
 
-    const char *global_script = config_get_string(params, "global_script");
-    const char *session_script = config_get_string(params, "session_script");
-
-    if ((*global_script && (my_instance->global_script = MXS_STRDUP(global_script)) == NULL) ||
-        (*session_script && (my_instance->session_script = MXS_STRDUP(session_script)) == NULL))
-    {
-        MXS_FREE(my_instance->global_script);
-        MXS_FREE(my_instance->session_script);
-        MXS_FREE(my_instance);
-        return NULL;
-    }
+    my_instance->global_script = config_copy_string(params, "global_script");
+    my_instance->session_script = config_copy_string(params, "session_script");
 
     if (my_instance->global_script)
     {
@@ -230,7 +225,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
             if (luaL_dofile(my_instance->global_lua_state, my_instance->global_script))
             {
-                MXS_ERROR("luafilter: Failed to execute global script at '%s':%s.",
+                MXS_ERROR("Failed to execute global script at '%s':%s.",
                           my_instance->global_script, lua_tostring(my_instance->global_lua_state, -1));
                 MXS_FREE(my_instance->global_script);
                 MXS_FREE(my_instance->session_script);
@@ -243,7 +238,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
                 if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
                 {
-                    MXS_WARNING("luafilter: Failed to get global variable 'createInstance':  %s."
+                    MXS_WARNING("Failed to get global variable 'createInstance':  %s."
                                 " The createInstance entry point will not be called for the global script.",
                                 lua_tostring(my_instance->global_lua_state, -1));
                     lua_pop(my_instance->global_lua_state, -1); // Pop the error off the stack
@@ -251,8 +246,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
                 /** Expose a part of the query classifier API */
                 lua_pushlightuserdata(my_instance->global_lua_state, &current_global_query);
-                lua_pushcclosure(my_instance->global_lua_state, lua_qc_get_type, 1);
-                lua_setglobal(my_instance->global_lua_state, "lua_qc_get_type");
+                lua_pushcclosure(my_instance->global_lua_state, lua_qc_get_type_mask, 1);
+                lua_setglobal(my_instance->global_lua_state, "lua_qc_get_type_mask");
 
                 lua_pushlightuserdata(my_instance->global_lua_state, &current_global_query);
                 lua_pushcclosure(my_instance->global_lua_state, lua_qc_get_operation, 1);
@@ -268,7 +263,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         }
     }
 
-    return (FILTER *) my_instance;
+    return (MXS_FILTER *) my_instance;
 }
 
 /**
@@ -287,7 +282,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session The session itself
  * @return Session specific data for this session
  */
-static void * newSession(FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     LUA_SESSION *my_session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE*) instance;
@@ -307,7 +302,7 @@ static void * newSession(FILTER *instance, SESSION *session)
 
         if (luaL_dofile(my_session->lua_state, my_instance->session_script))
         {
-            MXS_ERROR("luafilter: Failed to execute session script at '%s': %s.",
+            MXS_ERROR("Failed to execute session script at '%s': %s.",
                       my_instance->session_script,
                       lua_tostring(my_session->lua_state, -1));
             lua_close(my_session->lua_state);
@@ -322,8 +317,8 @@ static void * newSession(FILTER *instance, SESSION *session)
 
             /** Expose a part of the query classifier API */
             lua_pushlightuserdata(my_session->lua_state, &my_session->current_query);
-            lua_pushcclosure(my_session->lua_state, lua_qc_get_type, 1);
-            lua_setglobal(my_session->lua_state, "lua_qc_get_type");
+            lua_pushcclosure(my_session->lua_state, lua_qc_get_type_mask, 1);
+            lua_setglobal(my_session->lua_state, "lua_qc_get_type_mask");
 
             lua_pushlightuserdata(my_session->lua_state, &my_session->current_query);
             lua_pushcclosure(my_session->lua_state, lua_qc_get_operation, 1);
@@ -336,7 +331,7 @@ static void * newSession(FILTER *instance, SESSION *session)
 
             if (lua_pcall(my_session->lua_state, 2, 0, 0))
             {
-                MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
+                MXS_WARNING("Failed to get global variable 'newSession': '%s'."
                             " The newSession entry point will not be called.",
                             lua_tostring(my_session->lua_state, -1));
                 lua_pop(my_session->lua_state, -1); // Pop the error off the stack
@@ -354,7 +349,7 @@ static void * newSession(FILTER *instance, SESSION *session)
 
         if (lua_pcall(my_instance->global_lua_state, 2, 0, 0))
         {
-            MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
+            MXS_WARNING("Failed to get global variable 'newSession': '%s'."
                         " The newSession entry point will not be called for the global script.",
                         lua_tostring(my_instance->global_lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1); // Pop the error off the stack
@@ -363,7 +358,7 @@ static void * newSession(FILTER *instance, SESSION *session)
         spinlock_release(&my_instance->lock);
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -374,7 +369,7 @@ static void * newSession(FILTER *instance, SESSION *session)
  * @param instance The filter instance data
  * @param session The session being closed
  */
-static void closeSession(FILTER *instance, void *session)
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE*) instance;
@@ -388,7 +383,7 @@ static void closeSession(FILTER *instance, void *session)
 
         if (lua_pcall(my_session->lua_state, 0, 0, 0))
         {
-            MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
+            MXS_WARNING("Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called.",
                         lua_tostring(my_session->lua_state, -1));
             lua_pop(my_session->lua_state, -1);
@@ -404,7 +399,7 @@ static void closeSession(FILTER *instance, void *session)
 
         if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
-            MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
+            MXS_WARNING("Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called for the global script.",
                         lua_tostring(my_instance->global_lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1);
@@ -419,7 +414,7 @@ static void closeSession(FILTER *instance, void *session)
  * @param instance The filter instance
  * @param session The filter session
  */
-static void freeSession(FILTER *instance, void *session)
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
 
@@ -439,7 +434,7 @@ static void freeSession(FILTER *instance, void *session)
  * @param session The filter session
  * @param downstream The downstream filter or router.
  */
-static void setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session,  MXS_DOWNSTREAM *downstream)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     my_session->down = *downstream;
@@ -451,7 +446,7 @@ static void setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstrea
  * @param session Filter session
  * @param upstream Upstream filter
  */
-static void setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session,  MXS_UPSTREAM *upstream)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     my_session->up = *upstream;
@@ -466,7 +461,7 @@ static void setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
  * @param queue Server response
  * @return 1 on success
  */
-static int clientReply(FILTER *instance, void *session, GWBUF *queue)
+static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
@@ -479,7 +474,7 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
 
         if (lua_pcall(my_session->lua_state, 0, 0, 0))
         {
-            MXS_ERROR("luafilter: Session scope call to 'clientReply' failed: '%s'.",
+            MXS_ERROR("Session scope call to 'clientReply' failed: '%s'.",
                       lua_tostring(my_session->lua_state, -1));
             lua_pop(my_session->lua_state, -1);
         }
@@ -494,7 +489,7 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
 
         if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
-            MXS_ERROR("luafilter: Global scope call to 'clientReply' failed: '%s'.",
+            MXS_ERROR("Global scope call to 'clientReply' failed: '%s'.",
                       lua_tostring(my_session->lua_state, -1));
             lua_pop(my_instance->global_lua_state, -1);
         }
@@ -524,7 +519,7 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
  * @param session The filter session
  * @param queue  The query data
  */
-static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
+static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
@@ -551,7 +546,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
             if (lua_pcall(my_session->lua_state, 1, 1, 0))
             {
-                MXS_ERROR("luafilter: Session scope call to 'routeQuery' failed: '%s'.",
+                MXS_ERROR("Session scope call to 'routeQuery' failed: '%s'.",
                           lua_tostring(my_session->lua_state, -1));
                 lua_pop(my_session->lua_state, -1);
             }
@@ -583,7 +578,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
             if (lua_pcall(my_instance->global_lua_state, 1, 0, 0))
             {
-                MXS_ERROR("luafilter: Global scope call to 'routeQuery' failed: '%s'.",
+                MXS_ERROR("Global scope call to 'routeQuery' failed: '%s'.",
                           lua_tostring(my_instance->global_lua_state, -1));
                 lua_pop(my_instance->global_lua_state, -1);
             }
@@ -631,7 +626,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param fsession Filter session, may be NULL
  * @param dcb  The DCB for diagnostic output
  */
-static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
 
@@ -672,11 +667,61 @@ static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 }
 
 /**
+ * Diagnostics routine.
+ *
+ * This will call the matching diagnostics entry point in the Lua script. If the
+ * Lua function returns a string, it will be printed to the client DCB.
+ *
+ * @param instance The filter instance
+ * @param fsession Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    LUA_INSTANCE *my_instance = (LUA_INSTANCE *)instance;
+    json_t* rval = json_object();
+
+    if (my_instance)
+    {
+        if (my_instance->global_lua_state)
+        {
+            spinlock_acquire(&my_instance->lock);
+
+            lua_getglobal(my_instance->global_lua_state, "diagnostic");
+
+            if (lua_pcall(my_instance->global_lua_state, 0, 1, 0) == 0)
+            {
+                lua_gettop(my_instance->global_lua_state);
+                if (lua_isstring(my_instance->global_lua_state, -1))
+                {
+                    json_object_set_new(rval, "script_output",
+                                        json_string(lua_tostring(my_instance->global_lua_state, -1)));
+                }
+            }
+            else
+            {
+                lua_pop(my_instance->global_lua_state, -1);
+            }
+            spinlock_release(&my_instance->lock);
+        }
+        if (my_instance->global_script)
+        {
+            json_object_set_new(rval, "global_script", json_string(my_instance->global_script));
+        }
+        if (my_instance->session_script)
+        {
+            json_object_set_new(rval, "session_script", json_string(my_instance->session_script));
+        }
+    }
+
+    return rval;
+}
+
+/**
  * Capability routine.
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER *instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }

@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -27,8 +27,11 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "readconnroute"
+
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
+#include <maxscale/service.h>
 
 MXS_BEGIN_DECLS
 

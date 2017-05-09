@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -41,11 +41,12 @@ public:
     // pointer_type  : The type of a pointer to an element, either "uint8_t*" or "const uint8_t*".
     // reference_type: The type of a reference to an element, either "uint8_t&" or "const uint8_t&".
     template<class buf_type, class pointer_type, class reference_type>
-    class iterator_base : public std::iterator<std::forward_iterator_tag, // The type of the iterator
-                                               uint8_t,                   // The type of the elems
-                                               std::ptrdiff_t,            // Difference between two its
-                                               pointer_type,              // The type of pointer to an elem
-                                               reference_type>            // The reference type of an elem
+    class iterator_base : public std::iterator <
+        std::forward_iterator_tag, // The type of the iterator
+        uint8_t,                   // The type of the elems
+        std::ptrdiff_t,            // Difference between two its
+        pointer_type,              // The type of pointer to an elem
+        reference_type >           // The reference type of an elem
     {
     public:
         /**

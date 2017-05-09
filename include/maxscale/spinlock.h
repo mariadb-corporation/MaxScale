@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -24,6 +24,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <stdbool.h>
 #include <maxscale/debug.h>
 
 MXS_BEGIN_DECLS
@@ -42,24 +43,17 @@ MXS_BEGIN_DECLS
  */
 typedef struct spinlock
 {
-    int lock;         /*< Is the lock held? */
+    int lock;              /*< Is the lock held? */
 #if SPINLOCK_PROFILE
-    int spins;        /*< Number of spins on this lock */
-    int maxspins;     /*< Max no of spins to acquire lock */
-    int acquired;     /*< No. of times lock was acquired */
-    int waiting;      /*< No. of threads acquiring this lock */
-    int max_waiting;  /*< Max no of threads waiting for lock */
-    int contended;    /*< No. of times acquire was contended */
-    THREAD owner;     /*< Last owner of this lock */
+    uint64_t spins;        /*< Number of spins on this lock */
+    uint64_t maxspins;     /*< Max no of spins to acquire lock */
+    uint64_t acquired;     /*< No. of times lock was acquired */
+    uint64_t waiting;      /*< No. of threads acquiring this lock */
+    uint64_t max_waiting;  /*< Max no of threads waiting for lock */
+    uint64_t contended;    /*< No. of times acquire was contended */
+    THREAD owner;          /*< Last owner of this lock */
 #endif
 } SPINLOCK;
-
-#ifndef TRUE
-#define TRUE    true
-#endif
-#ifndef FALSE
-#define FALSE   false
-#endif
 
 #if SPINLOCK_PROFILE
 #define SPINLOCK_INIT { 0, 0, 0, 0, 0, 0, 0, 0 }
@@ -67,12 +61,55 @@ typedef struct spinlock
 #define SPINLOCK_INIT { 0 }
 #endif
 
+/**
+ * Debugging macro for testing the state of a spinlock.
+ *
+ * @attention ONLY to be used in debugging context.
+ */
 #define SPINLOCK_IS_LOCKED(l) ((l)->lock != 0 ? true : false)
 
+/**
+ * Initialise a spinlock.
+ *
+ * @param lock The spinlock to initialise.
+ */
 extern void spinlock_init(SPINLOCK *lock);
+
+/**
+ * Acquire a spinlock.
+ *
+ * @param lock The spinlock to acquire
+ */
 extern void spinlock_acquire(const SPINLOCK *lock);
-extern int spinlock_acquire_nowait(const SPINLOCK *lock);
+
+/**
+ * Acquire a spinlock if it is not already locked.
+ *
+ * @param lock The spinlock to acquire
+ * @return True if the spinlock was acquired, otherwise false
+ */
+extern bool spinlock_acquire_nowait(const SPINLOCK *lock);
+
+/*
+ * Release a spinlock.
+ *
+ * @param lock The spinlock to release
+ */
 extern void spinlock_release(const SPINLOCK *lock);
+
+/**
+ * Report statistics on a spinlock. This only has an effect if the
+ * spinlock code has been compiled with the SPINLOCK_PROFILE option set.
+ *
+ * NB A callback function is used to return the data rather than
+ * merely printing to a DCB in order to avoid a dependency on the DCB
+ * form the spinlock code and also to facilitate other uses of the
+ * statistics reporting.
+ *
+ * @param lock          The spinlock to report on
+ * @param reporter      The callback function to pass the statistics to
+ * @param hdl           A handle that is passed to the reporter function
+ */
 extern void spinlock_stats(const SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl);
 
 MXS_END_DECLS

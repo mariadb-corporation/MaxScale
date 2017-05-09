@@ -6,7 +6,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -59,7 +59,7 @@ typedef struct cli_instance
 typedef struct cli_session
 {
     char        cmdbuf[CMDBUFLEN]; /*< The command buffer used to build up user commands */
-    SESSION     *session;      /*< The gateway session */
+    MXS_SESSION *session;      /*< The gateway session */
     struct cli_session
         *next;         /*< The next pointer for the list of sessions */
 } CLI_SESSION;

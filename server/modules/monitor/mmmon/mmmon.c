@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -13,17 +13,9 @@
 
 /**
  * @file mm_mon.c - A Multi-Master Multi Muster cluster monitor
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 08/09/14 Massimiliano Pinto  Initial implementation
- * 08/05/15 Markus Makela       Addition of launchable scripts
- * 17/10/15 Martin Brampton     Change DCB callback to hangup
- *
- * @endverbatim
  */
+
+#define MXS_MODULE_NAME "mmmon"
 
 #include "mmmon.h"
 #include <maxscale/dcb.h>
@@ -39,18 +31,19 @@ MXS_MODULE info =
 {
     MXS_MODULE_API_MONITOR,
     MXS_MODULE_BETA_RELEASE,
-    MONITOR_VERSION,
+    MXS_MONITOR_VERSION,
     "A Multi-Master Multi Master monitor",
     "V1.1.1"
 };
 /*lint +e14 */
 
-static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *);
-static void stopMonitor(MONITOR *);
-static void diagnostics(DCB *, const MONITOR *);
+static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
+static void stopMonitor(MXS_MONITOR *);
+static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics_json(const MXS_MONITOR *);
 static void detectStaleMaster(void *, int);
-static MONITOR_SERVERS *get_current_master(MONITOR *);
-static bool isMySQLEvent(monitor_event_t event);
+static MXS_MONITOR_SERVERS *get_current_master(MXS_MONITOR *);
+static bool isMySQLEvent(mxs_monitor_event_t event);
 
 /**
  * The module entry point routine. It is this routine that
@@ -64,20 +57,22 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the Multi-Master Monitor module.");
 
-    static MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_OBJECT MyObject =
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_BETA_RELEASE,
-        MONITOR_VERSION,
+        MXS_MONITOR_VERSION,
         "A Multi-Master Multi Master monitor",
         "V1.1.1",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -85,6 +80,19 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread finish. */
         {
             {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "false"},
+            {
+                "script",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
+            {
+                "events",
+                MXS_MODULE_PARAM_ENUM,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MODULE_OPT_NONE,
+                mxs_monitor_event_enum_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -102,14 +110,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     MM_MONITOR *handle = mon->handle;
-    bool have_events = false, script_error = false;
 
     if (handle)
     {
         handle->shutdown = 0;
+        MXS_FREE(handle->script);
     }
     else
     {
@@ -118,43 +126,14 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
             return NULL;
         }
         handle->shutdown = 0;
-        handle->id = MONITOR_DEFAULT_ID;
+        handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
-        handle->script = NULL;
-        memset(handle->events, false, sizeof(handle->events));
-        spinlock_init(&handle->lock);
+        handle->monitor = mon;
     }
 
     handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
-
-    while (params)
-    {
-        if (!strcmp(params->name, "script"))
-        {
-            if (externcmd_can_execute(params->value))
-            {
-                MXS_FREE(handle->script);
-                handle->script = MXS_STRDUP_A(params->value);
-            }
-            else
-            {
-                script_error = true;
-            }
-        }
-        else if (!strcmp(params->name, "events"))
-        {
-            if (mon_parse_event_string((bool *)handle->events,
-                                       sizeof(handle->events), params->value) != 0)
-            {
-                script_error = true;
-            }
-            else
-            {
-                have_events = true;
-            }
-        }
-        params = params->next;
-    }
+    handle->script = config_copy_string(params, "script");
+    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
     if (!check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
     {
@@ -164,22 +143,12 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         return NULL;
     }
 
-    if (script_error)
-    {
-        MXS_ERROR("Errors were found in the script configuration parameters "
-                  "for the monitor '%s'. The script will not be used.", mon->name);
-        MXS_FREE(handle->script);
-        handle->script = NULL;
-    }
-    /** If no specific events are given, enable them all */
-    if (!have_events)
-    {
-        memset(handle->events, true, sizeof(handle->events));
-    }
-
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        return NULL;
     }
 
     return handle;
@@ -191,7 +160,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MONITOR *mon)
+stopMonitor(MXS_MONITOR *mon)
 {
     MM_MONITOR *handle = (MM_MONITOR *) mon->handle;
 
@@ -200,16 +169,30 @@ stopMonitor(MONITOR *mon)
 }
 
 /**
- * Daignostic interface
+ * Diagnostic interface
  *
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(DCB *dcb, const MONITOR *mon)
+static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
     const MM_MONITOR *handle = (const MM_MONITOR *) mon->handle;
 
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
+{
+    const MM_MONITOR *handle = (const MM_MONITOR *)mon->handle;
+
+    json_t* rval = json_object();
+    json_object_set_new(rval, "detect_stale_master", json_boolean(handle->detectStaleMaster));
+    return rval;
 }
 
 /**
@@ -219,7 +202,7 @@ static void diagnostics(DCB *dcb, const MONITOR *mon)
  * @param database  The database to probe
  */
 static void
-monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
+monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -236,7 +219,7 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
 
     /** Store previous status */
     database->mon_prev_status = database->server->status;
-    connect_result_t rval = mon_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(mon, database);
 
     if (rval != MONITOR_CONN_OK)
     {
@@ -502,16 +485,13 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MONITOR* mon = (MONITOR*) arg;
-    MM_MONITOR *handle;
-    MONITOR_SERVERS *ptr;
+    MM_MONITOR *handle = (MM_MONITOR *)arg;
+    MXS_MONITOR* mon = handle->monitor;
+    MXS_MONITOR_SERVERS *ptr;
     int detect_stale_master = false;
-    MONITOR_SERVERS *root_master = NULL;
+    MXS_MONITOR_SERVERS *root_master = NULL;
     size_t nrounds = 0;
 
-    spinlock_acquire(&mon->lock);
-    handle = (MM_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
     detect_stale_master = handle->detectStaleMaster;
 
     if (mysql_thread_init())
@@ -520,19 +500,19 @@ monitorMain(void *arg)
         return;
     }
 
-    handle->status = MONITOR_RUNNING;
+    handle->status = MXS_MONITOR_RUNNING;
     while (1)
     {
         if (handle->shutdown)
         {
-            handle->status = MONITOR_STOPPING;
+            handle->status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MONITOR_STOPPED;
+            handle->status = MXS_MONITOR_STOPPED;
             return;
         }
 
         /** Wait base interval */
-        thread_millisleep(MON_BASE_INTERVAL_MS);
+        thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
         /**
          * Calculate how far away the monitor interval is from its full
          * cycle and if monitor interval time further than the base
@@ -540,8 +520,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-             MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
+             MXS_MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;
@@ -565,7 +545,7 @@ monitorMain(void *arg)
             if (mon_status_changed(ptr) ||
                 mon_print_fail_status(ptr))
             {
-                MXS_DEBUG("Backend server %s:%d state : %s",
+                MXS_DEBUG("Backend server [%s]:%d state : %s",
                           ptr->server->name,
                           ptr->server->port,
                           STRSRVSTATUS(ptr->server));
@@ -601,7 +581,7 @@ monitorMain(void *arg)
                     !(ptr->pending_status & SERVER_MASTER))
                 {
                     /* in this case server->status will not be updated from pending_status */
-                    MXS_NOTICE("[mysql_mon]: root server [%s:%i] is no longer Master, let's "
+                    MXS_NOTICE("root server [%s:%i] is no longer Master, let's "
                                "use it again even if it could be a stale master, you have "
                                "been warned!", ptr->server->name, ptr->server->port);
                     /* Set the STALE bit for this server in server struct */
@@ -615,24 +595,11 @@ monitorMain(void *arg)
             ptr = ptr->next;
         }
 
-        ptr = mon->databases;
-        monitor_event_t evtype;
-        while (ptr)
-        {
-            if (mon_status_changed(ptr))
-            {
-                evtype = mon_get_event_type(ptr);
-                if (isMySQLEvent(evtype))
-                {
-                    mon_log_state_change(ptr);
-                    if (handle->script && handle->events[evtype])
-                    {
-                        monitor_launch_script(mon, ptr, handle->script);
-                    }
-                }
-            }
-            ptr = ptr->next;
-        }
+        /**
+         * After updating the status of all servers, check if monitor events
+         * need to be launched.
+         */
+        mon_process_state_changes(mon, handle->script, handle->events);
 
         mon_hangup_failed_servers(mon);
         servers_status_current_to_pending(mon);
@@ -668,10 +635,10 @@ detectStaleMaster(void *arg, int enable)
  * @return              The server at root level with SERVER_MASTER bit
  */
 
-static MONITOR_SERVERS *get_current_master(MONITOR *mon)
+static MXS_MONITOR_SERVERS *get_current_master(MXS_MONITOR *mon)
 {
     MM_MONITOR* handle = mon->handle;
-    MONITOR_SERVERS *ptr;
+    MXS_MONITOR_SERVERS *ptr;
 
     ptr = mon->databases;
 
@@ -716,38 +683,4 @@ static MONITOR_SERVERS *get_current_master(MONITOR *mon)
     {
         return NULL;
     }
-}
-
-
-static monitor_event_t mysql_events[] =
-{
-    MASTER_DOWN_EVENT,
-    MASTER_UP_EVENT,
-    SLAVE_DOWN_EVENT,
-    SLAVE_UP_EVENT,
-    SERVER_DOWN_EVENT,
-    SERVER_UP_EVENT,
-    LOST_MASTER_EVENT,
-    LOST_SLAVE_EVENT,
-    NEW_MASTER_EVENT,
-    NEW_SLAVE_EVENT,
-    MAX_MONITOR_EVENT
-};
-
-/**
- * Check if the MM monitor is monitoring this event type.
- * @param event Event to check
- * @return True if the event is monitored, false if it is not
- * */
-bool isMySQLEvent(monitor_event_t event)
-{
-    int i;
-    for (i = 0; mysql_events[i] != MAX_MONITOR_EVENT; i++)
-    {
-        if (event == mysql_events[i])
-        {
-            return true;
-        }
-    }
-    return false;
 }

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -29,16 +29,21 @@ public:
     typedef MaskingFilterConfig Config;
 
     ~MaskingFilter();
-    static MaskingFilter* create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams);
+    static MaskingFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
 
-    MaskingFilterSession* newSession(SESSION* pSession);
+    MaskingFilterSession* newSession(MXS_SESSION* pSession);
 
     void diagnostics(DCB* pDcb);
+    json_t* diagnostics_json() const;
 
-    static uint64_t getCapabilities();
+    uint64_t getCapabilities();
 
     void reload(DCB* pOut);
 
+    const Config& config() const
+    {
+        return m_config;
+    }
     SMaskingRules rules() const;
 
 private:
@@ -46,8 +51,6 @@ private:
 
     MaskingFilter(const MaskingFilter&);
     MaskingFilter& operator = (const MaskingFilter&);
-
-    static bool process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, Config& config);
 
 private:
     Config        m_config;

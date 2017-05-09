@@ -1,5 +1,7 @@
 # Masking
 
+This filter was introduced in MariaDB MaxScale 2.1.
+
 ## Overview
 With the _masking_ filter it is possible to obfuscate the returned
 value of a particular column.
@@ -16,9 +18,9 @@ the query is a specific one. That is, when making the query
 ```
 instead of getting the real result, as in
 ```
-+-------+------------+
-+ name  | ssn        |
-+-------+------------+
++-------+-------------+
++ name  | ssn         |
++-------+-------------+
 | Alice | 721-07-4426 |
 | Bob   | 435-22-3267 |
 ...
@@ -50,6 +52,20 @@ For a secure solution, the masking filter *must* be combined with the
 firewall filter to prevent the use of functions and the use of particular
 columns in where-clauses.
 
+## Limitations
+
+The masking filter can _only_ be used for masking columns of the following
+types: `BINARY`, `VARBINARY`, `CHAR`, `VARCHAR`, `BLOB`, `TINYBLOB`,
+`MEDIUMBLOB`, `LONGBLOB`, `TEXT`, `TINYTEXT`, `MEDIUMTEXT`, `LONGTEXT`,
+`ENUM` and `SET`. If the type of the column is something else, then no
+masking will be performed.
+
+Currently, the masking filter can only work on packets whose payload is less
+than 16MB. If the masking filter encounters a packet whose payload is exactly
+that, thus indicating a situation where the payload is delivered in multiple
+packets, the value of the parameter `large_payloads` specifies how the masking
+filter should handle the situation.
+
 ## Configuration
 
 The masking filter is taken into use with the following kind of
@@ -59,7 +75,7 @@ configuration setup.
 [Mask-SSN]
 type=filter
 module=masking
-rules_file=...
+rules=...
 
 [SomeService]
 type=service
@@ -67,18 +83,49 @@ type=service
 filters=Mask-SSN
 ```
 
-# Filter Parameter
+## Filter Parameters
 
-The masking filter has one mandatory parameter - `rules_file`.
+The masking filter has one mandatory parameter - `rules`.
 
-#### `rules_file`
+#### `rules`
 
 Specifies the path of the file where the masking rules are stored.
-A relative path is interpreted relative to the _data directory_ of
-MariaDB MaxScale.
+A relative path is interpreted relative to the _module configuration directory_
+of MariaDB MaxScale. The default module configuration directory is
+_/etc/maxscale.modules.d_.
 
 ```
-rules_file=/path/to/rules-file
+rules=/path/to/rules-file
+```
+
+#### `warn_type_mismatch`
+
+With this optional parameter the masking filter can be instructed to log
+a warning if a masking rule matches a column that is not of one of the
+allowed types.
+
+The values that can be used are `never` and `always`, with `never` being
+the default.
+```
+warn_type_mismatch=always
+```
+
+#### `large_payload`
+
+This optional parameter specifies how the masking filter should treat
+payloads larger than `16MB`, that is, payloads that are delivered in
+multiple MySQL protocol packets.
+
+The values that can be used are `ignore`, which means that columns in
+such payloads are not masked, and `abort`, which means that if such
+payloads are encountered, the client connection is closed. The default
+is `abort`.
+
+Note that the aborting behaviour is applied only to resultsets that
+contain columns that should be masked. There are *no* limitations on
+resultsets that do not contain such columns.
+```
+large_payload=ignore
 ```
 
 # Rules
@@ -257,3 +304,47 @@ MaxScale> call command masking reload MyMaskingFilter
 ```
 `MyMaskingFilter` refers to a particular filter section in the
 MariaDB MaxScale configuration file.
+
+# Example
+
+In the following we configure a masking filter _MyMasking_ that should always log a
+warning if a masking rule matches a column that is of a type that cannot be masked,
+and that should abort the client connection if a resultset package is larger than
+16MB. The rules for the masking filter are in the file `masking_rules.json`.
+
+### Configuration
+```
+[MyMasking]
+type=filter
+module=masking
+warn_type_mismatch=always
+large_payload=abort
+rules=masking_rules.json
+
+[MyService]
+type=service
+...
+filters=MyMasking
+```
+
+### `masking_rules.json`
+
+The rules specify that the data of a column whose name is `ssn`, should
+be replaced with the string _012345-ABCD_. If the length of the data is
+not exactly the same as the length of the replacement value, then the
+data should be replaced with as many _X_ characters as needed.
+```
+{
+    "rules": [
+        {
+            "replace": {
+                "column": "ssn"
+            },
+            "with": {
+                "value": "012345-ABCD",
+                "fill": "X"
+            }
+        }
+    ]
+}
+```

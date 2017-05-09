@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -36,32 +36,32 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 14/06/2013	Mark Riddoch		Initial implementation
- * 25/06/2013	Mark Riddoch		Addition of checks for current server state
- * 26/06/2013	Mark Riddoch		Use server with least connections since
- * 					startup if the number of current
- * 					connections is the same for two servers
- * 					Addition of master and slave options
- * 27/06/2013	Vilho Raatikka		Added skygw_log_write command as an example
- *					and necessary headers.
- * 17/07/2013	Massimiliano Pinto	Added clientReply routine:
- *					called by backend server to send data to client
- *					Included maxscale/protocol/mysql.h
- *					with macros and MySQL commands with MYSQL_ prefix
- *					avoiding any conflict with the standard ones
- *					in mysql.h
- * 22/07/2013	Mark Riddoch		Addition of joined router option for Galera
- * 					clusters
- * 31/07/2013	Massimiliano Pinto	Added a check for candidate server, if NULL return
- * 12/08/2013	Mark Riddoch		Log unsupported router options
- * 04/09/2013	Massimiliano Pinto	Added client NULL check in clientReply
- * 22/10/2013	Massimiliano Pinto	errorReply called from backend, for client error reply
- *					or take different actions such as open a new backend connection
- * 20/02/2014	Massimiliano Pinto	If router_options=slave, route traffic to master if no slaves available
- * 06/03/2014	Massimiliano Pinto	Server connection counter is now updated in closeSession
- * 24/06/2014	Massimiliano Pinto	New rules for selecting the Master server
- * 27/06/2014	Mark Riddoch		Addition of server weighting
+ * Date     Who     Description
+ * 14/06/2013   Mark Riddoch        Initial implementation
+ * 25/06/2013   Mark Riddoch        Addition of checks for current server state
+ * 26/06/2013   Mark Riddoch        Use server with least connections since
+ *                  startup if the number of current
+ *                  connections is the same for two servers
+ *                  Addition of master and slave options
+ * 27/06/2013   Vilho Raatikka      Added skygw_log_write command as an example
+ *                  and necessary headers.
+ * 17/07/2013   Massimiliano Pinto  Added clientReply routine:
+ *                  called by backend server to send data to client
+ *                  Included maxscale/protocol/mysql.h
+ *                  with macros and MySQL commands with MYSQL_ prefix
+ *                  avoiding any conflict with the standard ones
+ *                  in mysql.h
+ * 22/07/2013   Mark Riddoch        Addition of joined router option for Galera
+ *                  clusters
+ * 31/07/2013   Massimiliano Pinto  Added a check for candidate server, if NULL return
+ * 12/08/2013   Mark Riddoch        Log unsupported router options
+ * 04/09/2013   Massimiliano Pinto  Added client NULL check in clientReply
+ * 22/10/2013   Massimiliano Pinto  errorReply called from backend, for client error reply
+ *                  or take different actions such as open a new backend connection
+ * 20/02/2014   Massimiliano Pinto  If router_options=slave, route traffic to master if no slaves available
+ * 06/03/2014   Massimiliano Pinto  Server connection counter is now updated in closeSession
+ * 24/06/2014   Massimiliano Pinto  New rules for selecting the Master server
+ * 27/06/2014   Mark Riddoch        Addition of server weighting
  * 11/06/2015   Martin Brampton         Remove decrement n_current (moved to dcb.c)
  * 09/09/2015   Martin Brampton         Modify error handler
  * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
@@ -69,46 +69,40 @@
  *
  * @endverbatim
  */
+
+#include "readconnection.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <maxscale/alloc.h>
-#include <maxscale/service.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxscale/atomic.h>
 #include <maxscale/spinlock.h>
-#include "readconnection.h"
 #include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/modinfo.h>
-
 #include <maxscale/log_manager.h>
-
 #include <maxscale/protocol/mysql.h>
-
 #include <maxscale/modutil.h>
 
 /* The router entry points */
-static ROUTER *createInstance(SERVICE *service, char **options);
-static void *newSession(ROUTER *instance, SESSION *session);
-static void closeSession(ROUTER *instance, void *router_session);
-static void freeSession(ROUTER *instance, void *router_session);
-static int routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
-static void diagnostics(ROUTER *instance, DCB *dcb);
-static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
+static MXS_ROUTER *createInstance(SERVICE *service, char **options);
+static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
+static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static json_t* diagnostics_json(const MXS_ROUTER *instance);
+static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
-static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
-                        DCB *problem_dcb, error_action_t action, bool *succp);
-static uint64_t getCapabilities(void);
+static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *errbuf,
+                        DCB *problem_dcb, mxs_error_action_t action, bool *succp);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 static SERVER_REF *get_root_master(SERVER_REF *servers);
-static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession);
-
-static SPINLOCK instlock;
-static ROUTER_INSTANCE *instances;
 
 /**
  * The module entry point routine. It is this routine that
@@ -121,10 +115,8 @@ static ROUTER_INSTANCE *instances;
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise readconnroute router module.");
-    spinlock_init(&instlock);
-    instances = NULL;
 
-    static ROUTER_OBJECT MyObject =
+    static MXS_ROUTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -132,6 +124,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostics,
+        diagnostics_json,
         clientReply,
         handleError,
         getCapabilities,
@@ -142,9 +135,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
-        ROUTER_VERSION,
+        MXS_ROUTER_VERSION,
         "A connection based router to load balance based on connections",
         "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -170,12 +164,12 @@ static inline void free_readconn_instance(ROUTER_INSTANCE *router)
  * Create an instance of the router for a particular service
  * within the gateway.
  *
- * @param service	The service this router is being create for
- * @param options	An array of options for this query router
+ * @param service   The service this router is being create for
+ * @param options   An array of options for this query router
  *
  * @return The instance data for this new instance
  */
-static ROUTER *
+static MXS_ROUTER *
 createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *inst;
@@ -254,23 +248,19 @@ createInstance(SERVICE *service, char **options)
      * insert this router instance into the linked list of routers
      * that have been created with this module.
      */
-    spinlock_acquire(&instlock);
-    inst->next = instances;
-    instances = inst;
-    spinlock_release(&instlock);
 
-    return(ROUTER *) inst;
+    return (MXS_ROUTER *) inst;
 }
 
 /**
  * Associate a new session with this instance of the router.
  *
- * @param instance	The router instance data
- * @param session	The session itself
+ * @param instance  The router instance data
+ * @param session   The session itself
  * @return Session specific data for this session
  */
-static void *
-newSession(ROUTER *instance, SESSION *session)
+static MXS_ROUTER_SESSION *
+newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *client_rses;
@@ -435,19 +425,14 @@ newSession(ROUTER *instance, SESSION *session)
 
     atomic_add(&candidate->connections, 1);
 
-    // TODO: Remove this as it is never called
-    dcb_add_callback(client_rses->backend_dcb,
-                     DCB_REASON_NOT_RESPONDING,
-                     &handle_state_switch,
-                     client_rses);
     inst->stats.n_sessions++;
 
     CHK_CLIENT_RSES(client_rses);
 
-    MXS_INFO("Readconnroute: New session for server %s. Connections : %d",
+    MXS_INFO("New session for server %s. Connections : %d",
              candidate->server->unique_name, candidate->connections);
 
-    return(void *) client_rses;
+    return (void *) client_rses;
 }
 
 /**
@@ -467,7 +452,7 @@ newSession(ROUTER *instance, SESSION *session)
  * @details (write detailed description here)
  *
  */
-static void freeSession(ROUTER* router_instance, void* router_client_ses)
+static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_ses)
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE *) router_instance;
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *) router_client_ses;
@@ -482,11 +467,11 @@ static void freeSession(ROUTER* router_instance, void* router_client_ses)
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
  *
- * @param instance		The router instance data
- * @param router_session	The session being closed
+ * @param instance      The router instance data
+ * @param router_session    The session being closed
  */
 static void
-closeSession(ROUTER *instance, void *router_session)
+closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
     DCB* backend_dcb;
@@ -534,7 +519,7 @@ static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
     {
         sprintf(msg, "Server '%s' was removed from the service.", ref->server->unique_name);
     }
-    else if(SERVER_IN_MAINT(ref->server))
+    else if (SERVER_IN_MAINT(ref->server))
     {
         sprintf(msg, "Server '%s' is in maintenance.", ref->server->unique_name);
     }
@@ -548,13 +533,13 @@ static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
  * This is simply a case of sending it to the connection that was
  * chosen when we started the client session.
  *
- * @param instance		The router instance
- * @param router_session	The router session returned from the newSession call
- * @param queue			The queue of data buffers to route
+ * @param instance      The router instance
+ * @param router_session    The router session returned from the newSession call
+ * @param queue         The queue of data buffers to route
  * @return if succeed 1, otherwise 0
  */
 static int
-routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
+routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
@@ -600,18 +585,18 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 
     switch (mysql_command)
     {
-        case MYSQL_COM_CHANGE_USER:
-            rc = backend_dcb->func.auth(backend_dcb, NULL, backend_dcb->session,
-                                        queue);
-            break;
-        case MYSQL_COM_QUERY:
-            if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-            {
-                trc = modutil_get_SQL(queue);
-            }
-        default:
-            rc = backend_dcb->func.write(backend_dcb, queue);
-            break;
+    case MYSQL_COM_CHANGE_USER:
+        rc = backend_dcb->func.auth(backend_dcb, NULL, backend_dcb->session,
+                                    queue);
+        break;
+    case MYSQL_COM_QUERY:
+        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            trc = modutil_get_SQL(queue);
+        }
+    default:
+        rc = backend_dcb->func.write(backend_dcb, queue);
+        break;
     }
 
     MXS_INFO("Routed [%s] to '%s'%s%s",
@@ -629,14 +614,14 @@ return_rc:
 /**
  * Display router diagnostics
  *
- * @param instance	Instance of the router
- * @param dcb		DCB to send diagnostics to
+ * @param instance  Instance of the router
+ * @param dcb       DCB to send diagnostics to
  */
 static void
-diagnostics(ROUTER *router, DCB *dcb)
+diagnostics(MXS_ROUTER *router, DCB *dcb)
 {
     ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *) router;
-    char *weightby;
+    const char *weightby = serviceGetWeightingParameter(router_inst->service);
 
     dcb_printf(dcb, "\tNumber of router sessions:   	%d\n",
                router_inst->stats.n_sessions);
@@ -644,8 +629,7 @@ diagnostics(ROUTER *router, DCB *dcb)
                router_inst->service->stats.n_current);
     dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n",
                router_inst->stats.n_queries);
-    if ((weightby = serviceGetWeightingParameter(router_inst->service))
-        != NULL)
+    if (*weightby)
     {
         dcb_printf(dcb, "\tConnection distribution based on %s "
                    "server parameter.\n",
@@ -663,6 +647,31 @@ diagnostics(ROUTER *router, DCB *dcb)
 }
 
 /**
+ * Display router diagnostics
+ *
+ * @param instance  Instance of the router
+ * @param dcb       DCB to send diagnostics to
+ */
+static json_t* diagnostics_json(const MXS_ROUTER *router)
+{
+    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "connections", json_integer(router_inst->stats.n_sessions));
+    json_object_set_new(rval, "current_connections", json_integer(router_inst->service->stats.n_current));
+    json_object_set_new(rval, "queries", json_integer(router_inst->stats.n_queries));
+
+    const char *weightby = serviceGetWeightingParameter(router_inst->service);
+
+    if (*weightby)
+    {
+        json_object_set_new(rval, "weightby", json_string(weightby));
+    }
+
+    return rval;
+}
+
+/**
  * Client Reply routine
  *
  * The routine will reply to client data from backend server
@@ -673,10 +682,10 @@ diagnostics(ROUTER *router, DCB *dcb)
  * @param       queue           The GWBUF with reply data
  */
 static void
-clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
+clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue, DCB *backend_dcb)
 {
     ss_dassert(backend_dcb->session->client_dcb != NULL);
-    SESSION_ROUTE_REPLY(backend_dcb->session, queue);
+    MXS_SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 
 /**
@@ -688,50 +697,31 @@ clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_d
  * @param       router_session  The router session
  * @param       message         The error message to reply
  * @param       problem_dcb     The DCB related to the error
- * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
- * @param	succp		Result of action: true if router can continue
+ * @param       action      The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param   succp       Result of action: true if router can continue
  *
  */
-static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
-                        DCB *problem_dcb, error_action_t action, bool *succp)
+static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *errbuf,
+                        DCB *problem_dcb, mxs_error_action_t action, bool *succp)
 
 {
+    ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     DCB *client_dcb;
-    SESSION *session = problem_dcb->session;
-    session_state_t sesstate;
+    MXS_SESSION *session = problem_dcb->session;
+    mxs_session_state_t sesstate;
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
 
-    /** Don't handle same error twice on same DCB */
-    if (problem_dcb->dcb_errhandle_called)
-    {
-        /** we optimistically assume that previous call succeed */
-        *succp = true;
-        return;
-    }
-    else
-    {
-        problem_dcb->dcb_errhandle_called = true;
-    }
-    spinlock_acquire(&session->ses_lock);
     sesstate = session->state;
     client_dcb = session->client_dcb;
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
     {
         CHK_DCB(client_dcb);
-        spinlock_release(&session->ses_lock);
+
         client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
     }
-    else
-    {
-        spinlock_release(&session->ses_lock);
-    }
 
-    if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
-    {
-        dcb_close(problem_dcb);
-    }
-    else if (router_cli_ses && problem_dcb == router_cli_ses->backend_dcb)
+    if (router_cli_ses && problem_dcb == router_cli_ses->backend_dcb)
     {
         router_cli_ses->backend_dcb = NULL;
         dcb_close(problem_dcb);
@@ -801,7 +791,7 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
     spinlock_release(&rses->rses_lock);
 }
 
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return RCAP_TYPE_NONE;
 }
@@ -814,8 +804,8 @@ static uint64_t getCapabilities(void)
  * and the SERVER_MASTER bitval
  * Servers are checked even if they are in 'maintenance'
  *
- * @param servers	The list of servers
- * @return		The Master found
+ * @param servers   The list of servers
+ * @return      The Master found
  *
  */
 
@@ -833,8 +823,8 @@ static SERVER_REF *get_root_master(SERVER_REF *servers)
                 master_host = ref;
             }
             else if (ref->server->depth < master_host->server->depth ||
-                    (ref->server->depth == master_host->server->depth &&
-                     ref->weight > master_host->weight))
+                     (ref->server->depth == master_host->server->depth &&
+                      ref->weight > master_host->weight))
             {
                 /**
                  * This master has a lower depth than the candidate master or
@@ -845,50 +835,4 @@ static SERVER_REF *get_root_master(SERVER_REF *servers)
         }
     }
     return master_host;
-}
-
-static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession)
-{
-    ss_dassert(dcb != NULL);
-    SESSION* session = dcb->session;
-    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES*) routersession;
-    SERVICE* service = session->service;
-    ROUTER* router = (ROUTER *) service->router;
-
-    if (NULL == dcb->session->router_session && DCB_REASON_ERROR != reason)
-    {
-        /*
-         * We cannot handle a DCB that does not have a router session,
-         * except in the case where error processing is invoked.
-         */
-        return 0;
-    }
-    switch (reason)
-    {
-        case DCB_REASON_CLOSE:
-            dcb->func.close(dcb);
-            break;
-        case DCB_REASON_DRAINED:
-            /** Do we need to do anything? */
-            break;
-        case DCB_REASON_HIGH_WATER:
-            /** Do we need to do anything? */
-            break;
-        case DCB_REASON_LOW_WATER:
-            /** Do we need to do anything? */
-            break;
-        case DCB_REASON_ERROR:
-            dcb->func.error(dcb);
-            break;
-        case DCB_REASON_HUP:
-            dcb->func.hangup(dcb);
-            break;
-        case DCB_REASON_NOT_RESPONDING:
-            dcb->func.hangup(dcb);
-            break;
-        default:
-            break;
-    }
-
-    return 0;
 }

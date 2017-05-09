@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -31,7 +31,10 @@ public:
      *
      * @return Bitmask of @c cache_storage_capabilities_t values.
      */
-    uint32_t capabilities() const { return m_caps; }
+    uint32_t capabilities() const
+    {
+        return m_caps;
+    }
 
     /**
      * The capabilities of storages loaded via this factory. These
@@ -39,7 +42,10 @@ public:
      *
      * @return Bitmask of @c cache_storage_capabilities_t values.
      */
-    uint32_t storage_capabilities() const { return m_storage_caps; }
+    uint32_t storage_capabilities() const
+    {
+        return m_storage_caps;
+    }
 
     /**
      * Create storage instance.
@@ -78,19 +84,6 @@ public:
     Storage* createRawStorage(const char* zName,
                               const CACHE_STORAGE_CONFIG& config,
                               int argc = 0, char* argv[] = NULL);
-
-    /**
-     * Create a key for a GWBUF.
-     *
-     * @param zDefaultDb  The default DB or NULL.
-     * @param query       An SQL query. Must be one contiguous buffer.
-     * @param pKey        Pointer to object where key will be stored.
-     *
-     * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
-     */
-    cache_result_t get_key(const char* zDefaultDb,
-                           const GWBUF* pQuery,
-                           CACHE_KEY* pKey) const;
 
 private:
     StorageFactory(void* handle, CACHE_STORAGE_API* pApi, uint32_t capabilities);

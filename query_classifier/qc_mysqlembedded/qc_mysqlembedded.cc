@@ -64,7 +64,7 @@
 #define MYSQL_COM_INIT_DB     COM_INIT_DB
 #define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/utils.h>
 
 #include <stdio.h>
@@ -88,6 +88,7 @@ typedef struct parsing_info_st
     QC_FUNCTION_INFO* function_infos;
     size_t function_infos_len;
     size_t function_infos_capacity;
+    GWBUF* preparable_stmt;
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_tail;
 #endif
@@ -135,7 +136,7 @@ bool ensure_query_is_parsed(GWBUF* query)
     return parsed;
 }
 
-qc_parse_result_t qc_parse(GWBUF* querybuf)
+int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
 {
     bool parsed = ensure_query_is_parsed(querybuf);
 
@@ -144,13 +145,23 @@ qc_parse_result_t qc_parse(GWBUF* querybuf)
     // query is valid and hence correctly parsed, or the query is invalid in
     // which case the server will also consider it invalid and reject it. So,
     // it's always ok to claim it has been parsed.
-    return parsed ? QC_QUERY_PARSED : QC_QUERY_INVALID;
+
+    if (parsed)
+    {
+        *result = QC_QUERY_PARSED;
+    }
+    else
+    {
+        *result = QC_QUERY_INVALID;
+    }
+
+    return QC_RESULT_OK;
 }
 
-uint32_t qc_get_type(GWBUF* querybuf)
+int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
 {
+    *type_mask = QUERY_TYPE_UNKNOWN;
     MYSQL* mysql;
-    uint32_t qtype = QUERY_TYPE_UNKNOWN;
     bool succp;
 
     ss_info_dassert(querybuf != NULL, ("querybuf is NULL"));
@@ -178,13 +189,13 @@ uint32_t qc_get_type(GWBUF* querybuf)
             /** Find out the query type */
             if (mysql != NULL)
             {
-                qtype = resolve_query_type(pi, (THD *) mysql->thd);
+                *type_mask = resolve_query_type(pi, (THD *) mysql->thd);
             }
         }
     }
 
 retblock:
-    return qtype;
+    return QC_RESULT_OK;
 }
 
 /**
@@ -226,7 +237,7 @@ static bool parse_query(GWBUF* querybuf)
 
     /** Extract query and copy it to different buffer */
     data = (uint8_t*) GWBUF_DATA(querybuf);
-    len = MYSQL_GET_PACKET_LEN(data) - 1; /*< distract 1 for packet type byte */
+    len = MYSQL_GET_PAYLOAD_LEN(data) - 1; /*< distract 1 for packet type byte */
 
 
     if (len < 1 || len >= ~((size_t) 0) - 1 || (query_str = (char *) malloc(len + 1)) == NULL)
@@ -627,25 +638,25 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         {
             type |= QUERY_TYPE_GSYSVAR_READ;
         }
-            /**
-             * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
-             */
+        /**
+         * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
+         */
         else if (lex->sql_command == SQLCOM_SET_OPTION)
         {
             type |= QUERY_TYPE_GSYSVAR_WRITE;
         }
 
-            /*
-             * SHOW GLOBAL STATUS - Route to master
-             */
+        /*
+         * SHOW GLOBAL STATUS - Route to master
+         */
         else if (lex->sql_command == SQLCOM_SHOW_STATUS)
         {
             type = QUERY_TYPE_WRITE;
         }
-            /**
-             * REVOKE ALL, ASSIGN_TO_KEYCACHE,
-             * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
-             */
+        /**
+         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
+         * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
+         */
 
         else
         {
@@ -663,9 +674,9 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         {
             type |= QUERY_TYPE_SYSVAR_READ;
         }
-            /**
-             * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
-             */
+        /**
+         * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
+         */
         else if (lex->sql_command == SQLCOM_SET_OPTION)
         {
             /** Either user- or system variable write */
@@ -930,7 +941,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                         }
                         break;
 
-                        /** System session variable */
+                    /** System session variable */
                     case Item_func::GSYSVAR_FUNC:
                         {
                             const char* name = item->name;
@@ -951,7 +962,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                         }
                         break;
 
-                        /** User-defined variable read */
+                    /** User-defined variable read */
                     case Item_func::GUSERVAR_FUNC:
                         func_qtype |= QUERY_TYPE_USERVAR_READ;
                         MXS_DEBUG("%lu [resolve_query_type] "
@@ -960,7 +971,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                                   pthread_self());
                         break;
 
-                        /** User-defined variable modification */
+                    /** User-defined variable modification */
                     case Item_func::SUSERVAR_FUNC:
                         func_qtype |= QUERY_TYPE_USERVAR_WRITE;
                         MXS_DEBUG("%lu [resolve_query_type] "
@@ -1159,9 +1170,9 @@ char* qc_get_stmtname(GWBUF* buf)
         mysql->thd == NULL ||
         (THD *) (mysql->thd))->lex == NULL ||
         (THD *) (mysql->thd))->lex->prepared_stmt_name == NULL)
-        {
-            return NULL;
-        }
+    {
+        return NULL;
+    }
 
     return ((THD *) (mysql->thd))->lex->prepared_stmt_name.str;
 }
@@ -1254,7 +1265,7 @@ static TABLE_LIST* skygw_get_affected_tables(void* lexptr)
     return tbl;
 }
 
-char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
+int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tablesp, int32_t* tblsize)
 {
     LEX* lex;
     TABLE_LIST* tbl;
@@ -1286,7 +1297,7 @@ char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
         {
             if (i >= currtblsz)
             {
-                tmp = (char**) malloc(sizeof (char*)*(currtblsz * 2 + 1));
+                tmp = (char**) malloc(sizeof (char*) * (currtblsz * 2 + 1));
 
                 if (tmp)
                 {
@@ -1347,23 +1358,24 @@ char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
 
 retblock:
     *tblsize = i;
+    *tablesp = tables;
 
-    return tables;
+    return QC_RESULT_OK;
 }
 
-char* qc_get_created_table_name(GWBUF* querybuf)
+int32_t qc_mysql_get_created_table_name(GWBUF* querybuf, char** table_name)
 {
+    *table_name = NULL;
+
     if (querybuf == NULL)
     {
-        return NULL;
+        return QC_RESULT_OK;
     }
 
     if (!ensure_query_is_parsed(querybuf))
     {
-        return NULL;
+        return QC_RESULT_ERROR;
     }
-
-    char* table_name = NULL;
 
     LEX* lex = get_lex(querybuf);
 
@@ -1372,71 +1384,16 @@ char* qc_get_created_table_name(GWBUF* querybuf)
         if (lex->create_last_non_select_table &&
             lex->create_last_non_select_table->table_name)
         {
-            table_name = strdup(lex->create_last_non_select_table->table_name);
+            *table_name = strdup(lex->create_last_non_select_table->table_name);
         }
     }
 
-    return table_name;
+    return QC_RESULT_OK;
 }
 
-bool qc_is_real_query(GWBUF* querybuf)
+int32_t qc_mysql_is_drop_table_query(GWBUF* querybuf, int32_t* answer)
 {
-    bool succp;
-    LEX* lex;
-
-    if (querybuf == NULL)
-    {
-        succp = false;
-        goto retblock;
-    }
-
-    if (!ensure_query_is_parsed(querybuf))
-    {
-        succp = false;
-        goto retblock;
-    }
-
-    if ((lex = get_lex(querybuf)) == NULL)
-    {
-        succp = false;
-        goto retblock;
-    }
-
-    switch (lex->sql_command)
-    {
-    case SQLCOM_SELECT:
-        succp = lex->all_selects_list->table_list.elements > 0;
-        goto retblock;
-        break;
-
-    case SQLCOM_UPDATE_MULTI:
-    case SQLCOM_UPDATE:
-    case SQLCOM_INSERT:
-    case SQLCOM_INSERT_SELECT:
-    case SQLCOM_DELETE:
-    case SQLCOM_DELETE_MULTI:
-    case SQLCOM_TRUNCATE:
-    case SQLCOM_REPLACE:
-    case SQLCOM_REPLACE_SELECT:
-    case SQLCOM_PREPARE:
-    case SQLCOM_EXECUTE:
-        succp = true;
-        goto retblock;
-        break;
-
-    default:
-        succp = false;
-        goto retblock;
-        break;
-    }
-
-retblock:
-    return succp;
-}
-
-bool qc_is_drop_table_query(GWBUF* querybuf)
-{
-    bool answer = false;
+    *answer = 0;
 
     if (querybuf)
     {
@@ -1444,16 +1401,16 @@ bool qc_is_drop_table_query(GWBUF* querybuf)
         {
             LEX* lex = get_lex(querybuf);
 
-            answer = lex && lex->sql_command == SQLCOM_DROP_TABLE;
+            *answer = lex && lex->sql_command == SQLCOM_DROP_TABLE;
         }
     }
 
-    return answer;
+    return QC_RESULT_OK;
 }
 
-bool qc_query_has_clause(GWBUF* buf)
+int32_t qc_mysql_query_has_clause(GWBUF* buf, int32_t* has_clause)
 {
-    bool clause = false;
+    *has_clause = false;
 
     if (buf)
     {
@@ -1465,11 +1422,11 @@ bool qc_query_has_clause(GWBUF* buf)
             {
                 SELECT_LEX* current = lex->all_selects_list;
 
-                while (current && !clause)
+                while (current && !*has_clause)
                 {
                     if (current->where || current->having)
                     {
-                        clause = true;
+                        *has_clause = true;
                     }
 
                     current = current->next_select_in_list();
@@ -1478,7 +1435,7 @@ bool qc_query_has_clause(GWBUF* buf)
         }
     }
 
-    return clause;
+    return QC_RESULT_OK;
 }
 
 /**
@@ -1591,6 +1548,8 @@ static void parsing_info_done(void* ptr)
         }
         free(pi->function_infos);
 
+        gwbuf_free(pi->preparable_stmt);
+
         free(pi);
     }
 }
@@ -1611,7 +1570,7 @@ static void parsing_info_set_plain_str(void* ptr, char* str)
     pi->pi_query_plain_str = str;
 }
 
-char** qc_get_database_names(GWBUF* querybuf, int* size)
+int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* size)
 {
     LEX* lex;
     TABLE_LIST* tbl;
@@ -1657,7 +1616,7 @@ char** qc_get_database_names(GWBUF* querybuf, int* size)
                 if (i >= currsz)
                 {
                     tmp = (char**) realloc(databases,
-                                           sizeof (char*)*(currsz * 2 + 1));
+                                           sizeof (char*) * (currsz * 2 + 1));
 
                     if (tmp == NULL)
                     {
@@ -1679,12 +1638,14 @@ char** qc_get_database_names(GWBUF* querybuf, int* size)
 
 retblock:
     *size = i;
-    return databases;
+    *databasesp = databases;
+
+    return QC_RESULT_OK;
 }
 
-qc_query_op_t qc_get_operation(GWBUF* querybuf)
+int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
 {
-    qc_query_op_t operation = QUERY_OP_UNDEFINED;
+    *operation = QUERY_OP_UNDEFINED;
 
     if (querybuf)
     {
@@ -1697,7 +1658,7 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                 switch (lex->sql_command)
                 {
                 case SQLCOM_SELECT:
-                    operation = QUERY_OP_SELECT;
+                    *operation = QUERY_OP_SELECT;
                     break;
 
                 case SQLCOM_CREATE_DB:
@@ -1711,7 +1672,7 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                 case SQLCOM_CREATE_TRIGGER:
                 case SQLCOM_CREATE_USER:
                 case SQLCOM_CREATE_VIEW:
-                    operation = QUERY_OP_CREATE;
+                    *operation = QUERY_OP_CREATE;
                     break;
 
                 case SQLCOM_ALTER_DB:
@@ -1722,28 +1683,28 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                 case SQLCOM_ALTER_SERVER:
                 case SQLCOM_ALTER_TABLE:
                 case SQLCOM_ALTER_TABLESPACE:
-                    operation = QUERY_OP_ALTER;
+                    *operation = QUERY_OP_ALTER;
                     break;
 
                 case SQLCOM_UPDATE:
                 case SQLCOM_UPDATE_MULTI:
-                    operation = QUERY_OP_UPDATE;
+                    *operation = QUERY_OP_UPDATE;
                     break;
 
                 case SQLCOM_INSERT:
                 case SQLCOM_INSERT_SELECT:
                 case SQLCOM_REPLACE:
                 case SQLCOM_REPLACE_SELECT:
-                    operation = QUERY_OP_INSERT;
+                    *operation = QUERY_OP_INSERT;
                     break;
 
                 case SQLCOM_DELETE:
                 case SQLCOM_DELETE_MULTI:
-                    operation = QUERY_OP_DELETE;
+                    *operation = QUERY_OP_DELETE;
                     break;
 
                 case SQLCOM_TRUNCATE:
-                    operation = QUERY_OP_TRUNCATE;
+                    *operation = QUERY_OP_TRUNCATE;
                     break;
 
                 case SQLCOM_DROP_DB:
@@ -1756,37 +1717,37 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                 case SQLCOM_DROP_TRIGGER:
                 case SQLCOM_DROP_USER:
                 case SQLCOM_DROP_VIEW:
-                    operation = QUERY_OP_DROP;
+                    *operation = QUERY_OP_DROP;
                     break;
 
                 case SQLCOM_CHANGE_DB:
-                    operation = QUERY_OP_CHANGE_DB;
+                    *operation = QUERY_OP_CHANGE_DB;
                     break;
 
                 case SQLCOM_LOAD:
-                    operation = QUERY_OP_LOAD;
+                    *operation = QUERY_OP_LOAD;
                     break;
 
                 case SQLCOM_GRANT:
-                    operation = QUERY_OP_GRANT;
-                        break;
+                    *operation = QUERY_OP_GRANT;
+                    break;
 
                 case SQLCOM_REVOKE:
                 case SQLCOM_REVOKE_ALL:
-                    operation = QUERY_OP_REVOKE;
-                        break;
+                    *operation = QUERY_OP_REVOKE;
+                    break;
 
                 default:
-                    operation = QUERY_OP_UNDEFINED;
+                    *operation = QUERY_OP_UNDEFINED;
                 }
             }
         }
     }
 
-    return operation;
+    return QC_RESULT_OK;
 }
 
-char* qc_get_prepare_name(GWBUF* stmt)
+int32_t qc_mysql_get_prepare_name(GWBUF* stmt, char** namep)
 {
     char* name = NULL;
 
@@ -1810,13 +1771,13 @@ char* qc_get_prepare_name(GWBUF* stmt)
         }
     }
 
-    return name;
+    *namep = name;
+
+    return QC_RESULT_OK;
 }
 
-qc_query_op_t qc_get_prepare_operation(GWBUF* stmt)
+int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
 {
-    qc_query_op_t operation = QUERY_OP_UNDEFINED;
-
     if (stmt)
     {
         if (ensure_query_is_parsed(stmt))
@@ -1825,70 +1786,59 @@ qc_query_op_t qc_get_prepare_operation(GWBUF* stmt)
 
             if (lex->sql_command == SQLCOM_PREPARE)
             {
-                // This is terriby inefficient, but as qc_mysqlembedded is not used
-                // for anything else but comparisons it is ok.
-                const char* prepare_str = lex->prepared_stmt_code.str;
-                size_t prepare_str_len = lex->prepared_stmt_code.length;
+                parsing_info_t* pi = get_pinfo(stmt);
 
-                // MySQL does not parse e.g. "select * from x where ?=5". To work
-                // around that we'll replace all "?":s with "@a":s. We might replace
-                // something unnecessarily, but that won't hurt the classification.
-                size_t n_questions = 0;
-                const char* p = prepare_str;
-                while (p < prepare_str + prepare_str_len)
+                if (!pi->preparable_stmt)
                 {
-                    if (*p == '?')
+                    const char* preparable_stmt = lex->prepared_stmt_code.str;
+                    size_t preparable_stmt_len = lex->prepared_stmt_code.length;
+                    size_t payload_len = preparable_stmt_len + 1;
+                    size_t packet_len = MYSQL_HEADER_LEN + payload_len;
+
+                    GWBUF* preperable_packet = gwbuf_alloc(packet_len);
+
+                    if (preperable_packet)
                     {
-                        ++n_questions;
-                    }
+                        // Encode the length of the payload in the 3 first bytes.
+                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 0) = payload_len;
+                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 1) = (payload_len >> 8);
+                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 2) = (payload_len >> 16);
+                        // Sequence id
+                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 3) = 0x00;
+                        // Payload, starts with command.
+                        *((unsigned char*)GWBUF_DATA(preperable_packet) + 4) = COM_QUERY;
+                        // Is followed by the statement.
+                        char *s = (char*)GWBUF_DATA(preperable_packet) + 5;
 
-                    ++p;
-                }
-
-                size_t payload_len = prepare_str_len + n_questions * 2 + 1;
-                size_t prepare_stmt_len = MYSQL_HEADER_LEN + payload_len;
-
-                GWBUF* prepare_stmt = gwbuf_alloc(prepare_stmt_len);
-
-                if (prepare_stmt)
-                {
-                    // Encode the length of the payload in the 3 first bytes.
-                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 0) = payload_len;
-                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 1) = (payload_len >> 8);
-                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 2) = (payload_len >> 16);
-                    // Sequence id
-                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 3) = 0x00;
-                    // Payload, starts with command.
-                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 4) = COM_QUERY;
-                    // Is followed by the statement.
-                    char *s = (char*)GWBUF_DATA(prepare_stmt) + 5;
-                    p = prepare_str;
-
-                    while (p < prepare_str + prepare_str_len)
-                    {
-                        switch (*p)
+                        // We copy the statment, blindly replacing all '?':s with '0':s as
+                        // otherwise the parsing of the preparable statement as a regular
+                        // statement will not always succeed.
+                        const char* p = preparable_stmt;
+                        while (p < preparable_stmt + preparable_stmt_len)
                         {
-                        case '?':
-                            *s++ = '@';
-                            *s = 'a';
-                            break;
+                            if (*p == '?')
+                            {
+                                *s = '0';
+                            }
+                            else
+                            {
+                                *s = *p;
+                            }
 
-                        default:
-                            *s = *p;
+                            ++p;
+                            ++s;
                         }
-
-                        ++p;
-                        ++s;
                     }
 
-                    operation = qc_get_operation(prepare_stmt);
-                    gwbuf_free(prepare_stmt);
+                    pi->preparable_stmt = preperable_packet;
                 }
+
+                *preparable_stmt = pi->preparable_stmt;
             }
         }
     }
 
-    return operation;
+    return QC_RESULT_OK;
 }
 
 static bool should_exclude(const char* name, List<Item>* excludep)
@@ -2508,16 +2458,16 @@ static void update_field_infos(parsing_info_t* pi,
     }
 }
 
-void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
+int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos)
 {
     if (!buf)
     {
-        return;
+        return QC_RESULT_OK;
     }
 
     if (!ensure_query_is_parsed(buf))
     {
-        return;
+        return QC_RESULT_ERROR;;
     }
 
     parsing_info_t* pi = get_pinfo(buf);
@@ -2530,7 +2480,7 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
 
         if (!lex)
         {
-            return;
+            return QC_RESULT_ERROR;
         }
 
         uint32_t usage = 0;
@@ -2558,7 +2508,8 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
 
         if ((lex->sql_command == SQLCOM_INSERT) ||
             (lex->sql_command == SQLCOM_INSERT_SELECT) ||
-            (lex->sql_command == SQLCOM_REPLACE))
+            (lex->sql_command == SQLCOM_REPLACE) ||
+            (lex->sql_command == SQLCOM_REPLACE_SELECT))
         {
             List_iterator<Item> ilist(lex->field_list);
             while (Item *item = ilist++)
@@ -2613,24 +2564,30 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
 
     *infos = pi->field_infos;
     *n_infos = pi->field_infos_len;
+
+    return QC_RESULT_OK;
 }
 
-void qc_get_function_info(GWBUF* buf, const QC_FUNCTION_INFO** function_infos, size_t* n_function_infos)
+int32_t qc_mysql_get_function_info(GWBUF* buf,
+                                   const QC_FUNCTION_INFO** function_infos,
+                                   uint32_t* n_function_infos)
 {
     *function_infos = NULL;
     *n_function_infos = 0;
 
     const QC_FIELD_INFO* field_infos;
-    size_t n_field_infos;
+    uint32_t n_field_infos;
 
     // We ensure the information has been collected by querying the fields first.
-    qc_get_field_info(buf, &field_infos, &n_field_infos);
+    qc_mysql_get_field_info(buf, &field_infos, &n_field_infos);
 
     parsing_info_t* pi = get_pinfo(buf);
     ss_dassert(pi);
 
     *function_infos = pi->function_infos;
     *n_function_infos = pi->function_infos_len;
+
+    return QC_RESULT_OK;
 }
 
 namespace
@@ -2652,7 +2609,8 @@ const int IDX_DATADIR = 2;
 const int IDX_LANGUAGE = 3;
 const int N_OPTIONS = (sizeof(server_options) / sizeof(server_options[0])) - 1;
 
-const char* server_groups[] = {
+const char* server_groups[] =
+{
     "embedded",
     "server",
     "server",
@@ -2688,18 +2646,18 @@ void configure_options(const char* datadir, const char* langdir)
 
 }
 
-bool qc_setup(const char* args)
+int32_t qc_mysql_setup(const char* args)
 {
     if (args)
     {
-        MXS_WARNING("qc_mysqlembedded: '%s' provided as arguments, "
+        MXS_WARNING("'%s' provided as arguments, "
                     "even though no arguments are supported.", args);
     }
 
-    return true;
+    return QC_RESULT_OK;
 }
 
-int qc_mysql_process_init(void)
+int32_t qc_mysql_process_init(void)
 {
     bool inited = false;
 
@@ -2731,7 +2689,7 @@ int qc_mysql_process_init(void)
         }
     }
 
-    return inited ? 0 : -1;
+    return inited ? QC_RESULT_OK : QC_RESULT_ERROR;
 }
 
 void qc_mysql_process_end(void)
@@ -2739,7 +2697,7 @@ void qc_mysql_process_end(void)
     mysql_library_end();
 }
 
-int qc_mysql_thread_init(void)
+int32_t qc_mysql_thread_init(void)
 {
     bool inited = (mysql_thread_init() == 0);
 
@@ -2748,7 +2706,7 @@ int qc_mysql_thread_init(void)
         MXS_ERROR("mysql_thread_init() failed.");
     }
 
-    return inited ? 0 : -1;
+    return inited ? QC_RESULT_OK : QC_RESULT_ERROR;
 }
 
 void qc_mysql_thread_end(void)
@@ -2763,49 +2721,49 @@ void qc_mysql_thread_end(void)
 extern "C"
 {
 
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static QUERY_CLASSIFIER qc =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        qc_setup,
-        qc_mysql_process_init,
-        qc_mysql_process_end,
-        qc_mysql_thread_init,
-        qc_mysql_thread_end,
-        qc_parse,
-        qc_get_type,
-        qc_get_operation,
-        qc_get_created_table_name,
-        qc_is_drop_table_query,
-        qc_is_real_query,
-        qc_get_table_names,
-        NULL,
-        qc_query_has_clause,
-        qc_get_database_names,
-        qc_get_prepare_name,
-        qc_get_prepare_operation,
-        qc_get_field_info,
-        qc_get_function_info
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_QUERY_CLASSIFIER,
-        MXS_MODULE_IN_DEVELOPMENT,
-        QUERY_CLASSIFIER_VERSION,
-        "Query classifier based upon MySQL Embedded",
-        "V1.0.0",
-        &qc,
-        qc_mysql_process_init,
-        qc_mysql_process_end,
-        qc_mysql_thread_init,
-        qc_mysql_thread_end,
+        static QUERY_CLASSIFIER qc =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            qc_mysql_setup,
+            qc_mysql_process_init,
+            qc_mysql_process_end,
+            qc_mysql_thread_init,
+            qc_mysql_thread_end,
+            qc_mysql_parse,
+            qc_mysql_get_type_mask,
+            qc_mysql_get_operation,
+            qc_mysql_get_created_table_name,
+            qc_mysql_is_drop_table_query,
+            qc_mysql_get_table_names,
+            NULL,
+            qc_mysql_query_has_clause,
+            qc_mysql_get_database_names,
+            qc_mysql_get_prepare_name,
+            qc_mysql_get_field_info,
+            qc_mysql_get_function_info,
+            qc_mysql_get_preparable_stmt,
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_QUERY_CLASSIFIER,
+            MXS_MODULE_IN_DEVELOPMENT,
+            QUERY_CLASSIFIER_VERSION,
+            "Query classifier based upon MySQL Embedded",
+            "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &qc,
+            qc_mysql_process_init,
+            qc_mysql_process_end,
+            qc_mysql_thread_init,
+            qc_mysql_thread_end,
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
+
+        return &info;
+    }
 
 }

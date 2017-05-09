@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include "readwritesplit.h"
+
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
@@ -17,7 +20,6 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "readwritesplit.h"
 #include "rwsplit_internal.h"
 
 /**
@@ -58,8 +60,6 @@ mysql_sescmd_t *rses_property_get_sescmd(rses_property_t *prop)
     }
 
     CHK_RSES_PROP(prop);
-    ss_dassert(prop->rses_prop_rsession == NULL ||
-               SPINLOCK_IS_LOCKED(&prop->rses_prop_rsession->rses_lock));
 
     sescmd = &prop->rses_prop_data.sescmd;
 
@@ -74,9 +74,9 @@ mysql_sescmd_t *rses_property_get_sescmd(rses_property_t *prop)
  * Create session command property.
  */
 mysql_sescmd_t *mysql_sescmd_init(rses_property_t *rses_prop,
-                                         GWBUF *sescmd_buf,
-                                         unsigned char packet_type,
-                                         ROUTER_CLIENT_SES *rses)
+                                  GWBUF *sescmd_buf,
+                                  unsigned char packet_type,
+                                  ROUTER_CLIENT_SES *rses)
 {
     mysql_sescmd_t *sescmd;
 
@@ -129,17 +129,12 @@ void mysql_sescmd_done(mysql_sescmd_t *sescmd)
  * 9. s+q+
  */
 GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
-                                            backend_ref_t *bref,
-                                            bool *reconnect)
+                                     backend_ref_t *bref,
+                                     bool *reconnect)
 {
-    mysql_sescmd_t *scmd;
-    sescmd_cursor_t *scur;
-    ROUTER_CLIENT_SES *ses;
-
-    scur = &bref->bref_sescmd_cur;
-    ss_dassert(SPINLOCK_IS_LOCKED(&(scur->scmd_cur_rses->rses_lock)));
-    scmd = sescmd_cursor_get_command(scur);
-    ses = (*scur->scmd_cur_ptr_property)->rses_prop_rsession;
+    sescmd_cursor_t *scur = &bref->bref_sescmd_cur;
+    mysql_sescmd_t *scmd = sescmd_cursor_get_command(scur);
+    ROUTER_CLIENT_SES *ses = (*scur->scmd_cur_ptr_property)->rses_prop_rsession;
     CHK_GWBUF(replybuf);
 
     /**
@@ -174,7 +169,7 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                 MXS_ERROR("Slave server '%s': response differs from master's response. "
                           "Closing connection due to inconsistent session state.",
                           bref->ref->server->unique_name);
-                close_failed_bref(bref, true);                
+                close_failed_bref(bref, true);
 
                 RW_CHK_DCB(bref, bref->bref_dcb);
                 dcb_close(bref->bref_dcb);
@@ -221,7 +216,7 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                             RW_CLOSE_BREF(&ses->rses_backend_ref[i]);
                         }
                         *reconnect = true;
-                        MXS_INFO("Disabling slave %s:%d, result differs from "
+                        MXS_INFO("Disabling slave [%s]:%d, result differs from "
                                  "master's result. Master: %d Slave: %d",
                                  ses->rses_backend_ref[i].ref->server->name,
                                  ses->rses_backend_ref[i].ref->server->port,
@@ -271,7 +266,6 @@ mysql_sescmd_t *sescmd_cursor_get_command(sescmd_cursor_t *scur)
 {
     mysql_sescmd_t *scmd;
 
-    ss_dassert(SPINLOCK_IS_LOCKED(&(scur->scmd_cur_rses->rses_lock)));
     scur->scmd_cur_cmd = rses_property_get_sescmd(*scur->scmd_cur_ptr_property);
 
     CHK_MYSQL_SESCMD(scur->scmd_cur_cmd);
@@ -291,7 +285,6 @@ bool sescmd_cursor_is_active(sescmd_cursor_t *sescmd_cursor)
         MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
         return false;
     }
-    ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
 
     succp = sescmd_cursor->scmd_cur_active;
     return succp;
@@ -299,9 +292,8 @@ bool sescmd_cursor_is_active(sescmd_cursor_t *sescmd_cursor)
 
 /** router must be locked */
 void sescmd_cursor_set_active(sescmd_cursor_t *sescmd_cursor,
-                                     bool value)
+                              bool value)
 {
-    ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
     /** avoid calling unnecessarily */
     ss_dassert(sescmd_cursor->scmd_cur_active != value);
     sescmd_cursor->scmd_cur_active = value;
@@ -329,16 +321,11 @@ GWBUF *sescmd_cursor_clone_querybuf(sescmd_cursor_t *scur)
 
 bool execute_sescmd_history(backend_ref_t *bref)
 {
-    bool succp = true;
-    sescmd_cursor_t *scur;
-    if (bref == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return false;
-    }
+    ss_dassert(bref);
     CHK_BACKEND_REF(bref);
+    bool succp = true;
 
-    scur = &bref->bref_sescmd_cur;
+    sescmd_cursor_t *scur = &bref->bref_sescmd_cur;
     CHK_SESCMD_CUR(scur);
 
     if (!sescmd_cursor_history_empty(scur))
@@ -418,8 +405,6 @@ static bool sescmd_cursor_next(sescmd_cursor_t *scur)
 
     ss_dassert(scur != NULL);
     ss_dassert(*(scur->scmd_cur_ptr_property) != NULL);
-    ss_dassert(SPINLOCK_IS_LOCKED(
-                   &(*(scur->scmd_cur_ptr_property))->rses_prop_rsession->rses_lock));
 
     /** Illegal situation */
     if (scur == NULL || *scur->scmd_cur_ptr_property == NULL ||

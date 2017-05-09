@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -11,11 +11,11 @@
  * Public License.
  */
 
+#include "avrorouter.h"
 
 #include <maxscale/mysql_utils.h>
 #include <jansson.h>
 #include <maxscale/alloc.h>
-#include "avrorouter.h"
 #include <strings.h>
 
 #define WRITE_EVENT         0
@@ -30,7 +30,7 @@ static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET va
 
 uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create,
                                 avro_value_t *record, uint8_t *ptr,
-                                uint8_t *columns_present);
+                                uint8_t *columns_present, uint8_t *end);
 void notify_all_clients(AVRO_INSTANCE *router);
 void add_used_table(AVRO_INSTANCE* router, const char* table);
 
@@ -44,24 +44,40 @@ static int get_event_type(uint8_t event)
     switch (event)
     {
 
-        case WRITE_ROWS_EVENTv0:
-        case WRITE_ROWS_EVENTv1:
-        case WRITE_ROWS_EVENTv2:
-            return WRITE_EVENT;
+    case WRITE_ROWS_EVENTv0:
+    case WRITE_ROWS_EVENTv1:
+    case WRITE_ROWS_EVENTv2:
+        return WRITE_EVENT;
 
-        case UPDATE_ROWS_EVENTv0:
-        case UPDATE_ROWS_EVENTv1:
-        case UPDATE_ROWS_EVENTv2:
-            return UPDATE_EVENT;
+    case UPDATE_ROWS_EVENTv0:
+    case UPDATE_ROWS_EVENTv1:
+    case UPDATE_ROWS_EVENTv2:
+        return UPDATE_EVENT;
 
-        case DELETE_ROWS_EVENTv0:
-        case DELETE_ROWS_EVENTv1:
-        case DELETE_ROWS_EVENTv2:
-            return DELETE_EVENT;
+    case DELETE_ROWS_EVENTv0:
+    case DELETE_ROWS_EVENTv1:
+    case DELETE_ROWS_EVENTv2:
+        return DELETE_EVENT;
 
+    default:
+        MXS_ERROR("Unexpected event type: %d (%0x)", event, event);
+        return -1;
+    }
+}
+
+static const char* codec_to_string(enum mxs_avro_codec_type type)
+{
+    switch (type)
+    {
+        case MXS_AVRO_CODEC_NULL:
+            return "null";
+        case MXS_AVRO_CODEC_DEFLATE:
+            return "deflate";
+        case MXS_AVRO_CODEC_SNAPPY:
+            return "snappy";
         default:
-            MXS_ERROR("Unexpected event type: %d (%0x)", event, event);
-            return -1;
+            ss_dassert(false);
+            return "null";
     }
 }
 
@@ -105,7 +121,9 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
 
                     /** Close the file and open a new one */
                     hashtable_delete(router->open_tables, table_ident);
-                    AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema);
+                    AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema,
+                                                              codec_to_string(router->codec),
+                                                              router->block_size);
 
                     if (avro_table)
                     {
@@ -272,7 +290,6 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
     /** There should always be a table map event prior to a row event.
      * TODO: Make the active_maps dynamic */
     TABLE_MAP *map = router->active_maps[table_id % sizeof(router->active_maps)];
-    ss_dassert(map);
 
     if (map)
     {
@@ -290,13 +307,19 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
             int rows = 0;
+
             while (ptr - start < hdr->event_size - BINLOG_EVENT_HDR_LEN)
             {
                 /** Add the current GTID and timestamp */
+                uint8_t *end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
                 int event_type = get_event_type(hdr->event_type);
                 prepare_record(router, hdr, event_type, &record);
-                ptr = process_row_event_data(map, create, &record, ptr, col_present);
-                avro_file_writer_append_value(table->avro_file, &record);
+                ptr = process_row_event_data(map, create, &record, ptr, col_present, end);
+                if (avro_file_writer_append_value(table->avro_file, &record))
+                {
+                    MXS_ERROR("Failed to write value at position %ld: %s",
+                              router->current_pos, avro_strerror());
+                }
 
                 /** Update rows events have the before and after images of the
                  * affected rows so we'll process them as another record with
@@ -304,8 +327,12 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
                 if (event_type == UPDATE_EVENT)
                 {
                     prepare_record(router, hdr, UPDATE_EVENT_AFTER, &record);
-                    ptr = process_row_event_data(map, create, &record, ptr, col_present);
-                    avro_file_writer_append_value(table->avro_file, &record);
+                    ptr = process_row_event_data(map, create, &record, ptr, col_present, end);
+                    if (avro_file_writer_append_value(table->avro_file, &record))
+                    {
+                        MXS_ERROR("Failed to write value at position %ld: %s",
+                                  router->current_pos, avro_strerror());
+                    }
                 }
 
                 rows++;
@@ -353,47 +380,67 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
  */
 void set_numeric_field_value(avro_value_t *field, uint8_t type, uint8_t *metadata, uint8_t *value)
 {
-    int64_t i = 0;
-
     switch (type)
     {
-        case TABLE_COL_TYPE_TINY:
-            i = *value;
-            avro_value_set_int(field, i);
+    case TABLE_COL_TYPE_TINY:
+        {
+            char c = *value;
+            avro_value_set_int(field, c);
             break;
+        }
 
-        case TABLE_COL_TYPE_SHORT:
-            memcpy(&i, value, 2);
-            avro_value_set_int(field, i);
+    case TABLE_COL_TYPE_SHORT:
+        {
+            short s =  gw_mysql_get_byte2(value);
+            avro_value_set_int(field, s);
             break;
+        }
 
-        case TABLE_COL_TYPE_INT24:
-            memcpy(&i, value, 3);
-            avro_value_set_int(field, i);
-            break;
+    case TABLE_COL_TYPE_INT24:
+        {
+            int x = gw_mysql_get_byte3(value);
 
-        case TABLE_COL_TYPE_LONG:
-            memcpy(&i, value, 4);
-            avro_value_set_int(field, i);
-            break;
+            if (x & 0x800000)
+            {
+                x = -((0xffffff & (~x)) + 1);
+            }
 
-        case TABLE_COL_TYPE_LONGLONG:
-            memcpy(&i, value, 8);
-            avro_value_set_int(field, i);
+            avro_value_set_int(field, x);
             break;
+        }
 
-        case TABLE_COL_TYPE_FLOAT:
-            memcpy(&i, value, 4);
-            avro_value_set_float(field, (float)i);
+    case TABLE_COL_TYPE_LONG:
+        {
+            int x = gw_mysql_get_byte4(value);
+            avro_value_set_int(field, x);
             break;
+        }
 
-        case TABLE_COL_TYPE_DOUBLE:
-            memcpy(&i, value, 8);
-            avro_value_set_float(field, (double)i);
+    case TABLE_COL_TYPE_LONGLONG:
+        {
+            long l = gw_mysql_get_byte8(value);
+            avro_value_set_long(field, l);
             break;
+        }
 
-        default:
+    case TABLE_COL_TYPE_FLOAT:
+        {
+            float f = 0;
+            memcpy(&f, value, 4);
+            avro_value_set_float(field, f);
             break;
+        }
+
+    case TABLE_COL_TYPE_DOUBLE:
+        {
+            double d = 0;
+            memcpy(&d, value, 8);
+            avro_value_set_double(field, d);
+            break;
+        }
+
+    default:
+        break;
     }
 }
 
@@ -426,26 +473,26 @@ int get_metadata_len(uint8_t type)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_STRING:
-        case TABLE_COL_TYPE_VAR_STRING:
-        case TABLE_COL_TYPE_VARCHAR:
-        case TABLE_COL_TYPE_DECIMAL:
-        case TABLE_COL_TYPE_NEWDECIMAL:
-        case TABLE_COL_TYPE_ENUM:
-        case TABLE_COL_TYPE_SET:
-        case TABLE_COL_TYPE_BIT:
-            return 2;
+    case TABLE_COL_TYPE_STRING:
+    case TABLE_COL_TYPE_VAR_STRING:
+    case TABLE_COL_TYPE_VARCHAR:
+    case TABLE_COL_TYPE_DECIMAL:
+    case TABLE_COL_TYPE_NEWDECIMAL:
+    case TABLE_COL_TYPE_ENUM:
+    case TABLE_COL_TYPE_SET:
+    case TABLE_COL_TYPE_BIT:
+        return 2;
 
-        case TABLE_COL_TYPE_BLOB:
-        case TABLE_COL_TYPE_FLOAT:
-        case TABLE_COL_TYPE_DOUBLE:
-        case TABLE_COL_TYPE_DATETIME2:
-        case TABLE_COL_TYPE_TIMESTAMP2:
-        case TABLE_COL_TYPE_TIME2:
-            return 1;
+    case TABLE_COL_TYPE_BLOB:
+    case TABLE_COL_TYPE_FLOAT:
+    case TABLE_COL_TYPE_DOUBLE:
+    case TABLE_COL_TYPE_DATETIME2:
+    case TABLE_COL_TYPE_TIMESTAMP2:
+    case TABLE_COL_TYPE_TIME2:
+        return 1;
 
-        default:
-            return 0;
+    default:
+        return 0;
     }
 }
 
@@ -461,7 +508,7 @@ int get_metadata_len(uint8_t type)
  * @return Pointer to the first byte after the current row event
  */
 uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value_t *record,
-                                uint8_t *ptr, uint8_t *columns_present)
+                                uint8_t *ptr, uint8_t *columns_present, uint8_t *end)
 {
     int npresent = 0;
     avro_value_t field;
@@ -471,22 +518,33 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
 
     /** BIT type values use the extra bits in the row event header */
     int extra_bits = (((ncolumns + 7) / 8) * 8) - ncolumns;
+    ss_dassert(ptr < end);
 
     /** Store the null value bitmap */
     uint8_t *null_bitmap = ptr;
     ptr += (ncolumns + 7) / 8;
+    ss_dassert(ptr < end);
 
     for (long i = 0; i < map->columns && npresent < ncolumns; i++)
     {
         ss_dassert(create->columns == map->columns);
-        avro_value_get_by_name(record, create->column_names[i], &field, NULL);
+        ss_debug(int rc = )avro_value_get_by_name(record, create->column_names[i], &field, NULL);
+        ss_dassert(rc == 0);
 
         if (bit_is_set(columns_present, ncolumns, i))
         {
             npresent++;
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
-                avro_value_set_null(&field);
+                if (column_is_blob(map->column_types[i]))
+                {
+                    uint8_t nullvalue = 0;
+                    avro_value_set_bytes(&field, &nullvalue, 1);
+                }
+                else
+                {
+                    avro_value_set_null(&field);
+                }
             }
             else if (column_is_fixed_string(map->column_types[i]))
             {
@@ -508,6 +566,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     }
                     avro_value_set_string(&field, strval);
                     ptr += bytes;
+                    ss_dassert(ptr < end);
                 }
                 else
                 {
@@ -517,6 +576,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     str[bytes] = '\0';
                     avro_value_set_string(&field, str);
                     ptr += bytes + 1;
+                    ss_dassert(ptr < end);
                 }
             }
             else if (column_is_bit(map->column_types[i]))
@@ -536,21 +596,36 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 }
                 avro_value_set_int(&field, value);
                 ptr += bytes;
+                ss_dassert(ptr < end);
             }
             else if (column_is_decimal(map->column_types[i]))
             {
                 double f_value = 0.0;
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
                 avro_value_set_double(&field, f_value);
+                ss_dassert(ptr < end);
             }
             else if (column_is_variable_string(map->column_types[i]))
             {
                 size_t sz;
-                char *str = mxs_lestr_consume(&ptr, &sz);
+                int bytes = metadata[metadata_offset] | metadata[metadata_offset + 1] << 8;
+                if (bytes > 255)
+                {
+                    sz = gw_mysql_get_byte2(ptr);
+                    ptr += 2;
+                }
+                else
+                {
+                    sz = *ptr;
+                    ptr++;
+                }
+
                 char buf[sz + 1];
-                memcpy(buf, str, sz);
+                memcpy(buf, ptr, sz);
                 buf[sz] = '\0';
+                ptr += sz;
                 avro_value_set_string(&field, buf);
+                ss_dassert(ptr < end);
             }
             else if (column_is_blob(map->column_types[i]))
             {
@@ -558,8 +633,17 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 uint64_t len = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
-                avro_value_set_bytes(&field, ptr, len);
-                ptr += len;
+                if (len)
+                {
+                    avro_value_set_bytes(&field, ptr, len);
+                    ptr += len;
+                }
+                else
+                {
+                    uint8_t nullvalue = 0;
+                    avro_value_set_bytes(&field, &nullvalue, 1);
+                }
+                ss_dassert(ptr < end);
             }
             else if (column_is_temporal(map->column_types[i]))
             {
@@ -568,6 +652,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 ptr += unpack_temporal_value(map->column_types[i], ptr, &metadata[metadata_offset], &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
+                ss_dassert(ptr < end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
             else
@@ -577,6 +662,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 ptr += unpack_numeric_field(ptr, map->column_types[i],
                                             &metadata[metadata_offset], lval);
                 set_numeric_field_value(&field, map->column_types[i], &metadata[metadata_offset], lval);
+                ss_dassert(ptr < end);
             }
             ss_dassert(metadata_offset <= map->column_metadata_size);
             metadata_offset += get_metadata_len(map->column_types[i]);

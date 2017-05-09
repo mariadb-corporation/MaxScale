@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "masking"
 #include "maskingfiltersession.hh"
 #include <sstream>
 #include <maxscale/buffer.hh>
@@ -25,7 +26,7 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
-MaskingFilterSession::MaskingFilterSession(SESSION* pSession, const MaskingFilter* pFilter)
+MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter)
     : maxscale::FilterSession(pSession)
     , m_filter(*pFilter)
     , m_state(IGNORING_RESPONSE)
@@ -37,7 +38,7 @@ MaskingFilterSession::~MaskingFilterSession()
 }
 
 //static
-MaskingFilterSession* MaskingFilterSession::create(SESSION* pSession, const MaskingFilter* pFilter)
+MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession, const MaskingFilter* pFilter)
 {
     return new MaskingFilterSession(pSession, pFilter);
 }
@@ -46,11 +47,12 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
 {
     ComRequest request(pPacket);
 
+    // TODO: Breaks if responses are not waited for, before the next request is sent.
     switch (request.command())
     {
     case MYSQL_COM_QUERY:
-        // TODO: Breaks if responses are not waited for, before the next request is sent.
-        m_res.reset(m_filter.rules());
+    case MYSQL_COM_STMT_EXECUTE:
+        m_res.reset(request.command(), m_filter.rules());
         m_state = EXPECTING_RESPONSE;
         break;
 
@@ -63,47 +65,70 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
 
 int MaskingFilterSession::clientReply(GWBUF* pPacket)
 {
-    MXS_NOTICE("clientReply");
     ss_dassert(GWBUF_IS_CONTIGUOUS(pPacket));
 
-    switch (m_state)
+    ComResponse response(pPacket);
+
+    if (response.is_err())
     {
-    case EXPECTING_NOTHING:
-        MXS_WARNING("Received data, although expected nothing.");
-    case IGNORING_RESPONSE:
-        break;
+        // If we get an error response, we just abort what we were doing.
+        m_state = EXPECTING_NOTHING;
+    }
+    else
+    {
+        switch (m_state)
+        {
+        case EXPECTING_NOTHING:
+            MXS_WARNING("Received data, although expected nothing.");
+        case IGNORING_RESPONSE:
+            break;
 
-    case EXPECTING_RESPONSE:
-        handle_response(pPacket);
-        break;
+        case EXPECTING_RESPONSE:
+            handle_response(pPacket);
+            break;
 
-    case EXPECTING_FIELD:
-        handle_field(pPacket);
-        break;
+        case EXPECTING_FIELD:
+            handle_field(pPacket);
+            break;
 
-    case EXPECTING_ROW:
-        handle_row(pPacket);
-        break;
+        case EXPECTING_ROW:
+            handle_row(pPacket);
+            break;
 
-    case EXPECTING_FIELD_EOF:
-    case EXPECTING_ROW_EOF:
-        handle_eof(pPacket);
-        break;
+        case EXPECTING_FIELD_EOF:
+        case EXPECTING_ROW_EOF:
+            handle_eof(pPacket);
+            break;
+
+        case SUPPRESSING_RESPONSE:
+            break;
+        }
     }
 
-    return FilterSession::clientReply(pPacket);
+    // The state may change by the code above, so need to check it again.
+    int rv;
+    if (m_state != SUPPRESSING_RESPONSE)
+    {
+        rv = FilterSession::clientReply(pPacket);
+    }
+    else
+    {
+        // TODO: The return value should mean something.
+        rv = 0;
+    }
+
+    return rv;
 }
 
 void MaskingFilterSession::handle_response(GWBUF* pPacket)
 {
-    MXS_NOTICE("handle_response");
     ComResponse response(pPacket);
 
     switch (response.type())
     {
-    case 0x00: // OK
-    case 0xff: // ERR
-    case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
+    case ComResponse::OK_PACKET:
+        // We'll end up here also in the case of a multi-result.
+    case ComResponse::LOCAL_INFILE_PACKET: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
         m_state = EXPECTING_NOTHING;
         break;
 
@@ -119,38 +144,39 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
 
 void MaskingFilterSession::handle_field(GWBUF* pPacket)
 {
-    MXS_NOTICE("handle_field");
-
     ComQueryResponse::ColumnDef column_def(pPacket);
 
-    const char *zUser = session_get_user(m_pSession);
-    const char *zHost = session_get_remote(m_pSession);
-
-    if (!zUser)
+    if (column_def.payload_len() >= ComPacket::MAX_PAYLOAD_LEN) // Not particularly likely...
     {
-        zUser = "";
+        handle_large_payload();
     }
-
-    if (!zHost)
+    else
     {
-        zHost = "";
+        const char *zUser = session_get_user(m_pSession);
+        const char *zHost = session_get_remote(m_pSession);
+
+        if (!zUser)
+        {
+            zUser = "";
+        }
+
+        if (!zHost)
+        {
+            zHost = "";
+        }
+
+        const MaskingRules::Rule* pRule = m_res.rules()->get_rule_for(column_def, zUser, zHost);
+
+        if (m_res.append_type_and_rule(column_def.type(), pRule))
+        {
+            // All fields have been read.
+            m_state = EXPECTING_FIELD_EOF;
+        }
     }
-
-    const MaskingRules::Rule* pRule = m_res.rules()->get_rule_for(column_def, zUser, zHost);
-
-    if (m_res.append_rule(pRule))
-    {
-        // All fields have been read.
-        m_state = EXPECTING_FIELD_EOF;
-    }
-
-    MXS_NOTICE("Stats: %s", column_def.to_string().c_str());
 }
 
 void MaskingFilterSession::handle_eof(GWBUF* pPacket)
 {
-    MXS_NOTICE("handle_eof");
-
     ComResponse response(pPacket);
 
     if (response.is_eof())
@@ -177,43 +203,130 @@ void MaskingFilterSession::handle_eof(GWBUF* pPacket)
     }
 }
 
+namespace
+{
+
+void warn_of_type_mismatch(const MaskingRules::Rule& rule)
+{
+    MXS_WARNING("The rule targeting \"%s\" matches a column "
+                "that is not of string type.", rule.match().c_str());
+}
+
+}
+
 void MaskingFilterSession::handle_row(GWBUF* pPacket)
 {
-    MXS_NOTICE("handle_row");
+    ComPacket response(pPacket);
 
-    ComResponse response(pPacket);
-
-    switch (response.type())
+    if ((response.payload_len() == ComEOF::PAYLOAD_LEN) &&
+        (ComResponse(response).type() == ComResponse::EOF_PACKET))
     {
-    case ComPacket::EOF_PACKET:
         // EOF after last row.
-        MXS_NOTICE("EOF after last row received.");
-        m_state = EXPECTING_NOTHING;
-        break;
+        ComEOF eof(response);
 
-    default:
+        if (eof.status() & SERVER_MORE_RESULTS_EXIST)
         {
-            ComQueryResponse::Row row(response);
+            m_res.reset_multi();
+            m_state = EXPECTING_RESPONSE;
+        }
+        else
+        {
+            m_state = EXPECTING_NOTHING;
+        }
+    }
+    else
+    {
+        if (m_res.some_rule_matches())
+        {
+            if (response.payload_len() >= ComPacket::MAX_PAYLOAD_LEN)
+            {
+                handle_large_payload();
+            }
+            else
+            {
+                mask_values(response);
+            }
+        }
+    }
+}
 
-            ComQueryResponse::Row::iterator i = row.begin();
+void MaskingFilterSession::handle_large_payload()
+{
+    if (m_filter.config().large_payload() == Config::LARGE_ABORT)
+    {
+        MXS_WARNING("Payload > 16MB, closing the connection.");
+        poll_fake_hangup_event(m_pSession->client_dcb);
+        m_state = SUPPRESSING_RESPONSE;
+    }
+    else
+    {
+        MXS_WARNING("Payload > 16MB, no masking is performed.");
+        m_state = IGNORING_RESPONSE;
+    }
+}
+
+void MaskingFilterSession::mask_values(ComPacket& response)
+{
+    switch (m_res.command())
+    {
+    case MYSQL_COM_QUERY:
+        {
+            ComQueryResponse::TextResultsetRow row(response, m_res.types());
+
+            ComQueryResponse::TextResultsetRow::iterator i = row.begin();
             while (i != row.end())
             {
                 const MaskingRules::Rule* pRule = m_res.get_rule();
 
                 if (pRule)
                 {
-                    LEncString s = *i;
+                    ComQueryResponse::TextResultsetRow::Value value = *i;
 
-                    if (!s.is_null())
+                    if (value.is_string())
                     {
+                        LEncString s = value.as_string();
                         pRule->rewrite(s);
                     }
-
-                    MXS_NOTICE("String: %s", (*i).to_string().c_str());
+                    else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                    {
+                        warn_of_type_mismatch(*pRule);
+                    }
                 }
                 ++i;
             }
         }
         break;
+
+    case MYSQL_COM_STMT_EXECUTE:
+        {
+            ComQueryResponse::BinaryResultsetRow row(response, m_res.types());
+
+            ComQueryResponse::BinaryResultsetRow::iterator i = row.begin();
+            while (i != row.end())
+            {
+                const MaskingRules::Rule* pRule = m_res.get_rule();
+
+                if (pRule)
+                {
+                    ComQueryResponse::BinaryResultsetRow::Value value = *i;
+
+                    if (value.is_string())
+                    {
+                        LEncString s = value.as_string();
+                        pRule->rewrite(s);
+                    }
+                    else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                    {
+                        warn_of_type_mismatch(*pRule);
+                    }
+                }
+                ++i;
+            }
+        }
+        break;
+
+    default:
+        MXS_ERROR("Unexpected request: %d", m_res.command());
+        ss_dassert(!true);
     }
 }

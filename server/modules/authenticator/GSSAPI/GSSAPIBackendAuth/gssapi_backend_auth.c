@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -11,7 +11,9 @@
  * Public License.
  */
 
-#include <maxscale/gw_authenticator.h>
+#define MXS_MODULE_NAME "GSSAPIBackendAuth"
+
+#include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
@@ -265,7 +267,7 @@ static int gssapi_backend_auth_authenticate(DCB *dcb)
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         NULL,                               /* No initialize entry point */
         gssapi_backend_auth_alloc,          /* Allocate authenticator data */
@@ -274,16 +276,20 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gssapi_backend_auth_authenticate,   /* Authenticate user credentials */
         NULL,                               /* Client plugin will free shared data */
         gssapi_backend_auth_free,           /* Free authenticator data */
-        NULL                                /* Load users from backend databases */
+        NULL,                               /* Load users from backend databases */
+        NULL,                               /* No diagnostic */
+        NULL,
+        NULL                                /* No user reauthentication */
     };
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "GSSAPI backend authenticator",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

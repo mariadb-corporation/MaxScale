@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -29,8 +29,6 @@ public:
     static InMemoryStorage* Create_instance(const char* zName,
                                             const CACHE_STORAGE_CONFIG& config,
                                             int argc, char* argv[]);
-
-    static cache_result_t Get_key(const char* zDefault_db, const GWBUF& query, CACHE_KEY* pKey);
 
     void get_config(CACHE_STORAGE_CONFIG* pConfig);
     virtual cache_result_t get_info(uint32_t what, json_t** ppInfo) const = 0;
@@ -62,7 +60,7 @@ private:
     struct Entry
     {
         Entry()
-        : time(0)
+            : time(0)
         {}
 
         uint32_t time;
@@ -80,7 +78,7 @@ private:
             , deletes(0)
         {}
 
-        void fill(json_t* pbject) const;
+        void fill(json_t* pObject) const;
 
         uint64_t size;       /*< The total size of the stored values. */
         uint64_t items;      /*< The number of stored items. */

@@ -1,12 +1,81 @@
-add_library(maxscale-common SHARED adminusers.c alloc.c authenticator.c atomic.c buffer.c config.c config_runtime.c dcb.c filter.c filter.cc externcmd.c gwbitmask.c gwdirs.c hashtable.c hint.c housekeeper.c load_utils.c log_manager.cc maxscale_pcre2.c memlog.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c gw_ssl.c mysql_utils.c mysql_binlog.c modulecmd.c )
-
-target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIBRARIES} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl pthread crypt dl crypto inih z rt m stdc++)
+add_library(maxscale-common SHARED
+  admin.cc
+  adminusers.cc
+  alloc.cc
+  atomic.cc
+  authenticator.cc
+  buffer.cc
+  config.cc
+  config_runtime.cc
+  dcb.cc
+  externcmd.cc
+  filter.cc
+  hashtable.cc
+  hint.cc
+  housekeeper.cc
+  httprequest.cc
+  httpresponse.cc
+  json_api.cc
+  listener.cc
+  load_utils.cc
+  log_manager.cc
+  maxscale_pcre2.cc
+  misc.cc
+  mlist.cc
+  messagequeue.cc
+  modulecmd.cc
+  modutil.cc
+  monitor.cc
+  mysql_binlog.cc
+  mysql_utils.cc
+  paths.cc
+  poll.cc
+  query_classifier.cc
+  queuemanager.cc
+  random_jkiss.cc
+  resultset.cc
+  resource.cc
+  router.cc
+  secrets.cc
+  semaphore.cc
+  server.cc
+  service.cc
+  session.cc
+  skygw_utils.cc
+  spinlock.cc
+  ssl.cc
+  statistics.cc
+  thread.cc
+  users.cc
+  utils.cc
+  worker.cc
+  workertask.cc
+  )
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})
 elseif(WITH_TCMALLOC)
   target_link_libraries(maxscale-common ${TCMALLOC_LIBRARIES})
 endif()
+
+target_link_libraries(maxscale-common
+  ${MARIADB_CONNECTOR_LIBRARIES}
+  ${LZMA_LINK_FLAGS}
+  ${PCRE2_LIBRARIES}
+  ${CURL_LIBRARIES}
+  ${JANSSON_LIBRARIES}
+  ssl
+  pthread
+  crypt
+  dl
+  crypto
+  inih
+  z
+  rt
+  m
+  stdc++
+  microhttpd
+)
 
 add_dependencies(maxscale-common pcre2 connector-c)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")

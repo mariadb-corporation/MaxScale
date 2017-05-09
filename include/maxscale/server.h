@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -21,13 +21,23 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/resultset.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
 #define MAX_SERVER_NAME_LEN 1024
-#define MAX_SERVER_MONUSER_LEN 512
-#define MAX_SERVER_MONPW_LEN 512
+#define MAX_SERVER_MONUSER_LEN 1024
+#define MAX_SERVER_MONPW_LEN 1024
 #define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
+
+/**
+ * Server configuration parameters names
+ */
+extern const char CN_MONITORPW[];
+extern const char CN_MONITORUSER[];
+extern const char CN_PERSISTMAXTIME[];
+extern const char CN_PERSISTPOOLMAX[];
+extern const char CN_USE_PROXY_PROTOCOL[];
 
 /**
  * The server parameters used for weighting routing decissions
@@ -94,10 +104,17 @@ typedef struct server
     uint8_t        charset;        /**< Default server character set */
     bool           is_active;      /**< Server is active and has not been "destroyed" */
     bool           created_online; /**< Whether this server was created after startup */
+    bool           use_proxy_protocol; /**< Send proxy-protocol header when connecting client sessions. */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif
 } SERVER;
+
+enum
+{
+    MAX_RLAG_NOT_AVAILABLE = -1,
+    MAX_RLAG_UNDEFINED = -2
+};
 
 /**
  * Status bits in the server->status member.
@@ -248,16 +265,44 @@ void server_add_parameter(SERVER *server, const char *name, const char *value);
  */
 bool server_remove_parameter(SERVER *server, const char *name);
 
+/**
+ * @brief Check if a server points to a local MaxScale service
+ *
+ * @param server Server to check
+ * @return True if the server points to a local MaxScale service
+ */
+bool server_is_mxs_service(const SERVER *server);
+
+/**
+ * @brief Convert a server to JSON format
+ *
+ * @param server Server to convert
+ * @param host    Hostname of this server
+ *
+ * @return JSON representation of server or NULL if an error occurred
+ */
+json_t* server_to_json(const SERVER* server, const char* host);
+
+/**
+ * @brief Convert all servers into JSON format
+ *
+ * @param host    Hostname of this server
+ *
+ * @return JSON array of servers or NULL if an error occurred
+ */
+json_t* server_list_to_json(const char* host);
+
 extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
+extern int server_find_by_unique_names(char **server_names, int size, SERVER*** output);
 extern SERVER *server_find(const char *servname, unsigned short port);
 extern char *server_status(const SERVER *);
-extern void server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set);
-extern void server_set_status_nolock(SERVER *server, int bit);
-extern void server_clear_status_nolock(SERVER *server, int bit);
+extern void server_clear_set_status(SERVER *server, unsigned specified_bits, unsigned bits_to_set);
+extern void server_set_status_nolock(SERVER *server, unsigned bit);
+extern void server_clear_status_nolock(SERVER *server, unsigned bit);
 extern void server_transfer_status(SERVER *dest_server, const SERVER *source_server);
 extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
-extern const char *server_get_parameter(const SERVER *server, char *name);
+extern const char *server_get_parameter(const SERVER *server, const char *name);
 extern void server_update_credentials(SERVER *server, const char *user, const char *passwd);
 extern DCB  *server_get_persistent(SERVER *server, const char *user, const char *protocol, int id);
 extern void server_update_address(SERVER *server, const char *address);

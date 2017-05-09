@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -28,7 +28,7 @@ namespace maxscale
  * are virtual. That is by design, as the class will be used in a context where
  * the concrete class is known. That is, there is no need for the virtual mechanism.
  */
-class FilterSession
+class FilterSession : public MXS_FILTER_SESSION
 {
 public:
     /**
@@ -46,7 +46,7 @@ public:
             m_data.routeQuery = NULL;
         }
 
-        Downstream(const DOWNSTREAM& down)
+        Downstream(const MXS_DOWNSTREAM& down)
             : m_data(down)
         {}
 
@@ -63,7 +63,7 @@ public:
             return m_data.routeQuery(m_data.instance, m_data.session, pPacket);
         }
 
-        DOWNSTREAM m_data;
+        MXS_DOWNSTREAM m_data;
     };
 
     class Upstream
@@ -81,7 +81,7 @@ public:
             m_data.clientReply = NULL;
         }
 
-        Upstream(const UPSTREAM& up)
+        Upstream(const MXS_UPSTREAM& up)
             : m_data(up)
         {}
 
@@ -98,7 +98,7 @@ public:
             return m_data.clientReply(m_data.instance, m_data.session, pPacket);
         }
 
-        UPSTREAM m_data;
+        MXS_UPSTREAM m_data;
     };
 
     /**
@@ -149,13 +149,18 @@ public:
      */
     void diagnostics(DCB *pDcb);
 
-protected:
-    FilterSession(SESSION* pSession);
+    /**
+     * Called for obtaining diagnostics about the filter session.
+     */
+    json_t* diagnostics_json() const;
 
 protected:
-    SESSION*   m_pSession; /*< The SESSION this filter session is associated with. */
-    Downstream m_down;     /*< The downstream component. */
-    Upstream   m_up;       /*< The upstream component. */
+    FilterSession(MXS_SESSION* pSession);
+
+protected:
+    MXS_SESSION*   m_pSession; /*< The MXS_SESSION this filter session is associated with. */
+    Downstream     m_down;     /*< The downstream component. */
+    Upstream       m_up;       /*< The upstream component. */
 };
 
 
@@ -180,10 +185,10 @@ protected:
  * public:
  *      static MyFilter* create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
  *
- *      MyFilterSession* newSession(SESSION* pSession);
+ *      MyFilterSession* newSession(MXS_SESSION* pSession);
  *
  *      void diagnostics(DCB* pDcb);
- *      static uint64_t getCapabilities();
+ *      uint64_t getCapabilities();
  * };
  * @endcode
  *
@@ -200,43 +205,43 @@ protected:
  * @endcode
  */
 template<class FilterType, class FilterSessionType>
-class Filter
+class Filter : public MXS_FILTER
 {
 public:
-    static FILTER* createInstance(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
+    static MXS_FILTER* createInstance(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams)
     {
         FilterType* pFilter = NULL;
 
         MXS_EXCEPTION_GUARD(pFilter = FilterType::create(zName, pzOptions, ppParams));
 
-        return reinterpret_cast<FILTER*>(pFilter);
+        return pFilter;
     }
 
-    static void* newSession(FILTER* pInstance, SESSION* pSession)
+    static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession)
     {
-        FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
-        void* pFilterSession;
+        FilterType* pFilter = static_cast<FilterType*>(pInstance);
+        FilterSessionType* pFilterSession;
 
         MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession));
 
         return pFilterSession;
     }
 
-    static void closeSession(FILTER*, void* pData)
+    static void closeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(pFilterSession->close());
     }
 
-    static void freeSession(FILTER*, void* pData)
+    static void freeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(delete pFilterSession);
     }
 
-    static void setDownstream(FILTER*, void* pData, DOWNSTREAM* pDownstream)
+    static void setDownstream(MXS_FILTER*, MXS_FILTER_SESSION* pData, MXS_DOWNSTREAM* pDownstream)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -245,7 +250,7 @@ public:
         MXS_EXCEPTION_GUARD(pFilterSession->setDownstream(down));
     }
 
-    static void setUpstream(FILTER* pInstance, void* pData, UPSTREAM* pUpstream)
+    static void setUpstream(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, MXS_UPSTREAM* pUpstream)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -254,7 +259,7 @@ public:
         MXS_EXCEPTION_GUARD(pFilterSession->setUpstream(up));
     }
 
-    static int routeQuery(FILTER* pInstance, void* pData, GWBUF* pPacket)
+    static int routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -264,7 +269,7 @@ public:
         return rv;
     }
 
-    static int clientReply(FILTER* pInstance, void* pData, GWBUF* pPacket)
+    static int clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -274,7 +279,7 @@ public:
         return rv;
     }
 
-    static void diagnostics(FILTER* pInstance, void* pData, DCB* pDcb)
+    static void diagnostics(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, DCB* pDcb)
     {
         if (pData)
         {
@@ -284,34 +289,56 @@ public:
         }
         else
         {
-            FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
+            FilterType* pFilter = static_cast<FilterType*>(pInstance);
 
             MXS_EXCEPTION_GUARD(pFilter->diagnostics(pDcb));
         }
     }
 
-    static uint64_t getCapabilities(void)
+    static json_t* diagnostics_json(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
+    {
+        json_t* rval = NULL;
+
+        if (pData)
+        {
+            const FilterSessionType* pFilterSession = static_cast<const FilterSessionType*>(pData);
+
+            MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics_json());
+        }
+        else
+        {
+            const FilterType* pFilter = static_cast<const FilterType*>(pInstance);
+
+            MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics_json());
+        }
+
+        return rval;
+    }
+
+    static uint64_t getCapabilities(MXS_FILTER* pInstance)
     {
         uint64_t rv = 0;
 
-        MXS_EXCEPTION_GUARD(rv = FilterType::getCapabilities());
+        FilterType* pFilter = static_cast<FilterType*>(pInstance);
+
+        MXS_EXCEPTION_GUARD(rv = pFilter->getCapabilities());
 
         return rv;
     }
 
-    static void destroyInstance(FILTER* pInstance)
+    static void destroyInstance(MXS_FILTER* pInstance)
     {
-        FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
+        FilterType* pFilter = static_cast<FilterType*>(pInstance);
 
         MXS_EXCEPTION_GUARD(delete pFilter);
     }
 
-    static FILTER_OBJECT s_object;
+    static MXS_FILTER_OBJECT s_object;
 };
 
 
 template<class FilterType, class FilterSessionType>
-FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
+MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
 {
     &Filter<FilterType, FilterSessionType>::createInstance,
     &Filter<FilterType, FilterSessionType>::newSession,
@@ -322,6 +349,7 @@ FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &Filter<FilterType, FilterSessionType>::routeQuery,
     &Filter<FilterType, FilterSessionType>::clientReply,
     &Filter<FilterType, FilterSessionType>::diagnostics,
+    &Filter<FilterType, FilterSessionType>::diagnostics_json,
     &Filter<FilterType, FilterSessionType>::getCapabilities,
     &Filter<FilterType, FilterSessionType>::destroyInstance,
 };

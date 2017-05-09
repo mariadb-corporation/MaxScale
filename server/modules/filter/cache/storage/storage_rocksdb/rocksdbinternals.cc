@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -25,7 +25,8 @@
 bool RocksDBInternals::is_stale(const rocksdb::Slice& value, int32_t ttl, rocksdb::Env* pEnv)
 {
     if (ttl <= 0)
-    {  // Data is fresh if TTL is non-positive
+    {
+        // Data is fresh if TTL is non-positive
         return false;
     }
 

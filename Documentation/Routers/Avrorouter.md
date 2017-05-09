@@ -57,6 +57,15 @@ router=avrorouter
 source=replication-router
 ```
 
+### `codec`
+
+The compression codec to use. By default, the avrorouter does not use compression.
+
+This parameter takes one of the following two values; _null_ or
+_deflate_. These are the mandatory compression algorithms required by the
+Avro specification. For more information about the compression types,
+refer to the [Avro specification](https://avro.apache.org/docs/current/spec.html#Required+Codecs).
+
 **Note:** Since the 2.1 version of MaxScale, all of the router options can also
 be defined as parameters.
 
@@ -162,6 +171,11 @@ data block. The default value is 1 transaction.
 Controls the number of row events that are grouped into a single Avro
 data block. The default value is 1000 row events.
 
+#### `block_size`
+
+The Avro data block size in bytes. The default is 16 kilobytes. Increase this
+value if individual events in the binary logs are very large.
+
 ## Module commands
 
 Read [Module Commands](../Reference/Module-Commands.md) documentation for details about module commands.
@@ -257,8 +271,7 @@ For more information on how to use these scripts, see the output of `cdc.py -h` 
 
 To build the avrorouter from source, you will need the [Avro C](https://avro.apache.org/docs/current/api/c/)
 library, liblzma, [the Jansson library](http://www.digip.org/jansson/) and sqlite3 development headers. When
-configuring MaxScale with CMake, you will need to add `-DBUILD_AVRO=Y
--DBUILD_CDC=Y` to build the avrorouter and the CDC protocol module.
+configuring MaxScale with CMake, you will need to add `-DBUILD_CDC=Y` to build the CDC module set.
 
 For more details about building MaxScale from source, please refer to the
 [Building MaxScale from Source Code](../Getting-Started/Building-MaxScale-from-Source-Code.md) document.

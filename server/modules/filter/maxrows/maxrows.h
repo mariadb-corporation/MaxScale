@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -15,9 +15,6 @@
 #include <limits.h>
 
 MXS_BEGIN_DECLS
-
-#define MAXROWS_OK_PACKET_LEN              11
-#define MAXROWS_EOF_PACKET_LEN             9
 
 /*
  * The EOF packet 2 bytes flags start after:
@@ -39,5 +36,7 @@ MXS_BEGIN_DECLS
 #define MAXROWS_DEFAULT_MAX_RESULTSET_SIZE "65536"
 // Integer value
 #define MAXROWS_DEFAULT_DEBUG              "0"
+// Max size of copied input SQL
+#define MAXROWS_INPUT_SQL_MAX_LEN         1024
 
 MXS_END_DECLS

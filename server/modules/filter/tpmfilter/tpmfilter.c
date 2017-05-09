@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -40,6 +40,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "tpmfilter"
+
 #include <maxscale/cdefs.h>
 
 #include <ctype.h>
@@ -76,16 +78,17 @@ static const int default_sql_size = 4 * 1024;
 /*
  * The filter entry points
  */
-static  FILTER  *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static  void    *newSession(FILTER *instance, SESSION *session);
-static  void    closeSession(FILTER *instance, void *session);
-static  void    freeSession(FILTER *instance, void *session);
-static  void    setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static  void    setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
-static  int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static  int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
-static  void    diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static  MXS_FILTER  *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *);
+static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
+static  void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static  void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static  void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static  void    setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
+static  int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static  int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static  void    diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static  json_t*    diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static uint64_t getCapabilities(MXS_FILTER* instance);
 static  void checkNamedPipe(void *args);
 
 /**
@@ -117,8 +120,8 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM  down;
-    UPSTREAM    up;
+    MXS_DOWNSTREAM  down;
+    MXS_UPSTREAM    up;
     int     active;
     char        *clientHost;
     char        *userName;
@@ -147,7 +150,7 @@ typedef struct
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -158,6 +161,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -166,9 +170,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "Transaction Performance Monitoring filter",
         "V1.0.1",
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -197,8 +202,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static FILTER *
-createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+static MXS_FILTER *
+createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     TPM_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(TPM_INSTANCE));
 
@@ -285,7 +290,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         }
     }
 
-    return(FILTER *)my_instance;
+    return (MXS_FILTER *)my_instance;
 }
 
 /**
@@ -297,8 +302,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static  void    *
-newSession(FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
     TPM_SESSION *my_session;
@@ -348,7 +353,7 @@ newSession(FILTER *instance, SESSION *session)
         }
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -359,7 +364,7 @@ newSession(FILTER *instance, SESSION *session)
  * @param session   The session being closed
  */
 static  void
-closeSession(FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
@@ -378,7 +383,7 @@ closeSession(FILTER *instance, void *session)
  * @param session   The filter session
  */
 static void
-freeSession(FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 
@@ -399,7 +404,7 @@ freeSession(FILTER *instance, void *session)
  * @param downstream    The downstream filter or router.
  */
 static void
-setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 
@@ -415,7 +420,7 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param upstream  The upstream filter or session.
  */
 static void
-setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
+setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 
@@ -433,7 +438,7 @@ setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
  * @param queue     The query data
  */
 static  int
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
     TPM_SESSION *my_session = (TPM_SESSION *)session;
@@ -444,7 +449,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     {
         if ((ptr = modutil_get_SQL(queue)) != NULL)
         {
-            uint32_t query_type = qc_get_type(queue);
+            uint32_t query_type = qc_get_type_mask(queue);
             int query_len = strlen(ptr);
             my_session->query_end = false;
 
@@ -524,7 +529,7 @@ retblock:
 }
 
 static int
-clientReply(FILTER *instance, void *session, GWBUF *reply)
+clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
 {
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
     TPM_SESSION *my_session = (TPM_SESSION *)session;
@@ -605,7 +610,7 @@ clientReply(FILTER *instance, void *session, GWBUF *reply)
  * @param   dcb     The DCB for diagnostic output
  */
 static  void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
     TPM_SESSION *my_session = (TPM_SESSION *)fsession;
@@ -629,13 +634,58 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 }
 
 /**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t*
+diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    TPM_INSTANCE *my_instance = (TPM_INSTANCE*)instance;
+
+    json_t* rval = json_object();
+
+    if (my_instance->source)
+    {
+        json_object_set_new(rval, "source", json_string(my_instance->source));
+    }
+
+    if (my_instance->user)
+    {
+        json_object_set_new(rval, "user", json_string(my_instance->user));
+    }
+
+    if (my_instance->filename)
+    {
+        json_object_set_new(rval, "filename", json_string(my_instance->filename));
+    }
+
+    if (my_instance->delimiter)
+    {
+        json_object_set_new(rval, "delimiter", json_string(my_instance->delimiter));
+    }
+
+    if (my_instance->query_delimiter)
+    {
+        json_object_set_new(rval, "query_delimiter", json_string(my_instance->query_delimiter));
+    }
+
+    return rval;
+}
+
+/**
  * Capability routine.
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }
 
 static void checkNamedPipe(void *args)

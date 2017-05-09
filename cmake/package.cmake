@@ -2,11 +2,24 @@
 
 execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
 
+# Check target
+set(PACK_TARGETS "core" "devel" "external" "all")
+if(DEFINED TARGET_COMPONENT AND NOT TARGET_COMPONENT STREQUAL "")
+  set(LIST_INDEX -1)
+  list(FIND PACK_TARGETS ${TARGET_COMPONENT} LIST_INDEX)
+  if (${LIST_INDEX} EQUAL -1)
+    message(FATAL_ERROR "Unrecognized TARGET_COMPONENT value. Allowed values: ${PACK_TARGETS}.")
+  endif()
+else()
+  set(TARGET_COMPONENT "core")
+  message(STATUS "No TARGET_COMPONENT defined, using default value 'core'")
+endif()
+
 # Generic CPack configuration variables
 set(CPACK_SET_DESTDIR ON)
 set(CPACK_PACKAGE_RELOCATABLE FALSE)
 set(CPACK_STRIP_FILES FALSE)
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale - The Dynamic Data Routing Platform")
 set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
@@ -14,6 +27,15 @@ set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
 set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
 set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+
+# If building devel package, change the description. Deb- and rpm-specific parameters are set in their
+# dedicated files "package_(deb/rpm).cmake"
+if (TARGET_COMPONENT STREQUAL "devel")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale plugin development headers")
+  set(DESCRIPTION_TEXT "\
+ This package contains header files required for plugin module development for MariaDB MaxScale. \
+The source of MariaDB MaxScale is not required.")
+endif()
 
 # If we're building something other than the main package, append the target name
 # to the package name.

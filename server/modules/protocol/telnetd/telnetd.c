@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#define MXS_MODULE_NAME "telnetd"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -109,6 +112,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_PROTOCOL_VERSION,
         "A telnet deamon protocol for simple administration interface",
         "V1.1.1",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -142,7 +146,7 @@ static int telnetd_read_event(DCB* dcb)
 {
     int n;
     GWBUF *head = NULL;
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     TELNETD *telnetd = (TELNETD *)dcb->protocol;
     char *password, *t;
 
@@ -200,7 +204,7 @@ static int telnetd_read_event(DCB* dcb)
                     MXS_FREE(password);
                     break;
                 case TELNETD_STATE_DATA:
-                    SESSION_ROUTE_QUERY(session, head);
+                    MXS_SESSION_ROUTE_QUERY(session, head);
                     break;
                 }
             }

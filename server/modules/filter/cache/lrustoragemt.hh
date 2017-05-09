@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -28,10 +28,10 @@ public:
 
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
-                             GWBUF** ppvalue) const;
+                             GWBUF** ppValue) const;
 
     cache_result_t put_value(const CACHE_KEY& key,
-                             const GWBUF* pvalue);
+                             const GWBUF* pValue);
 
     cache_result_t del_value(const CACHE_KEY& key);
 
@@ -46,11 +46,11 @@ public:
     cache_result_t get_items(uint64_t* pItems) const;
 
 private:
-    LRUStorageMT(const CACHE_STORAGE_CONFIG& config, Storage* pstorage);
+    LRUStorageMT(const CACHE_STORAGE_CONFIG& config, Storage* pStorage);
 
     LRUStorageMT(const LRUStorageMT&);
     LRUStorageMT& operator = (const LRUStorageMT&);
 
 private:
-    mutable SPINLOCK lock_;
+    mutable SPINLOCK m_lock;
 };

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include "readwritesplit.h"
+
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
@@ -17,11 +20,10 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "readwritesplit.h"
 #include "rwsplit_internal.h"
 /**
  * @file rwsplit_select_backends.c   The functions that implement back end
- * selection for the read write split router. All of these functions are 
+ * selection for the read write split router. All of these functions are
  * internal to that router and not intended to be called from elsewhere.
  *
  * @verbatim
@@ -33,10 +35,10 @@
  * @endverbatim
  */
 
-static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history);
+static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execute_history);
 
 static void log_server_connections(select_criteria_t select_criteria,
-                            backend_ref_t *backend_ref, int router_nservers);
+                                   backend_ref_t *backend_ref, int router_nservers);
 
 static SERVER_REF *get_root_master(backend_ref_t *servers, int router_nservers);
 
@@ -84,7 +86,7 @@ static bool bref_valid_for_slave(const backend_ref_t *bref, const SERVER *master
     SERVER *server = bref->ref->server;
 
     return (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) &&
-        (master_host == NULL || (server != master_host));
+           (master_host == NULL || (server != master_host));
 }
 
 /**
@@ -146,13 +148,13 @@ backend_ref_t* get_slave_candidate(backend_ref_t *bref, int n, const SERVER *mas
  * @return true, if at least one master and one slave was found.
  */
 bool select_connect_backend_servers(backend_ref_t **p_master_ref,
-                                           backend_ref_t *backend_ref,
-                                           int router_nservers, int max_nslaves,
-                                           int max_slave_rlag,
-                                           select_criteria_t select_criteria,
-                                           SESSION *session,
-                                           ROUTER_INSTANCE *router,
-                                           bool active_session)
+                                    backend_ref_t *backend_ref,
+                                    int router_nservers, int max_nslaves,
+                                    int max_slave_rlag,
+                                    select_criteria_t select_criteria,
+                                    MXS_SESSION *session,
+                                    ROUTER_INSTANCE *router,
+                                    bool active_session)
 {
     if (p_master_ref == NULL || backend_ref == NULL)
     {
@@ -275,7 +277,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
             {
                 if (BREF_IS_IN_USE((&backend_ref[i])))
                 {
-                    MXS_INFO("Selected %s in \t%s:%d",
+                    MXS_INFO("Selected %s in \t[%s]:%d",
                              STRSRVSTATUS(backend_ref[i].ref->server),
                              backend_ref[i].ref->server->name,
                              backend_ref[i].ref->server->port);
@@ -283,7 +285,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
             } /* for */
         }
     }
-        /** Failure cases */
+    /** Failure cases */
     else
     {
         MXS_ERROR("Couldn't establish required amount of slave connections for "
@@ -417,7 +419,7 @@ static int bref_cmp_current_load(const void *bref1, const void *bref2)
  * @param execute_history Execute session command history
  * @return True if successful, false if an error occurred
  */
-static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history)
+static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execute_history)
 {
     SERVER *serv = bref->ref->server;
     bool rval = false;
@@ -431,9 +433,6 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
 
         if (!execute_history || execute_sescmd_history(bref))
         {
-            /** Add a callback for unresponsive server */
-            dcb_add_callback(bref->bref_dcb, DCB_REASON_NOT_RESPONDING,
-                             &router_handle_state_switch, (void *) bref);
             bref->bref_state = 0;
             bref_set_state(bref, BREF_IN_USE);
             atomic_add(&bref->ref->connections, 1);
@@ -441,7 +440,7 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
         }
         else
         {
-            MXS_ERROR("Failed to execute session command in %s (%s:%d). See earlier "
+            MXS_ERROR("Failed to execute session command in %s ([%s]:%d). See earlier "
                       "errors for more details.",
                       bref->ref->server->unique_name,
                       bref->ref->server->name,
@@ -454,7 +453,7 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
     }
     else
     {
-        MXS_ERROR("Unable to establish connection with server %s:%d",
+        MXS_ERROR("Unable to establish connection with server [%s]:%d",
                   serv->name, serv->port);
     }
 
@@ -469,7 +468,7 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
  * @param router_nservers Number of backends in @p backend_ref
  */
 static void log_server_connections(select_criteria_t select_criteria,
-                            backend_ref_t *backend_ref, int router_nservers)
+                                   backend_ref_t *backend_ref, int router_nservers)
 {
     if (select_criteria == LEAST_GLOBAL_CONNECTIONS ||
         select_criteria == LEAST_ROUTER_CONNECTIONS ||
@@ -486,31 +485,31 @@ static void log_server_connections(select_criteria_t select_criteria,
 
             switch (select_criteria)
             {
-                case LEAST_GLOBAL_CONNECTIONS:
-                    MXS_INFO("MaxScale connections : %d in \t%s:%d %s",
-                             b->server->stats.n_current, b->server->name,
-                             b->server->port, STRSRVSTATUS(b->server));
-                    break;
+            case LEAST_GLOBAL_CONNECTIONS:
+                MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
+                         b->server->stats.n_current, b->server->name,
+                         b->server->port, STRSRVSTATUS(b->server));
+                break;
 
-                case LEAST_ROUTER_CONNECTIONS:
-                    MXS_INFO("RWSplit connections : %d in \t%s:%d %s",
-                             b->connections, b->server->name,
-                             b->server->port, STRSRVSTATUS(b->server));
-                    break;
+            case LEAST_ROUTER_CONNECTIONS:
+                MXS_INFO("RWSplit connections : %d in \t[%s]:%d %s",
+                         b->connections, b->server->name,
+                         b->server->port, STRSRVSTATUS(b->server));
+                break;
 
-                case LEAST_CURRENT_OPERATIONS:
-                    MXS_INFO("current operations : %d in \t%s:%d %s",
-                             b->server->stats.n_current_ops,
-                             b->server->name, b->server->port,
-                             STRSRVSTATUS(b->server));
-                    break;
+            case LEAST_CURRENT_OPERATIONS:
+                MXS_INFO("current operations : %d in \t[%s]:%d %s",
+                         b->server->stats.n_current_ops,
+                         b->server->name, b->server->port,
+                         STRSRVSTATUS(b->server));
+                break;
 
-                case LEAST_BEHIND_MASTER:
-                    MXS_INFO("replication lag : %d in \t%s:%d %s",
-                             b->server->rlag, b->server->name,
-                             b->server->port, STRSRVSTATUS(b->server));
-                default:
-                    break;
+            case LEAST_BEHIND_MASTER:
+                MXS_INFO("replication lag : %d in \t[%s]:%d %s",
+                         b->server->rlag, b->server->name,
+                         b->server->port, STRSRVSTATUS(b->server));
+            default:
+                break;
             }
         }
     }

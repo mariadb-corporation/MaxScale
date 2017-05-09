@@ -62,6 +62,13 @@ if(NOT MARIADB_CONNECTOR_FOUND)
   include(cmake/BuildMariaDBConnector.cmake)
 endif()
 
+if(NOT JANSSON_FOUND)
+  message(STATUS "Building Jansson from source.")
+  include(cmake/BuildJansson.cmake)
+endif()
+
+include_directories(${JANSSON_INCLUDE_DIR})
+
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
 
@@ -115,9 +122,16 @@ if(${MAXSCALE_VERSION} MATCHES "-stable")
   endif()
 endif()
 
+# Copy cmake_flags, JENKINS_BUILD_TAG, source and value evironmental variables
+# into cmake variables. These are used by the build system to store information
+# about the packages being built.
+set(MAXSCALE_SOURCE "$ENV{source} $ENV{value}")
+set(MAXSCALE_CMAKE_FLAGS "$ENV{cmake_flags}")
+set(MAXSCALE_JENKINS_BUILD_TAG "$ENV{BUILD_TAG}")
+
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/version.h.in ${CMAKE_BINARY_DIR}/include/maxscale/version.h @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/gwdirs.h.in ${CMAKE_BINARY_DIR}/include/maxscale/gwdirs.h @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/paths.h.in ${CMAKE_BINARY_DIR}/include/maxscale/paths.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/adminusers.h.in ${CMAKE_BINARY_DIR}/include/maxscale/adminusers.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/include/maxscale/maxscale_test.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst @ONLY)
@@ -140,16 +154,6 @@ if(CMAKE_VERSION VERSION_GREATER 2.6)
   endif()
 endif()
 
-
-IF(DEFINED OLEVEL)
-  if((OLEVEL GREATER -1) AND (OLEVEL LESS 4) )
-    set(FLAGS "${FLAGS} -O${OLEVEL}" CACHE STRING "Compilation flags"  FORCE)
-	message(STATUS "Optimization level at: ${OLEVEL}")
-  else()
-	message(WARNING "Optimization level was set to a bad value, ignoring it. (Valid values are 0-3)")
-  endif()
-endif()
-
 if(GCOV)
   set(FLAGS "${FLAGS} -fprofile-arcs -ftest-coverage" CACHE STRING "Compilation flags"  FORCE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
@@ -162,19 +166,19 @@ endif()
 
 if(USE_C99)
   message(STATUS "Using C99 standard")
-  set(CMAKE_C_FLAGS "-std=c99 -D_GNU_SOURCE=1 ${FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_GNU_SOURCE=1 ${FLAGS}")
 else()
-  set(CMAKE_C_FLAGS "${FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${FLAGS}")
 endif()
 
-set(CMAKE_C_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
-set(CMAKE_C_FLAGS_RELEASE "")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-ggdb")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Wno-uninitialized")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -ggdb -Wno-uninitialized")
 
-set(CMAKE_CXX_FLAGS "${FLAGS} -Wno-deprecated-declarations")
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT  -Wno-deprecated-declarations")
-set(CMAKE_CXX_FLAGS_RELEASE "-Wno-deprecated-declarations")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb  -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS} -Wno-deprecated-declarations -std=c++0x")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT  -Wno-deprecated-declarations -std=c++0x")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-deprecated-declarations -Wno-uninitialized -std=c++0x")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -ggdb  -Wno-deprecated-declarations -Wno-uninitialized -std=c++0x")
 
 include_directories(include)
 include_directories(server/inih)
@@ -182,7 +186,7 @@ include_directories(server/modules/include)
 include_directories(${CMAKE_BINARY_DIR}/include)
 include_directories(${CURL_INCLUDE_DIRS})
 
-if (BUILD_AVRO)
+if (BUILD_CDC)
   include_directories(avro)
   add_subdirectory(avro)
 endif()
@@ -190,8 +194,12 @@ endif()
 add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
+add_subdirectory(include/maxscale)
 if(NOT WITHOUT_MAXADMIN)
   add_subdirectory(client)
+endif()
+if(BUILD_TESTS)
+  add_subdirectory(examples)
 endif()
 
 # Generate text versions of some documents
@@ -227,6 +235,9 @@ install_file(etc/lsyncd_example.conf core)
 install_manual(Documentation/maxscale.1 1 core)
 install_file(${CMAKE_SOURCE_DIR}/server/maxscale_binlogserver_template.cnf core)
 
+# For devel package, these files are put to the base folder
+install_header(${CMAKE_SOURCE_DIR}/COPYRIGHT devel)
+install_header(${CMAKE_SOURCE_DIR}/LICENSE.TXT devel)
 
 # Install startup scripts and ldconfig files
 if(WITH_SCRIPTS)
@@ -304,10 +315,11 @@ if(PACKAGE)
 endif()
 
 # NOTE: If you make changes here, ensure they are compatible with the
-#       situation in gwdirs.h.in.
+#       situation in paths.h.in.
 if (NOT PACKAGE)
   install(DIRECTORY DESTINATION var/cache/maxscale)
   install(DIRECTORY DESTINATION var/log/maxscale)
   install(DIRECTORY DESTINATION var/run/maxscale)
   install(DIRECTORY DESTINATION var/lib/maxscale)
+  install(DIRECTORY DESTINATION ${DEFAULT_MODULE_CONFIG_SUBPATH})
 endif()

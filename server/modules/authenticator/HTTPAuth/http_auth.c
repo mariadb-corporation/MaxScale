@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -24,7 +24,9 @@
  * @endverbatim
  */
 
-#include <maxscale/gw_authenticator.h>
+#define MXS_MODULE_NAME "HTTPAuth"
+
+#include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.h>
@@ -43,7 +45,7 @@ typedef struct http_auth
 {
     char* user;
     char* pw;
-}HTTP_AUTH;
+} HTTP_AUTH;
 
 /**
  * The module entry point routine. It is this routine that
@@ -55,7 +57,7 @@ typedef struct http_auth
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         NULL,                            /* No initialize entry point */
         NULL,                            /* No create entry point */
@@ -64,16 +66,20 @@ MXS_MODULE* MXS_CREATE_MODULE()
         http_auth_authenticate,          /* Authenticate user credentials */
         http_auth_free_client_data,      /* Free the client data held in DCB */
         NULL,                            /* No destroy entry point */
-        users_default_loadusers          /* Load generic users */
+        users_default_loadusers,         /* Load generic users */
+        users_default_diagnostic,        /* Default user diagnostic */
+        users_default_diagnostic_json,   /* Default user diagnostic */
+        NULL                             /* No user reauthentication */
     };
 
     static MXS_MODULE info =
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "The MaxScale HTTP BA authenticator",
         "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -101,7 +107,7 @@ http_auth_authenticate(DCB *dcb)
     HTTP_AUTH *ses = (HTTP_AUTH*)dcb->data;
     char *user, *pw;
     serviceGetUser(dcb->service, &user, &pw);
-    pw = decryptPassword(pw);
+    pw = decrypt_password(pw);
 
     if (ses && strcmp(ses->user, user) == 0 && strcmp(ses->pw, pw) == 0)
     {

@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -19,6 +19,29 @@ MXS_BEGIN_DECLS
 
 #define QUERY_CLASSIFIER_VERSION {1, 1, 0}
 
+/**
+ * qc_init_kind_t specifies what kind of initialization should be performed.
+ */
+typedef enum qc_init_kind
+{
+    QC_INIT_SELF   = 0x01, /*< Initialize/finalize the query classifier itself. */
+    QC_INIT_PLUGIN = 0x02, /*< Initialize/finalize the plugin. */
+    QC_INIT_BOTH   = 0x03
+} qc_init_kind_t;
+
+/**
+ * @c qc_collect_info_t specifies what information should be collected during parsing.
+ */
+typedef enum qc_collect_info
+{
+    QC_COLLECT_ESSENTIALS = 0x00, /*< Collect only the base minimum. */
+    QC_COLLECT_TABLES     = 0x01, /*< Collect table names. */
+    QC_COLLECT_DATABASES  = 0x02, /*< Collect database names. */
+    QC_COLLECT_FIELDS     = 0x04, /*< Collect field information. */
+    QC_COLLECT_FUNCTIONS  = 0x08, /*< Collect function information. */
+
+    QC_COLLECT_ALL = (QC_COLLECT_TABLES|QC_COLLECT_DATABASES|QC_COLLECT_FIELDS|QC_COLLECT_FUNCTIONS)
+} qc_collect_info_t;
 /**
  * qc_query_type_t defines bits that provide information about a
  * particular statement.
@@ -128,6 +151,16 @@ typedef struct qc_function_info
 } QC_FUNCTION_INFO;
 
 /**
+ * Each API function returns @c QC_RESULT_OK if the actual parsing process
+ * succeeded, and some error code otherwise.
+ */
+typedef enum qc_result
+{
+    QC_RESULT_OK,
+    QC_RESULT_ERROR
+} qc_result_t;
+
+/**
  * QUERY_CLASSIFIER defines the object a query classifier plugin must
  * implement and return.
  *
@@ -136,30 +169,210 @@ typedef struct qc_function_info
  */
 typedef struct query_classifier
 {
-    bool (*qc_setup)(const char* args);
+    /**
+     * Called once to setup the query classifier
+     *
+     * @param args  The value of `query_classifier_args` in the configuration file.
+     *
+     * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
+     *         some specific error code.
+     */
+    int32_t (*qc_setup)(const char* args);
 
-    int (*qc_process_init)(void);
+    /**
+     * Called once at process startup, after @c qc_setup has successfully
+     * been called.
+     *
+     * @return QC_RESULT_OK, if the process initialization succeeded.
+     */
+    int32_t (*qc_process_init)(void);
+
+    /**
+     * Called once at process shutdown.
+     */
     void (*qc_process_end)(void);
 
-    int (*qc_thread_init)(void);
+    /**
+     * Called once per each thread, except for the thread for which @c qc_process_init
+     * was called.
+     *
+     * @return QC_RESULT_OK, if the thread initialization succeeded.
+     */
+    int32_t (*qc_thread_init)(void);
+
+    /**
+     * Called once when a thread finishes, except for the thread for which @c qc_process_init
+     * was called.
+     */
     void (*qc_thread_end)(void);
 
-    qc_parse_result_t (*qc_parse)(GWBUF* stmt);
+    /**
+     * Called to explicitly parse a statement.
+     *
+     * @param stmt     The statement to be parsed.
+     * @param collect  A bitmask of @c qc_collect_info_t values. Specifies what information
+     *                 should be collected. Only a hint and must not restrict what information
+     *                 later can be queried.
+     * @param result   On return, the parse result, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_parse)(GWBUF* stmt, uint32_t collect, int32_t* result);
 
-    uint32_t (*qc_get_type)(GWBUF* stmt);
-    qc_query_op_t (*qc_get_operation)(GWBUF* stmt);
+    /**
+     * Reports the type of the statement.
+     *
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param type  On return, the type mask (combination of @c qc_query_type_t),
+     *              if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_type_mask)(GWBUF* stmt, uint32_t* type);
 
-    char* (*qc_get_created_table_name)(GWBUF* stmt);
-    bool (*qc_is_drop_table_query)(GWBUF* stmt);
-    bool (*qc_is_real_query)(GWBUF* stmt);
-    char** (*qc_get_table_names)(GWBUF* stmt, int* tblsize, bool fullnames);
-    char* (*qc_get_canonical)(GWBUF* stmt);
-    bool (*qc_query_has_clause)(GWBUF* stmt);
-    char** (*qc_get_database_names)(GWBUF* stmt, int* size);
-    char* (*qc_get_prepare_name)(GWBUF* stmt);
-    qc_query_op_t (*qc_get_prepare_operation)(GWBUF* stmt);
-    void (*qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
-    void (*qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n_infos);
+    /**
+     * Reports the operation of the statement.
+     *
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param type  On return, the operation (one of @c qc_query_op_t), if
+     *              @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_operation)(GWBUF* stmt, int32_t* op);
+
+    /**
+     * Reports the name of a created table.
+     *
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param name  On return, the name of the created table, if
+     *              @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_created_table_name)(GWBUF* stmt, char** name);
+
+    /**
+     * Reports whether a statement is a "DROP TABLE ..." statement.
+     *
+     * @param stmt           A COM_QUERY or COM_STMT_PREPARE packet
+     * @param is_drop_table  On return, non-zero if the statement is a DROP TABLE
+     *                       statement, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_is_drop_table_query)(GWBUF* stmt, int32_t* is_drop_table);
+
+    /**
+     * Returns all table names.
+     *
+     * @param stmt       A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param fullnames  If non-zero, the full (i.e. qualified) names are returned.
+     * @param names      On return, the names of the statement, if @c QC_RESULT_OK
+     *                   is returned.
+     * @param n_names    On return, how many names were returned, if @c QC_RESULT_OK
+     *                   is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_table_names)(GWBUF* stmt, int32_t full_names, char*** names, int32_t *n_names);
+
+    /**
+     * The canonical version of a statement.
+     *
+     * @param stmt       A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param canonical  On return, the canonical version of the statement, if @c QC_RESULT_OK
+     *                   is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_canonical)(GWBUF* stmt, char** canonical);
+
+    /**
+     * Reports whether the statement has a where clause.
+     *
+     * @param stmt        A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param has_clause  On return, non-zero if the statement has a where clause, if
+     *                    @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_query_has_clause)(GWBUF* stmt, int32_t* has_clause);
+
+    /**
+     * Reports the database names.
+     *
+     * @param stmt   A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param names  On return, the database names, if
+     *               @c QC_RESULT_OK is returned.
+     * @param size   On return, the number of names in @names, if
+     *               @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_database_names)(GWBUF* stmt, char*** names, int32_t* size);
+
+    /**
+     * Reports the prepare name.
+     *
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param name  On return, the name of a prepare statement, if
+     *              @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_prepare_name)(GWBUF* stmt, char** name);
+
+    /**
+     * Reports field information.
+     *
+     * @param stmt    A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param infos   On return, array of field infos, if @c QC_RESULT_OK is returned.
+     * @param n_infos On return, the size of @c infos, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos);
+
+    /**
+     * The canonical version of a statement.
+     *
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param infos   On return, array of function infos, if @c QC_RESULT_OK is returned.
+     * @param n_infos On return, the size of @c infos, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos);
+
+    /**
+     * Return the preparable statement of a PREPARE statement.
+     *
+     * @param stmt             A COM_QUERY or COM_STMT_PREPARE packet.
+     * @param preparable_stmt  On return, the preparable statement (provided @c stmt is a
+     *                         PREPARE statement), if @c QC_RESULT_OK is returned. Otherwise
+     *                         NULL.
+     *
+     * @attention The returned GWBUF is the property of @c stmt and will be deleted when
+     *            @c stmt is. If the preparable statement need to be retained beyond the
+     *            lifetime of @c stmt, it must be cloned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_preparable_stmt)(GWBUF* stmt, GWBUF** preparable_stmt);
 } QUERY_CLASSIFIER;
 
 /**
@@ -190,11 +403,14 @@ bool qc_setup(const char* plugin_name, const char* plugin_args);
  *
  * MaxScale calls this functions, so plugins should not do that.
  *
+ * @param kind  What kind of initialization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @return True, if the process wide initialization could be performed.
  *
  * @see qc_process_end qc_thread_init
  */
-bool qc_process_init(void);
+bool qc_process_init(uint32_t kind);
 
 /**
  * Finalizes the query classifier.
@@ -203,9 +419,12 @@ bool qc_process_init(void);
  * by a call to this function. MaxScale calls this function, so plugins
  * should not do that.
  *
+ * @param kind  What kind of finalization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @see qc_process_init qc_thread_end
  */
-void qc_process_end(void);
+void qc_process_end(uint32_t kind);
 
 /**
  * Loads a particular query classifier.
@@ -239,11 +458,14 @@ void qc_unload(QUERY_CLASSIFIER* classifier);
  *
  * MaxScale calls this function, so plugins should not do that.
  *
+ * @param kind  What kind of initialization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @return True if the initialization succeeded, false otherwise.
  *
  * @see qc_thread_end
  */
-bool qc_thread_init(void);
+bool qc_thread_init(uint32_t kind);
 
 /**
  * Performs thread finalization needed by the query classifier.
@@ -252,26 +474,35 @@ bool qc_thread_init(void);
  *
  * MaxScale calls this function, so plugins should not do that.
  *
+ * @param kind  What kind of finalization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @see qc_thread_init
  */
-void qc_thread_end(void);
+void qc_thread_end(uint32_t kind);
 
 /**
  * Parses the statement in the provided buffer and returns a value specifying
  * to what extent the statement could be parsed.
  *
  * There is no need to call this function explicitly before calling any of
- * the other functions; e.g. qc_get_type(). When some particular property of
+ * the other functions; e.g. qc_get_type_mask(). When some particular property of
  * a statement is asked for, the statement will be parsed if it has not been
  * parsed yet. Also, if the statement in the provided buffer has been parsed
  * already then this function will only return the result of that parsing;
  * the statement will not be parsed again.
  *
- * @param stmt  A buffer containing an COM_QUERY packet.
+ * @param stmt     A buffer containing an COM_QUERY or COM_STMT_PREPARE packet.
+ * @param collect  A bitmask of @c qc_collect_info_t values. Specifies what information
+ *                 should be collected.
+ *
+ *                 Note that this is merely a hint and does not restrict what
+ *                 information can be queried for. If necessary, the statement
+ *                 will transparently be reparsed.
  *
  * @return To what extent the statement could be parsed.
  */
-qc_parse_result_t qc_parse(GWBUF* stmt);
+qc_parse_result_t qc_parse(GWBUF* stmt, uint32_t collect);
 
 /**
  * Convert a qc_field_usage_t enum to corresponding string.
@@ -295,7 +526,7 @@ char* qc_field_usage_mask_to_string(uint32_t usage_mask);
 /**
  * Returns information about affected fields.
  *
- * @param stmt     A buffer containing a COM_QUERY packet.
+ * @param stmt     A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  * @param infos    Pointer to pointer that after the call will point to an
  *                 array of QC_FIELD_INFO:s.
  * @param n_infos  Pointer to size_t variable where the number of items
@@ -310,7 +541,7 @@ void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos
 /**
  * Returns information about function usage.
  *
- * @param stmt     A buffer containing a COM_QUERY packet.
+ * @param stmt     A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  * @param infos    Pointer to pointer that after the call will point to an
  *                 array of QC_FUNCTION_INFO:s.
  * @param n_infos  Pointer to size_t variable where the number of items
@@ -325,7 +556,7 @@ void qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n
 /**
  * Returns the statement, with literals replaced with question marks.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return A statement in its canonical form, or NULL if a memory
  *         allocation fails. The string must be freed by the caller.
@@ -335,7 +566,7 @@ char* qc_get_canonical(GWBUF* stmt);
 /**
  * Returns the name of the created table.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return The name of the created table or NULL if the statement
  *         does not create a table or a memory allocation failed.
@@ -347,7 +578,7 @@ char* qc_get_created_table_name(GWBUF* stmt);
  * Returns the databases accessed by the statement. Note that a
  * possible default database is not returned.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  * @param size  Pointer to integer where the number of databases
  *              is stored.
  *
@@ -361,7 +592,7 @@ char** qc_get_database_names(GWBUF* stmt, int* size);
 /**
  * Returns the operation of the statement.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return The operation of the statement.
  */
@@ -371,7 +602,7 @@ qc_query_op_t qc_get_operation(GWBUF* stmt);
  * Returns the name of the prepared statement, if the statement
  * is a PREPARE or EXECUTE statement.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return The name of the prepared statement, if the statement
  *         is a PREPARE or EXECUTE statement; otherwise NULL.
@@ -386,20 +617,31 @@ qc_query_op_t qc_get_operation(GWBUF* stmt);
 char* qc_get_prepare_name(GWBUF* stmt);
 
 /**
- * Returns the operator of the prepared statement, if the statement
- * is a PREPARE statement.
+ * Returns the preparable statement of a PREPARE statment. Other query classifier
+ * functions can then be used on the returned statement to find out information
+ * about the preparable statement. The returned @c GWBUF should not be used for
+ * anything else but for obtaining information about the preparable statement.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
- * @return The operator of the prepared statement, if the statement
- *         is a PREPARE statement; otherwise QUERY_OP_UNDEFINED.
+ * @return The preparable statement, if @stmt was a COM_QUERY PREPARE statement,
+ *         or NULL.
+ *
+ * @attention If the packet was a COM_STMT_PREPARE, then this function will
+ *            return NULL and the actual properties of the query can be obtained
+ *            by calling any of the qc-functions directly on the GWBUF containing
+ *            the COM_STMT_PREPARE. However, the type mask will contain the
+ *            bit @c QUERY_TYPE_PREPARE_STMT.
+ *
+ * @attention The returned @c GWBUF is the property of @c stmt and will be
+ *            deleted along with it.
  */
-qc_query_op_t qc_get_prepare_operation(GWBUF* stmt);
+GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
 
 /**
  * Returns the tables accessed by the statement.
  *
- * @param stmt       A buffer containing a COM_QUERY packet.
+ * @param stmt       A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  * @param tblsize    Pointer to integer where the number of tables is stored.
  * @param fullnames  If true, a table names will include the database name
  *                   as well (if explicitly referred to in the statement).
@@ -417,39 +659,48 @@ char** qc_get_table_names(GWBUF* stmt, int* size, bool fullnames);
  * should be tested against specific qc_query_type_t values* using the
  * bitwise & operator, never using the == operator.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return A bitmask with the type(s) the query.
  *
  * @see qc_query_is_type
  */
-uint32_t qc_get_type(GWBUF* stmt);
+uint32_t qc_get_type_mask(GWBUF* stmt);
+
+/**
+ * Returns the type bitmask of transaction related statements.
+ *
+ * If the statement starts a transaction, ends a transaction or
+ * changes the autocommit state, the returned bitmap will be a
+ * combination of:
+ *
+ *    QUERY_TYPE_BEGIN_TRX
+ *    QUERY_TYPE_COMMIT
+ *    QUERY_TYPE_ROLLBACK
+ *    QUERY_TYPE_ENABLE_AUTOCOMMIT
+ *    QUERY_TYPE_DISABLE_AUTOCOMMIT
+ *    QUERY_TYPE_READ  (explicitly read only transaction)
+ *    QUERY_TYPE_WRITE (explicitly read write transaction)
+ *
+ * Otherwise the result will be 0.
+ *
+ * @param stmt A COM_QUERY or COM_STMT_PREPARE packet.
+ *
+ * @return The relevant type bits if the statement is transaction
+ *         related, otherwise 0.
+ */
+uint32_t qc_get_trx_type_mask(GWBUF* stmt);
 
 /**
  * Returns whether the statement is a DROP TABLE statement.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return True if the statement is a DROP TABLE statement, false otherwise.
  *
  * @todo This function is far too specific.
  */
 bool qc_is_drop_table_query(GWBUF* stmt);
-
-/**
- * Returns whether the statement is a "real" statement. Statements that affect
- * the underlying database are considered real statements, while statements that
- * target specific rows or variable data are regarded as real statement. That is,
- * a real statement is  SELECT, UPDATE, INSERT, DELETE or a variation thereof.
- *
- * @param stmt  A buffer containing a COM_QUERY.
- *
- * @return True if the statement is a real query, false otherwise.
- *
- * @todo Consider whether the function name should be changed or the function
- *       removed altogether.
- */
-bool qc_is_real_query(GWBUF* stmt);
 
 /**
  * Returns the string representation of a query operation.
@@ -478,7 +729,7 @@ static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
 /**
  * Returns whether the statement has a WHERE or a USING clause.
  *
- * @param stmt  A buffer containing a COM_QUERY.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return True, if the statement has a WHERE or USING clause, false
  *         otherwise.

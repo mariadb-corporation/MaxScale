@@ -119,9 +119,10 @@ This functionality is similar to the [Multi-Master Monitor](MM-Monitor.md)
 functionality. The only difference is that the MySQL monitor will also detect
 traditional Master-Slave topologies.
 
-### `failover`
+### `detect_standalone_master`
 
-Failover mode. This feature takes a boolean parameter is disabled by default.
+Detect standalone master servers. This feature takes a boolean parameter and is
+disabled by default. In MaxScale 2.1.0, this parameter was called `failover`.
 
 This parameter is intended to be used with simple, two node master-slave pairs
 where the failure of the master can be resolved by "promoting" the slave as the
@@ -130,21 +131,40 @@ new master. Normally this is done by using an external agent of some sort
 [MariaDB Replication Manager](https://github.com/tanji/replication-manager)
 or [MHA](https://code.google.com/p/mysql-master-ha/).
 
-The failover mode in mysqlmon is completely passive in the sense that it does
-not modify the cluster or any servers in it. It labels a slave server as a
-master server when there is only one running server. Before a failover can be
-initiated, the following conditions must have been met:
+When the number of running servers in the cluster drops down to one, MaxScale
+cannot be absolutely certain whether the last remaining server is a master or a
+slave. At this point, MaxScale will try to deduce the type of the server by
+looking at the system variables of the server in question.
 
-- The monitor has repeatedly failed to connect to the failed servers
+By default, MaxScale will only attempt to deduce if the server can be used as a
+slave server (controlled by the `detect_stale_slave` parameter). When the
+`detect_standalone_master` mode is enabled, MaxScale will also attempt to deduce
+whether the server can be used as a master server. This is done by checking that
+the server is not in read-only mode and that it is not configured as a slave.
+
+This mode in mysqlmon is completely passive in the sense that it does not modify
+the cluster or any of the servers in it. It only labels the last remaining
+server in a cluster as the master server.
+
+Before a server is labeled as a standalone master, the following conditions must
+have been met:
+
+- Previous attempts to connect to other servers in the cluster have failed,
+  controlled by the `failcount` parameter
+
 - There is only one running server among the monitored servers
-- @@read_only is not enabled on the last running server
 
-When these conditions are met, the monitor assigns the last remaining server the
-master status and puts all other servers into maintenance mode. This is done to
-prevent accidental use of the failed servers if they came back online.
+- The value of the `@@read_only` system variable is set to `OFF`
 
-When the failed servers come back up, the maintenance mode needs to be manually
-cleared once replication has been set up.
+In 2.1.1, the following additional condition was added:
+
+- The last running server is not configured as a slave
+
+If the value of the `allow_cluster_recovery` parameter is set to false, the monitor
+sets all other servers into maintenance mode. This is done to prevent accidental
+use of the failed servers if they came back online. If the failed servers come
+back up, the maintenance mode needs to be manually cleared once replication has
+been set up.
 
 **Note**: A failover will cause permanent changes in the data of the promoted
   server. Only use this feature if you know that the slave servers are capable
@@ -152,17 +172,59 @@ cleared once replication has been set up.
 
 ### `failcount`
 
-Number of failures that must occur on all failed servers before a failover is
-initiated. The default value is 5 failures.
+Number of failures that must occur on all failed servers before a standalone
+server is labeled as a master. The default value is 5 failures.
 
-The monitor will attemt to contact all servers once per monitoring cycle. When
-_failover_ mode is enabled, all of the failed servers must fail _failcount_
-number of connection attemps before a failover is initiated.
+The monitor will attempt to contact all servers once per monitoring cycle. When
+`detect_standalone_master` is enabled, all of the failed servers must fail
+_failcount_ number of connection attempts before the last server is labeled as
+the master.
 
-The formula for calculating the actual number of milliseconds before failover
-can start is `monitor_interval * failcount`. This means that to trigger a
-failover after 10 seconds of master failure with a _monitor_interval_ of 1000
-milliseconds, the value of _failcount_ must be 10.
+The formula for calculating the actual number of milliseconds before the server
+is labeled as the master is `monitor_interval * failcount`.
+
+### `allow_cluster_recovery`
+
+Allow recovery after the cluster has dropped down to one server. This feature
+takes a boolean parameter is enabled by default. This parameter requires that
+`detect_standalone_master` is set to true. In MaxScale 2.1.0, this parameter was
+called `failover_recovery`.
+
+When this parameter is disabled, if the last remaining server is labeled as the
+master, the monitor will set all of the failed servers into maintenance
+mode. When this option is enabled, the failed servers are allowed to rejoin the
+cluster.
+
+This option should be enabled only when MaxScale is used in conjunction with an
+external agent that automatically reintegrates failed servers into the
+cluster. One of these agents is the _replication-manager_ which automatically
+configures the failed servers as new slaves of the current master.
+
+### `journal_max_age`
+
+The maximum journal file age in seconds. The default value is 28800 seconds.
+
+When the MySQL monitor starts, it reads any stored journal files. If the journal
+file is older than the value of _journal_max_age_, it will be removed and the
+monitor starts with no prior knowledge of the servers.
+
+## MySQL Monitor Crash Safety
+
+Starting with MaxScale 2.2.0, the mysqlmon module keeps an on-disk journal of
+the latest server states. This change makes the monitor crash-safe when options
+that introduce states are used. It also allows the monitor to retain stateful
+information when MaxScale is restarted.
+
+Options that introduce states into the monitoring process are the
+`detect_stale_master` and `detect_stale_slave` options, both of which are
+enabled by default.
+
+The default location for the server state journal is in
+`/var/lib/maxscale/<monitor name>/mysqlmon.dat` where `<monitor name>` is the
+name of the monitor section in the configuration file. If MaxScale crashes or is
+shut down in an uncontrolled fashion, the journal will be read when MaxScale is
+started. To skip the recovery process, manually delete the journal file before
+starting MaxScale.
 
 ## Example 1 - Monitor script
 

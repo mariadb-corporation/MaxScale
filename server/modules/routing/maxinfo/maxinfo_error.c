@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -22,6 +22,9 @@
  *
  * @endverbatim
  */
+
+#include "maxinfo.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,14 +32,12 @@
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/router.h>
-#include <maxscale/modules.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/atomic.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
-#include "maxinfo.h"
 #include <maxscale/log_manager.h>
 
 
@@ -56,18 +57,18 @@ maxinfo_send_parse_error(DCB *dcb, char *sql, PARSE_ERROR err)
 
     switch (err)
     {
-        case PARSE_NOERROR:
-            desc = "No error";
-            break;
-        case PARSE_MALFORMED_SHOW:
-            desc = "Expected show <command> [like <pattern>]";
-            break;
-        case PARSE_EXPECTED_LIKE:
-            desc = "Expected LIKE <pattern>";
-            break;
-        case PARSE_SYNTAX_ERROR:
-            desc = "Syntax error";
-            break;
+    case PARSE_NOERROR:
+        desc = "No error";
+        break;
+    case PARSE_MALFORMED_SHOW:
+        desc = "Expected show <command> [like <pattern>]";
+        break;
+    case PARSE_EXPECTED_LIKE:
+        desc = "Expected LIKE <pattern>";
+        break;
+    case PARSE_SYNTAX_ERROR:
+        desc = "Syntax error";
+        break;
     }
 
     len = strlen(sql) + strlen(desc) + 20;

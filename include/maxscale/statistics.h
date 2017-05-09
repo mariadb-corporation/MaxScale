@@ -3,7 +3,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -14,14 +14,6 @@
 
 /**
  * @file statistics.h  - Lock-free statistics gathering
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                 Description
- * 21/01/16     Markus Makela       Initial implementation
- * 15/06/16     Martin Brampton     Frequently used functions inlined
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -22,10 +22,18 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+
 #include <stdio.h>
-#include <maxscale/gwdirs.h>
+#include <errno.h>
+#include <sys/stat.h>
+
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/secrets.h>
+#include <maxscale/random_jkiss.h>
+
+#include "maxscale/secrets.h"
 
 struct option options[] =
 {
@@ -147,6 +155,8 @@ int main(int argc, char **argv)
     mxs_log_set_priority_enabled(LOG_INFO, false);
     mxs_log_set_priority_enabled(LOG_DEBUG, false);
 
+    random_jkiss_init();
+
     size_t len = strlen(password);
 
     if (len > MXS_PASSWORD_MAXLEN)
@@ -162,7 +172,7 @@ int main(int argc, char **argv)
 
     int rval = EXIT_SUCCESS;
 
-    char* enc = encryptPassword(path, used_password);
+    char* enc = encrypt_password(path, used_password);
     if (enc)
     {
         printf("%s\n", enc);

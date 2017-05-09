@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -16,10 +16,10 @@
 
 using maxscale::SpinLockGuard;
 
-LRUStorageMT::LRUStorageMT(const CACHE_STORAGE_CONFIG& config, Storage* pstorage)
-    : LRUStorage(config, pstorage)
+LRUStorageMT::LRUStorageMT(const CACHE_STORAGE_CONFIG& config, Storage* pStorage)
+    : LRUStorage(config, pStorage)
 {
-    spinlock_init(&lock_);
+    spinlock_init(&m_lock);
 
     MXS_NOTICE("Created multi threaded LRU storage.");
 }
@@ -28,11 +28,11 @@ LRUStorageMT::~LRUStorageMT()
 {
 }
 
-LRUStorageMT* LRUStorageMT::create(const CACHE_STORAGE_CONFIG& config, Storage* pstorage)
+LRUStorageMT* LRUStorageMT::create(const CACHE_STORAGE_CONFIG& config, Storage* pStorage)
 {
     LRUStorageMT* plru_storage = NULL;
 
-    MXS_EXCEPTION_GUARD(plru_storage = new LRUStorageMT(config, pstorage));
+    MXS_EXCEPTION_GUARD(plru_storage = new LRUStorageMT(config, pStorage));
 
     return plru_storage;
 }
@@ -40,58 +40,58 @@ LRUStorageMT* LRUStorageMT::create(const CACHE_STORAGE_CONFIG& config, Storage* 
 cache_result_t LRUStorageMT::get_info(uint32_t what,
                                       json_t** ppInfo) const
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return LRUStorage::do_get_info(what, ppInfo);
 }
 
 cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
-                                       GWBUF** ppvalue) const
+                                       GWBUF** ppValue) const
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
-    return do_get_value(key, flags, ppvalue);
+    return do_get_value(key, flags, ppValue);
 }
 
-cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key, const GWBUF* pvalue)
+cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
-    return do_put_value(key, pvalue);
+    return do_put_value(key, pValue);
 }
 
 cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return do_del_value(key);
 }
 
 cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return LRUStorage::do_get_head(pKey, ppHead);
 }
 
 cache_result_t LRUStorageMT::get_tail(CACHE_KEY* pKey, GWBUF** ppTail) const
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return LRUStorage::do_get_tail(pKey, ppTail);
 }
 
 cache_result_t LRUStorageMT::get_size(uint64_t* pSize) const
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return LRUStorage::do_get_size(pSize);
 }
 
 cache_result_t LRUStorageMT::get_items(uint64_t* pItems) const
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return LRUStorage::do_get_items(pItems);
 }

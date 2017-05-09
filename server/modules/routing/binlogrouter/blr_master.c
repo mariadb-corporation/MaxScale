@@ -5,7 +5,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-07-01
  *
@@ -55,6 +55,9 @@
  *
  * @endverbatim
  */
+
+#include "blr.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,18 +66,17 @@
 #include <maxscale/router.h>
 #include <maxscale/atomic.h>
 #include <maxscale/session.h>
-#include "blr.h"
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/buffer.h>
+#include <maxscale/worker.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <maxscale/log_manager.h>
 
-#include <maxscale/rdtsc.h>
 #include <maxscale/thread.h>
 
 /* Temporary requirement for auth data */
@@ -95,7 +97,9 @@ static void blr_log_packet(int priority, char *msg, uint8_t *ptr, int len);
 void blr_master_close(ROUTER_INSTANCE *);
 char *blr_extract_column(GWBUF *buf, int col);
 void poll_fake_write_event(DCB *dcb);
-GWBUF *blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr,
+GWBUF *blr_read_events_from_pos(ROUTER_INSTANCE *router,
+                                unsigned long long pos,
+                                REP_HEADER *hdr,
                                 unsigned long long pos_end);
 static void blr_check_last_master_event(void *inst);
 extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
@@ -104,20 +108,43 @@ static void blr_extract_header_semisync(uint8_t *pkt, REP_HEADER *hdr);
 static int blr_send_semisync_ack (ROUTER_INSTANCE *router, uint64_t pos);
 static int blr_get_master_semisync(GWBUF *buf);
 
-static void blr_terminate_master_replication(ROUTER_INSTANCE *router, uint8_t* ptr, int len);
+static void blr_terminate_master_replication(ROUTER_INSTANCE *router,
+                                             uint8_t* ptr,
+                                             int len);
 void blr_notify_all_slaves(ROUTER_INSTANCE *router);
 extern bool blr_notify_waiting_slave(ROUTER_SLAVE *slave);
+extern bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
+static void blr_register_serverid(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_handle_checksum(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_serveruuid(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_slaveuuid(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_utf8(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_selectversion(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_selectvercomment(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_selecthostname(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_mxw_binlogvars(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_mxw_tables(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_getsemisync(ROUTER_INSTANCE *router, GWBUF *buf);
+static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE *router,
+                                             GWBUF *buf);
+static void blr_register_send_command(ROUTER_INSTANCE *router,
+                                      const char *command,
+                                      unsigned int state);
+static void blr_register_cache_response(ROUTER_INSTANCE *router,
+                                        GWBUF **save_buf,
+                                        const char *save_tag,
+                                        GWBUF *in_buf);
+static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf);
+
+static void worker_cb_start_master(int worker_id, void* data);
+static void blr_start_master_in_main(void* data);
 
 static int keepalive = 1;
-
-/** Transaction-Safety feature */
-typedef enum
-{
-    BLRM_NO_TRANSACTION, /*< No transaction */
-    BLRM_TRANSACTION_START, /*< A transaction is open*/
-    BLRM_COMMIT_SEEN, /*< Received COMMIT event in the current transaction */
-    BLRM_XID_EVENT_SEEN /*< Received XID event of current transaction */
-} master_transaction_t;
 
 /** Master Semi-Sync capability */
 typedef enum
@@ -167,28 +194,46 @@ blr_start_master(void* data)
     router->master_state = BLRM_CONNECTING;
 
     spinlock_release(&router->lock);
+
+    /* Create fake 'client' DCB */
     if ((client = dcb_alloc(DCB_ROLE_INTERNAL, NULL)) == NULL)
     {
-        MXS_ERROR("Binlog router: failed to create DCB for dummy client");
+        MXS_ERROR("failed to create DCB for dummy client");
         return;
     }
     router->client = client;
+
+    /* Fake the client is reading */
     client->state = DCB_STATE_POLLING;  /* Fake the client is reading */
+
+    /* Create MySQL Athentication from configured user/passwd */
     client->data = CreateMySQLAuthData(router->user, router->password, "");
+
+    /* Create a session for dummy client DCB */
     if ((router->session = session_alloc(router->service, client)) == NULL)
     {
-        MXS_ERROR("Binlog router: failed to create session for connection to master");
+        MXS_ERROR("failed to create session for connection to master");
         return;
     }
     client->session = router->session;
-    if ((router->master = dcb_connect(router->service->dbref->server, router->session, BLR_PROTOCOL)) == NULL)
+
+    /**
+     * 'client' is the fake DCB that emulates a client session:
+     * we need to set the poll.thread.id for the "dummy client"
+     */
+    client->session->client_dcb->poll.thread.id = mxs_worker_get_current_id();
+
+    /* Connect to configured master server */
+    if ((router->master = dcb_connect(router->service->dbref->server,
+                                      router->session,
+                                      BLR_PROTOCOL)) == NULL)
     {
         char *name = MXS_MALLOC(strlen(router->service->name) + strlen(" Master") + 1);
 
         if (name)
         {
             sprintf(name, "%s Master", router->service->name);
-            hktask_oneshot(name, blr_start_master, router,
+            hktask_oneshot(name, blr_start_master_in_main, router,
                            BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
             MXS_FREE(name);
         }
@@ -196,13 +241,13 @@ blr_start_master(void* data)
         {
             router->retry_backoff = BLR_MAX_BACKOFF;
         }
-        MXS_ERROR("Binlog router: failed to connect to master server '%s'",
+        MXS_ERROR("failed to connect to master server '%s'",
                   router->service->dbref->server->unique_name);
         return;
     }
     router->master->remote = MXS_STRDUP_A(router->service->dbref->server->name);
 
-    MXS_NOTICE("%s: attempting to connect to master server %s:%d, binlog %s, pos %lu",
+    MXS_NOTICE("%s: attempting to connect to master server [%s]:%d, binlog %s, pos %lu",
                router->service->name, router->service->dbref->server->name,
                router->service->dbref->server->port, router->binlog_name, router->current_pos);
 
@@ -214,10 +259,55 @@ blr_start_master(void* data)
     }
 
     router->master_state = BLRM_AUTHENTICATED;
-    router->master->func.write(router->master, blr_make_query(router->master, "SELECT UNIX_TIMESTAMP()"));
-    router->master_state = BLRM_TIMESTAMP;
+
+    /**
+     * Start the slave protocol registration phase.
+     * This is the first step: SELECT UNIX_TIMESTAMP()
+     *
+     * Next states are handled by blr_master_response()
+     */
+
+    blr_register_send_command(router,
+                              "SELECT UNIX_TIMESTAMP()",
+                              BLRM_TIMESTAMP);
 
     router->stats.n_masterstarts++;
+}
+
+/**
+ * Callback function to be called in the context of the main worker.
+ *
+ * @param worker_id  The id of the worker in whose context the function is called.
+ * @param data       The data to be passed to `blr_start_master`
+ */
+static void worker_cb_start_master(int worker_id, void* data)
+{
+    // This is itended to be called only in the main worker.
+    ss_dassert(worker_id == 0);
+
+    blr_start_master(data);
+}
+
+/**
+ * Start master in the main Worker.
+ *
+ * @param data  Data intended for `blr_start_master`.
+ */
+static void blr_start_master_in_main(void* data)
+{
+    // The master should be connected to in the main worker, so we post it a
+    // message and call `blr_start_master` there.
+
+    MXS_WORKER* worker = mxs_worker_get(0); // The worker running in the main thread.
+    ss_dassert(worker);
+
+    intptr_t arg1 = (intptr_t)worker_cb_start_master;
+    intptr_t arg2 = (intptr_t)data;
+
+    if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+    {
+        MXS_ERROR("Could not post message to main worker.");
+    }
 }
 
 /**
@@ -247,7 +337,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
         if (name)
         {
             sprintf(name, "%s Master", router->service->name);
-            hktask_oneshot(name, blr_start_master, router,
+            hktask_oneshot(name, blr_start_master_in_main, router,
                            BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
             MXS_FREE(name);
         }
@@ -259,7 +349,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
     else
     {
         router->master_state = BLRM_UNCONNECTED;
-        blr_start_master(router);
+        blr_start_master_in_main(router);
     }
 }
 
@@ -337,7 +427,7 @@ blr_master_delayed_connect(ROUTER_INSTANCE *router)
     if (name)
     {
         sprintf(name, "%s Master Recovery", router->service->name);
-        hktask_oneshot(name, blr_start_master, router, 60);
+        hktask_oneshot(name, blr_start_master_in_main, router, 60);
         MXS_FREE(name);
     }
 }
@@ -448,386 +538,11 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         atomic_add(&router->handling_threads, -1);
         return;
     }
-    switch (router->master_state)
-    {
-    case BLRM_TIMESTAMP:
-        // Response to a timestamp message, no need to save this.
-        gwbuf_free(buf);
-        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'SERVER_ID'");
-        router->master_state = BLRM_SERVERID;
-        router->master->func.write(router->master, buf);
-        router->retry_backoff = 1;
-        break;
-    case BLRM_SERVERID:
-        {
-            char *val = blr_extract_column(buf, 2);
 
-            // Response to fetch of master's server-id
-            if (router->saved_master.server_id)
-            {
-                GWBUF_CONSUME_ALL(router->saved_master.server_id);
-            }
-            router->saved_master.server_id = buf;
-            blr_cache_response(router, "serverid", buf);
+    // Start the Slave Protocol registration with Master server
+    blr_start_master_registration(router, buf);
 
-            // set router->masterid from master server-id if it's not set by the config option
-            if (router->masterid == 0)
-            {
-                router->masterid = atoi(val);
-            }
-
-            {
-                char str[BLRM_SET_HEARTBEAT_QUERY_LEN];
-                sprintf(str, "SET @master_heartbeat_period = %lu000000000", router->heartbeat);
-                buf = blr_make_query(router->master, str);
-            }
-            router->master_state = BLRM_HBPERIOD;
-            router->master->func.write(router->master, buf);
-            MXS_FREE(val);
-            break;
-        }
-    case BLRM_HBPERIOD:
-        // Response to set the heartbeat period
-        if (router->saved_master.heartbeat)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.heartbeat);
-        }
-        router->saved_master.heartbeat = buf;
-        blr_cache_response(router, "heartbeat", buf);
-        buf = blr_make_query(router->master, "SET @master_binlog_checksum = @@global.binlog_checksum");
-        router->master_state = BLRM_CHKSUM1;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_CHKSUM1:
-        // Response to set the master binlog checksum
-        if (router->saved_master.chksum1)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.chksum1);
-        }
-        router->saved_master.chksum1 = buf;
-        blr_cache_response(router, "chksum1", buf);
-        buf = blr_make_query(router->master, "SELECT @master_binlog_checksum");
-        router->master_state = BLRM_CHKSUM2;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_CHKSUM2:
-        {
-            char *val = blr_extract_column(buf, 1);
-
-            if (val && strncasecmp(val, "NONE", 4) == 0)
-            {
-                router->master_chksum = false;
-            }
-            if (val)
-            {
-                MXS_FREE(val);
-            }
-            // Response to the master_binlog_checksum, should be stored
-            if (router->saved_master.chksum2)
-            {
-                GWBUF_CONSUME_ALL(router->saved_master.chksum2);
-            }
-            router->saved_master.chksum2 = buf;
-            blr_cache_response(router, "chksum2", buf);
-
-            if (router->mariadb10_compat)
-            {
-                buf = blr_make_query(router->master, "SET @mariadb_slave_capability=4");
-                router->master_state = BLRM_MARIADB10;
-            }
-            else
-            {
-                buf = blr_make_query(router->master, "SELECT @@GLOBAL.GTID_MODE");
-                router->master_state = BLRM_GTIDMODE;
-            }
-            router->master->func.write(router->master, buf);
-            break;
-        }
-    case BLRM_MARIADB10:
-        // Response to the SET @mariadb_slave_capability=4, should be stored
-        if (router->saved_master.mariadb10)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.mariadb10);
-        }
-        router->saved_master.mariadb10 = buf;
-        blr_cache_response(router, "mariadb10", buf);
-        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'SERVER_UUID'");
-        router->master_state = BLRM_MUUID;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_GTIDMODE:
-        // Response to the GTID_MODE, should be stored
-        if (router->saved_master.gtid_mode)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.gtid_mode);
-        }
-        router->saved_master.gtid_mode = buf;
-        blr_cache_response(router, "gtidmode", buf);
-        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'SERVER_UUID'");
-        router->master_state = BLRM_MUUID;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_MUUID:
-        {
-            char *key;
-            char *val = NULL;
-
-            key = blr_extract_column(buf, 1);
-            if (key && strlen(key))
-            {
-                val = blr_extract_column(buf, 2);
-            }
-            if (key)
-            {
-                MXS_FREE(key);
-            }
-
-            /* set the master_uuid from master if not set by the option */
-            if (!router->set_master_uuid)
-            {
-                MXS_FREE(router->master_uuid);
-                router->master_uuid = val;
-            }
-
-            // Response to the SERVER_UUID, should be stored
-            if (router->saved_master.uuid)
-            {
-                GWBUF_CONSUME_ALL(router->saved_master.uuid);
-            }
-            router->saved_master.uuid = buf;
-            blr_cache_response(router, "uuid", buf);
-            sprintf(query, "SET @slave_uuid='%s'", router->uuid);
-            buf = blr_make_query(router->master, query);
-            router->master_state = BLRM_SUUID;
-            router->master->func.write(router->master, buf);
-            break;
-        }
-    case BLRM_SUUID:
-        // Response to the SET @server_uuid, should be stored
-        if (router->saved_master.setslaveuuid)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.setslaveuuid);
-        }
-        router->saved_master.setslaveuuid = buf;
-        blr_cache_response(router, "ssuuid", buf);
-        buf = blr_make_query(router->master, "SET NAMES latin1");
-        router->master_state = BLRM_LATIN1;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_LATIN1:
-        // Response to the SET NAMES latin1, should be stored
-        if (router->saved_master.setnames)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.setnames);
-        }
-        router->saved_master.setnames = buf;
-        blr_cache_response(router, "setnames", buf);
-        buf = blr_make_query(router->master, "SET NAMES utf8");
-        router->master_state = BLRM_UTF8;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_UTF8:
-        // Response to the SET NAMES utf8, should be stored
-        if (router->saved_master.utf8)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.utf8);
-        }
-        router->saved_master.utf8 = buf;
-        blr_cache_response(router, "utf8", buf);
-        buf = blr_make_query(router->master, "SELECT 1");
-        router->master_state = BLRM_SELECT1;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_SELECT1:
-        // Response to the SELECT 1, should be stored
-        if (router->saved_master.select1)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.select1);
-        }
-        router->saved_master.select1 = buf;
-        blr_cache_response(router, "select1", buf);
-        buf = blr_make_query(router->master, "SELECT VERSION()");
-        router->master_state = BLRM_SELECTVER;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_SELECTVER:
-        // Response to SELECT VERSION should be stored
-        if (router->saved_master.selectver)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.selectver);
-        }
-        router->saved_master.selectver = buf;
-        blr_cache_response(router, "selectver", buf);
-        buf = blr_make_query(router->master, "SELECT @@version_comment limit 1");
-        router->master_state = BLRM_SELECTVERCOM;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_SELECTVERCOM:
-        // Response to SELECT @@version_comment should be stored
-        if (router->saved_master.selectvercom)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.selectvercom);
-        }
-        router->saved_master.selectvercom = buf;
-        blr_cache_response(router, "selectvercom", buf);
-        buf = blr_make_query(router->master, "SELECT @@hostname");
-        router->master_state = BLRM_SELECTHOSTNAME;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_SELECTHOSTNAME:
-        // Response to SELECT @@hostname should be stored
-        if (router->saved_master.selecthostname)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.selecthostname);
-        }
-        router->saved_master.selecthostname = buf;
-        blr_cache_response(router, "selecthostname", buf);
-        buf = blr_make_query(router->master, "SELECT @@max_allowed_packet");
-        router->master_state = BLRM_MAP;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_MAP:
-        // Response to SELECT @@max_allowed_packet should be stored
-        if (router->saved_master.map)
-        {
-            GWBUF_CONSUME_ALL(router->saved_master.map);
-        }
-        router->saved_master.map = buf;
-        blr_cache_response(router, "map", buf);
-        buf = blr_make_registration(router);
-        router->master_state = BLRM_REGISTER;
-        router->master->func.write(router->master, buf);
-        break;
-    case BLRM_REGISTER:
-        /* discard master reply to COM_REGISTER_SLAVE */
-        gwbuf_free(buf);
-
-        /* if semisync option is set, check for master semi-sync availability */
-        if (router->request_semi_sync)
-        {
-            MXS_NOTICE("%s: checking Semi-Sync replication capability for master server %s:%d",
-                       router->service->name,
-                       router->service->dbref->server->name,
-                       router->service->dbref->server->port);
-
-            buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'");
-            router->master_state = BLRM_CHECK_SEMISYNC;
-            router->master->func.write(router->master, buf);
-
-            break;
-        }
-        else
-        {
-            /* Continue */
-            router->master_state = BLRM_REQUEST_BINLOGDUMP;
-        }
-    case BLRM_CHECK_SEMISYNC:
-    {
-        /**
-         * This branch could be reached as fallthrough from BLRM_REGISTER
-         * if request_semi_sync option is false
-         */
-         if (router->master_state == BLRM_CHECK_SEMISYNC)
-         {
-             /* Get master semi-sync installed, enabled, disabled */
-             router->master_semi_sync = blr_get_master_semisync(buf);
-
-             /* Discard buffer */
-             gwbuf_free(buf);
-
-             if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
-             {
-                 /* not installed */
-                 MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync capability",
-                            router->service->name,
-                            router->service->dbref->server->name,
-                            router->service->dbref->server->port);
-
-                 /* Continue */
-                 router->master_state = BLRM_REQUEST_BINLOGDUMP;
-
-             }
-             else
-             {
-                 if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
-                 {
-                     /* Installed but not enabled,  right now */
-                     MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync enabled right now, "
-                                "Requesting Semi-Sync Replication",
-                                router->service->name,
-                                router->service->dbref->server->name,
-                                router->service->dbref->server->port);
-                 }
-                 else
-                 {
-                     /* Installed and enabled */
-                     MXS_NOTICE("%s: master server %s:%d has semi_sync enabled, Requesting Semi-Sync Replication",
-                                router->service->name,
-                                router->service->dbref->server->name,
-                                router->service->dbref->server->port);
-                 }
-
-                 buf = blr_make_query(router->master, "SET @rpl_semi_sync_slave = 1");
-                 router->master_state = BLRM_REQUEST_SEMISYNC;
-                 router->master->func.write(router->master, buf);
-
-                 break;
-            }
-        }
-    }
-    case BLRM_REQUEST_SEMISYNC:
-        /**
-         * This branch could be reached as fallthrough from BLRM_REGISTER or BLRM_CHECK_SEMISYNC
-         * if request_semi_sync option is false or master doesn't support semisync or it's not enabled
-         */
-         if (router->master_state == BLRM_REQUEST_SEMISYNC)
-         {
-             /* discard master reply */
-             gwbuf_free(buf);
-
-             /* Continue */
-             router->master_state = BLRM_REQUEST_BINLOGDUMP;
-         }
-
-    case BLRM_REQUEST_BINLOGDUMP:
-        /**
-         * This branch is reached after semi-sync check/request or
-         * just after sending COM_REGISTER_SLAVE if request_semi_sync option is false
-         */
-
-        /* Request now a dump of the binlog file */
-        buf = blr_make_binlog_dump(router);
-
-        router->master_state = BLRM_BINLOGDUMP;
-
-        router->master->func.write(router->master, buf);
-        MXS_NOTICE("%s: Request binlog records from %s at "
-                   "position %lu from master server %s:%d",
-                   router->service->name, router->binlog_name,
-                   router->current_pos,
-                   router->service->dbref->server->name,
-                   router->service->dbref->server->port);
-
-        /* Log binlog router identity */
-        blr_log_identity(router);
-
-        break;
-
-    case BLRM_BINLOGDUMP:
-        /**
-         * Main body, we have received a binlog record from the master
-         */
-        blr_handle_binlog_record(router, buf);
-
-        /**
-         * Set heartbeat check task
-         */
-        snprintf(task_name, BLRM_TASK_NAME_LEN, "%s heartbeat", router->service->name);
-        hktask_add(task_name, blr_check_last_master_event, router, router->heartbeat);
-
-        break;
-    }
-
+    // Check whether re-connect to master is needed
     if (router->reconnect_pending)
     {
         blr_restart_master(router);
@@ -1290,7 +1005,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                  */
 
                 spinlock_acquire(&router->binlog_lock);
-                if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == BLRM_NO_TRANSACTION))
+                if (router->trx_safe == 0 ||
+                    (router->trx_safe &&
+                     router->pending_transaction.state == BLRM_NO_TRANSACTION))
                 {
                     /* no pending transaction: set current_pos to binlog_position */
                     router->binlog_position = router->current_pos;
@@ -1299,57 +1016,79 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 spinlock_release(&router->binlog_lock);
 
                 /**
-                 * Detect transactions in events
+                 * Detect transactions in events if trx_safe is set:
                  * Only complete transactions should be sent to sleves
+                 *
+                 * Now looking for:
+                 * - QUERY_EVENT: BEGIN | START TRANSACTION | COMMIT
+                 * - MariadDB 10 GTID_EVENT
+                 * - XID_EVENT for transactional storage engines
                  */
 
-                /**
-                 * If MariaDB 10 compatibility:
-                 * check for MARIADB10_GTID_EVENT with flags = 0
-                 * This marks the transaction starts instead of
-                 * QUERY_EVENT with "BEGIN"
-                 */
                 if (router->trx_safe)
                 {
-                    if (router->mariadb10_compat)
+                    if (router->mariadb10_compat &&
+                        hdr.event_type == MARIADB10_GTID_EVENT)
                     {
-                        if (hdr.event_type == MARIADB10_GTID_EVENT)
+                        /**
+                         * If MariaDB 10 compatibility:
+                         * check for MARIADB10_GTID_EVENT with flags:
+                         * this is the TRASACTION START detection.
+                         */
+
+                        uint64_t n_sequence;
+                        uint32_t domainid;
+                        unsigned int flags;
+                        n_sequence = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN, 64);
+                        domainid = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8, 32);
+                        flags = *(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8 + 4);
+
+                        if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
                         {
-                            uint64_t n_sequence;
-                            uint32_t domainid;
-                            unsigned int flags;
-                            n_sequence = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN, 64);
-                            domainid = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8, 32);
-                            flags = *(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8 + 4);
+                            spinlock_acquire(&router->binlog_lock);
 
-                            if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
+                            /**
+                             * Now mark the new open transaction
+                             */
+                            if (router->pending_transaction.state > BLRM_NO_TRANSACTION)
                             {
-                                spinlock_acquire(&router->binlog_lock);
-
-                                if (router->pending_transaction > 0)
-                                {
-                                    MXS_ERROR("A MariaDB 10 transaction "
-                                              "is already open "
-                                              "@ %lu (GTID %u-%u-%lu) and "
-                                              "a new one starts @ %lu",
-                                              router->binlog_position,
-                                              domainid, hdr.serverid,
-                                              n_sequence,
-                                              router->current_pos);
-
-                                    // An action should be taken here
-                                }
-
-                                router->pending_transaction = BLRM_TRANSACTION_START;
-
-                                spinlock_release(&router->binlog_lock);
+                                MXS_ERROR("A MariaDB 10 transaction "
+                                          "is already open "
+                                          "@ %lu (GTID %u-%u-%lu) and "
+                                          "a new one starts @ %lu",
+                                          router->binlog_position,
+                                          domainid,
+                                          hdr.serverid,
+                                          n_sequence,
+                                          router->current_pos);
                             }
+
+                            router->pending_transaction.state = BLRM_TRANSACTION_START;
+
+                            /* Handle MariaDB GTID */
+                            if (router->mariadb_gtid)
+                            {
+                                char mariadb_gtid[GTID_MAX_LEN + 1];
+                                snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                                         domainid,
+                                         hdr.serverid,
+                                         n_sequence);
+
+                                MXS_DEBUG("MariaDB GTID received: (%s). Current file %s, pos %lu",
+                                          mariadb_gtid,
+                                          router->binlog_name,
+                                          router->current_pos);
+
+                                /* Save the pending GTID value */
+                                strcpy(router->pending_transaction.gtid, mariadb_gtid);
+                            }
+
+                            router->pending_transaction.start_pos = router->current_pos;
+                            router->pending_transaction.end_pos = 0;
+
+                            spinlock_release(&router->binlog_lock);
                         }
                     }
-
-                    /**
-                     * look for QUERY_EVENT [BEGIN / COMMIT] and XID_EVENT
-                     */
 
                     if (hdr.event_type == QUERY_EVENT)
                     {
@@ -1359,7 +1098,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         var_block_len = ptr[MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2];
 
                         statement_len = len - (MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
-                                        + var_block_len + 1 + db_name_len);
+                                               + var_block_len + 1 + db_name_len);
                         statement_sql = MXS_CALLOC(1, statement_len + 1);
                         MXS_ABORT_IF_NULL(statement_sql);
                         memcpy(statement_sql,
@@ -1372,25 +1111,25 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         /* Check for BEGIN (it comes for START TRANSACTION too) */
                         if (strncmp(statement_sql, "BEGIN", 5) == 0)
                         {
-                            if (router->pending_transaction > BLRM_NO_TRANSACTION)
+                            if (router->pending_transaction.state > BLRM_NO_TRANSACTION)
                             {
                                 MXS_ERROR("A transaction is already open "
                                           "@ %lu and a new one starts @ %lu",
                                           router->binlog_position,
                                           router->current_pos);
 
-                                // An action should be taken here
                             }
 
-                            router->pending_transaction = BLRM_TRANSACTION_START;
+                            router->pending_transaction.state = BLRM_TRANSACTION_START;
+                            router->pending_transaction.start_pos = router->current_pos;
+                            router->pending_transaction.end_pos = 0;
                         }
 
                         /* Check for COMMIT in non transactional store engines */
                         if (strncmp(statement_sql, "COMMIT", 6) == 0)
                         {
-                            router->pending_transaction = BLRM_COMMIT_SEEN;
+                            router->pending_transaction.state = BLRM_COMMIT_SEEN;
                         }
-
                         spinlock_release(&router->binlog_lock);
 
                         MXS_FREE(statement_sql);
@@ -1401,9 +1140,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     {
                         spinlock_acquire(&router->binlog_lock);
 
-                        if (router->pending_transaction)
+                        if (router->pending_transaction.state >= BLRM_TRANSACTION_START)
                         {
-                            router->pending_transaction = BLRM_XID_EVENT_SEEN;
+                            router->pending_transaction.state = BLRM_XID_EVENT_SEEN;
                         }
                         spinlock_release(&router->binlog_lock);
                     }
@@ -1464,7 +1203,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         router->stats.n_heartbeats++;
 
-                        if (router->pending_transaction)
+                        if (router->pending_transaction.state > BLRM_NO_TRANSACTION)
                         {
                             router->stats.lastReply = time(0);
                         }
@@ -1511,7 +1250,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                             MXS_DEBUG("%s: binlog record in file %s, pos %lu has "
                                       "SEMI_SYNC_ACK_REQ and needs a Semi-Sync ACK packet to "
-                                      "be sent to the master server %s:%d",
+                                      "be sent to the master server [%s]:%d",
                                       router->service->name, router->binlog_name,
                                       router->current_pos,
                                       router->service->dbref->server->name,
@@ -1531,7 +1270,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         spinlock_acquire(&router->binlog_lock);
 
-                        if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == BLRM_NO_TRANSACTION))
+                        if (router->trx_safe == 0 ||
+                            (router->trx_safe &&
+                             router->pending_transaction.state == BLRM_NO_TRANSACTION))
                         {
                             router->binlog_position = router->current_pos;
                             router->current_safe_event = router->last_event_pos;
@@ -1547,23 +1288,45 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                              * If transaction is closed:
                              *
                              * 1) Notify clients events can be read
-                             *  from router->binlog_position
-                             * 2) set router->binlog_position to
+                             *    from router->binlog_position
+                             * 2) Update last seen MariaDB 10 GTID
+                             * 3) set router->binlog_position to
                              *    router->current_pos
                              */
 
-                            if (router->pending_transaction > BLRM_TRANSACTION_START)
+                            if (router->pending_transaction.state > BLRM_TRANSACTION_START)
                             {
+                                if (router->mariadb10_compat)
+                                {
+                                    /**
+                                     * The transaction has been saved.
+                                     * this poins to end of binlog:
+                                     * i.e. the position of a new event
+                                     */
+                                    router->pending_transaction.end_pos = router->current_pos;
+
+                                    if (router->mariadb10_compat &&
+                                        router->mariadb_gtid)
+                                    {
+                                        /* Update last seen MariaDB GTID */
+                                        strcpy(router->last_mariadb_gtid, router->pending_transaction.gtid);
+                                        /**
+                                         * Save MariaDB GTID into repo
+                                         */
+                                        blr_save_mariadb_gtid(router);
+                                    }
+                                }
+
                                 spinlock_release(&router->binlog_lock);
 
                                 /* Notify clients events can be read */
                                 blr_notify_all_slaves(router);
 
-                                /* update binlog_position and set pending to 0 */
+                                /* update binlog_position and set pending to NO_TRX */
                                 spinlock_acquire(&router->binlog_lock);
 
                                 router->binlog_position = router->current_pos;
-                                router->pending_transaction = BLRM_NO_TRANSACTION;
+                                router->pending_transaction.state = BLRM_NO_TRANSACTION;
 
                                 spinlock_release(&router->binlog_lock);
                             }
@@ -1933,11 +1696,10 @@ GWBUF
             break;
         case -1:
             {
-                char err_msg[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Reading saved events: failed to read binlog "
                           "file %s at position %llu"
                           " (%s).", router->binlog_name,
-                          pos, strerror_r(errno, err_msg, sizeof(err_msg)));
+                          pos, mxs_strerror(errno));
 
                 if (errno == EBADF)
                 {
@@ -1993,11 +1755,10 @@ GWBUF
     {
         if (n == -1)
         {
-            char err_msg[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Reading saved events: the event at %llu in %s. "
                       "%s, expected %d bytes.",
                       pos, router->binlog_name,
-                      strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - 19);
+                      mxs_strerror(errno), hdr->event_size - 19);
         }
         else
         {
@@ -2143,7 +1904,7 @@ blr_check_heartbeat(ROUTER_INSTANCE *router)
     {
         if ((t_now - router->stats.lastReply) > (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME))
         {
-            MXS_ERROR("No event received from master %s:%d in heartbeat period (%lu seconds), "
+            MXS_ERROR("No event received from master [%s]:%d in heartbeat period (%lu seconds), "
                       "last event (%s %d) received %lu seconds ago. Assuming connection is dead "
                       "and reconnecting.",
                       router->service->dbref->server->name,
@@ -2245,12 +2006,11 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
     if ((n = pwrite(router->binlog_fd, buf, data_len,
                     router->last_written)) != data_len)
     {
-        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, router->binlog_position,
                   router->binlog_name,
-                  strerror_r(errno, err_msg, sizeof(err_msg)));
+                  mxs_strerror(errno));
 
         /* Remove any partial event that was written */
         if (ftruncate(router->binlog_fd, router->binlog_position))
@@ -2258,7 +2018,7 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
                       router->service->name, router->last_written,
                       router->binlog_name,
-                      strerror_r(errno, err_msg, sizeof(err_msg)));
+                      mxs_strerror(errno));
         }
         return 0;
     }
@@ -2308,8 +2068,8 @@ bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first
     }
     else
     {
-        MXS_ERROR("failed to allocate %ld bytes of memory when writing an"
-                  " event.", datalen + MYSQL_HEADER_LEN);
+        MXS_ERROR("failed to allocate %u bytes of memory when writing an "
+                  "event.", datalen + MYSQL_HEADER_LEN);
         rval = false;
     }
     return rval;
@@ -2346,7 +2106,7 @@ bool blr_send_event(blr_thread_role_t role,
                   "the event has already been sent by thread %lu in the role of %s. "
                   "%u bytes buffered for writing in DCB %p. %lu events received from master.",
                   slave->dcb->remote,
-                  ntohs((slave->dcb->ipv4).sin_port),
+                  dcb_get_port(slave->dcb),
                   slave->serverid,
                   binlog_name,
                   binlog_pos,
@@ -2407,9 +2167,9 @@ bool blr_send_event(blr_thread_role_t role,
     }
     else
     {
-        MXS_ERROR("Failed to send an event of %u bytes to slave at %s:%d.",
+        MXS_ERROR("Failed to send an event of %u bytes to slave at [%s]:%d.",
                   hdr->event_size, slave->dcb->remote,
-                  ntohs(slave->dcb->ipv4.sin_port));
+                  dcb_get_port(slave->dcb));
     }
     return rval;
 }
@@ -2538,11 +2298,16 @@ blr_get_master_semisync(GWBUF *buf)
     }
     free(key);
 
-    if (val) {
+    if (val)
+    {
         if (strncasecmp(val, "ON", 4) == 0)
+        {
             master_semisync = MASTER_SEMISYNC_ENABLED;
+        }
         else
+        {
             master_semisync = MASTER_SEMISYNC_DISABLED;
+        }
     }
     free(val);
 
@@ -2578,5 +2343,768 @@ void blr_notify_all_slaves(ROUTER_INSTANCE *router)
     if (notified > 0)
     {
         MXS_DEBUG("Notified %d slaves about new data.", notified);
+    }
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles previous reply from Master and sends
+ * SET @master_heartbeat_period to master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    char query[BLRM_SET_HEARTBEAT_QUERY_LEN];
+    char *val = blr_extract_column(buf, 2);
+
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.server_id,
+                                "serverid",
+                                buf);
+
+    /**
+     * Set router->masterid from master server-id
+     * if it's not set by the config option
+     */
+    if (router->masterid == 0)
+    {
+        router->masterid = atoi(val);
+    }
+    MXS_FREE(val);
+
+    // Prepare new registration message
+    sprintf(query,
+            "SET @master_heartbeat_period = %lu000000000",
+            router->heartbeat);
+    blr_register_send_command(router, query, BLRM_HBPERIOD);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles previous reply from Master and sends
+ * SET @master_binlog_checksum to master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.heartbeat,
+                                "heartbeat",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SET @master_binlog_checksum ="
+                              " @@global.binlog_checksum",
+                              BLRM_CHKSUM1);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles previous reply from Master and sends
+ * SELECT @master_binlog_checksum to master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.chksum1,
+                                "chksum1",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SELECT @master_binlog_checksum",
+                              BLRM_CHKSUM2);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles the reply from Master which
+ * contains the Binlog checksum algorithm in use:
+ * NONE or CRC32.
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_handle_checksum(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    char *val = blr_extract_column(buf, 1);
+
+    if (val && strncasecmp(val, "NONE", 4) == 0)
+    {
+        router->master_chksum = false;
+    }
+    if (val)
+    {
+        MXS_FREE(val);
+    }
+
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.chksum2,
+                                "chksum2",
+                                buf);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles the reply from Master and
+ * sends SHOW VARIABLES LIKE 'SERVER_UUID' to MySQL 5.6/5.7 Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_serveruuid(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.gtid_mode,
+                                "gtidmode",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SHOW VARIABLES LIKE 'SERVER_UUID'",
+                              BLRM_MUUID);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles the SERVER_UUID reply from MySQL 5.6/5.7 Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_slaveuuid(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    char *key;
+    char *val = NULL;
+    char query[BLRM_MASTER_REGITRATION_QUERY_LEN + 1];
+
+    key = blr_extract_column(buf, 1);
+    if (key && strlen(key))
+    {
+        val = blr_extract_column(buf, 2);
+    }
+    if (key)
+    {
+        MXS_FREE(key);
+    }
+
+    /* set the master_uuid from master if not set by the option */
+    if (!router->set_master_uuid)
+    {
+        MXS_FREE(router->master_uuid);
+        router->master_uuid = val;
+    }
+
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.uuid,
+                                "uuid",
+                                buf);
+    // New registration message
+    sprintf(query, "SET @slave_uuid='%s'", router->uuid);
+    blr_register_send_command(router, query, BLRM_SUUID);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Sends SET NAMES utf8 to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_utf8(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.setnames,
+                                "setnames",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SET NAMES utf8",
+                              BLRM_UTF8);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles previous reply from Master and
+ * sends SELECT VERSION() to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_selectversion(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.select1,
+                                "select1",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SELECT VERSION()",
+                              BLRM_SELECTVER);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles previous reply from Master and
+ * sends SELECT @@version_comment to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_selectvercomment(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.selectver,
+                                "selectver",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SELECT @@version_comment limit 1",
+                              BLRM_SELECTVERCOM);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles previous reply from Master and
+ * sends SELECT @@version_comment to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_selecthostname(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.selectvercom,
+                                "selectvercom",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SELECT @@hostname",
+                              BLRM_SELECTHOSTNAME);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handles previous reply from Master and
+ * sends SELECT @@max_allowed_packet to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.selecthostname,
+                                "selecthostname",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SELECT @@max_allowed_packet",
+                              BLRM_MAP);
+}
+
+/**
+ * Slave Protocol registration to Master (MaxWell compatibility):
+ *
+ * Handles previous reply from Master and
+ * sends SELECT IF(@@global.log_bin ...) to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_mxw_binlogvars(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.server_vars,
+                                "server_vars",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "SELECT IF(@@global.log_bin, 'ON', 'OFF'), "
+                              "@@global.binlog_format, @@global.binlog_row_image",
+                              BLRM_BINLOG_VARS);
+}
+
+/**
+ * Slave Protocol registration to Master (MaxWell compatibility):
+ *
+ * Handles previous reply from Master and
+ * sends select @@lower_case_table_names to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_mxw_tables(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.binlog_vars,
+                                "binlog_vars",
+                                buf);
+    // New registration message
+    blr_register_send_command(router,
+                              "select @@lower_case_table_names",
+                              BLRM_LOWER_CASE_TABLES);
+}
+
+/**
+ * Slave protocol registration: check Master SEMI-SYNC replication
+ *
+ * Ask master server for Semi-Sync replication capability
+ *
+ * Note: Master server must have rpl_semi_sync_master plugin installed
+ * in order to start the Semi-Sync replication
+ *
+ * @param router    Current router instance
+ * @param buf       The GWBUF to fill with new request
+ */
+static void blr_register_getsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    MXS_NOTICE("%s: checking Semi-Sync replication capability for master server [%s]:%d",
+               router->service->name,
+               router->service->dbref->server->name,
+               router->service->dbref->server->port);
+
+    // New registration message
+    blr_register_send_command(router,
+                              "SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'",
+                              BLRM_CHECK_SEMISYNC);
+}
+
+/**
+ * Slave protocol registration: handle SEMI-SYNC replication
+ *
+ * Get master semisync capability
+ * and if installed start the SEMI-SYNC replication
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ * @return          True is semi-sync can be started or false
+ */
+static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    if (router->master_state == BLRM_CHECK_SEMISYNC)
+    {
+        /* Get master semi-sync installed, enabled, disabled */
+        router->master_semi_sync = blr_get_master_semisync(buf);
+
+        /* Discard buffer */
+        gwbuf_free(buf);
+
+        if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
+        {
+            /* not installed */
+            MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync capability",
+                       router->service->name,
+                       router->service->dbref->server->name,
+                       router->service->dbref->server->port);
+
+            /* Continue without semisync */
+            router->master_state = BLRM_REQUEST_BINLOGDUMP;
+
+            return false;
+        }
+        else
+        {
+            if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
+            {
+                /* Installed but not enabled, right now */
+                MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync"
+                           " enabled right now, Request Semi-Sync Replication anyway",
+                           router->service->name,
+                           router->service->dbref->server->name,
+                           router->service->dbref->server->port);
+            }
+            else
+            {
+                /* Installed and enabled */
+                MXS_NOTICE("%s: master server [%s]:%d has semi_sync enabled,"
+                           " Requesting Semi-Sync Replication",
+                           router->service->name,
+                           router->service->dbref->server->name,
+                           router->service->dbref->server->port);
+            }
+
+            /* Request semisync */
+            blr_register_send_command(router,
+                                      "SET @rpl_semi_sync_slave = 1",
+                                      BLRM_REQUEST_SEMISYNC);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Slave Protocol registration to Master (MaxWell compatibility):
+ *
+ * Handles previous reply from Master and
+ * sets the state to BLRM_REGISTER_READY
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE *router,
+                                             GWBUF *buf)
+{
+    // Response from master should be stored
+    blr_register_cache_response(router,
+                                &router->saved_master.lower_case_tables,
+                                "lower_case_tables",
+                                buf);
+    // Set the new state
+    router->master_state = BLRM_REGISTER_READY;
+}
+
+/**
+ * Slave Protocol registration to Master: generic send command
+ *
+ * Sends a SQL statement to Master server
+ *
+ * @param router     Current router instance
+ * @param command    The SQL command to send
+ * @param state      The next registration state value
+ */
+static void blr_register_send_command(ROUTER_INSTANCE *router,
+                                      const char *command,
+                                      unsigned int state)
+{
+    // Create MySQL protocol packet
+    GWBUF *buf = blr_make_query(router->master, (char *)command);
+    // Set the next registration phase state
+    router->master_state = state;
+    // Send the packet
+    router->master->func.write(router->master, buf);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Saves previous reply from Master
+ *
+ * @param router      Current router instance
+ * @param save_buf    The saved GWBUF to update
+ * @param save_tag    Tag name for disk writing
+ * @param in_buf      GWBUF with server reply to previous
+ *                    registration command
+ */
+static void blr_register_cache_response(ROUTER_INSTANCE *router,
+                                        GWBUF **save_buf,
+                                        const char *save_tag,
+                                        GWBUF *in_buf)
+{
+    if (*save_buf)
+    {
+        gwbuf_free(*save_buf);
+    }
+    // New value in memory
+    *save_buf = in_buf;
+    // New value saved to disk
+    blr_cache_response(router, (char *)save_tag, in_buf);
+}
+
+/**
+ * Slave Protocol registration to Master:
+ *
+ * Handling the registration process:
+ *
+ * Note: some phases are specific to MySQL 5.6/5.7,
+ * others to MariaDB10.
+ *
+ * @param router      Current router instance
+ * @param in_buf      GWBUF with previous phase server response
+ */
+static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    char task_name[BLRM_TASK_NAME_LEN + 1] = "";
+
+    switch (router->master_state)
+    {
+    case BLRM_TIMESTAMP:
+        /**
+         * Previous state was BLRM_TIMESTAMP
+         * No need to save the server reply
+         */
+        gwbuf_free(buf);
+        blr_register_send_command(router,
+                                  "SHOW VARIABLES LIKE 'SERVER_ID'",
+                                  BLRM_SERVERID);
+        router->retry_backoff = 1;
+        break;
+    case BLRM_SERVERID:
+        blr_register_heartbeat(router, buf);
+        break;
+    case BLRM_HBPERIOD:
+        blr_register_setchecksum(router, buf);
+        break;
+    case BLRM_CHKSUM1:
+        blr_register_getchecksum(router, buf);
+        break;
+    case BLRM_CHKSUM2:
+        // Set router->master_chksum based on server reply
+        blr_register_handle_checksum(router, buf);
+        // Next state is BLRM_MARIADB10 or BLRM_GTIDMODE
+        {
+            unsigned int state = router->mariadb10_compat ?
+                                 BLRM_MARIADB10 :
+                                 BLRM_GTIDMODE;
+            const char *command = router->mariadb10_compat ?
+                                  "SET @mariadb_slave_capability=4" :
+                                  "SELECT @@GLOBAL.GTID_MODE";
+
+            blr_register_send_command(router, command, state);
+        }
+        break;
+    case BLRM_MARIADB10:
+        // Save server response
+        blr_register_cache_response(router,
+                                    &router->saved_master.mariadb10,
+                                    "mariadb10",
+                                    buf);
+        // Skip SERVER_UUID fetch and SET slave UUID
+        blr_register_send_command(router,
+                                  "SET NAMES latin1",
+                                  BLRM_LATIN1);
+        break;
+    case BLRM_GTIDMODE: // MySQL 5.6/7 only
+        blr_register_serveruuid(router, buf);
+        break;
+    case BLRM_MUUID:    // MySQL 5.6/7 only
+        blr_register_slaveuuid(router, buf);
+        break;
+    case BLRM_SUUID:    // MySQL 5.6/7 only
+        // Save server response
+        blr_register_cache_response(router,
+                                    &router->saved_master.setslaveuuid,
+                                    "ssuuid",
+                                     buf);
+        blr_register_send_command(router,
+                                  "SET NAMES latin1",
+                                  BLRM_LATIN1);
+        break;
+    case BLRM_LATIN1:
+        blr_register_utf8(router, buf);
+        break;
+    case BLRM_UTF8:
+        // Save server response
+        blr_register_cache_response(router,
+                                    &router->saved_master.utf8,
+                                    "utf8",
+                                    buf);
+        // Next state is MAXWELL BLRM_RESULTS_CHARSET or
+        // BLRM_SELECT1
+        {
+            unsigned int state = router->maxwell_compat ?
+                                 BLRM_RESULTS_CHARSET :
+                                 BLRM_SELECT1;
+            const char *command = router->maxwell_compat ?
+                                  "SET character_set_results = NULL" :
+                                  "SELECT 1";
+
+            blr_register_send_command(router, command, state);
+            break;
+        }
+    case BLRM_RESULTS_CHARSET:
+        gwbuf_free(buf); // Discard server reply, don't save it
+        blr_register_send_command(router,
+                                  MYSQL_CONNECTOR_SQL_MODE_QUERY,
+                                  BLRM_SQL_MODE);
+        break;
+    case BLRM_SQL_MODE:
+        gwbuf_free(buf); // Discard server reply, don't save it
+        blr_register_send_command(router,
+                                  "SELECT 1",
+                                  BLRM_SELECT1);
+        break;
+    case BLRM_SELECT1:
+        blr_register_selectversion(router, buf);
+        break;
+    case BLRM_SELECTVER:
+        blr_register_selectvercomment(router, buf);
+        break;
+    case BLRM_SELECTVERCOM:
+        blr_register_selecthostname(router, buf);
+        break;
+    case BLRM_SELECTHOSTNAME:
+        blr_register_selectmap(router, buf);
+        break;
+    case BLRM_MAP:
+        // Save server response
+        blr_register_cache_response(router,
+                                    &router->saved_master.map,
+                                    "map",
+                                    buf);
+        if (router->maxwell_compat)
+        {
+            blr_register_send_command(router,
+                                      MYSQL_CONNECTOR_SERVER_VARS_QUERY,
+                                      BLRM_SERVER_VARS);
+            break;
+        }
+        else
+        {
+            // Continue: ready for the registration, nothing to write/read
+            router->master_state = BLRM_REGISTER_READY;
+        }
+    case BLRM_SERVER_VARS:
+        /**
+         * This branch could be reached as fallthrough from BLRM_MAP
+         * with new state BLRM_REGISTER_READY
+         * Go ahead if maxwell_compat is not set
+         */
+        if (router->master_state == BLRM_SERVER_VARS && router->maxwell_compat)
+        {
+            blr_register_mxw_binlogvars(router, buf);
+            break;
+        }
+    case BLRM_BINLOG_VARS:
+        /**
+         * This branch could be reached as fallthrough from BLRM_MAP
+         * with new state BLRM_REGISTER_READY.
+         * Go ahead if maxwell_compat is not set
+         */
+        if (router->master_state == BLRM_BINLOG_VARS && router->maxwell_compat)
+        {
+            blr_register_mxw_tables(router, buf);
+            break;
+        }
+    case BLRM_LOWER_CASE_TABLES:
+        /**
+         * This branch could be reached as fallthrough from BLRM_MAP
+         * with new state BLRM_REGISTER_READY.
+         * Go ahead if maxwell_compat is not set
+         */
+        if (router->master_state == BLRM_LOWER_CASE_TABLES &&
+            router->maxwell_compat)
+        {
+            blr_register_mxw_handlelowercase(router, buf);
+            // Continue: ready for the registration, nothing to write/read
+        }
+    case BLRM_REGISTER_READY:
+        // Prepare Slave registration request: COM_REGISTER_SLAVE
+        buf = blr_make_registration(router);
+        // Set new state
+        router->master_state = BLRM_REGISTER;
+        // Send the packet
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_REGISTER:
+        /* discard master reply to COM_REGISTER_SLAVE */
+        gwbuf_free(buf);
+
+        /* if semisync option is set, check for master semi-sync availability */
+        if (router->request_semi_sync)
+        {
+            blr_register_getsemisync(router, buf);
+            break;
+        }
+        else
+        {
+            /* Continue */
+            router->master_state = BLRM_REQUEST_BINLOGDUMP;
+        }
+    case BLRM_CHECK_SEMISYNC:
+        /**
+         * This branch could be reached as fallthrough from BLRM_REGISTER
+         * if request_semi_sync option is false
+         */
+        if (router->master_state == BLRM_CHECK_SEMISYNC)
+        {
+           if (blr_register_setsemisync(router, buf))
+           {
+               break;
+           }
+        }
+    case BLRM_REQUEST_SEMISYNC:
+        /**
+         * This branch could be reached as fallthrough from BLRM_REGISTER or BLRM_CHECK_SEMISYNC
+         * if request_semi_sync option is false or master doesn't support semisync or it's not enabled
+         */
+        if (router->master_state == BLRM_REQUEST_SEMISYNC)
+        {
+            /* discard master reply */
+            gwbuf_free(buf);
+
+            /* Continue */
+            router->master_state = BLRM_REQUEST_BINLOGDUMP;
+        }
+    case BLRM_REQUEST_BINLOGDUMP:
+        /**
+         * This branch is reached after semi-sync check/request or
+         * just after sending COM_REGISTER_SLAVE if request_semi_sync option is false
+         */
+
+        /* Request now a dump of the binlog file: COM_BINLOG_DUMP */
+        buf = blr_make_binlog_dump(router);
+        router->master_state = BLRM_BINLOGDUMP;
+        router->master->func.write(router->master, buf);
+
+        MXS_NOTICE("%s: Request binlog records from %s at "
+                   "position %lu from master server [%s]:%d",
+                   router->service->name, router->binlog_name,
+                   router->current_pos,
+                   router->service->dbref->server->name,
+                   router->service->dbref->server->port);
+
+        /* Log binlog router identity */
+        blr_log_identity(router);
+        break;
+    case BLRM_BINLOGDUMP:
+        /**
+         * Main body, we have received a binlog record from the master
+         */
+        blr_handle_binlog_record(router, buf);
+
+        /**
+         * Set heartbeat check task
+         */
+        snprintf(task_name, BLRM_TASK_NAME_LEN, "%s heartbeat", router->service->name);
+        hktask_add(task_name, blr_check_last_master_event, router, router->heartbeat);
+
+        break;
     }
 }
