@@ -131,3 +131,17 @@ json_t* mxs_json_pointer(json_t* json, const char* json_ptr)
 {
     return mxs_json_pointer_internal(json, json_ptr);
 }
+
+json_t* mxs_json_self_link(const char* host, const char* path, const char* id)
+{
+    json_t* links = json_object();
+
+    string self = host;
+    self += "/";
+    self += path;
+    self += "/";
+    self += id;
+    json_object_set_new(links, CN_SELF, json_string(self.c_str()));
+
+    return links;
+}

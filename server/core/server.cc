@@ -1361,16 +1361,6 @@ bool server_is_mxs_service(const SERVER *server)
     return rval;
 }
 
-json_t* server_self_link(const char* host)
-{
-    json_t* links = json_object();
-    string self = host;
-    self += "/servers/";
-    json_object_set_new(links, CN_SELF, json_string(self.c_str()));
-
-    return links;
-}
-
 static json_t* server_json_attributes(const SERVER* server)
 {
     /** Resource attributes */
@@ -1468,16 +1458,18 @@ static json_t* server_to_json_data(const SERVER* server, const char* host)
     json_object_set_new(rel, CN_SERVICES, service_relations_to_server(server, host));
     json_object_set_new(rel, CN_MONITORS, monitor_relations_to_server(server, host));
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
-
     /** Attributes */
     json_object_set_new(rval, CN_ATTRIBUTES, server_json_attributes(server));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, server->unique_name));
 
     return rval;
 }
 
 json_t* server_to_json(const SERVER* server, const char* host)
 {
-    return mxs_json_resource(host, MXS_JSON_API_SERVERS, server_to_json_data(server, host));
+    string self = MXS_JSON_API_SERVERS;
+    self += server->unique_name;
+    return mxs_json_resource(host, self.c_str(), server_to_json_data(server, host));
 }
 
 json_t* server_list_to_json(const char* host)

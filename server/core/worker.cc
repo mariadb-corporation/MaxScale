@@ -814,6 +814,7 @@ public:
         json_object_set_new(json, CN_ID, json_string(ss.str().c_str()));
         json_object_set_new(json, CN_TYPE, json_string(CN_THREADS));
         json_object_set_new(json, CN_ATTRIBUTES, attr);
+        json_object_set_new(json, CN_LINKS, mxs_json_self_link(m_host, CN_THREADS, ss.str().c_str()));
 
         ss_dassert((size_t)idx < m_data.size());
         m_data[idx] = json;
@@ -833,7 +834,9 @@ public:
 
     json_t* resource(int id)
     {
-        return mxs_json_resource(m_host, MXS_JSON_API_THREADS, m_data[id]);
+        stringstream self;
+        self << MXS_JSON_API_THREADS << id;
+        return mxs_json_resource(m_host, self.str().c_str(), m_data[id]);
     }
 
 private:

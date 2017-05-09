@@ -2575,6 +2575,7 @@ json_t* service_json_data(const SERVICE* service, const char* host)
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVICES));
     json_object_set_new(rval, CN_ATTRIBUTES, service_attributes(service));
     json_object_set_new(rval, CN_RELATIONSHIPS, service_relationships(service, host));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVICES, service->name));
 
     spinlock_release(&service->spin);
 
@@ -2583,7 +2584,9 @@ json_t* service_json_data(const SERVICE* service, const char* host)
 
 json_t* service_to_json(const SERVICE* service, const char* host)
 {
-    return mxs_json_resource(host, MXS_JSON_API_SERVICES, service_json_data(service, host));
+    string self = MXS_JSON_API_SERVICES;
+    self += service->name;
+    return mxs_json_resource(host, self.c_str(), service_json_data(service, host));
 }
 
 json_t* service_listeners_to_json(const SERVICE* service, const char* host)

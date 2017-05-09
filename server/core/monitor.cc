@@ -1544,13 +1544,16 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, monitor->name));
 
     return rval;
 }
 
 json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
 {
-    return mxs_json_resource(host, MXS_JSON_API_MONITORS, monitor_json_data(monitor, host));
+    string self = MXS_JSON_API_MONITORS;
+    self += monitor->name;
+    return mxs_json_resource(host, self.c_str(), monitor_json_data(monitor, host));
 }
 
 json_t* monitor_list_to_json(const char* host)

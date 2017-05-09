@@ -453,6 +453,7 @@ static json_t* module_json_data(const LOADED_MODULE *mod, const char* host)
 
     json_object_set_new(attr, CN_PARAMETERS, params);
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
+    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, mod->module));
 
     return obj;
 }

@@ -526,13 +526,16 @@ json_t* filter_json_data(const MXS_FILTER_DEF* filter, const char* host)
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_FILTERS, filter->name));
 
     return rval;
 }
 
 json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
 {
-    return mxs_json_resource(host, MXS_JSON_API_FILTERS, filter_json_data(filter, host));
+    string self = MXS_JSON_API_FILTERS;
+    self += filter->name;
+    return mxs_json_resource(host, self.c_str(), filter_json_data(filter, host));
 }
 
 json_t* filter_list_to_json(const char* host)

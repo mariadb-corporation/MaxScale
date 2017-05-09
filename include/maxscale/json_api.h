@@ -66,6 +66,19 @@ json_t* mxs_json_relationship(const char* host, const char* endpoint);
 void mxs_json_add_relation(json_t* rel, const char* id, const char* type);
 
 /**
+ * @brief Create self link object
+ *
+ * The self link points to the object itself.
+ *
+ * @param host Hostname of this server
+ * @param path Base path to the resource collection
+ * @param id   The identified of this resource
+ *
+ * @return New self link object
+ */
+json_t* mxs_json_self_link(const char* host, const char* path, const char* id);
+
+/**
  * @brief Return value at provided JSON Pointer
  *
  * @param json     JSON object

@@ -1118,7 +1118,7 @@ json_t* session_json_data(const MXS_SESSION *session, const char *host)
 
     if (session->client_dcb->user)
     {
-        json_object_set_new(attr, "user", json_string(session->client_dcb->user));
+        json_object_set_new(attr, CN_USER, json_string(session->client_dcb->user));
     }
 
     if (session->client_dcb->remote)
@@ -1141,14 +1141,17 @@ json_t* session_json_data(const MXS_SESSION *session, const char *host)
         json_object_set_new(attr, "idle", json_real(idle));
     }
 
-    json_object_set_new(data, "attributes", attr);
+    json_object_set_new(data, CN_ATTRIBUTES, attr);
+    json_object_set_new(data, CN_LINKS, mxs_json_self_link(host, CN_SESSIONS, ss.str().c_str()));
 
     return data;
 }
 
 json_t* session_to_json(const MXS_SESSION *session, const char *host)
 {
-    return mxs_json_resource(host, MXS_JSON_API_SESSIONS, session_json_data(session, host));
+    stringstream ss;
+    ss << MXS_JSON_API_SESSIONS << session->ses_id;
+    return mxs_json_resource(host, ss.str().c_str(), session_json_data(session, host));
 }
 
 struct SessionListData
