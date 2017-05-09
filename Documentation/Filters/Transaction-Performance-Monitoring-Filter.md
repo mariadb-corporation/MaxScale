@@ -47,7 +47,7 @@ filename=/tmp/SqlQueryLog
 
 ### Source
 
-The  optional  `source`  parameter  defines  an  address  that  is  used 
+The  optional  `source`  parameter  defines  an  address  that  is  used
 to  match  against  the  address  from  which  the  client  connection
 to  MaxScale  originates.  Only  sessions  that  originate  from  this
 address  will  be  logged.
@@ -95,11 +95,11 @@ disabled when the router receives the character '0' from this named pipe.
 The default named pipe is **`/tmp/tpmfilter`** and logging is **disabled** by default.
 
 	named_pipe=/tmp/tpmfilter
-	
+
 For example, the following command enables the logging:
 
 	$ echo '1' > /tmp/tpmfilter
-	
+
 Similarly, the following command disables the logging:
 
 	$ echo '0' > /tmp/tpmfilter
