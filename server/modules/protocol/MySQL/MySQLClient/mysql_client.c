@@ -48,10 +48,7 @@ typedef enum kill_type
     KT_QUERY
 } kill_type_t;
 
-/* Limits on the length of the queries in which "KILL" is searched for. Reducing
- * LONGEST_KILL will reduce overhead but also limit the range of accepted queries. */
-const int SHORTEST_KILL = sizeof("KILL 1") - 1;
-const int LONGEST_KILL = sizeof("KILL CONNECTION 12345678901234567890 ;");
+const char WORD_KILL[] = "KILL";
 
 static int process_init(void);
 static void process_finish(void);
@@ -79,7 +76,7 @@ static void gw_process_one_new_client(DCB *client_dcb);
 static spec_com_res_t process_special_commands(DCB *client_dcb, GWBUF *read_buffer, int nbytes_read);
 static spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t current,
                                         bool is_complete, unsigned int packet_len);
-static uint64_t parse_kill_query(char *query, kill_type_t *kt_out);
+static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *kt_out);
 
 /**
  * The module entry point routine. It is this routine that
@@ -1589,6 +1586,10 @@ static spec_com_res_t process_special_commands(DCB *dcb, GWBUF *read_buffer, int
     }
     else if (proto->current_command == MYSQL_COM_QUERY)
     {
+        /* Limits on the length of the queries in which "KILL" is searched for. Reducing
+         * LONGEST_KILL will reduce overhead but also limit the range of accepted queries. */
+        const int SHORTEST_KILL = sizeof("KILL 1") - 1;
+        const int LONGEST_KILL = sizeof("KILL CONNECTION 12345678901234567890 ;");
         /* Is length within limits for a kill-type query? */
         if (packet_len >= (MYSQL_HEADER_LEN + 1 + SHORTEST_KILL) &&
             packet_len <= (MYSQL_HEADER_LEN + 1 + LONGEST_KILL))
@@ -1617,28 +1618,28 @@ spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t cu
     spec_com_res_t rval = current;
     /* First, we need to detect the text "KILL" (ignorecase) in the start
      * of the packet. Copy just enough characters. */
-    const char KILL_BEGIN[] = "KILL";
-    const size_t KILL_BEGIN_LEN = sizeof(KILL_BEGIN) - 1;
+    const size_t KILL_BEGIN_LEN = sizeof(WORD_KILL) - 1;
     char startbuf[KILL_BEGIN_LEN]; // Not 0-terminated, careful...
     size_t copied_len = gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 1,
                                         KILL_BEGIN_LEN, (uint8_t*)startbuf);
     if (is_complete)
     {
-        if (strncasecmp(KILL_BEGIN, startbuf, KILL_BEGIN_LEN) == 0)
+        if (strncasecmp(WORD_KILL, startbuf, KILL_BEGIN_LEN) == 0)
         {
             /* Good chance that the query is a KILL-query. Copy the entire
-             * buffer (skip the "KILL ") and process. */
-            size_t buffer_len = packet_len - (MYSQL_HEADER_LEN + 1) - KILL_BEGIN_LEN;
+             * buffer and process. */
+            size_t buffer_len = packet_len - (MYSQL_HEADER_LEN + 1);
             char querybuf[buffer_len + 1]; // 0-terminated
             copied_len = gwbuf_copy_data(read_buffer,
-                                         MYSQL_HEADER_LEN + 1 + KILL_BEGIN_LEN,
+                                         MYSQL_HEADER_LEN + 1,
                                          buffer_len,
                                          (uint8_t*)querybuf);
             querybuf[copied_len] = '\0';
             kill_type_t kt = KT_CONNECTION;
-            uint64_t thread_id = parse_kill_query(querybuf, &kt);
+            uint64_t thread_id = 0;
+            bool parsed = parse_kill_query(querybuf, &thread_id, &kt);
 
-            if (thread_id)
+            if (parsed && (thread_id > 0)) // MaxScale session counter starts at 1
             {
                 switch (kt)
                 {
@@ -1667,7 +1668,7 @@ spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t cu
     else
     {
         /* Look at the start of the query and see if it might contain "KILL" */
-        if (strncasecmp(KILL_BEGIN, startbuf, copied_len) == 0)
+        if (strncasecmp(WORD_KILL, startbuf, copied_len) == 0)
         {
             rval = RES_MORE_DATA;
         }
@@ -1676,14 +1677,15 @@ spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t cu
 }
 
 /**
- * Parse and process a "KILL [CONNECTION | QUERY] <process_id>" query. Will modify
- * the argument string even if not successful.
+ * Parse a "KILL [CONNECTION | QUERY] <process_id>" query. Will modify
+ * the argument string even if unsuccessful.
  *
- * @param query The query string
- * @param kt_out The kill command type output
- * @return Zero on error, a valid ID otherwise
+ * @param query Query string to parse
+ * @paran thread_id_out Thread id output
+ * @param kt_out Kill command type output
+ * @return true on success, false on error
  */
-static uint64_t parse_kill_query(char *query, kill_type_t *kt_out)
+static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *kt_out)
 {
     const char WORD_CONNECTION[] = "CONNECTION";
     const char WORD_QUERY[] = "QUERY";
@@ -1694,47 +1696,67 @@ static uint64_t parse_kill_query(char *query, kill_type_t *kt_out)
 
     enum kill_parse_state_t
     {
+        KILL,
         CONN_QUERY,
         ID,
         SEMICOLON,
         DONE
-    } state = CONN_QUERY;
-
+    } state = KILL;
     char *saveptr = NULL;
-    char *token = strtok_r(query, DELIM, &saveptr);
     bool error = false;
 
-    while (token && !error && state != DONE)
+    char *token = strtok_r(query, DELIM, &saveptr);
+
+    while (token && !error)
     {
         bool get_next = false;
         switch (state)
         {
-        case CONN_QUERY:
+        case KILL:
+            if (strncasecmp(token, WORD_KILL, sizeof(WORD_KILL) - 1) == 0)
             {
-                if (strncasecmp(token, WORD_QUERY, sizeof(WORD_QUERY) - 1) == 0)
-                {
-                    kill_type = KT_QUERY;
-                    get_next = true;
-                }
-                else if (strncasecmp(token, WORD_CONNECTION, sizeof(WORD_CONNECTION) - 1) == 0)
-                {
-                    get_next = true;
-                }
-                /* Move to next state regardless of comparison result. The current
-                 * part is optional and the process id may already be in the token. */
-                state = ID;
+                state = CONN_QUERY;
+                get_next = true;
             }
+            else
+            {
+                error = true;
+            }
+            break;
+
+        case CONN_QUERY:
+            if (strncasecmp(token, WORD_QUERY, sizeof(WORD_QUERY) - 1) == 0)
+            {
+                kill_type = KT_QUERY;
+                get_next = true;
+            }
+            else if (strncasecmp(token, WORD_CONNECTION, sizeof(WORD_CONNECTION) - 1) == 0)
+            {
+                get_next = true;
+            }
+            /* Move to next state regardless of comparison result. The current
+             * part is optional and the process id may already be in the token. */
+            state = ID;
             break;
 
         case ID:
             {
-                char *endptr_id;
+                /* strtoull()  accepts negative numbers, so check for '-' here */
+                if (*token == '-')
+                {
+                    error = true;
+                    break;
+                }
+                char *endptr_id = NULL;
                 thread_id = strtoull(token, &endptr_id, 0);
-                /* Zero is an error value, also MaxScale session id:s start at 1. */
-                if (thread_id == 0 || (thread_id == ULLONG_MAX && errno == ERANGE))
+                if ((thread_id == ULLONG_MAX) && (errno == ERANGE))
                 {
                     error = true;
                     errno = 0;
+                }
+                else if (endptr_id == token)
+                {
+                    error = true; // No digits were read
                 }
                 else if (*endptr_id == '\0') // Can be real end or written by strtok
                 {
@@ -1758,6 +1780,7 @@ static uint64_t parse_kill_query(char *query, kill_type_t *kt_out)
                 if (strncmp(token, ";", 1) == 0)
                 {
                     state = DONE;
+                    get_next = true;
                 }
                 else
                 {
@@ -1767,11 +1790,10 @@ static uint64_t parse_kill_query(char *query, kill_type_t *kt_out)
             break;
 
         default:
-            {
-                error = true;
-            }
+            error = true;
             break;
         }
+
         if (get_next)
         {
             token = strtok_r(NULL, DELIM, &saveptr);
@@ -1780,11 +1802,12 @@ static uint64_t parse_kill_query(char *query, kill_type_t *kt_out)
 
     if (error || (state != DONE && state != SEMICOLON))
     {
-        return 0;
+        return false;
     }
     else
     {
+        *thread_id_out = thread_id;
         *kt_out = kill_type;
-        return thread_id;
+        return true;
     }
 }
