@@ -68,6 +68,13 @@ The MySQL backend protocol module now supports sending a proxy protocol header
 to the server. For more information, see the server section in the
 [Configuration guide](../Getting-Started/Configuration-Guide.md).
 
+### KILL command support
+
+The MySQL client protocol now detects `KILL <thread_id>` statements (binary and
+query forms) and kills the MaxScale session with the given id. This feature has
+some limitations, see [Limitations](../About/Limitations.md) for more
+information.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed since the release of MaxScale 2.1.X.]()
