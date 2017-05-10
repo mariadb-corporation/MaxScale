@@ -3087,7 +3087,7 @@ static int32_t qc_sqlite_thread_init(void)
 
             // With this statement we cause sqlite3 to initialize itself, so that it
             // is not done as part of the actual classification of data.
-            const char* s = "CREATE TABLE __maxscale__internal__ (int field UNIQUE)";
+            const char* s = "CREATE TABLE __maxscale__internal__ (field int UNIQUE)";
             size_t len = strlen(s);
 
             this_thread.info->query = s;
