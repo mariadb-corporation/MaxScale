@@ -794,6 +794,22 @@ void make_avro_token(char* dest, const char* src, int length)
     dest[length] = '\0';
 }
 
+int get_column_index(TABLE_CREATE *create, const char *tok)
+{
+    int idx = -1;
+
+    for (int x = 0; x < create->columns; x++)
+    {
+        if (strcasecmp(create->column_names[x], tok) == 0)
+        {
+            idx = x;
+            break;
+        }
+    }
+
+    return idx;
+}
+
 bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
 {
     const char *tbl = strcasestr(sql, "table"), *def;
@@ -844,27 +860,45 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 {
                     tok = get_tok(tok + len, &len, end);
 
-                    MXS_FREE(create->column_names[create->columns - 1]);
-                    char ** tmp = MXS_REALLOC(create->column_names, sizeof(char*) * create->columns - 1);
-                    ss_dassert(tmp);
+                    int idx = get_column_index(create, tok);
 
-                    if (tmp == NULL)
+                    if (idx != -1)
                     {
-                        return false;
+                        free(create->column_names[idx]);
+                        for (int i = idx; i < (int)create->columns - 1; i++)
+                        {
+                            create->column_names[i] = create->column_names[i + 1];
+                        }
+
+                        char ** tmp = realloc(create->column_names, sizeof(char*) * create->columns - 1);
+                        ss_dassert(tmp);
+
+                        if (tmp == NULL)
+                        {
+                            return false;
+                        }
+
+                        create->column_names = tmp;
+                        create->columns--;
+                        updates++;
                     }
 
-                    create->column_names = tmp;
-                    create->columns--;
-                    updates++;
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
                 else if (tok_eq(ptok, "change", plen) && tok_eq(tok, "column", len))
                 {
                     tok = get_tok(tok + len, &len, end);
-                    MXS_FREE(create->column_names[create->columns - 1]);
-                    create->column_names[create->columns - 1] = strndup(tok, len);
-                    updates++;
+
+                    int idx = get_column_index(create, tok);
+
+                    if (idx != -1)
+                    {
+                        free(create->column_names[idx]);
+                        create->column_names[idx] = strndup(tok, len);
+                        updates++;
+                    }
+
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
@@ -975,7 +1009,6 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
         map->id = table_id;
         map->version = create->version;
         map->flags = flags;
-        ss_dassert(column_count == create->columns);
         map->columns = column_count;
         map->column_types = MXS_MALLOC(column_count);
         /** Allocate at least one byte for the metadata */

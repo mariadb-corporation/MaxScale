@@ -13,7 +13,6 @@
 
 #include "schemarouter.h"
 
-#include <my_config.h>
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
