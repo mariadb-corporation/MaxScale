@@ -4,6 +4,8 @@ This document describes the version 1 of the MaxScale REST API.
 
 ## Table of Contents
 
+- [Resources](#resources)
+- [Common Request Parameter](#common-request-parameters)
 - [HTTP Headers](#http-headers)
   - [Request Headers](#request-headers)
   - [Response Headers](#response-headers)
@@ -12,14 +14,84 @@ This document describes the version 1 of the MaxScale REST API.
   - [3xx Redirection](#3xx-redirection)
   - [4xx Client Error](#4xx-client-error)
   - [5xx Server Error](#5xx-server-error)
-- [Resources](#resources)
-- [Common Request Parameter](#common-request-parameters)
 
 ## Note About Syntax
 
 Although JSON does not define a syntax for comments, some of the JSON examples
 have C-style inline comments in them. These comments use `//` to mark the start
 of the comment and extend to the end of the current line.
+
+## Resources
+
+The MaxScale REST API provides the following resources. All resources conform to
+the [JSON API](http://jsonapi.org/format/) specification.
+
+- [/maxscale](Resources-MaxScale.md)
+- [/services](Resources-Service.md)
+- [/servers](Resources-Server.md)
+- [/filters](Resources-Filter.md)
+- [/monitors](Resources-Monitor.md)
+- [/sessions](Resources-Session.md)
+- [/users](Resources-User.md)
+
+### Resource Relationships
+
+All resources return complete JSON objects. The returned objects can have a
+_relationships_ field that represents any relations the object has to other
+objects. This closely resembles the JSON API definition of links.
+
+In the _relationships_ objects, all resources have a _self_ link that points to
+the resource itself. This allows for easier updating of resources as the reply
+URL is included in the response itself.
+
+The following lists the resources and the types of links each resource can have
+in addition to the _self_ link.
+
+- `services` - Service resource
+
+  - `servers`
+
+    List of servers used by the service
+
+  - `filters`
+
+    List of filters used by the service
+
+- `monitors` - Monitor resource
+
+  - `servers`
+
+    List of servers used by the monitor
+
+- `filters` - Filter resource
+
+  - `services`
+
+    List of services that use this filter
+
+- `servers` - Server resource
+
+  - `services`
+
+    List of services that use this server
+
+  - `monitors`
+
+    List of monitors that use this server
+
+## Common Request Parameters
+
+Most of the resources that support GET also support the following
+parameters. See the resource documentation for a list of supported request
+parameters.
+
+- `pretty`
+
+  - Pretty-print output.
+
+    If this parameter is set to `true` then the returned objects are
+    formatted in a more human readable format. All resources support this
+    parameter.
 
 ## HTTP Headers
 
@@ -41,19 +113,9 @@ Credentials for authentication.
 
 All PUT and POST requests must use the `Content-Type: application/json` media
 type and the request body must be a valid JSON representation of a resource. All
-PATCH requests must use the `Content-Type: application/json-patch` media type
-and the request body must be a valid JSON Patch document which is applied to the
-resource. Curently, only _add_, _remove_, _replace_ and _test_ operations are
-supported.
-
-Read the [JSON Patch](https://tools.ietf.org/html/draft-ietf-appsawg-json-patch-08)
-draft for more details on how to use it with PATCH.
-
-#### Date
-
-This header is required and should be in the RFC 1123 standard form, e.g. Mon,
-18 Nov 2013 08:14:29 -0600. Please note that the date must be in English. It
-will be checked by the API for being close to the current date and time.
+PATCH requests must use the `Content-Type: application/json` media type and the
+request body must be a JSON document containing a partial definition of the
+original resource.
 
 #### Host
 
@@ -100,8 +162,6 @@ Some clients only support GET and PUT requests. By providing the string value of
 the intended method in the `X-HTTP-Method-Override` header, a client can perform
 a POST, PATCH or DELETE request with the PUT method
 (e.g. `X-HTTP-Method-Override: PATCH`).
-
-_TODO: Add API version header?_
 
 ### Response Headers
 
@@ -294,21 +354,6 @@ contains a more detailed version of the error message.
 
 The server failed to fulfill an apparently valid request.
 
-Response status codes beginning with the digit "5" indicate cases in which the
-server is aware that it has encountered an error or is otherwise incapable of
-performing the request. Except when responding to a HEAD request, the server
-includes an entity containing an explanation of the error situation.
-
-```
-{
-    "error": "Log rotation failed",
-    "description": "Failed to rotate log files: 13, Permission denied"
-}
-```
-
-The _error_ field contains a short error description and the _description_ field
-contains a more detailed version of the error message.
-
 - 500 Internal Server Error
 
   - A generic error message, given when an unexpected condition was encountered
@@ -414,99 +459,3 @@ API could return them.
 
   - The user has sent too many requests in a given amount of time. Intended for
     use with rate-limiting schemes.
-
-## Resources
-
-The MaxScale REST API provides the following resources.
-
-- [/maxscale](Resources-MaxScale.md)
-- [/services](Resources-Service.md)
-- [/servers](Resources-Server.md)
-- [/filters](Resources-Filter.md)
-- [/monitors](Resources-Monitor.md)
-- [/sessions](Resources-Session.md)
-- [/users](Resources-User.md)
-
-### Resource Relationships
-
-All resources return complete JSON objects. The returned objects can have a
-_relationships_ field that represents any relations the object has to other
-objects. This closely resembles the JSON API definition of links.
-
-In the _relationships_ objects, all resources have a _self_ link that points to
-the resource itself. This allows for easier updating of resources as the reply
-URL is included in the response itself.
-
-The following lists the resources and the types of links each resource can have
-in addition to the _self_ link.
-
-- `services` - Service resource
-
-  - `servers`
-
-    List of servers used by the service
-
-  - `filters`
-
-    List of filters used by the service
-
-- `monitors` - Monitor resource
-
-  - `servers`
-
-    List of servers used by the monitor
-
-- `filters` - Filter resource
-
-  - `services`
-
-    List of services that use this filter
-
-- `servers` - Server resource
-
-  - `services`
-
-    List of services that use this server
-
-  - `monitors`
-
-    List of monitors that use this server
-
-## Common Request Parameters
-
-Most of the resources that support GET also support the following
-parameters. See the resource documentation for a list of supported request
-parameters.
-
-- `pretty`
-
-  - Pretty-print output.
-
-    If this parameter is set to `true` then the returned objects are
-    formatted in a more human readable format. All resources support this
-    parameter.
-
-- `fields`
-
-  - A list of fields to return.
-
-    This allows the returned object to be filtered so that only needed
-    parts are returned. The value of this parameter is a comma separated
-    list of fields to return.
-
-    For example, the parameter `?fields=id,name` would return object which
-    would only contain the _id_ and _name_ fields.
-
-- `range`
-
-  - Return a subset of the object array.
-
-    The value of this parameter is the range of objects to return given as
-    a inclusive range separated by a hyphen. If the size of the array is
-    less than the end of the range, only the objects between the requested
-    start of the range and the actual end of the array are returned. This
-    means that
-
-    For example, the parameter `?range=10-20` would return objects 10
-    through 20 from the object array if the actual size of the original
-    array is greater than or equal to 20.

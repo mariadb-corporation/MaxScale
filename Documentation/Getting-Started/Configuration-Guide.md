@@ -1047,6 +1047,18 @@ refuse these due to the lack of the header. To bypass this restriction, the
 server monitor needs to be disabled and the service listener needs to be
 configured to disregard authentication errors (`skip_authentication=true`).
 
+#### `authenticator`
+
+The authenticator module to use. Each protocol module defines a default
+authentication module which is used if no `authenticator` parameter is found
+from the configuration.
+
+#### `authenticator_options`
+
+Option string given to the authenticator module. The value of this parameter
+should be a comma-separated list of key-value pairs. See authenticator specific
+documentation for more details.
+
 ### Server and SSL
 
 This section describes configuration parameters for servers that control the
