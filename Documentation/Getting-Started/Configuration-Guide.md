@@ -542,7 +542,7 @@ The port where the HTTP admin interface listens on. The default value is port
 
 Enable HTTP admin interface authentication using HTTP Basic Access
 authentication. This is not a secure method of authentication but it does add a
-small layer of security. This option id disabled by default.
+small layer of security. This option is disabled by default.
 
 #### `admin_user`
 
@@ -572,6 +572,11 @@ documentation for more details.
 
 The path to the TLS CA certificate in PEM format. See `admin_ssl_key`
 documentation for more details.
+
+#### `admin_enabled`
+
+Enable or disable the admin interface. This allows the admin interface to
+be completely disabled to prevent access to it.
 
 ### Service
 

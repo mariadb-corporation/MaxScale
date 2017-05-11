@@ -69,6 +69,7 @@ MXS_BEGIN_DECLS
  */
 extern const char CN_ADDRESS[];
 extern const char CN_ADMIN_AUTH[];
+extern const char CN_ADMIN_ENABLED[];
 extern const char CN_ADMIN_HOST[];
 extern const char CN_ADMIN_PASSWORD[];
 extern const char CN_ADMIN_PORT[];
@@ -196,6 +197,7 @@ typedef struct
     char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
     uint16_t      admin_port;                          /**< Admin interface port */
     bool          admin_auth;                          /**< Admin interface authentication */
+    bool          admin_enabled;                       /**< Admin interface is enabled */
     char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
     char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
     char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */
