@@ -955,6 +955,7 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 
     if (server_to_object_relations(server, old_json.get(), new_json))
     {
+        rval = true;
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
@@ -962,7 +963,6 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 
         if (parameters)
         {
-            rval = true;
             const char* key;
             json_t* value;
 
