@@ -229,12 +229,12 @@ static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_st
         if (addr->ss_family == AF_INET)
         {
             struct sockaddr_in *ip = (struct sockaddr_in*)addr;
-            ip->sin_port = htons(port);
+            (*ip).sin_port = htons(port);
         }
         else if (addr->ss_family == AF_INET6)
         {
             struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
-            ip->sin6_port = htons(port);
+            (*ip).sin6_port = htons(port);
         }
     }
 
