@@ -268,6 +268,9 @@ static Keyword aKeywordTable[] = {
   { "FORCE",            "TK_FORCE",        ALWAYS                 },
 #endif
   { "FOREIGN",          "TK_FOREIGN",      FKEY                   },
+#ifdef MAXSCALE
+  { "FORMAT",           "TK_FORMAT",       ALWAYS                 },
+#endif
   { "FROM",             "TK_FROM",         ALWAYS                 },
   { "FULL",             "TK_JOIN_KW",      ALWAYS                 },
 #ifdef MAXSCALE

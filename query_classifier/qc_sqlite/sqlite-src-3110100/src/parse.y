@@ -114,7 +114,6 @@ extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
 extern void maxscaleDrop(Parse*, MxsDrop* pDrop);
 extern void maxscaleExecute(Parse*, Token* pName, int type_mask);
-extern void maxscaleExplain(Parse*, SrcList* pName);
 extern void maxscaleExplain(Parse*, Token* pNext);
 extern void maxscaleFlush(Parse*, Token* pWhat);
 extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
@@ -280,8 +279,7 @@ cmdlist ::= ecmd.
 ecmd ::= SEMI.
 ecmd ::= explain SEMI.
 ecmd ::= cmdx SEMI.
-ecmd ::= oracle_variable_assignment SEMI.
-ecmd ::= explain cmdx SEMI.
+ecmd ::= oracle_assignment SEMI.
 %ifdef MAXSCALE
 explain_kw ::= EXPLAIN.  // Also covers DESCRIBE
 explain_kw ::= DESC.
@@ -583,14 +581,14 @@ columnid(A) ::= nm(X). {
 %endif
 %ifdef MAXSCALE
   /*ABORT*/ ACTION AFTER ALGORITHM /*ANALYZE*/ /*ASC*/ /*ATTACH*/
-  /*BEFORE*/ BEGIN BY
+  /*BEFORE*/ /*BEGIN*/ BY
   // TODO: BINARY is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
   BINARY
   /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/
   DATA /*DATABASE*/ DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
   /*EACH*/ END ENUM EXCLUSIVE /*EXPLAIN*/
-  FIRST FLUSH /*FOR*/
+  FIRST FLUSH /*FOR*/ FORMAT
   GLOBAL
   // TODO: IF is a reserved word and should not automatically convert into an identifer.
   IF IMMEDIATE INITIALLY INSTEAD
@@ -601,9 +599,9 @@ columnid(A) ::= nm(X). {
   OF OFFSET OPEN
   QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ REPLACE RESTRICT ROLLBACK ROLLUP ROW
-  SAVEPOINT SELECT_OPTIONS_KW SLAVE START STATUS
+  SAVEPOINT SELECT_OPTIONS_KW SLAVE /*START*/ STATUS
   TABLES TEMP TEMPTABLE /*TRIGGER*/
-  TRUNCATE
+  /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
   UNSIGNED
@@ -656,6 +654,9 @@ eq ::= EQ.
 nm(A) ::= id(X).         {A = X;}
 nm(A) ::= STRING(X).     {A = X;}
 nm(A) ::= JOIN_KW(X).    {A = X;}
+nm(A) ::= START(X).      {A = X;}
+nm(A) ::= TRUNCATE(X).   {A = X;}
+nm(A) ::= BEGIN(X).      {A = X;}
 
 // A typetoken is really one or more tokens that form a type name such
 // as can be found after the column name in a CREATE TABLE statement.
@@ -1769,6 +1770,9 @@ term(A) ::= DEFAULT(X).          {spanExpr(&A, pParse, @X, &X);}
 term(A) ::= NULL(X).             {spanExpr(&A, pParse, @X, &X);}
 expr(A) ::= id(X).               {spanExpr(&A, pParse, TK_ID, &X);}
 expr(A) ::= JOIN_KW(X).          {spanExpr(&A, pParse, TK_ID, &X);}
+expr(A) ::= START(X).            {spanExpr(&A, pParse, TK_ID, &X);}
+expr(A) ::= TRUNCATE(X).         {spanExpr(&A, pParse, TK_ID, &X);}
+expr(A) ::= BEGIN(X).            {spanExpr(&A, pParse, TK_ID, &X);}
 expr(A) ::= nm(X) DOT nm(Y). {
   Expr *temp1 = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
   Expr *temp2 = sqlite3PExpr(pParse, TK_ID, 0, 0, &Y);
@@ -3244,7 +3248,9 @@ cmd ::= TRUNCATE table_opt nm(X) dbnm(Y). {
 
 //////////////////////// ORACLE ////////////////////////////////////
 //
-oracle_variable_assignment ::= id(X) EQ expr(Y). {
+//ecmd ::= oracle_assignment SEMI.
+//cmd ::= oracle_assignment.
+oracle_assignment ::= ID(X) EQ expr(Y). {
     Expr* pX = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
     Expr* pExpr = sqlite3PExpr(pParse, TK_EQ, pX, Y.pExpr, 0);
     ExprList* pExprList = sqlite3ExprListAppend(pParse, 0, pExpr);
