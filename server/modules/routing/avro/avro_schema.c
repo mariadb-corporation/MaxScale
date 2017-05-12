@@ -126,9 +126,11 @@ char* json_new_schema_from_table(TABLE_MAP *map)
 
     for (uint64_t i = 0; i < map->columns; i++)
     {
-        json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                              create->column_names[i], "type",
-                                              column_type_to_avro_type(map->column_types[i])));
+        json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
+                                              "name", create->column_names[i],
+                                              "type", column_type_to_avro_type(map->column_types[i]),
+                                              "real_type", create->column_types[i],
+                                              "length", create->column_lengths[i]));
     }
     json_object_set_new(schema, "fields", array);
     char* rval = json_dumps(schema, JSON_PRESERVE_ORDER);
@@ -174,8 +176,10 @@ bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
         {
             int array_size = json_array_size(arr);
             table->column_names = (char**)malloc(sizeof(char*) * (array_size));
+            table->column_types = (char**)malloc(sizeof(char*) * (array_size));
+            table->column_lengths = (int*)malloc(sizeof(int) * (array_size));
 
-            if (table->column_names)
+            if (table->column_names && table->column_types && table->column_lengths)
             {
                 int columns = 0;
                 rval = true;
@@ -186,6 +190,28 @@ bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
 
                     if (json_is_object(val))
                     {
+                        json_t* value;
+
+                        if ((value = json_object_get(val, "real_type")) && json_is_string(value))
+                        {
+                            table->column_types[columns] = strdup(json_string_value(value));
+                        }
+                        else
+                        {
+                            table->column_types[columns] = strdup("unknown");
+                            MXS_WARNING("No \"real_type\" value defined. Treating as unknown type field.");
+                        }
+
+                        if ((value = json_object_get(val, "length")) && json_is_integer(value))
+                        {
+                            table->column_lengths[columns] = json_integer_value(value);
+                        }
+                        else
+                        {
+                            table->column_lengths[columns] = -1;
+                            MXS_WARNING("No \"length\" value defined. Treating as default length field.");
+                        }
+
                         json_t *name = json_object_get(val, "name");
                         if (name && json_is_string(name))
                         {
