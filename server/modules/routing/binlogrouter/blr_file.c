@@ -2099,35 +2099,44 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         {
             if (hdr.event_type == MARIADB10_GTID_GTID_LIST_EVENT)
             {
-                uint32_t n_gtids; /* The lower 28 bits are the number of GTIDs */
-                uint32_t domainid;  /* 4 bytes */
-                uint32_t serverid;  /* 4 bytes */
-                uint64_t n_sequence;/* 8 bytes */
-                uint8_t flags; /* 1 byte, 4 bits */
-                char mariadb_gtid[GTID_MAX_LEN + 1];
-
+                unsigned long n_gtids;
                 n_gtids = extract_field(ptr, 32);
+                /* The lower 28 bits are the number of GTIDs */
                 n_gtids &= 0x01111111;
 
-                domainid = extract_field(ptr + 4, 32);
-                serverid = extract_field(ptr + 4 + 4, 32);
-                n_sequence = extract_field(ptr + 4 + 4 + 4, 64);
-
-                snprintf(mariadb_gtid,
-                         GTID_MAX_LEN,
-                         "%u-%u-%lu",
-                         domainid,
-                         serverid,
-                         n_sequence);
-
-                MXS_DEBUG("GTID List has %lu GTIDs, first is %s",
-                           (unsigned long)n_gtids,
-                           mariadb_gtid);
-
-                /* Set MariaDB GTID */
-                if (router->mariadb10_gtid)
+                if (n_gtids)
                 {
-                    strcpy(router->last_mariadb_gtid, mariadb_gtid);
+                    ptr += 4;
+                    uint32_t domainid;  /* 4 bytes */
+                    domainid = extract_field(ptr, 32);
+                    ptr += 4;
+
+                    uint32_t serverid;  /* 4 bytes */
+                    serverid = extract_field(ptr, 32);
+                    ptr += 4;
+
+                    uint64_t n_sequence;/* 8 bytes */
+                    n_sequence = extract_field(ptr, 64);
+                    ptr += 4;
+
+                    char mariadb_gtid[GTID_MAX_LEN + 1];
+
+                    snprintf(mariadb_gtid,
+                             GTID_MAX_LEN,
+                             "%u-%u-%lu",
+                             domainid,
+                             serverid,
+                             n_sequence);
+
+                    MXS_DEBUG("GTID List has %lu GTIDs, first is %s",
+                               n_gtids,
+                               mariadb_gtid);
+
+                    /* Set MariaDB GTID */
+                    if (router->mariadb10_gtid)
+                    {
+                        strcpy(router->last_mariadb_gtid, mariadb_gtid);
+                    }
                 }
             }
         }
@@ -3459,4 +3468,53 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
     }
 
     return result->gtid ? true : false;
+}
+
+/**
+ * Get the next binlog file sequence number
+ *
+ * @param filename    The current filename
+ * @return            0 on error, >0 as sequence number
+ */
+unsigned int
+blr_file_get_next_seqno(const char *filename)
+{
+    char *sptr;
+    int filenum;
+
+    if ((sptr = strrchr(filename, '.')) == NULL)
+    {
+        return 0;
+    }
+    filenum = atoi(sptr + 1);
+    if (filenum)
+    {
+        filenum++;
+    }
+
+    return filenum;
+}
+
+/**
+ * Return the binlog file size.
+ *
+ * @param filename    The current filename
+ * @return            0 on error, >0 size
+ */
+uint32_t blr_slave_get_file_size(const char *filename)
+{
+    struct stat statb;
+
+    if (stat(filename, &statb) == 0)
+    {
+        return statb.st_size;
+    }
+    else
+    {
+        MXS_ERROR("Failed to get %s file size: %d %s",
+                  filename,
+                  errno,
+                  mxs_strerror(errno));
+        return 0;
+    }
 }

@@ -76,6 +76,7 @@
 #include <maxscale/thread.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
+#include <inttypes.h>
 
 static GWBUF *blr_make_query(DCB *dcb, char *query);
 static GWBUF *blr_make_registration(ROUTER_INSTANCE *router);
@@ -128,7 +129,7 @@ static void blr_register_cache_response(ROUTER_INSTANCE *router,
                                         GWBUF *in_buf);
 static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
-                                             GWBUF *buf);
+                                              GWBUF *buf);
 static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
                                    REP_HEADER *hdr,
                                    uint8_t *ptr);
@@ -140,6 +141,9 @@ extern int blr_write_special_event(ROUTER_INSTANCE *router,
                                    uint32_t hole_size,
                                    REP_HEADER *hdr,
                                    int type);
+extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
+static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
+                                     char *new_file);
 
 static void worker_cb_start_master(int worker_id, void* data);
 static void blr_start_master_in_main(void* data);
@@ -758,13 +762,12 @@ static void reset_errors(ROUTER_INSTANCE *router, REP_HEADER *hdr)
 
     spinlock_release(&router->lock);
 #ifdef SHOW_EVENTS
-    printf("blr: len %lu, event type 0x%02x, flags 0x%04x, "
-           "event size %d, event timestamp %lu\n",
-           (unsigned long)len - MYSQL_HEADER_LEN,
+    printf("blr: event type 0x%02x, flags 0x%04x, "
+           "event size %d, event timestamp %" PRIu32 "\n",
            hdr->event_type,
            hdr->flags,
            hdr->event_size,
-           (unsigned long)hdr->timestamp);
+           hdr->timestamp);
 #endif
 }
 
@@ -3043,8 +3046,9 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
  *                  registration command
  */
 static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
-                                             GWBUF *buf)
+                                              GWBUF *buf)
 {
+    const char format_gtid_val[] = "SET @slave_connect_state='%s'";
     // Extract GTID domain
     char *val = blr_extract_column(buf, 1);
     // Store the Master GTID domain
@@ -3054,9 +3058,9 @@ static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
     gwbuf_free(buf);
 
     // SET the requested GTID
-    char set_gtid[GTID_MAX_LEN + 33 + 1];
+    char set_gtid[GTID_MAX_LEN + sizeof(format_gtid_val)];
     sprintf(set_gtid,
-            "SET @slave_connect_state='%s'",
+            format_gtid_val,
             router->last_mariadb_gtid);
 
      MXS_INFO("%s: Requesting GTID (%s) from master server.",
@@ -3104,13 +3108,18 @@ static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
     pos <<= 32;
     pos |= extract_field(ptr + BINLOG_EVENT_HDR_LEN, 32);
 
-    MXS_INFO("Fake ROTATE_EVENT received: file %s, pos %lu. Next event at pos %lu\n",
-             file,
-             (unsigned long)pos,
-             (unsigned long)hdr->next_pos);
+    MXS_DEBUG("Fake ROTATE_EVENT received: file %s, pos %" PRIu64
+              ". Next event at pos %" PRIu32,
+              file,
+              pos,
+              hdr->next_pos);
     /**
-     * TODO: Detect any missing file in sequence.
+     * Detect any missing file in sequence.
      */
+    if (!blr_handle_missing_files(router, file))
+    {
+        return false;
+    }
 
     spinlock_acquire(&router->binlog_lock);
 
@@ -3129,6 +3138,7 @@ static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
         router->current_pos = BINLOG_MAGIC_SIZE;
         router->binlog_position = BINLOG_MAGIC_SIZE;
         router->last_event_pos = BINLOG_MAGIC_SIZE;
+        router->current_safe_event = BINLOG_MAGIC_SIZE;
     }
 
     router->rotating = 1;
@@ -3161,10 +3171,11 @@ static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
     {
         uint64_t binlog_file_eof = lseek(router->binlog_fd, 0L, SEEK_END);
 
-        MXS_INFO("Fake GTID_LIST received: file %s, pos %lu. Next event at pos %lu\n",
+        MXS_INFO("Fake GTID_LIST received: file %s, pos %" PRIu64
+                 ". Next event at pos %" PRIu32,
                  router->binlog_name,
-                 (unsigned long)router->current_pos,
-                 (unsigned long)hdr->next_pos);
+                 router->current_pos,
+                 hdr->next_pos);
 
         /**
          * We could write in any binlog file position:
@@ -3177,8 +3188,9 @@ static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
              uint64_t hole_size = hdr->next_pos - binlog_file_eof;
 
              MXS_INFO("Detected hole while processing"
-                      " a Fake GTID_LIST Event: hole size will be %lu bytes",
-                      (unsigned long)hole_size);
+                      " a Fake GTID_LIST Event: hole size will be %"
+                      PRIu64 " bytes",
+                      hole_size);
 
              /* Set the offet for the write routine */
              spinlock_acquire(&router->binlog_lock);
@@ -3207,4 +3219,73 @@ static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
             spinlock_release(&router->binlog_lock);
         }
     }
+}
+
+/**
+ * Detect any missing file in sequence between
+ * current router->binlog_name and new_file
+ * in fake ROTATE_EVENT.
+ *
+ * In case of missing files, new files with 4 bytes
+ * will be created up to new_file.
+ *
+ * @param    router      The current router
+ * @param    new_file    The filename in Fake ROTATE_EVENT
+ * @return               true on success, false on errors
+ */
+static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
+                                     char *new_file)
+{
+    char *fptr;
+    uint32_t new_fseqno;
+    uint32_t curr_fseqno;
+    char buf[BLRM_BINLOG_NAME_STR_LEN];
+    char bigbuf[PATH_MAX + 1];
+
+    if ((fptr = strrchr(new_file, '.')) == NULL)
+    {
+        return false;
+    }
+    new_fseqno = atol(fptr + 1);
+    if ((fptr = strrchr(router->binlog_name, '.')) == NULL)
+    {
+        return false;
+    }
+    curr_fseqno = atol(fptr + 1);
+    int32_t delta_seq = new_fseqno - (curr_fseqno + 1);
+
+    /**
+     * Try creating delta_seq empty binlog files
+     */
+    if (delta_seq > 0)
+    {
+        MXS_INFO("Fake ROTATE_EVENT comes with a %" PRIu32
+                 " delta sequence in its name."
+                 " Creating %" PRIi32 " empty files",
+                 delta_seq,
+                 delta_seq);
+
+        // Create up to (delta_seq - 1) empty (with 4 bytes) binlog files
+        for (int i = 1; i <= delta_seq; i++)
+        {
+            sprintf(buf, BINLOG_NAMEFMT, router->fileroot, curr_fseqno + i);
+            if (!blr_file_new_binlog(router, buf))
+            {
+                return false;
+            }
+            else
+            {
+                MXS_INFO("Created empty binlog file [%d] '%s'"
+                         " due to Fake ROTATE_EVENT file sequence delta.",
+                         i,
+                         buf);
+            }
+        }
+
+        // Some files created, return true
+        return true;
+    }
+
+    // Did nothing, just return true
+    return true;
 }
