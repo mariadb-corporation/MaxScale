@@ -491,7 +491,6 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
         dest[bytes] = '\0';
 
         make_valid_avro_identifier(dest);
-        ptr = next_field_definition(ptr);
     }
     else
     {
@@ -501,61 +500,96 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
     return ptr;
 }
 
+int extract_type_length(const char* ptr, char *dest)
+{
+    /** Skip any leading whitespace */
+    while (isspace(*ptr) || *ptr == '`')
+    {
+        ptr++;
+    }
+
+    /** The field type definition starts here */
+    const char *start = ptr;
+
+    /** Skip characters until we either hit a whitespace character or the start
+     * of the length definition. */
+    while (!isspace(*ptr) && *ptr != '(')
+    {
+        ptr++;
+    }
+
+    /** Store type */
+    int typelen = ptr - start;
+    memcpy(dest, start, typelen);
+    dest[typelen] = '\0';
+
+    /** Skip whitespace */
+    while (isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    int rval = -1; // No length defined
+
+    /** Start of length definition */
+    if (*ptr == '(')
+    {
+        ptr++;
+        char *end;
+        int val = strtol(ptr, &end, 10);
+
+        if (*end == ')')
+        {
+            rval = val;
+        }
+    }
+
+    return rval;
+}
+
+int count_columns(const char* ptr)
+{
+    int i = 2;
+
+    while ((ptr = strchr(ptr, ',')))
+    {
+        ptr++;
+        i++;
+    }
+
+    return i;
+}
+
 /**
  * Process a table definition into an array of column names
  * @param nameptr table definition
  * @return Number of processed columns or -1 on error
  */
-static int process_column_definition(const char *nameptr, char*** dest)
+static int process_column_definition(const char *nameptr, char*** dest, char*** dest_types, int** dest_lens)
 {
-    /** Process columns in groups of 8 */
-    size_t chunks = 1;
-    const size_t chunk_size = 8;
-    int i = 0;
-    char **names = malloc(sizeof(char*) * (chunks * chunk_size + 1));
+    int n = count_columns(nameptr);
+    *dest = malloc(sizeof(char*) * n);
+    *dest_types = malloc(sizeof(char*) * n);
+    *dest_lens = malloc(sizeof(int) * n);
 
-    if (names == NULL)
-    {
-        MXS_ERROR("Memory allocation failed when trying allocate %ld bytes of memory.",
-                  sizeof(char*) * chunks);
-        return -1;
-    }
-
+    char **names = *dest;
+    char **types = *dest_types;
+    int *lengths = *dest_lens;
     char colname[512];
+    int i = 0;
 
     while ((nameptr = extract_field_name(nameptr, colname, sizeof(colname))))
     {
-        if (i >= chunks * chunk_size)
-        {
-            char **tmp = realloc(names, (++chunks * chunk_size + 1) * sizeof(char*));
-            if (tmp == NULL)
-            {
-                for (int x = 0; x < i; x++)
-                {
-                    free(names[x]);
-                }
-                free(names);
-                MXS_ERROR("Memory allocation failed when trying allocate %ld bytes of memory.",
-                          sizeof(char*) * chunks);
-                return -1;
-            }
-            names = tmp;
-        }
+        ss_dassert(i < n);
+        char type[100] = "";
+        int len = extract_type_length(nameptr, type);
+        nameptr = next_field_definition(nameptr);
 
-        if ((names[i++] = strdup(colname)) == NULL)
-        {
-            for (int x = 0; x < i; x++)
-            {
-                free(names[x]);
-            }
-            free(names);
-            MXS_ERROR("Memory allocation failed when trying allocate %lu bytes "
-                      "of memory.", strlen(colname));
-            return -1;
-        }
+        lengths[i] = len;
+        types[i] = strdup(type);
+        names[i] = strdup(colname);
+        i++;
     }
-
-    *dest = names;
 
     return i;
 }
@@ -600,7 +634,7 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
     char database[MYSQL_DATABASE_MAXLEN + 1];
     const char *db = event_db;
 
-    MXS_DEBUG("Create table statement: %.*s", stmt_len, statement_sql);
+    MXS_INFO("Create table: %s", sql);
 
     if (!get_table_name(sql, table))
     {
@@ -620,8 +654,10 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
         db = database;
     }
 
+    int* lengths = NULL;
     char **names = NULL;
-    int n_columns = process_column_definition(statement_sql, &names);
+    char **types = NULL;
+    int n_columns = process_column_definition(statement_sql, &names, &types, &lengths);
     ss_dassert(n_columns > 0);
 
     /** We have appear to have a valid CREATE TABLE statement */
@@ -633,6 +669,8 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
             rval->version = 1;
             rval->was_used = false;
             rval->column_names = names;
+            rval->column_lengths = lengths;
+            rval->column_types = types;
             rval->columns = n_columns;
             rval->database = strdup(db);
             rval->table = strdup(table);
@@ -675,8 +713,11 @@ void* table_create_free(TABLE_CREATE* value)
         for (uint64_t i = 0; i < value->columns; i++)
         {
             free(value->column_names[i]);
+            free(value->column_types[i]);
         }
         free(value->column_names);
+        free(value->column_types);
+        free(value->column_lengths);
         free(value->table);
         free(value->database);
         free(value);
@@ -822,7 +863,7 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
 
         if (tok)
         {
-            MXS_DEBUG("Altering table %.*s\n", len, tok);
+            MXS_INFO("Alter table '%.*s'; %.*s\n", len, tok, (int)(end - sql), sql);
             def = tok + len;
         }
 
