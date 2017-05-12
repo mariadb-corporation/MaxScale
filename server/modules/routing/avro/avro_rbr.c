@@ -572,15 +572,23 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                      * one or two bytes for string length.
                      */
 
-                    uint8_t bytes = *ptr++;
-                    int len = metadata[metadata_offset] +
-                        (((metadata[metadata_offset + 1] >> 4) & 0x3) ^ 0x3);
+                    uint16_t meta = metadata[metadata_offset + 1] + (metadata[metadata_offset] << 8);
+                    int bytes = 0;
+                    uint16_t extra_length = (((meta >> 4) & 0x300) ^ 0x300);
+                    uint16_t field_length = (meta & 0xff) + extra_length;
 
-                    if (len <= 255)
+                    if (field_length > 255)
                     {
-                        bytes += *ptr++ << 8;
+                        bytes = ptr[0] + (ptr[1] << 8);
+                        ptr += 2;
+                    }
+                    else
+                    {
+                        bytes = *ptr++;
                     }
 
+                    MXS_INFO("[%ld] CHAR: field: %d bytes, data: %d bytes", i, field_length, bytes);
+                    ss_dassert(bytes || *ptr == '\0');
                     char str[bytes + 1];
                     memcpy(str, ptr, bytes);
                     str[bytes] = '\0';
