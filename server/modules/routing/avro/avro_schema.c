@@ -584,6 +584,7 @@ static int process_column_definition(const char *nameptr, char*** dest, char*** 
         char type[100] = "";
         int len = extract_type_length(nameptr, type);
         nameptr = next_field_definition(nameptr);
+        fix_reserved_word(colname);
 
         lengths[i] = len;
         types[i] = strdup(type);
@@ -834,11 +835,15 @@ void make_avro_token(char* dest, const char* src, int length)
 
     memcpy(dest, src, length);
     dest[length] = '\0';
+    fix_reserved_word(dest);
 }
 
 int get_column_index(TABLE_CREATE *create, const char *tok)
 {
     int idx = -1;
+    char safe_tok[strlen(tok) + 2];
+    strcpy(safe_tok, tok);
+    fix_reserved_word(safe_tok);
 
     for (int x = 0; x < create->columns; x++)
     {
