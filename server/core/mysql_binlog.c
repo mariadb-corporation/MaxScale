@@ -26,6 +26,10 @@
 #include <strings.h>
 #include <math.h>
 
+#include "mysql_client_server_protocol.h"
+
+static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes);
+
 /**
  * @brief Convert a table column type to a string
  *
@@ -217,6 +221,35 @@ static void unpack_year(uint8_t *ptr, struct tm *dest)
     dest->tm_year = *ptr;
 }
 
+/** Base-10 logarithm values */
+int64_t log_10_values[] =
+{
+    1,
+    10,
+    100,
+    1000,
+    10000,
+    100000,
+    1000000,
+    10000000,
+    100000000
+};
+
+/**
+ * If the TABLE_COL_TYPE_DATETIME type field is declared as a datetime with
+ * extra precision, the packed length is shorter than 8 bytes.
+ */
+size_t datetime_sizes[] =
+{
+    5, // DATETIME(0)
+    6, // DATETIME(1)
+    6, // DATETIME(2)
+    7, // DATETIME(3)
+    7, // DATETIME(4)
+    7, // DATETIME(5)
+    8  // DATETIME(6)
+};
+
 /**
  * @brief Unpack a DATETIME
  *
@@ -225,21 +258,52 @@ static void unpack_year(uint8_t *ptr, struct tm *dest)
  * @param val Value read from the binary log
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_datetime(uint8_t *ptr, struct tm *dest)
+static void unpack_datetime(uint8_t *ptr, int length, struct tm *dest)
 {
-    uint64_t val = 0;
-    memcpy(&val, ptr, sizeof(val));
-    uint32_t second = val - ((val / 100) * 100);
-    val /= 100;
-    uint32_t minute = val - ((val / 100) * 100);
-    val /= 100;
-    uint32_t hour = val - ((val / 100) * 100);
-    val /= 100;
-    uint32_t day = val - ((val / 100) * 100);
-    val /= 100;
-    uint32_t month = val - ((val / 100) * 100);
-    val /= 100;
-    uint32_t year = val;
+    int64_t val = 0;
+    uint32_t second, minute, hour, day, month, year;
+
+    if (length == -1)
+    {
+        val = gw_mysql_get_byte8(ptr);
+        second = val - ((val / 100) * 100);
+        val /= 100;
+        minute = val - ((val / 100) * 100);
+        val /= 100;
+        hour = val - ((val / 100) * 100);
+        val /= 100;
+        day = val - ((val / 100) * 100);
+        val /= 100;
+        month = val - ((val / 100) * 100);
+        val /= 100;
+        year = val;
+    }
+    else
+    {
+        // TODO: Figure out why DATETIME(0) doesn't work like it others do
+        val = unpack_bytes(ptr, datetime_sizes[length]);
+        val *= log_10_values[6 - length];
+
+        if (val < 0)
+        {
+            val = -val;
+        }
+
+        int subsecond = val % 1000000;
+        val /= 1000000;
+
+        second = val % 60;
+        val /= 60;
+        minute = val % 60;
+        val /= 60;
+        hour = val % 24;
+        val /= 24;
+        day = val % 32;
+        val /= 32;
+        month = val % 13;
+        val /= 13;
+        year = val;
+    }
 
     memset(dest, 0, sizeof(struct tm));
     dest->tm_year = year - 1900;
@@ -393,21 +457,6 @@ size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
 }
 
 /**
- * If the TABLE_COL_TYPE_DATETIME type field is declared as a datetime with
- * extra precision, the packed length is shorter than 8 bytes.
- */
-size_t datetime_sizes[] =
-{
-    5, // DATETIME(0)
-    6, // DATETIME(1)
-    6, // DATETIME(2)
-    7, // DATETIME(3)
-    7, // DATETIME(4)
-    7, // DATETIME(5)
-    8  // DATETIME(6)
-};
-
-/**
  * @brief Get the length of a temporal field
  * @param type Field type
  * @param decimals How many decimals the field has
@@ -465,7 +514,7 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, int 
             break;
 
         case TABLE_COL_TYPE_DATETIME:
-            unpack_datetime(ptr, tm);
+            unpack_datetime(ptr, length, tm);
             break;
 
         case TABLE_COL_TYPE_DATETIME2:
