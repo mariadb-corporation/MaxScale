@@ -98,6 +98,8 @@ typedef struct table_create
 {
     uint64_t columns;
     char **column_names;
+    char **column_types;
+    int* column_lengths;
     char *table;
     char *database;
     int version;   /**< How many versions of this table have been used */

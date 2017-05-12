@@ -161,6 +161,11 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
                     "table until a DDL statement for it is read.", table_ident);
     }
 
+    if (rval)
+    {
+        MXS_INFO("Table Map for '%s' at %lu", table_ident, router->current_pos);
+    }
+
     return rval;
 }
 
@@ -288,9 +293,13 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
             int rows = 0;
+            MXS_INFO("Row Event for '%s' at %lu", table_ident, router->current_pos);
 
             while (ptr - start < hdr->event_size - BINLOG_EVENT_HDR_LEN)
             {
+                static uint64_t total_row_count = 1;
+                MXS_INFO("Row %lu", total_row_count++);
+
                 /** Add the current GTID and timestamp */
                 uint8_t *end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
                 int event_type = get_event_type(hdr->event_type);
@@ -516,6 +525,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             npresent++;
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
+                MXS_INFO("[%ld] NULL", i);
                 if (column_is_blob(map->column_types[i]))
                 {
                     uint8_t nullvalue = 0;
@@ -545,6 +555,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                         MXS_WARNING("ENUM/SET values larger than 255 values aren't supported.");
                     }
                     avro_value_set_string(&field, strval);
+                    MXS_INFO("[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
                     ss_dassert(ptr < end);
                 }
@@ -594,6 +605,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     MXS_WARNING("BIT is not currently supported, values are stored as 0.");
                 }
                 avro_value_set_int(&field, value);
+                MXS_INFO("[%ld] BIT", i);
                 ptr += bytes;
                 ss_dassert(ptr < end);
             }
@@ -602,6 +614,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 double f_value = 0.0;
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
                 avro_value_set_double(&field, f_value);
+                MXS_INFO("[%ld] DOUBLE", i);
                 ss_dassert(ptr < end);
             }
             else if (column_is_variable_string(map->column_types[i]))
@@ -619,6 +632,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     ptr++;
                 }
 
+                MXS_INFO("[%ld] VARCHAR: field: %d bytes, data: %lu bytes", i, bytes, sz);
                 char buf[sz + 1];
                 memcpy(buf, ptr, sz);
                 buf[sz] = '\0';
@@ -632,6 +646,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 uint64_t len = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
+                MXS_INFO("[%ld] BLOB: field: %d bytes, data: %lu bytes", i, bytes, len);
                 if (len)
                 {
                     avro_value_set_bytes(&field, ptr, len);
@@ -648,9 +663,12 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             {
                 char buf[80];
                 struct tm tm;
-                ptr += unpack_temporal_value(map->column_types[i], ptr, &metadata[metadata_offset], &tm);
+                ptr += unpack_temporal_value(map->column_types[i], ptr,
+                                             &metadata[metadata_offset],
+                                             create->column_lengths[i], &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
+                MXS_INFO("[%ld] TEMPORAL: %s", i, buf);
                 ss_dassert(ptr < end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
@@ -661,6 +679,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 ptr += unpack_numeric_field(ptr, map->column_types[i],
                                             &metadata[metadata_offset], lval);
                 set_numeric_field_value(&field, map->column_types[i], &metadata[metadata_offset], lval);
+                MXS_INFO("[%ld] NUMERIC: %ld", i, *((int64_t*)lval));
                 ss_dassert(ptr < end);
             }
             ss_dassert(metadata_offset <= map->column_metadata_size);

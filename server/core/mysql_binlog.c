@@ -392,6 +392,20 @@ size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
     return metadata[1];
 }
 
+/**
+ * If the TABLE_COL_TYPE_DATETIME type field is declared as a datetime with
+ * extra precision, the packed length is shorter than 8 bytes.
+ */
+size_t datetime_sizes[] =
+{
+    5, // DATETIME(0)
+    6, // DATETIME(1)
+    6, // DATETIME(2)
+    7, // DATETIME(3)
+    7, // DATETIME(4)
+    7, // DATETIME(5)
+    8  // DATETIME(6)
+};
 
 /**
  * @brief Get the length of a temporal field
@@ -399,7 +413,7 @@ size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
  * @param decimals How many decimals the field has
  * @return Number of bytes the temporal value takes
  */
-static size_t temporal_field_size(uint8_t type, uint8_t decimals)
+static size_t temporal_field_size(uint8_t type, uint8_t decimals, int length)
 {
     switch (type)
     {
@@ -414,7 +428,7 @@ static size_t temporal_field_size(uint8_t type, uint8_t decimals)
             return 3 + ((decimals + 1) / 2);
 
         case TABLE_COL_TYPE_DATETIME:
-            return 8;
+            return length < 0 || length > 6 ? 8 : datetime_sizes[length];
 
         case TABLE_COL_TYPE_TIMESTAMP:
             return 4;
@@ -442,7 +456,7 @@ static size_t temporal_field_size(uint8_t type, uint8_t decimals)
  * @param val Extracted packed value
  * @param tm Pointer where the unpacked temporal value is stored
  */
-size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, struct tm *tm)
+size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, int length, struct tm *tm)
 {
     switch (type)
     {
@@ -475,7 +489,7 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, stru
             ss_dassert(false);
             break;
     }
-    return temporal_field_size(type, *metadata);
+    return temporal_field_size(type, *metadata, length);
 }
 
 void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm)
