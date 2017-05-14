@@ -8,7 +8,7 @@ more servers.
 ### Get a monitor
 
 Get a single monitor. The _:name_ in the URI must be a valid monitor name with
-all whitespace replaced with hyphens. The monitor names are case-insensitive.
+all whitespace replaced with hyphens. The monitor names are case-sensitive.
 
 ```
 GET /monitors/:name
@@ -16,28 +16,101 @@ GET /monitors/:name
 
 #### Response
 
-```
-Status: 200 OK
+`Status: 200 OK`
 
+```javascript
 {
-    "name": "MySQL Monitor",
-    "module": "mysqlmon",
-    "state": "started",
-    "monitor_interval": 2500,
-    "connect_timeout": 5,
-    "read_timeout": 2,
-    "write_timeout": 3,
-    "servers": [
-        "/servers/db-serv-1",
-        "/servers/db-serv-2",
-        "/servers/db-serv-3"
-    ]
+    "links": {
+        "self": "http://localhost:8989/v1/monitors/MySQL-Monitor"
+    },
+    "data": {
+        "id": "MySQL-Monitor",
+        "type": "monitors",
+        "relationships": {
+            "servers": {
+                "links": {
+                    "self": "http://localhost:8989/v1/servers/"
+                },
+                "data": [
+                    {
+                        "id": "server1",
+                        "type": "servers"
+                    },
+                    {
+                        "id": "server2",
+                        "type": "servers"
+                    }
+                ]
+            }
+        },
+        "attributes": {
+            "module": "mysqlmon",
+            "state": "Running",
+            "parameters": {
+                "user": "maxuser",
+                "password": "maxpwd",
+                "monitor_interval": 10000,
+                "backend_connect_timeout": 3,
+                "backend_read_timeout": 1,
+                "backend_write_timeout": 2,
+                "backend_connect_attempts": 1,
+                "detect_replication_lag": false,
+                "detect_stale_master": true,
+                "detect_stale_slave": true,
+                "mysql51_replication": false,
+                "multimaster": false,
+                "detect_standalone_master": false,
+                "failcount": 5,
+                "allow_cluster_recovery": true,
+                "journal_max_age": 28800
+            },
+            "monitor_diagnostics": {
+                "monitor_id": 0,
+                "detect_stale_master": true,
+                "detect_stale_slave": true,
+                "detect_replication_lag": false,
+                "multimaster": false,
+                "detect_standalone_master": false,
+                "failcount": 5,
+                "allow_cluster_recovery": true,
+                "mysql51_replication": false,
+                "journal_max_age": 28800,
+                "server_info": [
+                    {
+                        "name": "server1",
+                        "server_id": 0,
+                        "master_id": 0,
+                        "read_only": false,
+                        "slave_configured": false,
+                        "slave_io_running": false,
+                        "slave_sql_running": false,
+                        "master_binlog_file": "",
+                        "master_binlog_position": 0
+                    },
+                    {
+                        "name": "server2",
+                        "server_id": 0,
+                        "master_id": 0,
+                        "read_only": false,
+                        "slave_configured": false,
+                        "slave_io_running": false,
+                        "slave_sql_running": false,
+                        "master_binlog_file": "",
+                        "master_binlog_position": 0
+                    }
+                ]
+            }
+        },
+        "links": {
+            "self": "http://localhost:8989/v1/monitors/MySQL-Monitor"
+        }
+    }
 }
 ```
 
 #### Supported Request Parameter
 
-- `fields`
+- `pretty`
 
 ### Get all monitors
 
@@ -49,45 +122,103 @@ GET /monitors
 
 #### Response
 
-```
-Status: 200 OK
+`Status: 200 OK`
 
-[
-    {
-        "name": "MySQL Monitor",
-        "module": "mysqlmon",
-        "state": "started",
-        "monitor_interval": 2500,
-        "connect_timeout": 5,
-        "read_timeout": 2,
-        "write_timeout": 3,
-        "servers": [
-            "/servers/db-serv-1",
-            "/servers/db-serv-2",
-            "/servers/db-serv-3"
-        ]
+```javascript
+{
+    "links": {
+        "self": "http://localhost:8989/v1/monitors/"
     },
-    {
-        "name": "Galera Monitor",
-        "module": "galeramon",
-        "state": "started",
-        "monitor_interval": 5000,
-        "connect_timeout": 10,
-        "read_timeout": 5,
-        "write_timeout": 5,
-        "servers": [
-            "/servers/db-galera-1",
-            "/servers/db-galera-2",
-            "/servers/db-galera-3"
-        ]
-    }
-]
+    "data": [
+        {
+            "id": "MySQL-Monitor",
+            "type": "monitors",
+            "relationships": {
+                "servers": {
+                    "links": {
+                        "self": "http://localhost:8989/v1/servers/"
+                    },
+                    "data": [
+                        {
+                            "id": "server1",
+                            "type": "servers"
+                        },
+                        {
+                            "id": "server2",
+                            "type": "servers"
+                        }
+                    ]
+                }
+            },
+            "attributes": {
+                "module": "mysqlmon",
+                "state": "Running",
+                "parameters": {
+                    "user": "maxuser",
+                    "password": "maxpwd",
+                    "monitor_interval": 10000,
+                    "backend_connect_timeout": 3,
+                    "backend_read_timeout": 1,
+                    "backend_write_timeout": 2,
+                    "backend_connect_attempts": 1,
+                    "detect_replication_lag": false,
+                    "detect_stale_master": true,
+                    "detect_stale_slave": true,
+                    "mysql51_replication": false,
+                    "multimaster": false,
+                    "detect_standalone_master": false,
+                    "failcount": 5,
+                    "allow_cluster_recovery": true,
+                    "journal_max_age": 28800
+                },
+                "monitor_diagnostics": {
+                    "monitor_id": 0,
+                    "detect_stale_master": true,
+                    "detect_stale_slave": true,
+                    "detect_replication_lag": false,
+                    "multimaster": false,
+                    "detect_standalone_master": false,
+                    "failcount": 5,
+                    "allow_cluster_recovery": true,
+                    "mysql51_replication": false,
+                    "journal_max_age": 28800,
+                    "server_info": [
+                        {
+                            "name": "server1",
+                            "server_id": 0,
+                            "master_id": 0,
+                            "read_only": false,
+                            "slave_configured": false,
+                            "slave_io_running": false,
+                            "slave_sql_running": false,
+                            "master_binlog_file": "",
+                            "master_binlog_position": 0
+                        },
+                        {
+                            "name": "server2",
+                            "server_id": 0,
+                            "master_id": 0,
+                            "read_only": false,
+                            "slave_configured": false,
+                            "slave_io_running": false,
+                            "slave_sql_running": false,
+                            "master_binlog_file": "",
+                            "master_binlog_position": 0
+                        }
+                    ]
+                }
+            },
+            "links": {
+                "self": "http://localhost:8989/v1/monitors/MySQL-Monitor"
+            }
+        }
+    ]
+}
 ```
 
 #### Supported Request Parameter
 
-- `fields`
-- `range`
+- `pretty`
 
 ### Stop a monitor
 
@@ -99,9 +230,9 @@ PUT /monitor/:name/stop
 
 #### Response
 
-```
-Status: 204 No Content
-```
+Monitor is stopped.
+
+`Status: 204 No Content`
 
 ### Start a monitor
 
@@ -113,64 +244,42 @@ PUT /monitor/:name/start
 
 #### Response
 
-```
-Status: 204 No Content
-```
+Monitor is started.
+
+`Status: 204 No Content`
 
 ### Update a monitor
 
-**Note**: The update mechanisms described here are provisional and most likely
-  will change in the future. This description is only for design purposes and
-  does not yet work.
-
-Partially update a monitor. The _:name_ in the URI must map to a monitor name
-and the request body must be a valid JSON Patch document which is applied to the
-resource.
+The :name in the URI must map to a monitor name with all whitespace replaced with
+hyphens. The request body must be a valid JSON document representing the modified monitor.
 
 ```
-PATCH /monitor/:name
+PUT /monitor/:name
 ```
 
 ### Modifiable Fields
 
-The following values can be modified with the PATCH method.
+The following standard server parameter can be modified.
+- [user](../Monitors/Monitor-Common.md#user)
+- [password](../Monitors/Monitor-Common.md#password)
+- [monitor_interval](../Monitors/Monitor-Common.md#monitor_interval)
+- [backend_connect_timeout](../Monitors/Monitor-Common.md#backend_connect_timeout)
+- [backend_write_timeout](../Monitors/Monitor-Common.md#backend_write_timeout)
+- [backend_read_timeout](../Monitors/Monitor-Common.md#backend_read_timeout)
+- [backend_connect_attempts](../Monitors/Monitor-Common.md#backend_connect_attempts)
 
-|Field            |Type        |Description                                        |
-|-----------------|------------|---------------------------------------------------|
-|servers          |string array|Servers monitored by this monitor                  |
-|monitor_interval |number      |Monitoring interval in milliseconds                |
-|connect_timeout  |number      |Connection timeout in seconds                      |
-|read_timeout     |number      |Read timeout in seconds                            |
-|write_timeout    |number      |Write timeout in seconds                           |
+Refer to the documentation on these parameters for valid values.
 
-```
-[
-    { "op": "remove", "path": "/servers/0" },
-    { "op": "replace", "path": "/monitor_interval", "value": 2000 },
-    { "op": "replace", "path": "/connect_timeout", "value": 2 },
-    { "op": "replace", "path": "/read_timeout", "value": 2 },
-    { "op": "replace", "path": "/write_timeout", "value": 2 }
-]
-```
+In addition to these standard parameters, the monitor specific parameters can also be
+modified. Refer to the monitor module documentation for details on these parameters.
 
 #### Response
 
-Response contains the modified resource.
+Monitor is modified.
 
-```
-Status: 200 OK
+`Status: 204 No Content`
 
-{
-    "name": "MySQL Monitor",
-    "module": "mysqlmon",
-    "servers": [
-        "/servers/db-serv-2",
-        "/servers/db-serv-3"
-    ],
-    "state": "started",
-    "monitor_interval": 2000,
-    "connect_timeout": 2,
-    "read_timeout": 2,
-    "write_timeout": 2
-}
-```
+Invalid request body.
+
+`Status: 403 Forbidden`
+
