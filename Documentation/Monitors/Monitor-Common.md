@@ -4,6 +4,16 @@ This document lists optional parameters that all current monitors support.
 
 ## Parameters
 
+### `user`
+
+Username used by the monitor to connect to the backend servers. If a server defines
+the `monitoruser` parameter, that value will be used instead of the default `user` of the monitor. 
+
+### `password`
+
+Password for the user defined with the `user` parameter. If a server defines
+the `monitorpw` parameter, that value will be used instead of the default `password` of the monitor.
+
 ### `monitor_interval`
 
 This is the time the monitor waits between each cycle of monitoring. The default value of 10000 milliseconds (10 seconds) should be lowered if you want a faster response to changes in the server states. The value is defined in milliseconds and the smallest possible value is 100 milliseconds.
