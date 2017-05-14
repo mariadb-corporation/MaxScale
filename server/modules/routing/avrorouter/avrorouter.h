@@ -84,6 +84,23 @@ static const char *avro_event_type   = "event_type";
 static const char *avro_timestamp    = "timestamp";
 static char *avro_client_ouput[]     = { "Undefined", "JSON", "Avro" };
 
+static inline bool is_reserved_word(const char* word)
+{
+    return strcasecmp(word, avro_domain) == 0 ||
+        strcasecmp(word, avro_server_id) == 0 ||
+        strcasecmp(word, avro_sequence) == 0 ||
+        strcasecmp(word, avro_event_number) == 0 ||
+        strcasecmp(word, avro_event_type) == 0 ||
+        strcasecmp(word, avro_timestamp) == 0;
+}
+
+static inline void fix_reserved_word(char *tok)
+{
+    if (is_reserved_word(tok))
+    {
+        strcat(tok, "_");
+    }
+}
 
 /** How a binlog file is closed */
 typedef enum avro_binlog_end
@@ -111,6 +128,8 @@ typedef struct table_create
 {
     uint64_t columns;
     char **column_names;
+    char **column_types;
+    int* column_lengths;
     char *table;
     char *database;
     int version;   /**< How many versions of this table have been used */
