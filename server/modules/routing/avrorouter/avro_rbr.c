@@ -688,7 +688,6 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 ptr += unpack_numeric_field(ptr, map->column_types[i],
                                             &metadata[metadata_offset], lval);
                 set_numeric_field_value(&field, map->column_types[i], &metadata[metadata_offset], lval);
-                MXS_INFO("[%ld] NUMERIC: %ld", i, *((int64_t*)lval));
                 ss_dassert(ptr < end);
             }
             ss_dassert(metadata_offset <= map->column_metadata_size);
