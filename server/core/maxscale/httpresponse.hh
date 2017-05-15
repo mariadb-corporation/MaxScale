@@ -30,6 +30,7 @@
 #define HTTP_RESPONSE_HEADER_LAST_MODIFIED "Last-Modified"
 #define HTTP_RESPONSE_HEADER_ETAG          "ETag"
 #define HTTP_RESPONSE_HEADER_ACCEPT        "Accept"
+#define HTTP_RESPONSE_HEADER_CONTENT_TYPE  "Content-Type"
 
 typedef std::map<std::string, std::string> Headers;
 

@@ -13,10 +13,13 @@
  */
 
 #include <maxscale/cdefs.h>
+
 #include <assert.h>
 #include <stdbool.h>
 #include <syslog.h>
 #include <unistd.h>
+
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -105,6 +108,7 @@ void mxs_log_set_augmentation(int bits);
 void mxs_log_set_throttling(const MXS_LOG_THROTTLING* throttling);
 
 void mxs_log_get_throttling(MXS_LOG_THROTTLING* throttling);
+json_t* mxs_logs_to_json(const char* host);
 
 static inline bool mxs_log_priority_is_enabled(int priority)
 {

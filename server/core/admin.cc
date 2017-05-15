@@ -55,7 +55,7 @@ int kv_iter(void *cls,
 {
     size_t* rval = (size_t*)cls;
 
-    if (strcmp(key, "Content-Length") == 0)
+    if (strcasecmp(key, "Content-Length") == 0)
     {
         *rval = atoi(value);
         return MHD_NO;
@@ -102,7 +102,17 @@ int Client::process(string url, string method, const char* upload_data, size_t *
     }
 
     HttpRequest request(m_connection, url, method, json);
-    HttpResponse reply = resource_handle_request(request);
+    HttpResponse reply(MHD_HTTP_NOT_FOUND);
+
+    if (url == "/")
+    {
+        // Respond to pings with 200 OK
+        reply = HttpResponse(MHD_HTTP_OK);
+    }
+    else if (request.validate_api_version())
+    {
+        reply = resource_handle_request(request);
+    }
 
     string data;
 
@@ -219,12 +229,12 @@ static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_st
         if (addr->ss_family == AF_INET)
         {
             struct sockaddr_in *ip = (struct sockaddr_in*)addr;
-            ip->sin_port = htons(port);
+            (*ip).sin_port = htons(port);
         }
         else if (addr->ss_family == AF_INET6)
         {
             struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
-            ip->sin6_port = htons(port);
+            (*ip).sin6_port = htons(port);
         }
     }
 

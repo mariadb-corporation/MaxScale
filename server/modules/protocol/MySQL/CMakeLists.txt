@@ -5,3 +5,4 @@ install_module(MySQLCommon core)
 
 add_subdirectory(MySQLBackend)
 add_subdirectory(MySQLClient)
+add_subdirectory(test)

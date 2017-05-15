@@ -40,6 +40,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/paths.h>
+#include <maxscale/json_api.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
@@ -53,6 +54,7 @@ using std::string;
 
 const char CN_ADDRESS[]                       = "address";
 const char CN_ADMIN_AUTH[]                    = "admin_auth";
+const char CN_ADMIN_ENABLED[]                 = "admin_enabled";
 const char CN_ADMIN_HOST[]                    = "admin_host";
 const char CN_ADMIN_PASSWORD[]                = "admin_password";
 const char CN_ADMIN_PORT[]                    = "admin_port";
@@ -60,6 +62,7 @@ const char CN_ADMIN_USER[]                    = "admin_user";
 const char CN_ADMIN_SSL_KEY[]                 = "admin_ssl_key";
 const char CN_ADMIN_SSL_CERT[]                = "admin_ssl_cert";
 const char CN_ADMIN_SSL_CA_CERT[]             = "admin_ssl_ca_cert";
+const char CN_ATTRIBUTES[]                    = "attributes";
 const char CN_AUTHENTICATOR[]                 = "authenticator";
 const char CN_AUTHENTICATOR_OPTIONS[]         = "authenticator_options";
 const char CN_AUTH_ALL_SERVERS[]              = "auth_all_servers";
@@ -68,12 +71,14 @@ const char CN_AUTH_READ_TIMEOUT[]             = "auth_read_timeout";
 const char CN_AUTH_WRITE_TIMEOUT[]            = "auth_write_timeout";
 const char CN_AUTO[]                          = "auto";
 const char CN_CONNECTION_TIMEOUT[]            = "connection_timeout";
+const char CN_DATA[]                          = "data";
 const char CN_DEFAULT[]                       = "default";
 const char CN_ENABLE_ROOT_USER[]              = "enable_root_user";
 const char CN_FEEDBACK[]                      = "feedback";
 const char CN_FILTERS[]                       = "filters";
 const char CN_FILTER[]                        = "filter";
 const char CN_GATEWAY[]                       = "gateway";
+const char CN_ID[]                            = "id";
 const char CN_LISTENER[]                      = "listener";
 const char CN_LISTENERS[]                     = "listeners";
 const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
@@ -83,6 +88,7 @@ const char CN_MAXSCALE[]                      = "maxscale";
 const char CN_MAX_CONNECTIONS[]               = "max_connections";
 const char CN_MAX_RETRY_INTERVAL[]            = "max_retry_interval";
 const char CN_MODULE[]                        = "module";
+const char CN_MODULES[]                       = "modules";
 const char CN_MONITORS[]                      = "monitors";
 const char CN_MONITOR[]                       = "monitor";
 const char CN_MS_TIMESTAMP[]                  = "ms_timestamp";
@@ -97,6 +103,7 @@ const char CN_PROTOCOL[]                      = "protocol";
 const char CN_QUERY_CLASSIFIER[]              = "query_classifier";
 const char CN_QUERY_CLASSIFIER_ARGS[]         = "query_classifier_args";
 const char CN_RELATIONSHIPS[]                 = "relationships";
+const char CN_LINKS[]                         = "links";
 const char CN_REQUIRED[]                      = "required";
 const char CN_RETRY_ON_FAILURE[]              = "retry_on_failure";
 const char CN_ROUTER[]                        = "router";
@@ -106,6 +113,7 @@ const char CN_SERVERS[]                       = "servers";
 const char CN_SERVER[]                        = "server";
 const char CN_SERVICES[]                      = "services";
 const char CN_SERVICE[]                       = "service";
+const char CN_SESSIONS[]                      = "sessions";
 const char CN_SKIP_PERMISSION_CHECKS[]        = "skip_permission_checks";
 const char CN_SOCKET[]                        = "socket";
 const char CN_STATE[]                         = "state";
@@ -1545,6 +1553,10 @@ handle_global_item(const char *name, const char *value)
     {
         gateway.admin_auth = config_truth_value(value);
     }
+    else if (strcmp(name, CN_ADMIN_ENABLED) == 0)
+    {
+        gateway.admin_enabled = config_truth_value(value);
+    }
     else
     {
         for (i = 0; lognames[i].name; i++)
@@ -1767,6 +1779,7 @@ global_defaults()
     gateway.skip_permission_checks = false;
     gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
     gateway.admin_auth = false;
+    gateway.admin_enabled = true;
     strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
     strcpy(gateway.admin_user, INET_DEFAULT_USERNAME);
     strcpy(gateway.admin_password, INET_DEFAULT_PASSWORD);
@@ -3850,20 +3863,24 @@ int config_parse_server_list(const char *servers, char ***output_array)
 
 json_t* config_paths_to_json(const char* host)
 {
+    json_t* attr = json_object();
+    json_object_set_new(attr, "libdir", json_string(get_libdir()));
+    json_object_set_new(attr, "datadir", json_string(get_datadir()));
+    json_object_set_new(attr, "process_datadir", json_string(get_process_datadir()));
+    json_object_set_new(attr, "cachedir", json_string(get_cachedir()));
+    json_object_set_new(attr, "configdir", json_string(get_configdir()));
+    json_object_set_new(attr, "config_persistdir", json_string(get_config_persistdir()));
+    json_object_set_new(attr, "module_configdir", json_string(get_module_configdir()));
+    json_object_set_new(attr, "piddir", json_string(get_piddir()));
+    json_object_set_new(attr, "logdir", json_string(get_logdir()));
+    json_object_set_new(attr, "langdir", json_string(get_langdir()));
+    json_object_set_new(attr, "execdir", json_string(get_execdir()));
+    json_object_set_new(attr, "connector_plugindir", json_string(get_connector_plugindir()));
+
     json_t* obj = json_object();
+    json_object_set_new(obj, CN_ATTRIBUTES, attr);
+    json_object_set_new(obj, CN_ID, json_string(CN_MAXSCALE));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MAXSCALE));
 
-    json_object_set_new(obj, "libdir", json_string(get_libdir()));
-    json_object_set_new(obj, "datadir", json_string(get_datadir()));
-    json_object_set_new(obj, "process_datadir", json_string(get_process_datadir()));
-    json_object_set_new(obj, "cachedir", json_string(get_cachedir()));
-    json_object_set_new(obj, "configdir", json_string(get_configdir()));
-    json_object_set_new(obj, "config_persistdir", json_string(get_config_persistdir()));
-    json_object_set_new(obj, "module_configdir", json_string(get_module_configdir()));
-    json_object_set_new(obj, "piddir", json_string(get_piddir()));
-    json_object_set_new(obj, "logdir", json_string(get_logdir()));
-    json_object_set_new(obj, "langdir", json_string(get_langdir()));
-    json_object_set_new(obj, "execdir", json_string(get_execdir()));
-    json_object_set_new(obj, "connector_plugindir", json_string(get_connector_plugindir()));
-
-    return obj;
+    return mxs_json_resource(host, MXS_JSON_API_MAXSCALE, obj);
 }

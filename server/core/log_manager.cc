@@ -11,10 +11,10 @@
  * Public License.
  */
 #include <maxscale/log_manager.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
 #include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -23,14 +23,17 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
-#include <maxscale/atomic.h>
-#include <maxscale/platform.h>
 
+#include <maxscale/atomic.h>
+#include <maxscale/config.h>
+#include <maxscale/platform.h>
 #include <maxscale/hashtable.h>
+#include <maxscale/json_api.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/debug.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
+
 #include "maxscale/mlist.h"
 
 #define MAX_PREFIXLEN 250
@@ -3012,4 +3015,28 @@ const char* mxs_strerror(int error)
     static thread_local char errbuf[MXS_STRERROR_BUFLEN];
 
     return strerror_r(error, errbuf, sizeof(errbuf));
+}
+
+json_t* mxs_logs_to_json(const char* host)
+{
+    json_t* param = json_object();
+    json_object_set_new(param, "highprecision", json_boolean(log_config.do_highprecision));
+    json_object_set_new(param, "maxlog", json_boolean(log_config.do_maxlog));
+    json_object_set_new(param, "syslog", json_boolean(log_config.do_syslog));
+
+    json_t* throttling = json_object();
+    json_object_set_new(throttling, "count", json_integer(log_config.throttling.count));
+    json_object_set_new(throttling, "suppress_ms", json_integer(log_config.throttling.suppress_ms));
+    json_object_set_new(throttling, "window_ms", json_integer(log_config.throttling.window_ms));
+    json_object_set_new(param, "throttling", throttling);
+
+    json_t* attr = json_object();
+    json_object_set_new(attr, CN_PARAMETERS, param);
+
+    json_t* data = json_object();
+    json_object_set_new(data, CN_ATTRIBUTES, attr);
+    json_object_set_new(data, CN_ID, json_string("logs"));
+    json_object_set_new(data, CN_TYPE, json_string("logs"));
+
+    return mxs_json_resource(host, MXS_JSON_API_LOGS, data);
 }

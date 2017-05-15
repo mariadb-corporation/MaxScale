@@ -36,6 +36,30 @@ MXS_BEGIN_DECLS
 #define MAX_ADMIN_PW_LEN        1024
 #define MAX_ADMIN_HOST_LEN      1024
 
+/** JSON Pointers to key parts of JSON objects */
+#define MXS_JSON_PTR_ID         "/data/id"
+#define MXS_JSON_PTR_PARAMETERS "/data/attributes/parameters"
+
+/** Pointers to relation lists */
+#define MXS_JSON_PTR_RELATIONSHIPS_SERVERS  "/data/relationships/servers/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_SERVICES "/data/relationships/services/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_MONITORS "/data/relationships/monitors/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_FILTERS  "/data/relationships/filters/data"
+
+/** Parameter value JSON Pointers */
+#define MXS_JSON_PTR_PARAM_PORT                  MXS_JSON_PTR_PARAMETERS "/port"
+#define MXS_JSON_PTR_PARAM_ADDRESS               MXS_JSON_PTR_PARAMETERS "/address"
+#define MXS_JSON_PTR_PARAM_PROTOCOL              MXS_JSON_PTR_PARAMETERS "/protocol"
+#define MXS_JSON_PTR_PARAM_AUTHENTICATOR         MXS_JSON_PTR_PARAMETERS "/authenticator"
+#define MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS MXS_JSON_PTR_PARAMETERS "/authenticator_options"
+#define MXS_JSON_PTR_PARAM_SSL_KEY               MXS_JSON_PTR_PARAMETERS "/ssl_key"
+#define MXS_JSON_PTR_PARAM_SSL_CERT              MXS_JSON_PTR_PARAMETERS "/ssl_cert"
+#define MXS_JSON_PTR_PARAM_SSL_CA_CERT           MXS_JSON_PTR_PARAMETERS "/ssl_ca_cert"
+#define MXS_JSON_PTR_PARAM_SSL_VERSION           MXS_JSON_PTR_PARAMETERS "/ssl_version"
+#define MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH MXS_JSON_PTR_PARAMETERS "/ssl_cert_verify_depth"
+
+#define MXS_JSON_PTR_MODULE  "/data/attributes/module"
+
 /**
  * Common configuration parameters names
  *
@@ -45,6 +69,7 @@ MXS_BEGIN_DECLS
  */
 extern const char CN_ADDRESS[];
 extern const char CN_ADMIN_AUTH[];
+extern const char CN_ADMIN_ENABLED[];
 extern const char CN_ADMIN_HOST[];
 extern const char CN_ADMIN_PASSWORD[];
 extern const char CN_ADMIN_PORT[];
@@ -52,6 +77,7 @@ extern const char CN_ADMIN_USER[];
 extern const char CN_ADMIN_SSL_KEY[];
 extern const char CN_ADMIN_SSL_CERT[];
 extern const char CN_ADMIN_SSL_CA_CERT[];
+extern const char CN_ATTRIBUTES[];
 extern const char CN_AUTHENTICATOR[];
 extern const char CN_AUTHENTICATOR_OPTIONS[];
 extern const char CN_AUTH_ALL_SERVERS[];
@@ -60,12 +86,14 @@ extern const char CN_AUTH_READ_TIMEOUT[];
 extern const char CN_AUTH_WRITE_TIMEOUT[];
 extern const char CN_AUTO[];
 extern const char CN_CONNECTION_TIMEOUT[];
+extern const char CN_DATA[];
 extern const char CN_DEFAULT[];
 extern const char CN_ENABLE_ROOT_USER[];
 extern const char CN_FEEDBACK[];
 extern const char CN_FILTERS[];
 extern const char CN_FILTER[];
 extern const char CN_GATEWAY[];
+extern const char CN_ID[];
 extern const char CN_LISTENER[];
 extern const char CN_LISTENERS[];
 extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
@@ -75,6 +103,7 @@ extern const char CN_MAXSCALE[];
 extern const char CN_MAX_CONNECTIONS[];
 extern const char CN_MAX_RETRY_INTERVAL[];
 extern const char CN_MODULE[];
+extern const char CN_MODULES[];
 extern const char CN_MONITORS[];
 extern const char CN_MONITOR[];
 extern const char CN_MS_TIMESTAMP[];
@@ -89,6 +118,7 @@ extern const char CN_PROTOCOL[];
 extern const char CN_QUERY_CLASSIFIER[];
 extern const char CN_QUERY_CLASSIFIER_ARGS[];
 extern const char CN_RELATIONSHIPS[];
+extern const char CN_LINKS[];
 extern const char CN_REQUIRED[];
 extern const char CN_RETRY_ON_FAILURE[];
 extern const char CN_ROUTER[];
@@ -98,6 +128,7 @@ extern const char CN_SERVERS[];
 extern const char CN_SERVER[];
 extern const char CN_SERVICES[];
 extern const char CN_SERVICE[];
+extern const char CN_SESSIONS[];
 extern const char CN_SKIP_PERMISSION_CHECKS[];
 extern const char CN_SOCKET[];
 extern const char CN_STATE[];
@@ -166,6 +197,7 @@ typedef struct
     char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
     uint16_t      admin_port;                          /**< Admin interface port */
     bool          admin_auth;                          /**< Admin interface authentication */
+    bool          admin_enabled;                       /**< Admin interface is enabled */
     char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
     char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
     char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */

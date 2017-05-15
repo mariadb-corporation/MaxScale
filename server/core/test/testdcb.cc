@@ -45,12 +45,7 @@
 static int
 test1()
 {
-    DCB   *dcb, *extra, *clone;
-    int     size = 100;
-    int     bite1 = 35;
-    int     bite2 = 60;
-    int     bite3 = 10;
-    int     buflen;
+    DCB   *dcb;
     SERV_LISTENER dummy;
     /* Single buffer tests */
     ss_dfprintf(stderr,
@@ -59,8 +54,6 @@ test1()
     printDCB(dcb);
     ss_info_dassert(dcb_isvalid(dcb), "New DCB must be valid");
     ss_dfprintf(stderr, "\t..done\nAllocated dcb.");
-    clone = dcb_clone(dcb);
-    ss_dfprintf(stderr, "\t..done\nCloned dcb");
     printAllDCBs();
     ss_info_dassert(true, "Something is true");
     ss_dfprintf(stderr, "\t..done\n");
@@ -68,12 +61,6 @@ test1()
     dcb_close(dcb);
     ss_dfprintf(stderr, "Freed original dcb");
     ss_info_dassert(!dcb_isvalid(dcb), "Closed DCB must not be valid");
-    ss_dfprintf(stderr, "\t..done\nMake clone DCB a zombie");
-    clone->state = DCB_STATE_NOPOLLING;
-    dcb_add_to_list(clone);
-    dcb_close(clone);
-    ss_dfprintf(stderr, "\t..done\nCheck clone no longer valid");
-    ss_info_dassert(!dcb_isvalid(clone), "After closing, clone DCB must not be valid");
     ss_dfprintf(stderr, "\t..done\nProcess the zombies list");
     dcb_process_zombies(0);
     ss_dfprintf(stderr, "\t..done\n");

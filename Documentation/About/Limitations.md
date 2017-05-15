@@ -47,7 +47,18 @@ transaction or change the autocommit mode using a prepared statement.
 
 ### Limitations with MySQL Protocol support (MySQLClient)
 
-Compression is not included in the MySQL server handshake.
+* Compression is not included in the MySQL server handshake.
+
+* MariaDB MaxScale will intercept `KILL <thread_id>` statements which are of the
+form `KILL 3`, `KILL CONNECTION 321` and `KILL QUERY 8`. These queries are not
+routed to backends because the `<thread_id>` sent by the client does not equal a
+backend id. MaxScale reacts to a thread kill command by killing the session with
+the given id if the user and host of the issuing session and the target session
+match. Query kill command is not supported and results in an error message. For
+MaxScale to recognize the *KILL* statement, the statement must start right after
+the command byte, have no comments and have minimal whitespace. These
+limitations are in place to limit the parsing MaxScale needs to do to every
+query.
 
 ## Authenticator limitations
 

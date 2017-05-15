@@ -15,6 +15,7 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/poll.h>
 #include <maxscale/thread.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -141,5 +142,26 @@ MXS_SESSION* mxs_worker_deregister_session(uint64_t id);
  * @return The found session or NULL if not found.
  */
 MXS_SESSION* mxs_worker_find_session(uint64_t id);
+
+/**
+ * @brief Convert a worker to JSON format
+ *
+ * @param host Hostname of this server
+ * @param id   ID of the worker
+ *
+ * @return JSON resource representing the worker
+ */
+json_t* mxs_worker_to_json(const char* host, int id);
+
+/**
+ * Convert workers into JSON format
+ *
+ * @param host Hostname of this server
+ *
+ * @return A JSON resource collection of workers
+ *
+ * @see mxs_json_resource()
+ */
+json_t* mxs_worker_list_to_json(const char* host);
 
 MXS_END_DECLS

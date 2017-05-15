@@ -1982,16 +1982,19 @@ int main(int argc, char **argv)
         }
     }
 
-    if (mxs_admin_init())
+    if (cnf->admin_enabled)
     {
-        MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
-    }
-    else
-    {
-        const char* logerr = "Failed to initialize admin interface";
-        print_log_n_stderr(true, true, logerr, logerr, 0);
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
+        if (mxs_admin_init())
+        {
+            MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
+        }
+        else
+        {
+            const char* logerr = "Failed to initialize admin interface";
+            print_log_n_stderr(true, true, logerr, logerr, 0);
+            rc = MAXSCALE_INTERNALERROR;
+            goto return_main;
+        }
     }
 
     MXS_NOTICE("MaxScale started with %d server threads.", config_threadcount());

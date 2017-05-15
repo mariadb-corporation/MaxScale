@@ -48,6 +48,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 #include <maxscale/jansson.h>
+#include <maxscale/json_api.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
@@ -498,36 +499,24 @@ int serviceInitialize(SERVICE *service)
 }
 
 /**
- * @brief Remove a failed listener
+ * @brief Remove a listener from use
  *
- * This should only be called when a newly created listener fails to start.
- *
- * @note The service spinlock must be held when this function is called.
+ * @note This does not free the memory
  *
  * @param service Service where @c port points to
  * @param port Port to remove
  */
-void serviceRemoveListener(SERVICE *service, SERV_LISTENER *port)
+void serviceRemoveListener(SERVICE *service, SERV_LISTENER *target)
 {
+    LISTENER_ITERATOR iter;
 
-    if (service->ports == port)
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
     {
-        service->ports = service->ports->next;
-    }
-    else
-    {
-        SERV_LISTENER *prev = service->ports;
-        SERV_LISTENER *current = service->ports->next;
-
-        while (current)
+        if (listener == target)
         {
-            if (current == port)
-            {
-                prev->next = current->next;
-                break;
-            }
-            prev = current;
-            current = current->next;
+            listener_set_active(listener, false);
+            break;
         }
     }
 }
@@ -543,7 +532,6 @@ bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
     {
         /** Failed to start the listener */
         serviceRemoveListener(service, port);
-        listener_free(port);
         rval = false;
     }
 
@@ -555,23 +543,21 @@ bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
 bool serviceStopListener(SERVICE *service, const char *name)
 {
     bool rval = false;
+    LISTENER_ITERATOR iter;
 
-    spinlock_acquire(&service->spin);
-
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
     {
-        if (strcmp(port->name, name) == 0)
+        if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
         {
-            if (poll_remove_dcb(port->listener) == 0)
+            if (poll_remove_dcb(listener->listener) == 0)
             {
-                port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+                listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
                 rval = true;
             }
             break;
         }
     }
-
-    spinlock_release(&service->spin);
 
     return rval;
 }
@@ -579,24 +565,22 @@ bool serviceStopListener(SERVICE *service, const char *name)
 bool serviceStartListener(SERVICE *service, const char *name)
 {
     bool rval = false;
+    LISTENER_ITERATOR iter;
 
-    spinlock_acquire(&service->spin);
-
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
     {
-        if (strcmp(port->name, name) == 0)
+        if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
         {
-            if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER_STOPPED &&
-                poll_add_dcb(port->listener) == 0)
+            if (listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED &&
+                poll_add_dcb(listener->listener) == 0)
             {
-                port->listener->session->state = SESSION_STATE_LISTENER;
+                listener->listener->session->state = SESSION_STATE_LISTENER;
                 rval = true;
             }
             break;
         }
     }
-
-    spinlock_release(&service->spin);
 
     return rval;
 }
@@ -631,13 +615,17 @@ bool serviceStop(SERVICE *service)
 
     if (service)
     {
-        for (SERV_LISTENER * port = service->ports; port; port = port->next)
+        LISTENER_ITERATOR iter;
+
+        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+             listener; listener = listener_iterator_next(&iter))
         {
-            if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER)
+            if (listener_is_active(listener) &&
+                listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER)
             {
-                if (poll_remove_dcb(port->listener) == 0)
+                if (poll_remove_dcb(listener->listener) == 0)
                 {
-                    port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+                    listener->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
                     listeners++;
                 }
             }
@@ -663,13 +651,17 @@ bool serviceStart(SERVICE *service)
 
     if (service)
     {
-        for (SERV_LISTENER* port = service->ports; port; port = port->next)
+        LISTENER_ITERATOR iter;
+
+        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+             listener; listener = listener_iterator_next(&iter))
         {
-            if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
+            if (listener_is_active(listener) &&
+                listener->listener && listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
             {
-                if (poll_add_dcb(port->listener) == 0)
+                if (poll_add_dcb(listener->listener) == 0)
                 {
-                    port->listener->session->state = SESSION_STATE_LISTENER;
+                    listener->listener->session->state = SESSION_STATE_LISTENER;
                     listeners++;
                 }
             }
@@ -727,6 +719,25 @@ void service_free(SERVICE *service)
 }
 
 /**
+ * Add a listener to a service
+ *
+ * @param service Service where listener is added
+ * @param proto   Listener to add
+ */
+static void service_add_listener(SERVICE* service, SERV_LISTENER* proto)
+{
+    do
+    {
+        /** Read the current value of the list's head. This will be our expected
+         * value for the following compare-and-swap operation. */
+        proto->next = (SERV_LISTENER*)atomic_load_ptr((void**)&service->ports);
+    }
+    /** Compare the current value to our expected value and if they match, replace
+     * the current value with our new value. */
+    while (!atomic_cas_ptr((void**)&service->ports, (void**)&proto->next, proto));
+}
+
+/**
  * Create a listener for the service
  *
  * @param service       The service
@@ -747,10 +758,7 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const c
 
     if (proto)
     {
-        spinlock_acquire(&service->spin);
-        proto->next = service->ports;
-        service->ports = proto;
-        spinlock_release(&service->spin);
+        service_add_listener(service, proto);
     }
 
     return proto;
@@ -768,23 +776,21 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const c
 bool serviceHasListener(SERVICE *service, const char *protocol,
                         const char* address, unsigned short port)
 {
-    SERV_LISTENER *proto;
+    LISTENER_ITERATOR iter;
 
-    spinlock_acquire(&service->spin);
-    proto = service->ports;
-    while (proto)
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
     {
-        if (strcmp(proto->protocol, protocol) == 0 && proto->port == port &&
-            ((address && proto->address && strcmp(proto->address, address) == 0) ||
-             (address == NULL && proto->address == NULL)))
+        if (listener_is_active(listener) &&
+            strcmp(listener->protocol, protocol) == 0 && listener->port == port &&
+            ((address && listener->address && strcmp(listener->address, address) == 0) ||
+             (address == NULL && listener->address == NULL)))
         {
-            break;
+            return true;
         }
-        proto = proto->next;
     }
-    spinlock_release(&service->spin);
 
-    return proto != NULL;
+    return false;
 }
 
 /**
@@ -1522,7 +1528,7 @@ void
 dListListeners(DCB *dcb)
 {
     SERVICE *service;
-    SERV_LISTENER *lptr;
+    SERV_LISTENER *port;
 
     spinlock_acquire(&service_spin);
     service = allServices;
@@ -1538,19 +1544,22 @@ dListListeners(DCB *dcb)
     }
     while (service)
     {
-        lptr = service->ports;
-        while (lptr)
-        {
-            dcb_printf(dcb, "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
-                       lptr->name, service->name, lptr->protocol,
-                       (lptr && lptr->address) ? lptr->address : "*",
-                       lptr->port,
-                       (!lptr->listener ||
-                        !lptr->listener->session ||
-                        lptr->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ?
-                       "Stopped" : "Running");
+        LISTENER_ITERATOR iter;
 
-            lptr = lptr->next;
+        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+             listener; listener = listener_iterator_next(&iter))
+        {
+            if (listener_is_active(listener))
+            {
+                dcb_printf(dcb, "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
+                           listener->name, service->name, listener->protocol,
+                           (listener && listener->address) ? listener->address : "*",
+                           listener->port,
+                           (!listener->listener ||
+                            !listener->listener->session ||
+                            listener->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ?
+                           "Stopped" : "Running");
+            }
         }
         service = service->next;
     }
@@ -1637,23 +1646,26 @@ int service_refresh_users(SERVICE *service)
             }
 
             ret = 0;
+            LISTENER_ITERATOR iter;
 
-            for (SERV_LISTENER *port = service->ports; port; port = port->next)
+            for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+                 listener; listener = listener_iterator_next(&iter))
             {
                 /** Load the authentication users before before starting the listener */
-                if (port->listener && port->listener->authfunc.loadusers)
+                if (listener_is_active(listener) && listener->listener &&
+                    listener->listener->authfunc.loadusers)
                 {
-                    switch (port->listener->authfunc.loadusers(port))
+                    switch (listener->listener->authfunc.loadusers(listener))
                     {
                     case MXS_AUTH_LOADUSERS_FATAL:
                         MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
-                                  " authentication will not work.", service->name, port->name);
+                                  " authentication will not work.", service->name, listener->name);
                         ret = 1;
                         break;
 
                     case MXS_AUTH_LOADUSERS_ERROR:
                         MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                                    " might not work.", service->name, port->name);
+                                    " might not work.", service->name, listener->name);
                         ret = 1;
                         break;
 
@@ -1902,6 +1914,8 @@ serviceSessionCountAll()
  * Provide a row to the result set that defines the set of service
  * listeners
  *
+ * TODO: Replace these
+ *
  * @param set   The result set
  * @param data  The index of the row to send
  * @return The next row or NULL
@@ -2085,11 +2099,15 @@ bool service_all_services_have_listeners()
 
     while (service)
     {
-        if (service->ports == NULL)
+        LISTENER_ITERATOR iter;
+        SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+
+        if (listener == NULL)
         {
             MXS_ERROR("Service '%s' has no listeners.", service->name);
             rval = false;
         }
+
         service = service->next;
     }
 
@@ -2240,7 +2258,8 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     dprintf(file, "%s=%ld\n", CN_CONNECTION_TIMEOUT, service->conn_idle_timeout);
     dprintf(file, "%s=%s\n", CN_AUTH_ALL_SERVERS, service->users_from_all ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_STRIP_DB_ESC, service->strip_db_esc ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST, service->localhost_match_wildcard_host ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST,
+            service->localhost_match_wildcard_host ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_VERSION_STRING, service->version_string);
     dprintf(file, "%s=%s\n", CN_WEIGHTBY, service->weightby);
     dprintf(file, "%s=%s\n", CN_LOG_AUTH_WARNINGS, service->log_auth_warnings ? "true" : "false");
@@ -2339,11 +2358,15 @@ bool service_serialize_servers(const SERVICE *service)
 
 void service_print_users(DCB *dcb, const SERVICE *service)
 {
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
+    LISTENER_ITERATOR iter;
+
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
     {
-        if (port->listener && port->listener->authfunc.diagnostic)
+        if (listener_is_active(listener) && listener->listener &&
+            listener->listener->authfunc.diagnostic)
         {
-            port->listener->authfunc.diagnostic(dcb, port);
+            listener->listener->authfunc.diagnostic(dcb, listener);
         }
     }
 }
@@ -2355,18 +2378,17 @@ bool service_port_is_used(unsigned short port)
 
     for (SERVICE *service = allServices; service && !rval; service = service->next)
     {
-        spinlock_acquire(&service->spin);
+        LISTENER_ITERATOR iter;
 
-        for (SERV_LISTENER *proto = service->ports; proto; proto = proto->next)
+        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+             listener; listener = listener_iterator_next(&iter))
         {
-            if (proto->port == port)
+            if (listener_is_active(listener) && listener->port == port)
             {
                 rval = true;
                 break;
             }
         }
-
-        spinlock_release(&service->spin);
     }
 
     spinlock_release(&service_spin);
@@ -2444,16 +2466,42 @@ json_t* service_parameters_to_json(const SERVICE* service)
     return rval;
 }
 
-json_t* service_to_json(const SERVICE* service, const char* host)
+static inline bool have_active_servers(const SERVICE* service)
 {
-    spinlock_acquire(&service->spin);
+    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+    {
+        if (SERVER_REF_IS_ACTIVE(ref))
+        {
+            return true;
+        }
+    }
 
-    json_t* rval = json_object();
+    return false;
+}
 
-    /** General service information */
-    json_object_set_new(rval, CN_NAME, json_string(service->name));
-    json_object_set_new(rval, CN_ROUTER, json_string(service->routerModule));
-    json_object_set_new(rval, CN_STATE, json_string(service_state_to_string(service->state)));
+json_t* service_listeners_json_data(const SERVICE* service)
+{
+    json_t* arr = json_array();
+    LISTENER_ITERATOR iter;
+
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
+    {
+        if (listener_is_active(listener))
+        {
+            json_array_append_new(arr, listener_to_json(listener));
+        }
+    }
+
+    return arr;
+}
+
+json_t* service_attributes(const SERVICE* service)
+{
+    json_t* attr = json_object();
+
+    json_object_set_new(attr, CN_ROUTER, json_string(service->routerModule));
+    json_object_set_new(attr, CN_STATE, json_string(service_state_to_string(service->state)));
 
     if (service->router && service->router_instance)
     {
@@ -2461,7 +2509,7 @@ json_t* service_to_json(const SERVICE* service, const char* host)
 
         if (diag)
         {
-            json_object_set_new(rval, "router_diagnostics", diag);
+            json_object_set_new(attr, "router_diagnostics", diag);
         }
     }
 
@@ -2471,117 +2519,112 @@ json_t* service_to_json(const SERVICE* service, const char* host)
     asctime_r(localtime_r(&service->stats.started, &result), timebuf);
     trim(timebuf);
 
-    json_object_set_new(rval, "started", json_string(timebuf));
-    json_object_set_new(rval, "total_connections", json_integer(service->stats.n_sessions));
-    json_object_set_new(rval, "connections", json_integer(service->stats.n_current));
+    json_object_set_new(attr, "started", json_string(timebuf));
+    json_object_set_new(attr, "total_connections", json_integer(service->stats.n_sessions));
+    json_object_set_new(attr, "connections", json_integer(service->stats.n_current));
 
-    /** Add service parameters */
-    json_object_set_new(rval, CN_PARAMETERS, service_parameters_to_json(service));
+    /** Add service parameters and listeners */
+    json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));
+    json_object_set_new(attr, CN_LISTENERS, service_listeners_json_data(service));
 
-    /** Add listeners */
-    json_t* arr = json_array();
+    return attr;
+}
 
-    if (service->ports)
-    {
-        for (SERV_LISTENER* p = service->ports; p; p = p->next)
-        {
-            json_array_append_new(arr, listener_to_json(p));
-        }
-    }
-
-    json_object_set_new(rval, CN_LISTENERS, arr);
-
+json_t* service_relationships(const SERVICE* service, const char* host)
+{
     /** Store relationships to other objects */
     json_t* rel = json_object();
 
-    string self = host;
-    self += "/services/";
-    self += service->name;
-    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
-
     if (service->n_filters)
     {
-        json_t* arr = json_array();
+        json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
 
         for (int i = 0; i < service->n_filters; i++)
         {
-            string filter = host;
-            filter += "/filters/";
-            filter += service->filters[i]->name;
-            json_array_append_new(arr, json_string(filter.c_str()));
+            mxs_json_add_relation(filters, service->filters[i]->name, CN_FILTERS);
         }
 
-        json_object_set_new(rel, "filters", arr);
+        json_object_set_new(rel, CN_FILTERS, filters);
     }
 
-    bool active_servers = false;
-
-    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+    if (have_active_servers(service))
     {
-        if (SERVER_REF_IS_ACTIVE(ref))
-        {
-            active_servers = true;
-            break;
-        }
-    }
-
-    if (active_servers)
-    {
-        json_t* arr = json_array();
+        json_t* servers = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
 
         for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
         {
             if (SERVER_REF_IS_ACTIVE(ref))
             {
-                string s = host;
-                s += "/servers/";
-                s += ref->server->unique_name;
-                json_array_append_new(arr, json_string(s.c_str()));
+                mxs_json_add_relation(servers, ref->server->unique_name, CN_SERVERS);
             }
         }
 
-        json_object_set_new(rel, CN_SERVERS, arr);
+        json_object_set_new(rel, CN_SERVERS, servers);
     }
 
-    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+    return rel;
+}
+
+json_t* service_json_data(const SERVICE* service, const char* host)
+{
+    json_t* rval = json_object();
+
+    spinlock_acquire(&service->spin);
+
+    json_object_set_new(rval, CN_ID, json_string(service->name));
+    json_object_set_new(rval, CN_TYPE, json_string(CN_SERVICES));
+    json_object_set_new(rval, CN_ATTRIBUTES, service_attributes(service));
+    json_object_set_new(rval, CN_RELATIONSHIPS, service_relationships(service, host));
+    json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVICES, service->name));
 
     spinlock_release(&service->spin);
 
     return rval;
 }
 
+json_t* service_to_json(const SERVICE* service, const char* host)
+{
+    string self = MXS_JSON_API_SERVICES;
+    self += service->name;
+    return mxs_json_resource(host, self.c_str(), service_json_data(service, host));
+}
+
+json_t* service_listeners_to_json(const SERVICE* service, const char* host)
+{
+    /** This needs to be done here as the listeners are sort of sub-resources
+     * of the service. */
+    string self = MXS_JSON_API_SERVICES;
+    self += service->name;
+    self += "/listeners";
+
+    return mxs_json_resource(host, self.c_str(), service_listeners_json_data(service));
+}
+
 json_t* service_list_to_json(const char* host)
 {
-    json_t* rval = json_array();
+    json_t* arr = json_array();
 
     spinlock_acquire(&service_spin);
 
     for (SERVICE *service = allServices; service; service = service->next)
     {
-        json_t* svc = service_to_json(service, host);
+        json_t* svc = service_json_data(service, host);
 
         if (svc)
         {
-            json_array_append_new(rval, svc);
+            json_array_append_new(arr, svc);
         }
     }
 
     spinlock_release(&service_spin);
 
-    return rval;
-}
-
-static void add_service_relation(json_t* arr, const char* host, const SERVICE* service)
-{
-    string svc = host;
-    svc += "/services/";
-    svc += service->name;
-    json_array_append_new(arr, json_string(svc.c_str()));
+    return mxs_json_resource(host, MXS_JSON_API_SERVICES, arr);
 }
 
 json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host)
 {
-    json_t* arr = json_array();
+    json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+
     spinlock_acquire(&service_spin);
 
     for (SERVICE *service = allServices; service; service = service->next)
@@ -2592,7 +2635,7 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
         {
             if (service->filters[i] == filter)
             {
-                add_service_relation(arr, host, service);
+                mxs_json_add_relation(rel, service->name, CN_SERVICES);
             }
         }
 
@@ -2601,12 +2644,14 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
 
     spinlock_release(&service_spin);
 
-    return arr;
+    return rel;
 }
+
 
 json_t* service_relations_to_server(const SERVER* server, const char* host)
 {
-    json_t* arr = json_array();
+    json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+
     spinlock_acquire(&service_spin);
 
     for (SERVICE *service = allServices; service; service = service->next)
@@ -2617,7 +2662,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
         {
             if (ref->server == server && SERVER_REF_IS_ACTIVE(ref))
             {
-                add_service_relation(arr, host, service);
+                mxs_json_add_relation(rel, service->name, CN_SERVICES);
             }
         }
 
@@ -2626,5 +2671,5 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
 
     spinlock_release(&service_spin);
 
-    return arr;
+    return rel;
 }

@@ -542,7 +542,7 @@ The port where the HTTP admin interface listens on. The default value is port
 
 Enable HTTP admin interface authentication using HTTP Basic Access
 authentication. This is not a secure method of authentication but it does add a
-small layer of security. This option id disabled by default.
+small layer of security. This option is disabled by default.
 
 #### `admin_user`
 
@@ -572,6 +572,11 @@ documentation for more details.
 
 The path to the TLS CA certificate in PEM format. See `admin_ssl_key`
 documentation for more details.
+
+#### `admin_enabled`
+
+Enable or disable the admin interface. This allows the admin interface to
+be completely disabled to prevent access to it.
 
 ### Service
 
@@ -1041,6 +1046,18 @@ servers in addition to client sessions, e.g. monitors, and the server will
 refuse these due to the lack of the header. To bypass this restriction, the
 server monitor needs to be disabled and the service listener needs to be
 configured to disregard authentication errors (`skip_authentication=true`).
+
+#### `authenticator`
+
+The authenticator module to use. Each protocol module defines a default
+authentication module which is used if no `authenticator` parameter is found
+from the configuration.
+
+#### `authenticator_options`
+
+Option string given to the authenticator module. The value of this parameter
+should be a comma-separated list of key-value pairs. See authenticator specific
+documentation for more details.
 
 ### Server and SSL
 

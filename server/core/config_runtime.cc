@@ -17,6 +17,7 @@
 
 #include <strings.h>
 #include <string>
+#include <sstream>
 #include <set>
 #include <iterator>
 #include <algorithm>
@@ -25,6 +26,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/jansson.hh>
+#include <maxscale/json_api.h>
 
 #include "maxscale/config.h"
 #include "maxscale/monitor.h"
@@ -32,6 +34,7 @@
 #include "maxscale/service.h"
 
 using std::string;
+using std::stringstream;
 using std::set;
 using mxs::Closer;
 
@@ -316,12 +319,8 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
         }
     }
 
-    if (valid)
+    if (valid && server_serialize(server))
     {
-        if (server->created_online)
-        {
-            server_serialize(server);
-        }
         MXS_NOTICE("Updated server '%s': %s=%s", server->unique_name, key, value);
     }
 
@@ -702,6 +701,10 @@ bool runtime_create_monitor(const char *name, const char *module)
             }
         }
     }
+    else
+    {
+        MXS_WARNING("Can't create monitor, it already exists");
+    }
 
     spinlock_release(&crt_lock);
     return rval;
@@ -756,46 +759,39 @@ static bool extract_relations(json_t* json, set<string>& relations,
                               bool (*relation_check)(const string&, const string&))
 {
     bool rval = true;
-    json_t* rel;
 
-    if ((rel = json_object_get(json, CN_RELATIONSHIPS)))
+    for (int i = 0; relation_types[i]; i++)
     {
-        for (int i = 0; relation_types[i]; i++)
+        json_t* arr = mxs_json_pointer(json, relation_types[i]);
+
+        if (arr && json_is_array(arr))
         {
-            json_t* arr = json_object_get(rel, relation_types[i]);
+            size_t size = json_array_size(arr);
 
-            if (arr)
+            for (size_t j = 0; j < size; j++)
             {
-                size_t size = json_array_size(arr);
+                json_t* obj = json_array_get(arr, j);
+                json_t* id = json_object_get(obj, CN_ID);
+                json_t* type = mxs_json_pointer(obj, CN_TYPE);
 
-                for (size_t j = 0; j < size; j++)
+                if (id && json_is_string(id) &&
+                    type && json_is_string(type))
                 {
-                    json_t* t = json_array_get(arr, j);
+                    string id_value = json_string_value(id);
+                    string type_value = json_string_value(type);
 
-                    if (json_is_string(t))
+                    if (relation_check(type_value, id_value))
                     {
-                        string value = json_string_value(t);
-
-                        // Remove the link part
-                        size_t pos = value.find_last_of("/");
-                        if (pos != string::npos)
-                        {
-                            value.erase(0, pos + 1);
-                        }
-
-                        if (relation_check(relation_types[i], value))
-                        {
-                            relations.insert(value);
-                        }
-                        else
-                        {
-                            rval = false;
-                        }
+                        relations.insert(id_value);
                     }
                     else
                     {
                         rval = false;
                     }
+                }
+                else
+                {
+                    rval = false;
                 }
             }
         }
@@ -804,10 +800,10 @@ static bool extract_relations(json_t* json, set<string>& relations,
     return rval;
 }
 
-static inline const char* string_or_null(json_t* json, const char* name)
+static inline const char* string_or_null(json_t* json, const char* path)
 {
     const char* rval = NULL;
-    json_t* value = json_object_get(json, name);
+    json_t* value = mxs_json_pointer(json, path);
 
     if (value && json_is_string(value))
     {
@@ -819,29 +815,19 @@ static inline const char* string_or_null(json_t* json, const char* name)
 
 static bool server_contains_required_fields(json_t* json)
 {
-    bool rval = false;
-    json_t* value;
+    json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
+    json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
+    json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
 
-    if ((value = json_object_get(json, CN_NAME)) && json_is_string(value))
-    {
-        /** Object has a name field */
-        json_t* param = json_object_get(json, CN_PARAMETERS);
-
-        if (param &&
-            (value = json_object_get(param, CN_ADDRESS)) && json_is_string(value) &&
-            (value = json_object_get(param, CN_PORT)) && json_is_integer(value))
-        {
-            rval = true;
-        }
-    }
-
-    return rval;
+    return (id && json_is_string(id) &&
+            address && json_is_string(address) &&
+            port && json_is_integer(port));
 }
 
 const char* server_relation_types[] =
 {
-    CN_SERVICES,
-    CN_MONITORS,
+    MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
+    MXS_JSON_PTR_RELATIONSHIPS_MONITORS,
     NULL
 };
 
@@ -883,31 +869,35 @@ static bool link_server_to_objects(SERVER* server, set<string>& relations)
     return rval;
 }
 
+static string json_int_to_string(json_t* json)
+{
+    char str[25]; // Enough to store any 64-bit integer value
+    int64_t i = json_integer_value(json);
+    snprintf(str, sizeof(str), "%ld", i);
+    return string(str);
+}
+
 SERVER* runtime_create_server_from_json(json_t* json)
 {
     SERVER* rval = NULL;
 
     if (server_contains_required_fields(json))
     {
-        const char* name = json_string_value(json_object_get(json, CN_NAME));
-        json_t* params = json_object_get(json, CN_PARAMETERS);
-        const char* address = json_string_value(json_object_get(params, CN_ADDRESS));
+        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* address = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS));
 
         /** The port needs to be in string format */
-        char port[200]; // Enough to store any port value
-        int i = json_integer_value(json_object_get(params, CN_PORT));
-        snprintf(port, sizeof(port), "%d", i);
+        string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
 
         /** Optional parameters */
-        const char* protocol = string_or_null(params, CN_PROTOCOL);
-        const char* authenticator = string_or_null(params, CN_AUTHENTICATOR);
-        const char* authenticator_options = string_or_null(params, CN_AUTHENTICATOR_OPTIONS);
-
+        const char* protocol = string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
+        const char* authenticator = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
+        const char* authenticator_options = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
 
         set<string> relations;
 
         if (extract_relations(json, relations, server_relation_types, server_relation_is_valid) &&
-            runtime_create_server(name, address, port, protocol, authenticator, authenticator_options))
+            runtime_create_server(name, address, port.c_str(), protocol, authenticator, authenticator_options))
         {
             rval = server_find_by_unique_name(name);
             ss_dassert(rval);
@@ -918,6 +908,10 @@ SERVER* runtime_create_server_from_json(json_t* json)
                 rval = NULL;
             }
         }
+    }
+    else
+    {
+        MXS_WARNING("Invalid request JSON: %s", mxs::json_dump(json).c_str());
     }
 
     return rval;
@@ -961,14 +955,14 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 
     if (server_to_object_relations(server, old_json.get(), new_json))
     {
-        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
-        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+        rval = true;
+        json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
+        json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
         ss_dassert(old_parameters);
 
         if (parameters)
         {
-            rval = true;
             const char* key;
             json_t* value;
 
@@ -994,7 +988,7 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 
 const char* object_relation_types[] =
 {
-    CN_SERVERS,
+    MXS_JSON_PTR_RELATIONSHIPS_SERVERS,
     NULL
 };
 
@@ -1015,8 +1009,8 @@ static bool validate_monitor_json(json_t* json)
     bool rval = false;
     json_t* value;
 
-    if ((value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
-        (value = json_object_get(json, CN_MODULE)) && json_is_string(value))
+    if ((value = mxs_json_pointer(json, MXS_JSON_PTR_ID)) && json_is_string(value) &&
+        (value = mxs_json_pointer(json, MXS_JSON_PTR_MODULE)) && json_is_string(value))
     {
         set<string> relations;
         if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
@@ -1071,8 +1065,8 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 
     if (validate_monitor_json(json))
     {
-        const char* name = json_string_value(json_object_get(json, CN_NAME));
-        const char* module = json_string_value(json_object_get(json, CN_MODULE));
+        const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
 
         if (runtime_create_monitor(name, module))
         {
@@ -1085,6 +1079,10 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
                 rval = NULL;
             }
         }
+    }
+    else
+    {
+        MXS_WARNING("Invalid request JSON: %s", mxs::json_dump(json).c_str());
     }
 
     return rval;
@@ -1128,15 +1126,15 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 
     if (object_to_server_relations(monitor->name, old_json.get(), new_json))
     {
+        rval = true;
         bool changed = false;
-        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
-        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+        json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
+        json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
         ss_dassert(old_parameters);
 
         if (parameters)
         {
-            rval = true;
             const char* key;
             json_t* value;
 
@@ -1194,8 +1192,8 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
     if (object_to_server_relations(service->name, old_json.get(), new_json))
     {
         bool changed = false;
-        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
-        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+        json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
+        json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
         ss_dassert(old_parameters);
 
@@ -1226,6 +1224,7 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                 }
                 else if (paramset.find(key) != paramset.end())
                 {
+                    /** Parameter can be altered */
                     if (!runtime_alter_service(service, key, mxs::json_to_string(value).c_str()))
                     {
                         rval = false;
@@ -1233,6 +1232,159 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                 }
             }
         }
+    }
+
+    return rval;
+}
+
+bool runtime_alter_logs_from_json(json_t* json)
+{
+    bool rval = false;
+    json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+
+    if (param && json_is_object(param))
+    {
+        json_t* value;
+        rval = true;
+
+        if ((value = mxs_json_pointer(param, "highprecision")) && json_is_boolean(value))
+        {
+            if (json_is_boolean(value))
+            {
+                mxs_log_set_highprecision_enabled(json_boolean_value(value));
+            }
+            else
+            {
+                rval = false;
+            }
+        }
+
+        if ((value = mxs_json_pointer(param, "maxlog")) && json_is_boolean(value))
+        {
+            if (json_is_boolean(value))
+            {
+                mxs_log_set_maxlog_enabled(json_boolean_value(value));
+            }
+            else
+            {
+                rval = false;
+            }
+        }
+
+        if ((value = mxs_json_pointer(param, "syslog")))
+        {
+            if (json_is_boolean(value))
+            {
+                mxs_log_set_syslog_enabled(json_boolean_value(value));
+            }
+            else
+            {
+                rval = false;
+            }
+        }
+
+        if ((param = mxs_json_pointer(param, "throttling")) && json_is_object(param))
+        {
+            int intval;
+            MXS_LOG_THROTTLING throttle;
+            mxs_log_get_throttling(&throttle);
+
+            if ((value = mxs_json_pointer(param, "count")))
+            {
+                if (json_is_integer(value) && (intval = json_integer_value(value)) > 0)
+                {
+                    throttle.count = intval;
+                }
+                else
+                {
+                    rval = false;
+                }
+            }
+
+            if ((value = mxs_json_pointer(param, "suppress_ms")))
+            {
+                if (json_is_integer(value) && (intval = json_integer_value(value)) > 0)
+                {
+                    throttle.suppress_ms = intval;
+                }
+                else
+                {
+                    rval = false;
+                }
+            }
+
+            if ((value = mxs_json_pointer(param, "window_ms")))
+            {
+                if (json_is_integer(value) && (intval = json_integer_value(value)) > 0)
+                {
+                    throttle.window_ms = intval;
+                }
+                else
+                {
+                    rval = false;
+                }
+            }
+
+            if (rval)
+            {
+                mxs_log_set_throttling(&throttle);
+            }
+        }
+    }
+
+    return rval;
+}
+
+static bool validate_listener_json(json_t* json)
+{
+    bool rval = false;
+    json_t* param;
+
+    if ((param = mxs_json_pointer(json, MXS_JSON_PTR_ID)) && json_is_string(param) &&
+        (param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)) && json_is_object(param))
+    {
+        json_t* value;
+
+        if ((value = mxs_json_pointer(param, CN_PORT)) && json_is_integer(value) &&
+            (!(value = mxs_json_pointer(param, CN_ADDRESS)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_AUTHENTICATOR)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_AUTHENTICATOR_OPTIONS)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_KEY)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_CERT)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_CA_CERT)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_VERSION)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_CERT_VERIFY_DEPTH)) || json_is_integer(value)))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
+{
+    bool rval = false;
+
+    if (validate_listener_json(json))
+    {
+        string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
+
+        const char* id = string_or_null(json, MXS_JSON_PTR_ID);
+        const char* address = string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
+        const char* protocol = string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
+        const char* authenticator = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
+        const char* authenticator_options = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
+        const char* ssl_key = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_KEY);
+        const char* ssl_cert = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT);
+        const char* ssl_ca_cert = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
+        const char* ssl_version = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
+        const char* ssl_cert_verify_depth = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
+
+        rval = runtime_create_listener(service, id, address, port.c_str(), protocol,
+                                       authenticator, authenticator_options,
+                                       ssl_key, ssl_cert, ssl_ca_cert, ssl_version,
+                                       ssl_cert_verify_depth);
     }
 
     return rval;

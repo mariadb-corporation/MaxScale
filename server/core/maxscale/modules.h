@@ -162,9 +162,20 @@ bool mxs_module_iterator_has_next(const MXS_MODULE_ITERATOR* iterator);
 MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator);
 
 /**
+ * @brief Convert module to JSON
+ *
+ * @param module Module to convert
+ * @param host   Hostname of this server
+ *
+ * @return The module in JSON format
+ */
+json_t* module_to_json(const MXS_MODULE* module, const char* host);
+
+/**
  * @brief Convert all modules to JSON
  *
  * @param host The hostname of this server
+ *
  * @return Array of modules in JSON format
  */
 json_t* module_list_to_json(const char* host);

@@ -37,16 +37,17 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <curl/curl.h>
+#include <sys/utsname.h>
+#include <openssl/sha.h>
 
 #include <maxscale/modinfo.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>
 #include <maxscale/notification.h>
-#include <curl/curl.h>
-#include <sys/utsname.h>
-#include <openssl/sha.h>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
+#include <maxscale/json_api.h>
 
 #include "maxscale/modules.h"
 #include "maxscale/config.h"
@@ -406,16 +407,19 @@ void dprintAllModules(DCB *dcb)
     dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n\n");
 }
 
-static json_t* module_to_json(const LOADED_MODULE *mod, const char* host)
+static json_t* module_json_data(const LOADED_MODULE *mod, const char* host)
 {
     json_t* obj = json_object();
 
-    json_object_set_new(obj, "name", json_string(mod->module));
-    json_object_set_new(obj, "type", json_string(mod->type));
-    json_object_set_new(obj, "version", json_string(mod->info->version));
-    json_object_set_new(obj, "description", json_string(mod->info->description));
-    json_object_set_new(obj, "api", json_string(mxs_module_api_to_string(mod->info->modapi)));
-    json_object_set_new(obj, "status", json_string(mxs_module_status_to_string(mod->info->status)));
+    json_object_set_new(obj, CN_ID, json_string(mod->module));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE));
+
+    json_t* attr = json_object();
+    json_object_set_new(attr, "module_type", json_string(mod->type));
+    json_object_set_new(attr, "version", json_string(mod->info->version));
+    json_object_set_new(attr, "description", json_string(mod->info->description));
+    json_object_set_new(attr, "api", json_string(mxs_module_api_to_string(mod->info->modapi)));
+    json_object_set_new(attr, "status", json_string(mxs_module_status_to_string(mod->info->status)));
 
     json_t* params = json_array();
 
@@ -447,9 +451,30 @@ static json_t* module_to_json(const LOADED_MODULE *mod, const char* host)
         json_array_append_new(params, p);
     }
 
-    json_object_set_new(obj, CN_PARAMETERS, params);
+    json_object_set_new(attr, CN_PARAMETERS, params);
+    json_object_set_new(obj, CN_ATTRIBUTES, attr);
+    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, mod->module));
 
     return obj;
+}
+
+json_t* module_to_json(const MXS_MODULE* module, const char* host)
+{
+    json_t* data = NULL;
+
+    for (LOADED_MODULE *ptr = registered; ptr; ptr = ptr->next)
+    {
+        if (ptr->info == module)
+        {
+            data = module_json_data(ptr, host);
+            break;
+        }
+    }
+
+    // This should always be non-NULL
+    ss_dassert(data);
+
+    return mxs_json_resource(host, MXS_JSON_API_MODULES, data);
 }
 
 json_t* module_list_to_json(const char* host)
@@ -458,10 +483,10 @@ json_t* module_list_to_json(const char* host)
 
     for (LOADED_MODULE *ptr = registered; ptr; ptr = ptr->next)
     {
-        json_array_append_new(arr, module_to_json(ptr, host));
+        json_array_append_new(arr, module_json_data(ptr, host));
     }
 
-    return arr;
+    return mxs_json_resource(host, MXS_JSON_API_MODULES, arr);
 }
 
 void moduleShowFeedbackReport(DCB *dcb)

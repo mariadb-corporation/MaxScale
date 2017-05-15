@@ -305,6 +305,16 @@ json_t* service_to_json(const SERVICE* service, const char* host);
 json_t* service_list_to_json(const char* host);
 
 /**
+ * @brief Convert service listeners to JSON
+ *
+ * @param service Service whose listeners are converted
+ * @param host    Hostname of this server
+ *
+ * @return Array of JSON format listeners
+ */
+json_t* service_listeners_to_json(const SERVICE* service, const char* host);
+
+/**
  * @brief Get links to services that relate to a server
  *
  * @param server Server to inspect

@@ -129,8 +129,8 @@ int main(int argc, char **argv)
     }
 
     inst->service = service;
-    inst->user = service->credentials.name;
-    inst->password = service->credentials.authdata;
+    inst->user = MXS_STRDUP_A(service->credentials.name);
+    inst->password = MXS_STRDUP_A(service->credentials.authdata);
 
     MXS_NOTICE("testbinlog v1.0");
 

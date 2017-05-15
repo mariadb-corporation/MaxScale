@@ -14,10 +14,13 @@
 
 #include <list>
 #include <sstream>
+#include <map>
 
 #include <maxscale/alloc.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/spinlock.hh>
+#include <maxscale/json_api.h>
+#include <maxscale/housekeeper.h>
 
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
@@ -27,12 +30,76 @@
 #include "maxscale/service.h"
 #include "maxscale/config_runtime.h"
 #include "maxscale/modules.h"
+#include "maxscale/worker.h"
+#include "maxscale/http.hh"
 
 using std::list;
+using std::map;
 using std::string;
 using std::stringstream;
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
+
+/**
+ * Class that keeps track of resource modification times
+ */
+class ResourceWatcher
+{
+public:
+
+    ResourceWatcher() :
+        m_init(time(NULL))
+    {
+    }
+
+    void modify(const string& path)
+    {
+        map<string, uint64_t>::iterator it = m_etag.find(path);
+
+        if (it != m_etag.end())
+        {
+            it->second++;
+        }
+        else
+        {
+            // First modification
+            m_etag[path] = 1;
+        }
+
+        m_last_modified[path] = time(NULL);
+    }
+
+    time_t last_modified(const string& path) const
+    {
+        map<string, time_t>::const_iterator it = m_last_modified.find(path);
+
+        if (it != m_last_modified.end())
+        {
+            return it->second;
+        }
+
+        // Resource has not yet been updated
+        return m_init;
+    }
+
+    time_t etag(const string& path) const
+    {
+        map<string, uint64_t>::const_iterator it = m_etag.find(path);
+
+        if (it != m_etag.end())
+        {
+            return it->second;
+        }
+
+        // Resource has not yet been updated
+        return 0;
+    }
+
+private:
+    time_t m_init;
+    map<string, time_t> m_last_modified;
+    map<string, uint64_t> m_etag;
+};
 
 Resource::Resource(ResourceCallback cb, int components, ...) :
     m_cb(cb)
@@ -88,7 +155,8 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
         if ((path == ":service" && service_find(target.c_str())) ||
             (path == ":server" && server_find_by_unique_name(target.c_str())) ||
             (path == ":filter" && filter_def_find(target.c_str())) ||
-            (path == ":monitor" && monitor_find(target.c_str())))
+            (path == ":monitor" && monitor_find(target.c_str())) ||
+            (path == ":module" && get_module(target.c_str(), NULL)))
         {
             rval = true;
         }
@@ -100,6 +168,16 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             if (ses)
             {
                 session_put_ref(ses);
+                rval = true;
+            }
+        }
+        else if (path == ":thread")
+        {
+            char* end;
+            int id = strtol(target.c_str(), &end, 10);
+
+            if (*end == '\0' && mxs_worker_get(id))
+            {
                 rval = true;
             }
         }
@@ -140,17 +218,12 @@ HttpResponse cb_create_server(const HttpRequest& request)
 {
     json_t* json = request.get_json();
 
-    if (json)
+    if (json && runtime_create_server_from_json(json))
     {
-        SERVER* server = runtime_create_server_from_json(json);
-
-        if (server)
-        {
-            return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
-        }
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_alter_server(const HttpRequest& request)
@@ -163,28 +236,36 @@ HttpResponse cb_alter_server(const HttpRequest& request)
 
         if (server && runtime_alter_server_from_json(server, json))
         {
-            return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
         }
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_create_monitor(const HttpRequest& request)
 {
     json_t* json = request.get_json();
 
-    if (json)
+    if (json && runtime_create_monitor_from_json(json))
     {
-        MXS_MONITOR* monitor = runtime_create_monitor_from_json(json);
-
-        if (monitor)
-        {
-            return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
-        }
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
+}
+
+HttpResponse cb_create_service_listener(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+
+    if (service && json && runtime_create_listener_from_json(service, json))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_alter_monitor(const HttpRequest& request)
@@ -197,11 +278,11 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
 
         if (monitor && runtime_alter_monitor_from_json(monitor, json))
         {
-            return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
         }
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_alter_service(const HttpRequest& request)
@@ -214,11 +295,23 @@ HttpResponse cb_alter_service(const HttpRequest& request)
 
         if (service && runtime_alter_service_from_json(service, json))
         {
-            return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
         }
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
+}
+
+HttpResponse cb_alter_logs(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json && runtime_alter_logs_from_json(json))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_delete_server(const HttpRequest& request)
@@ -230,7 +323,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_delete_monitor(const HttpRequest& request)
@@ -242,7 +335,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_all_servers(const HttpRequest& request)
@@ -282,15 +375,7 @@ HttpResponse cb_get_service(const HttpRequest& request)
 HttpResponse cb_get_service_listeners(const HttpRequest& request)
 {
     SERVICE* service = service_find(request.uri_part(1).c_str());
-    json_t* json = service_to_json(service, request.host());
-
-    // The 'listeners' key is always defined
-    json_t* listeners = json_incref(json_object_get(json, CN_LISTENERS));
-    ss_dassert(listeners);
-
-    json_decref(json);
-
-    return HttpResponse(MHD_HTTP_OK, listeners);
+    return HttpResponse(MHD_HTTP_OK, service_listeners_to_json(service, request.host()));
 }
 
 HttpResponse cb_all_filters(const HttpRequest& request)
@@ -354,38 +439,47 @@ HttpResponse cb_maxscale(const HttpRequest& request)
 
 HttpResponse cb_logs(const HttpRequest& request)
 {
-    // TODO: Show logs
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host()));
 }
 
 HttpResponse cb_flush(const HttpRequest& request)
 {
+    int code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+
     // Flush logs
     if (mxs_log_rotate() == 0)
     {
-        return HttpResponse(MHD_HTTP_OK);
+        code = MHD_HTTP_NO_CONTENT;
     }
-    else
-    {
-        return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
-    }
+
+    return HttpResponse(code);
 }
 
-HttpResponse cb_threads(const HttpRequest& request)
+HttpResponse cb_all_threads(const HttpRequest& request)
 {
-    // TODO: Show thread status
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, mxs_worker_list_to_json(request.host()));
+}
+
+HttpResponse cb_thread(const HttpRequest& request)
+{
+    int id = atoi(request.last_uri_part().c_str());
+    return HttpResponse(MHD_HTTP_OK, mxs_worker_to_json(request.host(), id));
 }
 
 HttpResponse cb_tasks(const HttpRequest& request)
 {
-    // TODO: Show housekeeper tasks
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, hk_tasks_json(request.host()));
 }
 
 HttpResponse cb_all_modules(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, module_list_to_json(request.host()));
+}
+
+HttpResponse cb_module(const HttpRequest& request)
+{
+    const MXS_MODULE* module = get_module(request.last_uri_part().c_str(), NULL);
+    return HttpResponse(MHD_HTTP_OK, module_to_json(module, request.host()));
 }
 
 HttpResponse cb_send_ok(const HttpRequest& request)
@@ -404,7 +498,7 @@ public:
     RootResource()
     {
         // Special resources required by OPTION etc.
-        m_get.push_back(SResource(new Resource(cb_send_ok, 1, "/")));
+        m_get.push_back(SResource(new Resource(cb_send_ok, 0)));
         m_get.push_back(SResource(new Resource(cb_send_ok, 1, "*")));
 
         m_get.push_back(SResource(new Resource(cb_all_servers, 1, "servers")));
@@ -425,20 +519,25 @@ public:
         m_get.push_back(SResource(new Resource(cb_get_session, 2, "sessions", ":session")));
 
         m_get.push_back(SResource(new Resource(cb_maxscale, 1, "maxscale")));
-        m_get.push_back(SResource(new Resource(cb_threads, 2, "maxscale", "threads")));
+        m_get.push_back(SResource(new Resource(cb_all_threads, 2, "maxscale", "threads")));
+        m_get.push_back(SResource(new Resource(cb_thread, 3, "maxscale", "threads", ":thread")));
         m_get.push_back(SResource(new Resource(cb_logs, 2, "maxscale", "logs")));
         m_get.push_back(SResource(new Resource(cb_tasks, 2, "maxscale", "tasks")));
         m_get.push_back(SResource(new Resource(cb_all_modules, 2, "maxscale", "modules")));
+        m_get.push_back(SResource(new Resource(cb_module, 3, "maxscale", "modules", ":module")));
 
         /** Create new resources */
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
+        m_post.push_back(SResource(new Resource(cb_create_service_listener, 3,
+                                                "services", ":service", "listeners")));
 
         /** Update resources */
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
         m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
         m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
+        m_put.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
 
         /** Change resource states */
         m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));
@@ -568,10 +667,106 @@ private:
 };
 
 static RootResource resources; /**< Core resource set */
+static ResourceWatcher watcher; /**< Modification watcher */
 static SpinLock resource_lock;
+
+static bool request_modifies_data(const string& verb)
+{
+    return verb == MHD_HTTP_METHOD_POST ||
+           verb == MHD_HTTP_METHOD_PUT ||
+           verb == MHD_HTTP_METHOD_DELETE;
+}
+
+static bool request_reads_data(const string& verb)
+{
+    return verb == MHD_HTTP_METHOD_GET ||
+           verb == MHD_HTTP_METHOD_HEAD;
+}
+
+bool request_precondition_met(const HttpRequest& request, HttpResponse& response)
+{
+    bool rval = true;
+    string str;
+    const string& uri = request.get_uri();
+
+    if ((str = request.get_header(MHD_HTTP_HEADER_IF_MODIFIED_SINCE)).length())
+    {
+        if (watcher.last_modified(uri) <= http_from_date(str))
+        {
+            rval = false;
+            response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
+        }
+    }
+    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_UNMODIFIED_SINCE)).length())
+    {
+        if (watcher.last_modified(uri) > http_from_date(str))
+        {
+            rval = false;
+            response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
+        }
+    }
+    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_MATCH)).length())
+    {
+        str = str.substr(1, str.length() - 2);
+
+        if (watcher.etag(uri) != strtol(str.c_str(), NULL, 10))
+        {
+            rval = false;
+            response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
+        }
+    }
+    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH)).length())
+    {
+        str = str.substr(1, str.length() - 2);
+
+        if (watcher.etag(uri) == strtol(str.c_str(), NULL, 10))
+        {
+            rval = false;
+            response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
+        }
+    }
+
+    return rval;
+}
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
+    MXS_DEBUG("%s %s %s", request.get_verb().c_str(), request.get_uri().c_str(),
+              request.get_json_str().c_str());
+
     SpinLockGuard guard(resource_lock);
-    return resources.process_request(request);
+    HttpResponse rval;
+
+    if (request_precondition_met(request, rval))
+    {
+        rval = resources.process_request(request);
+
+        if (request_modifies_data(request.get_verb()))
+        {
+            switch (rval.get_code())
+            {
+            case MHD_HTTP_OK:
+            case MHD_HTTP_NO_CONTENT:
+            case MHD_HTTP_CREATED:
+                watcher.modify(request.get_uri());
+                break;
+
+            default:
+                break;
+            }
+        }
+        else if (request_reads_data(request.get_verb()))
+        {
+            const string& uri = request.get_uri();
+
+            rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED,
+                            http_to_date(watcher.last_modified(uri)));
+
+            stringstream ss;
+            ss << "\"" << watcher.etag(uri) << "\"";
+            rval.add_header(HTTP_RESPONSE_HEADER_ETAG, ss.str());
+        }
+    }
+
+    return rval;
 }

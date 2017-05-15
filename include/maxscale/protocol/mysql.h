@@ -320,7 +320,7 @@ typedef struct
     uint32_t               server_capabilities;          /*< server capabilities, created or received */
     uint32_t               client_capabilities;          /*< client capabilities, created or received */
     uint32_t               extra_capabilities;           /*< MariaDB 10.2 capabilities */
-    uint32_t               tid;                          /*< MySQL Thread ID, in handshake */
+    uint64_t               thread_id;                    /*< MySQL Thread ID. Send only 32bits in handshake. */
     unsigned int           charset;                      /*< MySQL character set at connect time */
     int                    ignore_replies;               /*< How many replies should be discarded */
     GWBUF*                 stored_query;                 /*< Temporarily stored queries */
