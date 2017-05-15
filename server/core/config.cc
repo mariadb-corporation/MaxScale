@@ -42,6 +42,8 @@
 #include <maxscale/paths.h>
 #include <maxscale/json_api.h>
 #include <maxscale/http.hh>
+#include <maxscale/version.h>
+#include <maxscale/maxscale.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
@@ -3862,21 +3864,45 @@ int config_parse_server_list(const char *servers, char ***output_array)
     return output_ind;
 }
 
-json_t* config_paths_to_json(const char* host)
+json_t* config_maxscale_to_json(const char* host)
 {
+    json_t* param = json_object();
+    json_object_set_new(param, "libdir", json_string(get_libdir()));
+    json_object_set_new(param, "datadir", json_string(get_datadir()));
+    json_object_set_new(param, "process_datadir", json_string(get_process_datadir()));
+    json_object_set_new(param, "cachedir", json_string(get_cachedir()));
+    json_object_set_new(param, "configdir", json_string(get_configdir()));
+    json_object_set_new(param, "config_persistdir", json_string(get_config_persistdir()));
+    json_object_set_new(param, "module_configdir", json_string(get_module_configdir()));
+    json_object_set_new(param, "piddir", json_string(get_piddir()));
+    json_object_set_new(param, "logdir", json_string(get_logdir()));
+    json_object_set_new(param, "langdir", json_string(get_langdir()));
+    json_object_set_new(param, "execdir", json_string(get_execdir()));
+    json_object_set_new(param, "connector_plugindir", json_string(get_connector_plugindir()));
+    json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
+
+    MXS_CONFIG* cnf = config_get_global_options();
+
+    json_object_set_new(param, CN_AUTH_CONNECT_TIMEOUT, json_integer(cnf->auth_conn_timeout));
+    json_object_set_new(param, CN_AUTH_READ_TIMEOUT, json_integer(cnf->auth_read_timeout));
+    json_object_set_new(param, CN_AUTH_WRITE_TIMEOUT, json_integer(cnf->auth_write_timeout));
+    json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
+    json_object_set_new(param, "syslog", json_boolean(cnf->syslog));
+    json_object_set_new(param, "maxlog", json_boolean(cnf->maxlog));
+    json_object_set_new(param, "log_to_shm", json_boolean(cnf->log_to_shm));
+    json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
+
+    if (cnf->qc_args)
+    {
+        json_object_set_new(param, CN_QUERY_CLASSIFIER_ARGS, json_string(cnf->qc_args));
+    }
+
     json_t* attr = json_object();
-    json_object_set_new(attr, "libdir", json_string(get_libdir()));
-    json_object_set_new(attr, "datadir", json_string(get_datadir()));
-    json_object_set_new(attr, "process_datadir", json_string(get_process_datadir()));
-    json_object_set_new(attr, "cachedir", json_string(get_cachedir()));
-    json_object_set_new(attr, "configdir", json_string(get_configdir()));
-    json_object_set_new(attr, "config_persistdir", json_string(get_config_persistdir()));
-    json_object_set_new(attr, "module_configdir", json_string(get_module_configdir()));
-    json_object_set_new(attr, "piddir", json_string(get_piddir()));
-    json_object_set_new(attr, "logdir", json_string(get_logdir()));
-    json_object_set_new(attr, "langdir", json_string(get_langdir()));
-    json_object_set_new(attr, "execdir", json_string(get_execdir()));
-    json_object_set_new(attr, "connector_plugindir", json_string(get_connector_plugindir()));
+    json_object_set_new(attr, CN_PARAMETERS, param);
+    json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
+    json_object_set_new(attr, "commit", json_string(MAXSCALE_COMMIT));
+    json_object_set_new(attr, "started_at", json_string(http_to_date(maxscale_started()).c_str()));
+    json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
