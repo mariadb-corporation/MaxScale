@@ -7,12 +7,12 @@ This document lists optional parameters that all current monitors support.
 ### `user`
 
 Username used by the monitor to connect to the backend servers. If a server defines
-the `monitoruser` parameter, that value will be used instead of the default `user` of the monitor. 
+the `monitoruser` parameter, that value will be used instead.
 
 ### `password`
 
 Password for the user defined with the `user` parameter. If a server defines
-the `monitorpw` parameter, that value will be used instead of the default `password` of the monitor.
+the `monitorpw` parameter, that value will be used instead.
 
 ### `monitor_interval`
 
