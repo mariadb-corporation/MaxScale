@@ -28,7 +28,7 @@ set up replication between the two. The only thing we need to do is to create th
 users we will use for monitoring and authentication.
 
 The process of creating monitoring and authentication users for MariaDB MaxScale is described 
-	in the Creating Database Users section of the 
+in the Creating Database Users section of the 
 [MariaDB MaxScale Tutorial](MaxScale-Tutorial.md#creating-database-users).
 
 ## Setting up RabbitMQ server
