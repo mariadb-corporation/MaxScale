@@ -113,7 +113,7 @@ extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
 extern void maxscaleDrop(Parse*, MxsDrop* pDrop);
 extern void maxscaleExecute(Parse*, Token* pName);
-extern void maxscaleExplain(Parse*, SrcList* pName);
+extern void maxscaleExplain(Parse*, Token* pNext);
 extern void maxscaleFlush(Parse*, Token* pWhat);
 extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
 extern void maxscaleLoadData(Parse*, SrcList* pFullName);
@@ -276,33 +276,22 @@ input ::= cmdlist.
 cmdlist ::= cmdlist ecmd.
 cmdlist ::= ecmd.
 ecmd ::= SEMI.
-ecmd ::= explain cmdx SEMI.
+ecmd ::= explain SEMI.
+ecmd ::= cmdx SEMI.
 %ifdef MAXSCALE
 explain_kw ::= EXPLAIN.  // Also covers DESCRIBE
 explain_kw ::= DESC.
 
-ecmd ::= explain_kw fullname(X) SEMI. {
-  pParse->explain = 1;
-  maxscaleExplain(pParse, X);
-}
+explain ::= explain_kw.             { pParse->explain = 1; }
 // deferred_id is defined later, after the id token_class has been defined.
-ecmd ::= explain FOR deferred_id INTEGER SEMI. { // FOR CONNECTION connection_id
+explain ::= explain_kw deferred_id(A). { maxscaleExplain(pParse, &A); }
+explain ::= explain_kw deferred_id(A) DOT deferred_id. { maxscaleExplain(pParse, &A); }
+ecmd ::= explain FOR(A) deferred_id INTEGER SEMI. { // FOR CONNECTION connection_id
   pParse->explain = 1;
-  maxscaleExplain(pParse, 0);
+  maxscaleExplain(pParse, &A);
 }
 %endif
-explain ::= .
 %ifndef SQLITE_OMIT_EXPLAIN
-%ifdef MAXSCALE
-explain_type_opt ::= .
-explain_type_opt ::= deferred_id.                // EXTENDED | PARTITIONS
-explain_type_opt ::= deferred_id eq deferred_id. // FORMAT = {TRADITIONAL|JSON}
-
-explain ::= explain_kw explain_type_opt. { pParse->explain = 1; }
-%endif
-%ifndef MAXSCALE
-explain ::= EXPLAIN.              { pParse->explain = 1; }
-%endif
 %ifndef MAXSCALE
 explain ::= EXPLAIN QUERY PLAN.   { pParse->explain = 2; }
 %endif
@@ -2675,7 +2664,7 @@ type_options(A) ::= type_options CHARACTER SET ids. {A|=8;}
 type_options(A) ::= type_options CHARSET ids. {A|=8;}
 
 // deferred_id is used instead of id before the token_class id has been defined.
-deferred_id ::= id.
+deferred_id(A) ::= id(X). {A=X;}
 
 as_opt ::= .
 as_opt ::= AS.

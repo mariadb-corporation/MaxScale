@@ -494,41 +494,47 @@ const char* qc_op_to_string(qc_query_op_t op)
     case QUERY_OP_UNDEFINED:
         return "QUERY_OP_UNDEFINED";
 
-    case QUERY_OP_SELECT:
-        return "QUERY_OP_SELECT";
-
-    case QUERY_OP_UPDATE:
-        return "QUERY_OP_UPDATE";
-
-    case QUERY_OP_INSERT:
-        return "QUERY_OP_INSERT";
-
-    case QUERY_OP_DELETE:
-        return "QUERY_OP_DELETE";
-
-    case QUERY_OP_TRUNCATE:
-        return "QUERY_OP_TRUNCATE";
-
     case QUERY_OP_ALTER:
         return "QUERY_OP_ALTER";
-
-    case QUERY_OP_CREATE:
-        return "QUERY_OP_CREATE";
-
-    case QUERY_OP_DROP:
-        return "QUERY_OP_DROP";
 
     case QUERY_OP_CHANGE_DB:
         return "QUERY_OP_CHANGE_DB";
 
-    case QUERY_OP_LOAD:
-        return "QUERY_OP_LOAD";
+    case QUERY_OP_CREATE:
+        return "QUERY_OP_CREATE";
+
+    case QUERY_OP_DELETE:
+        return "QUERY_OP_DELETE";
+
+    case QUERY_OP_DROP:
+        return "QUERY_OP_DROP";
+
+    case QUERY_OP_EXPLAIN:
+        return "QUERY_OP_EXPLAIN";
 
     case QUERY_OP_GRANT:
         return "QUERY_OP_GRANT";
 
+    case QUERY_OP_INSERT:
+        return "QUERY_OP_INSERT";
+
+    case QUERY_OP_LOAD:
+        return "QUERY_OP_LOAD";
+
     case QUERY_OP_REVOKE:
         return "QUERY_OP_REVOKE";
+
+    case QUERY_OP_SELECT:
+        return "QUERY_OP_SELECT";
+
+    case QUERY_OP_SHOW:
+        return "QUERY_OP_SHOW";
+
+    case QUERY_OP_TRUNCATE:
+        return "QUERY_OP_TRUNCATE";
+
+    case QUERY_OP_UPDATE:
+        return "QUERY_OP_UPDATE";
 
     default:
         return "UNKNOWN_QUERY_OP";

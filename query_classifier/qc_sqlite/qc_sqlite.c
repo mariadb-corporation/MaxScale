@@ -411,6 +411,11 @@ static void parse_query_string(const char* query, size_t len)
     const char* suffix = (len > max_len ? "..." : "");
     const char* format;
 
+    if (this_thread.info->operation == QUERY_OP_EXPLAIN)
+    {
+        this_thread.info->status = QC_QUERY_PARSED;
+    }
+
     if (rc != SQLITE_OK)
     {
         if (qc_info_was_tokenized(this_thread.info->status))
@@ -1524,60 +1529,64 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
-    info->type_mask = QUERY_TYPE_WRITE;
-    info->operation = QUERY_OP_DELETE;
-    info->has_clause = pWhere ? true : false;
 
-    if (pUsing)
+    if (info->operation != QUERY_OP_EXPLAIN)
     {
-        // Walk through the using declaration and update
-        // table and database names.
-        for (int i = 0; i < pUsing->nSrc; ++i)
+        info->type_mask = QUERY_TYPE_WRITE;
+        info->operation = QUERY_OP_DELETE;
+        info->has_clause = pWhere ? true : false;
+
+        if (pUsing)
         {
-            struct SrcList_item* pItem = &pUsing->a[i];
-
-            update_names(info, pItem->zDatabase, pItem->zName);
-        }
-
-        // Walk through the tablenames while excluding alias
-        // names from the using declaration.
-        for (int i = 0; i < pTabList->nSrc; ++i)
-        {
-            const struct SrcList_item* pTable = &pTabList->a[i];
-            ss_dassert(pTable->zName);
-            int j = 0;
-            bool isSame = false;
-
-            do
+            // Walk through the using declaration and update
+            // table and database names.
+            for (int i = 0; i < pUsing->nSrc; ++i)
             {
-                struct SrcList_item* pItem = &pUsing->a[j++];
+                struct SrcList_item* pItem = &pUsing->a[i];
 
-                if (strcasecmp(pTable->zName, pItem->zName) == 0)
+                update_names(info, pItem->zDatabase, pItem->zName);
+            }
+
+            // Walk through the tablenames while excluding alias
+            // names from the using declaration.
+            for (int i = 0; i < pTabList->nSrc; ++i)
+            {
+                const struct SrcList_item* pTable = &pTabList->a[i];
+                ss_dassert(pTable->zName);
+                int j = 0;
+                bool isSame = false;
+
+                do
                 {
-                    isSame = true;
+                    struct SrcList_item* pItem = &pUsing->a[j++];
+
+                    if (strcasecmp(pTable->zName, pItem->zName) == 0)
+                    {
+                        isSame = true;
+                    }
+                    else if (pItem->zAlias && (strcasecmp(pTable->zName, pItem->zAlias) == 0))
+                    {
+                        isSame = true;
+                    }
                 }
-                else if (pItem->zAlias && (strcasecmp(pTable->zName, pItem->zAlias) == 0))
+                while (!isSame && (j < pUsing->nSrc));
+
+                if (!isSame)
                 {
-                    isSame = true;
+                    // No alias name, update the table name.
+                    update_names(info, pTable->zDatabase, pTable->zName);
                 }
             }
-            while (!isSame && (j < pUsing->nSrc));
-
-            if (!isSame)
-            {
-                // No alias name, update the table name.
-                update_names(info, pTable->zDatabase, pTable->zName);
-            }
         }
-    }
-    else
-    {
-        update_names_from_srclist(info, pTabList);
-    }
+        else
+        {
+            update_names_from_srclist(info, pTabList);
+        }
 
-    if (pWhere)
-    {
-        update_field_infos(info, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
+        if (pWhere)
+        {
+            update_field_infos(info, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
+        }
     }
 
     exposed_sqlite3ExprDelete(pParse->db, pWhere);
@@ -1677,36 +1686,40 @@ void mxs_sqlite3Insert(Parse* pParse,
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
-    info->type_mask = QUERY_TYPE_WRITE;
-    info->operation = QUERY_OP_INSERT;
-    ss_dassert(pTabList);
-    ss_dassert(pTabList->nSrc >= 1);
-    update_names_from_srclist(info, pTabList);
 
-    if (pColumns)
+    if (info->operation != QUERY_OP_EXPLAIN)
     {
-        update_field_infos_from_idlist(info, pColumns, 0, NULL);
-    }
+        info->type_mask = QUERY_TYPE_WRITE;
+        info->operation = QUERY_OP_INSERT;
+        ss_dassert(pTabList);
+        ss_dassert(pTabList->nSrc >= 1);
+        update_names_from_srclist(info, pTabList);
 
-    if (pSelect)
-    {
-        uint32_t usage;
-
-        if (pSelect->selFlags & SF_Values) // Synthesized from VALUES clause
+        if (pColumns)
         {
-            usage = 0;
-        }
-        else
-        {
-            usage = QC_USED_IN_SELECT;
+            update_field_infos_from_idlist(info, pColumns, 0, NULL);
         }
 
-        update_field_infos_from_select(info, pSelect, usage, NULL);
-    }
+        if (pSelect)
+        {
+            uint32_t usage;
 
-    if (pSet)
-    {
-        update_field_infos_from_exprlist(info, pSet, 0, NULL);
+            if (pSelect->selFlags & SF_Values) // Synthesized from VALUES clause
+            {
+                usage = 0;
+            }
+            else
+            {
+                usage = QC_USED_IN_SELECT;
+            }
+
+            update_field_infos_from_select(info, pSelect, usage, NULL);
+        }
+
+        if (pSet)
+        {
+            update_field_infos_from_exprlist(info, pSet, 0, NULL);
+        }
     }
 
     exposed_sqlite3SrcListDelete(pParse->db, pTabList);
@@ -1737,9 +1750,13 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     if (!info->initializing)
     {
         info->status = QC_QUERY_PARSED;
-        info->operation = QUERY_OP_SELECT;
 
-        maxscaleCollectInfoFromSelect(pParse, p, 0);
+        if (info->operation != QUERY_OP_EXPLAIN)
+        {
+            info->operation = QUERY_OP_SELECT;
+
+            maxscaleCollectInfoFromSelect(pParse, p, 0);
+        }
         // NOTE: By convention, the select is deleted in parse.y.
     }
     else
@@ -1828,24 +1845,28 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
-    info->type_mask = QUERY_TYPE_WRITE;
-    info->operation = QUERY_OP_UPDATE;
-    update_names_from_srclist(info, pTabList);
-    info->has_clause = (pWhere ? true : false);
 
-    if (pChanges)
+    if (info->operation != QUERY_OP_EXPLAIN)
     {
-        for (int i = 0; i < pChanges->nExpr; ++i)
+        info->type_mask = QUERY_TYPE_WRITE;
+        info->operation = QUERY_OP_UPDATE;
+        update_names_from_srclist(info, pTabList);
+        info->has_clause = (pWhere ? true : false);
+
+        if (pChanges)
         {
-            struct ExprList_item* pItem = &pChanges->a[i];
+            for (int i = 0; i < pChanges->nExpr; ++i)
+            {
+                struct ExprList_item* pItem = &pChanges->a[i];
 
-            update_field_infos(info, 0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
+                update_field_infos(info, 0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
+            }
         }
-    }
 
-    if (pWhere)
-    {
-        update_field_infos(info, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
+        if (pWhere)
+        {
+            update_field_infos(info, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
+        }
     }
 
     exposed_sqlite3SrcListDelete(pParse->db, pTabList);
@@ -2045,7 +2066,7 @@ void maxscaleExecute(Parse* pParse, Token* pName)
     }
 }
 
-void maxscaleExplain(Parse* pParse, SrcList* pName)
+void maxscaleExplain(Parse* pParse, Token* pNext)
 {
     QC_TRACE();
 
@@ -2054,16 +2075,28 @@ void maxscaleExplain(Parse* pParse, SrcList* pName)
 
     info->status = QC_QUERY_PARSED;
     info->type_mask = QUERY_TYPE_READ;
-    update_names(info, pName->a[0].zDatabase, pName->a[0].zName);
-    uint32_t u = QC_USED_IN_SELECT;
-    update_field_info(info, "information_schema", "COLUMNS", "COLUMN_DEFAULT", u, NULL);
-    update_field_info(info, "information_schema", "COLUMNS", "COLUMN_KEY", u, NULL);
-    update_field_info(info, "information_schema", "COLUMNS", "COLUMN_NAME", u, NULL);
-    update_field_info(info, "information_schema", "COLUMNS", "COLUMN_TYPE", u, NULL);
-    update_field_info(info, "information_schema", "COLUMNS", "EXTRA", u, NULL);
-    update_field_info(info, "information_schema", "COLUMNS", "IS_NULLABLE", u, NULL);
+    info->operation = QUERY_OP_SHOW;
 
-    exposed_sqlite3SrcListDelete(pParse->db, pName);
+    if (pNext)
+    {
+        if (pNext->z)
+        {
+            const char EXTENDED[]   = "EXTENDED";
+            const char PARTITIONS[] = "PARTITIONS";
+            const char FORMAT[]     = "FORMAT";
+            const char FOR[]        = "FOR";
+
+#define MATCHES_KEYWORD(t, k)  ((t->n == sizeof(k) - 1) && (strncasecmp(t->z, k, t->n) == 0))
+
+            if (MATCHES_KEYWORD(pNext, EXTENDED) ||
+                MATCHES_KEYWORD(pNext, PARTITIONS) ||
+                MATCHES_KEYWORD(pNext, FORMAT) ||
+                MATCHES_KEYWORD(pNext, FOR))
+            {
+                info->operation = QUERY_OP_EXPLAIN;
+            }
+        }
+    }
 }
 
 void maxscaleFlush(Parse* pParse, Token* pWhat)
@@ -2203,6 +2236,7 @@ void maxscaleKeyword(int token)
         case TK_DESC:
             info->status = QC_QUERY_TOKENIZED;
             info->type_mask = QUERY_TYPE_READ;
+            info->operation = QUERY_OP_EXPLAIN;
             break;
 
         case TK_DROP:
@@ -2219,6 +2253,7 @@ void maxscaleKeyword(int token)
         case TK_EXPLAIN:
             info->status = QC_QUERY_TOKENIZED;
             info->type_mask = QUERY_TYPE_READ;
+            info->operation = QUERY_OP_EXPLAIN;
             break;
 
         case TK_GRANT:
@@ -2656,188 +2691,83 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
-
-    char* zDatabase = NULL;
-    char* zName = NULL;
-
-    char database[pShow->pDatabase ? pShow->pDatabase->n + 1 : 0];
-    if (pShow->pDatabase)
-    {
-        strncpy(database, pShow->pDatabase->z, pShow->pDatabase->n);
-        database[pShow->pDatabase->n] = 0;
-        zDatabase = database;
-    }
-
-    char name[pShow->pName ? pShow->pName->n + 1 : 0];
-    if (pShow->pName)
-    {
-        strncpy(name, pShow->pName->z, pShow->pName->n);
-        name[pShow->pName->n] = 0;
-        zName = name;
-    }
+    info->operation = QUERY_OP_SHOW;
 
     uint32_t u = QC_USED_IN_SELECT;
 
     switch (pShow->what)
     {
     case MXS_SHOW_COLUMNS:
-        {
-            info->type_mask = QUERY_TYPE_READ;
-            update_names(info, zDatabase, zName);
-            if (pShow->data == MXS_SHOW_COLUMNS_FULL)
-            {
-                update_field_info(info, "information_schema", "COLUMNS", "COLLATION_NAME", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_COMMENT", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_DEFAULT", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_KEY", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_NAME", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_TYPE", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "EXTRA", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "IS_NULLABLE", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "PRIVILEGES", u, NULL);
-            }
-            else
-            {
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_DEFAULT", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_KEY", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_NAME", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "COLUMN_TYPE", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "EXTRA", u, NULL);
-                update_field_info(info, "information_schema", "COLUMNS", "IS_NULLABLE", u, NULL);
-            }
-        }
+        info->type_mask = QUERY_TYPE_READ;
         break;
 
     case MXS_SHOW_CREATE_VIEW:
-        {
-            info->type_mask = QUERY_TYPE_WRITE;
-            update_names(info, zDatabase, zName);
-        }
+        info->type_mask = QUERY_TYPE_READ;
         break;
 
     case MXS_SHOW_CREATE_TABLE:
-        {
-            info->type_mask = QUERY_TYPE_WRITE;
-            update_names(info, zDatabase, zName);
-        }
+        info->type_mask = QUERY_TYPE_READ;
         break;
 
     case MXS_SHOW_DATABASES:
-        {
-            info->type_mask = QUERY_TYPE_SHOW_DATABASES;
-            update_names(info, "information_schema", "SCHEMATA");
-            update_field_info(info, "information_schema", "SCHEMATA", "SCHEMA_NAME", u, NULL);
-        }
+        info->type_mask = QUERY_TYPE_SHOW_DATABASES;
         break;
 
     case MXS_SHOW_INDEX:
     case MXS_SHOW_INDEXES:
     case MXS_SHOW_KEYS:
-        {
-            info->type_mask = QUERY_TYPE_WRITE;
-            update_names(info, "information_schema", "STATISTICS");
-            update_field_info(info, "information_schema", "STATISTICS", "CARDINALITY", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "COLLATION", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "COLUMN_NAME", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "COMMENT", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "INDEX_COMMENT", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "INDEX_NAME", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "INDEX_TYPE", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "NON_UNIQUE", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "NULLABLE", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "PACKED", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "SEQ_IN_INDEX", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "SUB_PART", u, NULL);
-            update_field_info(info, "information_schema", "STATISTICS", "TABLE_NAME", u, NULL);
-        }
+        info->type_mask = QUERY_TYPE_WRITE;
         break;
 
     case MXS_SHOW_TABLE_STATUS:
-        {
-            info->type_mask = QUERY_TYPE_WRITE;
-            update_names(info, "information_schema", "TABLES");
-            update_field_info(info, "information_schema", "TABLES", "AUTO_INCREMENT", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "AVG_ROW_LENGTH", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "CHECKSUM", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "CHECK_TIME", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "CREATE_OPTIONS", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "CREATE_TIME", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "DATA_FREE", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "DATA_LENGTH", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "ENGINE", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "INDEX_LENGTH", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "MAX_DATA_LENGTH", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "ROW_FORMAT", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "TABLE_COLLATION", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "TABLE_COMMENT", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "TABLE_NAME", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "TABLE_ROWS", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "UPDATE_TIME", u, NULL);
-            update_field_info(info, "information_schema", "TABLES", "VERSION", u, NULL);
-        }
+        info->type_mask = QUERY_TYPE_WRITE;
         break;
 
     case MXS_SHOW_STATUS:
+        switch (pShow->data)
         {
-            switch (pShow->data)
-            {
-            case MXS_SHOW_VARIABLES_GLOBAL:
-            case MXS_SHOW_VARIABLES_SESSION:
-            case MXS_SHOW_VARIABLES_UNSPECIFIED:
-                // TODO: qc_mysqlembedded does not set the type bit.
-                info->type_mask = QUERY_TYPE_UNKNOWN;
-                update_names(info, "information_schema", "SESSION_STATUS");
-                update_field_info(info, "information_schema", "SESSION_STATUS", "VARIABLE_NAME", u, NULL);
-                update_field_info(info, "information_schema", "SESSION_STATUS", "VARIABLE_VALUE", u, NULL);
-                break;
+        case MXS_SHOW_VARIABLES_GLOBAL:
+        case MXS_SHOW_VARIABLES_SESSION:
+        case MXS_SHOW_VARIABLES_UNSPECIFIED:
+            info->type_mask = QUERY_TYPE_READ;
+            break;
 
-            case MXS_SHOW_STATUS_MASTER:
-                info->type_mask = QUERY_TYPE_WRITE;
-                break;
+        case MXS_SHOW_STATUS_MASTER:
+            info->type_mask = QUERY_TYPE_WRITE;
+            break;
 
-            case MXS_SHOW_STATUS_SLAVE:
-                info->type_mask = QUERY_TYPE_READ;
-                break;
+        case MXS_SHOW_STATUS_SLAVE:
+            info->type_mask = QUERY_TYPE_READ;
+            break;
 
-            case MXS_SHOW_STATUS_ALL_SLAVES:
-                info->type_mask = QUERY_TYPE_READ;
-                break;
+        case MXS_SHOW_STATUS_ALL_SLAVES:
+            info->type_mask = QUERY_TYPE_READ;
+            break;
 
-            default:
-                break;
-            }
+        default:
+            info->type_mask = QUERY_TYPE_READ;
+            break;
         }
         break;
 
     case MXS_SHOW_TABLES:
-        {
-            info->type_mask = QUERY_TYPE_SHOW_TABLES;
-            update_names(info, "information_schema", "TABLE_NAMES");
-            update_field_info(info, "information_schema", "TABLE_NAMES", "TABLE_NAME", u, NULL);
-        }
+        info->type_mask = QUERY_TYPE_SHOW_TABLES;
         break;
 
     case MXS_SHOW_VARIABLES:
+        if (pShow->data == MXS_SHOW_VARIABLES_GLOBAL)
         {
-            if (pShow->data == MXS_SHOW_VARIABLES_GLOBAL)
-            {
-                info->type_mask = QUERY_TYPE_GSYSVAR_READ;
-            }
-            else
-            {
-                info->type_mask = QUERY_TYPE_SYSVAR_READ;
-            }
-            update_names(info, "information_schema", "SESSION_VARIABLES");
-            update_field_info(info, "information_schema", "SESSION_STATUS", "VARIABLE_NAME", u, NULL);
-            update_field_info(info, "information_schema", "SESSION_STATUS", "VARIABLE_VALUE", u, NULL);
+            info->type_mask = QUERY_TYPE_GSYSVAR_READ;
+        }
+        else
+        {
+            info->type_mask = QUERY_TYPE_SYSVAR_READ;
         }
         break;
 
     case MXS_SHOW_WARNINGS:
-        {
-            // qc_mysqliembedded claims this.
-            info->type_mask = QUERY_TYPE_WRITE;
-        }
+        // qc_mysqliembedded claims this.
+        info->type_mask = QUERY_TYPE_WRITE;
         break;
 
     default:

@@ -593,6 +593,12 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         goto return_qtype;
     }
 
+    if (lex->describe)
+    {
+        type = QUERY_TYPE_READ;
+        goto return_qtype;
+    }
+
     if (skygw_stmt_causes_implicit_commit(lex, &set_autocommit_stmt))
     {
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -708,6 +714,10 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                 }
             }
         }
+        else
+        {
+            type |= QUERY_TYPE_READ;
+        }
 
         goto return_qtype;
     }
@@ -798,6 +808,11 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         goto return_qtype;
         break;
 
+    case SQLCOM_SHOW_CREATE:
+        type |= QUERY_TYPE_READ;
+        goto return_qtype;
+        break;
+
     case SQLCOM_SHOW_DATABASES:
         type |= QUERY_TYPE_SHOW_DATABASES;
         goto return_qtype;
@@ -805,6 +820,12 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
 
     case SQLCOM_SHOW_FIELDS:
         type |= QUERY_TYPE_READ;
+        goto return_qtype;
+        break;
+
+    case SQLCOM_SHOW_STATUS:
+        type |= QUERY_TYPE_READ;
+        goto return_qtype;
         break;
 
     case SQLCOM_SHOW_TABLES:
@@ -1265,6 +1286,33 @@ static TABLE_LIST* skygw_get_affected_tables(void* lexptr)
     return tbl;
 }
 
+static bool is_show_command(int sql_command)
+{
+    bool rv = false;
+
+    switch (sql_command)
+    {
+    case SQLCOM_SHOW_CREATE:
+    case SQLCOM_SHOW_DATABASES:
+    case SQLCOM_SHOW_FIELDS:
+    case SQLCOM_SHOW_KEYS:
+    case SQLCOM_SHOW_MASTER_STAT:
+    case SQLCOM_SHOW_SLAVE_STAT:
+    case SQLCOM_SHOW_STATUS:
+    case SQLCOM_SHOW_TABLES:
+    case SQLCOM_SHOW_TABLE_STATUS:
+    case SQLCOM_SHOW_VARIABLES:
+    case SQLCOM_SHOW_WARNS:
+        rv = true;
+        break;
+
+    default:
+        break;
+    }
+
+    return rv;
+}
+
 int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tablesp, int32_t* tblsize)
 {
     LEX* lex;
@@ -1283,6 +1331,11 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
     }
 
     if ((lex = get_lex(querybuf)) == NULL)
+    {
+        goto retblock;
+    }
+
+    if (lex->describe || is_show_command(lex->sql_command))
     {
         goto retblock;
     }
@@ -1420,16 +1473,19 @@ int32_t qc_mysql_query_has_clause(GWBUF* buf, int32_t* has_clause)
 
             if (lex)
             {
-                SELECT_LEX* current = lex->all_selects_list;
-
-                while (current && !*has_clause)
+                if (!lex->describe && !is_show_command(lex->sql_command))
                 {
-                    if (current->where || current->having)
-                    {
-                        *has_clause = true;
-                    }
+                    SELECT_LEX* current = lex->all_selects_list;
 
-                    current = current->next_select_in_list();
+                    while (current && !*has_clause)
+                    {
+                        if (current->where || current->having)
+                        {
+                            *has_clause = true;
+                        }
+
+                        current = current->next_select_in_list();
+                    }
                 }
             }
         }
@@ -1592,6 +1648,11 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
         goto retblock;
     }
 
+    if (lex->describe || is_show_command(lex->sql_command))
+    {
+        goto retblock;
+    }
+
     lex->current_select = lex->all_selects_list;
 
     while (lex->current_select)
@@ -1655,90 +1716,111 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
 
             if (lex)
             {
-                switch (lex->sql_command)
+                if (lex->describe)
                 {
-                case SQLCOM_SELECT:
-                    *operation = QUERY_OP_SELECT;
-                    break;
+                    *operation = QUERY_OP_EXPLAIN;
+                }
+                else
+                {
+                    switch (lex->sql_command)
+                    {
+                    case SQLCOM_SELECT:
+                        *operation = QUERY_OP_SELECT;
+                        break;
 
-                case SQLCOM_CREATE_DB:
-                case SQLCOM_CREATE_EVENT:
-                case SQLCOM_CREATE_FUNCTION:
-                case SQLCOM_CREATE_INDEX:
-                case SQLCOM_CREATE_PROCEDURE:
-                case SQLCOM_CREATE_SERVER:
-                case SQLCOM_CREATE_SPFUNCTION:
-                case SQLCOM_CREATE_TABLE:
-                case SQLCOM_CREATE_TRIGGER:
-                case SQLCOM_CREATE_USER:
-                case SQLCOM_CREATE_VIEW:
-                    *operation = QUERY_OP_CREATE;
-                    break;
+                    case SQLCOM_CREATE_DB:
+                    case SQLCOM_CREATE_EVENT:
+                    case SQLCOM_CREATE_FUNCTION:
+                    case SQLCOM_CREATE_INDEX:
+                    case SQLCOM_CREATE_PROCEDURE:
+                    case SQLCOM_CREATE_SERVER:
+                    case SQLCOM_CREATE_SPFUNCTION:
+                    case SQLCOM_CREATE_TABLE:
+                    case SQLCOM_CREATE_TRIGGER:
+                    case SQLCOM_CREATE_USER:
+                    case SQLCOM_CREATE_VIEW:
+                        *operation = QUERY_OP_CREATE;
+                        break;
 
-                case SQLCOM_ALTER_DB:
-                case SQLCOM_ALTER_DB_UPGRADE:
-                case SQLCOM_ALTER_EVENT:
-                case SQLCOM_ALTER_FUNCTION:
-                case SQLCOM_ALTER_PROCEDURE:
-                case SQLCOM_ALTER_SERVER:
-                case SQLCOM_ALTER_TABLE:
-                case SQLCOM_ALTER_TABLESPACE:
-                    *operation = QUERY_OP_ALTER;
-                    break;
+                    case SQLCOM_ALTER_DB:
+                    case SQLCOM_ALTER_DB_UPGRADE:
+                    case SQLCOM_ALTER_EVENT:
+                    case SQLCOM_ALTER_FUNCTION:
+                    case SQLCOM_ALTER_PROCEDURE:
+                    case SQLCOM_ALTER_SERVER:
+                    case SQLCOM_ALTER_TABLE:
+                    case SQLCOM_ALTER_TABLESPACE:
+                        *operation = QUERY_OP_ALTER;
+                        break;
 
-                case SQLCOM_UPDATE:
-                case SQLCOM_UPDATE_MULTI:
-                    *operation = QUERY_OP_UPDATE;
-                    break;
+                    case SQLCOM_UPDATE:
+                    case SQLCOM_UPDATE_MULTI:
+                        *operation = QUERY_OP_UPDATE;
+                        break;
 
-                case SQLCOM_INSERT:
-                case SQLCOM_INSERT_SELECT:
-                case SQLCOM_REPLACE:
-                case SQLCOM_REPLACE_SELECT:
-                    *operation = QUERY_OP_INSERT;
-                    break;
+                    case SQLCOM_INSERT:
+                    case SQLCOM_INSERT_SELECT:
+                    case SQLCOM_REPLACE:
+                    case SQLCOM_REPLACE_SELECT:
+                        *operation = QUERY_OP_INSERT;
+                        break;
 
-                case SQLCOM_DELETE:
-                case SQLCOM_DELETE_MULTI:
-                    *operation = QUERY_OP_DELETE;
-                    break;
+                    case SQLCOM_DELETE:
+                    case SQLCOM_DELETE_MULTI:
+                        *operation = QUERY_OP_DELETE;
+                        break;
 
-                case SQLCOM_TRUNCATE:
-                    *operation = QUERY_OP_TRUNCATE;
-                    break;
+                    case SQLCOM_TRUNCATE:
+                        *operation = QUERY_OP_TRUNCATE;
+                        break;
 
-                case SQLCOM_DROP_DB:
-                case SQLCOM_DROP_EVENT:
-                case SQLCOM_DROP_FUNCTION:
-                case SQLCOM_DROP_INDEX:
-                case SQLCOM_DROP_PROCEDURE:
-                case SQLCOM_DROP_SERVER:
-                case SQLCOM_DROP_TABLE:
-                case SQLCOM_DROP_TRIGGER:
-                case SQLCOM_DROP_USER:
-                case SQLCOM_DROP_VIEW:
-                    *operation = QUERY_OP_DROP;
-                    break;
+                    case SQLCOM_DROP_DB:
+                    case SQLCOM_DROP_EVENT:
+                    case SQLCOM_DROP_FUNCTION:
+                    case SQLCOM_DROP_INDEX:
+                    case SQLCOM_DROP_PROCEDURE:
+                    case SQLCOM_DROP_SERVER:
+                    case SQLCOM_DROP_TABLE:
+                    case SQLCOM_DROP_TRIGGER:
+                    case SQLCOM_DROP_USER:
+                    case SQLCOM_DROP_VIEW:
+                        *operation = QUERY_OP_DROP;
+                        break;
 
-                case SQLCOM_CHANGE_DB:
-                    *operation = QUERY_OP_CHANGE_DB;
-                    break;
+                    case SQLCOM_CHANGE_DB:
+                        *operation = QUERY_OP_CHANGE_DB;
+                        break;
 
-                case SQLCOM_LOAD:
-                    *operation = QUERY_OP_LOAD;
-                    break;
+                    case SQLCOM_LOAD:
+                        *operation = QUERY_OP_LOAD;
+                        break;
 
-                case SQLCOM_GRANT:
-                    *operation = QUERY_OP_GRANT;
-                    break;
+                    case SQLCOM_GRANT:
+                        *operation = QUERY_OP_GRANT;
+                        break;
 
-                case SQLCOM_REVOKE:
-                case SQLCOM_REVOKE_ALL:
-                    *operation = QUERY_OP_REVOKE;
-                    break;
+                    case SQLCOM_REVOKE:
+                    case SQLCOM_REVOKE_ALL:
+                        *operation = QUERY_OP_REVOKE;
+                        break;
 
-                default:
-                    *operation = QUERY_OP_UNDEFINED;
+                    case SQLCOM_SHOW_CREATE:
+                    case SQLCOM_SHOW_DATABASES:
+                    case SQLCOM_SHOW_FIELDS:
+                    case SQLCOM_SHOW_KEYS:
+                    case SQLCOM_SHOW_MASTER_STAT:
+                    case SQLCOM_SHOW_SLAVE_STAT:
+                    case SQLCOM_SHOW_STATUS:
+                    case SQLCOM_SHOW_TABLES:
+                    case SQLCOM_SHOW_TABLE_STATUS:
+                    case SQLCOM_SHOW_VARIABLES:
+                    case SQLCOM_SHOW_WARNS:
+                        *operation = QUERY_OP_SHOW;
+                        break;
+
+                    default:
+                        *operation = QUERY_OP_UNDEFINED;
+                    }
                 }
             }
         }
@@ -1757,15 +1839,18 @@ int32_t qc_mysql_get_prepare_name(GWBUF* stmt, char** namep)
         {
             LEX* lex = get_lex(stmt);
 
-            if ((lex->sql_command == SQLCOM_PREPARE) ||
-                (lex->sql_command == SQLCOM_EXECUTE) ||
-                (lex->sql_command == SQLCOM_DEALLOCATE_PREPARE))
+            if (!lex->describe)
             {
-                name = (char*)malloc(lex->prepared_stmt_name.length + 1);
-                if (name)
+                if ((lex->sql_command == SQLCOM_PREPARE) ||
+                    (lex->sql_command == SQLCOM_EXECUTE) ||
+                    (lex->sql_command == SQLCOM_DEALLOCATE_PREPARE))
                 {
-                    memcpy(name, lex->prepared_stmt_name.str, lex->prepared_stmt_name.length);
-                    name[lex->prepared_stmt_name.length] = 0;
+                    name = (char*)malloc(lex->prepared_stmt_name.length + 1);
+                    if (name)
+                    {
+                        memcpy(name, lex->prepared_stmt_name.str, lex->prepared_stmt_name.length);
+                        name[lex->prepared_stmt_name.length] = 0;
+                    }
                 }
             }
         }
@@ -1784,7 +1869,7 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
         {
             LEX* lex = get_lex(stmt);
 
-            if (lex->sql_command == SQLCOM_PREPARE)
+            if ((lex->sql_command == SQLCOM_PREPARE) && !lex->describe)
             {
                 parsing_info_t* pi = get_pinfo(stmt);
 
@@ -2481,6 +2566,13 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
         if (!lex)
         {
             return QC_RESULT_ERROR;
+        }
+
+        if (lex->describe || is_show_command(lex->sql_command))
+        {
+            *infos = NULL;
+            *n_infos = 0;
+            return QC_RESULT_OK;
         }
 
         uint32_t usage = 0;
