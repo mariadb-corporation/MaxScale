@@ -85,7 +85,7 @@ bool column_is_decimal(uint8_t type);
 bool fixed_string_is_enum(uint8_t type);
 
 /** Value unpacking */
-size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t* metadata, struct tm *tm);
+size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t* metadata, int length, struct tm *tm);
 size_t unpack_enum(uint8_t *ptr, uint8_t *metadata, uint8_t *dest);
 size_t unpack_numeric_field(uint8_t *ptr, uint8_t type, uint8_t* metadata, uint8_t* val);
 size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,

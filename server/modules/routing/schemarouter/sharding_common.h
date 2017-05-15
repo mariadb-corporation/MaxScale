@@ -15,7 +15,6 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <my_config.h>
 #include <poll.h>
 #include <maxscale/buffer.h>
 #include <maxscale/modutil.h>

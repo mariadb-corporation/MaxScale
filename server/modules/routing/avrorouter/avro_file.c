@@ -475,6 +475,17 @@ void notify_all_clients(AVRO_INSTANCE *router)
     }
 }
 
+void do_checkpoint(AVRO_INSTANCE *router, uint64_t *total_rows, uint64_t *total_commits)
+{
+    update_used_tables(router);
+    avro_flush_all_tables(router, AVROROUTER_FLUSH);
+    avro_save_conversion_state(router);
+    notify_all_clients(router);
+    *total_rows += router->row_count;
+    *total_commits += router->trx_count;
+    router->row_count = router->trx_count = 0;
+}
+
 /**
  * @brief Read all replication events from a binlog file.
  *
@@ -555,6 +566,8 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                 }
                 else
                 {
+                    do_checkpoint(router, &total_rows, &total_commits);
+
                     MXS_INFO("Processed %lu transactions and %lu row events.",
                              total_commits, total_rows);
                     if (rotate_seen)
@@ -742,13 +755,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             if (router->row_count >= router->row_target ||
                 router->trx_count >= router->trx_target)
             {
-                update_used_tables(router);
-                avro_flush_all_tables(router, AVROROUTER_SYNC);
-                avro_save_conversion_state(router);
-                notify_all_clients(router);
-                total_rows += router->row_count;
-                total_commits += router->trx_count;
-                router->row_count = router->trx_count = 0;
+                do_checkpoint(router, &total_rows, &total_commits);
             }
         }
 

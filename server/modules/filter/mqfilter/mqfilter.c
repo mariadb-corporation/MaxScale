@@ -59,7 +59,6 @@
 
 #define MXS_MODULE_NAME "mqfilter"
 
-#include <my_config.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <maxscale/filter.h>

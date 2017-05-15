@@ -1517,8 +1517,7 @@ dShowEventStats(DCB *pdcb)
  * @param stat  The required statistic
  * @return      The value of that statistic
  */
-int
-poll_get_stat(POLL_STAT stat)
+int64_t poll_get_stat(POLL_STAT stat)
 {
     switch (stat)
     {
