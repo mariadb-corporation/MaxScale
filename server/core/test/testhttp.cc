@@ -14,7 +14,7 @@
 #include <iostream>
 
 #include <maxscale/debug.h>
-#include "../maxscale/http.hh"
+#include <maxscale/http.hh>
 
 using std::string;
 using std::cout;

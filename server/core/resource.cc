@@ -21,6 +21,7 @@
 #include <maxscale/spinlock.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/http.hh>
 
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
@@ -31,7 +32,6 @@
 #include "maxscale/config_runtime.h"
 #include "maxscale/modules.h"
 #include "maxscale/worker.h"
-#include "maxscale/http.hh"
 
 using std::list;
 using std::map;

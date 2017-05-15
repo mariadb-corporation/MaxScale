@@ -41,6 +41,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/paths.h>
 #include <maxscale/json_api.h>
+#include <maxscale/http.hh>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"

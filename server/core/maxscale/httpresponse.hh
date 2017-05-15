@@ -20,8 +20,7 @@
 #include <microhttpd.h>
 
 #include <maxscale/jansson.hh>
-
-#include "http.hh"
+#include <maxscale/http.hh>
 
 /**
  * A list of default headers that are generated with each response

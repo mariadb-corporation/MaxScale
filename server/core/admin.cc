@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <sys/stat.h>
 
 #include <maxscale/atomic.h>
 #include <maxscale/debug.h>
@@ -31,10 +32,9 @@
 #include <maxscale/utils.h>
 #include <maxscale/config.h>
 #include <maxscale/hk_heartbeat.h>
-#include <sys/stat.h>
+#include <maxscale/http.hh>
 
 #include "maxscale/resource.hh"
-#include "maxscale/http.hh"
 
 using std::string;
 using std::ifstream;
