@@ -83,18 +83,19 @@ typedef enum qc_query_type
 typedef enum qc_query_op
 {
     QUERY_OP_UNDEFINED = 0,
-    QUERY_OP_SELECT,
-    QUERY_OP_UPDATE,
-    QUERY_OP_INSERT,
-    QUERY_OP_DELETE,
-    QUERY_OP_TRUNCATE,
+
     QUERY_OP_ALTER,
-    QUERY_OP_CREATE,
-    QUERY_OP_DROP,
     QUERY_OP_CHANGE_DB,
-    QUERY_OP_LOAD,
+    QUERY_OP_CREATE,
+    QUERY_OP_DELETE,
+    QUERY_OP_DROP,
     QUERY_OP_GRANT,
-    QUERY_OP_REVOKE
+    QUERY_OP_INSERT,
+    QUERY_OP_LOAD,
+    QUERY_OP_REVOKE,
+    QUERY_OP_SELECT,
+    QUERY_OP_TRUNCATE,
+    QUERY_OP_UPDATE,
 } qc_query_op_t;
 
 /**
