@@ -115,7 +115,8 @@ bool test_load_config(const char *input, SERVER *server)
 
     if (duplicate_context_init(&dcontext))
     {
-        CONFIG_CONTEXT ccontext = {.object = (char*)""};
+        CONFIG_CONTEXT ccontext = {};
+        ccontext.object = (char*)"";
 
         if (config_load_single_file(input, &dcontext, &ccontext))
         {
