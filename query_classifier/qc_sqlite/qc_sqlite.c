@@ -1352,35 +1352,38 @@ static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char
 {
     if ((info->collect & QC_COLLECT_TABLES) && !(info->collected & QC_COLLECT_TABLES))
     {
-        char* zCopy = MXS_STRDUP(zTable);
-        MXS_ABORT_IF_NULL(zCopy);
-        // TODO: Is this call really needed. Check also sqlite3Dequote.
-        exposed_sqlite3Dequote(zCopy);
-
-        enlarge_string_array(1, info->table_names_len, &info->table_names, &info->table_names_capacity);
-        info->table_names[info->table_names_len++] = zCopy;
-        info->table_names[info->table_names_len] = NULL;
-
-        if (zDatabase)
+        if (strcasecmp(zTable, "DUAL") != 0)
         {
-            zCopy = MXS_MALLOC(strlen(zDatabase) + 1 + strlen(zTable) + 1);
+            char* zCopy = MXS_STRDUP(zTable);
             MXS_ABORT_IF_NULL(zCopy);
-
-            strcpy(zCopy, zDatabase);
-            strcat(zCopy, ".");
-            strcat(zCopy, zTable);
+            // TODO: Is this call really needed. Check also sqlite3Dequote.
             exposed_sqlite3Dequote(zCopy);
-        }
-        else
-        {
-            zCopy = MXS_STRDUP(zCopy);
-            MXS_ABORT_IF_NULL(zCopy);
-        }
 
-        enlarge_string_array(1, info->table_fullnames_len,
-                             &info->table_fullnames, &info->table_fullnames_capacity);
-        info->table_fullnames[info->table_fullnames_len++] = zCopy;
-        info->table_fullnames[info->table_fullnames_len] = NULL;
+            enlarge_string_array(1, info->table_names_len, &info->table_names, &info->table_names_capacity);
+            info->table_names[info->table_names_len++] = zCopy;
+            info->table_names[info->table_names_len] = NULL;
+
+            if (zDatabase)
+            {
+                zCopy = MXS_MALLOC(strlen(zDatabase) + 1 + strlen(zTable) + 1);
+                MXS_ABORT_IF_NULL(zCopy);
+
+                strcpy(zCopy, zDatabase);
+                strcat(zCopy, ".");
+                strcat(zCopy, zTable);
+                exposed_sqlite3Dequote(zCopy);
+            }
+            else
+            {
+                zCopy = MXS_STRDUP(zCopy);
+                MXS_ABORT_IF_NULL(zCopy);
+            }
+
+            enlarge_string_array(1, info->table_fullnames_len,
+                                 &info->table_fullnames, &info->table_fullnames_capacity);
+            info->table_fullnames[info->table_fullnames_len++] = zCopy;
+            info->table_fullnames[info->table_fullnames_len] = NULL;
+        }
     }
 
     if ((info->collect & QC_COLLECT_DATABASES) && !(info->collected & QC_COLLECT_DATABASES))
