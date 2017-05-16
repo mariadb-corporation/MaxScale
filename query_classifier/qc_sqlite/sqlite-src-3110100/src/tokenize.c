@@ -497,6 +497,20 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         }else if( c==':' && z[i+1]==':' ){
           i++;
 #endif
+#ifdef MAXSCALE
+        }else if ( c=='\'' || c=='"' || c=='`' ){
+          int q=c;
+          ++i;
+          while ( IdChar(z[i]) ) {
+            ++i;
+            ++n;
+          }
+          if ( z[i]==q )
+          {
+            ++i;
+            break;
+          }
+#endif
         }else{
           break;
         }
