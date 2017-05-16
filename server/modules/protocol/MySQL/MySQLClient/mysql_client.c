@@ -1305,8 +1305,8 @@ static int gw_client_close(DCB *dcb)
         {
             ss_dassert(target->state == SESSION_STATE_ROUTER_READY ||
                        target->state == SESSION_STATE_STOPPING);
-            ss_debug(MXS_SESSION* removed =) mxs_worker_deregister_session(target->ses_id);
-            ss_dassert(removed == target);
+            ss_debug(bool removed =) mxs_worker_deregister_session(target->ses_id);
+            ss_dassert(removed);
             session_close(target);
         }
     }

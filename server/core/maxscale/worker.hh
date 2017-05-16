@@ -14,13 +14,14 @@
 
 #include <maxscale/cppdefs.hh>
 #include <memory>
-#include <tr1/unordered_map>
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
+#include <maxscale/utils.hh>
 #include "messagequeue.hh"
 #include "poll.h"
 #include "worker.h"
 #include "workertask.hh"
+#include "session.hh"
 
 namespace maxscale
 {
@@ -69,7 +70,7 @@ public:
     typedef WORKER_STATISTICS STATISTICS;
     typedef WorkerTask Task;
     typedef WorkerDisposableTask DisposableTask;
-    typedef std::tr1::unordered_map<uint64_t, MXS_SESSION*> SessionsById;
+    typedef Registry<MXS_SESSION> SessionsById;
 
     enum state_t
     {
@@ -397,28 +398,11 @@ public:
     bool post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
     /**
-     * Add a session to the session container.
+     * Return a reference to the session registry of this worker.
      *
-     * @param session The session to add
-     * @return true if successful
+     * @return Session registry.
      */
-    bool register_session(MXS_SESSION* session);
-
-    /**
-     * Remove a session from the session container.
-     *
-     * @param id Session id
-     * @return The removed session, or NULL if not found
-     */
-    MXS_SESSION* deregister_session(uint64_t id);
-
-    /**
-     * Find a session in the session container.
-     *
-     * @param id Session id
-     * @return The found session, or NULL if not found
-     */
-    MXS_SESSION* find_session(uint64_t id);
+    SessionsById& session_registry();
 
     /**
      * Broadcast a message to all worker.

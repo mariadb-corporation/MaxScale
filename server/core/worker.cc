@@ -728,55 +728,26 @@ bool mxs_worker_register_session(MXS_SESSION* session)
 {
     Worker* worker = Worker::get_current();
     ss_dassert(worker);
-    return worker->register_session(session);
+    return worker->session_registry().add(session);
 }
 
-MXS_SESSION* mxs_worker_deregister_session(uint64_t id)
+bool mxs_worker_deregister_session(uint64_t id)
 {
-    MXS_SESSION* rval = NULL;
     Worker* worker = Worker::get_current();
-    if (worker)
-    {
-        rval = worker->deregister_session(id);
-    }
-    return rval;
+    ss_dassert(worker);
+    return worker->session_registry().remove(id);
 }
 
 MXS_SESSION* mxs_worker_find_session(uint64_t id)
 {
-    MXS_SESSION* rval = NULL;
     Worker* worker = Worker::get_current();
-    if (worker)
-    {
-        rval = worker->find_session(id);
-    }
-    return rval;
+    ss_dassert(worker);
+    return worker->session_registry().lookup(id);
 }
 
-bool Worker::register_session(MXS_SESSION* session)
+Worker::SessionsById& Worker::session_registry()
 {
-    return m_sessions.insert(SessionsById::value_type(session->ses_id, session)).second;
-}
-
-MXS_SESSION* Worker::deregister_session(uint64_t id)
-{
-    MXS_SESSION* rval = find_session(id);
-    if (rval)
-    {
-        m_sessions.erase(id);
-    }
-    return rval;
-}
-
-MXS_SESSION* Worker::find_session(uint64_t id)
-{
-    MXS_SESSION* rval = NULL;
-    SessionsById::const_iterator iter = m_sessions.find(id);
-    if (iter != m_sessions.end())
-    {
-        rval = iter->second;
-    }
-    return rval;
+    return m_sessions;
 }
 
 class WorkerInfoTask: public maxscale::WorkerTask
