@@ -383,7 +383,7 @@ extern uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN];
 MYSQL_session* mysql_session_alloc();
 
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
-void           mysql_protocol_done (DCB* dcb);
+bool           mysql_protocol_done (DCB* dcb);
 const char *gw_mysql_protocol_state2string(int state);
 int        mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* buf);
 GWBUF*     mysql_create_com_quit(GWBUF* bufparam, int packet_number);

@@ -120,36 +120,35 @@ return_p:
 }
 
 /**
- * mysql_protocol_done
+ * Free protocol object
  *
- * free protocol allocations.
+ * @param dcb Owner DCB
  *
- * @param dcb owner DCB
- *
+ * @return True if protocol was closed
  */
-void mysql_protocol_done(DCB* dcb)
+bool mysql_protocol_done(DCB* dcb)
 {
-    MySQLProtocol* p;
-    server_command_t* scmd;
-    server_command_t* scmd2;
-
-    p = (MySQLProtocol *)dcb->protocol;
+    bool rval = false;
+    MySQLProtocol* p = (MySQLProtocol *)dcb->protocol;
 
     if (p->protocol_state == MYSQL_PROTOCOL_ACTIVE)
     {
-        scmd = p->protocol_cmd_history;
+        server_command_t* scmd = p->protocol_cmd_history;
 
-        while (scmd != NULL)
+        while (scmd)
         {
-            scmd2 = scmd->scom_next;
-            MXS_FREE(scmd);
-            scmd = scmd2;
+            server_command_t* temp = scmd;
+            scmd = scmd->scom_next;
+            MXS_FREE(temp);
         }
 
         gwbuf_free(p->stored_query);
 
         p->protocol_state = MYSQL_PROTOCOL_DONE;
+        rval = true;
     }
+
+    return rval;
 }
 
 /**

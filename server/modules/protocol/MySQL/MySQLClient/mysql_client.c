@@ -1295,11 +1295,22 @@ static int gw_client_close(DCB *dcb)
 {
     CHK_DCB(dcb);
     ss_dassert(dcb->protocol);
-    mysql_protocol_done(dcb);
-    MXS_SESSION* target = dcb->session;
-    ss_debug(MXS_SESSION* removed = ) mxs_worker_deregister_session(target->ses_id);
-    ss_dassert(removed == target);
-    session_close(target);
+
+    if (mysql_protocol_done(dcb))
+    {
+        MXS_SESSION* target = dcb->session;
+
+        if (target->state != SESSION_STATE_TO_BE_FREED &&
+            target->state != SESSION_STATE_DUMMY)
+        {
+            ss_dassert(target->state == SESSION_STATE_ROUTER_READY ||
+                       target->state == SESSION_STATE_STOPPING);
+            ss_debug(MXS_SESSION* removed =) mxs_worker_deregister_session(target->ses_id);
+            ss_dassert(removed == target);
+            session_close(target);
+        }
+    }
+
     return 1;
 }
 
