@@ -190,35 +190,41 @@ bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
 
                     if (json_is_object(val))
                     {
-                        json_t* value;
-
-                        if ((value = json_object_get(val, "real_type")) && json_is_string(value))
-                        {
-                            table->column_types[columns] = strdup(json_string_value(value));
-                        }
-                        else
-                        {
-                            table->column_types[columns] = strdup("unknown");
-                            MXS_WARNING("No \"real_type\" value defined. Treating as unknown type field.");
-                        }
-
-                        if ((value = json_object_get(val, "length")) && json_is_integer(value))
-                        {
-                            table->column_lengths[columns] = json_integer_value(value);
-                        }
-                        else
-                        {
-                            table->column_lengths[columns] = -1;
-                            MXS_WARNING("No \"length\" value defined. Treating as default length field.");
-                        }
-
                         json_t *name = json_object_get(val, "name");
+
                         if (name && json_is_string(name))
                         {
                             const char *name_str = json_string_value(name);
+
                             if (not_generated_field(name_str))
                             {
-                                table->column_names[columns++] = strdup(name_str);
+                                table->column_names[columns] = strdup(name_str);
+
+                                json_t* value;
+
+                                if ((value = json_object_get(val, "real_type")) && json_is_string(value))
+                                {
+                                    table->column_types[columns] = strdup(json_string_value(value));
+                                }
+                                else
+                                {
+                                    table->column_types[columns] = strdup("unknown");
+                                    MXS_WARNING("No \"real_type\" value defined. "
+                                                "Treating as unknown type field.");
+                                }
+
+                                if ((value = json_object_get(val, "length")) && json_is_integer(value))
+                                {
+                                    table->column_lengths[columns] = json_integer_value(value);
+                                }
+                                else
+                                {
+                                    table->column_lengths[columns] = -1;
+                                    MXS_WARNING("No \"length\" value defined. "
+                                                "Treating as default length field.");
+                                }
+
+                                columns++;
                             }
                         }
                         else
