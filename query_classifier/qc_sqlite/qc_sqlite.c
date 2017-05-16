@@ -101,6 +101,12 @@ typedef enum qc_parse_as
     QC_PARSE_AS_103      // Parse as embedded lib does in 10.3
 } qc_parse_as_t;
 
+typedef enum qc_sql_mode
+{
+    QC_SQL_MODE_DEFAULT,
+    QC_SQL_MODE_ORACLE
+} qc_sql_mode_t;
+
 /**
  * Defines what a particular name should be mapped to.
  */
@@ -129,6 +135,7 @@ static struct
     bool initialized;
     bool setup;
     qc_log_level_t log_level;
+    qc_sql_mode_t sql_mode;
     qc_parse_as_t parse_as;
     QC_NAME_MAPPING* function_name_mappings;
 } this_unit;
@@ -2924,6 +2931,7 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 
 static const char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
 static const char ARG_PARSE_AS[] = "parse_as";
+static const char ARG_SQL_MODE[] = "sql_mode";
 
 static int32_t qc_sqlite_setup(const char* cargs)
 {
@@ -2931,6 +2939,7 @@ static int32_t qc_sqlite_setup(const char* cargs)
     assert(!this_unit.setup);
 
     qc_log_level_t log_level = QC_LOG_NOTHING;
+    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
     qc_parse_as_t parse_as = QC_PARSE_AS_DEFAULT;
     QC_NAME_MAPPING* function_name_mappings = function_name_mappings_default;
 
@@ -2971,12 +2980,27 @@ static int32_t qc_sqlite_setup(const char* cargs)
                     {
                         parse_as = QC_PARSE_AS_103;
                         function_name_mappings = function_name_mappings_103;
-                        MXS_NOTICE("Parsing as 10.3");
+                        MXS_NOTICE("Parsing as 10.3.");
                     }
                     else
                     {
                         MXS_WARNING("'%s' is not a recognized value for '%s'. "
                                     "Parsing as pre-10.3.", value, key);
+                    }
+                }
+                else if (strcmp(key, ARG_SQL_MODE) == 0)
+                {
+                    if (strcmp(value, "MODE_ORACLE") == 0)
+                    {
+                        sql_mode = QC_SQL_MODE_ORACLE;
+                        MXS_NOTICE("Expecting Oracle SQL.");
+
+                        parse_as = QC_PARSE_AS_103;
+                        MXS_NOTICE("Parsing as 10.3.");
+                    }
+                    else
+                    {
+                        MXS_WARNING("Unknown value \"%s\" for key \"%s\"", value, key);
                     }
                 }
                 else
@@ -2995,6 +3019,7 @@ static int32_t qc_sqlite_setup(const char* cargs)
 
     this_unit.setup = true;
     this_unit.log_level = log_level;
+    this_unit.sql_mode = sql_mode;
     this_unit.parse_as = parse_as;
     this_unit.function_name_mappings = function_name_mappings;
 
