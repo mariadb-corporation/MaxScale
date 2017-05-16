@@ -598,7 +598,7 @@ columnid(A) ::= nm(X). {
   NO
   OF OFFSET OPEN
   QUICK
-  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ REPLACE RESTRICT ROLLBACK ROLLUP ROW
+  RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESTRICT ROLLBACK ROLLUP ROW
   SAVEPOINT SELECT_OPTIONS_KW SLAVE /*START*/ STATUS
   TABLES TEMP TEMPTABLE /*TRIGGER*/
   /*TRUNCATE*/
@@ -657,6 +657,7 @@ nm(A) ::= JOIN_KW(X).    {A = X;}
 nm(A) ::= START(X).      {A = X;}
 nm(A) ::= TRUNCATE(X).   {A = X;}
 nm(A) ::= BEGIN(X).      {A = X;}
+nm(A) ::= REPLACE(X).    {A = X;}
 
 // A typetoken is really one or more tokens that form a type name such
 // as can be found after the column name in a CREATE TABLE statement.
@@ -1773,6 +1774,7 @@ expr(A) ::= JOIN_KW(X).          {spanExpr(&A, pParse, TK_ID, &X);}
 expr(A) ::= START(X).            {spanExpr(&A, pParse, TK_ID, &X);}
 expr(A) ::= TRUNCATE(X).         {spanExpr(&A, pParse, TK_ID, &X);}
 expr(A) ::= BEGIN(X).            {spanExpr(&A, pParse, TK_ID, &X);}
+expr(A) ::= REPLACE(X).          {spanExpr(&A, pParse, TK_ID, &X);}
 expr(A) ::= nm(X) DOT nm(Y). {
   Expr *temp1 = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
   Expr *temp2 = sqlite3PExpr(pParse, TK_ID, 0, 0, &Y);
