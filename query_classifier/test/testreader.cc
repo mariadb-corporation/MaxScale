@@ -14,6 +14,7 @@
 #include "testreader.hh"
 #include <algorithm>
 #include <map>
+#include <iostream>
 
 using std::istream;
 using std::string;
@@ -244,7 +245,21 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     trim(line);
                     if (line.length() > 0)
                     {
-                        m_delimiter = line;
+                        if (line.length() >= m_delimiter.length())
+                        {
+                            if (line.substr(line.length() - m_delimiter.length()) == m_delimiter)
+                            {
+                                m_delimiter = line.substr(0, line.length() - m_delimiter.length());
+                            }
+                            else
+                            {
+                                m_delimiter = line;
+                            }
+                        }
+                        else
+                        {
+                            m_delimiter = line;
+                        }
                     }
                     continue;
 
