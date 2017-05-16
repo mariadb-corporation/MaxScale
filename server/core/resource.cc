@@ -223,7 +223,7 @@ HttpResponse cb_create_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_server(const HttpRequest& request)
@@ -240,7 +240,7 @@ HttpResponse cb_alter_server(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_create_monitor(const HttpRequest& request)
@@ -252,7 +252,7 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_create_service_listener(const HttpRequest& request)
@@ -265,7 +265,7 @@ HttpResponse cb_create_service_listener(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_monitor(const HttpRequest& request)
@@ -282,7 +282,7 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_service(const HttpRequest& request)
@@ -299,7 +299,7 @@ HttpResponse cb_alter_service(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_logs(const HttpRequest& request)
@@ -311,7 +311,7 @@ HttpResponse cb_alter_logs(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_delete_server(const HttpRequest& request)
@@ -323,7 +323,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_delete_monitor(const HttpRequest& request)
@@ -335,7 +335,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_all_servers(const HttpRequest& request)
@@ -352,7 +352,7 @@ HttpResponse cb_get_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_all_services(const HttpRequest& request)
@@ -369,7 +369,7 @@ HttpResponse cb_get_service(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_get_service_listeners(const HttpRequest& request)
@@ -392,7 +392,7 @@ HttpResponse cb_get_filter(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_all_monitors(const HttpRequest& request)
@@ -409,7 +409,7 @@ HttpResponse cb_get_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_all_sessions(const HttpRequest& request)

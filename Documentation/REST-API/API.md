@@ -268,13 +268,14 @@ complete the request.
 ### 4xx Client Error
 
 The 4xx class of status code is when the client seems to have erred. Except when
-responding to a HEAD request, the body of the response contains a JSON
-representation of the error in the following format.
+responding to a HEAD request, the body of the response *MAY* contains a JSON
+representation of the error.
 
-```
+```javascript
 {
-    "error": "Method not supported",
-    "description": "The `/service` resource does not support POST."
+    "error": {
+        "detail" : "The new `/server/` resource is missing the `port` parameter"
+    }
 }
 ```
 

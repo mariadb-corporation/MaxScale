@@ -24,6 +24,7 @@
 
 #include <maxscale/atomic.h>
 #include <maxscale/paths.h>
+#include <maxscale/platform.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>
@@ -40,6 +41,8 @@ using mxs::Closer;
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
+thread_local stringstream runtime_errmsg;
+
 bool runtime_link_server(SERVER *server, const char *target)
 {
     spinlock_acquire(&crt_lock);
@@ -55,6 +58,11 @@ bool runtime_link_server(SERVER *server, const char *target)
             service_serialize(service);
             rval = true;
         }
+        else
+        {
+            runtime_errmsg << "Service '" << service->name << "' already uses server '"
+                << server->unique_name << "'";
+        }
     }
     else if (monitor)
     {
@@ -62,6 +70,10 @@ bool runtime_link_server(SERVER *server, const char *target)
         {
             monitor_serialize(monitor);
             rval = true;
+        }
+        else
+        {
+            runtime_errmsg << "Server '" << server->unique_name << "' is already monitored";
         }
     }
 
@@ -165,6 +177,10 @@ bool runtime_create_server(const char *name, const char *address, const char *po
             rval = true;
         }
     }
+    else
+    {
+        runtime_errmsg << "Server '" << name << "' already exists";
+    }
 
     spinlock_release(&crt_lock);
     return rval;
@@ -177,6 +193,8 @@ bool runtime_destroy_server(SERVER *server)
 
     if (service_server_in_use(server) || monitor_server_in_use(server))
     {
+        runtime_errmsg << "Cannot destroy server '" << server->unique_name <<
+            "' as it is used by at least one service or monitor";
         MXS_ERROR("Cannot destroy server '%s' as it is used by at least one "
                   "service or monitor", server->unique_name);
     }
@@ -319,9 +337,16 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
         }
     }
 
-    if (valid && server_serialize(server))
+    if (valid)
     {
-        MXS_NOTICE("Updated server '%s': %s=%s", server->unique_name, key, value);
+        if (server_serialize(server))
+        {
+            MXS_NOTICE("Updated server '%s': %s=%s", server->unique_name, key, value);
+        }
+    }
+    else
+    {
+        runtime_errmsg << "Invalid server parameter: " << key;
     }
 
     spinlock_release(&crt_lock);
@@ -468,6 +493,10 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
 
         MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
     }
+    else
+    {
+        runtime_errmsg << "Invalid monitor parameter: " << key;
+    }
 
     spinlock_release(&crt_lock);
     return valid;
@@ -537,6 +566,7 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
     }
     else
     {
+        runtime_errmsg << "Invalid service parameter: " << key;
         MXS_ERROR("Unknown parameter for service '%s': %s=%s",
                   service->name, key.c_str(), value.c_str());
         valid = false;
@@ -703,7 +733,7 @@ bool runtime_create_monitor(const char *name, const char *module)
     }
     else
     {
-        MXS_WARNING("Can't create monitor, it already exists");
+        runtime_errmsg << "Can't create monitor '" << name << "', it already exists";
     }
 
     spinlock_release(&crt_lock);
@@ -908,10 +938,14 @@ SERVER* runtime_create_server_from_json(json_t* json)
                 rval = NULL;
             }
         }
+        else
+        {
+            runtime_errmsg << "Invalid relationships in request JSON";
+        }
     }
     else
     {
-        MXS_WARNING("Invalid request JSON: %s", mxs::json_dump(json).c_str());
+        runtime_errmsg << "Missing or bad parameters in request JSON";
     }
 
     return rval;
@@ -1082,7 +1116,7 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
     }
     else
     {
-        MXS_WARNING("Invalid request JSON: %s", mxs::json_dump(json).c_str());
+        runtime_errmsg << "Missing or bad parameters in request JSON";
     }
 
     return rval;
@@ -1386,6 +1420,31 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
                                        ssl_key, ssl_cert, ssl_ca_cert, ssl_version,
                                        ssl_cert_verify_depth);
     }
+    else
+    {
+        runtime_errmsg << "Missing or bad parameters in request JSON";
+    }
 
     return rval;
+}
+
+json_t* runtime_get_json_error()
+{
+    json_t* obj = NULL;
+    string errmsg = runtime_errmsg.str();
+
+    if (errmsg.length())
+    {
+        runtime_errmsg.str("");
+        json_t* err = json_object();
+        json_object_set_new(err, "detail", json_string(errmsg.c_str()));
+
+        json_t* arr = json_array();
+        json_array_append_new(arr, err);
+
+        obj = json_object();
+        json_object_set_new(obj, "errors", arr);
+    }
+
+    return obj;
 }

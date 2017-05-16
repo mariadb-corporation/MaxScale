@@ -257,4 +257,11 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json);
  */
 bool runtime_alter_logs_from_json(json_t* json);
 
+/**
+ * @brief Get current runtime error in JSON format
+ *
+ * @return The latest runtime error in JSON format or NULL if no error has occurred
+ */
+json_t* runtime_get_json_error();
+
 MXS_END_DECLS
