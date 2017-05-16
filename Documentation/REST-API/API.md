@@ -159,9 +159,13 @@ The value of this header must be a date value in the
 #### X-HTTP-Method-Override
 
 Some clients only support GET and PUT requests. By providing the string value of
-the intended method in the `X-HTTP-Method-Override` header, a client can perform
-a POST, PATCH or DELETE request with the PUT method
+the intended method in the `X-HTTP-Method-Override` header, a client can, for
+example, perform a POST, PATCH or DELETE request with the PUT method
 (e.g. `X-HTTP-Method-Override: PATCH`).
+
+If this header is defined in the request, the current method of the request is
+replaced with the one in the header. The HTTP method must be in uppercase and it
+must be one of the methods that the requested resource supports.
 
 ### Response Headers
 
