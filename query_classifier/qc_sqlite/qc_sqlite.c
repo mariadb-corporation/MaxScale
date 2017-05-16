@@ -2008,7 +2008,7 @@ void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
     exposed_sqlite3SrcListDelete(pParse->db, pSrc);
 }
 
-void maxscaleCall(Parse* pParse, SrcList* pName)
+void maxscaleCall(Parse* pParse, SrcList* pName, int uses_variables)
 {
     QC_TRACE();
 
@@ -2017,6 +2017,10 @@ void maxscaleCall(Parse* pParse, SrcList* pName)
 
     info->status = QC_QUERY_PARSED;
     info->type_mask = QUERY_TYPE_WRITE;
+    if (uses_variables)
+    {
+        info->type_mask |= QUERY_TYPE_USERVAR_READ;
+    }
 
     exposed_sqlite3SrcListDelete(pParse->db, pName);
 }
