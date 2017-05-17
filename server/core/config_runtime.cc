@@ -61,7 +61,7 @@ bool runtime_link_server(SERVER *server, const char *target)
         else
         {
             runtime_errmsg << "Service '" << service->name << "' already uses server '"
-                << server->unique_name << "'";
+                           << server->unique_name << "'";
         }
     }
     else if (monitor)
@@ -194,7 +194,7 @@ bool runtime_destroy_server(SERVER *server)
     if (service_server_in_use(server) || monitor_server_in_use(server))
     {
         runtime_errmsg << "Cannot destroy server '" << server->unique_name <<
-            "' as it is used by at least one service or monitor";
+                       "' as it is used by at least one service or monitor";
         MXS_ERROR("Cannot destroy server '%s' as it is used by at least one "
                   "service or monitor", server->unique_name);
     }
@@ -1271,98 +1271,130 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
     return rval;
 }
 
-bool runtime_alter_logs_from_json(json_t* json)
+static inline bool is_null_or_bool(json_t* params, const char* name)
 {
-    bool rval = false;
+    bool rval = true;
+    json_t* value = mxs_json_pointer(params, name);
+
+    if (value && !json_is_boolean(value))
+    {
+        runtime_errmsg << "Parameter '" << name << "' is not a boolean";
+        rval = false;
+    }
+
+    return rval;
+}
+
+static inline bool is_null_or_count(json_t* params, const char* name)
+{
+    bool rval = true;
+    json_t* value = mxs_json_pointer(params, name);
+
+    if (value)
+    {
+        if (!json_is_integer(value))
+        {
+            runtime_errmsg << "Parameter '" << name << "' is not an integer";
+            rval = false;
+        }
+        else if (json_integer_value(value) <= 0)
+        {
+            runtime_errmsg << "Parameter '" << name << "' is not a positive integer";
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
+bool validate_logs_json(json_t* json)
+{
     json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+    bool rval = false;
 
     if (param && json_is_object(param))
     {
+        rval = is_null_or_bool(param, "highprecision") &&
+               is_null_or_bool(param, "maxlog") &&
+               is_null_or_bool(param, "syslog") &&
+               is_null_or_bool(param, "log_info") &&
+               is_null_or_bool(param, "log_warning") &&
+               is_null_or_bool(param, "log_notice") &&
+               is_null_or_bool(param, "log_debug") &&
+               is_null_or_count(param, "throttling/count") &&
+               is_null_or_count(param, "throttling/suppress_ms") &&
+               is_null_or_count(param, "throttling/window_ms");
+    }
+
+    return rval;
+}
+
+bool runtime_alter_logs_from_json(json_t* json)
+{
+    bool rval = false;
+
+    if (validate_logs_json(json))
+    {
+        json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
         json_t* value;
         rval = true;
 
-        if ((value = mxs_json_pointer(param, "highprecision")) && json_is_boolean(value))
+        if ((value = mxs_json_pointer(param, "highprecision")))
         {
-            if (json_is_boolean(value))
-            {
-                mxs_log_set_highprecision_enabled(json_boolean_value(value));
-            }
-            else
-            {
-                rval = false;
-            }
+            mxs_log_set_highprecision_enabled(json_boolean_value(value));
         }
 
-        if ((value = mxs_json_pointer(param, "maxlog")) && json_is_boolean(value))
+        if ((value = mxs_json_pointer(param, "maxlog")))
         {
-            if (json_is_boolean(value))
-            {
-                mxs_log_set_maxlog_enabled(json_boolean_value(value));
-            }
-            else
-            {
-                rval = false;
-            }
+            mxs_log_set_maxlog_enabled(json_boolean_value(value));
         }
 
         if ((value = mxs_json_pointer(param, "syslog")))
         {
-            if (json_is_boolean(value))
-            {
-                mxs_log_set_syslog_enabled(json_boolean_value(value));
-            }
-            else
-            {
-                rval = false;
-            }
+            mxs_log_set_syslog_enabled(json_boolean_value(value));
+        }
+
+        if ((value = mxs_json_pointer(param, "log_info")))
+        {
+            mxs_log_set_priority_enabled(LOG_INFO, json_boolean_value(value));
+        }
+
+        if ((value = mxs_json_pointer(param, "log_warning")))
+        {
+            mxs_log_set_priority_enabled(LOG_WARNING, json_boolean_value(value));
+        }
+
+        if ((value = mxs_json_pointer(param, "log_notice")))
+        {
+            mxs_log_set_priority_enabled(LOG_NOTICE, json_boolean_value(value));
+        }
+
+        if ((value = mxs_json_pointer(param, "log_debug")))
+        {
+            mxs_log_set_priority_enabled(LOG_DEBUG, json_boolean_value(value));
         }
 
         if ((param = mxs_json_pointer(param, "throttling")) && json_is_object(param))
         {
-            int intval;
             MXS_LOG_THROTTLING throttle;
             mxs_log_get_throttling(&throttle);
 
             if ((value = mxs_json_pointer(param, "count")))
             {
-                if (json_is_integer(value) && (intval = json_integer_value(value)) > 0)
-                {
-                    throttle.count = intval;
-                }
-                else
-                {
-                    rval = false;
-                }
+                throttle.count = json_integer_value(value);
             }
 
             if ((value = mxs_json_pointer(param, "suppress_ms")))
             {
-                if (json_is_integer(value) && (intval = json_integer_value(value)) > 0)
-                {
-                    throttle.suppress_ms = intval;
-                }
-                else
-                {
-                    rval = false;
-                }
+                throttle.suppress_ms = json_integer_value(value);
             }
 
             if ((value = mxs_json_pointer(param, "window_ms")))
             {
-                if (json_is_integer(value) && (intval = json_integer_value(value)) > 0)
-                {
-                    throttle.window_ms = intval;
-                }
-                else
-                {
-                    rval = false;
-                }
+                throttle.window_ms = json_integer_value(value);
             }
 
-            if (rval)
-            {
-                mxs_log_set_throttling(&throttle);
-            }
+            mxs_log_set_throttling(&throttle);
         }
     }
 

@@ -248,7 +248,11 @@ GET /maxscale/logs
                     "count": 10,
                     "suppress_ms": 10000,
                     "window_ms": 1000
-                }
+                },
+                "log_warning": true,
+                "log_notice": true,
+                "log_info": false,
+                "log_debug": false
             }
         },
         "id": "logs",
