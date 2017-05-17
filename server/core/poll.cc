@@ -314,7 +314,7 @@ dShowEventStats(DCB *pdcb)
  * @param what  The required statistic
  * @return      The value of that statistic
  */
-int
+int64_t
 poll_get_stat(POLL_STAT what)
 {
     return Worker::get_one_statistic(what);

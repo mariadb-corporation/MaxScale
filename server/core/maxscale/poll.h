@@ -58,7 +58,7 @@ void            dShowThreads(DCB *dcb);
 void            dShowEventQ(DCB *dcb);
 void            dShowEventStats(DCB *dcb);
 
-int             poll_get_stat(POLL_STAT stat);
+int64_t         poll_get_stat(POLL_STAT stat);
 RESULTSET       *eventTimesGetList();
 
 MXS_END_DECLS

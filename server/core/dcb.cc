@@ -215,6 +215,7 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
     dcb_initialize(newdcb);
     newdcb->dcb_role = role;
     newdcb->listener = listener;
+    newdcb->last_read = hkheartbeat;
 
     return newdcb;
 }
@@ -616,6 +617,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
             MXS_DEBUG("Reusing a persistent connection, dcb %p", dcb);
             dcb->persistentstart = 0;
             dcb->was_persistent = true;
+            dcb->last_read = hkheartbeat;
             return dcb;
         }
         else
@@ -3016,14 +3018,22 @@ void dcb_process_idle_sessions(int thr)
         {
             if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
             {
-                MXS_SESSION *session = dcb->session;
+                ss_dassert(dcb->listener);
+                SERVICE *service = dcb->listener->service;
 
-                if (session->service && session->client_dcb &&
-                    session->client_dcb->state == DCB_STATE_POLLING &&
-                    session->service->conn_idle_timeout &&
-                    hkheartbeat - session->client_dcb->last_read > session->service->conn_idle_timeout * 10)
+                if (service->conn_idle_timeout && dcb->state == DCB_STATE_POLLING)
                 {
-                    poll_fake_hangup_event(dcb);
+                    int64_t idle = hkheartbeat - dcb->last_read;
+                    int64_t timeout = service->conn_idle_timeout * 10;
+
+                    if (idle > timeout)
+                    {
+                        MXS_WARNING("Timing out '%s'@%s, idle for %.1f seconds",
+                                    dcb->user ? dcb->user : "<unknown>",
+                                    dcb->remote ? dcb->remote : "<unknown>",
+                                    (float)idle / 10.f);
+                        poll_fake_hangup_event(dcb);
+                    }
                 }
             }
         }

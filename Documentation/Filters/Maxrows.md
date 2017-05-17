@@ -3,7 +3,7 @@
 This filter was introduced in MariaDB MaxScale 2.1.
 
 ## Overview
-The maxrows filter is capable of restricting the amount of rows that a SELECT,
+The Maxrows filter is capable of restricting the amount of rows that a SELECT,
  a prepared statement or stored procedure could return to the client application.
 
 If a resultset from a backend server has more rows than the configured limit
@@ -12,7 +12,7 @@ or the resultset size exceeds the configured size,
 
 ## Configuration
 
-The maxrows filter is easy to configure and to add to any existing service.
+The Maxrows filter is easy to configure and to add to any existing service.
 
 ```
 [MaxRows]
@@ -22,12 +22,12 @@ module=maxrows
 [MaxRows Routing Service]
 type=service
 ...
-filters=maxrows
+filters=MaxRows
 ```
 
 ### Filter Parameters
 
-The maxrows filter has no mandatory parameters.
+The Maxrows filter has no mandatory parameters.
 Optional parameters are:
 
 #### `max_resultset_rows`
@@ -81,7 +81,7 @@ ERROR 1415 (0A000): Row limit/size exceeded for query: select * from test.t4
 
 #### `debug`
 
-An integer value, using which the level of debug logging made by the maxrows
+An integer value, using which the level of debug logging made by the Maxrows
 filter can be controlled. The value is actually a bitfield with different bits
 denoting different logging.
 
@@ -97,8 +97,8 @@ debug=2
 
 ## Example Configuration
 
-Here is an example of filter configuration where the max number of returned
-rows is 10000 and max allowed resultset size is 256KB
+Here is an example of filter configuration where the maximum number of returned
+rows is 10000 and maximum allowed resultset size is 256KB
 
 ```
 [MaxRows]

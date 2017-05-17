@@ -1,8 +1,8 @@
-#Database Firewall filter
+# Database Firewall filter
 
 ## Overview
 
-The database firewall filter is used to block queries that match a set of
+The Database Firewall filter is used to block queries that match a set of
 rules. It can be used to prevent harmful queries from reaching the backend
 database instances or to limit access to the database based on a more flexible
 set of rules compared to the traditional GRANT-based privilege system. Currently
@@ -10,9 +10,9 @@ the filter does not support multi-statements.
 
 ## Configuration
 
-The database firewall filter only requires minimal configuration in the
-maxscale.cnf file. The actual rules of the database firewall filter are located
-in a separate text file. The following is an example of a database firewall
+The Database Firewall filter only requires minimal configuration in the
+maxscale.cnf file. The actual rules of the Database Firewall filter are located
+in a separate text file. The following is an example of a Database Firewall
 filter configuration in maxscale.cnf.
 
 ```
@@ -32,7 +32,7 @@ filters=DatabaseFirewall
 
 ### Filter Parameters
 
-The database firewall filter has one mandatory parameter, `rules`.
+The Database Firewall filter has one mandatory parameter, `rules`.
 
 #### `rules`
 
@@ -128,7 +128,7 @@ parameter (_allow_,  _block_ or _ignore_).
 
 ### Mandatory rule parameters
 
-The database firewall filter's rules expect a single mandatory parameter for a
+The Database Firewall filter's rules expect a single mandatory parameter for a
 rule. You can define multiple rules to cover situations where you would like to
 apply multiple mandatory rules to a query.
 
@@ -220,7 +220,7 @@ the network address. You can use the `%` character as the wildcard to enable
 user name matching from any address or network matching for all users. After the
 list of users and networks the keyword match is expected.
 
-After this either the keyword `any` `all` or `strict_all` is expected. This
+After this either the keyword `any`, `all` or `strict_all` is expected. This
 defined how the rules are matched. If `any` is used when the first rule is
 matched the query is considered as matched and the rest of the rules are
 skipped. If instead the `all` keyword is used all rules must match for the query
@@ -260,7 +260,7 @@ Shows the current statistics of the rules.
 
 To prevent the excessive use of a database we want to set a limit on the rate of
 queries. We only want to apply this limit to certain queries that cause unwanted
-behavior. To achieve this we can use a regular expression.
+behaviour. To achieve this we can use a regular expression.
 
 First we define the limit on the rate of queries. The first parameter for the
 rule sets the number of allowed queries to 10 queries and the second parameter

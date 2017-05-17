@@ -35,6 +35,8 @@ the _ssn_ would be masked, as in
 ...
 ```
 
+## Security
+
 Note that he masking filter alone is *not* sufficient for preventing
 access to a particular column. As the masking filter works on the column
 name alone a query like
@@ -49,8 +51,11 @@ a sufficient number of times with different _ssn_ values, will, eventually,
 reveal the social security number of all persons in the database.
 
 For a secure solution, the masking filter *must* be combined with the
-firewall filter to prevent the use of functions and the use of particular
-columns in where-clauses.
+firewall filter to prevent the use of functions using which the masking
+can be bypassed.
+
+In a future release, the combined use of the masking filter and the
+database firewall filter will be simplified.
 
 ## Limitations
 
