@@ -1,0 +1,2 @@
+USE cachingdb;
+DELETE FROM caching;

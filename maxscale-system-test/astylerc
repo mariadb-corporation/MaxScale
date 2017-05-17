@@ -1,0 +1,14 @@
+--style=allman
+--indent=spaces=4
+--indent-switches
+--indent-labels
+--min-conditional-indent=0
+--pad-oper
+--pad-header
+--add-brackets
+--convert-tabs
+--max-code-length=110
+--break-after-logical
+--mode=c
+--suffix=none
+--max-instatement-indent=110

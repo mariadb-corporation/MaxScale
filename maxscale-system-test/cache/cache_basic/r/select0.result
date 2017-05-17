@@ -1,0 +1,3 @@
+USE cachingdb;
+SELECT * FROM caching;
+a	b	c

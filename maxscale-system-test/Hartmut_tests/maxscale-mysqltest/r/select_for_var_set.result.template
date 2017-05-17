@@ -1,0 +1,6 @@
+BEGIN;
+SELECT (@@server_id) INTO @a;
+SELECT @a;
+@a
+####server_id####
+COMMIT;

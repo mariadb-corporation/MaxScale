@@ -1,0 +1,39 @@
+package maxscale.java;
+
+import java.io.File;
+
+/**
+ * MaxScale configuration class
+ *
+ * Configures MaxScale for testing
+ */
+public class MaxScaleConfiguration {
+
+    private static final String TEST_DIR = "@CMAKE_SOURCE_DIR@";
+    private static final String CONFIG_COMMAND = TEST_DIR + "/non_native_setup";
+    private static final String LOGS_COMMAND = TEST_DIR + "/copy_logs.sh";
+    private String test = null;
+
+    public MaxScaleConfiguration(String test) throws Exception
+    {
+        this.test = test;
+        ProcessBuilder pb = new ProcessBuilder(CONFIG_COMMAND, test);
+        pb.inheritIO();
+        pb.directory(new File(TEST_DIR));
+        pb.environment().put("test_dir", TEST_DIR);
+        Process process = pb.start();
+        process.waitFor();
+    }
+
+    public void close() {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(LOGS_COMMAND, test);
+            pb.inheritIO();
+            pb.directory(new File(TEST_DIR));
+            Process process = pb.start();
+            process.waitFor();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
