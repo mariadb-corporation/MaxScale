@@ -1,0 +1,3 @@
+UPDATE t1 SET x1=1 where fl=0;
+SELECT x1 FROM t1;
+SELECT * FROM t1;

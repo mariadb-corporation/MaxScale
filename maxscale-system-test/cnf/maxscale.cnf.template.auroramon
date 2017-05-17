@@ -1,0 +1,66 @@
+[maxscale]
+threads=###threads###
+log_warning=1
+
+# Monitors
+
+[Aurora Monitor]
+type=monitor
+module=auroramon
+servers=server1,server2,server3,server4
+user=skysql
+passwd=skysqlrds
+monitor_interval=1000
+
+# Services
+
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1,server2,server3,server4
+user=skysql
+passwd=skysqlrds
+
+[CLI]
+type=service
+router=cli
+
+# Listeners
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+socket=default
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+
+# Servers
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
+protocol=MySQLBackend
+
+[server3]
+type=server
+address=###node_server_IP_3###
+port=###node_server_port_3###
+protocol=MySQLBackend
+
+[server4]
+type=server
+address=###node_server_IP_4###
+port=###node_server_port_4###
+protocol=MySQLBackend
