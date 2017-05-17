@@ -1,6 +1,6 @@
 # Data archiving with Mqfilter and Tee filters
 
-This tutorial gives a quick look into how you can combine various filters to create 
+This tutorial gives a quick look into how you can combine various filters to create
 systems for archiving data for analysis. The aim of this tutorial is to show
 what can be done with MariaDB MaxScale's filters rather than demonstrate a proven method
 of archiving data. For this tutorial you will need two MariaDB/MySQL servers, one for
@@ -27,8 +27,8 @@ Since the archive server will not replicate from the main server, we don't need 
 set up replication between the two. The only thing we need to do is to create the
 users we will use for monitoring and authentication.
 
-The process of creating monitoring and authentication users for MariaDB MaxScale is described 
-in the Creating Database Users section of the 
+The process of creating monitoring and authentication users for MariaDB MaxScale is described
+in the Creating Database Users section of the
 [MariaDB MaxScale Tutorial](MaxScale-Tutorial.md#creating-database-users).
 
 ## Setting up RabbitMQ server
@@ -322,7 +322,7 @@ sudo maxadmin list servers
 
 Servers.
 -------------------+-----------------+-------+-------------+--------------------
-Server             | Address         | Port  | Connections | Status 
+Server             | Address         | Port  | Connections | Status
 -------------------+-----------------+-------+-------------+--------------------
 production-1       | 192.168.0.200   |  3306 |           0 | Running
 archive-1          | 192.168.0.201   |  3000 |           0 | Running

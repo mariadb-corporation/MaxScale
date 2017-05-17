@@ -557,7 +557,7 @@ RWSplit                   | readwritesplit    |      1 |              1 | server
 SchemaRouter              | schemarouter      |      1 |              1 | server1, server2, server3, server4
 RWSplit-Hint              | readwritesplit    |      1 |              1 | server1, server2, server3, server4
 ReadConn                  | readconnroute     |      1 |              1 | server1
-CLI                       | cli               |      2 |              2 | 
+CLI                       | cli               |      2 |              2 |
 --------------------------+-------------------+--------+----------------+-------------------
 MaxScale>
 ```
@@ -618,7 +618,7 @@ MaxScale> show service RWSplit
 		[127.0.0.1]:3003    Protocol: MySQLBackend    Name: server4
 	Total connections:                   1
 	Currently connected:                 1
-MaxScale> 
+MaxScale>
 ```
 
 This allows the set of backend servers defined by the service to be seen along
@@ -634,8 +634,8 @@ command can be used to examine the user data held by MariaDB MaxScale.
 
 ```
 MaxScale> show dbusers RWSplit
-User names: @localhost @localhost.localdomain 14567USER@localhost monuser@localhost monuser@% 14609USER@localhost maxuser@localhost maxuser@% 14651USER@localhost maxtest@localhost maxtest@% 14693USER@localhost skysql@localhost skysql@% 14735USER@localhost cliuser@localhost cliuser@% repuser@localhost repuser@% 
-MaxScale> 
+User names: @localhost @localhost.localdomain 14567USER@localhost monuser@localhost monuser@% 14609USER@localhost maxuser@localhost maxuser@% 14651USER@localhost maxtest@localhost maxtest@% 14693USER@localhost skysql@localhost skysql@% 14735USER@localhost cliuser@localhost cliuser@% repuser@localhost repuser@%
+MaxScale>
 
 ```
 
@@ -663,7 +663,7 @@ accepted.
 
 ```
 MaxScale> shutdown service RWSplit
-MaxScale> 
+MaxScale>
 ```
 
 ## Restart A Stopped Service
@@ -689,14 +689,14 @@ configured within MariaDB MaxScale.
 MaxScale> list servers
 Servers.
 -------------------+-----------------+-------+-------------+--------------------
-Server             | Address         | Port  | Connections | Status              
+Server             | Address         | Port  | Connections | Status
 -------------------+-----------------+-------+-------------+--------------------
 server1            | 127.0.0.1       |  3000 |           0 | Master, Running
 server2            | 127.0.0.1       |  3001 |           0 | Slave, Running
 server3            | 127.0.0.1       |  3002 |           0 | Slave, Running
 server4            | 127.0.0.1       |  3003 |           0 | Slave, Running
 -------------------+-----------------+-------+-------------+--------------------
-MaxScale> 
+MaxScale>
 ```
 
 ## Server Details
@@ -714,12 +714,12 @@ Server 0x6501d0 (server2)
 	Server Version:                      10.1.22-MariaDB
 	Node Id:                             3001
 	Master Id:                           3000
-	Slave Ids:                           
+	Slave Ids:
 	Repl Depth:                          1
 	Number of connections:               0
 	Current no. of conns:                0
 	Current no. of operations:           0
-MaxScale> 
+MaxScale>
 ```
 
 If the server has a non-zero value set for the server configuration item
@@ -796,7 +796,7 @@ Session          | Client          | Service        | State
 11               | ::ffff:127.0.0.1 | RWSplit        | Session ready for routing
 -----------------+-----------------+----------------+--------------------------
 
-MaxScale> 
+MaxScale>
 ```
 
 This will give a list of client connections.
@@ -816,7 +816,7 @@ Session 11
 	Connected:               Thu Apr 20 09:51:31 2017
 
 	Idle:                82 seconds
-MaxScale> 
+MaxScale>
 ```
 
 # Descriptor Control Blocks
@@ -841,20 +841,20 @@ Descriptor Control Blocks
 ------------------+----------------------------+--------------------+----------
  DCB              | State                      | Service            | Remote
 ------------------+----------------------------+--------------------+----------
- 0x68c0a0         | DCB for listening socket   | RWSplit            | 
- 0x6e23f0         | DCB for listening socket   | CLI                | 
- 0x691710         | DCB for listening socket   | SchemaRouter       | 
+ 0x68c0a0         | DCB for listening socket   | RWSplit            |
+ 0x6e23f0         | DCB for listening socket   | CLI                |
+ 0x691710         | DCB for listening socket   | SchemaRouter       |
  0x7fffe40130f0   | DCB in the polling loop    | CLI                | localhost
- 0x6b7540         | DCB for listening socket   | RWSplit-Hint       | 
- 0x6cd020         | DCB for listening socket   | ReadConn           | 
+ 0x6b7540         | DCB for listening socket   | RWSplit-Hint       |
+ 0x6cd020         | DCB for listening socket   | ReadConn           |
  0x7fffd80130f0   | DCB in the polling loop    | RWSplit            | ::ffff:127.0.0.1
- 0x7fffdc014590   | DCB in the polling loop    | RWSplit            | 
- 0x7fffdc0148d0   | DCB in the polling loop    | RWSplit            | 
- 0x7fffdc014c60   | DCB in the polling loop    | RWSplit            | 
- 0x7fffdc014ff0   | DCB in the polling loop    | RWSplit            | 
+ 0x7fffdc014590   | DCB in the polling loop    | RWSplit            |
+ 0x7fffdc0148d0   | DCB in the polling loop    | RWSplit            |
+ 0x7fffdc014c60   | DCB in the polling loop    | RWSplit            |
+ 0x7fffdc014ff0   | DCB in the polling loop    | RWSplit            |
 ------------------+----------------------------+--------------------+----------
 
-MaxScale> 
+MaxScale>
 ```
 
 A MariaDB MaxScale server that has activity on it will however have many more
@@ -1027,7 +1027,7 @@ Monitor              | Status
 ---------------------+---------------------
 MySQL-Monitor        | Running
 ---------------------+---------------------
-MaxScale> 
+MaxScale>
 ```
 
 ## Details Of A Particular Monitor
@@ -1056,7 +1056,7 @@ Slave configured: NO
 Slave IO running: NO
 Slave SQL running: NO
 Master ID: -1
-Master binlog file: 
+Master binlog file:
 Master binlog position: 0
 
 Server: server2
@@ -1090,7 +1090,7 @@ Master binlog file: binlog.000001
 Master binlog position: 435
 
 
-MaxScale> 
+MaxScale>
 ```
 
 ## Shutting Down A Monitor
@@ -1107,7 +1107,7 @@ Monitor              | Status
 ---------------------+---------------------
 MySQL-Monitor        | Stopped
 ---------------------+---------------------
-MaxScale> 
+MaxScale>
 ```
 
 ## Restarting A Monitor
@@ -1123,7 +1123,7 @@ Monitor              | Status
 ---------------------+---------------------
 MySQL-Monitor        | Running
 ---------------------+---------------------
-MaxScale> 
+MaxScale>
 ```
 
 # MaxScale Status Commands
@@ -1156,7 +1156,7 @@ Pending event queue length averages:
   1 | Polling    |        |                  |          |
   2 | Processing |      1 | 0x6e0dd0         | <202400ms | IN|OUT
   3 | Polling    |        |                  |          |
-MaxScale> 
+MaxScale>
 ```
 
 The resultant output returns data as to the average thread utilization for the
@@ -1176,7 +1176,7 @@ MaxScale> show tasks
 Name                      | Type     | Frequency | Next Due
 --------------------------+----------+-----------+-------------------------
 Load Average              | Repeated | 10        | Thu Apr 20 10:02:26 2017
-MaxScale> 
+MaxScale>
 ```
 
 # Administration Commands
@@ -1207,7 +1207,7 @@ readconnroute   | Router          | V1.1.0  | 2.0.0 | GA
 cli             | Router          | V1.0.0  | 2.0.0 | GA
 ----------------+-----------------+---------+-------+-------------------------
 
-MaxScale> 
+MaxScale>
 ```
 
 This command provides important version information for the module. Each module
@@ -1318,7 +1318,7 @@ command.
 
 ```
 MaxScale> shutdown maxscale
-MaxScale> 
+MaxScale>
 ```
 
 # Runtime Configuration Changes
@@ -1720,7 +1720,7 @@ No of poll completions with descriptors
 	 8			0
 	 9			0
 	>= 10			0
-MaxScale> 
+MaxScale>
 ```
 
 If the "Number of DCBs with pending events" grows rapidly it is an indication
@@ -1750,38 +1750,38 @@ Average event queue length:     1
                |    Number of events
 Duration       | Queued     | Executed
 ---------------+------------+-----------
- < 100ms       | 27         | 26        
-  100 -  200ms | 0          | 0         
-  200 -  300ms | 0          | 0         
-  300 -  400ms | 0          | 0         
-  400 -  500ms | 0          | 0         
-  500 -  600ms | 0          | 0         
-  600 -  700ms | 0          | 0         
-  700 -  800ms | 0          | 0         
-  800 -  900ms | 0          | 0         
-  900 - 1000ms | 0          | 0         
- 1000 - 1100ms | 0          | 0         
- 1100 - 1200ms | 0          | 0         
- 1200 - 1300ms | 0          | 0         
- 1300 - 1400ms | 0          | 0         
- 1400 - 1500ms | 0          | 0         
- 1500 - 1600ms | 0          | 0         
- 1600 - 1700ms | 0          | 0         
- 1700 - 1800ms | 0          | 0         
- 1800 - 1900ms | 0          | 0         
- 1900 - 2000ms | 0          | 0         
- 2000 - 2100ms | 0          | 0         
- 2100 - 2200ms | 0          | 0         
- 2200 - 2300ms | 0          | 0         
- 2300 - 2400ms | 0          | 0         
- 2400 - 2500ms | 0          | 0         
- 2500 - 2600ms | 0          | 0         
- 2600 - 2700ms | 0          | 0         
- 2700 - 2800ms | 0          | 0         
- 2800 - 2900ms | 0          | 0         
- 2900 - 3000ms | 0          | 0         
- > 3000ms      | 0          | 0         
-MaxScale> 
+ < 100ms       | 27         | 26
+  100 -  200ms | 0          | 0
+  200 -  300ms | 0          | 0
+  300 -  400ms | 0          | 0
+  400 -  500ms | 0          | 0
+  500 -  600ms | 0          | 0
+  600 -  700ms | 0          | 0
+  700 -  800ms | 0          | 0
+  800 -  900ms | 0          | 0
+  900 - 1000ms | 0          | 0
+ 1000 - 1100ms | 0          | 0
+ 1100 - 1200ms | 0          | 0
+ 1200 - 1300ms | 0          | 0
+ 1300 - 1400ms | 0          | 0
+ 1400 - 1500ms | 0          | 0
+ 1500 - 1600ms | 0          | 0
+ 1600 - 1700ms | 0          | 0
+ 1700 - 1800ms | 0          | 0
+ 1800 - 1900ms | 0          | 0
+ 1900 - 2000ms | 0          | 0
+ 2000 - 2100ms | 0          | 0
+ 2100 - 2200ms | 0          | 0
+ 2200 - 2300ms | 0          | 0
+ 2300 - 2400ms | 0          | 0
+ 2400 - 2500ms | 0          | 0
+ 2500 - 2600ms | 0          | 0
+ 2600 - 2700ms | 0          | 0
+ 2700 - 2800ms | 0          | 0
+ 2800 - 2900ms | 0          | 0
+ 2900 - 3000ms | 0          | 0
+ > 3000ms      | 0          | 0
+MaxScale>
 ```
 
 The statics are defined in 100ms buckets, with the count of the events that fell

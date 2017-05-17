@@ -175,7 +175,7 @@ CLI                       | cli                  |      2 |     2
 % maxadmin list servers
 Servers.
 -------------------+-----------------+-------+-------------+--------------------
-Server             | Address         | Port  | Connections | Status              
+Server             | Address         | Port  | Connections | Status
 -------------------+-----------------+-------+-------------+--------------------
 dbserv1            | 192.168.2.1     |  3306 |           0 | Running, Synced, Master
 dbserv2            | 192.168.2.2     |  3306 |           0 | Running, Synced, Slave

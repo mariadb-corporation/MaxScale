@@ -67,7 +67,7 @@ configured into the separate `consumer.cnf` file.
 | user		| Username for the RabbitMQ server             |
 | passwd	| Password for the RabbitMQ server             |
 | queue		| Queue to consume from                        |
-| dbserver	| Hostname of the SQL server                   | 
+| dbserver	| Hostname of the SQL server                   |
 | dbport	| Port of the SQL server                       |
 | dbname	| Name of the SQL database to use              |
 | dbuser	| Database username                            |

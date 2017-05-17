@@ -109,7 +109,7 @@ The best way to describe this process is with an example.
 
 User `'jdoe'@'192.168.0.200` has the following grant on the cluster:
 `GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'192.168.0.200'`.
-When the user connects directly to the server it will see it as 
+When the user connects directly to the server it will see it as
 `'jdoe'@'192.168.0.200` connecting to the server and it will match
 the grant for `'jdoe'@'192.168.0.200`.
 

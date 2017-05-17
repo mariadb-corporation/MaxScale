@@ -25,7 +25,7 @@ passwd=mypwd
 
 The module generates the list of databases based on the servers parameter using the connecting client's credentials. The user and passwd parameters define the credentials that are used to fetch the authentication data from the database servers. The credentials used only require the same grants as mentioned in the configuration documentation.
 
-The list of databases is built by sending a SHOW DATABASES query to all the servers. This requires the user to have at least USAGE and SELECT grants on the databases that need be sharded. 
+The list of databases is built by sending a SHOW DATABASES query to all the servers. This requires the user to have at least USAGE and SELECT grants on the databases that need be sharded.
 
 If you are connecting directly to a database or have different users on some of the servers, you need to get the authentication data from all the servers. You can control this with the `auth_all_servers` parameter. With this parameter, MariaDB MaxScale forms a union of all the users and their grants from all the servers. By default, the schemarouter will fetch the authentication data from all servers.
 

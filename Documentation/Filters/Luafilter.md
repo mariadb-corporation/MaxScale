@@ -49,7 +49,7 @@ The entry points for the Lua script expect the following signatures:
     - The `closeSession` function in the Lua scripts will be called.
 
   - `(nil | bool | string) routeQuery(string)` - query is being routed
-  
+
     - The Luafilter calls the `routeQuery` functions of both the session and the
       global script.  The query is passed as a string parameter to the
       routeQuery Lua function and the return values of the session specific
