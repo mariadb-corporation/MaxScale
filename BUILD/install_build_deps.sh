@@ -120,8 +120,7 @@ then
     exit 1
 fi
 avro_filename=`ls -1 *.tar.gz`
-avro_die=`echo "$avro_finema" | sed "s/.tar.gz//"`
-
+avro_dir=`echo "$avro_filename" | sed "s/.tar.gz//"`
 tar -axf $avro_filename
 mkdir $avro_dir/build
 pushd $avro_dir/build
