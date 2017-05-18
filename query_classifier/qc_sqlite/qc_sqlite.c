@@ -127,6 +127,14 @@ static QC_NAME_MAPPING function_name_mappings_103[] =
     { NULL, NULL }
 };
 
+// NOTE: Duplicate the information from function_name_mappings_103 here.
+static QC_NAME_MAPPING function_name_mappings_oracle[] =
+{
+    { "now", "current_timestamp" },
+    { "nvl", "ifnull" },
+    { NULL, NULL }
+};
+
 /**
  * The state of qc_sqlite.
  */
@@ -2982,7 +2990,6 @@ static int32_t qc_sqlite_setup(const char* cargs)
                     if (strcmp(value, "10.3") == 0)
                     {
                         parse_as = QC_PARSE_AS_103;
-                        function_name_mappings = function_name_mappings_103;
                         MXS_NOTICE("Parsing as 10.3.");
                     }
                     else
@@ -3018,6 +3025,15 @@ static int32_t qc_sqlite_setup(const char* cargs)
 
             token = strtok_r(NULL, ",", &p1);
         }
+    }
+
+    if (sql_mode == QC_SQL_MODE_ORACLE)
+    {
+        function_name_mappings = function_name_mappings_oracle;
+    }
+    else if (parse_as == QC_PARSE_AS_103)
+    {
+        function_name_mappings = function_name_mappings_103;
     }
 
     this_unit.setup = true;
