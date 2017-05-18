@@ -74,7 +74,9 @@ target_link_libraries(maxscale-common
   rt
   m
   stdc++
-  microhttpd
+  gnutls
+  gcrypt
+  ${MICROHTTPD_LIBRARIES}
 )
 
 add_dependencies(maxscale-common pcre2 connector-c)

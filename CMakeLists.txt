@@ -71,6 +71,8 @@ if(NOT JANSSON_FOUND)
   include(cmake/BuildJansson.cmake)
 endif()
 
+include(cmake/BuildMicroHttpd.cmake)
+
 include_directories(${JANSSON_INCLUDE_DIR})
 
 # You can find the variables set by this in the FindCURL.cmake file
