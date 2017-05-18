@@ -33,6 +33,7 @@
 #include <maxscale/config.h>
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/http.hh>
+#include <maxscale/adminusers.h>
 
 #include "maxscale/resource.hh"
 
@@ -152,24 +153,25 @@ void close_client(void *cls,
 
 bool do_auth(MHD_Connection *connection)
 {
-    const char *admin_user = config_get_global_options()->admin_user;
-    const char *admin_pw = config_get_global_options()->admin_password;
     bool admin_auth = config_get_global_options()->admin_auth;
 
     char* pw = NULL;
     char* user = MHD_basic_auth_get_username_password(connection, &pw);
     bool rval = true;
 
-    if (admin_auth && (!user || !pw || strcmp(user, admin_user) || strcmp(pw, admin_pw)))
+    if (admin_auth)
     {
-        rval = false;
-        static char error_resp[] = "Access denied\r\n";
-        MHD_Response *resp =
-            MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
-                                            MHD_RESPMEM_PERSISTENT);
+        if (!user || !pw || !admin_verify_inet_user(user, pw))
+        {
+            rval = false;
+            static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
+            MHD_Response *resp =
+                MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
+                                                MHD_RESPMEM_PERSISTENT);
 
-        MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
-        MHD_destroy_response(resp);
+            MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
+            MHD_destroy_response(resp);
+        }
     }
 
     return rval;

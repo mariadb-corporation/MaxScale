@@ -544,17 +544,9 @@ Enable HTTP admin interface authentication using HTTP Basic Access
 authentication. This is not a secure method of authentication but it does add a
 small layer of security. This option is disabled by default.
 
-#### `admin_user`
-
-The HTTP admin interface username. This is the username which is used when
-_admin_auth_ is enabled. The default user for the HTTP admin interface is
-`admin`.
-
-#### `admin_password`
-
-The HTTP admin interface password. This is the which which is used when
-_admin_auth_ is enabled. The default password for the HTTP admin interface is
-`mariadb`.
+The admin interface authentication uses the same user as MaxAdmin network
+interface. This means that new users can be added with both MaxAdmin and the
+REST API. The default credentials for the interface are `admin:mariadb`.
 
 #### `admin_ssl_key`
 

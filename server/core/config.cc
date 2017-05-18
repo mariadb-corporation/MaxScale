@@ -1524,14 +1524,6 @@ handle_global_item(const char *name, const char *value)
             MXS_FREE(v);
         }
     }
-    else if (strcmp(name, CN_ADMIN_USER) == 0)
-    {
-        strcpy(gateway.admin_user, value);
-    }
-    else if (strcmp(name, CN_ADMIN_PASSWORD) == 0)
-    {
-        strcpy(gateway.admin_password, value);
-    }
     else if (strcmp(name, CN_ADMIN_PORT) == 0)
     {
         gateway.admin_port = atoi(value);
@@ -1784,8 +1776,6 @@ global_defaults()
     gateway.admin_auth = false;
     gateway.admin_enabled = true;
     strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
-    strcpy(gateway.admin_user, INET_DEFAULT_USERNAME);
-    strcpy(gateway.admin_password, INET_DEFAULT_PASSWORD);
     gateway.admin_ssl_key[0] = '\0';
     gateway.admin_ssl_cert[0] = '\0';
     gateway.admin_ssl_ca_cert[0] = '\0';
