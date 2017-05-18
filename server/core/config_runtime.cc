@@ -41,7 +41,23 @@ using mxs::Closer;
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
-thread_local stringstream runtime_errmsg;
+#define RUNTIME_ERRMSG_BUFSIZE 512
+thread_local char runtime_errmsg[RUNTIME_ERRMSG_BUFSIZE];
+
+static void runtime_error(const char* fmt, ...)
+{
+    va_list list;
+    va_start(list, fmt);
+    vsnprintf(runtime_errmsg, sizeof(runtime_errmsg), fmt, list);
+    va_end(list);
+}
+
+static string runtime_get_error()
+{
+    string rval(runtime_errmsg);
+    runtime_errmsg[0] = '\0';
+    return rval;
+}
 
 bool runtime_link_server(SERVER *server, const char *target)
 {
@@ -60,8 +76,8 @@ bool runtime_link_server(SERVER *server, const char *target)
         }
         else
         {
-            runtime_errmsg << "Service '" << service->name << "' already uses server '"
-                           << server->unique_name << "'";
+            runtime_error("Service '%s' already uses server '%s'",
+                          service->name, server->unique_name);
         }
     }
     else if (monitor)
@@ -73,7 +89,7 @@ bool runtime_link_server(SERVER *server, const char *target)
         }
         else
         {
-            runtime_errmsg << "Server '" << server->unique_name << "' is already monitored";
+            runtime_error("Server '%s' is already monitored", server->unique_name);
         }
     }
 
@@ -179,7 +195,7 @@ bool runtime_create_server(const char *name, const char *address, const char *po
     }
     else
     {
-        runtime_errmsg << "Server '" << name << "' already exists";
+        runtime_error("Server '%s' already exists", name);
     }
 
     spinlock_release(&crt_lock);
@@ -193,10 +209,10 @@ bool runtime_destroy_server(SERVER *server)
 
     if (service_server_in_use(server) || monitor_server_in_use(server))
     {
-        runtime_errmsg << "Cannot destroy server '" << server->unique_name <<
-                       "' as it is used by at least one service or monitor";
-        MXS_ERROR("Cannot destroy server '%s' as it is used by at least one "
-                  "service or monitor", server->unique_name);
+        const char* err = "Cannot destroy server '%s' as it is used by at least "
+            "one service or monitor";
+        runtime_error(err, server->unique_name);
+        MXS_ERROR(err, server->unique_name);
     }
     else
     {
@@ -346,7 +362,7 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
     }
     else
     {
-        runtime_errmsg << "Invalid server parameter: " << key;
+        runtime_error("Invalid server parameter: %s", key);
     }
 
     spinlock_release(&crt_lock);
@@ -495,7 +511,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
     }
     else
     {
-        runtime_errmsg << "Invalid monitor parameter: " << key;
+        runtime_error("Invalid monitor parameter: %s", key);
     }
 
     spinlock_release(&crt_lock);
@@ -566,7 +582,7 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
     }
     else
     {
-        runtime_errmsg << "Invalid service parameter: " << key;
+        runtime_error("Invalid service parameter: %s", key.c_str());
         MXS_ERROR("Unknown parameter for service '%s': %s=%s",
                   service->name, key.c_str(), value.c_str());
         valid = false;
@@ -733,7 +749,7 @@ bool runtime_create_monitor(const char *name, const char *module)
     }
     else
     {
-        runtime_errmsg << "Can't create monitor '" << name << "', it already exists";
+        runtime_error("Can't create monitor '%s', it already exists", name);
     }
 
     spinlock_release(&crt_lock);
@@ -854,10 +870,38 @@ static bool server_contains_required_fields(json_t* json)
     json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
     json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
     json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
+    bool rval = false;
 
-    return (id && json_is_string(id) &&
-            address && json_is_string(address) &&
-            port && json_is_integer(port));
+    if (!id)
+    {
+        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
+    }
+    else if (!json_is_string(id))
+    {
+        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
+    }
+    else if (!address)
+    {
+        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_ADDRESS);
+    }
+    else if (!json_is_string(address))
+    {
+        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_ADDRESS);
+    }
+    else if (!port)
+    {
+        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_PORT);
+    }
+    else if (!json_is_integer(port))
+    {
+        runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
+    }
+    else
+    {
+        rval = true;
+    }
+
+    return rval;
 }
 
 const char* server_relation_types[] =
@@ -947,12 +991,12 @@ SERVER* runtime_create_server_from_json(json_t* json)
         }
         else
         {
-            runtime_errmsg << "Invalid relationships in request JSON";
+            runtime_error("Invalid relationships in request JSON");
         }
     }
     else
     {
-        runtime_errmsg << "Missing or bad parameters in request JSON";
+        runtime_error("Missing or bad parameters in request JSON");
     }
 
     return rval;
@@ -1023,6 +1067,10 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
                 }
             }
         }
+    }
+    else
+    {
+        runtime_error("Missing or bad parameters in request JSON");
     }
 
     return rval;
@@ -1125,7 +1173,7 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
     }
     else
     {
-        runtime_errmsg << "Missing or bad parameters in request JSON";
+        runtime_error("Missing or bad parameters in request JSON");
     }
 
     return rval;
@@ -1209,6 +1257,10 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
             monitorStart(monitor, monitor->parameters);
         }
     }
+    else
+    {
+        runtime_error("Missing or bad parameters in request JSON");
+    }
 
     return rval;
 }
@@ -1278,6 +1330,10 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
             }
         }
     }
+    else
+    {
+        runtime_error("Missing or bad parameters in request JSON");
+    }
 
     return rval;
 }
@@ -1289,7 +1345,7 @@ static inline bool is_null_or_bool(json_t* params, const char* name)
 
     if (value && !json_is_boolean(value))
     {
-        runtime_errmsg << "Parameter '" << name << "' is not a boolean";
+        runtime_error("Parameter '%s' is not a boolean", name);
         rval = false;
     }
 
@@ -1305,12 +1361,12 @@ static inline bool is_null_or_count(json_t* params, const char* name)
     {
         if (!json_is_integer(value))
         {
-            runtime_errmsg << "Parameter '" << name << "' is not an integer";
+            runtime_error("Parameter '%s' is not an integer", name);
             rval = false;
         }
         else if (json_integer_value(value) <= 0)
         {
-            runtime_errmsg << "Parameter '" << name << "' is not a positive integer";
+            runtime_error("Parameter '%s' is not a positive integer", name);
             rval = false;
         }
     }
@@ -1465,7 +1521,7 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
     }
     else
     {
-        runtime_errmsg << "Missing or bad parameters in request JSON";
+        runtime_error("Missing or bad parameters in request JSON");
     }
 
     return rval;
@@ -1474,11 +1530,10 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
 json_t* runtime_get_json_error()
 {
     json_t* obj = NULL;
-    string errmsg = runtime_errmsg.str();
+    string errmsg = runtime_get_error();
 
     if (errmsg.length())
     {
-        runtime_errmsg.str("");
         json_t* err = json_object();
         json_object_set_new(err, "detail", json_string(errmsg.c_str()));
 
