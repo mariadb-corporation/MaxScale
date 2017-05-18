@@ -2653,6 +2653,9 @@ static void update_field_infos(parsing_info_t* pi,
 
 int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos)
 {
+    *infos = NULL;
+    *n_infos = 0;
+
     if (!buf)
     {
         return QC_RESULT_OK;
@@ -2660,7 +2663,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 
     if (!ensure_query_is_parsed(buf))
     {
-        return QC_RESULT_ERROR;;
+        return QC_RESULT_ERROR;
     }
 
     parsing_info_t* pi = get_pinfo(buf);
@@ -2775,19 +2778,27 @@ int32_t qc_mysql_get_function_info(GWBUF* buf,
     *function_infos = NULL;
     *n_function_infos = 0;
 
-    const QC_FIELD_INFO* field_infos;
-    uint32_t n_field_infos;
+    int32_t rv = QC_RESULT_OK;
 
-    // We ensure the information has been collected by querying the fields first.
-    qc_mysql_get_field_info(buf, &field_infos, &n_field_infos);
+    if (buf)
+    {
+        const QC_FIELD_INFO* field_infos;
+        uint32_t n_field_infos;
 
-    parsing_info_t* pi = get_pinfo(buf);
-    ss_dassert(pi);
+        // We ensure the information has been collected by querying the fields first.
+        rv = qc_mysql_get_field_info(buf, &field_infos, &n_field_infos);
 
-    *function_infos = pi->function_infos;
-    *n_function_infos = pi->function_infos_len;
+        if (rv == QC_RESULT_OK)
+        {
+            parsing_info_t* pi = get_pinfo(buf);
+            ss_dassert(pi);
 
-    return QC_RESULT_OK;
+            *function_infos = pi->function_infos;
+            *n_function_infos = pi->function_infos_len;
+        }
+    }
+
+    return rv;
 }
 
 namespace
