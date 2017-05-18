@@ -14,7 +14,7 @@ extern "C" {
 void init_builtin_functions();
 void finish_builtin_functions();
 
-bool is_builtin_readonly_function(const char* zToken);
+bool is_builtin_readonly_function(const char* zToken, bool check_oracle);
 
 #ifdef __cplusplus
 }

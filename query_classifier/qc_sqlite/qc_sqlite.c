@@ -1187,7 +1187,7 @@ static void update_field_infos(QC_SQLITE_INFO* info,
                 {
                     info->type_mask |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
                 }
-                else if (!is_builtin_readonly_function(zToken))
+                else if (!is_builtin_readonly_function(zToken, this_unit.sql_mode == QC_SQL_MODE_ORACLE))
                 {
                     info->type_mask |= QUERY_TYPE_WRITE;
                 }
