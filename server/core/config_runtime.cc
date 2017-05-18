@@ -843,6 +843,12 @@ static inline const char* string_or_null(json_t* json, const char* path)
     return rval;
 }
 
+/** Check that the body at least defies a data member */
+static bool is_valid_resource_body(json_t* json)
+{
+    return mxs_json_pointer(json, MXS_JSON_PTR_DATA);
+}
+
 static bool server_contains_required_fields(json_t* json)
 {
     json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
@@ -911,7 +917,8 @@ SERVER* runtime_create_server_from_json(json_t* json)
 {
     SERVER* rval = NULL;
 
-    if (server_contains_required_fields(json))
+    if (is_valid_resource_body(json) &&
+        server_contains_required_fields(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* address = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS));
@@ -987,7 +994,8 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
     Closer<json_t*> old_json(server_to_json(server, ""));
     ss_dassert(old_json.get());
 
-    if (server_to_object_relations(server, old_json.get(), new_json))
+    if (is_valid_resource_body(new_json) &&
+        server_to_object_relations(server, old_json.get(), new_json))
     {
         rval = true;
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
@@ -1043,7 +1051,8 @@ static bool validate_monitor_json(json_t* json)
     bool rval = false;
     json_t* value;
 
-    if ((value = mxs_json_pointer(json, MXS_JSON_PTR_ID)) && json_is_string(value) &&
+    if (is_valid_resource_body(json) &&
+        (value = mxs_json_pointer(json, MXS_JSON_PTR_ID)) && json_is_string(value) &&
         (value = mxs_json_pointer(json, MXS_JSON_PTR_MODULE)) && json_is_string(value))
     {
         set<string> relations;
@@ -1158,7 +1167,8 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
     Closer<json_t*> old_json(monitor_to_json(monitor, ""));
     ss_dassert(old_json.get());
 
-    if (object_to_server_relations(monitor->name, old_json.get(), new_json))
+    if (is_valid_resource_body(new_json) &&
+        object_to_server_relations(monitor->name, old_json.get(), new_json))
     {
         rval = true;
         bool changed = false;
@@ -1223,7 +1233,8 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
     Closer<json_t*> old_json(service_to_json(service, ""));
     ss_dassert(old_json.get());
 
-    if (object_to_server_relations(service->name, old_json.get(), new_json))
+    if (is_valid_resource_body(new_json) &&
+        object_to_server_relations(service->name, old_json.get(), new_json))
     {
         bool changed = false;
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);

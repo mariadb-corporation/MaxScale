@@ -37,6 +37,7 @@ MXS_BEGIN_DECLS
 #define MAX_ADMIN_HOST_LEN      1024
 
 /** JSON Pointers to key parts of JSON objects */
+#define MXS_JSON_PTR_DATA       "/data"
 #define MXS_JSON_PTR_ID         "/data/id"
 #define MXS_JSON_PTR_PARAMETERS "/data/attributes/parameters"
 
