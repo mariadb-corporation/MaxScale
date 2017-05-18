@@ -2698,7 +2698,13 @@ call_arg(A) ::= INTEGER. {A=0;}
 call_arg(A) ::= FLOAT. {A=0;}
 call_arg(A) ::= STRING. {A=0;}
 call_arg(A) ::= id. {A=0;}
-call_arg(A) ::= VARIABLE. {A=1;}
+call_arg(A) ::= VARIABLE(X). {
+    if (X.n == 1 && strncmp(X.z, "?", 1) == 0) {
+      A=0;
+    } else {
+      A=1;
+    }
+}
 
 %type call_args {int}
 call_args(A) ::= call_arg(X). {A=X;}
