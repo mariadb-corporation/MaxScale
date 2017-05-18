@@ -95,6 +95,49 @@ typedef struct parsing_info_st
 #endif
 } parsing_info_t;
 
+/**
+ * Defines what a particular name should be mapped to.
+ */
+typedef struct name_mapping
+{
+    const char* from;
+    const char* to;
+} NAME_MAPPING;
+
+static NAME_MAPPING function_name_mappings_default[] =
+{
+    { NULL, NULL }
+};
+
+static NAME_MAPPING function_name_mappings_oracle[] =
+{
+    { "concat_operator_oracle", "concat" },
+    { "case", "decode" },
+    { NULL, NULL }
+};
+
+static NAME_MAPPING* function_name_mappings = function_name_mappings_default;
+
+static const char* map_function_name(const char* from)
+{
+    NAME_MAPPING* map = function_name_mappings;
+    const char* to = NULL;
+
+    while (!to && map->from)
+    {
+        if (strcasecmp(from, map->from) == 0)
+        {
+            to = map->to;
+        }
+        else
+        {
+            ++map;
+        }
+    }
+
+    return to ? to : from;
+}
+
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
 
 static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
@@ -2101,6 +2144,8 @@ static void add_function_info(parsing_info_t* info,
 {
     ss_dassert(name);
 
+    name = map_function_name(name);
+
     QC_FUNCTION_INFO item = { (char*)name, usage };
 
     size_t i;
@@ -2827,6 +2872,7 @@ int32_t qc_mysql_setup(const char* zArgs)
                 if (strcmp(value, "MODE_ORACLE") == 0)
                 {
                     sql_mode = MODE_ORACLE;
+                    function_name_mappings = function_name_mappings_oracle;
                 }
                 else
                 {
