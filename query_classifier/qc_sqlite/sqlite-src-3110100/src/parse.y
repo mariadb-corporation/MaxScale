@@ -2862,13 +2862,20 @@ prepare ::= PREPARE nm(X) FROM STRING(Y).
   maxscalePrepare(pParse, &X, &Y);
 }
 
-execute_variables ::= VARIABLE.
-execute_variables ::= execute_variables COMMA VARIABLE.
+%type execute_variable {int}
+execute_variable(A) ::= INTEGER.  {A=0;} // For Oracle
+execute_variable(A) ::= VARIABLE. {A=QUERY_TYPE_USERVAR_READ;}
+
+%type execute_variables {int}
+execute_variables(A) ::= execute_variable(X). {A=X;}
+execute_variables(A) ::= execute_variables(X) COMMA execute_variable(Y). {
+  A = X|Y;
+}
 
 %type execute_variables_opt {int}
 
-execute_variables_opt(A) ::= .                     { A = 0; }
-execute_variables_opt(A) ::= USING execute_variables. { A = QUERY_TYPE_USERVAR_READ; }
+execute_variables_opt(A) ::= .                           {A=0;}
+execute_variables_opt(A) ::= USING execute_variables(X). {A=X;}
 
 execute ::= EXECUTE nm(X) execute_variables_opt(Y). {
     maxscaleExecute(pParse, &X, Y);
