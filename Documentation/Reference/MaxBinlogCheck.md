@@ -1,10 +1,10 @@
-# Maxbinlogcheck, the MySQL/MariaDB binlog check utility
+# Maxbinlogcheck, the MariaDB binlog check utility
 
 # Overview
 
 Maxbinlogcheck is a command line utility for checking binlogfiles. The files may
 have been downloaded by the MariaDB MaxScale binlog router or they may be
-MySQL/MariaDB binlog files stored in a database server acting as a master in a
+MariaDB binlog files stored in a database server acting as a master in a
 replication environment. Maxbinlogcheck checks the binlog files against any
 corruption and stored incomplete transactions and reports a transaction summary
 after reading all the events. It may optionally truncate the binlog file.

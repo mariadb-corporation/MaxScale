@@ -121,7 +121,7 @@ When the session ends a report will be written for the session into the logfile 
 
 ### Duplicate Data From Your Application Into Cassandra
 
-The scenario we are using in this example is one in which you have an online gaming application that is designed to work with a MariaDB/MySQL database. The database schema includes a high score table which you would like to have access to in a Cassandra cluster. The application is already using MariaDB MaxScale to connect to a MariaDB Galera cluster, using a service names BubbleGame. The definition of that service is as follows
+The scenario we are using in this example is one in which you have an online gaming application that is designed to work with a MariaDB database. The database schema includes a high score table which you would like to have access to in a Cassandra cluster. The application is already using MariaDB MaxScale to connect to a MariaDB Galera cluster, using a service names BubbleGame. The definition of that service is as follows
 ```
 [BubbleGame]
 type=service

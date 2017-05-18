@@ -183,7 +183,7 @@ dbserv3            | 192.168.2.3     |  3306 |           0 | Running, Synced, Sl
 -------------------+-----------------+-------+-------------+--------------------
 ```
 
-A Galera Cluster is a multi-master clustering technology, however the monitor is able to impose false notions of master and slave roles within a Galera Cluster in order to facilitate the use of Galera as if it were a standard MySQL Replication setup. This is merely an internal MariaDB MaxScale convenience and has no impact on the behavior of the cluster but does allow the monitor to create these pseudo roles which are utilized by the Read/Write Splitter.
+A Galera Cluster is a multi-master clustering technology, however the monitor is able to impose false notions of master and slave roles within a Galera Cluster in order to facilitate the use of Galera as if it were a standard MariaDB Replication setup. This is merely an internal MariaDB MaxScale convenience and has no impact on the behavior of the cluster but does allow the monitor to create these pseudo roles which are utilized by the Read/Write Splitter.
 
 You can control which Galera node is the master server by using the _priority_ mechanism of the Galera Monitor module. For more details, read the [Galera Monitor](../Monitors/Galera-Monitor.md) documentation.
 

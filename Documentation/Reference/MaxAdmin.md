@@ -677,7 +677,7 @@ MaxScale>
 
 # Working With Servers
 
-The server represents each of the instances of MySQL or MariaDB that a service
+The server represents each of the instances of MariaDB or MySQL that a service
 may use.
 
 ## What Servers Are Configured?
@@ -1197,7 +1197,7 @@ MySQLAuth       | Authenticator   | V1.1.0  | 1.1.0 | GA
 MySQLClient     | Protocol        | V1.1.0  | 1.1.0 | GA
 MaxAdminAuth    | Authenticator   | V2.1.0  | 1.1.0 | GA
 maxscaled       | Protocol        | V2.0.0  | 1.1.0 | GA
-MySQLBackendAuth | Authenticator   | V1.0.0  | 1.1.0 | GA
+MySQLBackendAuth| Authenticator   | V1.0.0  | 1.1.0 | GA
 MySQLBackend    | Protocol        | V2.0.0  | 1.1.0 | GA
 mysqlmon        | Monitor         | V1.5.0  | 3.0.0 | GA
 schemarouter    | Router          | V1.0.0  | 2.0.0 | Beta

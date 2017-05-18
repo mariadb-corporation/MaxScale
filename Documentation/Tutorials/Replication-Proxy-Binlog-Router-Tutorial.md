@@ -1,11 +1,11 @@
 # MariaDB MaxScale as a Binlog Server
 MariaDB MaxScale is a dynamic data routing platform that sits between a database layer and the clients of that database. However, the binlog router described here is somewhat different to that original concept, moving MariaDB MaxScale down to play a role within the database layer itself.
 
-In a traditional MySQL replication setup a single master server is created and a set of slaves MySQL instances are configured to pull the binlog files from that master to the slaves. There are some problems, however, in this setup; when the number of slaves grows, an increasing load caused by the serving of binlogs to each slave, is placed on the master. When the master server fails, some action must be performed on every slave server before a new server can become the master server.
+In a traditional MariaDB replication setup a single master server is created and a set of slaves MariaDB instances are configured to pull the binlog files from that master to the slaves. There are some problems, however, in this setup; when the number of slaves grows, an increasing load caused by the serving of binlogs to each slave, is placed on the master. When the master server fails, some action must be performed on every slave server before a new server can become the master server.
 
 Introducing a proxy layer between the master server and the slave servers can improve the situation, by reducing the load on the master to simply serving the proxy layer rather than all of the slaves. The slaves only need to be aware of the proxy layer and not of the real master server. Removing the need for the slaves to have knowledge of the actual master, greatly simplifies the process of replacing a failed master within a replication environment.
 
-## MariaDB/MySQL as a Binlog Server
+## MariaDB as a Binlog Server
 The most obvious solution to the requirement for a proxy layer within a replication environment is to use a MariaDB or MySQL database instance. The database server is designed to allow this, since a slave server is able to be configured such that it will produce binary logs for updates it has itself received via replication from the master server. This is done with the *log_slave_updates* configuration option of the server. In this case the server is known as an intermediate master, it is simultaneously a slave to the real master and a master to the other slaves in the configuration.
 
 Using an intermediate master does not, however, solve all the problems and introduces some new ones, due to the way replication is implemented. A slave server reads the binary log data and creates a relay log from that binary log. This log provides a source of SQL statements, which are executed within the slave in order to make the same changes to the databases on the slaves as were made on the master. If the *log_slave_updates* option has been enabled, new binary log entries are created for the statements executed from the relay log.
@@ -348,7 +348,7 @@ Master_SSL_Verify_Server_Cert: No
 
 # Binlog router compatibility
 
-Binlog Router Plugin is compatible with MySQL 5.6 and MariaDB 5.5, the current default.
+Binlog Router Plugin is compatible with MariaDB 5.5 and MySQL 5.6, the current default.
 
 In order to use it with MySQL 5.6, the *GTID_MODE* setting must be OFF and connecting slaves must not use *MASTER_AUTO_POSITION = 1* option.
 

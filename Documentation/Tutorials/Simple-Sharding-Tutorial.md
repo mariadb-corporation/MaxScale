@@ -8,11 +8,11 @@ MariaDB MaxScale will appear to the client as a database server with the combina
 
 ## Environment & Solution Space
 
-This document is designed as a simple tutorial on schema-based sharding using MariaDB MaxScale in an environment in which you have two servers. The object of this tutorial is to have a system that, to the client side, acts like a single MySQL database but actually is sharded between the two servers.
+This document is designed as a simple tutorial on schema-based sharding using MariaDB MaxScale in an environment in which you have two servers. The object of this tutorial is to have a system that, to the client side, acts like a single MariaDB database but actually is sharded between the two servers.
 
 The database users should be configured according to [the configuration guide](../Getting-Started/Configuration-Guide.md). The [MaxScale Tutorial](MaxScale-Tutorial.md) contains easy to follow instructions on how to set up MaxScale.
 
-This tutorial will assume the user is using of the binary distributions available and has installed this in the default location. The process of configuring MariaDB MaxScale will be covered within this document. The installation and configuration of the MySQL servers will not be covered in-depth.
+This tutorial will assume the user is using of the binary distributions available and has installed this in the default location. The process of configuring MariaDB MaxScale will be covered within this document. The installation and configuration of the MariaDB servers will not be covered in-depth.
 
 ## Preparing MaxScale
 

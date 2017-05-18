@@ -1,4 +1,4 @@
-# Read/Write Splitting with MySQL Replication
+# Read/Write Splitting with MariaDB Replication
 
 ## Environment & Solution Space
 
