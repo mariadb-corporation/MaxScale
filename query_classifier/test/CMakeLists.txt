@@ -40,9 +40,10 @@ if (BUILD_QC_MYSQLEMBEDDED)
   add_test(TestQC_CompareMaxScale compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/maxscale.test)
   add_test(TestQC_CompareWhiteSpace compare -v 2 -S -s "select user from mysql.user; ")
 
-  add_test(TestQC_CompareOracle-1 compare -A sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/binlog_stm_ps.test)
-  add_test(TestQC_CompareOracle-2 compare -A sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/binlog_stm_sp.test)
-  add_test(TestQC_CompareOracle-3 compare -A sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/exception.test)
+  add_test(TestQC_CompareOracle-1 compare -A sql_mode=MODE_ORACLE -B sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/binlog_stm_ps.test)
+  add_test(TestQC_CompareOracle-2 compare -A sql_mode=MODE_ORACLE -B sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/binlog_stm_sp.test)
+  add_test(TestQC_CompareOracle-3 compare -A sql_mode=MODE_ORACLE -B sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/exception.test)
+  add_test(TestQC_CompareOracle-4 compare -A sql_mode=MODE_ORACLE -B sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/func_case.test)
 endif()
 
 add_subdirectory(canonical_tests)
