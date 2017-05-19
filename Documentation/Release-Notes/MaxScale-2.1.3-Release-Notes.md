@@ -42,6 +42,7 @@ for details.
 
 [Here is a list of bugs fixed since the release of MaxScale 2.1.2.](https://jira.mariadb.org/browse/MXS-1212?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%202.1.3)
 
+* [MXS-1263](https://jira.mariadb.org/browse/MXS-1263) broken TCP connections are not always cleaned properly
 * [MXS-1244](https://jira.mariadb.org/browse/MXS-1244) MySQL monitor "detect_replication_lag=true" doesn't work with "mysql51_replication=true"
 * [MXS-1227](https://jira.mariadb.org/browse/MXS-1227) Nagios Plugins broken by change in output of "show monitors" in 2.1
 * [MXS-1221](https://jira.mariadb.org/browse/MXS-1221) Nagios plugin scripts does not process -S option properly
