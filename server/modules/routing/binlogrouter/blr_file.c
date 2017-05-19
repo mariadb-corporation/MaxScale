@@ -3503,8 +3503,7 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
                                      "FROM gtid_maps "
                                          "WHERE (rep_domain = %" PRIu32 " AND "
                                                  "server_id = %" PRIu32 " AND "
-                                                 "sequence = %" PRIu64 ") "
-                                     "LIMIT 1;";
+                                                 "sequence = %" PRIu64 ");";
     ss_dassert(gtid != NULL);
 
     /* Parse GTID value into its components */
@@ -3650,8 +3649,8 @@ bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
                                            " '-' || server_id ||"
                                            " '-' || sequence) AS gtid, "
                                          "binlog_file, "
-                                         "MAX(start_pos) AS start_pos, "
-                                         "MAX(end_pos) AS end_pos "
+                                         "start_pos, "
+                                         "end_pos "
                                      "FROM gtid_maps "
                                      "WHERE id = "
                                          "(SELECT MAX(id) FROM gtid_maps);";
