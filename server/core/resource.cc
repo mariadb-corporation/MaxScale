@@ -22,6 +22,7 @@
 #include <maxscale/json_api.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
+#include <maxscale/adminusers.h>
 
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
@@ -156,7 +157,9 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             (path == ":server" && server_find_by_unique_name(target.c_str())) ||
             (path == ":filter" && filter_def_find(target.c_str())) ||
             (path == ":monitor" && monitor_find(target.c_str())) ||
-            (path == ":module" && get_module(target.c_str(), NULL)))
+            (path == ":module" && get_module(target.c_str(), NULL)) ||
+            (path == ":inetuser" && admin_inet_user_exists(target.c_str())) ||
+            (path == ":unixuser" && admin_linux_account_enabled(target.c_str())))
         {
             rval = true;
         }
@@ -482,6 +485,33 @@ HttpResponse cb_module(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, module_to_json(module, request.host()));
 }
 
+HttpResponse cb_all_users(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_ALL));
+}
+
+HttpResponse cb_all_inet_users(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_INET));
+}
+
+HttpResponse cb_all_unix_users(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_UNIX));
+}
+
+HttpResponse cb_inet_user(const HttpRequest& request)
+{
+    string user = request.uri_part(2);
+    return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str(), USER_TYPE_INET));
+}
+
+HttpResponse cb_unix_user(const HttpRequest& request)
+{
+    string user = request.uri_part(2);
+    return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str(), USER_TYPE_UNIX));
+}
+
 HttpResponse cb_send_ok(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK);
@@ -525,6 +555,12 @@ public:
         m_get.push_back(SResource(new Resource(cb_tasks, 2, "maxscale", "tasks")));
         m_get.push_back(SResource(new Resource(cb_all_modules, 2, "maxscale", "modules")));
         m_get.push_back(SResource(new Resource(cb_module, 3, "maxscale", "modules", ":module")));
+
+        m_get.push_back(SResource(new Resource(cb_all_users, 1, "users")));
+        m_get.push_back(SResource(new Resource(cb_all_inet_users, 2, "users", "inet")));
+        m_get.push_back(SResource(new Resource(cb_all_unix_users, 2, "users", "unix")));
+        m_get.push_back(SResource(new Resource(cb_inet_user, 3, "users", "inet", ":inetuser")));
+        m_get.push_back(SResource(new Resource(cb_unix_user, 3, "users", "unix", ":unixuser")));
 
         /** Create new resources */
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));

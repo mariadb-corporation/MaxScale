@@ -137,9 +137,19 @@ json_t* mxs_json_self_link(const char* host, const char* path, const char* id)
     json_t* links = json_object();
 
     string self = host;
-    self += "/";
+
+    if (path[0] != '/')
+    {
+        self += "/";
+    }
+
     self += path;
-    self += "/";
+
+    if (self[self.length() - 1] != '/')
+    {
+        self += "/";
+    }
+
     self += id;
     json_object_set_new(links, CN_SELF, json_string(self.c_str()));
 

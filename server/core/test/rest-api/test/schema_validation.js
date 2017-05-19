@@ -14,6 +14,9 @@ describe("Resource Collections", function() {
         "/maxscale/threads",
         "/maxscale/modules",
         "/maxscale/tasks",
+        "/users",
+        "/users/inet",
+        "/users/unix",
     ]
 
     tests.forEach(function(endpoint) {

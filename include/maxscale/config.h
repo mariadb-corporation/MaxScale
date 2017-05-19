@@ -39,6 +39,7 @@ MXS_BEGIN_DECLS
 /** JSON Pointers to key parts of JSON objects */
 #define MXS_JSON_PTR_DATA       "/data"
 #define MXS_JSON_PTR_ID         "/data/id"
+#define MXS_JSON_PTR_TYPE       "/data/type"
 #define MXS_JSON_PTR_PARAMETERS "/data/attributes/parameters"
 
 /** Pointers to relation lists */
@@ -95,6 +96,7 @@ extern const char CN_FILTERS[];
 extern const char CN_FILTER[];
 extern const char CN_GATEWAY[];
 extern const char CN_ID[];
+extern const char CN_INET[];
 extern const char CN_LISTENER[];
 extern const char CN_LISTENERS[];
 extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
@@ -143,7 +145,9 @@ extern const char CN_SSL_VERSION[];
 extern const char CN_STRIP_DB_ESC[];
 extern const char CN_THREADS[];
 extern const char CN_TYPE[];
+extern const char CN_UNIX[];
 extern const char CN_USER[];
+extern const char CN_USERS[];
 extern const char CN_VERSION_STRING[];
 extern const char CN_WEIGHTBY[];
 

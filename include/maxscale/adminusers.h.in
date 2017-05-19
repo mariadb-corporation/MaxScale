@@ -33,6 +33,14 @@ MXS_BEGIN_DECLS
 static const char INET_DEFAULT_USERNAME[] = "admin";
 static const char INET_DEFAULT_PASSWORD[] = "mariadb";
 
+/** User types */
+enum user_type
+{
+    USER_TYPE_ALL,  // Type that matches all users
+    USER_TYPE_INET, // Network users
+    USER_TYPE_UNIX  // Linux accounts
+};
+
 /*
  * MySQL session specific data
  *
@@ -49,16 +57,39 @@ typedef struct admin_session
 #endif
 } ADMIN_session;
 
-extern const char *admin_enable_linux_account(const char *uname);
-extern const char *admin_disable_linux_account(const char *uname);
-extern bool        admin_linux_account_enabled(const char *uname);
+void admin_users_init();
 
-extern const char *admin_add_inet_user(const char *uname, const char *password);
-extern const char *admin_remove_inet_user(const char *uname, const char *password);
-extern bool        admin_inet_user_exists(const char *uname);
+const char* admin_enable_linux_account(const char *uname);
+const char* admin_disable_linux_account(const char *uname);
+bool admin_linux_account_enabled(const char *uname);
 
-extern bool        admin_verify_inet_user(const char *uname, const char *password);
+const char* admin_add_inet_user(const char *uname, const char *password);
+const char* admin_remove_inet_user(const char *uname, const char *password);
+bool admin_inet_user_exists(const char *uname);
+bool admin_verify_inet_user(const char *uname, const char *password);
 
-extern void        dcb_PrintAdminUsers(DCB *dcb);
+/**
+ * @brief Convert all admin users to JSON
+ *
+ * @param host Hostname of this server
+ * @param type USER_TYPE_INET for networks users, USER_TYPE_UNIX for unix accounts
+ *             or USER_TYPE_ALL for all users
+ *
+ * @return Collection of users resources
+ */
+json_t* admin_all_users_to_json(const char* host, enum user_type type);
+
+/**
+ * @brief Convert an admin user into JSON
+ *
+ * @param host Hostname of this server
+ * @param user Username to convert
+ * @param type The type of user, either USER_TYPE_INET or USER_TYPE_UNIX
+ *
+ * @return The user converted to JSON
+ */
+json_t* admin_user_to_json(const char* host, const char* user, enum user_type type);
+
+void dcb_PrintAdminUsers(DCB *dcb);
 
 MXS_END_DECLS

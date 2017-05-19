@@ -82,6 +82,7 @@ const char CN_FILTERS[]                       = "filters";
 const char CN_FILTER[]                        = "filter";
 const char CN_GATEWAY[]                       = "gateway";
 const char CN_ID[]                            = "id";
+const char CN_INET[]                          = "inet";
 const char CN_LISTENER[]                      = "listener";
 const char CN_LISTENERS[]                     = "listeners";
 const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
@@ -130,7 +131,9 @@ const char CN_SSL_VERSION[]                   = "ssl_version";
 const char CN_STRIP_DB_ESC[]                  = "strip_db_esc";
 const char CN_THREADS[]                       = "threads";
 const char CN_TYPE[]                          = "type";
+const char CN_UNIX[]                          = "unix";
 const char CN_USER[]                          = "user";
+const char CN_USERS[]                         = "users";
 const char CN_VERSION_STRING[]                = "version_string";
 const char CN_WEIGHTBY[]                      = "weightby";
 
