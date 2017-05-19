@@ -1041,6 +1041,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                 if (router->trx_safe)
                 {
+                    // MariaDB 10 GTID event check
                     if (router->mariadb10_compat &&
                         hdr.event_type == MARIADB10_GTID_EVENT)
                     {
@@ -1057,57 +1058,62 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         domainid = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8, 32);
                         flags = *(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8 + 4);
 
-                        if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
+                        spinlock_acquire(&router->binlog_lock);
+
+                        /**
+                        * Detect whether it's a standalone transaction:
+                        * there is no terminating COMMIT event.
+                        * i.e: a DDL or FLUSH TABLES etc
+                        */
+                        router->pending_transaction.standalone = flags & MARIADB_FL_STANDALONE;
+
+                        /**
+                         * Now mark the new open transaction
+                         */
+                        if (router->pending_transaction.state > BLRM_NO_TRANSACTION)
                         {
-                            spinlock_acquire(&router->binlog_lock);
-
-                            /**
-                             * Now mark the new open transaction
-                             */
-                            if (router->pending_transaction.state > BLRM_NO_TRANSACTION)
-                            {
-                                MXS_ERROR("A MariaDB 10 transaction "
-                                          "is already open "
-                                          "@ %lu (GTID %u-%u-%lu) and "
-                                          "a new one starts @ %lu",
-                                          router->binlog_position,
-                                          domainid,
-                                          hdr.serverid,
-                                          n_sequence,
-                                          router->current_pos);
-                            }
-
-                            router->pending_transaction.state = BLRM_TRANSACTION_START;
-
-                            /* Handle MariaDB 10 GTID */
-                            if (router->mariadb10_gtid)
-                            {
-                                char mariadb_gtid[GTID_MAX_LEN + 1];
-                                snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
-                                         domainid,
-                                         hdr.serverid,
-                                         n_sequence);
-
-                                MXS_DEBUG("MariaDB GTID received: (%s). Current file %s, pos %lu",
-                                          mariadb_gtid,
-                                          router->binlog_name,
-                                          router->current_pos);
-
-                                /* Save the pending GTID string value */
-                                strcpy(router->pending_transaction.gtid, mariadb_gtid);
-                                /* Save the pending GTID components */
-                                router->pending_transaction.gtid_elms.domain_id = domainid;
-                                router->pending_transaction.gtid_elms.server_id = hdr.serverid;
-                                router->pending_transaction.gtid_elms.seq_no = n_sequence;
-                            }
-
-                            router->pending_transaction.start_pos = router->current_pos;
-                            router->pending_transaction.end_pos = 0;
-
-                            spinlock_release(&router->binlog_lock);
+                            MXS_ERROR("A MariaDB 10 transaction "
+                                      "is already open "
+                                      "@ %lu (GTID %u-%u-%lu) and "
+                                      "a new one starts @ %lu",
+                                      router->binlog_position,
+                                      domainid,
+                                      hdr.serverid,
+                                      n_sequence,
+                                      router->current_pos);
                         }
+
+                        router->pending_transaction.state = BLRM_TRANSACTION_START;
+
+                        /* Handle MariaDB 10 GTID */
+                        if (router->mariadb10_gtid)
+                        {
+                            char mariadb_gtid[GTID_MAX_LEN + 1];
+                            snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                                     domainid,
+                                     hdr.serverid,
+                                     n_sequence);
+
+                            MXS_DEBUG("MariaDB GTID received: (%s). Current file %s, pos %lu",
+                                      mariadb_gtid,
+                                      router->binlog_name,
+                                      router->current_pos);
+
+                            /* Save the pending GTID string value */
+                            strcpy(router->pending_transaction.gtid, mariadb_gtid);
+                            /* Save the pending GTID components */
+                            router->pending_transaction.gtid_elms.domain_id = domainid;
+                            router->pending_transaction.gtid_elms.server_id = hdr.serverid;
+                            router->pending_transaction.gtid_elms.seq_no = n_sequence;
+                        }
+
+                        router->pending_transaction.start_pos = router->current_pos;
+                        router->pending_transaction.end_pos = 0;
+
+                        spinlock_release(&router->binlog_lock);
                     }
 
+                    // Query Event check
                     if (hdr.event_type == QUERY_EVENT)
                     {
                         char *statement_sql;
@@ -1148,6 +1154,17 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         {
                             router->pending_transaction.state = BLRM_COMMIT_SEEN;
                         }
+
+                        /**
+                         * If it's a standalone transaction event we're done:
+                         * this query event, only one, terminates the transaction.
+                         */
+                        if (router->pending_transaction.state > BLRM_NO_TRANSACTION &&
+                            router->pending_transaction.standalone)
+                        {
+                            router->pending_transaction.state = BLRM_STANDALONE_SEEN;
+                        }
+
                         spinlock_release(&router->binlog_lock);
 
                         MXS_FREE(statement_sql);
@@ -1326,7 +1343,10 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                 spinlock_acquire(&router->binlog_lock);
 
                                 router->binlog_position = router->current_pos;
+
+                                /* Set no pending transaction and no standalone */
                                 router->pending_transaction.state = BLRM_NO_TRANSACTION;
+                                router->pending_transaction.standalone = false;
 
                                 spinlock_release(&router->binlog_lock);
                             }

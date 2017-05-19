@@ -2051,54 +2051,58 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 domainid = extract_field(ptr + 8, 32);
                 flags = *(ptr + 8 + 4);
 
-                if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
+                /**
+                 * Detect whether it's a standalone transaction:
+                 * there is no terminating COMMIT event.
+                 * i.e: a DDL or FLUSH TABLES etc
+                 */
+                router->pending_transaction.standalone = flags & MARIADB_FL_STANDALONE;
+
+                if (pending_transaction > BLRM_NO_TRANSACTION)
                 {
-                    if (pending_transaction > BLRM_NO_TRANSACTION)
+                    MXS_ERROR("Transaction cannot be @ pos %llu: "
+                              "Another MariaDB 10 transaction (GTID %u-%u-%lu)"
+                              " was opened at %llu",
+                              pos, domainid, hdr.serverid,
+                              n_sequence, last_known_commit);
+
+                    gwbuf_free(result);
+
+                    break;
+                }
+                else
+                {
+                    char mariadb_gtid[GTID_MAX_LEN + 1];
+                    snprintf(mariadb_gtid,
+                             GTID_MAX_LEN,
+                             "%u-%u-%lu",
+                             domainid,
+                             hdr.serverid,
+                             n_sequence);
+
+                    pending_transaction = BLRM_TRANSACTION_START;
+
+                    router->pending_transaction.start_pos = pos;
+                    router->pending_transaction.end_pos = 0;
+
+                    /* Set MariaDB GTID */
+                    if (router->mariadb10_gtid)
                     {
-                        MXS_ERROR("Transaction cannot be @ pos %llu: "
-                                  "Another MariaDB 10 transaction (GTID %u-%u-%lu)"
-                                  " was opened at %llu",
-                                  pos, domainid, hdr.serverid,
-                                  n_sequence, last_known_commit);
+                        strcpy(router->pending_transaction.gtid, mariadb_gtid);
 
-                        gwbuf_free(result);
-
-                        break;
+                        /* Save the pending GTID components */
+                        router->pending_transaction.gtid_elms.domain_id = domainid;
+                        router->pending_transaction.gtid_elms.server_id = hdr.serverid;
+                        router->pending_transaction.gtid_elms.seq_no = n_sequence;
                     }
-                    else
+
+                    transaction_events = 0;
+                    event_bytes = 0;
+                    if (!(debug & BLR_CHECK_ONLY))
                     {
-                        char mariadb_gtid[GTID_MAX_LEN + 1];
-                        snprintf(mariadb_gtid,
-                                 GTID_MAX_LEN,
-                                 "%u-%u-%lu",
-                                 domainid,
-                                 hdr.serverid,
-                                 n_sequence);
-
-                        pending_transaction = BLRM_TRANSACTION_START;
-
-                        router->pending_transaction.start_pos = pos;
-                        router->pending_transaction.end_pos = 0;
-
-                        /* Set MariaDB GTID */
-                        if (router->mariadb10_gtid)
-                        {
-                            strcpy(router->pending_transaction.gtid, mariadb_gtid);
-
-                            /* Save the pending GTID components */
-                            router->pending_transaction.gtid_elms.domain_id = domainid;
-                            router->pending_transaction.gtid_elms.server_id = hdr.serverid;
-                            router->pending_transaction.gtid_elms.seq_no = n_sequence;
-                        }
-
-                        transaction_events = 0;
-                        event_bytes = 0;
-                        if (!(debug & BLR_CHECK_ONLY))
-                        {
-                            MXS_DEBUG("> MariaDB 10 Transaction (GTID %u-%u-%lu)"
-                                      " starts @ pos %llu",
-                                      domainid, hdr.serverid, n_sequence, pos);
-                        }
+                        MXS_DEBUG("> MariaDB 10 Transaction (GTID %u-%u-%lu)"
+                                  " starts @ pos %llu",
+                                  domainid, hdr.serverid, n_sequence, pos);
                     }
                 }
             }
@@ -2179,6 +2183,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
          *
          * Check for BEGIN ( ONLY for mysql 5.6, mariadb 5.5 )
          * Check for COMMIT (not transactional engines)
+         * Check for pending standalone transaction
          */
 
         if (hdr.event_type == QUERY_EVENT)
@@ -2238,11 +2243,33 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                         if (!(debug & BLR_CHECK_ONLY))
                         {
-                            MXS_DEBUG("       Transaction @ pos %llu, closing @ %llu",
-                                      last_known_commit, pos);
+                            MXS_DEBUG("       Transaction @ pos %llu,"
+                                      " closing @ %llu",
+                                      last_known_commit,
+                                      pos);
                         }
                     }
                 }
+
+                /**
+                 * If it's a standalone transaction event we're done:
+                 * This query event, only one, terminates the
+                 * transaction.
+                 */
+                if (pending_transaction > BLRM_NO_TRANSACTION &&
+                    router->pending_transaction.standalone)
+                {
+                    pending_transaction = BLRM_STANDALONE_SEEN;
+
+                    if (!(debug & BLR_CHECK_ONLY))
+                    {
+                        MXS_DEBUG("       Standalone Transaction @ pos %llu,"
+                                  " closing @ %llu",
+                                  last_known_commit,
+                                  pos);
+                    }
+                }
+
                 MXS_FREE(statement_sql);
             }
             else
@@ -2263,8 +2290,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                 if (!(debug & BLR_CHECK_ONLY))
                 {
-                    MXS_DEBUG("       Transaction XID @ pos %llu, closing @ %llu",
-                              last_known_commit, pos);
+                    MXS_DEBUG("       Transaction XID @ pos %llu,"
+                              " closing @ %llu",
+                              last_known_commit,
+                              pos);
                 }
             }
         }
@@ -2273,11 +2302,15 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         {
             if (!(debug & BLR_CHECK_ONLY))
             {
-                MXS_DEBUG("< Transaction @ pos %llu, is now closed @ %llu. %lu events seen",
-                          last_known_commit, pos, transaction_events);
+                MXS_DEBUG("< Transaction @ pos %llu, is now closed @ %llu."
+                          " %lu events seen",
+                          last_known_commit,
+                          pos,
+                          transaction_events);
             }
 
             pending_transaction = BLRM_NO_TRANSACTION;
+            router->pending_transaction.standalone = false;
 
             router->pending_transaction.end_pos = hdr.next_pos;
 
@@ -3485,7 +3518,6 @@ static int gtid_select_cb(void *data, int cols, char** values, char** names)
  * @param    result  The (allocated) ouput data to fill
  * @return   True if with found GTID or false
  */
-
 bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
                             const char *gtid,
                             MARIADB_GTID_INFO *result)

@@ -543,7 +543,8 @@ typedef enum
     BLRM_NO_TRANSACTION,       /*< No transaction */
     BLRM_TRANSACTION_START,    /*< A transaction is open*/
     BLRM_COMMIT_SEEN,          /*< Received COMMIT event in the current trx */
-    BLRM_XID_EVENT_SEEN        /*< Received XID event of current transaction */
+    BLRM_XID_EVENT_SEEN,       /*< Received XID event of current transaction */
+    BLRM_STANDALONE_SEEN       /*< Received a standalone event, ie: a DDL */
 } master_transaction_t;
 
 /** MariaDB GTID elements */
@@ -562,6 +563,8 @@ typedef struct pending_transaction
     uint64_t start_pos;              /** The BEGIN pos */
     uint64_t end_pos;                /** The next_pos in COMMIT event*/
     MARIADB_GTID_ELEMS gtid_elms;    /* MariaDB 10.x GTID components */
+    bool standalone;                 /** Standalone event, such as DDL
+                                      * no terminating COMMIT */
 } PENDING_TRANSACTION;
 
 /** MariaDB GTID info */

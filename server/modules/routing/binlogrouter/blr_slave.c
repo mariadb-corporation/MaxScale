@@ -6826,7 +6826,8 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
         MXS_ERROR("%s: Incomplete set command.", router->service->name);
         return false;
     }
-    else if ((strcasecmp(word, "autocommit") == 0) || (strcasecmp(word, "@@session.autocommit") == 0))
+    else if ((strcasecmp(word, "autocommit") == 0) ||
+             (strcasecmp(word, "@@session.autocommit") == 0))
     {
         blr_slave_send_ok(router, slave);
         return true;
