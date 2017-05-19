@@ -1093,8 +1093,12 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                           router->binlog_name,
                                           router->current_pos);
 
-                                /* Save the pending GTID value */
+                                /* Save the pending GTID string value */
                                 strcpy(router->pending_transaction.gtid, mariadb_gtid);
+                                /* Save the pending GTID components */
+                                router->pending_transaction.gtid_elms.domain_id = domainid;
+                                router->pending_transaction.gtid_elms.server_id = hdr.serverid;
+                                router->pending_transaction.gtid_elms.seq_no = n_sequence;
                             }
 
                             router->pending_transaction.start_pos = router->current_pos;
@@ -1304,7 +1308,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                         router->mariadb10_gtid)
                                     {
                                         /* Update last seen MariaDB GTID */
-                                        strcpy(router->last_mariadb_gtid, router->pending_transaction.gtid);
+                                        strcpy(router->last_mariadb_gtid,
+                                               router->pending_transaction.gtid);
                                         /**
                                          * Save MariaDB GTID into repo
                                          */
@@ -3162,8 +3167,8 @@ static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
  * @param ptr       The packet data
  */
 static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
-                                                REP_HEADER *hdr,
-                                                uint8_t *ptr)
+                                      REP_HEADER *hdr,
+                                      uint8_t *ptr)
 {
     ss_dassert(hdr->event_type == MARIADB10_GTID_GTID_LIST_EVENT);
 
@@ -3182,7 +3187,6 @@ static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
          * fill any GAP with an ignorable event
          * if GTID_LIST next_pos is greter than current EOF
          */
-
         if (hdr->next_pos && (hdr->next_pos > binlog_file_eof))
         {
              uint64_t hole_size = hdr->next_pos - binlog_file_eof;

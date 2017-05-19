@@ -173,6 +173,7 @@ extern int MaxScaleUptime();
 extern void encode_value(unsigned char *data, unsigned int value, int len);
 extern void blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr);
 bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
+bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info);
 
 typedef struct binlog_event_desc
 {
@@ -219,7 +220,12 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
                                   char *binlogname,
                                   char *errmsg);
 
-static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *output);
+static void blr_report_checksum(REP_HEADER hdr,
+                                const uint8_t *buffer,
+                                char *output);
+
+bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
+                                MARIADB_GTID_INFO *result);
 
 /**
  * MariaDB 10.1.7 Start Encryption event content
@@ -2065,7 +2071,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                         snprintf(mariadb_gtid,
                                  GTID_MAX_LEN,
                                  "%u-%u-%lu",
-                                 domainid, hdr.serverid,
+                                 domainid,
+                                 hdr.serverid,
                                  n_sequence);
 
                         pending_transaction = BLRM_TRANSACTION_START;
@@ -2077,6 +2084,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                         if (router->mariadb10_gtid)
                         {
                             strcpy(router->pending_transaction.gtid, mariadb_gtid);
+
+                            /* Save the pending GTID components */
+                            router->pending_transaction.gtid_elms.domain_id = domainid;
+                            router->pending_transaction.gtid_elms.server_id = hdr.serverid;
+                            router->pending_transaction.gtid_elms.seq_no = n_sequence;
                         }
 
                         transaction_events = 0;
@@ -2099,7 +2111,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         {
             if (hdr.event_type == MARIADB10_GTID_GTID_LIST_EVENT)
             {
+                char mariadb_gtid[GTID_MAX_LEN + 1] = "";
+                MARIADB_GTID_INFO gtid_info = {};
                 unsigned long n_gtids;
+
                 n_gtids = extract_field(ptr, 32);
                 /* The lower 28 bits are the number of GTIDs */
                 n_gtids &= 0x01111111;
@@ -2119,8 +2134,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     n_sequence = extract_field(ptr, 64);
                     ptr += 4;
 
-                    char mariadb_gtid[GTID_MAX_LEN + 1];
-
                     snprintf(mariadb_gtid,
                              GTID_MAX_LEN,
                              "%u-%u-%lu",
@@ -2128,15 +2141,35 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                              serverid,
                              n_sequence);
 
-                    MXS_DEBUG("GTID List has %lu GTIDs, first is %s",
+                    MXS_DEBUG("GTID List Event has %lu GTIDs, first is %s",
                                n_gtids,
                                mariadb_gtid);
+                }
+                else
+                {
+                    MXS_DEBUG("GTID List Event has no GTIDs");
 
-                    /* Set MariaDB GTID */
-                    if (router->mariadb10_gtid)
+                    /* Try loading last found GTID */
+                    if (router->mariadb10_gtid &&
+                        blr_load_last_mariadb_gtid(router, &gtid_info) &&
+                        gtid_info.gtid != NULL)
                     {
-                        strcpy(router->last_mariadb_gtid, mariadb_gtid);
+                        snprintf(mariadb_gtid,
+                                 GTID_MAX_LEN,
+                                 "%s",
+                                 gtid_info.gtid);
+
+                        MXS_FREE(gtid_info.gtid);
+                        MXS_FREE(gtid_info.file);
                     }
+                }
+
+                /* Set MariaDB GTID */
+                if (router->mariadb10_gtid)
+                {
+                    strcpy(router->last_mariadb_gtid, mariadb_gtid);
+                    MXS_INFO("Last MariaDB 10 GTID was (%s).",
+                             router->last_mariadb_gtid);
                 }
             }
         }
@@ -2257,8 +2290,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 router->mariadb10_gtid)
             {
                 /* Update Last Seen MariaDB GTID */
-                strcpy(router->last_mariadb_gtid, router->pending_transaction.gtid);
-
+                strcpy(router->last_mariadb_gtid,
+                       router->pending_transaction.gtid);
                 /* Save MariaDB 10 GTID */
                 blr_save_mariadb_gtid(router);
             }
@@ -3349,24 +3382,39 @@ static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *out
 bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
 {
     static const char insert_tpl[] = "INSERT OR IGNORE INTO gtid_maps("
-                             "gtid, "
-                             "binlog_file, "
-                             "start_pos, end_pos) "
-                             "VALUES (\"%s\", \"%s\", %lu, %lu);";
-    MARIADB_GTID_INFO gtid_info;
+                                         "rep_domain, "
+                                         "server_id, "
+                                         "sequence, "
+                                         "binlog_file, "
+                                         "start_pos, "
+                                         "end_pos) "
+                                     "VALUES ( "
+                                         "%" PRIu32 ", "
+                                         "%" PRIu32 ", "
+                                         "%" PRIu64 ", "
+                                         "\"%s\", "
+                                         "%" PRIu64 ", "
+                                         "%" PRIu64 ");";
     char *errmsg;
     char insert_sql[GTID_SQL_BUFFER_SIZE];
+    MARIADB_GTID_INFO gtid_info;
+    MARIADB_GTID_ELEMS gtid_elms;
 
     gtid_info.gtid = inst->pending_transaction.gtid;
     gtid_info.file = inst->binlog_name;
     gtid_info.start = inst->pending_transaction.start_pos;
     gtid_info.end = inst->pending_transaction.end_pos;
+    memcpy(&gtid_elms,
+           &inst->pending_transaction.gtid_elms,
+           sizeof(MARIADB_GTID_ELEMS));
 
     /* Save GTID into repo */
     snprintf(insert_sql,
              GTID_SQL_BUFFER_SIZE,
              insert_tpl,
-             gtid_info.gtid,
+             gtid_elms.domain_id,
+             gtid_elms.server_id,
+             gtid_elms.seq_no,
              gtid_info.file,
              gtid_info.start,
              gtid_info.end);
@@ -3383,9 +3431,9 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
                   gtid_info.start,
                   gtid_info.end,
                   errmsg);
+        sqlite3_free(errmsg);
         return false;
     }
-    sqlite3_free(errmsg);
 
     MXS_DEBUG("Saved MariaDB GTID '%s', %s:%lu,%lu, insert SQL [%s]",
               gtid_info.gtid,
@@ -3398,7 +3446,7 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
 }
 
 /**
- * GTID select callbck for sqlite3 database
+ * GTID select callback for sqlite3 database
  *
  * @param data      Data pointer from caller
  * @param cols      Number of columns
@@ -3422,9 +3470,9 @@ static int gtid_select_cb(void *data, int cols, char** values, char** names)
         result->file = MXS_STRDUP_A(values[1]);
         result->start = atoll(values[2]);
         result->end = atoll(values[3]);
-    }
 
-    ss_dassert(result->start > 0 && result->end > result->start);
+        ss_dassert(result->start > 0 && result->end > result->start);
+    }
 
     return 0;
 }
@@ -3444,15 +3492,33 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
 {
     char *errmsg = NULL;
     char select_query[GTID_SQL_BUFFER_SIZE];
-    static const char select_tpl[] = "SELECT gtid, binlog_file, start_pos, end_pos "
+    MARIADB_GTID_ELEMS gtid_elms = {};
+    static const char select_tpl[] = "SELECT "
+                                         "(rep_domain ||"
+                                           " '-' || server_id ||"
+                                           " '-' || sequence) AS gtid, "
+                                         "binlog_file, "
+                                         "start_pos, "
+                                         "end_pos "
                                      "FROM gtid_maps "
-                                     "WHERE gtid = '%s' LIMIT 1;";
+                                         "WHERE (rep_domain = %" PRIu32 " AND "
+                                                 "server_id = %" PRIu32 " AND "
+                                                 "sequence = %" PRIu64 ") "
+                                     "LIMIT 1;";
     ss_dassert(gtid != NULL);
+
+    /* Parse GTID value into its components */
+    if (!blr_parse_gtid(gtid, &gtid_elms))
+    {
+        return false;
+    }
 
     snprintf(select_query,
              GTID_SQL_BUFFER_SIZE,
              select_tpl,
-             gtid);
+             gtid_elms.domain_id,
+             gtid_elms.server_id,
+             gtid_elms.seq_no);
 
     /* Find the GTID */
     if (sqlite3_exec(slave->gtid_maps,
@@ -3462,7 +3528,9 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
                      &errmsg) != SQLITE_OK)
     {
         MXS_ERROR("Failed to select GTID %s from GTID maps DB: %s, select [%s]",
-                  gtid, errmsg, select_query);
+                  gtid,
+                  errmsg,
+                  select_query);
         sqlite3_free(errmsg);
         return false;
     }
@@ -3517,4 +3585,90 @@ uint32_t blr_slave_get_file_size(const char *filename)
                   mxs_strerror(errno));
         return 0;
     }
+}
+
+/**
+ * Extract the GTID the client requested
+ *
+ * @param gtid   Then input GTID
+ * @param info   The GTID structure to fil
+ * @return       True for a parsed GTID string or false
+ */
+bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info)
+{
+    const char *ptr = gtid;
+    int read = 0;
+    int len = strlen(gtid);
+
+    while (ptr < gtid + len)
+    {
+        if (!isdigit(*ptr))
+        {
+            ptr++;
+        }
+        else
+        {
+            char *end;
+            switch (read)
+            {
+            case 0:
+                info->domain_id = strtoul(ptr, &end, 10);
+                break;
+            case 1:
+                info->server_id = strtoul(ptr, &end, 10);
+                break;
+            case 2:
+                info->seq_no = strtoul(ptr, &end, 10);
+                break;
+            }
+            read++;
+            ptr = end;
+        }
+    }
+
+    return (info->server_id && info->seq_no) ? true : false;
+}
+
+/**
+ * Get MariaDB GTID from repo
+ *
+ * @param    router  The current router instance
+ * @param    gtid    The GTID to look for
+ * @param    result  The (allocated) ouput data to fill
+ * @return   False on sqlite errors
+ *           True even if the gtid_maps is empty
+ *           The caller must check result->gtid value
+ */
+
+bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
+                                MARIADB_GTID_INFO *result)
+{
+    char *errmsg = NULL;
+    MARIADB_GTID_ELEMS gtid_elms = {};
+    static const char last_gtid[] = "SELECT "
+                                         "(rep_domain ||"
+                                           " '-' || server_id ||"
+                                           " '-' || sequence) AS gtid, "
+                                         "binlog_file, "
+                                         "MAX(start_pos) AS start_pos, "
+                                         "MAX(end_pos) AS end_pos "
+                                     "FROM gtid_maps "
+                                     "WHERE id = "
+                                         "(SELECT MAX(id) FROM gtid_maps);";
+
+    /* Find the GTID */
+    if (sqlite3_exec(router->gtid_maps,
+                     last_gtid,
+                     gtid_select_cb,
+                     result,
+                     &errmsg) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to select last GTID from GTID maps DB: %s, select [%s]",
+                  errmsg,
+                  last_gtid);
+        sqlite3_free(errmsg);
+        return false;
+    }
+
+    return true;
 }

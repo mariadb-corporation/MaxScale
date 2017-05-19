@@ -3116,12 +3116,18 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst)
     char* errmsg;
     /* Create the gtid_maps table */
     int rc = sqlite3_exec(inst->gtid_maps,
-                          "CREATE TABLE IF NOT EXISTS "
-                          "gtid_maps(gtid varchar(255), "
-                          "binlog_file varchar(255), "
-                          "start_pos bigint, "
-                          "end_pos bigint, "
-                          "primary key(gtid));",
+                          "BEGIN;"
+                          "CREATE TABLE IF NOT EXISTS gtid_maps("
+                              "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                              "rep_domain INT, "
+                              "server_id INT, "
+                              "sequence BIGINT, "
+                              "binlog_file VARCHAR(255), "
+                              "start_pos BIGINT, "
+                              "end_pos BIGINT);"
+                          "CREATE UNIQUE INDEX IF NOT EXISTS gtid_index "
+                              "ON gtid_maps(rep_domain, server_id, sequence);"
+                          "COMMIT;",
                           NULL, NULL, &errmsg);
     if (rc != SQLITE_OK)
     {

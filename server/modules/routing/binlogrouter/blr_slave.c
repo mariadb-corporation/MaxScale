@@ -274,7 +274,6 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
 static int blr_send_fake_gtid_list(ROUTER_SLAVE *slave,
                                    const char *gtid,
                                    uint32_t serverid);
-static bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info);
 static bool blr_handle_maxwell_stmt(ROUTER_INSTANCE *router,
                                     ROUTER_SLAVE *slave,
                                     const char *maxwell_stmt);
@@ -296,6 +295,8 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE *router,
 static inline void blr_get_file_fullpath(const char *binlog_file,
                                          const char *root_dir,
                                          char *full_path);
+
+extern bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info);
 
 /**
  * Process a request packet from the slave server.
@@ -6328,7 +6329,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
         }
         else
         {
-            /* A Gtid has been found */
+            /* GTID has been found */
             MXS_INFO("Found GTID '%s' for slave %lu at %s:%lu",
                      slave->mariadb_gtid,
                      (unsigned long)slave->serverid,
@@ -6498,48 +6499,6 @@ static int blr_send_fake_gtid_list(ROUTER_SLAVE *slave,
 
     /* Send Fake GTID_LIST Event or return 0*/
     return gl_event ? slave->dcb->func.write(slave->dcb, gl_event) : 0;
-}
-
-/**
- * Extract the GTID the client requested
- *
- * @param gtid   Then input GTID
- * @param info   The GTID structure to fil
- * @return       True for a parsed GTID string or false
- */
-static bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info)
-{
-    const char *ptr = gtid;
-    int read = 0;
-    int len = strlen(gtid);
-
-    while (ptr < gtid + len)
-    {
-        if (!isdigit(*ptr))
-        {
-            ptr++;
-        }
-        else
-        {
-            char *end;
-            switch (read)
-            {
-            case 0:
-                info->domain_id = strtoul(ptr, &end, 10);
-                break;
-            case 1:
-                info->server_id = strtoul(ptr, &end, 10);
-                break;
-            case 2:
-                info->seq_no = strtoul(ptr, &end, 10);
-                break;
-            }
-            read++;
-            ptr = end;
-        }
-    }
-
-    return (info->server_id && info->seq_no) ? true : false;
 }
 
 /**
@@ -6967,19 +6926,24 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
     {
         if (slave->serverid != 0)
         {
-            MXS_ERROR("Master GTID registration can be sent only via administration connection");
+            MXS_ERROR("Master GTID registration can be sent only"
+                      " via administration connection");
             blr_slave_send_error_packet(slave,
-                                        "Master GTID registration cannot be issued by a regitrating slave.",
-                                        (unsigned int)1198, NULL);
+                                        "Master GTID registration cannot be"
+                                        " issued by a registrating slave.",
+                                        1198, NULL);
             return false;
         }
         if (router->master_state != BLRM_SLAVE_STOPPED)
         {
-            MXS_ERROR("Master GTID registration needs stopped slave: issue STOP SLAVE first.");
+            MXS_ERROR("Master GTID registration needs stopped replication:"
+                      " issue STOP SLAVE first.");
             blr_slave_send_error_packet(slave,
-                                        "Cannot use Master GTID registration with a running slave; "
-                                        "run STOP SLAVE first",
-                                        (unsigned int)1198, NULL);
+                                        "Cannot use Master GTID registration"
+                                        " with running replication;"
+                                        " run STOP SLAVE first",
+                                        1198,
+                                        NULL);
             return true;
         }
         /* If not mariadb GTID an error message will be returned */
@@ -6988,34 +6952,50 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
             if ((word = strtok_r(NULL, sep, &brkb)) != NULL)
             {
                 char heading[GTID_MAX_LEN + 1];
-                MXS_INFO("Binlog server requests GTID '%s' to master",
-                         word);
+                MARIADB_GTID_ELEMS gtid_elms = {};
 
                 // TODO: gtid_strip_chars routine for this
                 strcpy(heading, word + 1);
                 heading[strlen(heading) - 1] = '\0';
-                if (!heading[0])
+
+                MXS_INFO("Requesting GTID (%s) from Master server.",
+                         !heading[0] ? "empty value" : heading);
+
+                /* Parse the non empty GTID value */
+                if (heading[0] && !blr_parse_gtid(heading, &gtid_elms))
                 {
-                    MXS_ERROR("Cannot request empty GTID right now");
+                    static const char *err_fmt = "Invalid format for GTID ('%s')"
+                                                 " set request; use 'X-Y-Z'";
+                    char err_msg[sizeof(err_fmt) + GTID_MAX_LEN + 1];
+
+                    sprintf(err_msg, err_fmt, heading);
+
+                    MXS_ERROR(err_msg);
+
+                    /* Stop Master registration */
                     blr_slave_send_error_packet(slave,
-                                                "Empty GTID not implemented righ now",
-                                                (unsigned int)1198, NULL);
-                    return false;
+                                                err_msg,
+                                                1198,
+                                                NULL);
                 }
                 else
                 {
                     strcpy(router->last_mariadb_gtid, heading);
                     blr_slave_send_ok(router, slave);
-                    return true;
                 }
+                return true;
             }
         }
         else
         {
-            MXS_ERROR("Master GTID registration needs 'mariadb10_master_gtid' option to be set.");
+            MXS_ERROR("Master GTID registration needs 'mariadb10_master_gtid'"
+                      " option to be set.");
             blr_slave_send_error_packet(slave,
-                                        "Master GTID registration needs 'mariadb10_master_gtid' option to be set.",
-                                        (unsigned int)1198, NULL);
+                                        "Master GTID registration needs"
+                                        " 'mariadb10_master_gtid' option"
+                                        " to be set first.",
+                                        1198,
+                                        NULL);
             return true;
         }
     }
@@ -7078,7 +7058,8 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
     {
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
-            MXS_ERROR("%s: Truncated SET NAMES command.", router->service->name);
+            MXS_ERROR("%s: Truncated SET NAMES command.",
+                      router->service->name);
             return false;
         }
         else if (strcasecmp(word, "latin1") == 0)
