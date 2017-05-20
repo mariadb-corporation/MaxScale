@@ -1546,3 +1546,108 @@ json_t* runtime_get_json_error()
 
     return obj;
 }
+
+bool validate_user_json(json_t* json)
+{
+    bool rval = false;
+    json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
+    json_t* type = mxs_json_pointer(json, MXS_JSON_PTR_TYPE);
+    json_t* password = mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD);
+
+    if (!id)
+    {
+        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
+    }
+    else if (!json_is_string(id))
+    {
+        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
+    }
+    else if (!type)
+    {
+        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_TYPE);
+    }
+    else if (!json_is_string(type))
+    {
+        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_TYPE);
+    }
+    else
+    {
+        if (strcmp(json_string_value(type), CN_INET) == 0)
+        {
+            if (!password)
+            {
+                runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PASSWORD);
+            }
+            else if (!json_is_string(password))
+            {
+                runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PASSWORD);
+            }
+            else
+            {
+                rval = true;
+            }
+        }
+        else if (strcmp(json_string_value(type), CN_UNIX) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            runtime_error("Invalid value for field '%s': %s", MXS_JSON_PTR_TYPE,
+                          json_string_value(type));
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_create_user_from_json(json_t* json)
+{
+    bool rval = false;
+
+    if (validate_user_json(json))
+    {
+        const char* user = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
+        const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
+        string strtype = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
+        const char* err = NULL;
+
+        if (strtype == CN_INET && (err = admin_add_inet_user(user, password)) == ADMIN_SUCCESS)
+        {
+            MXS_NOTICE("Create network user '%s'", user);
+            rval = true;
+        }
+        else if (strtype == CN_UNIX && (err = admin_enable_linux_account(user)) == ADMIN_SUCCESS)
+        {
+            MXS_NOTICE("Enabled account '%s'", user);
+            rval = true;
+        }
+        else if (err)
+        {
+            runtime_error("Failed to add user '%s': %s", user, err);
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_remove_user(const char* id, enum user_type type)
+{
+    bool rval = false;
+    const char* err = type == USER_TYPE_INET ?
+        admin_remove_inet_user(id, NULL) :
+        admin_disable_linux_account(id);
+
+    if (err == ADMIN_SUCCESS)
+    {
+        MXS_NOTICE("%s '%s'", type == USER_TYPE_INET ?
+                   "Deleted network user" : "Disabled account", id);
+        rval = true;
+    }
+    else
+    {
+        runtime_error("Failed to remove user '%s': %s", id, err);
+    }
+
+    return rval;
+}

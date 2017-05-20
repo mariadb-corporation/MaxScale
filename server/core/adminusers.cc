@@ -45,19 +45,6 @@ static bool admin_search_user(USERS *users, const char *uname);
 static USERS *linux_users = NULL;
 static USERS *inet_users = NULL;
 
-static const char *ADMIN_ERR_NOMEM            = "Out of memory";
-static const char *ADMIN_ERR_FILEOPEN         = "Unable to create password file";
-static const char *ADMIN_ERR_DUPLICATE        = "Duplicate username specified";
-static const char *ADMIN_ERR_USERNOTFOUND     = "User not found";
-static const char *ADMIN_ERR_AUTHENTICATION   = "Authentication failed";
-static const char *ADMIN_ERR_FILEAPPEND       = "Unable to append to password file";
-static const char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
-static const char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
-static const char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
-static const char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbidden";
-static const char *ADMIN_ERR_DELROOT          = "Deleting the default admin user is forbidden";
-static const char *ADMIN_SUCCESS              = NULL;
-
 static const int LINELEN = 80;
 
 static const char LINUX_USERS_FILE_NAME[] = "maxadmin-users";

@@ -60,7 +60,9 @@ MXS_BEGIN_DECLS
 #define MXS_JSON_PTR_PARAM_SSL_VERSION           MXS_JSON_PTR_PARAMETERS "/ssl_version"
 #define MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH MXS_JSON_PTR_PARAMETERS "/ssl_cert_verify_depth"
 
+/** Non-parameter JSON pointers */
 #define MXS_JSON_PTR_MODULE  "/data/attributes/module"
+#define MXS_JSON_PTR_PASSWORD "/data/attributes/password"
 
 /**
  * Common configuration parameters names

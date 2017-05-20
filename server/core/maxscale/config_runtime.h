@@ -18,6 +18,7 @@
 
 #include <maxscale/cdefs.h>
 
+#include <maxscale/adminusers.h>
 #include <maxscale/monitor.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
@@ -263,5 +264,24 @@ bool runtime_alter_logs_from_json(json_t* json);
  * @return The latest runtime error in JSON format or NULL if no error has occurred
  */
 json_t* runtime_get_json_error();
+
+/**
+ * @brief Create a new user account
+ *
+ * @param json JSON defining the user
+ *
+ * @return True if the user was successfully created
+ */
+bool runtime_create_user_from_json(json_t* json);
+
+/**
+ * @brief Remove admin user
+ *
+ * @param id   Username of the network user
+ * @param type USER_TYPE_INET for network user and USER_TYPE_UNIX for enabled accounts
+ *
+ * @return True if user was successfully removed
+ */
+bool runtime_remove_user(const char* id, enum user_type type);
 
 MXS_END_DECLS

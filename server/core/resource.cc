@@ -512,6 +512,32 @@ HttpResponse cb_unix_user(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str(), USER_TYPE_UNIX));
 }
 
+HttpResponse cb_create_user(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (runtime_create_user_from_json(json))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_delete_user(const HttpRequest& request)
+{
+    string user = request.last_uri_part();
+    string type = request.uri_part(1);
+
+    if ((type == CN_INET && runtime_remove_user(user.c_str(), USER_TYPE_INET)) ||
+        (type == CN_UNIX && runtime_remove_user(user.c_str(), USER_TYPE_UNIX)))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_send_ok(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK);
@@ -568,6 +594,8 @@ public:
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
         m_post.push_back(SResource(new Resource(cb_create_service_listener, 3,
                                                 "services", ":service", "listeners")));
+        m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "inet")));
+        m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "unix")));
 
         /** Update resources */
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
@@ -583,6 +611,8 @@ public:
 
         m_delete.push_back(SResource(new Resource(cb_delete_server, 2, "servers", ":server")));
         m_delete.push_back(SResource(new Resource(cb_delete_monitor, 2, "monitors", ":monitor")));
+        m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "inet", ":inetuser")));
+        m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "unix", ":unixuser")));
     }
 
     ~RootResource()
