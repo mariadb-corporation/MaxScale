@@ -59,9 +59,7 @@ const char CN_ADDRESS[]                       = "address";
 const char CN_ADMIN_AUTH[]                    = "admin_auth";
 const char CN_ADMIN_ENABLED[]                 = "admin_enabled";
 const char CN_ADMIN_HOST[]                    = "admin_host";
-const char CN_ADMIN_PASSWORD[]                = "admin_password";
 const char CN_ADMIN_PORT[]                    = "admin_port";
-const char CN_ADMIN_USER[]                    = "admin_user";
 const char CN_ADMIN_SSL_KEY[]                 = "admin_ssl_key";
 const char CN_ADMIN_SSL_CERT[]                = "admin_ssl_cert";
 const char CN_ADMIN_SSL_CA_CERT[]             = "admin_ssl_ca_cert";
@@ -3880,9 +3878,14 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_AUTH_READ_TIMEOUT, json_integer(cnf->auth_read_timeout));
     json_object_set_new(param, CN_AUTH_WRITE_TIMEOUT, json_integer(cnf->auth_write_timeout));
     json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
-    json_object_set_new(param, "syslog", json_boolean(cnf->syslog));
-    json_object_set_new(param, "maxlog", json_boolean(cnf->maxlog));
-    json_object_set_new(param, "log_to_shm", json_boolean(cnf->log_to_shm));
+    json_object_set_new(param, CN_ADMIN_AUTH, json_boolean(cnf->admin_auth));
+    json_object_set_new(param, CN_ADMIN_ENABLED, json_boolean(cnf->admin_enabled));
+    json_object_set_new(param, CN_ADMIN_HOST, json_string(cnf->admin_host));
+    json_object_set_new(param, CN_ADMIN_PORT, json_integer(cnf->admin_port));
+    json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
+    json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
+    json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
+
     json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
 
     if (cnf->qc_args)
