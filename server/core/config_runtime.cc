@@ -210,7 +210,7 @@ bool runtime_destroy_server(SERVER *server)
     if (service_server_in_use(server) || monitor_server_in_use(server))
     {
         const char* err = "Cannot destroy server '%s' as it is used by at least "
-            "one service or monitor";
+                          "one service or monitor";
         runtime_error(err, server->unique_name);
         MXS_ERROR(err, server->unique_name);
     }
@@ -597,6 +597,94 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
     spinlock_release(&crt_lock);
 
     return valid;
+}
+
+bool runtime_alter_maxscale(const char* name, const char* value)
+{
+    MXS_CONFIG& cnf = *config_get_global_options();
+    string key = name;
+    bool rval = false;
+
+    spinlock_acquire(&crt_lock);
+
+    if (key == CN_AUTH_CONNECT_TIMEOUT)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval > 0)
+        {
+            MXS_NOTICE("Updated '%s' from %d to %d", CN_AUTH_CONNECT_TIMEOUT,
+                       cnf.auth_conn_timeout, intval);
+            cnf.auth_conn_timeout = intval;
+            rval = true;
+        }
+        else
+        {
+            runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_CONNECT_TIMEOUT, value);
+        }
+    }
+    else if (key == CN_AUTH_READ_TIMEOUT)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval > 0)
+        {
+            MXS_NOTICE("Updated '%s' from %d to %d", CN_AUTH_READ_TIMEOUT,
+                       cnf.auth_read_timeout, intval);
+            cnf.auth_read_timeout = intval;
+            rval = true;
+        }
+        else
+        {
+            runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_READ_TIMEOUT, value);
+        }
+    }
+    else if (key == CN_AUTH_WRITE_TIMEOUT)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval > 0)
+        {
+            MXS_NOTICE("Updated '%s' from %d to %d", CN_AUTH_WRITE_TIMEOUT,
+                       cnf.auth_write_timeout, intval);
+            cnf.auth_write_timeout = intval;
+            rval = true;
+        }
+        else
+        {
+            runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_WRITE_TIMEOUT, value);
+        }
+    }
+    else if (key == CN_ADMIN_AUTH)
+    {
+        int boolval = config_truth_value(value);
+
+        if (boolval != -1)
+        {
+            MXS_NOTICE("Updated '%s' from '%s' to '%s'", CN_ADMIN_AUTH,
+                       cnf.admin_auth ? "true" : "false",
+                       boolval ? "true" : "false");
+            cnf.admin_auth = boolval;
+            rval = true;
+        }
+        else
+        {
+            runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_AUTH, value);
+        }
+    }
+    else
+    {
+        runtime_error("Unknown global parameter: %s", value);
+    }
+
+    if (rval)
+    {
+        config_global_serialize();
+    }
+
+    spinlock_release(&crt_lock);
+
+    return rval;
 }
 
 bool runtime_create_listener(SERVICE *service, const char *name, const char *addr,
@@ -1635,8 +1723,8 @@ bool runtime_remove_user(const char* id, enum user_type type)
 {
     bool rval = false;
     const char* err = type == USER_TYPE_INET ?
-        admin_remove_inet_user(id, NULL) :
-        admin_disable_linux_account(id);
+                      admin_remove_inet_user(id, NULL) :
+                      admin_disable_linux_account(id);
 
     if (err == ADMIN_SUCCESS)
     {

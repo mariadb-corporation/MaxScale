@@ -133,6 +133,16 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
 bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue);
 
 /**
+ * @brief Alter MaxScale parameters
+ *
+ * @param name  Key to modify
+ * @param value New value
+ *
+ * @return True if @c key was one of the supported parameters
+ */
+bool runtime_alter_maxscale(const char* name, const char* value);
+
+/**
  * @brief Create a new listener for a service
  *
  * This function adds a new listener to a service and starts it.

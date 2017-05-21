@@ -1541,6 +1541,34 @@ static void alterService(DCB *dcb, SERVICE *service, char *v1, char *v2, char *v
     }
 }
 
+static void alterMaxScale(DCB *dcb, char *v1, char *v2, char *v3,
+                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                         char *v10, char *v11)
+{
+    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    const int items = sizeof(values) / sizeof(values[0]);
+
+    for (int i = 0; i < items && values[i]; i++)
+    {
+        char *key = values[i];
+        char *value = strchr(key, '=');
+
+        if (value)
+        {
+            *value++ = '\0';
+
+            if (!runtime_alter_maxscale(key, value))
+            {
+                dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
+            }
+        }
+        else
+        {
+            dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
+        }
+    }
+}
+
 struct subcommand alteroptions[] =
 {
     {
@@ -1631,6 +1659,27 @@ struct subcommand alteroptions[] =
             ARG_TYPE_SERVICE, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
+    },
+        {
+        "maxscale", 1, 11, alterMaxScale,
+        "Alter maxscale parameters",
+        "Usage: alter maxscale KEY=VALUE ...\n"
+        "\n"
+        "Parameters:\n"
+        "KEY=VALUE List of `key=value` pairs separated by spaces\n"
+        "\n"
+        "The following configuration values can be altered:\n"
+        "auth_connect_timeout         Connection timeout for permission checks\n"
+        "auth_read_timeout            Read timeout for permission checks\n"
+        "auth_write_timeout           Write timeout for permission checks\n"
+        "admin_auth                   Enable admin interface authentication\n"
+        "\n"
+        "Example: alter maxscale auth_connect_timeout=10",
+        {
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
         }
     },
     {

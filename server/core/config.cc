@@ -3907,3 +3907,68 @@ json_t* config_maxscale_to_json(const char* host)
 
     return mxs_json_resource(host, MXS_JSON_API_MAXSCALE, obj);
 }
+
+/**
+ * Creates a global configuration at the location pointed by @c filename
+ *
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_global_config(const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        MXS_ERROR("Failed to open file '%s' when serializing global configuration: %d, %s",
+                  filename, errno, mxs_strerror(errno));
+        return false;
+    }
+
+    dprintf(file, "[maxscale]\n");
+    dprintf(file, "%s=%u\n", CN_AUTH_CONNECT_TIMEOUT, gateway.auth_conn_timeout);
+    dprintf(file, "%s=%u\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout);
+    dprintf(file, "%s=%u\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
+    dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
+
+    close(file);
+
+    return true;
+}
+
+bool config_global_serialize()
+{
+    static const char* GLOBAL_CONFIG_NAME = "global-options";
+    bool rval = false;
+    char filename[PATH_MAX];
+
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             GLOBAL_CONFIG_NAME);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove temporary global configuration at '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
+    else if (create_global_config(filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
+                      filename, errno, mxs_strerror(errno));
+        }
+    }
+
+    return rval;
+}

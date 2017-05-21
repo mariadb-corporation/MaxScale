@@ -355,6 +355,8 @@ destroy:
 alter:
     alter server - Alter server parameters
     alter monitor - Alter monitor parameters
+    alter service - Alter service parameters
+    alter maxscale - Alter maxscale parameters
 
 set:
     set server - Set the status of a server
@@ -1581,6 +1583,64 @@ NAME Monitor to destroy
 The monitor is stopped and it will be removed on the next restart of MaxScale
 
 Example: destroy monitor my-monitor
+```
+
+## Services
+
+### Altering Services
+
+To alter the common service parameters, use the `alter service` command. Module
+specific parameters cannot be altered with this command.
+
+```
+alter service - Alter service parameters
+
+Usage: alter service NAME KEY=VALUE ...
+
+Parameters:
+NAME      Service name
+KEY=VALUE List of `key=value` pairs separated by spaces
+
+All services support the following values for KEY:
+user                          Username used when connecting to servers
+password                      Password used when connecting to servers
+enable_root_user              Allow root user access through this service
+max_retry_interval            Maximum restart retry interval
+max_connections               Maximum connection limit
+connection_timeout            Client idle timeout in seconds
+auth_all_servers              Retrieve authentication data from all servers
+strip_db_esc                  Strip escape characters from database names
+localhost_match_wildcard_host Match wildcard host to 'localhost' address
+version_string                The version string given to client connections
+weightby                      Weighting parameter name
+log_auth_warnings             Log authentication warnings
+retry_on_failure              Retry service start on failure
+
+Example: alter service my-service user=maxuser password=maxpwd
+```
+
+## MaxScale Core
+
+### Altering MaxScale
+
+The core MaxScale parameters that can be modified at runtime can be altered with
+the `alter maxscale` command.
+
+```
+alter maxscale - Alter maxscale parameters
+
+Usage: alter maxscale KEY=VALUE ...
+
+Parameters:
+KEY=VALUE List of `key=value` pairs separated by spaces
+
+The following configuration values can be altered:
+auth_connect_timeout         Connection timeout for permission checks
+auth_read_timeout            Read timeout for permission checks
+auth_write_timeout           Write timeout for permission checks
+admin_auth                   Enable admin interface authentication
+
+Example: alter maxscale auth_connect_timeout=10
 ```
 
 ## Other Modules
