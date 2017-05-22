@@ -2058,6 +2058,33 @@ void maxscaleCheckTable(Parse* pParse, SrcList* pTables)
     exposed_sqlite3SrcListDelete(pParse->db, pTables);
 }
 
+void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
+{
+    QC_TRACE();
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_QUERY_PARSED;
+
+    const char* zDatabase = NULL;
+    char database[pDatabase ? pDatabase->n + 1 : 1];
+
+    if (pDatabase)
+    {
+        strncpy(database, pDatabase->z, pDatabase->n);
+        database[pDatabase->n] = 0;
+
+        zDatabase = database;
+    }
+
+    char table[pTable->n + 1];
+    strncpy(table, pTable->z, pTable->n);
+    table[pTable->n] = 0;
+
+    update_names(info, zDatabase, table);
+}
+
 void maxscaleComment()
 {
     QC_TRACE();
@@ -2930,6 +2957,10 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
     switch (pShow->what)
     {
     case MXS_SHOW_COLUMNS:
+        info->type_mask = QUERY_TYPE_READ;
+        break;
+
+    case MXS_SHOW_CREATE_SEQUENCE:
         info->type_mask = QUERY_TYPE_READ;
         break;
 

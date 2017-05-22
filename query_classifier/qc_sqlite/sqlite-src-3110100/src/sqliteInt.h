@@ -4109,6 +4109,7 @@ typedef enum mxs_set
 typedef enum mxs_show
 {
     MXS_SHOW_COLUMNS,
+    MXS_SHOW_CREATE_SEQUENCE,
     MXS_SHOW_CREATE_TABLE,
     MXS_SHOW_CREATE_VIEW,
     MXS_SHOW_DATABASES,

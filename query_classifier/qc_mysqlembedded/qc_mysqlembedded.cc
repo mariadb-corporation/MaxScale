@@ -156,7 +156,7 @@ static bool ensure_query_is_parsed(GWBUF* query);
 static bool parse_query(GWBUF* querybuf);
 static bool query_is_parsed(GWBUF* buf);
 
-#if MYSQL_VERSION_MINOR >= 3
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
 inline void get_string_and_length(const LEX_CSTRING& ls, const char** s, size_t* length)
 {
     *s = ls.str;
@@ -1812,6 +1812,9 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_CREATE_FUNCTION:
                     case SQLCOM_CREATE_INDEX:
                     case SQLCOM_CREATE_PROCEDURE:
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
+                    case SQLCOM_CREATE_SEQUENCE:
+#endif
                     case SQLCOM_CREATE_SERVER:
                     case SQLCOM_CREATE_SPFUNCTION:
                     case SQLCOM_CREATE_TABLE:

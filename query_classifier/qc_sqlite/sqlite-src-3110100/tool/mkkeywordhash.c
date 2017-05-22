@@ -399,6 +399,7 @@ static Keyword aKeywordTable[] = {
   { "SAVEPOINT",        "TK_SAVEPOINT",    ALWAYS                 },
 #ifdef MAXSCALE
   { "SCHEMAS",          "TK_DATABASES_KW", ALWAYS                 },
+  { "SEQUENCE",         "TK_SEQUENCE",     ALWAYS                 },
 #endif
   { "SELECT",           "TK_SELECT",       ALWAYS                 },
 #ifdef MAXSCALE

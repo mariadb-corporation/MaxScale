@@ -110,6 +110,7 @@ extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
 extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
 extern void maxscaleCall(Parse*, SrcList* pName, int uses_variables);
 extern void maxscaleCheckTable(Parse*, SrcList* pTables);
+extern void maxscaleCreateSequence(Parse*, Token* pDatabase, Token* pTable);
 extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
 extern void maxscaleDrop(Parse*, MxsDrop* pDrop);
@@ -600,7 +601,7 @@ columnid(A) ::= nm(X). {
   OF OFFSET OPEN
   QUICK
   RAISE RECURSIVE /*REINDEX*/ RELEASE /*RENAME*/ /*REPLACE*/ RESTRICT ROLLBACK ROLLUP ROW
-  SAVEPOINT SELECT_OPTIONS_KW SLAVE /*START*/ STATUS
+  SAVEPOINT SELECT_OPTIONS_KW /*SEQUENCE*/ SLAVE /*START*/ STATUS
   TABLES TEMP TEMPTABLE /*TRIGGER*/
   /*TRUNCATE*/
   // TODO: UNSIGNED is a reserved word and should not automatically convert into an identifer.
@@ -1771,11 +1772,6 @@ term(A) ::= DEFAULT(X).          {spanExpr(&A, pParse, @X, &X);}
 %endif
 term(A) ::= NULL(X).             {spanExpr(&A, pParse, @X, &X);}
 expr(A) ::= id(X).               {spanExpr(&A, pParse, TK_ID, &X);}
-expr(A) ::= JOIN_KW(X).          {spanExpr(&A, pParse, TK_ID, &X);}
-expr(A) ::= START(X).            {spanExpr(&A, pParse, TK_ID, &X);}
-expr(A) ::= TRUNCATE(X).         {spanExpr(&A, pParse, TK_ID, &X);}
-expr(A) ::= BEGIN(X).            {spanExpr(&A, pParse, TK_ID, &X);}
-expr(A) ::= REPLACE(X).          {spanExpr(&A, pParse, TK_ID, &X);}
 expr(A) ::= nm(X) DOT nm(Y). {
   Expr *temp1 = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
   Expr *temp2 = sqlite3PExpr(pParse, TK_ID, 0, 0, &Y);
@@ -3118,6 +3114,19 @@ show(A) ::= SHOW CREATE VIEW nm(X) dbnm(Y). {
   }
 }
 
+show(A) ::= SHOW CREATE SEQUENCE nm(X) dbnm(Y). {
+  A.what = MXS_SHOW_CREATE_SEQUENCE;
+  A.data = 0;
+  if (Y.z) {
+      A.pName = &Y;
+      A.pDatabase = &X;
+  }
+  else {
+      A.pName = &X;
+      A.pDatabase = NULL;
+  }
+}
+
 show(A) ::= SHOW DATABASES_KW like_or_where_opt. {
   A.what = MXS_SHOW_DATABASES;
   A.data = 0;
@@ -3269,15 +3278,31 @@ cmd ::= TRUNCATE table_opt nm(X) dbnm(Y). {
   maxscaleTruncate(pParse, pDatabase, pName);
 }
 
-//////////////////////// ORACLE ////////////////////////////////////
+//////////////////////// ORACLE Assignment ////////////////////////////////////
 //
-//ecmd ::= oracle_assignment SEMI.
-//cmd ::= oracle_assignment.
-oracle_assignment ::= ID(X) EQ expr(Y). {
+oracle_assignment ::= id(X) EQ expr(Y). {
     Expr* pX = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
     Expr* pExpr = sqlite3PExpr(pParse, TK_EQ, pX, Y.pExpr, 0);
     ExprList* pExprList = sqlite3ExprListAppend(pParse, 0, pExpr);
     maxscaleSet(pParse, 0, MXS_SET_VARIABLES, pExprList);
+}
+
+//////////////////////// ORACLE CREATE SEQUENCE ////////////////////////////////////
+//
+cmd ::= CREATE SEQUENCE nm(X) dbnm(Y).{ // CREATE SEQUENCE db
+    Token* pDatabase;
+    Token* pTable;
+    if (Y.z)
+    {
+        pDatabase = &X;
+        pTable = &Y;
+    }
+    else
+    {
+        pDatabase = NULL;
+        pTable = &X;
+    }
+    maxscaleCreateSequence(pParse, pDatabase, pTable);
 }
 
 %endif
