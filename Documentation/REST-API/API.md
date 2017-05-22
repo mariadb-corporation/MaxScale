@@ -81,8 +81,7 @@ in addition to the _self_ link.
 
 ## Common Request Parameters
 
-Most of the resources that support GET also support the following
-parameters. See the resource documentation for a list of supported request
+All the resources that return JSON content also support the following
 parameters.
 
 - `pretty`

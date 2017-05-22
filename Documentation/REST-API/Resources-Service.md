@@ -86,10 +86,6 @@ GET /v1/services/:name
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Get all services
 
 Get all services.
@@ -228,10 +224,6 @@ GET /v1/services
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Get service listeners
 
 Get the listeners of a service. The _:name_ in the URI must be a valid service
@@ -266,10 +258,6 @@ GET /v1/services/:name/listeners
     ]
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`
 
 ### Update a service
 

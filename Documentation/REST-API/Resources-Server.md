@@ -91,10 +91,6 @@ Server not found:
 Status: 404 Not Found
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Get all servers
 
 ```
@@ -222,10 +218,6 @@ Status: 200 OK
     ]
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`
 
 ### Create a server
 
@@ -478,10 +470,6 @@ Invalid JSON body:
 Status: 403 Forbidden
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Destroy a server
 
 ```
@@ -524,8 +512,6 @@ GET /v1/servers/:name/connections
 ```
 
 #### Response
-
-#### Supported Request Parameter
 
 ### Close all connections to a server
 

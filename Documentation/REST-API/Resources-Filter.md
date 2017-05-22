@@ -45,10 +45,6 @@ GET /v1/filters/:name
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Get all filters
 
 Get all filters.
@@ -89,7 +85,3 @@ GET /v1/filters
     ]
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`

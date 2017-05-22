@@ -50,10 +50,6 @@ GET /v1/sessions/:id
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Get all sessions
 
 Get all sessions.
@@ -147,7 +143,3 @@ GET /v1/sessions
     ]
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`

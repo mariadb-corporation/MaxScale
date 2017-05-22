@@ -59,10 +59,6 @@ GET /v1/maxscale
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ## Get thread information
 
 Get the information and statistics of a particular thread. The _:id_ in
@@ -105,10 +101,6 @@ GET /v1/maxscale/threads/:id
     }
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`
 
 ## Get information for all threads
 
@@ -216,10 +208,6 @@ GET /v1/maxscale/threads
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ## Get logging information
 
 Get information about the current state of logging, enabled log files and the
@@ -261,10 +249,6 @@ GET /v1/maxscale/logs
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ## Flush and rotate log files
 
 Flushes any pending messages to disk and reopens the log files. The body of the
@@ -300,10 +284,6 @@ GET /v1/maxscale/tasks
     "data": [] // No tasks active
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`
 
 ## Get loaded modules
 
@@ -412,10 +392,6 @@ GET /v1/maxscale/modules
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ## Get all loaded modules
 
 Retrieve information about all loaded modules.
@@ -467,7 +443,3 @@ GET /v1/maxscale/modules
     ]
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`

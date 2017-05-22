@@ -33,10 +33,6 @@ GET /v1/users/inet/:name
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Get all network users
 
 Get all network users.
@@ -65,10 +61,6 @@ GET /v1/users/inet
     ]
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`
 
 ### Get enabled UNIX account
 
@@ -100,10 +92,6 @@ GET /v1/users/unix/:name
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Get all enabled UNIX accounts
 
 Get all enabled UNIX accounts.
@@ -132,10 +120,6 @@ GET /v1/users/unix
     ]
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`
 
 ### Get all users
 
@@ -173,10 +157,6 @@ GET /v1/users
     ]
 }
 ```
-
-#### Supported Request Parameter
-
-- `pretty`
 
 ### Create a network user
 

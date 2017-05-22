@@ -108,10 +108,6 @@ GET /v1/monitors/:name
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Get all monitors
 
 Get all monitors.
@@ -216,10 +212,6 @@ GET /v1/monitors
 }
 ```
 
-#### Supported Request Parameter
-
-- `pretty`
-
 ### Create a monitor
 
 Create a new monitor. The request body must define the `/data/id`
@@ -232,7 +224,7 @@ be defined at creation time.
 
 The following example defines a request body which creates the new monitor,
 _test-monitor_, and assigns two servers to be monitored by it. It also defines
-a custom value for the _monitor_interval_ parameter. 
+a custom value for the _monitor_interval_ parameter.
 
 ```javascript
 {
@@ -258,7 +250,7 @@ a custom value for the _monitor_interval_ parameter.
                     }
                 ]
             }
-        } 
+        }
     }
 }
 ```
