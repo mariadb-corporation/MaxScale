@@ -4092,13 +4092,8 @@ int sqlite3DbstatRegister(sqlite3*);
 typedef enum mxs_drop
 {
     MXS_DROP_FUNCTION,
+    MXS_DROP_SEQUENCE,
 } mxs_drop_t;
-
-typedef struct MxsDrop
-{
-    mxs_drop_t what;
-    Token token;
-} MxsDrop;
 
 typedef enum mxs_set
 {

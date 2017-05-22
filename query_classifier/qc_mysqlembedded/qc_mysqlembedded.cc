@@ -1861,6 +1861,9 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                     case SQLCOM_DROP_FUNCTION:
                     case SQLCOM_DROP_INDEX:
                     case SQLCOM_DROP_PROCEDURE:
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
+                    case SQLCOM_DROP_SEQUENCE:
+#endif
                     case SQLCOM_DROP_SERVER:
                     case SQLCOM_DROP_TABLE:
                     case SQLCOM_DROP_TRIGGER:

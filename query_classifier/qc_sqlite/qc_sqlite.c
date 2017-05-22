@@ -2140,7 +2140,7 @@ void maxscaleDo(Parse* pParse, ExprList* pEList)
     exposed_sqlite3ExprListDelete(pParse->db, pEList);
 }
 
-void maxscaleDrop(Parse* pParse, MxsDrop* pDrop)
+void maxscaleDrop(Parse* pParse, int what, Token* pDatabase, Token* pName)
 {
     QC_TRACE();
 
@@ -2150,6 +2150,26 @@ void maxscaleDrop(Parse* pParse, MxsDrop* pDrop)
     info->status = QC_QUERY_PARSED;
     info->type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
     info->operation = QUERY_OP_DROP;
+
+    if (what == MXS_DROP_SEQUENCE)
+    {
+        const char* zDatabase = NULL;
+        char database[pDatabase ? pDatabase->n + 1 : 1];
+
+        if (pDatabase)
+        {
+            strncpy(database, pDatabase->z, pDatabase->n);
+            database[pDatabase->n] = 0;
+
+            zDatabase = database;
+        }
+
+        char table[pName->n + 1];
+        strncpy(table, pName->z, pName->n);
+        table[pName->n] = 0;
+
+        update_names(info, zDatabase, table);
+    }
 }
 
 void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)

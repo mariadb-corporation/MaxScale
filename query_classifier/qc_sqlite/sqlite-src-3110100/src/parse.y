@@ -113,7 +113,7 @@ extern void maxscaleCheckTable(Parse*, SrcList* pTables);
 extern void maxscaleCreateSequence(Parse*, Token* pDatabase, Token* pTable);
 extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
-extern void maxscaleDrop(Parse*, MxsDrop* pDrop);
+extern void maxscaleDrop(Parse*, int what, Token* pDatabase, Token* pName);
 extern void maxscaleExecute(Parse*, Token* pName, int type_mask);
 extern void maxscaleExecuteImmediate(Parse*, Token* pName, ExprSpan* pExprSpan, int type_mask);
 extern void maxscaleExplain(Parse*, Token* pNext);
@@ -2719,11 +2719,7 @@ call ::= CALL fullname(X) call_args_opt(Y). {
 //////////////////////// DROP FUNCTION statement ////////////////////////////////////
 //
 cmd ::= DROP FUNCTION_KW ifexists nm(X). {
-  MxsDrop drop;
-  drop.what = MXS_DROP_FUNCTION;
-  drop.token = X;
-
-  maxscaleDrop(pParse, &drop);
+  maxscaleDrop(pParse, MXS_DROP_FUNCTION, NULL, &X);
 }
 
 //////////////////////// The CHECK TABLE statement ////////////////////////////////////
@@ -3303,6 +3299,24 @@ cmd ::= CREATE SEQUENCE nm(X) dbnm(Y).{ // CREATE SEQUENCE db
         pTable = &X;
     }
     maxscaleCreateSequence(pParse, pDatabase, pTable);
+}
+
+//////////////////////// ORACLE CREATE SEQUENCE ////////////////////////////////////
+//
+cmd ::= DROP SEQUENCE nm(X) dbnm(Y).{ // CREATE SEQUENCE db
+    Token* pDatabase;
+    Token* pTable;
+    if (Y.z)
+    {
+        pDatabase = &X;
+        pTable = &Y;
+    }
+    else
+    {
+        pDatabase = NULL;
+        pTable = &X;
+    }
+    maxscaleDrop(pParse, MXS_DROP_SEQUENCE, pDatabase, pTable);
 }
 
 %endif
