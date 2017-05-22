@@ -330,7 +330,7 @@ response is returned.
 
 ### Modifiable Fields
 
-The following standard server parameter can be modified.
+The following standard server parameters can be modified.
 
 - [address](../Getting-Started/Configuration-Guide.md#address)
 - [port](../Getting-Started/Configuration-Guide.md#port)
