@@ -12,33 +12,7 @@
  */
 
 /**
- * @file tee.c  A filter that splits the processing pipeline in two
- * @verbatim
- *
- * Conditionally duplicate requests and send the duplicates to another service
- * within MaxScale.
- *
- * Parameters
- * ==========
- *
- * service  The service to send the duplicates to
- * source   The source address to match in order to duplicate (optional)
- * match    A regular expression to match in order to perform duplication
- *          of the request (optional)
- * nomatch  A regular expression to match in order to prevent duplication
- *          of the request (optional)
- * user     A user name to match against. If present only requests that
- *          originate from this user will be duplciated (optional)
- *
- * Revision History
- * ================
- *
- * Date         Who             Description
- * 20/06/2014   Mark Riddoch    Initial implementation
- * 24/06/2014   Mark Riddoch    Addition of support for multi-packet queries
- * 12/12/2014   Mark Riddoch    Add support for otehr packet types
- *
- * @endverbatim
+ * @file tee.cc  A filter that splits the processing pipeline in two
  */
 
 #define MXS_MODULE_NAME "tee"
@@ -367,7 +341,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    TEE_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(TEE_INSTANCE));
+    TEE_INSTANCE *my_instance = (TEE_INSTANCE*)MXS_CALLOC(1, sizeof(TEE_INSTANCE));
 
     if (my_instance)
     {
@@ -431,11 +405,10 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     {
         MXS_ERROR("%s: Recursive use of tee filter in service.",
                   session->service->name);
-        my_session = NULL;
-        goto retblock;
+        return NULL;
     }
 
-    HASHTABLE* ht = hashtable_alloc(100, hashtable_item_strhash, hashtable_item_strcmp);
+    HASHTABLE* ht = (HASHTABLE*)hashtable_alloc(100, hashtable_item_strhash, hashtable_item_strcmp);
     bool is_loop = detect_loops(my_instance, ht, session->service);
     hashtable_free(ht);
 
@@ -443,11 +416,10 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     {
         MXS_ERROR("%s: Recursive use of tee filter in service.",
                   session->service->name);
-        my_session = NULL;
-        goto retblock;
+        return NULL;
     }
 
-    if ((my_session = MXS_CALLOC(1, sizeof(TEE_SESSION))) != NULL)
+    if ((my_session = (TEE_SESSION*)MXS_CALLOC(1, sizeof(TEE_SESSION))) != NULL)
     {
         my_session->active = 1;
         my_session->residual = 0;
@@ -485,12 +457,9 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
             if ((dcb = dcb_clone(session->client_dcb)) == NULL)
             {
                 freeSession(instance, (MXS_FILTER_SESSION *) my_session);
-                my_session = NULL;
-
                 MXS_ERROR("Creating client DCB for Tee "
                           "filter failed. Terminating session.");
-
-                goto retblock;
+                return NULL;
             }
 
             dcb->service = my_instance->service;
@@ -499,11 +468,9 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
             {
                 dcb_close(dcb);
                 freeSession(instance, (MXS_FILTER_SESSION *) my_session);
-                my_session = NULL;
                 MXS_ERROR("Creating client session for Tee "
                           "filter failed. Terminating session.");
-
-                goto retblock;
+                return NULL;
             }
 
             ss_dassert(ses->ses_is_child);
@@ -512,7 +479,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
             my_session->branch_dcb = dcb;
         }
     }
-retblock:
+
     return (MXS_FILTER_SESSION*)my_session;
 }
 
@@ -989,7 +956,7 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
 
 void create_orphan(MXS_SESSION* ses)
 {
-    orphan_session_t* orphan = MXS_MALLOC(sizeof(orphan_session_t));
+    orphan_session_t* orphan = (orphan_session_t*)MXS_MALLOC(sizeof(orphan_session_t));
     if (orphan)
     {
         orphan->session = ses;
