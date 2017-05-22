@@ -11,9 +11,9 @@ PREPARE stmt FROM 'SELECT :a,:b';
 EXECUTE stmt USING @a, @b;
 PREPARE stmt FROM 'SELECT :aaa,:bbb';
 EXECUTE stmt USING @a, @b;
-PREPARE stmt FROM 'SELECT :"a",:"b"';
+#qc_mysqlembedded: PREPARE stmt FROM 'SELECT :"a",:"b"';
 EXECUTE stmt USING @a, @b;
-PREPARE stmt FROM 'SELECT :"aaa",:"bbb"';
+#qc_mysqlembedded: PREPARE stmt FROM 'SELECT :"aaa",:"bbb"';
 EXECUTE stmt USING @a, @b;
 PREPARE stmt FROM 'SELECT :1,:2';
 EXECUTE stmt USING @a, @b;
@@ -229,7 +229,7 @@ DROP FUNCTION f1;
 
 SET @table_name='DUAL';
 EXECUTE IMMEDIATE 'SELECT 1 AS a FROM ' || @table_name;
-PREPARE stmt FROM 'SELECT 1 AS a FROM ' || @table_name;
+#qc: PREPARE stmt FROM 'SELECT 1 AS a FROM ' || @table_name;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 

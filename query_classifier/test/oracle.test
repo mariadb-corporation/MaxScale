@@ -1,0 +1,11 @@
+#
+# This file contains PL/SQL statements that in some way are not handled
+# completely or correctly.
+#
+
+PREPARE stmt FROM 'SELECT 1 AS a FROM ' || @table_name;
+
+# qc_sqlite parses this correctly. However, currently there is no way
+# that the "'SELECT 1 AS a FROM ' || @table_name" can be expressed as
+# a statement that separately can be analyzed. Consequently, statements
+# like this will not pass through the database firewall filter.
