@@ -220,31 +220,52 @@ GET /v1/monitors
 
 - `pretty`
 
-### Stop a monitor
+### Create a monitor
 
-Stops a started monitor.
+Create a new monitor. The request body must define the `/data/id`
+field with the name of the monitor, the `/data/type` field with the
+value of `monitors` and the `/data/attributes/module` field with the
+monitor module for this monitor. All of the monitor parameters can
+be defined at creation time.
 
-```
-PUT /v1/monitor/:name/stop
+`POST /v1/monitors`
+
+The following example defines a request body which creates the new monitor,
+_test-monitor_, and assigns two servers to be monitored by it. It also defines
+a custom value for the _monitor_interval_ parameter. 
+
+```javascript
+{
+    data: {
+        "id": "test-monitor", // Name of the monitor
+        "type": "monitors",
+        "attributes": {
+            "module": "mysqlmon", // The monitor uses the mysqlmon module
+            "parameters": { // Monitor parameters
+                "monitor_interval": 1000
+            }
+        },
+        "relationships": { // List of server relationships that this monitor uses
+            "servers": {
+                "data": [ // This monitor uses two servers
+                    {
+                        "id": "server1",
+                        "type": "servers"
+                    },
+                    {
+                        "id": "server2",
+                        "type": "servers"
+                    }
+                ]
+            }
+        } 
+    }
+}
 ```
 
 #### Response
 
-Monitor is stopped.
-
-`Status: 204 No Content`
-
-### Start a monitor
-
-Starts a stopped monitor.
-
-```
-PUT /v1/monitor/:name/start
-```
-
-#### Response
-
-Monitor is started.
+Monitor is created.
 
 `Status: 204 No Content`
 
@@ -282,3 +303,31 @@ Monitor is modified.
 Invalid request body.
 
 `Status: 403 Forbidden`
+
+### Stop a monitor
+
+Stops a started monitor.
+
+```
+PUT /v1/monitor/:name/stop
+```
+
+#### Response
+
+Monitor is stopped.
+
+`Status: 204 No Content`
+
+### Start a monitor
+
+Starts a stopped monitor.
+
+```
+PUT /v1/monitor/:name/start
+```
+
+#### Response
+
+Monitor is started.
+
+`Status: 204 No Content`
