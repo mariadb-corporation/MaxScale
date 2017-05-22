@@ -2153,6 +2153,78 @@ void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)
     }
 }
 
+static int32_t type_check_dynamic_string(const Expr* pExpr)
+{
+    int32_t type_mask = 0;
+
+    if (pExpr)
+    {
+        switch (pExpr->op)
+        {
+        case TK_CONCAT:
+            type_mask |= type_check_dynamic_string(pExpr->pLeft);
+            type_mask |= type_check_dynamic_string(pExpr->pRight);
+            break;
+
+        case TK_VARIABLE:
+            ss_dassert(pExpr->u.zToken);
+            {
+                const char* zToken = pExpr->u.zToken;
+                if (zToken[0] == '@')
+                {
+                    if (zToken[1] == '@')
+                    {
+                        type_mask |= QUERY_TYPE_SYSVAR_READ;
+                    }
+                    else
+                    {
+                        type_mask |= QUERY_TYPE_USERVAR_READ;
+                    }
+                }
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    return type_mask;
+}
+
+void maxscaleExecuteImmediate(Parse* pParse, Token* pName, ExprSpan* pExprSpan, int type_mask)
+{
+    QC_TRACE();
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+    {
+        // This should be "EXECUTE IMMEDIATE ...", but as "IMMEDIATE" is not
+        // checked by the parser we do it here.
+
+        static const char IMMEDIATE[] = "IMMEDIATE";
+
+        if ((pName->n == sizeof(IMMEDIATE) - 1) && (strncasecmp(pName->z, IMMEDIATE, pName->n)) == 0)
+        {
+            info->status = QC_QUERY_PARSED;
+            info->type_mask = (QUERY_TYPE_WRITE | type_mask);
+            info->type_mask |= type_check_dynamic_string(pExprSpan->pExpr);
+        }
+        else
+        {
+            info->status = QC_QUERY_INVALID;
+        }
+    }
+    else
+    {
+        info->status = QC_QUERY_INVALID;
+    }
+
+    exposed_sqlite3ExprDelete(pParse->db, pExprSpan->pExpr);
+}
+
 void maxscaleExplain(Parse* pParse, Token* pNext)
 {
     QC_TRACE();
@@ -2519,14 +2591,72 @@ void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
     exposed_sqlite3SrcListDelete(pParse->db, pTables);
 }
 
-void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
+/**
+ * Returns some string from an expression.
+ *
+ * @param pExpr An expression.
+ *
+ * @return Some string referred to in pExpr.
+ */
+static const char* find_one_string(Expr* pExpr)
+{
+    const char* z = NULL;
+
+    if (pExpr->op == TK_STRING)
+    {
+        ss_dassert(pExpr->u.zToken);
+        z = pExpr->u.zToken;
+    }
+
+    if (!z && pExpr->pLeft)
+    {
+        z = find_one_string(pExpr->pLeft);
+    }
+
+    if (!z && pExpr->pRight)
+    {
+        z = find_one_string(pExpr->pRight);
+    }
+
+    return z;
+}
+
+void maxscalePrepare(Parse* pParse, Token* pName, Expr* pStmt)
 {
     QC_TRACE();
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    info->status = QC_QUERY_PARSED;
+    // If the mode is MODE_ORACLE then if expression contains simply a string
+    // we can conclude that the statement has been fully parsed, because it will
+    // be sensible to parse the preparable statement. Otherwise we mark the
+    // statement as having been partially parsed, since the preparable statement
+    // will not contain the full statement.
+    if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+    {
+        if (pStmt->op == TK_STRING)
+        {
+            info->status = QC_QUERY_PARSED;
+        }
+        else
+        {
+            info->status = QC_QUERY_PARTIALLY_PARSED;
+        }
+    }
+    else
+    {
+        // If the mode is not MODE_ORACLE, then only a string is acceptable.
+        if (pStmt->op == TK_STRING)
+        {
+            info->status = QC_QUERY_PARSED;
+        }
+        else
+        {
+            info->status = QC_QUERY_INVALID;
+        }
+    }
+
     info->type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
 
     // If information is collected in several passes, then we may
@@ -2540,25 +2670,38 @@ void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
             info->prepare_name[pName->n] = 0;
         }
 
-        size_t preparable_stmt_len = pStmt->n - 2;
-        size_t payload_len = 1 + preparable_stmt_len;
-        size_t packet_len = MYSQL_HEADER_LEN + payload_len;
+        // If the expression just contains a string, then zStmt will
+        // be that string. Otherwise it will be _some_ string from the
+        // expression. In the latter case we've already marked the result
+        // to have been partially parsed.
+        const char* zStmt = find_one_string(pStmt);
 
-        info->preparable_stmt = gwbuf_alloc(packet_len);
-
-        if (info->preparable_stmt)
+        if (zStmt)
         {
-            uint8_t* ptr = GWBUF_DATA(info->preparable_stmt);
-            // Payload length
-            *ptr++ = payload_len;
-            *ptr++ = (payload_len >> 8);
-            *ptr++ = (payload_len >> 16);
-            // Sequence id
-            *ptr++ = 0x00;
-            // Command
-            *ptr++ = MYSQL_COM_QUERY;
+            size_t preparable_stmt_len = zStmt ? strlen(zStmt) : 0;
+            size_t payload_len = 1 + preparable_stmt_len;
+            size_t packet_len = MYSQL_HEADER_LEN + payload_len;
 
-            memcpy(ptr, pStmt->z + 1, pStmt->n - 2);
+            info->preparable_stmt = gwbuf_alloc(packet_len);
+
+            if (info->preparable_stmt)
+            {
+                uint8_t* ptr = GWBUF_DATA(info->preparable_stmt);
+                // Payload length
+                *ptr++ = payload_len;
+                *ptr++ = (payload_len >> 8);
+                *ptr++ = (payload_len >> 16);
+                // Sequence id
+                *ptr++ = 0x00;
+                // Command
+                *ptr++ = MYSQL_COM_QUERY;
+
+                memcpy(ptr, zStmt, preparable_stmt_len);
+            }
+        }
+        else
+        {
+            info->status = QC_QUERY_INVALID;
         }
     }
     else
@@ -2566,6 +2709,8 @@ void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
         ss_dassert(info->collect != info->collected);
         ss_dassert(strncmp(info->prepare_name, pName->z, pName->n) == 0);
     }
+
+    exposed_sqlite3ExprDelete(pParse->db, pStmt);
 }
 
 void maxscalePrivileges(Parse* pParse, int kind)

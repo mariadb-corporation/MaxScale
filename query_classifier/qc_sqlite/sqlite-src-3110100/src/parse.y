@@ -114,12 +114,13 @@ extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
 extern void maxscaleDrop(Parse*, MxsDrop* pDrop);
 extern void maxscaleExecute(Parse*, Token* pName, int type_mask);
+extern void maxscaleExecuteImmediate(Parse*, Token* pName, ExprSpan* pExprSpan, int type_mask);
 extern void maxscaleExplain(Parse*, Token* pNext);
 extern void maxscaleFlush(Parse*, Token* pWhat);
 extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
 extern void maxscaleLoadData(Parse*, SrcList* pFullName);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
-extern void maxscalePrepare(Parse*, Token* pName, Token* pStmt);
+extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
 extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
@@ -2857,9 +2858,9 @@ cmd ::= prepare.
 cmd ::= execute.
 cmd ::= deallocate.
 
-prepare ::= PREPARE nm(X) FROM STRING(Y).
+prepare ::= PREPARE nm(X) FROM expr(Y).
 {
-  maxscalePrepare(pParse, &X, &Y);
+  maxscalePrepare(pParse, &X, Y.pExpr);
 }
 
 %type execute_variable {int}
@@ -2879,6 +2880,10 @@ execute_variables_opt(A) ::= USING execute_variables(X). {A=X;}
 
 execute ::= EXECUTE nm(X) execute_variables_opt(Y). {
     maxscaleExecute(pParse, &X, Y);
+}
+
+execute ::= EXECUTE id(X) expr(Y) execute_variables_opt(Z). {
+    maxscaleExecuteImmediate(pParse, &X, &Y, Z);
 }
 
 dod ::= DEALLOCATE.
