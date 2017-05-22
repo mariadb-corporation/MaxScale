@@ -735,9 +735,10 @@ In versions of MySQL 5.7.6 and later, the `Password` column was replaced by
 **Note**: If authentication fails, MaxScale will try to refresh the list of
 database users used by the service up to 4 times every 30 seconds.
 
-#### `passwd`
+<a id="passwd"></a>
+#### `password`
 
-The passwd parameter provides the password information for the above user and
+The password parameter provides the password information for the above user and
 may be either a plain text password or it may be an encrypted password.  See the
 section on encrypting passwords for use in the maxscale.cnf file. This user must
 be capable of connecting to the backend database and executing these SQL
