@@ -1325,9 +1325,9 @@ int main(int argc, char* argv[])
     const char* zClassifier2 = "qc_sqlite";
     const char* zClassifier1Args = NULL;
 #if defined(USING_MARIADB_103)
-    const char* zClassifier2Args = "parse_as=10.3,log_unrecognized_statements=1";
+    string classifier2Args("parse_as=10.3,log_unrecognized_statements=1");
 #else
-    const char* zClassifier2Args = "log_unrecognized_statements=1";
+    string classifier2Args("log_unrecognized_statements=1");
 #endif
     const char* zStatement = NULL;
 
@@ -1359,7 +1359,8 @@ int main(int argc, char* argv[])
             break;
 
         case 'B':
-            zClassifier2Args = optarg;
+            classifier2Args += ",";
+            classifier2Args += optarg;
             break;
 
         case 'd':
@@ -1399,6 +1400,8 @@ int main(int argc, char* argv[])
 
             if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
             {
+                const char* zClassifier2Args = classifier2Args.c_str();
+
                 QUERY_CLASSIFIER* pClassifier1;
                 QUERY_CLASSIFIER* pClassifier2;
 
