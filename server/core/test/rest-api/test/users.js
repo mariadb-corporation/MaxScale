@@ -4,7 +4,7 @@ require("../utils.js")()
 describe("Users", function() {
     before(startMaxScale)
 
-    user = {
+    var user = {
         data: {
             id: "user1",
             type: "inet",

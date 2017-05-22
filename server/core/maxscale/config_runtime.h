@@ -294,4 +294,13 @@ bool runtime_create_user_from_json(json_t* json);
  */
 bool runtime_remove_user(const char* id, enum user_type type);
 
+/**
+ * @brief Alter core MaxScale parameters from JSON
+ *
+ * @param new_json JSON defining the new core parameters
+ *
+ * @return True if the core parameters are valid and were successfully applied
+ */
+bool runtime_alter_maxscale_from_json(json_t* new_json);
+
 MXS_END_DECLS

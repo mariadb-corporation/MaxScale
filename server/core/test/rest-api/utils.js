@@ -420,7 +420,8 @@ module.exports = function() {
     this.ajv = new Ajv({$data: true, allErrors: true, extendRefs: true, verbose: true})
     this.validate_func = ajv.compile(json_api_schema)
     this.validate = validate_json
-    this.base_url = "http://localhost:8989/v1"
+    this.host = "localhost:8989/v1"
+    this.base_url = "http://" + this.host
     this.startMaxScale = function(done) {
         child_process.execFile("./before.sh", function(err, stdout, stderr) {
             if (process.env.MAXSCALE_DIR == null) {

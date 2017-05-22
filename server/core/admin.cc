@@ -151,18 +151,19 @@ void close_client(void *cls,
     delete client;
 }
 
-bool do_auth(MHD_Connection *connection)
+bool do_auth(MHD_Connection *connection, const char* url)
 {
-    bool admin_auth = config_get_global_options()->admin_auth;
-
-    char* pw = NULL;
-    char* user = MHD_basic_auth_get_username_password(connection, &pw);
     bool rval = true;
 
-    if (admin_auth)
+    if (config_get_global_options()->admin_auth)
     {
+        char* pw = NULL;
+        char* user = MHD_basic_auth_get_username_password(connection, &pw);
+
         if (!user || !pw || !admin_verify_inet_user(user, pw))
         {
+            MXS_WARNING("Authentication failed for '%s', %s. Request: %s", user ? user : "",
+                        pw ? "using password" : "no password", url);
             rval = false;
             static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
             MHD_Response *resp =
@@ -171,6 +172,11 @@ bool do_auth(MHD_Connection *connection)
 
             MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
             MHD_destroy_response(resp);
+        }
+        else
+        {
+            MXS_INFO("Accept authentication from '%s', %s. Request: %s", user ? user : "",
+                     pw ? "using password" : "no password", url);
         }
     }
 
@@ -187,7 +193,7 @@ int handle_client(void *cls,
                   void **con_cls)
 
 {
-    if (!do_auth(connection))
+    if (!do_auth(connection, url))
     {
         return MHD_YES;
     }

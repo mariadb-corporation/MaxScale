@@ -1739,3 +1739,89 @@ bool runtime_remove_user(const char* id, enum user_type type)
 
     return rval;
 }
+
+bool validate_maxscale_json(json_t* json)
+{
+    bool rval = false;
+    json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+
+    if (param)
+    {
+        rval = is_null_or_count(param, CN_AUTH_CONNECT_TIMEOUT) &&
+               is_null_or_count(param, CN_AUTH_READ_TIMEOUT) &&
+               is_null_or_count(param, CN_AUTH_WRITE_TIMEOUT) &&
+               is_null_or_bool(param, CN_ADMIN_AUTH);
+    }
+
+    return rval;
+}
+
+bool ignored_core_parameters(const char* key)
+{
+    static const char* params[] =
+    {
+        "libdir",
+        "datadir",
+        "process_datadir",
+        "cachedir",
+        "configdir",
+        "config_persistdir",
+        "module_configdir",
+        "piddir",
+        "logdir",
+        "langdir",
+        "execdir",
+        "connector_plugindir",
+        NULL
+    };
+
+    for (int i = 0; params[i]; i++)
+    {
+        if (strcmp(key, params[i]) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool runtime_alter_maxscale_from_json(json_t* new_json)
+{
+    bool rval = false;
+
+    if (validate_maxscale_json(new_json))
+    {
+        rval = true;
+        json_t* old_json = config_maxscale_to_json("");
+        ss_dassert(old_json);
+
+        json_t* new_param = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
+        json_t* old_param = mxs_json_pointer(old_json, MXS_JSON_PTR_PARAMETERS);
+
+        const char* key;
+        json_t* value;
+
+        json_object_foreach(new_param, key, value)
+        {
+            json_t* new_val = json_object_get(new_param, key);
+            json_t* old_val = json_object_get(old_param, key);
+
+            if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
+            {
+                /** No change in values */
+            }
+            else if (ignored_core_parameters(key))
+            {
+                /** We can't change these at runtime */
+                MXS_DEBUG("Ignoring runtime change to '%s'", key);
+            }
+            else if (!runtime_alter_maxscale(key, mxs::json_to_string(value).c_str()))
+            {
+                rval = false;
+            }
+        }
+    }
+
+    return rval;
+}

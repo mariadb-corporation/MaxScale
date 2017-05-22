@@ -440,6 +440,18 @@ HttpResponse cb_maxscale(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, config_maxscale_to_json(request.host()));
 }
 
+HttpResponse cb_alter_maxscale(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json && runtime_alter_maxscale_from_json(json))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_logs(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host()));
@@ -602,6 +614,7 @@ public:
         m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
         m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
         m_put.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
+        m_put.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
 
         /** Change resource states */
         m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));
