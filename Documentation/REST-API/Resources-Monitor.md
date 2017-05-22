@@ -11,7 +11,7 @@ Get a single monitor. The _:name_ in the URI must be a valid monitor name with
 all whitespace replaced with hyphens. The monitor names are case-sensitive.
 
 ```
-GET /monitors/:name
+GET /v1/monitors/:name
 ```
 
 #### Response
@@ -117,7 +117,7 @@ GET /monitors/:name
 Get all monitors.
 
 ```
-GET /monitors
+GET /v1/monitors
 ```
 
 #### Response
@@ -225,7 +225,7 @@ GET /monitors
 Stops a started monitor.
 
 ```
-PUT /monitor/:name/stop
+PUT /v1/monitor/:name/stop
 ```
 
 #### Response
@@ -239,7 +239,7 @@ Monitor is stopped.
 Starts a stopped monitor.
 
 ```
-PUT /monitor/:name/start
+PUT /v1/monitor/:name/start
 ```
 
 #### Response
@@ -254,7 +254,7 @@ The :name in the URI must map to a monitor name with all whitespace replaced wit
 hyphens. The request body must be a valid JSON document representing the modified monitor.
 
 ```
-PUT /monitor/:name
+PUT /v1/monitor/:name
 ```
 
 ### Modifiable Fields
@@ -282,4 +282,3 @@ Monitor is modified.
 Invalid request body.
 
 `Status: 403 Forbidden`
-

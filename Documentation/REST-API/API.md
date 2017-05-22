@@ -26,13 +26,13 @@ of the comment and extend to the end of the current line.
 The MaxScale REST API provides the following resources. All resources conform to
 the [JSON API](http://jsonapi.org/format/) specification.
 
-- [/maxscale](Resources-MaxScale.md)
-- [/services](Resources-Service.md)
-- [/servers](Resources-Server.md)
-- [/filters](Resources-Filter.md)
-- [/monitors](Resources-Monitor.md)
-- [/sessions](Resources-Session.md)
-- [/users](Resources-User.md)
+- [maxscale](Resources-MaxScale.md)
+- [services](Resources-Service.md)
+- [servers](Resources-Server.md)
+- [filters](Resources-Filter.md)
+- [monitors](Resources-Monitor.md)
+- [sessions](Resources-Session.md)
+- [users](Resources-User.md)
 
 ### Resource Relationships
 

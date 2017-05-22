@@ -11,7 +11,7 @@ Retrieve global information about a MaxScale instance. This includes various
 file locations, configuration options and version information.
 
 ```
-GET /maxscale
+GET /v1/maxscale
 ```
 
 #### Response
@@ -70,7 +70,7 @@ the URI must map to a valid thread number between 0 and the configured
 value of `threads`.
 
 ```
-GET /maxscale/threads/:id
+GET /v1/maxscale/threads/:id
 ```
 
 #### Response
@@ -115,7 +115,7 @@ GET /maxscale/threads/:id
 Get the informatino for all threads. Returns a collection of threads resources.
 
 ```
-GET /maxscale/threads
+GET /v1/maxscale/threads
 ```
 
 #### Response
@@ -226,7 +226,7 @@ Get information about the current state of logging, enabled log files and the
 location where the log files are stored.
 
 ```
-GET /maxscale/logs
+GET /v1/maxscale/logs
 ```
 
 #### Response
@@ -271,7 +271,7 @@ Flushes any pending messages to disk and reopens the log files. The body of the
 message is ignored.
 
 ```
-POST /maxscale/logs/flush
+POST /v1/maxscale/logs/flush
 ```
 
 #### Response
@@ -285,7 +285,7 @@ Status: 204 No Content
 Retrieve all pending tasks that are queued for execution.
 
 ```
-GET /maxscale/tasks
+GET /v1/maxscale/tasks
 ```
 
 #### Response
@@ -311,7 +311,7 @@ Retrieve information about a loaded module. This includes version, API and
 maturity information as well as all the parameters that the module defines.
 
 ```
-GET /maxscale/modules
+GET /v1/maxscale/modules
 ```
 
 #### Response
@@ -421,7 +421,7 @@ GET /maxscale/modules
 Retrieve information about all loaded modules.
 
 ```
-GET /maxscale/modules
+GET /v1/maxscale/modules
 ```
 
 #### Response

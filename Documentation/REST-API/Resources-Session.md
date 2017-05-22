@@ -11,7 +11,7 @@ session is created on a service and each service can have multiple sessions.
 Get a single session. _:id_ must be a valid session ID.
 
 ```
-GET /sessions/:id
+GET /v1/sessions/:id
 ```
 
 #### Response
@@ -59,7 +59,7 @@ GET /sessions/:id
 Get all sessions.
 
 ```
-GET /sessions
+GET /v1/sessions
 ```
 
 #### Response

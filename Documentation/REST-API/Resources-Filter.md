@@ -11,7 +11,7 @@ Get a single filter. The _:name_ in the URI must be a valid filter name with all
 whitespace replaced with hyphens. The filter names are case-sensitive.
 
 ```
-GET /filters/:name
+GET /v1/filters/:name
 ```
 
 #### Response
@@ -54,7 +54,7 @@ GET /filters/:name
 Get all filters.
 
 ```
-GET /filters
+GET /v1/filters
 ```
 
 #### Response
