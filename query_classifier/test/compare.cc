@@ -58,6 +58,7 @@ char USAGE[] =
     "-2    the second classifier, default qc_sqlite\n"
     "-A    arguments for the first classifier\n"
     "-B    arguments for the second classifier\n"
+    "-C    arguments for both classifiers\n"
     "-s    compare single statement\n"
     "-S    strict, also require that the parse result is identical\n"
     "-R    strict reporting, report if parse result is different\n"
@@ -1315,6 +1316,15 @@ int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const st
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+void append_arg(string& args, const string& arg)
+{
+    if (!args.empty())
+    {
+        args += ",";
+    }
+    args += arg;
+}
+
 }
 
 int main(int argc, char* argv[])
@@ -1323,7 +1333,7 @@ int main(int argc, char* argv[])
 
     const char* zClassifier1 = "qc_mysqlembedded";
     const char* zClassifier2 = "qc_sqlite";
-    const char* zClassifier1Args = NULL;
+    string classifier1Args;
 #if defined(USING_MARIADB_103)
     string classifier2Args("parse_as=10.3,log_unrecognized_statements=1");
 #else
@@ -1334,7 +1344,7 @@ int main(int argc, char* argv[])
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:s:SR")) != -1)
+    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:C:s:SR")) != -1)
     {
         switch (c)
         {
@@ -1355,12 +1365,16 @@ int main(int argc, char* argv[])
             break;
 
         case 'A':
-            zClassifier1Args = optarg;
+            append_arg(classifier1Args, optarg);
             break;
 
         case 'B':
-            classifier2Args += ",";
-            classifier2Args += optarg;
+            append_arg(classifier2Args, optarg);
+            break;
+
+        case 'C':
+            append_arg(classifier1Args, optarg);
+            append_arg(classifier2Args, optarg);
             break;
 
         case 'd':
@@ -1400,6 +1414,7 @@ int main(int argc, char* argv[])
 
             if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
             {
+                const char* zClassifier1Args = classifier1Args.c_str();
                 const char* zClassifier2Args = classifier2Args.c_str();
 
                 QUERY_CLASSIFIER* pClassifier1;
