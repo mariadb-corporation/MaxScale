@@ -2173,6 +2173,19 @@ void maxscaleComment()
     }
 }
 
+void maxscaleDeclare(Parse* pParse)
+{
+    QC_TRACE();
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    if (this_unit.sql_mode != QC_SQL_MODE_ORACLE)
+    {
+        info->status = QC_QUERY_INVALID;
+    }
+}
+
 void maxscaleDeallocate(Parse* pParse, Token* pName)
 {
     QC_TRACE();
@@ -2506,6 +2519,7 @@ int maxscaleKeyword(int token)
             break;
 
         case TK_BEGIN:
+        case TK_DECLARE:
             if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
             {
                 // The beginning of a BLOCK. We'll assume it is in a single

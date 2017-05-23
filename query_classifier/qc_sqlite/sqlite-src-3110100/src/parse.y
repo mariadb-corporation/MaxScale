@@ -111,6 +111,7 @@ extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
 extern void maxscaleCall(Parse*, SrcList* pName, int uses_variables);
 extern void maxscaleCheckTable(Parse*, SrcList* pTables);
 extern void maxscaleCreateSequence(Parse*, Token* pDatabase, Token* pTable);
+extern void maxscaleDeclare(Parse* pParse);
 extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
 extern void maxscaleDrop(Parse*, int what, Token* pDatabase, Token* pName);
@@ -3323,6 +3324,12 @@ cmd ::= DROP SEQUENCE nm(X) dbnm(Y).{ // CREATE SEQUENCE db
         pTable = &X;
     }
     maxscaleDrop(pParse, MXS_DROP_SEQUENCE, pDatabase, pTable);
+}
+
+//////////////////////// ORACLE DECLARE ////////////////////////////////////
+//
+cmd ::= DECLARE. {
+    maxscaleDeclare(pParse);
 }
 
 %endif

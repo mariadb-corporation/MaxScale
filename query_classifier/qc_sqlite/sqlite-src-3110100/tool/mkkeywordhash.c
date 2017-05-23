@@ -218,6 +218,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "DATABASES",        "TK_DATABASES_KW", ALWAYS                 },
   { "DEALLOCATE",       "TK_DEALLOCATE",   ALWAYS                 },
+  { "DECLARE",          "TK_DECLARE",      ALWAYS                 },
 #endif
   { "DEFAULT",          "TK_DEFAULT",      ALWAYS                 },
   { "DEFERRED",         "TK_DEFERRED",     ALWAYS                 },
