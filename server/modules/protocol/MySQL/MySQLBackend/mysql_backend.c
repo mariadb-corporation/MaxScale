@@ -26,30 +26,6 @@
 /*
  * MySQL Protocol module for handling the protocol between the gateway
  * and the backend MySQL database.
- *
- * Revision History
- * Date         Who                     Description
- * 14/06/2013   Mark Riddoch            Initial version
- * 17/06/2013   Massimiliano Pinto      Added MaxScale To Backends routines
- * 01/07/2013   Massimiliano Pinto      Put Log Manager example code behind SS_DEBUG macros.
- * 03/07/2013   Massimiliano Pinto      Added delayq for incoming data before mysql connection
- * 04/07/2013   Massimiliano Pinto      Added asynchronous MySQL protocol connection to backend
- * 05/07/2013   Massimiliano Pinto      Added closeSession if backend auth fails
- * 12/07/2013   Massimiliano Pinto      Added Mysql Change User via dcb->func.auth()
- * 15/07/2013   Massimiliano Pinto      Added Mysql session change via dcb->func.session()
- * 17/07/2013   Massimiliano Pinto      Added dcb->command update from gwbuf->command for proper routing
- *                                      server replies to client via router->clientReply
- * 04/09/2013   Massimiliano Pinto      Added dcb->session and dcb->session->client checks for NULL
- * 12/09/2013   Massimiliano Pinto      Added checks in gw_read_backend_event() for gw_read_backend_handshake
- * 27/09/2013   Massimiliano Pinto      Changed in gw_read_backend_event the check for dcb_read(),
- *                                      now is if rc less than 0
- * 24/10/2014   Massimiliano Pinto      Added Mysql user@host @db authentication support
- * 10/11/2014   Massimiliano Pinto      Client charset is passed to backend
- * 19/06/2015   Martin Brampton         Persistent connection handling
- * 07/10/2015   Martin Brampton         Remove calls to dcb_close - should be done by routers
- * 27/10/2015   Martin Brampton         Test for RCAP_TYPE_NO_RSESSION before calling clientReply
- * 23/05/2016   Martin Brampton         Provide for backend SSL
- *
  */
 
 static int gw_create_backend_connection(DCB *backend, SERVER *server, MXS_SESSION *in_session);
@@ -68,7 +44,6 @@ extern char* create_auth_failed_msg(GWBUF* readbuf, char* hostaddr, uint8_t* sha
 static bool sescmd_response_complete(DCB* dcb);
 static void gw_reply_on_error(DCB *dcb, mxs_auth_state_t state);
 static int gw_read_and_write(DCB *dcb);
-static int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload);
 static int gw_do_connect_to_backend(char *host, int port, int *fd);
 static void inline close_socket(int socket);
 static GWBUF *gw_create_change_user_packet(MYSQL_session*  mses,

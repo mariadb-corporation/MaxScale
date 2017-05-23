@@ -13,33 +13,6 @@
 
 /*
  * MySQL Protocol common routines for client to gateway and gateway to backend
- *
- * Revision History
- * Date         Who                     Description
- * 17/06/2013   Massimiliano Pinto      Common MySQL protocol routines
- * 02/06/2013   Massimiliano Pinto      MySQL connect asynchronous phases
- * 04/09/2013   Massimiliano Pinto      Added dcb NULL assert in mysql_send_custom_error
- * 12/09/2013   Massimiliano Pinto      Added checks in gw_decode_mysql_server_handshake and
- *                                      gw_read_backend_handshake
- * 10/02/2014   Massimiliano Pinto      Added MySQL Authentication with user@host
- * 10/09/2014   Massimiliano Pinto      Added MySQL Authentication option enabling localhost
- *                                      match with any host (wildcard %)
- *                                      Backend server configuration may differ so default is 0,
- *                                      don't match and an explicit
- *                                      localhost entry should be added for the selected user
- *                                      in the backends.
- *                                      Setting to 1 allow localhost (127.0.0.1 or socket) to
- *                                      match the any host grant via
- *                                      user@%
- * 29/09/2014   Massimiliano Pinto      Added Mysql user@host authentication with wildcard in IPv4 hosts:
- *                                      x.y.z.%, x.y.%.%, x.%.%.%
- * 03/10/2014   Massimiliano Pinto      Added netmask for wildcard in IPv4 hosts.
- * 24/10/2014   Massimiliano Pinto      Added Mysql user@host @db authentication support
- * 10/11/2014   Massimiliano Pinto      Charset at connect is passed to backend during authentication
- * 07/07/2015   Martin Brampton         Fix problem recognising null password
- * 07/02/2016   Martin Brampton         Remove authentication functions to mysql_auth.c
- * 31/05/2016   Martin Brampton         Add mysql_create_standard_error function
- *
  */
 
 #include <netinet/tcp.h>
@@ -1137,18 +1110,20 @@ int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char*
  * Otherwise, the packet size is computed, based on the minimum size and
  * increased by the optional or variable elements.
  *
- * @param conn  The MySQLProtocol structure for the connection
- * @param user  Name of the user seeking to connect
- * @param passwd Password for the user seeking to connect
- * @param dbname Name of the database to be made default, if any
+ * @param with_ssl        SSL is used
+ * @param ssl_established SSL is established
+ * @param user            Name of the user seeking to connect
+ * @param passwd          Password for the user seeking to connect
+ * @param dbname          Name of the database to be made default, if any
+ *
  * @return The length of the response packet
  */
-static int
-response_length(MySQLProtocol *conn, char *user, uint8_t *passwd, char *dbname, const char *auth_module)
+static int response_length(bool with_ssl, bool ssl_established, char *user, uint8_t *passwd,
+                char *dbname, const char *auth_module)
 {
     long bytes;
 
-    if (conn->owner_dcb->server->server_ssl && conn->owner_dcb->ssl_state != SSL_ESTABLISHED)
+    if (with_ssl && !ssl_established)
     {
         return MYSQL_AUTH_PACKET_BASE_SIZE;
     }
@@ -1243,14 +1218,14 @@ load_hashed_password(uint8_t *scramble, uint8_t *payload, uint8_t *passwd)
  * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
 static uint32_t
-create_capabilities(MySQLProtocol *conn, bool db_specified, bool compress)
+create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool compress)
 {
     uint32_t final_capabilities;
 
     /** Copy client's flags to backend but with the known capabilities mask */
     final_capabilities = (conn->client_capabilities & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
 
-    if (conn->owner_dcb->server->server_ssl)
+    if (with_ssl)
     {
         final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL;
         /* Unclear whether we should include this */
@@ -1259,12 +1234,10 @@ create_capabilities(MySQLProtocol *conn, bool db_specified, bool compress)
     }
 
     /* Compression is not currently supported */
+    ss_dassert(!compress);
     if (compress)
     {
         final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_COMPRESS;
-#ifdef DEBUG_MYSQL_CONN
-        fprintf(stderr, ">>>> Backend Connection with compression\n");
-#endif
     }
 
     if (db_specified)
@@ -1283,35 +1256,21 @@ create_capabilities(MySQLProtocol *conn, bool db_specified, bool compress)
     return final_capabilities;
 }
 
-/**
- * Write MySQL authentication packet to backend server
- *
- * @param dcb  Backend DCB
- * @return True on success, false on failure
- */
-mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
+GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
+                                 bool with_ssl, bool ssl_established)
 {
-    MYSQL_session local_session;
-    gw_get_shared_session_auth_info(dcb, &local_session);
+    MYSQL_session client;
+    gw_get_shared_session_auth_info(session->client_dcb, &client);
 
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
-    uint8_t *curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
-                           local_session.client_sha1 : NULL;
+    uint8_t *curr_passwd = NULL;
 
-    /**
-     * If session is stopping or has failed return with error.
-     */
-    if (dcb->session == NULL ||
-        (dcb->session->state != SESSION_STATE_READY &&
-         dcb->session->state != SESSION_STATE_ROUTER_READY) ||
-        (dcb->server->server_ssl &&
-         dcb->ssl_state == SSL_HANDSHAKE_FAILED))
+    if (memcmp(client.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) != 0)
     {
-        return MXS_AUTH_STATE_FAILED;
+        curr_passwd = client.client_sha1;
     }
 
-    MySQLProtocol *conn = (MySQLProtocol*)dcb->protocol;
-    uint32_t capabilities = create_capabilities(conn, (local_session.db && strlen(local_session.db)), false);
+    uint32_t capabilities = create_capabilities(conn, with_ssl, client.db[0], false);
     gw_mysql_set_byte4(client_capabilities, capabilities);
 
     /**
@@ -1319,10 +1278,10 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
      * different authentication mechanism, it will send an AuthSwitchRequest
      * packet.
      */
-    const char* auth_plugin_name =  DEFAULT_MYSQL_AUTH_PLUGIN;
+    const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
 
-    long bytes = response_length(conn, local_session.user, curr_passwd,
-                                 local_session.db, auth_plugin_name);
+    long bytes = response_length(with_ssl, ssl_established, client.user,
+                                 curr_passwd, client.db, auth_plugin_name);
 
     // allocating the GWBUF
     GWBUF *buffer = gwbuf_alloc(bytes);
@@ -1335,7 +1294,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     gw_mysql_set_byte3(payload, (bytes - 4));
 
     // set packet # = 1
-    payload[3] = (SSL_ESTABLISHED == dcb->ssl_state) ? '\x02' : '\x01';
+    payload[3] = ssl_established ? '\x02' : '\x01';
     payload += 4;
 
     // set client capabilities
@@ -1358,53 +1317,79 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     memcpy(payload, &conn->extra_capabilities, sizeof(conn->extra_capabilities));
     payload += 4;
 
-    if (dcb->server->server_ssl && dcb->ssl_state != SSL_ESTABLISHED)
+    if (!with_ssl || ssl_established)
     {
-        if (dcb_write(dcb, buffer) && dcb_connect_SSL(dcb) >= 0)
+        // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
+        memcpy(payload, client.user, strlen(client.user));
+        payload += strlen(client.user);
+        payload++;
+
+        if (curr_passwd)
         {
-            return MXS_AUTH_STATE_CONNECTED;
+            payload = load_hashed_password(conn->scramble, payload, curr_passwd);
+        }
+        else
+        {
+            payload++;
         }
 
-        return MXS_AUTH_STATE_FAILED;
+        // if the db is not NULL append it
+        if (client.db[0])
+        {
+            memcpy(payload, client.db, strlen(client.db));
+            payload += strlen(client.db);
+            payload++;
+        }
+
+        memcpy(payload, auth_plugin_name, strlen(auth_plugin_name));
+
     }
 
-    // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
-    memcpy(payload, local_session.user, strlen(local_session.user));
-    payload += strlen(local_session.user);
-    payload++;
-
-    if (curr_passwd != NULL)
-    {
-        payload = load_hashed_password(conn->scramble, payload, curr_passwd);
-    }
-    else
-    {
-        payload++;
-    }
-
-    // if the db is not NULL append it
-    if (local_session.db[0])
-    {
-        memcpy(payload, local_session.db, strlen(local_session.db));
-        payload += strlen(local_session.db);
-        payload++;
-    }
-
-    memcpy(payload, auth_plugin_name, strlen(auth_plugin_name));
-
-    return dcb_write(dcb, buffer) ? MXS_AUTH_STATE_RESPONSE_SENT : MXS_AUTH_STATE_FAILED;
+    return buffer;
 }
 
 /**
- * Decode mysql server handshake
+ * Write MySQL authentication packet to backend server
  *
- * @param conn The MySQLProtocol structure
- * @param payload The bytes just read from the net
- * @return 0 on success, < 0 on failure
- *
+ * @param dcb  Backend DCB
+ * @return Authentication state after sending handshake response
  */
-static int
-gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
+mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
+{
+    mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
+
+    if (dcb->session == NULL ||
+        (dcb->session->state != SESSION_STATE_READY &&
+         dcb->session->state != SESSION_STATE_ROUTER_READY) ||
+        (dcb->server->server_ssl &&
+         dcb->ssl_state == SSL_HANDSHAKE_FAILED))
+    {
+        return rval;
+    }
+
+    bool with_ssl = dcb->server->server_ssl;
+    bool ssl_established = dcb->ssl_state == SSL_ESTABLISHED;
+
+    GWBUF* buffer = gw_generate_auth_response(dcb->session, dcb->protocol,
+                                              with_ssl, ssl_established);
+    ss_dassert(buffer);
+
+    if (with_ssl)
+    {
+        if (dcb_write(dcb, buffer) && dcb_connect_SSL(dcb) >= 0)
+        {
+            rval = MXS_AUTH_STATE_CONNECTED;
+        }
+    }
+    else if (dcb_write(dcb, buffer))
+    {
+        rval = MXS_AUTH_STATE_RESPONSE_SENT;
+    }
+
+    return rval;
+}
+
+int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
 {
     uint8_t *server_version_end = NULL;
     uint16_t mysql_server_capabilities_one = 0;
