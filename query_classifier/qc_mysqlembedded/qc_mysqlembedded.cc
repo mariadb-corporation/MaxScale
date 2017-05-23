@@ -90,6 +90,7 @@ typedef struct parsing_info_st
     size_t function_infos_capacity;
     GWBUF* preparable_stmt;
     qc_parse_result_t result;
+    int32_t type_mask;
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_tail;
 #endif
@@ -155,6 +156,8 @@ static TABLE_LIST* skygw_get_affected_tables(void* lexptr);
 static bool ensure_query_is_parsed(GWBUF* query);
 static bool parse_query(GWBUF* querybuf);
 static bool query_is_parsed(GWBUF* buf);
+int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos);
+
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
 inline void get_string_and_length(const LEX_CSTRING& ls, const char** s, size_t* length)
@@ -224,6 +227,8 @@ int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
 
 int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
 {
+    int32_t rv = QC_RESULT_OK;
+
     *type_mask = QUERY_TYPE_UNKNOWN;
     MYSQL* mysql;
     bool succp;
@@ -254,12 +259,25 @@ int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
             if (mysql != NULL)
             {
                 *type_mask = resolve_query_type(pi, (THD *) mysql->thd);
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
+                // If in 10.3 mode we need to ensure that sequence related functions
+                // are taken into account. That we can ensure by querying for the fields.
+                const QC_FIELD_INFO* field_infos;
+                uint32_t n_field_infos;
+
+                rv = qc_mysql_get_field_info(querybuf, &field_infos, &n_field_infos);
+
+                if (rv == QC_RESULT_OK)
+                {
+                    *type_mask |= pi->type_mask;
+                }
+#endif
             }
         }
     }
 
 retblock:
-    return QC_RESULT_OK;
+    return rv;
 }
 
 /**
@@ -2342,6 +2360,43 @@ static void remove_surrounding_back_ticks(char* s)
     }
 }
 
+static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name)
+{
+    bool rv = false;
+
+    // We want to ignore functions that do not really appear as such in an
+    // actual SQL statement. E.g. "SELECT @a" appears as a function "get_user_var".
+    if ((strcasecmp(func_name, "decimal_typecast") == 0) ||
+        (strcasecmp(func_name, "cast_as_char") == 0) ||
+        (strcasecmp(func_name, "cast_as_date") == 0) ||
+        (strcasecmp(func_name, "cast_as_datetime") == 0) ||
+        (strcasecmp(func_name, "cast_as_time") == 0) ||
+        (strcasecmp(func_name, "cast_as_signed") == 0) ||
+        (strcasecmp(func_name, "cast_as_unsigned") == 0) ||
+        (strcasecmp(func_name, "get_user_var") == 0) ||
+        (strcasecmp(func_name, "get_system_var") == 0) ||
+        (strcasecmp(func_name, "set_user_var") == 0) ||
+        (strcasecmp(func_name, "set_system_var") == 0))
+    {
+        rv = true;
+    }
+
+    // Any sequence related functions should be ignored as well.
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
+    if (!rv)
+    {
+        if ((strcasecmp(func_name, "lastval") == 0) ||
+            (strcasecmp(func_name, "nextval") == 0))
+        {
+            pi->type_mask |= QUERY_TYPE_WRITE;
+            rv = true;
+        }
+    }
+#endif
+
+    return rv;
+}
+
 static void update_field_infos(parsing_info_t* pi,
                                collect_source_t source,
                                Item* item,
@@ -2459,17 +2514,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             // We want to ignore functions that do not really appear as such in an
             // actual SQL statement. E.g. "SELECT @a" appears as a function "get_user_var".
-            if ((strcasecmp(func_name, "decimal_typecast") != 0) &&
-                (strcasecmp(func_name, "cast_as_char") != 0) &&
-                (strcasecmp(func_name, "cast_as_date") != 0) &&
-                (strcasecmp(func_name, "cast_as_datetime") != 0) &&
-                (strcasecmp(func_name, "cast_as_time") != 0) &&
-                (strcasecmp(func_name, "cast_as_signed") != 0) &&
-                (strcasecmp(func_name, "cast_as_unsigned") != 0) &&
-                (strcasecmp(func_name, "get_user_var") != 0) &&
-                (strcasecmp(func_name, "get_system_var") != 0) &&
-                (strcasecmp(func_name, "set_user_var") != 0) &&
-                (strcasecmp(func_name, "set_system_var") != 0))
+            if (!should_function_be_ignored(pi, func_name))
             {
                 if (strcmp(func_name, "%") == 0)
                 {
