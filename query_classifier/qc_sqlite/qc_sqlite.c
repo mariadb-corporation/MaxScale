@@ -1536,15 +1536,18 @@ void mxs_sqlite3Analyze(Parse* pParse, SrcList* pSrcList)
     exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
 }
 
-void mxs_sqlite3BeginTransaction(Parse* pParse, int type)
+void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
 {
     QC_TRACE();
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    info->status = QC_QUERY_PARSED;
-    info->type_mask = QUERY_TYPE_BEGIN_TRX | type;
+    if ((this_unit.sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
+    {
+        info->status = QC_QUERY_PARSED;
+        info->type_mask = QUERY_TYPE_BEGIN_TRX | type;
+    }
 }
 
 void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CREATE TRIGGER statement */
@@ -2465,9 +2468,18 @@ void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
     }
 }
 
-void maxscaleKeyword(int token)
+/**
+ * Register the tokenization of a keyword.
+ *
+ * @param token A keyword code (check generated parse.h)
+ *
+ * @return Non-zero if all input should be consumed, 0 otherwise.
+ */
+int maxscaleKeyword(int token)
 {
     QC_TRACE();
+
+    int rv = 0;
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
@@ -2491,6 +2503,18 @@ void maxscaleKeyword(int token)
             info->status = QC_QUERY_TOKENIZED;
             info->type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
             info->operation = QUERY_OP_ALTER;
+            break;
+
+        case TK_BEGIN:
+            if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+            {
+                // The beginning of a BLOCK. We'll assume it is in a single
+                // COM_QUERY packet and hence one GWBUF.
+                info->status = QC_QUERY_TOKENIZED;
+                info->type_mask = QUERY_TYPE_WRITE;
+                // Return non-0 to cause the entire input to be consumed.
+                rv = 1;
+            }
             break;
 
         case TK_CALL:
@@ -2683,6 +2707,8 @@ void maxscaleKeyword(int token)
             }
         }
     }
+
+    return rv;
 }
 
 void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
