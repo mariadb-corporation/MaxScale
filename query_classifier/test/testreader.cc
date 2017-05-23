@@ -150,7 +150,7 @@ void init_keywords()
     }
 }
 
-skip_action_t get_action(const string& keyword)
+skip_action_t get_action(const string& keyword, const string& delimiter)
 {
     skip_action_t action = SKIP_NOTHING;
 
@@ -158,11 +158,18 @@ skip_action_t get_action(const string& keyword)
 
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 
-    KeywordActionMapping::iterator i = mtl_keywords.find(key);
+    // "while" is both a mysqltest and PL/SQL keyword. We use the
+    // heuristic that if the delimiter is something else but ";"
+    // we assume it used in a PL/SQL context.
 
-    if (i != mtl_keywords.end())
+    if ((key != "while") || (delimiter == ";"))
     {
-        action = i->second;
+        KeywordActionMapping::iterator i = mtl_keywords.find(key);
+
+        if (i != mtl_keywords.end())
+        {
+            action = i->second;
+        }
     }
 
     return action;
@@ -229,7 +236,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                                                   std::ptr_fun<int,int>(std::isspace));
                 string keyword = line.substr(0, i - line.begin());
 
-                skip_action_t action = get_action(keyword);
+                skip_action_t action = get_action(keyword, m_delimiter);
 
                 switch (action)
                 {
