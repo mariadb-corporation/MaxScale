@@ -51,6 +51,7 @@ if (BUILD_QC_MYSQLEMBEDDED)
   add_test(TestQC_Oracle-ps            compare -C sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/ps.test)
   add_test(TestQC_Oracle-sequence      compare -C sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/sequence.test)
   add_test(TestQC_Oracle-sp-anonymous  compare -C sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/sp-anonymous.test)
+  add_test(TestQC_Oracle-sp-code       compare -C sql_mode=MODE_ORACLE -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/sp-code.test)
 endif()
 
 add_subdirectory(canonical_tests)
