@@ -46,7 +46,7 @@ public:
      *
      * @return True if query was successfully queued
      */
-    bool query(GWBUF* buffer);
+    bool queue_query(GWBUF* buffer);
 
 private:
     LocalClient(MXS_SESSION* session, int fd);
@@ -71,5 +71,5 @@ private:
     size_t                  m_expected_bytes;
     std::deque<mxs::Buffer> m_queue;
     MXS_SESSION*            m_session;
-    MySQLProtocol           m_proto;
+    MySQLProtocol           m_protocol;
 };

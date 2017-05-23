@@ -34,10 +34,10 @@ LocalClient::LocalClient(MXS_SESSION* session, int fd):
 {
     MXS_POLL_DATA::handler = LocalClient::poll_handler;
     MySQLProtocol* client = (MySQLProtocol*)m_session->client_dcb->protocol;
-    m_proto = {};
-    m_proto.charset = client->charset;
-    m_proto.client_capabilities = client->client_capabilities;
-    m_proto.extra_capabilities = client->extra_capabilities;
+    m_protocol = {};
+    m_protocol.charset = client->charset;
+    m_protocol.client_capabilities = client->client_capabilities;
+    m_protocol.extra_capabilities = client->extra_capabilities;
 }
 
 LocalClient::~LocalClient()
@@ -48,7 +48,7 @@ LocalClient::~LocalClient()
     }
 }
 
-bool LocalClient::query(GWBUF* buffer)
+bool LocalClient::queue_query(GWBUF* buffer)
 {
     GWBUF* my_buf = gwbuf_clone(buffer);
 
@@ -82,9 +82,9 @@ void LocalClient::process(uint32_t events)
         {
             if (m_state == VC_WAITING_HANDSHAKE)
             {
-                if (gw_decode_mysql_server_handshake(&m_proto, GWBUF_DATA(buf) + MYSQL_HEADER_LEN) == 0)
+                if (gw_decode_mysql_server_handshake(&m_protocol, GWBUF_DATA(buf) + MYSQL_HEADER_LEN) == 0)
                 {
-                    GWBUF* response = gw_generate_auth_response(m_session, &m_proto, false, false);
+                    GWBUF* response = gw_generate_auth_response(m_session, &m_protocol, false, false);
                     m_queue.push_front(response);
                     m_state = VC_RESPONSE_SENT;
                 }
