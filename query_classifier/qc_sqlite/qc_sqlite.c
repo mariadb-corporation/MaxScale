@@ -576,9 +576,15 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                     ss_dassert((~info->collected & collect) != 0);
 
                     // If we get here, then the statement has been parsed once, but
-                    // not all needed was collected. Now we turn on all blinkelichts to
+                    // not all needed was collected. Now we turn on all blinkenlichts to
                     // ensure that a statement is parsed at most twice.
                     info->collect = QC_COLLECT_ALL;
+
+                    // We also reset the collected keywords, so that code that behaves
+                    // differently depending on whether keywords have been seem or not
+                    // acts the same way on this second round.
+                    info->keyword_1 = 0;
+                    info->keyword_2 = 0;
                 }
                 else
                 {
@@ -2513,6 +2519,9 @@ void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
 
 int maxscaleTranslateKeyword(int token)
 {
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
     switch (token)
     {
     case TK_CHARSET:
@@ -2520,7 +2529,12 @@ int maxscaleTranslateKeyword(int token)
     case TK_HANDLER:
         if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
         {
-            token = TK_ID;
+            // The keyword is translated, but only if it not used
+            // as the first keyword. Matters for DO and HANDLER.
+            if (info->keyword_1)
+            {
+                token = TK_ID;
+            }
         }
         break;
 
