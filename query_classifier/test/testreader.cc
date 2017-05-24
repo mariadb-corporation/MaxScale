@@ -154,12 +154,20 @@ skip_action_t get_action(const string& keyword, const string& delimiter)
 {
     skip_action_t action = SKIP_NOTHING;
 
-    // Some mysqltest keywords, such as "while", "exit" and "if" are also
-    // PL/SQL keywords. We assume they can only be used in the former role,
-    // if the delimiter is ";".
+    string key(keyword);
+    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 
-    if (delimiter == ";")
+    if (key == "delimiter")
     {
+        // DELIMITER is directly understood by the parser so it needs to
+        // be handled explicitly.
+        action = SKIP_DELIMITER;
+    }
+    else if (delimiter == ";")
+    {
+        // Some mysqltest keywords, such as "while", "exit" and "if" are also
+        // PL/SQL keywords. We assume they can only be used in the former role,
+        // if the delimiter is ";".
         string key(keyword);
 
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
@@ -224,6 +232,12 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
         if (!line.empty() && (line.at(0) != '#'))
         {
+            // Ignore comment lines.
+            if ((line.substr(0, 3) == "-- ") || (line.substr(0, 1) == "#"))
+            {
+                continue;
+            }
+
             if (!skip)
             {
                 if (line.substr(0, 2) == "--")
