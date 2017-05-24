@@ -290,6 +290,28 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
             stmt += line;
 
+            // Look for a ';'. If we are dealing with a one line test statment
+            // the delimiter will in practice be ';' and if it is a multi-line
+            // test statement then the test-script delimiter will be something
+            // else than ';' and ';' will be the delimiter used in the multi-line
+            // statement.
+            string::size_type i = line.find(";");
+
+            if (i != string::npos)
+            {
+                // Is there a "-- " or "#" after the delimiter?
+                if ((line.find("-- ", i) != string::npos) ||
+                    (line.find("#", i) != string::npos))
+                {
+                    // If so, add a newline. Otherwise the rest of the
+                    // statement would be included in the comment.
+                    stmt += "\n";
+                }
+
+                // This is somewhat fragile as a ";", "#" or "-- " inside a
+                // string will trigger this behaviour...
+            }
+
             string c;
 
             if (line.length() >= m_delimiter.length())
