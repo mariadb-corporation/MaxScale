@@ -2522,6 +2522,7 @@ int maxscaleKeyword(int token)
 
         case TK_BEGIN:
         case TK_DECLARE:
+        case TK_FOR:
             if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
             {
                 // The beginning of a BLOCK. We'll assume it is in a single
