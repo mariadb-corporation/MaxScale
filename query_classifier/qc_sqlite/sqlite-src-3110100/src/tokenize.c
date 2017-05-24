@@ -569,11 +569,17 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
 
         if (*tokenType != TK_ID) {
           extern int maxscaleKeyword(int);
-          if (maxscaleKeyword(*tokenType) != 0)
-          {
-            /* Consume the entire string. */
-            while ( z[i] ) {
-              ++i;
+          extern int maxscaleTranslateKeyword(int);
+
+          *tokenType = maxscaleTranslateKeyword(*tokenType);
+
+          if (*tokenType != TK_ID) {
+            if (maxscaleKeyword(*tokenType) != 0)
+            {
+              /* Consume the entire string. */
+              while ( z[i] ) {
+                ++i;
+              }
             }
           }
         }

@@ -2483,6 +2483,26 @@ void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
     }
 }
 
+int maxscaleTranslateKeyword(int token)
+{
+    switch (token)
+    {
+    case TK_CHARSET:
+    case TK_DO:
+    case TK_HANDLER:
+        if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+        {
+            token = TK_ID;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return token;
+}
+
 /**
  * Register the tokenization of a keyword.
  *
