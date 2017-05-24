@@ -35,7 +35,7 @@ static int value_iterator(void *cls,
 {
     std::pair<std::string, std::string>* cmp = (std::pair<std::string, std::string>*)cls;
 
-    if (strcasecmp(cmp->first.c_str(), key) == 0)
+    if (strcasecmp(cmp->first.c_str(), key) == 0 && value)
     {
         cmp->second = value;
         return MHD_NO;
