@@ -18,7 +18,7 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev libmicrohttpd-dev $install_cmake
+       sqlite3 liblua5.1 liblua5.1-dev libgnutls30 libgcrypt20 $install_cmake
 else
   ## RPM-based distro
   command -v yum
@@ -30,7 +30,7 @@ else
          make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
          pcre-devel git wget tcl libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         libmicrohttpd-devel $install_cmake
+         gnutls gcrypt $install_cmake
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
@@ -46,7 +46,7 @@ else
          libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         libmicrohttpd-devel $install_cmake
+         gnutls gcrypt $install_cmake
 
     cat /etc/redhat-release | grep "release 5"
     if [ $? -eq 0 ]
