@@ -2100,7 +2100,7 @@ void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
     exposed_sqlite3SrcListDelete(pParse->db, pSrc);
 }
 
-void maxscaleCall(Parse* pParse, SrcList* pName, int uses_variables)
+void maxscaleCall(Parse* pParse, SrcList* pName, ExprList* pExprList)
 {
     QC_TRACE();
 
@@ -2109,12 +2109,14 @@ void maxscaleCall(Parse* pParse, SrcList* pName, int uses_variables)
 
     info->status = QC_QUERY_PARSED;
     info->type_mask = QUERY_TYPE_WRITE;
-    if (uses_variables)
+
+    if (pExprList)
     {
-        info->type_mask |= QUERY_TYPE_USERVAR_READ;
+        update_field_infos_from_exprlist(info, pExprList, 0, NULL);
     }
 
     exposed_sqlite3SrcListDelete(pParse->db, pName);
+    exposed_sqlite3ExprListDelete(pParse->db, pExprList);
 }
 
 void maxscaleCheckTable(Parse* pParse, SrcList* pTables)

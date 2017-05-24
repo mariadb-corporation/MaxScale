@@ -108,7 +108,7 @@ extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
 
 extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
-extern void maxscaleCall(Parse*, SrcList* pName, int uses_variables);
+extern void maxscaleCall(Parse*, SrcList* pName, ExprList* pExprList);
 extern void maxscaleCheckTable(Parse*, SrcList* pTables);
 extern void maxscaleCreateSequence(Parse*, Token* pDatabase, Token* pTable);
 extern void maxscaleDeclare(Parse* pParse);
@@ -2697,27 +2697,9 @@ default_opt ::= DEFAULT.
 //
 cmd ::= call.
 
-%type call_arg {int}
-call_arg(A) ::= INTEGER. {A=0;}
-call_arg(A) ::= FLOAT. {A=0;}
-call_arg(A) ::= STRING. {A=0;}
-call_arg(A) ::= id. {A=0;}
-call_arg(A) ::= VARIABLE(X). {
-    if (X.n == 1 && strncmp(X.z, "?", 1) == 0) {
-      A=0;
-    } else {
-      A=1;
-    }
-}
-
-%type call_args {int}
-call_args(A) ::= call_arg(X). {A=X;}
-call_args(A) ::= call_args(X) COMMA call_arg(Y). {A=X|Y;}
-
-%type call_args_opt {int}
+%type call_args_opt {ExprList*}
 call_args_opt(A) ::= . {A=0;}
-call_args_opt(A) ::= LP RP. {A=0;}
-call_args_opt(A) ::= LP call_args(X) RP. {A=X;}
+call_args_opt(A) ::= LP exprlist(X) RP. {A=X;}
 
 call ::= CALL fullname(X) call_args_opt(Y). {
     maxscaleCall(pParse, X, Y);
