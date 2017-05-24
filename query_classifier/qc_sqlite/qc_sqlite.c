@@ -2624,7 +2624,8 @@ int maxscaleKeyword(int token)
 
         case TK_SHOW:
             info->status = QC_QUERY_TOKENIZED;
-            info->type_mask = QUERY_TYPE_WRITE;
+            info->type_mask = QUERY_TYPE_READ;
+            info->operation = QUERY_OP_SHOW;
             break;
 
         case TK_START:

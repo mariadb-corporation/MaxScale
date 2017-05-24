@@ -858,7 +858,6 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         break;
 
     case SQLCOM_SELECT:
-    case SQLCOM_SHOW_SLAVE_STAT:
         type |= QUERY_TYPE_READ;
         break;
 
@@ -894,28 +893,28 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         goto return_qtype;
         break;
 
-    case SQLCOM_SHOW_CREATE:
-        type |= QUERY_TYPE_READ;
-        goto return_qtype;
-        break;
-
     case SQLCOM_SHOW_DATABASES:
         type |= QUERY_TYPE_SHOW_DATABASES;
         goto return_qtype;
         break;
 
-    case SQLCOM_SHOW_FIELDS:
-        type |= QUERY_TYPE_READ;
-        goto return_qtype;
-        break;
-
-    case SQLCOM_SHOW_STATUS:
-        type |= QUERY_TYPE_READ;
-        goto return_qtype;
-        break;
-
     case SQLCOM_SHOW_TABLES:
         type |= QUERY_TYPE_SHOW_TABLES;
+        goto return_qtype;
+        break;
+
+    case SQLCOM_SHOW_CREATE:
+    case SQLCOM_SHOW_CREATE_DB:
+    case SQLCOM_SHOW_CREATE_FUNC:
+    case SQLCOM_SHOW_CREATE_PROC:
+    case SQLCOM_SHOW_FIELDS:
+    case SQLCOM_SHOW_FUNC_CODE:
+    case SQLCOM_SHOW_GRANTS:
+    case SQLCOM_SHOW_PROC_CODE:
+    case SQLCOM_SHOW_SLAVE_HOSTS:
+    case SQLCOM_SHOW_SLAVE_STAT:
+    case SQLCOM_SHOW_STATUS:
+        type |= QUERY_TYPE_READ;
         goto return_qtype;
         break;
 
@@ -1908,10 +1907,17 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                         break;
 
                     case SQLCOM_SHOW_CREATE:
+                    case SQLCOM_SHOW_CREATE_DB:
+                    case SQLCOM_SHOW_CREATE_FUNC:
+                    case SQLCOM_SHOW_CREATE_PROC:
                     case SQLCOM_SHOW_DATABASES:
                     case SQLCOM_SHOW_FIELDS:
+                    case SQLCOM_SHOW_FUNC_CODE:
+                    case SQLCOM_SHOW_GRANTS:
                     case SQLCOM_SHOW_KEYS:
                     case SQLCOM_SHOW_MASTER_STAT:
+                    case SQLCOM_SHOW_PROC_CODE:
+                    case SQLCOM_SHOW_SLAVE_HOSTS:
                     case SQLCOM_SHOW_SLAVE_STAT:
                     case SQLCOM_SHOW_STATUS:
                     case SQLCOM_SHOW_TABLES:
