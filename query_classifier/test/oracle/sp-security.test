@@ -236,7 +236,8 @@ DROP TABLE t1;
 
 
 connection default;
-GRANT SELECT (a) ON db1.t1 TO user1;
+# qc_sqlite: GRANT SELECT (a) ON db1.t1 TO user1;
+# qc_sqlite: Does not collect database/able names.
 connection conn1;
 
 --echo #
