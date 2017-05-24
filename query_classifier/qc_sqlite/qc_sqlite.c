@@ -1124,6 +1124,8 @@ static void update_field_infos(QC_SQLITE_INFO* info,
                                qc_token_position_t pos,
                                const ExprList* pExclude)
 {
+    const Expr* pLeft = pExpr->pLeft;
+    const Expr* pRight = pExpr->pRight;
     const char* zToken = pExpr->u.zToken;
 
     bool ignore_exprlist = false;
@@ -1221,10 +1223,36 @@ static void update_field_infos(QC_SQLITE_INFO* info,
         case TK_MINUS:
         case TK_NOTNULL:
         case TK_PLUS:
-        case TK_REM:
         case TK_SLASH:
         case TK_STAR:
             update_function_info(info, get_token_symbol(pExpr->op), usage);
+            break;
+
+        case TK_REM:
+            if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+            {
+                if ((pLeft && (pLeft->op == TK_ID)) &&
+                    (pRight && (pRight->op == TK_ID)) &&
+                    (strcasecmp(pLeft->u.zToken, "sql") == 0) &&
+                    (strcasecmp(pRight->u.zToken, "rowcount") == 0))
+                {
+                    char sqlrowcount[13]; // strlen("sql") + strlen("%") + strlen("rowcount") + 1
+                    sprintf(sqlrowcount, "%s%%%s", pLeft->u.zToken, pRight->u.zToken);
+
+                    update_function_info(info, sqlrowcount, usage);
+
+                    pLeft = NULL;
+                    pRight = NULL;
+                }
+                else
+                {
+                    update_function_info(info, get_token_symbol(pExpr->op), usage);
+                }
+            }
+            else
+            {
+                update_function_info(info, get_token_symbol(pExpr->op), usage);
+            }
             break;
 
         case TK_UMINUS:
@@ -1273,12 +1301,12 @@ static void update_field_infos(QC_SQLITE_INFO* info,
             break;
         }
 
-        if (pExpr->pLeft)
+        if (pLeft)
         {
             update_field_infos(info, pExpr->op, pExpr->pLeft, usage, QC_TOKEN_LEFT, pExclude);
         }
 
-        if (pExpr->pRight)
+        if (pRight)
         {
             if (usage & QC_USED_IN_SET)
             {
