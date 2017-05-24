@@ -3601,6 +3601,15 @@ void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p)
                 fix_serverlist(p->value);
                 break;
 
+            case MXS_MODULE_PARAM_QUOTEDSTRING:
+                {   // Remove the '"':s from the ends of the string
+                    char* value = p->value;
+                    size_t len = strlen(value);
+                    value[len - 1] = '\0';
+                    memmove(value, value + 1, len - 1);
+                }
+                break;
+
             default:
                 break;
             }
@@ -3694,6 +3703,17 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 if (*value)
                 {
                     valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_QUOTEDSTRING:
+                valid = false;
+                {
+                    size_t len = strlen(value);
+                    if ((len >= 2) && (value[0] == '"') && (value[len - 1] == '"'))
+                    {
+                        valid = true;
+                    }
                 }
                 break;
 

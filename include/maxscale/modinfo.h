@@ -79,6 +79,7 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_SIZE, /**< Size in bytes */
     MXS_MODULE_PARAM_BOOL, /**< Boolean value */
     MXS_MODULE_PARAM_STRING, /**< String value */
+    MXS_MODULE_PARAM_QUOTEDSTRING, /**< String enclosed in '"':s */
     MXS_MODULE_PARAM_ENUM, /**< Enumeration of string values */
     MXS_MODULE_PARAM_PATH, /**< Path to a file or a directory */
     MXS_MODULE_PARAM_SERVICE, /**< Service name */
@@ -233,6 +234,8 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
         return "bool";
     case MXS_MODULE_PARAM_STRING:
         return "string";
+    case MXS_MODULE_PARAM_QUOTEDSTRING:
+        return "quoted string";
     case MXS_MODULE_PARAM_ENUM:
         return "enum";
     case MXS_MODULE_PARAM_PATH:
