@@ -154,16 +154,16 @@ skip_action_t get_action(const string& keyword, const string& delimiter)
 {
     skip_action_t action = SKIP_NOTHING;
 
-    string key(keyword);
+    // Some mysqltest keywords, such as "while", "exit" and "if" are also
+    // PL/SQL keywords. We assume they can only be used in the former role,
+    // if the delimiter is ";".
 
-    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-
-    // "while" and "exit" are both mysqltest and PL/SQL keywords. We use
-    // the heuristic that if the delimiter is something else but ";"
-    // we assume it used in a PL/SQL context.
-
-    if ((delimiter == ";") || ((key != "while") && (key != "exit")))
+    if (delimiter == ";")
     {
+        string key(keyword);
+
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+
         KeywordActionMapping::iterator i = mtl_keywords.find(key);
 
         if (i != mtl_keywords.end())
