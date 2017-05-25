@@ -11,7 +11,42 @@ requirements are as follows:
 * Bison 2.7 or later
 * Flex 2.5.35 or later
 * libuuid
-* libmicrohttpd
+* GNUTLS
+
+## Quickstart
+
+This installs MaxScale as if it was installed from a package.
+
+### Install dependencies
+
+CentOS 7:
+
+```
+sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake \
+     libgcc perl make libtool openssl openssl-devel libcurl-devel pcre-devel \
+     tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel \
+     gnutls gcrypt
+```
+
+Ubuntu 16.04:
+
+```
+sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
+     cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
+     uuid-dev libsqlite3-dev libgnutls30 libgcrypt20
+```
+
+### Build and Install MaxScale
+
+```
+git clone https://github.com/mariadb-corporation/MaxScale
+mkdir build
+cd build
+cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr
+make
+sudo make install
+sudo ./postinst
+```
 
 ## Required packages
 
@@ -27,15 +62,6 @@ systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel
 gnutls gcrypt
 ```
 
-You can install the packages with the following commands.
-
-```
-sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake \
-     libgcc perl make libtool openssl openssl-devel libcurl-devel pcre-devel \
-     tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel \
-     gnutls gcrypt
-```
-
 ### Required packages on Ubuntu and Debian systems
 
 The following packages are required on Ubuntu 16.04. Different releases may
@@ -45,14 +71,6 @@ require other packages in addition to these.
 git build-essential libssl-dev ncurses-dev bison flex cmake perl libtool \
 libcurl4-openssl-dev libpcre3-dev tlc tcl-dev uuid uuid-dev sqlite3-dev
 libgnutls30 libgcrypt20
-```
-
-You can install the packages with the following command.
-
-```
-sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
-     cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
-     uuid-dev libsqlite3-dev libgnutls30 libgcrypt20
 ```
 
 ## Preparing the MariaDB MaxScale build
