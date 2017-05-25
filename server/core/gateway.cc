@@ -36,6 +36,7 @@
 #include <sys/wait.h>
 
 #include <maxscale/alloc.h>
+#include <maxscale/adminusers.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/log_manager.h>
@@ -1881,6 +1882,9 @@ int main(int argc, char **argv)
     poll_init();
 
     dcb_global_init();
+
+    /** Load the admin users */
+    admin_users_init();
 
     /* Initialize the internal query classifier. The plugin will be initialized
      * via the module initialization below.

@@ -1,0 +1,11 @@
+#
+# Cache basic
+#
+# See ../cache_rules.
+#
+# This script assumes t/update3.test has been successfully executed.
+#
+
+USE cachingdb;
+
+SELECT * FROM caching;

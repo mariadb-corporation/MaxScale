@@ -18,6 +18,7 @@
 
 #include <maxscale/cdefs.h>
 
+#include <maxscale/adminusers.h>
 #include <maxscale/monitor.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
@@ -130,6 +131,16 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
  * @return True if @c key was one of the supported parameters
  */
 bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue);
+
+/**
+ * @brief Alter MaxScale parameters
+ *
+ * @param name  Key to modify
+ * @param value New value
+ *
+ * @return True if @c key was one of the supported parameters
+ */
+bool runtime_alter_maxscale(const char* name, const char* value);
 
 /**
  * @brief Create a new listener for a service
@@ -256,5 +267,40 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json);
  * @return True if the modifications were successful
  */
 bool runtime_alter_logs_from_json(json_t* json);
+
+/**
+ * @brief Get current runtime error in JSON format
+ *
+ * @return The latest runtime error in JSON format or NULL if no error has occurred
+ */
+json_t* runtime_get_json_error();
+
+/**
+ * @brief Create a new user account
+ *
+ * @param json JSON defining the user
+ *
+ * @return True if the user was successfully created
+ */
+bool runtime_create_user_from_json(json_t* json);
+
+/**
+ * @brief Remove admin user
+ *
+ * @param id   Username of the network user
+ * @param type USER_TYPE_INET for network user and USER_TYPE_UNIX for enabled accounts
+ *
+ * @return True if user was successfully removed
+ */
+bool runtime_remove_user(const char* id, enum user_type type);
+
+/**
+ * @brief Alter core MaxScale parameters from JSON
+ *
+ * @param new_json JSON defining the new core parameters
+ *
+ * @return True if the core parameters are valid and were successfully applied
+ */
+bool runtime_alter_maxscale_from_json(json_t* new_json);
 
 MXS_END_DECLS

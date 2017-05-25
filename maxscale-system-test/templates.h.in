@@ -1,0 +1,17 @@
+#ifndef TEMPLATES_H
+#define TEMPLATES_H
+
+static struct
+{
+    const char* test_name;
+    const char* test_template;
+} cnf_templates[] = {
+@CNF_TEMPLATES@ {NULL, NULL}};
+
+/** The default template to use */
+static const char * default_template = "replication";
+
+/** This is the working directory for all tests */
+static const char *test_dir = "@CMAKE_SOURCE_DIR@";
+
+#endif

@@ -1,0 +1,4 @@
+drop database if exists cachingdb;
+create database cachingdb;
+use cachingdb;
+create table caching (a INT, b TEXT, c FLOAT);

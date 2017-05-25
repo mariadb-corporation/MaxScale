@@ -19,3 +19,6 @@ do
     $maxscaledir/bin/maxadmin help >& /dev/null && break
     sleep 0.1
 done
+
+# Give MaxScale some time to settle
+sleep 1

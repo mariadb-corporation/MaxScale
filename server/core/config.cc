@@ -41,6 +41,9 @@
 #include <maxscale/utils.h>
 #include <maxscale/paths.h>
 #include <maxscale/json_api.h>
+#include <maxscale/http.hh>
+#include <maxscale/version.h>
+#include <maxscale/maxscale.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
@@ -56,9 +59,7 @@ const char CN_ADDRESS[]                       = "address";
 const char CN_ADMIN_AUTH[]                    = "admin_auth";
 const char CN_ADMIN_ENABLED[]                 = "admin_enabled";
 const char CN_ADMIN_HOST[]                    = "admin_host";
-const char CN_ADMIN_PASSWORD[]                = "admin_password";
 const char CN_ADMIN_PORT[]                    = "admin_port";
-const char CN_ADMIN_USER[]                    = "admin_user";
 const char CN_ADMIN_SSL_KEY[]                 = "admin_ssl_key";
 const char CN_ADMIN_SSL_CERT[]                = "admin_ssl_cert";
 const char CN_ADMIN_SSL_CA_CERT[]             = "admin_ssl_ca_cert";
@@ -79,6 +80,7 @@ const char CN_FILTERS[]                       = "filters";
 const char CN_FILTER[]                        = "filter";
 const char CN_GATEWAY[]                       = "gateway";
 const char CN_ID[]                            = "id";
+const char CN_INET[]                          = "inet";
 const char CN_LISTENER[]                      = "listener";
 const char CN_LISTENERS[]                     = "listeners";
 const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
@@ -127,7 +129,9 @@ const char CN_SSL_VERSION[]                   = "ssl_version";
 const char CN_STRIP_DB_ESC[]                  = "strip_db_esc";
 const char CN_THREADS[]                       = "threads";
 const char CN_TYPE[]                          = "type";
+const char CN_UNIX[]                          = "unix";
 const char CN_USER[]                          = "user";
+const char CN_USERS[]                         = "users";
 const char CN_VERSION_STRING[]                = "version_string";
 const char CN_WEIGHTBY[]                      = "weightby";
 
@@ -1521,14 +1525,6 @@ handle_global_item(const char *name, const char *value)
             MXS_FREE(v);
         }
     }
-    else if (strcmp(name, CN_ADMIN_USER) == 0)
-    {
-        strcpy(gateway.admin_user, value);
-    }
-    else if (strcmp(name, CN_ADMIN_PASSWORD) == 0)
-    {
-        strcpy(gateway.admin_password, value);
-    }
     else if (strcmp(name, CN_ADMIN_PORT) == 0)
     {
         gateway.admin_port = atoi(value);
@@ -1781,8 +1777,6 @@ global_defaults()
     gateway.admin_auth = false;
     gateway.admin_enabled = true;
     strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
-    strcpy(gateway.admin_user, INET_DEFAULT_USERNAME);
-    strcpy(gateway.admin_password, INET_DEFAULT_PASSWORD);
     gateway.admin_ssl_key[0] = '\0';
     gateway.admin_ssl_cert[0] = '\0';
     gateway.admin_ssl_ca_cert[0] = '\0';
@@ -3861,21 +3855,50 @@ int config_parse_server_list(const char *servers, char ***output_array)
     return output_ind;
 }
 
-json_t* config_paths_to_json(const char* host)
+json_t* config_maxscale_to_json(const char* host)
 {
+    json_t* param = json_object();
+    json_object_set_new(param, "libdir", json_string(get_libdir()));
+    json_object_set_new(param, "datadir", json_string(get_datadir()));
+    json_object_set_new(param, "process_datadir", json_string(get_process_datadir()));
+    json_object_set_new(param, "cachedir", json_string(get_cachedir()));
+    json_object_set_new(param, "configdir", json_string(get_configdir()));
+    json_object_set_new(param, "config_persistdir", json_string(get_config_persistdir()));
+    json_object_set_new(param, "module_configdir", json_string(get_module_configdir()));
+    json_object_set_new(param, "piddir", json_string(get_piddir()));
+    json_object_set_new(param, "logdir", json_string(get_logdir()));
+    json_object_set_new(param, "langdir", json_string(get_langdir()));
+    json_object_set_new(param, "execdir", json_string(get_execdir()));
+    json_object_set_new(param, "connector_plugindir", json_string(get_connector_plugindir()));
+    json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
+
+    MXS_CONFIG* cnf = config_get_global_options();
+
+    json_object_set_new(param, CN_AUTH_CONNECT_TIMEOUT, json_integer(cnf->auth_conn_timeout));
+    json_object_set_new(param, CN_AUTH_READ_TIMEOUT, json_integer(cnf->auth_read_timeout));
+    json_object_set_new(param, CN_AUTH_WRITE_TIMEOUT, json_integer(cnf->auth_write_timeout));
+    json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
+    json_object_set_new(param, CN_ADMIN_AUTH, json_boolean(cnf->admin_auth));
+    json_object_set_new(param, CN_ADMIN_ENABLED, json_boolean(cnf->admin_enabled));
+    json_object_set_new(param, CN_ADMIN_HOST, json_string(cnf->admin_host));
+    json_object_set_new(param, CN_ADMIN_PORT, json_integer(cnf->admin_port));
+    json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
+    json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
+    json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
+
+    json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
+
+    if (cnf->qc_args)
+    {
+        json_object_set_new(param, CN_QUERY_CLASSIFIER_ARGS, json_string(cnf->qc_args));
+    }
+
     json_t* attr = json_object();
-    json_object_set_new(attr, "libdir", json_string(get_libdir()));
-    json_object_set_new(attr, "datadir", json_string(get_datadir()));
-    json_object_set_new(attr, "process_datadir", json_string(get_process_datadir()));
-    json_object_set_new(attr, "cachedir", json_string(get_cachedir()));
-    json_object_set_new(attr, "configdir", json_string(get_configdir()));
-    json_object_set_new(attr, "config_persistdir", json_string(get_config_persistdir()));
-    json_object_set_new(attr, "module_configdir", json_string(get_module_configdir()));
-    json_object_set_new(attr, "piddir", json_string(get_piddir()));
-    json_object_set_new(attr, "logdir", json_string(get_logdir()));
-    json_object_set_new(attr, "langdir", json_string(get_langdir()));
-    json_object_set_new(attr, "execdir", json_string(get_execdir()));
-    json_object_set_new(attr, "connector_plugindir", json_string(get_connector_plugindir()));
+    json_object_set_new(attr, CN_PARAMETERS, param);
+    json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
+    json_object_set_new(attr, "commit", json_string(MAXSCALE_COMMIT));
+    json_object_set_new(attr, "started_at", json_string(http_to_date(maxscale_started()).c_str()));
+    json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
 
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
@@ -3883,4 +3906,69 @@ json_t* config_paths_to_json(const char* host)
     json_object_set_new(obj, CN_TYPE, json_string(CN_MAXSCALE));
 
     return mxs_json_resource(host, MXS_JSON_API_MAXSCALE, obj);
+}
+
+/**
+ * Creates a global configuration at the location pointed by @c filename
+ *
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_global_config(const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        MXS_ERROR("Failed to open file '%s' when serializing global configuration: %d, %s",
+                  filename, errno, mxs_strerror(errno));
+        return false;
+    }
+
+    dprintf(file, "[maxscale]\n");
+    dprintf(file, "%s=%u\n", CN_AUTH_CONNECT_TIMEOUT, gateway.auth_conn_timeout);
+    dprintf(file, "%s=%u\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout);
+    dprintf(file, "%s=%u\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
+    dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
+
+    close(file);
+
+    return true;
+}
+
+bool config_global_serialize()
+{
+    static const char* GLOBAL_CONFIG_NAME = "global-options";
+    bool rval = false;
+    char filename[PATH_MAX];
+
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             GLOBAL_CONFIG_NAME);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove temporary global configuration at '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
+    else if (create_global_config(filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
+                      filename, errno, mxs_strerror(errno));
+        }
+    }
+
+    return rval;
 }

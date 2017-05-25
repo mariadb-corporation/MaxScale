@@ -124,9 +124,11 @@ char* json_new_schema_from_table(TABLE_MAP *map)
 
     for (uint64_t i = 0; i < map->columns; i++)
     {
-        json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                              create->column_names[i], "type",
-                                              column_type_to_avro_type(map->column_types[i])));
+        json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
+                                              "name", create->column_names[i],
+                                              "type", column_type_to_avro_type(map->column_types[i]),
+                                              "real_type", create->column_types[i],
+                                              "length", create->column_lengths[i]));
     }
     json_object_set_new(schema, "fields", array);
     char* rval = json_dumps(schema, JSON_PRESERVE_ORDER);
@@ -172,8 +174,10 @@ bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
         {
             int array_size = json_array_size(arr);
             table->column_names = (char**)MXS_MALLOC(sizeof(char*) * (array_size));
+            table->column_types = (char**)MXS_MALLOC(sizeof(char*) * (array_size));
+            table->column_lengths = (int*)MXS_MALLOC(sizeof(int) * (array_size));
 
-            if (table->column_names)
+            if (table->column_names && table->column_types && table->column_lengths)
             {
                 int columns = 0;
                 rval = true;
@@ -184,6 +188,28 @@ bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
 
                     if (json_is_object(val))
                     {
+                        json_t* value;
+
+                        if ((value = json_object_get(val, "real_type")) && json_is_string(value))
+                        {
+                            table->column_types[columns] = MXS_STRDUP_A(json_string_value(value));
+                        }
+                        else
+                        {
+                            table->column_types[columns] = MXS_STRDUP_A("unknown");
+                            MXS_WARNING("No \"real_type\" value defined. Treating as unknown type field.");
+                        }
+
+                        if ((value = json_object_get(val, "length")) && json_is_integer(value))
+                        {
+                            table->column_lengths[columns] = json_integer_value(value);
+                        }
+                        else
+                        {
+                            table->column_lengths[columns] = -1;
+                            MXS_WARNING("No \"length\" value defined. Treating as default length field.");
+                        }
+
                         json_t *name = json_object_get(val, "name");
                         if (name && json_is_string(name))
                         {
@@ -489,7 +515,6 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
         dest[bytes] = '\0';
 
         make_valid_avro_identifier(dest);
-        ptr = next_field_definition(ptr);
     }
     else
     {
@@ -499,55 +524,97 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
     return ptr;
 }
 
+int extract_type_length(const char* ptr, char *dest)
+{
+    /** Skip any leading whitespace */
+    while (isspace(*ptr) || *ptr == '`')
+    {
+        ptr++;
+    }
+
+    /** The field type definition starts here */
+    const char *start = ptr;
+
+    /** Skip characters until we either hit a whitespace character or the start
+     * of the length definition. */
+    while (!isspace(*ptr) && *ptr != '(')
+    {
+        ptr++;
+    }
+
+    /** Store type */
+    int typelen = ptr - start;
+    memcpy(dest, start, typelen);
+    dest[typelen] = '\0';
+
+    /** Skip whitespace */
+    while (isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    int rval = -1; // No length defined
+
+    /** Start of length definition */
+    if (*ptr == '(')
+    {
+        ptr++;
+        char *end;
+        int val = strtol(ptr, &end, 10);
+
+        if (*end == ')')
+        {
+            rval = val;
+        }
+    }
+
+    return rval;
+}
+
+int count_columns(const char* ptr)
+{
+    int i = 2;
+
+    while ((ptr = strchr(ptr, ',')))
+    {
+        ptr++;
+        i++;
+    }
+
+    return i;
+}
+
 /**
  * Process a table definition into an array of column names
  * @param nameptr table definition
  * @return Number of processed columns or -1 on error
  */
-static int process_column_definition(const char *nameptr, char*** dest)
+static int process_column_definition(const char *nameptr, char*** dest, char*** dest_types, int** dest_lens)
 {
-    /** Process columns in groups of 8 */
-    size_t chunks = 1;
-    const size_t chunk_size = 8;
-    int i = 0;
-    char **names = MXS_MALLOC(sizeof(char*) * (chunks * chunk_size + 1));
+    int n = count_columns(nameptr);
+    *dest = MXS_MALLOC(sizeof(char*) * n);
+    *dest_types = MXS_MALLOC(sizeof(char*) * n);
+    *dest_lens = MXS_MALLOC(sizeof(int) * n);
 
-    if (names == NULL)
-    {
-        return -1;
-    }
-
+    char **names = *dest;
+    char **types = *dest_types;
+    int *lengths = *dest_lens;
     char colname[512];
+    int i = 0;
 
     while ((nameptr = extract_field_name(nameptr, colname, sizeof(colname))))
     {
-        if (i >= chunks * chunk_size)
-        {
-            char **tmp = MXS_REALLOC(names, (++chunks * chunk_size + 1) * sizeof(char*));
-            if (tmp == NULL)
-            {
-                for (int x = 0; x < i; x++)
-                {
-                    MXS_FREE(names[x]);
-                }
-                MXS_FREE(names);
-                return -1;
-            }
-            names = tmp;
-        }
+        ss_dassert(i < n);
+        char type[100] = "";
+        int len = extract_type_length(nameptr, type);
+        nameptr = next_field_definition(nameptr);
+        fix_reserved_word(colname);
 
-        if ((names[i++] = MXS_STRDUP(colname)) == NULL)
-        {
-            for (int x = 0; x < i; x++)
-            {
-                MXS_FREE(names[x]);
-            }
-            MXS_FREE(names);
-            return -1;
-        }
+        lengths[i] = len;
+        types[i] = MXS_STRDUP_A(type);
+        names[i] = MXS_STRDUP_A(colname);
+        i++;
     }
-
-    *dest = names;
 
     return i;
 }
@@ -601,7 +668,7 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
     char database[MYSQL_DATABASE_MAXLEN + 1];
     const char *db = event_db;
 
-    MXS_DEBUG("Create table statement: %.*s", stmt_len, statement_sql);
+    MXS_INFO("Create table: %s", sql);
 
     if (!get_table_name(sql, table))
     {
@@ -621,8 +688,10 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
         db = database;
     }
 
+    int* lengths = NULL;
     char **names = NULL;
-    int n_columns = process_column_definition(statement_sql, &names);
+    char **types = NULL;
+    int n_columns = process_column_definition(statement_sql, &names, &types, &lengths);
     ss_dassert(n_columns > 0);
 
     /** We have appear to have a valid CREATE TABLE statement */
@@ -634,6 +703,8 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
             rval->version = 1;
             rval->was_used = false;
             rval->column_names = names;
+            rval->column_lengths = lengths;
+            rval->column_types = types;
             rval->columns = n_columns;
             rval->database = MXS_STRDUP(db);
             rval->table = MXS_STRDUP(table);
@@ -675,8 +746,11 @@ void table_create_free(TABLE_CREATE* value)
         for (uint64_t i = 0; i < value->columns; i++)
         {
             MXS_FREE(value->column_names[i]);
+            MXS_FREE(value->column_types[i]);
         }
         MXS_FREE(value->column_names);
+        MXS_FREE(value->column_types);
+        MXS_FREE(value->column_lengths);
         MXS_FREE(value->table);
         MXS_FREE(value->database);
         MXS_FREE(value);
@@ -792,6 +866,26 @@ void make_avro_token(char* dest, const char* src, int length)
 
     memcpy(dest, src, length);
     dest[length] = '\0';
+    fix_reserved_word(dest);
+}
+
+int get_column_index(TABLE_CREATE *create, const char *tok)
+{
+    int idx = -1;
+    char safe_tok[strlen(tok) + 2];
+    strcpy(safe_tok, tok);
+    fix_reserved_word(safe_tok);
+
+    for (int x = 0; x < create->columns; x++)
+    {
+        if (strcasecmp(create->column_names[x], tok) == 0)
+        {
+            idx = x;
+            break;
+        }
+    }
+
+    return idx;
 }
 
 bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
@@ -805,7 +899,7 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
 
         if (tok)
         {
-            MXS_DEBUG("Altering table %.*s\n", len, tok);
+            MXS_INFO("Alter table '%.*s'; %.*s\n", len, tok, (int)(end - sql), sql);
             def = tok + len;
         }
 
@@ -844,27 +938,45 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 {
                     tok = get_tok(tok + len, &len, end);
 
-                    MXS_FREE(create->column_names[create->columns - 1]);
-                    char ** tmp = MXS_REALLOC(create->column_names, sizeof(char*) * create->columns - 1);
-                    ss_dassert(tmp);
+                    int idx = get_column_index(create, tok);
 
-                    if (tmp == NULL)
+                    if (idx != -1)
                     {
-                        return false;
+                        MXS_FREE(create->column_names[idx]);
+                        for (int i = idx; i < (int)create->columns - 1; i++)
+                        {
+                            create->column_names[i] = create->column_names[i + 1];
+                        }
+
+                        char ** tmp = realloc(create->column_names, sizeof(char*) * create->columns - 1);
+                        ss_dassert(tmp);
+
+                        if (tmp == NULL)
+                        {
+                            return false;
+                        }
+
+                        create->column_names = tmp;
+                        create->columns--;
+                        updates++;
                     }
 
-                    create->column_names = tmp;
-                    create->columns--;
-                    updates++;
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
                 else if (tok_eq(ptok, "change", plen) && tok_eq(tok, "column", len))
                 {
                     tok = get_tok(tok + len, &len, end);
-                    MXS_FREE(create->column_names[create->columns - 1]);
-                    create->column_names[create->columns - 1] = strndup(tok, len);
-                    updates++;
+
+                    int idx = get_column_index(create, tok);
+
+                    if (idx != -1)
+                    {
+                        MXS_FREE(create->column_names[idx]);
+                        create->column_names[idx] = strndup(tok, len);
+                        updates++;
+                    }
+
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
@@ -975,7 +1087,6 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
         map->id = table_id;
         map->version = create->version;
         map->flags = flags;
-        ss_dassert(column_count == create->columns);
         map->columns = column_count;
         map->column_types = MXS_MALLOC(column_count);
         /** Allocate at least one byte for the metadata */

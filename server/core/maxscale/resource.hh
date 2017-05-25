@@ -20,8 +20,8 @@
 #include <deque>
 
 #include <maxscale/server.h>
+#include <maxscale/http.hh>
 
-#include "http.hh"
 #include "httprequest.hh"
 #include "httpresponse.hh"
 #include "monitor.h"

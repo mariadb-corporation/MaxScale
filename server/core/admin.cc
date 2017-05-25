@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <sys/stat.h>
 
 #include <maxscale/atomic.h>
 #include <maxscale/debug.h>
@@ -31,10 +32,10 @@
 #include <maxscale/utils.h>
 #include <maxscale/config.h>
 #include <maxscale/hk_heartbeat.h>
-#include <sys/stat.h>
+#include <maxscale/http.hh>
+#include <maxscale/adminusers.h>
 
 #include "maxscale/resource.hh"
-#include "maxscale/http.hh"
 
 using std::string;
 using std::ifstream;
@@ -150,26 +151,33 @@ void close_client(void *cls,
     delete client;
 }
 
-bool do_auth(MHD_Connection *connection)
+bool do_auth(MHD_Connection *connection, const char* url)
 {
-    const char *admin_user = config_get_global_options()->admin_user;
-    const char *admin_pw = config_get_global_options()->admin_password;
-    bool admin_auth = config_get_global_options()->admin_auth;
-
-    char* pw = NULL;
-    char* user = MHD_basic_auth_get_username_password(connection, &pw);
     bool rval = true;
 
-    if (admin_auth && (!user || !pw || strcmp(user, admin_user) || strcmp(pw, admin_pw)))
+    if (config_get_global_options()->admin_auth)
     {
-        rval = false;
-        static char error_resp[] = "Access denied\r\n";
-        MHD_Response *resp =
-            MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
-                                            MHD_RESPMEM_PERSISTENT);
+        char* pw = NULL;
+        char* user = MHD_basic_auth_get_username_password(connection, &pw);
 
-        MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
-        MHD_destroy_response(resp);
+        if (!user || !pw || !admin_verify_inet_user(user, pw))
+        {
+            MXS_WARNING("Authentication failed for '%s', %s. Request: %s", user ? user : "",
+                        pw ? "using password" : "no password", url);
+            rval = false;
+            static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
+            MHD_Response *resp =
+                MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
+                                                MHD_RESPMEM_PERSISTENT);
+
+            MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
+            MHD_destroy_response(resp);
+        }
+        else
+        {
+            MXS_INFO("Accept authentication from '%s', %s. Request: %s", user ? user : "",
+                     pw ? "using password" : "no password", url);
+        }
     }
 
     return rval;
@@ -185,7 +193,7 @@ int handle_client(void *cls,
                   void **con_cls)
 
 {
-    if (!do_auth(connection))
+    if (!do_auth(connection, url))
     {
         return MHD_YES;
     }

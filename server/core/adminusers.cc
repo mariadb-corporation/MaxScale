@@ -11,23 +11,25 @@
  * Public License.
  */
 #include <maxscale/cdefs.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
 #include <crypt.h>
+#include <sys/stat.h>
+#include <string>
+
 #include <maxscale/users.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
-#include <sys/stat.h>
+#include <maxscale/json_api.h>
 
 /**
  * @file adminusers.c - Administration user account management
  */
-
-static void  initialise();
 
 static USERS *loadLinuxUsers();
 static USERS *loadInetUsers();
@@ -42,20 +44,6 @@ static bool admin_search_user(USERS *users, const char *uname);
 
 static USERS *linux_users = NULL;
 static USERS *inet_users = NULL;
-static int   admin_init = 0;
-
-static const char *ADMIN_ERR_NOMEM            = "Out of memory";
-static const char *ADMIN_ERR_FILEOPEN         = "Unable to create password file";
-static const char *ADMIN_ERR_DUPLICATE        = "Duplicate username specified";
-static const char *ADMIN_ERR_USERNOTFOUND     = "User not found";
-static const char *ADMIN_ERR_AUTHENTICATION   = "Authentication failed";
-static const char *ADMIN_ERR_FILEAPPEND       = "Unable to append to password file";
-static const char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
-static const char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
-static const char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
-static const char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbidden";
-static const char *ADMIN_ERR_DELROOT          = "Deleting the default admin user is forbidden";
-static const char *ADMIN_SUCCESS              = NULL;
 
 static const int LINELEN = 80;
 
@@ -65,15 +53,8 @@ static const char INET_USERS_FILE_NAME[]  = "passwd";
 /**
  * Admin Users initialisation
  */
-static void
-initialise()
+void admin_users_init()
 {
-    if (admin_init)
-    {
-        return;
-    }
-
-    admin_init = 1;
     linux_users = loadLinuxUsers();
     inet_users = loadInetUsers();
 }
@@ -331,6 +312,78 @@ void dcb_print_users(DCB *dcb, const char* heading, USERS *users)
     dcb_printf(dcb, "%s", "\n");
 }
 
+static json_t* admin_user_json_data(const char* host, const char* user, enum user_type user_type)
+{
+    ss_dassert(user_type != USER_TYPE_ALL);
+    const char* type = user_type == USER_TYPE_INET ? CN_INET : CN_UNIX;
+
+    json_t* entry = json_object();
+    json_object_set_new(entry, CN_ID, json_string(user));
+    json_object_set_new(entry, CN_TYPE, json_string(type));
+
+    std::string self = MXS_JSON_API_USERS;
+    self += type;
+    json_object_set_new(entry, CN_RELATIONSHIPS, mxs_json_self_link(host, self.c_str(), user));
+
+    return entry;
+}
+
+static void user_types_to_json(USERS* users, json_t* arr, const char* host, enum user_type type)
+{
+    const char* user;
+    HASHITERATOR *iter = hashtable_iterator(users->data);
+
+    while ((user = (const char*)hashtable_next(iter)))
+    {
+        json_array_append_new(arr, admin_user_json_data(host, user, type));
+    }
+
+    hashtable_iterator_free(iter);
+}
+
+static std::string path_from_type(enum user_type type)
+{
+    std::string path = MXS_JSON_API_USERS;
+
+    if (type == USER_TYPE_INET)
+    {
+        path += CN_INET;
+    }
+    else if (type == USER_TYPE_UNIX)
+    {
+        path += CN_UNIX;
+    }
+
+    return path;
+}
+
+json_t* admin_user_to_json(const char* host, const char* user, enum user_type type)
+{
+    std::string path = path_from_type(type);
+    path += "/";
+    path += user;
+
+    return mxs_json_resource(host, path.c_str(), admin_user_json_data(host, user, type));
+}
+
+json_t* admin_all_users_to_json(const char* host, enum user_type type)
+{
+    json_t* arr = json_array();
+    std::string path = path_from_type(type);
+
+    if (inet_users && (type == USER_TYPE_ALL || type == USER_TYPE_INET))
+    {
+        user_types_to_json(inet_users, arr, host, USER_TYPE_INET);
+    }
+
+    if (linux_users && (type == USER_TYPE_ALL || type == USER_TYPE_UNIX))
+    {
+        user_types_to_json(linux_users, arr, host, USER_TYPE_UNIX);
+    }
+
+    return mxs_json_resource(host, path.c_str(), arr);
+}
+
 /**
  * Load the admin users
  *
@@ -345,7 +398,6 @@ loadUsers(const char *fname)
     char  uname[80];
     int added_users = 0;
 
-    initialise();
     snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
     if ((fp = fopen(path, "r")) == NULL)
     {
@@ -423,8 +475,6 @@ static USERS *loadInetUsers()
  */
 const char *admin_enable_linux_account(const char *uname)
 {
-    initialise();
-
     return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL);
 }
 
@@ -437,8 +487,6 @@ const char *admin_enable_linux_account(const char *uname)
  */
 const char* admin_disable_linux_account(const char* uname)
 {
-    initialise();
-
     return admin_remove_user(linux_users, LINUX_USERS_FILE_NAME, uname, NULL);
 }
 
@@ -451,8 +499,6 @@ const char* admin_disable_linux_account(const char* uname)
  */
 bool admin_linux_account_enabled(const char *uname)
 {
-    initialise();
-
     bool rv = false;
 
     if (strcmp(uname, DEFAULT_ADMIN_USER) == 0)
@@ -477,8 +523,6 @@ bool admin_linux_account_enabled(const char *uname)
  */
 const char *admin_add_inet_user(const char *uname, const char* password)
 {
-    initialise();
-
     struct crypt_data cdata;
     cdata.initialized = 0;
     char *cpassword = crypt_r(password, ADMIN_SALT, &cdata);
@@ -496,8 +540,6 @@ const char *admin_add_inet_user(const char *uname, const char* password)
  */
 const char* admin_remove_inet_user(const char* uname, const char *password)
 {
-    initialise();
-
     return admin_remove_user(inet_users, INET_USERS_FILE_NAME, uname, password);
 }
 
@@ -510,8 +552,6 @@ const char* admin_remove_inet_user(const char* uname, const char *password)
  */
 bool admin_inet_user_exists(const char *uname)
 {
-    initialise();
-
     bool rv = false;
 
     if (inet_users)
@@ -534,8 +574,6 @@ bool
 admin_verify_inet_user(const char *username, const char *password)
 {
     bool rv = false;
-
-    initialise();
 
     if (inet_users)
     {

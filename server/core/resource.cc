@@ -21,6 +21,8 @@
 #include <maxscale/spinlock.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/http.hh>
+#include <maxscale/adminusers.h>
 
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
@@ -31,7 +33,6 @@
 #include "maxscale/config_runtime.h"
 #include "maxscale/modules.h"
 #include "maxscale/worker.h"
-#include "maxscale/http.hh"
 
 using std::list;
 using std::map;
@@ -156,7 +157,9 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             (path == ":server" && server_find_by_unique_name(target.c_str())) ||
             (path == ":filter" && filter_def_find(target.c_str())) ||
             (path == ":monitor" && monitor_find(target.c_str())) ||
-            (path == ":module" && get_module(target.c_str(), NULL)))
+            (path == ":module" && get_module(target.c_str(), NULL)) ||
+            (path == ":inetuser" && admin_inet_user_exists(target.c_str())) ||
+            (path == ":unixuser" && admin_linux_account_enabled(target.c_str())))
         {
             rval = true;
         }
@@ -223,7 +226,7 @@ HttpResponse cb_create_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_server(const HttpRequest& request)
@@ -240,7 +243,7 @@ HttpResponse cb_alter_server(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_create_monitor(const HttpRequest& request)
@@ -252,7 +255,7 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_create_service_listener(const HttpRequest& request)
@@ -265,7 +268,7 @@ HttpResponse cb_create_service_listener(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_monitor(const HttpRequest& request)
@@ -282,7 +285,7 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_service(const HttpRequest& request)
@@ -299,7 +302,7 @@ HttpResponse cb_alter_service(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_logs(const HttpRequest& request)
@@ -311,7 +314,7 @@ HttpResponse cb_alter_logs(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_delete_server(const HttpRequest& request)
@@ -323,7 +326,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_delete_monitor(const HttpRequest& request)
@@ -335,7 +338,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN);
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_all_servers(const HttpRequest& request)
@@ -352,7 +355,7 @@ HttpResponse cb_get_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_all_services(const HttpRequest& request)
@@ -369,7 +372,7 @@ HttpResponse cb_get_service(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_get_service_listeners(const HttpRequest& request)
@@ -392,7 +395,7 @@ HttpResponse cb_get_filter(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_all_monitors(const HttpRequest& request)
@@ -409,7 +412,7 @@ HttpResponse cb_get_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_all_sessions(const HttpRequest& request)
@@ -434,7 +437,19 @@ HttpResponse cb_get_session(const HttpRequest& request)
 
 HttpResponse cb_maxscale(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, config_paths_to_json(request.host()));
+    return HttpResponse(MHD_HTTP_OK, config_maxscale_to_json(request.host()));
+}
+
+HttpResponse cb_alter_maxscale(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json && runtime_alter_maxscale_from_json(json))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
 HttpResponse cb_logs(const HttpRequest& request)
@@ -482,6 +497,59 @@ HttpResponse cb_module(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, module_to_json(module, request.host()));
 }
 
+HttpResponse cb_all_users(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_ALL));
+}
+
+HttpResponse cb_all_inet_users(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_INET));
+}
+
+HttpResponse cb_all_unix_users(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_UNIX));
+}
+
+HttpResponse cb_inet_user(const HttpRequest& request)
+{
+    string user = request.uri_part(2);
+    return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str(), USER_TYPE_INET));
+}
+
+HttpResponse cb_unix_user(const HttpRequest& request)
+{
+    string user = request.uri_part(2);
+    return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str(), USER_TYPE_UNIX));
+}
+
+HttpResponse cb_create_user(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (runtime_create_user_from_json(json))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_delete_user(const HttpRequest& request)
+{
+    string user = request.last_uri_part();
+    string type = request.uri_part(1);
+
+    if ((type == CN_INET && runtime_remove_user(user.c_str(), USER_TYPE_INET)) ||
+        (type == CN_UNIX && runtime_remove_user(user.c_str(), USER_TYPE_UNIX)))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_send_ok(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK);
@@ -526,18 +594,27 @@ public:
         m_get.push_back(SResource(new Resource(cb_all_modules, 2, "maxscale", "modules")));
         m_get.push_back(SResource(new Resource(cb_module, 3, "maxscale", "modules", ":module")));
 
+        m_get.push_back(SResource(new Resource(cb_all_users, 1, "users")));
+        m_get.push_back(SResource(new Resource(cb_all_inet_users, 2, "users", "inet")));
+        m_get.push_back(SResource(new Resource(cb_all_unix_users, 2, "users", "unix")));
+        m_get.push_back(SResource(new Resource(cb_inet_user, 3, "users", "inet", ":inetuser")));
+        m_get.push_back(SResource(new Resource(cb_unix_user, 3, "users", "unix", ":unixuser")));
+
         /** Create new resources */
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
         m_post.push_back(SResource(new Resource(cb_create_service_listener, 3,
                                                 "services", ":service", "listeners")));
+        m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "inet")));
+        m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "unix")));
 
         /** Update resources */
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
         m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
         m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
         m_put.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
+        m_put.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
 
         /** Change resource states */
         m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));
@@ -547,6 +624,8 @@ public:
 
         m_delete.push_back(SResource(new Resource(cb_delete_server, 2, "servers", ":server")));
         m_delete.push_back(SResource(new Resource(cb_delete_monitor, 2, "monitors", ":monitor")));
+        m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "inet", ":inetuser")));
+        m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "unix", ":unixuser")));
     }
 
     ~RootResource()

@@ -18,6 +18,10 @@ done
 # If it wasn't dead before, now it is
 pgrep maxscale && pkill -9 maxscale
 
+# Remove created users
+rm $maxscaledir/passwd
+rm $maxscaledir/maxadmin-users
+
 rm -r $maxscaledir/lib/maxscale
 rm -r $maxscaledir/cache/maxscale
 rm -r $maxscaledir/run/maxscale

@@ -109,7 +109,7 @@ public:
 
     void execute(maxscale::Worker& worker)
     {
-        MXS_SESSION* target = worker.find_session(m_target_id);
+        MXS_SESSION* target = worker.session_registry().lookup(m_target_id);
         if (target && issuer_can_kill_target(m_issuer_user, m_issuer_host, target))
         {
             poll_fake_hangup_event(target->client_dcb);

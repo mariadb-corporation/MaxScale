@@ -133,7 +133,7 @@ bool mxs_worker_register_session(MXS_SESSION* session);
  * @param id Which id to remove.
  * @return The removed session or NULL if not found.
  */
-MXS_SESSION* mxs_worker_deregister_session(uint64_t id);
+bool mxs_worker_deregister_session(uint64_t id);
 
 /**
  * Find a session in the current worker's session container.

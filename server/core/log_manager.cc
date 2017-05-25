@@ -3029,6 +3029,11 @@ json_t* mxs_logs_to_json(const char* host)
     json_object_set_new(throttling, "suppress_ms", json_integer(log_config.throttling.suppress_ms));
     json_object_set_new(throttling, "window_ms", json_integer(log_config.throttling.window_ms));
     json_object_set_new(param, "throttling", throttling);
+    json_object_set_new(param, "log_warning", json_boolean(mxs_log_priority_is_enabled(LOG_WARNING)));
+    json_object_set_new(param, "log_notice", json_boolean(mxs_log_priority_is_enabled(LOG_NOTICE)));
+    json_object_set_new(param, "log_info", json_boolean(mxs_log_priority_is_enabled(LOG_INFO)));
+    json_object_set_new(param, "log_debug", json_boolean(mxs_log_priority_is_enabled(LOG_DEBUG)));
+    json_object_set_new(param, "log_to_shm", json_boolean(config_get_global_options()->log_to_shm));
 
     json_t* attr = json_object();
     json_object_set_new(attr, CN_PARAMETERS, param);

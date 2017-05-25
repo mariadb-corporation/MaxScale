@@ -23,8 +23,7 @@
 
 #include <maxscale/jansson.hh>
 #include <maxscale/utils.hh>
-
-#include "http.hh"
+#include <maxscale/http.hh>
 
 // The API version part of the URL
 #define MXS_REST_API_VERSION "v1"

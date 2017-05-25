@@ -1,0 +1,2 @@
+rule test2 deny wildcard on_queries select
+users %@% match all rules test2

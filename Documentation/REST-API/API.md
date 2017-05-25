@@ -26,13 +26,13 @@ of the comment and extend to the end of the current line.
 The MaxScale REST API provides the following resources. All resources conform to
 the [JSON API](http://jsonapi.org/format/) specification.
 
-- [/maxscale](Resources-MaxScale.md)
-- [/services](Resources-Service.md)
-- [/servers](Resources-Server.md)
-- [/filters](Resources-Filter.md)
-- [/monitors](Resources-Monitor.md)
-- [/sessions](Resources-Session.md)
-- [/users](Resources-User.md)
+- [maxscale](Resources-MaxScale.md)
+- [services](Resources-Service.md)
+- [servers](Resources-Server.md)
+- [filters](Resources-Filter.md)
+- [monitors](Resources-Monitor.md)
+- [sessions](Resources-Session.md)
+- [users](Resources-User.md)
 
 ### Resource Relationships
 
@@ -81,8 +81,7 @@ in addition to the _self_ link.
 
 ## Common Request Parameters
 
-Most of the resources that support GET also support the following
-parameters. See the resource documentation for a list of supported request
+All the resources that return JSON content also support the following
 parameters.
 
 - `pretty`
@@ -159,9 +158,13 @@ The value of this header must be a date value in the
 #### X-HTTP-Method-Override
 
 Some clients only support GET and PUT requests. By providing the string value of
-the intended method in the `X-HTTP-Method-Override` header, a client can perform
-a POST, PATCH or DELETE request with the PUT method
+the intended method in the `X-HTTP-Method-Override` header, a client can, for
+example, perform a POST, PATCH or DELETE request with the PUT method
 (e.g. `X-HTTP-Method-Override: PATCH`).
+
+If this header is defined in the request, the current method of the request is
+replaced with the one in the header. The HTTP method must be in uppercase and it
+must be one of the methods that the requested resource supports.
 
 ### Response Headers
 
@@ -264,13 +267,14 @@ complete the request.
 ### 4xx Client Error
 
 The 4xx class of status code is when the client seems to have erred. Except when
-responding to a HEAD request, the body of the response contains a JSON
-representation of the error in the following format.
+responding to a HEAD request, the body of the response *MAY* contains a JSON
+representation of the error.
 
-```
+```javascript
 {
-    "error": "Method not supported",
-    "description": "The `/service` resource does not support POST."
+    "error": {
+        "detail" : "The new `/server/` resource is missing the `port` parameter"
+    }
 }
 ```
 

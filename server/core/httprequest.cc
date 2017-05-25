@@ -20,7 +20,8 @@
 using std::string;
 using std::deque;
 
-#define HTTP_HOST_HEADER "Host"
+#define HTTP_HOST_HEADER     "Host"
+#define HTTP_METHOD_OVERRIDE "X-HTTP-Method-Override"
 
 const std::string HttpRequest::HTTP_PREFIX = "http://";
 const std::string HttpRequest::HTTPS_PREFIX = "https://";
@@ -94,6 +95,13 @@ HttpRequest::HttpRequest(struct MHD_Connection *connection, string url, string m
 
     m_hostname = mxs_admin_https_enabled() ? HttpRequest::HTTPS_PREFIX : HttpRequest::HTTP_PREFIX;
     m_hostname += get_header(HTTP_HOST_HEADER);
+
+    string method_override = get_header(HTTP_METHOD_OVERRIDE);
+
+    if (method_override.length())
+    {
+        m_verb = method_override;
+    }
 
     if (m_hostname[m_hostname.size() - 1] != '/')
     {

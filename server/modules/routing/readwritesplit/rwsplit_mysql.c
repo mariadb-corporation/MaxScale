@@ -13,7 +13,6 @@
 
 #include "readwritesplit.h"
 
-#include <my_config.h>
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
@@ -162,12 +161,12 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
 {
     if (rses->load_data_state == LOAD_DATA_INACTIVE)
     {
-        unsigned char command = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
-        char *qtypestr = qc_typemask_to_string(qtype);
-
-        char *sql;
+        uint8_t *packet = GWBUF_DATA(querybuf);
+        unsigned char command = packet[4];
         int len = 0;
+        char* sql;
         modutil_extract_SQL(querybuf, &sql, &len);
+        char *qtypestr = qc_typemask_to_string(qtype);
 
         if (len > RWSPLIT_TRACE_MSG_LEN)
         {
@@ -181,9 +180,9 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
         const char *hint = querybuf->hint == NULL ? "" : ", Hint:";
         const char *hint_type = querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type);
 
-        MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %.*s%s %s",
-                 autocommit, transaction, STRPACKETTYPE(command), querytype, len,
-                 sql, hint, hint_type);
+        MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, type: %s, stmt: %.*s%s %s",
+                 autocommit, transaction, command, STRPACKETTYPE(command),
+                 querytype, len, sql, hint, hint_type);
 
         MXS_FREE(qtypestr);
     }

@@ -149,4 +149,11 @@ void config_add_module_params_json(const MXS_MODULE* mod,
  */
 void fix_section_name(char *section);
 
+/**
+ * @brief Serialize global options
+ *
+ * @return True if options were serialized successfully
+ */
+bool config_global_serialize();
+
 MXS_END_DECLS

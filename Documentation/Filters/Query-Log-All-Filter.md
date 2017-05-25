@@ -6,7 +6,7 @@ The Query Log All (QLA) filter is a filter module for MariaDB MaxScale that is a
 
 ## Configuration
 
-The configuration block for the QLA filter requires the minimal filter options in it's section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
+The configuration block for the QLA filter requires the minimal filter options in its section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
 ```
 [MyLogFilter]
 type=filter
@@ -31,7 +31,7 @@ The QLA filter accepts the following options.
  case | Use case-sensitive matching
  extended | Use extended regular expression syntax (ERE)
 
-To use multiple filter options, list them in a comma-separated list. If no file settings are given, default will be used. Multiple file settings can be enabled simultaneously.
+To use multiple filter options, list them in a comma-separated list. If no options are given, default will be used. Multiple options can be enabled simultaneously.
 
 ```
 options=case,extended
@@ -53,7 +53,7 @@ The basename of the output file created for each session. A session index is add
 filebase=/tmp/SqlQueryLog
 ```
 
-The filebase may also be set as the filter, the mechanism to set the filebase via the filter option is superseded by the parameter. If both are set the parameter setting will be used and the filter option ignored.
+The filebase may also be set as the filter option, the mechanism to set the filebase via the filter option is superseded by the parameter. If both are set the parameter setting will be used and the filter option ignored.
 
 ### `match`
 
@@ -99,8 +99,7 @@ user=john
 
 ### `log_type`
 
-The type of log file to use. Parameter value is a comma separated list of the
-following values. The default value is _session_.
+The type of log file to use. The default value is _session_.
 
 |Value   | Description                    |
 |--------|--------------------------------|
@@ -108,7 +107,7 @@ following values. The default value is _session_.
 |unified |Use one file for all sessions   |
 
 ```
-log_type=session, unified
+log_type=session
 ```
 
 ### `log_data`

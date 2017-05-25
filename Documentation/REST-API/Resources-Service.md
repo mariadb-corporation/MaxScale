@@ -11,94 +11,218 @@ Get a single service. The _:name_ in the URI must be a valid service name with
 all whitespace replaced with hyphens. The service names are case-insensitive.
 
 ```
-GET /services/:name
+GET /v1/services/:name
 ```
 
 #### Response
 
-```
-Status: 200 OK
+`Status: 200 OK`
 
+```javascript
 {
-    "name": "My Service",
-    "router": "readwritesplit",
-    "router_options": {
-        "disable_sescmd_history": "true"
+    "links": {
+        "self": "http://localhost:8989/v1/services/Read-Connection-Router"
     },
-    "state": "started",
-    "total_connections": 10,
-    "current_connections": 2,
-    "started": "2016-08-29T12:52:31+03:00",
-    "filters": [
-        "/filters/Query-Logging-Filter"
-    ],
-    "servers": [
-        "/servers/db-serv-1",
-        "/servers/db-serv-2",
-        "/servers/db-serv-3"
-    ]
+    "data": {
+        "id": "Read-Connection-Router",
+        "type": "services",
+        "attributes": {
+            "router": "readconnroute",
+            "state": "Started",
+            "router_diagnostics": {
+                "connections": 0,
+                "current_connections": 1,
+                "queries": 0
+            },
+            "started": "Mon May 22 12:54:05 2017",
+            "total_connections": 1,
+            "connections": 1,
+            "parameters": { // Service parameters
+                "router_options": "master",
+                "user": "maxuser",
+                "password": "maxpwd",
+                "enable_root_user": false,
+                "max_retry_interval": 3600,
+                "max_connections": 0,
+                "connection_timeout": 0,
+                "auth_all_servers": false,
+                "strip_db_esc": true,
+                "localhost_match_wildcard_host": true,
+                "version_string": "",
+                "log_auth_warnings": true,
+                "retry_on_failure": true
+            },
+            "listeners": [ // Listeners that point to this service
+                {
+                    "attributes": {
+                        "parameters": {
+                            "port": 4008,
+                            "protocol": "MySQLClient",
+                            "authenticator": "MySQLAuth"
+                        }
+                    },
+                    "id": "Read-Connection-Listener",
+                    "type": "listeners"
+                }
+            ]
+        },
+        "relationships": {
+            "servers": {
+                "links": {
+                    "self": "http://localhost:8989/v1/servers/"
+                },
+                "data": [ // List of servers that this service uses
+                    {
+                        "id": "server1",
+                        "type": "servers"
+                    }
+                ]
+            }
+        },
+        "links": {
+            "self": "http://localhost:8989/v1/services/Read-Connection-Router"
+        }
+    }
 }
 ```
-
-#### Supported Request Parameter
-
-- `fields`
 
 ### Get all services
 
 Get all services.
 
 ```
-GET /services
+GET /v1/services
 ```
 
 #### Response
 
-```
-Status: 200 OK
+`Status: 200 OK`
 
-[
-    {
-        "name": "My Service",
-        "router": "readwritesplit",
-        "router_options": {
-            "disable_sescmd_history": "true"
-        },
-        "state": "started",
-        "total_connections": 10,
-        "current_connections": 2,
-        "started": "2016-08-29T12:52:31+03:00",
-        "filters": [
-            "/filters/Query-Logging-Filter"
-        ],
-        "servers": [
-            "/servers/db-serv-1",
-            "/servers/db-serv-2",
-            "/servers/db-serv-3"
-        ]
+```javascript
+{
+    "links": {
+        "self": "http://localhost:8989/v1/services/"
     },
-    {
-        "name": "My Second Service",
-        "router": "readconnroute",
-        "router_options": {
-            "type": "master"
+    "data": [ // Collection of service resources
+        {
+            "id": "Read-Connection-Router",
+            "type": "services",
+            "attributes": {
+                "router": "readconnroute",
+                "state": "Started",
+                "router_diagnostics": {
+                    "connections": 0,
+                    "current_connections": 1,
+                    "queries": 0
+                },
+                "started": "Mon May 22 13:00:46 2017",
+                "total_connections": 1,
+                "connections": 1,
+                "parameters": {
+                    "router_options": "master",
+                    "user": "maxuser",
+                    "password": "maxpwd",
+                    "enable_root_user": false,
+                    "max_retry_interval": 3600,
+                    "max_connections": 0,
+                    "connection_timeout": 0,
+                    "auth_all_servers": false,
+                    "strip_db_esc": true,
+                    "localhost_match_wildcard_host": true,
+                    "version_string": "",
+                    "log_auth_warnings": true,
+                    "retry_on_failure": true
+                },
+                "listeners": [
+                    {
+                        "attributes": {
+                            "parameters": {
+                                "port": 4008,
+                                "protocol": "MySQLClient",
+                                "authenticator": "MySQLAuth"
+                            }
+                        },
+                        "id": "Read-Connection-Listener",
+                        "type": "listeners"
+                    }
+                ]
+            },
+            "relationships": {
+                "servers": {
+                    "links": {
+                        "self": "http://localhost:8989/v1/servers/"
+                    },
+                    "data": [
+                        {
+                            "id": "server1",
+                            "type": "servers"
+                        }
+                    ]
+                }
+            },
+            "links": {
+                "self": "http://localhost:8989/v1/services/Read-Connection-Router"
+            }
         },
-        "state": "started",
-        "total_connections": 10,
-        "current_connections": 2,
-        "started": "2016-08-29T12:52:31+03:00",
-        "servers": [
-            "/servers/db-serv-1",
-            "/servers/db-serv-2"
-        ]
-    }
-]
+        {
+            "id": "CLI",
+            "type": "services",
+            "attributes": {
+                "router": "cli",
+                "state": "Started",
+                "started": "Mon May 22 13:00:46 2017",
+                "total_connections": 2,
+                "connections": 2,
+                "parameters": {
+                    "router_options": "",
+                    "user": "",
+                    "password": "",
+                    "enable_root_user": false,
+                    "max_retry_interval": 3600,
+                    "max_connections": 0,
+                    "connection_timeout": 0,
+                    "auth_all_servers": false,
+                    "strip_db_esc": true,
+                    "localhost_match_wildcard_host": true,
+                    "version_string": "",
+                    "log_auth_warnings": true,
+                    "retry_on_failure": true
+                },
+                "listeners": [
+                    {
+                        "attributes": {
+                            "parameters": {
+                                "address": "default",
+                                "port": 0,
+                                "protocol": "maxscaled",
+                                "authenticator": "MaxAdminAuth"
+                            }
+                        },
+                        "id": "CLI-Listener",
+                        "type": "listeners"
+                    },
+                    {
+                        "attributes": {
+                            "parameters": {
+                                "address": "0.0.0.0",
+                                "port": 6603,
+                                "protocol": "maxscaled",
+                                "authenticator": "MaxAdminAuth"
+                            }
+                        },
+                        "id": "CLI-Network-Listener",
+                        "type": "listeners"
+                    }
+                ]
+            },
+            "relationships": {},
+            "links": {
+                "self": "http://localhost:8989/v1/services/CLI"
+            }
+        }
+    ]
+}
 ```
-
-#### Supported Request Parameter
-
-- `fields`
-- `range`
 
 ### Get service listeners
 
@@ -107,165 +231,64 @@ name with all whitespace replaced with hyphens. The service names are
 case-insensitive.
 
 ```
-GET /services/:name/listeners
+GET /v1/services/:name/listeners
 ```
 
 #### Response
 
-```
-Status: 200 OK
+`Status: 200 OK`
 
-[
-    {
-        "name": "My Listener",
-        "protocol": "MySQLClient",
-        "address": "0.0.0.0",
-        "port": 4006
+```javascript
+{
+    "links": {
+        "self": "http://localhost:8989/v1/services/Read-Connection-Router/listeners"
     },
-    {
-        "name": "My SSL Listener",
-        "protocol": "MySQLClient",
-        "address": "127.0.0.1",
-        "port": 4006,
-        "ssl": "required",
-        "ssl_cert": "/home/markusjm/newcerts/server-cert.pem",
-        "ssl_key": "/home/markusjm/newcerts/server-key.pem",
-        "ssl_ca_cert": "/home/markusjm/newcerts/ca.pem"
-    }
-]
+    "data": [
+        {
+            "attributes": {
+                "parameters": {
+                    "port": 4008,
+                    "protocol": "MySQLClient",
+                    "authenticator": "MySQLAuth"
+                }
+            },
+            "id": "Read-Connection-Listener",
+            "type": "listeners"
+        }
+    ]
+}
 ```
-
-#### Supported Request Parameter
-
-- `fields`
-- `range`
 
 ### Update a service
 
-**Note**: The update mechanisms described here are provisional and most likely
-  will change in the future. This description is only for design purposes and
-  does not yet work.
-
-Partially update a service. The _:name_ in the URI must map to a service name
-and the request body must be a valid JSON Patch document which is applied to the
-resource.
+The _:name_ in the URI must map to a service name and the request body must be a
+valid JSON Patch document which is applied to the resource.
 
 ```
-PATCH /services/:name
+PUT /v1/services/:name
 ```
 
-### Modifiable Fields
+The following standard service parameters can be modified.
 
-|Field         |Type        |Description                                        |
-|--------------|------------|---------------------------------------------------|
-|servers       |string array|Servers used by this service, must be relative links to existing server resources|
-|router_options|object      |Router specific options|
-|filters       |string array|Service filters, configured in the same order they are declared in the array (`filters[0]` => first filter, `filters[1]` => second filter)|
-|user          |string      |The username for the service user|
-|password      |string      |The password for the service user|
-|root_user     |boolean     |Allow root user to connect via this service|
-|version_string|string      |Custom version string given to connecting clients|
-|weightby      |string      |Name of a server weigting parameter which is used for connection weighting|
-|connection_timeout|number  |Client idle timeout in seconds|
-|max_connection|number      |Maximum number of allowed connections|
-|strip_db_esc|boolean       |Strip escape characters from default database name|
+- [user](../Getting-Started/Configuration-Guide.md#user)
+- [password](../Getting-Started/Configuration-Guide.md#password)
+- [enable_root_user](../Getting-Started/Configuration-Guide.md#enable_root_user)
+- [max_retry_interval](../Getting-Started/Configuration-Guide.md#max_retry_interval)
+- [max_connections](../Getting-Started/Configuration-Guide.md#max_connections)
+- [connection_timeout](../Getting-Started/Configuration-Guide.md#connection_timeout)
+- [auth_all_servers](../Getting-Started/Configuration-Guide.md#auth_all_servers)
+- [strip_db_esc](../Getting-Started/Configuration-Guide.md#strip_db_esc)
+- [localhost_match_wildcard_host](../Getting-Started/Configuration-Guide.md#localhost_match_wildcard_host)
+- [version_string](../Getting-Started/Configuration-Guide.md#version_string)
+- [weightby](../Getting-Started/Configuration-Guide.md#weightby)
+- [log_auth_warnings](../Getting-Started/Configuration-Guide.md#log_auth_warnings)
+- [retry_on_failure](../Getting-Started/Configuration-Guide.md#retry_on_failure)
 
-```
-[
-    { "op": "replace", "path": "/servers", "value": ["/servers/db-serv-2","/servers/db-serv-3"] },
-    { "op": "add", "path": "/router_options/master_failover_mode", "value": "fail_on_write" },
-    { "op": "remove", "path": "/filters" }
-]
-```
+Refer to the documentation on these parameters for valid values.
 
 #### Response
 
-Response contains the modified resource.
-
-```
-Status: 200 OK
-
-    {
-        "name": "My Service",
-        "router": "readwritesplit",
-        "router_options": {
-            "disable_sescmd_history=false",
-            "master_failover_mode": "fail_on_write"
-        }
-        "state": "started",
-        "total_connections": 10,
-        "current_connections": 2,
-        "started": "2016-08-29T12:52:31+03:00",
-        "servers": [
-            "/servers/db-serv-2",
-            "/servers/db-serv-3"
-        ]
-    }
-```
-
-### Stop a service
-
-Stops a started service.
-
-```
-PUT /service/:name/stop
-```
-
-#### Response
-
-```
-Status: 204 No Content
-```
-
-### Start a service
-
-Starts a stopped service.
-
-```
-PUT /service/:name/start
-```
-
-#### Response
-
-```
-Status: 204 No Content
-```
-
-### Get all sessions for a service
-
-Get all sessions for a particular service.
-
-```
-GET /services/:name/sessions
-```
-
-#### Response
-
-Relative links to all sessions for this service.
-
-```
-Status: 200 OK
-
-[
-    "/sessions/1",
-    "/sessions/2"
-]
-```
-
-#### Supported Request Parameter
-
-- `range`
-
-### Close all sessions for a service
-
-Close all sessions for a particular service. This will forcefully close all
-client connections and any backend connections they have made.
-
-```
-DELETE /services/:name/sessions
-```
-
-#### Response
+Service is modified.
 
 ```
 Status: 204 No Content

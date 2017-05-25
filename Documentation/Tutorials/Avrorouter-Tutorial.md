@@ -29,7 +29,8 @@ binlog_format=row
 binlog_row_image=full
 ```
 
-_You can find out more about replication formats from the [MariaDB Knowledge Base](https://mariadb.com/kb/en/mariadb/binary-log-formats/)_
+_You can find out more about replication formats from the
+[MariaDB Knowledge Base](https://mariadb.com/kb/en/mariadb/binary-log-formats/)_
 
 ## Configuring MaxScale
 
@@ -77,7 +78,8 @@ You can see that the `source` parameter in the _avro-service_ points to the
 _replication-service_ we defined before.  This service will be the data source
 for the avrorouter. The _filestem_ is the prefix in the binlog files and the
 additional _avrodir_ router_option is where the converted Avro files are stored.
-For more information on the avrorouter options, read the [Avrorouter Documentation](../Routers/Avrorouter.md).
+For more information on the avrorouter options, read the
+[Avrorouter Documentation](../Routers/Avrorouter.md).
 
 After the services were defined, we added the listeners for the
 _replication-service_ and the _avro-service_. The _CDC_ protocol is a new
@@ -103,29 +105,29 @@ the following format:
 
 ```
 {
-    "Namespace": "MaxScaleChangeDataSchema.avro",
-    "Type": "record",
-    "Name": "ChangeRecord",
-    "Fields":
+    "namespace": "MaxScaleChangeDataSchema.avro",
+    "type": "record",
+    "name": "ChangeRecord",
+    "fields":
     [
         {
-            "Name": "name",
-            "Type": "string"
+            "name": "name",
+            "type": "string"
         },
         {
-            "Name":"address",
-            "Type":"string"
+            "name":"address",
+            "type":"string"
         },
         {
-            "Name":"age",
-            "Type":"int"
+            "name":"age",
+            "type":"int"
         }
     ]
 }
 ```
 
 The avrorouter uses the schema file to identify the columns, their names and
-what type they are. The Name fiels contains the name of the column and the Type
+what type they are. The _name_ field  contains the name of the column and the _type_
 contains the Avro type. Read the [Avro specification](https://avro.apache.org/docs/1.8.1/spec.html)
 for details on the layout of the schema files.
 

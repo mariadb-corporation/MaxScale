@@ -37,7 +37,9 @@ MXS_BEGIN_DECLS
 #define MAX_ADMIN_HOST_LEN      1024
 
 /** JSON Pointers to key parts of JSON objects */
+#define MXS_JSON_PTR_DATA       "/data"
 #define MXS_JSON_PTR_ID         "/data/id"
+#define MXS_JSON_PTR_TYPE       "/data/type"
 #define MXS_JSON_PTR_PARAMETERS "/data/attributes/parameters"
 
 /** Pointers to relation lists */
@@ -58,7 +60,9 @@ MXS_BEGIN_DECLS
 #define MXS_JSON_PTR_PARAM_SSL_VERSION           MXS_JSON_PTR_PARAMETERS "/ssl_version"
 #define MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH MXS_JSON_PTR_PARAMETERS "/ssl_cert_verify_depth"
 
+/** Non-parameter JSON pointers */
 #define MXS_JSON_PTR_MODULE  "/data/attributes/module"
+#define MXS_JSON_PTR_PASSWORD "/data/attributes/password"
 
 /**
  * Common configuration parameters names
@@ -71,9 +75,7 @@ extern const char CN_ADDRESS[];
 extern const char CN_ADMIN_AUTH[];
 extern const char CN_ADMIN_ENABLED[];
 extern const char CN_ADMIN_HOST[];
-extern const char CN_ADMIN_PASSWORD[];
 extern const char CN_ADMIN_PORT[];
-extern const char CN_ADMIN_USER[];
 extern const char CN_ADMIN_SSL_KEY[];
 extern const char CN_ADMIN_SSL_CERT[];
 extern const char CN_ADMIN_SSL_CA_CERT[];
@@ -94,6 +96,7 @@ extern const char CN_FILTERS[];
 extern const char CN_FILTER[];
 extern const char CN_GATEWAY[];
 extern const char CN_ID[];
+extern const char CN_INET[];
 extern const char CN_LISTENER[];
 extern const char CN_LISTENERS[];
 extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
@@ -142,7 +145,9 @@ extern const char CN_SSL_VERSION[];
 extern const char CN_STRIP_DB_ESC[];
 extern const char CN_THREADS[];
 extern const char CN_TYPE[];
+extern const char CN_UNIX[];
 extern const char CN_USER[];
+extern const char CN_USERS[];
 extern const char CN_VERSION_STRING[];
 extern const char CN_WEIGHTBY[];
 
@@ -192,8 +197,6 @@ typedef struct
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
-    char          admin_user[MAX_ADMIN_USER_LEN];      /**< Admin interface user */
-    char          admin_password[MAX_ADMIN_PW_LEN];    /**< Admin interface password */
     char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
     uint16_t      admin_port;                          /**< Admin interface port */
     bool          admin_auth;                          /**< Admin interface authentication */
@@ -434,6 +437,6 @@ bool config_reload(void);
  * @param host Hostname of this server
  * @return JSON object representing the paths used by MaxScale
  */
-json_t* config_paths_to_json(const char* host);
+json_t* config_maxscale_to_json(const char* host);
 
 MXS_END_DECLS

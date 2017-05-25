@@ -1,0 +1,2 @@
+rule testrule deny no_where_clause at_times ###time### on_queries delete
+users skysql@% match strict_all rules testrule

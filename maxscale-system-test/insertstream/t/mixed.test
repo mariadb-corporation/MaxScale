@@ -1,0 +1,59 @@
+# Setup
+--disable_warnings
+DROP TABLE IF EXISTS test.t1;
+--enable_warnings
+CREATE TABLE test.t1(id INT);
+
+# Test mixed queries in transactions
+
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+SELECT 1;
+INSERT INTO test.t1 VALUES (1);
+COMMIT;
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Test transaction and non-transaction inserts
+
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+COMMIT;
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Mix inserts and selects in and out of transactions
+
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+SELECT COUNT(*) FROM test.t1;
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+SELECT COUNT(*) FROM test.t1;
+UPDATE test.t1 SET id = 0;
+DELETE FROM test.t1;
+COMMIT;
+SELECT COUNT(*) FROM test.t1;
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Cleanup
+DROP TABLE test.t1;
