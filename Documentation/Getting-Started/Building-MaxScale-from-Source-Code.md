@@ -25,12 +25,13 @@ CentOS 7:
 sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake \
      libgcc perl make libtool openssl openssl-devel libcurl-devel pcre-devel \
      tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel \
-     gnutls gcrypt
+     gnutls-devel libgcrypt-devel
 ```
 
 Ubuntu 16.04:
 
 ```
+sudo apt-get update
 sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
      cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
      uuid-dev libsqlite3-dev libgnutls30 libgcrypt20
