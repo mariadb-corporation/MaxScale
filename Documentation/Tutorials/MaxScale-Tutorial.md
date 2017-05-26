@@ -1,11 +1,11 @@
 # Setting up MariaDB MaxScale
 
 This document is designed as a quick introduction to setting up MariaDB MaxScale
-in an environment in which you have either a MySQL Master-Slave replication cluster
+in an environment in which you have either a MariaDB Master-Slave replication cluster
 with one master and multiple slave servers or a multi-node Galera cluster.
 The process of setting and configuring MariaDB MaxScale will be covered within this document.
 
-The installation and configuration of the MySQL Replication or the Galera cluster
+The installation and configuration of the MariaDB Replication or the Galera cluster
 will not be covered nor will any discussion of installation management tools
 to handle automated or semi-automated failover of the replication cluster.
 The [Setting Up Replication](https://mariadb.com/kb/en/mariadb/setting-up-replication/)
@@ -109,7 +109,7 @@ The best way to describe this process is with an example.
 
 User `'jdoe'@'192.168.0.200` has the following grant on the cluster:
 `GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'192.168.0.200'`.
-When the user connects directly to the server it will see it as 
+When the user connects directly to the server it will see it as
 `'jdoe'@'192.168.0.200` connecting to the server and it will match
 the grant for `'jdoe'@'192.168.0.200`.
 
@@ -153,8 +153,8 @@ The configuration file creation is covered in different tutorials.
 
 ### Master-Slave cluster
 
-* [MySQL Replication Connection Routing Tutorial](MySQL-Replication-Connection-Routing-Tutorial.md)
-* [MySQL Replication Read-Write Splitting Tutorial](MySQL-Replication-Read-Write-Splitting-Tutorial.md)
+* [MariaDB Replication Connection Routing Tutorial](MySQL-Replication-Connection-Routing-Tutorial.md)
+* [MariaDB Replication Read-Write Splitting Tutorial](MySQL-Replication-Read-Write-Splitting-Tutorial.md)
 
 ### Galera cluster
 

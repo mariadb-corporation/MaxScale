@@ -1231,7 +1231,7 @@ MariaDB MaxScale to connect to MariaDB MaxScale.
 ##### `MySQLBackend`
 
 The MySQLBackend protocol module is the implementation of the protocol that
-MariaDB MaxScale uses to connect to the backend MySQL, MariaDB and Percona
+MariaDB MaxScale uses to connect to the backend MariaDB, MySQL and Percona
 Server databases. This implementation is tailored for the MariaDB MaxScale to
 MySQL Database traffic and is not a general purpose implementation of the MySQL
 protocol.
@@ -1449,12 +1449,12 @@ Monitors can not be completely removed from the running MariaDB MaxScale.
 
 ## Authentication
 
-MySQL uses username, passwords and the client host in order to authenticate a
+MariaDB uses username, passwords and the client host in order to authenticate a
 user, so a typical user would be defined as user X at host Y and would be given
-a password to connect. MariaDB MaxScale uses exactly the same rules as MySQL
+a password to connect. MariaDB MaxScale uses exactly the same rules as MariaDB
 when users connect to the MariaDB MaxScale instance, i.e. it will check the
 address from which the client is connecting and treat this in exactly the same
-way that MySQL would. MariaDB MaxScale will pull the authentication data from
+way that MariaDB would. MariaDB MaxScale will pull the authentication data from
 one of the backend servers and use this to match the incoming connections, the
 assumption being that all the backend servers for a particular service will
 share the same set of user credentials.
@@ -1493,10 +1493,10 @@ backends as it would also use the password *pass2* for these connections.
 
 ### Wildcard Hosts
 
-Hostname mapping in MariaDB MaxScale works in exactly the same way as for MySQL,
+Hostname mapping in MariaDB MaxScale works in exactly the same way as for MariaDB,
 if the wildcard is used for the host then any host other than the localhost
 (127.0.0.1) will match. It is important to consider that the localhost check
-will be performed at the MariaDB MaxScale level and at the MySQL server level.
+will be performed at the MariaDB MaxScale level and at the MariaDB server level.
 
 If MariaDB MaxScale and the databases are on separate hosts there are two
 important changes in behavior to consider:

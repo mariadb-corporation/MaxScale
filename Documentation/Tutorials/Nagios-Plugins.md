@@ -10,7 +10,7 @@ that can be run from a command line to check the status or a host or service.
 Nagios uses the results from plugins to determine the current status of hosts and
 services on your network.
 Nagios core executes a plugin whenever there is a need to check the status
-of a service or host. 
+of a service or host.
 
 While MariaDB MaxScale resources and status can be monitored via CLI using
 maxadmin commands, Nagios Plugin provides an automated way for system administration
@@ -31,7 +31,7 @@ details on respective resources.
 Current resources are: modules, services, listeners, servers, sessions, filters.
 
 3. check_maxscale_monitor.pl: This command provides you status of the configured
-monitor modules on MariaDB MaxScale server. 
+monitor modules on MariaDB MaxScale server.
 
 In order to use these scripts on your Nagios Server, you need to copy them
 from the MariaDB MaxScale binary package or download them from source tree on GitHub.

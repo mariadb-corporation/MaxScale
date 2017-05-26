@@ -82,7 +82,7 @@ For more details, please refer to [MariaDB MaxScale 1.3 Release Notes](Release-N
       * Firewall filter
       * Multi-Master monitor
       * RabbitMQ logging filter
-      * Schema Sharding router 
+      * Schema Sharding router
 * Added option to use high precision timestamps in logging.
 * Readwritesplit router now returns the master server's response.
 * New readwritesplit router option added. It is now possible to control the amount of memory readwritesplit sessions will consume by limiting the amount of session modifying statements they can execute.

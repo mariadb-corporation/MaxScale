@@ -30,7 +30,7 @@ filters=MyRegexfilter
 
 ## Filter Options
 
-The Regex filter accepts the options ignorecase or case. These define if the pattern text should take the case of the string it is matching against into consideration or not. 
+The Regex filter accepts the options ignorecase or case. These define if the pattern text should take the case of the string it is matching against into consideration or not.
 
 ## Filter Parameters
 

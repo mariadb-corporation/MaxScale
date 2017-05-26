@@ -27,11 +27,11 @@ If you already have a SSH key generated, you can skip this next step and go to t
 To generate a new set of SSH keys, we will use `ssh-keygen`.
 
 ```
-[root@localhost ~]# ssh-keygen 
+[root@localhost ~]# ssh-keygen
 Generating public/private rsa key pair.
-Enter file in which to save the key (/root/.ssh/id_rsa): 
-Enter passphrase (empty for no passphrase): 
-Enter same passphrase again: 
+Enter file in which to save the key (/root/.ssh/id_rsa):
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
 Your identification has been saved in /root/.ssh/id_rsa.
 Your public key has been saved in /root/.ssh/id_rsa.pub.
 The key fingerprint is:
@@ -101,17 +101,17 @@ sync{
 default.rsyncssh,
 
 -- This is where the maxscale.cnf file is copied from.
-source="/etc", 
+source="/etc",
 
 -- This is the user and host where the maxscale.cnf is copied to.
 -- Change this to the user and destination host where you want maxscale.cnf to be synchronized to.
-host="user@192.168.122.100", 
+host="user@192.168.122.100",
 
 -- This is where the maxscale.cnf is copied to on the remote host.
-targetdir="/etc", 
+targetdir="/etc",
 
 -- This is an optional section which defines a custom SSH port. Uncomment to enable.
--- ssh={port=2222}, 
+-- ssh={port=2222},
 
 -- These are values passed to rsync. Only change these if you know what you are doing.
 rsync={
@@ -139,9 +139,9 @@ settings{
 
 sync{
 default.rsyncssh,
-source="/etc", 
-host="maxuser@192.168.0.50", 
-targetdir="/etc", 
+source="/etc",
+host="maxuser@192.168.0.50",
+targetdir="/etc",
 rsync={
       compress=true,
 	  _extra = {[[--filter=+ *maxscale.cnf]],
@@ -153,9 +153,9 @@ rsync={
 
 sync{
 default.rsyncssh,
-source="/etc", 
-host="syncuser@192.168.122.105", 
-targetdir="/etc", 
+source="/etc",
+host="syncuser@192.168.122.105",
+targetdir="/etc",
 rsync={
       compress=true,
 	  _extra = {[[--filter=+ *maxscale.cnf]],

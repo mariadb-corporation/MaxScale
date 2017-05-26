@@ -210,6 +210,6 @@ Average statement execution time     1.488 seconds
 
 Total connection time               46.500 seconds
 
--bash-4.1$ 
+-bash-4.1$
 
 ```
