@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS t1;
+CREATE TABLE t1 (x1 int, fl int);
+select sleep(5);
+SELECT fl FROM t1;
+SELECT * FROM t1;
+select t1.fl as 'something' from t1 as t1 limit 1;

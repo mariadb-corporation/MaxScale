@@ -1,0 +1,1 @@
+SELECT fl FROM t1 WHERE fl = 0 AND x1 = 1 OR x1=2

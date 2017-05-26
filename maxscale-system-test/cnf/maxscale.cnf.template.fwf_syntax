@@ -1,0 +1,28 @@
+[maxscale]
+threads=###threads###
+log_warning=1
+
+[Read Connection Router Slave]
+type=service
+router=readconnroute
+servers=server1
+user=maxskysql
+passwd=skysql
+filters=Database Firewall
+
+[Read Connection Listener Slave]
+type=listener
+service=Read Connection Router Slave
+protocol=MySQLClient
+port=4009
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+
+[Database Firewall]
+type=filter
+module=dbfwfilter
+rules=/###access_homedir###/rules/rules.txt
