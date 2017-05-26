@@ -10,7 +10,7 @@ export test_dir=`dirname $rp`
 export test_name=`basename $rp`
 $test_dir/non_native_setup $test_name
 
-if [ $? -ne 0 ] ; then 
+if [ $? -ne 0 ] ; then
         echo "configuring maxscale failed"
         exit 1
 fi

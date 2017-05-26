@@ -3,10 +3,10 @@
 ### Full build and test environment setup
 
 <pre>
-# install ruby 
+# install ruby
 sudo apt-get install ruby
 
-# install all needed libraries 
+# install all needed libraries
 sudo apt-get install libxslt-dev libxml2-dev libvirt-dev zlib1g-dev
 
 # install vagrant
@@ -35,7 +35,7 @@ sudo apt-get install cmake gcc g++ libssl-dev
 sudo apt-get install mariadb-client shellcheck
 
 # install MariaDB development library
-sudo apt-get install libmariadbclient-dev 
+sudo apt-get install libmariadbclient-dev
 # Ubuntu repos can contain the sa,e package with different name 'libmariadb-client-lgpl-dev'
 # but it can not be used to build maxscale-system-test; please use mariadb.org repositories
 # https://downloads.mariadb.org/mariadb/repositories/
@@ -67,7 +67,7 @@ make
 cd ..
 mv sysbench sysbench_deb7
 
-# for OVH servers it is needed to move 'docker' and 'libvirt' working directories to /home 
+# for OVH servers it is needed to move 'docker' and 'libvirt' working directories to /home
 # (replace 'vagrant' to your home directory name)
 cd /var/lib/
 sudo mv docker /home/vagrant/
@@ -127,14 +127,14 @@ for AWS machines:
 }
 </pre>
 
-Following boxes are availabe: 
+Following boxes are availabe:
 * qemu: debian_7.5_libvirt, ubuntu_trusty_libvirt, centos_7.0_libvirt, centos_6.5_libvirt
 * AWS: rhel5, rhel6, rhel7, sles11, sles12, fedora20, fedora21, fediora22, ubuntu_wily, ubuntu_vivid, centos7, deb_jessie
 
 #### Maxscale and backend machines creation
 
 * Generation of Maxscale repository description
-It is necessary to generate descriptions of MariaDB and Maxscale repositories before bringin up Maxscale machine with Vagrant 
+It is necessary to generate descriptions of MariaDB and Maxscale repositories before bringin up Maxscale machine with Vagrant
 <pre>
 export ci_url="http://my_repository_site.com/repostory/"
 ~/mdbci-repository-config/generate_all.sh $repo_dir
@@ -153,7 +153,7 @@ export ci_url="http://max-tst-01.mariadb.com/ci-repository/"
 </pre>
 More information can be found in the [MDBCI documentation](https://github.com/OSLL/mdbci#repod-files) and in the [mdbci-repository-config documentaion](https://github.com/mariadb-corporation/mdbci-repository-config#mdbci-repository-config)
 
-* Preparing configuration description 
+* Preparing configuration description
 Virtual machines should be described in JSON format. Example template can be found in the [build-scripts package](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/test/template.libvirt.json).
 
 MariaDB machine description example:

@@ -42,7 +42,7 @@ macro(check_dirs)
   set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
 
   # Find the MySQL headers if they were not defined
-  
+
   if(DEFINED MYSQL_DIR)
 	if(DEBUG_OUTPUT)
 	  message(STATUS "Searching for MySQL headers at: ${MYSQL_DIR}")
@@ -51,11 +51,11 @@ macro(check_dirs)
   else()
 	find_path(MYSQL_DIR_LOC mysql.h PATH_SUFFIXES mysql mariadb)
   endif()
-  
+
   if(DEBUG_OUTPUT)
 	message(STATUS "Search returned: ${MYSQL_DIR_LOC}")
   endif()
-  
+
   if(${MYSQL_DIR_LOC} MATCHES "NOTFOUND")
 	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
     message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")

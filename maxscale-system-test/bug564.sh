@@ -3,14 +3,14 @@
 ###
 ## @file bug564.sh Regression case for the bug "Wrong charset settings"
 ## - call MariaDB client with different --default-character-set= settings
-## - check output of SHOW VARIABLES LIKE 'char%'  
+## - check output of SHOW VARIABLES LIKE 'char%'
 
 rp=`realpath $0`
 export test_dir=`dirname $rp`
 export test_name=`basename $rp`
 $test_dir/non_native_setup $test_name
 
-if [ $? -ne 0 ] ; then 
+if [ $? -ne 0 ] ; then
         echo "configuring maxscale failed"
         exit 1
 fi
@@ -31,9 +31,9 @@ do
 	res3=$?
 
 
-	if [[ $res1 != 0 ]] || [[ $res2 != 0 ]] || [[ $res3 != 0 ]] ; then 
+	if [[ $res1 != 0 ]] || [[ $res2 != 0 ]] || [[ $res3 != 0 ]] ; then
 		echo "charset is ignored"
-		mysql -u$node_user -p$node_password -h $maxscale_IP -P 4006 $ssl_options --default-character-set="latin2" -e "SHOW VARIABLES LIKE 'char%'" 
+		mysql -u$node_user -p$node_password -h $maxscale_IP -P 4006 $ssl_options --default-character-set="latin2" -e "SHOW VARIABLES LIKE 'char%'"
 		$test_dir/copy_logs.sh bug564
 		exit 1
 	fi

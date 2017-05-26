@@ -7,7 +7,7 @@ For detailed function and properties description and thier full list please see 
 
 For every test case following should be created:
 - test executable
-- record in the 'templates' file 
+- record in the 'templates' file
 - Maxscale configuration template (if test requires special Maxscale configuration)
 - [CMakeLists.txt](CMakeLists.txt) record:
   - add_test_executable(<source.cpp> <binary_name> <cnf_template_name>)
@@ -47,7 +47,7 @@ Template can contain following varables:
 * use TestConnections::add_result() to idicate test failure and print explanation message
 * execute TestConnections::copy_all_logs at the end of test
 * return TestConnections::global_result value
-* do not leave any node blocked by firewall 
+* do not leave any node blocked by firewall
 
 ## Class TestConnections
 
@@ -55,7 +55,7 @@ This class contains all information about Maxscale node and about all backend no
 to handle Maxscale and backends, interact with Maxscale routers and Maxadmin.
 Here is only list of main functions, for all details see Doxygen comments in [testconnections.h](testconnections.h)
 
-Currently two backend sets are supported (represented by Mariadb_nodes class objects): 'repl' and 'galera' 
+Currently two backend sets are supported (represented by Mariadb_nodes class objects): 'repl' and 'galera'
 - contains all info and operations for Master/Slave and Galera setups
 (see Doxygen comments in [mariadb_nodes.h](mariadb_nodes.h) )
 
@@ -80,14 +80,14 @@ Please check Doxygen comments for details
 * create maxscale.cnf out of template and copy it to Maxscale node
 * create needed directories, set access righs for them, cleanup logs, coredumps
 * start Maxscale
-* initialize internal structures 
+* initialize internal structures
 
 #### Timeout functions
 
 int set_timeout(int timeout_seconds)
 stop_timeout()
 
-If after set_timeout() a new call of set_timeout() or stop_timeout() is not done the test execution terminated, 
+If after set_timeout() a new call of set_timeout() or stop_timeout() is not done the test execution terminated,
 logs from Maxscale are copied to host.
 
 #### Open connection functions
@@ -96,10 +96,10 @@ logs from Maxscale are copied to host.
 | int connect_maxscale();<br>  int connect_rwsplit();<br>  int connect_readconn_master();<br>  int connect_maxscale_slave();|store MYSQL handler in TestConnections object (only one cnnection can be created by them, second call leads to MYSQL handler leak)|
 |MYSQL * open_rwsplit_connection() <br> MYSQL * open_readconn_master_connection() <br> MYSQL * open_readconn_slave_connection() |returns MYSQL handler (can be used to create a number of connections to each router)|
 | int create_connections(int conn_N) |- open and then close N connections to each router|
- 
-A number of useful wrappers for mysql_real_connect() are not included into TestConnections class, but 
+
+A number of useful wrappers for mysql_real_connect() are not included into TestConnections class, but
 they are availve from [mariadb_func.h](mariadb_func.h)
- 
+
 #### Backend check and setup functions
 |Function|Short description|
 |----|---|
@@ -114,7 +114,7 @@ they are availve from [mariadb_func.h](mariadb_func.h)
 |add_result()|failure printing, increase global_result|
 |tprint()| printing with timestamp|
 |copy_logs()|copy Maxscale log, maxscale.cnf file and core dump from Maxscale machine to current directory|
- 
+
 #### Different checks functions
 |Function|Short description|
 |----|---|
@@ -133,7 +133,7 @@ they are availve from [mariadb_func.h](mariadb_func.h)
 |restart_maxscale()||
 |execute_ssh_maxscale()|execute command on Maxscale node via ssh|
 
-#### Properties 
+#### Properties
 |Name|Short description|Corresponding env variable|
 |----|-----|----|
 |global_result|0 if there is not single failure during the test| - |
@@ -183,7 +183,7 @@ they are availve from [mariadb_func.h](mariadb_func.h)
 |flush_hosts()|Execute 'mysqladmin flush-hosts' on all nodes|
 |execute_query_all_nodes()|Execute same query on all nodes|
 
-#### Properties 
+#### Properties
 |Name|Short description|Corresponding env variable|
 |----|-----|----|
 |N|Number of nodes|node_N <br> galera_N|

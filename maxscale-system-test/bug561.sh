@@ -3,7 +3,7 @@
 ###
 ## @file bug561.sh Regression case for the bug "Different error messages from MariaDB and Maxscale"
 ## - try to connect to non existing DB directly to MariaDB server and via Maxscale
-## - compare error messages 
+## - compare error messages
 ## - repeat for RWSplit, ReadConn
 
 
@@ -13,7 +13,7 @@ export test_name=`basename $rp`
 
 $test_dir/non_native_setup $test_name
 
-if [ $? -ne 0 ] ; then 
+if [ $? -ne 0 ] ; then
         echo "configuring maxscale failed"
         exit 1
 fi

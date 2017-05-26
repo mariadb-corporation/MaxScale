@@ -16,7 +16,7 @@ public class BatchInsert {
             try {
                 Connection connection = maxscale.getConnRw();
                 Statement stmt = connection.createStatement();
-            
+
                 stmt.execute("DROP TABLE IF EXISTS tt");
                 stmt.execute("CREATE TABLE tt (d int)");
 

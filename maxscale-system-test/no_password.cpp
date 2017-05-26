@@ -19,6 +19,6 @@ int main(int argc, char** argv)
     test.add_result(strstr(mysql_error(mysql), "using password: YES") == NULL, "Missing (using password: YES) error message, got this instead: %s", mysql_error(mysql));
     test.tprintf("MySQL error: %s", mysql_error(mysql));
     mysql_close(mysql);
-    
+
     return test.global_result;
 }

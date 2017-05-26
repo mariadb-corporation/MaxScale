@@ -32,8 +32,8 @@ module=qlafilter
 filebase=/tmp/QueryLog
 
 [duplicate]
-type=filter 
-module=tee 
+type=filter
+module=tee
 service=RW Split2
 
 [RW Split Router]

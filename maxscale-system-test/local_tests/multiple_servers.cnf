@@ -22,7 +22,7 @@ pid-file        = /var/run/mysqld/mysqld1.pid
 socket          = /var/run/mysqld/mysqld1.sock
 port            = 3301
 datadir         = /data/mysql/mysql1
- 
+
 [mysqld2]
 log-bin=mar-bin
 binlog-format=row
@@ -48,7 +48,7 @@ pid-file        = /var/run/mysqld/mysqld3.pid
 socket          = /var/run/mysqld/mysqld3.sock
 port            = 3303
 datadir         = /data/mysql/mysql3
- 
+
 [mysqld4]
 log-bin=mar-bin
 binlog-format=row
