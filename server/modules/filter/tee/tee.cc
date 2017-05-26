@@ -241,14 +241,12 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_U
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     TeeSession *my_session = reinterpret_cast<TeeSession*>(session);
-    int rval = 0;
 
-    if (my_session->passive || my_session->client->queue_query(queue))
-    {
-        rval = my_session->down.routeQuery(my_session->down.instance,
+    int rval = my_session->down.routeQuery(my_session->down.instance,
                                            my_session->down.session,
                                            queue);
-    }
+
+    my_session->client->queue_query(queue);
 
     return rval;
 }

@@ -73,9 +73,6 @@ int main(int argc, char *argv[])
 
     Test->check_log_err((char *) "Couldn't find suitable Master from 2 candidates", true);
     Test->check_log_err((char *) "Failed to create new router session for service 'RW_Split'", true);
-    Test->check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", true);
-    Test->check_log_err((char *) "Failed to create filter 'DuplicaFilter' for service 'RW_Router'", true);
-    Test->check_log_err((char *) "Setting up filters failed. Terminating session RW_Router", true);
 
     int rval = Test->global_result;
     delete Test;

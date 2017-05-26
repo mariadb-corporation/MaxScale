@@ -96,7 +96,6 @@ int main(int argc, char *argv[])
     Test->close_maxscale_connections();
 
     Test->check_log_err((char *) "Couldn't find suitable Master from 2 candidates", true);
-    Test->check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", true);
 
     int rval = Test->global_result;
     delete Test;
