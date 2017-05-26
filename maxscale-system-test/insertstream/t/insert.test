@@ -1,0 +1,108 @@
+# Setup
+--disable_warnings
+DROP TABLE IF EXISTS test.t1;
+--enable_warnings
+CREATE TABLE test.t1(id INT);
+
+# Test one insert inside transaction
+
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+COMMIT;
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Test multiple inserts inside transaction
+
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (2);
+INSERT INTO test.t1 VALUES (3);
+COMMIT;
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Test multi-value insert inside transaction
+
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1), (2), (3);
+COMMIT;
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Test non-transaction inserts
+
+INSERT INTO test.t1 VALUES (1);
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (2);
+INSERT INTO test.t1 VALUES (3);
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Test different tables in inserts inside transactions
+
+--disable_warnings
+DROP TABLE IF EXISTS test.t2;
+--enable_warnings
+CREATE TABLE test.t2(id int);
+
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+--disable_abort_on_error
+INSERT INTO test.t2 VALUES (1);
+--enable_abort_on_error
+COMMIT;
+
+SELECT COUNT(*) FROM test.t2;
+DROP TABLE test.t2;
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Test inserts to different tables with selects between them inside a transaction
+
+CREATE TABLE test.t2(id int);
+
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+SELECT 1;
+INSERT INTO test.t2 VALUES (1);
+COMMIT;
+
+SELECT COUNT(*) FROM test.t2;
+DROP TABLE test.t2;
+
+SHOW STATUS LIKE 'COM_INSERT';
+SHOW STATUS LIKE 'COM_LOAD';
+SELECT COUNT(*) FROM test.t1;
+DELETE FROM test.t1;
+FLUSH STATUS;
+
+# Cleanup
+DROP TABLE test.t1;
