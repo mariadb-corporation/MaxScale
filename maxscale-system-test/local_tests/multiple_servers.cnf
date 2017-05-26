@@ -1,0 +1,79 @@
+
+#
+# These groups are read by MariaDB server.
+# Use it for options that only the server (but not clients) should see
+#
+# See the examples of server my.cnf files in /usr/share/mysql/
+#
+
+# this is read by the standalone daemon and embedded servers
+[server]
+
+# this is only for the mysqld standalone daemon
+[mysqld1]
+log-bin=mar-bin
+binlog-format=row
+#max_long_data_size=1000000000
+#innodb_log_file_size=2000000000
+slave-skip-errors=all
+server_id=1
+user            = mysql
+pid-file        = /var/run/mysqld/mysqld1.pid
+socket          = /var/run/mysqld/mysqld1.sock
+port            = 3301
+datadir         = /data/mysql/mysql1
+
+[mysqld2]
+log-bin=mar-bin
+binlog-format=row
+#max_long_data_size=1000000000
+#innodb_log_file_size=2000000000
+slave-skip-errors=all
+server_id=2
+user            = mysql
+pid-file        = /var/run/mysqld/mysqld2.pid
+socket          = /var/run/mysqld/mysqld2.sock
+port            = 3302
+datadir         = /data/mysql/mysql2
+
+[mysqld3]
+log-bin=mar-bin
+binlog-format=row
+#max_long_data_size=1000000000
+#innodb_log_file_size=2000000000
+slave-skip-errors=all
+server_id=3
+user            = mysql
+pid-file        = /var/run/mysqld/mysqld3.pid
+socket          = /var/run/mysqld/mysqld3.sock
+port            = 3303
+datadir         = /data/mysql/mysql3
+
+[mysqld4]
+log-bin=mar-bin
+binlog-format=row
+#max_long_data_size=1000000000
+#innodb_log_file_size=2000000000
+slave-skip-errors=all
+server_id=4
+user            = mysql
+pid-file        = /var/run/mysqld/mysqld4.pid
+socket          = /var/run/mysqld/mysqld4.sock
+port            = 3304
+datadir         = /data/mysql/mysql4
+
+# this is only for embedded server
+[embedded]
+
+# This group is only read by MariaDB-5.5 servers.
+# If you use the same .cnf file for MariaDB of different versions,
+# use this group for options that older servers don't understand
+[mysqld-5.5]
+
+# These two groups are only read by MariaDB servers, not by MySQL.
+# If you use the same .cnf file for MySQL and MariaDB,
+# you can put MariaDB-only options here
+[mariadb]
+
+[mariadb-5.5]
+

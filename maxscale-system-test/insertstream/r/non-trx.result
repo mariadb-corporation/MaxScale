@@ -1,0 +1,29 @@
+DROP TABLE IF EXISTS test.t1;
+CREATE TABLE test.t1(id INT);
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+0
+DELETE FROM test.t1;
+INSERT INTO test.t1 VALUES (1), (2), (3);
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+3
+UPDATE test.t1 SET id = 0;
+CREATE TABLE test.new_table(id int) ENGINE=MyISAM;
+INSERT INTO test.new_table VALUES (1), (2);
+DROP TABLE test.new_table;
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (1);
+SHOW STATUS LIKE 'COM_INSERT';
+Variable_name	Value
+Com_insert	10
+SHOW STATUS LIKE 'COM_LOAD';
+Variable_name	Value
+Com_load	0
+DROP TABLE test.t1;

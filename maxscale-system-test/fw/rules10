@@ -1,0 +1,3 @@
+rule regex_rule deny regex '^(?i)load.*data.*infile*'
+rule files2 deny regex '^(?i)load.data.*local.*infile'
+users %@% match any rules regex_rule

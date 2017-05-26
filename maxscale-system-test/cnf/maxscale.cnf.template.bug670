@@ -1,0 +1,134 @@
+[maxscale]
+threads=###threads###
+
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+###repl51###
+monitor_interval=10000
+servers=server1,server2,server3,server4
+user=skysql
+passwd=skysql
+
+[hints]
+type=filter
+module=hintfilter
+
+[regex]
+type=filter
+module=regexfilter
+match=fetch
+replace=select
+
+[typo]
+type=filter
+module=regexfilter
+match=[Ff][Oo0][Rr][Mm]
+replace=from
+
+[qla]
+type=filter
+module=qlafilter
+filebase=/tmp/QueryLog
+
+[duplicate]
+type=filter
+module=tee
+service=RW Split2
+
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1,server2,server3,server4
+
+max_slave_connections=100%
+use_sql_variables_in=all
+
+user=skysql
+passwd=skysql
+filters=typo|qla|regex|hints|regex|hints
+enable_root_user=1
+
+[RW Split2]
+type=service
+router=readwritesplit
+servers=server1,server2
+max_slave_connections=100%
+use_sql_variables_in=all
+user=skysql
+passwd=skysql
+
+[Read Connection Router]
+type=service
+router=readconnroute
+router_options=master
+servers=server1,server2
+user=skysql
+passwd=skysql
+filters=duplicate
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+socket=default
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+
+[RW Split Listener2]
+type=listener
+service=RW Split2
+protocol=MySQLClient
+port=4012
+
+[Read Connection Listener]
+type=listener
+service=Read Connection Router
+protocol=MySQLClient
+port=4008
+
+[Read Connection Router Slave]
+type=service
+router=readconnroute
+router_options= slave
+servers=server1,server2,server3,server4
+user=maxskysql
+passwd=skysql
+
+[Read Connection Listener Slave]
+type=listener
+service=Read Connection Router Slave
+protocol=MySQLClient
+port=4009
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
+protocol=MySQLBackend
+
+[server3]
+type=server
+address=###node_server_IP_3###
+port=###node_server_port_3###
+protocol=MySQLBackend
+
+[server4]
+type=server
+address=###node_server_IP_4###
+port=###node_server_port_4###
+protocol=MySQLBackend
