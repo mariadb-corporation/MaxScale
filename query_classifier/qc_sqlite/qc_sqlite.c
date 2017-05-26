@@ -49,6 +49,26 @@ static inline bool qc_info_was_parsed(qc_parse_result_t status)
     return status == QC_QUERY_PARSED;
 }
 
+typedef enum qc_log_level
+{
+    QC_LOG_NOTHING = 0,
+    QC_LOG_NON_PARSED,
+    QC_LOG_NON_PARTIALLY_PARSED,
+    QC_LOG_NON_TOKENIZED,
+} qc_log_level_t;
+
+typedef enum qc_parse_as
+{
+    QC_PARSE_AS_DEFAULT, // Parse as embedded lib does before 10.3
+    QC_PARSE_AS_103      // Parse as embedded lib does in 10.3
+} qc_parse_as_t;
+
+typedef enum qc_sql_mode
+{
+    QC_SQL_MODE_DEFAULT,
+    QC_SQL_MODE_ORACLE
+} qc_sql_mode_t;
+
 /**
  * Contains information about a particular query.
  */
@@ -85,27 +105,8 @@ typedef struct qc_sqlite_info
     size_t function_infos_len;       // The used entries in function_infos.
     size_t function_infos_capacity;  // The capacity of the function_infos array.
     bool initializing;               // Whether we are initializing sqlite3.
+    qc_sql_mode_t sql_mode;          // The current sql_mode.
 } QC_SQLITE_INFO;
-
-typedef enum qc_log_level
-{
-    QC_LOG_NOTHING = 0,
-    QC_LOG_NON_PARSED,
-    QC_LOG_NON_PARTIALLY_PARSED,
-    QC_LOG_NON_TOKENIZED,
-} qc_log_level_t;
-
-typedef enum qc_parse_as
-{
-    QC_PARSE_AS_DEFAULT, // Parse as embedded lib does before 10.3
-    QC_PARSE_AS_103      // Parse as embedded lib does in 10.3
-} qc_parse_as_t;
-
-typedef enum qc_sql_mode
-{
-    QC_SQL_MODE_DEFAULT,
-    QC_SQL_MODE_ORACLE
-} qc_sql_mode_t;
 
 /**
  * Defines what a particular name should be mapped to.
@@ -180,10 +181,11 @@ static QC_SQLITE_INFO* info_alloc(uint32_t collect);
 static void info_finish(QC_SQLITE_INFO* info);
 static void info_free(QC_SQLITE_INFO* info);
 static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info, uint32_t collect);
-static bool is_sequence_related_field(const char* database,
+static bool is_sequence_related_field(QC_SQLITE_INFO* info,
+                                      const char* database,
                                       const char* table,
                                       const char* column);
-static bool is_sequence_related_function(const char* func_name);
+static bool is_sequence_related_function(QC_SQLITE_INFO* info, const char* func_name);
 static void log_invalid_data(GWBUF* query, const char* message);
 static const char* map_function_name(const char* name);
 static bool parse_query(GWBUF* query, uint32_t collect);
@@ -441,6 +443,7 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info, uint32_t collect)
     info->function_infos_len = 0;
     info->function_infos_capacity = 0;
     info->initializing = false;
+    info->sql_mode = this_unit.sql_mode;
 
     return info;
 }
@@ -671,31 +674,34 @@ static bool query_is_parsed(GWBUF* query, uint32_t collect)
 /**
  * Returns whether a field is sequence related.
  *
- * @param database The database/schema or NULL.
- * @param table    The table or NULL.
- * @param column   The column.
+ * @param info      Current info object
+ * @param database  The database/schema or NULL.
+ * @param table     The table or NULL.
+ * @param column    The column.
  *
  * @return True, if the field is sequence related, false otherwise.
  */
-static bool is_sequence_related_field(const char* database,
+static bool is_sequence_related_field(QC_SQLITE_INFO* info,
+                                      const char* database,
                                       const char* table,
                                       const char* column)
 {
-    return is_sequence_related_function(column);
+    return is_sequence_related_function(info, column);
 }
 
 /**
  * Returns whether a function is sequence related.
  *
- * @param func_name   A function.
+ * @param info       Current info object
+ * @param func_name  A function name.
  *
  * @return True, if the function is sequence related, false otherwise.
  */
-static bool is_sequence_related_function(const char* func_name)
+static bool is_sequence_related_function(QC_SQLITE_INFO* info, const char* func_name)
 {
     bool rv = false;
 
-    if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+    if (info->sql_mode == QC_SQL_MODE_ORACLE)
     {
         // In Oracle mode we ignore the pseudocolumns "currval" and "nextval".
         // We also exclude "lastval", the 10.3 equivalent of "currval".
@@ -820,7 +826,7 @@ static void update_field_info(QC_SQLITE_INFO* info,
 {
     ss_dassert(column);
 
-    if (is_sequence_related_field(database, table, column))
+    if (is_sequence_related_field(info, database, table, column))
     {
         info->type_mask |= QUERY_TYPE_WRITE;
         return;
@@ -1235,7 +1241,7 @@ static void update_field_infos(QC_SQLITE_INFO* info,
             break;
 
         case TK_REM:
-            if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+            if (info->sql_mode == QC_SQL_MODE_ORACLE)
             {
                 if ((pLeft && (pLeft->op == TK_ID)) &&
                     (pRight && (pRight->op == TK_ID)) &&
@@ -1284,12 +1290,12 @@ static void update_field_infos(QC_SQLITE_INFO* info,
                 {
                     info->type_mask |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
                 }
-                else if (is_sequence_related_function(zToken))
+                else if (is_sequence_related_function(info, zToken))
                 {
                     info->type_mask |= QUERY_TYPE_WRITE;
                     ignore_exprlist = true;
                 }
-                else if (!is_builtin_readonly_function(zToken, this_unit.sql_mode == QC_SQL_MODE_ORACLE))
+                else if (!is_builtin_readonly_function(zToken, info->sql_mode == QC_SQL_MODE_ORACLE))
                 {
                     info->type_mask |= QUERY_TYPE_WRITE;
                 }
@@ -1577,7 +1583,7 @@ void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    if ((this_unit.sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
+    if ((info->sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
     {
         info->status = QC_QUERY_PARSED;
         info->type_mask = QUERY_TYPE_BEGIN_TRX | type;
@@ -2216,7 +2222,7 @@ void maxscaleDeclare(Parse* pParse)
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    if (this_unit.sql_mode != QC_SQL_MODE_ORACLE)
+    if (info->sql_mode != QC_SQL_MODE_ORACLE)
     {
         info->status = QC_QUERY_INVALID;
     }
@@ -2369,7 +2375,7 @@ void maxscaleExecuteImmediate(Parse* pParse, Token* pName, ExprSpan* pExprSpan, 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+    if (info->sql_mode == QC_SQL_MODE_ORACLE)
     {
         // This should be "EXECUTE IMMEDIATE ...", but as "IMMEDIATE" is not
         // checked by the parser we do it here.
@@ -2527,7 +2533,7 @@ int maxscaleTranslateKeyword(int token)
     case TK_CHARSET:
     case TK_DO:
     case TK_HANDLER:
-        if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+        if (info->sql_mode == QC_SQL_MODE_ORACLE)
         {
             // The keyword is translated, but only if it not used
             // as the first keyword. Matters for DO and HANDLER.
@@ -2585,7 +2591,7 @@ int maxscaleKeyword(int token)
         case TK_BEGIN:
         case TK_DECLARE:
         case TK_FOR:
-            if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+            if (info->sql_mode == QC_SQL_MODE_ORACLE)
             {
                 // The beginning of a BLOCK. We'll assume it is in a single
                 // COM_QUERY packet and hence one GWBUF.
@@ -2857,7 +2863,7 @@ void maxscalePrepare(Parse* pParse, Token* pName, Expr* pStmt)
     // be sensible to parse the preparable statement. Otherwise we mark the
     // statement as having been partially parsed, since the preparable statement
     // will not contain the full statement.
-    if (this_unit.sql_mode == QC_SQL_MODE_ORACLE)
+    if (info->sql_mode == QC_SQL_MODE_ORACLE)
     {
         if (pStmt->op == TK_STRING)
         {
