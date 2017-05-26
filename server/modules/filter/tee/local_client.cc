@@ -216,31 +216,39 @@ uint32_t LocalClient::poll_handler(struct mxs_poll_data* data, int wid, uint32_t
 LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
 {
     LocalClient* rval = NULL;
+    LISTENER_ITERATOR iter;
 
-    if (service->ports && service->ports->port > 0)
+    for (SERV_LISTENER* listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
     {
-        sockaddr_storage addr;
-        int fd = open_network_socket(MXS_SOCKET_NETWORK, &addr, "127.0.0.1",
-                                     service->ports->port);
-
-        if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS)
+        if (listener->port > 0)
         {
-            LocalClient* relay = new (std::nothrow) LocalClient(session, fd);
+            /** Pick the first network listener */
+            sockaddr_storage addr;
+            int fd = open_network_socket(MXS_SOCKET_NETWORK, &addr, "127.0.0.1",
+                                         service->ports->port);
 
-            if (relay)
+            if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS)
             {
-                mxs::Worker* worker = mxs::Worker::get_current();
+                LocalClient* relay = new (std::nothrow) LocalClient(session, fd);
 
-                if (worker->add_fd(fd, poll_events, (MXS_POLL_DATA*)relay))
+                if (relay)
                 {
-                    rval = relay;
-                }
-                else
-                {
-                    delete rval;
-                    rval = NULL;
+                    mxs::Worker* worker = mxs::Worker::get_current();
+
+                    if (worker->add_fd(fd, poll_events, (MXS_POLL_DATA*)relay))
+                    {
+                        rval = relay;
+                    }
+                    else
+                    {
+                        delete rval;
+                        rval = NULL;
+                    }
                 }
             }
+
+            break;
         }
     }
 
