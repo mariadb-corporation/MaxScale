@@ -94,7 +94,9 @@ void atomic_store_int32(int *variable, int value)
 #ifdef MXS_USE_ATOMIC_BUILTINS
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
 #else
-    (void)__sync_lock_test_and_set(variable, value);
+    __sync_synchronize();
+    *variable = value;
+    __sync_synchronize();
 #endif
 }
 
@@ -103,7 +105,9 @@ void atomic_store_int64(int64_t *variable, int64_t value)
 #ifdef MXS_USE_ATOMIC_BUILTINS
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
 #else
-    (void)__sync_lock_test_and_set(variable, value);
+    __sync_synchronize();
+    *variable = value;
+    __sync_synchronize();
 #endif
 }
 
@@ -112,7 +116,9 @@ void atomic_store_uint64(uint64_t *variable, uint64_t value)
 #ifdef MXS_USE_ATOMIC_BUILTINS
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
 #else
-    (void)__sync_lock_test_and_set(variable, value);
+    __sync_synchronize();
+    *variable = value;
+    __sync_synchronize();
 #endif
 }
 
@@ -121,7 +127,9 @@ void atomic_store_ptr(void **variable, void *value)
 #ifdef MXS_USE_ATOMIC_BUILTINS
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
 #else
-    (void)__sync_lock_test_and_set(variable, value);
+    __sync_synchronize();
+    *variable = value;
+    __sync_synchronize();
 #endif
 }
 
@@ -131,6 +139,6 @@ bool atomic_cas_ptr(void **variable, void** old_value, void *new_value)
     return __atomic_compare_exchange_n(variable, old_value, new_value,
                                        false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 #else
-    return __sync_val_compare_and_swap(variable, *old_value, new_value);
+    return __sync_bool_compare_and_swap(variable, *old_value, new_value);
 #endif
 }
