@@ -33,7 +33,15 @@ opts = parser.parse_args(sys.argv[1:])
 
 def parse_field(row):
     res = dict()
-    name = row[1].lower().split('(')[0]
+    parts = row[1].lower().split('(')
+    name = parts[0]
+
+    res["real_type"] = name
+
+    if len(parts) > 1:
+        res["length"] = int(parts[1].split(')')[0])
+    else:
+        res["length"] = -1
 
     if name in ("date", "datetime", "time", "timestamp", "year", "tinytext", "text",
 	        "mediumtext", "longtext", "char", "varchar", "enum", "set"):
