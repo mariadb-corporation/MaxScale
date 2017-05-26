@@ -35,7 +35,7 @@
  * The instance structure for the TEE filter - this holds the configuration
  * information for the filter.
  */
-typedef struct
+struct Tee
 {
     SERVICE *service; /* The service to duplicate requests to */
     char *source; /* The source of the client connection */
@@ -44,7 +44,7 @@ typedef struct
     regex_t re; /* Compiled regex text */
     char *nomatch; /* Optional text to match against for exclusion */
     regex_t nore; /* Compiled regex nomatch text */
-} TEE_INSTANCE;
+};
 
 /**
  * The session structure for this TEE filter.
@@ -54,13 +54,13 @@ typedef struct
  *
  * It also holds the file descriptor to which queries are written.
  */
-typedef struct
+struct TeeSession
 {
     MXS_DOWNSTREAM down;    /**< The downstream filter */
     MXS_UPSTREAM   up;      /**< The upstream filter */
     bool           passive; /**< Whether to clone queries */
     LocalClient*   client;  /**< The client connection to the local service */
-} TEE_SESSION;
+};
 
 static const MXS_ENUM_VALUE option_values[] =
 {
@@ -85,7 +85,7 @@ bool recursive_tee_usage(std::set<std::string>& services, SERVICE* service);
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    TEE_INSTANCE *my_instance = (TEE_INSTANCE*)MXS_CALLOC(1, sizeof(TEE_INSTANCE));
+    Tee *my_instance = new (std::nothrow) Tee;
 
     if (my_instance)
     {
@@ -105,7 +105,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
             MXS_FREE(my_instance->nomatch);
             MXS_FREE(my_instance->source);
             MXS_FREE(my_instance->user);
-            MXS_FREE(my_instance);
+            delete my_instance;
             return NULL;
         }
 
@@ -121,7 +121,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
             MXS_FREE(my_instance->nomatch);
             MXS_FREE(my_instance->source);
             MXS_FREE(my_instance->user);
-            MXS_FREE(my_instance);
+            delete my_instance;
             return NULL;
         }
     }
@@ -148,11 +148,11 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER *instance, MXS_SESSION *session
         return NULL;
     }
 
-    TEE_SESSION* my_session = new (std::nothrow) TEE_SESSION;
+    TeeSession* my_session = new (std::nothrow) TeeSession;
 
     if (my_session)
     {
-        TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
+        Tee *my_instance = reinterpret_cast<Tee*>(instance);
         const char* remote = session_get_remote(session);
         const char* user = session_get_user(session);
 
@@ -196,7 +196,7 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  */
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
-    TEE_SESSION *my_session = reinterpret_cast<TEE_SESSION*>(session);
+    TeeSession *my_session = reinterpret_cast<TeeSession*>(session);
     delete my_session->client;
     delete my_session;
 }
@@ -211,7 +211,7 @@ static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  */
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
-    TEE_SESSION *my_session = (TEE_SESSION *) session;
+    TeeSession *my_session = reinterpret_cast<TeeSession*>(session);
     my_session->down = *downstream;
 }
 
@@ -225,7 +225,7 @@ static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS
  */
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream)
 {
-    TEE_SESSION *my_session = (TEE_SESSION *) session;
+    TeeSession *my_session = reinterpret_cast<TeeSession*>(session);
     my_session->up = *upstream;
 }
 
@@ -240,7 +240,7 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_U
  */
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
-    TEE_SESSION *my_session = (TEE_SESSION *)session;
+    TeeSession *my_session = reinterpret_cast<TeeSession*>(session);
     int rval = 0;
 
     if (my_session->passive || my_session->client->queue_query(queue))
@@ -266,7 +266,7 @@ static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *
 static int
 clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply)
 {
-    TEE_SESSION *my_session = (TEE_SESSION *) session;
+    TeeSession *my_session = reinterpret_cast<TeeSession*>(session);
 
     return my_session->up.clientReply(my_session->up.instance,
                                       my_session->up.session,
@@ -287,7 +287,7 @@ clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply)
 static void
 diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
-    TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
+    Tee *my_instance = reinterpret_cast<Tee*>(instance);
 
     if (my_instance->source)
     {
@@ -325,7 +325,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  */
 static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
-    TEE_INSTANCE *my_instance = (TEE_INSTANCE*)instance;
+    const Tee *my_instance = reinterpret_cast<const Tee*>(instance);
 
     json_t* rval = json_object();
 
@@ -385,7 +385,7 @@ bool recursive_tee_usage(std::set<std::string>& services, SERVICE* service)
              * Found a Tee filter, recurse down its path
              * if the service name isn't already in the hashtable.
              */
-            TEE_INSTANCE* inst = (TEE_INSTANCE*)filter_def_get_instance(service->filters[i]);
+            Tee* inst = (Tee*)filter_def_get_instance(service->filters[i]);
 
             if (inst == NULL)
             {
