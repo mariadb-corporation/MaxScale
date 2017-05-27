@@ -22,16 +22,6 @@ service=RW Split Router
  * - check warnig in the log "RW Split Router: Recursive use of tee filter in service"
  */
 
-/*
-Mark Riddoch 2014-12-11 11:59:19 UTC
-There is a recursive use of the tee filter in the configuration.
-
-The "RW Split Router" uses the"duplicate" filter that will then duplicate all traffic to the original destination and another copy of the "RW Split Router", which again will  duplicate all traffic to the original destination and another copy of the "RW Split Router"...
-
-Really this needs to be trapped as a configuration error.
-*/
-
-
 #include <iostream>
 #include "testconnections.h"
 
@@ -56,7 +46,7 @@ int main(int argc, char *argv[])
         Test->add_result(1, "FAIL: Query to broken service succeeded!\n");
     }
     Test->close_maxscale_connections();
-    Test->check_log_err((char *) "RW-Split-Router: Recursive use of tee filter in service", true);
+    Test->check_log_err("Recursive use of tee filter in service", true);
 
     int rval = Test->global_result;
     delete Test;

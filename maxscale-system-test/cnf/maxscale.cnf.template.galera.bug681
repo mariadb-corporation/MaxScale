@@ -10,7 +10,7 @@ servers=server1,server2,server3
 #passwd=maxpwd
 user=maxskysql
 passwd=skysql
-root_node_as_master=false
+#root_node_as_master=false
 
 [RW Split Router]
 type=service

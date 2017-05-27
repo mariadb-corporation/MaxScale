@@ -9,7 +9,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
 use_priority=true
-root_node_as_master=false
+#root_node_as_master=false
 
 [RW Split Router]
 type=service
@@ -43,6 +43,16 @@ service=Read Connection Router
 protocol=MySQLClient
 port=4008
 #socket=/tmp/readconn.sock
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+socket=default
 
 [server1]
 type=server

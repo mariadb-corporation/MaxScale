@@ -44,8 +44,7 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();
 
-    Test->check_log_err((char *)
-                        "Unable to start RW-Split-Router service. There are too few backend servers configured in", true);
+    Test->check_log_err("There are too few backend servers configured in", true);
 
     int rval = Test->global_result;
     delete Test;
