@@ -3,9 +3,6 @@
 # Do the real building work. This script is executed on build VM and
 # requires a working installation of CMake.
 
-# Check if CMake needs to be installed
-command -v cmake || install_cmake="cmake"
-
 
 command -v apt-get
 
@@ -18,7 +15,7 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev libgnutls30 libgcrypt20 $install_cmake
+       sqlite3 liblua5.1 liblua5.1-dev libgnutls30 libgcrypt20 
 else
   ## RPM-based distro
   command -v yum
@@ -30,7 +27,7 @@ else
          make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
          pcre-devel git wget tcl libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls gcrypt $install_cmake
+         gnutls gcrypt
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
@@ -46,7 +43,7 @@ else
          libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         gnutls gcrypt $install_cmake
+         gnutls gcrypt
 
     cat /etc/redhat-release | grep "release 5"
     if [ $? -eq 0 ]
@@ -55,6 +52,27 @@ else
     fi
   fi
 
+fi
+
+# cmake
+wget http://max-tst-01.mariadb.com/ci-repository/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+if [ $? != 0 ] ; then
+    echo "CMake can not be downloaded from Maxscale build server, trying from cmake.org"
+    wget https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+    sudo tar xzvf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
+fi
+
+cmake_version=`cmake --version | grep "cmake version" | awk '{ print $3 }'`
+if [ "$cmake_version" \< "3.7.1" ] ; then
+    echo "cmake does not work! Trying to build from source"
+    wget https://cmake.org/files/v3.7/cmake-3.7.1.tar.gz --no-check-certificate
+    tar xzvf cmake-3.7.1.tar.gz
+    cd cmake-3.7.1
+
+    ./bootstrap
+    gmake
+    sudo make install
+    cd ..
 fi
 
 # Flex
