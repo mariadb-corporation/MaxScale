@@ -18,13 +18,22 @@ function(add_java_test name src entry_point template)
 endfunction()
 
 # Some constants that make changing the connector easier
-set(JDBC_JAR ${CMAKE_CURRENT_SOURCE_DIR}/mariadb-java-client-1.5.4.jar CACHE INTERNAL "")
+set(JDBC_JAR_NAME "mariadb-java-client-1.5.9.jar")
+set(JDBC_JAR ${CMAKE_CURRENT_BINARY_DIR}/${JDBC_JAR_NAME} CACHE INTERNAL "")
 set(MXS_JAR ${CMAKE_CURRENT_BINARY_DIR}/maxscale_java.jar CACHE INTERNAL "")
 set(TEST_JARPATH "${MXS_JAR}:${JDBC_JAR}" CACHE INTERNAL "")
 
+# If we don't have the JDBC driver, download it
+if(NOT EXISTS ${JDBC_JAR})
+  message(STATUS "Downloading MariaDB Connector-J: ${JDBC_JAR_NAME}")
+  file(DOWNLOAD https://downloads.mariadb.com/Connectors/java/connector-java-1.5.9/mariadb-java-client-1.5.9.jar
+    ${CMAKE_CURRENT_BINARY_DIR}/${JDBC_JAR_NAME}
+    SHOW_PROGRESS)
+endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/MaxScaleConfiguration.java.in ${CMAKE_CURRENT_BINARY_DIR}/MaxScaleConfiguration.java @ONLY)
 add_jar(maxscale_java SOURCES MaxScaleConnection.java MaxScaleConfiguration.java
-  INCLUDE_JARS mariadb-java-client-1.5.4.jar)
+  INCLUDE_JARS ${JDBC_JAR_NAME})
 add_subdirectory(test1)
 add_subdirectory(prep_stmt)
 add_subdirectory(batch)
