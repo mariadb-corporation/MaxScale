@@ -84,7 +84,8 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_PATH, /**< Path to a file or a directory */
     MXS_MODULE_PARAM_SERVICE, /**< Service name */
     MXS_MODULE_PARAM_SERVER, /**< Server name */
-    MXS_MODULE_PARAM_SERVERLIST /**< List of server names, separated by ',' */
+    MXS_MODULE_PARAM_SERVERLIST, /**< List of server names, separated by ',' */
+    MXS_MODULE_PARAM_REGEX /**< A regex string enclosed in '/' */
 };
 
 /** Maximum and minimum values for integer types */
@@ -246,6 +247,8 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
         return "server";
     case MXS_MODULE_PARAM_SERVERLIST:
         return "serverlist";
+    case MXS_MODULE_PARAM_REGEX:
+        return "regular expression";
     default:
         ss_dassert(!true);
         return "unknown";
