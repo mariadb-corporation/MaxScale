@@ -121,7 +121,14 @@ int Client::process(string url, string method, const char* upload_data, size_t *
 
     if (js)
     {
-        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
+        int flags = 0;
+        string pretty = request.get_option("pretty");
+
+        if (pretty == "true" || pretty.length() == 0)
+        {
+            flags |= JSON_INDENT(4);
+        }
+
         data = mxs::json_dump(js, flags);
     }
 
