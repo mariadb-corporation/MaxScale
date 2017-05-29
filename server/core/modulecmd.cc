@@ -625,66 +625,58 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
     return rval;
 }
 
-char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
+#define format_type(a, b) (MODULECMD_ARG_IS_REQUIRED(a) ? b : "[" b "]")
+
+const char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
 {
-    const char *strtype = "UNKNOWN";
+    const char* rval = "UNKNOWN";
 
     switch (MODULECMD_GET_TYPE(type))
     {
     case MODULECMD_ARG_NONE:
-        strtype = "NONE";
+        rval = format_type(type, "NONE");
         break;
 
     case MODULECMD_ARG_STRING:
-        strtype = "STRING";
+        rval = format_type(type, "STRING");
         break;
 
     case MODULECMD_ARG_BOOLEAN:
-        strtype = "BOOLEAN";
+        rval = format_type(type, "BOOLEAN");
         break;
 
     case MODULECMD_ARG_SERVICE:
-        strtype = "SERVICE";
+        rval = format_type(type, "SERVICE");
         break;
 
     case MODULECMD_ARG_SERVER:
-        strtype = "SERVER";
+        rval = format_type(type, "SERVER");
         break;
 
     case MODULECMD_ARG_SESSION:
-        strtype = "SESSION";
+        rval = format_type(type, "SESSION");
         break;
 
     case MODULECMD_ARG_DCB:
-        strtype = "DCB";
+        rval = format_type(type, "DCB");
         break;
 
     case MODULECMD_ARG_MONITOR:
-        strtype = "MONITOR";
+        rval = format_type(type, "MONITOR");
         break;
 
     case MODULECMD_ARG_FILTER:
-        strtype = "FILTER";
+        rval = format_type(type, "FILTER");
         break;
 
     case MODULECMD_ARG_OUTPUT:
-        strtype = "OUTPUT";
+        rval = format_type(type, "OUTPUT");
         break;
 
     default:
         ss_dassert(false);
         MXS_ERROR("Unknown type");
         break;
-    }
-
-    size_t slen = strlen(strtype);
-    size_t extra = MODULECMD_ARG_IS_REQUIRED(type) ? 0 : 2;
-    char *rval = (char*)MXS_MALLOC(slen + extra + 1);
-
-    if (rval)
-    {
-        const char *fmtstr = extra ? "[%s]" : "%s";
-        sprintf(rval, fmtstr, strtype);
     }
 
     return rval;
