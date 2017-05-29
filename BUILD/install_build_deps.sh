@@ -17,9 +17,15 @@ then
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
        sqlite3 liblua5.1 liblua5.1-dev  wget
   sudo apt-get install -y --force-yes libgnutls-dev
-  sudo apt-get install -y --force-yes libgnutls28-dev
-  sudo apt-get install -y --force-yes libgcrypt11
+  if [ $? != 0 ]
+  then
+       sudo apt-get install -y --force-yes libgnutls28-dev
+  fi
   sudo apt-get install -y --force-yes libgcrypt20
+  if [ $? != 0 ]
+  then
+      sudo apt-get install -y --force-yes libgcrypt11
+  fi
 else
   ## RPM-based distro
   command -v yum
