@@ -59,8 +59,8 @@ wget http://max-tst-01.mariadb.com/ci-repository/cmake-3.7.1-Linux-x86_64.tar.gz
 if [ $? != 0 ] ; then
     echo "CMake can not be downloaded from Maxscale build server, trying from cmake.org"
     wget https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
-    sudo tar xzvf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
 fi
+sudo tar xzvf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
 
 cmake_version=`cmake --version | grep "cmake version" | awk '{ print $3 }'`
 if [ "$cmake_version" \< "3.7.1" ] ; then
