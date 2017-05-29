@@ -4,13 +4,8 @@
 # different, so they have separate output files.
     
 #forbid_utf
+#newline_default LF ANY ANYCRLF
 
-/a\Cb/
-    aXb
- 0: aXb
-    a\nb
- 0: a\x0ab
-  
 /[^\x{c4}]/IB
 ------------------------------------------------------------------
         Bra
@@ -581,7 +576,7 @@ Failed: error 134 at offset 11: character code point value in \x{} or \o{} is to
 
 # Non-UTF characters 
 
-/\C{2,3}/
+/.{2,3}/
     \x{400000}\x{400001}\x{400002}\x{400003}
 ** Character \x{400000} is greater than 0xffff and UTF-16 mode is not enabled.
 ** Truncation will probably give the wrong result.
@@ -645,5 +640,25 @@ Starting code units: \x00 \x01 \x02 \x03 \x04 \x05 \x06 \x07 \x08 \x09 \x0e
   \xed \xee \xef \xf0 \xf1 \xf2 \xf3 \xf4 \xf5 \xf6 \xf7 \xf8 \xf9 \xfa \xfb 
   \xfc \xfd \xfe \xff 
 Subject length lower bound = 1
+
+/(*THEN:\[A]{65501})/expand
+
+# We can use pcre2test's utf8_input modifier to create wide pattern characters,
+# even though this test is run when UTF is not supported.
+
+/abý¿¿¿¿¿z/utf8_input
+** Failed: character value greater than 0xffff cannot be converted to 16-bit in non-UTF mode
+    abý¿¿¿¿¿z
+    ab\x{7fffffff}z
+
+/abÿý¿¿¿¿¿z/utf8_input
+** Failed: invalid UTF-8 string cannot be converted to 16-bit string
+    abÿý¿¿¿¿¿z
+    ab\x{ffffffff}z 
+
+/abÿAz/utf8_input
+** Failed: invalid UTF-8 string cannot be converted to 16-bit string
+    abÿAz
+    ab\x{80000041}z 
 
 # End of testinput11

@@ -1,8 +1,11 @@
-# These are a few representative patterns whose lengths and offsets are to be
-# shown when the link size is 2. This is just a doublecheck test to ensure the
-# sizes don't go horribly wrong when something is changed. The pattern contents
-# are all themselves checked in other tests. Unicode, including property
-# support, is required for these tests.
+# There are two sorts of patterns in this test. A number of them are
+# representative patterns whose lengths and offsets are checked. This is just a
+# doublecheck test to ensure the sizes don't go horribly wrong when something
+# is changed. The operation of these patterns is checked in other tests.
+#
+# This file also contains tests whose output varies with code unit size and/or
+# link size. Unicode support is required for these tests. There are separate
+# output files for each code unit size and link size.
 
 #pattern fullbincode,memory
 
@@ -378,7 +381,7 @@ Options: utf
 First code unit = 'A'
 Last code unit = '.'
 Subject length lower bound = 4
-    
+
 /\x{D55c}\x{ad6d}\x{C5B4}/I,utf
 Memory allocation (code space): 19
 ------------------------------------------------------------------
@@ -842,11 +845,184 @@ Memory allocation (code space): 10
 
 # Check the absolute limit on nesting (?| etc. This varies with code unit
 # width because the workspace is a different number of bytes. It will fail
-# in 8-bit and 16-bit but not in 32-bit.
-    
+# with link size 2 in 8-bit and 16-bit but not in 32-bit.
+
 /(?|(?|(?J:(?|(?x:(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|(?|
 )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 /parens_nest_limit=1000,-fullbincode
 Failed: error 184 at offset 1540: (?| and/or (?J: or (?x: parentheses are too deeply nested
+
+# Use "expand" to create some very long patterns with nested parentheses, in
+# order to test workspace overflow. Again, this varies with code unit width,
+# and even when it fails in two modes, the error offset differs. It also varies
+# with link size - hence multiple tests with different values.
+
+/(?'ABC'\[[bar](]{792}*THEN:\[A]{255}\[)]{793}/expand,-fullbincode,parens_nest_limit=1000
+
+/(?'ABC'\[[bar](]{793}*THEN:\[A]{255}\[)]{794}/expand,-fullbincode,parens_nest_limit=1000
+Failed: error 186 at offset 5820: regular expression is too complicated
+
+/(?'ABC'\[[bar](]{1793}*THEN:\[A]{255}\[)]{1794}/expand,-fullbincode,parens_nest_limit=2000
+Failed: error 186 at offset 12820: regular expression is too complicated
+
+/(?(1)(?1)){8,}+()/debug
+------------------------------------------------------------------
+  0 119 Bra
+  3 105 Once
+  6   9 Cond
+  9   1 Cond ref
+ 12 111 Recurse
+ 15   9 Ket
+ 18   9 Cond
+ 21   1 Cond ref
+ 24 111 Recurse
+ 27   9 Ket
+ 30   9 Cond
+ 33   1 Cond ref
+ 36 111 Recurse
+ 39   9 Ket
+ 42   9 Cond
+ 45   1 Cond ref
+ 48 111 Recurse
+ 51   9 Ket
+ 54   9 Cond
+ 57   1 Cond ref
+ 60 111 Recurse
+ 63   9 Ket
+ 66   9 Cond
+ 69   1 Cond ref
+ 72 111 Recurse
+ 75   9 Ket
+ 78   9 Cond
+ 81   1 Cond ref
+ 84 111 Recurse
+ 87   9 Ket
+ 90  15 SBraPos
+ 93   9 SCond
+ 96   1 Cond ref
+ 99 111 Recurse
+102   9 Ket
+105  15 KetRpos
+108 105 Ket
+111   5 CBra 1
+116   5 Ket
+119 119 Ket
+122     End
+------------------------------------------------------------------
+Capturing subpattern count = 1
+Max back reference = 1
+May match empty string
+Subject length lower bound = 0
+    abcd
+ 0: 
+ 1: 
+
+/(?(1)|a(?1)b){2,}+()/debug
+------------------------------------------------------------------
+  0  61 Bra
+  3  47 Once
+  6   6 Cond
+  9   1 Cond ref
+ 12  10 Alt
+ 15     a
+ 17  53 Recurse
+ 20     b
+ 22  16 Ket
+ 25  22 SBraPos
+ 28   6 SCond
+ 31   1 Cond ref
+ 34  10 Alt
+ 37     a
+ 39  53 Recurse
+ 42     b
+ 44  16 Ket
+ 47  22 KetRpos
+ 50  47 Ket
+ 53   5 CBra 1
+ 58   5 Ket
+ 61  61 Ket
+ 64     End
+------------------------------------------------------------------
+Capturing subpattern count = 1
+Max back reference = 1
+May match empty string
+Subject length lower bound = 0
+    abcde
+No match
+
+/((?1)(?2)(?3)(?4)(?5)(?6)(?7)(?8)(?9)(?9)(?8)(?7)(?6)(?5)(?4)(?3)(?2)(?1)(?0)){2,}()()()()()()()()()/debug
+------------------------------------------------------------------
+  0 205 Bra
+  3  62 CBra 1
+  8   3 Recurse
+ 11 133 Recurse
+ 14 141 Recurse
+ 17 149 Recurse
+ 20 157 Recurse
+ 23 165 Recurse
+ 26 173 Recurse
+ 29 181 Recurse
+ 32 189 Recurse
+ 35 189 Recurse
+ 38 181 Recurse
+ 41 173 Recurse
+ 44 165 Recurse
+ 47 157 Recurse
+ 50 149 Recurse
+ 53 141 Recurse
+ 56 133 Recurse
+ 59   3 Recurse
+ 62   0 Recurse
+ 65  62 Ket
+ 68  62 SCBra 1
+ 73   3 Recurse
+ 76 133 Recurse
+ 79 141 Recurse
+ 82 149 Recurse
+ 85 157 Recurse
+ 88 165 Recurse
+ 91 173 Recurse
+ 94 181 Recurse
+ 97 189 Recurse
+100 189 Recurse
+103 181 Recurse
+106 173 Recurse
+109 165 Recurse
+112 157 Recurse
+115 149 Recurse
+118 141 Recurse
+121 133 Recurse
+124   3 Recurse
+127   0 Recurse
+130  62 KetRmax
+133   5 CBra 2
+138   5 Ket
+141   5 CBra 3
+146   5 Ket
+149   5 CBra 4
+154   5 Ket
+157   5 CBra 5
+162   5 Ket
+165   5 CBra 6
+170   5 Ket
+173   5 CBra 7
+178   5 Ket
+181   5 CBra 8
+186   5 Ket
+189   5 CBra 9
+194   5 Ket
+197   5 CBra 10
+202   5 Ket
+205 205 Ket
+208     End
+------------------------------------------------------------------
+Capturing subpattern count = 10
+May match empty string
+Subject length lower bound = 0
+
+/([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00](*ACCEPT)/
+Failed: error 114 at offset 509: missing closing parenthesis
+
+/([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00]([00](*ACCEPT)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))/-fullbincode
 
 # End of testinput8

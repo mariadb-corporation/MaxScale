@@ -1,4 +1,4 @@
-.TH PCRE2POSIX 3 "20 October 2014" "PCRE2 10.00"
+.TH PCRE2POSIX 3 "31 January 2016" "PCRE2 10.22"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH "SYNOPSIS"
@@ -28,7 +28,7 @@ expression 8-bit library. See the
 \fBpcre2api\fP
 .\"
 documentation for a description of PCRE2's native API, which contains much
-additional functionality. There is no POSIX-style wrapper for PCRE2's 16-bit
+additional functionality. There are no POSIX-style wrappers for PCRE2's 16-bit
 and 32-bit libraries.
 .P
 The functions described here are just wrapper functions that ultimately call
@@ -44,9 +44,9 @@ value zero. This has no effect, but since programs that are written to the
 POSIX interface often use it, this makes it easier to slot in PCRE2 as a
 replacement library. Other POSIX options are not even defined.
 .P
-There are also some other options that are not defined by POSIX. These have
-been added at the request of users who want to make use of certain
-PCRE2-specific features via the POSIX calling interface.
+There are also some options that are not defined by POSIX. These have been
+added at the request of users who want to make use of certain PCRE2-specific
+features via the POSIX calling interface.
 .P
 When PCRE2 is called via these functions, it is only the API that is POSIX-like
 in style. The syntax and semantics of the regular expressions themselves are
@@ -95,11 +95,11 @@ defined POSIX behaviour for REG_NEWLINE (see the following section).
 .sp
   REG_NOSUB
 .sp
-The PCRE2_NO_AUTO_CAPTURE option is set when the regular expression is passed
-for compilation to the native function. In addition, when a pattern that is
-compiled with this flag is passed to \fBregexec()\fP for matching, the
-\fInmatch\fP and \fIpmatch\fP arguments are ignored, and no captured strings
-are returned.
+When a pattern that is compiled with this flag is passed to \fBregexec()\fP for
+matching, the \fInmatch\fP and \fIpmatch\fP arguments are ignored, and no
+captured strings are returned. Versions of the PCRE library prior to 10.22 used
+to set the PCRE2_NO_AUTO_CAPTURE compile option, but this no longer happens
+because it disables the use of back references.
 .sp
   REG_UCP
 .sp
@@ -145,7 +145,7 @@ use the contents of the \fIpreg\fP structure. If, for example, you pass it to
 This area is not simple, because POSIX and Perl take different views of things.
 It is not possible to get PCRE2 to obey POSIX semantics, but then PCRE2 was
 never intended to be a POSIX engine. The following table lists the different
-possibilities for matching newline characters in PCRE2:
+possibilities for matching newline characters in Perl and PCRE2:
 .sp
                           Default   Change with
 .sp
@@ -155,7 +155,7 @@ possibilities for matching newline characters in PCRE2:
   $ matches \en in middle     no     PCRE2_MULTILINE
   ^ matches \en in middle     no     PCRE2_MULTILINE
 .sp
-This is the equivalent table for POSIX:
+This is the equivalent table for a POSIX-compatible pattern matcher:
 .sp
                           Default   Change with
 .sp
@@ -165,13 +165,17 @@ This is the equivalent table for POSIX:
   $ matches \en in middle     no     REG_NEWLINE
   ^ matches \en in middle     no     REG_NEWLINE
 .sp
-PCRE2's behaviour is the same as Perl's, except that there is no equivalent for
-PCRE2_DOLLAR_ENDONLY in Perl. In both PCRE2 and Perl, there is no way to stop
-newline from matching [^a].
+This behaviour is not what happens when PCRE2 is called via its POSIX
+API. By default, PCRE2's behaviour is the same as Perl's, except that there is
+no equivalent for PCRE2_DOLLAR_ENDONLY in Perl. In both PCRE2 and Perl, there
+is no way to stop newline from matching [^a].
 .P
-The default POSIX newline handling can be obtained by setting PCRE2_DOTALL and
-PCRE2_DOLLAR_ENDONLY, but there is no way to make PCRE2 behave exactly as for
-the REG_NEWLINE action.
+Default POSIX newline handling can be obtained by setting PCRE2_DOTALL and
+PCRE2_DOLLAR_ENDONLY when calling \fBpcre2_compile()\fP directly, but there is
+no way to make PCRE2 behave exactly as for the REG_NEWLINE action. When using
+the POSIX API, passing REG_NEWLINE to PCRE2's \fBregcomp()\fP function
+causes PCRE2_MULTILINE to be passed to \fBpcre2_compile()\fP, and REG_DOTALL
+passes PCRE2_DOTALL. There is no way to pass PCRE2_DOLLAR_ENDONLY.
 .
 .
 .SH "MATCHING A PATTERN"
@@ -207,16 +211,18 @@ to have a terminating NUL located at \fIstring\fP + \fIpmatch[0].rm_eo\fP
 IEEE Standard 1003.2 (POSIX.2), and should be used with caution in software
 intended to be portable to other systems. Note that a non-zero \fIrm_so\fP does
 not imply REG_NOTBOL; REG_STARTEND affects only the location of the string, not
-how it is matched.
+how it is matched. Setting REG_STARTEND and passing \fIpmatch\fP as NULL are
+mutually exclusive; the error REG_INVARG is returned.
 .P
 If the pattern was compiled with the REG_NOSUB flag, no data about any matched
 strings is returned. The \fInmatch\fP and \fIpmatch\fP arguments of
-\fBregexec()\fP are ignored.
+\fBregexec()\fP are ignored (except possibly as input for REG_STARTEND).
 .P
-If the value of \fInmatch\fP is zero, or if the value \fIpmatch\fP is NULL,
-no data about any matched strings is returned.
+The value of \fInmatch\fP may be zero, and the value \fIpmatch\fP may be NULL
+(unless REG_STARTEND is set); in both these cases no data about any matched
+strings is returned.
 .P
-Otherwise,the portion of the string that was matched, and also any captured
+Otherwise, the portion of the string that was matched, and also any captured
 substrings, are returned via the \fIpmatch\fP argument, which points to an
 array of \fInmatch\fP structures of type \fIregmatch_t\fP, containing the
 members \fIrm_so\fP and \fIrm_eo\fP. These contain the byte offset to the first
@@ -236,9 +242,11 @@ header file, of which REG_NOMATCH is the "expected" failure code.
 The \fBregerror()\fP function maps a non-zero errorcode from either
 \fBregcomp()\fP or \fBregexec()\fP to a printable message. If \fIpreg\fP is not
 NULL, the error should have arisen from the use of that structure. A message
-terminated by a binary zero is placed in \fIerrbuf\fP. The length of the
-message, including the zero, is limited to \fIerrbuf_size\fP. The yield of the
-function is the size of buffer needed to hold the whole message.
+terminated by a binary zero is placed in \fIerrbuf\fP. If the buffer is too
+short, only the first \fIerrbuf_size\fP - 1 characters of the error message are
+used. The yield of the function is the size of buffer needed to hold the whole
+message, including the terminating zero. This value is greater than
+\fIerrbuf_size\fP if the message was truncated.
 .
 .
 .SH MEMORY USAGE
@@ -263,6 +271,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 20 October 2014
-Copyright (c) 1997-2014 University of Cambridge.
+Last updated: 31 January 2016
+Copyright (c) 1997-2016 University of Cambridge.
 .fi

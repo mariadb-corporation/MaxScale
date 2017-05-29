@@ -86,7 +86,7 @@ while test $# -gt 0; do
       ;;
     --libs-posix)
       if test @enable_pcre2_8@ = yes ; then
-        echo $libS$libR -lpcre2posix -lpcre2-8
+        echo $libS$libR -lpcre2-posix -lpcre2-8
       else
         echo "${usage}" 1>&2
       fi

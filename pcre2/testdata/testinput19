@@ -1,62 +1,18 @@
-# This set of tests exercises the serialization/deserialization functions in
-# the library. It does not use UTF or JIT.
-
-#forbid_utf
-
-# Compile several patterns, push them onto the stack, and then write them
-# all to a file.
-
-#pattern push
-
-/(?<NAME>(?&NAME_PAT))\s+(?<ADDR>(?&ADDRESS_PAT))
-  (?(DEFINE)
-  (?<NAME_PAT>[a-z]+)
-  (?<ADDRESS_PAT>\d+)
-  )/x
-/^(?:((.)(?1)\2|)|((.)(?3)\4|.))$/i
-
-#save testsaved1
-
-# Do it again for some more patterns.
-
-/(*MARK:A)(*SKIP:B)(C|X)/mark
-/(?:(?<n>foo)|(?<n>bar))\k<n>/dupnames
-
-#save testsaved2
-#pattern -push
-
-# Reload the patterns, then pop them one by one and check them.
-
-#load testsaved1
-#load testsaved2
-
-#pop info
-    foofoo             
-    barbar
+# This set of tests is run only with the 8-bit library. It tests the POSIX
+# interface with UTF/UCP support, which is supported only with the 8-bit
+# library. This test should not be run with JIT (which is not available for the
+# POSIX interface).
     
-#pop mark
-    C
-    D 
+#pattern posix
+
+/a\x{1234}b/utf
+    a\x{1234}b
+
+/\w/
+\= Expect no match
+    +++\x{c2}
+
+/\w/ucp
+    +++\x{c2}
     
-#pop
-    AmanaplanacanalPanama   
-
-#pop info
-    metcalfe 33
-    
-# Check for an error when different tables are used.
-
-/abc/push,tables=1
-/xyz/push,tables=2
-#save testsaved1
-
-#pop
-    xyz
-
-#pop
-    abc
-
-#pop should give an error
-    pqr
-
-# End of testinput19 
+# End of testdata/testinput19

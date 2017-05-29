@@ -1,4 +1,4 @@
-.TH PCRE2CALLOUT 3 "23 March 2015" "PCRE2 10.20"
+.TH PCRE2CALLOUT 3 "29 September 2016" "PCRE2 10.23"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -40,11 +40,20 @@ two callout points:
 .sp
 If the PCRE2_AUTO_CALLOUT option bit is set when a pattern is compiled, PCRE2
 automatically inserts callouts, all with number 255, before each item in the
-pattern. For example, if PCRE2_AUTO_CALLOUT is used with the pattern
+pattern except for immediately before or after a callout item in the pattern.
+For example, if PCRE2_AUTO_CALLOUT is used with the pattern
+.sp
+  A(?C3)B
+.sp
+it is processed as if it were
+.sp
+  (?C255)A(?C3)B(?C255)
+.sp
+Here is a more complicated example:
 .sp
   A(\ed{2}|--)
 .sp
-it is processed as if it were
+With PCRE2_AUTO_CALLOUT, this pattern is processed as if it were
 .sp
 (?C255)A(?C255)((?C255)\ed{2}(?C255)|(?C255)-(?C255)-(?C255))(?C255)
 .sp
@@ -91,10 +100,10 @@ with PCRE2_ANCHORED and PCRE2_AUTO_CALLOUT and then applied to the string
   No match
 .sp
 This indicates that when matching [bc] fails, there is no backtracking into a+
-and therefore the callouts that would be taken for the backtracks do not occur.
-You can disable the auto-possessify feature by passing PCRE2_NO_AUTO_POSSESS to
-\fBpcre2_compile()\fP, or starting the pattern with (*NO_AUTO_POSSESS). In this
-case, the output changes to this:
+(because it is being treated as a++) and therefore the callouts that would be
+taken for the backtracks do not occur. You can disable the auto-possessify
+feature by passing PCRE2_NO_AUTO_POSSESS to \fBpcre2_compile()\fP, or starting
+the pattern with (*NO_AUTO_POSSESS). In this case, the output changes to this:
 .sp
   --->aaaa
    +0 ^        a+
@@ -220,8 +229,8 @@ but the intention is never to remove any of the existing fields.
 .sp
 For a numerical callout, \fIcallout_string\fP is NULL, and \fIcallout_number\fP
 contains the number of the callout, in the range 0-255. This is the number
-that follows (?C for manual callouts; it is 255 for automatically generated
-callouts.
+that follows (?C for callouts that part of the pattern; it is 255 for
+automatically generated callouts.
 .
 .
 .SS "Fields for string callouts"
@@ -286,10 +295,15 @@ The \fIpattern_position\fP field contains the offset in the pattern string to
 the next item to be matched.
 .P
 The \fInext_item_length\fP field contains the length of the next item to be
-matched in the pattern string. When the callout immediately precedes an
-alternation bar, a closing parenthesis, or the end of the pattern, the length
-is zero. When the callout precedes an opening parenthesis, the length is that
-of the entire subpattern.
+processed in the pattern string. When the callout is at the end of the pattern,
+the length is zero. When the callout precedes an opening parenthesis, the
+length includes meta characters that follow the parenthesis. For example, in a
+callout before an assertion such as (?=ab) the length is 3. For an an
+alternation bar or a closing parenthesis, the length is one, unless a closing
+parenthesis is followed by a quantifier, in which case its length is included.
+(This changed in release 10.23. In earlier releases, before an opening
+parenthesis the length was that of the entire subpattern, and before an
+alternation bar or a closing parenthesis the length was zero.)
 .P
 The \fIpattern_position\fP and \fInext_item_length\fP fields are intended to
 help in distinguishing between different automatic callouts, which all have the
@@ -382,6 +396,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 23 March 2015
-Copyright (c) 1997-2015 University of Cambridge.
+Last updated: 29 September 2016
+Copyright (c) 1997-2016 University of Cambridge.
 .fi

@@ -57,12 +57,13 @@ assertion and "once-only" subpatterns, which are handled like subroutine calls.
 Normally, these are never very deep, and the limit on the complexity of
 <b>pcre2_dfa_match()</b> is controlled by the amount of workspace it is given.
 However, it is possible to write patterns with runaway infinite recursions;
-such patterns will cause <b>pcre2_dfa_match()</b> to run out of stack. At
-present, there is no protection against this.
+such patterns will cause <b>pcre2_dfa_match()</b> to run out of stack unless a
+limit is applied (see below).
 </P>
 <P>
-The comments that follow do NOT apply to <b>pcre2_dfa_match()</b>; they are
-relevant only for <b>pcre2_match()</b> without the JIT optimization.
+The comments in the next three sections do not apply to
+<b>pcre2_dfa_match()</b>; they are relevant only for <b>pcre2_match()</b> without
+the JIT optimization.
 </P>
 <br><b>
 Reducing <b>pcre2_match()</b>'s stack usage
@@ -115,7 +116,7 @@ entitled
 in the
 <a href="pcre2api.html"><b>pcre2api</b></a>
 documentation. Since the block sizes are always the same, it may be possible to
-implement customized a memory handler that is more efficient than the standard
+implement a customized memory handler that is more efficient than the standard
 function. The memory blocks obtained for this purpose are retained and re-used
 if possible while <b>pcre2_match()</b> is running. They are all freed just
 before it exits.
@@ -149,6 +150,15 @@ The <b>pcre2test</b> test program has a modifier called "find_limits" which, if
 applied to a subject line, causes it to find the smallest limits that allow a a
 pattern to match. This is done by calling <b>pcre2_match()</b> repeatedly with
 different limits.
+</P>
+<br><b>
+Limiting <b>pcre2_dfa_match()</b>'s stack usage
+</b><br>
+<P>
+The recursion limit, as described above for <b>pcre2_match()</b>, also applies
+to <b>pcre2_dfa_match()</b>, whose use of recursive function calls for
+recursions in the pattern can lead to runaway stack usage. The non-recursive
+match limit is not relevant for DFA matching, and is ignored.
 </P>
 <br><b>
 Changing stack size in Unix-like systems
@@ -198,9 +208,9 @@ Cambridge, England.
 REVISION
 </b><br>
 <P>
-Last updated: 21 November 2014
+Last updated: 23 December 2016
 <br>
-Copyright &copy; 1997-2014 University of Cambridge.
+Copyright &copy; 1997-2016 University of Cambridge.
 <br>
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

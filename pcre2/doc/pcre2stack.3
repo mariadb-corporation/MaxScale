@@ -1,4 +1,4 @@
-.TH PCRE2STACK 3 "21 November 2014" "PCRE2 10.00"
+.TH PCRE2STACK 3 "23 December 2016" "PCRE2 10.23"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH "PCRE2 DISCUSSION OF STACK USAGE"
@@ -43,11 +43,12 @@ assertion and "once-only" subpatterns, which are handled like subroutine calls.
 Normally, these are never very deep, and the limit on the complexity of
 \fBpcre2_dfa_match()\fP is controlled by the amount of workspace it is given.
 However, it is possible to write patterns with runaway infinite recursions;
-such patterns will cause \fBpcre2_dfa_match()\fP to run out of stack. At
-present, there is no protection against this.
+such patterns will cause \fBpcre2_dfa_match()\fP to run out of stack unless a
+limit is applied (see below).
 .P
-The comments that follow do NOT apply to \fBpcre2_dfa_match()\fP; they are
-relevant only for \fBpcre2_match()\fP without the JIT optimization.
+The comments in the next three sections do not apply to
+\fBpcre2_dfa_match()\fP; they are relevant only for \fBpcre2_match()\fP without
+the JIT optimization.
 .
 .
 .SS "Reducing \fBpcre2_match()\fP's stack usage"
@@ -106,7 +107,7 @@ in the
 \fBpcre2api\fP
 .\"
 documentation. Since the block sizes are always the same, it may be possible to
-implement customized a memory handler that is more efficient than the standard
+implement a customized memory handler that is more efficient than the standard
 function. The memory blocks obtained for this purpose are retained and re-used
 if possible while \fBpcre2_match()\fP is running. They are all freed just
 before it exits.
@@ -145,6 +146,15 @@ The \fBpcre2test\fP test program has a modifier called "find_limits" which, if
 applied to a subject line, causes it to find the smallest limits that allow a a
 pattern to match. This is done by calling \fBpcre2_match()\fP repeatedly with
 different limits.
+.
+.
+.SS "Limiting \fBpcre2_dfa_match()\fP's stack usage"
+.rs
+.sp
+The recursion limit, as described above for \fBpcre2_match()\fP, also applies
+to \fBpcre2_dfa_match()\fP, whose use of recursive function calls for
+recursions in the pattern can lead to runaway stack usage. The non-recursive
+match limit is not relevant for DFA matching, and is ignored.
 .
 .
 .SS "Changing stack size in Unix-like systems"
@@ -197,6 +207,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 21 November 2014
-Copyright (c) 1997-2014 University of Cambridge.
+Last updated: 23 December 2016
+Copyright (c) 1997-2016 University of Cambridge.
 .fi

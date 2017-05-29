@@ -67,15 +67,20 @@ In UTF modes, the dot metacharacter matches one UTF character instead of a
 single code unit.
 </P>
 <P>
-The escape sequence \C can be used to match a single code unit, in a UTF mode,
+The escape sequence \C can be used to match a single code unit in a UTF mode,
 but its use can lead to some strange effects because it breaks up multi-unit
 characters (see the description of \C in the
 <a href="pcre2pattern.html"><b>pcre2pattern</b></a>
-documentation). The use of \C is not supported in the alternative matching
-function <b>pcre2_dfa_match()</b>, nor is it supported in UTF mode by the JIT
-optimization. If JIT optimization is requested for a UTF pattern that contains
-\C, it will not succeed, and so the matching will be carried out by the normal
-interpretive function.
+documentation).
+</P>
+<P>
+The use of \C is not supported by the alternative matching function
+<b>pcre2_dfa_match()</b> when in UTF-8 or UTF-16 mode, that is, when a character
+may consist of more than one code unit. The use of \C in these modes provokes
+a match-time error. Also, the JIT optimization does not support \C in these
+modes. If JIT optimization is requested for a UTF-8 or UTF-16 pattern that
+contains \C, it will not succeed, and so when <b>pcre2_match()</b> is called,
+the matching will be carried out by the normal interpretive function.
 </P>
 <P>
 The character escapes \b, \B, \d, \D, \s, \S, \w, and \W correctly test
@@ -126,11 +131,22 @@ as a byte-order mark (BOM). The PCRE2 functions do not handle this, expecting
 strings to be in host byte order.
 </P>
 <P>
-The entire string is checked before any other processing takes place. In
-addition to checking the format of the string, there is a check to ensure that
-all code points lie in the range U+0 to U+10FFFF, excluding the surrogate area.
-The so-called "non-character" code points are not excluded because Unicode
-corrigendum #9 makes it clear that they should not be.
+A UTF string is checked before any other processing takes place. In the case of
+<b>pcre2_match()</b> and <b>pcre2_dfa_match()</b> calls with a non-zero starting
+offset, the check is applied only to that part of the subject that could be
+inspected during matching, and there is a check that the starting offset points
+to the first code unit of a character or to the end of the subject. If there
+are no lookbehind assertions in the pattern, the check starts at the starting
+offset. Otherwise, it starts at the length of the longest lookbehind before the
+starting offset, or at the start of the subject if there are not that many
+characters before the starting offset. Note that the sequences \b and \B are
+one-character lookbehinds.
+</P>
+<P>
+In addition to checking the format of the string, there is a check to ensure
+that all code points lie in the range U+0 to U+10FFFF, excluding the surrogate
+area. The so-called "non-character" code points are not excluded because
+Unicode corrigendum #9 makes it clear that they should not be.
 </P>
 <P>
 Characters in the "Surrogate Area" of Unicode are reserved for use by UTF-16,
@@ -232,9 +248,9 @@ Errors in UTF-16 strings
 <P>
 The following negative error codes are given for invalid UTF-16 strings:
 <pre>
-  PCRE_UTF16_ERR1  Missing low surrogate at end of string
-  PCRE_UTF16_ERR2  Invalid low surrogate follows high surrogate
-  PCRE_UTF16_ERR3  Isolated low surrogate
+  PCRE2_ERROR_UTF16_ERR1  Missing low surrogate at end of string
+  PCRE2_ERROR_UTF16_ERR2  Invalid low surrogate follows high surrogate
+  PCRE2_ERROR_UTF16_ERR3  Isolated low surrogate
 
 <a name="utf32strings"></a></PRE>
 </P>
@@ -244,8 +260,8 @@ Errors in UTF-32 strings
 <P>
 The following negative error codes are given for invalid UTF-32 strings:
 <pre>
-  PCRE_UTF32_ERR1  Surrogate character (range from 0xd800 to 0xdfff)
-  PCRE_UTF32_ERR2  Code point is greater than 0x10ffff
+  PCRE2_ERROR_UTF32_ERR1  Surrogate character (0xd800 to 0xdfff)
+  PCRE2_ERROR_UTF32_ERR2  Code point is greater than 0x10ffff
 
 </PRE>
 </P>
@@ -264,9 +280,9 @@ Cambridge, England.
 REVISION
 </b><br>
 <P>
-Last updated: 23 November 2014
+Last updated: 03 July 2016
 <br>
-Copyright &copy; 1997-2014 University of Cambridge.
+Copyright &copy; 1997-2016 University of Cambridge.
 <br>
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

@@ -10,7 +10,7 @@ RC=0
 7:PATTERN at the start of a line.
 8:In the middle of a line, PATTERN appears.
 10:This pattern is in lower case.
-610:Check up on PATTERN near the end.
+623:Check up on PATTERN near the end.
 RC=0
 ---------------------------- Test 4 ------------------------------
 4
@@ -19,7 +19,7 @@ RC=0
 ./testdata/grepinput:7:PATTERN at the start of a line.
 ./testdata/grepinput:8:In the middle of a line, PATTERN appears.
 ./testdata/grepinput:10:This pattern is in lower case.
-./testdata/grepinput:610:Check up on PATTERN near the end.
+./testdata/grepinput:623:Check up on PATTERN near the end.
 ./testdata/grepinputx:3:Here is the pattern again.
 ./testdata/grepinputx:5:Pattern
 ./testdata/grepinputx:42:This line contains pattern not on a line by itself.
@@ -28,7 +28,7 @@ RC=0
 7:PATTERN at the start of a line.
 8:In the middle of a line, PATTERN appears.
 10:This pattern is in lower case.
-610:Check up on PATTERN near the end.
+623:Check up on PATTERN near the end.
 3:Here is the pattern again.
 5:Pattern
 42:This line contains pattern not on a line by itself.
@@ -324,10 +324,10 @@ RC=0
 ./testdata/grepinput-9-
 ./testdata/grepinput:10:This pattern is in lower case.
 --
-./testdata/grepinput-607-PUT NEW DATA ABOVE THIS LINE.
-./testdata/grepinput-608-=============================
-./testdata/grepinput-609-
-./testdata/grepinput:610:Check up on PATTERN near the end.
+./testdata/grepinput-620-PUT NEW DATA ABOVE THIS LINE.
+./testdata/grepinput-621-=============================
+./testdata/grepinput-622-
+./testdata/grepinput:623:Check up on PATTERN near the end.
 --
 ./testdata/grepinputx-1-This is a second file of input for the pcregrep tests.
 ./testdata/grepinputx-2-
@@ -349,8 +349,8 @@ RC=0
 ./testdata/grepinput-12-Here follows a whole lot of stuff that makes the file over 24K long.
 ./testdata/grepinput-13-
 --
-./testdata/grepinput:610:Check up on PATTERN near the end.
-./testdata/grepinput-611-This is the last line of this file.
+./testdata/grepinput:623:Check up on PATTERN near the end.
+./testdata/grepinput-624-This is the last line of this file.
 --
 ./testdata/grepinputx:3:Here is the pattern again.
 ./testdata/grepinputx-4-
@@ -456,8 +456,8 @@ over the lazy dog.
 This time it jumps and jumps and jumps.
 RC=0
 ---------------------------- Test 52 ------------------------------
-fox [1;31mjumps[00m
-This time it [1;31mjumps[00m and [1;31mjumps[00m and [1;31mjumps[00m.
+fox [1;31mjumps[0m
+This time it [1;31mjumps[0m and [1;31mjumps[0m and [1;31mjumps[0m.
 RC=0
 ---------------------------- Test 53 ------------------------------
 36972,6
@@ -474,9 +474,9 @@ RC=0
 597:32,4
 RC=0
 ---------------------------- Test 55 -----------------------------
-Here is the [1;31mpattern[00m again.
-That time it was on a [1;31mline by itself[00m.
-This line contains [1;31mpattern[00m not on a [1;31mline by itself[00m.
+Here is the [1;31mpattern[0m again.
+That time it was on a [1;31mline by itself[0m.
+This line contains [1;31mpattern[0m not on a [1;31mline by itself[0m.
 RC=0
 ---------------------------- Test 56 -----------------------------
 ./testdata/grepinput:456
@@ -588,56 +588,57 @@ RC=0
 ---------------------------- Test 70 -----------------------------
 [1;31mtriple:	t1_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
 
-[00m[1;31mtriple:	t3_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+[0m[1;31mtriple:	t3_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
 
-[00m[1;31mtriple:	t4_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+[0m[1;31mtriple:	t4_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
 
-[00m[1;31mtriple:	t6_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+[0m[1;31mtriple:	t6_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
 
-[00mRC=0
+[0mRC=0
 ---------------------------- Test 71 -----------------------------
 01
 RC=0
 ---------------------------- Test 72 -----------------------------
-[1;31m01[00m0203040506
+[1;31m01[0m0203040506
 RC=0
 ---------------------------- Test 73 -----------------------------
-[1;31m01[00m
+[1;31m01[0m
 RC=0
 ---------------------------- Test 74 -----------------------------
 01
 02
 RC=0
 ---------------------------- Test 75 -----------------------------
-[1;31m01[00m[1;31m02[00m03040506
+[1;31m01[0m[1;31m02[0m03040506
 RC=0
 ---------------------------- Test 76 -----------------------------
-[1;31m01[00m
-[1;31m02[00m
+[1;31m01[0m
+[1;31m02[0m
 RC=0
 ---------------------------- Test 77 -----------------------------
 01
 03
 RC=0
 ---------------------------- Test 78 -----------------------------
-[1;31m01[00m02[1;31m03[00m040506
+[1;31m01[0m02[1;31m03[0m040506
 RC=0
 ---------------------------- Test 79 -----------------------------
-[1;31m01[00m
-[1;31m03[00m
+[1;31m01[0m
+[1;31m03[0m
 RC=0
 ---------------------------- Test 80 -----------------------------
 01
 RC=0
 ---------------------------- Test 81 -----------------------------
-[1;31m01[00m0203040506
+[1;31m01[0m0203040506
 RC=0
 ---------------------------- Test 82 -----------------------------
-[1;31m01[00m
+[1;31m01[0m
 RC=0
 ---------------------------- Test 83 -----------------------------
 pcre2grep: line 4 of file ./testdata/grepinput3 is too long for the internal buffer
-pcre2grep: check the --buffer-size option
+pcre2grep: the maximum buffer size is 100
+pcre2grep: use the --max-buffer-size option to change it
 RC=2
 ---------------------------- Test 84 -----------------------------
 testdata/grepinputv:fox jumps
@@ -701,9 +702,9 @@ RC=0
 ./testdata/grepinput:zerothe.
 RC=0
 ---------------------------- Test 101 ------------------------------
-./testdata/grepinput:[1;31m.[00m|[1;31mzero[00m|[1;31mthe[00m|[1;31m.[00m
-./testdata/grepinput:[1;31mzero[00m|[1;31ma[00m
-./testdata/grepinput:[1;31m.[00m|[1;31mzero[00m|[1;31mthe[00m|[1;31m.[00m
+./testdata/grepinput:[1;31m.[0m|[1;31mzero[0m|[1;31mthe[0m|[1;31m.[0m
+./testdata/grepinput:[1;31mzero[0m|[1;31ma[0m
+./testdata/grepinput:[1;31m.[0m|[1;31mzero[0m|[1;31mthe[0m|[1;31m.[0m
 RC=0
 ---------------------------- Test 102 -----------------------------
 2:
@@ -724,21 +725,21 @@ RC=0
 14:
 RC=0
 ---------------------------- Test 105 -----------------------------
-[1;31m[00mtriple:	t1_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
-[1;31m[00m
-[1;31m[00mtriple:	t2_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	
-[1;31m[00mLorem [1;31mipsum[00m dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-[1;31m[00m
-[1;31m[00mtriple:	t3_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
-[1;31m[00m
-[1;31m[00mtriple:	t4_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
-[1;31m[00m
-[1;31m[00mtriple:	t5_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	
-[1;31m[00mo_txt
-[1;31m[00m
-[1;31m[00mtriple:	t6_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
-[1;31m[00m
-[1;31m[00mtriple:	t7_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+triple:	t1_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+triple:	t2_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	
+Lorem [1;31mipsum[0m dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+triple:	t3_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+triple:	t4_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+triple:	t5_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	
+o_txt
+
+triple:	t6_txt	s2_tag	s_txt	p_tag	p_txt	o_tag	o_txt
+
+triple:	t7_txt	s1_tag	s_txt	p_tag	p_txt	o_tag	o_txt
 RC=0
 ---------------------------- Test 106 -----------------------------
 a
@@ -750,4 +751,81 @@ RC=0
 2:2,1
 2:3,1
 2:4,1
+RC=0
+---------------------------- Test 108 ------------------------------
+RC=0
+---------------------------- Test 109 -----------------------------
+RC=0
+---------------------------- Test 110 -----------------------------
+match 1:
+ a
+/1/a
+match 2:
+ b
+/2/b
+match 3:
+ c
+/3/c
+match 4:
+ d
+/4/d
+match 5:
+ e
+/5/e
+RC=0
+---------------------------- Test 111 -----------------------------
+607:0,12
+609:0,12
+611:0,12
+613:0,12
+615:0,12
+RC=0
+---------------------------- Test 112 -----------------------------
+37168,12
+37180,12
+37192,12
+37204,12
+37216,12
+RC=0
+---------------------------- Test 113 -----------------------------
+476
+RC=0
+---------------------------- Test 114 -----------------------------
+testdata/grepinput:469
+testdata/grepinput3:0
+testdata/grepinput8:0
+testdata/grepinputv:1
+testdata/grepinputx:6
+TOTAL:476
+RC=0
+---------------------------- Test 115 -----------------------------
+testdata/grepinput:469
+testdata/grepinputv:1
+testdata/grepinputx:6
+TOTAL:476
+RC=0
+---------------------------- Test 116 -----------------------------
+476
+RC=0
+---------------------------- Test 117 -----------------------------
+469
+0
+0
+1
+6
+476
+RC=0
+---------------------------- Test 118 -----------------------------
+testdata/grepinput3
+testdata/grepinput8
+RC=0
+---------------------------- Test 119 -----------------------------
+123
+456
+789
+---
+abc
+def
+xyz
+---
 RC=0

@@ -1,4 +1,4 @@
-.TH PCRE2UNICODE 3 "23 November 2014" "PCRE2 10.00"
+.TH PCRE2UNICODE 3 "03 July 2016" "PCRE2 10.22"
 .SH NAME
 PCRE - Perl-compatible regular expressions (revised API)
 .SH "UNICODE AND UTF SUPPORT"
@@ -57,17 +57,21 @@ individual code units.
 In UTF modes, the dot metacharacter matches one UTF character instead of a
 single code unit.
 .P
-The escape sequence \eC can be used to match a single code unit, in a UTF mode,
+The escape sequence \eC can be used to match a single code unit in a UTF mode,
 but its use can lead to some strange effects because it breaks up multi-unit
 characters (see the description of \eC in the
 .\" HREF
 \fBpcre2pattern\fP
 .\"
-documentation). The use of \eC is not supported in the alternative matching
-function \fBpcre2_dfa_match()\fP, nor is it supported in UTF mode by the JIT
-optimization. If JIT optimization is requested for a UTF pattern that contains
-\eC, it will not succeed, and so the matching will be carried out by the normal
-interpretive function.
+documentation).
+.P
+The use of \eC is not supported by the alternative matching function
+\fBpcre2_dfa_match()\fP when in UTF-8 or UTF-16 mode, that is, when a character
+may consist of more than one code unit. The use of \eC in these modes provokes
+a match-time error. Also, the JIT optimization does not support \eC in these
+modes. If JIT optimization is requested for a UTF-8 or UTF-16 pattern that
+contains \eC, it will not succeed, and so when \fBpcre2_match()\fP is called,
+the matching will be carried out by the normal interpretive function.
 .P
 The character escapes \eb, \eB, \ed, \eD, \es, \eS, \ew, and \eW correctly test
 characters of any code value, but, by default, the characters that PCRE2
@@ -117,11 +121,21 @@ UTF-16 and UTF-32 strings can indicate their endianness by special code knows
 as a byte-order mark (BOM). The PCRE2 functions do not handle this, expecting
 strings to be in host byte order.
 .P
-The entire string is checked before any other processing takes place. In
-addition to checking the format of the string, there is a check to ensure that
-all code points lie in the range U+0 to U+10FFFF, excluding the surrogate area.
-The so-called "non-character" code points are not excluded because Unicode
-corrigendum #9 makes it clear that they should not be.
+A UTF string is checked before any other processing takes place. In the case of
+\fBpcre2_match()\fP and \fBpcre2_dfa_match()\fP calls with a non-zero starting
+offset, the check is applied only to that part of the subject that could be
+inspected during matching, and there is a check that the starting offset points
+to the first code unit of a character or to the end of the subject. If there
+are no lookbehind assertions in the pattern, the check starts at the starting
+offset. Otherwise, it starts at the length of the longest lookbehind before the
+starting offset, or at the start of the subject if there are not that many
+characters before the starting offset. Note that the sequences \eb and \eB are
+one-character lookbehinds.
+.P
+In addition to checking the format of the string, there is a check to ensure
+that all code points lie in the range U+0 to U+10FFFF, excluding the surrogate
+area. The so-called "non-character" code points are not excluded because
+Unicode corrigendum #9 makes it clear that they should not be.
 .P
 Characters in the "Surrogate Area" of Unicode are reserved for use by UTF-16,
 where they are used in pairs to encode code points with values greater than
@@ -221,9 +235,9 @@ never occur in a valid UTF-8 string.
 .sp
 The following negative error codes are given for invalid UTF-16 strings:
 .sp
-  PCRE_UTF16_ERR1  Missing low surrogate at end of string
-  PCRE_UTF16_ERR2  Invalid low surrogate follows high surrogate
-  PCRE_UTF16_ERR3  Isolated low surrogate
+  PCRE2_ERROR_UTF16_ERR1  Missing low surrogate at end of string
+  PCRE2_ERROR_UTF16_ERR2  Invalid low surrogate follows high surrogate
+  PCRE2_ERROR_UTF16_ERR3  Isolated low surrogate
 .sp
 .
 .
@@ -233,8 +247,8 @@ The following negative error codes are given for invalid UTF-16 strings:
 .sp
 The following negative error codes are given for invalid UTF-32 strings:
 .sp
-  PCRE_UTF32_ERR1  Surrogate character (range from 0xd800 to 0xdfff)
-  PCRE_UTF32_ERR2  Code point is greater than 0x10ffff
+  PCRE2_ERROR_UTF32_ERR1  Surrogate character (0xd800 to 0xdfff)
+  PCRE2_ERROR_UTF32_ERR2  Code point is greater than 0x10ffff
 .sp
 .
 .
@@ -252,6 +266,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 23 November 2014
-Copyright (c) 1997-2014 University of Cambridge.
+Last updated: 03 July 2016
+Copyright (c) 1997-2016 University of Cambridge.
 .fi

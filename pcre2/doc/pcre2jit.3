@@ -1,4 +1,4 @@
-.TH PCRE2JIT 3 "27 November 2014" "PCRE2 10.00"
+.TH PCRE2JIT 3 "05 June 2016" "PCRE2 10.22"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH "PCRE2 JUST-IN-TIME COMPILER SUPPORT"
@@ -61,6 +61,12 @@ much faster than the normal interpretive code, but yields exactly the same
 results. The returned value from \fBpcre2_jit_compile()\fP is zero on success,
 or a negative error code.
 .P
+There is a limit to the size of pattern that JIT supports, imposed by the size
+of machine stack that it uses. The exact rules are not documented because they
+may change at any time, in particular, when new optimizations are introduced.
+If a pattern is too big, a call to \fBpcre2_jit_compile()\fB returns
+PCRE2_ERROR_NOMEMORY.
+.P
 PCRE2_JIT_COMPLETE requests the JIT compiler to generate code for complete
 matches. If you want to run partial matches using the PCRE2_PARTIAL_HARD or
 PCRE2_PARTIAL_SOFT options of \fBpcre2_match()\fP, you should set one or both
@@ -121,6 +127,9 @@ The \fBpcre2_match()\fP options that are supported for JIT matching are
 PCRE2_NOTBOL, PCRE2_NOTEOL, PCRE2_NOTEMPTY, PCRE2_NOTEMPTY_ATSTART,
 PCRE2_NO_UTF_CHECK, PCRE2_PARTIAL_HARD, and PCRE2_PARTIAL_SOFT. The
 PCRE2_ANCHORED option is not supported at match time.
+.P
+If the PCRE2_NO_JIT option is passed to \fBpcre2_match()\fP it disables the
+use of JIT, forcing matching by the interpreter code.
 .P
 The only unsupported pattern items are \eC (match a single data unit) when
 running in a UTF mode, and a callout immediately before an assertion condition
@@ -207,8 +216,13 @@ for JIT matching. A callback function can therefore be used to determine
 whether a match operation was executed by JIT or by the interpreter.
 .P
 You may safely use the same JIT stack for more than one pattern (either by
-assigning directly or by callback), as long as the patterns are all matched
-sequentially in the same thread. In a multithread application, if you do not
+assigning directly or by callback), as long as the patterns are matched
+sequentially in the same thread. Currently, the only way to set up
+non-sequential matches in one thread is to use callouts: if a callout function
+starts another match, that match must use a different JIT stack to the one used
+for currently suspended match(es).
+.P
+In a multithread application, if you do not
 specify a JIT stack, or if you assign or pass back NULL from a callback, that
 is thread-safe, because each thread has its own machine stack. However, if you
 assign or pass back a non-NULL JIT stack, this must be a different stack for
@@ -366,7 +380,7 @@ The fast path function is called \fBpcre2_jit_match()\fP, and it takes exactly
 the same arguments as \fBpcre2_match()\fP. The return values are also the same,
 plus PCRE2_ERROR_JIT_BADOPTION if a matching mode (partial or complete) is
 requested that was not compiled. Unsupported option bits (for example,
-PCRE2_ANCHORED) are ignored.
+PCRE2_ANCHORED) are ignored, as is the PCRE2_NO_JIT option.
 .P
 When you call \fBpcre2_match()\fP, as well as testing for invalid options, a
 number of other sanity checks are performed on the arguments. For example, if
@@ -399,6 +413,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 27 November 2014
-Copyright (c) 1997-2014 University of Cambridge.
+Last updated: 05 June 2016
+Copyright (c) 1997-2016 University of Cambridge.
 .fi

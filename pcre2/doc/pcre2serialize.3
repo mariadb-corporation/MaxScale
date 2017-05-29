@@ -1,4 +1,4 @@
-.TH PCRE2SERIALIZE 3 "20 January 2015" "PCRE2 10.10"
+.TH PCRE2SERIALIZE 3 "24 May 2016" "PCRE2 10.22"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH "SAVING AND RE-USING PRECOMPILED PCRE2 PATTERNS"
@@ -22,12 +22,22 @@ If you are running an application that uses a large number of regular
 expression patterns, it may be useful to store them in a precompiled form
 instead of having to compile them every time the application is run. However,
 if you are using the just-in-time optimization feature, it is not possible to
-save and reload the JIT data, because it is position-dependent. In addition,
-the host on which the patterns are reloaded must be running the same version of
-PCRE2, with the same code unit width, and must also have the same endianness,
-pointer width and PCRE2_SIZE type. For example, patterns compiled on a 32-bit
-system using PCRE2's 16-bit library cannot be reloaded on a 64-bit system, nor
-can they be reloaded using the 8-bit library.
+save and reload the JIT data, because it is position-dependent. The host on
+which the patterns are reloaded must be running the same version of PCRE2, with
+the same code unit width, and must also have the same endianness, pointer width
+and PCRE2_SIZE type. For example, patterns compiled on a 32-bit system using
+PCRE2's 16-bit library cannot be reloaded on a 64-bit system, nor can they be
+reloaded using the 8-bit library.
+.
+.
+.SH "SECURITY CONCERNS"
+.rs
+.sp
+The facility for saving and restoring compiled patterns is intended for use
+within individual applications. As such, the data supplied to
+\fBpcre2_serialize_decode()\fP is expected to be trusted data, not data from
+arbitrary external sources. There is only some simple consistency checking, not
+complete validation of what is being re-loaded.
 .
 .
 .SH "SAVING COMPILED PATTERNS"
@@ -129,20 +139,26 @@ is filled with those that fit, and the remainder are ignored. The yield of the
 function is the number of decoded patterns, or one of the following negative
 error codes:
 .sp
-  PCRE2_ERROR_BADDATA   second argument is zero or less
-  PCRE2_ERROR_BADMAGIC  mismatch of id bytes in the data
-  PCRE2_ERROR_BADMODE   mismatch of variable unit size or PCRE2 version
-  PCRE2_ERROR_MEMORY    memory allocation failed
-  PCRE2_ERROR_NULL      first or third argument is NULL
+  PCRE2_ERROR_BADDATA    second argument is zero or less
+  PCRE2_ERROR_BADMAGIC   mismatch of id bytes in the data
+  PCRE2_ERROR_BADMODE    mismatch of code unit size or PCRE2 version
+  PCRE2_ERROR_BADSERIALIZEDDATA  other sanity check failure
+  PCRE2_ERROR_MEMORY     memory allocation failed
+  PCRE2_ERROR_NULL       first or third argument is NULL
 .sp
 PCRE2_ERROR_BADMAGIC may mean that the data is corrupt, or that it was compiled
 on a system with different endianness.
 .P
 Decoded patterns can be used for matching in the usual way, and must be freed
-by calling \fBpcre2_code_free()\fP as normal. A single copy of the character
-tables is used by all the decoded patterns. A reference count is used to
+by calling \fBpcre2_code_free()\fP. However, be aware that there is a potential
+race issue if you are using multiple patterns that were decoded from a single
+byte stream in a multithreaded application. A single copy of the character
+tables is used by all the decoded patterns and a reference count is used to
 arrange for its memory to be automatically freed when the last pattern is
-freed.
+freed, but there is no locking on this reference count. Therefore, if you want
+to call \fBpcre2_code_free()\fP for these patterns in different threads, you
+must arrange your own locking, and ensure that \fBpcre2_code_free()\fP cannot
+be called by two threads at the same time.
 .P
 If a pattern was processed by \fBpcre2_jit_compile()\fP before being
 serialized, the JIT data is discarded and so is no longer available after a
@@ -165,6 +181,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 20 January 2015
-Copyright (c) 1997-2015 University of Cambridge.
+Last updated: 24 May 2016
+Copyright (c) 1997-2016 University of Cambridge.
 .fi

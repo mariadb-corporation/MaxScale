@@ -44,7 +44,7 @@ wrappers.
 
 The distribution does contain a set of C wrapper functions for the 8-bit
 library that are based on the POSIX regular expression API (see the pcre2posix
-man page). These can be found in a library called libpcre2posix. Note that this
+man page). These can be found in a library called libpcre2-posix. Note that this
 just provides a POSIX calling interface to PCRE2; the regular expressions
 themselves still follow Perl syntax and semantics. The POSIX API is restricted,
 and does not give full access to all of PCRE2's facilities.
@@ -58,8 +58,8 @@ renamed or pointed at by a link.
 If you are using the POSIX interface to PCRE2 and there is already a POSIX
 regex library installed on your system, as well as worrying about the regex.h
 header file (as mentioned above), you must also take care when linking programs
-to ensure that they link with PCRE2's libpcre2posix library. Otherwise they may
-pick up the POSIX functions of the same name from the other library.
+to ensure that they link with PCRE2's libpcre2-posix library. Otherwise they
+may pick up the POSIX functions of the same name from the other library.
 
 One way of avoiding this confusion is to compile PCRE2 with the addition of
 -Dregcomp=PCRE2regcomp (and similarly for the other POSIX functions) to the
@@ -168,14 +168,11 @@ library. They are also documented in the pcre2build man page.
   built. If you want only the 16-bit or 32-bit library, use --disable-pcre2-8
   to disable building the 8-bit library.
 
-. If you want to include support for just-in-time compiling, which can give
-  large performance improvements on certain platforms, add --enable-jit to the
-  "configure" command. This support is available only for certain hardware
+. If you want to include support for just-in-time (JIT) compiling, which can
+  give large performance improvements on certain platforms, add --enable-jit to
+  the "configure" command. This support is available only for certain hardware
   architectures. If you try to enable it on an unsupported architecture, there
   will be a compile time error.
-
-. When JIT support is enabled, pcre2grep automatically makes use of it, unless
-  you add --disable-pcre2grep-jit to the "configure" command.
 
 . If you do not want to make use of the support for UTF-8 Unicode character
   strings in the 8-bit library, UTF-16 Unicode character strings in the 16-bit
@@ -207,18 +204,18 @@ library. They are also documented in the pcre2build man page.
   --enable-newline-is-crlf, --enable-newline-is-anycrlf, or
   --enable-newline-is-any to the "configure" command, respectively.
 
-  If you specify --enable-newline-is-cr or --enable-newline-is-crlf, some of
-  the standard tests will fail, because the lines in the test files end with
-  LF. Even if the files are edited to change the line endings, there are likely
-  to be some failures. With --enable-newline-is-anycrlf or
-  --enable-newline-is-any, many tests should succeed, but there may be some
-  failures.
-
 . By default, the sequence \R in a pattern matches any Unicode line ending
   sequence. This is independent of the option specifying what PCRE2 considers
   to be the end of a line (see above). However, the caller of PCRE2 can
   restrict \R to match only CR, LF, or CRLF. You can make this the default by
   adding --enable-bsr-anycrlf to the "configure" command (bsr = "backslash R").
+
+. In a pattern, the escape sequence \C matches a single code unit, even in a
+  UTF mode. This can be dangerous because it breaks up multi-code-unit
+  characters. You can build PCRE2 with the use of \C permanently locked out by
+  adding --enable-never-backslash-C (note the upper case C) to the "configure"
+  command. When \C is allowed by the library, individual applications can lock
+  it out by calling pcre2_compile() with the PCRE2_NEVER_BACKSLASH_C option.
 
 . PCRE2 has a counter that limits the depth of nesting of parentheses in a
   pattern. This limits the amount of system stack that a pattern uses when it
@@ -249,13 +246,13 @@ library. They are also documented in the pcre2build man page.
   sizes in the pcre2stack man page.
 
 . In the 8-bit library, the default maximum compiled pattern size is around
-  64K. You can increase this by adding --with-link-size=3 to the "configure"
-  command. PCRE2 then uses three bytes instead of two for offsets to different
-  parts of the compiled pattern. In the 16-bit library, --with-link-size=3 is
-  the same as --with-link-size=4, which (in both libraries) uses four-byte
-  offsets. Increasing the internal link size reduces performance in the 8-bit
-  and 16-bit libraries. In the 32-bit library, the link size setting is
-  ignored, as 4-byte offsets are always used.
+  64K bytes. You can increase this by adding --with-link-size=3 to the
+  "configure" command. PCRE2 then uses three bytes instead of two for offsets
+  to different parts of the compiled pattern. In the 16-bit library,
+  --with-link-size=3 is the same as --with-link-size=4, which (in both
+  libraries) uses four-byte offsets. Increasing the internal link size reduces
+  performance in the 8-bit and 16-bit libraries. In the 32-bit library, the
+  link size setting is ignored, as 4-byte offsets are always used.
 
 . You can build PCRE2 so that its internal match() function that is called from
   pcre2_match() does not call itself recursively. Instead, it uses memory
@@ -317,6 +314,14 @@ library. They are also documented in the pcre2build man page.
   running "make" to build PCRE2. There is more information about coverage
   reporting in the "pcre2build" documentation.
 
+. When JIT support is enabled, pcre2grep automatically makes use of it, unless
+  you add --disable-pcre2grep-jit to the "configure" command.
+
+. On non-Windows sytems there is support for calling external scripts during
+  matching in the pcre2grep command via PCRE2's callout facility with string
+  arguments. This support can be disabled by adding --disable-pcre2grep-callout
+  to the "configure" command.
+
 . The pcre2grep program currently supports only 8-bit data files, and so
   requires the 8-bit PCRE2 library. It is possible to compile pcre2grep to use
   libz and/or libbz2, in order to read .gz and .bz2 files (respectively), by
@@ -327,12 +332,23 @@ library. They are also documented in the pcre2build man page.
 
   Of course, the relevant libraries must be installed on your system.
 
-. The default size (in bytes) of the internal buffer used by pcre2grep can be
-  set by, for example:
+. The default starting size (in bytes) of the internal buffer used by pcre2grep
+  can be set by, for example:
 
   --with-pcre2grep-bufsize=51200
 
-  The value must be a plain integer. The default is 20480.
+  The value must be a plain integer. The default is 20480. The amount of memory
+  used by pcre2grep is actually three times this number, to allow for "before"
+  and "after" lines. If very long lines are encountered, the buffer is
+  automatically enlarged, up to a fixed maximum size.
+
+. The default maximum size of pcre2grep's internal buffer can be set by, for
+  example:
+
+  --with-pcre2grep-max-bufsize=2097152
+
+  The default is either 1048576 or the value of --with-pcre2grep-bufsize,
+  whichever is the larger.
 
 . It is possible to compile pcre2test so that it links with the libreadline
   or libedit libraries, by specifying, respectively,
@@ -356,6 +372,22 @@ library. They are also documented in the pcre2build man page.
   If you get error messages about missing functions tgetstr, tgetent, tputs,
   tgetflag, or tgoto, this is the problem, and linking with the ncurses library
   should fix it.
+
+. There is a special option called --enable-fuzz-support for use by people who
+  want to run fuzzing tests on PCRE2. At present this applies only to the 8-bit
+  library. If set, it causes an extra library called libpcre2-fuzzsupport.a to
+  be built, but not installed. This contains a single function called
+  LLVMFuzzerTestOneInput() whose arguments are a pointer to a string and the
+  length of the string. When called, this function tries to compile the string
+  as a pattern, and if that succeeds, to match it. This is done both with no
+  options and with some random options bits that are generated from the string.
+  Setting --enable-fuzz-support also causes a binary called pcre2fuzzcheck to
+  be created. This is normally run under valgrind or used when PCRE2 is
+  compiled with address sanitizing enabled. It calls the fuzzing function and
+  outputs information about it is doing. The input strings are specified by
+  arguments: if an argument starts with "=" the rest of it is a literal input
+  string. Otherwise, it is assumed to be a file name, and the contents of the
+  file are the test string.
 
 The "configure" script builds the following files for the basic C library:
 
@@ -531,7 +563,7 @@ script creates the .txt and HTML forms of the documentation from the man pages.
 
 
 Testing PCRE2
-------------
+-------------
 
 To test the basic PCRE2 library on a Unix-like system, run the RunTest script.
 There is another script called RunGrepTest that tests the pcre2grep command.
@@ -724,6 +756,7 @@ The distribution should contain the files listed below.
   src/pcre2_context.c      )
   src/pcre2_dfa_match.c    )
   src/pcre2_error.c        )
+  src/pcre2_find_bracket.c )
   src/pcre2_jit_compile.c  )
   src/pcre2_jit_match.c    ) sources for the functions in the library,
   src/pcre2_jit_misc.c     )   and some internal functions that they use
@@ -744,6 +777,7 @@ The distribution should contain the files listed below.
   src/pcre2_xclass.c       )
 
   src/pcre2_printint.c     debugging function that is used by pcre2test,
+  src/pcre2_fuzzsupport.c  function for (optional) fuzzing support
 
   src/config.h.in          template for config.h, when built by "configure"
   src/pcre2.h.in           template for pcre2.h when built by "configure"
@@ -801,7 +835,7 @@ The distribution should contain the files listed below.
   libpcre2-8.pc.in         template for libpcre2-8.pc for pkg-config
   libpcre2-16.pc.in        template for libpcre2-16.pc for pkg-config
   libpcre2-32.pc.in        template for libpcre2-32.pc for pkg-config
-  libpcre2posix.pc.in      template for libpcre2posix.pc for pkg-config
+  libpcre2-posix.pc.in     template for libpcre2-posix.pc for pkg-config
   ltmain.sh                file used to build a libtool script
   missing                  ) common stub for a few missing GNU programs while
                            )   installing, generated by automake
@@ -832,4 +866,4 @@ The distribution should contain the files listed below.
 Philip Hazel
 Email local part: ph10
 Email domain: cam.ac.uk
-Last updated: 24 April 2015
+Last updated: 01 November 2016

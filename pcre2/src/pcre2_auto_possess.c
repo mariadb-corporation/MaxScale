@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2014 University of Cambridge
+         New API code Copyright (c) 2016 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -91,6 +91,7 @@ static const uint8_t autoposstab[APTROWS][APTCOLS] = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0 }   /* \X */
 };
 
+#ifdef SUPPORT_UNICODE
 /* This table is used to check whether auto-possessification is possible
 between adjacent Unicode property opcodes (OP_PROP and OP_NOTPROP). The
 left-hand (repeated) opcode is used to select the row, and the right-hand
@@ -170,64 +171,7 @@ static const uint8_t posspropstab[3][4] = {
   { ucp_Z, ucp_Z, ucp_C, ucp_Cc },  /* SPACE and PXSPACE, 2nd value redundant */
   { ucp_L, ucp_N, ucp_P, ucp_Po }   /* WORD */
 };
-
-/* This table is used when converting repeating opcodes into possessified
-versions as a result of an explicit possessive quantifier such as ++. A zero
-value means there is no possessified version - in those cases the item in
-question must be wrapped in ONCE brackets. The table is truncated at OP_CALLOUT
-because all relevant opcodes are less than that. */
-
-static const uint8_t opcode_possessify[] = {
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* 0 - 15  */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* 16 - 31 */
-
-  0,                       /* NOTI */
-  OP_POSSTAR, 0,           /* STAR, MINSTAR */
-  OP_POSPLUS, 0,           /* PLUS, MINPLUS */
-  OP_POSQUERY, 0,          /* QUERY, MINQUERY */
-  OP_POSUPTO, 0,           /* UPTO, MINUPTO */
-  0,                       /* EXACT */
-  0, 0, 0, 0,              /* POS{STAR,PLUS,QUERY,UPTO} */
-
-  OP_POSSTARI, 0,          /* STARI, MINSTARI */
-  OP_POSPLUSI, 0,          /* PLUSI, MINPLUSI */
-  OP_POSQUERYI, 0,         /* QUERYI, MINQUERYI */
-  OP_POSUPTOI, 0,          /* UPTOI, MINUPTOI */
-  0,                       /* EXACTI */
-  0, 0, 0, 0,              /* POS{STARI,PLUSI,QUERYI,UPTOI} */
-
-  OP_NOTPOSSTAR, 0,        /* NOTSTAR, NOTMINSTAR */
-  OP_NOTPOSPLUS, 0,        /* NOTPLUS, NOTMINPLUS */
-  OP_NOTPOSQUERY, 0,       /* NOTQUERY, NOTMINQUERY */
-  OP_NOTPOSUPTO, 0,        /* NOTUPTO, NOTMINUPTO */
-  0,                       /* NOTEXACT */
-  0, 0, 0, 0,              /* NOTPOS{STAR,PLUS,QUERY,UPTO} */
-
-  OP_NOTPOSSTARI, 0,       /* NOTSTARI, NOTMINSTARI */
-  OP_NOTPOSPLUSI, 0,       /* NOTPLUSI, NOTMINPLUSI */
-  OP_NOTPOSQUERYI, 0,      /* NOTQUERYI, NOTMINQUERYI */
-  OP_NOTPOSUPTOI, 0,       /* NOTUPTOI, NOTMINUPTOI */
-  0,                       /* NOTEXACTI */
-  0, 0, 0, 0,              /* NOTPOS{STARI,PLUSI,QUERYI,UPTOI} */
-
-  OP_TYPEPOSSTAR, 0,       /* TYPESTAR, TYPEMINSTAR */
-  OP_TYPEPOSPLUS, 0,       /* TYPEPLUS, TYPEMINPLUS */
-  OP_TYPEPOSQUERY, 0,      /* TYPEQUERY, TYPEMINQUERY */
-  OP_TYPEPOSUPTO, 0,       /* TYPEUPTO, TYPEMINUPTO */
-  0,                       /* TYPEEXACT */
-  0, 0, 0, 0,              /* TYPEPOS{STAR,PLUS,QUERY,UPTO} */
-
-  OP_CRPOSSTAR, 0,         /* CRSTAR, CRMINSTAR */
-  OP_CRPOSPLUS, 0,         /* CRPLUS, CRMINPLUS */
-  OP_CRPOSQUERY, 0,        /* CRQUERY, CRMINQUERY */
-  OP_CRPOSRANGE, 0,        /* CRRANGE, CRMINRANGE */
-  0, 0, 0, 0,              /* CRPOS{STAR,PLUS,QUERY,RANGE} */
-
-  0, 0, 0,                 /* CLASS, NCLASS, XCLASS */
-  0, 0,                    /* REF, REFI */
-  0, 0,                    /* DNREF, DNREFI */
-  0, 0                     /* RECURSE, CALLOUT */
-};
+#endif  /* SUPPORT_UNICODE */
 
 
 
@@ -645,6 +589,7 @@ for(;;)
       case OP_ASSERTBACK_NOT:
       case OP_ONCE:
       case OP_ONCE_NC:
+
       /* Atomic sub-patterns and assertions can always auto-possessify their
       last iterator. However, if the group was entered as a result of checking
       a previous iterator, this is not possible. */
@@ -661,6 +606,9 @@ for(;;)
     case OP_CBRA:
     next_code = code + GET(code, 1);
     code += PRIV(OP_lengths)[c];
+
+    /* Check each branch. We have to recurse a level for all but the last
+    branch. */
 
     while (*next_code == OP_ALT)
       {
@@ -1102,8 +1050,10 @@ but some compilers complain about an unreachable statement. */
 
 /* Replaces single character iterations with their possessive alternatives
 if appropriate. This function modifies the compiled opcode! Hitting a
-non-existant opcode may indicate a bug in PCRE2, but it can also be caused if a
-bad UTF string was compiled with PCRE2_NO_UTF_CHECK.
+non-existent opcode may indicate a bug in PCRE2, but it can also be caused if a
+bad UTF string was compiled with PCRE2_NO_UTF_CHECK. The rec_limit catches
+overly complicated or large patterns. In these cases, the check just stops,
+leaving the remainder of the pattern unpossessified.
 
 Arguments:
   code        points to start of the byte code
@@ -1117,11 +1067,11 @@ Returns:      0 for success
 int
 PRIV(auto_possessify)(PCRE2_UCHAR *code, BOOL utf, const compile_block *cb)
 {
-register PCRE2_UCHAR c;
+PCRE2_UCHAR c;
 PCRE2_SPTR end;
 PCRE2_UCHAR *repeat_opcode;
 uint32_t list[8];
-int rec_limit;
+int rec_limit = 1000;  /* Was 10,000 but clang+ASAN uses a lot of stack. */
 
 for (;;)
   {
@@ -1136,7 +1086,6 @@ for (;;)
       get_chr_property_list(code, utf, cb->fcc, list) : NULL;
     list[1] = c == OP_STAR || c == OP_PLUS || c == OP_QUERY || c == OP_UPTO;
 
-    rec_limit = 1000;
     if (end != NULL && compare_opcodes(end, utf, cb, list, end, &rec_limit))
       {
       switch(c)
@@ -1193,7 +1142,6 @@ for (;;)
 
       list[1] = (c & 1) == 0;
 
-      rec_limit = 1000;
       if (compare_opcodes(end, utf, cb, list, end, &rec_limit))
         {
         switch (c)

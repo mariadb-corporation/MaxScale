@@ -2,14 +2,10 @@
 # UTF-8 or Unicode property support. */
     
 #forbid_utf
+#newline_default lf any anycrlf
 
-/a\Cb/
-    aXb
- 0: aXb
-    a\nb
- 0: a\x0ab
-    ** Failers (too big char)
-No match
+/ab/
+\= Expect error message (too big char) and no match
     A\x{123}B
 ** Character \x{123} is greater than 255 and UTF-8 mode is not enabled.
 ** Truncation will probably give the wrong result.
@@ -311,9 +307,13 @@ Subject length lower bound = 1
 ------------------------------------------------------------------
 
 /\777/I
-Failed: error 151 at offset 3: octal value is greater than \377 in 8-bit non-UTF-8 mode
+Failed: error 151 at offset 4: octal value is greater than \377 in 8-bit non-UTF-8 mode
 
 /(*:0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF)XX/mark
+Failed: error 176 at offset 259: name is too long in (*MARK), (*PRUNE), (*SKIP), or (*THEN)
+    XX
+     
+/(*:0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF)XX/mark,alt_verbnames
 Failed: error 176 at offset 259: name is too long in (*MARK), (*PRUNE), (*SKIP), or (*THEN)
     XX
      
@@ -322,11 +322,16 @@ Failed: error 176 at offset 259: name is too long in (*MARK), (*PRUNE), (*SKIP),
  0: XX
 MK: 0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDE
 
+/(*:0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDE)XX/mark,alt_verbnames
+    XX
+ 0: XX
+MK: 0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDE
+
 /\u0100/alt_bsux,allow_empty_class,match_unset_backref,dupnames
-Failed: error 177 at offset 5: character code point value in \u.... sequence is too large
+Failed: error 177 at offset 6: character code point value in \u.... sequence is too large
 
 /[\u0100-\u0200]/alt_bsux,allow_empty_class,match_unset_backref,dupnames
-Failed: error 177 at offset 6: character code point value in \u.... sequence is too large
+Failed: error 177 at offset 7: character code point value in \u.... sequence is too large
 
 /[^\x00-a]{12,}[^b-\xff]*/B
 ------------------------------------------------------------------
@@ -355,5 +360,11 @@ Failed: error 177 at offset 6: character code point value in \u.... sequence is 
         Ket
         End
 ------------------------------------------------------------------
+
+/(*MARK:a\x{100}b)z/alt_verbnames 
+Failed: error 134 at offset 14: character code point value in \x{} or \o{} is too large
+
+/(*:*++++++++++++''''''''''''''''''''+''+++'+++x+++++++++++++++++++++++++++++++++++(++++++++++++++++++++:++++++%++:''''''''''''''''''''''''+++++++++++++++++++++++++++++++++++++++++++++++++++++-++++++++k+++++++''''+++'+++++++++++++++++++++++''''++++++++++++':ƿ)/
+Failed: error 176 at offset 259: name is too long in (*MARK), (*PRUNE), (*SKIP), or (*THEN)
 
 # End of testinput9

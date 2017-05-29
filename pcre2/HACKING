@@ -7,8 +7,8 @@ but with a revised (and incompatible) API. To avoid confusion, the original
 library is referred to as PCRE1 below. For information about testing PCRE2, see
 the pcre2test documentation and the comment at the head of the RunTest file.
 
-PCRE1 releases were up to 8.3x when PCRE2 was developed. The 8.xx series will
-continue for bugfixes if necessary. PCRE2 releases started at 10.00 to avoid
+PCRE1 releases were up to 8.3x when PCRE2 was developed, and later bug fix
+releases remain in the 8.xx series. PCRE2 releases started at 10.00 to avoid
 confusion with PCRE1.
 
 
@@ -16,19 +16,20 @@ Historical note 1
 -----------------
 
 Many years ago I implemented some regular expression functions to an algorithm
-suggested by Martin Richards. These were not Unix-like in form, and were quite
-restricted in what they could do by comparison with Perl. The interesting part
-about the algorithm was that the amount of space required to hold the compiled
-form of an expression was known in advance. The code to apply an expression did
-not operate by backtracking, as the original Henry Spencer code and current
-PCRE2 and Perl code does, but instead checked all possibilities simultaneously
-by keeping a list of current states and checking all of them as it advanced
-through the subject string. In the terminology of Jeffrey Friedl's book, it was
-a "DFA algorithm", though it was not a traditional Finite State Machine (FSM).
-When the pattern was all used up, all remaining states were possible matches,
-and the one matching the longest subset of the subject string was chosen. This
-did not necessarily maximize the individual wild portions of the pattern, as is
-expected in Unix and Perl-style regular expressions.
+suggested by Martin Richards. The rather simple patterns were not Unix-like in
+form, and were quite restricted in what they could do by comparison with Perl.
+The interesting part about the algorithm was that the amount of space required
+to hold the compiled form of an expression was known in advance. The code to
+apply an expression did not operate by backtracking, as the original Henry
+Spencer code and current PCRE2 and Perl code does, but instead checked all
+possibilities simultaneously by keeping a list of current states and checking
+all of them as it advanced through the subject string. In the terminology of
+Jeffrey Friedl's book, it was a "DFA algorithm", though it was not a
+traditional Finite State Machine (FSM). When the pattern was all used up, all
+remaining states were possible matches, and the one matching the longest subset
+of the subject string was chosen. This did not necessarily maximize the
+individual wild portions of the pattern, as is expected in Unix and Perl-style
+regular expressions.
 
 
 Historical note 2
@@ -85,7 +86,7 @@ had become very complicated and hard to maintain. Indeed one of the early
 things I did for 6.8 was to fix Yet Another Bug in the memory computation. Then
 I had a flash of inspiration as to how I could run the real compile function in
 a "fake" mode that enables it to compute how much memory it would need, while
-actually only ever using a few hundred bytes of working memory, and without too
+in most cases only ever using a small amount of working memory, and without too
 many tests of the mode that might slow it down. So I refactored the compiling
 functions to work this way. This got rid of about 600 lines of source. It
 should make future maintenance and development easier. As this was such a major
@@ -104,20 +105,208 @@ system stack used by the compile function, which uses recursive function calls
 for nested parenthesized groups. This is a safety feature for environments with
 small stacks where the patterns are provided by users.
 
-History repeated itself for release 10.20. A number of bugs relating to named 
-subpatterns had been discovered by fuzzers. Most of these were related to the 
-handling of forward references when it was not known if the named pattern was
+
+Yet another pattern scan
+------------------------
+
+History repeated itself for PCRE2 release 10.20. A number of bugs relating to
+named subpatterns had been discovered by fuzzers. Most of these were related to
+the handling of forward references when it was not known if the named group was
 unique. (References to non-unique names use a different opcode and more
 memory.) The use of duplicate group numbers (the (?| facility) also caused
-issues. 
+issues.
 
-To get around these problems I adopted a new approach by adding a third pass,
-really a "pre-pass", over the pattern, which does nothing other than identify
-all the named subpatterns and their corresponding group numbers. This means 
-that the actual compile (both pre-pass and real compile) have full knowledge of 
-group names and numbers throughout. Several dozen lines of messy code were 
-eliminated, though the new pre-pass is not short (skipping over [] classes is 
-complicated).
+To get around these problems I adopted a new approach by adding a third pass
+over the pattern (really a "pre-pass"), which did nothing other than identify
+all the named subpatterns and their corresponding group numbers. This means
+that the actual compile (both the memory-computing dummy run and the real
+compile) has full knowledge of group names and numbers throughout. Several
+dozen lines of messy code were eliminated, though the new pre-pass was not
+short. In particular, parsing and skipping over [] classes is complicated.
+
+While working on 10.22 I realized that I could simplify yet again by moving
+more of the parsing into the pre-pass, thus avoiding doing it in two places, so
+after 10.22 was released, the code underwent yet another big refactoring. This
+is how it is from 10.23 onwards:
+
+The function called parse_regex() scans the pattern characters, parsing them
+into literal data and meta characters. It converts escapes such as \x{123}
+into literals, handles \Q...\E, and skips over comments and non-significant
+white space. The result of the scanning is put into a vector of 32-bit unsigned
+integers. Values less than 0x80000000 are literal data. Higher values represent
+meta-characters. The top 16-bits of such values identify the meta-character,
+and these are given names such as META_CAPTURE. The lower 16-bits are available
+for data, for example, the capturing group number. The only situation in which
+literal data values greater than 0x7fffffff can appear is when the 32-bit
+library is running in non-UTF mode. This is handled by having a special
+meta-character that is followed by the 32-bit data value.
+
+The size of the parsed pattern vector, when auto-callouts are not enabled, is
+bounded by the length of the pattern (with one exception). The code is written
+so that each item in the pattern uses no more vector elements than the number
+of code units in the item itself. The exception is the aforementioned large
+32-bit number handling. For this reason, 32-bit non-UTF patterns are scanned in
+advance to check for such values. When auto-callouts are enabled, the generous
+assumption is made that there will be a callout for each pattern code unit
+(which of course is only actually true if all code units are literals) plus one
+at the end. There is a default parsed pattern vector on the stack, but if this
+is not big enough, heap memory is used.
+
+As before, the actual compiling function is run twice, the first time to
+determine the amount of memory needed for the final compiled pattern. It
+now processes the parsed pattern vector, not the pattern itself, although some
+of the parsed items refer to strings in the pattern - for example, group
+names. As escapes and comments have already been processed, the code is a bit
+simpler than before.
+
+Most errors can be diagnosed during the parsing scan. For those that cannot
+(for example, "lookbehind assertion is not fixed length"), the parsed code
+contains offsets into the pattern so that the actual compiling code can
+identify where errors occur.
+
+
+The elements of the parsed pattern vector
+-----------------------------------------
+
+The word "offset" below means a code unit offset into the pattern. When
+PCRE2_SIZE (which is usually size_t) is no bigger than uint32_t, an offset is
+stored in a single parsed pattern element. Otherwise (typically on 64-bit
+systems) it occupies two elements. The following meta items occupy just one
+element, with no data:
+
+META_ACCEPT           (*ACCEPT)
+META_ASTERISK         *
+META_ASTERISK_PLUS    *+
+META_ASTERISK_QUERY   *?
+META_ATOMIC           (?> start of atomic group
+META_CIRCUMFLEX       ^ metacharacter
+META_CLASS            [ start of non-empty class
+META_CLASS_EMPTY      [] empty class - only with PCRE2_ALLOW_EMPTY_CLASS
+META_CLASS_EMPTY_NOT  [^] negative empty class - ditto
+META_CLASS_END        ] end of non-empty class
+META_CLASS_NOT        [^ start non-empty negative class
+META_COMMIT           (*COMMIT)
+META_COND_ASSERT      (?(?assertion)
+META_DOLLAR           $ metacharacter
+META_DOT              . metacharacter
+META_END              End of pattern (this value is 0x80000000)
+META_FAIL             (*FAIL)
+META_KET              ) closing parenthesis
+META_LOOKAHEAD        (?= start of lookahead
+META_LOOKAHEADNOT     (?! start of negative lookahead
+META_NOCAPTURE        (?: no capture parens
+META_PLUS             +
+META_PLUS_PLUS        ++
+META_PLUS_QUERY       +?
+META_PRUNE            (*PRUNE) - no argument
+META_QUERY            ?
+META_QUERY_PLUS       ?+
+META_QUERY_QUERY      ??
+META_RANGE_ESCAPED    hyphen in class range with at least one escape
+META_RANGE_LITERAL    hyphen in class range defined literally
+META_SKIP             (*SKIP) - no argument
+META_THEN             (*THEN) - no argument
+
+The two RANGE values occur only in character classes. They are positioned
+between two literals that define the start and end of the range. In an EBCDIC
+evironment it is necessary to know whether either of the range values was
+specified as an escape. In an ASCII/Unicode environment the distinction is not
+relevant.
+
+The following have data in the lower 16 bits, and may be followed by other data
+elements:
+
+META_ALT              | alternation
+META_BACKREF
+META_CAPTURE
+META_ESCAPE
+META_RECURSE
+
+If the data for META_ALT is non-zero, it is inside a lookbehind, and the data
+is the length of its branch, for which OP_REVERSE must be generated.
+
+META_BACKREF, META_CAPTURE, and META_RECURSE have the capture group number as
+their data in the lower 16 bits of the element.
+
+META_BACKREF is followed by an offset if the back reference group number is 10
+or more. The offsets of the first ocurrences of references to groups whose
+numbers are less than 10 are put in cb->small_ref_offset[] (only the first
+occurrence is useful). On 64-bit systems this avoids using more than two parsed
+pattern elements for items such as \3. The offset is used when an error is
+given for a reference to a non-existent group.
+
+META_RECURSE is always followed by an offset, for use in error messages.
+
+META_ESCAPE has an ESC_xxx value as its data. For ESC_P and ESC_p, the next
+element contains the 16-bit type and data property values, packed together.
+ESC_g and ESC_k are used only for named references - numerical ones are turned
+into META_RECURSE or META_BACKREF as appropriate. ESC_g and ESC_k are followed
+by a length and an offset into the pattern to specify the name.
+
+The following have one data item that follows in the next vector element:
+
+META_BIGVALUE         Next is a literal >= META_END
+META_OPTIONS          (?i) and friends (data is new option bits)
+META_POSIX            POSIX class item (data identifies the class)
+META_POSIX_NEG        negative POSIX class item (ditto)
+
+The following are followed by a length element, then a number of character code
+values (which should match with the length):
+
+META_MARK             (*MARK:xxxx)
+META_PRUNE_ARG        (*PRUNE:xxx)
+META_SKIP_ARG         (*SKIP:xxxx)
+META_THEN_ARG         (*THEN:xxxx)
+
+The following are followed by a length element, then an offset in the pattern
+that identifies the name:
+
+META_COND_NAME        (?(<name>) or (?('name') or (?(name)
+META_COND_RNAME       (?(R&name)
+META_COND_RNUMBER     (?(Rdigits)
+META_RECURSE_BYNAME   (?&name)
+META_BACKREF_BYNAME   \k'name'
+
+META_COND_RNUMBER is used for names that start with R and continue with digits,
+because this is an ambiguous case. It could be a back reference to a group with
+that name, or it could be a recursion test on a numbered group.
+
+This one is followed by an offset, for use in error messages, then a number:
+
+META_COND_NUMBER       (?([+-]digits)
+
+The following is followed just by an offset, for use in error messages:
+
+META_COND_DEFINE      (?(DEFINE)
+
+The following are also followed just by an offset, but also the lower 16 bits
+of the main word contain the length of the first branch of the lookbehind
+group; this is used when generating OP_REVERSE for that branch.
+
+META_LOOKBEHIND       (?<=
+META_LOOKBEHINDNOT    (?<!
+
+The following are followed by two values, the minimum and maximum. Repeat
+values are limited to 65535 (MAX_REPEAT). A maximum value of "unlimited" is
+represented by UNLIMITED_REPEAT, which is bigger than MAX_REPEAT:
+
+META_MINMAX           {n,m}  repeat
+META_MINMAX_PLUS      {n,m}+ repeat
+META_MINMAX_QUERY     {n,m}? repeat
+
+This one is followed by three elements. The first is 0 for '>' and 1 for '>=';
+the next two are the major and minor numbers:
+
+META_COND_VERSION     (?(VERSION<op>x.y)
+
+Callouts are converted into one of two items:
+
+META_CALLOUT_NUMBER   (?C with numerical argument
+META_CALLOUT_STRING   (?C with string argument
+
+In both cases, the next two elements contain the offset and length of the next
+item in the pattern. Then there is either one callout number, or a length and
+an offset for the string argument. The length includes both delimiters.
 
 
 Traditional matching function
@@ -225,8 +414,13 @@ These items are all just one unit long
   OP_THEN                )
 
 OP_ASSERT_ACCEPT is used when (*ACCEPT) is encountered within an assertion.
-This ends the assertion, not the entire pattern match. The assertion (?!) is 
+This ends the assertion, not the entire pattern match. The assertion (?!) is
 always optimized to OP_FAIL.
+
+OP_ALLANY is used for '.' when PCRE2_DOTALL is set. It is also used for \C in
+non-UTF modes and in UTF-32 mode (since one code unit still equals one
+character). Another use is for [^] when empty classes are permitted
+(PCRE2_ALLOW_EMPTY_CLASS is set).
 
 
 Backtracking control verbs with optional data
@@ -545,8 +739,8 @@ immediately before the assertion. It is also possible to insert a manual
 callout at this point. Only assertion conditions may have callouts preceding
 the condition.
 
-A condition that is the negative assertion (?!) is optimized to OP_FAIL in all 
-parts of the pattern, so this is another opcode that may appear as a condition. 
+A condition that is the negative assertion (?!) is optimized to OP_FAIL in all
+parts of the pattern, so this is another opcode that may appear as a condition.
 It is treated the same as OP_FALSE.
 
 
@@ -588,10 +782,10 @@ the actual string is passed, but the delimiter can be accessed as string[-1] if
 the application needs it. In the 8-bit library, the callout in /X(?C'abc')Y/ is
 compiled as the following bytes (decimal numbers represent binary values):
 
-  [OP_CALLOUT]  [0] [10]  [0] [1]  [0] [14]  [0] [5] ['] [a] [b] [c] [0]
-                --------  -------  --------  -------
-                   |         |        |         |
-                   ------- LINK_SIZE items ------
+  [OP_CALLOUT_STR]  [0] [10]  [0] [1]  [0] [14]  [0] [5] ['] [a] [b] [c] [0]
+                    --------  -------  --------  -------
+                       |         |        |         |
+                       ------- LINK_SIZE items ------
 
 Opcode table checking
 ---------------------
@@ -601,4 +795,4 @@ not a real opcode, but is used to check that tables indexed by opcode are the
 correct length, in order to catch updating errors.
 
 Philip Hazel
-June 2015
+November 2016

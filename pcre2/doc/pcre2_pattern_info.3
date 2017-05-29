@@ -1,4 +1,4 @@
-.TH PCRE2_PATTERN_INFO 3 "01 December 2014" "PCRE2 10.00"
+.TH PCRE2_PATTERN_INFO 3 "21 November 2015" "PCRE2 10.21"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -30,19 +30,20 @@ request are as follows:
                                PCRE2_BSR_ANYCRLF: CR, LF, or CRLF only
   PCRE2_INFO_CAPTURECOUNT    Number of capturing subpatterns
   PCRE2_INFO_FIRSTBITMAP     Bitmap of first code units, or NULL
-  PCRE2_INFO_FIRSTCODEUNIT   First code unit when type is 1
   PCRE2_INFO_FIRSTCODETYPE   Type of start-of-match information
                                0 nothing set
                                1 first code unit is set
                                2 start of string or after newline
+  PCRE2_INFO_FIRSTCODEUNIT   First code unit when type is 1
+  PCRE2_INFO_HASBACKSLASHC   Return 1 if pattern contains \eC
   PCRE2_INFO_HASCRORLF       Return 1 if explicit CR or LF matches
                                exist in the pattern
   PCRE2_INFO_JCHANGED        Return 1 if (?J) or (?-J) was used
   PCRE2_INFO_JITSIZE         Size of JIT compiled code, or 0
-  PCRE2_INFO_LASTCODEUNIT    Last code unit when type is 1
   PCRE2_INFO_LASTCODETYPE    Type of must-be-present information
                                0 nothing set
                                1 code unit is set
+  PCRE2_INFO_LASTCODEUNIT    Last code unit when type is 1
   PCRE2_INFO_MATCHEMPTY      1 if the pattern can match an
                                empty string, 0 otherwise
   PCRE2_INFO_MATCHLIMIT      Match limit if set,
@@ -50,8 +51,8 @@ request are as follows:
   PCRE2_INFO_MAXLOOKBEHIND   Length (in characters) of the longest
                                lookbehind assertion
   PCRE2_INFO_MINLENGTH       Lower bound length of matching strings
-  PCRE2_INFO_NAMEENTRYSIZE   Size of name table entries
   PCRE2_INFO_NAMECOUNT       Number of named subpatterns
+  PCRE2_INFO_NAMEENTRYSIZE   Size of name table entries
   PCRE2_INFO_NAMETABLE       Pointer to name table
   PCRE2_CONFIG_NEWLINE       Code for the newline sequence:
                                PCRE2_NEWLINE_CR

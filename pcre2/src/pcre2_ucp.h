@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2014 University of Cambridge
+         New API code Copyright (c) 2016 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -39,8 +39,8 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#ifndef _PCRE2_UCP_H
-#define _PCRE2_UCP_H
+#ifndef PCRE2_UCP_H_IDEMPOTENT_GUARD
+#define PCRE2_UCP_H_IDEMPOTENT_GUARD
 
 /* This file contains definitions of the property values that are returned by
 the UCD access macros. New values that are added for new releases of Unicode
@@ -253,9 +253,16 @@ enum {
   ucp_Pau_Cin_Hau,
   ucp_Siddham,
   ucp_Tirhuta,
-  ucp_Warang_Citi
+  ucp_Warang_Citi,
+  /* New for Unicode 8.0.0: */
+  ucp_Ahom,
+  ucp_Anatolian_Hieroglyphs,
+  ucp_Hatran,
+  ucp_Multani,
+  ucp_Old_Hungarian,
+  ucp_SignWriting
 };
 
-#endif
+#endif  /* PCRE2_UCP_H_IDEMPOTENT_GUARD */
 
 /* End of pcre2_ucp.h */

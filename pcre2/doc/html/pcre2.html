@@ -126,8 +126,10 @@ running redundant checks.
 <P>
 The use of the \C escape sequence in a UTF-8 or UTF-16 pattern can lead to
 problems, because it may leave the current matching point in the middle of a
-multi-code-unit character. The PCRE2_NEVER_BACKSLASH_C option can be used to
-lock out the use of \C, causing a compile-time error if it is encountered.
+multi-code-unit character. The PCRE2_NEVER_BACKSLASH_C option can be used by an
+application to lock out the use of \C, causing a compile-time error if it is
+encountered. It is also possible to build PCRE2 with the use of \C permanently
+disabled.
 </P>
 <P>
 Another way that performance can be hit is by running a pattern that has a very
@@ -187,7 +189,7 @@ use my two initials, followed by the two digits 10, at the domain cam.ac.uk.
 </P>
 <br><a name="SEC5" href="#TOC1">REVISION</a><br>
 <P>
-Last updated: 13 April 2015
+Last updated: 16 October 2015
 <br>
 Copyright &copy; 1997-2015 University of Cambridge.
 <br>

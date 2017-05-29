@@ -111,9 +111,10 @@ it matches a literal "u".
   \W         a "non-word" character
   \X         a Unicode extended grapheme cluster
 </pre>
-The application can lock out the use of \C by setting the
-PCRE2_NEVER_BACKSLASH_C option. It is dangerous because it may leave the
-current matching point in the middle of a UTF-8 or UTF-16 character.
+\C is dangerous because it may leave the current matching point in the middle
+of a UTF-8 or UTF-16 character. The application can lock out the use of \C by
+setting the PCRE2_NEVER_BACKSLASH_C option. It is also possible to build PCRE2
+with the use of \C permanently disabled.
 </P>
 <P>
 By default, \d, \s, and \w match only ASCII characters, even in UTF-8 mode
@@ -187,6 +188,8 @@ at release 5.18.
 </P>
 <br><a name="SEC7" href="#TOC1">SCRIPT NAMES FOR \p AND \P</a><br>
 <P>
+Ahom,
+Anatolian_Hieroglyphs,
 Arabic,
 Armenian,
 Avestan,
@@ -227,6 +230,7 @@ Gurmukhi,
 Han,
 Hangul,
 Hanunoo,
+Hatran,
 Hebrew,
 Hiragana,
 Imperial_Aramaic,
@@ -263,12 +267,14 @@ Miao,
 Modi,
 Mongolian,
 Mro,
+Multani,
 Myanmar,
 Nabataean,
 New_Tai_Lue,
 Nko,
 Ogham,
 Ol_Chiki,
+Old_Hungarian,
 Old_Italic,
 Old_North_Arabian,
 Old_Permic,
@@ -290,6 +296,7 @@ Saurashtra,
 Sharada,
 Shavian,
 Siddham,
+SignWriting,
 Sinhala,
 Sora_Sompeng,
 Sundanese,
@@ -444,9 +451,10 @@ appear.
   (*UCP)          set PCRE2_UCP (use Unicode properties for \d etc)
 </pre>
 Note that LIMIT_MATCH and LIMIT_RECURSION can only reduce the value of the
-limits set by the caller of pcre2_match(), not increase them. The application
-can lock out the use of (*UTF) and (*UCP) by setting the PCRE2_NEVER_UTF or
-PCRE2_NEVER_UCP options, respectively, at compile time.
+limits set by the caller of <b>pcre2_match()</b> or <b>pcre2_dfa_match()</b>, not
+increase them. The application can lock out the use of (*UTF) and (*UCP) by
+setting the PCRE2_NEVER_UTF or PCRE2_NEVER_UCP options, respectively, at
+compile time.
 </P>
 <br><a name="SEC17" href="#TOC1">NEWLINE CONVENTION</a><br>
 <P>
@@ -485,6 +493,9 @@ Each top-level branch of a look behind must be of a fixed length.
   \n              reference by number (can be ambiguous)
   \gn             reference by number
   \g{n}           reference by number
+  \g+n            relative reference by number (PCRE2 extension)
+  \g-n            relative reference by number
+  \g{+n}          relative reference by number (PCRE2 extension)
   \g{-n}          relative reference by number
   \k&#60;name&#62;        reference by name (Perl)
   \k'name'        reference by name (Perl)
@@ -523,14 +534,17 @@ Each top-level branch of a look behind must be of a fixed length.
   (?(-n)              relative reference condition
   (?(&#60;name&#62;)          named reference condition (Perl)
   (?('name')          named reference condition (Perl)
-  (?(name)            named reference condition (PCRE2)
+  (?(name)            named reference condition (PCRE2, deprecated)
   (?(R)               overall recursion condition
-  (?(Rn)              specific group recursion condition
-  (?(R&name)          specific recursion condition
+  (?(Rn)              specific numbered group recursion condition
+  (?(R&name)          specific named group recursion condition
   (?(DEFINE)          define subpattern for reference
   (?(VERSION[&#62;]=n.m)  test PCRE2 version
   (?(assert)          assertion condition
-</PRE>
+</pre>
+Note the ambiguity of (?(R) and (?(Rn) which might be named reference
+conditions or recursion tests. Such a condition is interpreted as a reference
+condition if the relevant named group exists.
 </P>
 <br><a name="SEC23" href="#TOC1">BACKTRACKING CONTROL</a><br>
 <P>
@@ -582,9 +596,9 @@ Cambridge, England.
 </P>
 <br><a name="SEC27" href="#TOC1">REVISION</a><br>
 <P>
-Last updated: 13 June 2015
+Last updated: 23 December 2016
 <br>
-Copyright &copy; 1997-2015 University of Cambridge.
+Copyright &copy; 1997-2016 University of Cambridge.
 <br>
 <p>
 Return to the <a href="index.html">PCRE2 index page</a>.

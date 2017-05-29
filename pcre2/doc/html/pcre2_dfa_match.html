@@ -45,8 +45,8 @@ is <b>pcre2_match()</b>.) The arguments for this function are:
   <i>wscount</i>      Number of elements in the vector
 </pre>
 For <b>pcre2_dfa_match()</b>, a match context is needed only if you want to set
-up a callout function. The <i>length</i> and <i>startoffset</i> values are code
-units, not characters. The options are:
+up a callout function or specify the recursion limit. The <i>length</i> and
+<i>startoffset</i> values are code units, not characters. The options are:
 <pre>
   PCRE2_ANCHORED          Match only at the first position
   PCRE2_NOTBOL            Subject is not the beginning of a line

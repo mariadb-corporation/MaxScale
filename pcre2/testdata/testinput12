@@ -7,49 +7,6 @@
 /abc/utf
     Ã]
 
-/X(\C{3})/utf
-    X\x{11234}Y
-    X\x{11234}YZ
-
-/X(\C{4})/utf
-    X\x{11234}YZ
-    X\x{11234}YZW
-
-/X\C*/utf
-    XYZabcdce
-
-/X\C*?/utf
-    XYZabcde
-
-/X\C{3,5}/utf
-    Xabcdefg
-    X\x{11234}Y
-    X\x{11234}YZ
-    X\x{11234}\x{512}
-    X\x{11234}\x{512}YZ
-    X\x{11234}\x{512}\x{11234}Z
-
-/X\C{3,5}?/utf
-    Xabcdefg
-    X\x{11234}Y
-    X\x{11234}YZ
-    X\x{11234}\x{512}YZ
-    *** Failers
-    X\x{11234}
-
-/a\Cb/utf
-    aXb
-    a\nb
-
-/a\C\Cb/utf
-    a\x{12257}b
-    a\x{12257}\x{11234}b
-    ** Failers
-    a\x{100}b
-
-/ab\Cde/utf
-    abXde
-
 # Check maximum character size 
 
 /\x{ffff}/IB,utf
@@ -90,27 +47,12 @@
 
 /\x{212ab}/IB,utf
 
-# This one is here not because it's different to Perl, but because the way
-# the captured single-byte is displayed. (In Perl it becomes a character, and you
-# can't tell the difference.) 
-
-/X(\C)(.*)/utf
-    X\x{1234}
-    X\nabc
-
-# This one is here because Perl gives out a grumbly error message (quite
-# correctly, but that messes up comparisons). 
-
-/a\Cb/utf
-    *** Failers
-    a\x{100}b
-
 /[^ab\xC0-\xF0]/IB,utf
     \x{f1}
     \x{bf}
     \x{100}
     \x{1000}
-    *** Failers
+\= Expect no match
     \x{c0}
     \x{f0}
 
@@ -137,7 +79,6 @@
     \x{100}
     Z\x{100}
     \x{100}Z
-    *** Failers
 
 /[\xff]/IB,utf
     >\x{ff}<
@@ -157,18 +98,24 @@
 /^[\QÄ€\E-\QÅ\E/B,utf
 
 /X/utf
-    XX\x{d800}
     XX\x{d800}\=no_utf_check
-    XX\x{da00}
     XX\x{da00}\=no_utf_check
-    XX\x{dc00}
     XX\x{dc00}\=no_utf_check
-    XX\x{de00}
     XX\x{de00}\=no_utf_check
-    XX\x{dfff}
     XX\x{dfff}\=no_utf_check
+\= Expect UTF error
+    XX\x{d800}
+    XX\x{da00}
+    XX\x{dc00}
+    XX\x{de00}
+    XX\x{dfff}
     XX\x{110000}
     XX\x{d800}\x{1234}
+\= Expect no match
+    XX\x{d800}\=offset=3
+    
+/(?<=.)X/utf
+    XX\x{d800}\=offset=3
 
 /(*UTF16)\x{11234}/
   abcd\x{11234}pqr
@@ -229,7 +176,9 @@
     a\x{123}aa\=offset=1
     a\x{123}aa\=offset=2
     a\x{123}aa\=offset=3
+\= Expect no match
     a\x{123}aa\=offset=4
+\= Expect bad offset error     
     a\x{123}aa\=offset=5
     a\x{123}aa\=offset=6
 
@@ -250,11 +199,16 @@
 # Check bad offset 
 
 /a/utf
+\= Expect bad UTF-16 offset, or no match in 32-bit
     \x{10000}\=offset=1
     \x{10000}ab\=offset=1
+\= Expect 16-bit match, 32-bit no match
     \x{10000}ab\=offset=2
+\= Expect no match     
     \x{10000}ab\=offset=3
+\= Expect no match in 16-bit, bad offset in 32-bit    
     \x{10000}ab\=offset=4
+\= Expect bad offset     
     \x{10000}ab\=offset=5
 
 /í¼€/utf
@@ -329,9 +283,6 @@
 
 /\o{4200000}/utf
 
-/\C/utf
-    \x{110000}
-
 /\x{100}*A/IB,utf
     A
 
@@ -341,7 +292,6 @@
     Z\x{100}
     \x{100}
     \x{100}Z
-    *** Failers 
 
 /[z-\x{100}]/IB,utf
 
@@ -367,7 +317,7 @@
     \x{104}
     \x{105}
     \x{109}  
-    ** Failers
+\= Expect no match
     \x{100}
     \x{10a} 
     
@@ -381,7 +331,7 @@
     \x{ff}
     \x{100}
     \x{101} 
-    ** Failers
+\= Expect no match
     \x{102}
     Y
     y           
@@ -389,5 +339,25 @@
 /[z-\x{100}]/IBi,utf
 
 /\x{3a3}B/IBi,utf
+
+/./utf
+    \x{110000}
+
+/(*UTF)abý¿¿¿¿¿z/B
+
+/abý¿¿¿¿¿z/utf
+
+/[\W\p{Any}]/B
+    abc
+    123 
+
+/[\W\pL]/B
+    abc
+    \x{100}
+    \x{308}  
+\= Expect no match
+    123     
+
+/[\s[:^ascii:]]/B,ucp
 
 # End of testinput12

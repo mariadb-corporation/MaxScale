@@ -1,4 +1,4 @@
-.TH PCRE2BUILD 3 "23 April 2015" "PCRE2 10.20"
+.TH PCRE2BUILD 3 "01 November 2016" "PCRE2 10.23"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .
@@ -132,11 +132,20 @@ Pattern escapes such as \ed and \ew do not by default make use of Unicode
 properties. The application can request that they do by setting the PCRE2_UCP
 option. Unless the application has set PCRE2_NEVER_UCP, a pattern may also
 request this by starting with (*UCP).
-.P
+.
+.
+.SH "DISABLING THE USE OF \eC"
+.rs
+.sp
 The \eC escape sequence, which matches a single code unit, even in a UTF mode,
 can cause unpredictable behaviour because it may leave the current matching
-point in the middle of a multi-code-unit character. It can be locked out by
-setting the PCRE2_NEVER_BACKSLASH_C option.
+point in the middle of a multi-code-unit character. The application can lock it
+out by setting the PCRE2_NEVER_BACKSLASH_C option when calling
+\fBpcre2_compile()\fP. There is also a build-time option
+.sp
+  --enable-never-backslash-C
+.sp
+(note the upper case C) which locks out the use of \eC entirely.
 .
 .
 .SH "JUST-IN-TIME COMPILER SUPPORT"
@@ -343,6 +352,19 @@ and equivalent run-time options, refer to these character values in an EBCDIC
 environment.
 .
 .
+.SH "PCRE2GREP SUPPORT FOR EXTERNAL SCRIPTS"
+.rs
+.sp
+By default, on non-Windows systems, \fBpcre2grep\fP supports the use of
+callouts with string arguments within the patterns it is matching, in order to
+run external scripts. For details, see the
+.\" HREF
+\fBpcre2grep\fP
+.\"
+documentation. This support can be disabled by adding
+--disable-pcre2grep-callout to the \fBconfigure\fP command.
+.
+.
 .SH "PCRE2GREP OPTIONS FOR COMPRESSED FILE SUPPORT"
 .rs
 .sp
@@ -363,16 +385,19 @@ they are not.
 .sp
 \fBpcre2grep\fP uses an internal buffer to hold a "window" on the file it is
 scanning, in order to be able to output "before" and "after" lines when it
-finds a match. The size of the buffer is controlled by a parameter whose
-default value is 20K. The buffer itself is three times this size, but because
-of the way it is used for holding "before" lines, the longest line that is
-guaranteed to be processable is the parameter size. You can change the default
-parameter value by adding, for example,
+finds a match. The starting size of the buffer is controlled by a parameter
+whose default value is 20K. The buffer itself is three times this size, but
+because of the way it is used for holding "before" lines, the longest line that
+is guaranteed to be processable is the parameter size. If a longer line is
+encountered, \fBpcre2grep\fP automatically expands the buffer, up to a
+specified maximum size, whose default is 1M or the starting size, whichever is
+the larger. You can change the default parameter values by adding, for example,
 .sp
-  --with-pcre2grep-bufsize=50K
+  --with-pcre2grep-bufsize=51200
+  --with-pcre2grep-max-bufsize=2097152
 .sp
-to the \fBconfigure\fP command. The caller of \fPpcre2grep\fP can override this
-value by using --buffer-size on the command line..
+to the \fBconfigure\fP command. The caller of \fPpcre2grep\fP can override
+these values by using --buffer-size and --max-buffer-size on the command line.
 .
 .
 .SH "PCRE2TEST OPTION FOR LIBREADLINE SUPPORT"
@@ -490,6 +515,28 @@ information about code coverage, see the \fBgcov\fP and \fBlcov\fP
 documentation.
 .
 .
+.SH "SUPPORT FOR FUZZERS"
+.rs
+.sp
+There is a special option for use by people who want to run fuzzing tests on
+PCRE2:
+.sp
+  --enable-fuzz-support
+.sp
+At present this applies only to the 8-bit library. If set, it causes an extra
+library called libpcre2-fuzzsupport.a to be built, but not installed. This
+contains a single function called LLVMFuzzerTestOneInput() whose arguments are
+a pointer to a string and the length of the string. When called, this function
+tries to compile the string as a pattern, and if that succeeds, to match it.
+This is done both with no options and with some random options bits that are
+generated from the string. Setting --enable-fuzz-support also causes a binary
+called \fBpcre2fuzzcheck\fP to be created. This is normally run under valgrind
+or used when PCRE2 is compiled with address sanitizing enabled. It calls the
+fuzzing function and outputs information about it is doing. The input strings
+are specified by arguments: if an argument starts with "=" the rest of it is a
+literal input string. Otherwise, it is assumed to be a file name, and the
+contents of the file are the test string.
+.
 .SH "SEE ALSO"
 .rs
 .sp
@@ -510,6 +557,6 @@ Cambridge, England.
 .rs
 .sp
 .nf
-Last updated: 24 April 2015
-Copyright (c) 1997-2015 University of Cambridge.
+Last updated: 01 November 2016
+Copyright (c) 1997-2016 University of Cambridge.
 .fi

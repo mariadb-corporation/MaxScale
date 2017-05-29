@@ -12,17 +12,21 @@ This page is part of the PCRE2 HTML documentation. It was generated
 automatically from the original man page. If there is any nonsense in it,
 please consult the man page, in case the conversion went wrong.
 <br>
-<br><b>
-PCRE2 PERFORMANCE
-</b><br>
+<ul>
+<li><a name="TOC1" href="#SEC1">PCRE2 PERFORMANCE</a>
+<li><a name="TOC2" href="#SEC2">COMPILED PATTERN MEMORY USAGE</a>
+<li><a name="TOC3" href="#SEC3">STACK USAGE AT RUN TIME</a>
+<li><a name="TOC4" href="#SEC4">PROCESSING TIME</a>
+<li><a name="TOC5" href="#SEC5">AUTHOR</a>
+<li><a name="TOC6" href="#SEC6">REVISION</a>
+</ul>
+<br><a name="SEC1" href="#TOC1">PCRE2 PERFORMANCE</a><br>
 <P>
 Two aspects of performance are discussed below: memory usage and processing
 time. The way you express your pattern as a regular expression can affect both
 of them.
 </P>
-<br><b>
-COMPILED PATTERN MEMORY USAGE
-</b><br>
+<br><a name="SEC2" href="#TOC1">COMPILED PATTERN MEMORY USAGE</a><br>
 <P>
 Patterns are compiled by PCRE2 into a reasonably efficient interpretive code,
 so that most simple patterns do not use much memory. However, there is one case
@@ -75,9 +79,7 @@ pattern. Nevertheless, if the atomic grouping is not a problem and the loss of
 speed is acceptable, this kind of rewriting will allow you to process patterns
 that PCRE2 cannot otherwise handle.
 </P>
-<br><b>
-STACK USAGE AT RUN TIME
-</b><br>
+<br><a name="SEC3" href="#TOC1">STACK USAGE AT RUN TIME</a><br>
 <P>
 When <b>pcre2_match()</b> is used for matching, certain kinds of pattern can
 cause it to use large amounts of the process stack. In some environments the
@@ -86,9 +88,7 @@ SIGSEGV. Rewriting your pattern can often help. The
 <a href="pcre2stack.html"><b>pcre2stack</b></a>
 documentation discusses this issue in detail.
 </P>
-<br><b>
-PROCESSING TIME
-</b><br>
+<br><a name="SEC4" href="#TOC1">PROCESSING TIME</a><br>
 <P>
 Certain items in regular expression patterns are processed more efficiently
 than others. It is more efficient to use a character class like [aeiou] than a
@@ -177,9 +177,7 @@ appreciable time with strings longer than about 20 characters.
 In many cases, the solution to this kind of performance issue is to use an
 atomic group or a possessive quantifier.
 </P>
-<br><b>
-AUTHOR
-</b><br>
+<br><a name="SEC5" href="#TOC1">AUTHOR</a><br>
 <P>
 Philip Hazel
 <br>
@@ -188,9 +186,7 @@ University Computing Service
 Cambridge, England.
 <br>
 </P>
-<br><b>
-REVISION
-</b><br>
+<br><a name="SEC6" href="#TOC1">REVISION</a><br>
 <P>
 Last updated: 02 January 2015
 <br>

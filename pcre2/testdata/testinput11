@@ -4,11 +4,8 @@
 # different, so they have separate output files.
     
 #forbid_utf
+#newline_default LF ANY ANYCRLF
 
-/a\Cb/
-    aXb
-    a\nb
-  
 /[^\x{c4}]/IB
   
 /\x{100}/I
@@ -343,7 +340,7 @@
 
 # Non-UTF characters 
 
-/\C{2,3}/
+/.{2,3}/
     \x{400000}\x{400001}\x{400002}\x{400003}
 
 /\x{400000}\x{800000}/IBi
@@ -353,5 +350,22 @@
 /[\H]/IB
 
 /[\V]/IB
+
+/(*THEN:\[A]{65501})/expand
+
+# We can use pcre2test's utf8_input modifier to create wide pattern characters,
+# even though this test is run when UTF is not supported.
+
+/abý¿¿¿¿¿z/utf8_input
+    abý¿¿¿¿¿z
+    ab\x{7fffffff}z
+
+/abÿý¿¿¿¿¿z/utf8_input
+    abÿý¿¿¿¿¿z
+    ab\x{ffffffff}z 
+
+/abÿAz/utf8_input
+    abÿAz
+    ab\x{80000041}z 
 
 # End of testinput11

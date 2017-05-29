@@ -1,4 +1,4 @@
-.TH PCRE2_MATCH_DATA_CREATE_FROM_PATTERN 3 "24 October 2014" "PCRE2 10.00"
+.TH PCRE2_MATCH_DATA_CREATE_FROM_PATTERN 3 "29 July 2015" "PCRE2 10.21"
 .SH NAME
 PCRE2 - Perl-compatible regular expressions (revised API)
 .SH SYNOPSIS
@@ -7,8 +7,8 @@ PCRE2 - Perl-compatible regular expressions (revised API)
 .B #include <pcre2.h>
 .PP
 .nf
-.B pcre2_match_data_create_from_pattern(const pcre2_code *\fIcode\fP,
-.B "  pcre2_general_context *\fIgcontext\fP);"
+.B pcre2_match_data *pcre2_match_data_create_from_pattern(
+.B "  const pcre2_code *\fIcode\fP, pcre2_general_context *\fIgcontext\fP);"
 .fi
 .
 .SH DESCRIPTION
