@@ -3,13 +3,10 @@
 # Do the real building work. This script is executed on build VM and
 # requires a working installation of CMake.
 
-# Check if CMake needs to be installed
-command -v cmake || install_cmake="cmake"
-
 
 command -v apt-get
 
-if [ $? -e 0 ]
+if [ $? == 0 ]
 then
   # DEB-based distro
 
@@ -18,23 +15,35 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev libgnutls30 libgcrypt20 $install_cmake
+       sqlite3 liblua5.1 liblua5.1-dev  wget
+  sudo apt-get install -y --force-yes libgnutls-dev
+  if [ $? != 0 ]
+  then
+       sudo apt-get install -y --force-yes libgnutls28-dev
+  fi
+  sudo apt-get install -y --force-yes libgcrypt20
+  if [ $? != 0 ]
+  then
+      sudo apt-get install -y --force-yes libgcrypt11
+  fi
 else
   ## RPM-based distro
   command -v yum
 
-  if [ $? -ne 0 ]
+  if [ $? != 0 ]
   then
     # We need zypper here
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
          pcre-devel git wget tcl libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls gcrypt $install_cmake
+         gnutls 
+    sudo zypper -n install gcrypt
+    sudo zypper -n install libgcrypt
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
-    if [ $? -ne 0 ]
+    if [ $? != 0 ]
     then
       sudo zypper -n install libedit-devel
     fi
@@ -43,18 +52,39 @@ else
     sudo yum clean all
     sudo yum install -y --nogpgcheck gcc gcc-c++ ncurses-devel bison glibc-devel \
          libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
-         libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign \
+         libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign wget \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         gnutls gcrypt $install_cmake
+         gnutls gcrypt
 
     cat /etc/redhat-release | grep "release 5"
-    if [ $? -eq 0 ]
+    if [ $? == 0 ]
     then
       sudo yum remove -y libedit-devel libedit
     fi
   fi
 
+fi
+
+# cmake
+wget http://max-tst-01.mariadb.com/ci-repository/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+if [ $? != 0 ] ; then
+    echo "CMake can not be downloaded from Maxscale build server, trying from cmake.org"
+    wget https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+fi
+sudo tar xzvf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
+
+cmake_version=`cmake --version | grep "cmake version" | awk '{ print $3 }'`
+if [ "$cmake_version" \< "3.7.1" ] ; then
+    echo "cmake does not work! Trying to build from source"
+    wget https://cmake.org/files/v3.7/cmake-3.7.1.tar.gz --no-check-certificate
+    tar xzvf cmake-3.7.1.tar.gz
+    cd cmake-3.7.1
+
+    ./bootstrap
+    gmake
+    sudo make install
+    cd ..
 fi
 
 # Flex
@@ -67,7 +97,7 @@ mkdir rabbit
 cd rabbit
 git clone https://github.com/alanxz/rabbitmq-c.git
 
-if [ $? -ne 0 ]
+if [ $? != 0 ]
 then
     echo "Error cloning rabbitmq-c"
     exit 1
@@ -84,7 +114,7 @@ mkdir tcl
 cd tcl
 wget --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-src.tar.gz
 
-if [ $? -ne 0 ]
+if [ $? != 0 ]
 then
     echo "Error getting tcl"
     exit 1
