@@ -330,13 +330,9 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
 
         if (MODULECMD_GET_TYPE(type) != MODULECMD_ARG_OUTPUT)
         {
-            char *t = modulecmd_argtype_to_str(&cmd->arg_types[i]);
-
-            if (t)
-            {
-                dcb_printf(dcb, "%s%s", t, i < cmd->arg_count_max - 1 ? " " : "");
-                MXS_FREE(t);
-            }
+            dcb_printf(dcb, "%s%s",
+                       modulecmd_argtype_to_str(&cmd->arg_types[i]),
+                       i < cmd->arg_count_max - 1 ? " " : "");
         }
     }
 
@@ -348,14 +344,9 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
 
         if (MODULECMD_GET_TYPE(type) != MODULECMD_ARG_OUTPUT)
         {
-
-            char *t = modulecmd_argtype_to_str(&cmd->arg_types[i]);
-
-            if (t)
-            {
-                dcb_printf(dcb, "    %s - %s\n", t, cmd->arg_types[i].description);
-                MXS_FREE(t);
-            }
+            dcb_printf(dcb, "    %s - %s\n",
+                       modulecmd_argtype_to_str(&cmd->arg_types[i]),
+                       cmd->arg_types[i].description);
         }
     }
 

@@ -263,6 +263,6 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
  * @param type Type to convert
  * @return New string or NULL on memory allocation error
  */
-char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type);
+const char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type);
 
 MXS_END_DECLS

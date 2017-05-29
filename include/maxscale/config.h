@@ -72,6 +72,8 @@ MXS_BEGIN_DECLS
  * that the sizeof(CN_<name>) returns the actual size of that string.
  */
 extern const char CN_ADDRESS[];
+extern const char CN_ARG_MAX[];
+extern const char CN_ARG_MIN[];
 extern const char CN_ADMIN_AUTH[];
 extern const char CN_ADMIN_ENABLED[];
 extern const char CN_ADMIN_HOST[];
@@ -90,6 +92,7 @@ extern const char CN_AUTO[];
 extern const char CN_CONNECTION_TIMEOUT[];
 extern const char CN_DATA[];
 extern const char CN_DEFAULT[];
+extern const char CN_DESCRIPTION[];
 extern const char CN_ENABLE_ROOT_USER[];
 extern const char CN_FEEDBACK[];
 extern const char CN_FILTERS[];
@@ -107,6 +110,7 @@ extern const char CN_MAX_CONNECTIONS[];
 extern const char CN_MAX_RETRY_INTERVAL[];
 extern const char CN_MODULE[];
 extern const char CN_MODULES[];
+extern const char CN_MODULE_COMMAND[];
 extern const char CN_MONITORS[];
 extern const char CN_MONITOR[];
 extern const char CN_MS_TIMESTAMP[];

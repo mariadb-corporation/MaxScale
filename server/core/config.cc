@@ -56,6 +56,8 @@ using std::set;
 using std::string;
 
 const char CN_ADDRESS[]                       = "address";
+const char CN_ARG_MAX[]                       = "arg_max";
+const char CN_ARG_MIN[]                       = "arg_min";
 const char CN_ADMIN_AUTH[]                    = "admin_auth";
 const char CN_ADMIN_ENABLED[]                 = "admin_enabled";
 const char CN_ADMIN_HOST[]                    = "admin_host";
@@ -74,6 +76,7 @@ const char CN_AUTO[]                          = "auto";
 const char CN_CONNECTION_TIMEOUT[]            = "connection_timeout";
 const char CN_DATA[]                          = "data";
 const char CN_DEFAULT[]                       = "default";
+const char CN_DESCRIPTION[]                   = "description";
 const char CN_ENABLE_ROOT_USER[]              = "enable_root_user";
 const char CN_FEEDBACK[]                      = "feedback";
 const char CN_FILTERS[]                       = "filters";
@@ -91,6 +94,7 @@ const char CN_MAX_CONNECTIONS[]               = "max_connections";
 const char CN_MAX_RETRY_INTERVAL[]            = "max_retry_interval";
 const char CN_MODULE[]                        = "module";
 const char CN_MODULES[]                       = "modules";
+const char CN_MODULE_COMMAND[]                = "module_command";
 const char CN_MONITORS[]                      = "monitors";
 const char CN_MONITOR[]                       = "monitor";
 const char CN_MS_TIMESTAMP[]                  = "ms_timestamp";
@@ -3601,6 +3605,15 @@ void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p)
                 fix_serverlist(p->value);
                 break;
 
+            case MXS_MODULE_PARAM_QUOTEDSTRING:
+                {   // Remove the '"':s from the ends of the string
+                    char* value = p->value;
+                    size_t len = strlen(value);
+                    value[len - 1] = '\0';
+                    memmove(value, value + 1, len - 1);
+                }
+                break;
+
             default:
                 break;
             }
@@ -3694,6 +3707,17 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 if (*value)
                 {
                     valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_QUOTEDSTRING:
+                valid = false;
+                {
+                    size_t len = strlen(value);
+                    if ((len >= 2) && (value[0] == '"') && (value[len - 1] == '"'))
+                    {
+                        valid = true;
+                    }
                 }
                 break;
 
