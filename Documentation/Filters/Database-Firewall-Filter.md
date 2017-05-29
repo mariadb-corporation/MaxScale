@@ -134,12 +134,28 @@ apply multiple mandatory rules to a query.
 
 #### `wildcard`
 
-This rule blocks all queries that use the wildcard character *.
+This rule blocks all queries that use the wildcard character `*`.
+
+##### Example
+
+Use of the wildcard is not allowed:
+
+```
+rule examplerule deny wildcard
+```
 
 #### `columns`
 
 This rule expects a list of values after the `columns` keyword. These values are
 interpreted as column names and if a query targets any of these, it is matched.
+
+##### Example
+
+Deny name and salary columns:
+
+```
+rule examplerule deny columns name salary
+```
 
 #### `function`
 
@@ -149,6 +165,14 @@ matched. The symbolic comparison operators (`<`, `>`, `>=` etc.) are also
 considered functions whereas the text versions (`NOT`, `IS`, `IS NOT` etc.) are
 not considered functions.
 
+##### Example
+
+Deny SUM and COUNT functions:
+
+```
+rule examplerule deny function sum count
+```
+
 #### `regex`
 
 This rule blocks all queries matching a regex enclosed in single or double
@@ -156,14 +180,30 @@ quotes.  The regex string expects a PCRE2 syntax regular expression. For more
 information about the PCRE2 syntax, read the [PCRE2
 documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
 
+##### Example
+
+Block selects to accounts:
+
+```
+rule examplerule deny regex '.*select.*from.*accounts.*'
+```
+
 #### `limit_queries`
 
 The limit_queries rule expects three parameters. The first parameter is the
 number of allowed queries during the time period. The second is the time period
-in seconds and the third is the amount of time for which the rule is considered
-active and blocking.
+in seconds and the third is the amount of time in seconds for which the rule is
+considered active and blocking.
 
 **WARNING:** Using `limit_queries` in `action=allow` is not supported.
+
+##### Example
+
+Over 50 queries within a window of 5 seconds will block for 100 seconds:
+
+```
+rule examplerule deny limit_queries 50 5 100
+```
 
 #### `no_where_clause`
 
@@ -171,6 +211,14 @@ This rule inspects the query and blocks it if it has no WHERE clause. For
 example, this would disallow a `DELETE FROM ...` query without a `WHERE`
 clause. This does not prevent wrongful usage of the `WHERE` clause e.g. `DELETE
 FROM ... WHERE 1=1`.
+
+##### Example
+
+Queries must have a where clause:
+
+```
+rule examplerule deny no_where_clause
+```
 
 ### Optional rule parameters
 

@@ -30,7 +30,7 @@ enabled=1
 gpgcheck=0
 ```
 
-### Install the software 
+### Install the software
 
 ```
 # yum install pacemaker corosync crmsh
@@ -74,7 +74,7 @@ For each node, add all the server names into `/etc/hosts`.
 
 ### Prepare authkey for optional cryptographic use
 
-On one of the nodes, say node2 run the corosync-keygen utility and follow 
+On one of the nodes, say node2 run the corosync-keygen utility and follow
 
 ```
 [root@node2 ~]# corosync-keygen
@@ -263,7 +263,7 @@ The Corosync / Pacemaker cluster is ready to be configured to manage resources.
 The MariaDB MaxScale init script in `/etc/init.d./maxscale` allows to start, stop, restart and monitor the MariaDB MaxScale process running on the system.
 
 ```
-[root@node1 ~]# /etc/init.d/maxscale 
+[root@node1 ~]# /etc/init.d/maxscale
 Usage: /etc/init.d/maxscale {start|stop|status|restart|condrestart|reload}
 ```
 
@@ -389,7 +389,7 @@ Version: 1.1.10-14.el6_5.3-368c726
 
 Online: [ node1 node2 node3 ]
 
- MaxScale	(lsb:maxscale):	Started node1 
+ MaxScale	(lsb:maxscale):	Started node1
 ```
 
 ### The resource cannot be migrated to node1 for a failure
@@ -422,7 +422,7 @@ Version: 1.1.10-14.el6_5.3-368c726
 
 Online: [ node1 node2 node3 ]
 
- MaxScale	(lsb:maxscale):	Started node2 
+ MaxScale	(lsb:maxscale):	Started node2
 
 Failed actions:
 
@@ -519,9 +519,9 @@ Online: [ node1 node2 node3 ]
 
  Resource Group: maxscale_service
 
-     maxscale_vip	(ocf::heartbeat:IPaddr2):	Started node2 
+     maxscale_vip	(ocf::heartbeat:IPaddr2):	Started node2
 
-     MaxScale	(lsb:maxscale):	Started node2 
+     MaxScale	(lsb:maxscale):	Started node2
 ```
 
 With both resources on node2, now MariaDB MaxScale service will be reachable via the configured VIP address 192.168.122.125.

@@ -241,7 +241,7 @@ dbserv3            | 192.168.2.3     |  3306 |           0 | Running, Synced, Sl
 
 A Galera Cluster is a multi-master clustering technology, however the monitor is able
 to impose false notions of master and slave roles within a Galera Cluster in order to
-facilitate the use of Galera as if it were a standard MySQL Replication setup.
+facilitate the use of Galera as if it were a standard MariaDB Replication setup.
 This is merely an internal MariaDB MaxScale convenience and has no impact on the behavior of the cluster.
 
 You can control which Galera node is the master server by using the _priority_

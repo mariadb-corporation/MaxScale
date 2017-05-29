@@ -40,7 +40,7 @@ disable_master_failback=true
 
 ### `available_when_donor`
 
-This option only has an effect if there is a single Galera node being backed up an XtraBackup instance. This causes the initial node to go into Donor state which would normally prevent if from being marked as a valid server inside MaxScale. If this option is enabled, a single node in Donor state where the method is XtraBackup will be kept in Synced state. 
+This option only has an effect if there is a single Galera node being backed up an XtraBackup instance. This causes the initial node to go into Donor state which would normally prevent if from being marked as a valid server inside MaxScale. If this option is enabled, a single node in Donor state where the method is XtraBackup will be kept in Synced state.
 
 ```
 available_when_donor=true
@@ -93,7 +93,7 @@ Example of variable being set in all slave nodes, assuming three nodes:
 SET GLOBAL wsrep_sst_donor = "galera001,galera000"
 ```
 
-**Note**: 
+**Note**:
 in order to set the global variable _wsrep_sst_donor_, proper privileges are
 required for the monitor user that connects to cluster nodes.
 This option is disabled by default and was introduced in MaxScale 2.1.0.
@@ -147,7 +147,7 @@ In this example `node-1` is always used as the master if available. If `node-1`
 is not available, then the next node with the highest priority rank is used. In
 this case it would be `node-3`. If both `node-1` and `node-3` were down, then
 `node-2` would be used. Because `node-4` has a value of 0 in _priority_, it will
-never be the master. Nodes without _priority_ parameter are considered as 
+never be the master. Nodes without _priority_ parameter are considered as
 having the lowest priority rank and will be used only if all nodes
 with _priority_ parameter are not available.
 

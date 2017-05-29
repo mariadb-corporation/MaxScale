@@ -37,7 +37,7 @@ All hints must start with the `maxscale` tag.
 
 ```
 -- maxscale <hint body>
-```	
+```
 
 The hints have two types, ones that define a server type and others that contain
 name-value pairs.

@@ -1,4 +1,4 @@
-# Connection Routing with MySQL Replication
+# Connection Routing with MariaDB Replication
 
 # Environment & Solution Space
 
@@ -21,7 +21,7 @@ A global, `[maxscale]`, section is included within every MariaDB MaxScale config
 threads=4
 ```
 
-Since we are using MySQL Replication and connection routing we want two different ports to which the client application can connect; one that will be directed to the current master within the replication cluster and another that will load balance between the slaves. To achieve this within MariaDB MaxScale we need to define two services in the ini file; one for the read/write operations that should be executed on the master server and another for connections to one of the slaves. Create a section for each in your MariaDB MaxScale configuration file and set the type to service, the section names are the names of the services themselves and should be meaningful to the administrator. Avoid using whitespace in the section names.
+Since we are using MariaDB Replication and connection routing we want two different ports to which the client application can connect; one that will be directed to the current master within the replication cluster and another that will load balance between the slaves. To achieve this within MariaDB MaxScale we need to define two services in the ini file; one for the read/write operations that should be executed on the master server and another for connections to one of the slaves. Create a section for each in your MariaDB MaxScale configuration file and set the type to service, the section names are the names of the services themselves and should be meaningful to the administrator. Avoid using whitespace in the section names.
 
 ```
 [Write-Service]
@@ -207,7 +207,7 @@ CLI                       | cli                  |      2 |     2
 
 Servers.
 -------------------+-----------------+-------+-------------+--------------------
-Server             | Address         | Port  | Connections | Status              
+Server             | Address         | Port  | Connections | Status
 -------------------+-----------------+-------+-------------+--------------------
 dbserv1            | 192.168.2.1     |  3306 |           0 | Running, Slave
 dbserv2            | 192.168.2.2     |  3306 |           0 | Running, Master

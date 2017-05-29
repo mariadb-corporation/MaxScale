@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 # do the real building work
 # this script is executed on build VM
@@ -9,14 +9,14 @@ cd ./MaxScale
 
 mkdir _build
 cd _build
-cmake ..  $cmake_flags 
+cmake ..  $cmake_flags
 make
 
 if [ $remove_strip == "yes" ] ; then
 	sudo rm -rf /usr/bin/strip
 	sudo touch /usr/bin/strip
 	sudo chmod a+x /usr/bin/strip
-fi 
+fi
 sudo make package
 res=$?
 if [ $res != 0 ] ; then
@@ -56,7 +56,7 @@ if [ "$build_experimental" == "yes" ] ; then
 fi
 
 if [ "$BUILD_RABBITMQ" == "yes" ] ; then
-  cmake ../rabbitmq_consumer/  $cmake_flags 
+  cmake ../rabbitmq_consumer/  $cmake_flags
   sudo make package
   res=$?
   if [ $res != 0 ] ; then

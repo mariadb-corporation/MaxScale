@@ -16,7 +16,7 @@ sleep 20
 
 for i in `seq 1 $servers`;
 do
-    sudo mysql_install_db --defaults-file=$dir/multiple_servers.cnf --user=mysql --datadir=/data/mysql/mysql$i 
+    sudo mysql_install_db --defaults-file=$dir/multiple_servers.cnf --user=mysql --datadir=/data/mysql/mysql$i
 done
 
 sudo mysqld_multi  --defaults-file=$dir/multiple_servers.cnf  start  &

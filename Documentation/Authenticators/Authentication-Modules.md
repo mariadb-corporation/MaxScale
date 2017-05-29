@@ -24,7 +24,7 @@ connection data. The return value of this function is stored in the
 `destroy` entry point and the value returned by `create` will be given as the
 first parameter.
 
-# MySQL Authentication Moduels
+# MySQL Authentication Modules
 
 The MySQL protocol authentication starts when the server sends the
 [handshake packet](https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake)

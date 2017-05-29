@@ -16,7 +16,7 @@ Currently the user can connect to maxinfo from any remote IP and to localhost as
 type=service
 router=maxinfo
 user=monitor
-passwd=EBD2F49C3B375812A8CDEBA632ED8BBC	
+passwd=EBD2F49C3B375812A8CDEBA632ED8BBC
 ```
 
 The listener section defines the protocol, port and other information needed to create a listener for the service. To listen on a port using the MySQL protocol a section as shown below should be added to the configuration file.
@@ -61,7 +61,7 @@ The maxinfo supports a small subset of SQL statements in addition to the MySQL s
 % mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor -pxyz ping
 mysqld is alive
 % mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor -pxyz status
-Uptime: 72  Threads: 1  Sessions: 11 
+Uptime: 72  Threads: 1  Sessions: 11
 %
 ```
 
@@ -168,7 +168,7 @@ mysql> show status;
 +---------------------------+-------+
 22 rows in set (0.02 sec)
 
-mysql> 
+mysql>
 ```
 
 ## Show services
@@ -191,7 +191,7 @@ mysql> show services;
 +----------------+----------------+--------------+----------------+
 8 rows in set (0.02 sec)
 
-mysql> 
+mysql>
 ```
 
 The show services command does not accept a like clause and will ignore any like clause that is given.
@@ -217,7 +217,7 @@ mysql> show listeners;
 +----------------+-----------------+-----------+------+---------+
 9 rows in set (0.02 sec)
 
-mysql> 
+mysql>
 ```
 
 The show listeners command will ignore any like clause passed to it.
@@ -245,7 +245,7 @@ mysql> show sessions;
 +-----------+---------------+----------------+---------------------------+
 11 rows in set (0.02 sec)
 
-mysql> 
+mysql>
 ```
 
 ## Show clients
@@ -262,7 +262,7 @@ mysql> show clients;
 +-----------+---------------+---------+---------------------------+
 2 rows in set (0.02 sec)
 
-mysql> 
+mysql>
 ```
 
 ## Show servers
@@ -281,7 +281,7 @@ mysql> show servers;
 +---------+-----------+------+-------------+---------+
 4 rows in set (0.02 sec)
 
-mysql> 
+mysql>
 ```
 
 ## Show modules
@@ -306,7 +306,7 @@ mysql> show modules;
 +----------------+-------------+---------+-------------+----------------+
 10 rows in set (0.02 sec)
 
-mysql> 
+mysql>
 ```
 
 ## Show monitors
@@ -367,7 +367,7 @@ mysql> show eventTimes;
 +---------------+-------------------+---------------------+
 30 rows in set (0.02 sec)
 
-mysql> 
+mysql>
 ```
 
 Each row represents a time interval, in 100ms increments, with the counts representing the number of events that were in the event queue for the length of time that row represents and the number of events that were executing of the time indicated by the row.
@@ -422,7 +422,7 @@ $ curl http://maxscale.mariadb.com:8003/status
 { "Variable_name" : "Max_event_queue_length", "Value" : 1},
 { "Variable_name" : "Max_event_queue_time", "Value" : 0},
 { "Variable_name" : "Max_event_execution_time", "Value" : 1}]
-$ 
+$
 ```
 
 ## Services
@@ -496,7 +496,7 @@ $ curl http://maxscale.mariadb.com:8003/sessions
 { "Session" : "0x1a5c0b0", "Client" : , "Service" : "Filter Service", "State" : "Listener Session"},
 { "Session" : "0x1a5c530", "Client" : , "Service" : "Split Service", "State" : "Listener Session"},
 { "Session" : "0x19ac1c0", "Client" : , "Service" : "Test Service", "State" : "Listener Session"}]
-$ 
+$
 ```
 
 ## Clients

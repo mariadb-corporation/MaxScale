@@ -15,10 +15,10 @@ For access to VMs see [environment documentation](ENV_SETUP.md#access-vms)
 
 Jenkins job log consists of following parts:
 * Vagrant output: VMs creation priocess, MariaDB Master/Slave and MariaDB Galera stuff installation, MaxScale installation
-* [set_env_vagrant.sh](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/test/set_env_vagrant.sh) output: retrieval of all VM parameters 
+* [set_env_vagrant.sh](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/test/set_env_vagrant.sh) output: retrieval of all VM parameters
 * setup scripts output: MariaDB initialisation on backend nodes, DB users setup, enabling core dump on MaxScale VM
 * test application output for all tests: eevry line starts from test case number and ':' (can be grepped)
-* CTest final printing: N of M tests passed, CTest warnings, email sending logs 
+* CTest final printing: N of M tests passed, CTest warnings, email sending logs
 
 To check presence of core dumps:
 <pre>

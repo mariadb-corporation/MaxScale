@@ -92,20 +92,20 @@ what it is you want to achieve with your MariaDB MaxScale and what environment
 it will run in. The later is probably the easiest starting point for choosing
 which configuration route you wish to take.
 There are two distinct database environments which the first GA release
-of MariaDB MaxScale supports; MySQL Master/Slave Replication clusters and Galera Cluster.
+of MariaDB MaxScale supports; MariaDB Master/Slave Replication clusters and Galera Cluster.
 
 For more details, refer to the [Configuration Guide](Configuration-Guide.md).
 
 ### Master/Slave Replication Clusters
 
 There are two major configuration options available to use MariaDB MaxScale
-with a MySQL Replication cluster; connection routing with separate read and
+with a MariaDB Replication cluster; connection routing with separate read and
 write connections, or read/write splitting with a single connection.
 A separate tutorial is available for each of these configurations that
 describes how to build the configuration file for MariaDB MaxScale that
 will work with your environment.
 
-Using a MySQL Master/Slave Replication cluster will provide one node server
+Using a MariaDB Master/Slave Replication cluster will provide one node server
 within the cluster that is the master server and the remainder of the servers
 will be slaves. The slaves are read replicas of the master.
 In a replication cluster like this all write operations must be performed

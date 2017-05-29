@@ -1,4 +1,4 @@
-# Read/Write Splitting with MySQL Replication
+# Read/Write Splitting with MariaDB Replication
 
 ## Environment & Solution Space
 
@@ -228,7 +228,7 @@ Servers.
 
 -------------------+-----------------+-------+-------------+--------------------
 
-Server             | Address         | Port  | Connections | Status              
+Server             | Address         | Port  | Connections | Status
 
 -------------------+-----------------+-------+-------------+--------------------
 

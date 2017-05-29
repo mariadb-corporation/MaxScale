@@ -46,14 +46,14 @@ parameter to the service definition.
 
 ## Persistent Connections
 
-The MySQL session state is reset in MaxScale 2.1 for persistent
+The MariaDB session state is reset in MaxScale 2.1 for persistent
 connections. This means that any modifications to the session state (default
 database, user variable etc.) will not survive if the connection is put into the
 connection pool. For most users, this is the expected behavior.
 
 ## User Data Cache
 
-The location of the MySQL user data cache was moved from
+The location of the MariaDB user data cache was moved from
 `/var/cache/maxscale/<Service>` to `/var/cache/maxscale/<Service>/<Listener>`.
 
 ## Galeramon Monitoring Algorithm
