@@ -153,7 +153,8 @@ static int blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router,
 static int blr_slave_send_master_status(ROUTER_INSTANCE *router,
                                         ROUTER_SLAVE *slave);
 static int blr_slave_send_slave_status(ROUTER_INSTANCE *router,
-                                       ROUTER_SLAVE *slave);
+                                       ROUTER_SLAVE *slave,
+                                       bool all_slaves);
 static int blr_slave_send_slave_hosts(ROUTER_INSTANCE *router,
                                       ROUTER_SLAVE *slave);
 static int blr_slave_send_fieldcount(ROUTER_INSTANCE *router,
@@ -273,9 +274,9 @@ static int blr_slave_read_ste(ROUTER_INSTANCE *router,
                               uint32_t fde_end_pos);
 static GWBUF *blr_slave_read_fde(ROUTER_INSTANCE *router,
                                  ROUTER_SLAVE *slave);
-static bool blr_handle_select_stmt(ROUTER_INSTANCE *router,
-                                   ROUTER_SLAVE *slave,
-                                   char *select_stmt);
+static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
+                                          ROUTER_SLAVE *slave,
+                                          char *select_stmt);
 static GWBUF *blr_build_fake_rotate_event(ROUTER_SLAVE *slave,
                                           unsigned long pos,
                                           const char *filename,
@@ -322,7 +323,12 @@ static int binary_logs_select_cb(void *data,
 static GWBUF *blr_create_result_row(const char *name,
                                     const char *value,
                                     int seq_no);
-
+static int blr_slave_send_id_ro(ROUTER_INSTANCE *router,
+                                ROUTER_SLAVE *slave);
+static bool blr_handle_complex_select(ROUTER_INSTANCE *router,
+                                      ROUTER_SLAVE *slave,
+                                      const char *col1,
+                                      const char *coln);
 /**
  * Process a request packet from the slave server.
  *
@@ -522,7 +528,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  * order to support some commands that are useful for monitoring the binlog
  * router.
  *
- * 15 select statements are currently supported:
+ * 16 select statements are currently supported:
  *  SELECT UNIX_TIMESTAMP();
  *  SELECT @master_binlog_checksum
  *  SELECT @@GLOBAL.GTID_MODE
@@ -538,8 +544,9 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SELECT USER()
  *  SELECT @@GLOBAL.gtid_domain_id
  *  SELECT @@[GLOBAL].gtid_current_pos
+ *  SELECT @@[global.]server_id, @@[global.]read_only
  *
- * 8 show commands are supported:
+ * 9 show commands are supported:
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_UUID'
  *  SHOW [GLOBAL] VARIABLES LIKE 'MAXSCALE%'
@@ -548,6 +555,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SHOW SLAVE HOSTS
  *  SHOW WARNINGS
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
+ *  SHOW BINARY LOGS
  *
  * 12 set commands are supported:
  *  SET @master_binlog_checksum = @@global.binlog_checksum
@@ -652,7 +660,17 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else
         {
-            if (blr_handle_select_stmt(router,
+            if (brkb && strlen(brkb) &&
+                blr_handle_complex_select(router,
+                                         slave,
+                                          word,
+                                          brkb))
+            {
+                MXS_FREE(query_text);
+                return 1;
+            }
+
+            if (blr_handle_simple_select_stmt(router,
                                        slave,
                                        word))
             {
@@ -1075,15 +1093,29 @@ static char *slave_status_columns[] =
     "Retrieved_Gtid_Set", "Executed_Gtid_Set", "Auto_Position", NULL
 };
 
+/*
+ * New columns to send for a "SHOW ALL SLAVES STATUS" command
+ */
+static char *all_slaves_status_columns[] =
+{
+    "Connection_name",
+    "Slave_SQL_State",
+    NULL
+};
+
 /**
- * Send the response to the SQL command "SHOW SLAVE STATUS"
+ * Send the response to the SQL command "SHOW SLAVE STATUS" or
+ * SHOW ALL SLAVES STATUS
  *
- * @param   router      The binlog router instance
- * @param   slave       The slave server to which we are sending the response
- * @return              Non-zero if data was sent
+ * @param   router        The binlog router instance
+ * @param   slave         The slave server to which we are sending the response
+ * @param   all_slaves    Whether to use SHOW ALL SLAVES STATUS
+ * @return                Non-zero if data was sent
  */
 static int
-blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+blr_slave_send_slave_status(ROUTER_INSTANCE *router,
+                            ROUTER_SLAVE *slave,
+                            bool all_slaves)
 {
     GWBUF *pkt;
     char column[251] = "";
@@ -1091,12 +1123,36 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     int len, actual_len, col_len, seqno, ncols, i;
     char *dyn_column = NULL;
     int max_column_size = sizeof(column);
+    int new_cols;
 
-    /* Count the columns */
+    /* Count SHOW SLAVE STATUS the columns */
     for (ncols = 0; slave_status_columns[ncols]; ncols++);
+
+    /* Add the new SHOW ALL SLAVES STATUS columns */
+    for (new_cols = 0; all_slaves_status_columns[new_cols]; new_cols++);
+
+    /* Add the new all_slaves columns to the total */
+    if (all_slaves)
+    {
+        ncols += new_cols;
+    }
 
     blr_slave_send_fieldcount(router, slave, ncols);
     seqno = 2;
+    if (all_slaves)
+    {
+        /* Send first the column definitions for the all_slaves */
+        for (i = 0; all_slaves_status_columns[i]; i++)
+        {
+            blr_slave_send_columndef(router,
+                                     slave,
+                                     all_slaves_status_columns[i],
+                                     BLR_TYPE_STRING,
+                                     40,
+                                     seqno++);
+        }
+    }
+    /* Now send column definitions for slave status */
     for (i = 0; slave_status_columns[i]; i++)
     {
         blr_slave_send_columndef(router,
@@ -1122,6 +1178,15 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     // Sequence number in response
     *ptr++ = seqno++;
 
+    if (all_slaves)
+    {
+        for (i = 0; all_slaves_status_columns[i]; i++)
+        {
+            *ptr++ = 0;    // Empty value
+        }
+    }
+
+    // Slave_IO_State
     snprintf(column, max_column_size, "%s",
              blrm_states[router->master_state]);
     col_len = strlen(column);
@@ -1129,6 +1194,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
+    // Master_Host
     snprintf(column, max_column_size, "%s",
              router->service->dbref->server->name ? router->service->dbref->server->name : "");
     col_len = strlen(column);
@@ -1136,6 +1202,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
+    // Master_User
     snprintf(column, max_column_size, "%s",
              router->user ? router->user : "");
     col_len = strlen(column);
@@ -1143,6 +1210,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
+    // Master_Port
     sprintf(column, "%d", router->service->dbref->server->port);
     col_len = strlen(column);
     *ptr++ = col_len;                          // Length of result string
@@ -5925,9 +5993,9 @@ blr_slave_read_ste(ROUTER_INSTANCE *router,
  * @param    select_stmt    The SELECT statement
  * @return                  True for handled queries, False otherwise
  */
-static bool blr_handle_select_stmt(ROUTER_INSTANCE *router,
-                                  ROUTER_SLAVE *slave,
-                                  char *select_stmt)
+static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
+                                          ROUTER_SLAVE *slave,
+                                          char *select_stmt)
 {
     char *word;
     char *brkb;
@@ -6102,6 +6170,14 @@ static bool blr_handle_select_stmt(ROUTER_INSTANCE *router,
 
         sprintf(server_id, "%d", router->masterid);
         strcpy(heading, word);
+
+
+        if (strcasecmp(brkb, "@@read_only") == 0 ||
+            strcasecmp(brkb, "@@global.read_only") == 0)
+        {
+            blr_slave_send_id_ro(router, slave);
+            return true;
+        }
 
         blr_slave_send_var_value(router,
                                  slave,
@@ -6807,7 +6883,9 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
             return true;
         }
     }
-    else if (strcasecmp(word, "SLAVE") == 0)
+    /* Added support for SHOW ALL SLAVES STATUS */
+    else if (strcasecmp(word, "SLAVE") == 0 ||
+             (strcasecmp(word, "ALL") == 0))
     {
         if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
         {
@@ -6815,12 +6893,15 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
                       router->service->name);
             return false;
         }
-        else if (strcasecmp(word, "STATUS") == 0)
+        else if (strcasecmp(word, "STATUS") == 0 ||
+                 (strcasecmp(word, "SLAVES") == 0 &&
+                  strcasecmp(brkb, "STATUS") == 0))
         {
             /* if state is BLRM_UNCONFIGURED return empty result */
             if (router->master_state > BLRM_UNCONFIGURED)
             {
-                blr_slave_send_slave_status(router, slave);
+                bool s_all = strcasecmp(word, "SLAVES") == 0 ? true : false;
+                blr_slave_send_slave_status(router, slave, s_all);
             }
             else
             {
@@ -7036,7 +7117,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
 
                     sprintf(err_msg, err_fmt, heading);
 
-                    MXS_ERROR(err_msg);
+                    MXS_ERROR("%s", err_msg);
 
                     /* Stop Master registration */
                     blr_slave_send_error_packet(slave,
@@ -7641,7 +7722,9 @@ blr_show_binary_logs(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
                              40,
                              seqno++);
     /* Cols EOF */
-    blr_slave_send_eof(router, slave, seqno++);
+    blr_slave_send_eof(router, slave, seqno);
+    /* Increment sequence */
+    seqno++;
 
     /* Initialise the result data struct */
     result.seq_no = seqno;
@@ -7675,6 +7758,9 @@ blr_show_binary_logs(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
         return blr_slave_send_eof(router, slave, result.seq_no);
     }
 
+    /* Use seqno ofof  last sent packet */
+    seqno = result.seq_no;
+
     /**
      * Check whether the last file is the current binlog file.
      * If not then add the new row.
@@ -7685,8 +7771,6 @@ blr_show_binary_logs(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
         GWBUF *pkt;
         /* Free last file */
         MXS_FREE(result.last_file);
-        /* Use seqno from last sent row, already incremented */
-        seqno = result.seq_no;
         /* Create the string value for pos */
         sprintf(pos, "%" PRIu64, current_pos);
 
@@ -7696,11 +7780,13 @@ blr_show_binary_logs(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
                                          seqno)) != NULL)
         {
             slave->dcb->func.write(slave->dcb, pkt);
+            /* Increment sequence */
+            seqno++;
         }
     }
 
-    /* Increment seqno, and add the result set EOF and return */
-    return blr_slave_send_eof(router, slave, ++seqno);
+    /* Add the result set EOF */
+    return blr_slave_send_eof(router, slave, seqno);
 }
 
 /**
@@ -7794,5 +7880,96 @@ static int binary_logs_select_cb(void *data,
     else
     {
         return 0;    /* Success: no data from db or end of result set */
+    }
+}
+
+/**
+ * Handle SELECT @@server_id, @@read_only
+ * that MaxScale MySQL monitor sends to monitored servers
+ *
+ * @param   router   The router instance
+ * @param   slave    The connected client
+ * @return           Number of bytes written
+ */
+static int blr_slave_send_id_ro(ROUTER_INSTANCE *router,
+                                ROUTER_SLAVE *slave)
+{
+    int seqno;
+    GWBUF *pkt;
+    /**
+     * First part of result set:
+     * send 2 columns and their defintions.
+     */
+
+    /* This call sets seq to 1 in the packet */
+    blr_slave_send_fieldcount(router, slave, 2);
+    /* Set 'seqno' counter to next value: 2 */
+    seqno = 2;
+    /* Col 1 def */
+    blr_slave_send_columndef(router,
+                             slave,
+                             "@@server_id",
+                             BLR_TYPE_INT,
+                             40,
+                             seqno++);
+    /* Col 2 def */
+    blr_slave_send_columndef(router,
+                             slave,
+                             "@@read_only",
+                             BLR_TYPE_INT,
+                             40,
+                             seqno++);
+    /* Cols EOF */
+    blr_slave_send_eof(router, slave, seqno++);
+
+    /* Create the MySQL Result Set row */
+    char server_id[40] = "";
+    sprintf(server_id, "%d", router->serverid);
+    if ((pkt = blr_create_result_row(server_id, // File name
+                                     "0",       // o = OFF
+                                     seqno++)) != NULL)
+    {
+         /* Write packet to client */
+         slave->dcb->func.write(slave->dcb, pkt);
+    }
+
+    /* Add the result set EOF and return */
+    return blr_slave_send_eof(router, slave, seqno);
+}
+
+/**
+ * Handle a SELECT with more than one column.
+ *
+ * Only SELECT @@server_id, @@read_only is supported.
+ * That query is sent by MaxScale MySQL monitor.
+ *
+ * @param    router    The router instance
+ * @param    slave     The connected client
+ * @param    col1      The first column
+ * @param    coln      Whatever is after first column
+ * @return             True is handled, false otherwise
+ */
+static bool blr_handle_complex_select(ROUTER_INSTANCE *router,
+                                      ROUTER_SLAVE *slave,
+                                      const char *col1,
+                                      const char *coln)
+{
+    /* Strip leading spaces */
+    while(isspace(*coln))
+    {
+        coln++;
+    }
+
+    if ((strcasecmp(col1, "@@server_id") == 0 ||
+        strcasecmp(col1, "@@global.server_id") == 0) &&
+         (strcasecmp(coln, "@@read_only") == 0 ||
+          strcasecmp(coln, "@@global.read_only") == 0))
+    {
+         blr_slave_send_id_ro(router, slave);
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
