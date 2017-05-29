@@ -428,6 +428,30 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
             spinlock_release(&router->binlog_lock);
 
             created = 1;
+
+            /**
+             * Add an entry in GTID repo with size 4
+             * and router->orig_masterid.
+             * This allows SHOW BINARY LOGS to list
+             * new created files.
+             */
+            if (router->mariadb10_compat &&
+                router->mariadb10_gtid)
+            {
+                MARIADB_GTID_ELEMS gtid_elms = {};
+                // Add GTID domain
+                gtid_elms.domain_id = router->mariadb10_gtid_domain;
+                // router->orig_masterid keeps the original ID
+                gtid_elms.server_id = router->orig_masterid;
+                // Pos 4 only for end_pos
+                router->pending_transaction.end_pos = 4;
+                memcpy(&router->pending_transaction.gtid_elms,
+                       &gtid_elms,
+                       sizeof(MARIADB_GTID_ELEMS));
+
+                /* Save GTID into repo */
+                blr_save_mariadb_gtid(router);
+            }
         }
         else
         {

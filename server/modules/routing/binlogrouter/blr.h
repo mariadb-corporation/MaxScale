@@ -98,6 +98,12 @@ MXS_BEGIN_DECLS
 
 /* GTID slite3 database name */
 #define GTID_MAPS_DB "gtid_maps.db"
+
+/**
+ * Add GTID components domain and serverid as name prefix
+ * in SHOW FULL BINARY LOGS
+ */
+#define BINLOG_FILE_EXTRA_INFO GTID_MAX_LEN
 /**
  * Supported Encryption algorithms
  *
@@ -585,6 +591,7 @@ typedef struct router_instance
     ROUTER_SLAVE            *slaves;        /*< Link list of all the slave connections  */
     SPINLOCK                lock;           /*< Spinlock for the instance data */
     char                    *uuid;          /*< UUID for the router to use w/master */
+    int                     orig_masterid;  /*< Server ID of the master, internally used */
     int                     masterid;       /*< Set ID of the master, sent to slaves */
     int                     serverid;       /*< ID for the router to use w/master */
     int                     initbinlog;     /*< Initial binlog file number */

@@ -649,6 +649,8 @@ createInstance(SERVICE *service, char **options)
         MXS_ERROR("%s: Error: No router options supplied for binlogrouter", service->name);
     }
 
+    inst->orig_masterid = 0;
+
     if (inst->masterid)
     {
         inst->set_master_server_id = true;
@@ -3126,7 +3128,7 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst)
                               "start_pos BIGINT, "
                               "end_pos BIGINT);"
                           "CREATE UNIQUE INDEX IF NOT EXISTS gtid_index "
-                              "ON gtid_maps(rep_domain, server_id, sequence);"
+                              "ON gtid_maps(rep_domain, server_id, sequence, binlog_file);"
                           "COMMIT;",
                           NULL, NULL, &errmsg);
     if (rc != SQLITE_OK)

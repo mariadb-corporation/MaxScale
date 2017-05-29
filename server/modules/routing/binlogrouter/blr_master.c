@@ -1103,6 +1103,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                             strcpy(router->pending_transaction.gtid, mariadb_gtid);
                             /* Save the pending GTID components */
                             router->pending_transaction.gtid_elms.domain_id = domainid;
+                            /* This is the master id, no override */
                             router->pending_transaction.gtid_elms.server_id = hdr.serverid;
                             router->pending_transaction.gtid_elms.seq_no = n_sequence;
                         }
@@ -2273,6 +2274,12 @@ static void blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf)
                                 &router->saved_master.server_id,
                                 "serverid",
                                 buf);
+
+    /**
+     * Keep the original master server id
+     * for any further reference.
+     */
+    router->orig_masterid = atoi(val);
 
     /**
      * Set router->masterid from master server-id

@@ -100,9 +100,11 @@
  */
 typedef struct
 {
-   int seq_no;         /* Output sequence in result test */
-   char *last_file;    /* Last binlog file found in GTID repository */
-   DCB *client;        /* Connected client DCB */
+   int seq_no;              /* Output sequence in result test */
+   char *last_file;         /* Last binlog file found in GTID repo */
+   const char *binlogdir;   /* Binlog files cache dir */
+   bool extra_info;         /* Add extra ouput info */
+   DCB *client;             /* Connected client DCB */
 } BINARY_LOG_DATA_RESULT;
 
 extern void poll_fake_write_event(DCB *dcb);
@@ -313,7 +315,8 @@ static inline void blr_get_file_fullpath(const char *binlog_file,
                                          const char *root_dir,
                                          char *full_path);
 static int blr_show_binary_logs(ROUTER_INSTANCE *router,
-                                ROUTER_SLAVE *slave);
+                                ROUTER_SLAVE *slave,
+                                const char *extra_data);
 
 extern bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info);
 static int binary_logs_select_cb(void *data,
@@ -555,7 +558,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SHOW SLAVE HOSTS
  *  SHOW WARNINGS
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
- *  SHOW BINARY LOGS
+ *  SHOW [FULL] BINARY LOGS
  *
  * 12 set commands are supported:
  *  SET @master_binlog_checksum = @@global.binlog_checksum
@@ -6754,15 +6757,17 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
         blr_slave_show_warnings(router, slave);
         return true;
     }
-    else if (strcasecmp(word, "BINARY") == 0)
+    else if (strcasecmp(word, "BINARY") == 0 ||
+             (strcasecmp(word, "FULL") == 0 &&
+              strcasecmp(word, "BINARY")))
     {
         if (router->mariadb10_gtid)
         {
-            blr_show_binary_logs(router, slave);
+            blr_show_binary_logs(router, slave, word);
         }
         else
         {
-            char *errmsg = "SHOW BINARY LOGS needs the"
+            char *errmsg = "SHOW [FULL] BINARY LOGS needs the"
                            " 'mariadb10_slave_gtid' option to be set.";
             MXS_ERROR("%s: %s",
                       errmsg,
@@ -7664,18 +7669,20 @@ static inline void blr_get_file_fullpath(const char *binlog_file,
 
 /**
  * Returns the list of binlog files
+ * saved in GTID repo.
  *
  * It's called olny if mariadb10_slave_gtid option is set
  *
- * Limitation: it doesn't return the current binlog file
- * unless a GTID is found in it.
- *
- * @param   router    The router instance
- * @param   slave     The connected client
- * @retun             Sent bytes
+ * @param   router        The router instance
+ * @param   slave         The connected client
+ * @param   extra_data    Whether to dispay path file
+ *                        info before filename
+ * @retun                 Sent bytes
  */
 static int
-blr_show_binary_logs(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+blr_show_binary_logs(ROUTER_INSTANCE *router,
+                     ROUTER_SLAVE *slave,
+                     const char *extra_data)
 {
     char current_file[BINLOG_FNAMELEN];
     uint64_t current_pos = 0;
@@ -7689,6 +7696,7 @@ blr_show_binary_logs(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     int seqno;
     char *errmsg = NULL;
     BINARY_LOG_DATA_RESULT result = {};
+    bool extra_info = !strcasecmp(extra_data, "FULL");
 
     /* Get current binlog finename and position */
     spinlock_acquire(&router->binlog_lock);
@@ -7730,6 +7738,8 @@ blr_show_binary_logs(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     result.seq_no = seqno;
     result.client = slave->dcb;
     result.last_file = NULL;
+    result.binlogdir = router->binlogdir;
+    result.extra_info = extra_info;
 
     /**
      * Second part of result set:
@@ -7846,6 +7856,8 @@ static int binary_logs_select_cb(void *data,
     BINARY_LOG_DATA_RESULT *data_set = (BINARY_LOG_DATA_RESULT *)data;
     DCB *dcb = data_set->client;
     int ret = 1; // Failure
+    uint32_t fsize;
+    char file_size[40];
 
     ss_dassert(cols >= 4 && dcb);
 
@@ -7855,13 +7867,52 @@ static int binary_logs_select_cb(void *data,
         values[3])      // Server ID
     {
         GWBUF *pkt;
+        char file_path[PATH_MAX + 1];
+        char filename[1 +
+                      strlen(values[0]) +
+                      BINLOG_FILE_EXTRA_INFO];
+
+        fsize = atoll(values[1]);
 
         /* File size != 0 && server ID != 0 */
-        ss_dassert(atoll(values[1]) && atoll(values[3]));
+        ss_dassert(fsize && atoll(values[3]));
+
+        /**
+         * In GTID repo binlog file last pos is last GTID.
+         * In case of rotate_event or any event the "file_size"
+         * it's not correct.
+         * In case of binlog files with no transactions at all
+         * the saved size is 4.
+         *
+         * Let's get the real size by calling blr_slave_get_file_size()
+         */
+
+        //Get binlog filename full-path
+        blr_get_file_fullpath(values[0],
+                              data_set->binlogdir,
+                              file_path);
+        //Get the file size
+        fsize = blr_slave_get_file_size(file_path);
+
+        sprintf(file_size, "%" PRIu32 "", fsize);
+
+        // Include extra output
+        if (data_set->extra_info)
+        {
+            sprintf(filename,
+                    "%s/%s/%s",
+                    values[2],   // domain ID
+                    values[3],   // server ID
+                    values[0]);  // filename
+        }
+        else
+        {
+            sprintf(filename, "%s", values[0]);  // filename only
+        }
 
         /* Create the MySQL Result Set row */
-        if ((pkt = blr_create_result_row(values[0], // File name
-                                         values[1], // File size
+        if ((pkt = blr_create_result_row(filename,  // File name
+                                         file_size, // File size
                                          data_set->seq_no)) != NULL)
         {
             /* Increase sequence for next row */
@@ -7965,7 +8016,7 @@ static bool blr_handle_complex_select(ROUTER_INSTANCE *router,
          (strcasecmp(coln, "@@read_only") == 0 ||
           strcasecmp(coln, "@@global.read_only") == 0))
     {
-         blr_slave_send_id_ro(router, slave);
+        blr_slave_send_id_ro(router, slave);
         return true;
     }
     else
