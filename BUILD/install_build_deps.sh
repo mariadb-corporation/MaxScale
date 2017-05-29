@@ -15,7 +15,9 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev libgnutls-dev libgcrypt20 wget
+       sqlite3 liblua5.1 liblua5.1-dev libgcrypt20 wget
+  sudo apt-get install -y --force-yes libgnutls-dev
+  sudo apt-get install -y --force-yes libgnutls28-dev
 else
   ## RPM-based distro
   command -v yum
@@ -27,7 +29,9 @@ else
          make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
          pcre-devel git wget tcl libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls gcrypt
+         gnutls 
+    sudo zypper -n install gcrypt
+    sudo zypper -n install libgcrypt
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
