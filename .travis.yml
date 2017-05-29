@@ -23,8 +23,8 @@ addons:
       - pandoc
       - uuid
       - uuid-dev
-      - libgnutls30
-      - libgcrypt20
+      - libgnutls-dev
+      - libgcrypt11-dev
   coverity_scan:
     project:
       name: "mariadb-corporation/MaxScale"
