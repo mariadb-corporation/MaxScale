@@ -6,7 +6,7 @@
 
 command -v apt-get
 
-if [ $? -e 0 ]
+if [ $? == 0 ]
 then
   # DEB-based distro
 
@@ -15,12 +15,12 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev libgnutls30 libgcrypt20 
+       sqlite3 liblua5.1 liblua5.1-dev libgnutls-dev libgcrypt20 
 else
   ## RPM-based distro
   command -v yum
 
-  if [ $? -ne 0 ]
+  if [ $? != 0 ]
   then
     # We need zypper here
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
@@ -31,7 +31,7 @@ else
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
-    if [ $? -ne 0 ]
+    if [ $? != 0 ]
     then
       sudo zypper -n install libedit-devel
     fi
@@ -46,7 +46,7 @@ else
          gnutls gcrypt
 
     cat /etc/redhat-release | grep "release 5"
-    if [ $? -eq 0 ]
+    if [ $? == 0 ]
     then
       sudo yum remove -y libedit-devel libedit
     fi
@@ -85,7 +85,7 @@ mkdir rabbit
 cd rabbit
 git clone https://github.com/alanxz/rabbitmq-c.git
 
-if [ $? -ne 0 ]
+if [ $? != 0 ]
 then
     echo "Error cloning rabbitmq-c"
     exit 1
@@ -102,7 +102,7 @@ mkdir tcl
 cd tcl
 wget --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-src.tar.gz
 
-if [ $? -ne 0 ]
+if [ $? != 0 ]
 then
     echo "Error getting tcl"
     exit 1
