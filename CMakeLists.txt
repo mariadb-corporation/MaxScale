@@ -46,15 +46,11 @@ find_package(Avro)
 find_package(GSSAPI)
 find_package(SQLite)
 
-# Find or build PCRE2
+# Build PCRE2 so we always know the version
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
-find_package(PCRE2)
-if(NOT PCRE2_FOUND)
-  message(STATUS "Using bundled PCRE2 library")
-  include(cmake/BuildPCRE2.cmake)
-endif()
+include(cmake/BuildPCRE2.cmake)
 
-include_directories(${PCRE2_INCLUDE_DIRS})
+include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
 
 # If the connector was not found, download and build it from source
 if(NOT MARIADB_CONNECTOR_FOUND)
