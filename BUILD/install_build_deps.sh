@@ -17,13 +17,11 @@ then
        perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev 
   sudo apt-get install -y --force-yes libgnutls30
-  if [ $? != 0 ]
+  res1=$?
+  sudo apt-get install -y --force-yes libgnutls-dev
+  if [ $? != 0 ] || [ $res1 != 0 ]
   then
-      sudo apt-get install -y --force-yes libgnutls-dev
-      if [ $? != 0 ]
-      then
-          sudo apt-get install -y --force-yes libgnutls28-dev
-      fi
+      sudo apt-get install -y --force-yes libgnutls28-dev
   fi
   sudo apt-get install -y --force-yes libgcrypt20-dev
   if [ $? != 0 ]
