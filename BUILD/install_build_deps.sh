@@ -12,10 +12,24 @@ then
 
   sudo apt-get update
 
-  sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
-       build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
-       libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev libgnutls-dev libgcrypt20 wget
+  sudo apt-get install -y --force-yes dpkg-dev git wget \
+       build-essential libssl-dev ncurses-dev bison flex \
+       perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
+       uuid-dev libsqlite3-dev 
+  sudo apt-get install -y --force-yes libgnutls30
+  if [ $? != 0 ]
+  then
+      sudo apt-get install -y --force-yes libgnutls-dev
+      if [ $? != 0 ]
+      then
+          sudo apt-get install -y --force-yes libgnutls28-dev
+      fi
+  fi
+  sudo apt-get install -y --force-yes libgcrypt20
+  if [ $? != 0 ]
+  then
+      sudo apt-get install -y --force-yes libgcrypt11
+  fi
 else
   ## RPM-based distro
   command -v yum
