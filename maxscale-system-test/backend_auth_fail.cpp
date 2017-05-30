@@ -31,7 +31,10 @@ int main(int argc, char** argv)
         }
     }
 
+    // Wait for the connections to clean up
     Test->stop_timeout();
+    sleep(5);
+
     Test->check_maxscale_alive();
     int rval = Test->global_result;
     delete Test;
