@@ -5,8 +5,9 @@
 
 set -x
 
-cd ./MaxScale
+cmake_flags +=" -DERRMSG=/usr/share/english/errmsg.sys -DMYSQL_EMBEDDED_LIBRARIES=/usr/lib/
 
+cd ./MaxScale
 
 mkdir _build
 cd _build
