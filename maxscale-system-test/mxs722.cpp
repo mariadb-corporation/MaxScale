@@ -34,9 +34,10 @@ int main(int argc, char *argv[])
     test->ssh_maxscale(true, "cp /etc/maxscale.cnf.backup /etc/maxscale.cnf");
 
     /** Set router_options to a bad value */
-    test->ssh_maxscale(true, "sed -i -e 's/router_options.*/router_options=bad_option=true/' /etc/maxscale.cnf");
-    test->add_result(baseline == test->ssh_maxscale(true, "maxscale -c --user=maxscale"),
-                     "Bad router_options should be detected.\n");
+    // Disabled for 2.0
+    //test->ssh_maxscale(true, "sed -i -e 's/router_options.*/router_options=bad_option=true/' /etc/maxscale.cnf");
+    //test->add_result(baseline == test->ssh_maxscale(true, "maxscale -c --user=maxscale"),
+    //                 "Bad router_options should be detected.\n");
 
     test->ssh_maxscale(true, "cp /etc/maxscale.cnf.backup /etc/maxscale.cnf");
 
