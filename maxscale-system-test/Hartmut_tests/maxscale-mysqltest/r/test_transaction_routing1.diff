@@ -1,0 +1,8 @@
+--- r/test_transaction_routing1.result	2016-07-08 18:46:12.871790721 +0300
++++ r/test_transaction_routing1.reject	2016-07-11 20:31:14.968073756 +0300
+@@ -5,4 +5,4 @@
+ commit;
+ select count(*) from t1;
+ count(*)
+-1
++0

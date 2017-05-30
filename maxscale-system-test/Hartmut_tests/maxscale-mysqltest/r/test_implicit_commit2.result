@@ -1,0 +1,17 @@
+USE test;
+DROP TABLE IF EXISTS T1;
+DROP EVENT IF EXISTS myevent;
+SET autocommit=1;
+BEGIN;
+CREATE TABLE T1 (id integer);
+CREATE EVENT myevent
+ON SCHEDULE AT CURRENT_TIMESTAMP + INTERVAL 1 HOUR
+DO
+UPDATE t1 SET id = id + 1;
+SELECT (@@server_id) INTO @a;
+SELECT IF(@a <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result;
+result
+OK (slave)
+DROP TABLE T1;
+DROP EVENT myevent;
+COMMIT;

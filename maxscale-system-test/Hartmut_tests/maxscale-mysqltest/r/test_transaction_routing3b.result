@@ -1,0 +1,10 @@
+USE test;
+DROP TABLE IF EXISTS T2;
+START TRANSACTION;
+CREATE TABLE T2 (id integer);
+INSERT INTO T2 VALUES (@@server_id);
+SET AUTOCOMMIT=oN;
+SELECT IF(id <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result FROM T2;
+result
+OK (slave)
+DROP TABLE T2;

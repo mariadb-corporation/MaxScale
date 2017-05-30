@@ -1,0 +1,9 @@
+--- r/test_transaction_routing3b.result	2016-07-08 18:46:12.871790721 +0300
++++ r/test_transaction_routing3b.reject	2016-07-11 20:27:06.210601662 +0300
+@@ -6,5 +6,5 @@
+ SET AUTOCOMMIT=oN;
+ SELECT IF(id <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result FROM T2;
+ result
+-OK (slave)
++FAIL (master)
+ DROP TABLE T2;
