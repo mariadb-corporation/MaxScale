@@ -646,7 +646,7 @@ add_test_executable(cdc_client.cpp cdc_client avro LABELS avrorouter binlogroute
 add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog LABELS binlogrouter HEAVY BREAKS_REPL)
 
 # Try to configure binlog router to use wrong password for Master and check 'slave status' on binlog
-add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd setup_binlog LABELS binlogrouter BREAKS_REPL)
+#add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd setup_binlog LABELS binlogrouter BREAKS_REPL)
 
 # Regression case for crash if long host name is used for binlog router (in 'change master to ...')
 add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog LABELS binlogrouter BREAKS_REPL)
