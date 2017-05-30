@@ -9,7 +9,7 @@ command -v cmake || install_cmake="cmake"
 
 command -v apt-get
 
-if [ $? -e 0 ]
+if [ $? == 0 ]
 then
   # DEB-based distro
 
@@ -18,23 +18,22 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev libgnutls30 libgcrypt20 $install_cmake
+       sqlite3 liblua5.1 liblua5.1-dev
 else
   ## RPM-based distro
   command -v yum
 
-  if [ $? -ne 0 ]
+  if [ $? != 0 ]
   then
     # We need zypper here
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
          pcre-devel git wget tcl libuuid-devel \
-         xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls gcrypt $install_cmake
+         xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
-    if [ $? -ne 0 ]
+    if [ $? != 0 ]
     then
       sudo zypper -n install libedit-devel
     fi
@@ -45,9 +44,7 @@ else
          libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
          libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
-         sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         gnutls gcrypt $install_cmake
-
+         sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils 
     cat /etc/redhat-release | grep "release 5"
     if [ $? -eq 0 ]
     then
@@ -112,19 +109,54 @@ make
 sudo make install
 popd
 
-# Avro C API
-wget -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories http://mirror.netinch.com/pub/apache/avro/stable/c
-if [ $? != 0 ]
-then
-    echo "Error getting avro-c"
-    exit 1
+# check CPU architecture to select proper MariaDB tarball
+cat /proc/cpuinfo | grep cpu | grep POWER
+if [ $? -ne 0 ] ; then
+
+  dpkg --version
+  if [ $? == 0 ] ; then
+    dpkg -l | grep libc6
+    export libc6_ver=`dpkg -l | sed "s/:amd64//g" |awk '$2=="libc6" { print $3 }'`
+    dpkg --compare-versions $libc6_ver lt 2.14
+    res=$?
+  else
+    export libc6_ver=`rpm --query glibc  --qf "%{VERSION}"`
+    rpmdev-vercmp $libc6_ver 2.14
+    if [ $? == 12 ] ; then
+       res=0
+    else
+       res=1
+    fi
+    cat /etc/redhat-release | grep " 5\."
+    if [ $? == 0 ] ; then
+        res=0
+    fi
+    cat /etc/issue | grep "SUSE" | grep " 11 "
+    if [ $? == 0 ] ; then
+        res=0
+    fi
+  fi
+set -x
+  if [ $res != 0 ] ; then
+    export mariadbd_link="https://downloads.mariadb.org/interstitial/mariadb-5.5.56/bintar-linux-glibc_214-x86_64/mariadb-5.5.56-linux-glibc_214-x86_64.tar.gz"
+    export mariadbd_file="mariadb-5.5.56-linux-glibc_214-x86_64.tar.gz"
+  else 
+    export mariadbd_link="https://downloads.mariadb.org/interstitial/mariadb-5.5.56/bintar-linux-x86_64/mariadb-5.5.56-linux-x86_64.tar.gz"
+    export mariadbd_file="mariadb-5.5.56-linux-x86_64.tar.gz"
+  fi
+else
+        endian=`echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6`
+        if [ $endian == 0 ] ; then 
+                export mariadbd_link="http://jenkins.engskysql.com/x/mariadb-5.5.41-linux-ppc64.tar.gz"
+                export mariadbd_file="mariadb-5.5.41-linux-ppc64.tar.gz"
+                cat /etc/redhat-release | grep " 6\."
+                if [ $? == 0 ] ; then
+                     export mariadbd_link="http://jenkins.engskysql.com/x/rhel6/mariadb-5.5.41-linux-ppc64.tar.gz"
+                fi
+
+        else
+                export mariadbd_link="http://jenkins.engskysql.com/x/mariadb-5.5.41-linux-ppc64le.tar.gz"
+                export mariadbd_file="mariadb-5.5.41-linux-ppc64le.tar.gz"
+        fi
 fi
-avro_filename=`ls -1 *.tar.gz`
-avro_dir=`echo "$avro_filename" | sed "s/.tar.gz//"`
-tar -axf $avro_filename
-mkdir $avro_dir/build
-pushd $avro_dir/build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC
-make
-sudo make install
-popd
+
