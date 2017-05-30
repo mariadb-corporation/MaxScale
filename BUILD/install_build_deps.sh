@@ -54,6 +54,27 @@ else
 
 fi
 
+# cmake
+wget http://max-tst-01.mariadb.com/ci-repository/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+if [ $? != 0 ] ; then
+    echo "CMake can not be downloaded from Maxscale build server, trying from cmake.org"
+    wget https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+fi
+sudo tar xzvf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
+
+cmake_version=`cmake --version | grep "cmake version" | awk '{ print $3 }'`
+if [ "$cmake_version" \< "3.7.1" ] ; then
+    echo "cmake does not work! Trying to build from source"
+    wget https://cmake.org/files/v3.7/cmake-3.7.1.tar.gz --no-check-certificate
+    tar xzvf cmake-3.7.1.tar.gz
+    cd cmake-3.7.1
+
+    ./bootstrap
+    gmake
+    sudo make install
+    cd ..
+fi
+
 # Flex
 wget http://maxscale-jenkins.mariadb.com/x/flex-2.5.35-0.8.el5.rfb.x86_64.rpm
 sudo yum install flex-2.5.35-0.8.el5.rfb.x86_64.rpm -y --nogpgcheck
