@@ -27,7 +27,7 @@ else
          make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
          pcre-devel git wget tcl libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls gcrypt
+         gnutls-devel libgcrypt-devel
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
@@ -43,7 +43,7 @@ else
          libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign wget \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         gnutls gcrypt
+         gnutls-devel libgcrypt-devel
 
     cat /etc/redhat-release | grep "release 5"
     if [ $? == 0 ]
