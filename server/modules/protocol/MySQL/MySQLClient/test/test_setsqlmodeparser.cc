@@ -1,0 +1,174 @@
+/*
+ * Copyright (c) 2016 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2019-07-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
+#include "../setsqlmodeparser.hh"
+#include <stdlib.h>
+#include <iostream>
+#include <maxscale/buffer.h>
+#include <maxscale/paths.h>
+
+using namespace std;
+
+namespace
+{
+
+GWBUF* create_gwbuf(const char* zStmt)
+{
+    size_t len = strlen(zStmt);
+    size_t payload_len = len + 1;
+    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
+
+    GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
+
+    *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
+    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
+    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
+    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;
+    memcpy((char*)GWBUF_DATA(pBuf) + 5, zStmt, len);
+
+    return pBuf;
+}
+
+}
+
+namespace
+{
+
+typedef SetSqlModeParser P;
+
+struct TEST_CASE
+{
+    const char*                  zStmt;
+    SetSqlModeParser::result_t   result;
+    SetSqlModeParser::sql_mode_t sql_mode;
+} test_cases[] =
+{
+    { "SET SQL_MODE=DEFAULT",
+      P::IS_SET_SQL_MODE, P::DEFAULT },
+    { "/*blah*/ SET /*blah*/ SQL_MODE /*blah*/ = /*blah*/ DEFAULT /*blah*/ ",
+      P::IS_SET_SQL_MODE, P::DEFAULT },
+    { "SET SQL_MODE=ORACLE",
+      P::IS_SET_SQL_MODE, P::ORACLE },
+    { "SET SQL_MODE=BLAH",              // So short that it cannot be DEFAULT|ORACLE
+      P::NOT_SET_SQL_MODE,  P::ORACLE },
+    { "SET SQL_MODE='BLAH'",
+      P::IS_SET_SQL_MODE, P::SOMETHING },
+    { "SET SQL_MODE=BLAHBLAH",
+      P::IS_SET_SQL_MODE, P::SOMETHING },
+    { "SET SQL_MODE='ORACLE'",
+      P::IS_SET_SQL_MODE, P::ORACLE },
+    { "SET SQL_MODE='BLAH, A, B, ORACLE'",
+      P::IS_SET_SQL_MODE, P::ORACLE },
+    { "SET SQL_MODE='BLAH, A, B, XYZ_123'",
+      P::IS_SET_SQL_MODE, P::SOMETHING },
+    { "SET VAR1=1234, VAR2=3456, SQL_MODE='A,B, ORACLE'",
+      P::IS_SET_SQL_MODE, P::ORACLE },
+    { "SET SQL_MODE=ORACLE, VAR1=3456, VAR2='A=b, c=d', SQL_MODE='A,B, ORACLE'",
+      P::IS_SET_SQL_MODE, P::ORACLE },
+};
+
+const int N_TEST_CASES = sizeof(test_cases)/sizeof(test_cases[0]);
+
+int test(const TEST_CASE& test_case)
+{
+    int rv = EXIT_SUCCESS;
+
+    cout << test_case.zStmt << ": ";
+
+    GWBUF* pStmt = create_gwbuf(test_case.zStmt);
+    ss_dassert(pStmt);
+
+    SetSqlModeParser parser;
+
+    SetSqlModeParser::sql_mode_t sql_mode;
+    SetSqlModeParser::result_t result = parser.get_sql_mode(&pStmt, &sql_mode);
+    gwbuf_free(pStmt);
+
+    if (result == test_case.result)
+    {
+        if (result == SetSqlModeParser::IS_SET_SQL_MODE)
+        {
+            if (sql_mode == test_case.sql_mode)
+            {
+                cout << "OK";
+            }
+            else
+            {
+                cout << "ERROR: Expected "
+                     << "'" << SetSqlModeParser::to_string(test_case.sql_mode) << "'"
+                     << ", got "
+                     << "'" << SetSqlModeParser::to_string(sql_mode) << "'"
+                     << ".";
+                rv = EXIT_FAILURE;
+            }
+        }
+        else
+        {
+            cout << "OK";
+        }
+    }
+    else
+    {
+        cout << "ERROR: Expected "
+             << "'" << SetSqlModeParser::to_string(test_case.result) << "'"
+             << ", got "
+             << "'" << SetSqlModeParser::to_string(result) << "'"
+             << ".";
+        rv = EXIT_FAILURE;
+    }
+
+    cout << endl;
+
+    return rv;
+}
+
+int test()
+{
+    int rv = EXIT_SUCCESS;
+
+    for (int i = 0; i < N_TEST_CASES; ++i)
+    {
+        if (test(test_cases[i]) == EXIT_FAILURE)
+        {
+            rv = EXIT_FAILURE;
+        }
+    }
+
+    return rv;
+}
+
+}
+
+
+int main(int argc, char* argv[])
+{
+    int rc = EXIT_SUCCESS;
+
+    set_datadir(strdup("/tmp"));
+    set_langdir(strdup("."));
+    set_process_datadir(strdup("/tmp"));
+
+    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+    {
+        rc = test();
+
+        mxs_log_finish();
+    }
+    else
+    {
+        cerr << "error: Could not initialize log." << endl;
+    }
+
+    return rc;
+}
