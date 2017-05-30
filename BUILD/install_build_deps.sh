@@ -16,17 +16,22 @@ then
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev 
-  sudo apt-get install -y --force-yes libgnutls30
-  res1=$?
-  sudo apt-get install -y --force-yes libgnutls-dev
-  if [ $? != 0 ] || [ $res1 != 0 ]
+  ## separatelibgnutls installation process for Ubuntu Trusty
+  cat /etc/*release | grep "Trusty"
+  if [ $? == 0 ]
   then
-      sudo apt-get install -y --force-yes libgnutls28-dev
-  fi
-  sudo apt-get install -y --force-yes libgcrypt20-dev
-  if [ $? != 0 ]
-  then
-      sudo apt-get install -y --force-yes libgcrypt11-dev
+     sudo apt-get install -y --force-yes libgnutls-dev libgcrypt11-dev
+  else
+     sudo apt-get install -y --force-yes libgnutls30 libgnutls-dev
+     if [ $? != 0 ]
+     then
+         sudo apt-get install -y --force-yes libgnutls28-dev
+     fi
+     sudo apt-get install -y --force-yes libgcrypt20-dev
+     if [ $? != 0 ]
+     then
+         sudo apt-get install -y --force-yes libgcrypt11-dev
+     fi
   fi
 else
   ## RPM-based distro
