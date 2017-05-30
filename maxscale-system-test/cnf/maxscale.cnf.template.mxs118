@@ -16,7 +16,7 @@ module=galeramon
 servers= server1, server2,server3  ,server4
 user=maxskysql
 passwd= skysql
-root_node_as_master=false
+#root_node_as_master=false
 
 [RW Split Router]
 type=service
