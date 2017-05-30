@@ -16,11 +16,13 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
+router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
+max_slave_connections=1
 
 [Read Connection Router Slave]
 type=service
 router=readconnroute
-router_options= slave
+router_options=slave
 servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
@@ -38,7 +40,6 @@ type=listener
 service=RW Split Router
 protocol=MySQLClient
 port=4006
-#socket=/tmp/rwsplit.sock
 
 [Read Connection Listener Slave]
 type=listener
@@ -51,6 +52,16 @@ type=listener
 service=Read Connection Router Master
 protocol=MySQLClient
 port=4008
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+socket=default
 
 [server1]
 type=server
@@ -75,14 +86,3 @@ type=server
 address=###galera_server_IP_4###
 port=###galera_server_port_4###
 protocol=MySQLBackend
-
-[CLI]
-type=service
-router=cli
-
-[CLI Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-#address=localhost
-socket=default
