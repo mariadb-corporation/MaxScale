@@ -25,10 +25,10 @@ then
           sudo apt-get install -y --force-yes libgnutls28-dev
       fi
   fi
-  sudo apt-get install -y --force-yes libgcrypt20
+  sudo apt-get install -y --force-yes libgcrypt20-dev
   if [ $? != 0 ]
   then
-      sudo apt-get install -y --force-yes libgcrypt11
+      sudo apt-get install -y --force-yes libgcrypt11-dev
   fi
 else
   ## RPM-based distro
