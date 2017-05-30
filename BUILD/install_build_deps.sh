@@ -160,3 +160,6 @@ else
         fi
 fi
 
+wget --retry-connrefused $mariadbd_link
+sudo tar xzvf $mariadbd_file -C /usr/ --strip-components=1
+cmake_flags +=" -DERRMSG=/usr/share/english/errmsg.sys -DMYSQL_EMBEDDED_LIBRARIES=/usr/lib/"
