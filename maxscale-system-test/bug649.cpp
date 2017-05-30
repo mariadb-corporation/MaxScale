@@ -124,6 +124,11 @@ int main(int argc, char *argv[])
     Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
     Test->close_rwsplit();
 
+    /** Clean up */
+    Test->repl->connect();
+    execute_query(Test->repl->nodes[0], "DROP DATABASE test");
+    execute_query(Test->repl->nodes[0], "CREATE DATABASE test");
+
     int rval = Test->global_result;
     delete Test;
     return rval;
