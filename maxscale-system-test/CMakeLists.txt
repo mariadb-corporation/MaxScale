@@ -250,7 +250,7 @@ add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replicatio
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
 
 # MySQL Monitor Failover Test
-add_test_executable(failover_mysqlmon.cpp failover_mysqlmon failover_mysqlmon LABELS mysqlmon REPL_BACKEND)
+#add_test_executable(failover_mysqlmon.cpp failover_mysqlmon failover_mysqlmon LABELS mysqlmon REPL_BACKEND)
 
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
