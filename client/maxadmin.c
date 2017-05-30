@@ -47,6 +47,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <pwd.h>
 
 #include <version.h>
 
@@ -255,6 +256,11 @@ main(int argc, char **argv)
 
         if ((so = connectUsingInetSocket(hostname, port, user, passwd)) == -1)
         {
+            if (access(MAXADMIN_DEFAULT_SOCKET, R_OK) == 0)
+            {
+                fprintf(stderr, "Found default MaxAdmin socket in: %s\n", MAXADMIN_DEFAULT_SOCKET);
+                fprintf(stderr, "Try connecting with:\n\n\tmaxadmin -S %s\n\n", MAXADMIN_DEFAULT_SOCKET);
+            }
             exit(EXIT_FAILURE);
         }
     }
@@ -608,7 +614,13 @@ authUnixSocket(int so)
 
     if (!authenticated)
     {
-        fprintf(stderr, "Could connect to MaxScale, but was not authorized.\n");
+        uid_t id = geteuid();
+        struct passwd* pw = getpwuid(id);
+        fprintf(stderr, "Could connect to MaxScale, but was not authorized.\n"
+                "Check that the current user is added to the list of allowed users.\n"
+                "To add this user to the list, execute:\n\n"
+                "\tsudo maxadmin enable account %s\n\n"
+                "This assumes that the root user account is enabled in MaxScale.\n", pw->pw_name);
     }
 
     return authenticated;
