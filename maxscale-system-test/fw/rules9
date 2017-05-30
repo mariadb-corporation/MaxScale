@@ -1,3 +1,0 @@
-rule no_wildcard deny wildcard
-rule no_x1 deny columns x1
-users %@% match any rules no_wildcard no_x1

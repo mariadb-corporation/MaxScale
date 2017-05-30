@@ -1,1 +1,0 @@
-add_java_test(java_prep_stmt PrepStmtTest.java maxscale.java.prep_stmt.PrepStmtTest java_prep_stmt)

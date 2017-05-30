@@ -1,2 +1,0 @@
-rule no_func deny functions sum avg
-users %@% match any rules no_func

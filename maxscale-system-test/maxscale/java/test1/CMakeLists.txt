@@ -1,1 +1,0 @@
-add_java_test(simplejavatest SimpleConnectorJTest.java maxscale.java.test1.SimpleConnectorJTest simplejavatest)

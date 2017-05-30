@@ -1,3 +1,0 @@
-drop table if exists t1;
-create table t1(id int);
-alter table t1 add column b int;

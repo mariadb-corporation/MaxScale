@@ -1,2 +1,0 @@
-rule test7 deny no_where_clause on_queries select|delete|update
-users %@% match all rules test7

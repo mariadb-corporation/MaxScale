@@ -1,2 +1,0 @@
-rule test9 deny no_where_clause on_queries select
-users %@% match all rules test9

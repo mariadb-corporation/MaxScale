@@ -1,2 +1,0 @@
-grant select on *.* to 'skysql'@'localhost';
-revoke select on *.* from 'skysql'@'localhost';

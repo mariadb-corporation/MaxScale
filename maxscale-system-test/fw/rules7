@@ -1,2 +1,0 @@
-rule test11 deny no_where_clause on_queries update
-users %@% match all rules test11

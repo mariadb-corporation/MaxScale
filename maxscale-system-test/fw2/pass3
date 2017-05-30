@@ -1,2 +1,0 @@
-select * from mysql.user;
-set @var = 1;

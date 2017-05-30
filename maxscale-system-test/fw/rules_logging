@@ -1,2 +1,0 @@
-rule r1 deny regex 'select.*1'
-users %@% match any rules r1

@@ -1,6 +1,0 @@
-#
-# Cache basic
-#
-# See ../cache_rules.
-
-drop database if exists cachingdb;
