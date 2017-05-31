@@ -13,6 +13,7 @@
 
 #include "../setsqlmodeparser.hh"
 #include <stdlib.h>
+#include <time.h>
 #include <iostream>
 #include <maxscale/buffer.h>
 #include <maxscale/paths.h>
@@ -22,7 +23,7 @@ using namespace std;
 namespace
 {
 
-GWBUF* create_gwbuf(const char* zStmt)
+GWBUF* gwbuf_create_com_query(const char* zStmt)
 {
     size_t len = strlen(zStmt);
     size_t payload_len = len + 1;
@@ -54,59 +55,88 @@ struct TEST_CASE
     SetSqlModeParser::sql_mode_t sql_mode;
 } test_cases[] =
 {
-    { "SET SQL_MODE=DEFAULT",
-      P::IS_SET_SQL_MODE, P::DEFAULT },
-    { "/*blah*/ SET /*blah*/ SQL_MODE /*blah*/ = /*blah*/ DEFAULT /*blah*/ ",
-      P::IS_SET_SQL_MODE, P::DEFAULT },
-    { "SET SQL_MODE=ORACLE",
-      P::IS_SET_SQL_MODE, P::ORACLE },
-    { "SET SQL_MODE=BLAH",              // So short that it cannot be DEFAULT|ORACLE
-      P::NOT_SET_SQL_MODE,  P::ORACLE },
-    { "SET SQL_MODE='BLAH'",
-      P::IS_SET_SQL_MODE, P::SOMETHING },
-    { "SET SQL_MODE=BLAHBLAH",
-      P::IS_SET_SQL_MODE, P::SOMETHING },
-    { "SET SQL_MODE='ORACLE'",
-      P::IS_SET_SQL_MODE, P::ORACLE },
-    { "SET SQL_MODE='BLAH, A, B, ORACLE'",
-      P::IS_SET_SQL_MODE, P::ORACLE },
-    { "SET SQL_MODE='BLAH, A, B, XYZ_123'",
-      P::IS_SET_SQL_MODE, P::SOMETHING },
-    { "SET VAR1=1234, VAR2=3456, SQL_MODE='A,B, ORACLE'",
-      P::IS_SET_SQL_MODE, P::ORACLE },
-    { "SET SQL_MODE=ORACLE, VAR1=3456, VAR2='A=b, c=d', SQL_MODE='A,B, ORACLE'",
-      P::IS_SET_SQL_MODE, P::ORACLE },
+    {
+        "SET SQL_MODE=DEFAULT",
+        P::IS_SET_SQL_MODE,
+        P::DEFAULT
+    },
+    {
+        "/*blah*/ SET /*blah*/ SQL_MODE /*blah*/ = /*blah*/ DEFAULT /*blah*/ ",
+        P::IS_SET_SQL_MODE,
+        P::DEFAULT
+    },
+    {
+        "SET SQL_MODE=ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET SQL_MODE=BLAH",              // So short that it cannot be DEFAULT|ORACLE
+        P::NOT_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET SQL_MODE='BLAH'",
+        P::IS_SET_SQL_MODE,
+        P::SOMETHING
+    },
+    {
+        "SET SQL_MODE=BLAHBLAH",
+        P::IS_SET_SQL_MODE,
+        P::SOMETHING
+    },
+    {
+        "SET SQL_MODE='ORACLE'",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET SQL_MODE='BLAH, A, B, ORACLE'",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET SQL_MODE='BLAH, A, B, XYZ_123'",
+        P::IS_SET_SQL_MODE,
+        P::SOMETHING
+    },
+    {
+        "SET VAR1=1234, VAR2=3456, SQL_MODE='A,B, ORACLE'",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET SQL_MODE=ORACLE, VAR1=3456, VAR2='A=b, c=d', SQL_MODE='A,B, ORACLE'",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
 };
 
 const int N_TEST_CASES = sizeof(test_cases)/sizeof(test_cases[0]);
 
-int test(const TEST_CASE& test_case)
+int test(GWBUF** ppStmt,
+         SetSqlModeParser::sql_mode_t expected_sql_mode,
+         SetSqlModeParser::result_t expected_result)
 {
     int rv = EXIT_SUCCESS;
-
-    cout << test_case.zStmt << ": ";
-
-    GWBUF* pStmt = create_gwbuf(test_case.zStmt);
-    ss_dassert(pStmt);
 
     SetSqlModeParser parser;
 
     SetSqlModeParser::sql_mode_t sql_mode;
-    SetSqlModeParser::result_t result = parser.get_sql_mode(&pStmt, &sql_mode);
-    gwbuf_free(pStmt);
+    SetSqlModeParser::result_t result = parser.get_sql_mode(ppStmt, &sql_mode);
 
-    if (result == test_case.result)
+    if (result == expected_result)
     {
         if (result == SetSqlModeParser::IS_SET_SQL_MODE)
         {
-            if (sql_mode == test_case.sql_mode)
+            if (sql_mode == expected_sql_mode)
             {
                 cout << "OK";
             }
             else
             {
                 cout << "ERROR: Expected "
-                     << "'" << SetSqlModeParser::to_string(test_case.sql_mode) << "'"
+                     << "'" << SetSqlModeParser::to_string(expected_sql_mode) << "'"
                      << ", got "
                      << "'" << SetSqlModeParser::to_string(sql_mode) << "'"
                      << ".";
@@ -121,7 +151,7 @@ int test(const TEST_CASE& test_case)
     else
     {
         cout << "ERROR: Expected "
-             << "'" << SetSqlModeParser::to_string(test_case.result) << "'"
+             << "'" << SetSqlModeParser::to_string(expected_result) << "'"
              << ", got "
              << "'" << SetSqlModeParser::to_string(result) << "'"
              << ".";
@@ -133,9 +163,28 @@ int test(const TEST_CASE& test_case)
     return rv;
 }
 
-int test()
+int test(const TEST_CASE& test_case)
 {
     int rv = EXIT_SUCCESS;
+
+    cout << test_case.zStmt << ": ";
+
+    GWBUF* pStmt = gwbuf_create_com_query(test_case.zStmt);
+    ss_dassert(pStmt);
+
+    rv = test(&pStmt, test_case.sql_mode, test_case.result);
+
+    gwbuf_free(pStmt);
+
+    return rv;
+}
+
+int test_contiguous()
+{
+    int rv = EXIT_SUCCESS;
+
+    cout << "Test contiguous statements\n"
+         << "--------------------------" << endl;
 
     for (int i = 0; i < N_TEST_CASES; ++i)
     {
@@ -143,6 +192,73 @@ int test()
         {
             rv = EXIT_FAILURE;
         }
+    }
+
+    cout << endl;
+
+    return rv;
+}
+
+int test_non_contiguous()
+{
+    int rv = EXIT_SUCCESS;
+
+    cout << "Test non-contiguous statements\n"
+         << "------------------------------" << endl;
+
+    for (int i = 0; i < N_TEST_CASES; ++i)
+    {
+        TEST_CASE& test_case = test_cases[i];
+
+        cout << test_case.zStmt << "(" << strlen(test_case.zStmt) << ": ";
+
+        GWBUF* pTail = gwbuf_create_com_query(test_case.zStmt);
+        ss_dassert(pTail);
+        GWBUF* pStmt = NULL;
+
+        while (pTail)
+        {
+            size_t n = MYSQL_HEADER_LEN + rand() % 10; // Between 4 and 13 bytes long chunks.
+
+            GWBUF* pHead = gwbuf_split(&pTail, n);
+
+            cout << GWBUF_LENGTH(pHead);
+
+            pStmt = gwbuf_append(pStmt, pHead);
+
+            if (pTail)
+            {
+                cout << ", ";
+            }
+        }
+
+        cout << "): " << flush;
+
+        if (test(&pStmt, test_case.sql_mode, test_case.result) == EXIT_FAILURE)
+        {
+            rv = EXIT_FAILURE;
+        }
+
+        gwbuf_free(pStmt);
+    }
+
+    cout << endl;
+
+    return rv;
+}
+
+int test()
+{
+    int rv = EXIT_SUCCESS;
+
+    if (test_contiguous() != EXIT_SUCCESS)
+    {
+        rv = EXIT_FAILURE;
+    }
+
+    if (test_non_contiguous() != EXIT_SUCCESS)
+    {
+        rv = EXIT_FAILURE;
     }
 
     return rv;
@@ -154,6 +270,8 @@ int test()
 int main(int argc, char* argv[])
 {
     int rc = EXIT_SUCCESS;
+
+    srand(time(NULL));
 
     set_datadir(strdup("/tmp"));
     set_langdir(strdup("."));
