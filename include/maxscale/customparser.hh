@@ -126,6 +126,25 @@ protected:
     }
 
     /**
+     * Peek current character.
+     *
+     * @param pC  Upon successful return will be the current character.
+     *
+     * @return True, if the current character was returned, false otherwise.
+     *         False will only be returned if the current position is at
+     *         the end.
+     */
+    bool peek_current_char(char* pC) const
+    {
+        if (m_pI != m_pEnd)
+        {
+            *pC = *m_pI;
+        }
+
+        return m_pI != m_pEnd;
+    }
+
+    /**
      * Peek next character.
      *
      * @param pC  Upon successful return will be the next character.
@@ -134,16 +153,16 @@ protected:
      *         False will only be returned if the current position is at
      *         the end.
      */
-    bool peek_next_char(char* pC)
+    bool peek_next_char(char* pC) const
     {
-        bypass_whitespace();
+        bool rc = (m_pI + 1 < m_pEnd);
 
-        if (m_pI != m_pEnd)
+        if (rc)
         {
-            *pC = *m_pI;
+            *pC = *(m_pI + 1);
         }
 
-        return m_pI != m_pEnd;
+        return rc;
     }
 
     /**

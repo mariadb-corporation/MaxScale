@@ -374,9 +374,15 @@ private:
                 // the identifier and if it is followed by a "=" we consume the value.
                 {
                     char c;
-                    if (consume_id() && peek_next_char(&c) && (c == '='))
+                    if (consume_id())
                     {
-                        consume_value();
+                        bypass_whitespace();
+
+                        if (peek_current_char(&c) && (c == '='))
+                        {
+                            ++m_pI;
+                            consume_value();
+                        }
                     }
                     else
                     {
@@ -396,7 +402,9 @@ private:
 
             if (rv != ERROR)
             {
-                if (peek_next_char(&c))
+                bypass_whitespace();
+
+                if (peek_current_char(&c))
                 {
                     if (c == ',')
                     {
@@ -470,7 +478,9 @@ private:
 
             if (!is_error(rv))
             {
-                if (peek_next_char(&c) && (c == ','))
+                bypass_whitespace();
+
+                if (peek_current_char(&c) && (c == ','))
                 {
                     ++m_pI;
                 }

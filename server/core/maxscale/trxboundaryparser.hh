@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <ctype.h>
-#include <maxscale/modutil.h>
+#include <maxscale/customparser.hh>
 #include <maxscale/query_classifier.h>
 
 namespace maxscale
@@ -37,8 +37,11 @@ namespace maxscale
  * of utmost importance; consequently it is defined in its entirety
  * in the header to allow for aggressive inlining.
  */
-class TrxBoundaryParser
+class TrxBoundaryParser : public maxscale::CustomParser
 {
+    TrxBoundaryParser(const TrxBoundaryParser&);
+    TrxBoundaryParser& operator = (const TrxBoundaryParser&);
+
 public:
     enum token_t
     {
@@ -88,10 +91,6 @@ public:
      * @endcode
      */
     TrxBoundaryParser()
-        : m_pSql(NULL)
-        , m_len(0)
-        , m_pI(NULL)
-        , m_pEnd(NULL)
     {
     }
 
@@ -546,29 +545,6 @@ private:
         return type_mask;
     }
 
-    inline bool is_next_alpha(char uc, int offset = 1) const
-    {
-        ss_dassert(uc >= 'A' && uc <= 'Z');
-
-        char lc = uc + ('a' - 'A');
-
-        return
-            ((m_pI + offset) < m_pEnd) &&
-            ((*(m_pI + offset) == uc) || (*(m_pI + offset) == lc));
-    }
-
-    bool peek_next_char(char* pC) const
-    {
-        bool rc = (m_pI + 1 < m_pEnd);
-
-        if (rc)
-        {
-            *pC = *(m_pI + 1);
-        }
-
-        return rc;
-    }
-
     // Significantly faster than library version.
     static char toupper(char c)
     {
@@ -825,16 +801,6 @@ private:
 
         return token;
     }
-
-private:
-    TrxBoundaryParser(const TrxBoundaryParser&);
-    TrxBoundaryParser& operator = (const TrxBoundaryParser&);
-
-private:
-    const char* m_pSql;
-    int         m_len;
-    const char* m_pI;
-    const char* m_pEnd;
 };
 
 }
