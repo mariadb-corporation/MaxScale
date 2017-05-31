@@ -61,6 +61,16 @@ struct TEST_CASE
         P::DEFAULT
     },
     {
+        "SET SQL_MODE=DEFAULT;",
+        P::IS_SET_SQL_MODE,
+        P::DEFAULT
+    },
+    {
+        "SET SQL_MODE=DEFAULT;   ",
+        P::IS_SET_SQL_MODE,
+        P::DEFAULT
+    },
+    {
         "-- This is a comment\nSET SQL_MODE=DEFAULT",
         P::IS_SET_SQL_MODE,
         P::DEFAULT
@@ -132,6 +142,31 @@ struct TEST_CASE
     },
     {
         "SET LOCAL SQL_MODE=ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET @@GLOBAL.SQL_MODE=ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET @@SESSION.SQL_MODE=ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET @@LOCAL.SQL_MODE=ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET @@LOCAL . SQL_MODE = ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET @@SESSION.blah = 1234, @@GLOBAL.blahblah = something, sql_mode=ORACLE",
         P::IS_SET_SQL_MODE,
         P::ORACLE
     },
@@ -286,6 +321,15 @@ int test()
         rv = EXIT_FAILURE;
     }
 
+    if (rv == EXIT_SUCCESS)
+    {
+        cout << "OK" << endl;
+    }
+    else
+    {
+        cout << "ERROR" << endl;
+    }
+
     return rv;
 }
 
@@ -294,7 +338,7 @@ int test()
 
 int main(int argc, char* argv[])
 {
-    int rc = EXIT_SUCCESS;
+    int rv = EXIT_SUCCESS;
 
     srand(time(NULL));
 
@@ -304,7 +348,7 @@ int main(int argc, char* argv[])
 
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {
-        rc = test();
+        rv = test();
 
         mxs_log_finish();
     }
@@ -313,5 +357,5 @@ int main(int argc, char* argv[])
         cerr << "error: Could not initialize log." << endl;
     }
 
-    return rc;
+    return rv;
 }

@@ -39,8 +39,10 @@ public:
         UNUSED_FIRST = 0xFF,
         TK_DEFAULT,
         TK_GLOBAL,
+        TK_GLOBAL_VAR,
         TK_ORACLE,
         TK_SESSION,
+        TK_SESSION_VAR,
         TK_SET,
         TK_SQL_MODE,
     };
@@ -353,6 +355,18 @@ private:
                 rv = parse_set(pSql_mode);
                 break;
 
+            case TK_GLOBAL_VAR:
+            case TK_SESSION_VAR:
+                if (next_token() == '.')
+                {
+                    rv = parse_set(pSql_mode);
+                }
+                else
+                {
+                    rv = ERROR;
+                }
+                break;
+
             case TK_SQL_MODE:
                 if (next_token() == '=')
                 {
@@ -561,14 +575,19 @@ private:
             case '@':
                 if (is_next_alpha('S', 2))
                 {
-                    token = expect_token(MXS_CP_EXPECT_TOKEN("@@SESSION"), TK_SESSION);
+                    token = expect_token(MXS_CP_EXPECT_TOKEN("@@SESSION"), TK_SESSION_VAR);
                 }
                 else if (is_next_alpha('G', 2))
                 {
-                    token = expect_token(MXS_CP_EXPECT_TOKEN("@@GLOBAL"), TK_GLOBAL);
+                    token = expect_token(MXS_CP_EXPECT_TOKEN("@@GLOBAL"), TK_GLOBAL_VAR);
+                }
+                else if (is_next_alpha('L', 2))
+                {
+                    token = expect_token(MXS_CP_EXPECT_TOKEN("@@LOCAL"), TK_SESSION_VAR);
                 }
                 break;
 
+            case '.':
             case '\'':
             case '"':
             case '`':
