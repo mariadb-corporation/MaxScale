@@ -120,6 +120,21 @@ struct TEST_CASE
         P::IS_SET_SQL_MODE,
         P::ORACLE
     },
+    {
+        "SET GLOBAL SQL_MODE=ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET SESSION SQL_MODE=ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
+    {
+        "SET LOCAL SQL_MODE=ORACLE",
+        P::IS_SET_SQL_MODE,
+        P::ORACLE
+    },
 };
 
 const int N_TEST_CASES = sizeof(test_cases)/sizeof(test_cases[0]);

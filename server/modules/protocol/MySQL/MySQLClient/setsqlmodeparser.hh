@@ -588,6 +588,11 @@ private:
                 token = expect_token(MXS_CP_EXPECT_TOKEN("GLOBAL"), TK_GLOBAL);
                 break;
 
+            case 'l':
+            case 'L':
+                token = expect_token(MXS_CP_EXPECT_TOKEN("LOCAL"), TK_SESSION);
+                break;
+
             case 'o':
             case 'O':
                 token = expect_token(MXS_CP_EXPECT_TOKEN("ORACLE"), TK_ORACLE);
