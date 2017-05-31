@@ -60,7 +60,7 @@ other packages in addition to these.
 git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl make \
 libtool openssl openssl-devel libcurl-devel pcre-devel tcl tcl-devel \
 systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel
-gnutls gcrypt
+gnutls-devel libgcrypt-devel
 ```
 
 ### Required packages on Ubuntu and Debian systems
