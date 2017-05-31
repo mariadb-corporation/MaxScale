@@ -11,13 +11,14 @@
  * Public License.
  */
 
-#include "../setsqlmodeparser.hh"
+#include "../core/maxscale/setsqlmodeparser.hh"
 #include <stdlib.h>
 #include <time.h>
 #include <iostream>
 #include <maxscale/buffer.h>
 #include <maxscale/paths.h>
 
+using namespace maxscale;
 using namespace std;
 
 namespace

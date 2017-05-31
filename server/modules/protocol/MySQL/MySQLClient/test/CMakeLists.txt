@@ -1,3 +1,0 @@
-add_executable(test_setsqlmodeparser test_setsqlmodeparser.cc)
-target_link_libraries(test_setsqlmodeparser maxscale-common)
-add_test(test_setsqlmodeparser test_setsqlmodeparser)
