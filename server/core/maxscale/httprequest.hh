@@ -43,6 +43,34 @@ static int value_iterator(void *cls,
 
     return MHD_YES;
 }
+static int value_sum_iterator(void *cls,
+                              enum MHD_ValueKind kind,
+                              const char *key,
+                              const char *value)
+{
+    size_t& count = *(size_t*)cls;
+    count++;
+    return MHD_YES;
+}
+
+static int value_copy_iterator(void *cls,
+                               enum MHD_ValueKind kind,
+                               const char *key,
+                               const char *value)
+{
+    std::string k = key;
+    if (value)
+    {
+        k += "=";
+        k += value;
+    }
+
+    char**& dest = *(char***) cls;
+    *dest = MXS_STRDUP_A(k.c_str());
+    dest++;
+
+    return MHD_YES;
+}
 
 class HttpRequest
 {
@@ -107,6 +135,34 @@ public:
     }
 
     /**
+     * @brief Get request option count
+     *
+     * @return Number of options in the request
+     */
+    size_t get_option_count() const
+    {
+        size_t rval = 0;
+        MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
+                                  value_sum_iterator, &rval);
+
+        return rval;
+    }
+
+    /**
+     * @brief Copy options to an array
+     *
+     * The @c dest parameter must be able to hold at least get_option_count()
+     * pointers. The values stored need to be freed by the caller.
+     *
+     * @param dest Destination where options are copied
+     */
+    void copy_options(char** dest) const
+    {
+        MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
+                                  value_copy_iterator, &dest);
+    }
+
+    /**
      * @brief Return request body
      *
      * @return Request body or empty string if no body is defined
@@ -131,7 +187,7 @@ public:
      *
      * @return The complete request URI
      */
-    const std::string& get_uri() const
+    std::string get_uri() const
     {
         return m_resource;
     }
@@ -143,9 +199,37 @@ public:
      *
      * @return The request URI part or empty string if no part was found
      */
-    const std::string uri_part(uint32_t idx) const
+    std::string uri_part(uint32_t idx) const
     {
         return m_resource_parts.size() > idx ? m_resource_parts[idx] : "";
+    }
+
+    /**
+     * @brief Return a segment of the URI
+     *
+     * Combines a range of parts into a segment of the URI. Each part is
+     * separated by a forward slash.
+     *
+     * @param start Start of range
+     * @param end   End of range, not inclusive
+     *
+     * @return The URI segment that matches this range
+     */
+    std::string uri_segment(uint32_t start, uint32_t end) const
+    {
+        std::string rval;
+
+        for (uint32_t i = start; i < end && i < m_resource_parts.size(); i++)
+        {
+            if (i > start)
+            {
+                rval += "/";
+            }
+
+            rval += m_resource_parts[i];
+        }
+
+        return rval;
     }
 
     /**
@@ -158,12 +242,12 @@ public:
         return m_resource_parts.size();
     }
 
-   /**
-    * @brief Return the last part of the URI
-    *
-    * @return The last URI part
-    */
-    const std::string last_uri_part() const
+    /**
+     * @brief Return the last part of the URI
+     *
+     * @return The last URI part
+     */
+    std::string last_uri_part() const
     {
         return  m_resource_parts.size() > 0 ? m_resource_parts[m_resource_parts.size() - 1] : "";
     }

@@ -64,6 +64,7 @@ private:
 
     ResourceCallback        m_cb;   /**< Resource handler callback */
     std::deque<std::string> m_path; /**< Path components */
+    bool                    m_is_glob; /**< Does this path glob? */
 };
 
 /**

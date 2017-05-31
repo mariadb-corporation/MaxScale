@@ -304,89 +304,69 @@ GET /v1/maxscale/modules
         "self": "http://localhost:8989/v1/maxscale/modules/"
     },
     "data": {
-        "id": "readwritesplit",
+        "id": "dbfwfilter",
         "type": "module",
         "attributes": {
-            "module_type": "Router",
-            "version": "V1.1.0",
-            "description": "A Read/Write splitting router for enhancement read scalability",
-            "api": "router",
+            "module_type": "Filter",
+            "version": "V1.2.0",
+            "description": "Firewall Filter",
+            "api": "filter",
             "status": "GA",
+            "commands": [
+                {
+                    "id": "rules/reload",
+                    "type": "module_command",
+                    "links": {
+                        "self": "http://localhost:8989/v1/modules/dbfwfilter/rules/reload"
+                    },
+                    "attributes": {
+                        "method": "POST",
+                        "arg_min": 1,
+                        "arg_max": 2,
+                        "parameters": [
+                            {
+                                "description": "Filter to reload",
+                                "type": "FILTER",
+                                "required": true
+                            },
+                            {
+                                "description": "Path to rule file",
+                                "type": "[STRING]",
+                                "required": false
+                            }
+                        ]
+                    }
+                }
+            ],
             "parameters": [
                 {
-                    "name": "use_sql_variables_in",
-                    "type": "enum",
-                    "default_value": "all",
-                    "enum_values": [
-                        "all",
-                        "master"
-                    ]
+                    "name": "rules",
+                    "type": "path"
                 },
                 {
-                    "name": "slave_selection_criteria",
-                    "type": "enum",
-                    "default_value": "LEAST_CURRENT_OPERATIONS",
-                    "enum_values": [
-                        "LEAST_GLOBAL_CONNECTIONS",
-                        "LEAST_ROUTER_CONNECTIONS",
-                        "LEAST_BEHIND_MASTER",
-                        "LEAST_CURRENT_OPERATIONS"
-                    ]
-                },
-                {
-                    "name": "master_failure_mode",
-                    "type": "enum",
-                    "default_value": "fail_instantly",
-                    "enum_values": [
-                        "fail_instantly",
-                        "fail_on_write",
-                        "error_on_write"
-                    ]
-                },
-                {
-                    "name": "max_slave_replication_lag",
-                    "type": "int",
-                    "default_value": "-1"
-                },
-                {
-                    "name": "max_slave_connections",
-                    "type": "string",
-                    "default_value": "255"
-                },
-                {
-                    "name": "retry_failed_reads",
-                    "type": "bool",
-                    "default_value": "true"
-                },
-                {
-                    "name": "disable_sescmd_history",
-                    "type": "bool",
-                    "default_value": "true"
-                },
-                {
-                    "name": "max_sescmd_history",
-                    "type": "count",
-                    "default_value": "0"
-                },
-                {
-                    "name": "strict_multi_stmt",
-                    "type": "bool",
-                    "default_value": "true"
-                },
-                {
-                    "name": "master_accept_reads",
+                    "name": "log_match",
                     "type": "bool",
                     "default_value": "false"
                 },
                 {
-                    "name": "connection_keepalive",
-                    "type": "count",
-                    "default_value": "0"
+                    "name": "log_no_match",
+                    "type": "bool",
+                    "default_value": "false"
+                },
+                {
+                    "name": "action",
+                    "type": "enum",
+                    "default_value": "block",
+                    "enum_values": [
+                        "allow",
+                        "block",
+                        "ignore"
+                    ]
                 }
             ]
         },
         "links": {
-            "self": "http://localhost:8989/v1/modules/readwritesplit"
+            "self": "http://localhost:8989/v1/modules/dbfwfilter"
         }
     }
 }
