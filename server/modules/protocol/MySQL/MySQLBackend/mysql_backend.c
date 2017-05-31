@@ -1451,10 +1451,7 @@ static GWBUF* process_response_data(DCB* dcb,
 
     /** Get command which was stored in gw_MySQLWrite_backend */
     p = DCB_PROTOCOL(dcb, MySQLProtocol);
-    if (!DCB_IS_CLONE(dcb))
-    {
-        CHK_PROTOCOL(p);
-    }
+    CHK_PROTOCOL(p);
 
     /** All buffers processed here are sescmd responses */
     gwbuf_set_type(*readbuf, GWBUF_TYPE_SESCMD_RESPONSE);
@@ -1600,10 +1597,7 @@ static bool sescmd_response_complete(DCB* dcb)
     bool succp;
 
     p = DCB_PROTOCOL(dcb, MySQLProtocol);
-    if (!DCB_IS_CLONE(dcb))
-    {
-        CHK_PROTOCOL(p);
-    }
+    CHK_PROTOCOL(p);
 
     protocol_get_response_status(p, &npackets_left, &nbytes_left);
 

@@ -144,7 +144,6 @@ typedef struct session
     MXS_DOWNSTREAM          head;             /*< Head of the filter chain */
     MXS_UPSTREAM            tail;             /*< The tail of the filter chain */
     int                     refcount;         /*< Reference count on the session */
-    bool                    ses_is_child;     /*< this is a child session */
     mxs_session_trx_state_t trx_state;        /*< The current transaction state. */
     bool                    autocommit;       /*< Whether autocommit is on. */
     struct

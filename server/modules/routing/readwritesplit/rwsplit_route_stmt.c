@@ -729,13 +729,6 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
         target = TARGET_MASTER;
     }
     /**
-     * A cloned session, route everything to the master
-     */
-    else if (DCB_IS_CLONE(rses->client_dcb))
-    {
-        target = TARGET_MASTER;
-    }
-    /**
      * These queries are not affected by hints
      */
     else if (!load_active &&

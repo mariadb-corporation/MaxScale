@@ -232,68 +232,6 @@ dcb_free(DCB *dcb)
     dcb_close(dcb);
 }
 
-/*
- * Clone a DCB for internal use, mostly used for specialist filters
- * to create dummy clients based on real clients.
- *
- * @param orig          The DCB to clone
- * @return              A DCB that can be used as a client
- */
-DCB *
-dcb_clone(DCB *orig)
-{
-    char *remote = orig->remote;
-
-    if (remote)
-    {
-        remote = MXS_STRDUP(remote);
-        if (!remote)
-        {
-            return NULL;
-        }
-    }
-
-    char *user = orig->user;
-    if (user)
-    {
-        user = MXS_STRDUP(user);
-        if (!user)
-        {
-            MXS_FREE(remote);
-            return NULL;
-        }
-    }
-
-    DCB *clonedcb = dcb_alloc(orig->dcb_role, orig->listener);
-
-    if (clonedcb)
-    {
-        clonedcb->fd = DCBFD_CLOSED;
-        clonedcb->flags |= DCBF_CLONE;
-        clonedcb->state = orig->state;
-        clonedcb->data = orig->data;
-        clonedcb->ssl_state = orig->ssl_state;
-        clonedcb->remote = remote;
-        clonedcb->user = user;
-        clonedcb->poll.thread.id = orig->poll.thread.id;
-        clonedcb->protocol = orig->protocol;
-
-        clonedcb->func.write = dcb_null_write;
-        /**
-         * Close triggers closing of router session as well which is needed.
-         */
-        clonedcb->func.close = orig->func.close;
-        clonedcb->func.auth = dcb_null_auth;
-    }
-    else
-    {
-        MXS_FREE(remote);
-        MXS_FREE(user);
-    }
-
-    return clonedcb;
-}
-
 /**
  * Free a DCB and remove it from the chain of all DCBs
  *
@@ -357,11 +295,11 @@ dcb_free_all_memory(DCB *dcb)
 {
     DCB_CALLBACK *cb_dcb;
 
-    if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
+    if (dcb->protocol)
     {
         MXS_FREE(dcb->protocol);
     }
-    if (dcb->data && dcb->authfunc.free && !DCB_IS_CLONE(dcb))
+    if (dcb->data && dcb->authfunc.free)
     {
         dcb->authfunc.free(dcb);
         dcb->data = NULL;
@@ -771,8 +709,7 @@ int dcb_read(DCB   *dcb,
 
     if (dcb->fd <= 0)
     {
-        MXS_ERROR("Read failed, dcb is %s.", dcb->fd == DCBFD_CLOSED ?
-                  "closed" : "cloned, not readable");
+        MXS_ERROR("Read failed, dcb is closed.");
         return 0;
     }
 
@@ -935,8 +872,7 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
 
     if (dcb->fd <= 0)
     {
-        MXS_ERROR("Read failed, dcb is %s.", dcb->fd == DCBFD_CLOSED ?
-                  "closed" : "cloned, not readable");
+        MXS_ERROR("Read failed, dcb is closed.");
         return -1;
     }
 
@@ -1123,8 +1059,7 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
 
     if (dcb->fd <= 0)
     {
-        MXS_ERROR("Write failed, dcb is %s.",
-                  dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not writable");
+        MXS_ERROR("Write failed, dcb is closed.");
         gwbuf_free(queue);
         return false;
     }
@@ -1552,10 +1487,7 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
     dcb_printf(pdcb, "\t\tNo. of Accepts:           %d\n", dcb->stats.n_accepts);
     dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->stats.n_high_water);
     dcb_printf(pdcb, "\t\tNo. of Low Water Events:  %d\n", dcb->stats.n_low_water);
-    if (dcb->flags & DCBF_CLONE)
-    {
-        dcb_printf(pdcb, "\t\tDCB is a clone.\n");
-    }
+
     if (dcb->persistentstart)
     {
         char buff[20];
@@ -1716,10 +1648,6 @@ dprintDCB(DCB *pdcb, DCB *dcb)
     {
         dcb_printf(pdcb, "\t\tPending events in the queue:      %x %s\n",
                    dcb->evq.pending_events, dcb->evq.processing ? "(processing)" : "");
-    }
-    if (dcb->flags & DCBF_CLONE)
-    {
-        dcb_printf(pdcb, "\t\tDCB is a clone.\n");
     }
 
     if (dcb->persistentstart)
@@ -2120,41 +2048,6 @@ dcb_hangup_foreach(struct server* server)
     intptr_t arg2 = (intptr_t)server;
 
     Worker::broadcast_message(MXS_WORKER_MSG_CALL, arg1, arg2);
-}
-
-/**
- * Null protocol write routine used for cloned dcb's. It merely consumes
- * buffers written on the cloned DCB and sets the DCB_REPLIED flag.
- *
- * @param dcb           The descriptor control block
- * @param buf           The buffer being written
- * @return      Always returns a good write operation result
- */
-static int
-dcb_null_write(DCB *dcb, GWBUF *buf)
-{
-    while (buf)
-    {
-        buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
-    }
-
-    dcb->flags |= DCBF_REPLIED;
-
-    return 1;
-}
-
-/**
- * Null protocol auth operation for use by cloned DCB's.
- *
- * @param dcb           The DCB being closed.
- * @param server        The server to auth against
- * @param session       The user session
- * @param buf           The buffer with the new auth request
- */
-static int
-dcb_null_auth(DCB *dcb, SERVER *server, MXS_SESSION *session, GWBUF *buf)
-{
-    return 0;
 }
 
 /**
@@ -3565,12 +3458,9 @@ int poll_remove_dcb(DCB *dcb)
 
     /**
      * Only positive fds can be removed from epoll set.
-     * Cloned DCBs can have a state of DCB_STATE_POLLING but are not in
-     * the epoll set and do not have a valid file descriptor.  Hence the
-     * only action for them is already done - the change of state to
-     * DCB_STATE_NOPOLLING.
      */
     dcbfd = dcb->fd;
+    ss_dassert(dcbfd > 0);
 
     if (dcbfd > 0)
     {
