@@ -3,10 +3,6 @@
 # Do the real building work. This script is executed on build VM and
 # requires a working installation of CMake.
 
-# Check if CMake needs to be installed
-command -v cmake || install_cmake="cmake"
-
-
 command -v apt-get
 
 if [ $? == 0 ]
@@ -17,7 +13,7 @@ then
 
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
-       flex libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
+       flex libeditline-dev uuid-dev liblzma-dev libpcre3-dev \
        liblua5.1 liblua5.1-dev
 else
   ## RPM-based distro
