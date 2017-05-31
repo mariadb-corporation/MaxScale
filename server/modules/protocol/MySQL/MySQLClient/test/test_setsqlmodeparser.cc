@@ -61,6 +61,16 @@ struct TEST_CASE
         P::DEFAULT
     },
     {
+        "-- This is a comment\nSET SQL_MODE=DEFAULT",
+        P::IS_SET_SQL_MODE,
+        P::DEFAULT
+    },
+    {
+        "#This is a comment\nSET SQL_MODE=DEFAULT",
+        P::IS_SET_SQL_MODE,
+        P::DEFAULT
+    },
+    {
         "/*blah*/ SET /*blah*/ SQL_MODE /*blah*/ = /*blah*/ DEFAULT /*blah*/ ",
         P::IS_SET_SQL_MODE,
         P::DEFAULT
