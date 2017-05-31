@@ -63,12 +63,6 @@ typedef enum qc_parse_as
     QC_PARSE_AS_103      // Parse as embedded lib does in 10.3
 } qc_parse_as_t;
 
-typedef enum qc_sql_mode
-{
-    QC_SQL_MODE_DEFAULT,
-    QC_SQL_MODE_ORACLE
-} qc_sql_mode_t;
-
 /**
  * Contains information about a particular query.
  */
@@ -3971,6 +3965,16 @@ int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
     return rv;
 }
 
+int32_t qc_sqlite_get_sql_mode(qc_sql_mode_t* sql_mode)
+{
+    return QC_RESULT_ERROR;
+}
+
+int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
+{
+    return QC_RESULT_ERROR;
+}
+
 /**
  * EXPORTS
  */
@@ -3997,6 +4001,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_field_info,
         qc_sqlite_get_function_info,
         qc_sqlite_get_preparable_stmt,
+        qc_sqlite_get_sql_mode,
+        qc_sqlite_set_sql_mode,
     };
 
     static MXS_MODULE info =

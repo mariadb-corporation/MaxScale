@@ -115,6 +115,16 @@ int32_t qc_dummy_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
     return QC_RESULT_OK;
 }
 
+int32_t qc_dummy_get_sql_mode(qc_sql_mode_t* sql_mode)
+{
+    return QC_RESULT_ERROR;
+}
+
+int32_t qc_dummy_set_sql_mode(qc_sql_mode_t sql_mode)
+{
+    return QC_RESULT_ERROR;
+}
+
 extern "C"
 {
     MXS_MODULE* MXS_CREATE_MODULE()
@@ -139,6 +149,8 @@ extern "C"
             qc_dummy_get_field_info,
             qc_dummy_get_function_info,
             qc_dummy_get_preparable_stmt,
+            qc_dummy_get_sql_mode,
+            qc_dummy_set_sql_mode,
         };
 
         static MXS_MODULE info =

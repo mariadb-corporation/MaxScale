@@ -3020,6 +3020,16 @@ void qc_mysql_thread_end(void)
     mysql_thread_end();
 }
 
+int32_t qc_mysql_get_sql_mode(qc_sql_mode_t* sql_mode)
+{
+    return QC_RESULT_ERROR;
+}
+
+int32_t qc_mysql_set_sql_mode(qc_sql_mode_t sql_mode)
+{
+    return QC_RESULT_ERROR;
+}
+
 /**
  * EXPORTS
  */
@@ -3049,6 +3059,8 @@ extern "C"
             qc_mysql_get_field_info,
             qc_mysql_get_function_info,
             qc_mysql_get_preparable_stmt,
+            qc_mysql_get_sql_mode,
+            qc_mysql_set_sql_mode,
         };
 
         static MXS_MODULE info =
