@@ -16,6 +16,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <sstream>
 
 using std::string;
 using std::deque;
@@ -127,4 +128,79 @@ bool HttpRequest::validate_api_version()
     }
 
     return rval;
+}
+
+namespace
+{
+struct ValueFormatter
+{
+    std::stringstream ss;
+    const char* separator;
+    const char* terminator;
+
+    ValueFormatter(const char* sep, const char* term):
+        separator(sep), terminator(term)
+    {
+    }
+};
+}
+
+static int value_combine_cb(void *cls,
+                          enum MHD_ValueKind kind,
+                          const char *key,
+                          const char *value)
+{
+    ValueFormatter& cnf = *(ValueFormatter*)cls;
+
+    cnf.ss << key;
+
+    if (value)
+    {
+        cnf.ss << cnf.separator << value;
+    }
+
+    cnf.ss << cnf.terminator;
+
+    return MHD_YES;
+}
+
+std::string HttpRequest::to_string() const
+{
+    std::stringstream req;
+    req << m_verb << " " << m_resource;
+
+    ValueFormatter opts("=", "&");
+    MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
+                              value_combine_cb, &opts);
+
+    std::string optstr = opts.ss.str();
+    size_t len = optstr.length();
+
+    if (len)
+    {
+        req << "?";
+
+        if (optstr[len - 1] == '&')
+        {
+            optstr.erase(len - 1);
+        }
+    }
+
+    req << optstr << " " << "HTTP/1.1" << "\r\n";
+
+    ValueFormatter hdr(": ", "\r\n");
+    MHD_get_connection_values(m_connection, MHD_HEADER_KIND,
+                              value_combine_cb, &hdr);
+
+    std::string hdrstr = hdr.ss.str();
+
+    if (hdrstr.length())
+    {
+        req << hdrstr;
+    }
+
+    req << "\r\n";
+
+    req << m_json_string;
+    return req.str();
 }

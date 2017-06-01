@@ -43,6 +43,7 @@ static int value_iterator(void *cls,
 
     return MHD_YES;
 }
+
 static int value_sum_iterator(void *cls,
                               enum MHD_ValueKind kind,
                               const char *key,
@@ -252,10 +253,24 @@ public:
         return  m_resource_parts.size() > 0 ? m_resource_parts[m_resource_parts.size() - 1] : "";
     }
 
+    /**
+     * @brief Return the value of the Host header
+     *
+     * @return The value of the Host header
+     */
     const char* host() const
     {
         return m_hostname.c_str();
     }
+
+    /**
+     * @brief Convert request to string format
+     *
+     * The returned string should be logically equivalent to the original request.
+     *
+     * @return The request in string format
+     */
+    std::string to_string() const;
 
     /**
      * @brief Drop the API version prefix

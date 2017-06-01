@@ -105,6 +105,8 @@ int Client::process(string url, string method, const char* upload_data, size_t *
     HttpRequest request(m_connection, url, method, json);
     HttpResponse reply(MHD_HTTP_NOT_FOUND);
 
+    MXS_DEBUG("Request:\n%s", request.to_string().c_str());
+
     if (url == "/")
     {
         // Respond to pings with 200 OK
