@@ -183,7 +183,7 @@ protected:
  * class MyFilter : public maxscale::Filter<MyFilter, MyFilterSession>
  * {
  * public:
- *      static MyFilter* create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
+ *      static MyFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
  *
  *      MyFilterSession* newSession(MXS_SESSION* pSession);
  *
