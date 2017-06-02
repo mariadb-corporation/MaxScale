@@ -18,37 +18,37 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(10);
+    TestConnections test(argc, argv);
+    test.set_timeout(10);
 
-    Test->connect_maxscale();
+    test.connect_maxscale();
 
-    Test->set_timeout(10);
-    Test->try_query(Test->conn_rwsplit, (char *) "SET @a=1");
-    Test->stop_timeout();
+    test.set_timeout(10);
+    test.try_query(test.conn_rwsplit, (char *) "SET @a=1");
+    test.stop_timeout();
     sleep(1);
-    Test->set_timeout(20);
-    Test->tprintf("Blocking first slave\n");
-    Test->repl->block_node(1);
-    Test->stop_timeout();
+    test.set_timeout(20);
+    test.tprintf("Blocking first slave\n");
+    test.repl->block_node(1);
+    test.stop_timeout();
     sleep(5);
-    Test->set_timeout(10);
-    Test->tprintf("Unblocking first slave and blocking second slave\n");
+    test.set_timeout(10);
+    test.tprintf("Unblocking first slave and blocking second slave\n");
 
-    Test->repl->unblock_node(1);
-    Test->stop_timeout();
+    test.repl->unblock_node(1);
+    test.stop_timeout();
     sleep(5);
-    Test->repl->block_node(2);
-    Test->stop_timeout();
+    test.repl->block_node(2);
+    test.stop_timeout();
     sleep(5);
-    Test->set_timeout(20);
+    test.set_timeout(20);
 
     int retries;
 
     for (retries = 0; retries < 10; retries++)
     {
         char server1_status[256];
-        Test->get_maxadmin_param((char *) "show server server2", (char *) "Status", server1_status);
+        test.get_maxadmin_param((char *) "show server server2", (char *) "Status", server1_status);
         if (strstr(server1_status, "Running"))
         {
             break;
@@ -56,28 +56,26 @@ int main(int argc, char *argv[])
         sleep(1);
     }
 
-    Test->add_result(retries == 10, "Slave is not recovered, slave status is not Running\n");
+    test.add_result(retries == 10, "Slave is not recovered, slave status is not Running\n");
 
-    Test->repl->connect();
-    int real_id = Test->repl->get_server_id(1);
+    test.repl->connect();
+    int real_id = test.repl->get_server_id(1);
 
     char server_id[200] = "";
-    find_field(Test->conn_rwsplit, "SELECT @@server_id", "@@server_id", server_id);
+    find_field(test.conn_rwsplit, "SELECT @@server_id", "@@server_id", server_id);
     int queried_id = atoi(server_id);
 
-    Test->add_result(queried_id != real_id, "The query server ID '%d' does not match the one from server '%d'. "
+    test.add_result(queried_id != real_id, "The query server ID '%d' does not match the one from server '%d'. "
                      "Slave was not recovered.", queried_id, real_id);
 
     char userval[200] = "";
-    find_field(Test->conn_rwsplit, "SELECT @a", "@a", userval);
+    find_field(test.conn_rwsplit, "SELECT @a", "@a", userval);
 
-    Test->add_result(atoi(userval) != 1, "User variable @a is not 1, it is '%s'", userval);
+    test.add_result(atoi(userval) != 1, "User variable @a is not 1, it is '%s'", userval);
 
-    Test->tprintf("Unblocking second slave\n");
-    Test->repl->unblock_node(2);
+    test.tprintf("Unblocking second slave\n");
+    test.repl->unblock_node(2);
 
-    Test->check_maxscale_alive();
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    test.check_maxscale_alive();
+    return test.global_result;
 }
