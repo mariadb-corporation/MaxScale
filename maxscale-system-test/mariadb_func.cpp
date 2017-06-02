@@ -461,14 +461,14 @@ int get_conn_num(MYSQL *conn, char * ip, char *hostname, char * db)
     MYSQL_RES *res;
     MYSQL_ROW row;
     unsigned long long int num_fields;
-    //unsigned long long int row_i=0;
     unsigned long long int rows;
     unsigned long long int i;
     unsigned int conn_num = 0;
-    char * hostname_internal;
+    const char * hostname_internal;
+
     if (strcmp(ip, "127.0.0.1") == 0)
     {
-        hostname_internal = (char*) "localhost";
+        hostname_internal = "localhost";
     }
     else
     {
@@ -516,9 +516,9 @@ int get_conn_num(MYSQL *conn, char * ip, char *hostname, char * db)
     }
     if (strcmp(ip, "127.0.0.1") == 0)
     {
-        // one extra connection i svisible in the processlist
+        // one extra connection is visible in the process list
         // output in case of local test
-        // (when maxscale is on the same machine as backends)
+        // (when MaxScale is on the same machine as backends)
         conn_num--;
     }
     return conn_num;
