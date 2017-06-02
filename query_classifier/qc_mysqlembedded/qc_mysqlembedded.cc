@@ -29,7 +29,6 @@
 #if defined(MYSQL_CLIENT)
 #undef MYSQL_CLIENT
 #endif
-
 #include <my_config.h>
 #include <mysql.h>
 #include <my_sys.h>
@@ -55,8 +54,11 @@
 #include <strfunc.h>
 #include <item_func.h>
 
+#include <pthread.h>
+
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/platform.h>
 #include <maxscale/query_classifier.h>
 // <maxscale/protocol/mysql.h> assumes it is being compiled agains Connector-C,
 // so we need to make certain Connector-C constants visible.
@@ -173,7 +175,9 @@ inline void get_string_and_length(const char* cs, const char** s, size_t* length
 }
 #endif
 
-static uint32_t sql_mode = 0;
+static qc_sql_mode_t              default_qc_sql_mode = QC_SQL_MODE_DEFAULT;
+static thread_local qc_sql_mode_t thread_qc_sql_mode  = QC_SQL_MODE_DEFAULT;
+static pthread_mutex_t            sql_mode_mutex      = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * Ensures that the query is parsed. If it is not already parsed, it
@@ -187,8 +191,37 @@ bool ensure_query_is_parsed(GWBUF* query)
 
     if (!parsed)
     {
-        global_system_variables.sql_mode |= sql_mode;
+        // Instead of modifying global_system_variables, from which
+        // thd->variables.sql_mode will be initialied, we should modify
+        // thd->variables.sql_mode _after_ it has been created and
+        // initialized.
+        //
+        // However, for whatever reason, the offset of that variable is
+        // different when accessed from within libmysqld and qc_mysqlembedded,
+        // so we will not modify the right variable even if it appears we do.
+        //
+        // So, for the time being we modify global_system_variables.sql_mode and
+        // serialize the parsing. That's ok, since qc_mysqlembedded is only
+        // used for verifying the behaviour of qc_sqlite.
+
+        ss_debug(int rv);
+
+        ss_debug(rv = )pthread_mutex_lock(&sql_mode_mutex);
+        ss_dassert(rv == 0);
+
+        if (thread_qc_sql_mode == QC_SQL_MODE_ORACLE)
+        {
+            global_system_variables.sql_mode |= MODE_ORACLE;
+        }
+        else
+        {
+            global_system_variables.sql_mode &= ~MODE_ORACLE;
+        }
+
         parsed = parse_query(query);
+
+        ss_debug(rv = )pthread_mutex_unlock(&sql_mode_mutex);
+        ss_dassert(rv == 0);
 
         if (!parsed)
         {
@@ -2939,7 +2972,7 @@ int32_t qc_mysql_setup(const char* zArgs)
 
                 if (strcmp(value, "MODE_ORACLE") == 0)
                 {
-                    sql_mode = MODE_ORACLE;
+                    default_qc_sql_mode = QC_SQL_MODE_ORACLE;
                     function_name_mappings = function_name_mappings_oracle;
                 }
                 else
@@ -3005,6 +3038,8 @@ void qc_mysql_process_end(void)
 
 int32_t qc_mysql_thread_init(void)
 {
+    thread_qc_sql_mode = default_qc_sql_mode;
+
     bool inited = (mysql_thread_init() == 0);
 
     if (!inited)
@@ -3022,12 +3057,24 @@ void qc_mysql_thread_end(void)
 
 int32_t qc_mysql_get_sql_mode(qc_sql_mode_t* sql_mode)
 {
-    return QC_RESULT_ERROR;
+    *sql_mode = thread_qc_sql_mode;
+    return QC_RESULT_OK;
 }
 
 int32_t qc_mysql_set_sql_mode(qc_sql_mode_t sql_mode)
 {
-    return QC_RESULT_ERROR;
+    int32_t rv = QC_RESULT_OK;
+
+    if ((sql_mode == QC_SQL_MODE_DEFAULT) || (sql_mode == QC_SQL_MODE_ORACLE))
+    {
+        thread_qc_sql_mode = sql_mode;
+    }
+    else
+    {
+        rv = QC_RESULT_ERROR;
+    }
+
+    return rv;
 }
 
 /**

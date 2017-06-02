@@ -3977,8 +3977,18 @@ int32_t qc_sqlite_get_sql_mode(qc_sql_mode_t* sql_mode)
 
 int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
 {
-    this_thread.sql_mode = sql_mode;
-    return QC_RESULT_OK;
+    int32_t rv = QC_RESULT_OK;
+
+    if ((sql_mode == QC_SQL_MODE_DEFAULT) || (sql_mode == QC_SQL_MODE_ORACLE))
+    {
+        this_thread.sql_mode = sql_mode;
+    }
+    else
+    {
+        rv = QC_RESULT_ERROR;
+    }
+
+    return rv;
 }
 
 /**
