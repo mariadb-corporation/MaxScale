@@ -333,6 +333,11 @@ createInstance(SERVICE *service, char **options)
     inst->row_target = AVRO_DEFAULT_BLOCK_ROW_COUNT;
     inst->trx_target = AVRO_DEFAULT_BLOCK_TRX_COUNT;
     inst->block_size = 0;
+    inst->gtid.domain = 0;
+    inst->gtid.event_num = 0;
+    inst->gtid.seq = 0;
+    inst->gtid.server_id = 0;
+    inst->gtid.timestamp = 0;
     int first_file = 1;
     bool err = false;
 

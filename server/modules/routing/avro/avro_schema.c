@@ -126,6 +126,8 @@ char* json_new_schema_from_table(TABLE_MAP *map)
 
     for (uint64_t i = 0; i < map->columns; i++)
     {
+        ss_info_dassert(create->column_names[i] && *create->column_names[i],
+                        "Column name should not be empty or NULL");
         json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
                                               "name", create->column_names[i],
                                               "type", column_type_to_avro_type(map->column_types[i]),
@@ -523,6 +525,7 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
         dest[bytes] = '\0';
 
         make_valid_avro_identifier(dest);
+        ss_dassert(strlen(dest) > 0);
     }
     else
     {
@@ -535,7 +538,7 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
 int extract_type_length(const char* ptr, char *dest)
 {
     /** Skip any leading whitespace */
-    while (isspace(*ptr) || *ptr == '`')
+    while (*ptr && (isspace(*ptr) || *ptr == '`'))
     {
         ptr++;
     }
@@ -545,7 +548,7 @@ int extract_type_length(const char* ptr, char *dest)
 
     /** Skip characters until we either hit a whitespace character or the start
      * of the length definition. */
-    while (!isspace(*ptr) && *ptr != '(')
+    while (*ptr && !isspace(*ptr) && *ptr != '(')
     {
         ptr++;
     }
@@ -556,7 +559,7 @@ int extract_type_length(const char* ptr, char *dest)
     dest[typelen] = '\0';
 
     /** Skip whitespace */
-    while (isspace(*ptr))
+    while (*ptr && isspace(*ptr))
     {
         ptr++;
     }
@@ -621,6 +624,7 @@ static int process_column_definition(const char *nameptr, char*** dest, char*** 
         lengths[i] = len;
         types[i] = strdup(type);
         names[i] = strdup(colname);
+        ss_info_dassert(*names[i] && *types[i], "`name` and `type` must not be empty");
         i++;
     }
 

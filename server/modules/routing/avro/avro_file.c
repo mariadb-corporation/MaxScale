@@ -114,6 +114,7 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, size
                                          &table->avro_schema))
         {
             MXS_ERROR("Avro error: %s", avro_strerror());
+            MXS_INFO("Avro schema: %s", json_schema);
             free(table);
             return NULL;
         }

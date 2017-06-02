@@ -204,7 +204,7 @@ void avro_update_index(AVRO_INSTANCE* router)
 /** The SQL for the in-memory used_tables table */
 static const char *insert_sql = "INSERT OR IGNORE INTO "MEMORY_TABLE_NAME
                                 "(domain, server_id, sequence, binlog_timestamp, table_name)"
-                                " VALUES (%lu, %lu, %lu, %lu, \"%s\")";
+                                " VALUES (%lu, %lu, %lu, %u, \"%s\")";
 
 /**
  * @brief Add a used table to the current transaction
