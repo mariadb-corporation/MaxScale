@@ -409,6 +409,11 @@ createInstance(SERVICE *service, char **options)
     inst->block_size = config_get_integer(params, "block_size");
 
     MXS_CONFIG_PARAMETER *param = config_get_param(params, "source");
+    inst->gtid.domain = 0;
+    inst->gtid.event_num = 0;
+    inst->gtid.seq = 0;
+    inst->gtid.server_id = 0;
+    inst->gtid.timestamp = 0;
     bool err = false;
 
     if (param)
