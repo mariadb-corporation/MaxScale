@@ -21,6 +21,7 @@
 #include <string>
 #include <sstream>
 #include <my_config.h>
+#define MYSQL_COM_QUERY       COM_QUERY
 #define MYSQL_COM_QUIT        COM_QUIT
 #define MYSQL_COM_INIT_DB     COM_INIT_DB
 #define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
@@ -28,6 +29,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
+#include "../../server/core/maxscale/setsqlmodeparser.hh"
 #include "testreader.hh"
 using std::cerr;
 using std::cin;
@@ -39,6 +41,7 @@ using std::map;
 using std::ostream;
 using std::string;
 using std::stringstream;
+using maxscale::SetSqlModeParser;
 
 #if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR == 3
 #define USING_MARIADB_103
@@ -1234,6 +1237,33 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     GWBUF* pCopy2 = create_gwbuf(s);
 
     bool success = compare(pClassifier1, pCopy1, pClassifier2, pCopy2);
+
+    if (success)
+    {
+        SetSqlModeParser::sql_mode_t sql_mode;
+        SetSqlModeParser parser;
+
+        if (parser.get_sql_mode(&pCopy1, &sql_mode) == SetSqlModeParser::IS_SET_SQL_MODE)
+        {
+            switch (sql_mode)
+            {
+            case SetSqlModeParser::DEFAULT:
+                pClassifier1->qc_set_sql_mode(QC_SQL_MODE_DEFAULT);
+                pClassifier2->qc_set_sql_mode(QC_SQL_MODE_DEFAULT);
+                break;
+
+            case SetSqlModeParser::ORACLE:
+                pClassifier1->qc_set_sql_mode(QC_SQL_MODE_ORACLE);
+                pClassifier2->qc_set_sql_mode(QC_SQL_MODE_ORACLE);
+                break;
+
+            default:
+                ss_dassert(!true);
+            case SetSqlModeParser::SOMETHING:
+                break;
+            };
+        }
+    }
 
     gwbuf_free(pCopy1);
     gwbuf_free(pCopy2);
