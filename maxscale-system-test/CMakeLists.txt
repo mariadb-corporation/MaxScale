@@ -421,8 +421,7 @@ add_test_executable(mxs812_2.cpp mxs812_2 longblob LABELS readwritesplit REPL_BA
 add_test_executable(mxs822_maxpasswd.cpp mxs822_maxpasswd maxpasswd LABELS maxscale REPL_BACKEND)
 
 # Do only SELECTS during time > wait_timeout and then do INSERT
-# This test will fail because the functionality hasn't been implemented
-#add_test_executable(mxs827_write_timeout.cpp mxs827_write_timeout mxs827_write_timeout LABELS readwritesplit REPL_BACKEND)
+add_test_executable(mxs827_write_timeout.cpp mxs827_write_timeout mxs827_write_timeout LABELS readwritesplit REPL_BACKEND)
 
 # Block and unblock first and second slaves and check that they are recovered
 add_test_executable(mxs874_slave_recovery.cpp mxs874_slave_recovery mxs874 LABELS readwritesplit REPL_BACKEND)
