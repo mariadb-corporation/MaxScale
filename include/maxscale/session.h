@@ -126,20 +126,21 @@ typedef struct mxs_upstream
 typedef struct session
 {
     skygw_chk_t             ses_chk_top;
-    mxs_session_state_t     state;            /*< Current descriptor state */
-    size_t                  ses_id;           /*< Unique session identifier */
-    struct dcb              *client_dcb;      /*< The client connection */
-    void                    *router_session;  /*< The router instance data */
-    MXS_SESSION_STATS       stats;            /*< Session statistics */
-    struct service          *service;         /*< The service this session is using */
-    int                     n_filters;        /*< Number of filter sessions */
-    SESSION_FILTER          *filters;         /*< The filters in use within this session */
-    MXS_DOWNSTREAM          head;             /*< Head of the filter chain */
-    MXS_UPSTREAM            tail;             /*< The tail of the filter chain */
-    int                     refcount;         /*< Reference count on the session */
-    bool                    ses_is_child;     /*< this is a child session */
-    mxs_session_trx_state_t trx_state;        /*< The current transaction state. */
-    bool                    autocommit;       /*< Whether autocommit is on. */
+    mxs_session_state_t     state;                /*< Current descriptor state */
+    size_t                  ses_id;               /*< Unique session identifier */
+    struct dcb              *client_dcb;          /*< The client connection */
+    void                    *router_session;      /*< The router instance data */
+    MXS_SESSION_STATS       stats;                /*< Session statistics */
+    struct service          *service;             /*< The service this session is using */
+    int                     n_filters;            /*< Number of filter sessions */
+    SESSION_FILTER          *filters;             /*< The filters in use within this session */
+    MXS_DOWNSTREAM          head;                 /*< Head of the filter chain */
+    MXS_UPSTREAM            tail;                 /*< The tail of the filter chain */
+    int                     refcount;             /*< Reference count on the session */
+    bool                    ses_is_child;         /*< this is a child session */
+    mxs_session_trx_state_t trx_state;            /*< The current transaction state. */
+    bool                    autocommit;           /*< Whether autocommit is on. */
+    intptr_t                client_protocol_data; /*< Owned and managed by the client protocol. */
     struct
     {
         GWBUF *buffer; /**< Buffer containing the statement */
