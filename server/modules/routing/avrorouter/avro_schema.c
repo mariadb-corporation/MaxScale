@@ -102,16 +102,16 @@ char* json_new_schema_from_table(TABLE_MAP *map)
     json_object_set_new(schema, "name", json_string("ChangeRecord"));
 
     json_t *array = json_array();
-    json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                          avro_domain, "type", "int"));
-    json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                          avro_server_id, "type", "int"));
-    json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                          avro_sequence, "type", "int"));
-    json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                          avro_event_number, "type", "int"));
-    json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
-                                          avro_timestamp, "type", "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
+                                              avro_domain, "type", "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
+                                              avro_server_id, "type", "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
+                                              avro_sequence, "type", "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
+                                              avro_event_number, "type", "int"));
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s}", "name",
+                                              avro_timestamp, "type", "int"));
 
     /** Enums and other complex types are defined with complete JSON objects
      * instead of string values */
@@ -119,18 +119,19 @@ char* json_new_schema_from_table(TABLE_MAP *map)
                                        "name", "EVENT_TYPES", "symbols", "insert",
                                        "update_before", "update_after", "delete");
 
-    json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:o}", "name", avro_event_type,
-                                          "type", event_types));
+    // Ownership of `event_types` is stolen when using the `o` format
+    json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:o}", "name", avro_event_type,
+                                              "type", event_types));
 
     for (uint64_t i = 0; i < map->columns; i++)
     {
         ss_info_dassert(create->column_names[i] && *create->column_names[i],
                         "Column name should not be empty or NULL");
-        json_array_append(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
-                                              "name", create->column_names[i],
-                                              "type", column_type_to_avro_type(map->column_types[i]),
-                                              "real_type", create->column_types[i],
-                                              "length", create->column_lengths[i]));
+        json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
+                                                  "name", create->column_names[i],
+                                                  "type", column_type_to_avro_type(map->column_types[i]),
+                                                  "real_type", create->column_types[i],
+                                                  "length", create->column_lengths[i]));
     }
     json_object_set_new(schema, "fields", array);
     char* rval = json_dumps(schema, JSON_PRESERVE_ORDER);
