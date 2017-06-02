@@ -9,7 +9,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
 use_priority=true
-#root_node_as_master=false
+root_node_as_master=false
 
 [RW Split Router]
 type=service

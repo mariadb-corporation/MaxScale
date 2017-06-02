@@ -86,7 +86,7 @@ servers=gserver1,gserver2,gserver3,gserver4
 user=maxskysql
 passwd=skysql
 monitor_interval=100
-#root_node_as_master=false
+root_node_as_master=false
 
 [server1]
 type=server

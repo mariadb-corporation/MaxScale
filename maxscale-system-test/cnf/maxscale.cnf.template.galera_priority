@@ -12,7 +12,7 @@ user=maxskysql
 passwd=skysql
 use_priority=true
 monitor_interval=1000
-#root_node_as_master=false
+root_node_as_master=false
 
 [RW Split Router]
 type=service
