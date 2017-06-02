@@ -139,6 +139,7 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
                         errmsg = NULL;
                         prev_gtid = gtid;
                     }
+                    json_decref(row);
                 }
                 else
                 {
