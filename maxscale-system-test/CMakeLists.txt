@@ -223,7 +223,7 @@ add_test_executable(bug730.cpp bug730 bug730 LABELS regexfilter REPL_BACKEND)
 add_test_executable(bulk_insert.cpp bulk_insert bulk_insert LABELS MySQLProtocol REPL_BACKEND 10.2)
 
 # Tests for the CCRFilter module
-#add_test_executable(ccrfilter.cpp ccrfilter ccrfilter LABELS ccrfilter LIGHT REPL_BACKEND)
+add_test_executable(ccrfilter.cpp ccrfilter ccrfilter LABELS ccrfilter LIGHT REPL_BACKEND)
 
 # Tries to reconfigure replication setup to use another node as a Master
 add_test_executable(change_master_during_session.cpp change_master_during_session replication LABELS readwritesplit mysqlmon REPL_BACKEND)
@@ -250,19 +250,19 @@ add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replicatio
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
 
 # MySQL Monitor Failover Test
-#add_test_executable(failover_mysqlmon.cpp failover_mysqlmon failover_mysqlmon LABELS mysqlmon REPL_BACKEND)
+add_test_executable(failover_mysqlmon.cpp failover_mysqlmon failover_mysqlmon LABELS mysqlmon REPL_BACKEND)
 
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
 # A set of tests for Firewall filter
 add_test_executable(fwf.cpp fwf fwf LABELS dbfwfilter REPL_BACKEND)
-#add_test_executable(fwf2.cpp fwf2 fwf LABELS dbfwfilter REPL_BACKEND)
-#add_test_executable(fwf_duplicate_rules.cpp fwf_duplicate_rules fwf LABELS dbfwfilter REPL_BACKEND)
+add_test_executable(fwf2.cpp fwf2 fwf LABELS dbfwfilter REPL_BACKEND)
+add_test_executable(fwf_duplicate_rules.cpp fwf_duplicate_rules fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_prepared_stmt.cpp fwf_prepared_stmt fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_actions.cpp fwf_actions fwf_action LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_logging.cpp fwf_logging fwf_logging LABELS dbfwfilter REPL_BACKEND)
-#add_test_executable(fwf_reload.cpp fwf_reload fwf LABELS dbfwfilter REPL_BACKEND)
+add_test_executable(fwf_reload.cpp fwf_reload fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_com_ping.cpp fwf_com_ping fwf_com_ping LABELS dbfwfilter REPL_BACKEND)
 
@@ -273,7 +273,7 @@ add_test_executable(galera_priority.cpp galera_priority galera_priority LABELS g
 add_test_executable(kill_master.cpp kill_master replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Test insertstream filter
-#add_test_script(insertstream insertstream.sh insertstream LABELS insertstream REPL_BACKEND)
+add_test_script(insertstream insertstream.sh insertstream LABELS insertstream REPL_BACKEND)
 
 # Check load balancing
 add_test_executable(load_balancing.cpp load_balancing load LABELS readwritesplit LIGHT REPL_BACKEND)
@@ -324,7 +324,7 @@ add_test_executable(maxscale_process_user.cpp maxscale_process_user replication 
 add_test_executable(mm.cpp mm mm LABELS mmmon BREAKS_REPL)
 
 # MySQL Monitor with Multi-master configurations
-#add_test_executable(mm_mysqlmon.cpp mm_mysqlmon mm_mysqlmon LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
+add_test_executable(mm_mysqlmon.cpp mm_mysqlmon mm_mysqlmon LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
 
 # MySQL Monitor crash safety
 #add_test_executable(mysqlmon_backup.cpp mysqlmon_backup mysqlmon_backup LABELS mysqlmon REPL_BACKEND)
@@ -429,36 +429,36 @@ add_test_executable(mxs874_slave_recovery.cpp mxs874_slave_recovery mxs874 LABEL
 
 # A set of dynamic configuration tests
 # Server removal test
-#add_test_executable(mxs922_bad_server.cpp mxs922_bad_server mxs922 LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs922_bad_server.cpp mxs922_bad_server mxs922 LABELS maxscale REPL_BACKEND)
 
 # Server creation test
-#add_test_executable(mxs922_server.cpp mxs922_server mxs922_base LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs922_server.cpp mxs922_server mxs922_base LABELS maxscale REPL_BACKEND)
 
 # Monitor creation test
-#add_test_executable(mxs922_monitor.cpp mxs922_monitor mxs922_base LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs922_monitor.cpp mxs922_monitor mxs922_base LABELS maxscale REPL_BACKEND)
 
 # Double creation of listeners, expect no crash
-#add_test_executable(mxs922_double_listener.cpp mxs922_double_listener mxs922_base LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs922_double_listener.cpp mxs922_double_listener mxs922_base LABELS maxscale REPL_BACKEND)
 
 # Test persisting of configuration changes
-#add_test_executable(mxs922_restart.cpp mxs922_restart mxs922 LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs922_restart.cpp mxs922_restart mxs922 LABELS maxscale REPL_BACKEND)
 
 # Server scaling test
-#add_test_executable(mxs922_scaling.cpp mxs922_scaling mxs922_base LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs922_scaling.cpp mxs922_scaling mxs922_base LABELS maxscale REPL_BACKEND)
 
 # Dynamic listener SSL test
-#add_test_executable(mxs922_listener_ssl.cpp mxs922_listener_ssl mxs922_base LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs922_listener_ssl.cpp mxs922_listener_ssl mxs922_base LABELS maxscale REPL_BACKEND)
 
 # Test of MaxRows filter
-#add_test_executable(mxs1071_maxrows.cpp mxs1071_maxrows maxrows LABELS maxrowsfilter REPL_BACKEND)
+add_test_executable(mxs1071_maxrows.cpp mxs1071_maxrows maxrows LABELS maxrowsfilter REPL_BACKEND)
 
 # Test of Masking filter
-#add_test_script(masking_mysqltest masking_mysqltest_driver.sh masking_mysqltest LABELS maskingfilter REPL_BACKEND)
+add_test_script(masking_mysqltest masking_mysqltest_driver.sh masking_mysqltest LABELS maskingfilter REPL_BACKEND)
 
-#add_test_script(masking_user masking_user.sh masking_mysqltest LABELS maskingfilter REPL_BACKEND)
+add_test_script(masking_user masking_user.sh masking_mysqltest LABELS maskingfilter REPL_BACKEND)
 
 # Test of Cache filter
-#add_test_script(cache_basic cache_basic.sh cache_basic LABELS cachefilter REPL_BACKEND)
+add_test_script(cache_basic cache_basic.sh cache_basic LABELS cachefilter REPL_BACKEND)
 
 # Set utf8mb4 in the backend and restart Maxscale
 add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACKEND)
@@ -532,10 +532,10 @@ add_test_executable(rwsplit_readonly_stress.cpp rwsplit_readonly_stress rwsplit_
 add_test_executable(rwsplit_multi_stmt.cpp rwsplit_multi_stmt rwsplit_multi_stmt LABELS readwritesplit REPL_BACKEND)
 
 # Test readwritesplit multi-statement handling
-#add_test_executable(rwsplit_read_only_trx.cpp rwsplit_read_only_trx rwsplit_read_only_trx LABELS readwritesplit REPL_BACKEND)
+add_test_executable(rwsplit_read_only_trx.cpp rwsplit_read_only_trx rwsplit_read_only_trx LABELS readwritesplit REPL_BACKEND)
 
 # Test replication-manager with MaxScale
-#add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
+add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
 #add_test_executable_notest(replication_manager_2nodes.cpp replication_manager_2nodes replication_manager_2nodes LABELS maxscale REPL_BACKEND)
 #add_test_executable_notest(replication_manager_3nodes.cpp replication_manager_3nodes replication_manager_3nodes LABELS maxscale REPL_BACKEND)
 
@@ -558,7 +558,7 @@ add_test_executable(session_limits.cpp session_limits session_limits LABELS read
 add_test_executable(sharding.cpp sharding sharding LABELS schemarouter BREAKS_REPL)
 
 # MXS-1160: LOAD DATA LOCAL INFILE with schemarouter
-#add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS schemarouter BREAKS_REPL)
+add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS schemarouter BREAKS_REPL)
 
 # Do short sessions (open conn, short query, close conn) in the loop
 add_test_executable(short_sessions.cpp short_sessions replication LABELS readwritesplit readconnroute REPL_BACKEND)
@@ -650,7 +650,7 @@ add_test_executable(cdc_client.cpp cdc_client avro LABELS avrorouter binlogroute
 add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog LABELS binlogrouter HEAVY BREAKS_REPL)
 
 # Try to configure binlog router to use wrong password for Master and check 'slave status' on binlog
-#add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd setup_binlog LABELS binlogrouter BREAKS_REPL)
+add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd setup_binlog LABELS binlogrouter BREAKS_REPL)
 
 # Regression case for crash if long host name is used for binlog router (in 'change master to ...')
 add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog LABELS binlogrouter BREAKS_REPL)
