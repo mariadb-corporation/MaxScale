@@ -24,10 +24,10 @@ int main(int argc, char** argv)
     test.try_query(test.conn_rwsplit, "CREATE TABLE test.t1(a INT, b INT, c INT)");
     test.try_query(test.conn_rwsplit, "INSERT INTO test.t1 VALUES (1, 1, 1)");
 
-    test.add_result(execute_query(test.conn_rwsplit, "PREPARE my_ps FROM 'SELECT a, b FROM test.t1'") == 0,
-                    "Text protocol preparation should fail");
-    test.add_result(execute_query(test.conn_rwsplit, "EXECUTE my_ps") == 0,
-                    "Text protocol execution should fail");
+    test.add_result(execute_query(test.conn_rwsplit, "PREPARE my_ps FROM 'SELECT a, b FROM test.t1'"),
+                    "Text protocol preparation should succeed");
+    test.add_result(execute_query(test.conn_rwsplit, "EXECUTE my_ps"),
+                    "Text protocol execution should succeed");
 
     test.add_result(execute_query(test.conn_rwsplit, "PREPARE my_ps2 FROM 'SELECT c FROM test.t1'") == 0,
                     "Text protocol preparation should fail");
@@ -37,8 +37,8 @@ int main(int argc, char** argv)
     MYSQL_STMT* stmt = mysql_stmt_init(test.conn_rwsplit);
     const char *query = "SELECT a, b FROM test.t1";
 
-    test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)) == 0, "Binary protocol preparation should fail");
-    test.add_result(mysql_stmt_execute(stmt) == 0, "Binary protocol execution should fail");
+    test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)), "Binary protocol preparation should succeed");
+    test.add_result(mysql_stmt_execute(stmt), "Binary protocol execution should succeed");
     mysql_stmt_close(stmt);
 
     stmt = mysql_stmt_init(test.conn_rwsplit);
