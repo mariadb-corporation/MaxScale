@@ -280,12 +280,22 @@ bool runtime_alter_server(SERVER *server, char *key, char *value)
     {
         server_update_port(server, atoi(value));
     }
-    else if (strcmp(key, "monuser") == 0)
+    else if (strcmp(key, "monuser") == 0 || strcmp(key, "monitoruser") == 0)
     {
+        if (strcmp(key, "monuser") == 0)
+        {
+            MXS_WARNING("Use of `monuser` is deprecated, use `monitoruser` instead.");
+        }
+
         server_update_credentials(server, value, server->monpw);
     }
-    else if (strcmp(key, "monpw") == 0)
+    else if (strcmp(key, "monpw") == 0 || strcmp(key, "monitorpw") == 0)
     {
+        if (strcmp(key, "monpw") == 0)
+        {
+            MXS_WARNING("Use of `monpw` is deprecated, use `monitorpw` instead.");
+        }
+
         server_update_credentials(server, server->monuser, value);
     }
     else
