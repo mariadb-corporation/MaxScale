@@ -654,11 +654,9 @@ static void freeSession(ROUTER* router_instance, void* router_client_ses)
 {
     AVRO_INSTANCE *router = (AVRO_INSTANCE *) router_instance;
     AVRO_CLIENT *client = (AVRO_CLIENT *) router_client_ses;
-    int prev_val;
 
-    prev_val = atomic_add(&router->stats.n_clients, -1);
+    ss_debug(int prev_val = )atomic_add(&router->stats.n_clients, -1);
     ss_dassert(prev_val > 0);
-    (void) prev_val;
 
     free(client->uuid);
     maxavro_file_close(client->file_handle);
@@ -713,9 +711,6 @@ static void closeSession(ROUTER *instance, void *router_session)
 
     spinlock_release(&client->file_lock);
     spinlock_release(&client->catch_lock);
-
-    /* decrease server registered slaves counter */
-    atomic_add(&router->stats.n_clients, -1);
 }
 
 /**
