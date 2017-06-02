@@ -74,30 +74,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-#define MYSQL_COM_QUERY_HEADER_SIZE 5 /*< 3 bytes size, 1 sequence, 1 command */
-#define MAX_QUERYBUF_SIZE 2048
-typedef struct parsing_info_st
-{
-#if defined(SS_DEBUG)
-    skygw_chk_t pi_chk_top;
-#endif
-    void* pi_handle; /*< parsing info object pointer */
-    char* pi_query_plain_str; /*< query as plain string */
-    void (*pi_done_fp)(void *); /*< clean-up function for parsing info */
-    QC_FIELD_INFO* field_infos;
-    size_t field_infos_len;
-    size_t field_infos_capacity;
-    QC_FUNCTION_INFO* function_infos;
-    size_t function_infos_len;
-    size_t function_infos_capacity;
-    GWBUF* preparable_stmt;
-    qc_parse_result_t result;
-    int32_t type_mask;
-#if defined(SS_DEBUG)
-    skygw_chk_t pi_chk_tail;
-#endif
-} parsing_info_t;
-
 /**
  * Defines what a particular name should be mapped to.
  */
@@ -119,9 +95,7 @@ static NAME_MAPPING function_name_mappings_oracle[] =
     { NULL, NULL }
 };
 
-static NAME_MAPPING* function_name_mappings = function_name_mappings_default;
-
-static const char* map_function_name(const char* from)
+static const char* map_function_name(NAME_MAPPING* function_name_mappings, const char* from)
 {
     NAME_MAPPING* map = function_name_mappings;
     const char* to = NULL;
@@ -140,6 +114,31 @@ static const char* map_function_name(const char* from)
 
     return to ? to : from;
 }
+
+#define MYSQL_COM_QUERY_HEADER_SIZE 5 /*< 3 bytes size, 1 sequence, 1 command */
+#define MAX_QUERYBUF_SIZE 2048
+typedef struct parsing_info_st
+{
+#if defined(SS_DEBUG)
+    skygw_chk_t pi_chk_top;
+#endif
+    void* pi_handle; /*< parsing info object pointer */
+    char* pi_query_plain_str; /*< query as plain string */
+    void (*pi_done_fp)(void *); /*< clean-up function for parsing info */
+    QC_FIELD_INFO* field_infos;
+    size_t field_infos_len;
+    size_t field_infos_capacity;
+    QC_FUNCTION_INFO* function_infos;
+    size_t function_infos_len;
+    size_t function_infos_capacity;
+    GWBUF* preparable_stmt;
+    qc_parse_result_t result;
+    int32_t type_mask;
+    NAME_MAPPING* function_name_mappings;
+#if defined(SS_DEBUG)
+    skygw_chk_t pi_chk_tail;
+#endif
+} parsing_info_t;
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
 
@@ -175,9 +174,27 @@ inline void get_string_and_length(const char* cs, const char** s, size_t* length
 }
 #endif
 
-static qc_sql_mode_t              default_qc_sql_mode = QC_SQL_MODE_DEFAULT;
-static thread_local qc_sql_mode_t thread_qc_sql_mode  = QC_SQL_MODE_DEFAULT;
-static pthread_mutex_t            sql_mode_mutex      = PTHREAD_MUTEX_INITIALIZER;
+static struct
+{
+    qc_sql_mode_t   sql_mode;
+    pthread_mutex_t sql_mode_mutex;
+    NAME_MAPPING*   function_name_mappings;
+} this_unit =
+{
+    QC_SQL_MODE_DEFAULT,
+    PTHREAD_MUTEX_INITIALIZER,
+    function_name_mappings_default
+};
+
+static thread_local struct
+{
+    qc_sql_mode_t sql_mode;
+    NAME_MAPPING* function_name_mappings;
+} this_thread =
+{
+    QC_SQL_MODE_DEFAULT,
+    function_name_mappings_default
+};
 
 /**
  * Ensures that the query is parsed. If it is not already parsed, it
@@ -206,10 +223,10 @@ bool ensure_query_is_parsed(GWBUF* query)
 
         ss_debug(int rv);
 
-        ss_debug(rv = )pthread_mutex_lock(&sql_mode_mutex);
+        ss_debug(rv = )pthread_mutex_lock(&this_unit.sql_mode_mutex);
         ss_dassert(rv == 0);
 
-        if (thread_qc_sql_mode == QC_SQL_MODE_ORACLE)
+        if (this_thread.sql_mode == QC_SQL_MODE_ORACLE)
         {
             global_system_variables.sql_mode |= MODE_ORACLE;
         }
@@ -220,7 +237,7 @@ bool ensure_query_is_parsed(GWBUF* query)
 
         parsed = parse_query(query);
 
-        ss_debug(rv = )pthread_mutex_unlock(&sql_mode_mutex);
+        ss_debug(rv = )pthread_mutex_unlock(&this_unit.sql_mode_mutex);
         ss_dassert(rv == 0);
 
         if (!parsed)
@@ -1675,6 +1692,8 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
     pi->pi_handle = mysql;
     pi->pi_done_fp = donefun;
     pi->result = QC_QUERY_INVALID;
+    ss_dassert(this_thread.function_name_mappings);
+    pi->function_name_mappings = this_thread.function_name_mappings;
 
 retblock:
     return pi;
@@ -2207,7 +2226,7 @@ static void add_function_info(parsing_info_t* info,
 {
     ss_dassert(name);
 
-    name = map_function_name(name);
+    name = map_function_name(info->function_name_mappings, name);
 
     QC_FUNCTION_INFO item = { (char*)name, usage };
 
@@ -2972,8 +2991,8 @@ int32_t qc_mysql_setup(const char* zArgs)
 
                 if (strcmp(value, "MODE_ORACLE") == 0)
                 {
-                    default_qc_sql_mode = QC_SQL_MODE_ORACLE;
-                    function_name_mappings = function_name_mappings_oracle;
+                    this_unit.sql_mode = QC_SQL_MODE_ORACLE;
+                    this_unit.function_name_mappings = function_name_mappings_oracle;
                 }
                 else
                 {
@@ -3016,6 +3035,10 @@ int32_t qc_mysql_process_init(void)
 
         if (rc != 0)
         {
+            this_thread.sql_mode = this_unit.sql_mode;
+            ss_dassert(this_unit.function_name_mappings);
+            this_thread.function_name_mappings = this_unit.function_name_mappings;
+
             MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
         }
         else
@@ -3038,7 +3061,9 @@ void qc_mysql_process_end(void)
 
 int32_t qc_mysql_thread_init(void)
 {
-    thread_qc_sql_mode = default_qc_sql_mode;
+    this_thread.sql_mode = this_unit.sql_mode;
+    ss_dassert(this_unit.function_name_mappings);
+    this_thread.function_name_mappings = this_unit.function_name_mappings;
 
     bool inited = (mysql_thread_init() == 0);
 
@@ -3057,7 +3082,7 @@ void qc_mysql_thread_end(void)
 
 int32_t qc_mysql_get_sql_mode(qc_sql_mode_t* sql_mode)
 {
-    *sql_mode = thread_qc_sql_mode;
+    *sql_mode = this_thread.sql_mode;
     return QC_RESULT_OK;
 }
 
@@ -3065,12 +3090,19 @@ int32_t qc_mysql_set_sql_mode(qc_sql_mode_t sql_mode)
 {
     int32_t rv = QC_RESULT_OK;
 
-    if ((sql_mode == QC_SQL_MODE_DEFAULT) || (sql_mode == QC_SQL_MODE_ORACLE))
+    switch (sql_mode)
     {
-        thread_qc_sql_mode = sql_mode;
-    }
-    else
-    {
+    case QC_SQL_MODE_DEFAULT:
+        this_thread.sql_mode = sql_mode;
+        this_thread.function_name_mappings = function_name_mappings_default;
+        break;
+
+    case QC_SQL_MODE_ORACLE:
+        this_thread.sql_mode = sql_mode;
+        this_thread.function_name_mappings = function_name_mappings_oracle;
+        break;
+
+    default:
         rv = QC_RESULT_ERROR;
     }
 

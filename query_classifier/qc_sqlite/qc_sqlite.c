@@ -64,45 +64,6 @@ typedef enum qc_parse_as
 } qc_parse_as_t;
 
 /**
- * Contains information about a particular query.
- */
-typedef struct qc_sqlite_info
-{
-    qc_parse_result_t status;        // The validity of the information in this structure.
-    uint32_t collect;                // What information should be collected.
-    uint32_t collected;              // What information has been collected.
-    const char* query;               // The query passed to sqlite.
-    size_t query_len;                // The length of the query.
-
-    uint32_t type_mask;              // The type mask of the query.
-    qc_query_op_t operation;         // The operation in question.
-    bool has_clause;                 // Has WHERE or HAVING.
-    char** table_names;              // Array of table names used in the query.
-    size_t table_names_len;          // The used entries in table_names.
-    size_t table_names_capacity;     // The capacity of table_names.
-    char** table_fullnames;          // Array of full (i.e. qualified) table names used in the query.
-    size_t table_fullnames_len;      // The used entries in table_fullnames.
-    size_t table_fullnames_capacity; // The capacity of table_fullnames.
-    char* created_table_name;        // The name of a created table.
-    bool is_drop_table;              // Is the query a DROP TABLE.
-    char** database_names;           // Array of database names used in the query.
-    size_t database_names_len;       // The used entries in database_names.
-    size_t database_names_capacity;  // The capacity of database_names.
-    int keyword_1;                   // The first encountered keyword.
-    int keyword_2;                   // The second encountered keyword.
-    char* prepare_name;              // The name of a prepared statement.
-    GWBUF* preparable_stmt;          // The preparable statement.
-    QC_FIELD_INFO *field_infos;      // Pointer to array of QC_FIELD_INFOs.
-    size_t field_infos_len;          // The used entries in field_infos.
-    size_t field_infos_capacity;     // The capacity of the field_infos array.
-    QC_FUNCTION_INFO *function_infos;// Pointer to array of QC_FUNCTION_INFOs.
-    size_t function_infos_len;       // The used entries in function_infos.
-    size_t function_infos_capacity;  // The capacity of the function_infos array.
-    bool initializing;               // Whether we are initializing sqlite3.
-    qc_sql_mode_t sql_mode;          // The current sql_mode.
-} QC_SQLITE_INFO;
-
-/**
  * Defines what a particular name should be mapped to.
  */
 typedef struct qc_name_mapping
@@ -131,6 +92,46 @@ static QC_NAME_MAPPING function_name_mappings_oracle[] =
 };
 
 /**
+ * Contains information about a particular query.
+ */
+typedef struct qc_sqlite_info
+{
+    qc_parse_result_t status;                // The validity of the information in this structure.
+    uint32_t collect;                        // What information should be collected.
+    uint32_t collected;                      // What information has been collected.
+    const char* query;                       // The query passed to sqlite.
+    size_t query_len;                        // The length of the query.
+
+    uint32_t type_mask;                      // The type mask of the query.
+    qc_query_op_t operation;                 // The operation in question.
+    bool has_clause;                         // Has WHERE or HAVING.
+    char** table_names;                      // Array of table names used in the query.
+    size_t table_names_len;                  // The used entries in table_names.
+    size_t table_names_capacity;             // The capacity of table_names.
+    char** table_fullnames;                  // Array of full (i.e. qualified) table names used in the query.
+    size_t table_fullnames_len;              // The used entries in table_fullnames.
+    size_t table_fullnames_capacity;         // The capacity of table_fullnames.
+    char* created_table_name;                // The name of a created table.
+    bool is_drop_table;                      // Is the query a DROP TABLE.
+    char** database_names;                   // Array of database names used in the query.
+    size_t database_names_len;               // The used entries in database_names.
+    size_t database_names_capacity;          // The capacity of database_names.
+    int keyword_1;                           // The first encountered keyword.
+    int keyword_2;                           // The second encountered keyword.
+    char* prepare_name;                      // The name of a prepared statement.
+    GWBUF* preparable_stmt;                  // The preparable statement.
+    QC_FIELD_INFO *field_infos;              // Pointer to array of QC_FIELD_INFOs.
+    size_t field_infos_len;                  // The used entries in field_infos.
+    size_t field_infos_capacity;             // The capacity of the field_infos array.
+    QC_FUNCTION_INFO *function_infos;        // Pointer to array of QC_FUNCTION_INFOs.
+    size_t function_infos_len;               // The used entries in function_infos.
+    size_t function_infos_capacity;          // The capacity of the function_infos array.
+    bool initializing;                       // Whether we are initializing sqlite3.
+    qc_sql_mode_t sql_mode;                  // The current sql_mode.
+    QC_NAME_MAPPING* function_name_mappings; // How function names should be mapped.
+} QC_SQLITE_INFO;
+
+/**
  * The state of qc_sqlite.
  */
 static struct
@@ -148,10 +149,11 @@ static struct
  */
 static thread_local struct
 {
-    bool initialized;       // Whether the thread specific data has been initialized.
-    sqlite3* db;            // Thread specific database handle.
-    qc_sql_mode_t sql_mode; // What sql_mode is used.
-    QC_SQLITE_INFO* info;   // The information for the current statement being classified.
+    bool initialized;                        // Whether the thread specific data has been initialized.
+    sqlite3* db;                             // Thread specific database handle.
+    qc_sql_mode_t sql_mode;                  // What sql_mode is used.
+    QC_SQLITE_INFO* info;                    // The information for the current statement being classified.
+    QC_NAME_MAPPING* function_name_mappings; // How function names should be mapped.
 } this_thread;
 
 /**
@@ -182,7 +184,7 @@ static bool is_sequence_related_field(QC_SQLITE_INFO* info,
                                       const char* column);
 static bool is_sequence_related_function(QC_SQLITE_INFO* info, const char* func_name);
 static void log_invalid_data(GWBUF* query, const char* message);
-static const char* map_function_name(const char* name);
+static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
 static bool parse_query(GWBUF* query, uint32_t collect);
 static void parse_query_string(const char* query, size_t len);
 static bool query_is_parsed(GWBUF* query, uint32_t collect);
@@ -439,6 +441,7 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info, uint32_t collect)
     info->function_infos_capacity = 0;
     info->initializing = false;
     info->sql_mode = this_thread.sql_mode;
+    info->function_name_mappings = this_thread.function_name_mappings;
 
     return info;
 }
@@ -747,9 +750,17 @@ static void log_invalid_data(GWBUF* query, const char* message)
     }
 }
 
-static const char* map_function_name(const char* from)
+/**
+ * Map a function name to another.
+ *
+ * @param function_name_mappings  The name mapping to use.
+ * @param from                    The function name to map.
+ *
+ * @param The mapped name, or @c from if the name is not mapped.
+ */
+static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* from)
 {
-    QC_NAME_MAPPING* map = this_unit.function_name_mappings;
+    QC_NAME_MAPPING* map = function_name_mappings;
     const char* to = NULL;
 
     while (!to && map->from)
@@ -926,7 +937,7 @@ static void update_function_info(QC_SQLITE_INFO* info,
         return;
     }
 
-    name = map_function_name(name);
+    name = map_function_name(info->function_name_mappings, name);
 
     QC_FUNCTION_INFO item = { (char*)name, usage };
 
@@ -3499,6 +3510,7 @@ static int32_t qc_sqlite_thread_init(void)
     if (rc == SQLITE_OK)
     {
         this_thread.sql_mode = this_unit.sql_mode;
+        this_thread.function_name_mappings = this_unit.function_name_mappings;
         this_thread.initialized = true;
 
         MXS_INFO("In-memory sqlite database successfully opened for thread %lu.",
@@ -3979,12 +3991,26 @@ int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
 {
     int32_t rv = QC_RESULT_OK;
 
-    if ((sql_mode == QC_SQL_MODE_DEFAULT) || (sql_mode == QC_SQL_MODE_ORACLE))
+    switch (sql_mode)
     {
+    case QC_SQL_MODE_DEFAULT:
         this_thread.sql_mode = sql_mode;
-    }
-    else
-    {
+        if (this_unit.parse_as == QC_PARSE_AS_103)
+        {
+            this_thread.function_name_mappings = function_name_mappings_103;
+        }
+        else
+        {
+            this_thread.function_name_mappings = function_name_mappings_default;
+        }
+        break;
+
+    case QC_SQL_MODE_ORACLE:
+        this_thread.sql_mode = sql_mode;
+        this_thread.function_name_mappings = function_name_mappings_oracle;
+        break;
+
+    default:
         rv = QC_RESULT_ERROR;
     }
 
