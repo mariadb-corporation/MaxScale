@@ -22,18 +22,19 @@
 #define MXS_MODULE_NAME "MySQLClient"
 
 #include <maxscale/protocol.h>
-#include <maxscale/alloc.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/protocol/mysql.h>
-#include <maxscale/ssl.h>
-#include <maxscale/poll.h>
-#include <maxscale/modinfo.h>
-#include <sys/stat.h>
-#include <maxscale/modutil.h>
 #include <netinet/tcp.h>
-#include <maxscale/query_classifier.h>
+#include <sys/stat.h>
+#include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/poll.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/query_classifier.h>
 #include <maxscale/session.h>
+#include <maxscale/ssl.h>
+#include "setsqlmodeparser.hh"
 
 static int process_init(void);
 static void process_finish(void);
@@ -685,6 +686,8 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
          * normal data handling function instead of this one.
          */
         MXS_SESSION *session = session_alloc(dcb->service, dcb);
+        // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
+        session->client_protocol_data = QC_SQL_MODE_DEFAULT;
 
         if (session != NULL)
         {
@@ -864,6 +867,53 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
 }
 
 /**
+ * Sets the query classifier mode.
+ *
+ * @param session      The session for which the query classifier mode is adjusted.
+ * @param read_buffer  Pointer to a buffer, assumed to contain a statement.
+ *                     May be reallocated if not contiguous.
+ */
+void set_qc_mode(MXS_SESSION* session, GWBUF** read_buffer)
+{
+    SetSqlModeParser parser;
+    SetSqlModeParser::sql_mode_t sql_mode;
+
+    switch (parser.get_sql_mode(read_buffer, &sql_mode))
+    {
+    case SetSqlModeParser::ERROR:
+        // In practice only OOM.
+        break;
+
+    case SetSqlModeParser::IS_SET_SQL_MODE:
+        switch (sql_mode)
+        {
+        case SetSqlModeParser::ORACLE:
+            session->client_protocol_data = QC_SQL_MODE_ORACLE;
+            break;
+
+        case SetSqlModeParser::DEFAULT:
+            session->client_protocol_data = QC_SQL_MODE_DEFAULT;
+            break;
+
+        case SetSqlModeParser::SOMETHING:
+            break;
+
+        default:
+            ss_dassert(!true);
+        }
+        break;
+
+    case SetSqlModeParser::NOT_SET_SQL_MODE:
+        break;
+
+    default:
+        ss_dassert(!true);
+    }
+
+    qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
+}
+
+/**
  * @brief Client read event, process data, client already authenticated
  *
  * First do some checks and get the router capabilities.  If the router
@@ -921,6 +971,8 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 
             return 0;
         }
+
+        set_qc_mode(session, &read_buffer);
         gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
     }
 
