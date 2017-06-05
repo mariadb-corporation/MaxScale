@@ -532,9 +532,9 @@ The allowed values are:
 sql_mode=oracle
 ```
 
-The default value is `default`, which is also used if no value is specified
-or if `sql_mode=` is not present at all. At runtime, MariaDB MaxScale will
-recognize statements like
+The default value is `default`.
+
+At runtime, MariaDB MaxScale will recognize statements like
 ```
 set sql_mode=oracle;
 ```
