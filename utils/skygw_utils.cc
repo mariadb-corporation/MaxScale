@@ -1181,12 +1181,13 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
         if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
             (mdata = pcre2_match_data_create_from_pattern(remove_comments_re, NULL)))
         {
+            orig_len = len;
             while (pcre2_substitute(remove_comments_re, (PCRE2_SPTR) * src, orig_len, 0,
                                     PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
+                char* tmp = (char*) realloc(output, (len = (size_t) (orig_len * BUFFER_GROWTH_RATE + 1)));
                 if (tmp == NULL)
                 {
                     free(output);
