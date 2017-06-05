@@ -29,7 +29,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
-#include "../../server/core/maxscale/setsqlmodeparser.hh"
+#include "../../server/modules/protocol/MySQL/MySQLClient/setsqlmodeparser.hh"
 #include "testreader.hh"
 using std::cerr;
 using std::cin;
@@ -41,7 +41,6 @@ using std::map;
 using std::ostream;
 using std::string;
 using std::stringstream;
-using maxscale::SetSqlModeParser;
 
 #if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR == 3
 #define USING_MARIADB_103

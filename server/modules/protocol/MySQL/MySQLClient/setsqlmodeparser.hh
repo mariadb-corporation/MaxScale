@@ -17,10 +17,7 @@
 #include <maxscale/protocol/mysql.h>
 
 
-namespace maxscale
-{
-
-class SetSqlModeParser : public CustomParser
+class SetSqlModeParser : public maxscale::CustomParser
 {
 public:
     enum sql_mode_t
@@ -652,5 +649,3 @@ private:
         return token;
     }
 };
-
-}
