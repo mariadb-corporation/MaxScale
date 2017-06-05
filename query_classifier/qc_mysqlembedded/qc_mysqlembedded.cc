@@ -2969,47 +2969,19 @@ void configure_options(const char* datadir, const char* langdir)
 
 }
 
-int32_t qc_mysql_setup(const char* zArgs)
+int32_t qc_mysql_setup(qc_sql_mode_t sql_mode, const char* zArgs)
 {
+    this_unit.sql_mode = sql_mode;
+
+    if (sql_mode == QC_SQL_MODE_ORACLE)
+    {
+        this_unit.function_name_mappings = function_name_mappings_oracle;
+    }
+
     if (zArgs)
     {
-#if MYSQL_VERSION_MINOR >= 3
-        char args[strlen(zArgs) + 1];
-        strcpy(args, zArgs);
-
-        char *p1;
-        char *token = strtok_r(args, ",", &p1);
-
-        while (token)
-        {
-            char *p2;
-            char* key = trim(strtok_r(token, "=", &p2));
-
-            if (strcmp(key, "sql_mode") == 0)
-            {
-                char* value = trim(p2);
-
-                if (strcmp(value, "MODE_ORACLE") == 0)
-                {
-                    this_unit.sql_mode = QC_SQL_MODE_ORACLE;
-                    this_unit.function_name_mappings = function_name_mappings_oracle;
-                }
-                else
-                {
-                    MXS_WARNING("Unknown value \"%s\" for key \"%s\"", value, key);
-                }
-            }
-            else
-            {
-                MXS_WARNING("Unknown argument \"%s\".", key);
-            }
-
-            token = strtok_r(NULL, ",", &p1);
-        }
-#else
         MXS_WARNING("'%s' provided as arguments, "
                     "even though no arguments are supported.", zArgs);
-#endif
     }
 
     return QC_RESULT_OK;

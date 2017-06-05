@@ -86,7 +86,7 @@ int32_t qc_dummy_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** ppInfo
     return QC_RESULT_OK;
 }
 
-int32_t qc_dummy_setup(const char* args)
+int32_t qc_dummy_setup(qc_sql_mode_t sql_mode, const char* args)
 {
     return QC_RESULT_OK;
 }

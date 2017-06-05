@@ -45,7 +45,7 @@ static QUERY_CLASSIFIER* classifier;
 static qc_trx_parse_using_t qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
 
 
-bool qc_setup(const char* plugin_name, const char* plugin_args)
+bool qc_setup(const char* plugin_name, qc_sql_mode_t sql_mode, const char* plugin_args)
 {
     QC_TRACE();
     ss_dassert(!classifier);
@@ -61,7 +61,7 @@ bool qc_setup(const char* plugin_name, const char* plugin_args)
 
     if (classifier)
     {
-        rv = classifier->qc_setup(plugin_args);
+        rv = classifier->qc_setup(sql_mode, plugin_args);
 
         if (rv != QC_RESULT_OK)
         {

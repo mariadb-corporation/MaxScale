@@ -53,14 +53,15 @@ namespace
 
 char USAGE[] =
     "usage: compare [-r count] [-d] [-1 classfier1] [-2 classifier2] "
-        "[-A args] [-B args] [-v [0..2]] [-s statement]|[file]]\n\n"
+        "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-s statement]|[file]]\n\n"
     "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
     "-d    don't stop after first failed query\n"
-    "-1    the first classifier, default qc_mysqlembedded\n"
-    "-2    the second classifier, default qc_sqlite\n"
+    "-1    the first classifier, default 'qc_mysqlembedded'\n"
+    "-2    the second classifier, default 'qc_sqlite'\n"
     "-A    arguments for the first classifier\n"
     "-B    arguments for the second classifier\n"
     "-C    arguments for both classifiers\n"
+    "-m    initial sql mode, 'default' or 'oracle', default is 'default'\n"
     "-s    compare single statement\n"
     "-S    strict, also require that the parse result is identical\n"
     "-R    strict reporting, report if parse result is different\n"
@@ -173,13 +174,13 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
     return pClassifier;
 }
 
-QUERY_CLASSIFIER* get_classifier(const char* zName, const char* zArgs)
+QUERY_CLASSIFIER* get_classifier(const char* zName, qc_sql_mode_t sql_mode, const char* zArgs)
 {
     QUERY_CLASSIFIER* pClassifier = load_classifier(zName);
 
     if (pClassifier)
     {
-        if ((pClassifier->qc_setup(zArgs) != QC_RESULT_OK) ||
+        if ((pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK) ||
             ((pClassifier->qc_process_init() != QC_RESULT_OK)))
         {
             cerr << "error: Could not setup or init classifier " << zName << "." << endl;
@@ -200,16 +201,17 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
     }
 }
 
-bool get_classifiers(const char* zName1, const char* zArgs1, QUERY_CLASSIFIER** ppClassifier1,
+bool get_classifiers(qc_sql_mode_t sql_mode,
+                     const char* zName1, const char* zArgs1, QUERY_CLASSIFIER** ppClassifier1,
                      const char* zName2, const char* zArgs2, QUERY_CLASSIFIER** ppClassifier2)
 {
     bool rc = false;
 
-    QUERY_CLASSIFIER* pClassifier1 = get_classifier(zName1, zArgs1);
+    QUERY_CLASSIFIER* pClassifier1 = get_classifier(zName1, sql_mode, zArgs1);
 
     if (pClassifier1)
     {
-        QUERY_CLASSIFIER* pClassifier2 = get_classifier(zName2, zArgs2);
+        QUERY_CLASSIFIER* pClassifier2 = get_classifier(zName2, sql_mode, zArgs2);
 
         if (pClassifier2)
         {
@@ -1369,11 +1371,12 @@ int main(int argc, char* argv[])
     string classifier2Args("log_unrecognized_statements=1");
 #endif
     const char* zStatement = NULL;
+    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
 
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:C:s:SR")) != -1)
+    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:C:m:s:SR")) != -1)
     {
         switch (c)
         {
@@ -1414,6 +1417,22 @@ int main(int argc, char* argv[])
             zStatement = optarg;
             break;
 
+        case 'm':
+            if (strcasecmp(optarg, "default") == 0)
+            {
+                sql_mode = QC_SQL_MODE_DEFAULT;
+            }
+            else if (strcasecmp(optarg, "oracle") == 0)
+            {
+                sql_mode = QC_SQL_MODE_ORACLE;
+            }
+            else
+            {
+                rc = EXIT_FAILURE;
+                break;
+            }
+            break;
+
         case 'S':
             global.strict = true;
             break;
@@ -1449,7 +1468,8 @@ int main(int argc, char* argv[])
                 QUERY_CLASSIFIER* pClassifier1;
                 QUERY_CLASSIFIER* pClassifier2;
 
-                if (get_classifiers(zClassifier1, zClassifier1Args, &pClassifier1,
+                if (get_classifiers(sql_mode,
+                                    zClassifier1, zClassifier1Args, &pClassifier1,
                                     zClassifier2, zClassifier2Args, &pClassifier2))
                 {
                     size_t round = 0;

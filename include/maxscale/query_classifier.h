@@ -185,12 +185,13 @@ typedef struct query_classifier
     /**
      * Called once to setup the query classifier
      *
-     * @param args  The value of `query_classifier_args` in the configuration file.
+     * @param sql_mode  The default sql mode.
+     * @param args      The value of `query_classifier_args` in the configuration file.
      *
      * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
      *         some specific error code.
      */
-    int32_t (*qc_setup)(const char* args);
+    int32_t (*qc_setup)(qc_sql_mode_t sql_mode, const char* args);
 
     /**
      * Called once at process startup, after @c qc_setup has successfully
@@ -417,6 +418,7 @@ typedef struct query_classifier
  *
  * @param plugin_name  The name of the plugin from which the query classifier
  *                     should be loaded.
+ * @param sql_mode     The default sql mode.
  * @param plugin_args  The arguments to be provided to the query classifier.
  *
  * @return True if the query classifier could be loaded and initialized,
@@ -424,7 +426,7 @@ typedef struct query_classifier
  *
  * @see qc_end qc_thread_init
  */
-bool qc_setup(const char* plugin_name, const char* plugin_args);
+bool qc_setup(const char* plugin_name, qc_sql_mode_t sql_mode, const char* plugin_args);
 
 /**
  * Intializes the query classifier.

@@ -3294,7 +3294,7 @@ void maxscaleUse(Parse* pParse, Token* pToken)
 /**
  * API
  */
-static int32_t qc_sqlite_setup(const char* args);
+static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* args);
 static int32_t qc_sqlite_process_init(void);
 static void qc_sqlite_process_end(void);
 static int32_t qc_sqlite_thread_init(void);
@@ -3329,16 +3329,14 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 
 static const char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
 static const char ARG_PARSE_AS[] = "parse_as";
-static const char ARG_SQL_MODE[] = "sql_mode";
 
-static int32_t qc_sqlite_setup(const char* cargs)
+static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
 {
     QC_TRACE();
     assert(!this_unit.setup);
 
     qc_log_level_t log_level = QC_LOG_NOTHING;
-    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
-    qc_parse_as_t parse_as = QC_PARSE_AS_DEFAULT;
+    qc_parse_as_t parse_as = (sql_mode == QC_SQL_MODE_ORACLE) ? QC_PARSE_AS_103 : QC_PARSE_AS_DEFAULT;
     QC_NAME_MAPPING* function_name_mappings = function_name_mappings_default;
 
     if (cargs)
@@ -3383,21 +3381,6 @@ static int32_t qc_sqlite_setup(const char* cargs)
                     {
                         MXS_WARNING("'%s' is not a recognized value for '%s'. "
                                     "Parsing as pre-10.3.", value, key);
-                    }
-                }
-                else if (strcmp(key, ARG_SQL_MODE) == 0)
-                {
-                    if (strcmp(value, "MODE_ORACLE") == 0)
-                    {
-                        sql_mode = QC_SQL_MODE_ORACLE;
-                        MXS_NOTICE("Expecting Oracle SQL.");
-
-                        parse_as = QC_PARSE_AS_103;
-                        MXS_NOTICE("Parsing as 10.3.");
-                    }
-                    else
-                    {
-                        MXS_WARNING("Unknown value \"%s\" for key \"%s\"", value, key);
                     }
                 }
                 else
