@@ -111,10 +111,16 @@ Credentials for authentication.
 #### Content-Type
 
 All PUT and POST requests must use the `Content-Type: application/json` media
-type and the request body must be a valid JSON representation of a resource. All
-PATCH requests must use the `Content-Type: application/json` media type and the
-request body must be a JSON document containing a partial definition of the
-original resource.
+type and the request body must be a complete and valid JSON representation of a
+resource. All PATCH requests must use the `Content-Type: application/json` media
+type and the request body must be a JSON document containing a partial
+definition of the original resource.
+
+The current version of the API supports PATCH-like PUT requests with
+partial definitions of resources in the request body. This is discouraged
+as it goes against the intended use of the PUT method. Future versions of
+the MaxScale REST API can remove this support which means that this
+functionality is deprecated.
 
 #### Host
 

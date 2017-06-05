@@ -677,11 +677,11 @@ public:
         m_post.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
 
         /** Update resources */
-        m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
-        m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
-        m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
-        m_put.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
-        m_put.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
+        m_patch.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
+        m_patch.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
+        m_patch.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
+        m_patch.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
+        m_patch.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
 
         /** Change resource states */
         m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));
@@ -774,6 +774,10 @@ public:
         {
             return process_request_type(m_put, request);
         }
+        else if (request.get_verb() == MHD_HTTP_METHOD_PATCH)
+        {
+            return process_request_type(m_patch, request);
+        }
         else if (request.get_verb() == MHD_HTTP_METHOD_POST)
         {
             return process_request_type(m_post, request);
@@ -810,6 +814,7 @@ private:
     ResourceList m_put;    /**< PUT request handlers */
     ResourceList m_post;   /**< POST request handlers */
     ResourceList m_delete; /**< DELETE request handlers */
+    ResourceList m_patch; /**< PATCH request handlers */
 };
 
 static RootResource resources; /**< Core resource set */
@@ -820,7 +825,8 @@ static bool request_modifies_data(const string& verb)
 {
     return verb == MHD_HTTP_METHOD_POST ||
            verb == MHD_HTTP_METHOD_PUT ||
-           verb == MHD_HTTP_METHOD_DELETE;
+           verb == MHD_HTTP_METHOD_DELETE ||
+           verb == MHD_HTTP_METHOD_PATCH;
 }
 
 static bool request_reads_data(const string& verb)

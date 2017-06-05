@@ -267,7 +267,7 @@ The :name in the URI must map to a monitor name with all whitespace replaced wit
 hyphens. The request body must be a valid JSON document representing the modified monitor.
 
 ```
-PUT /v1/monitor/:name
+PATCH /v1/monitor/:name
 ```
 
 ### Modifiable Fields

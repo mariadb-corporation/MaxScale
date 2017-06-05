@@ -17,7 +17,7 @@ describe("Logs", function() {
                 logs.data.attributes.parameters.throttling.suppress_ms = 1
                 logs.data.attributes.parameters.throttling.window_ms = 1
 
-                return request.put(base_url + "/maxscale/logs", {json: logs})
+                return request.patch(base_url + "/maxscale/logs", {json: logs})
             })
             .then(function(resp) {
                 return request.get(base_url + "/maxscale/logs")

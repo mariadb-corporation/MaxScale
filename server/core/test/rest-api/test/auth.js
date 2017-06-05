@@ -6,7 +6,7 @@ function set_auth(auth, value) {
         .then(function(resp) {
             var d = JSON.parse(resp)
             d.data.attributes.parameters.admin_auth = value;
-            return request.put(auth + host + "/maxscale", { json: d })
+            return request.patch(auth + host + "/maxscale", { json: d })
         })
         .then(function() {
             return request.get(auth + host + "/maxscale")

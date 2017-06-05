@@ -312,7 +312,7 @@ Status: 403 Forbidden
 ### Update a server
 
 ```
-PUT /v1/servers/:name
+PATCH /v1/servers/:name
 ```
 
 The _:name_ in the URI must map to a server name with all whitespace replaced
@@ -443,12 +443,12 @@ Request for `PUT /v1/server/server1`:
 }
 ```
 
-The current implementation accepts both PUT and PATCH requests with partially
-defined resources as request body. If parts of the resource are not defined
-(e.g. the `attributes` field in the above example), those parts of the resource
-are not modified. All parts that are defined are interpreted as the new
-definition of those part of the resource. In the above example, the
-`relationships` of the resource are completely redefined.
+The current implementation accepts PATCH requests with partially defined
+resources as request body. If parts of the resource are not defined (e.g. the
+`attributes` field in the above example), those parts of the resource are not
+modified. All parts that are defined are interpreted as the new definition of
+those part of the resource. In the above example, the `relationships` of the
+resource are completely redefined.
 
 #### Response
 

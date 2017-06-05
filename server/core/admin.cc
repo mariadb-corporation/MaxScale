@@ -75,7 +75,7 @@ static inline size_t request_data_length(MHD_Connection *connection)
 static bool modifies_data(MHD_Connection *connection, string method)
 {
     return (method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT ||
-            method == MHD_HTTP_METHOD_DELETE) &&
+            method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH) &&
            request_data_length(connection);
 }
 

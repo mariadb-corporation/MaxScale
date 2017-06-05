@@ -7,7 +7,7 @@ describe("Errors", function()
 
     it("error on invalid PUT request", function()
     {
-        return request.put(base_url + "/servers/server1", { json: {this_is: "a test"}})
+        return request.patch(base_url + "/servers/server1", { json: {this_is: "a test"}})
                .should.be.rejected
     })
 
