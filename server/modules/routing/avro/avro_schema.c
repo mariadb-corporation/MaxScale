@@ -555,14 +555,12 @@ int extract_type_length(const char* ptr, char *dest)
     }
 
     /** Store type */
-    int typelen = ptr - start;
-
     for (const char* c = start; c < ptr; c++)
     {
-        *dest = tolower(*c);
+        *dest++ = tolower(*c);
     }
 
-    dest[typelen] = '\0';
+    *dest++ = '\0';
 
     /** Skip whitespace */
     while (*ptr && isspace(*ptr))
@@ -858,7 +856,7 @@ void read_alter_identifier(const char *sql, const char *end, char *dest, int siz
 
 void make_avro_token(char* dest, const char* src, int length)
 {
-    while (*src == '(' || *src == ')' || *src == '`' || isspace(*src))
+    while (length > 0 && (*src == '(' || *src == ')' || *src == '`' || isspace(*src)))
     {
         src++;
         length--;
@@ -880,16 +878,17 @@ void make_avro_token(char* dest, const char* src, int length)
     fix_reserved_word(dest);
 }
 
-int get_column_index(TABLE_CREATE *create, const char *tok)
+int get_column_index(TABLE_CREATE *create, const char *tok, int len)
 {
     int idx = -1;
-    char safe_tok[strlen(tok) + 2];
-    strcpy(safe_tok, tok);
+    char safe_tok[len + 2];
+    memcpy(safe_tok, tok, len);
+    safe_tok[len] = '\0';
     fix_reserved_word(safe_tok);
 
     for (int x = 0; x < create->columns; x++)
     {
-        if (strcasecmp(create->column_names[x], tok) == 0)
+        if (strcasecmp(create->column_names[x], safe_tok) == 0)
         {
             idx = x;
             break;
@@ -948,7 +947,7 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 {
                     tok = get_tok(tok + len, &len, end);
 
-                    int idx = get_column_index(create, tok);
+                    int idx = get_column_index(create, tok, len);
 
                     if (idx != -1)
                     {
@@ -975,9 +974,9 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 {
                     tok = get_tok(tok + len, &len, end);
 
-                    int idx = get_column_index(create, tok);
+                    int idx = get_column_index(create, tok, len);
 
-                    if (idx != -1)
+                    if (idx != -1 && (tok = get_tok(tok + len, &len, end)))
                     {
                         free(create->column_names[idx]);
                         free(create->column_types[idx]);
