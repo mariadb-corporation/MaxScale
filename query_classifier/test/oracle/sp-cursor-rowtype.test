@@ -982,6 +982,7 @@ BEGIN
     OPEN cur;
     FETCH cur INTO rec;
     CLOSE cur;
+    # qc_sqlite: SELECT rec.a, rec."CONCAT(a,'a')", rec."CONCAT(a,'ö')";
     SELECT rec.a, rec.CONCAT(a,'a'), rec.CONCAT(a,'ö');
   END;
 END;

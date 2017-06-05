@@ -2,7 +2,7 @@
 --source include/have_binlog_format_statement.inc
 
 --disable_query_log
-//qc_sqlite: reset master; # get rid of previous tests binlog
+#qc_sqlite: reset master; # get rid of previous tests binlog
 --enable_query_log
 
 SET sql_mode=ORACLE;
