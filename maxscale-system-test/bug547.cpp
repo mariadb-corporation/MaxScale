@@ -43,12 +43,12 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Trying some queries, expecting failure, but not a crash\n");
-    execute_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1");
-    execute_query(Test->conn_rwsplit, (char *) "CREATE TABLE t1 (x INT)");
-    execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x) VALUES (1)");
-    execute_query(Test->conn_rwsplit, (char *) "select * from t1");
-    execute_query(Test->conn_master, (char *) "select * from t1");
-    execute_query(Test->conn_slave, (char *) "select * from t1");
+    execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1");
+    execute_query(Test->conn_rwsplit, "CREATE TABLE t1 (x INT)");
+    execute_query(Test->conn_rwsplit, "INSERT INTO t1 (x) VALUES (1)");
+    execute_query(Test->conn_rwsplit, "select * from t1");
+    execute_query(Test->conn_master, "select * from t1");
+    execute_query(Test->conn_slave, "select * from t1");
 
     Test->set_timeout(10);
     Test->close_maxscale_connections();
@@ -58,12 +58,8 @@ int main(int argc, char *argv[])
 
     Test->stop_timeout();
     sleep(15);
-    Test->check_log_err((char *) "fatal signal 11", false);
-    Test->check_log_err((char *) "Failed to create new router session for service 'RW-Split-Router'", true);
-    Test->check_log_err((char *)
-                        "Failed to create new router session for service 'Read-Connection-Router-Master'", true);
-    Test->check_log_err((char *) "Failed to create new router session for service 'Read-Connection-Router-Slave'",
-                        true);
+    Test->check_log_err("fatal signal 11", false);
+    Test->check_log_err("Failed to create new router session for service", true);
 
     int rval = Test->global_result;
     delete Test;

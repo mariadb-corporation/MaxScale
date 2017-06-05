@@ -413,19 +413,34 @@ auto_ptr<MaskingRules::Rule> create_rule_from_elements(json_t* pReplace,
         json_t* pValue = json_object_get(pWith, KEY_VALUE);
         json_t* pFill = json_object_get(pWith, KEY_FILL);
 
-        if ((pValue || pFill) &&
-            (!pValue || json_is_string(pValue)) &&
-            (!pFill || json_is_string(pFill)))
+        if (!pFill)
         {
-            sRule = create_rule_from_elements(pColumn, pTable, pDatabase,
-                                              pValue, pFill,
-                                              pApplies_to, pExempted);
+            // Allowed. Use default value for fill and add it to pWith.
+            pFill = json_string("X");
+            if (pFill)
+            {
+                json_object_set_new(pWith, KEY_FILL, pFill);
+            }
+            else
+            {
+                MXS_ERROR("json_string() error, cannot produce a valid rule.");
+            }
         }
-        else
+        if (pFill)
         {
-            MXS_ERROR("The '%s' object of a masking rule does not have either '%s' "
-                      "or '%s' as keys, or their values are not strings.",
-                      KEY_WITH, KEY_VALUE, KEY_FILL);
+            if ((!pValue || (json_is_string(pValue) && json_string_length(pValue))) &&
+                (json_is_string(pFill) && json_string_length(pFill)))
+            {
+                sRule = create_rule_from_elements(pColumn, pTable, pDatabase,
+                                                  pValue, pFill,
+                                                  pApplies_to, pExempted);
+            }
+            else
+            {
+                MXS_ERROR("One of the keys '%s' or '%s' of masking rule object '%s' "
+                          "has a non-string value or the string is empty.",
+                          KEY_VALUE, KEY_FILL, KEY_WITH);
+            }
         }
     }
     else
