@@ -198,23 +198,21 @@ specified name.
 
 #### `with`
 
-The value of this key is an object that specifies what the value
-of the matched column should be replaced with. Currently, the object
-is expected to contain either the key `value` or the key `fill`. The
-value of both must be a string. If both keys are specified, then
-`value` takes presedence.
+The value of this key is an object that specifies what the value of the matched
+column should be replaced with. Currently, the object is expected to contain
+either the key `value` or the key `fill`. The value of both must be a string
+with length greater than zero. If both keys are specified, `value` takes
+precedence. If `fill` is not specified, the default `X` is used as its value.
 
-If `value` is specified, then its value is used to replace the actual
-value verbatim and the length of the specified value must match the
-actual returned value (from the server) exactly. If the lengths do
-not match, then if `fill` is specified its value will be used to
-mask the actual value. Otherwise an error is logged and the value
-is *not* masked.
+If `value` is specified, then its value is used to replace the actual value
+verbatim and the length of the specified value must match the actual returned
+value (from the server) exactly. If the lengths do not match, the value of
+`fill` is used to mask the actual value.
 
-If `fill` is specified, then its value will be used for masking the
-value; as such if the lenghts match, by cutting it if the actual value
-is shorter, and by repeating it, fully or partially, the necessary
-amount of times, if the actual value is longer.
+When the value of `fill` (fill-value) is used for masking the returned value,
+the fill-value is used as many times as necessary to match the length of the
+return value. If required, only a part of the fill-value may be used in the end
+of the mask value to get the lengths to match.
 ```
 {
     "rules": [
