@@ -556,7 +556,12 @@ int extract_type_length(const char* ptr, char *dest)
 
     /** Store type */
     int typelen = ptr - start;
-    memcpy(dest, start, typelen);
+
+    for (const char* c = start; c < ptr; c++)
+    {
+        *dest = tolower(*c);
+    }
+
     dest[typelen] = '\0';
 
     /** Skip whitespace */
@@ -923,18 +928,17 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 {
                     tok = get_tok(tok + len, &len, end);
 
-                    char ** tmp = realloc(create->column_names, sizeof(char*) * create->columns + 1);
-                    ss_dassert(tmp);
+                    create->column_names = realloc(create->column_names, sizeof(char*) * create->columns + 1);
+                    create->column_types = realloc(create->column_types, sizeof(char*) * create->columns + 1);
+                    create->column_lengths = realloc(create->column_lengths, sizeof(int) * create->columns + 1);
 
-                    if (tmp == NULL)
-                    {
-                        return false;
-                    }
-
-                    create->column_names = tmp;
                     char avro_token[len + 1];
                     make_avro_token(avro_token, tok, len);
+                    char field_type[200] = ""; // Enough to hold all types
+                    int field_length = extract_type_length(tok + len, field_type);
                     create->column_names[create->columns] = strdup(avro_token);
+                    create->column_types[create->columns] = strdup(field_type);
+                    create->column_lengths[create->columns] = field_length;
                     create->columns++;
                     updates++;
                     tok = get_next_def(tok, end);
@@ -949,20 +953,17 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                     if (idx != -1)
                     {
                         free(create->column_names[idx]);
+                        free(create->column_types[idx]);
                         for (int i = idx; i < (int)create->columns - 1; i++)
                         {
                             create->column_names[i] = create->column_names[i + 1];
+                            create->column_types[i] = create->column_types[i + 1];
+                            create->column_lengths[i] = create->column_lengths[i + 1];
                         }
 
-                        char ** tmp = realloc(create->column_names, sizeof(char*) * create->columns - 1);
-                        ss_dassert(tmp);
-
-                        if (tmp == NULL)
-                        {
-                            return false;
-                        }
-
-                        create->column_names = tmp;
+                        create->column_names = realloc(create->column_names, sizeof(char*) * create->columns - 1);
+                        create->column_types = realloc(create->column_types, sizeof(char*) * create->columns - 1);
+                        create->column_lengths = realloc(create->column_lengths, sizeof(int) * create->columns - 1);
                         create->columns--;
                         updates++;
                     }
@@ -979,7 +980,14 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                     if (idx != -1)
                     {
                         free(create->column_names[idx]);
-                        create->column_names[idx] = strndup(tok, len);
+                        free(create->column_types[idx]);
+                        char avro_token[len + 1];
+                        make_avro_token(avro_token, tok, len);
+                        char field_type[200] = ""; // Enough to hold all types
+                        int field_length = extract_type_length(tok + len, field_type);
+                        create->column_names[idx] = strdup(avro_token);
+                        create->column_types[idx] = strdup(field_type);
+                        create->column_lengths[idx] = field_length;
                         updates++;
                     }
 
@@ -994,7 +1002,7 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
         }
 
         /** Only increment the create version if it has an associated .avro
-         * file. The .avro file is only created if it is acutally used. */
+         * file. The .avro file is only created if it is actually used. */
         if (updates > 0 && create->was_used)
         {
             create->version++;
