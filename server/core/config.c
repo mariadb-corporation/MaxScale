@@ -13,36 +13,6 @@
 
 /**
  * @file config.c  - Read the gateway.cnf configuration file
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 21/06/13     Mark Riddoch            Initial implementation
- * 08/07/13     Mark Riddoch            Addition on monitor module support
- * 23/07/13     Mark Riddoch            Addition on default monitor password
- * 06/02/14     Massimiliano Pinto      Added support for enable/disable root user in services
- * 14/02/14     Massimiliano Pinto      Added enable_root_user in the service_params list
- * 11/03/14     Massimiliano Pinto      Added Unix socket support
- * 11/05/14     Massimiliano Pinto      Added version_string support to service
- * 19/05/14     Mark Riddoch            Added unique names from section headers
- * 29/05/14     Mark Riddoch            Addition of filter definition
- * 23/05/14     Massimiliano Pinto      Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
- * 28/05/14     Massimiliano Pinto      Added detect_replication_lag parameter
- * 28/08/14     Massimiliano Pinto      Added detect_stale_master parameter
- * 09/09/14     Massimiliano Pinto      Added localhost_match_wildcard_host parameter
- * 12/09/14     Mark Riddoch            Addition of checks on servers list and
- *                                      internal router suppression of messages
- * 30/10/14     Massimiliano Pinto      Added disable_master_failback parameter
- * 07/11/14     Massimiliano Pinto      Addition of monitor timeouts for connect/read/write
- * 20/02/15     Markus Mäkelä           Added connection_timeout parameter for services
- * 05/03/15     Massimiliano Pinto      Added notification_feedback support
- * 20/04/15     Guillaume Lefranc       Added available_when_donor parameter
- * 22/04/15     Martin Brampton         Added disable_master_role_setting parameter
- * 26/01/16     Martin Brampton         Transfer SSL processing to listener
- * 31/05/16     Martin Brampton         Implement connection throttling, initially no queue
- *
- * @endverbatim
  */
 #include <maxscale/config.h>
 
@@ -1304,6 +1274,22 @@ handle_global_item(const char *name, const char *value)
     else if (strcmp(name, "query_classifier_args") == 0)
     {
         gateway.qc_args = MXS_STRDUP_A(value);
+    }
+    else if (strcmp(name, "sql_mode") == 0)
+    {
+        if ((*value == 0) || (strcasecmp(value, "default") == 0))
+        {
+            gateway.qc_sql_mode = QC_SQL_MODE_DEFAULT;
+        }
+        else if (strcasecmp(value, "oracle") == 0)
+        {
+            gateway.qc_sql_mode = QC_SQL_MODE_ORACLE;
+        }
+        else
+        {
+            MXS_ERROR("'%s' is not a valid value for '%s'. Allowed values are 'DEFAULT' and "
+                      "'ORACLE'. Using 'DEFAULT' as default.", value, name);
+        }
     }
     else if (strcmp(name, "log_throttling") == 0)
     {

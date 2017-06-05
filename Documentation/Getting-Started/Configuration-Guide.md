@@ -519,6 +519,35 @@ This will log all statements that cannot be parsed completely. This may be
 useful if you suspect that MariaDB MaxScale routes statements to the wrong
 server (e.g. to a slave instead of to a master).
 
+#### `sql_mode`
+
+Specifies whether the query classifier parser should initially expect _MariaDB_
+or _PL/SQL_ kind of SQL.
+
+The allowed values are:
+   `default`: The parser expects regular _MariaDB_ SQL.
+   `oracle` : The parser expects PL/SQL.
+
+```
+sql_mode=oracle
+```
+
+The default value is `default`, which is also used if no value is specified
+or if `sql_mode=` is not present at all. At runtime, MariaDB MaxScale will
+recognize statements like
+```
+set sql_mode=oracle;
+```
+and
+```
+set sql_mode=default;
+```
+and change mode accordingly.
+
+Note that MariaDB MaxScale is **not** explicitly aware of the sql mode of
+the server, so the value of `sql_mode` should reflect the sql mode used
+when the server is started.
+
 ### Service
 
 A service represents the database service that MariaDB MaxScale offers to the

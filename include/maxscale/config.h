@@ -23,6 +23,7 @@
 #include <sys/utsname.h>
 
 #include <maxscale/modinfo.h>
+#include <maxscale/query_classifier.h>
 
 MXS_BEGIN_DECLS
 
@@ -74,6 +75,7 @@ typedef struct
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
+    qc_sql_mode_t qc_sql_mode;                         /**< The query classifier sql mode */
 } MXS_CONFIG;
 
 /**
