@@ -2191,6 +2191,23 @@ static bool command_is_mandatory(const GWBUF *buffer)
     }
 }
 
+static bool command_is_prepare(uint8_t command)
+{
+    switch (command)
+    {
+        case MYSQL_COM_STMT_PREPARE:
+        case MYSQL_COM_STMT_EXECUTE:
+        case MYSQL_COM_STMT_SEND_LONG_DATA:
+        case MYSQL_COM_STMT_CLOSE:
+        case MYSQL_COM_STMT_RESET:
+        case MYSQL_COM_STMT_FETCH:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once processed the
@@ -2209,8 +2226,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     DCB *dcb = my_session->session->client_dcb;
     int rval = 0;
     ss_dassert(dcb && dcb->session);
-
     uint32_t type = 0;
+    uint8_t command = 0;
+    gwbuf_copy_data(queue, MYSQL_HEADER_LEN, 1, &command);
 
     if (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue))
     {
@@ -2228,7 +2246,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     }
     else if (QUERY_IS_TYPE(type, QUERY_TYPE_PREPARE_STMT) ||
              QUERY_IS_TYPE(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-             modutil_is_SQL_prepare(queue))
+             command_is_prepare(command))
     {
         GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
                                      "prepared statements.");

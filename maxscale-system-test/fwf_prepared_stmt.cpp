@@ -21,6 +21,7 @@ int main(int argc, char** argv)
     test.connect_maxscale();
     execute_query_silent(test.conn_rwsplit, "DROP TABLE test.t1");
 
+    test.set_timeout(60);
     test.try_query(test.conn_rwsplit, "CREATE TABLE test.t1(a INT, b INT, c INT)");
     test.try_query(test.conn_rwsplit, "INSERT INTO test.t1 VALUES (1, 1, 1)");
 
@@ -34,6 +35,7 @@ int main(int argc, char** argv)
     test.add_result(execute_query(test.conn_rwsplit, "EXECUTE my_ps2") == 0,
                     "Text protocol execution should fail");
 
+    test.set_timeout(60);
     MYSQL_STMT* stmt = mysql_stmt_init(test.conn_rwsplit);
     const char *query = "SELECT a, b FROM test.t1";
 
@@ -47,7 +49,8 @@ int main(int argc, char** argv)
     test.add_result(!mysql_stmt_prepare(stmt, query, strlen(query)), "Binary protocol preparation should fail");
     mysql_stmt_close(stmt);
 
-    test.try_query(test.conn_rwsplit, "DROP TABLE test.t1");
+    test.repl->connect();
+    test.try_query(test.repl->nodes[0], "DROP TABLE test.t1");
 
     return test.global_result;
 }
