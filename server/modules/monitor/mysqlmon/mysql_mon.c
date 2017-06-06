@@ -1540,8 +1540,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *dat
                         "(maxscale_id INT NOT NULL, "
                         "master_server_id INT NOT NULL, "
                         "master_timestamp INT UNSIGNED NOT NULL, "
-                        "PRIMARY KEY ( master_server_id, maxscale_id ) ) "
-                        "ENGINE=MYISAM DEFAULT CHARSET=latin1"))
+                        "PRIMARY KEY ( master_server_id, maxscale_id ) )"))
         {
             MXS_ERROR("Error creating maxscale_schema.replication_heartbeat "
                       "table in Master server: %s", mysql_error(database->con));
