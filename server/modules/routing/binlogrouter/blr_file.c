@@ -226,6 +226,16 @@ static void blr_report_checksum(REP_HEADER hdr,
 
 bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
                                 MARIADB_GTID_INFO *result);
+bool blr_get_last_file(ROUTER_INSTANCE *router,
+                       MARIADB_GTID_INFO *result);
+static int gtid_file_select_cb(void *data,
+                               int cols,
+                               char** values,
+                               char** names);
+bool blr_compare_binlogs(ROUTER_INSTANCE *router,
+                         const MARIADB_GTID_ELEMS *info,
+                         const char *r_file,
+                         const char *s_file);
 
 /**
  * MariaDB 10.1.7 Start Encryption event content
@@ -254,7 +264,8 @@ typedef struct start_encryption_event
  * binlog to use and initialise it for writing, determining the
  * next record to be fetched from the real master.
  *
- * @param router    The router instance this defines the master for this replication chain
+ * @param router    The router instance
+ * @return          1 on success, 0 otherwise
  */
 int
 blr_file_init(ROUTER_INSTANCE *router)
@@ -265,6 +276,7 @@ blr_file_init(ROUTER_INSTANCE *router)
     int root_len, i;
     DIR *dirp;
     struct dirent *dp;
+    int ret = 0;
 
     if (router->binlogdir == NULL)
     {
@@ -303,61 +315,118 @@ blr_file_init(ROUTER_INSTANCE *router)
         return 0;
     }
 
-    /* First try to find a binlog file number by reading the directory */
-    root_len = strlen(router->fileroot);
-    if ((dirp = opendir(path)) == NULL)
+    /**
+     * Find last written binary log in the binlog cache
+     * OR
+     * get it from GTID maps repo
+     */
+
+    /* - 1 - try to find a binlog file number by reading the directory */
+    if (router->storage_type == BLR_BINLOG_STORAGE_FLAT)
     {
-        MXS_ERROR("%s: Unable to read the binlog directory %s, %s.",
-                  router->service->name, router->binlogdir,
-                  mxs_strerror(errno));
-        return 0;
-    }
-    while ((dp = readdir(dirp)) != NULL)
-    {
-        if (strncmp(dp->d_name, router->fileroot, root_len) == 0)
+        root_len = strlen(router->fileroot);
+        if ((dirp = opendir(path)) == NULL)
         {
-            i = atoi(dp->d_name + root_len + 1);
-            if (i > n)
+            MXS_ERROR("%s: Unable to read the binlog directory %s, %s.",
+                      router->service->name, router->binlogdir,
+                      mxs_strerror(errno));
+            return 0;
+        }
+        while ((dp = readdir(dirp)) != NULL)
+        {
+            if (strncmp(dp->d_name, router->fileroot, root_len) == 0)
             {
-                n = i;
+                i = atoi(dp->d_name + root_len + 1);
+                if (i > n)
+                {
+                    n = i;
+                }
             }
         }
-    }
-    closedir(dirp);
+        closedir(dirp);
 
-
-    file_found = 0;
-    do
-    {
-        snprintf(filename, PATH_MAX, "%s/" BINLOG_NAMEFMT, path, router->fileroot, n);
-        if (access(filename, R_OK) != -1)
+        file_found = 0;
+        do
         {
-            file_found  = 1;
-            n++;
+            snprintf(filename, PATH_MAX, "%s/" BINLOG_NAMEFMT, path, router->fileroot, n);
+            if (access(filename, R_OK) != -1)
+            {
+                file_found  = 1;
+                n++;
+            }
+            else
+            {
+                file_found = 0;
+            }
+        }
+        while (file_found);
+        n--;
+
+        if (n == 0)     // No binlog files found
+        {
+            snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot, router->initbinlog);
+
+            if (!blr_file_create(router, filename))
+            {
+                return 0;
+            }
         }
         else
         {
-            file_found = 0;
+            snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot, n);
+            blr_file_append(router, filename);
         }
+        return 1;
     }
-    while (file_found);
-    n--;
-
-    if (n == 0)     // No binlog files found
-    {
-        snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot, router->initbinlog);
-
-        if (!blr_file_create(router, filename))
-        {
-            return 0;
-        }
-    }
+    /* - 2 - Get last file in GTID maps repo */
     else
     {
-        snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot, n);
-        blr_file_append(router, filename);
+        MARIADB_GTID_INFO last_gtid = {};
+        char f_prefix[BINLOG_FILE_EXTRA_INFO] = "";
+        // SELECT LAST FILE
+        if (!blr_get_last_file(router, &last_gtid) ||
+            last_gtid.gtid == NULL)
+        {
+            MXS_INFO("%s: cannot find any GTID in GTID maps repo",
+                     router->service->name);
+            return 0;
+        }
+
+        /** We don't care about sequence being 0
+         * as this is a placeholder for new file in the repo.
+         * In case of file without transactions
+         * there is no real GTID with sequence:
+         * there should be a GTID_LIST event which holds
+         * the last GTID.
+         * The event is parsed while reading the binlog.
+         * Right now we need only the domain_id, server_id
+         * and filename.
+         */
+        sprintf(f_prefix,
+                "%" PRIu32 "/%" PRIu32 "",
+                last_gtid.gtid_elms.domain_id,
+                last_gtid.gtid_elms.server_id);
+
+        router->mariadb10_gtid_domain = last_gtid.gtid_elms.domain_id;
+        router->orig_masterid = last_gtid.gtid_elms.server_id;
+
+        snprintf(filename, PATH_MAX, "%s/%s/%s", path, f_prefix, last_gtid.file);
+        if (access(filename, R_OK) != -1)
+        {
+            blr_file_append(router, last_gtid.file);
+            ret = 1;
+        }
+        else
+        {
+            ret = blr_file_create(router, last_gtid.file);
+        }
+
+        MXS_FREE(last_gtid.gtid);
+        MXS_FREE(last_gtid.file);
+
+        return ret;
     }
-    return 1;
+    return 0;
 }
 
 int
@@ -409,6 +478,39 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
 
     strcpy(path, router->binlogdir);
     strcat(path, "/");
+
+   /**
+    * Create file using domain and server_id prefix
+    */
+   if (router->mariadb10_compat &&
+       router->mariadb10_master_gtid &&
+       router->storage_type == BLR_BINLOG_STORAGE_TREE)
+   {
+        char prefix[BINLOG_FILE_EXTRA_INFO];
+        sprintf(prefix,
+                "%" PRIu32 "/%" PRIu32 "/",
+                router->mariadb10_gtid_domain,
+                router->orig_masterid);
+
+        strcat(path, prefix);
+        if (access(path, R_OK) == -1)
+        {
+            int mkdir_rval;
+            mkdir_rval = mkdir(path, 0700);
+            if (mkdir_rval == -1)
+            {
+                MXS_ERROR("Service %s, Failed to create binlog"
+                          " directory tree '%s': [%d] %s",
+                          router->service->name,
+                          path,
+                          errno,
+                          mxs_strerror(errno));
+                return 0;
+            }
+        }
+    }
+
+    // Set final file name full path
     strcat(path, file);
 
     int fd = open(path, O_RDWR | O_CREAT, 0666);
@@ -443,8 +545,10 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
                 gtid_elms.domain_id = router->mariadb10_gtid_domain;
                 // router->orig_masterid keeps the original ID
                 gtid_elms.server_id = router->orig_masterid;
-                // Pos 4 only for end_pos
+                // Pos 4 for start/end_pos
                 router->pending_transaction.end_pos = 4;
+                router->pending_transaction.start_pos = 4;
+                // Update all the gtid_elms
                 memcpy(&router->pending_transaction.gtid_elms,
                        &gtid_elms,
                        sizeof(MARIADB_GTID_ELEMS));
@@ -496,6 +600,21 @@ blr_file_append(ROUTER_INSTANCE *router, char *file)
 
     strcpy(path, router->binlogdir);
     strcat(path, "/");
+
+    // Add file prefix
+    if (router->mariadb10_compat &&
+        router->mariadb10_master_gtid &&
+        router->storage_type == BLR_BINLOG_STORAGE_TREE)
+    {
+        char prefix[BINLOG_FILE_EXTRA_INFO];
+        sprintf(prefix,
+                "%" PRIu32 "/%" PRIu32 "/",
+                router->mariadb10_gtid_domain,
+                router->orig_masterid);
+        strcat(path, prefix);
+    }
+
+    //Add filename
     strcat(path, file);
 
     if ((fd = open(path, flags, 0666)) == -1)
@@ -670,10 +789,19 @@ blr_file_flush(ROUTER_INSTANCE *router)
  *
  * @param router    The router instance
  * @param binlog    The binlog filename
+ * @param info      MariaDB GTID info
+ *                  with rep_domain and
+ *                  server_id.
+ *                  These two fileds are
+ *                  used as file prefix
+ *                  for binlog file name.
+ *
  * @return a binlog file record
  */
 BLFILE *
-blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
+blr_open_binlog(ROUTER_INSTANCE *router,
+                const char *binlog,
+                const MARIADB_GTID_INFO *info)
 {
     size_t len = strlen(binlog);
     if (len > BINLOG_FNAMELEN)
@@ -683,7 +811,7 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
         return NULL;
     }
 
-    len += (strlen(router->binlogdir) + 1); // +1 for the /.
+    len += (strlen(router->binlogdir) + 1); // +1 for the '.'
     if (len > PATH_MAX)
     {
         MXS_ERROR("The length of %s/%s is longer than the maximum allowed length %d.",
@@ -716,10 +844,32 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
     strcpy(file->binlogname, binlog);
     file->refcnt = 1;
     file->cache = 0;
+
+    /* Store additional file informations */
+    if (info)
+    {
+        memcpy(&file->info,
+               &info->gtid_elms,
+               sizeof(MARIADB_GTID_ELEMS));
+    }
+
     spinlock_init(&file->lock);
 
     strcpy(path, router->binlogdir);
     strcat(path, "/");
+
+    // Add tree prefix: "domain_id/server_id"
+    if (info)
+    {
+        char t_prefix[BINLOG_FILE_EXTRA_INFO];
+        sprintf(t_prefix,
+                "%" PRIu32 "/%" PRIu32 "/",
+                info->gtid_elms.domain_id,
+                info->gtid_elms.server_id);
+        strcat(path, t_prefix);
+    }
+
+    // Add file name
     strcat(path, binlog);
 
     if ((file->fd = open(path, O_RDONLY, 0666)) == -1)
@@ -798,7 +948,11 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         spinlock_acquire(&router->binlog_lock);
         spinlock_acquire(&file->lock);
 
-        if (strcmp(router->binlog_name, file->binlogname) != 0)
+        /* Check whether is current router file */
+        if (!blr_compare_binlogs(router,
+                                 &file->info,
+                                 router->binlog_name,
+                                 file->binlogname))
         {
             snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond "
                      "'closed' binlog file '%s', size %lu. Generating Error '1236'",
@@ -824,7 +978,11 @@ blr_read_binlog(ROUTER_INSTANCE *router,
     spinlock_acquire(&router->binlog_lock);
     spinlock_acquire(&file->lock);
 
-    if (strcmp(router->binlog_name, file->binlogname) == 0 &&
+    /* Check current router file and router position */
+    if (blr_compare_binlogs(router,
+                            &file->info,
+                            router->binlog_name,
+                            file->binlogname) &&
         pos >= router->binlog_position)
     {
         if (pos > router->binlog_position)
@@ -1075,7 +1233,7 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         gwbuf_free(result);
 
         /**
-         * Binlog event check based on Replication Header content and pos
+         * Binlog event check based on Rep Header content and pos
          */
         if (!blr_binlog_event_check(router, pos, hdr, file->binlogname, errmsg))
         {
@@ -1083,7 +1241,7 @@ blr_read_binlog(ROUTER_INSTANCE *router,
             return NULL;
         }
 
-        /* Set the decrypted event as result*/
+        /* Set the decrypted event as result */
         result = decrypted_event;
     }
 
@@ -1143,7 +1301,7 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
 /**
  * Log the event header of  binlog event
  *
- * @param   priority The syslog priority of the message (LOG_ERR, LOG_WARNING, etc.)
+ * @param   priority The syslog priority (LOG_ERR, LOG_WARNING, etc.)
  * @param   msg  A message strign to preceed the header with
  * @param   ptr  The event header raw data
  */
@@ -1292,23 +1450,130 @@ blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 /**
  * Does the next binlog file in the sequence for the slave exist.
  *
- * @param router    The router instance
- * @param slave     The slave in question
- * @return      0 if the next file does not exist
+ * @param router       The router instance
+ * @param slave        The slave in question
+ * @param next_file    The next_file buffer
+ * @return             0 if the next file does not exist
  */
 int
-blr_file_next_exists(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+blr_file_next_exists(ROUTER_INSTANCE *router,
+                     ROUTER_SLAVE *slave,
+                     char *next_file)
 {
-    char *sptr, buf[BLRM_BINLOG_NAME_STR_LEN], bigbuf[PATH_MAX + 1];
-    int filenum;
+    char *errmsg = NULL;
+    char *sptr;
+    char bigbuf[PATH_MAX + 1];
+    char select_query[GTID_SQL_BUFFER_SIZE];
+    const char select_tpl[] = "SELECT "
+                                 "(rep_domain || '/' || server_id || '/' || binlog_file) AS file, "
+                                 "rep_domain, "
+                                 "server_id, "
+                                 "binlog_file "
+                              "FROM gtid_maps "
+                                 "WHERE id = "
+                                     "(SELECT MAX(id) "
+                                         "FROM gtid_maps "
+                                             "WHERE (binlog_file='%s' AND "
+                                                 "rep_domain = %" PRIu32 " AND "
+                                                 "server_id = %" PRIu32 ")) + 1;";
+
+    MARIADB_GTID_INFO result = {};
+    MARIADB_GTID_ELEMS gtid_elms = {};
 
     if ((sptr = strrchr(slave->binlogfile, '.')) == NULL)
     {
+        next_file[0] = '\0';
         return 0;
     }
-    filenum = atoi(sptr + 1);
-    sprintf(buf, BINLOG_NAMEFMT, router->fileroot, filenum + 1);
-    sprintf(bigbuf, "%s/%s", router->binlogdir, buf);
+
+    /**
+     * The next file to read could be determined in two ways:
+     * - 1 - file sequence +1
+     * - 2 - next file form GTID maps repo
+     */
+    if (router->storage_type == BLR_BINLOG_STORAGE_FLAT)
+    {
+        /**
+         * Next file is the one with +1 in sequence
+         */
+        char buf[BINLOG_FNAMELEN + 1];
+        int filenum;
+        filenum = atoi(sptr + 1);
+        sprintf(buf, BINLOG_NAMEFMT, router->fileroot, filenum + 1);
+        sprintf(bigbuf, "%s/%s", router->binlogdir, buf);
+        // Set the new file name in the output
+        strncpy(next_file, buf, BINLOG_FNAMELEN);
+        next_file[BINLOG_FNAMELEN] = '\0';
+    }
+    else
+    {
+        /**
+         * Next file is selected in GTID maps repo
+         */
+        snprintf(select_query,
+                 GTID_SQL_BUFFER_SIZE,
+                 select_tpl,
+                 slave->binlogfile,
+                 slave->f_info.gtid_elms.domain_id,
+                 slave->f_info.gtid_elms.server_id);
+
+        /* Find the GTID */
+        if (sqlite3_exec(router->gtid_maps,
+                         select_query,
+                         gtid_file_select_cb,
+                         &result,
+                         &errmsg) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to select next file of %s"
+                      " from GTID maps DB: %s, select [%s]",
+                      slave->binlogfile,
+                      errmsg,
+                      select_query);
+            sqlite3_free(errmsg);
+            next_file[0] = '\0';
+            return 0;
+        }
+
+        MXS_INFO("The next Binlog file from GTID maps repo is %s",
+                 result.file);
+
+        // Check whether the query has a result
+        if (result.file)
+        {
+            // Full filename path
+            sprintf(bigbuf,
+                    "%s/%" PRIu32 "/%" PRIu32 "/%s",
+                    router->binlogdir,
+                    result.gtid_elms.domain_id,
+                    result.gtid_elms.server_id,
+                    result.file);
+            // Set the new file name in the output
+            strncpy(next_file, result.file, BINLOG_FNAMELEN);
+            next_file[BINLOG_FNAMELEN] = '\0';
+
+            /**
+             * Update GTID elems in the slave->f_info struct:
+             * file and domain_id / server_id
+             */
+            if (slave->f_info.file)
+            {
+                MXS_FREE(slave->f_info.file);
+                slave->f_info.file = MXS_STRDUP_A(result.file);
+            }
+
+            slave->f_info.gtid_elms.domain_id = result.gtid_elms.domain_id;
+            slave->f_info.gtid_elms.server_id = result.gtid_elms.server_id;
+
+            MXS_FREE(result.file);
+        }
+        else
+        {
+            next_file[0] = '\0';
+            return 0;
+        }
+    }
+
+    // Check whether the new file exists
     if (access(bigbuf, R_OK) == -1)
     {
         return 0;
@@ -2137,6 +2402,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
          */
         if (router->mariadb10_compat)
         {
+            char f_prefix[BINLOG_FILE_EXTRA_INFO] = "";
             if (hdr.event_type == MARIADB10_GTID_GTID_LIST_EVENT)
             {
                 char mariadb_gtid[GTID_MAX_LEN + 1] = "";
@@ -2164,14 +2430,22 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                     snprintf(mariadb_gtid,
                              GTID_MAX_LEN,
-                             "%u-%u-%lu",
+                             "%" PRIu32 "-%" PRIu32 "-%" PRIu64 "",
                              domainid,
                              serverid,
                              n_sequence);
 
-                    MXS_DEBUG("GTID List Event has %lu GTIDs, first is %s",
+                    MXS_DEBUG("GTID List Event has %lu GTIDs, first one is %s",
                                n_gtids,
                                mariadb_gtid);
+
+                    if (router->storage_type == BLR_BINLOG_STORAGE_TREE)
+                    {
+                        sprintf(f_prefix,
+                                "%" PRIu32 "/%" PRIu32 "/",
+                                domainid,
+                                serverid);
+                    }
                 }
                 else
                 {
@@ -2187,17 +2461,41 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                                  "%s",
                                  gtid_info.gtid);
 
+                        if (router->storage_type == BLR_BINLOG_STORAGE_TREE)
+                        {
+                            sprintf(f_prefix,
+                                    "%" PRIu32 "/%" PRIu32 "/",
+                                    gtid_info.gtid_elms.domain_id,
+                                    gtid_info.gtid_elms.server_id);
+                        }
+
+                        if (router->mariadb10_gtid)
+                        {
+                            MXS_INFO("Last found MariaDB 10 GTID"
+                                     " in GTID maps repo was (%s). File %s%s",
+                                     mariadb_gtid,
+                                     f_prefix,
+                                     gtid_info.file);
+                        }
+
                         MXS_FREE(gtid_info.gtid);
                         MXS_FREE(gtid_info.file);
                     }
                 }
 
-                /* Set MariaDB GTID */
                 if (router->mariadb10_gtid)
                 {
+                    /* Set MariaDB GTID */
                     strcpy(router->last_mariadb_gtid, mariadb_gtid);
-                    MXS_INFO("Last MariaDB 10 GTID was (%s).",
-                             router->last_mariadb_gtid);
+
+                    if (router->mariadb10_gtid)
+                    {
+                        MXS_INFO("Last MariaDB 10 GTID (GTID_LIST event)"
+                                 " is (%s). File %s%s",
+                                 mariadb_gtid,
+                                 f_prefix,
+                                 router->binlog_name);
+                    }
                 }
             }
         }
@@ -3438,7 +3736,8 @@ static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *out
  */
 bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
 {
-    static const char insert_tpl[] = "INSERT OR IGNORE INTO gtid_maps("
+    int sql_ret;
+    static const char insert_tpl[] = "INSERT OR FAIL INTO gtid_maps("
                                          "rep_domain, "
                                          "server_id, "
                                          "sequence, "
@@ -3452,8 +3751,16 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
                                          "\"%s\", "
                                          "%" PRIu64 ", "
                                          "%" PRIu64 ");";
+
+    static const char update_tpl[] = "UPDATE gtid_maps SET "
+                                         "start_pos = %" PRIu64 ", "
+                                         "end_pos = %" PRIu64 " "
+                                     "WHERE rep_domain = %" PRIu32 " AND "
+                                         "server_id = %" PRIu32 " AND "
+                                         "sequence = %" PRIu64 " AND "
+                                         "binlog_file = \"%s\";";
     char *errmsg;
-    char insert_sql[GTID_SQL_BUFFER_SIZE];
+    char sql_stmt[GTID_SQL_BUFFER_SIZE];
     MARIADB_GTID_INFO gtid_info;
     MARIADB_GTID_ELEMS gtid_elms;
 
@@ -3465,8 +3772,8 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
            &inst->pending_transaction.gtid_elms,
            sizeof(MARIADB_GTID_ELEMS));
 
-    /* Save GTID into repo */
-    snprintf(insert_sql,
+    /* Prepare INSERT SQL */
+    snprintf(sql_stmt,
              GTID_SQL_BUFFER_SIZE,
              insert_tpl,
              gtid_elms.domain_id,
@@ -3477,27 +3784,67 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
              gtid_info.end);
 
     /* Save GTID into repo */
-    if (sqlite3_exec(inst->gtid_maps, insert_sql, NULL, NULL,
-                     &errmsg) != SQLITE_OK)
+    if ((sql_ret = sqlite3_exec(inst->gtid_maps,
+                                sql_stmt,
+                                NULL,
+                                NULL,
+                                &errmsg)) != SQLITE_OK)
     {
-        MXS_ERROR("Service %s: failed to insert GTID %s for %s:%lu,%lu "
-                  "into gtid_maps database: %s",
-                  inst->service->name,
-                  gtid_info.gtid,
-                  gtid_info.file,
-                  gtid_info.start,
-                  gtid_info.end,
-                  errmsg);
-        sqlite3_free(errmsg);
-        return false;
+        if (sql_ret == SQLITE_CONSTRAINT)
+        {
+            /* Prepare UPDATE SQL */
+            snprintf(sql_stmt,
+                     GTID_SQL_BUFFER_SIZE,
+                     update_tpl,
+                     gtid_info.start,
+                     gtid_info.end,
+                     gtid_elms.domain_id,
+                     gtid_elms.server_id,
+                     gtid_elms.seq_no,
+                     gtid_info.file);
+
+            /* Update GTID into repo */
+            if ((sql_ret = sqlite3_exec(inst->gtid_maps,
+                                        sql_stmt,
+                                        NULL,
+                                        NULL,
+                                        &errmsg)) != SQLITE_OK)
+            {
+                MXS_ERROR("Service %s: failed to update GTID %s for %s:%lu,%lu "
+                          "into gtid_maps database: %s",
+                          inst->service->name,
+                          gtid_info.gtid,
+                          gtid_info.file,
+                          gtid_info.start,
+                          gtid_info.end,
+                          errmsg);
+                sqlite3_free(errmsg);
+                return false;
+            }
+            /* Remove SQLITE_CONSTRAINT error message */
+            sqlite3_free(errmsg);
+        }
+        else
+        {
+            MXS_ERROR("Service %s: failed to insert GTID %s for %s:%lu,%lu "
+                      "into gtid_maps database: %s",
+                      inst->service->name,
+                      gtid_info.gtid,
+                      gtid_info.file,
+                      gtid_info.start,
+                      gtid_info.end,
+                      errmsg);
+            sqlite3_free(errmsg);
+            return false;
+        }
     }
 
-    MXS_DEBUG("Saved MariaDB GTID '%s', %s:%lu,%lu, insert SQL [%s]",
+    MXS_DEBUG("Saved/udated MariaDB GTID '%s', %s:%lu,%lu, SQL [%s]",
               gtid_info.gtid,
               inst->binlog_name,
               gtid_info.start,
               gtid_info.end,
-              insert_sql);
+              sql_stmt);
 
     return true;
 }
@@ -3527,8 +3874,22 @@ static int gtid_select_cb(void *data, int cols, char** values, char** names)
         result->file = MXS_STRDUP_A(values[1]);
         result->start = atoll(values[2]);
         result->end = atoll(values[3]);
+        if (cols > 4)
+        {
+            result->gtid_elms.domain_id = atoll(values[4]);
+            result->gtid_elms.server_id = atoll(values[5]);
+            result->gtid_elms.seq_no = atoll(values[6]);
+        }
 
-        ss_dassert(result->start > 0 && result->end > result->start);
+        ss_dassert(result->start > 0 && result->start > 0);
+        if (result->start > 4)
+        {
+            ss_dassert(result->end > result->start);
+        }
+        else
+        {
+            ss_dassert(result->start > 0 && result->start > 0);
+        }
     }
 
     return 0;
@@ -3555,7 +3916,10 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
                                            " '-' || sequence) AS gtid, "
                                          "binlog_file, "
                                          "start_pos, "
-                                         "end_pos "
+                                         "end_pos, "
+                                         "rep_domain, "
+                                         "server_id, "
+                                         "sequence "
                                      "FROM gtid_maps "
                                          "WHERE (rep_domain = %" PRIu32 " AND "
                                                  "server_id = %" PRIu32 " AND "
@@ -3589,7 +3953,16 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
         sqlite3_free(errmsg);
         return false;
     }
-
+    else
+    {
+        if (result->gtid)
+        {
+            MXS_INFO("Binlog file to read from is %" PRIu32 "/%" PRIu32 "/%s",
+                     result->gtid_elms.domain_id,
+                     result->gtid_elms.server_id,
+                     result->file);
+        }
+    }
     return result->gtid ? true : false;
 }
 
@@ -3688,7 +4061,6 @@ bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info)
  * Get MariaDB GTID from repo
  *
  * @param    router  The current router instance
- * @param    gtid    The GTID to look for
  * @param    result  The (allocated) ouput data to fill
  * @return   False on sqlite errors
  *           True even if the gtid_maps is empty
@@ -3706,19 +4078,25 @@ bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
                                            " '-' || sequence) AS gtid, "
                                          "binlog_file, "
                                          "start_pos, "
-                                         "end_pos "
+                                         "end_pos, "
+                                         "rep_domain, "
+                                         "server_id, "
+                                         "sequence "
                                      "FROM gtid_maps "
                                      "WHERE id = "
-                                         "(SELECT MAX(id) FROM gtid_maps);";
+                                         "(SELECT MAX(id) "
+                                              "FROM gtid_maps "
+                                           "WHERE start_pos > 4);";
 
-    /* Find the GTID */
+    /* Find the last GTID */
     if (sqlite3_exec(router->gtid_maps,
                      last_gtid,
                      gtid_select_cb,
                      result,
                      &errmsg) != SQLITE_OK)
     {
-        MXS_ERROR("Failed to select last GTID from GTID maps DB: %s, select [%s]",
+        MXS_ERROR("Failed to select last GTID"
+                  " from GTID maps DB: %s, select [%s]",
                   errmsg,
                   last_gtid);
         sqlite3_free(errmsg);
@@ -3726,4 +4104,128 @@ bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
     }
 
     return true;
+}
+
+/**
+ * Select callback for blr_file_next_exists()
+ *
+ * @param data      Data pointer from caller
+ * @param cols      Number of columns
+ * @param values    The values
+ * @param names     The column names
+ *
+ * @return          0 on success, 1 otherwise
+ */
+static int gtid_file_select_cb(void *data,
+                               int cols,
+                               char** values,
+                               char** names)
+{
+    MARIADB_GTID_INFO *result = (MARIADB_GTID_INFO *)data;
+
+    ss_dassert(cols >= 4);
+
+    if (values[0] &&
+        values[1] &&
+        values[2] &&
+        values[3])
+    {
+        result->file = MXS_STRDUP_A(values[3]);
+        result->gtid_elms.domain_id = atoll(values[1]);
+        result->gtid_elms.server_id = atoll(values[2]);
+    }
+
+    return 0;
+}
+
+/**
+ * Get Last file from GTID from repo
+ *
+ * @param    router  The current router instance
+ * @param    result  The (allocated) ouput data to fill
+ * @return   False on sqlite errors
+ *           True even if the gtid_maps is empty
+ *           The caller must check result->gtid value
+ */
+
+bool blr_get_last_file(ROUTER_INSTANCE *router,
+                       MARIADB_GTID_INFO *result)
+{
+    char *errmsg = NULL;
+    MARIADB_GTID_ELEMS gtid_elms = {};
+    static const char last_gtid[] = "SELECT "
+                                         "(rep_domain ||"
+                                           " '-' || server_id ||"
+                                           " '-' || sequence) AS gtid, "
+                                         "binlog_file, "
+                                         "start_pos, "
+                                         "end_pos, "
+                                         "rep_domain, "
+                                         "server_id, "
+                                         "sequence "
+                                     "FROM gtid_maps "
+                                     "WHERE id = "
+                                         "(SELECT MAX(id) FROM gtid_maps);";
+
+    /* Find the the last file */
+    if (sqlite3_exec(router->gtid_maps,
+                     last_gtid,
+                     gtid_select_cb,
+                     result,
+                     &errmsg) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to select last written binlog file"
+                  " from GTID maps DB: %s, select [%s]",
+                  errmsg,
+                  last_gtid);
+        sqlite3_free(errmsg);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Compare the specified router file and slave one
+ *
+ * @param    router    The router instance
+ * @param    info      Additional file info
+ * @param    r_file    The router binlog file
+ * @param    s_file    The slave file
+ * @return             True or false
+ */
+bool blr_compare_binlogs(ROUTER_INSTANCE *router,
+                         const MARIADB_GTID_ELEMS *info,
+                         const char *r_file,
+                         const char *s_file)
+{
+    // Just strcmp()
+    if (router->storage_type == BLR_BINLOG_STORAGE_FLAT)
+    {
+        return strcmp(r_file, s_file) == 0;
+    }
+    else
+    {
+       // domain_id, server_id and strcmp()
+       return ((router->mariadb10_gtid_domain == info->domain_id) &&
+               (router->orig_masterid == info->server_id) &&
+               strcmp(r_file, r_file) == 0);
+    }
+}
+
+/**
+ * Check whether the current slave file is the current file
+ * being written by the router
+ *
+ * @param    router    The router instance
+ * @param    slave     The connected slave
+ * @return             True or false
+ */
+bool blr_is_current_binlog(ROUTER_INSTANCE *router,
+                           ROUTER_SLAVE *slave)
+{
+    return blr_compare_binlogs(router,
+                               &slave->f_info.gtid_elms,
+                               router->binlog_name,
+                               slave->binlogfile);
 }

@@ -61,7 +61,6 @@
  */
 
 #include "blr.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -87,6 +86,7 @@
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <maxscale/alloc.h>
+#include <inttypes.h>
 
 /* The router entry points */
 static  MXS_ROUTER  *createInstance(SERVICE *service, char **options);
@@ -126,6 +126,8 @@ static void stats_func(void *);
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
 GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
+extern bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
+                                       MARIADB_GTID_INFO *result);
 
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
@@ -136,6 +138,13 @@ static const MXS_ENUM_VALUE enc_algo_values[] =
 #if OPENSSL_VERSION_NUMBER > 0x10000000L
     {"aes_ctr", BLR_AES_CTR},
 #endif
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE binlog_storage_values[] =
+{
+    {"flat", BLR_BINLOG_STORAGE_FLAT},
+    {"tree", BLR_BINLOG_STORAGE_TREE},
     {NULL}
 };
 
@@ -200,6 +209,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
             {"mariadb10_slave_gtid", MXS_MODULE_PARAM_BOOL, "false"},
             {"mariadb10_master_gtid", MXS_MODULE_PARAM_BOOL, "false"},
+            {"binlog_structure", MXS_MODULE_PARAM_ENUM, "flat", MXS_MODULE_OPT_NONE, binlog_storage_values},
             {"shortburst", MXS_MODULE_PARAM_COUNT, DEF_SHORT_BURST},
             {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
@@ -382,6 +392,11 @@ createInstance(SERVICE *service, char **options)
     /* Set router uuid */
     inst->uuid = config_copy_string(params, "uuid");
 
+    /* Enable Flat or Tree storage of binlog files */
+    inst->storage_type = config_get_enum(params,
+                                         "binlog_structure",
+                                         binlog_storage_values);
+
     if (inst->uuid == NULL)
     {
         /* Generate UUID for the router instance */
@@ -542,6 +557,13 @@ createInstance(SERVICE *service, char **options)
                 {
                     inst->mariadb10_master_gtid = config_truth_value(value);
                 }
+                else if (strcmp(options[i], "binlog_structure") == 0)
+                {
+                    /* Enable Flat or Tree storage of binlog files */
+                    inst->storage_type = strcasecmp(value, "tree") == 0 ?
+                                         BLR_BINLOG_STORAGE_TREE :
+                                         BLR_BINLOG_STORAGE_FLAT;
+                }
                 else if (strcmp(options[i], "encryption_algorithm") == 0)
                 {
                     int ret = blr_check_encryption_algorithm(value);
@@ -672,7 +694,6 @@ createInstance(SERVICE *service, char **options)
         return NULL;
     }
 
-
     /* Get the Encryption key */
     if (inst->encryption.enabled && !blr_get_encryption_key(inst))
     {
@@ -723,6 +744,24 @@ createInstance(SERVICE *service, char **options)
         inst->mariadb10_gtid = true;
     }
 
+    if (!inst->mariadb10_master_gtid &&
+        inst->storage_type == BLR_BINLOG_STORAGE_TREE)
+    {
+        MXS_ERROR("%s: binlog_structure 'tree' mode can be enabled only"
+                      " with MariaDB Master GTID registration feature."
+                      " Please enable it with option"
+                      " 'mariadb10_master_gtid = on'",
+                  service->name);
+        free_instance(inst);
+        return NULL;
+    }
+
+    /* Log binlog structure storage mode */
+    MXS_NOTICE("%s: storing binlog files in %s",
+               service->name,
+               inst->storage_type == BLR_BINLOG_STORAGE_FLAT ?
+               "'flat' mode" :
+               "'tree' mode using GTID domain_id and server_id");
     /* Enable MariaDB the GTID maps store */
     if (inst->mariadb10_compat &&
         inst->mariadb10_gtid)
@@ -889,7 +928,7 @@ createInstance(SERVICE *service, char **options)
         /* Read any cached response messages */
         blr_cache_read_master_data(inst);
 
-        /* Find latest binlog file or create a new one (000001) */
+        /* Find latest binlog file */
         if (blr_file_init(inst) == 0)
         {
             MXS_ERROR("%s: Service not started due to lack of binlog directory %s",
@@ -955,8 +994,18 @@ createInstance(SERVICE *service, char **options)
      */
     if (inst->master_state == BLRM_UNCONNECTED)
     {
-        /* Check current binlog */
-        MXS_NOTICE("Validating binlog file '%s' ...",
+        char f_prefix[BINLOG_FILE_EXTRA_INFO] = "";
+        if (inst->storage_type == BLR_BINLOG_STORAGE_TREE)
+        {
+            sprintf(f_prefix,
+                    "%" PRIu32 "/%" PRIu32 "/",
+                    inst->mariadb10_gtid_domain,
+                    inst->orig_masterid);
+        }
+
+        /* Log current binlog, possibly with tree prefix */
+        MXS_NOTICE("Validating last binlog file '%s%s' ...",
+                   f_prefix,
                    inst->binlog_name);
 
         if (!blr_check_binlog(inst))
@@ -974,6 +1023,57 @@ createInstance(SERVICE *service, char **options)
         MXS_INFO("Current binlog file is %s, safe pos %lu, current pos is %lu\n",
                  inst->binlog_name, inst->binlog_position, inst->current_pos);
 
+        /**
+         *  Try loading last found GTID if the file size is <= 4 bytes
+         */
+        if (inst->mariadb10_gtid &&
+            inst->current_pos <= 4)
+        {
+            MARIADB_GTID_INFO last_gtid = {};
+            /* Get last MariaDB GTID from repo */
+            if (blr_load_last_mariadb_gtid(inst, &last_gtid) &&
+                last_gtid.gtid != NULL)
+            {
+                /* Set MariaDB GTID */
+                strcpy(inst->last_mariadb_gtid, last_gtid.gtid);
+
+                MXS_FREE(last_gtid.gtid);
+                MXS_FREE(last_gtid.file);
+            }
+            else
+            {
+                /**
+                 * In case of no GTID, inst->last_mariadb_gtid is empty.
+                 *
+                 * If connecting to master with GTID = "" the server
+                 * will send data from its first binlog and
+                 * this might overwrite existing data.
+                 *
+                 * Binlog server will not connect to master.
+                 *
+                 * It's needed to connect to MySQL admin interface
+                 * and explicitely issue:
+                 * SET @@GLOBAL.GTID_SLAVE_POS =''
+                 * and START SLAVE
+                 */
+
+                /* Force STOPPED state */
+                inst->master_state = BLRM_SLAVE_STOPPED;
+                /* Set mysql_errno and error message */
+                inst->m_errno = BINLOG_FATAL_ERROR_READING;
+                inst->m_errmsg = MXS_STRDUP_A("HY000 Cannot find any GTID"
+                                              " in the GTID maps repo."
+                                              " Please issue SET @@GLOBAL.GTID_SLAVE_POS =''"
+                                              " and START SLAVE."
+                                              " Existing binlogs might be overwritten.");
+               MXS_ERROR("%s: %s",
+                         inst->service->name,
+                         inst->m_errmsg);
+
+                return (MXS_ROUTER *)inst;
+            }
+        }
+
         /* Don't start replication if binlog has START_ENCRYPTION_EVENT but binlog encryption is off */
         if (!inst->encryption.enabled && inst->encryption_ctx)
         {
@@ -985,8 +1085,9 @@ createInstance(SERVICE *service, char **options)
             inst->master_state = BLRM_SLAVE_STOPPED;
             /* Set mysql_errno and error message */
             inst->m_errno = BINLOG_FATAL_ERROR_READING;
-            inst->m_errmsg = mxs_strdup("HY000 Binlog encryption is Off but binlog file has "
-                                        "the START_ENCRYPTION_EVENT");
+            inst->m_errmsg = MXS_STRDUP_A("HY000 Binlog encryption is Off"
+                                          " but current binlog file has"
+                                           " the START_ENCRYPTION_EVENT");
 
             return (MXS_ROUTER *)inst;
         }
@@ -998,6 +1099,11 @@ createInstance(SERVICE *service, char **options)
     return (MXS_ROUTER *)inst;
 }
 
+/**
+ * Free the router instance
+ *
+ * @param    instance    The router instance
+ */
 static void
 free_instance(ROUTER_INSTANCE *instance)
 {
@@ -1079,6 +1185,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     slave->mariadb_gtid = NULL;
 
     slave->gtid_maps = NULL;
+    memset(&slave->f_info, 0 , sizeof (MARIADB_GTID_INFO));
 
     /**
      * Add this session to the list of active sessions.

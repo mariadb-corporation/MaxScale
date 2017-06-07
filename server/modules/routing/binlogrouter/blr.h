@@ -104,6 +104,12 @@ MXS_BEGIN_DECLS
  * in SHOW FULL BINARY LOGS
  */
 #define BINLOG_FILE_EXTRA_INFO GTID_MAX_LEN
+
+enum blr_binlog_storage_type
+{
+    BLR_BINLOG_STORAGE_FLAT,
+    BLR_BINLOG_STORAGE_TREEE
+};
 /**
  * Supported Encryption algorithms
  *
@@ -298,6 +304,24 @@ enum blr_event_state
     BLR_EVENT_DONE, /*< The complete event was received */
 };
 
+/** MariaDB GTID elements */
+typedef struct mariadb_gtid_elems
+{
+    uint32_t domain_id;   /*< The replication domain */
+    uint32_t server_id;   /*< The serverid */
+    uint64_t seq_no;      /*< The sequence number */
+} MARIADB_GTID_ELEMS;
+
+/** MariaDB GTID info */
+typedef struct mariadb_gtid_info
+{
+    char *gtid;                      /** MariaDB 10.x GTID, string value */
+    char *file;                      /** The binlog file */
+    uint64_t start;                  /** The BEGIN pos: i.e the GTID event */
+    uint64_t end;                    /** The next_pos in COMMIT event */
+    MARIADB_GTID_ELEMS gtid_elms;    /** MariaDB 10.x GTID components */
+} MARIADB_GTID_INFO;
+
 /* Master Server configuration struct */
 typedef struct master_server_config
 {
@@ -376,11 +400,12 @@ typedef struct
 typedef struct blfile
 {
     char            binlogname[BINLOG_FNAMELEN + 1]; /*< Name of the binlog file */
-    int             fd;                             /*< Actual file descriptor */
-    int             refcnt;                         /*< Reference count for file */
-    BLCACHE         *cache;                         /*< Record cache for this file */
-    SPINLOCK        lock;                           /*< The file lock */
-    struct blfile   *next;                          /*< Next file in list */
+    int             fd;                              /*< Actual file descriptor */
+    int             refcnt;                          /*< Reference count for file */
+    BLCACHE         *cache;                          /*< Record cache for this file */
+    SPINLOCK        lock;                            /*< The file lock */
+    MARIADB_GTID_ELEMS   info;                       /*< Elements for file prefix */
+    struct blfile   *next;                           /*< Next file in list */
 } BLFILE;
 
 /**
@@ -471,6 +496,7 @@ typedef struct router_slave
     bool              gtid_strict_mode;/*< MariaDB 10 Slave sets gtid_strict_mode */
     char              *mariadb_gtid;   /*< MariaDB 10 Slave connects with GTID */
     sqlite3           *gtid_maps;      /*< GTID storage client handle, read only*/
+    MARIADB_GTID_INFO f_info;          /*< GTID info for file name prefix */
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
@@ -553,34 +579,17 @@ typedef enum
     BLRM_STANDALONE_SEEN       /*< Received a standalone event, ie: a DDL */
 } master_transaction_t;
 
-/** MariaDB GTID elements */
-typedef struct mariadb_gtid_elems
-{
-    uint32_t domain_id;   /*< The replication domain */
-    uint32_t server_id;   /*< The serverid */
-    uint64_t seq_no;      /*< The sequence number */
-} MARIADB_GTID_ELEMS;
-
 /** Transaction Details */
 typedef struct pending_transaction
 {
     char gtid[GTID_MAX_LEN + 1];     /** MariaDB 10.x GTID */
     master_transaction_t state;      /** Transaction state */
     uint64_t start_pos;              /** The BEGIN pos */
-    uint64_t end_pos;                /** The next_pos in COMMIT event*/
-    MARIADB_GTID_ELEMS gtid_elms;    /* MariaDB 10.x GTID components */
+    uint64_t end_pos;                /** The next_pos in COMMIT event */
+    MARIADB_GTID_ELEMS gtid_elms;    /** MariaDB 10.x GTID components */
     bool standalone;                 /** Standalone event, such as DDL
                                       * no terminating COMMIT */
 } PENDING_TRANSACTION;
-
-/** MariaDB GTID info */
-typedef struct mariadb_gtid_info
-{
-    char *gtid;        /** MariaDB 10.x GTID, string value */
-    char *file;        /** The binlog file */
-    uint64_t start;    /** The BEGIN pos: i.e the GTID event */
-    uint64_t end;      /** The next_pos in COMMIT event*/
-} MARIADB_GTID_INFO;
 
 /**
  * The per instance data for the router.
@@ -673,6 +682,7 @@ typedef struct router_instance
                                              */
     uint32_t          mariadb10_gtid_domain;/*< MariaDB 10 GTID Domain ID */
     sqlite3           *gtid_maps;           /*< MariaDB 10 GTID storage */
+    enum binlog_storage_type   storage_type;/*< Enables hierachical binlog file storage */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 
@@ -894,7 +904,9 @@ extern int  blr_file_init(ROUTER_INSTANCE *);
 extern int  blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *, uint32_t pos, uint8_t *);
 extern int  blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
-extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
+extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *,
+                               const char *,
+                               const MARIADB_GTID_INFO *);
 extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned long, REP_HEADER *, char *,
                               const SLAVE_ENCRYPTION_CTX *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
@@ -902,7 +914,9 @@ extern unsigned long blr_file_size(BLFILE *);
 extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_send_custom_error(DCB *, int, int, char *, char *, unsigned int);
-extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
+extern int blr_file_next_exists(ROUTER_INSTANCE *,
+                                ROUTER_SLAVE *,
+                                char *next_file);
 uint32_t extract_field(uint8_t *src, int bits);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *, BINLOG_FILE_FIX *, int);

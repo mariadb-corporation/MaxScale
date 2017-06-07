@@ -3246,6 +3246,8 @@ static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
             router->last_written = hdr->next_pos;
             router->last_event_pos = router->current_pos;
             router->current_pos = hdr->next_pos;
+            router->binlog_position = router->current_pos;
+            router->current_safe_event = router->current_pos;
 
             spinlock_release(&router->binlog_lock);
         }
