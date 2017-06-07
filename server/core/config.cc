@@ -163,7 +163,7 @@ static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
 static bool check_first_last_char(const char* string, char expected);
 static void remove_first_last_char(char* value);
-static bool test_regex_string_validity(const char* regex_string);
+static bool test_regex_string_validity(const char* regex_string, const char* key);
 static bool compile_regex_string(const char* regex_string, bool jit_enabled, uint32_t options,
                                  pcre2_code** output_code, uint32_t* output_capcount);
 
@@ -3633,8 +3633,19 @@ void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p)
                 break;
 
             case MXS_MODULE_PARAM_QUOTEDSTRING:
+                // Remove *if* once '" .. "' is no longer optional
+                if (check_first_last_char(p->value, '"'))
+                {
+                    remove_first_last_char(p->value);
+                }
+                break;
+
             case MXS_MODULE_PARAM_REGEX:
-                remove_first_last_char(p->value);
+                // Remove *if* once '/ .. /' is no longer optional
+                if (check_first_last_char(p->value, '/'))
+                {
+                    remove_first_last_char(p->value);
+                }
                 break;
 
             default:
@@ -3734,7 +3745,20 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 break;
 
             case MXS_MODULE_PARAM_QUOTEDSTRING:
-                valid = check_first_last_char(value, '"');
+                if (*value)
+                {
+                    valid = true;
+                    if (!check_first_last_char(value, '"'))
+                    {
+                        // Change warning to valid=false once quotes are no longer optional
+                        MXS_WARNING("Missing quotes (\") around a quoted string is deprecated: '%s=%s'.",
+                                    key, value);
+                    }
+                }
+                break;
+
+            case MXS_MODULE_PARAM_REGEX:
+                valid = test_regex_string_validity(value, key);
                 break;
 
             case MXS_MODULE_PARAM_ENUM:
@@ -3812,10 +3836,6 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
 
             case MXS_MODULE_PARAM_PATH:
                 valid = check_path_parameter(&params[i], value);
-                break;
-
-            case MXS_MODULE_PARAM_REGEX:
-                valid = test_regex_string_validity(value);
                 break;
 
             default:
@@ -4121,15 +4141,24 @@ static bool compile_regex_string(const char* regex_string, bool jit_enabled,
  * @return True if compilation succeeded, false if string is invalid or cannot
  * be compiled.
  */
-static bool test_regex_string_validity(const char* regex_string)
+static bool test_regex_string_validity(const char* regex_string, const char* key)
 {
-    if (!check_first_last_char(regex_string, '/'))
+    if (*regex_string == '\0')
     {
         return false;
     }
     char regex_copy[strlen(regex_string) + 1];
     strcpy(regex_copy, regex_string);
-    remove_first_last_char(regex_copy);
+    if (!check_first_last_char(regex_string, '/'))
+    {
+        //return false; // Uncomment this line once '/ .. /' is no longer optional
+        MXS_WARNING("Missing slashes (/) around a regular expression is deprecated: '%s=%s'.",
+                    key, regex_string);
+    }
+    else
+    {
+        remove_first_last_char(regex_copy);
+    }
 
     pcre2_code* code;
     uint32_t capcount;
