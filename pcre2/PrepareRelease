@@ -65,13 +65,9 @@ End
 
 echo "Making pcre2.txt"
 for file in pcre2 pcre2api pcre2build pcre2callout pcre2compat pcre2jit \
-            pcre2limits pcre2matching pcre2partial pcre2unicode ; do
-
-#for file in  \
-#            pcre2syntax \
-#            pcre2precompile pcre2perform pcre2posix pcre2sample \
-#            pcre2stack ; do
-
+            pcre2limits pcre2matching pcre2partial pcre2pattern pcre2perform \
+            pcre2posix pcre2sample pcre2serialize pcre2stack pcre2syntax \
+            pcre2unicode ; do
   echo "  Processing $file.3"
   nroff -c -man $file.3 >$file.rawtxt
   perl ../CleanTxt <$file.rawtxt >>pcre2.txt
@@ -153,7 +149,6 @@ for file in *.3 ; do
      [ "$base" = "pcre2stack" ]   || \
      [ "$base" = "pcre2compat" ]  || \
      [ "$base" = "pcre2limits" ]  || \
-     [ "$base" = "pcre2perform" ] || \
      [ "$base" = "pcre2unicode" ] ; then
     toc=""
   fi
@@ -204,6 +199,7 @@ files="\
   src/pcre2_context.c \
   src/pcre2_dfa_match.c \
   src/pcre2_error.c \
+  src/pcre2_find_bracket.c \
   src/pcre2_internal.h \
   src/pcre2_intmodedep.h \
   src/pcre2_jit_compile.c \

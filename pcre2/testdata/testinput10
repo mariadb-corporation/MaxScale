@@ -1,45 +1,7 @@
 # This set of tests is for UTF-8 support and Unicode property support, with
 # relevance only for the 8-bit library.
 
-/X(\C{3})/utf
-    X\x{1234}
-
-/X(\C{4})/utf
-    X\x{1234}YZ
-
-/X\C*/utf
-    XYZabcdce
-
-/X\C*?/utf
-    XYZabcde
-
-/X\C{3,5}/utf
-    Xabcdefg
-    X\x{1234}
-    X\x{1234}YZ
-    X\x{1234}\x{512}
-    X\x{1234}\x{512}YZ
-
-/X\C{3,5}?/utf
-    Xabcdefg
-    X\x{1234}
-    X\x{1234}YZ
-    X\x{1234}\x{512}
-
-/a\Cb/utf
-    aXb
-    a\nb
-
-/a\C\Cb/utf
-    a\x{100}b
-
-/ab\Cde/utf
-    abXde
-
-/a\C\Cb/utf
-    a\x{100}b
-    ** Failers
-    a\x{12257}b
+# The next 4 patterns have UTF-8 errors
 
 /[√]/utf
 
@@ -47,7 +9,12 @@
 
 /√√√xxx/utf
 
+/√ÇÇÇÇÇÇÇÇ√/utf
+
+# Now test subjects
+
 /badutf/utf
+\= Expect UTF-8 errors
     X\xdf
     XX\xef
     XXX\xef\x80
@@ -89,11 +56,13 @@
     \xff
 
 /badutf/utf
+\= Expect UTF-8 errors
     XX\xfb\x80\x80\x80\x80
     XX\xfd\x80\x80\x80\x80\x80
     XX\xf7\xbf\xbf\xbf
 
 /shortutf/utf
+\= Expect UTF-8 errors
     XX\xdf\=ph
     XX\xef\=ph
     XX\xef\x80\=ph
@@ -111,6 +80,7 @@
     \xfd\x80\x80\x80\x80\=ph
 
 /anything/utf
+\= Expect UTF-8 errors
     X\xc0\x80
     XX\xc1\x8f
     XXX\xe0\x9f\x80
@@ -119,20 +89,57 @@
     \xfc\x83\x80\x80\x80\x80
     \xfe\x80\x80\x80\x80\x80
     \xff\x80\x80\x80\x80\x80
+    \xf8\x88\x80\x80\x80
+    \xf9\x87\x80\x80\x80
+    \xfc\x84\x80\x80\x80\x80
+    \xfd\x83\x80\x80\x80\x80
+\= Expect no match
     \xc3\x8f
     \xe0\xaf\x80
     \xe1\x80\x80
     \xf0\x9f\x80\x80
     \xf1\x8f\x80\x80
-    \xf8\x88\x80\x80\x80
-    \xf9\x87\x80\x80\x80
-    \xfc\x84\x80\x80\x80\x80
-    \xfd\x83\x80\x80\x80\x80
     \xf8\x88\x80\x80\x80\=no_utf_check
     \xf9\x87\x80\x80\x80\=no_utf_check
     \xfc\x84\x80\x80\x80\x80\=no_utf_check
     \xfd\x83\x80\x80\x80\x80\=no_utf_check
+    
+# Similar tests with offsets
 
+/badutf/utf
+\= Expect UTF-8 errors
+    X\xdfabcd
+    X\xdfabcd\=offset=1
+\= Expect no match
+    X\xdfabcd\=offset=2
+
+/(?<=x)badutf/utf
+\= Expect UTF-8 errors
+    X\xdfabcd
+    X\xdfabcd\=offset=1
+    X\xdfabcd\=offset=2
+    X\xdfabcd\xdf\=offset=3
+\= Expect no match
+    X\xdfabcd\=offset=3
+
+/(?<=xx)badutf/utf
+\= Expect UTF-8 errors
+    X\xdfabcd
+    X\xdfabcd\=offset=1
+    X\xdfabcd\=offset=2
+    X\xdfabcd\=offset=3
+
+/(?<=xxxx)badutf/utf
+\= Expect UTF-8 errors
+    X\xdfabcd
+    X\xdfabcd\=offset=1
+    X\xdfabcd\=offset=2
+    X\xdfabcd\=offset=3
+    X\xdfabc\xdf\=offset=6
+    X\xdfabc\xdf\=offset=7
+\= Expect no match
+    X\xdfabcd\=offset=6
+ 
 /\x{100}/IB,utf
 
 /\x{1000}/IB,utf
@@ -167,27 +174,12 @@
 
 /\x{212ab}/IB,utf
 
-# This one is here not because it's different to Perl, but because the way
-# the captured single-byte is displayed. (In Perl it becomes a character, and you
-# can't tell the difference.)
-
-/X(\C)(.*)/utf
-    X\x{1234}
-    X\nabc
-
-# This one is here because Perl gives out a grumbly error message (quite
-# correctly, but that messes up comparisons).
-
-/a\Cb/utf
-    *** Failers
-    a\x{100}b
-
 /[^ab\xC0-\xF0]/IB,utf
     \x{f1}
     \x{bf}
     \x{100}
     \x{1000}
-    *** Failers
+\= Expect no match
     \x{c0}
     \x{f0}
 
@@ -214,7 +206,6 @@
     \x{100}
     Z\x{100}
     \x{100}Z
-    *** Failers
 
 /[\xff]/IB,utf
     >\x{ff}<
@@ -236,21 +227,23 @@
 # This tests the stricter UTF-8 check according to RFC 3629.
 
 /X/utf
+\= Expect UTF-8 errors
     \x{d800}
-    \x{d800}\=no_utf_check
     \x{da00}
-    \x{da00}\=no_utf_check
     \x{dfff}
-    \x{dfff}\=no_utf_check
     \x{110000}
-    \x{110000}\=no_utf_check
     \x{2000000}
-    \x{2000000}\=no_utf_check
     \x{7fffffff}
+\= Expect no match
+    \x{d800}\=no_utf_check
+    \x{da00}\=no_utf_check
+    \x{dfff}\=no_utf_check
+    \x{110000}\=no_utf_check
+    \x{2000000}\=no_utf_check
     \x{7fffffff}\=no_utf_check
 
 /(*UTF8)\x{1234}/
-  abcd\x{1234}pqr
+    abcd\x{1234}pqr
 
 /(*CRLF)(*UTF)(*BSR_UNICODE)a\Rb/I
 
@@ -290,11 +283,14 @@
 
 /a+/utf
     a\x{123}aa\=offset=1
-    a\x{123}aa\=offset=2
     a\x{123}aa\=offset=3
     a\x{123}aa\=offset=4
-    a\x{123}aa\=offset=5
+\= Expect bad offset value
     a\x{123}aa\=offset=6
+\= Expect bad UTF-8 offset     
+    a\x{123}aa\=offset=2
+\= Expect no match
+    a\x{123}aa\=offset=5
 
 /\x{1234}+/Ii,utf
 
@@ -395,7 +391,6 @@
     Z\x{100}
     \x{100}
     \x{100}Z
-    *** Failers 
 
 /[z-\x{100}]/IB,utf
 
@@ -421,7 +416,7 @@
     \x{104}
     \x{105}
     \x{109}  
-    ** Failers
+\= Expect no match
     \x{100}
     \x{10a} 
     
@@ -435,7 +430,7 @@
     \x{ff}
     \x{100}
     \x{101} 
-    ** Failers
+\= Expect no match
     \x{102}
     Y
     y           
@@ -445,6 +440,22 @@
 /\x{3a3}B/IBi,utf
 
 /abc/utf,replace=√
-   abc
+    abc
+
+/(?<=(a)(?-1))x/I,utf
+    a\x80zx\=offset=3
+
+/[\W\p{Any}]/B
+    abc
+    123 
+
+/[\W\pL]/B
+    abc
+\= Expect no match
+    123     
+
+/(*:*++++++++++++''''''''''''''''''''+''+++'+++x+++++++++++++++++++++++++++++++++++(++++++++++++++++++++:++++++%++:''''''''''''''''''''''''+++++++++++++++++++++++++++++++++++++++++++++++++++++-++++++++k+++++++''''+++'+++++++++++++++++++++++''''++++++++++++':∆ø)/utf
+
+/[\s[:^ascii:]]/B,ucp
 
 # End of testinput10

@@ -44,6 +44,16 @@ protocol=MySQLClient
 port=4008
 #socket=/tmp/readconn.sock
 
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+socket=default
+
 [server1]
 type=server
 address=###galera_server_IP_1###

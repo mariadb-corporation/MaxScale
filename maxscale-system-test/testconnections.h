@@ -443,6 +443,11 @@ public:
     int start_binlog();
 
     /**
+     * @brief Start binlogrouter replication from master
+     */
+    bool replicate_from_master();
+
+    /**
      * @brief prepare_binlog clean up binlog directory, set proper access rights to it
      * @return 0
      */

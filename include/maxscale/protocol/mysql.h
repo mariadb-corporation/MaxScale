@@ -5,34 +5,11 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
- */
-
-/*
- * Revision History
- *
- * Date         Who                     Description
- * 01-06-2013   Mark Riddoch            Initial implementation
- * 14-06-2013   Massimiliano Pinto      Added specific data
- *                                      for MySQL session
- * 04-07-2013   Massimiliano Pinto      Added new MySQL protocol status for asynchronous connection
- *                                      Added authentication reply status
- * 12-07-2013   Massimiliano Pinto      Added routines for change_user
- * 14-02-2014   Massimiliano Pinto      setipaddress returns int
- * 25-02-2014   Massimiliano Pinto      Added dcb parameter to gw_find_mysql_user_password_sha1()
- *                                      and repository to gw_check_mysql_scramble_data()
- *                                      It's now possible to specify a different users' table than
- *                                      dcb->service->users default
- * 26-02-2014   Massimiliano Pinto      Removed previously added parameters to gw_check_mysql_scramble_data() and
- *                                      gw_find_mysql_user_password_sha1()
- * 28-02-2014   Massimiliano Pinto      MYSQL_DATABASE_MAXLEN,MYSQL_USER_MAXLEN moved to dbusers.h
- * 07-02-2016   Martin Brampton         Extend MYSQL_session type; add MYSQL_AUTH_SUCCEEDED
- * 17-05-2016   Martin Brampton         Moved gw_find_mysql_user_password_sha1 to mysql_auth.c
- *
  */
 
 #include <maxscale/cdefs.h>
@@ -430,6 +407,30 @@ char* create_auth_fail_str(char *username, char *hostaddr, bool password, char *
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 bool read_complete_packet(DCB *dcb, GWBUF **readbuf);
 bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
+
+/**
+ * Decode server handshake
+ *
+ * @param conn    The MySQLProtocol structure
+ * @param payload The handshake payload without the network header
+ *
+ * @return 0 on success, -1 on failure
+ *
+ */
+int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload);
+
+/**
+ * Create a response to the server handshake
+ *
+ * @param session         Session object
+ * @param conn            MySQL Protocol object for this connection
+ * @param with_ssl        Whether to create an SSL response or a normal response packet
+ * @param ssl_established Set to true if the SSL response has been sent
+ *
+ * @return Generated response packet
+ */
+GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
+                                 bool with_ssl, bool ssl_established);
 
 /** Read the backend server's handshake */
 bool gw_read_backend_handshake(DCB *dcb, GWBUF *buffer);

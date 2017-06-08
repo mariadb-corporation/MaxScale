@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -147,8 +147,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         { MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name" }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "show", cache_command_show,
-                               MXS_ARRAY_NELEMS(show_argv), show_argv);
+    modulecmd_register_command(MXS_MODULE_NAME, "show", MODULECMD_TYPE_PASSIVE,
+                               cache_command_show, MXS_ARRAY_NELEMS(show_argv), show_argv);
 
     MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
 

@@ -6,7 +6,7 @@ function set_value(key, value) {
         .then(function(resp) {
             var d = JSON.parse(resp)
             d.data.attributes.parameters[key] = value;
-            return request.put(base_url + "/maxscale", { json: d })
+            return request.patch(base_url + "/maxscale", { json: d })
         })
         .then(function() {
             return request.get(base_url + "/maxscale")

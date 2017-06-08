@@ -8,35 +8,35 @@
 #forbid_utf
 
 /^[\w]+/
-    *** Failers
+\= Expect no match
     École
 
 /^[\w]+/locale=fr_FR
     École
 
 /^[\w]+/
-    *** Failers
+\= Expect no match
     École
 
 /^[\W]+/
     École
 
 /^[\W]+/locale=fr_FR
-    *** Failers
+\= Expect no match
     École
 
 /[\b]/
     \b
-    *** Failers
+\= Expect no match
     a
 
 /[\b]/locale=fr_FR
     \b
-    *** Failers
+\= Expect no match
     a
 
 /^\w+/
-    *** Failers
+\= Expect no match
     École
 
 /^\w+/locale=fr_FR
@@ -46,12 +46,12 @@
     École
 
 /(.+)\b(.+)/locale=fr_FR
-    *** Failers
+\= Expect no match
     École
 
 /École/i
     École
-    *** Failers
+\= Expect no match
     école
 
 /École/i,locale=fr_FR
@@ -72,7 +72,7 @@
 
 /^[\xc8-\xc9]/
     École
-    *** Failers 
+\= Expect no match
     école
 
 /\W+/

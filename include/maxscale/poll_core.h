@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -97,12 +97,5 @@ bool poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data
  * @return True on success, false on failure.
  */
 bool poll_remove_fd_from_worker(int wid, int fd);
-
-/**
- * Check whether there are cross-thread messages for current thread.
- *
- * @attention Only to be called by the system.
- */
-void poll_check_message(void);
 
 MXS_END_DECLS

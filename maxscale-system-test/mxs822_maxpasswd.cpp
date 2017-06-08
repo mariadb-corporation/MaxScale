@@ -31,7 +31,7 @@ void try_password(TestConnections* Test, char * pass)
      */
     Test->tprintf("Encrypting password: %s", pass);
     Test->set_timeout(30);
-    int rc = Test->ssh_maxscale(true, "maxpasswd '%s' | tr -dc '[:xdigit:]' > /tmp/pw.txt && "
+    int rc = Test->ssh_maxscale(true, "maxpasswd /var/lib/maxscale/ '%s' | tr -dc '[:xdigit:]' > /tmp/pw.txt && "
                                 "sed -i 's/user=.*/user=test/' /etc/maxscale.cnf && "
                                 "sed -i \"s/passwd=.*/passwd=$(cat /tmp/pw.txt)/\" /etc/maxscale.cnf && "
                                 "service maxscale restart && "

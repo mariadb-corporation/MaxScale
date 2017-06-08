@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1575,8 +1575,8 @@ struct subcommand alteroptions[] =
         "\n"
         "address               Server address\n"
         "port                  Server port\n"
-        "monuser               Monitor user for this server\n"
-        "monpw                 Monitor password for this server\n"
+        "monitoruser           Monitor user for this server\n"
+        "monitorpw             Monitor password for this server\n"
         "ssl                   Enable SSL, value must be 'required'\n"
         "ssl_key               Path to SSL private key\n"
         "ssl_cert              Path to SSL certificate\n"

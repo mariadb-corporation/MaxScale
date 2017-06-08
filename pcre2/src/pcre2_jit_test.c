@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2014 University of Cambridge
+         New API code Copyright (c) 2016 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -140,7 +140,6 @@ int main(void)
 #define F_DIFF		0x080000
 #define F_FORCECONV	0x100000
 #define F_PROPERTY	0x200000
-#define F_STUDY		0x400000
 
 struct regression_test_case {
 	int compile_options;
@@ -188,6 +187,7 @@ static struct regression_test_case regression_test_cases[] = {
 	{ CMUP, A, 0, 0, "\xf0\x90\x90\x80{2}", "\xf0\x90\x90\x80#\xf0\x90\x90\xa8\xf0\x90\x90\x80" },
 	{ CMUP, A, 0, 0, "\xf0\x90\x90\xa8{2}", "\xf0\x90\x90\x80#\xf0\x90\x90\xa8\xf0\x90\x90\x80" },
 	{ CMUP, A, 0, 0, "\xe1\xbd\xb8\xe1\xbf\xb8", "\xe1\xbf\xb8\xe1\xbd\xb8" },
+	{ M, A, 0, 0, "[3-57-9]", "5" },
 
 	/* Assertions. */
 	{ MU, A, 0, 0, "\\b[^A]", "A_B#" },
@@ -247,13 +247,17 @@ static struct regression_test_case regression_test_cases[] = {
 	{ M, A, 0, 0, "a\\z", "aaa" },
 	{ M, A, 0, 0 | F_NOMATCH, "a\\z", "aab" },
 
-	/* Brackets. */
+	/* Brackets and alternatives. */
 	{ MU, A, 0, 0, "(ab|bb|cd)", "bacde" },
 	{ MU, A, 0, 0, "(?:ab|a)(bc|c)", "ababc" },
 	{ MU, A, 0, 0, "((ab|(cc))|(bb)|(?:cd|efg))", "abac" },
 	{ CMU, A, 0, 0, "((aB|(Cc))|(bB)|(?:cd|EFg))", "AcCe" },
 	{ MU, A, 0, 0, "((ab|(cc))|(bb)|(?:cd|ebg))", "acebebg" },
 	{ MU, A, 0, 0, "(?:(a)|(?:b))(cc|(?:d|e))(a|b)k", "accabdbbccbk" },
+	{ MU, A, 0, 0, "\xc7\x82|\xc6\x82", "\xf1\x83\x82\x82\xc7\x82\xc7\x83" },
+	{ MU, A, 0, 0, "=\xc7\x82|#\xc6\x82", "\xf1\x83\x82\x82=\xc7\x82\xc7\x83" },
+	{ MU, A, 0, 0, "\xc7\x82\xc7\x83|\xc6\x82\xc6\x82", "\xf1\x83\x82\x82\xc7\x82\xc7\x83" },
+	{ MU, A, 0, 0, "\xc6\x82\xc6\x82|\xc7\x83\xc7\x83|\xc8\x84\xc8\x84", "\xf1\x83\x82\x82\xc8\x84\xc8\x84" },
 
 	/* Greedy and non-greedy ? operators. */
 	{ MU, A, 0, 0, "(?:a)?a", "laab" },
@@ -323,6 +327,14 @@ static struct regression_test_case regression_test_cases[] = {
 	{ CMU, A, 0, 0, "[^\xe1\xbd\xb8][^\xc3\xa9]", "\xe1\xbd\xb8\xe1\xbf\xb8\xc3\xa9\xc3\x89#" },
 	{ MU, A, 0, 0, "[^\xe1\xbd\xb8][^\xc3\xa9]", "\xe1\xbd\xb8\xe1\xbf\xb8\xc3\xa9\xc3\x89#" },
 	{ MU, A, 0, 0, "[^\xe1\xbd\xb8]{3,}?", "##\xe1\xbd\xb8#\xe1\xbd\xb8#\xc3\x89#\xe1\xbd\xb8" },
+	{ MU, A, 0, 0, "\\d+123", "987654321,01234" },
+	{ MU, A, 0, 0, "abcd*|\\w+xy", "aaaaa,abxyz" },
+	{ MU, A, 0, 0, "(?:abc|((?:amc|\\b\\w*xy)))", "aaaaa,abxyz" },
+	{ MU, A, 0, 0, "a(?R)|([a-z]++)#", ".abcd.abcd#."},
+	{ MU, A, 0, 0, "a(?R)|([a-z]++)#", ".abcd.mbcd#."},
+	{ MU, A, 0, 0, ".[ab]*.", "xx" },
+	{ MU, A, 0, 0, ".[ab]*a", "xxa" },
+	{ MU, A, 0, 0, ".[ab]?.", "xx" },
 
 	/* Bracket repeats with limit. */
 	{ MU, A, 0, 0, "(?:(ab){2}){5}M", "abababababababababababM" },
@@ -679,6 +691,8 @@ static struct regression_test_case regression_test_cases[] = {
 	{ MU | PCRE2_FIRSTLINE, PCRE2_NEWLINE_CRLF, 0, 1, ".", "\r\n" },
 	{ PCRE2_FIRSTLINE | PCRE2_DOTALL, PCRE2_NEWLINE_LF, 0, 0 | F_NOMATCH, "ab.", "ab" },
 	{ MU | PCRE2_FIRSTLINE, A, 0, 1 | F_NOMATCH, "^[a-d0-9]", "\nxx\nd" },
+	{ PCRE2_FIRSTLINE | PCRE2_DOTALL, PCRE2_NEWLINE_ANY, 0, 0, "....a", "012\n0a" },
+	{ MU | PCRE2_FIRSTLINE, A, 0, 0, "[aC]", "a" },
 
 	/* Recurse. */
 	{ MU, A, 0, 0, "(a)(?1)", "aa" },
@@ -765,11 +779,11 @@ static struct regression_test_case regression_test_cases[] = {
 	{ MU, A, 0, 0, "(?(DEFINE)(a(*:aa)))a(?1)b|aac", "aac" },
 	{ MU, A, 0, 0, "(a(*:aa)){0}(?:b(?1)b|c)+c", "babbab cc" },
 	{ MU, A, 0, 0, "(a(*:aa)){0}(?:b(?1)b)+", "babba" },
-	{ MU, A, 0, 0 | F_NOMATCH | F_STUDY, "(a(*:aa)){0}(?:b(?1)b)+", "ba" },
+	{ MU, A, 0, 0 | F_NOMATCH, "(a(*:aa)){0}(?:b(?1)b)+", "ba" },
 	{ MU, A, 0, 0, "(a\\K(*:aa)){0}(?:b(?1)b|c)+c", "babbab cc" },
 	{ MU, A, 0, 0, "(a\\K(*:aa)){0}(?:b(?1)b)+", "babba" },
-	{ MU, A, 0, 0 | F_NOMATCH | F_STUDY, "(a\\K(*:aa)){0}(?:b(?1)b)+", "ba" },
-	{ MU, A, 0, 0 | F_NOMATCH | F_STUDY, "(*:mark)m", "a" },
+	{ MU, A, 0, 0 | F_NOMATCH, "(a\\K(*:aa)){0}(?:b(?1)b)+", "ba" },
+	{ MU, A, 0, 0 | F_NOMATCH, "(*:mark)m", "a" },
 
 	/* (*COMMIT) verb. */
 	{ MU, A, 0, 0 | F_NOMATCH, "a(*COMMIT)b", "ac" },
@@ -813,6 +827,9 @@ static struct regression_test_case regression_test_cases[] = {
 
 	/* (*SKIP) verb. */
 	{ MU, A, 0, 0 | F_NOMATCH, "(?=a(*SKIP)b)ab|ad", "ad" },
+	{ MU, A, 0, 0, "(\\w+(*SKIP)#)", "abcd,xyz#," },
+	{ MU, A, 0, 0, "\\w+(*SKIP)#|mm", "abcd,xyz#," },
+	{ MU, A, 0, 0 | F_NOMATCH, "b+(?<=(*SKIP)#c)|b+", "#bbb" },
 
 	/* (*THEN) verb. */
 	{ MU, A, 0, 0, "((?:a(*THEN)|aab)(*THEN)c|a+)+m", "aabcaabcaabcaabcnacm" },
@@ -1516,10 +1533,10 @@ static int regression_tests(void)
 							is_successful = 0;
 						}
 #endif
-#if defined SUPPORT_PCRE2_16 && defined SUPPORT_PCRE2_16
-						if (ovector16_1[i] != ovector16_2[i] || ovector16_1[i] != ovector16_1[i] || ovector16_1[i] != ovector16_2[i]) {
-							printf("\n16 and 16 bit: Ovector[%d] value differs(J16:%d,I16:%d,J32:%d,I32:%d): [%d] '%s' @ '%s' \n",
-								i, ovector16_1[i], ovector16_2[i], ovector16_1[i], ovector16_2[i],
+#if defined SUPPORT_PCRE2_16 && defined SUPPORT_PCRE2_32
+						if (ovector16_1[i] != ovector16_2[i] || ovector16_1[i] != ovector32_1[i] || ovector16_1[i] != ovector32_2[i]) {
+							printf("\n16 and 32 bit: Ovector[%d] value differs(J16:%d,I16:%d,J32:%d,I32:%d): [%d] '%s' @ '%s' \n",
+								i, ovector16_1[i], ovector16_2[i], ovector32_1[i], ovector32_2[i],
 								total, current->pattern, current->input);
 							is_successful = 0;
 						}

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -148,7 +148,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         { MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "The avrorouter service" },
         { MODULECMD_ARG_STRING, "Action, whether to 'start' or 'stop' the conversion process" }
     };
-    modulecmd_register_command(MXS_MODULE_NAME, "convert", avro_handle_convert, 2, args);
+    modulecmd_register_command(MXS_MODULE_NAME, "convert", MODULECMD_TYPE_ACTIVE, avro_handle_convert, 2, args);
 
     static MXS_ROUTER_OBJECT MyObject =
     {
@@ -426,6 +426,12 @@ createInstance(SERVICE *service, char **options)
     inst->block_size = config_get_integer(params, "block_size");
 
     MXS_CONFIG_PARAMETER *param = config_get_param(params, "source");
+    inst->gtid.domain = 0;
+    inst->gtid.event_num = 0;
+    inst->gtid.seq = 0;
+    inst->gtid.server_id = 0;
+    inst->gtid.timestamp = 0;
+    memset(&inst->active_maps, 0, sizeof(inst->active_maps));
     bool err = false;
 
     if (param)
@@ -719,11 +725,9 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
 {
     AVRO_INSTANCE *router = (AVRO_INSTANCE *) router_instance;
     AVRO_CLIENT *client = (AVRO_CLIENT *) router_client_ses;
-    int prev_val;
 
-    prev_val = atomic_add(&router->stats.n_clients, -1);
+    ss_debug(int prev_val = )atomic_add(&router->stats.n_clients, -1);
     ss_dassert(prev_val > 0);
-    (void) prev_val;
 
     free(client->uuid);
     maxavro_file_close(client->file_handle);
@@ -778,9 +782,6 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
 
     spinlock_release(&client->file_lock);
     spinlock_release(&client->catch_lock);
-
-    /* decrease server registered slaves counter */
-    atomic_add(&router->stats.n_clients, -1);
 }
 
 /**

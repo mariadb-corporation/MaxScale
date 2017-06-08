@@ -8,7 +8,7 @@ describe("Service", function() {
             .then(function(resp) {
                 var svc = JSON.parse(resp)
                 svc.data.attributes.parameters.enable_root_user = true
-                return request.put(base_url + "/services/RW-Split-Router", {json: svc})
+                return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
@@ -25,7 +25,7 @@ describe("Service", function() {
             .then(function(resp) {
                 var svc = JSON.parse(resp)
                 delete svc.data.relationships
-                return request.put(base_url + "/services/RW-Split-Router", {json: svc})
+                return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")
@@ -51,7 +51,7 @@ describe("Service", function() {
                     }
                 }
 
-                return request.put(base_url + "/services/RW-Split-Router", {json: svc})
+                return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
                 return request.get(base_url + "/services/RW-Split-Router")

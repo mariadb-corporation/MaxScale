@@ -35,7 +35,10 @@ errors are negative numbers. The arguments are:
   <i>bufflen</i>     the length of the buffer (code units)
 </pre>
 The function returns the length of the message, excluding the trailing zero, or
-a negative error code if the buffer is too small.
+the negative error code PCRE2_ERROR_NOMEMORY if the buffer is too small. In
+this case, the returned message is truncated (but still with a trailing zero).
+If <i>errorcode</i> does not contain a recognized error code number, the
+negative value PCRE2_ERROR_BADDATA is returned.
 </P>
 <P>
 There is a complete description of the PCRE2 native API in the

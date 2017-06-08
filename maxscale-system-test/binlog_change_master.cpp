@@ -25,6 +25,7 @@ TestConnections * Test ;
 int exit_flag;
 int master = 0;
 int i_trans = 0;
+const int trans_max = 100;
 int failed_transaction_num = 0;
 
 /** The amount of rows each transaction inserts */
@@ -294,7 +295,7 @@ void *transaction_thread( void *ptr )
     Test->add_result(mysql_errno(conn), "Error connecting to Binlog router, error: %s\n", mysql_error(conn));
     create_t1(conn);
 
-    while ((exit_flag == 0))
+    while ((exit_flag == 0) && i_trans < trans_max)
     {
         Test->tprintf("Transaction %d\n", i_trans);
         trans_result = transaction(conn, i_trans);

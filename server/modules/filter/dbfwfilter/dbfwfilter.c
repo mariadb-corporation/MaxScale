@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -826,7 +826,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Path to rule file"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "rules/reload", dbfw_reload_rules, 2, args_rules_reload);
+    modulecmd_register_command(MXS_MODULE_NAME, "rules/reload", MODULECMD_TYPE_ACTIVE,
+                               dbfw_reload_rules, 2, args_rules_reload);
 
     modulecmd_arg_type_t args_rules_show[] =
     {
@@ -834,7 +835,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to inspect"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "rules", dbfw_show_rules, 2, args_rules_show);
+    modulecmd_register_command(MXS_MODULE_NAME, "rules", MODULECMD_TYPE_PASSIVE,
+                               dbfw_show_rules, 2, args_rules_show);
 
     static MXS_FILTER_OBJECT MyObject =
     {

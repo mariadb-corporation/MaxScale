@@ -38,7 +38,9 @@ public:
 
     bool operator ==(const TestOutput& output) const
     {
-        return m_value == output.getValue();
+        return m_value == output.getValue() ||
+        (m_type.find("BLOB") != std::string::npos &&
+         output.getValue().length() == 0);
     }
 
     bool operator !=(const TestOutput& output) const

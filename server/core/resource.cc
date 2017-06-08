@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -23,6 +23,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/adminusers.h>
+#include <maxscale/modulecmd.h>
 
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
@@ -103,7 +104,8 @@ private:
 };
 
 Resource::Resource(ResourceCallback cb, int components, ...) :
-    m_cb(cb)
+    m_cb(cb),
+    m_is_glob(false)
 {
     va_list args;
     va_start(args, components);
@@ -112,6 +114,10 @@ Resource::Resource(ResourceCallback cb, int components, ...) :
     {
         string part = va_arg(args, const char*);
         m_path.push_back(part);
+        if (part == "?")
+        {
+            m_is_glob = true;
+        }
     }
     va_end(args);
 }
@@ -124,11 +130,12 @@ bool Resource::match(const HttpRequest& request) const
 {
     bool rval = false;
 
-    if (request.uri_part_count() == m_path.size())
+    if (request.uri_part_count() == m_path.size() || m_is_glob)
     {
         rval = true;
+        size_t parts = MXS_MIN(request.uri_part_count(), m_path.size());
 
-        for (size_t i = 0; i < request.uri_part_count(); i++)
+        for (size_t i = 0; i < parts; i++)
         {
             if (m_path[i] != request.uri_part(i) &&
                 !matching_variable_path(m_path[i], request.uri_part(i)))
@@ -184,6 +191,11 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
                 rval = true;
             }
         }
+    }
+    else if (path == "?")
+    {
+        /** Wildcard match */
+        rval = true;
     }
 
     return rval;
@@ -550,6 +562,43 @@ HttpResponse cb_delete_user(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_modulecmd(const HttpRequest& request)
+{
+    std::string module = request.uri_part(2);
+    std::string identifier = request.uri_segment(3, request.uri_part_count());
+    std::string verb = request.get_verb();
+
+    const MODULECMD* cmd = modulecmd_find_command(module.c_str(), identifier.c_str());
+
+    if (cmd && !modulecmd_requires_output_dcb(cmd))
+    {
+        if ((!MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_GET) ||
+            (MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_POST))
+        {
+            int n_opts = (int)request.get_option_count();
+            char* opts[n_opts];
+            request.copy_options(opts);
+
+            MODULECMD_ARG* args = modulecmd_arg_parse(cmd, n_opts, (const void**)opts);
+            bool rval = false;
+
+            if (args)
+            {
+                rval = modulecmd_call_command(cmd, args);
+            }
+
+            for (int i = 0; i < n_opts; i++)
+            {
+                MXS_FREE(opts[i]);
+            }
+
+            return HttpResponse(rval ? MHD_HTTP_OK : MHD_HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
+}
+
 HttpResponse cb_send_ok(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK);
@@ -563,6 +612,18 @@ public:
     typedef std::shared_ptr<Resource> SResource;
     typedef list<SResource> ResourceList;
 
+    /**
+     * Create REST API resources
+     *
+     * Each resource represents either a collection of resources, an individual
+     * resource, a sub-resource of a resource or an "action" endpoint which
+     * executes an action.
+     *
+     * The resources are defined by the Resource class. Each resource maps to a
+     * HTTP method and one or more paths. The path components can contain either
+     * an explicit string, a colon-prefixed object type or a question mark for
+     * a path component that matches everything.
+     */
     RootResource()
     {
         // Special resources required by OPTION etc.
@@ -594,6 +655,9 @@ public:
         m_get.push_back(SResource(new Resource(cb_all_modules, 2, "maxscale", "modules")));
         m_get.push_back(SResource(new Resource(cb_module, 3, "maxscale", "modules", ":module")));
 
+        /** For all read-only module commands */
+        m_get.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
+
         m_get.push_back(SResource(new Resource(cb_all_users, 1, "users")));
         m_get.push_back(SResource(new Resource(cb_all_inet_users, 2, "users", "inet")));
         m_get.push_back(SResource(new Resource(cb_all_unix_users, 2, "users", "unix")));
@@ -609,12 +673,15 @@ public:
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "inet")));
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "unix")));
 
+        /** For all module commands that modify state/data */
+        m_post.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
+
         /** Update resources */
-        m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
-        m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
-        m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
-        m_put.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
-        m_put.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
+        m_patch.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
+        m_patch.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
+        m_patch.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
+        m_patch.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
+        m_patch.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
 
         /** Change resource states */
         m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));
@@ -707,6 +774,10 @@ public:
         {
             return process_request_type(m_put, request);
         }
+        else if (request.get_verb() == MHD_HTTP_METHOD_PATCH)
+        {
+            return process_request_type(m_patch, request);
+        }
         else if (request.get_verb() == MHD_HTTP_METHOD_POST)
         {
             return process_request_type(m_post, request);
@@ -743,6 +814,7 @@ private:
     ResourceList m_put;    /**< PUT request handlers */
     ResourceList m_post;   /**< POST request handlers */
     ResourceList m_delete; /**< DELETE request handlers */
+    ResourceList m_patch; /**< PATCH request handlers */
 };
 
 static RootResource resources; /**< Core resource set */
@@ -753,7 +825,8 @@ static bool request_modifies_data(const string& verb)
 {
     return verb == MHD_HTTP_METHOD_POST ||
            verb == MHD_HTTP_METHOD_PUT ||
-           verb == MHD_HTTP_METHOD_DELETE;
+           verb == MHD_HTTP_METHOD_DELETE ||
+           verb == MHD_HTTP_METHOD_PATCH;
 }
 
 static bool request_reads_data(const string& verb)

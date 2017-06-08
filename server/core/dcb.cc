@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -69,19 +69,6 @@ using maxscale::Semaphore;
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized;
 
-/** Fake epoll event struct */
-typedef struct fake_event
-{
-    DCB               *dcb;   /*< The DCB where this event was generated */
-    GWBUF             *data;  /*< Fake data, placed in the DCB's read queue */
-    uint32_t           event; /*< The EPOLL event type */
-    struct fake_event *tail;  /*< The last event */
-    struct fake_event *next;  /*< The next event */
-} fake_event_t;
-
-static fake_event_t **fake_events; /*< Thread-specific fake event queue */
-static SPINLOCK      *fake_event_lock;
-
 static  DCB           **all_dcbs;
 static  SPINLOCK       *all_dcbs_lock;
 static  DCB           **zombies;
@@ -106,9 +93,7 @@ void dcb_global_init()
     if ((zombies = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
         (all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
         (all_dcbs_lock = (SPINLOCK*)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
-        (nzombies = (int*)MXS_CALLOC(nthreads, sizeof(int))) == NULL ||
-        (fake_events = (fake_event_t**)MXS_CALLOC(nthreads, sizeof(fake_event_t*))) == NULL ||
-        (fake_event_lock = (SPINLOCK*)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL)
+        (nzombies = (int*)MXS_CALLOC(nthreads, sizeof(int))) == NULL)
     {
         MXS_OOM();
         raise(SIGABRT);
@@ -117,11 +102,6 @@ void dcb_global_init()
     for (int i = 0; i < nthreads; i++)
     {
         spinlock_init(&all_dcbs_lock[i]);
-    }
-
-    for (int i = 0; i < nthreads; i++)
-    {
-        spinlock_init(&fake_event_lock[i]);
     }
 }
 
@@ -159,8 +139,7 @@ static DCB *dcb_find_free();
 static void dcb_remove_from_list(DCB *dcb);
 
 static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events);
-static uint32_t dcb_process_poll_events(DCB *dcb, int thread_id, uint32_t ev);
-static void dcb_process_fake_events(DCB *dcb, int thread_id);
+static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t ev);
 static bool dcb_session_check(DCB *dcb, const char *);
 
 uint64_t dcb_get_session_id(DCB *dcb)
@@ -232,68 +211,6 @@ dcb_free(DCB *dcb)
     dcb_close(dcb);
 }
 
-/*
- * Clone a DCB for internal use, mostly used for specialist filters
- * to create dummy clients based on real clients.
- *
- * @param orig          The DCB to clone
- * @return              A DCB that can be used as a client
- */
-DCB *
-dcb_clone(DCB *orig)
-{
-    char *remote = orig->remote;
-
-    if (remote)
-    {
-        remote = MXS_STRDUP(remote);
-        if (!remote)
-        {
-            return NULL;
-        }
-    }
-
-    char *user = orig->user;
-    if (user)
-    {
-        user = MXS_STRDUP(user);
-        if (!user)
-        {
-            MXS_FREE(remote);
-            return NULL;
-        }
-    }
-
-    DCB *clonedcb = dcb_alloc(orig->dcb_role, orig->listener);
-
-    if (clonedcb)
-    {
-        clonedcb->fd = DCBFD_CLOSED;
-        clonedcb->flags |= DCBF_CLONE;
-        clonedcb->state = orig->state;
-        clonedcb->data = orig->data;
-        clonedcb->ssl_state = orig->ssl_state;
-        clonedcb->remote = remote;
-        clonedcb->user = user;
-        clonedcb->poll.thread.id = orig->poll.thread.id;
-        clonedcb->protocol = orig->protocol;
-
-        clonedcb->func.write = dcb_null_write;
-        /**
-         * Close triggers closing of router session as well which is needed.
-         */
-        clonedcb->func.close = orig->func.close;
-        clonedcb->func.auth = dcb_null_auth;
-    }
-    else
-    {
-        MXS_FREE(remote);
-        MXS_FREE(user);
-    }
-
-    return clonedcb;
-}
-
 /**
  * Free a DCB and remove it from the chain of all DCBs
  *
@@ -357,11 +274,11 @@ dcb_free_all_memory(DCB *dcb)
 {
     DCB_CALLBACK *cb_dcb;
 
-    if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
+    if (dcb->protocol)
     {
         MXS_FREE(dcb->protocol);
     }
-    if (dcb->data && dcb->authfunc.free && !DCB_IS_CLONE(dcb))
+    if (dcb->data && dcb->authfunc.free)
     {
         dcb->authfunc.free(dcb);
         dcb->data = NULL;
@@ -771,8 +688,7 @@ int dcb_read(DCB   *dcb,
 
     if (dcb->fd <= 0)
     {
-        MXS_ERROR("Read failed, dcb is %s.", dcb->fd == DCBFD_CLOSED ?
-                  "closed" : "cloned, not readable");
+        MXS_ERROR("Read failed, dcb is closed.");
         return 0;
     }
 
@@ -935,8 +851,7 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
 
     if (dcb->fd <= 0)
     {
-        MXS_ERROR("Read failed, dcb is %s.", dcb->fd == DCBFD_CLOSED ?
-                  "closed" : "cloned, not readable");
+        MXS_ERROR("Read failed, dcb is closed.");
         return -1;
     }
 
@@ -1123,8 +1038,7 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
 
     if (dcb->fd <= 0)
     {
-        MXS_ERROR("Write failed, dcb is %s.",
-                  dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not writable");
+        MXS_ERROR("Write failed, dcb is closed.");
         gwbuf_free(queue);
         return false;
     }
@@ -1552,10 +1466,7 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
     dcb_printf(pdcb, "\t\tNo. of Accepts:           %d\n", dcb->stats.n_accepts);
     dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->stats.n_high_water);
     dcb_printf(pdcb, "\t\tNo. of Low Water Events:  %d\n", dcb->stats.n_low_water);
-    if (dcb->flags & DCBF_CLONE)
-    {
-        dcb_printf(pdcb, "\t\tDCB is a clone.\n");
-    }
+
     if (dcb->persistentstart)
     {
         char buff[20];
@@ -1716,10 +1627,6 @@ dprintDCB(DCB *pdcb, DCB *dcb)
     {
         dcb_printf(pdcb, "\t\tPending events in the queue:      %x %s\n",
                    dcb->evq.pending_events, dcb->evq.processing ? "(processing)" : "");
-    }
-    if (dcb->flags & DCBF_CLONE)
-    {
-        dcb_printf(pdcb, "\t\tDCB is a clone.\n");
     }
 
     if (dcb->persistentstart)
@@ -2098,12 +2005,6 @@ static void dcb_hangup_foreach_worker(int thread_id, struct server* server)
             dcb->server == server)
         {
             poll_fake_hangup_event(dcb);
-            // dcb_hangup_foreach_worker() is called via the message loop,
-            // so immediately after the hangup event has been added, we can
-            // also process it. Indeed, it is necessary to do that because
-            // otherwise, unless there is a real event for the DCB descriptor,
-            // the fake event would not be handled.
-            dcb_process_fake_events(dcb, thread_id);
         }
     }
 }
@@ -2120,41 +2021,6 @@ dcb_hangup_foreach(struct server* server)
     intptr_t arg2 = (intptr_t)server;
 
     Worker::broadcast_message(MXS_WORKER_MSG_CALL, arg1, arg2);
-}
-
-/**
- * Null protocol write routine used for cloned dcb's. It merely consumes
- * buffers written on the cloned DCB and sets the DCB_REPLIED flag.
- *
- * @param dcb           The descriptor control block
- * @param buf           The buffer being written
- * @return      Always returns a good write operation result
- */
-static int
-dcb_null_write(DCB *dcb, GWBUF *buf)
-{
-    while (buf)
-    {
-        buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
-    }
-
-    dcb->flags |= DCBF_REPLIED;
-
-    return 1;
-}
-
-/**
- * Null protocol auth operation for use by cloned DCB's.
- *
- * @param dcb           The DCB being closed.
- * @param server        The server to auth against
- * @param session       The user session
- * @param buf           The buffer with the new auth request
- */
-static int
-dcb_null_auth(DCB *dcb, SERVER *server, MXS_SESSION *session, GWBUF *buf)
-{
-    return 0;
 }
 
 /**
@@ -3141,9 +3007,10 @@ int dcb_get_port(const DCB *dcb)
     return rval;
 }
 
-static uint32_t dcb_process_poll_events(DCB *dcb, int thread_id, uint32_t events)
+static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 {
-    ss_dassert(dcb->poll.thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
+    ss_dassert(dcb->poll.thread.id == mxs::Worker::get_current_id() ||
+               dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 
     CHK_DCB(dcb);
 
@@ -3305,89 +3172,56 @@ static uint32_t dcb_process_poll_events(DCB *dcb, int thread_id, uint32_t events
     return rc;
 }
 
-static void dcb_process_fake_events(DCB *dcb, int thread_id)
-{
-    // Since this loop is now here, it will be processed once per extracted epoll
-    // event and not once per extraction of events, but as this is temporary code
-    // that's ok. Once it'll be possible to send cross-thread messages, the need
-    // for the fake event list will disappear.
-
-    fake_event_t *event = NULL;
-
-    /** It is very likely that the queue is empty so to avoid hitting the
-     * spinlock every time we receive events, we only do a dirty read. Currently,
-     * only the monitors inject fake events from external threads. */
-    if (fake_events[thread_id])
-    {
-        spinlock_acquire(&fake_event_lock[thread_id]);
-        event = fake_events[thread_id];
-        fake_events[thread_id] = NULL;
-        spinlock_release(&fake_event_lock[thread_id]);
-    }
-
-    while (event)
-    {
-        event->dcb->dcb_fakequeue = event->data;
-        dcb_process_poll_events(event->dcb, thread_id, event->event);
-        fake_event_t *tmp = event;
-        event = event->next;
-        MXS_FREE(tmp);
-    }
-}
-
 static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events)
 {
     DCB *dcb = (DCB*)data;
 
-    uint32_t rc = dcb_process_poll_events(dcb, thread_id, events);
-
-    dcb_process_fake_events(dcb, thread_id);
-
-    return rc;
+    return dcb_process_poll_events(dcb, events);
 }
 
-static void poll_add_event_to_dcb(DCB*       dcb,
-                                  GWBUF*     buf,
-                                  uint32_t ev)
+class FakeEventTask: public mxs::WorkerDisposableTask
 {
-    fake_event_t *event = (fake_event_t*)MXS_MALLOC(sizeof(*event));
+    FakeEventTask(const FakeEventTask&);
+    FakeEventTask& operator=(const FakeEventTask&);
 
-    if (event)
+public:
+    FakeEventTask(DCB* dcb, GWBUF* buf, uint32_t ev):
+        m_dcb(dcb),
+        m_buffer(buf),
+        m_ev(ev)
     {
-        event->data = buf;
-        event->dcb = dcb;
-        event->event = ev;
-        event->next = NULL;
-        event->tail = event;
+    }
 
-        int thr = dcb->poll.thread.id;
+    void execute(Worker& worker)
+    {
+        m_dcb->dcb_fakequeue = m_buffer;
+        dcb_process_poll_events(m_dcb, m_ev);
+    }
 
-        /** It is possible that a housekeeper or a monitor thread inserts a fake
-         * event into the thread's event queue which is why the operation needs
-         * to be protected by a spinlock */
-        spinlock_acquire(&fake_event_lock[thr]);
+private:
+    DCB*     m_dcb;
+    GWBUF*   m_buffer;
+    uint32_t m_ev;
+};
 
-        if (fake_events[thr])
-        {
-            fake_events[thr]->tail->next = event;
-            fake_events[thr]->tail = event;
-        }
-        else
-        {
-            fake_events[thr] = event;
-        }
+static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev)
+{
+    FakeEventTask* task = new (std::nothrow) FakeEventTask(dcb, buf, ev);
 
-        spinlock_release(&fake_event_lock[thr]);
+    if (task)
+    {
+        Worker* worker = Worker::get(dcb->poll.thread.id);
+        worker->post(std::auto_ptr<FakeEventTask>(task), mxs::Worker::EXECUTE_QUEUED);
+    }
+    else
+    {
+        MXS_OOM();
     }
 }
 
 void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf)
 {
-    uint32_t ev;
-
-    ev = EPOLLIN;
-
-    poll_add_event_to_dcb(dcb, buf, ev);
+    poll_add_event_to_dcb(dcb, buf, EPOLLIN);
 }
 
 void poll_fake_write_event(DCB *dcb)
@@ -3565,12 +3399,9 @@ int poll_remove_dcb(DCB *dcb)
 
     /**
      * Only positive fds can be removed from epoll set.
-     * Cloned DCBs can have a state of DCB_STATE_POLLING but are not in
-     * the epoll set and do not have a valid file descriptor.  Hence the
-     * only action for them is already done - the change of state to
-     * DCB_STATE_NOPOLLING.
      */
     dcbfd = dcb->fd;
+    ss_dassert(dcbfd > 0);
 
     if (dcbfd > 0)
     {

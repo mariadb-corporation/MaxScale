@@ -204,6 +204,14 @@ bool Connection::readRow(std::string& dest)
         else
         {
             dest += buf;
+
+            if (dest[0] == 'E' && dest[1] == 'R' & dest[2] == 'R')
+            {
+                m_error = "Server responded with an error: ";
+                m_error += dest;
+                rval = false;
+                break;
+            }
         }
     }
 

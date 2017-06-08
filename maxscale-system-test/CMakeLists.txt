@@ -121,7 +121,7 @@ add_test_executable(bug547.cpp bug547 replication LABELS readwritesplit REPL_BAC
 add_test_executable(bug681.cpp bug681 galera.bug681 LABELS readwritesplit GALERA_BACKEND)
 
 # Regression case for the bug "crash with tee filter"
-add_test_executable(bug643.cpp bug643 bug643 LABELS tee REPL_BACKEND)
+#add_test_executable(bug643.cpp bug643 bug643 LABELS tee REPL_BACKEND)
 
 # Regression case for the bug ""Different error messages from MariaDB and Maxscale"
 add_test_script(bug561.sh bug561.sh replication LABELS MySQLAuth REPL_BACKEND)
@@ -166,13 +166,13 @@ add_test_executable(bug626.cpp bug626 replication LABELS MySQLAuth MySQLProtocol
 add_test_executable(bug634.cpp bug634 replication LABELS readwritesplit REPL_BACKEND)
 
 # Regression cases for several TEE filter hangs
-add_test_executable(bug645.cpp bug645 bug645 LABELS tee REPL_BACKEND)
-add_test_executable(bug645_1.cpp bug645_1 bug645_1 LABELS tee REPL_BACKEND)
-add_test_executable(bug649.cpp bug649 bug645 LABELS tee)
-add_test_executable(bug650.cpp bug650 bug650 LABELS tee REPL_BACKEND)
+#add_test_executable(bug645.cpp bug645 bug645 LABELS tee REPL_BACKEND)
+#add_test_executable(bug645_1.cpp bug645_1 bug645_1 LABELS tee REPL_BACKEND)
+#add_test_executable(bug649.cpp bug649 bug645 LABELS tee)
+#add_test_executable(bug650.cpp bug650 bug650 LABELS tee REPL_BACKEND)
 
 # Heavy test for TEE filter
-add_test_script(bug648 sql_queries bug648 LABELS tee UNSTABLE HEAVY REPL_BACKEND)
+#add_test_script(bug648 sql_queries bug648 LABELS tee UNSTABLE HEAVY REPL_BACKEND)
 
 # Crash when host name for some user in mysql.user is very long
 add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
@@ -181,7 +181,7 @@ add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol
 add_test_executable(bug654.cpp bug654 replication LABELS maxscale REPL_BACKEND)
 
 # Regression case for the bug "Tee filter: closing child session causes MaxScale to fail"
-add_test_executable(bug657.cpp bug657 bug657 LABELS tee REPL_BACKEND)
+#add_test_executable(bug657.cpp bug657 bug657 LABELS tee REPL_BACKEND)
 
 # Block backends (master or all slaves) and tries to connect Maxscale
 add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
@@ -193,7 +193,7 @@ add_test_executable(bug662.cpp bug662 replication LABELS readwritesplit readconn
 add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol)
 
 # TEE fileter: execute long sequence of queries ans session commands in the loop
-add_test_executable(bug670.cpp bug670 bug670 LABELS tee REPL_BACKEND)
+#add_test_executable(bug670.cpp bug670 bug670 LABELS tee REPL_BACKEND)
 
 # Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
 add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
@@ -327,7 +327,7 @@ add_test_executable(mm.cpp mm mm LABELS mmmon BREAKS_REPL)
 add_test_executable(mm_mysqlmon.cpp mm_mysqlmon mm_mysqlmon LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
 
 # MySQL Monitor crash safety
-add_test_executable(mysqlmon_backup.cpp mysqlmon_backup mysqlmon_backup LABELS mysqlmon REPL_BACKEND)
+#add_test_executable(mysqlmon_backup.cpp mysqlmon_backup mysqlmon_backup LABELS mysqlmon REPL_BACKEND)
 
 # Regression case for the bug "Two monitors loaded at the same time result into not working installation"
 add_test_executable(mxs118.cpp mxs118 mxs118 LABELS maxscale LIGHT REPL_BACKEND)
@@ -366,7 +366,7 @@ add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND 
 add_test_executable(mxs47.cpp mxs47 replication LABELS MySQLProtocol LIGHT REPL_BACKEND)
 
 # Regression case for the bug "USE <db> hangs when Tee filter uses matching"
-add_test_executable(mxs501_tee_usedb.cpp mxs501_tee_usedb mxs501 LABELS tee REPL_BACKEND)
+#add_test_executable(mxs501_tee_usedb.cpp mxs501_tee_usedb mxs501 LABELS tee REPL_BACKEND)
 
 # Open connection, execute 'change user', close connection in the loop
 add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548 LABELS MySQLProtocol REPL_BACKEND)
@@ -421,7 +421,6 @@ add_test_executable(mxs812_2.cpp mxs812_2 longblob LABELS readwritesplit REPL_BA
 add_test_executable(mxs822_maxpasswd.cpp mxs822_maxpasswd maxpasswd LABELS maxscale REPL_BACKEND)
 
 # Do only SELECTS during time > wait_timeout and then do INSERT
-# This test will fail because the functionality hasn't been implemented
 add_test_executable(mxs827_write_timeout.cpp mxs827_write_timeout mxs827_write_timeout LABELS readwritesplit REPL_BACKEND)
 
 # Block and unblock first and second slaves and check that they are recovered
@@ -536,8 +535,8 @@ add_test_executable(rwsplit_read_only_trx.cpp rwsplit_read_only_trx rwsplit_read
 
 # Test replication-manager with MaxScale
 add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
-add_test_executable_notest(replication_manager_2nodes.cpp replication_manager_2nodes replication_manager_2nodes LABELS maxscale REPL_BACKEND)
-add_test_executable_notest(replication_manager_3nodes.cpp replication_manager_3nodes replication_manager_3nodes LABELS maxscale REPL_BACKEND)
+#add_test_executable_notest(replication_manager_2nodes.cpp replication_manager_2nodes replication_manager_2nodes LABELS maxscale REPL_BACKEND)
+#add_test_executable_notest(replication_manager_3nodes.cpp replication_manager_3nodes replication_manager_3nodes LABELS maxscale REPL_BACKEND)
 
 # Schemarouter duplicate database detection test: create DB on all nodes and then try query againt schema router
 add_test_executable(schemarouter_duplicate_db.cpp schemarouter_duplicate_db schemarouter_duplicate_db LABELS schemarouter REPL_BACKEND)
@@ -584,11 +583,15 @@ add_test_script(sql_queries_pers10 sql_queries sql_queries_pers10 LABELS maxscal
 # Execute queries of different size, check data is the same when accessing via Maxscale and directly to backend, client ssl is ON
 add_test_script(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND)
 
+
 # Check load balancing, client ssl is ON
-add_test_script(ssl_load load_balancing ssl_load LABELS maxscale readwritesplit REPL_BACKEND)
+
+# Disabled due to some strangeness in Connector-C 3.0 TLS connections which
+# cause uneven distribution of connections.
+#add_test_script(ssl_load load_balancing ssl_load LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Check load balancing, client ssl is ON, Galera backend
-add_test_script(ssl_load_galera load_balancing_galera ssl_load_galera LABELS maxscale readwritesplit GALERA_BACKEND)
+#add_test_script(ssl_load_galera load_balancing_galera ssl_load_galera LABELS maxscale readwritesplit GALERA_BACKEND)
 
 # Testing slaves who have lost their master and how MaxScale works with them
 add_test_executable(stale_slaves.cpp stale_slaves replication LABELS mysqlmon REPL_BACKEND)
@@ -606,7 +609,7 @@ add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter LIGHT REP
 add_test_executable(avro.cpp avro avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)
 
 # Test avrorouter file compression
-add_test_script(avro_compression avro avro_compression LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)
+#add_test_script(avro_compression avro avro_compression LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)
 
 # In the binlog router setup stop Master and promote one of the Slaves to be new Master
 add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe LABELS binlogrouter BREAKS_REPL)
@@ -680,7 +683,7 @@ add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssa
 #add_test_executable(bad_pers.cpp bad_pers bad_pers LABELS REPL_BACKEND)
 
 # Test Aurora RDS monitor
-add_test_executable(auroramon.cpp auroramon auroramon LABELS HEAVY EXTERNAL_BACKEND)
+#add_test_executable(auroramon.cpp auroramon auroramon LABELS HEAVY EXTERNAL_BACKEND)
 
 # Disabled for the time being
 # add_test_executable(gatekeeper.cpp gatekeeper gatekeeper LABELS gatekeeper)

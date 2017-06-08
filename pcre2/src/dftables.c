@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2014 University of Cambridge
+         New API code Copyright (c) 2016 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -102,7 +102,7 @@ fprintf(f,
   "/* This file was automatically written by the dftables auxiliary\n"
   "program. It contains character tables that are used when no external\n"
   "tables are passed to PCRE2 by the application that calls it. The tables\n"
-  "are used only for characters whose code values are less than 256.\n\n");
+  "are used only for characters whose code values are less than 256. */\n\n");
 
 /* Force config.h in z/OS */
 
@@ -115,7 +115,7 @@ fprintf(f,
 #endif
 
 fprintf(f,
-  "The following #includes are present because without them gcc 4.x may remove\n"
+  "/* The following #includes are present because without them gcc 4.x may remove\n"
   "the array definition from the final binary if PCRE2 is built into a static\n"
   "library and dead code stripping is activated. This leads to link errors.\n"
   "Pulling in the header ensures that the array gets flagged as \"someone\n"

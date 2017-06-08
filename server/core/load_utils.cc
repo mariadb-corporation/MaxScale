@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -417,6 +417,12 @@ struct cb_param
 
 bool modulecmd_cb(const MODULECMD *cmd, void *data)
 {
+    if (modulecmd_requires_output_dcb(cmd))
+    {
+        /** Module requires an output DCB, don't print it */
+        return true;
+    }
+
     cb_param* d = static_cast<cb_param*>(data);
 
     json_t* obj = json_object();
@@ -424,6 +430,8 @@ bool modulecmd_cb(const MODULECMD *cmd, void *data)
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE_COMMAND));
 
     json_t* attr = json_object();
+    const char* method = MODULECMD_MODIFIES_DATA(cmd) ? "POST" : "GET";
+    json_object_set_new(attr, CN_METHOD, json_string(method));
     json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd->arg_count_min));
     json_object_set_new(attr, CN_ARG_MAX, json_integer(cmd->arg_count_max));
 

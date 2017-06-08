@@ -23,6 +23,18 @@ This filter now uses the PCRE2-libarary to match queries. Previously, it used
 the POSIX-version of PCRE2. The filter also accepts multiple match-server pairs.
 Please see the NamedServerFilter documentation for details.
 
+### Tee Filter
+
+The `tee` filter has been rewritten to better suit the way MaxScale now
+functions. The filter requires that the service where the branched session is
+created has at least one network listener. The users must also be able to
+connect from the local MaxScale host. Usually this means that an extra grant for
+the loopback address is required (e.g. `myuser@127.0.0.1`).
+
+In addition to the aforementioned requirements, a failure to create a branched
+session no longer causes the actual client session to be closed. In most cases,
+this is desired behavior.
+
 ## Dropped Features
 
 ### MaxAdmin

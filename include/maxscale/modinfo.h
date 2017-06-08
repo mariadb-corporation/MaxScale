@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -84,7 +84,8 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_PATH, /**< Path to a file or a directory */
     MXS_MODULE_PARAM_SERVICE, /**< Service name */
     MXS_MODULE_PARAM_SERVER, /**< Server name */
-    MXS_MODULE_PARAM_SERVERLIST /**< List of server names, separated by ',' */
+    MXS_MODULE_PARAM_SERVERLIST, /**< List of server names, separated by ',' */
+    MXS_MODULE_PARAM_REGEX /**< A regex string enclosed in '/' */
 };
 
 /** Maximum and minimum values for integer types */
@@ -246,6 +247,8 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
         return "server";
     case MXS_MODULE_PARAM_SERVERLIST:
         return "serverlist";
+    case MXS_MODULE_PARAM_REGEX:
+        return "regular expression";
     default:
         ss_dassert(!true);
         return "unknown";

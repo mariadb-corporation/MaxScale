@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -137,8 +137,8 @@ static MODULECMD_DOMAIN* get_or_create_domain(const char *domain)
 }
 
 static MODULECMD* command_create(const char *identifier, const char *domain,
-                                 MODULECMDFN entry_point, int argc,
-                                 modulecmd_arg_type_t* argv)
+                                 enum modulecmd_type type, MODULECMDFN entry_point,
+                                 int argc, modulecmd_arg_type_t* argv)
 {
     ss_dassert((argc && argv) || (argc == 0 && argv == NULL));
     MODULECMD *rval = (MODULECMD*)MXS_MALLOC(sizeof(*rval));
@@ -166,6 +166,7 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
             types[0].description = "";
         }
 
+        rval->type = type;
         rval->func = entry_point;
         rval->identifier = id;
         rval->domain = dm;
@@ -413,7 +414,8 @@ static void free_argument(struct arg_node *arg)
  */
 
 bool modulecmd_register_command(const char *domain, const char *identifier,
-                                MODULECMDFN entry_point, int argc, modulecmd_arg_type_t *argv)
+                                enum modulecmd_type type, MODULECMDFN entry_point,
+                                int argc, modulecmd_arg_type_t *argv)
 {
     reset_error();
     bool rval = false;
@@ -430,7 +432,7 @@ bool modulecmd_register_command(const char *domain, const char *identifier,
         }
         else
         {
-            MODULECMD *cmd = command_create(identifier, domain, entry_point, argc, argv);
+            MODULECMD *cmd = command_create(identifier, domain, type, entry_point, argc, argv);
 
             if (cmd)
             {
@@ -686,4 +688,18 @@ bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx)
 {
     return arg->argc > idx &&
            MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
+}
+
+bool modulecmd_requires_output_dcb(const MODULECMD* cmd)
+{
+    for (int i = 0; i < cmd->arg_count_max; i++)
+    {
+        if (cmd->arg_types[i].type == MODULECMD_ARG_OUTPUT)
+        {
+            /** We can't call this as it requries a DCB for output so don't show it */
+            return true;
+        }
+    }
+
+    return false;
 }

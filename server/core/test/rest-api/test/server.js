@@ -38,7 +38,7 @@ describe("Server", function() {
 
     it("update server", function() {
         server.data.attributes.parameters.weight = 10
-        return request.put(base_url + "/servers/" + server.data.id, { json: server})
+        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
             .should.be.fulfilled
     });
 
@@ -69,7 +69,7 @@ describe("Server Relationships", function() {
 
     it("remove relationships", function() {
         delete rel_server.data["relationships"]
-        return request.put(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
+        return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
             .should.be.fulfilled
     });
 

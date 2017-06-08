@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -144,7 +144,6 @@ typedef struct session
     MXS_DOWNSTREAM          head;             /*< Head of the filter chain */
     MXS_UPSTREAM            tail;             /*< The tail of the filter chain */
     int                     refcount;         /*< Reference count on the session */
-    bool                    ses_is_child;     /*< this is a child session */
     mxs_session_trx_state_t trx_state;        /*< The current transaction state. */
     bool                    autocommit;       /*< Whether autocommit is on. */
     struct

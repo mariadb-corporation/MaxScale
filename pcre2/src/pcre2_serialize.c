@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2015 University of Cambridge
+         New API code Copyright (c) 2016 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -104,7 +104,7 @@ for (i = 0; i < number_of_codes; i++)
     return PCRE2_ERROR_MIXEDTABLES;
   total_size += re->blocksize;
   }
-  
+
 /* Initialize the byte stream. */
 bytes = memctl->malloc(total_size + sizeof(pcre2_memctl), memctl->memory_data);
 if (bytes == NULL) return PCRE2_ERROR_NOMEMORY;
@@ -158,6 +158,7 @@ int32_t i, j;
 
 if (data == NULL || codes == NULL) return PCRE2_ERROR_NULL;
 if (number_of_codes <= 0) return PCRE2_ERROR_BADDATA;
+if (data->number_of_codes <= 0) return PCRE2_ERROR_BADSERIALIZEDDATA;
 if (data->magic != SERIALIZED_DATA_MAGIC) return PCRE2_ERROR_BADMAGIC;
 if (data->version != SERIALIZED_DATA_VERSION) return PCRE2_ERROR_BADMODE;
 if (data->config != SERIALIZED_DATA_CONFIG) return PCRE2_ERROR_BADMODE;
@@ -167,7 +168,7 @@ if (number_of_codes > data->number_of_codes)
 
 src_bytes = bytes + sizeof(pcre2_serialized_data);
 
-/* Decode tables. The reference count for the tables is stored immediately 
+/* Decode tables. The reference count for the tables is stored immediately
 following them. */
 
 tables = memctl->malloc(tables_length + sizeof(PCRE2_SIZE), memctl->memory_data);
@@ -179,8 +180,8 @@ src_bytes += tables_length;
 
 /* Decode the byte stream. We must not try to read the size from the compiled
 code block in the stream, because it might be unaligned, which causes errors on
-hardware such as Sparc-64 that doesn't like unaligned memory accesses. The type 
-of the blocksize field is given its own name to ensure that it is the same here 
+hardware such as Sparc-64 that doesn't like unaligned memory accesses. The type
+of the blocksize field is given its own name to ensure that it is the same here
 as in the block. */
 
 for (i = 0; i < number_of_codes; i++)
@@ -188,10 +189,12 @@ for (i = 0; i < number_of_codes; i++)
   CODE_BLOCKSIZE_TYPE blocksize;
   memcpy(&blocksize, src_bytes + offsetof(pcre2_real_code, blocksize),
     sizeof(CODE_BLOCKSIZE_TYPE));
+  if (blocksize <= sizeof(pcre2_real_code))
+    return PCRE2_ERROR_BADSERIALIZEDDATA;
 
   /* The allocator provided by gcontext replaces the original one. */
-   
-  dst_re = (pcre2_real_code *)PRIV(memctl_malloc)(blocksize, 
+
+  dst_re = (pcre2_real_code *)PRIV(memctl_malloc)(blocksize,
     (pcre2_memctl *)gcontext);
   if (dst_re == NULL)
     {
@@ -205,12 +208,16 @@ for (i = 0; i < number_of_codes; i++)
     }
 
   /* The new allocator must be preserved. */
-   
+
   memcpy(((uint8_t *)dst_re) + sizeof(pcre2_memctl),
     src_bytes + sizeof(pcre2_memctl), blocksize - sizeof(pcre2_memctl));
+  if (dst_re->magic_number != MAGIC_NUMBER ||
+      dst_re->name_entry_size > MAX_NAME_SIZE + IMM2_SIZE + 1 ||
+      dst_re->name_count > MAX_NAME_COUNT)
+    return PCRE2_ERROR_BADSERIALIZEDDATA;
 
   /* At the moment only one table is supported. */
-   
+
   dst_re->tables = tables;
   dst_re->executable_jit = NULL;
   dst_re->flags |= PCRE2_DEREF_TABLES;
@@ -252,7 +259,7 @@ if (bytes != NULL)
   {
   pcre2_memctl *memctl = (pcre2_memctl *)(bytes - sizeof(pcre2_memctl));
   memctl->free(memctl, memctl->memory_data);
-  } 
+  }
 }
 
 /* End of pcre2_serialize.c */

@@ -143,6 +143,7 @@ bool run_test(TestConnections& test)
 {
     bool rval = true;
 
+    test.tprintf("Inserting data");
     for (int x = 0; test_set[x].types; x++)
     {
         for (int i = 0; test_set[x].types[i]; i++)
@@ -152,6 +153,7 @@ bool run_test(TestConnections& test)
         }
     }
 
+    test.tprintf("Waiting for avrorouter to process data");
     test.repl->connect();
     execute_query(test.repl->nodes[0], "FLUSH LOGS");
     test.repl->close_connections();
@@ -196,6 +198,7 @@ bool run_test(TestConnections& test)
                 std::string err = conn.getError();
                 test.tprintf("Failed to request data: %s", err.c_str());
                 rval = false;
+                break;
             }
             test.stop_timeout();
         }
@@ -209,8 +212,7 @@ int main(int argc, char *argv[])
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
-    test.start_binlog();
-    test.restart_maxscale();
+    test.replicate_from_master();
 
     if (!run_test(test))
     {

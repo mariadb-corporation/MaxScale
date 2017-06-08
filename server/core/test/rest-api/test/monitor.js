@@ -27,7 +27,7 @@ describe("Monitor", function() {
         monitor.data.attributes.parameters = {
             monitor_interval: 1000
         }
-        return request.put(base_url + "/monitors/" + monitor.data.id, {json:monitor})
+        return request.patch(base_url + "/monitors/" + monitor.data.id, {json:monitor})
             .should.be.fulfilled
     });
 
@@ -53,7 +53,7 @@ describe("Monitor Relationships", function() {
             .then(function(resp) {
                 var mon = JSON.parse(resp)
                 delete mon.data.relationships.servers
-                return request.put(base_url + "/monitors/MySQL-Monitor", {json: mon})
+                return request.patch(base_url + "/monitors/MySQL-Monitor", {json: mon})
             })
             .should.be.fulfilled
     });
@@ -69,7 +69,7 @@ describe("Monitor Relationships", function() {
                     {id: "server3", type: "servers"},
                     {id: "server4", type: "servers"},
                 ]
-                return request.put(base_url + "/monitors/" + monitor.data.id, {json: mon})
+                return request.patch(base_url + "/monitors/" + monitor.data.id, {json: mon})
             })
             .should.be.fulfilled
     });
@@ -80,7 +80,7 @@ describe("Monitor Relationships", function() {
             .then(function(resp) {
                 var mon = JSON.parse(resp)
                 delete mon.data.relationships.servers
-                return request.put(base_url + "/monitors/" + monitor.data.id, {json: mon})
+                return request.patch(base_url + "/monitors/" + monitor.data.id, {json: mon})
             })
             .then(function() {
                 return request.get(base_url + "/monitors/MySQL-Monitor")
@@ -93,7 +93,7 @@ describe("Monitor Relationships", function() {
                     {id: "server3", type: "servers"},
                     {id: "server4", type: "servers"},
                 ]
-                return request.put(base_url + "/monitors/MySQL-Monitor", {json: mon})
+                return request.patch(base_url + "/monitors/MySQL-Monitor", {json: mon})
             })
             .should.be.fulfilled
     });

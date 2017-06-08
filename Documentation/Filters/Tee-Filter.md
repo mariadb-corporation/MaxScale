@@ -6,12 +6,15 @@ The tee filter is a "plumbing" fitting in the MariaDB MaxScale filter toolkit.
 It can be used in a filter pipeline of a service to make copies of requests from
 the client and send the copies to another service within MariaDB MaxScale.
 
+**Please Note:** Starting with MaxScale 2.2.0, any client that connects to a
+  service which uses a tee filter will require a grant for the loopback address,
+  i.e. `127.0.0.1`.
+
 ## Configuration
 
 The configuration block for the TEE filter requires the minimal filter
 parameters in its section within the MaxScale configuration file. The service to
-send the duplicates to must be defined. Currently the tee filter does not
-support multi-statements.
+send the duplicates to must be defined.
 
 ```
 [DataMartFilter]

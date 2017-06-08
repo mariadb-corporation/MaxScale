@@ -1,9 +1,10 @@
 /**
  * @file bug673.cpp regression case for bug673 ("MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin")
  *
- * - configure wrong IP for all backends
- * - execute maxadmin command show dbusers "RW Split Router"
- * - check MaxScale is alive by executing maxadmin again
+ * - Configure wrong IP for all backends
+ * - Execute maxadmin command show dbusers "RW Split Router"
+ * - Check MaxScale is alive by executing maxadmin again
+ * - Check that only new style object names in maxadmin commands are accepted
  */
 
 #include "testconnections.h"
@@ -11,20 +12,17 @@
 
 int main(int argc, char *argv[])
 {
-    char result[1024];
-    TestConnections * Test = new TestConnections(argc, argv);
+    TestConnections test(argc, argv);
 
-    Test->set_timeout(20);
-
+    test.set_timeout(60);
     for (int i = 0; i < 2; i++)
     {
-        Test->tprintf("Trying show dbusers \"RW Split Router\"\n");
-        Test->add_result(Test->get_maxadmin_param((char *) "show dbusers \"RW Split Router\"", (char *) "User names:",
-                         result), "Maxadmin failed\n");
-        Test->tprintf("result %s\n", result);
+        char result[1024];
+        test.add_result(test.get_maxadmin_param("show dbusers \"RW Split Router\"", "User names:", result) == 0,
+                        "Old style objects in maxadmin commands should fail");
+        test.add_result(test.get_maxadmin_param("show dbusers RW-Split-Router", "User names:", result),
+                        "New style objects in maxadmin commands should succeed");
     }
 
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return test.global_result;
 }

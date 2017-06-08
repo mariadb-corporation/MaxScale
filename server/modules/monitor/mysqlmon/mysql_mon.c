@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1540,8 +1540,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *dat
                         "(maxscale_id INT NOT NULL, "
                         "master_server_id INT NOT NULL, "
                         "master_timestamp INT UNSIGNED NOT NULL, "
-                        "PRIMARY KEY ( master_server_id, maxscale_id ) ) "
-                        "ENGINE=MYISAM DEFAULT CHARSET=latin1"))
+                        "PRIMARY KEY ( master_server_id, maxscale_id ) )"))
         {
             MXS_ERROR("Error creating maxscale_schema.replication_heartbeat "
                       "table in Master server: %s", mysql_error(database->con));

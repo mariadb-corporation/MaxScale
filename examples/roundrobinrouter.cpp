@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -673,7 +673,8 @@ static MXS_ROUTER* createInstance(SERVICE* service, char** options)
      * the pointer. */
 
     /* Register a custom command */
-    if (!modulecmd_register_command("rrrouter", "test_command", custom_cmd_example,
+    if (!modulecmd_register_command("rrrouter", "test_command",
+                                    MODULECMD_TYPE_ACTIVE, custom_cmd_example,
                                     2, custom_cmd_args))
     {
         MXS_ERROR("Module command registration failed.");

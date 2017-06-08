@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -65,6 +65,13 @@ typedef struct
                                           This should always be the first argument
                                           if the function requires an output DCB. */
 
+/** What type of an action does the command perform? */
+enum modulecmd_type
+{
+    MODULECMD_TYPE_PASSIVE, /**< Command only displays data */
+    MODULECMD_TYPE_ACTIVE   /**< Command can modify data */
+};
+
 /**
  * Options for arguments, bits 9 through 32
  */
@@ -123,12 +130,16 @@ typedef struct modulecmd
 {
     char                 *identifier; /**< Unique identifier */
     char                 *domain; /**< Command domain */
+    enum modulecmd_type   type; /**< Command type, either active or passive */
     MODULECMDFN           func; /**< The registered function */
     int                   arg_count_min; /**< Minimum number of arguments */
     int                   arg_count_max; /**< Maximum number of arguments */
     modulecmd_arg_type_t *arg_types; /**< Argument types */
     struct modulecmd     *next; /**< Next command */
 } MODULECMD;
+
+/** Check if the module command can modify the data/state of the module */
+#define MODULECMD_MODIFIES_DATA(t) (t->type == MODULECMD_TYPE_ACTIVE)
 
 /**
  * @brief Register a new command
@@ -143,7 +154,8 @@ typedef struct modulecmd
  * @return True if the module was successfully registered, false on error
  */
 bool modulecmd_register_command(const char *domain, const char *identifier,
-                                MODULECMDFN entry_point, int argc, modulecmd_arg_type_t *argv);
+                                enum modulecmd_type type, MODULECMDFN entry_point,
+                                int argc, modulecmd_arg_type_t *argv);
 
 /**
  * @brief Find a registered command
@@ -195,6 +207,15 @@ void modulecmd_arg_free(MODULECMD_ARG *arg);
  * @return True if the optional argument is present
  */
 bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx);
+
+/**
+ * @brief Check if module command requires an output DCB
+ *
+ * @param cmd Command to check
+ *
+ * @return True if module requires a DCB for printing output
+ */
+bool modulecmd_requires_output_dcb(const MODULECMD* cmd);
 
 /**
  * @brief Call a registered command

@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -24,6 +24,7 @@
 
 #include <maxscale/modinfo.h>
 #include <maxscale/jansson.h>
+#include <maxscale/pcre2.h>
 
 MXS_BEGIN_DECLS
 
@@ -108,6 +109,7 @@ extern const char CN_LOG_THROTTLING[];
 extern const char CN_MAXSCALE[];
 extern const char CN_MAX_CONNECTIONS[];
 extern const char CN_MAX_RETRY_INTERVAL[];
+extern const char CN_METHOD[];
 extern const char CN_MODULE[];
 extern const char CN_MODULES[];
 extern const char CN_MODULE_COMMAND[];
@@ -352,11 +354,39 @@ int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
                            struct server*** output);
 
 /**
+ * Get a compiled regular expression. The returned @c pcre2_code should be freed
+ * by the caller.
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ * @param options PCRE2 compilation options
+ * @return The compiled PCRE2 code, or NULL on error
+ */
+pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params, const char *key,
+                                      uint32_t options);
+
+/**
+ * Get a compiled regular expression and the capture count of the pattern. The
+ * @c pcre2_code should be freed by the caller.
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ * @param options PCRE2 compilation options
+ * @param output_code Output for compilation result
+ * @param output_capcount Output for capture count
+ * @return True on success, false otherwise
+ */
+bool config_get_compiled_regex_capcount(const MXS_CONFIG_PARAMETER *params,
+                                        const char *key, uint32_t options,
+                                        pcre2_code** output_code,
+                                        uint32_t* output_capcount);
+
+/**
  * Parse a list of server names and write the results in an array of strings
  * with one server name in each. The output array and its elements should be
  * deallocated by the caller. The server names are not checked to be actual
  * configured servers.
- * 
+ *
  * The output array may contain more elements than the the value returned, but these
  * extra elements are null and in the end of the array. If no server names were
  * parsed or if an error occurs, nothing is written to the output parameter.

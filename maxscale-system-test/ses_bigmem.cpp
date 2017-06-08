@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
             Test->try_query(Test->routers[j], (char*) "select 1;");
             Test->try_query(Test->routers[j], (char*) "set autocommit=1;");
             Test->try_query(Test->routers[j], (char*) "select 2;");
-            if ((i / 100) * 100 == i)
+            if ((i / 1000) * 1000 == i)
             {
                 Test->tprintf("i=%d\n", i);
             }

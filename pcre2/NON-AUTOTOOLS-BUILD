@@ -97,6 +97,7 @@ can skip ahead to the CMake section.
        pcre2_context.c
        pcre2_dfa_match.c
        pcre2_error.c
+       pcre2_find_bracket.c
        pcre2_jit_compile.c
        pcre2_maketables.c
        pcre2_match.c
@@ -173,7 +174,11 @@ can skip ahead to the CMake section.
 
 (11) If you want to use the pcre2grep command, compile and link
      src/pcre2grep.c; it uses only the basic 8-bit PCRE2 library (it does not
-     need the pcre2posix library).
+     need the pcre2posix library). If you have built the PCRE2 library with JIT
+     support by defining SUPPORT_JIT in src/config.h, you can also define
+     SUPPORT_PCRE2GREP_JIT, which causes pcre2grep to make use of JIT (unless
+     it is run with --no-jit). If you define SUPPORT_PCRE2GREP_JIT without
+     defining SUPPORT_JIT, pcre2grep does not try to make use of JIT.
 
 
 STACK SIZE IN WINDOWS ENVIRONMENTS
@@ -388,4 +393,4 @@ and executable, is in EBCDIC and native z/OS file formats and this is the
 recommended download site.
 
 =============================
-Last Updated: 15 June 2015
+Last Updated: 13 October 2016

@@ -2,12 +2,12 @@
 *      Perl-Compatible Regular Expressions       *
 *************************************************/
 
-/* PCRE is a library of functions to support regular expressions whose syntax
+/* PCRE2 is a library of functions to support regular expressions whose syntax
 and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2015 University of Cambridge
+         New API code Copyright (c) 2016 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,10 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 /* We do not support both EBCDIC and Unicode at the same time. The "configure"
-script prevents both being selected, but not everybody uses "configure". */
+script prevents both being selected, but not everybody uses "configure". EBCDIC
+is only supported for the 8-bit library, but the check for this has to be later
+in this file, because the first part is not width-dependent, and is included by
+pcre2test.c with CODE_UNIT_WIDTH == 0. */
 
 #if defined EBCDIC && defined SUPPORT_UNICODE
 #error The use of both EBCDIC and SUPPORT_UNICODE is not supported.
@@ -68,6 +71,14 @@ typedef int BOOL;
 
 #ifdef SUPPORT_VALGRIND
 #include <valgrind/memcheck.h>
+#endif
+
+/* Older versions of MSVC lack snprintf(). This define allows for
+warning/error-free compilation and testing with MSVC compilers back to at least
+MSVC 10/2010. Except for VC6 (which is missing some fundamentals and fails). */
+
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+#define snprintf _snprintf
 #endif
 
 /* When compiling a DLL for Windows, the exported symbols have to be declared
@@ -131,20 +142,6 @@ pcre2_match() because of the way it backtracks. */
 #define PCRE2_SPTR CUSTOM_SUBJECT_PTR
 #endif
 
-/* When compiling with the MSVC compiler, it is sometimes necessary to include
-a "calling convention" before exported function names. (This is secondhand
-information; I know nothing about MSVC myself). For example, something like
-
-  void __cdecl function(....)
-
-might be needed. In order so make this easy, all the exported functions have
-PCRE2_CALL_CONVENTION just before their names. It is rarely needed; if not
-set, we ensure here that it has no effect. */
-
-#ifndef PCRE2_CALL_CONVENTION
-#define PCRE2_CALL_CONVENTION
-#endif
-
 /* When checking for integer overflow in pcre2_compile(), we need to handle
 large integers. If a 64-bit integer type is available, we can use that.
 Otherwise we have to cast to double, which of course requires floating point
@@ -166,7 +163,7 @@ by "configure". */
 #endif
 
 /* When compiling for use with the Virtual Pascal compiler, these functions
-need to have their names changed. PCRE must be compiled with the -DVPCOMPAT
+need to have their names changed. PCRE2 must be compiled with the -DVPCOMPAT
 option on the command line. */
 
 #ifdef VPCOMPAT
@@ -189,7 +186,7 @@ neither (there some non-Unix environments where this is the case). */
 #define memmove(a, b, c) bcopy(b, a, c)
 #else  /* HAVE_BCOPY */
 static void *
-pcre_memmove(void *d, const void *s, size_t n)
+pcre2_memmove(void *d, const void *s, size_t n)
 {
 size_t i;
 unsigned char *dest = (unsigned char *)d;
@@ -207,7 +204,7 @@ else
   return (void *)(dest - n);
   }
 }
-#define memmove(a, b, c) pcre_memmove(a, b, c)
+#define memmove(a, b, c) pcre2_memmove(a, b, c)
 #endif   /* not HAVE_BCOPY */
 #endif   /* not HAVE_MEMMOVE */
 #endif   /* not VPCOMPAT */
@@ -231,8 +228,15 @@ Unicode doesn't go beyond 0x0010ffff. */
 
 #define MAX_UTF_CODE_POINT 0x10ffff
 
-/* Compile-time errors are added to this value. As they are documented, it
-should probably never be changed. */
+/* Compile-time positive error numbers (all except UTF errors, which are
+negative) start at this value. It should probably never be changed, in case
+some application is checking for specific numbers. There is a copy of this
+#define in pcre2posix.c (which now no longer includes this file). Ideally, a
+way of having a single definition should be found, but as the number is
+unlikely to change, this is not a pressing issue. The original reason for
+having a base other than 0 was to keep the absolute values of compile-time and
+run-time error numbers numerically different, but in the event the code does
+not rely on this. */
 
 #define COMPILE_ERROR_BASE 100
 
@@ -266,21 +270,21 @@ advancing the pointer. */
 
 #define GETUTF8(c, eptr) \
     { \
-    if ((c & 0x20) == 0) \
-      c = ((c & 0x1f) << 6) | (eptr[1] & 0x3f); \
-    else if ((c & 0x10) == 0) \
-      c = ((c & 0x0f) << 12) | ((eptr[1] & 0x3f) << 6) | (eptr[2] & 0x3f); \
-    else if ((c & 0x08) == 0) \
-      c = ((c & 0x07) << 18) | ((eptr[1] & 0x3f) << 12) | \
-      ((eptr[2] & 0x3f) << 6) | (eptr[3] & 0x3f); \
-    else if ((c & 0x04) == 0) \
-      c = ((c & 0x03) << 24) | ((eptr[1] & 0x3f) << 18) | \
-          ((eptr[2] & 0x3f) << 12) | ((eptr[3] & 0x3f) << 6) | \
-          (eptr[4] & 0x3f); \
+    if ((c & 0x20u) == 0) \
+      c = ((c & 0x1fu) << 6) | (eptr[1] & 0x3fu); \
+    else if ((c & 0x10u) == 0) \
+      c = ((c & 0x0fu) << 12) | ((eptr[1] & 0x3fu) << 6) | (eptr[2] & 0x3fu); \
+    else if ((c & 0x08u) == 0) \
+      c = ((c & 0x07u) << 18) | ((eptr[1] & 0x3fu) << 12) | \
+      ((eptr[2] & 0x3fu) << 6) | (eptr[3] & 0x3fu); \
+    else if ((c & 0x04u) == 0) \
+      c = ((c & 0x03u) << 24) | ((eptr[1] & 0x3fu) << 18) | \
+          ((eptr[2] & 0x3fu) << 12) | ((eptr[3] & 0x3fu) << 6) | \
+          (eptr[4] & 0x3fu); \
     else \
-      c = ((c & 0x01) << 30) | ((eptr[1] & 0x3f) << 24) | \
-          ((eptr[2] & 0x3f) << 18) | ((eptr[3] & 0x3f) << 12) | \
-          ((eptr[4] & 0x3f) << 6) | (eptr[5] & 0x3f); \
+      c = ((c & 0x01u) << 30) | ((eptr[1] & 0x3fu) << 24) | \
+          ((eptr[2] & 0x3fu) << 18) | ((eptr[3] & 0x3fu) << 12) | \
+          ((eptr[4] & 0x3fu) << 6) | (eptr[5] & 0x3fu); \
     }
 
 /* Base macro to pick up the remaining bytes of a UTF-8 character, advancing
@@ -288,31 +292,31 @@ the pointer. */
 
 #define GETUTF8INC(c, eptr) \
     { \
-    if ((c & 0x20) == 0) \
-      c = ((c & 0x1f) << 6) | (*eptr++ & 0x3f); \
-    else if ((c & 0x10) == 0) \
+    if ((c & 0x20u) == 0) \
+      c = ((c & 0x1fu) << 6) | (*eptr++ & 0x3fu); \
+    else if ((c & 0x10u) == 0) \
       { \
-      c = ((c & 0x0f) << 12) | ((*eptr & 0x3f) << 6) | (eptr[1] & 0x3f); \
+      c = ((c & 0x0fu) << 12) | ((*eptr & 0x3fu) << 6) | (eptr[1] & 0x3fu); \
       eptr += 2; \
       } \
-    else if ((c & 0x08) == 0) \
+    else if ((c & 0x08u) == 0) \
       { \
-      c = ((c & 0x07) << 18) | ((*eptr & 0x3f) << 12) | \
-          ((eptr[1] & 0x3f) << 6) | (eptr[2] & 0x3f); \
+      c = ((c & 0x07u) << 18) | ((*eptr & 0x3fu) << 12) | \
+          ((eptr[1] & 0x3fu) << 6) | (eptr[2] & 0x3fu); \
       eptr += 3; \
       } \
-    else if ((c & 0x04) == 0) \
+    else if ((c & 0x04u) == 0) \
       { \
-      c = ((c & 0x03) << 24) | ((*eptr & 0x3f) << 18) | \
-          ((eptr[1] & 0x3f) << 12) | ((eptr[2] & 0x3f) << 6) | \
-          (eptr[3] & 0x3f); \
+      c = ((c & 0x03u) << 24) | ((*eptr & 0x3fu) << 18) | \
+          ((eptr[1] & 0x3fu) << 12) | ((eptr[2] & 0x3fu) << 6) | \
+          (eptr[3] & 0x3fu); \
       eptr += 4; \
       } \
     else \
       { \
-      c = ((c & 0x01) << 30) | ((*eptr & 0x3f) << 24) | \
-          ((eptr[1] & 0x3f) << 18) | ((eptr[2] & 0x3f) << 12) | \
-          ((eptr[3] & 0x3f) << 6) | (eptr[4] & 0x3f); \
+      c = ((c & 0x01u) << 30) | ((*eptr & 0x3fu) << 24) | \
+          ((eptr[1] & 0x3fu) << 18) | ((eptr[2] & 0x3fu) << 12) | \
+          ((eptr[3] & 0x3fu) << 6) | (eptr[4] & 0x3fu); \
       eptr += 5; \
       } \
     }
@@ -322,34 +326,34 @@ advancing the pointer, incrementing the length. */
 
 #define GETUTF8LEN(c, eptr, len) \
     { \
-    if ((c & 0x20) == 0) \
+    if ((c & 0x20u) == 0) \
       { \
-      c = ((c & 0x1f) << 6) | (eptr[1] & 0x3f); \
+      c = ((c & 0x1fu) << 6) | (eptr[1] & 0x3fu); \
       len++; \
       } \
-    else if ((c & 0x10)  == 0) \
+    else if ((c & 0x10u)  == 0) \
       { \
-      c = ((c & 0x0f) << 12) | ((eptr[1] & 0x3f) << 6) | (eptr[2] & 0x3f); \
+      c = ((c & 0x0fu) << 12) | ((eptr[1] & 0x3fu) << 6) | (eptr[2] & 0x3fu); \
       len += 2; \
       } \
-    else if ((c & 0x08)  == 0) \
+    else if ((c & 0x08u)  == 0) \
       {\
-      c = ((c & 0x07) << 18) | ((eptr[1] & 0x3f) << 12) | \
-          ((eptr[2] & 0x3f) << 6) | (eptr[3] & 0x3f); \
+      c = ((c & 0x07u) << 18) | ((eptr[1] & 0x3fu) << 12) | \
+          ((eptr[2] & 0x3fu) << 6) | (eptr[3] & 0x3fu); \
       len += 3; \
       } \
-    else if ((c & 0x04)  == 0) \
+    else if ((c & 0x04u)  == 0) \
       { \
-      c = ((c & 0x03) << 24) | ((eptr[1] & 0x3f) << 18) | \
-          ((eptr[2] & 0x3f) << 12) | ((eptr[3] & 0x3f) << 6) | \
-          (eptr[4] & 0x3f); \
+      c = ((c & 0x03u) << 24) | ((eptr[1] & 0x3fu) << 18) | \
+          ((eptr[2] & 0x3fu) << 12) | ((eptr[3] & 0x3fu) << 6) | \
+          (eptr[4] & 0x3fu); \
       len += 4; \
       } \
     else \
       {\
-      c = ((c & 0x01) << 30) | ((eptr[1] & 0x3f) << 24) | \
-          ((eptr[2] & 0x3f) << 18) | ((eptr[3] & 0x3f) << 12) | \
-          ((eptr[4] & 0x3f) << 6) | (eptr[5] & 0x3f); \
+      c = ((c & 0x01u) << 30) | ((eptr[1] & 0x3fu) << 24) | \
+          ((eptr[2] & 0x3fu) << 18) | ((eptr[3] & 0x3fu) << 12) | \
+          ((eptr[4] & 0x3fu) << 6) | (eptr[5] & 0x3fu); \
       len += 5; \
       } \
     }
@@ -379,7 +383,7 @@ other. NOTE: The values also appear in pcre2_jit_compile.c. */
 /* Character U+180E (Mongolian Vowel Separator) is not included in the list of
 spaces in the Unicode file PropList.txt, and Perl does not recognize it as a
 space. However, in many other sources it is listed as a space and has been in
-PCRE for a long time. */
+PCRE (both APIs) for a long time. */
 
 #define HSPACE_LIST \
   CHAR_HT, CHAR_SPACE, CHAR_NBSP, \
@@ -524,9 +528,11 @@ bytes in a code unit in that mode. */
 #define PCRE2_NL_SET        0x00008000  /* newline was set in the pattern */
 #define PCRE2_NOTEMPTY_SET  0x00010000  /* (*NOTEMPTY) used        ) keep */
 #define PCRE2_NE_ATST_SET   0x00020000  /* (*NOTEMPTY_ATSTART) used) together */
-#define PCRE2_DEREF_TABLES  0x00040000  /* Release character tables. */
+#define PCRE2_DEREF_TABLES  0x00040000  /* release character tables */
 #define PCRE2_NOJIT         0x00080000  /* (*NOJIT) used */
 #define PCRE2_HASBKPORX     0x00100000  /* contains \P, \p, or \X */
+#define PCRE2_DUPCAPUSED    0x00200000  /* contains (?| */
+#define PCRE2_HASBKC        0x00400000  /* contains \C */
 
 #define PCRE2_MODE_MASK     (PCRE2_MODE8 | PCRE2_MODE16 | PCRE2_MODE32)
 
@@ -545,17 +551,9 @@ req_unit match. */
 
 #define REQ_CU_MAX 1000
 
-/* Bit definitions for entries in the pcre_ctypes table. */
-
-#define ctype_space   0x01
-#define ctype_letter  0x02
-#define ctype_digit   0x04
-#define ctype_xdigit  0x08
-#define ctype_word    0x10    /* alphanumeric or '_' */
-#define ctype_meta    0x80    /* regexp meta char or zero (end pattern) */
-
-/* Offsets for the bitmap tables in pcre_cbits. Each table contains a set
-of bits for a class map. Some classes are built by combining these tables. */
+/* Offsets for the bitmap tables in the cbits set of tables. Each table
+contains a set of bits for a class map. Some classes are built by combining
+these tables. */
 
 #define cbit_space     0      /* [:space:] or \s */
 #define cbit_xdigit   32      /* [:xdigit:] */
@@ -569,19 +567,28 @@ of bits for a class map. Some classes are built by combining these tables. */
 #define cbit_cntrl   288      /* [:cntrl:] */
 #define cbit_length  320      /* Length of the cbits table */
 
-/* Offsets of the various tables from the base tables pointer, and
-total length. */
+/* Bit definitions for entries in the ctypes table. */
 
-#define lcc_offset      0
-#define fcc_offset    256
-#define cbits_offset  512
-#define ctypes_offset (cbits_offset + cbit_length)
+#define ctype_space   0x01
+#define ctype_letter  0x02
+#define ctype_digit   0x04
+#define ctype_xdigit  0x08
+#define ctype_word    0x10    /* alphanumeric or '_' */
+#define ctype_meta    0x80    /* regexp meta char or zero (end pattern) */
+
+/* Offsets of the various tables from the base tables pointer, and
+total length of the tables. */
+
+#define lcc_offset      0                           /* Lower case */
+#define fcc_offset    256                           /* Flip case */
+#define cbits_offset  512                           /* Character classes */
+#define ctypes_offset (cbits_offset + cbit_length)  /* Character types */
 #define tables_length (ctypes_offset + 256)
 
 
 /* -------------------- Character and string names ------------------------ */
 
-/* If PCRE is to support UTF-8 on EBCDIC platforms, we cannot use normal
+/* If PCRE2 is to support UTF-8 on EBCDIC platforms, we cannot use normal
 character constants like '*' because the compiler would emit their EBCDIC code,
 which is different from their ASCII/UTF-8 code. Instead we define macros for
 the characters so that they always use the ASCII/UTF-8 code when UTF-8 support
@@ -589,7 +596,7 @@ is enabled. When UTF-8 support is not enabled, the definitions use character
 literals. Both character and string versions of each character are needed, and
 there are some longer strings as well.
 
-This means that, on EBCDIC platforms, the PCRE library can handle either
+This means that, on EBCDIC platforms, the PCRE2 library can handle either
 EBCDIC, or UTF-8, but not both. To support both in the same compiled library
 would need different lookups depending on whether PCRE2_UTF was set or not.
 This would make it impossible to use characters in switch/case statements,
@@ -601,7 +608,7 @@ macros to give the functions distinct names. */
 #ifndef SUPPORT_UNICODE
 
 /* UTF-8 support is not enabled; use the platform-dependent character literals
-so that PCRE works in both ASCII and EBCDIC environments, but only in non-UTF
+so that PCRE2 works in both ASCII and EBCDIC environments, but only in non-UTF
 mode. Newline characters are problematic in EBCDIC. Though it has CR and LF
 characters, a common practice has been to use its NL (0x15) character as the
 line terminator in C-like processing environments. However, sometimes the LF
@@ -609,7 +616,7 @@ line terminator in C-like processing environments. However, sometimes the LF
 
 http://unicode.org/standard/reports/tr13/tr13-5.html
 
-PCRE defaults EBCDIC NL to 0x15, but has a build-time option to select 0x25
+PCRE2 defaults EBCDIC NL to 0x15, but has a build-time option to select 0x25
 instead. Whichever is *not* chosen is defined as NEL.
 
 In both ASCII and EBCDIC environments, CHAR_NL and CHAR_LF are synonyms for the
@@ -917,6 +924,7 @@ a positive value. */
 #define STRING_NOTEMPTY_ATSTART_RIGHTPAR  "NOTEMPTY_ATSTART)"
 #define STRING_LIMIT_MATCH_EQ             "LIMIT_MATCH="
 #define STRING_LIMIT_RECURSION_EQ         "LIMIT_RECURSION="
+#define STRING_MARK                       "MARK"
 
 #else  /* SUPPORT_UNICODE */
 
@@ -1189,6 +1197,7 @@ only. */
 #define STRING_NOTEMPTY_ATSTART_RIGHTPAR  STR_N STR_O STR_T STR_E STR_M STR_P STR_T STR_Y STR_UNDERSCORE STR_A STR_T STR_S STR_T STR_A STR_R STR_T STR_RIGHT_PARENTHESIS
 #define STRING_LIMIT_MATCH_EQ             STR_L STR_I STR_M STR_I STR_T STR_UNDERSCORE STR_M STR_A STR_T STR_C STR_H STR_EQUALS_SIGN
 #define STRING_LIMIT_RECURSION_EQ         STR_L STR_I STR_M STR_I STR_T STR_UNDERSCORE STR_R STR_E STR_C STR_U STR_R STR_S STR_I STR_O STR_N STR_EQUALS_SIGN
+#define STRING_MARK                       STR_M STR_A STR_R STR_K
 
 #endif  /* SUPPORT_UNICODE */
 
@@ -1212,7 +1221,7 @@ only. */
 #define PT_TABSIZE   11    /* Size of square table for autopossessify tests */
 
 /* The following special properties are used only in XCLASS items, when POSIX
-classes are specified and PCRE_UCP is set - in other words, for Unicode
+classes are specified and PCRE2_UCP is set - in other words, for Unicode
 handling of these classes. They are not available via the \p or \P escapes like
 those in the above list, and so they do not take part in the autopossessifying
 table. */
@@ -1275,23 +1284,16 @@ mode rather than an escape sequence. It is also used for [^] in JavaScript
 compatibility mode, and for \C in non-utf mode. In non-DOTALL mode, "." behaves
 like \N.
 
-The special values ESC_DU, ESC_du, etc. are used instead of ESC_D, ESC_d, etc.
-when PCRE_UCP is set and replacement of \d etc by \p sequences is required.
-They must be contiguous, and remain in order so that the replacements can be
-looked up from a table.
-
 Negative numbers are used to encode a backreference (\1, \2, \3, etc.) in
-check_escape(). There are two tests in the code for an escape
-greater than ESC_b and less than ESC_Z to detect the types that may be
-repeated. These are the types that consume characters. If any new escapes are
-put in between that don't consume a character, that code will have to change.
-*/
+check_escape(). There are tests in the code for an escape greater than ESC_b
+and less than ESC_Z to detect the types that may be repeated. These are the
+types that consume characters. If any new escapes are put in between that don't
+consume a character, that code will have to change. */
 
 enum { ESC_A = 1, ESC_G, ESC_K, ESC_B, ESC_b, ESC_D, ESC_d, ESC_S, ESC_s,
        ESC_W, ESC_w, ESC_N, ESC_dum, ESC_C, ESC_P, ESC_p, ESC_R, ESC_H,
        ESC_h, ESC_V, ESC_v, ESC_X, ESC_Z, ESC_z,
-       ESC_E, ESC_Q, ESC_g, ESC_k,
-       ESC_DU, ESC_du, ESC_SU, ESC_su, ESC_WU, ESC_wu };
+       ESC_E, ESC_Q, ESC_g, ESC_k };
 
 
 /********************** Opcode definitions ******************/
@@ -1301,12 +1303,12 @@ enum { ESC_A = 1, ESC_G, ESC_K, ESC_B, ESC_b, ESC_D, ESC_d, ESC_S, ESC_s,
 Starting from 1 (i.e. after OP_END), the values up to OP_EOD must correspond in
 order to the list of escapes immediately above. Furthermore, values up to
 OP_DOLLM must not be changed without adjusting the table called autoposstab in
-pcre_compile.c
+pcre2_auto_possess.c
 
 Whenever this list is updated, the two macro definitions that follow must be
 updated to match. The possessification table called "opcode_possessify" in
-pcre_compile.c must also be updated, and also the tables called "coptable"
-and "poptable" in pcre_dfa_exec.c.
+pcre2_compile.c must also be updated, and also the tables called "coptable"
+and "poptable" in pcre2_dfa_match.c.
 
 ****** NOTE NOTE NOTE ******/
 
@@ -1357,7 +1359,8 @@ enum {
   OP_CIRC,           /* 27 Start of line - not multiline */
   OP_CIRCM,          /* 28 Start of line - multiline */
 
-  /* Single characters; caseful must precede the caseless ones */
+  /* Single characters; caseful must precede the caseless ones, and these
+  must remain in this order, and adjacent. */
 
   OP_CHAR,           /* 29 Match one character, casefully */
   OP_CHARI,          /* 30 Match one character, caselessly */
@@ -1800,10 +1803,15 @@ typedef struct pcre2_serialized_data {
 
 #if defined PCRE2_CODE_UNIT_WIDTH && PCRE2_CODE_UNIT_WIDTH != 0
 
+/* EBCDIC is supported only for the 8-bit library. */
+
+#if defined EBCDIC && PCRE2_CODE_UNIT_WIDTH != 8
+#error EBCDIC is not supported for the 16-bit or 32-bit libraries
+#endif
+
 /* This is the largest non-UTF code point. */
 
 #define MAX_NON_UTF_CHAR (0xffffffffU >> (32 - PCRE2_CODE_UNIT_WIDTH))
-
 
 /* Internal shared data tables and variables. These are used by more than one
 of the exported public functions. They have to be "external" in the C sense,
@@ -1878,11 +1886,12 @@ private structures. */
 
 /* Private "external" functions. These are internal functions that are called
 from modules other than the one in which they are defined. They have to be
-"external" in the C sense, but are not part of the PCRE public API. They are
+"external" in the C sense, but are not part of the PCRE2 public API. They are
 not referenced from pcre2test, and must not be defined when no code unit width
 is available. */
 
 #define _pcre2_auto_possessify       PCRE2_SUFFIX(_pcre2_auto_possessify_)
+#define _pcre2_check_escape          PCRE2_SUFFIX(_pcre2_check_escape_)
 #define _pcre2_find_bracket          PCRE2_SUFFIX(_pcre2_find_bracket_)
 #define _pcre2_is_newline            PCRE2_SUFFIX(_pcre2_is_newline_)
 #define _pcre2_jit_free_rodata       PCRE2_SUFFIX(_pcre2_jit_free_rodata_)
@@ -1904,6 +1913,8 @@ is available. */
 
 extern int          _pcre2_auto_possessify(PCRE2_UCHAR *, BOOL,
                       const compile_block *);
+extern int          _pcre2_check_escape(PCRE2_SPTR *, PCRE2_SPTR, uint32_t *,
+                      int *, uint32_t, BOOL, compile_block *);
 extern PCRE2_SPTR   _pcre2_find_bracket(PCRE2_SPTR, BOOL, int);
 extern BOOL         _pcre2_is_newline(PCRE2_SPTR, uint32_t, PCRE2_SPTR,
                       uint32_t *, BOOL);

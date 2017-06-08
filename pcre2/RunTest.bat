@@ -13,17 +13,19 @@
 @rem line. Added argument validation and added error reporting.
 @rem
 @rem Sheri Pierce added logic to skip feature dependent tests
-@rem tests 4 5 9 15 and 18 require utf support
-@rem tests 6 7 10 16 and 19 require ucp support
-@rem 11 requires ucp and link size 2
-@rem 12 requires presence of jit support
-@rem 13 requires absence of jit support
+@rem tests 4 5 7 10 12 14 19 and 22 require Unicode support
+@rem 8 requires Unicode and link size 2
+@rem 16 requires absence of jit support
+@rem 17 requires presence of jit support
 @rem Sheri P also added override tests for study and jit testing
 @rem Zoltan Herczeg added libpcre16 support
 @rem Zoltan Herczeg added libpcre32 support
 @rem -------------------------------------------------------------------
 @rem
 @rem The file was converted for PCRE2 by PH, February 2015.
+@rem Updated for new test 14 (moving others up a number), August 2015.
+@rem Tidied and updated for new tests 21, 22, 23 by PH, October 2015.
+@rem PH added missing "set type" for test 22, April 2016.
 
 
 setlocal enabledelayedexpansion
@@ -64,6 +66,8 @@ set support32=%ERRORLEVEL%
 set unicode=%ERRORLEVEL%
 %pcre2test% -C jit >NUL
 set jit=%ERRORLEVEL%
+%pcre2test% -C backslash-C >NUL
+set supportBSC=%ERRORLEVEL%
 
 if %support8% EQU 1 (
 if not exist testout8 md testout8
@@ -99,18 +103,22 @@ set do16=no
 set do17=no
 set do18=no
 set do19=no
+set do20=no
+set do21=no
+set do22=no
+set do23=no
 set all=yes
 
 for %%a in (%*) do (
   set valid=no
-  for %%v in (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19) do if %%v == %%a set valid=yes
+  for %%v in (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23) do if %%v == %%a set valid=yes
   if "!valid!" == "yes" (
     set do%%a=yes
     set all=no
 ) else (
     echo Invalid test number - %%a!
         echo Usage %0 [ test_number ] ...
-        echo Where test_number is one or more optional test numbers 1 through 19, default is all tests.
+        echo Where test_number is one or more optional test numbers 1 through 23, default is all tests.
         exit /b 1
 )
 )
@@ -136,6 +144,10 @@ if "%all%" == "yes" (
   set do17=yes
   set do18=yes
   set do19=yes
+  set do20=yes
+  set do21=yes
+  set do22=yes
+  set do23=yes
 )
 
 @echo RunTest.bat's pcre2test output is written to newly created subfolders
@@ -183,6 +195,10 @@ if "%do16%" == "yes" call :do16
 if "%do17%" == "yes" call :do17
 if "%do18%" == "yes" call :do18
 if "%do19%" == "yes" call :do19
+if "%do20%" == "yes" call :do20
+if "%do21%" == "yes" call :do21
+if "%do22%" == "yes" call :do22
+if "%do23%" == "yes" call :do23
 :modeSkip
 if "%mode%" == "" (
   set mode=-16
@@ -227,11 +243,16 @@ if [%3] == [] (
   exit /b 1
 )
 
+if %1 == 8 (
+  set outnum=8-%bits%-%link_size%
+) else (
+  set outnum=%1
+)
 set testinput=testinput%1
-set testoutput=testoutput%1
+set testoutput=testoutput%outnum%
 if exist %srcdir%\testdata\win%testinput% (
   set testinput=wintestinput%1
-  set testoutput=wintestoutput%1
+  set testoutput=wintestoutput%outnum%
 )
 
 echo Test %1: %3
@@ -241,16 +262,21 @@ if errorlevel 1 (
   echo.            %pcre2test% %mode% %4 %5 %6 %7 %8 %9 %srcdir%\testdata\%testinput% ^>%2%bits%\%testoutput%
   set failed="yes"
   goto :eof
+) else if [%1]==[2] (
+  %pcre2test% %mode% %4 %5 %6 %7 %8 %9 -error -63,-62,-2,-1,0,100,188,189,190,191 >>%2%bits%\%testoutput%
 )
 
 set type=
-if [%1]==[8] (
-  set type=-%bits%
-)
 if [%1]==[11] (
   set type=-%bits%
 )
 if [%1]==[12] (
+  set type=-%bits%
+)
+if [%1]==[14] (
+  set type=-%bits%
+)
+if [%1]==[22] (
   set type=-%bits%
 )
 
@@ -316,7 +342,7 @@ if %unicode% EQU 0 (
 goto :eof
 
 :do6
-  call :runsub 6 testout "DFA matching main non-UTF, non-UCP functionality" -q -dfa
+  call :runsub 6 testout "DFA matching main non-UTF, non-UCP functionality" -q
 goto :eof
 
 :do7
@@ -324,7 +350,7 @@ if %unicode% EQU 0 (
   echo Test 7 Skipped due to absence of Unicode support.
   goto :eof
 )
-  call :runsub 7 testout "DFA matching with UTF-%bits% and Unicode property support" -q -dfa
+  call :runsub 7 testout "DFA matching with UTF-%bits% and Unicode property support" -q
   goto :eof
 
 :do8
@@ -388,39 +414,35 @@ if %bits% EQU 8 (
   echo Test 13 Skipped when running 8-bit tests.
   goto :eof
 )
-  call :runsub 13 testout "DFA specials for the basic 16/32-bit library" -q -dfa
+  call :runsub 13 testout "DFA specials for the basic 16/32-bit library" -q
 goto :eof
 
 :do14
-call :runsub 14 testout "Non-JIT limits and other non_JIT tests" -q
-goto :eof
-
-:do15
-if %jit% EQU 1 (
-  echo Test 15 Skipped due to presence of JIT support.
+if %unicode% EQU 0 (
+  echo Test 14 Skipped due to absence of Unicode support.
   goto :eof
 )
-  call :runsub 15 testout "JIT-specific features when JIT is not available" -q
+  call :runsub 14 testout "DFA specials for UTF and UCP support" -q
+  goto :eof
+
+:do15
+call :runsub 15 testout "Non-JIT limits and other non_JIT tests" -q
 goto :eof
 
 :do16
-if %jit% EQU 0 (
-  echo Test 16 Skipped due to absence of JIT support.
+if %jit% EQU 1 (
+  echo Test 16 Skipped due to presence of JIT support.
   goto :eof
 )
-  call :runsub 16 testout "JIT-specific features when JIT is available" -q
+  call :runsub 16 testout "JIT-specific features when JIT is not available" -q
 goto :eof
 
 :do17
-if %bits% EQU 16 (
-  echo Test 17 Skipped when running 16-bit tests.
+if %jit% EQU 0 (
+  echo Test 17 Skipped due to absence of JIT support.
   goto :eof
 )
-if %bits% EQU 32 (
-  echo Test 17 Skipped when running 32-bit tests.
-  goto :eof
-)
-  call :runsub 17 testout "POSIX interface, excluding UTF-8 and UCP" -q
+  call :runsub 17 testout "JIT-specific features when JIT is available" -q
 goto :eof
 
 :do18
@@ -432,11 +454,58 @@ if %bits% EQU 32 (
   echo Test 18 Skipped when running 32-bit tests.
   goto :eof
 )
-  call :runsub 1 testout "POSIX interface with UTF-8 and UCP" -q
+  call :runsub 18 testout "POSIX interface, excluding UTF-8 and UCP" -q
 goto :eof
 
 :do19
-call :runsub 1 testout "Serialization tests" -q
+if %bits% EQU 16 (
+  echo Test 19 Skipped when running 16-bit tests.
+  goto :eof
+)
+if %bits% EQU 32 (
+  echo Test 19 Skipped when running 32-bit tests.
+  goto :eof
+)
+if %unicode% EQU 0 (
+  echo Test 19 Skipped due to absence of Unicode support.
+  goto :eof
+)
+  call :runsub 19 testout "POSIX interface with UTF-8 and UCP" -q
+goto :eof
+
+:do20
+call :runsub 20 testout "Serialization tests" -q
+goto :eof
+
+:do21
+if %supportBSC% EQU 0 (
+  echo Test 21 Skipped due to absence of backslash-C support.
+  goto :eof
+)
+  call :runsub 21 testout "Backslash-C tests without UTF" -q
+  call :runsub 21 testout "Backslash-C tests without UTF (DFA)" -q -dfa
+  if %jit% EQU 1 call :runsub 21 testoutjit "Test with JIT Override" -q -jit
+goto :eof
+
+:do22
+if %supportBSC% EQU 0 (
+  echo Test 22 Skipped due to absence of backslash-C support.
+  goto :eof
+)
+if %unicode% EQU 0 (
+  echo Test 22 Skipped due to absence of Unicode support.
+  goto :eof
+)
+  call :runsub 22 testout "Backslash-C tests with UTF" -q
+  if %jit% EQU 1 call :runsub 22 testoutjit "Test with JIT Override" -q -jit
+goto :eof
+
+:do23
+if %supportBSC% EQU 1 (
+  echo Test 23 Skipped due to presence of backslash-C support.
+  goto :eof
+)
+  call :runsub 23 testout "Backslash-C disabled test" -q
 goto :eof
 
 :conferror

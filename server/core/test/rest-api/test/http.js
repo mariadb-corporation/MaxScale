@@ -10,7 +10,7 @@ describe("HTTP Headers", function() {
                 resp.headers.etag.should.be.equal("\"0\"")
                 var srv = JSON.parse(resp.body)
                 delete srv.data.relationships
-                return request.put(base_url + "/servers/server1", {json: srv})
+                return request.patch(base_url + "/servers/server1", {json: srv})
             })
             .then(function() {
                 return request.get(base_url + "/servers/server1", {resolveWithFullResponse: true})
@@ -42,7 +42,7 @@ describe("HTTP Headers", function() {
                         }
                     }
 
-                    request.put(base_url + "/servers/server1", {json: srv})
+                    request.patch(base_url + "/servers/server1", {json: srv})
                         .then(function() {
                             return request.get(base_url + "/servers/server1", {resolveWithFullResponse: true})
                         })

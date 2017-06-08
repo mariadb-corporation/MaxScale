@@ -954,6 +954,44 @@ int TestConnections::start_binlog()
     return global_result;
 }
 
+bool TestConnections::replicate_from_master()
+{
+    bool rval = true;
+
+    /** Stop the binlogrouter */
+    MYSQL* conn = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+
+    if (execute_query(conn, "stop slave"))
+    {
+        rval = false;
+    }
+    mysql_close(conn);
+
+    /** Clean up MaxScale directories */
+    prepare_binlog();
+    ssh_maxscale(true, "service maxscale restart");
+
+    char log_file[256] = "";
+    char log_pos[256] = "4";
+
+    repl->execute_query_all_nodes("STOP SLAVE");
+    repl->connect();
+    execute_query(repl->nodes[0], "RESET MASTER");
+
+    conn = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+
+    if (find_field(repl->nodes[0], "show master status", "File", log_file) ||
+        repl->set_slave(conn, repl->IP[0], repl->port[0], log_file, log_pos) ||
+        execute_query(conn, "start slave"))
+    {
+        rval = false;
+    }
+
+    mysql_close(conn);
+
+    return rval;
+}
+
 int TestConnections::start_mm()
 {
     int i;

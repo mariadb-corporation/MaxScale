@@ -3,6 +3,7 @@
 # used to force DFA matching for all tests.
 
 #subject dfa
+#newline_default LF any anyCRLF
 
 /\x{100}ab/utf
   \x{100}ab
@@ -21,8 +22,7 @@
  0: a\x{100}b
     a\x{100}\x{100}b  
  0: a\x{100}\x{100}b
-    *** Failers 
-No match
+\= Expect no match 
     ab
 No match
      
@@ -33,16 +33,14 @@ No match
  0: X
     \x{300}Xoanon 
  0: X
-    *** Failers 
-No match
+\= Expect no match 
     YXoanon  
 No match
     
 /\BX/utf
     YXoanon
  0: X
-    *** Failers
-No match
+\= Expect no match
     Xoanon
 No match
     +Xoanon    
@@ -57,16 +55,14 @@ No match
  0: X
     FAX 
  0: X
-    *** Failers 
-No match
+\= Expect no match 
     Xoanon  
 No match
     
 /X\B/utf
     Xoanon  
  0: X
-    *** Failers
-No match
+\= Expect no match
     X+oanon
 No match
     ZX\x{300}oanon 
@@ -87,8 +83,7 @@ No match
  0: \x{123}\x{123}4
     \x{400}\x{401}\x{402}6  
  0: \x{400}\x{401}\x{402}6
-    *** Failers
-No match
+\= Expect no match
     d99
 No match
     \x{123}\x{122}4   
@@ -105,8 +100,7 @@ No match
  0: a\x{7f}b
     a\x{100}b 
  0: a\x{100}b
-    *** Failers
-No match
+\= Expect no match
     a\nb  
 No match
 
@@ -117,8 +111,7 @@ No match
  0: a\x{4000}\x{7f}yb
     a\x{4000}\x{100}yb 
  0: a\x{4000}\x{100}yb
-    *** Failers
-No match
+\= Expect no match
     a\x{4000}b 
 No match
     ac\ncb 
@@ -181,8 +174,7 @@ No match
  0: a\x{1234}\x{4321}yb
     a\x{1234}\x{4321}\x{3412}b 
  0: a\x{1234}\x{4321}\x{3412}b
-    *** Failers
-No match
+\= Expect no match
     a\x{1234}b 
 No match
     ac\ncb 
@@ -200,8 +192,7 @@ No match
  1: axxxxb
     a\x{1234}\x{4321}\x{3412}\x{3421}b 
  0: a\x{1234}\x{4321}\x{3412}\x{3421}b
-    *** Failers
-No match
+\= Expect no match
     a\x{1234}b 
 No match
 
@@ -217,8 +208,7 @@ No match
  1: axxxxb
     a\x{1234}\x{4321}\x{3412}\x{3421}b 
  0: a\x{1234}\x{4321}\x{3412}\x{3421}b
-    *** Failers
-No match
+\= Expect no match
     a\x{1234}b 
 No match
 
@@ -237,8 +227,7 @@ No match
  0: axbxxb
     axxxxxbcdefghijb 
  0: axxxxxb
-    *** Failers
-No match
+\= Expect no match
     a\x{1234}b 
 No match
     axxxxxxbcdefghijb 
@@ -259,16 +248,14 @@ No match
  0: axbxxb
     axxxxxbcdefghijb 
  0: axxxxxb
-    *** Failers
-No match
+\= Expect no match
     a\x{1234}b 
 No match
     axxxxxxbcdefghijb 
 No match
 
 /^[a\x{c0}]/utf
-    *** Failers
-No match
+\= Expect no match
     \x{100}
 No match
 
@@ -287,8 +274,7 @@ No match
 /(?:\x{100}){3}b/utf
     \x{100}\x{100}\x{100}b
  0: \x{100}\x{100}\x{100}b
-    *** Failers 
-No match
+\= Expect no match 
     \x{100}\x{100}b
 No match
 
@@ -297,8 +283,7 @@ No match
  0: \x{ab}
     \xc2\xab
  0: \x{ab}
-    *** Failers 
-No match
+\= Expect no match 
     \x00{ab}
 No match
 
@@ -307,8 +292,7 @@ No match
  0: X
     \x{256}XYZ 
  0: X
-    *** Failers
-No match
+\= Expect no match
     XYZ 
 No match
 
@@ -467,8 +451,7 @@ Matched, but offsets vector is too small to show all matches
 /\D+/utf
     12abcd34
  0: abcd
-    *** Failers
- 0: *** Failers
+\= Expect no match
     1234  
 No match
 
@@ -477,8 +460,7 @@ No match
  0: abc
     12ab34
  0: ab
-    *** Failers  
- 0: ***
+\= Expect no match  
     1234
 No match
     12a34  
@@ -490,9 +472,7 @@ No match
  1: ab
     12ab34
  0: ab
-    *** Failers  
- 0: ***
- 1: **
+\= Expect no match  
     1234
 No match
     12a34  
@@ -501,16 +481,13 @@ No match
 /\d+/utf
     12abcd34
  0: 12
-    *** Failers
-No match
 
 /\d{2,3}/utf
     12abcd34
  0: 12
     1234abcd
  0: 123
-    *** Failers  
-No match
+\= Expect no match  
     1.4 
 No match
 
@@ -520,16 +497,14 @@ No match
     1234abcd
  0: 123
  1: 12
-    *** Failers  
-No match
+\= Expect no match  
     1.4 
 No match
 
 /\S+/utf
     12abcd34
  0: 12abcd34
-    *** Failers
- 0: ***
+\= Expect no match
     \    \ 
 No match
 
@@ -538,8 +513,7 @@ No match
  0: 12a
     1234abcd
  0: 123
-    *** Failers
- 0: ***
+\= Expect no match
     \     \  
 No match
 
@@ -550,25 +524,20 @@ No match
     1234abcd
  0: 123
  1: 12
-    *** Failers
- 0: ***
- 1: **
+\= Expect no match
     \     \  
 No match
 
 />\s+</utf
     12>      <34
  0: >      <
-    *** Failers
-No match
 
 />\s{2,3}</utf
     ab>  <cd
  0: >  <
     ab>   <ce
  0: >   <
-    *** Failers
-No match
+\= Expect no match
     ab>    <cd 
 No match
 
@@ -577,16 +546,14 @@ No match
  0: >  <
     ab>   <ce
  0: >   <
-    *** Failers
-No match
+\= Expect no match
     ab>    <cd 
 No match
 
 /\w+/utf
     12      34
  0: 12
-    *** Failers
- 0: Failers
+\= Expect no match
     +++=*! 
 No match
 
@@ -595,8 +562,7 @@ No match
  0: ab
     abcd ce
  0: abc
-    *** Failers
- 0: Fai
+\= Expect no match
     a.b.c
 No match
 
@@ -606,17 +572,14 @@ No match
     abcd ce
  0: abc
  1: ab
-    *** Failers
- 0: Fai
- 1: Fa
+\= Expect no match
     a.b.c
 No match
 
 /\W+/utf
     12====34
  0: ====
-    *** Failers
- 0: *** 
+\= Expect no match
     abcd 
 No match
 
@@ -625,8 +588,7 @@ No match
  0: ===
     ab==cd
  0: ==
-    *** Failers
- 0: ***
+\= Expect no match
     a.b.c
 No match
 
@@ -636,9 +598,7 @@ No match
  1: ==
     ab==cd
  0: ==
-    *** Failers
- 0: ***
- 1: **
+\= Expect no match
     a.b.c
 No match
 
@@ -649,8 +609,6 @@ No match
  0: \x{100}
     \x{100}Z
  0: \x{100}
-    *** Failers 
-No match
 
 /[Z\x{100}]/utf
     Z\x{100}
@@ -659,16 +617,12 @@ No match
  0: \x{100}
     \x{100}Z
  0: \x{100}
-    *** Failers 
-No match
 
 /[\x{100}\x{200}]/utf
    ab\x{100}cd
  0: \x{100}
    ab\x{200}cd
  0: \x{200}
-   *** Failers  
-No match
 
 /[\x{100}-\x{200}]/utf
    ab\x{100}cd
@@ -677,8 +631,6 @@ No match
  0: \x{200}
    ab\x{111}cd 
  0: \x{111}
-   *** Failers  
-No match
 
 /[z-\x{200}]/utf
    ab\x{100}cd
@@ -691,8 +643,6 @@ No match
  0: z
    ab|cd  
  0: |
-   *** Failers  
-No match
 
 /[Q\x{100}\x{200}]/utf
    ab\x{100}cd
@@ -701,8 +651,6 @@ No match
  0: \x{200}
    Q? 
  0: Q
-   *** Failers  
-No match
 
 /[Q\x{100}-\x{200}]/utf
    ab\x{100}cd
@@ -713,8 +661,6 @@ No match
  0: \x{111}
    Q? 
  0: Q
-   *** Failers  
-No match
 
 /[Qz-\x{200}]/utf
    ab\x{100}cd
@@ -729,8 +675,6 @@ No match
  0: |
    Q? 
  0: Q
-   *** Failers  
-No match
 
 /[\x{100}\x{200}]{1,3}/utf
    ab\x{100}cd
@@ -739,8 +683,6 @@ No match
  0: \x{200}
    ab\x{200}\x{100}\x{200}\x{100}cd
  0: \x{200}\x{100}\x{200}
-   *** Failers  
-No match
 
 /[\x{100}\x{200}]{1,3}?/utf
    ab\x{100}cd
@@ -751,8 +693,6 @@ No match
  0: \x{200}\x{100}\x{200}
  1: \x{200}\x{100}
  2: \x{200}
-   *** Failers  
-No match
 
 /[Q\x{100}\x{200}]{1,3}/utf
    ab\x{100}cd
@@ -761,8 +701,6 @@ No match
  0: \x{200}
    ab\x{200}\x{100}\x{200}\x{100}cd
  0: \x{200}\x{100}\x{200}
-   *** Failers  
-No match
 
 /[Q\x{100}\x{200}]{1,3}?/utf
    ab\x{100}cd
@@ -773,16 +711,13 @@ No match
  0: \x{200}\x{100}\x{200}
  1: \x{200}\x{100}
  2: \x{200}
-   *** Failers  
-No match
 
 /(?<=[\x{100}\x{200}])X/utf
     abc\x{200}X
  0: X
     abc\x{100}X 
  0: X
-    *** Failers
-No match
+\= Expect no match
     X  
 No match
 
@@ -793,16 +728,14 @@ No match
  0: X
     abQX 
  0: X
-    *** Failers
-No match
+\= Expect no match
     X  
 No match
 
 /(?<=[\x{100}\x{200}]{3})X/utf
     abc\x{100}\x{200}\x{100}X
  0: X
-    *** Failers
-No match
+\= Expect no match
     abc\x{200}X
 No match
     X  
@@ -815,8 +748,7 @@ No match
  0: \x{150}X
     \x{500}X 
  0: \x{500}X
-    *** Failers
-No match
+\= Expect no match
     \x{100}X
 No match
     \x{200}X   
@@ -829,8 +761,7 @@ No match
  0: \x{150}X
     \x{500}X 
  0: \x{500}X
-    *** Failers
-No match
+\= Expect no match
     \x{100}X
 No match
     \x{200}X   
@@ -843,8 +774,7 @@ No match
  0: AX
     \x{500}X 
  0: \x{500}X
-    *** Failers
-No match
+\= Expect no match
     \x{100}X
 No match
     \x{150}X
@@ -859,8 +789,7 @@ No match
  0: Z
     \x{100}
  0: \x{100}
-    *** Failers
-No match
+\= Expect no match
     \x{102}
 No match
     y    
@@ -885,23 +814,28 @@ No match
  0: \x{123}
 
 /^[ac]*b/utf
-  xb
+\= Expect no match
+    xb
 No match
 
 /^[ac\x{100}]*b/utf
-  xb
+\= Expect no match
+    xb
 No match
 
 /^[^x]*b/i,utf
-  xb
+\= Expect no match
+    xb
 No match
 
 /^[^x]*b/utf
-  xb
+\= Expect no match
+    xb
 No match
   
 /^\d*b/utf
-  xb 
+\= Expect no match
+    xb 
 No match
 
 /(|a)/g,utf
@@ -967,8 +901,7 @@ No match
  0: a\x{2028}b
     a\x{2029}b 
  0: a\x{2029}b
-    ** Failers
-No match
+\= Expect no match
     a\n\rb    
 No match
 
@@ -1009,8 +942,7 @@ No match
  0: a\x{0a}\x{0d}b
     a\n\r\x{85}\x0cb 
  0: a\x{0a}\x{0d}\x{85}\x{0c}b
-    ** Failers
-No match
+\= Expect no match
     ab  
 No match
 
@@ -1029,8 +961,7 @@ No match
  0: a\x{0a}\x{0d}\x{0a}\x{0d}b
     a\n\n\r\nb 
  0: a\x{0a}\x{0a}\x{0d}\x{0a}b
-    ** Failers
-No match
+\= Expect no match
     a\n\n\n\rb
 No match
     a\r
@@ -1059,8 +990,7 @@ No match
  0: X X\x{0a}
     X\x09X\x0b
  0: X\x{09}X\x{0b}
-    ** Failers
-No match
+\= Expect no match
     \x{a0} X\x0a   
 No match
     
@@ -1073,8 +1003,7 @@ No match
  1: \x{09} \x{a0}\x{0a}\x{0b}\x{0c}
     \x09\x20\x{a0}\x0a\x0b\x0c
  0: \x{09} \x{a0}\x{0a}\x{0b}\x{0c}
-    ** Failers 
-No match
+\= Expect no match 
     \x09\x20\x{a0}\x0a\x0b
 No match
      
@@ -1083,8 +1012,7 @@ No match
  0: \x{3001}\x{3000}\x{2030}\x{2028}
     X\x{180e}X\x{85}
  0: X\x{180e}X\x{85}
-    ** Failers
-No match
+\= Expect no match
     \x{2009} X\x0a   
 No match
     
@@ -1097,8 +1025,7 @@ No match
  1: \x{09}\x{205f}\x{a0}\x{0a}\x{2029}\x{0c}
     \x09\x20\x{202f}\x0a\x0b\x0c
  0: \x{09} \x{202f}\x{0a}\x{0b}\x{0c}
-    ** Failers 
-No match
+\= Expect no match 
     \x09\x{200a}\x{a0}\x{2028}\x0b
 No match
      
@@ -1115,8 +1042,7 @@ Subject length lower bound = 3
  0: a\x{0a}b
     a\r\nb
  0: a\x{0d}\x{0a}b
-    ** Failers
-No match
+\= Expect no match
     a\x{85}b
 No match
     a\x0bb     
@@ -1153,8 +1079,7 @@ Subject length lower bound = 2
  0: a\x{0a}b
     a\r\nb
  0: a\x{0d}\x{0a}b
-    ** Failers
-No match
+\= Expect no match
     a\x{85}b
 No match
     a\x0bb     
@@ -1216,13 +1141,6 @@ Partial match: abcde
     the cat\=ph
 Partial match: the cat
 
-/ab\Cde/utf
-    abXde
-Failed: error -42: pattern contains an item that is not supported for DFA matching
-
-/(?<=ab\Cde)X/utf
-Failed: error 136 at offset 10: \C is not allowed in a lookbehind assertion
-
 /./newline=crlf,utf
     \r\=ps
  0: \x{0d}
@@ -1269,8 +1187,7 @@ Partial match: \x{0d}\x{0d}\x{0d}
 /\pL\P{Nd}/utf
     AB
  0: AB
-    *** Failers
- 0: Fa
+\= Expect no match
     A0
 No match
     00
@@ -1283,8 +1200,7 @@ No match
  0: A\x{300}B
     A\x{300}\x{301}\x{302}BC
  0: A\x{300}\x{301}\x{302}B
-    *** Failers
- 0: **
+\= Expect no match
     \x{300}
 No match
 
@@ -1295,8 +1211,7 @@ No match
  0: A\x{300}B\x{300}\x{301}
     A\x{300}\x{301}\x{302}BC
  0: A\x{300}\x{301}\x{302}B
-    *** Failers
- 0: **
+\= Expect no match
     \x{300}
 No match
 
@@ -1305,16 +1220,13 @@ No match
  0: abcd
     a
  0: a
-    *** Failers
-No match
 
 /^\PL+/utf
     1234
  0: 1234
     =
  0: =
-    *** Failers
- 0: *** 
+\= Expect no match
     abcd
 No match
 
@@ -1327,8 +1239,6 @@ No match
  0: A\x{300}\x{301}\x{302}A\x{300}\x{301}\x{302}
     a
  0: a
-    *** Failers
- 0: *** Failers
     \x{300}\x{301}\x{302}
  0: \x{300}\x{301}\x{302}
 
@@ -1341,20 +1251,17 @@ No match
  0: A\x{300}abc
     \x{300}abc
  0: \x{300}abc
-    *** Failers
-No match
 
 /^\X?abc/utf
     abc
  0: abc
     A\x{300}abc
  0: A\x{300}abc
-    *** Failers
-No match
-    A\x{300}\x{301}\x{302}A\x{300}A\x{300}A\x{300}abcxyz
-No match
     \x{300}abc
  0: \x{300}abc
+\= Expect no match
+    A\x{300}\x{301}\x{302}A\x{300}A\x{300}A\x{300}abcxyz
+No match
 
 /\X*abc/utf
     abc
@@ -1365,8 +1272,6 @@ No match
  0: A\x{300}\x{301}\x{302}A\x{300}A\x{300}A\x{300}abc
     \x{300}abc
  0: \x{300}abc
-    *** Failers
-No match
 
 /^\X*abc/utf
     abc
@@ -1375,8 +1280,6 @@ No match
  0: A\x{300}abc
     A\x{300}\x{301}\x{302}A\x{300}A\x{300}A\x{300}abcxyz
  0: A\x{300}\x{301}\x{302}A\x{300}A\x{300}A\x{300}abc
-    *** Failers
-No match
     \x{300}abc
  0: \x{300}abc
 
@@ -1385,8 +1288,7 @@ No match
  0: A=b
     =c
  0: =c
-    *** Failers
-No match
+\= Expect no match
     1=2
 No match
     AAAA=b
@@ -1397,8 +1299,7 @@ No match
  0: AAAA=b
     =c
  0: =c
-    *** Failers
-No match
+\= Expect no match
     1=2
 No match
 
@@ -1407,8 +1308,7 @@ No match
  0: A\x{300}\x{301}\x{302}A\x{300}\x{301}\x{302}X
     A\x{300}\x{301}\x{302}A\x{300}\x{301}\x{302}A\x{300}\x{301}\x{302}X
  0: A\x{300}\x{301}\x{302}A\x{300}\x{301}\x{302}A\x{300}\x{301}\x{302}X
-    *** Failers
-No match
+\= Expect no match
     X
 No match
     A\x{300}\x{301}\x{302}X
@@ -1421,64 +1321,56 @@ No match
  0: \x{7f}\x{c0}\x{30f}\x{660}\x{66c}\x{f01}\x{1680}<
     \np\x{300}9!\$ <
  0: \x{0a}p\x{300}9!$ <
-    ** Failers
-No match
+\= Expect no match
     ap\x{300}9!\$ <
 No match
   
 /^\PC/utf
     X
  0: X
-    ** Failers
- 0: *
+\= Expect no match
     \x7f
 No match
   
 /^\PL/utf
     9
  0: 9
-    ** Failers
- 0: *
+\= Expect no match
     \x{c0}
 No match
   
 /^\PM/utf
     X
  0: X
-    ** Failers
- 0: *
+\= Expect no match
     \x{30f}
 No match
   
 /^\PN/utf
     X
  0: X
-    ** Failers
- 0: *
+\= Expect no match
     \x{660}
 No match
   
 /^\PP/utf
     X
  0: X
-    ** Failers
-No match
+\= Expect no match
     \x{66c}
 No match
   
 /^\PS/utf
     X
  0: X
-    ** Failers
- 0: *
+\= Expect no match
     \x{f01}
 No match
   
 /^\PZ/utf
     X
  0: X
-    ** Failers
- 0: *
+\= Expect no match
     \x{1680}
 No match
     
@@ -1487,8 +1379,7 @@ No match
  0: \x{17}
     \x{09f}
  0: \x{9f}
-    ** Failers
-No match
+\= Expect no match
     \x{0600}
 No match
   
@@ -1507,38 +1398,33 @@ No match
  0: \x{2068}
     \x{2069}
  0: \x{2069}
-    ** Failers
-No match
+\= Expect no match
     \x{09f}
 No match
   
 /^\p{Cn}/utf
-    ** Failers
-No match
+\= Expect no match
     \x{09f}
 No match
   
 /^\p{Co}/utf
     \x{f8ff}
  0: \x{f8ff}
-    ** Failers
-No match
+\= Expect no match
     \x{09f}
 No match
   
 /^\p{Cs}/utf
     \x{dfff}\=no_utf_check
  0: \x{dfff}
-    ** Failers
-No match
+\= Expect no match
     \x{09f}
 No match
   
 /^\p{Ll}/utf
     a
  0: a
-    ** Failers
-No match
+\= Expect no match
     Z
 No match
     \x{e000}
@@ -1547,16 +1433,14 @@ No match
 /^\p{Lm}/utf
     \x{2b0}
  0: \x{2b0}
-    ** Failers
-No match
+\= Expect no match
     a
 No match
   
 /^\p{Lo}/utf
     \x{1bb}
  0: \x{1bb}
-    ** Failers
-No match
+\= Expect no match
     a
 No match
     \x{2b0}
@@ -1565,8 +1449,7 @@ No match
 /^\p{Lt}/utf
     \x{1c5}
  0: \x{1c5}
-    ** Failers
-No match
+\= Expect no match
     a
 No match
     \x{2b0}
@@ -1575,16 +1458,14 @@ No match
 /^\p{Lu}/utf
     A
  0: A
-    ** Failers
-No match
+\= Expect no match
     \x{2b0}
 No match
   
 /^\p{Mc}/utf
     \x{903}
  0: \x{903}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{300}
@@ -1593,8 +1474,7 @@ No match
 /^\p{Me}/utf
     \x{488}
  0: \x{488}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{903}
@@ -1607,8 +1487,7 @@ No match
  0: \x{300}
     \x{1a1b}
  0: \x{1a1b}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{903}
@@ -1654,16 +1533,14 @@ Matched, but offsets vector is too small to show all matches
  7: \x{966}\x{967}\x{968}
  8: \x{966}\x{967}
  9: \x{966}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
   
 /^\p{Nl}/utf
     \x{16ee}
  0: \x{16ee}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{966}
@@ -1674,8 +1551,7 @@ No match
  0: \x{b2}
     \x{b3}
  0: \x{b3}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{16ee}
@@ -1686,8 +1562,7 @@ No match
  0: _
     \x{203f}
  0: \x{203f}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     -
@@ -1700,8 +1575,7 @@ No match
  0: -
     \x{58a}
  0: \x{58a}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{203f}
@@ -1720,8 +1594,7 @@ No match
  0: \x{2309}
     \x{230b}
  0: \x{230b}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{203f}
@@ -1740,8 +1613,7 @@ No match
  0: \x{bb}
     \x{2019}
  0: \x{2019}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{203f}
@@ -1752,8 +1624,7 @@ No match
  0: \x{ab}
     \x{2018}
  0: \x{2018}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{203f}
@@ -1764,8 +1635,7 @@ No match
  0: !
     \x{37e}
  0: \x{37e}
-    ** Failers
- 0: *
+\= Expect no match
     X
 No match
     \x{203f}
@@ -1784,8 +1654,7 @@ No match
  0: \x{2308}
     \x{230a}
  0: \x{230a}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     )
@@ -1802,8 +1671,7 @@ No match
  0: $\x{a2}\x{a3}\x{a4}\x{a5}
     \x{9f2}
  0: \x{9f2}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{2c2}
@@ -1812,8 +1680,7 @@ No match
 /^\p{Sk}/utf
     \x{2c2}
  0: \x{2c2}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{9f2}
@@ -1822,8 +1689,7 @@ No match
 /^\p{Sm}+/utf
     +<|~\x{ac}\x{2044}
  0: +<|~\x{ac}\x{2044}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{9f2}
@@ -1834,8 +1700,7 @@ No match
  0: \x{a6}
     \x{482}
  0: \x{482}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{9f2}
@@ -1844,8 +1709,7 @@ No match
 /^\p{Zl}/utf
     \x{2028}
  0: \x{2028}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{2029}
@@ -1854,8 +1718,7 @@ No match
 /^\p{Zp}/utf
     \x{2029}
  0: \x{2029}
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     \x{2028}
@@ -1872,8 +1735,7 @@ No match
  0: \x{2000}
     \x{2001}
  0: \x{2001}
-    ** Failers
-No match
+\= Expect no match
     \x{2028}
 No match
     \x{200d}
@@ -1948,8 +1810,7 @@ No match
  0: \x{660}\x{661}\x{662}ABC
   
 /\p{Nd}*+(....)/utf
-      ** Failers
- 0: ** F
+\= Expect no match
       \x{660}\x{661}\x{662}ABC
 No match
   
@@ -1958,8 +1819,7 @@ No match
  0: A
     a\x{10a0}B
  0: \x{10a0}
-    ** Failers
- 0: F
+\= Expect no match
     a
 No match
     \x{1d00}
@@ -1968,16 +1828,14 @@ No match
 /\p{^Lu}/i,utf
     1234
  0: 1
-    ** Failers
- 0: *
+\= Expect no match
     ABC
 No match
 
 /\P{Lu}/i,utf
     1234
  0: 1
-    ** Failers
- 0: *
+\= Expect no match
     ABC
 No match
 
@@ -1988,8 +1846,7 @@ No match
  0: XYZ
     ABA\x{660}XYZpqr
  0: XYZ
-    ** Failers
-No match
+\= Expect no match
     AXYZ
 No match
     XYZ
@@ -2002,8 +1859,7 @@ No match
  0: XYZ
     XYZ
  0: XYZ
-    ** Failers
-No match
+\= Expect no match
     WXYZ
 No match
 
@@ -2018,22 +1874,18 @@ No match
  0: 12-34
     12+\x{661}-34
  0: 12+\x{661}-34
-    ** Failers
-No match
+\= Expect no match
     abcd
 No match
 
 /[\P{Nd}]+/utf
     abcd
  0: abcd
-    ** Failers
- 0: ** Failers
+\= Expect no match
     1234
 No match
 
 /\D+/utf,no_auto_possess
-    11111111111111111111111111111111111111111111111111111111111111111111111
-No match
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 Matched, but offsets vector is too small to show all matches
  0: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -2051,10 +1903,11 @@ Matched, but offsets vector is too small to show all matches
 12: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 13: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 14: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+\= Expect no match
+    11111111111111111111111111111111111111111111111111111111111111111111111
+No match
      
 /\P{Nd}+/utf,no_auto_possess
-    11111111111111111111111111111111111111111111111111111111111111111111111
-No match
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 Matched, but offsets vector is too small to show all matches
  0: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -2072,10 +1925,11 @@ Matched, but offsets vector is too small to show all matches
 12: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 13: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 14: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+\= Expect no match
+    11111111111111111111111111111111111111111111111111111111111111111111111
+No match
 
 /[\D]+/utf,no_auto_possess
-    11111111111111111111111111111111111111111111111111111111111111111111111
-No match
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 Matched, but offsets vector is too small to show all matches
  0: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -2093,10 +1947,11 @@ Matched, but offsets vector is too small to show all matches
 12: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 13: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 14: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+\= Expect no match
+    11111111111111111111111111111111111111111111111111111111111111111111111
+No match
 
 /[\P{Nd}]+/utf,no_auto_possess
-    11111111111111111111111111111111111111111111111111111111111111111111111
-No match
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 Matched, but offsets vector is too small to show all matches
  0: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -2114,10 +1969,11 @@ Matched, but offsets vector is too small to show all matches
 12: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 13: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 14: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+\= Expect no match
+    11111111111111111111111111111111111111111111111111111111111111111111111
+No match
 
 /[\D\P{Nd}]+/utf,no_auto_possess
-    11111111111111111111111111111111111111111111111111111111111111111111111
-No match
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 Matched, but offsets vector is too small to show all matches
  0: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -2135,6 +1991,9 @@ Matched, but offsets vector is too small to show all matches
 12: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 13: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 14: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+\= Expect no match
+    11111111111111111111111111111111111111111111111111111111111111111111111
+No match
 
 /\pL/utf
     a
@@ -2153,8 +2012,7 @@ Matched, but offsets vector is too small to show all matches
  0: A
     aZ
  0: Z
-    ** Failers
- 0: F
+\= Expect no match
     abc
 No match
 
@@ -2163,8 +2021,7 @@ No match
  0: A
     aZ
  0: Z
-    ** Failers
- 0: F
+\= Expect no match
     abc
 No match
 
@@ -2173,8 +2030,7 @@ No match
  0: a
     Az
  0: z
-    ** Failers
- 0: a
+\= Expect no match
     ABC
 No match
 
@@ -2183,8 +2039,7 @@ No match
  0: a
     Az
  0: z
-    ** Failers
- 0: a
+\= Expect no match
     ABC
 No match
 
@@ -2203,8 +2058,7 @@ No match
 /A\x{391}\x{10427}\x{ff3a}\x{1fb0}/utf
     A\x{391}\x{10427}\x{ff3a}\x{1fb0}
  0: A\x{391}\x{10427}\x{ff3a}\x{1fb0}
-    ** Failers
-No match
+\= Expect no match
     a\x{391}\x{10427}\x{ff3a}\x{1fb0}
 No match
     A\x{3b1}\x{10427}\x{ff3a}\x{1fb0}
@@ -2269,8 +2123,7 @@ No match
  0: \x{105}
     \x{109}
  0: \x{109}
-    ** Failers
-No match
+\= Expect no match
     \x{100}
 No match
     \x{10a}
@@ -2295,8 +2148,7 @@ No match
  0: \x{100}
     \x{101}
  0: \x{101}
-    ** Failers
-No match
+\= Expect no match
     \x{102}
 No match
     Y
@@ -2313,8 +2165,6 @@ No match
  0: A\x{300}
     A\x{300}\x{301}\x{302}BC
  0: A\x{300}\x{301}\x{302}
-    *** Failers
- 0: *
     \x{300}
  0: \x{300}
 
@@ -2359,8 +2209,7 @@ No match
  4: A
 
 /^\X(.)/utf
-    *** Failers
- 0: **
+\= Expect no match
     A\x{300}\x{301}\x{302}
 No match
 
@@ -2393,8 +2242,7 @@ No match
  0: 12X
     123X
  0: 123X
-    *** Failers
-No match
+\= Expect no match
     X
 No match
     1X
@@ -2411,16 +2259,14 @@ No match
 /^\p{Han}+/utf
     \x{2e81}\x{3007}\x{2f804}\x{31a0}
  0: \x{2e81}\x{3007}\x{2f804}
-    ** Failers
-No match
+\= Expect no match
     \x{2e7f}
 No match
 
 /^\P{Katakana}+/utf
     \x{3105}
  0: \x{3105}
-    ** Failers
- 0: ** Failers
+\= Expect no match
     \x{30ff}
 No match
 
@@ -2429,16 +2275,14 @@ No match
  0: \x{6e9}
     \x{060b}
  0: \x{60b}
-    ** Failers
-No match
+\= Expect no match
     X\x{06e9}
 No match
 
 /^[\P{Yi}]/utf
     \x{2f800}
  0: \x{2f800}
-    ** Failers
- 0: *
+\= Expect no match
     \x{a014}
 No match
     \x{a4c6}
@@ -2449,14 +2293,12 @@ No match
  0: AX
     \x{1234}XYZ
  0: \x{1234}X
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     
 /^\P{Any}X/utf
-    ** Failers
-No match
+\= Expect no match
     AX
 No match
     
@@ -2467,16 +2309,14 @@ No match
  0: AX
     \x{1234}XYZ
  0: \x{1234}X
-    ** Failers
-No match
+\= Expect no match
     ABXYZ
 No match
 
 /^\P{Any}?X/utf
     XYZ
  0: X
-    ** Failers
-No match
+\= Expect no match
     AXYZ
 No match
     \x{1234}XYZ
@@ -2491,14 +2331,12 @@ No match
  0: \x{1234}X
     A\x{1234}XYZ
  0: A\x{1234}X
-    ** Failers
-No match
+\= Expect no match
     XYZ
 No match
 
 /^\P{Any}+X/utf
-    ** Failers
-No match
+\= Expect no match
     AXYZ
 No match
     \x{1234}XYZ
@@ -2517,14 +2355,11 @@ No match
  0: \x{1234}X
     A\x{1234}XYZ
  0: A\x{1234}X
-    ** Failers
-No match
 
 /^\P{Any}*X/utf
     XYZ
  0: X
-    ** Failers
-No match
+\= Expect no match
     AXYZ
 No match
     \x{1234}XYZ
@@ -2537,14 +2372,12 @@ No match
  0: AX
     \x{1234}XYZ
  0: \x{1234}X
-    ** Failers
-No match
+\= Expect no match
     X
 No match
     
 /^[\P{Any}]X/utf
-    ** Failers
-No match
+\= Expect no match
     AX
 No match
     
@@ -2555,16 +2388,14 @@ No match
  0: AX
     \x{1234}XYZ
  0: \x{1234}X
-    ** Failers
-No match
+\= Expect no match
     ABXYZ
 No match
 
 /^[\P{Any}]?X/utf
     XYZ
  0: X
-    ** Failers
-No match
+\= Expect no match
     AXYZ
 No match
     \x{1234}XYZ
@@ -2579,14 +2410,12 @@ No match
  0: \x{1234}X
     A\x{1234}XYZ
  0: A\x{1234}X
-    ** Failers
-No match
+\= Expect no match
     XYZ
 No match
 
 /^[\P{Any}]+X/utf
-    ** Failers
-No match
+\= Expect no match
     AXYZ
 No match
     \x{1234}XYZ
@@ -2605,14 +2434,11 @@ No match
  0: \x{1234}X
     A\x{1234}XYZ
  0: A\x{1234}X
-    ** Failers
-No match
 
 /^[\P{Any}]*X/utf
     XYZ
  0: X
-    ** Failers
-No match
+\= Expect no match
     AXYZ
 No match
     \x{1234}XYZ
@@ -2637,8 +2463,7 @@ No match
  0: \x{1234}\x{0a}\x{0d}\x{3456}x
 
 /^\P{Any}{3,5}?/utf
-    ** Failers
-No match
+\= Expect no match
     abcdefgh
 No match
     \x{1234}\n\r\x{3456}xyz
@@ -2651,8 +2476,7 @@ No match
  0: aX
      \x{1c5}XY
  0: \x{1c5}X
-     ** Failers
-No match
+\= Expect no match
      \x{1bb}XY
 No match
      \x{2b0}XY
@@ -2667,8 +2491,7 @@ No match
  0: aX
      \x{1c5}XY
  0: \x{1c5}X
-     ** Failers
-No match
+\= Expect no match
      \x{1bb}XY
 No match
      \x{2b0}XY
@@ -2688,8 +2511,7 @@ No match
      abcDEXypqreXlmn
  0: abcDEXypqreX
  1: abcDEX
-     ** Failers
-No match
+\= Expect no match
      \x{1bb}XY
 No match
      \x{2b0}XY
@@ -2709,8 +2531,7 @@ No match
      abcDEXypqreXlmn
  0: abcDEXypqreX
  1: abcDEX
-     ** Failers
-No match
+\= Expect no match
      \x{1bb}XY
 No match
      \x{2b0}XY
@@ -2730,8 +2551,7 @@ No match
      abcDEXypqreXlmn
  0: abcDEXypqreX
  1: abcDEX
-     ** Failers
-No match
+\= Expect no match
      \x{1bb}XY
 No match
      \x{2b0}XY
@@ -2751,8 +2571,7 @@ No match
      abcDEXypqreXlmn
  0: abcDEXypqreX
  1: abcDEX
-     ** Failers
-No match
+\= Expect no match
      \x{1bb}XY
 No match
      \x{2b0}XY
@@ -2767,8 +2586,7 @@ No match
  0: \x{1bb}X
      \x{2b0}XY
  0: \x{2b0}X
-     ** Failers
-No match
+\= Expect no match
      \x{1c5}XY
 No match
      AXY
@@ -2781,8 +2599,7 @@ No match
  0: \x{1bb}X
      \x{2b0}XY
  0: \x{2b0}X
-     ** Failers
-No match
+\= Expect no match
      \x{1c5}XY
 No match
      AXY
@@ -2804,7 +2621,7 @@ No match
     \x{c0}\x{e0}\x{116}\x{117}
  0: \x{c0}\x{e0}\x{116}\x{117}
 
-/Check property support in non-UTF-8 mode/
+# Check property support in non-UTF-8 mode
  
 /\p{L}{4}/
     123abcdefg
@@ -2825,8 +2642,7 @@ No match
 /\x{a77d}\x{1d79}/utf
     \x{a77d}\x{1d79}
  0: \x{a77d}\x{1d79}
-    ** Failers
-No match
+\= Expect no match
     \x{1d79}\x{a77d}
 No match
 
@@ -2841,16 +2657,14 @@ No match
  0: \x{a6c}
     \x{10a7}
  0: \x{10a7}
-    ** Failers
-No match
+\= Expect no match
     _ABC
 No match
 
 /^\p{Xan}+/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
  0: ABCD1234\x{6ca}\x{a6c}\x{10a7}
-    ** Failers
-No match
+\= Expect no match
     _ABC
 No match
 
@@ -2873,24 +2687,21 @@ No match
  0: \x{a6c}
     \x{10a7}
  0: \x{10a7}
-    ** Failers
-No match
+\= Expect no match
     _ABC
 No match
  
 /^[\p{Xan}]+/utf
     ABCD1234\x{6ca}\x{a6c}\x{10a7}_
  0: ABCD1234\x{6ca}\x{a6c}\x{10a7}
-    ** Failers
-No match
+\= Expect no match
     _ABC
 No match
 
 /^>\p{Xsp}/utf
     >\x{1680}\x{2028}\x{0b}
  0: >\x{1680}
-    ** Failers
-No match
+\= Expect no match
     \x{0b}
 No match
 
@@ -2951,8 +2762,7 @@ No match
  0: >\x{1680}
     >\x{a0}
  0: >\x{a0}
-    ** Failers
-No match
+\= Expect no match
     \x{0b}
 No match
 
@@ -3006,8 +2816,7 @@ No match
  0: \x{10a7}
     _ABC
  0: _
-    ** Failers
-No match
+\= Expect no match
     []
 No match
 
@@ -3036,8 +2845,7 @@ No match
  0: \x{10a7}
     _ABC
  0: _
-    ** Failers
-No match
+\= Expect no match
     []
 No match
  
@@ -3064,8 +2872,7 @@ No match
 /\b...\B/utf
     abc_
  0: abc
-    ** Failers
- 0: Fai
+\= Expect no match
     \x{37e}abc\x{376}
 No match
     \x{37e}\x{376}\x{371}\x{393}\x{394}
@@ -3170,9 +2977,7 @@ Partial match: AA
     \x{1b04}\x{1b04}X
  0: \x{1b04}\x{1b04}
  0+ X
-    *These match up to the roman letters
- 0: *
- 0+ These match up to the roman letters
+\= These match up to the roman letters
     \x{1111}\x{1111}L,L
  0: \x{1111}\x{1111}
  0+ L,L
@@ -3203,9 +3008,7 @@ Partial match: AA
     \x{ad89}\x{11fe}\x{11fe}LVT, T, T
  0: \x{ad89}\x{11fe}\x{11fe}
  0+ LVT, T, T
-    *These match just the first codepoint (invalid sequence)
- 0: *
- 0+ These match just the first codepoint (invalid sequence)
+\= These match just the first codepoint (invalid sequence)
     \x{1111}\x{11fe}L, T
  0: \x{1111}
  0+ \x{11fe}L, T
@@ -3251,9 +3054,7 @@ Partial match: AA
     \x{11fe}\x{ad89}T, LVT
  0: \x{11fe}
  0+ \x{ad89}T, LVT
-    *Test extend and spacing mark
- 0: *
- 0+ Test extend and spacing mark
+\= Test extend and spacing mark
     \x{1111}\x{ae4c}\x{0711}L, LV, extend
  0: \x{1111}\x{ae4c}\x{711}
  0+ L, LV, extend
@@ -3263,9 +3064,7 @@ Partial match: AA
     \x{1111}\x{ae4c}\x{1b04}\x{0711}\x{1b04}L, LV, spacing mark, extend, spacing mark
  0: \x{1111}\x{ae4c}\x{1b04}\x{711}\x{1b04}
  0+ L, LV, spacing mark, extend, spacing mark
-    *Test CR, LF, and control
- 0: *
- 0+ Test CR, LF, and control
+\= Test CR, LF, and control
     \x0d\x{0711}CR, extend
  0: \x{0d}
  0+ \x{711}CR, extend
@@ -3284,9 +3083,7 @@ Partial match: AA
     \x09\x{1b04}Control, spacingmark
  0: \x{09}
  0+ \x{1b04}Control, spacingmark
-    *There are no Prepend characters, so we can't test Prepend, CR
- 0: *
- 0+ There are no Prepend characters, so we can't test Prepend, CR
+\= There are no Prepend characters, so we can't test Prepend, CR
     
 /^(?>\X{2})X/utf,aftertext
     \x{1111}\x{ae4c}\x{1111}\x{ae4c}X
@@ -3366,7 +3163,6 @@ Partial match: AA
     \x{00c5}\x{00e5}\x{212b}
  0: \x{c5}\x{e5}\x{212b}
 
-
 /\x{01c4}+/i,utf
     \x{01c4}\x{01c5}\x{01c6}
  0: \x{1c4}\x{1c5}\x{1c6}
@@ -3378,7 +3174,6 @@ Partial match: AA
 /\x{01c6}+/i,utf
     \x{01c4}\x{01c5}\x{01c6}
  0: \x{1c4}\x{1c5}\x{1c6}
-
 
 /\x{01c7}+/i,utf
     \x{01c7}\x{01c8}\x{01c9}
@@ -3405,7 +3200,6 @@ Partial match: AA
     \x{01ca}\x{01cb}\x{01cc}
  0: \x{1ca}\x{1cb}\x{1cc}
 
-
 /\x{01f1}+/i,utf
     \x{01f1}\x{01f2}\x{01f3}
  0: \x{1f1}\x{1f2}\x{1f3}
@@ -3417,7 +3211,6 @@ Partial match: AA
 /\x{01f3}+/i,utf
     \x{01f1}\x{01f2}\x{01f3}
  0: \x{1f1}\x{1f2}\x{1f3}
-
 
 /\x{0345}+/i,utf
     \x{0345}\x{0399}\x{03b9}\x{1fbe}
@@ -3434,7 +3227,6 @@ Partial match: AA
 /\x{1fbe}+/i,utf
     \x{0345}\x{0399}\x{03b9}\x{1fbe}
  0: \x{345}\x{399}\x{3b9}\x{1fbe}
-
 
 /\x{0392}+/i,utf
     \x{0392}\x{03b2}\x{03d0}
@@ -3461,7 +3253,6 @@ Partial match: AA
     \x{0395}\x{03b5}\x{03f5}
  0: \x{395}\x{3b5}\x{3f5}
 
-
 /\x{0398}+/i,utf
     \x{0398}\x{03b8}\x{03d1}\x{03f4}
  0: \x{398}\x{3b8}\x{3d1}\x{3f4}
@@ -3477,7 +3268,6 @@ Partial match: AA
 /\x{03f4}+/i,utf
     \x{0398}\x{03b8}\x{03d1}\x{03f4}
  0: \x{398}\x{3b8}\x{3d1}\x{3f4}
-    
 
 /\x{039a}+/i,utf
     \x{039a}\x{03ba}\x{03f0}
@@ -3491,7 +3281,6 @@ Partial match: AA
     \x{039a}\x{03ba}\x{03f0}
  0: \x{39a}\x{3ba}\x{3f0}
     
-
 /\x{03a0}+/i,utf
     \x{03a0}\x{03c0}\x{03d6}
  0: \x{3a0}\x{3c0}\x{3d6}
@@ -3503,7 +3292,6 @@ Partial match: AA
 /\x{03d6}+/i,utf
     \x{03a0}\x{03c0}\x{03d6}
  0: \x{3a0}\x{3c0}\x{3d6}
-
 
 /\x{03a1}+/i,utf
     \x{03a1}\x{03c1}\x{03f1}
@@ -3517,7 +3305,6 @@ Partial match: AA
     \x{03a1}\x{03c1}\x{03f1}
  0: \x{3a1}\x{3c1}\x{3f1}
 
-
 /\x{03a3}+/i,utf
     \x{03A3}\x{03C2}\x{03C3}
  0: \x{3a3}\x{3c2}\x{3c3}
@@ -3529,7 +3316,6 @@ Partial match: AA
 /\x{03c3}+/i,utf
     \x{03A3}\x{03C2}\x{03C3}
  0: \x{3a3}\x{3c2}\x{3c3}
-    
 
 /\x{03a6}+/i,utf
     \x{03a6}\x{03c6}\x{03d5}
@@ -3543,7 +3329,6 @@ Partial match: AA
     \x{03a6}\x{03c6}\x{03d5}
  0: \x{3a6}\x{3c6}\x{3d5}
 
-
 /\x{03c9}+/i,utf
     \x{03c9}\x{03a9}\x{2126}
  0: \x{3c9}\x{3a9}\x{2126}
@@ -3556,7 +3341,6 @@ Partial match: AA
     \x{03c9}\x{03a9}\x{2126}
  0: \x{3c9}\x{3a9}\x{2126}
     
-
 /\x{1e60}+/i,utf
     \x{1e60}\x{1e61}\x{1e9b}
  0: \x{1e60}\x{1e61}\x{1e9b}
@@ -3569,7 +3353,6 @@ Partial match: AA
     \x{1e60}\x{1e61}\x{1e9b}
  0: \x{1e60}\x{1e61}\x{1e9b}
     
-
 /\x{1e9e}+/i,utf
     \x{1e9e}\x{00df}
  0: \x{1e9e}\x{df}
@@ -3578,7 +3361,6 @@ Partial match: AA
     \x{1e9e}\x{00df}
  0: \x{1e9e}\x{df}
     
-
 /\x{1f88}+/i,utf
     \x{1f88}\x{1f80}
  0: \x{1f88}\x{1f80}
@@ -3599,7 +3381,6 @@ Partial match: AA
     \x{004b}\x{006b}\x{212a}
  0: Kk\x{212a}
 
-
 /\x{0053}+/i,utf
     \x{0053}\x{0073}\x{017f}
  0: Ss\x{17f}
@@ -3613,24 +3394,29 @@ Partial match: AA
  0: Ss\x{17f}
 
 /ist/i,utf
+\= Expect no match
     ikt
 No match
 
 /is+t/i,utf
     iSs\x{17f}t
  0: iSs\x{17f}t
+\= Expect no match
     ikt
 No match
 
 /is+?t/i,utf
+\= Expect no match
     ikt
 No match
 
 /is?t/i,utf
+\= Expect no match
     ikt
 No match
 
 /is{2}t/i,utf
+\= Expect no match
     iskt
 No match
 
@@ -3643,16 +3429,14 @@ No match
  0: `
     \x{1234}abc
  0: \x{1234}
-    ** Failers
-No match
+\= Expect no match
     abc
 No match
 
 /^\p{Xuc}+/utf
     $@`\x{a0}\x{1234}\x{e000}**
  0: $@`\x{a0}\x{1234}\x{e000}
-    ** Failers
-No match
+\= Expect no match
     \x{9f}
 No match
 
@@ -3664,32 +3448,28 @@ No match
  3: $@`
  4: $@
  5: $
-    ** Failers
-No match
+\= Expect no match
     \x{9f}
 No match
 
 /^\p{Xuc}+?\*/utf
     $@`\x{a0}\x{1234}\x{e000}**
  0: $@`\x{a0}\x{1234}\x{e000}*
-    ** Failers
-No match
+\= Expect no match
     \x{9f}
 No match
 
 /^\p{Xuc}++/utf
     $@`\x{a0}\x{1234}\x{e000}**
  0: $@`\x{a0}\x{1234}\x{e000}
-    ** Failers
-No match
+\= Expect no match
     \x{9f}
 No match
 
 /^\p{Xuc}{3,5}/utf
     $@`\x{a0}\x{1234}\x{e000}**
  0: $@`\x{a0}\x{1234}
-    ** Failers
-No match
+\= Expect no match
     \x{9f}
 No match
 
@@ -3698,32 +3478,28 @@ No match
  0: $@`\x{a0}\x{1234}
  1: $@`\x{a0}
  2: $@`
-    ** Failers
-No match
+\= Expect no match
     \x{9f}
 No match
 
 /^[\p{Xuc}]/utf
     $@`\x{a0}\x{1234}\x{e000}**
  0: $
-    ** Failers
-No match
+\= Expect no match
     \x{9f}
 No match
 
 /^[\p{Xuc}]+/utf
     $@`\x{a0}\x{1234}\x{e000}**
  0: $@`\x{a0}\x{1234}\x{e000}
-    ** Failers
-No match
+\= Expect no match
     \x{9f}
 No match
 
 /^\P{Xuc}/utf
     abc
  0: a
-    ** Failers
- 0: *
+\= Expect no match
     $abc
 No match
     @abc
@@ -3736,8 +3512,7 @@ No match
 /^[\P{Xuc}]/utf
     abc
  0: a
-    ** Failers
- 0: *
+\= Expect no match
     $abc
 No match
     @abc

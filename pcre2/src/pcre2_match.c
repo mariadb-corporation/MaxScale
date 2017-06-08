@@ -7,7 +7,7 @@ and semantics are as close as possible to those of the Perl 5 language.
 
                        Written by Philip Hazel
      Original API code Copyright (c) 1997-2012 University of Cambridge
-         New API code Copyright (c) 2014 University of Cambridge
+         New API code Copyright (c) 2016 University of Cambridge
 
 -----------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define PUBLIC_MATCH_OPTIONS \
   (PCRE2_ANCHORED|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY| \
    PCRE2_NOTEMPTY_ATSTART|PCRE2_NO_UTF_CHECK|PCRE2_PARTIAL_HARD| \
-   PCRE2_PARTIAL_SOFT)
+   PCRE2_PARTIAL_SOFT|PCRE2_NO_JIT)
 
 #define PUBLIC_JIT_MATCH_OPTIONS \
    (PCRE2_NO_UTF_CHECK|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY|\
@@ -142,14 +142,14 @@ Returns:      = 0 sucessful match; number of code units matched is set
 */
 
 static int
-match_ref(PCRE2_SIZE offset, PCRE2_SIZE offset_top, register PCRE2_SPTR eptr,
+match_ref(PCRE2_SIZE offset, PCRE2_SIZE offset_top, PCRE2_SPTR eptr,
   match_block *mb, BOOL caseless, PCRE2_SIZE *lengthptr)
 {
 #if defined SUPPORT_UNICODE
 BOOL utf = (mb->poptions & PCRE2_UTF) != 0;
 #endif
 
-register PCRE2_SPTR p;
+PCRE2_SPTR p;
 PCRE2_SIZE length;
 PCRE2_SPTR eptr_start = eptr;
 
@@ -194,7 +194,7 @@ if (caseless)
       GETCHARINC(c, eptr);
       GETCHARINC(d, p);
       ur = GET_UCD(d);
-      if (c != d && c != d + ur->other_case)
+      if (c != d && c != (uint32_t)((int)d + ur->other_case))
         {
         const uint32_t *pp = PRIV(ucd_caseless_sets) + ur->caseset;
         for (;;)
@@ -211,7 +211,7 @@ if (caseless)
     /* Not in UTF mode */
 
     {
-    while (length-- > 0)
+    for (; length > 0; length--)
       {
       uint32_t cc, cp;
       if (eptr >= mb->end_subject) return 1;   /* Partial match */
@@ -226,11 +226,11 @@ if (caseless)
   }
 
 /* In the caseful case, we can just compare the code units, whether or not we
-are in UT mode. */
+are in UTF mode. */
 
 else
   {
-  while (length-- > 0)
+  for (; length > 0; length--)
     {
     if (eptr >= mb->end_subject) return 1;   /* Partial match */
     if (UCHAR21INCTEST(p) != UCHAR21INCTEST(eptr)) return -1;  /*No match */
@@ -296,7 +296,6 @@ enum { RM1=1, RM2,  RM3,  RM4,  RM5,  RM6,  RM7,  RM8,  RM9,  RM10,
 argument of RMATCH isn't actually used in this definition. */
 
 #ifndef HEAP_MATCH_RECURSE
-#define REGISTER register
 #define RMATCH(ra,rb,rc,rd,re,rw) \
   rrc = match(ra,rb,mstart,rc,rd,re,rdepth+1)
 #define RRETURN(ra) return ra
@@ -305,8 +304,6 @@ argument of RMATCH isn't actually used in this definition. */
 /* These versions of the macros manage a private stack on the heap. Note that
 the "rd" argument of RMATCH isn't actually used in this definition. It's the mb
 argument of match(), which never changes. */
-
-#define REGISTER
 
 #define RMATCH(ra,rb,rc,rd,re,rw)\
   {\
@@ -425,7 +422,7 @@ to save the ovector while calling match() to process the pattern recursion. */
 op_recurse_ovecsave(). */
 
 static int
-match(REGISTER PCRE2_SPTR eptr, REGISTER PCRE2_SPTR ecode, PCRE2_SPTR mstart,
+match(PCRE2_SPTR eptr, PCRE2_SPTR ecode, PCRE2_SPTR mstart,
   PCRE2_SIZE offset_top, match_block *mb, eptrblock *eptrb, uint32_t rdepth);
 
 
@@ -465,14 +462,14 @@ Returns:      a match() return code
 */
 
 static int
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
 __attribute__ ((noinline))
 #endif
-op_recurse_ovecsave(REGISTER PCRE2_SPTR eptr, PCRE2_SPTR callpat,
+op_recurse_ovecsave(PCRE2_SPTR eptr, PCRE2_SPTR callpat,
   PCRE2_SPTR mstart, PCRE2_SIZE offset_top, match_block *mb, eptrblock *eptrb,
   uint32_t rdepth)
 {
-register int rrc;
+int rrc;
 BOOL cbegroup = *callpat >= OP_SBRA;
 recursion_info *new_recursive = mb->recursive;
 PCRE2_SIZE ovecsave[OP_RECURSE_STACK_SAVE_MAX];
@@ -576,20 +573,19 @@ Returns:       MATCH_MATCH if matched            )  these values are >= 0
 */
 
 static int
-match(REGISTER PCRE2_SPTR eptr, REGISTER PCRE2_SPTR ecode, PCRE2_SPTR mstart,
+match(PCRE2_SPTR eptr, PCRE2_SPTR ecode, PCRE2_SPTR mstart,
   PCRE2_SIZE offset_top, match_block *mb, eptrblock *eptrb, uint32_t rdepth)
 {
 /* These variables do not need to be preserved over recursion in this function,
 so they can be ordinary variables in all cases. Mark some of them with
 "register" because they are used a lot in loops. */
 
-register int  rrc;         /* Returns from recursive calls */
-register int  i;           /* Used for loops not involving calls to RMATCH() */
-register uint32_t c;       /* Character values not kept over RMATCH() calls */
-register BOOL utf;         /* Local copy of UTF flag for speed */
+int  rrc;         /* Returns from recursive calls */
+int  i;           /* Used for loops not involving calls to RMATCH() */
+uint32_t c;       /* Character values not kept over RMATCH() calls */
+BOOL utf;         /* Local copy of UTF flag for speed */
 
 BOOL minimize, possessive; /* Quantifier options */
-BOOL caseless;
 int condcode;
 
 /* When recursion is not being used, all "local" variables that have to be
@@ -727,6 +723,7 @@ still need to be preserved over recursive calls of match(). These macros define
 the alternative names that are used. */
 
 #define allow_zero      cur_is_word
+#define caseless        cur_is_word
 #define cbegroup        condition
 #define code_offset     codelink
 #define condassert      condition
@@ -1319,7 +1316,7 @@ for (;;)
         {
         pcre2_callout_block cb;
         cb.version          = 1;
-        cb.capture_top      = offset_top/2;
+        cb.capture_top      = (uint32_t)offset_top/2;
         cb.capture_last     = mb->capture_last & CAPLMASK;
         cb.offset_vector    = mb->ovector;
         cb.mark             = mb->nomatch_mark;
@@ -1503,8 +1500,8 @@ for (;;)
 
       if (offset >= offset_top)
         {
-        register PCRE2_SIZE *iptr = mb->ovector + offset_top;
-        register PCRE2_SIZE *iend = mb->ovector + offset;
+        PCRE2_SIZE *iptr = mb->ovector + offset_top;
+        PCRE2_SIZE *iend = mb->ovector + offset;
         while (iptr < iend) *iptr++ = PCRE2_UNSET;
         offset_top = offset + 2;
         }
@@ -1704,14 +1701,14 @@ for (;;)
     back a number of characters, not bytes. */
 
     case OP_REVERSE:
+    i = GET(ecode, 1);
 #ifdef SUPPORT_UNICODE
     if (utf)
       {
-      i = GET(ecode, 1);
       while (i-- > 0)
         {
+        if (eptr <= mb->start_subject) RRETURN(MATCH_NOMATCH);
         eptr--;
-        if (eptr < mb->start_subject) RRETURN(MATCH_NOMATCH);
         BACKCHAR(eptr);
         }
       }
@@ -1721,8 +1718,8 @@ for (;;)
     /* No UTF-8 support, or not in UTF-8 mode: count is byte count */
 
       {
-      eptr -= GET(ecode, 1);
-      if (eptr < mb->start_subject) RRETURN(MATCH_NOMATCH);
+      if (i > eptr - mb->start_subject) RRETURN(MATCH_NOMATCH);
+      eptr -= i;
       }
 
     /* Save the earliest consulted character, then skip to next op code */
@@ -1746,7 +1743,7 @@ for (;;)
         pcre2_callout_block cb;
         cb.version          = 1;
         cb.callout_number   = ecode[LINK_SIZE + 1];
-        cb.capture_top      = offset_top/2;
+        cb.capture_top      = (uint32_t)offset_top/2;
         cb.capture_last     = mb->capture_last & CAPLMASK;
         cb.offset_vector    = mb->ovector;
         cb.mark             = mb->nomatch_mark;
@@ -2052,8 +2049,8 @@ for (;;)
 
         if (offset > offset_top)
           {
-          register PCRE2_SIZE *iptr = mb->ovector + offset_top;
-          register PCRE2_SIZE *iend = mb->ovector + offset;
+          PCRE2_SIZE *iptr = mb->ovector + offset_top;
+          PCRE2_SIZE *iend = mb->ovector + offset;
           while (iptr < iend) *iptr++ = PCRE2_UNSET;
           }
 
@@ -2382,7 +2379,7 @@ for (;;)
     case OP_ANY:
     if (IS_NEWLINE(eptr)) RRETURN(MATCH_NOMATCH);
     if (mb->partial != 0 &&
-        eptr + 1 >= mb->end_subject &&
+        eptr == mb->end_subject - 1 &&
         NLBLOCK->nltype == NLTYPE_FIXED &&
         NLBLOCK->nllen == 2 &&
         UCHAR21TEST(eptr) == NLBLOCK->nl[0])
@@ -2408,8 +2405,9 @@ for (;;)
     ecode++;
     break;
 
-    /* Match a single byte, even in UTF-8 mode. This opcode really does match
-    any byte, even newline, independent of the setting of PCRE2_DOTALL. */
+    /* Match a single code unit, even in UTF-8 mode. This opcode really does
+    match any code unit, even newline. (It really should be called ANYCODEUNIT,
+    of course - the byte name is from pre-16 bit days.) */
 
     case OP_ANYBYTE:
     if (eptr >= mb->end_subject)   /* DO NOT merge the eptr++ here; it must */
@@ -2848,9 +2846,7 @@ for (;;)
         continue;
       }
 
-    /* First, ensure the minimum number of matches are present. We get back
-    the length of the reference string explicitly rather than passing the
-    address of eptr, so that eptr can be a register variable. */
+    /* First, ensure the minimum number of matches are present. */
 
     for (i = 1; i <= min; i++)
       {
@@ -3342,7 +3338,10 @@ for (;;)
         CHECK_PARTIAL();             /* Not SCHECK_PARTIAL() */
         RRETURN(MATCH_NOMATCH);
         }
-      while (length-- > 0) if (*ecode++ != UCHAR21INC(eptr)) RRETURN(MATCH_NOMATCH);
+      for (; length > 0; length--)
+        {
+        if (*ecode++ != UCHAR21INC(eptr)) RRETURN(MATCH_NOMATCH);
+        }
       }
     else
 #endif
@@ -3758,7 +3757,7 @@ for (;;)
 #ifdef SUPPORT_UNICODE
     if (utf)
       {
-      register uint32_t ch, och;
+      uint32_t ch, och;
 
       ecode++;
       GETCHARINC(ch, ecode);
@@ -3780,7 +3779,7 @@ for (;;)
     else
 #endif  /* SUPPORT_UNICODE */
       {
-      register uint32_t ch = ecode[1];
+      uint32_t ch = ecode[1];
       c = *eptr++;
       if (ch == c || (op == OP_NOTI && TABLE_GET(ch, mb->fcc, ch) == c))
         RRETURN(MATCH_NOMATCH);
@@ -3886,7 +3885,7 @@ for (;;)
 #ifdef SUPPORT_UNICODE
       if (utf)
         {
-        register uint32_t d;
+        uint32_t d;
         for (i = 1; i <= min; i++)
           {
           if (eptr >= mb->end_subject)
@@ -3921,7 +3920,7 @@ for (;;)
 #ifdef SUPPORT_UNICODE
         if (utf)
           {
-          register uint32_t d;
+          uint32_t d;
           for (fi = min;; fi++)
             {
             RMATCH(eptr, ecode, offset_top, mb, eptrb, RM28);
@@ -3966,7 +3965,7 @@ for (;;)
 #ifdef SUPPORT_UNICODE
         if (utf)
           {
-          register uint32_t d;
+          uint32_t d;
           for (i = min; i < max; i++)
             {
             int len = 1;
@@ -4027,7 +4026,7 @@ for (;;)
 #ifdef SUPPORT_UNICODE
       if (utf)
         {
-        register uint32_t d;
+        uint32_t d;
         for (i = 1; i <= min; i++)
           {
           if (eptr >= mb->end_subject)
@@ -4061,7 +4060,7 @@ for (;;)
 #ifdef SUPPORT_UNICODE
         if (utf)
           {
-          register uint32_t d;
+          uint32_t d;
           for (fi = min;; fi++)
             {
             RMATCH(eptr, ecode, offset_top, mb, eptrb, RM32);
@@ -4105,7 +4104,7 @@ for (;;)
 #ifdef SUPPORT_UNICODE
         if (utf)
           {
-          register uint32_t d;
+          uint32_t d;
           for (i = min; i < max; i++)
             {
             int len = 1;
@@ -6459,6 +6458,7 @@ PCRE2_UCHAR first_cu2 = 0;
 PCRE2_UCHAR req_cu = 0;
 PCRE2_UCHAR req_cu2 = 0;
 
+PCRE2_SPTR bumpalong_limit;
 PCRE2_SPTR end_subject;
 PCRE2_SPTR start_match = subject + start_offset;
 PCRE2_SPTR req_cu_ptr = start_match - 1;
@@ -6482,6 +6482,7 @@ mb->match_frames_base = &frame_zero;
 subject string. */
 
 if (length == PCRE2_ZERO_TERMINATED) length = PRIV(strlen)(subject);
+end_subject = subject + length;
 
 /* Plausibility checks */
 
@@ -6513,7 +6514,7 @@ occur. */
 
 #define FF (PCRE2_NOTEMPTY_SET|PCRE2_NE_ATST_SET)
 #define OO (PCRE2_NOTEMPTY|PCRE2_NOTEMPTY_ATSTART)
-options |= (re->flags & FF) / ((FF & -FF) / (OO & -OO));
+options |= (re->flags & FF) / ((FF & (~FF+1)) / (OO & (~OO+1)));
 #undef FF
 #undef OO
 
@@ -6533,20 +6534,65 @@ mb->partial = ((options & PCRE2_PARTIAL_HARD) != 0)? 2 :
 
 /* Check a UTF string for validity if required. For 8-bit and 16-bit strings,
 we must also check that a starting offset does not point into the middle of a
-multiunit character. */
+multiunit character. We check only the portion of the subject that is going to
+be inspected during matching - from the offset minus the maximum back reference
+to the given length. This saves time when a small part of a large subject is
+being matched by the use of a starting offset. Note that the maximum lookbehind
+is a number of characters, not code units. */
 
 #ifdef SUPPORT_UNICODE
 if (utf && (options & PCRE2_NO_UTF_CHECK) == 0)
   {
-  match_data->rc = PRIV(valid_utf)(subject, length, &(match_data->startchar));
-  if (match_data->rc != 0) return match_data->rc;
+  PCRE2_SPTR check_subject = start_match;  /* start_match includes offset */
+
+  if (start_offset > 0)
+    {
 #if PCRE2_CODE_UNIT_WIDTH != 32
-  if (start_offset > 0 && start_offset < length &&
-      NOT_FIRSTCHAR(subject[start_offset]))
-    return PCRE2_ERROR_BADUTFOFFSET;
+    unsigned int i;
+    if (start_match < end_subject && NOT_FIRSTCU(*start_match))
+      return PCRE2_ERROR_BADUTFOFFSET;
+    for (i = re->max_lookbehind; i > 0 && check_subject > subject; i--)
+      {
+      check_subject--;
+      while (check_subject > subject &&
+#if PCRE2_CODE_UNIT_WIDTH == 8
+      (*check_subject & 0xc0) == 0x80)
+#else  /* 16-bit */
+      (*check_subject & 0xfc00) == 0xdc00)
+#endif /* PCRE2_CODE_UNIT_WIDTH == 8 */
+        check_subject--;
+      }
+#else
+    /* In the 32-bit library, one code unit equals one character. However,
+    we cannot just subtract the lookbehind and then compare pointers, because
+    a very large lookbehind could create an invalid pointer. */
+
+    if (start_offset >= re->max_lookbehind)
+      check_subject -= re->max_lookbehind;
+    else
+      check_subject = subject;
 #endif  /* PCRE2_CODE_UNIT_WIDTH != 32 */
+    }
+
+  /* Validate the relevant portion of the subject. After an error, adjust the
+  offset to be an absolute offset in the whole string. */
+
+  match_data->rc = PRIV(valid_utf)(check_subject,
+    length - (check_subject - subject), &(match_data->startchar));
+  if (match_data->rc != 0)
+    {
+    match_data->startchar += check_subject - subject;
+    return match_data->rc;
+    }
   }
 #endif  /* SUPPORT_UNICODE */
+
+/* It is an error to set an offset limit without setting the flag at compile
+time. */
+
+if (mcontext->offset_limit != PCRE2_UNSET &&
+     (re->overall_options & PCRE2_USE_OFFSET_LIMIT) == 0)
+  return PCRE2_ERROR_BADOFFSETLIMIT;
 
 /* If the pattern was successfully studied with JIT support, run the JIT
 executable instead of the rest of this function. Most options must be set at
@@ -6568,30 +6614,21 @@ if (re->executable_jit != NULL && (options & ~PUBLIC_JIT_MATCH_OPTIONS) == 0)
 anchored = ((re->overall_options | options) & PCRE2_ANCHORED) != 0;
 firstline = (re->overall_options & PCRE2_FIRSTLINE) != 0;
 startline = (re->flags & PCRE2_STARTLINE) != 0;
+bumpalong_limit =  (mcontext->offset_limit == PCRE2_UNSET)?
+  end_subject : subject + mcontext->offset_limit;
 
 /* Fill in the fields in the match block. */
 
-if (mcontext == NULL)
-  {
-  mb->callout = NULL;
-  mb->memctl = re->memctl;
+mb->callout = mcontext->callout;
+mb->callout_data = mcontext->callout_data;
+mb->memctl = mcontext->memctl;
 #ifdef HEAP_MATCH_RECURSE
-  mb->stack_memctl = re->memctl;
+mb->stack_memctl = mcontext->stack_memctl;
 #endif
-  }
-else
-  {
-  mb->callout = mcontext->callout;
-  mb->callout_data = mcontext->callout_data;
-  mb->memctl = mcontext->memctl;
-#ifdef HEAP_MATCH_RECURSE
-  mb->stack_memctl = mcontext->stack_memctl;
-#endif
-  }
 
 mb->start_subject = subject;
 mb->start_offset = start_offset;
-mb->end_subject = end_subject = mb->start_subject + length;
+mb->end_subject = end_subject;
 mb->hasthen = (re->flags & PCRE2_HASTHEN) != 0;
 
 mb->moptions = options;                 /* Match options */
@@ -6689,8 +6726,8 @@ in case they inspect these fields. */
 
 if (ocount > 0)
   {
-  register PCRE2_SIZE *iptr = mb->ovector + ocount;
-  register PCRE2_SIZE *iend = iptr - re->top_bracket;
+  PCRE2_SIZE *iptr = mb->ovector + ocount;
+  PCRE2_SIZE *iend = iptr - re->top_bracket;
   if (iend < mb->ovector + 2) iend = mb->ovector + 2;
   while (--iptr >= iend) *iptr = PCRE2_UNSET;
   mb->ovector[0] = mb->ovector[1] = PCRE2_UNSET;
@@ -6783,7 +6820,8 @@ for(;;)
       end_subject = t;
       }
 
-    /* Advance to a unique first code unit if there is one. */
+    /* Advance to a unique first code unit if there is one. In 8-bit mode, the
+    use of memchr() gives a big speed up. */
 
     if (has_first_cu)
       {
@@ -6793,8 +6831,15 @@ for(;;)
           (smc = UCHAR21TEST(start_match)) != first_cu && smc != first_cu2)
           start_match++;
       else
+        {
+#if PCRE2_CODE_UNIT_WIDTH != 8
         while (start_match < end_subject && UCHAR21TEST(start_match) != first_cu)
           start_match++;
+#else
+        start_match = memchr(start_match, first_cu, end_subject - start_match);
+        if (start_match == NULL) start_match = end_subject;
+#endif
+        }
       }
 
     /* Or to just after a linebreak for a multiline match */
@@ -6838,7 +6883,7 @@ for(;;)
       {
       while (start_match < end_subject)
         {
-        register uint32_t c = UCHAR21TEST(start_match);
+        uint32_t c = UCHAR21TEST(start_match);
 #if PCRE2_CODE_UNIT_WIDTH != 8
         if (c > 255) c = 255;
 #endif
@@ -6882,7 +6927,7 @@ for(;;)
 
       if (has_req_cu && end_subject - start_match < REQ_CU_MAX)
         {
-        register PCRE2_SPTR p = start_match + (has_first_cu? 1:0);
+        PCRE2_SPTR p = start_match + (has_first_cu? 1:0);
 
         /* We don't need to repeat the search if we haven't yet reached the
         place we found it at last time. */
@@ -6893,7 +6938,7 @@ for(;;)
             {
             while (p < end_subject)
               {
-              register uint32_t pp = UCHAR21INCTEST(p);
+              uint32_t pp = UCHAR21INCTEST(p);
               if (pp == req_cu || pp == req_cu2) { p--; break; }
               }
             }
@@ -6925,6 +6970,14 @@ for(;;)
     }
 
   /* ------------ End of start of match optimizations ------------ */
+
+  /* Give no match if we have passed the bumpalong limit. */
+
+  if (start_match > bumpalong_limit)
+    {
+    rc = MATCH_NOMATCH;
+    break;
+    }
 
   /* OK, we can now run the match. If "hitend" is set afterwards, remember the
   first starting point for which a partial match was found. */
@@ -7044,7 +7097,7 @@ for(;;)
 
 (2) The pattern is anchored or the match was failed by (*COMMIT);
 
-(3) We are past the end of the subject;
+(3) We are past the end of the subject or the bumpalong limit;
 
 (4) PCRE2_FIRSTLINE is set and we have failed to match at a newline, because
     this option requests that a match occur at or before the first newline in
@@ -7104,7 +7157,7 @@ if (rc == MATCH_MATCH || rc == MATCH_ACCEPT)
   too many to fit into the ovector. */
 
   match_data->rc = ((mb->capture_last & OVFLBIT) != 0)?
-    0 : mb->end_offset_top/2;
+    0 : (int)mb->end_offset_top/2;
 
   /* If there is space in the offset vector, set any pairs that follow the
   highest-numbered captured string but are less than the number of capturing
@@ -7118,7 +7171,7 @@ if (rc == MATCH_MATCH || rc == MATCH_ACCEPT)
 
   if (mb->end_offset_top/2 <= re->top_bracket)
     {
-    register PCRE2_SIZE *iptr, *iend;
+    PCRE2_SIZE *iptr, *iend;
     int resetcount = re->top_bracket + 1;
     if (resetcount > match_data->oveccount) resetcount = match_data->oveccount;
     iptr = match_data->ovector + mb->end_offset_top;

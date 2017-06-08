@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -725,13 +725,6 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     route_target_t target = TARGET_UNDEFINED;
 
     if (rses->forced_node && rses->forced_node == rses->rses_master_ref)
-    {
-        target = TARGET_MASTER;
-    }
-    /**
-     * A cloned session, route everything to the master
-     */
-    else if (DCB_IS_CLONE(rses->client_dcb))
     {
         target = TARGET_MASTER;
     }

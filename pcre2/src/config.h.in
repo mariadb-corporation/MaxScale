@@ -78,6 +78,9 @@ sure both macros are undefined; an emulation function will then be used. */
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* Define to 1 if you have the `mkostemp' function. */
+#undef HAVE_MKOSTEMP
+
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 
@@ -89,6 +92,9 @@ sure both macros are undefined; an emulation function will then be used. */
 
 /* Define to 1 if you have the <readline/readline.h> header file. */
 #undef HAVE_READLINE_READLINE_H
+
+/* Define to 1 if you have the `secure_getenv' function. */
+#undef HAVE_SECURE_GETENV
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -110,6 +116,9 @@ sure both macros are undefined; an emulation function will then be used. */
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <sys/wait.h> header file. */
+#undef HAVE_SYS_WAIT_H
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
@@ -169,6 +178,9 @@ sure both macros are undefined; an emulation function will then be used. */
    overflow caused by enormously large patterns. */
 #undef MAX_NAME_SIZE
 
+/* Defining NEVER_BACKSLASH_C locks out the use of \C in all patterns. */
+#undef NEVER_BACKSLASH_C
+
 /* The value of NEWLINE_DEFAULT determines the default newline character
    sequence. PCRE2 client programs can override this by selecting other values
    at run time. The valid values are 1 (CR), 2 (LF), 3 (CRLF), 4 (ANY), and 5
@@ -201,12 +213,19 @@ sure both macros are undefined; an emulation function will then be used. */
    stack that is used while compiling a pattern. */
 #undef PARENS_NEST_LIMIT
 
-/* The value of PCRE2GREP_BUFSIZE determines the size of buffer used by
-   pcre2grep to hold parts of the file it is searching. This is also the
-   minimum value. The actual amount of memory used by pcre2grep is three times
-   this number, because it allows for the buffering of "before" and "after"
-   lines. */
+/* The value of PCRE2GREP_BUFSIZE is the starting size of the buffer used by
+   pcre2grep to hold parts of the file it is searching. The buffer will be
+   expanded up to PCRE2GREP_MAX_BUFSIZE if necessary, for files containing
+   very long lines. The actual amount of memory used by pcre2grep is three
+   times this number, because it allows for the buffering of "before" and
+   "after" lines. */
 #undef PCRE2GREP_BUFSIZE
+
+/* The value of PCRE2GREP_MAX_BUFSIZE specifies the maximum size of the buffer
+   used by pcre2grep to hold parts of the file it is searching. The actual
+   amount of memory used by pcre2grep is three times this number, because it
+   allows for the buffering of "before" and "after" lines. */
+#undef PCRE2GREP_MAX_BUFSIZE
 
 /* to make a symbol visible */
 #undef PCRE2POSIX_EXP_DECL
@@ -259,7 +278,11 @@ sure both macros are undefined; an emulation function will then be used. */
    is able to handle .gz files. */
 #undef SUPPORT_LIBZ
 
-/* Define to any value to enable JIT support in pcre2grep. */
+/* Define to any value to enable callout script support in pcre2grep. */
+#undef SUPPORT_PCRE2GREP_CALLOUT
+
+/* Define to any value to enable JIT support in pcre2grep. Note that this will
+   have no effect unless SUPPORT_JIT is also defined. */
 #undef SUPPORT_PCRE2GREP_JIT
 
 /* Define to any value to enable the 16 bit PCRE2 library. */
@@ -280,8 +303,40 @@ sure both macros are undefined; an emulation function will then be used. */
 /* Define to any value for valgrind support to find invalid memory reads. */
 #undef SUPPORT_VALGRIND
 
+/* Enable extensions on AIX 3, Interix.  */
+#ifndef _ALL_SOURCE
+# undef _ALL_SOURCE
+#endif
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+# undef _GNU_SOURCE
+#endif
+/* Enable threading extensions on Solaris.  */
+#ifndef _POSIX_PTHREAD_SEMANTICS
+# undef _POSIX_PTHREAD_SEMANTICS
+#endif
+/* Enable extensions on HP NonStop.  */
+#ifndef _TANDEM_SOURCE
+# undef _TANDEM_SOURCE
+#endif
+/* Enable general extensions on Solaris.  */
+#ifndef __EXTENSIONS__
+# undef __EXTENSIONS__
+#endif
+
+
 /* Version number of package */
 #undef VERSION
+
+/* Define to 1 if on MINIX. */
+#undef _MINIX
+
+/* Define to 2 if the system does not provide POSIX.1 features except with
+   this defined. */
+#undef _POSIX_1_SOURCE
+
+/* Define to 1 if you need to in order for `stat' and other things to work. */
+#undef _POSIX_SOURCE
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const

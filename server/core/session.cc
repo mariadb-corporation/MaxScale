@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -178,7 +178,6 @@ MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint64_t i
 static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
                                        MXS_SESSION* session)
 {
-    session->ses_is_child = (bool) DCB_IS_CLONE(client_dcb);
     session->service = service;
     session->client_dcb = client_dcb;
     session->stats.connect = time(0);
@@ -309,7 +308,6 @@ session_set_dummy(DCB *client_dcb)
     session = &session_dummy_struct;
     session->ses_chk_top = CHK_NUM_SESSION;
     session->ses_chk_tail = CHK_NUM_SESSION;
-    session->ses_is_child = false;
     session->service = NULL;
     session->client_dcb = NULL;
     session->n_filters = 0;
@@ -359,7 +357,7 @@ static void
 session_simple_free(MXS_SESSION *session, DCB *dcb)
 {
     /* Does this possibly need a lock? */
-    if (dcb->data && !DCB_IS_CLONE(dcb))
+    if (dcb->data)
     {
         void * clientdata = dcb->data;
         dcb->data = NULL;
@@ -385,7 +383,7 @@ session_simple_free(MXS_SESSION *session, DCB *dcb)
 
 void session_close(MXS_SESSION *session)
 {
-    if (!session->ses_is_child && session->router_session)
+    if (session->router_session)
     {
         if (session->state != SESSION_STATE_STOPPING)
         {
@@ -421,7 +419,7 @@ static void session_free(MXS_SESSION *session)
      * If session is not child of some other session, free router_session.
      * Otherwise let the parent free it.
      */
-    if (!session->ses_is_child && session->router_session)
+    if (session->router_session)
     {
         session->service->router->freeSession(session->service->router_instance,
                                               session->router_session);
@@ -450,12 +448,8 @@ static void session_free(MXS_SESSION *session)
 
     MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name, session->ses_id);
 
-    /** If session doesn't have parent referencing to it, it can be freed */
-    if (!session->ses_is_child)
-    {
-        session->state = SESSION_STATE_FREE;
-        session_final_free(session);
-    }
+    session->state = SESSION_STATE_FREE;
+    session_final_free(session);
 }
 
 static void

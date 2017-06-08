@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2020-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -75,7 +75,7 @@ static inline size_t request_data_length(MHD_Connection *connection)
 static bool modifies_data(MHD_Connection *connection, string method)
 {
     return (method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT ||
-            method == MHD_HTTP_METHOD_DELETE) &&
+            method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH) &&
            request_data_length(connection);
 }
 
@@ -104,6 +104,8 @@ int Client::process(string url, string method, const char* upload_data, size_t *
 
     HttpRequest request(m_connection, url, method, json);
     HttpResponse reply(MHD_HTTP_NOT_FOUND);
+
+    MXS_DEBUG("Request:\n%s", request.to_string().c_str());
 
     if (url == "/")
     {
