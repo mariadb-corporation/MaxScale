@@ -165,8 +165,10 @@ static int blr_slave_send_fieldcount(ROUTER_INSTANCE *router,
                                      int count);
 static int blr_slave_send_columndef(ROUTER_INSTANCE *router,
                                     ROUTER_SLAVE *slave,
-                                    char *name, int type,
-                                    int len, uint8_t seqno);
+                                    const char *name,
+                                    int type,
+                                    int len,
+                                    uint8_t seqno);
 static int blr_slave_send_eof(ROUTER_INSTANCE *router,
                               ROUTER_SLAVE *slave,
                               int seqno);
@@ -1091,7 +1093,7 @@ blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 /*
  * Columns to send for a "SHOW SLAVE STATUS" command
  */
-static char *slave_status_columns[] =
+static const char *slave_status_columns[] =
 {
     "Slave_IO_State",
     "Master_Host",
@@ -1144,6 +1146,24 @@ static char *slave_status_columns[] =
     "Last_SQL_Error_Timestamp",
     "Master_SSL_Crl",
     "Master_SSL_Crlpath",
+    NULL
+};
+
+/*
+ * New columns to send for a "SHOW ALL SLAVES STATUS" command
+ */
+static const char *all_slaves_status_columns[] =
+{
+    "Connection_name",
+    "Slave_SQL_State",
+    NULL
+};
+
+/*
+ * Columns to send for GTID in "SHOW SLAVE STATUS" MySQL 5.6/7 command
+ */
+static const char *mysql_gtid_status_columns[] =
+{
     "Retrieved_Gtid_Set",
     "Executed_Gtid_Set",
     "Auto_Position",
@@ -1151,12 +1171,13 @@ static char *slave_status_columns[] =
 };
 
 /*
- * New columns to send for a "SHOW ALL SLAVES STATUS" command
+ * Columns to send for GTID in "SHOW SLAVE STATUS" MariaDB 10 command
+ * and SHOW ALL SLAVES STATUS as well
  */
-static char *all_slaves_status_columns[] =
+static const char *mariadb10_gtid_status_columns[] =
 {
-    "Connection_name",
-    "Slave_SQL_State",
+    "Using_Gtid",
+    "Gtid_IO_Pos",
     NULL
 };
 
@@ -1177,24 +1198,40 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     GWBUF *pkt;
     char column[251] = "";
     uint8_t *ptr;
-    int len, actual_len, col_len, seqno, ncols, i;
+    int len, actual_len, col_len, seqno, i;
     char *dyn_column = NULL;
     int max_column_size = sizeof(column);
-    int new_cols;
+    int ncols = 0;
+    int gtid_cols = 0;
 
     /* Count SHOW SLAVE STATUS the columns */
-    for (ncols = 0; slave_status_columns[ncols]; ncols++);
-
-    /* Add the new SHOW ALL SLAVES STATUS columns */
-    for (new_cols = 0; all_slaves_status_columns[new_cols]; new_cols++);
-
-    /* Add the new all_slaves columns to the total */
-    if (all_slaves)
+    while (slave_status_columns[ncols])
     {
-        ncols += new_cols;
+        ncols++;
     }
 
+    /* Add the new SHOW ALL SLAVES STATUS columns */
+    if (all_slaves)
+    {
+        int k = 0;
+        while (all_slaves_status_columns[k++])
+        {
+            ncols++;
+        }
+    }
+
+    const char **gtid_status_columns = router->mariadb10_gtid ?
+                                 mariadb10_gtid_status_columns :
+                                 mysql_gtid_status_columns;
+    /* Increment ncols with the right GTID columns */
+    while (gtid_status_columns[gtid_cols++])
+    {
+        ncols++;
+    }
+
+    /* Send number of columns */
     blr_slave_send_fieldcount(router, slave, ncols);
+
     seqno = 2;
     if (all_slaves)
     {
@@ -1219,6 +1256,19 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
                                  40,
                                  seqno++);
     }
+
+    /* Send MariaDB 10 or MySQL 5.6/7 GTID columns */
+    for (i = 0; gtid_status_columns[i]; i++)
+    {
+        blr_slave_send_columndef(router,
+                                 slave,
+                                 gtid_status_columns[i],
+                                 BLR_TYPE_STRING,
+                                 40,
+                                 seqno++);
+    }
+
+    /* Send EOF for columns def */
     blr_slave_send_eof(router, slave, seqno++);
 
     // Max length + 250 bytes error message
@@ -1579,10 +1629,29 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     *ptr++ = 0;
     *ptr++ = 0;
 
-    // No GTID support send empty values
-    *ptr++ = 0;
-    *ptr++ = 0;
-    *ptr++ = 0;
+    if (!router->mariadb10_gtid)
+    {
+        // No GTID support send empty values
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 0;
+    }
+    else
+    {
+        // MariaDB 10 GTID
+        sprintf(column, "%s", "Slave_pos");
+        col_len = strlen(column);
+        *ptr++ = col_len;                // Length of result string
+        memcpy(ptr, column, col_len);    // Result string
+        ptr += col_len;
+
+        sprintf(column, "%s", router->last_mariadb_gtid);
+        col_len = strlen(column);
+        *ptr++ = col_len;                // Length of result string
+        memcpy(ptr, column, col_len);    // Result string
+        ptr += col_len;
+    }
+
     *ptr++ = 0;
 
     actual_len = ptr - (uint8_t *)GWBUF_DATA(pkt);
@@ -2929,7 +2998,7 @@ blr_slave_send_fieldcount(ROUTER_INSTANCE *router,
 static int
 blr_slave_send_columndef(ROUTER_INSTANCE *router,
                          ROUTER_SLAVE *slave,
-                         char *name,
+                         const char *name,
                          int type,
                          int len,
                          uint8_t seqno)

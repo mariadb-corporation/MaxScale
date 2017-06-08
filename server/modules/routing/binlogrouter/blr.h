@@ -105,11 +105,12 @@ MXS_BEGIN_DECLS
  */
 #define BINLOG_FILE_EXTRA_INFO GTID_MAX_LEN
 
-enum blr_binlog_storage_type
+enum binlog_storage_type
 {
     BLR_BINLOG_STORAGE_FLAT,
-    BLR_BINLOG_STORAGE_TREEE
+    BLR_BINLOG_STORAGE_TREE
 };
+
 /**
  * Supported Encryption algorithms
  *
@@ -650,8 +651,10 @@ typedef struct router_instance
     DCB                     *client;        /*< DCB for dummy client */
     MXS_SESSION             *session;       /*< Fake session for master connection */
     unsigned int            master_state;   /*< State of the master FSM */
-    uint8_t                 lastEventReceived; /*< Last even received */
-    uint32_t                lastEventTimestamp; /*< Timestamp from last event */
+    uint8_t                 lastEventReceived;
+    /*< Last event received */
+    uint32_t                lastEventTimestamp;
+    /*< Timestamp from last event */
     MASTER_RESPONSES        saved_master;   /*< Saved master responses */
     char                    *binlogdir;     /*< The directory with the binlog files */
     SPINLOCK                binlog_lock;    /*< Lock to control update of the binlog position */
@@ -661,7 +664,7 @@ typedef struct router_instance
     enum blr_event_state    master_event_state;
     /*< Packet read state */
     REP_HEADER              stored_header;
-    /*< Relication header of the event the master is sending */
+    /*< Replication header of the event the master is sending */
     GWBUF                   *stored_event;  /*< Buffer where partial events are stored */
     uint64_t                last_safe_pos;  /* last committed transaction */
     char                    binlog_name[BINLOG_FNAMELEN + 1];
@@ -738,7 +741,7 @@ typedef struct slave_encryption_ctx
     char     *log_file;              /**< The log file the client has requested */
     uint32_t first_enc_event_pos;    /**< The position of first encrypted event
                                       *   It's the first event afte Start_encryption_event
-                                      *   Which is after FDE */
+                                      *   which is after FDE */
 } SLAVE_ENCRYPTION_CTX;
 
 /**
@@ -907,7 +910,7 @@ static char *blrs_states[] =
  */
 #define COM_QUIT                0x01
 #define COM_QUERY               0x03
-#define COM_STATISTIC           0x09
+#define COM_STATISTICS          0x09
 #define COM_PING                0x0e
 #define COM_REGISTER_SLAVE      0x15
 #define COM_BINLOG_DUMP         0x12
@@ -963,8 +966,10 @@ extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *,
                                const char *,
                                const MARIADB_GTID_INFO *);
-extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *,
-                              unsigned long, REP_HEADER *,
+extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *,
+                              BLFILE *,
+                              unsigned long,
+                              REP_HEADER *,
                               char *,
                               const SLAVE_ENCRYPTION_CTX *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
