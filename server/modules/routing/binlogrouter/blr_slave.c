@@ -477,10 +477,13 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         rv = 1;
         break;
     default:
-        blr_send_custom_error(slave->dcb, 1, 0,
+        blr_send_custom_error(slave->dcb,
+                              1,
+                              0,
                               "You have an error in your SQL syntax; Check the "
                               "syntax the MaxScale binlog router accepts.",
-                              "42000", 1064);
+                              "42000",
+                              1064);
         MXS_ERROR("Unexpected MySQL Command (%d) received from slave",
                   MYSQL_COMMAND(queue));
         break;
@@ -633,7 +636,8 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
 
         MXS_INFO("Execute statement (truncated, it contains password)"
-                 " from the slave '%s'", new_text);
+                 " from the slave '%s'",
+                 new_text);
         MXS_FREE(new_text);
     }
     else
@@ -722,7 +726,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
          if (blr_handle_admin_stmt(router,
                                    slave,
                                    word,
-                                  brkb))
+                                   brkb))
          {
              MXS_FREE(query_text);
              return 1;
@@ -744,7 +748,9 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     else
     {
         MXS_INFO("Unexpected query from '%s'@'%s', possibly a 10.1 slave: %s",
-                 slave->dcb->user, slave->dcb->remote, query_text);
+                 slave->dcb->user,
+                 slave->dcb->remote,
+                 query_text);
     }
 
     MXS_FREE(query_text);
@@ -1087,21 +1093,61 @@ blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
  */
 static char *slave_status_columns[] =
 {
-    "Slave_IO_State", "Master_Host", "Master_User", "Master_Port", "Connect_Retry",
-    "Master_Log_File", "Read_Master_Log_Pos", "Relay_Log_File", "Relay_Log_Pos",
-    "Relay_Master_Log_File", "Slave_IO_Running", "Slave_SQL_Running", "Replicate_Do_DB",
-    "Replicate_Ignore_DB", "Replicate_Do_Table",
-    "Replicate_Ignore_Table", "Replicate_Wild_Do_Table", "Replicate_Wild_Ignore_Table",
-    "Last_Errno", "Last_Error", "Skip_Counter", "Exec_Master_Log_Pos", "Relay_Log_Space",
-    "Until_Condition", "Until_Log_File", "Until_Log_Pos", "Master_SSL_Allowed",
-    "Master_SSL_CA_File", "Master_SSL_CA_Path", "Master_SSL_Cert", "Master_SSL_Cipher",
-    "Master_SSL_Key", "Seconds_Behind_Master",
-    "Master_SSL_Verify_Server_Cert", "Last_IO_Errno", "Last_IO_Error", "Last_SQL_Errno",
-    "Last_SQL_Error", "Replicate_Ignore_Server_Ids", "Master_Server_Id", "Master_UUID",
-    "Master_Info_File", "SQL_Delay", "SQL_Remaining_Delay", "Slave_SQL_Running_State",
-    "Master_Retry_Count", "Master_Bind", "Last_IO_Error_TimeStamp",
-    "Last_SQL_Error_Timestamp", "Master_SSL_Crl", "Master_SSL_Crlpath",
-    "Retrieved_Gtid_Set", "Executed_Gtid_Set", "Auto_Position", NULL
+    "Slave_IO_State",
+    "Master_Host",
+    "Master_User",
+    "Master_Port",
+    "Connect_Retry",
+    "Master_Log_File",
+    "Read_Master_Log_Pos",
+    "Relay_Log_File",
+    "Relay_Log_Pos",
+    "Relay_Master_Log_File",
+    "Slave_IO_Running",
+    "Slave_SQL_Running",
+    "Replicate_Do_DB",
+    "Replicate_Ignore_DB",
+    "Replicate_Do_Table",
+    "Replicate_Ignore_Table",
+    "Replicate_Wild_Do_Table",
+    "Replicate_Wild_Ignore_Table",
+    "Last_Errno",
+    "Last_Error",
+    "Skip_Counter",
+    "Exec_Master_Log_Pos",
+    "Relay_Log_Space",
+    "Until_Condition",
+    "Until_Log_File",
+    "Until_Log_Pos",
+    "Master_SSL_Allowed",
+    "Master_SSL_CA_File",
+    "Master_SSL_CA_Path",
+    "Master_SSL_Cert",
+    "Master_SSL_Cipher",
+    "Master_SSL_Key",
+    "Seconds_Behind_Master",
+    "Master_SSL_Verify_Server_Cert",
+    "Last_IO_Errno",
+    "Last_IO_Error",
+    "Last_SQL_Errno",
+    "Last_SQL_Error",
+    "Replicate_Ignore_Server_Ids",
+    "Master_Server_Id",
+    "Master_UUID",
+    "Master_Info_File",
+    "SQL_Delay",
+    "SQL_Remaining_Delay",
+    "Slave_SQL_Running_State",
+    "Master_Retry_Count",
+    "Master_Bind",
+    "Last_IO_Error_TimeStamp",
+    "Last_SQL_Error_Timestamp",
+    "Master_SSL_Crl",
+    "Master_SSL_Crlpath",
+    "Retrieved_Gtid_Set",
+    "Executed_Gtid_Set",
+    "Auto_Position",
+    NULL
 };
 
 /*
@@ -1206,8 +1252,12 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     ptr += col_len;
 
     // Master_Host
-    snprintf(column, max_column_size, "%s",
-             router->service->dbref->server->name ? router->service->dbref->server->name : "");
+    snprintf(column,
+             max_column_size,
+             "%s",
+             router->service->dbref->server->name ?
+             router->service->dbref->server->name :
+             "");
     col_len = strlen(column);
     *ptr++ = col_len;                          // Length of result string
     memcpy((char *)ptr, column, col_len);      // Result string
@@ -1961,7 +2011,8 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
                router->service->name, slave->dcb->remote,
                dcb_get_port(slave->dcb),
                slave->serverid,
-               slave->binlogfile, (unsigned long)slave->binlog_pos);
+               slave->binlogfile,
+               (unsigned long)slave->binlog_pos);
 
     /* Force the slave to call catchup routine */
     poll_fake_write_event(slave->dcb);
@@ -2313,7 +2364,8 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 #endif
             if (hkheartbeat - beat1 > 1)
             {
-                MXS_ERROR("blr_open_binlog took %lu beats", hkheartbeat - beat1);
+                MXS_ERROR("blr_open_binlog took %lu beats",
+                          hkheartbeat - beat1);
             }
         }
 
@@ -2518,8 +2570,10 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                       slave->dcb->remote,
                       dcb_get_port(slave->dcb),
                       slave->serverid,
-                      slave->binlogfile, (unsigned long)slave->binlog_pos,
-                      router->binlog_name, router->binlog_position);
+                      slave->binlogfile,
+                      (unsigned long)slave->binlog_pos,
+                      router->binlog_name,
+                      router->binlog_position);
 
             /* Reset encryption context */
             MXS_FREE(slave->encryption_ctx);
@@ -2527,9 +2581,15 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 
             /* Now pass the next_file to blr_slave_fake_rotate() */
 #ifdef BLFILE_IN_SLAVE
-            if (blr_slave_fake_rotate(router, slave, &slave->file, next_file))
+            if (blr_slave_fake_rotate(router,
+                                      slave,
+                                      &slave->file,
+                                      next_file))
 #else
-            if (blr_slave_fake_rotate(router, slave, &file, next_file))
+            if (blr_slave_fake_rotate(router,
+                                      slave,
+                                      &file,
+                                      next_file))
 #endif
             {
                 spinlock_acquire(&slave->catch_lock);
@@ -2739,7 +2799,12 @@ blr_slave_read_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
         return NULL;
     }
     /* FDE is not encrypted, so we can pass NULL to last parameter */
-    if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg, NULL)) == NULL)
+    if ((record = blr_read_binlog(router,
+                                  file,
+                                  4,
+                                  &hdr,
+                                  err_msg,
+                                  NULL)) == NULL)
     {
         if (hdr.ok != SLAVE_POS_READ_OK)
         {
@@ -3196,10 +3261,10 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 }
 
 /**
- * Send a MySQL OK packet to the slave backend
+ * Send a MySQL OK packet to the connected client
  *
  * @param   router    The binlog router instance
- * @param   slave     The slave server to which we are sending the response
+ * @param   slave     The slave server to which we are sending data
  *
  * @return            Result of a write call, non-zero if successful
  */
@@ -3227,11 +3292,11 @@ blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 }
 
 /**
- * Send a MySQL OK packet with a message to the slave backend
+ * Send a MySQL OK packet with a message to the client
  *
  * @param    router     The binlog router instance
  * @param    message    The message to send
- * @param    slave      The slave server to which we are sending the response
+ * @param    slave      The slave server to which we are sending data
  *
  * @return              The write call result: non-zero on success
  */
@@ -5289,7 +5354,9 @@ blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         msg_ptr = strchr(slave->warning_msg, ':');
         if (msg_ptr)
         {
-            size_t len = (msg_ptr - slave->warning_msg > 16) ? 16 : (msg_ptr - slave->warning_msg);
+            size_t len = (msg_ptr - slave->warning_msg > 16) ?
+                         16 :
+                         (msg_ptr - slave->warning_msg);
             memcpy(err_code, slave->warning_msg, len);
             err_code[len] = 0;
             code_len = strlen(err_code);
@@ -7457,7 +7524,8 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                     blr_slave_send_error_packet(slave,
                                                 "This operation cannot be performed "
                                                 "with a running slave; run STOP SLAVE first",
-                                                (unsigned int)1198, NULL);
+                                                (unsigned int)1198,
+                                                NULL);
                 }
                 return true;
             }
@@ -7508,7 +7576,8 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                 blr_slave_send_error_packet(slave,
                                             "Cannot change master with a running slave; "
                                             "run STOP SLAVE first",
-                                            (unsigned int)1198, NULL);
+                                            (unsigned int)1198,
+                                            NULL);
                 return true;
             }
             else

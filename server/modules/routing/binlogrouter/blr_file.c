@@ -286,7 +286,9 @@ blr_file_init(ROUTER_INSTANCE *router)
         if (len > PATH_MAX)
         {
             MXS_ERROR("The length of %s/%s is more than the maximum length %d.",
-                      datadir, router->service->name, PATH_MAX);
+                      datadir,
+                      router->service->name,
+                      PATH_MAX);
             return 0;
         }
 
@@ -311,7 +313,8 @@ blr_file_init(ROUTER_INSTANCE *router)
     if (access(path, R_OK) == -1)
     {
         MXS_ERROR("%s: Unable to read the binlog directory %s.",
-                  router->service->name, router->binlogdir);
+                  router->service->name,
+                  router->binlogdir);
         return 0;
     }
 
@@ -348,7 +351,12 @@ blr_file_init(ROUTER_INSTANCE *router)
         file_found = 0;
         do
         {
-            snprintf(filename, PATH_MAX, "%s/" BINLOG_NAMEFMT, path, router->fileroot, n);
+            snprintf(filename,
+                     PATH_MAX,
+                     "%s/" BINLOG_NAMEFMT,
+                     path,
+                     router->fileroot,
+                     n);
             if (access(filename, R_OK) != -1)
             {
                 file_found  = 1;
@@ -364,7 +372,11 @@ blr_file_init(ROUTER_INSTANCE *router)
 
         if (n == 0)     // No binlog files found
         {
-            snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot, router->initbinlog);
+            snprintf(filename,
+                     PATH_MAX,
+                     BINLOG_NAMEFMT,
+                     router->fileroot,
+                     router->initbinlog);
 
             if (!blr_file_create(router, filename))
             {
@@ -373,7 +385,11 @@ blr_file_init(ROUTER_INSTANCE *router)
         }
         else
         {
-            snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot, n);
+            snprintf(filename,
+                     PATH_MAX,
+                     BINLOG_NAMEFMT,
+                     router->fileroot,
+                     n);
             blr_file_append(router, filename);
         }
         return 1;
@@ -410,7 +426,12 @@ blr_file_init(ROUTER_INSTANCE *router)
         router->mariadb10_gtid_domain = last_gtid.gtid_elms.domain_id;
         router->orig_masterid = last_gtid.gtid_elms.server_id;
 
-        snprintf(filename, PATH_MAX, "%s/%s/%s", path, f_prefix, last_gtid.file);
+        snprintf(filename,
+                 PATH_MAX,
+                 "%s/%s/%s",
+                 path,
+                 f_prefix,
+                 last_gtid.file);
         if (access(filename, R_OK) != -1)
         {
             blr_file_append(router, last_gtid.file);
@@ -466,8 +487,10 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
 {
     if (strlen(file) > BINLOG_FNAMELEN)
     {
-        MXS_ERROR("The binlog filename %s is longer than the maximum allowed length %d.",
-                  file, BINLOG_FNAMELEN);
+        MXS_ERROR("The binlog filename %s is longer than "
+                  "the maximum allowed length %d.",
+                  file,
+                  BINLOG_FNAMELEN);
         return 0;
     }
 
@@ -523,7 +546,8 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
             spinlock_acquire(&router->binlog_lock);
             strcpy(router->binlog_name, file);
             router->binlog_fd = fd;
-            router->current_pos = BINLOG_MAGIC_SIZE;     /* Initial position after the magic number */
+            /* Initial position after the magic number */
+            router->current_pos = BINLOG_MAGIC_SIZE;
             router->binlog_position = BINLOG_MAGIC_SIZE;
             router->current_safe_event = BINLOG_MAGIC_SIZE;
             router->last_written = BINLOG_MAGIC_SIZE;
@@ -559,21 +583,28 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
         }
         else
         {
-            MXS_ERROR("%s: Failed to write magic string to created binlog file %s, %s.",
-                      router->service->name, path, mxs_strerror(errno));
+            MXS_ERROR("%s: Failed to write magic string to "
+                      "created binlog file %s, %s.",
+                      router->service->name,
+                      path,
+                      mxs_strerror(errno));
             close(fd);
 
             if (!unlink(path))
             {
                 MXS_ERROR("%s: Failed to delete file %s, %s.",
-                          router->service->name, path, mxs_strerror(errno));
+                          router->service->name,
+                          path,
+                          mxs_strerror(errno));
             }
         }
     }
     else
     {
         MXS_ERROR("%s: Failed to create binlog file %s, %s.",
-                  router->service->name, path, mxs_strerror(errno));
+                  router->service->name,
+                  path,
+                  mxs_strerror(errno));
     }
 
     return created;
@@ -641,7 +672,8 @@ blr_file_append(ROUTER_INSTANCE *router, char *file)
             }
             else
             {
-                MXS_ERROR("%s: Could not write magic to binlog file.", router->service->name);
+                MXS_ERROR("%s: Could not write magic to binlog file.",
+                          router->service->name);
             }
         }
         else
@@ -649,7 +681,9 @@ blr_file_append(ROUTER_INSTANCE *router, char *file)
             /* If for any reason the file's length is between 1 and 3 bytes
              * then report an error. */
             MXS_ERROR("%s: binlog file %s has an invalid length %lu.",
-                      router->service->name, path, router->current_pos);
+                      router->service->name,
+                      path,
+                      router->current_pos);
             close(fd);
             spinlock_release(&router->binlog_lock);
             return;
@@ -668,7 +702,10 @@ blr_file_append(ROUTER_INSTANCE *router, char *file)
  * @return       Return the number of bytes written
  */
 int
-blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size, uint8_t *buf)
+blr_write_binlog_record(ROUTER_INSTANCE *router,
+                        REP_HEADER *hdr,
+                        uint32_t size,
+                        uint8_t *buf)
 {
     int n = 0;
     bool write_start_encryption_event = false;
@@ -689,7 +726,11 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     if (hdr->next_pos && (hdr->next_pos > (file_offset + size)))
     {
         uint64_t hole_size = hdr->next_pos - file_offset - size;
-        if (!blr_write_special_event(router, file_offset, hole_size, hdr, BLRM_IGNORABLE))
+        if (!blr_write_special_event(router,
+                                     file_offset,
+                                     hole_size,
+                                     hdr,
+                                     BLRM_IGNORABLE))
         {
             return 0;
         }
@@ -712,7 +753,10 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
 
         encr_ptr = GWBUF_DATA(encrypted);
 
-        n = pwrite(router->binlog_fd, encr_ptr, size, router->last_written);
+        n = pwrite(router->binlog_fd,
+                   encr_ptr,
+                   size,
+                   router->last_written);
 
         gwbuf_free(encrypted);
         encrypted = NULL;
@@ -720,7 +764,10 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     else
     {
         /* Write current received event form master */
-        n = pwrite(router->binlog_fd, buf, size, router->last_written);
+        n = pwrite(router->binlog_fd,
+                   buf,
+                   size,
+                   router->last_written);
     }
 
     /* Check write operation result*/
@@ -728,14 +775,16 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     {
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
-                  router->service->name, router->binlog_position,
+                  router->service->name,
+                  router->binlog_position,
                   router->binlog_name,
                   mxs_strerror(errno));
         /* Remove any partial event that was written */
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
-                      router->service->name, router->binlog_position,
+                      router->service->name,
+                      router->binlog_position,
                       router->binlog_name,
                       mxs_strerror(errno));
         }
@@ -758,7 +807,11 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         {
             event_size += BINLOG_EVENT_CRC_SIZE;
         }
-        if (!blr_write_special_event(router, file_offset, event_size, hdr, BLRM_START_ENCRYPTION))
+        if (!blr_write_special_event(router,
+                                     file_offset,
+                                     event_size,
+                                     hdr,
+                                     BLRM_START_ENCRYPTION))
         {
             return 0;
         }
@@ -806,16 +859,21 @@ blr_open_binlog(ROUTER_INSTANCE *router,
     size_t len = strlen(binlog);
     if (len > BINLOG_FNAMELEN)
     {
-        MXS_ERROR("The binlog filename %s is longer than the maximum allowed length %d.",
-                  binlog, BINLOG_FNAMELEN);
+        MXS_ERROR("The binlog filename %s is longer than "
+                  "the maximum allowed length %d.",
+                  binlog,
+                  BINLOG_FNAMELEN);
         return NULL;
     }
 
     len += (strlen(router->binlogdir) + 1); // +1 for the '.'
     if (len > PATH_MAX)
     {
-        MXS_ERROR("The length of %s/%s is longer than the maximum allowed length %d.",
-                  router->binlogdir, binlog, PATH_MAX);
+        MXS_ERROR("The length of %s/%s is longer than the "
+                  "maximum allowed length %d.",
+                  router->binlogdir,
+                  binlog,
+                  PATH_MAX);
         return NULL;
     }
 
@@ -920,8 +978,10 @@ blr_read_binlog(ROUTER_INSTANCE *router,
 
     if (!file)
     {
-        snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                 "Invalid file pointer for requested binlog at position %lu", pos);
+        snprintf(errmsg,
+                 BINLOG_ERROR_MSG_LEN,
+                 "Invalid file pointer for requested binlog at position %lu",
+                 pos);
         return NULL;
     }
 
@@ -935,8 +995,10 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         if (file->fd == -1)
         {
             hdr->ok = SLAVE_POS_BAD_FD;
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                     "blr_read_binlog called with invalid file->fd, pos %lu", pos);
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "blr_read_binlog called with invalid file->fd, pos %lu",
+                     pos);
             spinlock_release(&file->lock);
             return NULL;
         }
@@ -954,15 +1016,23 @@ blr_read_binlog(ROUTER_INSTANCE *router,
                                  router->binlog_name,
                                  file->binlogname))
         {
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond "
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Requested position %lu is beyond "
                      "'closed' binlog file '%s', size %lu. Generating Error '1236'",
-                     pos, file->binlogname, filelen);
+                     pos,
+                     file->binlogname,
+                     filelen);
         }
         else
         {
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond "
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Requested position %lu is beyond "
                      "end of the latest binlog file '%s', size %lu. Disconnecting",
-                     pos, file->binlogname, filelen);
+                     pos,
+                     file->binlogname,
+                     filelen);
 
             /* Slave will be disconnected by the calling routine */
             hdr->ok = SLAVE_POS_BEYOND_EOF;
@@ -987,9 +1057,13 @@ blr_read_binlog(ROUTER_INSTANCE *router,
     {
         if (pos > router->binlog_position)
         {
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu is unsafe. "
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Requested binlog position %lu is unsafe. "
                      "Latest safe position %lu, end of binlog file %lu",
-                     pos, router->binlog_position, router->current_pos);
+                     pos,
+                     router->binlog_position,
+                     router->current_pos);
 
             hdr->ok = SLAVE_POS_READ_UNSAFE;
         }
@@ -1009,7 +1083,10 @@ blr_read_binlog(ROUTER_INSTANCE *router,
     spinlock_release(&router->binlog_lock);
 
     /* Read the header information from the file */
-    if ((n = pread(file->fd, hdbuf, BINLOG_EVENT_HDR_LEN, pos)) != BINLOG_EVENT_HDR_LEN)
+    if ((n = pread(file->fd,
+                   hdbuf,
+                   BINLOG_EVENT_HDR_LEN,
+                   pos)) != BINLOG_EVENT_HDR_LEN)
     {
         switch (n)
         {
@@ -1023,22 +1100,35 @@ blr_read_binlog(ROUTER_INSTANCE *router,
             break;
         case -1:
             {
-                snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file '%s'; (%s), event at %lu",
-                         file->binlogname, mxs_strerror(errno), pos);
+                snprintf(errmsg,
+                         BINLOG_ERROR_MSG_LEN,
+                         "Failed to read binlog file '%s'; (%s), event at %lu",
+                         file->binlogname,
+                         mxs_strerror(errno),
+                         pos);
 
                 if (errno == EBADF)
                 {
-                    snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                    snprintf(errmsg,
+                             BINLOG_ERROR_MSG_LEN,
                              "Bad file descriptor for binlog file '%s', "
                              "refcount %d, descriptor %d, event at %lu",
-                             file->binlogname, file->refcnt, file->fd, pos);
+                             file->binlogname,
+                             file->refcnt,
+                             file->fd,
+                             pos);
                 }
             }
             break;
         default:
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bogus data in log event header; "
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Bogus data in log event header; "
                      "expected %d bytes but read %d, position %lu, binlog file '%s'",
-                     BINLOG_EVENT_HDR_LEN, n, pos, file->binlogname);
+                     BINLOG_EVENT_HDR_LEN,
+                     n,
+                     pos,
+                     file->binlogname);
             break;
         }
         return NULL;
@@ -1058,7 +1148,11 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         /**
          * Binlog event check based on Replication Header content and pos
          */
-        if (!blr_binlog_event_check(router, pos, hdr, file->binlogname, errmsg))
+        if (!blr_binlog_event_check(router,
+                                    pos,
+                                    hdr,
+                                    file->binlogname,
+                                    errmsg))
         {
             return NULL;
         }
@@ -1072,7 +1166,10 @@ blr_read_binlog(ROUTER_INSTANCE *router,
                       pos, file->binlogname, filelen, router->binlog_position,
                       router->binlog_name);
 
-            if ((n = pread(file->fd, hdbuf, BINLOG_EVENT_HDR_LEN, pos)) != BINLOG_EVENT_HDR_LEN)
+            if ((n = pread(file->fd,
+                           hdbuf,
+                           BINLOG_EVENT_HDR_LEN,
+                           pos)) != BINLOG_EVENT_HDR_LEN)
             {
                 switch (n)
                 {
@@ -1085,23 +1182,35 @@ blr_read_binlog(ROUTER_INSTANCE *router,
                     break;
                 case -1:
                     {
-                        snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                        snprintf(errmsg,
+                                 BINLOG_ERROR_MSG_LEN,
                                  "Failed to reread header in binlog file '%s'; (%s), event at %lu",
-                                 file->binlogname, mxs_strerror(errno), pos);
+                                 file->binlogname,
+                                 mxs_strerror(errno),
+                                 pos);
 
                         if (errno == EBADF)
                         {
-                            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                            snprintf(errmsg,
+                                     BINLOG_ERROR_MSG_LEN,
                                      "Bad file descriptor rereading header for binlog file '%s', "
                                      "refcount %d, descriptor %d, event at %lu",
-                                     file->binlogname, file->refcnt, file->fd, pos);
+                                     file->binlogname,
+                                     file->refcnt,
+                                     file->fd,
+                                     pos);
                         }
                     }
                     break;
                 default:
-                    snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bogus data rereading log event header; "
+                    snprintf(errmsg,
+                             BINLOG_ERROR_MSG_LEN,
+                             "Bogus data rereading log event header; "
                              "expected %d bytes but read %d, position %lu in binlog file '%s'",
-                             BINLOG_EVENT_HDR_LEN, n, pos, file->binlogname);
+                             BINLOG_EVENT_HDR_LEN,
+                             n,
+                             pos,
+                             file->binlogname);
                     break;
                 }
                 return NULL;
@@ -1117,8 +1226,12 @@ blr_read_binlog(ROUTER_INSTANCE *router,
 
             if (hdr->next_pos < pos && hdr->event_type != ROTATE_EVENT)
             {
-                snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Next event position still incorrect after rereading, "
-                         "event at %lu in binlog file '%s'", pos, file->binlogname);
+                snprintf(errmsg,
+                         BINLOG_ERROR_MSG_LEN,
+                         "Next event position still incorrect after rereading, "
+                         "event at %lu in binlog file '%s'",
+                         pos,
+                         file->binlogname);
                 return NULL;
             }
             else
@@ -1141,9 +1254,13 @@ blr_read_binlog(ROUTER_INSTANCE *router,
     /* Allocate memory for the binlog event */
     if ((result = gwbuf_alloc(hdr->event_size)) == NULL)
     {
-        snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                 "Failed to allocate memory for binlog entry, size %d, event at %lu in binlog file '%s'",
-                 hdr->event_size, pos, file->binlogname);
+        snprintf(errmsg,
+                 BINLOG_ERROR_MSG_LEN,
+                 "Failed to allocate memory for binlog entry, "
+                 "size %d, event at %lu in binlog file '%s'",
+                 hdr->event_size,
+                 pos,
+                 file->binlogname);
         return NULL;
     }
 
@@ -1151,7 +1268,9 @@ blr_read_binlog(ROUTER_INSTANCE *router,
 
     memcpy(data, hdbuf, BINLOG_EVENT_HDR_LEN);  // Copy the header in the buffer
 
-    if ((n = pread(file->fd, &data[BINLOG_EVENT_HDR_LEN], hdr->event_size - BINLOG_EVENT_HDR_LEN,
+    if ((n = pread(file->fd,
+                   &data[BINLOG_EVENT_HDR_LEN],
+                   hdr->event_size - BINLOG_EVENT_HDR_LEN,
                    pos + BINLOG_EVENT_HDR_LEN))
         != hdr->event_size - BINLOG_EVENT_HDR_LEN)  // Read the balance
     {
@@ -1168,7 +1287,8 @@ blr_read_binlog(ROUTER_INSTANCE *router,
 
         if (n == -1)
         {
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
                      "Error reading the binlog event at %lu in binlog file '%s';"
                      "(%s), expected %d bytes.",
                      pos,
@@ -1178,17 +1298,27 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         }
         else
         {
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bogus data in log event entry; "
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Bogus data in log event entry; "
                      "expected %d bytes but got %d, position %lu in binlog file '%s'",
-                     hdr->event_size - BINLOG_EVENT_HDR_LEN, n, pos, file->binlogname);
+                     hdr->event_size - BINLOG_EVENT_HDR_LEN,
+                     n,
+                     pos,
+                     file->binlogname);
 
             if (filelen != 0 && filelen - pos < hdr->event_size)
             {
-                snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Binlog event is close to the end of the binlog file; "
+                snprintf(errmsg,
+                         BINLOG_ERROR_MSG_LEN,
+                         "Binlog event is close to the end of the binlog file; "
                          "current file size is %lu, event at %lu in binlog file '%s'",
-                         filelen, pos, file->binlogname);
+                         filelen, pos,
+                         file->binlogname);
             }
-            blr_log_header(LOG_ERR, "Possible malformed event header", hdbuf);
+            blr_log_header(LOG_ERR,
+                           "Possible malformed event header",
+                           hdbuf);
         }
 
         gwbuf_free(result);
@@ -1212,9 +1342,13 @@ blr_read_binlog(ROUTER_INSTANCE *router,
                                                            enc_ctx->nonce,
                                                            BINLOG_FLAG_DECRYPT)) == NULL)
         {
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Binlog event decryption error: "
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Binlog event decryption error: "
                      "file size is %lu, event at %lu in binlog file '%s'",
-                     filelen, pos, file->binlogname);
+                     filelen,
+                     pos,
+                     file->binlogname);
             gwbuf_free(result);
             return NULL;
         }
@@ -1235,7 +1369,11 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         /**
          * Binlog event check based on Rep Header content and pos
          */
-        if (!blr_binlog_event_check(router, pos, hdr, file->binlogname, errmsg))
+        if (!blr_binlog_event_check(router,
+                                    pos,
+                                    hdr,
+                                    file->binlogname,
+                                    errmsg))
         {
             gwbuf_free(decrypted_event);
             return NULL;
@@ -1353,11 +1491,18 @@ void
 blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 {
     static const char CACHE[] = "/cache";
-    size_t len = strlen(router->binlogdir) + (sizeof(CACHE) - 1) + sizeof('/') + strlen(response);
+    size_t len = strlen(router->binlogdir) +
+                 (sizeof(CACHE) - 1) +
+                 sizeof('/') +
+                 strlen(response);
     if (len > PATH_MAX)
     {
-        MXS_ERROR("The cache path %s%s/%s is longer than the maximum allowed length %d.",
-                  router->binlogdir, CACHE, response, PATH_MAX);
+        MXS_ERROR("The cache path %s%s/%s is longer than "
+                  "the maximum allowed length %d.",
+                  router->binlogdir,
+                  CACHE,
+                  response,
+                  PATH_MAX);
         return;
     }
 
@@ -1384,7 +1529,8 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
     if (write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf)) == -1)
     {
         MXS_ERROR("Failed to write cached response: %d, %s",
-                  errno, mxs_strerror(errno));
+                  errno,
+                  mxs_strerror(errno));
     }
 
     close(fd);
@@ -1405,11 +1551,18 @@ GWBUF *
 blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 {
     static const char CACHE[] = "/cache";
-    size_t len = strlen(router->binlogdir) + (sizeof(CACHE) - 1) + sizeof('/') + strlen(response);
+    size_t len = strlen(router->binlogdir) +
+                 (sizeof(CACHE) - 1) +
+                 sizeof('/') +
+                 strlen(response);
     if (len > PATH_MAX)
     {
-        MXS_ERROR("The cache path %s%s/%s is longer than the maximum allowed length %d.",
-                  router->binlogdir, CACHE, response, PATH_MAX);
+        MXS_ERROR("The cache path %s%s/%s is longer than "
+                  "the maximum allowed length %d.",
+                  router->binlogdir,
+                  CACHE,
+                  response,
+                  PATH_MAX);
         return NULL;
     }
 
@@ -1441,7 +1594,8 @@ blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
     if (read(fd, GWBUF_DATA(buf), statb.st_size) == -1)
     {
         MXS_ERROR("Failed to read cached response: %d, %s",
-                  errno, mxs_strerror(errno));
+                  errno,
+                  mxs_strerror(errno));
     }
     close(fd);
     return buf;
@@ -1655,7 +1809,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
     {
 
         /* Read the header information from the file */
-        if ((n = pread(router->binlog_fd, hdbuf, BINLOG_EVENT_HDR_LEN, pos)) != BINLOG_EVENT_HDR_LEN)
+        if ((n = pread(router->binlog_fd,
+                       hdbuf,
+                       BINLOG_EVENT_HDR_LEN,
+                       pos)) != BINLOG_EVENT_HDR_LEN)
         {
             switch (n)
             {
@@ -1759,8 +1916,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 router->current_pos = pos;
                 router->pending_transaction.state = BLRM_TRANSACTION_START;
 
-                MXS_ERROR("Binlog '%s' ends at position %lu and has an incomplete transaction at %lu. ",
-                          router->binlog_name, router->current_pos, router->binlog_position);
+                MXS_ERROR("Binlog '%s' ends at position %lu "
+                          "and has an incomplete transaction at %lu. ",
+                          router->binlog_name,
+                          router->current_pos,
+                          router->binlog_position);
 
                 return 0;
             }
@@ -1775,7 +1935,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                     MXS_WARNING("an error has been found. "
                                 "Setting safe pos to %lu, current pos %lu",
-                                router->binlog_position, router->current_pos);
+                                router->binlog_position,
+                                router->current_pos);
                     if (fix)
                     {
                         if (ftruncate(router->binlog_fd, router->binlog_position) == 0)
@@ -1827,7 +1988,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                 MXS_DEBUG("** Encrypted Event @ %lu: the IV is %s, size is %lu, next pos is %lu\n",
                           (unsigned long)pos,
-                          iv_hex, (unsigned long)event_size,
+                          iv_hex,
+                          (unsigned long)event_size,
                           (unsigned long)(pos + event_size));
             }
 
@@ -1889,7 +2051,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                 MXS_WARNING("an error has been found. "
                             "Setting safe pos to %lu, current pos %lu",
-                            router->binlog_position, router->current_pos);
+                            router->binlog_position,
+                            router->current_pos);
                 if (fix)
                 {
                     if (ftruncate(router->binlog_fd, router->binlog_position) == 0)
@@ -1918,7 +2081,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
             MXS_WARNING("an error has been found. "
                         "Setting safe pos to %lu, current pos %lu",
-                        router->binlog_position, router->current_pos);
+                        router->binlog_position,
+                        router->current_pos);
 
             if (fix)
             {
@@ -1939,7 +2103,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         memcpy(data, hdbuf, BINLOG_EVENT_HDR_LEN);// Copy the header in
 
         /* Read event data */
-        if ((n = pread(router->binlog_fd, &data[BINLOG_EVENT_HDR_LEN],
+        if ((n = pread(router->binlog_fd,
+                       &data[BINLOG_EVENT_HDR_LEN],
                        hdr.event_size - BINLOG_EVENT_HDR_LEN,
                        pos + BINLOG_EVENT_HDR_LEN)) != hdr.event_size - BINLOG_EVENT_HDR_LEN)
         {
@@ -1947,7 +2112,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             {
                 MXS_ERROR("Error reading the event at %llu in %s. "
                           "%s, expected %d bytes.",
-                          pos, router->binlog_name,
+                          pos,
+                          router->binlog_name,
                           mxs_strerror(errno),
                           hdr.event_size - BINLOG_EVENT_HDR_LEN);
             }
@@ -1955,14 +2121,16 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             {
                 MXS_ERROR("Short read when reading the event at %llu in %s. "
                           "Expected %d bytes got %d bytes.",
-                          pos, router->binlog_name,
+                          pos,
+                          router->binlog_name,
                           hdr.event_size - BINLOG_EVENT_HDR_LEN, n);
 
                 if (filelen > 0 && filelen - pos < hdr.event_size)
                 {
                     MXS_ERROR("Binlog event is close to the end of the binlog file %s, "
-                              " size is %lu.",
-                              router->binlog_name, filelen);
+                              "size is %lu.",
+                              router->binlog_name,
+                              filelen);
                 }
             }
 
@@ -1974,7 +2142,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
             MXS_WARNING("an error has been found. "
                         "Setting safe pos to %lu, current pos %lu",
-                        router->binlog_position, router->current_pos);
+                        router->binlog_position,
+                        router->current_pos);
             if (fix)
             {
                 if (ftruncate(router->binlog_fd, router->binlog_position) == 0)
@@ -2091,7 +2260,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("- Format Description event FDE @ %llu, size %lu, time %lu (%s)",
-                          pos, (unsigned long)hdr.event_size, fde_event.event_time, buf_t);
+                          pos,
+                          (unsigned long)hdr.event_size,
+                          fde_event.event_time,
+                          buf_t);
             }
 
             /* FDE is:
@@ -2167,10 +2339,22 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             MXS_DEBUG("%8s==== Event Header ====\n%39sEvent Pos %lu\n%39sEvent time %lu\n%39s"
                       "Event size %lu\n%39sEvent Type %u (%s)\n%39s"
                       "Server Id %lu\n%39sNextPos %lu\n%39sFlags %u",
-                      " ", " ", (unsigned long) pos, " ", (unsigned long)hdr.timestamp, " ",
-                      (unsigned long)hdr.event_size, " ", hdr.event_type,
-                      event_desc ? event_desc : "NULL", " ",
-                      (unsigned long)hdr.serverid, " ", (unsigned long)hdr.next_pos, " ", hdr.flags);
+                      " ",
+                      " ",
+                      (unsigned long) pos,
+                      " ",
+                      (unsigned long)hdr.timestamp,
+                      " ",
+                      (unsigned long)hdr.event_size,
+                      " ",
+                      hdr.event_type,
+                      event_desc ? event_desc : "NULL",
+                      " ",
+                      (unsigned long)hdr.serverid,
+                      " ",
+                      (unsigned long)hdr.next_pos,
+                      " ",
+                      hdr.flags);
             if (found_chksum)
             {
                 char hex_checksum[BINLOG_EVENT_CRC_SIZE * 2 + strlen(BLR_REPORT_CHECKSUM_FORMAT) + 1];
@@ -2207,7 +2391,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             memcpy(new_encryption_ctx->nonce, ste_event.nonce, BLRM_NONCE_LENGTH);
             new_encryption_ctx->binlog_crypto_scheme = ste_event.binlog_crypto_scheme;
             memcpy(&new_encryption_ctx->binlog_key_version,
-                   &ste_event.binlog_key_version, BLRM_KEY_VERSION_LENGTH);
+                   &ste_event.binlog_key_version,
+                   BLRM_KEY_VERSION_LENGTH);
 
             if (!(debug & BLR_CHECK_ONLY))
             {
@@ -2215,11 +2400,16 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
 
                 MXS_DEBUG("- START_ENCRYPTION event @ %llu, size %lu, next pos is @ %lu, flags %u",
-                          pos, (unsigned long)hdr.event_size, (unsigned long)hdr.next_pos, hdr.flags);
+                          pos,
+                          (unsigned long)hdr.event_size,
+                          (unsigned long)hdr.next_pos,
+                          hdr.flags);
 
                 MXS_DEBUG("        Encryption scheme: %u, key_version: %u,"
-                          " nonce: %s\n", ste_event.binlog_crypto_scheme,
-                          ste_event.binlog_key_version, nonce_hex);
+                          " nonce: %s\n",
+                          ste_event.binlog_crypto_scheme,
+                          ste_event.binlog_key_version,
+                          nonce_hex);
             }
 
             if (router->encryption.key_len == 0)
@@ -2267,7 +2457,9 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("- Rotate event @ %llu, next file is [%s] @ %lu",
-                          pos, file, new_pos);
+                          pos,
+                          file,
+                          new_pos);
             }
         }
 
@@ -2317,7 +2509,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             router->master_chksum = found_chksum;
 
             /* Create and write Ingonrable event into binlog file at action->pos */
-            blr_write_special_event(router, pos, hdr.event_size, &hdr, BLRM_IGNORABLE);
+            blr_write_special_event(router,
+                                    pos,
+                                    hdr.event_size,
+                                    &hdr,
+                                    BLRM_IGNORABLE);
 
             /* Set replace indicator: when COMMIT is seen later, it will be set to false */
             replace_trx_events = action->replace_trx ? true : false;
@@ -2352,8 +2548,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     MXS_ERROR("Transaction cannot be @ pos %llu: "
                               "Another MariaDB 10 transaction (GTID %u-%u-%lu)"
                               " was opened at %llu",
-                              pos, domainid, hdr.serverid,
-                              n_sequence, last_known_commit);
+                              pos, domainid,
+                              hdr.serverid,
+                              n_sequence,
+                              last_known_commit);
 
                     gwbuf_free(result);
 
@@ -2391,7 +2589,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     {
                         MXS_DEBUG("> MariaDB 10 Transaction (GTID %u-%u-%lu)"
                                   " starts @ pos %llu",
-                                  domainid, hdr.serverid, n_sequence, pos);
+                                  domainid,
+                                  hdr.serverid,
+                                  n_sequence,
+                                  pos);
                     }
                 }
             }
@@ -2533,7 +2734,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     {
                         MXS_ERROR("Transaction cannot be @ pos %llu: "
                                   "Another transaction was opened at %llu",
-                                  pos, last_known_commit);
+                                  pos,
+                                  last_known_commit);
 
                         MXS_FREE(statement_sql);
                         gwbuf_free(result);
@@ -2596,7 +2798,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             }
             else
             {
-                MXS_ERROR("Unable to allocate memory for statement SQL in blr_file.c ");
+                MXS_ERROR("Unable to allocate memory for statement SQL in blr_file.c");
                 gwbuf_free(result);
                 break;
             }
@@ -2679,7 +2881,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
             MXS_WARNING("an error has been found. "
                         "Setting safe pos to %lu, current pos %lu",
-                        router->binlog_position, router->current_pos);
+                        router->binlog_position,
+                        router->current_pos);
             if (fix)
             {
                 if (ftruncate(router->binlog_fd, router->binlog_position) == 0)
@@ -2709,7 +2912,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
             MXS_WARNING("an error has been found. "
                         "Setting safe pos to %lu, current pos %lu",
-                        router->binlog_position, router->current_pos);
+                        router->binlog_position,
+                        router->current_pos);
 
             if (fix)
             {
@@ -2744,7 +2948,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         else
         {
             MXS_ERROR("Current event type %d @ %llu has nex pos = %u : exiting",
-                      hdr.event_type, pos, hdr.next_pos);
+                      hdr.event_type, pos,
+                      hdr.next_pos);
             break;
         }
 
@@ -2764,7 +2969,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
         MXS_WARNING("an error has been found. "
                     "Setting safe pos to %lu, current pos %lu",
-                    router->binlog_position, router->current_pos);
+                    router->binlog_position,
+                    router->current_pos);
 
         return 0;
     }
@@ -3050,7 +3256,8 @@ blr_create_ignorable_event(uint32_t event_size,
     if (event_size < BINLOG_EVENT_HDR_LEN)
     {
         MXS_ERROR("blr_create_ignorable_event an event of %lu bytes"
-                  " is not valid in blr_file.c", (unsigned long)event_size);
+                  " is not valid in blr_file.c",
+                 (unsigned long)event_size);
         return NULL;
     }
 
@@ -3099,7 +3306,10 @@ blr_create_ignorable_event(uint32_t event_size,
  * @return              1 on success, 0 on error
  */
 int
-blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t event_size, REP_HEADER *hdr,
+blr_write_special_event(ROUTER_INSTANCE *router,
+                        uint32_t file_offset,
+                        uint32_t event_size,
+                        REP_HEADER *hdr,
                         int type)
 {
     int n;
@@ -3175,11 +3385,16 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
     }
 
     /* Write the event */
-    if ((n = pwrite(router->binlog_fd, new_event, event_size, router->last_written)) != event_size)
+    if ((n = pwrite(router->binlog_fd,
+                    new_event,
+                    event_size,
+                    router->last_written)) != event_size)
     {
         MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
-                  router->service->name, new_event_desc, (unsigned long)file_offset,
+                  router->service->name,
+                  new_event_desc,
+                  (unsigned long)file_offset,
                   router->binlog_name,
                   mxs_strerror(errno));
 
@@ -3187,7 +3402,9 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate %s special binlog record at %lu of %s, %s. ",
-                      router->service->name, new_event_desc, (unsigned long)file_offset,
+                      router->service->name,
+                      new_event_desc,
+                      (unsigned long)file_offset,
                       router->binlog_name,
                       mxs_strerror(errno));
         }
@@ -3224,7 +3441,9 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
  */
 
 uint8_t *
-blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, bool do_checksum)
+blr_create_start_encryption_event(ROUTER_INSTANCE *router,
+                                  uint32_t event_pos,
+                                  bool do_checksum)
 {
     uint8_t *new_event;
     uint8_t event_size = sizeof(START_ENCRYPTION_EVENT);
@@ -3292,7 +3511,8 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
     memcpy(new_encryption_ctx->nonce, nonce_ptr, BLRM_NONCE_LENGTH);
     new_encryption_ctx->binlog_crypto_scheme = new_event[BINLOG_EVENT_HDR_LEN];
     memcpy(&new_encryption_ctx->binlog_key_version,
-           &new_event[BINLOG_EVENT_HDR_LEN + 1], BLRM_KEY_VERSION_LENGTH);
+           &new_event[BINLOG_EVENT_HDR_LEN + 1],
+           BLRM_KEY_VERSION_LENGTH);
 
     /* Set the router encryption context for current binlog file */
     MXS_FREE(router->encryption_ctx);
@@ -3356,7 +3576,8 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
                            iv,
                            action))
     {
-        MXS_ERROR("Error in EVP_CipherInit_ex for algo %d", router->encryption.encryption_algorithm);
+        MXS_ERROR("Error in EVP_CipherInit_ex for algo %d",
+                  router->encryption.encryption_algorithm);
         EVP_CIPHER_CTX_cleanup(&ctx);
         MXS_FREE(outbuf);
         return NULL;
@@ -3485,9 +3706,11 @@ static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
     gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
     gw_bin2hex(nonce_hex, nonce_ptr, BLRM_NONCE_LENGTH);
 
-    MXS_DEBUG("** Encryption/Decryption of Event @ %lu: the IV is %s, size is %lu, next pos is %lu",
+    MXS_DEBUG("** Encryption/Decryption of Event @ %lu: the IV is %s, "
+              "size is %lu, next pos is %lu",
               (unsigned long)pos,
-              iv_hex, (unsigned long)size,
+              iv_hex,
+              (unsigned long)size,
               (unsigned long)(pos + size));
 #endif
 
@@ -3501,7 +3724,11 @@ static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
      * The encrypted buffer has same size of the original event (size variable)
      */
 
-    if ((encrypted = blr_aes_crypt(router, buf + 4, size - 4, iv, action)) == NULL)
+    if ((encrypted = blr_aes_crypt(router,
+                                   buf + 4,
+                                   size - 4,
+                                   iv,
+                                   action)) == NULL)
     {
         return NULL;
     }
@@ -3665,12 +3892,14 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
                                   char *errmsg)
 {
     /* event pos & size checks */
-    if (hdr->event_size == 0 || ((hdr->next_pos != (pos + hdr->event_size)) &&
-                                 (hdr->event_type != ROTATE_EVENT)))
+    if (hdr->event_size == 0 ||
+        ((hdr->next_pos != (pos + hdr->event_size)) &&
+         (hdr->event_type != ROTATE_EVENT)))
     {
         snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                  "Client requested master to start replication from invalid "
-                 "position %lu in binlog file '%s'", pos,
+                 "position %lu in binlog file '%s'",
+                 pos,
                  binlogname);
         return 0;
     }
@@ -3682,7 +3911,9 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
         {
             snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                      "Invalid MariaDB 10 event type 0x%x at %lu in binlog file '%s'",
-                     hdr->event_type, pos, binlogname);
+                     hdr->event_type,
+                     pos,
+                     binlogname);
             return 0;
         }
     }
@@ -3690,9 +3921,12 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
     {
         if (hdr->event_type > MAX_EVENT_TYPE)
         {
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                     "Invalid event type 0x%x at %lu in binlog file '%s'", hdr->event_type,
-                     pos, binlogname);
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Invalid event type 0x%x at %lu in binlog file '%s'",
+                     hdr->event_type,
+                     pos,
+                     binlogname);
             return 0;
         }
     }
@@ -3709,7 +3943,9 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
  * @param buffer The buffer with binlog event
  * @output       The output buffer to fill, preallocated by the caller
  */
-static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *output)
+static void blr_report_checksum(REP_HEADER hdr,
+                                const uint8_t *buffer,
+                                char *output)
 {
     uint8_t cksum_data[BINLOG_EVENT_CRC_SIZE];
     char *ptr = output + strlen(BLR_REPORT_CHECKSUM_FORMAT);
@@ -3859,7 +4095,10 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
  *
  * @return          0 on success, 1 otherwise
  */
-static int gtid_select_cb(void *data, int cols, char** values, char** names)
+static int gtid_select_cb(void *data,
+                          int cols,
+                          char** values,
+                          char** names)
 {
     MARIADB_GTID_INFO *result = (MARIADB_GTID_INFO *)data;
 

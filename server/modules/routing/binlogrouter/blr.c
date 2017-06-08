@@ -91,10 +91,15 @@
 /* The router entry points */
 static  MXS_ROUTER  *createInstance(SERVICE *service, char **options);
 static void free_instance(ROUTER_INSTANCE *instance);
-static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
-static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
-static  int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
+static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance,
+                                       MXS_SESSION *session);
+static  void closeSession(MXS_ROUTER *instance,
+                          MXS_ROUTER_SESSION *router_session);
+static  void freeSession(MXS_ROUTER *instance,
+                         MXS_ROUTER_SESSION *router_session);
+static  int routeQuery(MXS_ROUTER *instance,
+                       MXS_ROUTER_SESSION *router_session,
+                       GWBUF *queue);
 static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
 static  json_t* diagnostics_json(const MXS_ROUTER *instance);
 static  void clientReply(MXS_ROUTER *instance,
@@ -109,14 +114,21 @@ static  void errorReply(MXS_ROUTER *instance,
                         bool *succp);
 
 static uint64_t getCapabilities(MXS_ROUTER* instance);
-static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
-static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
+static int blr_handler_config(void *userdata,
+                              const char *section,
+                              const char *name,
+                              const char *value);
+static int blr_handle_config_item(const char *name,
+                                  const char *value,
+                                  ROUTER_INSTANCE *inst);
 static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
 static void destroyInstance(MXS_ROUTER *instance);
-bool blr_extract_key(const char *linebuf, int nline, ROUTER_INSTANCE *router);
+bool blr_extract_key(const char *linebuf,
+                     int nline,
+                     ROUTER_INSTANCE *router);
 bool blr_get_encryption_key(ROUTER_INSTANCE *router);
 int blr_parse_key_file(ROUTER_INSTANCE *router);
 static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst);
@@ -125,7 +137,8 @@ static void stats_func(void *);
 
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
-GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
+GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router,
+                               char *response);
 extern bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
                                        MARIADB_GTID_INFO *result);
 
@@ -205,11 +218,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"transaction_safety", MXS_MODULE_PARAM_BOOL, "false"},
             {"semisync", MXS_MODULE_PARAM_BOOL, "false"},
             {"encrypt_binlog", MXS_MODULE_PARAM_BOOL, "false"},
-            {"encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc", MXS_MODULE_OPT_NONE, enc_algo_values},
+            {"encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc",
+             MXS_MODULE_OPT_NONE, enc_algo_values},
             {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
             {"mariadb10_slave_gtid", MXS_MODULE_PARAM_BOOL, "false"},
             {"mariadb10_master_gtid", MXS_MODULE_PARAM_BOOL, "false"},
-            {"binlog_structure", MXS_MODULE_PARAM_ENUM, "flat", MXS_MODULE_OPT_NONE, binlog_storage_values},
+            {"binlog_structure", MXS_MODULE_PARAM_ENUM, "flat",
+             MXS_MODULE_OPT_NONE, binlog_storage_values},
             {"shortburst", MXS_MODULE_PARAM_COUNT, DEF_SHORT_BURST},
             {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
@@ -383,8 +398,11 @@ createInstance(SERVICE *service, char **options)
 
     /* Binlog encryption */
     inst->encryption.enabled = config_get_bool(params, "encrypt_binlog");
-    inst->encryption.encryption_algorithm = config_get_enum(params, "encryption_algorithm", enc_algo_values);
-    inst->encryption.key_management_filename = config_copy_string(params, "encryption_key_file");
+    inst->encryption.encryption_algorithm = config_get_enum(params,
+                                                            "encryption_algorithm",
+                                                            enc_algo_values);
+    inst->encryption.key_management_filename = config_copy_string(params,
+                                                                  "encryption_key_file");
 
     /* Encryption CTX */
     inst->encryption_ctx = NULL;
@@ -668,7 +686,8 @@ createInstance(SERVICE *service, char **options)
     }
     else
     {
-        MXS_ERROR("%s: Error: No router options supplied for binlogrouter", service->name);
+        MXS_ERROR("%s: Error: No router options supplied for binlogrouter",
+                   service->name);
     }
 
     inst->orig_masterid = 0;
@@ -678,9 +697,11 @@ createInstance(SERVICE *service, char **options)
         inst->set_master_server_id = true;
     }
 
-    if ((inst->binlogdir == NULL) || (inst->binlogdir != NULL && !strlen(inst->binlogdir)))
+    if ((inst->binlogdir == NULL) ||
+        (inst->binlogdir != NULL && !strlen(inst->binlogdir)))
     {
-        MXS_ERROR("Service %s, binlog directory is not specified", service->name);
+        MXS_ERROR("Service %s, binlog directory is not specified",
+                  service->name);
         free_instance(inst);
         return NULL;
     }
@@ -688,7 +709,8 @@ createInstance(SERVICE *service, char **options)
     if (inst->serverid <= 0)
     {
         MXS_ERROR("Service %s, server-id is not configured. "
-                  "Please configure it with a unique positive integer value (1..2^32-1)",
+                  "Please configure it with a unique positive "
+                  "integer value (1..2^32-1)",
                   service->name);
         free_instance(inst);
         return NULL;
@@ -788,8 +810,11 @@ createInstance(SERVICE *service, char **options)
     {
         SERVER *server;
         SSL_LISTENER *ssl_cfg;
-        server = server_alloc("binlog_router_master_host", "_none_", 3306,
-                              "MySQLBackend", "MySQLBackendAuth", NULL);
+        server = server_alloc("binlog_router_master_host",
+                              "_none_", 3306,
+                              "MySQLBackend",
+                              "MySQLBackendAuth",
+                              NULL);
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",
@@ -887,12 +912,15 @@ createInstance(SERVICE *service, char **options)
 
     if (inst->ssl_enabled)
     {
-        if (service->dbref && service->dbref->server && service->dbref->server->server_ssl)
+        if (service->dbref &&
+            service->dbref->server &&
+            service->dbref->server->server_ssl)
         {
             /* Initialise SSL: exit on error */
             if (listener_init_SSL(service->dbref->server->server_ssl) != 0)
             {
-                MXS_ERROR("%s: Unable to initialize SSL with backend server", service->name);
+                MXS_ERROR("%s: Unable to initialize SSL with backend server",
+                          service->name);
                 /* Free SSL struct */
                 /* Note: SSL struct in server should be freed by server_free() */
                 blr_free_ssl_data(inst);
@@ -1087,7 +1115,7 @@ createInstance(SERVICE *service, char **options)
             inst->m_errno = BINLOG_FATAL_ERROR_READING;
             inst->m_errmsg = MXS_STRDUP_A("HY000 Binlog encryption is Off"
                                           " but current binlog file has"
-                                           " the START_ENCRYPTION_EVENT");
+                                          " the START_ENCRYPTION_EVENT");
 
             return (MXS_ROUTER *)inst;
         }
