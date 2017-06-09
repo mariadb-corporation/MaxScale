@@ -355,32 +355,19 @@ int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
                            struct server*** output);
 
 /**
- * Get a compiled regular expression. The returned @c pcre2_code should be freed
- * by the caller.
+ * Get a compiled regular expression and the ovector size of the pattern. The
+ * return value should be freed by the caller.
  *
  * @param params List of configuration parameters
  * @param key Parameter name
  * @param options PCRE2 compilation options
- * @return The compiled PCRE2 code, or NULL on error
+ * @param output_ovec_size Output for match data ovector size. On error,
+ * nothing is written. If NULL, the parameter is ignored.
+ * @return Compiled regex code on success, NULL otherwise
  */
-pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params, const char *key,
-                                      uint32_t options);
-
-/**
- * Get a compiled regular expression and the capture count of the pattern. The
- * @c pcre2_code should be freed by the caller.
- *
- * @param params List of configuration parameters
- * @param key Parameter name
- * @param options PCRE2 compilation options
- * @param output_code Output for compilation result
- * @param output_capcount Output for capture count
- * @return True on success, false otherwise
- */
-bool config_get_compiled_regex_capcount(const MXS_CONFIG_PARAMETER *params,
-                                        const char *key, uint32_t options,
-                                        pcre2_code** output_code,
-                                        uint32_t* output_capcount);
+pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params,
+                                      const char *key, uint32_t options,
+                                      uint32_t* output_ovec_size);
 
 /**
  * Parse a list of server names and write the results in an array of strings

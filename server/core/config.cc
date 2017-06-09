@@ -165,8 +165,8 @@ static int maxscale_getline(char** dest, int* size, FILE* file);
 static bool check_first_last_char(const char* string, char expected);
 static void remove_first_last_char(char* value);
 static bool test_regex_string_validity(const char* regex_string, const char* key);
-static bool compile_regex_string(const char* regex_string, bool jit_enabled, uint32_t options,
-                                 pcre2_code** output_code, uint32_t* output_capcount);
+static pcre2_code* compile_regex_string(const char* regex_string, bool jit_enabled,
+                                        uint32_t options, uint32_t* output_ovector_size);
 
 int config_get_ifaddr(unsigned char *output);
 static int config_get_release_string(char* release);
@@ -1240,24 +1240,13 @@ char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key)
 }
 
 pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params,
-                                      const char *key, uint32_t options)
-{
-    pcre2_code* code = NULL;
-    uint32_t capcount = 0;
-    config_get_compiled_regex_capcount(params, key, options, &code, &capcount);
-    return code;
-}
-
-bool config_get_compiled_regex_capcount(const MXS_CONFIG_PARAMETER *params,
-                                        const char *key, uint32_t options,
-                                        pcre2_code** output_code,
-                                        uint32_t* output_capcount)
+                                      const char *key, uint32_t options,
+                                      uint32_t* output_ovec_size)
 {
     const char* regex_string = config_get_string(params, key);
     uint32_t jit_available = 0;
     pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
-    return compile_regex_string(regex_string, jit_available, options,
-                                output_code, output_capcount);
+    return compile_regex_string(regex_string, jit_available, options, output_ovec_size);
 }
 
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
@@ -4075,20 +4064,20 @@ static void remove_first_last_char(char* value)
  * Compile a regex string using PCRE2 using the settings provided.
  *
  * @param regex_string The string to compile
- * @param jit_enabled Enable JIT compilation. If not available, a notice is printed.
+ * @param jit_enabled Enable JIT compilation. If true but JIT is not available,
+ * a warning is printed.
  * @param options PCRE2 compilation options
- * @param output_code Output for the regex machine code
- * @param output_capcount Output for the capture count of the regex. Add one to
- * get the optimal ovector size.
- * @return True on success. On error, nothing is written to the outputs.
+ * @param output_ovector_size Output for the match data ovector size. On error,
+ * nothing is written. If NULL, the parameter is ignored.
+ * @return Compiled regex code on success, NULL otherwise
  */
-static bool compile_regex_string(const char* regex_string, bool jit_enabled,
-                                 uint32_t options, pcre2_code** output_code,
-                                 uint32_t* output_capcount)
+static pcre2_code* compile_regex_string(const char* regex_string, bool jit_enabled,
+                                        uint32_t options, uint32_t* output_ovector_size)
 {
     bool success = true;
     int errorcode = -1;
     PCRE2_SIZE error_offset = -1;
+    uint32_t capcount = 0;
     pcre2_code* machine =
         pcre2_compile((PCRE2_SPTR) regex_string, PCRE2_ZERO_TERMINATED, options,
                       &errorcode, &error_offset, NULL);
@@ -4102,21 +4091,13 @@ static bool compile_regex_string(const char* regex_string, bool jit_enabled,
                 MXS_WARNING("PCRE2 JIT compilation of pattern '%s' failed, "
                             "falling back to normal compilation.", regex_string);
             }
-
         }
-        /* Check what is the required match_data size for this pattern.
-         */
-        uint32_t capcount = 0;
+        /* Check what is the required match_data size for this pattern. */
         int ret_info = pcre2_pattern_info(machine, PCRE2_INFO_CAPTURECOUNT, &capcount);
         if (ret_info != 0)
         {
             MXS_PCRE2_PRINT_ERROR(ret_info);
             success = false;
-        }
-        if (success)
-        {
-            *output_code = machine;
-            *output_capcount = capcount;
         }
     }
     else
@@ -4127,11 +4108,16 @@ static bool compile_regex_string(const char* regex_string, bool jit_enabled,
         success = false;
     }
 
-    if (!success && machine)
+    if (!success)
     {
         pcre2_code_free(machine);
+        machine = NULL;
     }
-    return success;
+    else if (output_ovector_size)
+    {
+        *output_ovector_size = capcount + 1;
+    }
+    return machine;
 }
 
 /**
@@ -4161,12 +4147,8 @@ static bool test_regex_string_validity(const char* regex_string, const char* key
         remove_first_last_char(regex_copy);
     }
 
-    pcre2_code* code;
-    uint32_t capcount;
-    if (compile_regex_string(regex_copy, false, 0, &code, &capcount))
-    {
-        pcre2_code_free(code);
-        return true;
-    }
-    return false;
+    pcre2_code* code = compile_regex_string(regex_copy, false, 0, NULL);
+    bool rval = (code != NULL);
+    pcre2_code_free(code);
+    return rval;
 }
