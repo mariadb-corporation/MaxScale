@@ -144,6 +144,7 @@ const char* rule_names[] =
 {
     "UNDEFINED",
     "COLUMN",
+    "FUNCTION",
     "THROTTLE",
     "PERMISSION",
     "WILDCARD",
@@ -802,6 +803,30 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
     return true;
 }
 
+bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
+{
+    MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
+    FW_INSTANCE *inst = (FW_INSTANCE*)filter_def_get_instance(filter);
+
+    json_t* arr = json_array();
+
+    if (!thr_rules || !thr_users)
+    {
+        if (!replace_rules(inst))
+        {
+            return 0;
+        }
+    }
+
+    for (RULE *rule = thr_rules; rule; rule = rule->next)
+    {
+        json_array_append_new(arr, rule_to_json(rule));
+    }
+
+    *output = arr;
+    return true;
+}
+
 static const MXS_ENUM_VALUE action_values[] =
 {
     {"allow",  FW_ACTION_ALLOW},
@@ -837,6 +862,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     modulecmd_register_command(MXS_MODULE_NAME, "rules", MODULECMD_TYPE_PASSIVE,
                                dbfw_show_rules, 2, args_rules_show);
+
+    modulecmd_arg_type_t args_rules_show_json[] =
+    {
+        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to inspect"}
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "rules/json", MODULECMD_TYPE_PASSIVE,
+                               dbfw_show_rules_json, 1, args_rules_show_json);
 
     static MXS_FILTER_OBJECT MyObject =
     {

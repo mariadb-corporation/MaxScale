@@ -1717,11 +1717,18 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
 
         if (arg)
         {
-            // TODO: Print output instead of passing a writable DCB to the command
-            if (!modulecmd_call_command(cmd, arg, NULL))
+            json_t* output = NULL;
+
+            if (!modulecmd_call_command(cmd, arg, &output))
             {
                 dcb_printf(dcb, "Error: %s\n", modulecmd_get_error());
             }
+            else if (output)
+            {
+                dcb_printf(dcb, "%s\n", json_dumps(output, JSON_INDENT(4)));
+            }
+
+            json_decref(output);
             modulecmd_arg_free(arg);
         }
         else
