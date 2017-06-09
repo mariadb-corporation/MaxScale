@@ -141,6 +141,7 @@ typedef struct modulecmd
 {
     char                 *identifier; /**< Unique identifier */
     char                 *domain; /**< Command domain */
+    char                 *description; /**< Command description */
     enum modulecmd_type   type; /**< Command type, either active or passive */
     MODULECMDFN           func; /**< The registered function */
     int                   arg_count_min; /**< Minimum number of arguments */
@@ -157,16 +158,19 @@ typedef struct modulecmd
  *
  * This function registers a new command into the domain.
  *
- * @param domain Command domain
- * @param identifier The unique identifier for this command
+ * @param domain      Command domain
+ * @param identifier  The unique identifier for this command
  * @param entry_point The actual entry point function
- * @param argc Maximum number of arguments
- * @param argv Array of argument types of size @c argc
+ * @param argc        Maximum number of arguments
+ * @param argv        Array of argument types of size @c argc
+ * @param description Human-readable description of this command
+ *
  * @return True if the module was successfully registered, false on error
  */
 bool modulecmd_register_command(const char *domain, const char *identifier,
                                 enum modulecmd_type type, MODULECMDFN entry_point,
-                                int argc, modulecmd_arg_type_t *argv);
+                                int argc, modulecmd_arg_type_t *argv,
+                                const char *description);
 
 /**
  * @brief Find a registered command

@@ -67,10 +67,10 @@ int test_arguments()
     TEST(modulecmd_find_command(ns, id) == NULL, "The registered command should not yet be found");
     TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn, 2, args1),
+    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn, 2, args1, ""),
          "Registering a command should succeed");
 
-    TEST(!modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn, 2, args1),
+    TEST(!modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn, 2, args1, ""),
          "Registering the command a second time should fail");
     TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
 
@@ -163,7 +163,7 @@ int test_optional_arguments()
         {MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL, ""}
     };
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn2, 2, args1),
+    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn2, 2, args1, ""),
          "Registering a command should succeed");
 
     const MODULECMD *cmd = modulecmd_find_command(ns, id);
@@ -235,7 +235,7 @@ int test_module_errors()
     const char *ns = "test_module_errors";
     const char *id = "test_module_errors";
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn3, 0, NULL),
+    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn3, 0, NULL, ""),
          "Registering a command should succeed");
 
     const MODULECMD *cmd = modulecmd_find_command(ns, id);
@@ -267,7 +267,7 @@ int test_map()
     {
         char id[200];
         sprintf(id, "test_map%d", i + 1);
-        TEST(modulecmd_register_command(map_dom, id, MODULECMD_TYPE_ACTIVE, test_fn_map, 0, NULL),
+        TEST(modulecmd_register_command(map_dom, id, MODULECMD_TYPE_ACTIVE, test_fn_map, 0, NULL, ""),
              "Registering a command should succeed");
     }
 
@@ -333,7 +333,7 @@ int test_pointers()
         {MODULECMD_ARG_DCB, ""}
     };
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, ptrfn, 1, args),
+    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, ptrfn, 1, args, ""),
          "Registering a command should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
@@ -368,7 +368,7 @@ int test_domain_matching()
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ""}
     };
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, monfn, 1, args),
+    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, monfn, 1, args, ""),
          "Registering a command should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
@@ -406,7 +406,7 @@ int test_output()
     const char *ns = "test_output";
     const char *id = "test_output";
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, outputfn, 0, NULL),
+    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, outputfn, 0, NULL, ""),
          "Registering a command should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 

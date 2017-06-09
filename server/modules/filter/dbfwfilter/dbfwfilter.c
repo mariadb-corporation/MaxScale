@@ -852,7 +852,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "rules/reload", MODULECMD_TYPE_ACTIVE,
-                               dbfw_reload_rules, 2, args_rules_reload);
+                               dbfw_reload_rules, 2, args_rules_reload,
+                               "Reload dbfwfilter rules");
 
     modulecmd_arg_type_t args_rules_show[] =
     {
@@ -861,7 +862,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "rules", MODULECMD_TYPE_PASSIVE,
-                               dbfw_show_rules, 2, args_rules_show);
+                               dbfw_show_rules, 2, args_rules_show,
+                               "(deprecated) Show dbfwfilter rule statistics");
 
     modulecmd_arg_type_t args_rules_show_json[] =
     {
@@ -869,7 +871,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "rules/json", MODULECMD_TYPE_PASSIVE,
-                               dbfw_show_rules_json, 1, args_rules_show_json);
+                               dbfw_show_rules_json, 1, args_rules_show_json,
+                               "Show dbfwfilter rule statistics as JSON");
 
     static MXS_FILTER_OBJECT MyObject =
     {

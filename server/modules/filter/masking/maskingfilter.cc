@@ -66,7 +66,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     modulecmd_register_command(MXS_MODULE_NAME, "reload",
                                MODULECMD_TYPE_ACTIVE, masking_command_reload,
-                               MXS_ARRAY_NELEMS(reload_argv), reload_argv);
+                               MXS_ARRAY_NELEMS(reload_argv), reload_argv,
+                               "Reload masking filter rules");
 
     MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);
 

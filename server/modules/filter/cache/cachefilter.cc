@@ -148,7 +148,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "show", MODULECMD_TYPE_PASSIVE,
-                               cache_command_show, MXS_ARRAY_NELEMS(show_argv), show_argv);
+                               cache_command_show, MXS_ARRAY_NELEMS(show_argv), show_argv,
+                               "Show cache filter statistics");
 
     MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
 

@@ -675,7 +675,8 @@ static MXS_ROUTER* createInstance(SERVICE* service, char** options)
     /* Register a custom command */
     if (!modulecmd_register_command("rrrouter", "test_command",
                                     MODULECMD_TYPE_ACTIVE, custom_cmd_example,
-                                    2, custom_cmd_args))
+                                    2, custom_cmd_args,
+                                    "This is the command description"))
     {
         MXS_ERROR("Module command registration failed.");
     }

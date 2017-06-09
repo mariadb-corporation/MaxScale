@@ -154,7 +154,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         { MODULECMD_ARG_STRING, "Password of the user"}
     };
 
-    modulecmd_register_command("cdc", "add_user", MODULECMD_TYPE_ACTIVE, cdc_add_new_user, 3, args);
+    modulecmd_register_command("cdc", "add_user", MODULECMD_TYPE_ACTIVE,
+                               cdc_add_new_user, 3, args,
+                               "Add a new CDC user");
 
     static MXS_AUTHENTICATOR MyObject =
     {
