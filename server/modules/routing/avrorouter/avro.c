@@ -101,7 +101,7 @@ static bool conversion_task_ctl(AVRO_INSTANCE *inst, bool start);
 static SPINLOCK instlock;
 static AVRO_INSTANCE *instances;
 
-bool avro_handle_convert(const MODULECMD_ARG *args)
+bool avro_handle_convert(const MODULECMD_ARG *args, json_t** output)
 {
     bool rval = false;
 

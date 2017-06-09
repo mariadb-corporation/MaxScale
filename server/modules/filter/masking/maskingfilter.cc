@@ -32,7 +32,7 @@ char VERSION_STRING[] = "V1.0.0";
  *
  * @return True, if the command was handled.
  */
-bool masking_command_reload(const MODULECMD_ARG* pArgs)
+bool masking_command_reload(const MODULECMD_ARG* pArgs, json_t** output)
 {
     ss_dassert(pArgs->argc == 2);
     ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_OUTPUT);

@@ -29,6 +29,7 @@
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -118,10 +119,20 @@ typedef struct
  * the argument was not provided, the type of the argument will be
  * MODULECMD_ARG_NONE.
  *
- * @param argv Argument list
+ * If the module command produces output, it should be stored in the @c output
+ * parameter as a json_t pointer. The output should conform as closely as possible
+ * to the JSON API specification. The minimal requirement for a JSON API conforming
+ * object is that it has a `meta` field. Ideally, the `meta` field should not
+ * be used as it offloads the work to the client.
+ *
+ * @see http://jsonapi.org/format/
+ *
+ * @param argv   Argument list
+ * @param output JSON formatted output from the command
+ *
  * @return True on success, false on error
  */
-typedef bool (*MODULECMDFN)(const MODULECMD_ARG *argv);
+typedef bool (*MODULECMDFN)(const MODULECMD_ARG *argv, json_t** output);
 
 /**
  * A registered command
@@ -224,11 +235,13 @@ bool modulecmd_requires_output_dcb(const MODULECMD* cmd);
  * on the length of the call or whether it will block. All of this depends on the
  * module and what the command does.
  *
- * @param cmd Command to call
- * @param args Parsed command arguments
+ * @param cmd    Command to call
+ * @param args   Parsed command arguments, pass NULL for no arguments
+ * @param output JSON output of the called command, pass NULL to ignore output
+ *
  * @return True on success, false on error
  */
-bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args);
+bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, json_t** output);
 
 /**
  * @brief Set the current error message

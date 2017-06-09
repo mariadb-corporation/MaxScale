@@ -534,7 +534,7 @@ void modulecmd_arg_free(MODULECMD_ARG* arg)
     }
 }
 
-bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args)
+bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, json_t** output)
 {
     bool rval = false;
     reset_error();
@@ -550,7 +550,9 @@ bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args)
             args = &MODULECMD_NO_ARGUMENTS;
         }
 
-        rval = cmd->func(args);
+        json_t* discard = NULL;
+        rval = cmd->func(args, output ? output : &discard);
+        json_decref(discard);
     }
 
     return rval;

@@ -581,10 +581,11 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
             MODULECMD_ARG* args = modulecmd_arg_parse(cmd, n_opts, (const void**)opts);
             bool rval = false;
+            json_t* output = NULL;
 
             if (args)
             {
-                rval = modulecmd_call_command(cmd, args);
+                rval = modulecmd_call_command(cmd, args, &output);
             }
 
             for (int i = 0; i < n_opts; i++)
@@ -592,7 +593,28 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
                 MXS_FREE(opts[i]);
             }
 
-            return HttpResponse(rval ? MHD_HTTP_OK : MHD_HTTP_INTERNAL_SERVER_ERROR);
+            int rc = MHD_HTTP_INTERNAL_SERVER_ERROR;
+
+            if (rval)
+            {
+                if (output)
+                {
+                    rc = MHD_HTTP_OK;
+
+                    /** Store the command output in the meta field. This allows
+                     * all the commands to conform to the JSON API even though
+                     * the content of the field can vary from command to command. */
+                    json_t* obj = json_object();
+                    json_object_set_new(obj, CN_META, output);
+                    output = obj;
+                }
+                else
+                {
+                    rc = MHD_HTTP_NO_CONTENT;
+                }
+            }
+
+            return HttpResponse(rc, output);
         }
     }
 

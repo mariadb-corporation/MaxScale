@@ -92,6 +92,7 @@ const char CN_LOG_THROTTLING[]                = "log_throttling";
 const char CN_MAXSCALE[]                      = "maxscale";
 const char CN_MAX_CONNECTIONS[]               = "max_connections";
 const char CN_MAX_RETRY_INTERVAL[]            = "max_retry_interval";
+const char CN_META[]                          = "meta";
 const char CN_METHOD[]                        = "method";
 const char CN_MODULE[]                        = "module";
 const char CN_MODULES[]                       = "modules";

@@ -109,6 +109,7 @@ extern const char CN_LOG_THROTTLING[];
 extern const char CN_MAXSCALE[];
 extern const char CN_MAX_CONNECTIONS[];
 extern const char CN_MAX_RETRY_INTERVAL[];
+extern const char CN_META[];
 extern const char CN_METHOD[];
 extern const char CN_MODULE[];
 extern const char CN_MODULES[];

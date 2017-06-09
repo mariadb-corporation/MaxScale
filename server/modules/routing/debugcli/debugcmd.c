@@ -1717,7 +1717,8 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
 
         if (arg)
         {
-            if (!modulecmd_call_command(cmd, arg))
+            // TODO: Print output instead of passing a writable DCB to the command
+            if (!modulecmd_call_command(cmd, arg, NULL))
             {
                 dcb_printf(dcb, "Error: %s\n", modulecmd_get_error());
             }

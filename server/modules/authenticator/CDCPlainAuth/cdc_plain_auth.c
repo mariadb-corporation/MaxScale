@@ -78,7 +78,7 @@ static int cdc_auth_set_client_data(
  * @param args Arguments for this command
  * @return True if user was successfully added
  */
-static bool cdc_add_new_user(const MODULECMD_ARG *args)
+static bool cdc_add_new_user(const MODULECMD_ARG *args, json_t** output)
 {
     const char *user = args->argv[1].value.string;
     size_t userlen = strlen(user);

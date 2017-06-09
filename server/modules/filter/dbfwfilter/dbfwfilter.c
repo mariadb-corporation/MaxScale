@@ -712,7 +712,7 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
     return tmp;
 }
 
-bool dbfw_reload_rules(const MODULECMD_ARG *argv)
+bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
 {
     bool rval = true;
     MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
@@ -776,7 +776,7 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv)
     return rval;
 }
 
-bool dbfw_show_rules(const MODULECMD_ARG *argv)
+bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
 {
     DCB *dcb = argv->argv[0].value.dcb;
     MXS_FILTER_DEF *filter = argv->argv[1].value.filter;
