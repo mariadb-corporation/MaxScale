@@ -36,21 +36,21 @@
 
 #define MXS_MODULE_NAME "qlafilter"
 
-#include <stdio.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <time.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
 #include <maxscale/filter.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/utils.h>
-#include <maxscale/log_manager.h>
-#include <time.h>
-#include <sys/time.h>
-#include <regex.h>
-#include <string.h>
-#include <maxscale/atomic.h>
-#include <maxscale/alloc.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/service.h>
+#include <maxscale/utils.h>
 
 /** Date string buffer size */
 #define QLA_DATE_BUFFER_SIZE 20
@@ -101,16 +101,21 @@ typedef struct
     char *source; /* The source of the client connection to filter on */
     char *user_name; /* The user name to filter on */
     char *match; /* Optional text to match against */
-    regex_t re; /* Compiled regex text */
+    pcre2_code* re_match; /* Compiled regex text */
     char *nomatch; /* Optional text to match against for exclusion */
-    regex_t nore; /* Compiled regex nomatch text */
+    pcre2_code* re_nomatch; /* Compiled regex nomatch text */
+    uint32_t ovec_size; /* PCRE2 match data ovector size */
     uint32_t log_mode_flags; /* Log file mode settings */
     uint32_t log_file_data_flags; /* What data is saved to the files */
     FILE *unified_fp; /* Unified log file. The pointer needs to be shared here
                        * to avoid garbled printing. */
     bool flush_writes; /* Flush log file after every write? */
     bool append;    /* Open files in append-mode? */
-    bool write_warning_given; /* To make sure some warning are only given once */
+
+    /* Avoid repeatedly printing some errors/warnings. */
+    bool write_warning_given;
+    bool match_error_printed;
+    bool nomatch_error_printed;
 } QLA_INSTANCE;
 
 /**
@@ -125,23 +130,26 @@ typedef struct
 {
     int active;
     MXS_DOWNSTREAM down;
-    char *filename;   /* The session-specific log file name */
-    FILE *fp;         /* The session-specific log file */
-    const char *remote;
-    char *service;    /* The service name this filter is attached to. Not owned. */
-    size_t ses_id;    /* The session this filter serves */
-    const char *user; /* The client */
+    char *filename;     /* The session-specific log file name */
+    FILE *fp;           /* The session-specific log file */
+    const char *remote; /* Client address */
+    char *service;      /* The service name this filter is attached to. Not owned. */
+    size_t ses_id;      /* The session this filter serves */
+    const char *user;   /* The client */
+    pcre2_match_data* match_data; /* Regex match data */
 } QLA_SESSION;
 
 static FILE* open_log_file(uint32_t, QLA_INSTANCE *, const char *);
 static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const char*,
                            const char*, size_t);
+static bool regex_check(QLA_INSTANCE* my_instance, QLA_SESSION* my_session,
+                        const char* ptr, int length);
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", REG_ICASE},
+    {"ignorecase", PCRE2_CASELESS},
     {"case",       0},
-    {"extended",   REG_EXTENDED},
+    {"extended",   PCRE2_EXTENDED},
     {NULL}
 };
 
@@ -204,11 +212,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
         {
             {
                 "match",
-                MXS_MODULE_PARAM_STRING
+                MXS_MODULE_PARAM_REGEX
             },
             {
                 "exclude",
-                MXS_MODULE_PARAM_STRING
+                MXS_MODULE_PARAM_REGEX
             },
             {
                 "user",
@@ -279,39 +287,53 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 
     if (my_instance)
     {
+        my_instance->name = MXS_STRDUP_A(name);
         my_instance->sessions = 0;
+        my_instance->ovec_size = 0;
         my_instance->unified_fp = NULL;
         my_instance->write_warning_given = false;
-        my_instance->name = MXS_STRDUP_A(name);
-        my_instance->filebase = MXS_STRDUP_A(config_get_string(params, "filebase"));
-        my_instance->flush_writes = config_get_bool(params, "flush");
-        my_instance->append = config_get_bool(params, "append");
-        my_instance->match = config_copy_string(params, "match");
-        my_instance->nomatch = config_copy_string(params, "exclude");
+        my_instance->match_error_printed = false;
+        my_instance->nomatch_error_printed = false;
+
         my_instance->source = config_copy_string(params, "source");
         my_instance->user_name = config_copy_string(params, "user");
+
+        my_instance->filebase = MXS_STRDUP_A(config_get_string(params, "filebase"));
+        my_instance->append = config_get_bool(params, "append");
+        my_instance->flush_writes = config_get_bool(params, "flush");
         my_instance->log_file_data_flags = config_get_enum(params, "log_data", log_data_values);
         my_instance->log_mode_flags = config_get_enum(params, "log_type", log_type_values);
+
+        my_instance->match = config_copy_string(params, "match");
+        my_instance->nomatch = config_copy_string(params, "exclude");
+        my_instance->re_nomatch = NULL;
+        my_instance->re_match = NULL;
         bool error = false;
 
         int cflags = config_get_enum(params, "options", option_values);
-
-        if (my_instance->match && regcomp(&my_instance->re, my_instance->match, cflags))
+        if (my_instance->match)
         {
-            MXS_ERROR("Invalid regular expression '%s' for the 'match' "
-                      "parameter.", my_instance->match);
-            MXS_FREE(my_instance->match);
-            my_instance->match = NULL;
-            error = true;
+            my_instance->re_match =
+                config_get_compiled_regex(params, "match", cflags, &my_instance->ovec_size);
+            if (!my_instance->re_match)
+            {
+                error = true;
+            }
         }
 
-        if (my_instance->nomatch && regcomp(&my_instance->nore, my_instance->nomatch, cflags))
+        if (my_instance->nomatch)
         {
-            MXS_ERROR("Invalid regular expression '%s' for the 'nomatch'"
-                      " parameter.", my_instance->nomatch);
-            MXS_FREE(my_instance->nomatch);
-            my_instance->nomatch = NULL;
-            error = true;
+            uint32_t ovec_size_temp = 0;
+            my_instance->re_nomatch =
+                config_get_compiled_regex(params, "exclude", cflags, &ovec_size_temp);
+            if (ovec_size_temp > my_instance->ovec_size)
+            {
+                my_instance->ovec_size = ovec_size_temp;
+            }
+            if (!my_instance->re_nomatch)
+            {
+                error = true;
+            }
         }
 
         // Try to open the unified log file
@@ -346,17 +368,11 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 
         if (error)
         {
-            if (my_instance->match)
-            {
-                MXS_FREE(my_instance->match);
-                regfree(&my_instance->re);
-            }
-
-            if (my_instance->nomatch)
-            {
-                MXS_FREE(my_instance->nomatch);
-                regfree(&my_instance->nore);
-            }
+            MXS_FREE(my_instance->name);
+            MXS_FREE(my_instance->match);
+            pcre2_code_free(my_instance->re_match);
+            MXS_FREE(my_instance->nomatch);
+            pcre2_code_free(my_instance->re_nomatch);
             if (my_instance->unified_fp != NULL)
             {
                 fclose(my_instance->unified_fp);
@@ -389,8 +405,19 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
 
     if ((my_session = MXS_CALLOC(1, sizeof(QLA_SESSION))) != NULL)
     {
-        if ((my_session->filename = (char *)MXS_MALLOC(strlen(my_instance->filebase) + 20)) == NULL)
+        my_session->fp = NULL;
+        my_session->match_data = NULL;
+        my_session->filename = (char *)MXS_MALLOC(strlen(my_instance->filebase) + 20);
+        const uint32_t ovec_size = my_instance->ovec_size;
+        if (ovec_size)
         {
+            my_session->match_data = pcre2_match_data_create(ovec_size, NULL);
+        }
+
+        if (!my_session->filename || (ovec_size && !my_session->match_data))
+        {
+            MXS_FREE(my_session->filename);
+            pcre2_match_data_free(my_session->match_data);
             MXS_FREE(my_session);
             return NULL;
         }
@@ -434,6 +461,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
                           errno,
                           mxs_strerror(errno));
                 MXS_FREE(my_session->filename);
+                pcre2_match_data_free(my_session->match_data);
                 MXS_FREE(my_session);
                 my_session = NULL;
             }
@@ -473,6 +501,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
     QLA_SESSION *my_session = (QLA_SESSION *) session;
 
     MXS_FREE(my_session->filename);
+    pcre2_match_data_free(my_session->match_data);
     MXS_FREE(session);
     return;
 }
@@ -513,57 +542,50 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     struct tm t;
     struct timeval tv;
 
-    if (my_session->active)
+    if (my_session->active &&
+        modutil_extract_SQL(queue, &ptr, &length) &&
+        regex_check(my_instance, my_session, ptr, length))
     {
-        if (modutil_extract_SQL(queue, &ptr, &length))
+        char buffer[QLA_DATE_BUFFER_SIZE];
+        gettimeofday(&tv, NULL);
+        localtime_r(&tv.tv_sec, &t);
+        strftime(buffer, sizeof(buffer), "%F %T", &t);
+
+        /**
+         * Loop over all the possible log file modes and write to
+         * the enabled files.
+         */
+
+        char *sql_string = ptr;
+        bool write_error = false;
+        if (my_instance->log_mode_flags & CONFIG_FILE_SESSION)
         {
-            if ((my_instance->match == NULL ||
-                 regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
-                (my_instance->nomatch == NULL ||
-                 regexec(&my_instance->nore, ptr, 0, NULL, 0) != 0))
+            // In this case there is no need to write the session
+            // number into the files.
+            uint32_t data_flags = (my_instance->log_file_data_flags &
+                                   ~LOG_DATA_SESSION);
+
+            if (write_log_entry(data_flags, my_session->fp,
+                                my_instance, my_session, buffer, sql_string, length) < 0)
             {
-                char buffer[QLA_DATE_BUFFER_SIZE];
-                gettimeofday(&tv, NULL);
-                localtime_r(&tv.tv_sec, &t);
-                strftime(buffer, sizeof(buffer), "%F %T", &t);
-
-                /**
-                 * Loop over all the possible log file modes and write to
-                 * the enabled files.
-                 */
-
-                char *sql_string = ptr;
-                bool write_error = false;
-                if (my_instance->log_mode_flags & CONFIG_FILE_SESSION)
-                {
-                    // In this case there is no need to write the session
-                    // number into the files.
-                    uint32_t data_flags = (my_instance->log_file_data_flags &
-                                           ~LOG_DATA_SESSION);
-
-                    if (write_log_entry(data_flags, my_session->fp,
-                                        my_instance, my_session, buffer, sql_string, length) < 0)
-                    {
-                        write_error = true;
-                    }
-                }
-                if (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED)
-                {
-                    uint32_t data_flags = my_instance->log_file_data_flags;
-                    if (write_log_entry(data_flags, my_instance->unified_fp,
-                                        my_instance, my_session, buffer, sql_string, length) < 0)
-                    {
-                        write_error = true;
-                    }
-                }
-                if (write_error && !my_instance->write_warning_given)
-                {
-                    MXS_ERROR("qla-filter '%s': Log file write failed. "
-                              "Suppressing further similar warnings.",
-                              my_instance->name);
-                    my_instance->write_warning_given = true;
-                }
+                write_error = true;
             }
+        }
+        if (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED)
+        {
+            uint32_t data_flags = my_instance->log_file_data_flags;
+            if (write_log_entry(data_flags, my_instance->unified_fp,
+                                my_instance, my_session, buffer, sql_string, length) < 0)
+            {
+                write_error = true;
+            }
+        }
+        if (write_error && !my_instance->write_warning_given)
+        {
+            MXS_ERROR("qla-filter '%s': Log file write failed. "
+                      "Suppressing further similar warnings.",
+                      my_instance->name);
+            my_instance->write_warning_given = true;
         }
     }
     /* Pass the query downstream */
@@ -909,4 +931,47 @@ static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *ins
         }
         return rval;
     }
+}
+
+static bool regex_check(QLA_INSTANCE* my_instance, QLA_SESSION* my_session,
+                        const char* ptr, int length)
+{
+    bool rval = true;
+    if (my_instance->re_match)
+    {
+        int result = pcre2_match(my_instance->re_match, (PCRE2_SPTR)ptr,
+                                 length, 0, 0, my_session->match_data, NULL);
+        if (result == PCRE2_ERROR_NOMATCH)
+        {
+            rval = false; // Didn't match the "match"-regex
+        }
+        else if (result < 0)
+        {
+            rval = false;
+            if (!my_instance->match_error_printed)
+            {
+                MXS_PCRE2_PRINT_ERROR(result);
+                my_instance->match_error_printed = true;
+            }
+        }
+    }
+    if (rval && my_instance->re_nomatch)
+    {
+        int result = pcre2_match(my_instance->re_nomatch, (PCRE2_SPTR)ptr,
+                                 length, 0, 0, my_session->match_data, NULL);
+        if (result >= 0)
+        {
+            rval = false; // Matched the "exclude"-regex
+        }
+        else if (result != PCRE2_ERROR_NOMATCH)
+        {
+            rval = false;
+            if (!my_instance->nomatch_error_printed)
+            {
+                MXS_PCRE2_PRINT_ERROR(result);
+                my_instance->nomatch_error_printed = true;
+            }
+        }
+    }
+    return rval;
 }
