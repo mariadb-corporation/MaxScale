@@ -13,6 +13,8 @@
 
 #include <maxscale/modulecmd.h>
 
+#include <string>
+
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/pcre2.h>
@@ -575,10 +577,37 @@ void modulecmd_set_error(const char *format, ...)
     va_end(list);
 }
 
+static void modulecmd_clear_error()
+{
+    prepare_error();
+    errbuf[0] = '\0';
+}
+
 const char* modulecmd_get_error()
 {
     prepare_error();
     return errbuf;
+}
+
+json_t* modulecmd_get_json_error()
+{
+    json_t* obj = NULL;
+    std::string errmsg = modulecmd_get_error();
+    modulecmd_clear_error();
+
+    if (errmsg.length())
+    {
+        json_t* err = json_object();
+        json_object_set_new(err, "detail", json_string(errmsg.c_str()));
+
+        json_t* arr = json_array();
+        json_array_append_new(arr, err);
+
+        obj = json_object();
+        json_object_set_new(obj, "errors", arr);
+    }
+
+    return obj;
 }
 
 bool modulecmd_foreach(const char *domain_re, const char *ident_re,

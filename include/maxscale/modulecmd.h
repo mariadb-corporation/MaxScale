@@ -265,6 +265,12 @@ void modulecmd_set_error(const char *format, ...);
  */
 const char* modulecmd_get_error();
 
+/**
+ * @brief Get JSON formatted error
+ *
+ * @return The error or NULL if no errors have occurred
+ */
+json_t* modulecmd_get_json_error();
 
 /**
  * @brief Call a function for each command

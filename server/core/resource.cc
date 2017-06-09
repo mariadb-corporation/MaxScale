@@ -593,7 +593,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
                 MXS_FREE(opts[i]);
             }
 
-            int rc = MHD_HTTP_INTERNAL_SERVER_ERROR;
+            int rc;
 
             if (rval)
             {
@@ -612,6 +612,11 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
                 {
                     rc = MHD_HTTP_NO_CONTENT;
                 }
+            }
+            else
+            {
+                rc = MHD_HTTP_FORBIDDEN;
+                output = modulecmd_get_json_error();
             }
 
             return HttpResponse(rc, output);
