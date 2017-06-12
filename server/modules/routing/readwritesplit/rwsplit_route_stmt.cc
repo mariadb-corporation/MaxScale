@@ -11,40 +11,61 @@
  * Public License.
  */
 
-#include "readwritesplit.h"
+#include "readwritesplit.hh"
+#include "rwsplit_internal.hh"
 
-#include <stdio.h>
 #include <strings.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/router.h>
 #include <maxscale/modutil.h>
 
-#include "rwsplit_internal.h"
-
 /**
- * @file rwsplit_route_stmt.c   The functions that support the routing of
- * queries to back end servers. All the functions in this module are internal
- * to the read write split router, and not intended to be called from
- * anywhere else.
- *
- * @verbatim
- * Revision History
- *
- * Date          Who                 Description
- * 08/08/2016    Martin Brampton     Initial implementation
- *
- * @endverbatim
+ * The functions that support the routing of queries to back end
+ * servers. All the functions in this module are internal to the read
+ * write split router, and not intended to be called from anywhere else.
  */
 
 extern int (*criteria_cmpfun[LAST_CRITERIA])(const void *, const void *);
 
-static backend_ref_t *check_candidate_bref(backend_ref_t *cand,
-                                           backend_ref_t *new,
-                                           select_criteria_t sc);
 static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses);
+
+/**
+ * Find out which of the two backend servers has smaller value for select
+ * criteria property.
+ *
+ * @param cand  previously selected candidate
+ * @param new   challenger
+ * @param sc    select criteria
+ *
+ * @return pointer to backend reference of that backend server which has smaller
+ * value in selection criteria. If either reference pointer is NULL then the
+ * other reference pointer value is returned.
+ */
+static backend_ref_t *check_candidate_bref(backend_ref_t *cand,
+                                           backend_ref_t *new_bref,
+                                           select_criteria_t sc)
+{
+    int (*p)(const void *, const void *);
+    /** get compare function */
+    p = criteria_cmpfun[sc];
+
+    if (new_bref == NULL)
+    {
+        return cand;
+    }
+    else if (cand == NULL || (p((void *)cand, (void *)new_bref) > 0))
+    {
+        return new_bref;
+    }
+    else
+    {
+        return cand;
+    }
+}
 
 void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                                  DCB *target_dcb)
@@ -88,8 +109,8 @@ void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf)
 {
-    qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-    int packet_type;
+    uint32_t qtype = QUERY_TYPE_UNKNOWN;
+    uint8_t packet_type;
     DCB *target_dcb = NULL;
     route_target_t route_target;
     bool succp = false;
@@ -103,7 +124,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     if (non_empty_packet)
     {
-        handle_multi_temp_and_load(rses, querybuf, packet_type, (int *)&qtype);
+        handle_multi_temp_and_load(rses, querybuf, packet_type, &qtype);
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -211,7 +232,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                          GWBUF *querybuf, ROUTER_INSTANCE *inst,
                          int packet_type,
-                         qc_query_type_t qtype)
+                         uint32_t qtype)
 {
     bool succp;
     rses_property_t *prop;
@@ -717,12 +738,12 @@ return_succp:
  *          if the query would otherwise be routed to slave.
  */
 route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
-                                qc_query_type_t qtype, HINT *hint)
+                                uint32_t qtype, HINT *hint)
 {
     bool trx_active = session_trx_is_active(rses->client_dcb->session);
     bool load_active = rses->load_data_state != LOAD_DATA_INACTIVE;
     mxs_target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
-    route_target_t target = TARGET_UNDEFINED;
+    int target = TARGET_UNDEFINED;
 
     if (rses->forced_node && rses->forced_node == rses->rses_master_ref)
     {
@@ -898,7 +919,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
         hint = hint->next;
     } /*< while (hint != NULL) */
 
-    return target;
+    return (route_target_t)target;
 }
 
 /**
@@ -913,7 +934,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
  */
 void
 handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
-                           int packet_type, int *qtype)
+                           uint8_t packet_type, uint32_t *qtype)
 {
     /** Check for multi-statement queries. If no master server is available
      * and a multi-statement is issued, an error is returned to the client
@@ -1028,7 +1049,7 @@ bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
              * Set the name of searched
              * backend server.
              */
-            named_server = hint->data;
+            named_server = (char*)hint->data;
             MXS_INFO("Hint: route to server '%s'", named_server);
         }
         else if (hint->type == HINT_PARAMETER &&
@@ -1410,40 +1431,6 @@ int rses_property_add(ROUTER_CLIENT_SES *rses, rses_property_t *prop)
         p->rses_prop_next = prop;
     }
     return 0;
-}
-
-/**
- * Find out which of the two backend servers has smaller value for select
- * criteria property.
- *
- * @param cand  previously selected candidate
- * @param new   challenger
- * @param sc    select criteria
- *
- * @return pointer to backend reference of that backend server which has smaller
- * value in selection criteria. If either reference pointer is NULL then the
- * other reference pointer value is returned.
- */
-static backend_ref_t *check_candidate_bref(backend_ref_t *cand,
-                                           backend_ref_t *new,
-                                           select_criteria_t sc)
-{
-    int (*p)(const void *, const void *);
-    /** get compare function */
-    p = criteria_cmpfun[sc];
-
-    if (new == NULL)
-    {
-        return cand;
-    }
-    else if (cand == NULL || (p((void *)cand, (void *)new) > 0))
-    {
-        return new;
-    }
-    else
-    {
-        return cand;
-    }
 }
 
 /********************************

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "readwritesplit.h"
+#include "readwritesplit.hh"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -21,7 +21,7 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "rwsplit_internal.h"
+#include "rwsplit_internal.hh"
 
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
@@ -32,34 +32,13 @@
 #include <maxscale/alloc.h>
 
 /**
- * @file readwritesplit.c   The entry points for the read/write query splitting
- * router module.
+ * The entry points for the read/write query splitting router module.
  *
- * This file contains the entry points that comprise the API to the read write
- * query splitting router. It also contains functions that are directly called
- * by the entry point functions. Some of these are used by functions in other
- * modules of the read write split router, others are used only within this
- * module.
- *
- * @verbatim
- * Revision History
- *
- * Date          Who                 Description
- * 01/07/2013    Vilho Raatikka      Initial implementation
- * 15/07/2013    Massimiliano Pinto  Added clientReply from master only in case
- *                                   of session change
- * 17/07/2013    Massimiliano Pinto  clientReply is now used by mysql_backend
- *                                   for all reply situations
- * 18/07/2013    Massimiliano Pinto  routeQuery now handles COM_QUIT
- *                                   as QUERY_TYPE_SESSION_WRITE
- * 17/07/2014    Massimiliano Pinto  Server connection counter is updated in
- * closeSession
- * 09/09/2015    Martin Brampton     Modify error handler
- * 25/09/2015    Martin Brampton     Block callback processing when no router
- * session in the DCB
- * 03/08/2016    Martin Brampton     Extract the API functions, move the rest
- *
- * @endverbatim
+ * This file contains the entry points that comprise the API to the read
+ * write query splitting router. It also contains functions that are
+ * directly called by the entry point functions. Some of these are used by
+ * functions in other modules of the read write split router, others are
+ * used only within this module.
  */
 
 /** Maximum number of slaves */
@@ -133,6 +112,8 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
     {"error_on_write", RW_ERROR_ON_WRITE},
     {NULL}
 };
+
+MXS_BEGIN_DECLS
 
 /**
  * The module entry point routine. It is this routine that
@@ -208,6 +189,8 @@ MXS_MODULE *MXS_CREATE_MODULE()
     return &info;
 }
 
+MXS_END_DECLS
+
 // TODO: Don't process parameters in readwritesplit
 static bool handle_max_slaves(ROUTER_INSTANCE *router, const char *str)
 {
@@ -250,7 +233,7 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *router;
 
-    if ((router = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((router = (ROUTER_INSTANCE*)MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
         return NULL;
     }
@@ -267,13 +250,13 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
 
     MXS_CONFIG_PARAMETER *params = service->svc_config_param;
 
-    router->rwsplit_config.use_sql_variables_in = config_get_enum(params, "use_sql_variables_in",
+    router->rwsplit_config.use_sql_variables_in = (mxs_target_t)config_get_enum(params, "use_sql_variables_in",
                                                                   use_sql_variables_in_values);
 
-    router->rwsplit_config.slave_selection_criteria = config_get_enum(params, "slave_selection_criteria",
+    router->rwsplit_config.slave_selection_criteria = (select_criteria_t)config_get_enum(params, "slave_selection_criteria",
                                                                       slave_selection_criteria_values);
 
-    router->rwsplit_config.master_failure_mode = config_get_enum(params, "master_failure_mode",
+    router->rwsplit_config.master_failure_mode = (enum failure_mode)config_get_enum(params, "master_failure_mode",
                                                                  master_failure_mode_values);
 
     router->rwsplit_config.max_slave_replication_lag = config_get_integer(params, "max_slave_replication_lag");
@@ -396,7 +379,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
 
     router->stats.n_sessions += 1;
 
-    return (void *)client_rses;
+    return (MXS_ROUTER_SESSION*)client_rses;
 }
 
 /**

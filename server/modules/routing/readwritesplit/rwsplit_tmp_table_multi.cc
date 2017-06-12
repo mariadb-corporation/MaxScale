@@ -11,32 +11,22 @@
  * Public License.
  */
 
-#include "readwritesplit.h"
+#include "readwritesplit.hh"
+#include "rwsplit_internal.hh"
 
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <maxscale/alloc.h>
 
-/* Note that modutil contains much MySQL specific code */
 #include <maxscale/modutil.h>
-
+#include <maxscale/alloc.h>
 #include <maxscale/router.h>
-#include "rwsplit_internal.h"
+
 /**
- * @file rwsplit_tmp_table.c   The functions that carry out checks on
- * statements to see if they involve various operations involving temporary
- * tables or multi-statement queries.
- *
- * @verbatim
- * Revision History
- *
- * Date          Who                 Description
- * 08/08/2016    Martin Brampton     Initial implementation
- *
- * @endverbatim
+ * The functions that carry out checks on statements to see if they involve
+ * various operations involving temporary tables or multi-statement queries.
  */
 
 /*
@@ -55,7 +45,7 @@
  * @param type The type of the query resolved so far
  */
 void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
-                          mysql_server_cmd_t packet_type)
+                          uint32_t packet_type)
 {
     if (packet_type != MYSQL_COM_QUERY && packet_type != MYSQL_COM_DROP_DB)
     {
@@ -81,7 +71,7 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
             {
                 /* Not clear why the next six lines are outside the if block */
                 klen = strlen(dbname) + strlen(tbl[i]) + 2;
-                hkey = MXS_CALLOC(klen, sizeof(char));
+                hkey = (char*)MXS_CALLOC(klen, sizeof(char));
                 MXS_ABORT_IF_NULL(hkey);
                 strcpy(hkey, dbname);
                 strcat(hkey, ".");
@@ -113,7 +103,7 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
  */
 bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                        GWBUF *querybuf,
-                       qc_query_type_t qtype)
+                       uint32_t qtype)
 {
 
     bool target_tmp_table = false;
@@ -199,7 +189,7 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
  * @param type The type of the query resolved so far
  */
 void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                            GWBUF *querybuf, qc_query_type_t type)
+                            GWBUF *querybuf, uint32_t type)
 {
     if (!qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
@@ -246,7 +236,7 @@ void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
     if (tblname && strlen(tblname) > 0)
     {
         klen = strlen(dbname) + strlen(tblname) + 2;
-        hkey = MXS_CALLOC(klen, sizeof(char));
+        hkey = (char*)MXS_CALLOC(klen, sizeof(char));
         MXS_ABORT_IF_NULL(hkey);
         strcpy(hkey, dbname);
         strcat(hkey, ".");
@@ -321,7 +311,7 @@ void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
  * @param buf Buffer containing the full query
  * @return True if the query contains multiple statements
  */
-bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_type)
+bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type)
 {
     MySQLProtocol *proto = (MySQLProtocol *)protocol;
     bool rval = false;
@@ -362,16 +352,16 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_
  * @param packet_type   Integer denoting DB specific enum
  * @param non_empty_packet  Boolean to be set by this function
  *
- * @return qc_query_type_t the query type; also the non_empty_packet bool is set
+ * @return uint32_t the query type; also the non_empty_packet bool is set
  */
-qc_query_type_t
+uint32_t
 determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet)
 {
-    qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
+    uint32_t qtype = QUERY_TYPE_UNKNOWN;
 
     if (non_empty_packet)
     {
-        mysql_server_cmd_t my_packet_type = (mysql_server_cmd_t)packet_type;
+        uint8_t my_packet_type = (uint8_t)packet_type;
         switch (my_packet_type)
         {
         case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */

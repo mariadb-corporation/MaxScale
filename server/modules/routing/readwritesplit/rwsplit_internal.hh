@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _RWSPLIT_INTERNAL_H
-#define _RWSPLIT_INTERNAL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,17 +12,8 @@
  * Public License.
  */
 
-/*
- * File:   rwsplit_internal.h
- * Author: mbrampton
- *
- * Created on 08 August 2016, 11:54
- */
-
 #include <maxscale/cdefs.h>
 #include <maxscale/query_classifier.h>
-
-MXS_BEGIN_DECLS
 
 /* This needs to be removed along with dependency on it - see the
  * rwsplit_tmp_table_multi functions
@@ -52,9 +41,9 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
 bool execute_sescmd_in_backend(backend_ref_t *backend_ref);
 bool handle_target_is_all(route_target_t route_target,
                           ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                          GWBUF *querybuf, int packet_type, qc_query_type_t qtype);
-int determine_packet_type(GWBUF *querybuf, bool *non_empty_packet);
-void log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t qtype);
+                          GWBUF *querybuf, int packet_type, uint32_t qtype);
+uint8_t determine_packet_type(GWBUF *querybuf, bool *non_empty_packet);
+void log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype);
 bool is_packet_a_one_way_message(int packet_type);
 sescmd_cursor_t *backend_ref_get_sescmd_cursor(backend_ref_t *bref);
 bool is_packet_a_query(int packet_type);
@@ -84,11 +73,11 @@ void rwsplit_hfree(void *fval);
 bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                      char *name, int max_rlag);
 route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
-                                qc_query_type_t qtype, HINT *hint);
+                                uint32_t qtype, HINT *hint);
 rses_property_t *rses_property_init(rses_property_type_t prop_type);
 int rses_property_add(ROUTER_CLIENT_SES *rses, rses_property_t *prop);
 void handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
-                                int packet_type, int *qtype);
+                                uint8_t packet_type, uint32_t *qtype);
 bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                           route_target_t route_target, DCB **target_dcb);
 bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
@@ -100,7 +89,7 @@ bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                          GWBUF *querybuf, ROUTER_INSTANCE *inst,
                          int packet_type,
-                         qc_query_type_t qtype);
+                         uint32_t qtype);
 
 /*
  * The following are implemented in rwsplit_session_cmd.c
@@ -138,21 +127,12 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
  */
 void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                           GWBUF *querybuf,
-                          mysql_server_cmd_t packet_type);
+                          uint32_t packet_type);
 bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                        GWBUF *querybuf,
-                       qc_query_type_t type);
+                       uint32_t type);
 void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                            GWBUF *querybuf, qc_query_type_t type);
-bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_type);
-qc_query_type_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
+                            GWBUF *querybuf, uint32_t type);
+bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type);
+uint32_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
 void close_failed_bref(backend_ref_t *bref, bool fatal);
-
-#ifdef __cplusplus
-}
-#endif
-
-MXS_END_DECLS
-
-#endif /* RWSPLIT_INTERNAL_H */
-

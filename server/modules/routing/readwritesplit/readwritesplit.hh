@@ -16,13 +16,6 @@
 
 /**
  * @file router.h - The read write split router module heder file
- *
- * @verbatim
- * Revision History
- *
- * See GitHub https://github.com/mariadb-corporation/MaxScale
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "readwritesplit"
@@ -279,7 +272,7 @@ typedef struct backend_ref_st
 #endif
     SERVER_REF*     ref;
     DCB*            bref_dcb;
-    bref_state_t    bref_state;
+    int             bref_state;
     int             bref_num_result_wait;
     sescmd_cursor_t bref_sescmd_cur;
     unsigned char   reply_cmd;  /**< The reply the backend server sent to a session command.

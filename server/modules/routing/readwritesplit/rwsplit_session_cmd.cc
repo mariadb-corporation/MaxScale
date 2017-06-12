@@ -11,7 +11,8 @@
  * Public License.
  */
 
-#include "readwritesplit.h"
+#include "readwritesplit.hh"
+#include "rwsplit_internal.hh"
 
 #include <stdio.h>
 #include <strings.h>
@@ -20,19 +21,9 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "rwsplit_internal.h"
 
 /**
- * @file rwsplit_session_cmd.c   The functions that provide session command
- * handling for the read write split router.
- *
- * @verbatim
- * Revision History
- *
- * Date          Who                 Description
- * 08/08/2016    Martin Brampton     Initial implementation
- *
- * @endverbatim
+ * Functions for session command handling
  */
 
 static bool sescmd_cursor_history_empty(sescmd_cursor_t *scur);

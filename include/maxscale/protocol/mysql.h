@@ -40,6 +40,7 @@
 #include <maxscale/utils.h>
 #include <mysql.h>
 #include <mysql_com.h>
+#include <mysqld_error.h>
 
 MXS_BEGIN_DECLS
 

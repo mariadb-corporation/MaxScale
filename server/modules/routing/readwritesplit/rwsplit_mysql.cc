@@ -11,18 +11,15 @@
  * Public License.
  */
 
-#include "readwritesplit.h"
+#include "readwritesplit.hh"
+#include "rwsplit_internal.hh"
 
-#include <stdio.h>
 #include <strings.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "rwsplit_internal.h"
-
-#include <mysql.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/dcb.h>
@@ -30,7 +27,6 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/protocol/mysql.h>
-#include <mysqld_error.h>
 #include <maxscale/alloc.h>
 
 #if defined(SS_DEBUG)
@@ -40,22 +36,14 @@
 #define RWSPLIT_TRACE_MSG_LEN 1000
 
 /**
- * @file rwsplit_mysql.c   Functions within the read-write split router that
- * are specific to MySQL. The aim is to either remove these into a separate
- * module or to move them into the MySQL protocol modules.
- *
- * @verbatim
- * Revision History
- *
- * Date          Who                 Description
- * 08/08/2016    Martin Brampton     Initial implementation
- *
- * @endverbatim
+ * Functions within the read-write split router that are specific to
+ * MySQL. The aim is to either remove these into a separate module or to
+ * move them into the MySQL protocol modules.
  */
 
 /*
  * The following functions are called from elsewhere in the router and
- * are defined in rwsplit_internal.h.  They are not intended to be called
+ * are defined in rwsplit_internal.hh.  They are not intended to be called
  * from outside this router.
  */
 
@@ -80,24 +68,24 @@
  * @param non_empty_packet  bool indicating whether the packet is non-empty
  * @return The packet type, or MYSQL_COM_UNDEFINED; also the second parameter is set
  */
-int
+uint8_t
 determine_packet_type(GWBUF *querybuf, bool *non_empty_packet)
 {
-    mysql_server_cmd_t packet_type;
+    uint8_t packet_type;
     uint8_t *packet = GWBUF_DATA(querybuf);
 
     if (gw_mysql_get_byte3(packet) == 0)
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
         *non_empty_packet = false;
-        packet_type = MYSQL_COM_UNDEFINED;
+        packet_type = (uint8_t)MYSQL_COM_UNDEFINED;
     }
     else
     {
         *non_empty_packet = true;
         packet_type = packet[4];
     }
-    return (int)packet_type;
+    return packet_type;
 }
 
 /*
@@ -157,7 +145,7 @@ is_packet_a_one_way_message(int packet_type)
  * @param qtype     Query type
  */
 void
-log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t qtype)
+log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype)
 {
     if (rses->load_data_state == LOAD_DATA_INACTIVE)
     {
@@ -219,7 +207,7 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
  */
 bool handle_target_is_all(route_target_t route_target, ROUTER_INSTANCE *inst,
                           ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
-                          int packet_type, qc_query_type_t qtype)
+                          int packet_type, uint32_t qtype)
 {
     bool result = false;
 

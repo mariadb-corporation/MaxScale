@@ -11,7 +11,8 @@
  * Public License.
  */
 
-#include "readwritesplit.h"
+#include "readwritesplit.hh"
+#include "rwsplit_internal.hh"
 
 #include <stdio.h>
 #include <strings.h>
@@ -20,19 +21,11 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "rwsplit_internal.h"
+
 /**
- * @file rwsplit_select_backends.c   The functions that implement back end
- * selection for the read write split router. All of these functions are
- * internal to that router and not intended to be called from elsewhere.
- *
- * @verbatim
- * Revision History
- *
- * Date          Who                 Description
- * 08/08/2016    Martin Brampton     Initial implementation
- *
- * @endverbatim
+ * The functions that implement back end selection for the read write
+ * split router. All of these functions are internal to that router and
+ * not intended to be called from elsewhere.
  */
 
 static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execute_history);
