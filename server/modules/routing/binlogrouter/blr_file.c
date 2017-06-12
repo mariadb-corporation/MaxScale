@@ -516,55 +516,25 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
        router->storage_type == BLR_BINLOG_STORAGE_TREE)
    {
         char prefix[BINLOG_FILE_EXTRA_INFO];
+        // Add prefix
         sprintf(prefix,
-                "%" PRIu32 "/",
-                router->mariadb10_gtid_domain);
-
-        // Add domain_id
-        strcat(path, prefix);
-
-        /**
-         * - 1 - Check and create $domain_id dir
-         */
-        if (access(path, R_OK) == -1)
-        {
-            int mkdir_rval;
-            mkdir_rval = mkdir(path, 0700);
-            if (mkdir_rval == -1)
-            {
-                MXS_ERROR("Service %s, Failed to create binlog"
-                          " directory tree (domain_id) '%s': [%d] %s",
-                          router->service->name,
-                          path,
-                          errno,
-                          mxs_strerror(errno));
-                return 0;
-            }
-        }
-
-        // Add server_id
-        sprintf(prefix,
-                "%" PRIu32 "/",
+                "%" PRIu32 "/%" PRIu32 "/",
+                router->mariadb10_gtid_domain,
                 router->orig_masterid);
         strcat(path, prefix);
 
         /**
-         * - 2 - Check and create $server_id dir under $domain_id
+         * Check and create $domain_id/$server_id dir
          */
-        if (access(path, R_OK) == -1)
+        if (!mxs_mkdir_all(path, 0700))
         {
-            int mkdir_rval;
-            mkdir_rval = mkdir(path, 0700);
-            if (mkdir_rval == -1)
-            {
-                MXS_ERROR("Service %s, Failed to create binlog"
-                          " directory tree (domain_id/server_id) '%s': [%d] %s",
-                          router->service->name,
-                          path,
-                          errno,
-                          mxs_strerror(errno));
-                return 0;
-            }
+            MXS_ERROR("Service %s, Failed to create binlog"
+                      " directory tree '%s': [%d] %s",
+                      router->service->name,
+                      path,
+                      errno,
+                      mxs_strerror(errno));
+            return 0;
         }
     }
 

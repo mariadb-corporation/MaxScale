@@ -6521,13 +6521,13 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
     {
         /* If not mariadb10 mastergtid an error message will be returned */
         if (slave->mariadb10_compat &&
-            router->mariadb10_master_gtid)
+            router->mariadb10_gtid)
         {
             char heading[40];
             char gtid_domain[40];
             sprintf(gtid_domain,
-                    "%lu",
-                    (unsigned long)router->mariadb10_gtid_domain);
+                    "%" PRIu32 "",
+                    router->mariadb10_gtid_domain);
             strcpy(heading, word);
 
             blr_slave_send_var_value(router,
@@ -6842,14 +6842,43 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
             }
             else
             {
-               /**
-                * The requested binlog file is not the GTID info file.
-                * The binlog file could be different due to:
-                * a rotate event or other non GTID events written
-                * after that GTID.
-                * Events are sent from requested file@pos
-                */
-                slave->binlog_pos = req_pos;
+                /**
+                 * The requested binlog file is not the GTID info file.
+                 * The binlog file could be different due to:
+                 * a rotate event or other non GTID events written
+                 * after that GTID.
+                 * If file exists events will be sent from requested file@pos
+                 * otherwise file & pos = GTID info file.
+                 */
+
+                // Add tree prefix
+                char t_prefix[BINLOG_FILE_EXTRA_INFO] = "";
+                char file_path[PATH_MAX + 1] = "";
+                if (router->storage_type == BLR_BINLOG_STORAGE_TREE)
+                {
+                    sprintf(t_prefix,
+                            "%" PRIu32 "/%" PRIu32 "/",
+                            f_gtid.gtid_elms.domain_id,
+                            f_gtid.gtid_elms.server_id);
+                }
+
+                // Get binlog filename full-path
+                blr_get_file_fullpath(slave->binlogfile,
+                                      router->binlogdir,
+                                      file_path,
+                                      t_prefix[0] ? t_prefix: NULL);
+                if (blr_slave_get_file_size(file_path) != 0)
+                {
+                    slave->binlog_pos = req_pos;
+                }
+                else
+                {
+                    /* Set binlog file to the GTID one */
+                    strcpy(slave->binlogfile, f_gtid.file);
+
+                    /* Set pos to GTID next event pos */
+                    slave->binlog_pos = f_gtid.end;
+                }
             }
 
             /* Set GTID details in f_info*/
@@ -8020,14 +8049,14 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE *router,
 
     /**
      * Get the next file in sequence or next by GTID maps
-     * if current file has 4 bytes size.
+     * if current file has 4 bytes size or it doesn't exist at all.
      * Stop if the new file is the current binlog file.
      */
     while (!blr_compare_binlogs(router,
                                 f_tree,
                                 router_curr_file,
                                 binlog_file) &&
-           blr_slave_get_file_size(file_path) == 4 &&
+           blr_slave_get_file_size(file_path) <= 4 &&
            blr_file_next_exists(router, slave, next_file))
     {
         // Log skipped file

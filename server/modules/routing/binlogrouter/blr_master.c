@@ -2821,18 +2821,41 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
                                     buf);
         // Next state is BLRM_MARIADB10_GTID_DOMAIN or BLRM_LATIN1
         {
-            unsigned int state = router->mariadb10_master_gtid ?
+            /**
+             * Always request "gtid_domain_id" to Master server
+             * if MariaDB 10 Compatibilty is On
+             */
+            unsigned int state = router->mariadb10_compat ?
                                  BLRM_MARIADB10_GTID_DOMAIN :
                                  BLRM_LATIN1;
-            const char *command = router->mariadb10_master_gtid ?
+            const char *command = router->mariadb10_compat ?
                                   "SELECT @@GLOBAL.gtid_domain_id" :
                                   "SET NAMES latin1";
             blr_register_send_command(router, command, state);
         }
         break;
     case BLRM_MARIADB10_GTID_DOMAIN: // MariaDB10 Only
-        // Next state is BLRM_MARIADB10_REQUEST_GTID
-        blr_register_mariadb_gtid_request(router, buf);
+        {
+            // Extract GTID domain
+            char *val = blr_extract_column(buf, 1);
+            // Store the Master GTID domain
+            router->mariadb10_gtid_domain = atol(val);
+            MXS_FREE(val);
+            // Don't save the server response
+            gwbuf_free(buf);
+        }
+
+        // Next state is BLRM_MARIADB10_REQUEST_GTID or BLRM_LATIN1
+        if (!router->mariadb10_master_gtid)
+        {
+            blr_register_send_command(router,
+                                      "SET NAMES latin1",
+                                      BLRM_LATIN1);
+        }
+        else
+        {
+            blr_register_mariadb_gtid_request(router, buf);
+        }
         break;
     case BLRM_MARIADB10_REQUEST_GTID: // MariaDB10 Only
         // Don't save GTID request
