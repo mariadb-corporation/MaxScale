@@ -13,25 +13,12 @@
 
 /**
  * @file qlafilter.c - Quary Log All Filter
- * @verbatim
  *
- * QLA Filter - Query Log All. A primitive query logging filter, simply
- * used to verify the filter mechanism for downstream filters. All queries
- * that are passed through the filter will be written to file.
+ * QLA Filter - Query Log All. A simple query logging filter. All queries passing
+ * through the filter are written to a text file.
  *
  * The filter makes no attempt to deal with query packets that do not fit
  * in a single GWBUF.
- *
- * A single option may be passed to the filter, this is the name of the
- * file to which the queries are logged. A serial number is appended to this
- * name in order that each session logs to a different file.
- *
- * Date         Who             Description
- * 03/06/2014   Mark Riddoch    Initial implementation
- * 11/06/2014   Mark Riddoch    Addition of source and match parameters
- * 19/06/2014   Mark Riddoch    Addition of user parameter
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "qlafilter"
@@ -52,10 +39,10 @@
 #include <maxscale/service.h>
 #include <maxscale/utils.h>
 
-/** Date string buffer size */
+/* Date string buffer size */
 #define QLA_DATE_BUFFER_SIZE 20
 
-/** Log file save mode flags */
+/* Log file save mode flags */
 #define CONFIG_FILE_SESSION (1 << 0) // Default value, session specific files
 #define CONFIG_FILE_UNIFIED (1 << 1) // One file shared by all sessions
 
@@ -69,12 +56,10 @@ enum log_options
     LOG_DATA_QUERY      = (1 << 4),
 };
 
-/** Default values for logged data */
+/* Default values for logged data */
 #define LOG_DATA_DEFAULT "date,user,query"
 
-/*
- * The filter entry points
- */
+/* The filter entry points */
 static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *);
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
@@ -102,8 +87,8 @@ typedef struct
     char *user_name; /* The user name to filter on */
     char *match; /* Optional text to match against */
     pcre2_code* re_match; /* Compiled regex text */
-    char *nomatch; /* Optional text to match against for exclusion */
-    pcre2_code* re_nomatch; /* Compiled regex nomatch text */
+    char *exclude; /* Optional text to match against for exclusion */
+    pcre2_code* re_exclude; /* Compiled regex nomatch text */
     uint32_t ovec_size; /* PCRE2 match data ovector size */
     uint32_t log_mode_flags; /* Log file mode settings */
     uint32_t log_file_data_flags; /* What data is saved to the files */
@@ -115,17 +100,10 @@ typedef struct
     /* Avoid repeatedly printing some errors/warnings. */
     bool write_warning_given;
     bool match_error_printed;
-    bool nomatch_error_printed;
+    bool exclude_error_printed;
 } QLA_INSTANCE;
 
-/**
- * The session structure for this QLA filter.
- * This stores the downstream filter information, such that the
- * filter is able to pass the query on to the next filter (or router)
- * in the chain.
- *
- * It also holds the file descriptor to which queries are written.
- */
+/* The session structure for this QLA filter. */
 typedef struct
 {
     int active;
@@ -170,11 +148,19 @@ static const MXS_ENUM_VALUE log_data_values[] =
     {NULL}
 };
 
+static const char PARAM_MATCH[] = "match";
+static const char PARAM_EXCLUDE[] = "exclude";
+static const char PARAM_USER[] = "user";
+static const char PARAM_SOURCE[] = "source";
+static const char PARAM_FILEBASE[] = "filebase";
+static const char PARAM_OPTIONS[] = "options";
+static const char PARAM_LOG_TYPE[] = "log_type";
+static const char PARAM_LOG_DATA[] = "log_data";
+static const char PARAM_FLUSH[] = "flush";
+static const char PARAM_APPEND[] = "append";
+
 /**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
+ * The module entry point routine.
  *
  * @return The module object
  */
@@ -211,55 +197,55 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread finish. */
         {
             {
-                "match",
+                PARAM_MATCH,
                 MXS_MODULE_PARAM_REGEX
             },
             {
-                "exclude",
+                PARAM_EXCLUDE,
                 MXS_MODULE_PARAM_REGEX
             },
             {
-                "user",
+                PARAM_USER,
                 MXS_MODULE_PARAM_STRING
             },
             {
-                "source",
+                PARAM_SOURCE,
                 MXS_MODULE_PARAM_STRING
             },
             {
-                "filebase",
+                PARAM_FILEBASE,
                 MXS_MODULE_PARAM_STRING,
                 NULL,
                 MXS_MODULE_OPT_REQUIRED
             },
             {
-                "options",
+                PARAM_OPTIONS,
                 MXS_MODULE_PARAM_ENUM,
                 "ignorecase",
                 MXS_MODULE_OPT_NONE,
                 option_values
             },
             {
-                "log_type",
+                PARAM_LOG_TYPE,
                 MXS_MODULE_PARAM_ENUM,
                 "session",
                 MXS_MODULE_OPT_NONE,
                 log_type_values
             },
             {
-                "log_data",
+                PARAM_LOG_DATA,
                 MXS_MODULE_PARAM_ENUM,
                 LOG_DATA_DEFAULT,
                 MXS_MODULE_OPT_NONE,
                 log_data_values
             },
             {
-                "flush",
+                PARAM_FLUSH,
                 MXS_MODULE_PARAM_BOOL,
                 "false"
             },
             {
-                "append",
+                PARAM_APPEND,
                 MXS_MODULE_PARAM_BOOL,
                 "false"
             },
@@ -271,14 +257,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 
 /**
- * Create an instance of the filter for a particular service
- * within MaxScale.
+ * Create an instance of the filter for a particular service within MaxScale.
  *
- * @param name      The name of the instance (as defined in the config file).
+ * @param name      The name of the instance (as defined in the config file)
  * @param options   The options for this filter
  * @param params    The array of name/value pair parameters for the filter
  *
- * @return The instance data for this new instance
+ * @return The new filter instance, or NULL on error
  */
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
@@ -293,44 +278,44 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         my_instance->unified_fp = NULL;
         my_instance->write_warning_given = false;
         my_instance->match_error_printed = false;
-        my_instance->nomatch_error_printed = false;
+        my_instance->exclude_error_printed = false;
 
-        my_instance->source = config_copy_string(params, "source");
-        my_instance->user_name = config_copy_string(params, "user");
+        my_instance->source = config_copy_string(params, PARAM_SOURCE);
+        my_instance->user_name = config_copy_string(params, PARAM_USER);
 
-        my_instance->filebase = MXS_STRDUP_A(config_get_string(params, "filebase"));
-        my_instance->append = config_get_bool(params, "append");
-        my_instance->flush_writes = config_get_bool(params, "flush");
-        my_instance->log_file_data_flags = config_get_enum(params, "log_data", log_data_values);
-        my_instance->log_mode_flags = config_get_enum(params, "log_type", log_type_values);
+        my_instance->filebase = MXS_STRDUP_A(config_get_string(params, PARAM_FILEBASE));
+        my_instance->append = config_get_bool(params, PARAM_APPEND);
+        my_instance->flush_writes = config_get_bool(params, PARAM_FLUSH);
+        my_instance->log_file_data_flags = config_get_enum(params, PARAM_LOG_DATA, log_data_values);
+        my_instance->log_mode_flags = config_get_enum(params, PARAM_LOG_TYPE, log_type_values);
 
-        my_instance->match = config_copy_string(params, "match");
-        my_instance->nomatch = config_copy_string(params, "exclude");
-        my_instance->re_nomatch = NULL;
+        my_instance->match = config_copy_string(params, PARAM_MATCH);
+        my_instance->exclude = config_copy_string(params, PARAM_EXCLUDE);
+        my_instance->re_exclude = NULL;
         my_instance->re_match = NULL;
         bool error = false;
 
-        int cflags = config_get_enum(params, "options", option_values);
+        int cflags = config_get_enum(params, PARAM_OPTIONS, option_values);
         if (my_instance->match)
         {
             my_instance->re_match =
-                config_get_compiled_regex(params, "match", cflags, &my_instance->ovec_size);
+                config_get_compiled_regex(params, PARAM_MATCH, cflags, &my_instance->ovec_size);
             if (!my_instance->re_match)
             {
                 error = true;
             }
         }
 
-        if (my_instance->nomatch)
+        if (my_instance->exclude)
         {
             uint32_t ovec_size_temp = 0;
-            my_instance->re_nomatch =
-                config_get_compiled_regex(params, "exclude", cflags, &ovec_size_temp);
+            my_instance->re_exclude =
+                config_get_compiled_regex(params, PARAM_EXCLUDE, cflags, &ovec_size_temp);
             if (ovec_size_temp > my_instance->ovec_size)
             {
                 my_instance->ovec_size = ovec_size_temp;
             }
-            if (!my_instance->re_nomatch)
+            if (!my_instance->re_exclude)
             {
                 error = true;
             }
@@ -352,10 +337,8 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 
                 if (my_instance->unified_fp == NULL)
                 {
-                    MXS_ERROR("Opening output file for qla "
-                              "filter failed due to %d, %s",
-                              errno,
-                              mxs_strerror(errno));
+                    MXS_ERROR("Opening output file for qla-filter failed due to %d, %s",
+                              errno, mxs_strerror(errno));
                     error = true;
                 }
                 MXS_FREE(filename);
@@ -371,8 +354,8 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
             MXS_FREE(my_instance->name);
             MXS_FREE(my_instance->match);
             pcre2_code_free(my_instance->re_match);
-            MXS_FREE(my_instance->nomatch);
-            pcre2_code_free(my_instance->re_nomatch);
+            MXS_FREE(my_instance->exclude);
+            pcre2_code_free(my_instance->re_exclude);
             if (my_instance->unified_fp != NULL)
             {
                 fclose(my_instance->unified_fp);
@@ -442,7 +425,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
 
         sprintf(my_session->filename, "%s.%lu",
                 my_instance->filebase,
-                my_session->ses_id); // Fixed possible race condition
+                my_session->ses_id);
 
         // Multiple sessions can try to update my_instance->sessions simultaneously
         atomic_add(&(my_instance->sessions), 1);
@@ -456,10 +439,8 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
 
             if (my_session->fp == NULL)
             {
-                MXS_ERROR("Opening output file for qla "
-                          "filter failed due to %d, %s",
-                          errno,
-                          mxs_strerror(errno));
+                MXS_ERROR("Opening output file for qla-filter failed due to %d, %s",
+                          errno, mxs_strerror(errno));
                 MXS_FREE(my_session->filename);
                 pcre2_match_data_free(my_session->match_data);
                 MXS_FREE(my_session);
@@ -602,7 +583,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  *
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
- * @param   dcb     The DCB for diagnostic output
+ * @param   dcb         The DCB for diagnostic output
  */
 static void
 diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
@@ -630,10 +611,10 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
         dcb_printf(dcb, "\t\tInclude queries that match     %s\n",
                    my_instance->match);
     }
-    if (my_instance->nomatch)
+    if (my_instance->exclude)
     {
         dcb_printf(dcb, "\t\tExclude queries that match     %s\n",
-                   my_instance->nomatch);
+                   my_instance->exclude);
     }
 }
 
@@ -661,22 +642,22 @@ static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESS
 
     if (my_instance->source)
     {
-        json_object_set_new(rval, "source", json_string(my_instance->source));
+        json_object_set_new(rval, PARAM_SOURCE, json_string(my_instance->source));
     }
 
     if (my_instance->user_name)
     {
-        json_object_set_new(rval, "user", json_string(my_instance->user_name));
+        json_object_set_new(rval, PARAM_USER, json_string(my_instance->user_name));
     }
 
     if (my_instance->match)
     {
-        json_object_set_new(rval, "match", json_string(my_instance->match));
+        json_object_set_new(rval, PARAM_MATCH, json_string(my_instance->match));
     }
 
-    if (my_instance->nomatch)
+    if (my_instance->exclude)
     {
-        json_object_set_new(rval, "exclude", json_string(my_instance->nomatch));
+        json_object_set_new(rval, PARAM_EXCLUDE, json_string(my_instance->exclude));
     }
 
     return rval;
@@ -691,6 +672,7 @@ static uint64_t getCapabilities(MXS_FILTER* instance)
 {
     return RCAP_TYPE_NONE;
 }
+
 /**
  * Open the log file and print a header if appropriate.
  * @param   data_flags  Data save settings flags
@@ -709,10 +691,12 @@ static FILE* open_log_file(uint32_t data_flags, QLA_INSTANCE *instance, const ch
     }
     else
     {
-        // Using fopen() with 'a+' means we will always write to the end but can read
-        // anywhere. Depending on the "append"-setting the file has been
-        // opened in different modes, which should be considered if file handling
-        // changes later (e.g. rewinding).
+        /**
+         *  Using fopen() with 'a+' means we will always write to the end but can read
+         *  anywhere. Depending on the "append"-setting the file has been
+         *  opened in different modes, which should be considered if file handling
+         *  changes later (e.g. rewinding).
+         */
         if ((fp = fopen(filename, "a+")) != NULL)
         {
             // Check to see if file already has contents
@@ -792,13 +776,14 @@ static FILE* open_log_file(uint32_t data_flags, QLA_INSTANCE *instance, const ch
 
 /**
  * Write an entry to the log file.
+ *
  * @param   data_flags    Controls what to write
- * @param   logfile    Target file
- * @param   instance    Filter instance
- * @param   session    Filter session
- * @param   time_string Date entry
- * @param   sql_string SQL-query, not NULL terminated!
- * @param   sql_str_len Length of SQL-string
+ * @param   logfile       Target file
+ * @param   instance      Filter instance
+ * @param   session       Filter session
+ * @param   time_string   Date entry
+ * @param   sql_string    SQL-query, *not* NULL terminated
+ * @param   sql_str_len   Length of SQL-string
  * @return  The number of characters written, or a negative value on failure
  */
 static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *instance,
@@ -807,11 +792,12 @@ static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *ins
 {
     ss_dassert(logfile != NULL);
     size_t print_len = 0;
-
-    // First calculate an upper limit for the total length. The strlen()-calls
-    // could be removed if the values would be saved into the instance or session
-    // or if we had some reasonable max lengths. (Apparently there are max lengths
-    // but they are much higher than what is typically needed)
+    /**
+     *  First calculate an upper limit for the total length. The strlen()-calls
+     *  could be removed if the values would be saved into the instance or session
+     *  or if we had some reasonable max lengths. (Apparently there are max lengths
+     *  but they are much higher than what is typically needed.)
+     */
 
     // The numbers have some extra for delimiters.
     if (data_flags & LOG_DATA_SERVICE)
@@ -840,9 +826,9 @@ static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *ins
         return 0; // Nothing to print
     }
 
-    // Allocate space for a buffer. Printing to the file in parts would likely
-    // cause garbled printing if several threads write simultaneously, so we
-    // have to first print to a string.
+    /* Allocate space for a buffer. Printing to the file in parts would likely
+       cause garbled printing if several threads write simultaneously, so we
+       have to first print to a string. */
     char *print_str = NULL;
     if ((print_str = MXS_CALLOC(print_len, sizeof(char))) == NULL)
     {
@@ -955,9 +941,9 @@ static bool regex_check(QLA_INSTANCE* my_instance, QLA_SESSION* my_session,
             }
         }
     }
-    if (rval && my_instance->re_nomatch)
+    if (rval && my_instance->re_exclude)
     {
-        int result = pcre2_match(my_instance->re_nomatch, (PCRE2_SPTR)ptr,
+        int result = pcre2_match(my_instance->re_exclude, (PCRE2_SPTR)ptr,
                                  length, 0, 0, my_session->match_data, NULL);
         if (result >= 0)
         {
@@ -966,10 +952,10 @@ static bool regex_check(QLA_INSTANCE* my_instance, QLA_SESSION* my_session,
         else if (result != PCRE2_ERROR_NOMATCH)
         {
             rval = false;
-            if (!my_instance->nomatch_error_printed)
+            if (!my_instance->exclude_error_printed)
             {
                 MXS_PCRE2_PRINT_ERROR(result);
-                my_instance->nomatch_error_printed = true;
+                my_instance->exclude_error_printed = true;
             }
         }
     }
