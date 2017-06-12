@@ -328,7 +328,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
             const char UNIFIED[] = ".unified";
             int namelen = strlen(my_instance->filebase) + sizeof(UNIFIED);
             char *filename = NULL;
-            if ((filename = MXS_CALLOC(namelen, sizeof(char))) != NULL)
+            if ((filename = (char*)MXS_CALLOC(namelen, sizeof(char))) != NULL)
             {
                 snprintf(filename, namelen, "%s.unified", my_instance->filebase);
                 // Open the file. It is only closed at program exit
@@ -386,7 +386,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     QLA_SESSION *my_session;
     const char *remote, *userName;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(QLA_SESSION))) != NULL)
+    if ((my_session = (QLA_SESSION*)MXS_CALLOC(1, sizeof(QLA_SESSION))) != NULL)
     {
         my_session->fp = NULL;
         my_session->match_data = NULL;
@@ -830,7 +830,7 @@ static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *ins
        cause garbled printing if several threads write simultaneously, so we
        have to first print to a string. */
     char *print_str = NULL;
-    if ((print_str = MXS_CALLOC(print_len, sizeof(char))) == NULL)
+    if ((print_str = (char*)MXS_CALLOC(print_len, sizeof(char))) == NULL)
     {
         return -1;
     }
