@@ -306,18 +306,23 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)router_inst;
     ROUTER_CLIENT_SES* client_rses = new (std::nothrow) ROUTER_CLIENT_SES;
+    rses_property_t* prop = rses_property_init(RSES_PROP_TYPE_TMPTABLES);
 
-    if (client_rses == NULL)
+    if (client_rses == NULL || prop == NULL)
     {
+        delete client_rses;
+        delete prop;
         return NULL;
     }
+
+    prop->rses_prop_rsession = client_rses;
 #if defined(SS_DEBUG)
     client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
     client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
 
     client_rses->rses_properties[RSES_PROP_TYPE_SESCMD] = NULL;
-    client_rses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = NULL;
+    client_rses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = prop;
     client_rses->rses_closed = false;
     client_rses->router = router;
     client_rses->client_dcb = session->client_dcb;
@@ -1069,10 +1074,13 @@ rses_property_t *rses_property_init(rses_property_type_t prop_type)
 
     if (prop == NULL)
     {
+        MXS_OOM();
         return NULL;
     }
 
     prop->rses_prop_type = prop_type;
+    prop->rses_prop_next = NULL;
+    prop->rses_prop_refcount = 1;
 #if defined(SS_DEBUG)
     prop->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
     prop->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
@@ -1101,7 +1109,7 @@ void rses_property_done(rses_property_t *prop)
         break;
 
     case RSES_PROP_TYPE_TMPTABLES:
-        hashtable_free(prop->rses_prop_data.temp_tables);
+        // Nothing to do
         break;
 
     default:
@@ -1111,6 +1119,7 @@ void rses_property_done(rses_property_t *prop)
         ss_dassert(false);
         break;
     }
+
     delete prop;
 }
 

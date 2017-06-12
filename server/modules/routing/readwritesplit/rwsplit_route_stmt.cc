@@ -990,7 +990,7 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
          */
         if (rses->have_tmp_tables)
         {
-            check_drop_tmp_table(rses, querybuf, packet_type);
+            check_drop_tmp_table(rses, querybuf);
             if (is_packet_a_query(packet_type) && is_read_tmp_table(rses, querybuf, *qtype))
             {
                 *qtype |= QUERY_TYPE_MASTER_READ;

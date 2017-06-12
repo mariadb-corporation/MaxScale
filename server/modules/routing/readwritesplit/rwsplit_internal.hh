@@ -125,9 +125,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
-void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                          GWBUF *querybuf,
-                          uint32_t packet_type);
+void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf);
 bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                        GWBUF *querybuf,
                        uint32_t type);

@@ -44,52 +44,27 @@
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
-                          uint32_t packet_type)
+void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf)
 {
-    if (packet_type != MYSQL_COM_QUERY && packet_type != MYSQL_COM_DROP_DB)
-    {
-        return;
-    }
-
-    int tsize = 0, klen = 0, i;
-    char **tbl = NULL;
-    char *hkey, *dbname;
-    MYSQL_session *my_data;
-    rses_property_t *rses_prop_tmp;
-    MYSQL_session *data = (MYSQL_session *)router_cli_ses->client_dcb->data;
-
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    dbname = (char *)data->db;
-
     if (qc_is_drop_table_query(querybuf))
     {
-        tbl = qc_get_table_names(querybuf, &tsize, false);
-        if (tbl != NULL)
-        {
-            for (i = 0; i < tsize; i++)
-            {
-                /* Not clear why the next six lines are outside the if block */
-                klen = strlen(dbname) + strlen(tbl[i]) + 2;
-                hkey = (char*)MXS_CALLOC(klen, sizeof(char));
-                MXS_ABORT_IF_NULL(hkey);
-                strcpy(hkey, dbname);
-                strcat(hkey, ".");
-                strcat(hkey, tbl[i]);
+        const QC_FIELD_INFO* info;
+        size_t n_infos;
+        qc_get_field_info(querybuf, &info, &n_infos);
 
-                if (rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
-                {
-                    if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables,
-                                         (void *)hkey))
-                    {
-                        MXS_INFO("Temporary table dropped: %s", hkey);
-                    }
-                }
-                MXS_FREE(tbl[i]);
-                MXS_FREE(hkey);
+        for (size_t i = 0; i < n_infos; i++)
+        {
+            MYSQL_session* data = static_cast<MYSQL_session*>(router_cli_ses->client_dcb->data);
+            std::string table = info[i].database ? info[i].database : data->db;
+            table += ".";
+
+            if (info[i].table)
+            {
+                table += info[i].table;
             }
 
-            MXS_FREE(tbl);
+            rses_property_t* prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+            prop->rses_prop_data.temp_tables.erase(table);
         }
     }
 }
@@ -105,75 +80,40 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                        GWBUF *querybuf,
                        uint32_t qtype)
 {
-
-    bool target_tmp_table = false;
-    int tsize = 0, klen = 0, i;
-    char **tbl = NULL;
-    char *dbname;
-    char hkey[MYSQL_DATABASE_MAXLEN + MYSQL_TABLE_MAXLEN + 2];
-    MYSQL_session *data;
+    ss_dassert(router_cli_ses && querybuf && router_cli_ses->client_dcb);
     bool rval = false;
-    rses_property_t *rses_prop_tmp;
 
-    if (router_cli_ses == NULL || querybuf == NULL)
+    if (qtype & (QUERY_TYPE_READ |
+                 QUERY_TYPE_LOCAL_READ |
+                 QUERY_TYPE_USERVAR_READ |
+                 QUERY_TYPE_SYSVAR_READ |
+                 QUERY_TYPE_GSYSVAR_READ))
     {
-        MXS_ERROR("[%s] Error: NULL parameters passed: %p %p", __FUNCTION__,
-                  router_cli_ses, querybuf);
-        return false;
-    }
+        const QC_FIELD_INFO* info;
+        size_t n_infos;
+        qc_get_field_info(querybuf, &info, &n_infos);
 
-    if (router_cli_ses->client_dcb == NULL)
-    {
-        MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
-        return false;
-    }
-
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    data = (MYSQL_session *)router_cli_ses->client_dcb->data;
-
-    if (data == NULL)
-    {
-        MXS_ERROR("[%s] Error: User data in client DBC is NULL.", __FUNCTION__);
-        return false;
-    }
-
-    dbname = (char *)data->db;
-
-    if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
-    {
-        tbl = qc_get_table_names(querybuf, &tsize, false);
-
-        if (tbl != NULL && tsize > 0)
+        for (size_t i = 0; i < n_infos; i++)
         {
-            /** Query targets at least one table */
-            for (i = 0; i < tsize && !target_tmp_table && tbl[i]; i++)
+            MYSQL_session* data = static_cast<MYSQL_session*>(router_cli_ses->client_dcb->data);
+            std::string table = info[i].database ? info[i].database : data->db;
+            table += ".";
+
+            if (info[i].table)
             {
-                sprintf(hkey, "%s.%s", dbname, tbl[i]);
-                if (rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
-                {
-                    if (hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, hkey))
-                    {
-                        /**Query target is a temporary table*/
-                        rval = true;
-                        MXS_INFO("Query targets a temporary table: %s", hkey);
-                        break;
-                    }
-                }
+                table += info[i].table;
+            }
+
+            rses_property_t* prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+
+            if (prop->rses_prop_data.temp_tables.find(table) !=
+                prop->rses_prop_data.temp_tables.end())
+            {
+                rval = true;
+                MXS_INFO("Query targets a temporary table: %s", table.c_str());
+                break;
             }
         }
-    }
-
-    if (tbl != NULL)
-    {
-        for (i = 0; i < tsize; i++)
-        {
-            MXS_FREE(tbl[i]);
-        }
-        MXS_FREE(tbl);
     }
 
     return rval;
@@ -191,112 +131,29 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                             GWBUF *querybuf, uint32_t type)
 {
-    if (!qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
-        return;
-    }
+        ss_dassert(router_cli_ses && querybuf && router_cli_ses->client_dcb &&
+                   router_cli_ses->client_dcb->data);
 
-    int klen = 0;
-    char *hkey, *dbname;
-    MYSQL_session *data;
-    rses_property_t *rses_prop_tmp;
-    HASHTABLE *h;
+        router_cli_ses->have_tmp_tables = true;
+        char* tblname = qc_get_created_table_name(querybuf);
+        std::string table;
 
-    if (router_cli_ses == NULL || querybuf == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameters passed: %p %p", __FUNCTION__,
-                  router_cli_ses, querybuf);
-        return;
-    }
-
-    if (router_cli_ses->client_dcb == NULL)
-    {
-        MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
-        return;
-    }
-
-    router_cli_ses->have_tmp_tables = true;
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    data = (MYSQL_session *)router_cli_ses->client_dcb->data;
-
-    if (data == NULL)
-    {
-        MXS_ERROR("[%s] Error: User data in master server DBC is NULL.",
-                  __FUNCTION__);
-        return;
-    }
-
-    dbname = (char *)data->db;
-
-    bool is_temp = true;
-    char *tblname = NULL;
-
-    tblname = qc_get_created_table_name(querybuf);
-
-    if (tblname && strlen(tblname) > 0)
-    {
-        klen = strlen(dbname) + strlen(tblname) + 2;
-        hkey = (char*)MXS_CALLOC(klen, sizeof(char));
-        MXS_ABORT_IF_NULL(hkey);
-        strcpy(hkey, dbname);
-        strcat(hkey, ".");
-        strcat(hkey, tblname);
-    }
-    else
-    {
-        hkey = NULL;
-    }
-
-    if (rses_prop_tmp == NULL)
-    {
-        if ((rses_prop_tmp = (rses_property_t *)MXS_CALLOC(1, sizeof(rses_property_t))))
+        if (tblname && *tblname)
         {
-#if defined(SS_DEBUG)
-            rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
-            rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-#endif
-            rses_prop_tmp->rses_prop_rsession = router_cli_ses;
-            rses_prop_tmp->rses_prop_refcount = 1;
-            rses_prop_tmp->rses_prop_next = NULL;
-            rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
-            router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
-        }
-    }
-    if (rses_prop_tmp)
-    {
-        if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
-        {
-            h = hashtable_alloc(7, rwsplit_hashkeyfun, rwsplit_hashcmpfun);
-            hashtable_memory_fns(h, rwsplit_hstrdup, NULL, rwsplit_hfree, NULL);
-            if (h != NULL)
-            {
-                rses_prop_tmp->rses_prop_data.temp_tables = h;
-            }
-            else
-            {
-                MXS_ERROR("Failed to allocate a new hashtable.");
-            }
+            MYSQL_session* data = static_cast<MYSQL_session*>(router_cli_ses->client_dcb->data);
+            table += data->db;
+            table += ".";
+            table += tblname;
         }
 
-        if (hkey && rses_prop_tmp->rses_prop_data.temp_tables &&
-            hashtable_add(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey,
-                          (void *)is_temp) == 0) /*< Conflict in hash table */
-        {
-            MXS_INFO("Temporary table conflict in hashtable: %s", hkey);
-        }
-#if defined(SS_DEBUG)
-        {
-            bool retkey = hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, hkey);
-            if (retkey)
-            {
-                MXS_INFO("Temporary table added: %s", hkey);
-            }
-        }
-#endif
-    }
+        /** Add the table to the set of temporary tables */
+        rses_property_t* prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+        prop->rses_prop_data.temp_tables.insert(table);
 
-    MXS_FREE(hkey);
-    MXS_FREE(tblname);
+        MXS_FREE(tblname);
+    }
 }
 
 /**

@@ -20,6 +20,9 @@
 
 #include <maxscale/cppdefs.hh>
 
+#include <tr1/unordered_set>
+#include <string>
+
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/router.h>
@@ -153,6 +156,8 @@ struct mysql_sescmd_t
     skygw_chk_t             my_sescmd_chk_tail;
 };
 
+typedef std::tr1::unordered_set<std::string> TableSet;
+
 /**
  * Property structure
  */
@@ -163,10 +168,10 @@ struct rses_property_t
     int                  rses_prop_refcount;
     rses_property_type_t rses_prop_type;
 
-    union rses_prop_data
+    struct rses_prop_data // TODO: Remove the properties and integrate them into the session object
     {
         mysql_sescmd_t   sescmd;
-        HASHTABLE*       temp_tables;
+        TableSet         temp_tables;
     } rses_prop_data;
     rses_property_t*     rses_prop_next; /**< next property of same type */
     skygw_chk_t          rses_prop_chk_tail;
