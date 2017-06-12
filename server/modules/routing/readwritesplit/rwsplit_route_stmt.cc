@@ -1359,32 +1359,6 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 }
 
 /**
- * @brief Create a generic router session property structure.
- *
- * @param prop_type     Property type
- *
- * @return property structure of requested type, or NULL if failed
- */
-rses_property_t *rses_property_init(rses_property_type_t prop_type)
-{
-    rses_property_t *prop;
-
-    prop = (rses_property_t *)MXS_CALLOC(1, sizeof(rses_property_t));
-    if (prop == NULL)
-    {
-        return NULL;
-    }
-    prop->rses_prop_type = prop_type;
-#if defined(SS_DEBUG)
-    prop->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
-    prop->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-#endif
-
-    CHK_RSES_PROP(prop);
-    return prop;
-}
-
-/**
  * @brief Add property to the router client session
  *
  * Add property to the router_client_ses structure's rses_properties

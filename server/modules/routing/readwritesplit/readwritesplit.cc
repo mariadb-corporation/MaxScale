@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <new>
 
 #include <maxscale/router.h>
 #include "rwsplit_internal.hh"
@@ -74,7 +75,6 @@ static uint64_t getCapabilities(MXS_ROUTER* instance);
  * not part of the API.
  */
 
-static void free_rwsplit_instance(ROUTER_INSTANCE *router);
 static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
                                            char **options);
 static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
@@ -231,12 +231,13 @@ static bool handle_max_slaves(ROUTER_INSTANCE *router, const char *str)
  */
 static MXS_ROUTER *createInstance(SERVICE *service, char **options)
 {
-    ROUTER_INSTANCE *router;
+    ROUTER_INSTANCE* router = new (std::nothrow) ROUTER_INSTANCE;
 
-    if ((router = (ROUTER_INSTANCE*)MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if (router == NULL)
     {
         return NULL;
     }
+
     router->service = service;
 
     /*
@@ -270,7 +271,7 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
     if (!handle_max_slaves(router, config_get_string(params, "max_slave_connections")) ||
         (options && !rwsplit_process_router_options(router, options)))
     {
-        free_rwsplit_instance(router);
+        delete router;
         return NULL;
     }
 
@@ -281,7 +282,7 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
         router->rwsplit_config.max_sescmd_history = 0;
     }
 
-    return (MXS_ROUTER *)router;
+    return (MXS_ROUTER*)router;
 }
 
 /**
@@ -303,8 +304,8 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
  */
 static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
 {
-    ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_inst;
-    ROUTER_CLIENT_SES *client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
+    ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)router_inst;
+    ROUTER_CLIENT_SES* client_rses = new (std::nothrow) ROUTER_CLIENT_SES;
 
     if (client_rses == NULL)
     {
@@ -315,6 +316,9 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
     client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
 
+    client_rses->rses_properties[RSES_PROP_TYPE_SESCMD] = NULL;
+    client_rses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = NULL;
+    client_rses->rses_closed = false;
     client_rses->router = router;
     client_rses->client_dcb = session->client_dcb;
     client_rses->have_tmp_tables = false;
@@ -326,21 +330,12 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
 
     int router_nservers = router->service->n_dbref;
     const int min_nservers = 1; /*< hard-coded for now */
-
-    if (!have_enough_servers(client_rses, min_nservers, router_nservers, router))
-    {
-        MXS_FREE(client_rses);
-        return NULL;
-    }
-
-    /**
-     * Create backend reference objects for this session.
-     */
     backend_ref_t *backend_ref;
 
-    if (!create_backends(client_rses, &backend_ref, &router_nservers))
+    if (!have_enough_servers(client_rses, min_nservers, router_nservers, router) ||
+        !create_backends(client_rses, &backend_ref, &router_nservers))
     {
-        MXS_FREE(client_rses);
+        delete client_rses;
         return NULL;
     }
 
@@ -361,8 +356,8 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
          * in the strict mode. If sessions without master are allowed, only
          * <min_nslaves> slaves must be found.
          */
-        MXS_FREE(client_rses->rses_backend_ref);
-        MXS_FREE(client_rses);
+        delete client_rses->rses_backend_ref;
+        delete client_rses;
         return NULL;
     }
 
@@ -489,9 +484,8 @@ static void freeSession(MXS_ROUTER *router_instance, MXS_ROUTER_SESSION *router_
         }
     }
 
-    MXS_FREE(router_cli_ses->rses_backend_ref);
-    MXS_FREE(router_cli_ses);
-    return;
+    delete[] router_cli_ses->rses_backend_ref;
+    delete router_cli_ses;
 }
 
 /**
@@ -988,11 +982,7 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
  */
 void bref_clear_state(backend_ref_t *bref, bref_state_t state)
 {
-    if (bref == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return;
-    }
+    ss_dassert(bref);
 
     if ((state & BREF_WAITING_RESULT) && (bref->bref_state & BREF_WAITING_RESULT))
     {
@@ -1037,11 +1027,7 @@ void bref_clear_state(backend_ref_t *bref, bref_state_t state)
  */
 void bref_set_state(backend_ref_t *bref, bref_state_t state)
 {
-    if (bref == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return;
-    }
+    ss_dassert(bref);
 
     if ((state & BREF_WAITING_RESULT) && (bref->bref_state & BREF_WAITING_RESULT) == 0)
     {
@@ -1071,6 +1057,32 @@ void bref_set_state(backend_ref_t *bref, bref_state_t state)
 }
 
 /**
+ * @brief Create a generic router session property structure.
+ *
+ * @param prop_type     Property type
+ *
+ * @return property structure of requested type, or NULL if failed
+ */
+rses_property_t *rses_property_init(rses_property_type_t prop_type)
+{
+    rses_property_t* prop = new (std::nothrow) rses_property_t;
+
+    if (prop == NULL)
+    {
+        return NULL;
+    }
+
+    prop->rses_prop_type = prop_type;
+#if defined(SS_DEBUG)
+    prop->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
+    prop->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
+#endif
+
+    CHK_RSES_PROP(prop);
+    return prop;
+}
+
+/**
  * @brief Free resources belonging to a property
  *
  * Property is freed at the end of router client session.
@@ -1079,11 +1091,7 @@ void bref_set_state(backend_ref_t *bref, bref_state_t state)
  */
 void rses_property_done(rses_property_t *prop)
 {
-    if (prop == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return;
-    }
+    ss_dassert(prop);
     CHK_RSES_PROP(prop);
 
     switch (prop->rses_prop_type)
@@ -1103,7 +1111,7 @@ void rses_property_done(rses_property_t *prop)
         ss_dassert(false);
         break;
     }
-    MXS_FREE(prop);
+    delete prop;
 }
 
 /**
@@ -1677,7 +1685,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
 static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
                                 int router_nsrv, ROUTER_INSTANCE *router)
 {
-    bool succp;
+    bool succp = true;
 
     /** With too few servers session is not created */
     if (router_nsrv < min_nsrv ||
@@ -1718,27 +1726,8 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
         }
         succp = false;
     }
-    else
-    {
-        succp = true;
-    }
-    return succp;
-}
 
-/*
- * @brief   Release resources when createInstance fails to complete
- *
- * Internal to createInstance
- *
- * @param   router  Router instance
- *
- */
-static void free_rwsplit_instance(ROUTER_INSTANCE *router)
-{
-    if (router)
-    {
-        MXS_FREE(router);
-    }
+    return succp;
 }
 
 /**
@@ -1755,7 +1744,7 @@ static void free_rwsplit_instance(ROUTER_INSTANCE *router)
  */
 static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* n_backend)
 {
-    backend_ref_t *backend_ref = (backend_ref_t *)MXS_CALLOC(1, *n_backend * sizeof(backend_ref_t));
+    backend_ref_t* backend_ref = new (std::nothrow) backend_ref_t[*n_backend];
 
     if (backend_ref == NULL)
     {
@@ -1774,9 +1763,13 @@ static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* 
             backend_ref[i].bref_sescmd_cur.scmd_cur_chk_top = CHK_NUM_SESCMD_CUR;
             backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
 #endif
+            backend_ref[i].closed_at = 0;
             backend_ref[i].bref_state = 0;
             backend_ref[i].ref = sref;
             backend_ref[i].reply_state = REPLY_STATE_DONE;
+            backend_ref[i].reply_cmd = 0;
+            backend_ref[i].bref_dcb = NULL;
+            backend_ref[i].bref_num_result_wait = 0;
             /** store pointers to sescmd list to both cursors */
             backend_ref[i].bref_sescmd_cur.scmd_cur_rses = rses;
             backend_ref[i].bref_sescmd_cur.scmd_cur_active = false;

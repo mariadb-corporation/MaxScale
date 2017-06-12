@@ -83,6 +83,8 @@ mysql_sescmd_t *mysql_sescmd_init(rses_property_t *rses_prop,
     sescmd->my_sescmd_buf = sescmd_buf;
     sescmd->my_sescmd_packet_type = packet_type;
     sescmd->position = atomic_add(&rses->pos_generator, 1);
+    sescmd->my_sescmd_is_replied = false;
+    sescmd->reply_cmd = 0;
 
     return sescmd;
 }
