@@ -1806,7 +1806,7 @@ global_defaults()
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     gateway.skip_permission_checks = false;
     gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
-    gateway.admin_auth = false;
+    gateway.admin_auth = true;
     gateway.admin_enabled = true;
     strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
     gateway.admin_ssl_key[0] = '\0';
