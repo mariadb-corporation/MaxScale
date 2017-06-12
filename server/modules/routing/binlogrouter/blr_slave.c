@@ -398,7 +398,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         else if (router->mariadb10_compat && !slave->mariadb10_compat)
         {
             char *err_msg = "MariaDB 10 Slave is required"
-                                  " for Slave registration.";
+                            " for Slave registration.";
             /**
              * If Master is MariaDB10 don't allow registration from
              * MariaDB/Mysql 5 Slaves
@@ -426,8 +426,8 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
              * If GTID master replication is set
              * only GTID slaves can continue the registration.
              */
-            char *err_msg = "MariaDB 10 Slave GTID is required"
-                                  " for Slave registration.";
+            const char *err_msg = "MariaDB 10 Slave GTID is required"
+                            " for Slave registration.";
             slave->state = BLRS_ERRORED;
             /* Send error that stops slave replication */
             blr_send_custom_error(slave->dcb,
@@ -1091,7 +1091,7 @@ blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 }
 
 /*
- * Columns to send for a "SHOW SLAVE STATUS" command
+ * Columns to send for GTID in "SHOW SLAVE STATUS" command
  */
 static const char *slave_status_columns[] =
 {
@@ -1150,7 +1150,7 @@ static const char *slave_status_columns[] =
 };
 
 /*
- * New columns to send for a "SHOW ALL SLAVES STATUS" command
+ * New columns to send for GTID in "SHOW ALL SLAVES STATUS" command
  */
 static const char *all_slaves_status_columns[] =
 {
@@ -1220,6 +1220,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
         }
     }
 
+    /* Get the right GTID columns array */
     const char **gtid_status_columns = router->mariadb10_gtid ?
                                  mariadb10_gtid_status_columns :
                                  mysql_gtid_status_columns;
@@ -1246,6 +1247,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
                                      seqno++);
         }
     }
+
     /* Now send column definitions for slave status */
     for (i = 0; slave_status_columns[i]; i++)
     {
@@ -2364,6 +2366,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
         if (hdr.event_type == ROTATE_EVENT)
         {
             unsigned long beat1 = hkheartbeat;
+
             blr_close_binlog(router, file);
             if (hkheartbeat - beat1 > 1)
             {
@@ -2377,6 +2380,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             slave->encryption_ctx = NULL;
 
             beat1 = hkheartbeat;
+
 #ifdef BLFILE_IN_SLAVE
             if ((slave->file = blr_open_binlog(router,
                                                slave->binlogfile,
@@ -2867,7 +2871,7 @@ blr_slave_read_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     {
         return NULL;
     }
-    /* FDE is not encrypted, so we can pass NULL to last parameter */
+    /* FDE, at pos 4, is not encrypted, pass NULL to last parameter */
     if ((record = blr_read_binlog(router,
                                   file,
                                   4,
@@ -3554,9 +3558,17 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     router->master_state = BLRM_UNCONNECTED;
     spinlock_release(&router->lock);
 
-    /* create a new binlog or just use current one */
+    /**
+     * Check whether to create the new binlog (router->binlog_name)
+     *
+     * File handling happens only if mariadb10_master_gtid is off:
+     * with Master GTID the first file will be created/opened
+     * by the fake Rotate Event.
+     */
+
+    /* Check first for incomplete transaction */
     if (strlen(router->prevbinlog) &&
-        strcmp(router->prevbinlog, router->binlog_name))
+        strcmp(router->prevbinlog, router->binlog_name) != 0)
     {
         if (router->trx_safe &&
             router->pending_transaction.state > BLRM_NO_TRANSACTION)
@@ -3565,9 +3577,21 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
             char file[PATH_MAX + 1] = "";
             struct stat statb;
             unsigned long filelen = 0;
+            char t_prefix[BINLOG_FILE_EXTRA_INFO] = "";
 
-            snprintf(file, PATH_MAX, "%s/%s",
+            // Add file prefix
+            if (router->storage_type == BLR_BINLOG_STORAGE_TREE)
+            {
+                sprintf(t_prefix,
+                        "%" PRIu32 "/%" PRIu32 "/",
+                        router->mariadb10_gtid_domain,
+                        router->orig_masterid);
+            }
+
+            // Router current file
+            snprintf(file, PATH_MAX, "%s/%s%s",
                      router->binlogdir,
+                     t_prefix,
                      router->prevbinlog);
 
             /* Get file size */
@@ -3578,9 +3602,10 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
             /* Prepare warning message */
             snprintf(msg, BINLOG_ERROR_MSG_LEN,
-                     "1105:Truncated partial transaction in file %s, "
+                     "1105:Truncated partial transaction in file %s%s, "
                      "starting at pos %lu, "
                      "ending at pos %lu. File %s now has length %lu.",
+                     t_prefix,
                      router->prevbinlog,
                      router->last_safe_pos,
                      filelen,
@@ -3596,10 +3621,11 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
             /* Log it */
             MXS_WARNING("A transaction is still opened at pos %lu"
-                        " File %s will be truncated. "
+                        " File %s%s will be truncated. "
                         "Next binlog file is %s at pos %d, "
                         "START SLAVE is required again.",
                         router->last_safe_pos,
+                        t_prefix,
                         router->prevbinlog,
                         router->binlog_name,
                         4);
@@ -3617,21 +3643,34 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
             /* Send warning message to mysql command */
             blr_slave_send_warning_message(router, slave, msg);
-        }
-    }
 
-    /* No file has beem opened, create a new binlog file */
-    if (router->binlog_fd == -1)
-    {
-        blr_file_new_binlog(router, router->binlog_name);
-    }
-    else
-    {
-        /* A new binlog file has been created by CHANGE MASTER TO
-         * if no pending transaction is detected.
-         * use the existing one.
-         */
-        blr_file_append(router, router->binlog_name);
+            return 1;
+        }
+        /* No pending transaction */
+        else
+        {
+            /**
+             * If router->mariadb10_master_gtid is Off then
+             * handle file create/append.
+             * This means the domain_id and server_id
+             * are not taken into account for filename prefix.
+             */
+            if (!router->mariadb10_master_gtid)
+            {
+                /* If the router file is not open, create a new binlog file */
+                if (router->binlog_fd == -1)
+                {
+                    blr_file_new_binlog(router, router->binlog_name);
+                }
+                else
+                {
+                    /* A new binlog file has been created and opened
+                     * by CHANGE MASTER TO: use it
+                     */
+                     blr_file_append(router, router->binlog_name);
+                }
+            }
+        }
     }
 
     /** Initialise SSL: exit on error */
@@ -3644,7 +3683,8 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
             blr_slave_send_error_packet(slave,
                                         "Unable to initialise SSL with backend server",
-                                        (unsigned int)1210, "HY000");
+                                        1210,
+                                        "HY000");
             spinlock_acquire(&router->lock);
 
             router->master_state = BLRM_SLAVE_STOPPED;
@@ -3894,36 +3934,62 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     /**
       * If MASTER_LOG_FILE is not set
       * and master connection is configured
-      * set master_logfile to current binlog_name
-      * Otherwise return an error.
+      * set master_logfile to current binlog_name.
+      *
+      * 'router->use_mariadb10_gtid' value is checked before
+      * returning an error
       */
     if (master_logfile == NULL)
     {
-        int change_binlog_error = 0;
+        bool change_binlog_error = true;
+        const char *err_prefix = "Router is not configured "
+                                 "for master connection,";
         /* Replication is not configured yet */
         if (router->master_state == BLRM_UNCONFIGURED)
         {
-            /* if there is another error message keep it */
-            if (!strlen(error))
+            /* Check MASTER_USE_GTID option */
+            if (router->mariadb10_master_gtid &&
+                !change_master.use_mariadb10_gtid)
             {
                 snprintf(error,
                          BINLOG_ERROR_MSG_LEN,
-                         "Router is not configured for master connection, "
-                         "MASTER_LOG_FILE is required");
+                         "%s MASTER_USE_GTID=Slave_pos is required",
+                         err_prefix);
             }
-            change_binlog_error = 1;
+            else
+            {
+                /* If there is another error message keep it */
+                if (!strlen(error) &&
+                    !change_master.use_mariadb10_gtid)
+                {
+                    snprintf(error,
+                             BINLOG_ERROR_MSG_LEN,
+                             "%s MASTER_LOG_FILE is required",
+                             err_prefix);
+                }
+            }
+
+            change_binlog_error = strlen(error) ? true : false;
         }
         else
         {
-            /* if errors returned set error */
-            if (strlen(error))
+            /* If errors returned set error */
+            if (strlen(error) &&
+                (router->mariadb10_master_gtid &&
+                 !change_master.use_mariadb10_gtid))
             {
-                change_binlog_error = 1;
+                /* MASTER_USE_GTID option not set */
+                snprintf(error,
+                         BINLOG_ERROR_MSG_LEN,
+                         "%s MASTER_USE_GTID=Slave_pos is required",
+                         err_prefix);
             }
             else
             {
                 /* Use current binlog file */
                 master_logfile = MXS_STRDUP_A(router->binlog_name);
+
+                change_binlog_error = false;
             }
         }
 
@@ -3941,13 +4007,44 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
             return -1;
         }
     }
+    else
+    /* master_log_file is not NULL */
+    {
+        /* Check for MASTER_USE_GTID option */
+        const char *err_prefix = "Router is not configured "
+                                 "for master connection,";
+        if (router->mariadb10_master_gtid &&
+            !change_master.use_mariadb10_gtid)
+        {
+            snprintf(error,
+                     BINLOG_ERROR_MSG_LEN,
+                     "%s MASTER_USE_GTID=Slave_pos is required",
+                     err_prefix);
+            MXS_ERROR("%s: %s", router->service->name, error);
+
+            /* restore previous master_host and master_port */
+            blr_master_restore_config(router, current_master);
+
+            blr_master_free_parsed_options(&change_master);
+
+            spinlock_release(&router->lock);
+
+            return -1;
+        }
+    }
 
     /**
      * If master connection is configured check new binlog name:
-     * If binlog name has changed to next one only position 4 is allowed
+     * If binlog name has changed to next one
+     * then only position 4 is allowed
      */
 
-    if (strcmp(master_logfile, router->binlog_name) &&
+    /**
+     * Check whether MASTER_USE_GTID option was set
+     */
+    if ((router->mariadb10_master_gtid &&
+        !change_master.use_mariadb10_gtid) &&
+        strcmp(master_logfile, router->binlog_name) != 0 &&
         router->master_state != BLRM_UNCONFIGURED)
     {
         int return_error = 0;
@@ -4002,7 +4099,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
             spinlock_release(&router->lock);
 
             return -1;
-
         }
         else
         {
@@ -4025,6 +4121,22 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                      router->service->name,
                      router->binlog_name);
         }
+    }
+    /* MariaDB 10 GTID request */
+    else if (router->mariadb10_master_gtid &&
+             change_master.use_mariadb10_gtid)
+    {
+        /* Set empty filename at pos 4 */
+        strcpy(router->binlog_name, "");
+
+        router->current_pos = 4;
+        router->binlog_position = 4;
+        router->current_safe_event = 4;
+
+        MXS_INFO("%s: MASTER_USE_GTID is [%s], value [%s]",
+                 router->service->name,
+                 change_master.use_mariadb10_gtid,
+                 router->last_mariadb_gtid);
     }
     else
     {
@@ -4087,7 +4199,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         {
             /**
              * no pos change, set it to 4 if BLRM_UNCONFIGURED
-             * Also set binlog name if UNCOFIGURED
+             * Also set binlog name if UNCONFIGURED
              */
             if (router->master_state == BLRM_UNCONFIGURED)
             {
@@ -4108,11 +4220,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     }
 
     /* Log config changes (without passwords) */
-
     MXS_NOTICE("%s: 'CHANGE MASTER TO executed'. Previous state "
                "MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', "
                "MASTER_LOG_POS=%lu, MASTER_USER='%s'. New state is MASTER_HOST='%s', "
-               "MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'",
+               "MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'%s",
                router->service->name,
                current_master->host,
                current_master->port,
@@ -4123,7 +4234,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,
-               router->user);
+               router->user,
+               change_master.use_mariadb10_gtid ?
+               ", MASTER_USE_GTID=Slave_pos" :
+               "");
 
     blr_master_free_config(current_master);
 
@@ -4412,6 +4526,8 @@ blr_master_free_config(MASTER_SERVER_CFG *master_cfg)
     MXS_FREE(master_cfg->ssl_cert);
     MXS_FREE(master_cfg->ssl_ca);
     MXS_FREE(master_cfg->ssl_version);
+    /* MariaDB 10 GTID */
+    MXS_FREE(master_cfg->use_mariadb10_gtid);
 
     MXS_FREE(master_cfg);
 }
@@ -4454,6 +4570,11 @@ blr_master_set_empty_config(ROUTER_INSTANCE *router)
     router->binlog_position = 4;
     router->current_safe_event = 4;
     strcpy(router->binlog_name, "");
+    strcpy(router->prevbinlog, "");
+    /* Set Empty master id */
+    router->orig_masterid = 0;
+    /* Set Default GTID domain */
+    router->mariadb10_gtid_domain = BLR_DEFAULT_GTID_DOMAIN_ID;
 }
 
 /**
@@ -4920,6 +5041,10 @@ static char
              strcasecmp(option, "master_tls_version") == 0)
     {
         return &config->ssl_version;
+    }
+    else if (strcasecmp(option, "master_use_gtid") == 0)
+    {
+        return &config->use_mariadb10_gtid;
     }
     else
     {
@@ -6547,6 +6672,7 @@ static GWBUF *blr_build_fake_rotate_event(ROUTER_SLAVE *slave,
  * @param req_pos   The requested file pos
  * @return          False if GTID is not found and slave
  *                  is connectig with gtid_strict_mode=1,
+ *                  other errors.
  *                  True otherwise.
  */
 static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
@@ -6581,16 +6707,29 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
     if (!slave->mariadb_gtid[0])
     {
         /**
-          * Empty GTID:
-          * Sending data from the router current file and pos 4
-          */
+         * Empty GTID:
+         * Sending data from the router current file and pos 4
+         */
+        char t_prefix[BINLOG_FILE_EXTRA_INFO] = "";
+
+        // Add file prefix
+        if (router->storage_type == BLR_BINLOG_STORAGE_TREE)
+        {
+            sprintf(t_prefix,
+                    "%" PRIu32 "/%" PRIu32 "/",
+                    f_gtid.gtid_elms.domain_id,
+                    f_gtid.gtid_elms.server_id);
+        }
+
         strcpy(slave->binlogfile, router_curr_file);
         slave->binlog_pos = 4;
 
-        MXS_INFO("Slave %lu is registering with empty GTID:"
-                 " sending events from current binlog file %s,"
+        // TODO: Add prefix
+        MXS_INFO("Slave %d is registering with empty GTID:"
+                 " sending events from current binlog file %s%s,"
                  " pos %" PRIu32 "",
-                 (unsigned long)slave->serverid,
+                 slave->serverid,
+                 t_prefix,
                  slave->binlogfile,
                  slave->binlog_pos);
 
@@ -7315,14 +7454,25 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
                                         1198, NULL);
             return false;
         }
-        if (router->master_state != BLRM_SLAVE_STOPPED)
+        if (router->master_state != BLRM_SLAVE_STOPPED &&
+            router->master_state != BLRM_UNCONFIGURED)
         {
-            MXS_ERROR("Master GTID registration needs stopped replication:"
-                      " issue STOP SLAVE first.");
+            const char *err_msg_u = "configured replication: Issue CHANGE MASTER TO first.";
+            const char *err_msg_s = "stopped replication: issue STOP SLAVE first.";
+            char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
+            MXS_ERROR("GTID registration without %s",
+                      router->master_state == BLRM_SLAVE_STOPPED ?
+                      err_msg_s : err_msg_u);
+
+            snprintf(error_string,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Cannot use Master GTID registration without %s",
+                     router->master_state == BLRM_SLAVE_STOPPED ?
+                     err_msg_s :
+                     err_msg_u);
+
             blr_slave_send_error_packet(slave,
-                                        "Cannot use Master GTID registration"
-                                        " with running replication;"
-                                        " run STOP SLAVE first",
+                                        error_string,
                                         1198,
                                         NULL);
             return true;
@@ -7518,7 +7668,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                     MXS_ERROR("%s: %s", router->service->name, error_string);
                     blr_slave_send_error_packet(slave,
                                                 error_string,
-                                                (unsigned int)1201,
+                                                1201,
                                                 NULL);
 
                     return true;
@@ -7573,7 +7723,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                 {
                     blr_slave_send_error_packet(slave,
                                                 error_string,
-                                                (unsigned int)1201,
+                                                1201,
                                                 NULL);
                 }
                 else
@@ -7593,7 +7743,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                     blr_slave_send_error_packet(slave,
                                                 "This operation cannot be performed "
                                                 "with a running slave; run STOP SLAVE first",
-                                                (unsigned int)1198,
+                                                1198,
                                                 NULL);
                 }
                 return true;
@@ -7661,7 +7811,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                 {
                     blr_slave_send_error_packet(slave,
                                                 error_string,
-                                                (unsigned int)1201,
+                                                1201,
                                                 NULL);
 
                     return true;
@@ -7676,7 +7826,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                     /* CHANGE MASTER TO has failed */
                     blr_slave_send_error_packet(slave,
                                                 error_string,
-                                                (unsigned int)1234,
+                                                1234,
                                                 "42000");
                     blr_master_free_config(current_master);
 
@@ -7709,7 +7859,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
 
                         blr_slave_send_error_packet(slave,
                                                     error_string,
-                                                    (unsigned int)1201,
+                                                    1201,
                                                     NULL);
 
                         return true;
@@ -7730,10 +7880,13 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                         /*
                          * The binlog server has just been configured
                          * master.ini file written in router->binlogdir.
-                         * Now create the binlogfile specified in MASTER_LOG_FILE
+                         *
+                         * Create the binlogfile specified in MASTER_LOG_FILE
+                         * only if MariaDB GTID 'mariadb10_master_gtid' is Off
                          */
 
-                        if (blr_file_new_binlog(router, router->binlog_name))
+                        if (!router->mariadb10_master_gtid &&
+                            blr_file_new_binlog(router, router->binlog_name))
                         {
                             MXS_INFO("%s: 'master.ini' created, binlog file '%s' created",
                                      router->service->name, router->binlog_name);
@@ -7767,10 +7920,12 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
                     /*
                      * The CHAMGE MASTER command might specify a new binlog file.
                      * Let's create the binlogfile specified in MASTER_LOG_FILE
+                     * only if MariaDB GTID 'mariadb10_master_gtid' is Off
                      */
 
-                    if (strlen(router->prevbinlog) &&
-                        strcmp(router->prevbinlog, router->binlog_name))
+                    if (!router->mariadb10_master_gtid &&
+                        (strlen(router->prevbinlog) &&
+                        strcmp(router->prevbinlog, router->binlog_name) != 0))
                     {
                         if (blr_file_new_binlog(router, router->binlog_name))
                         {
@@ -7882,7 +8037,7 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE *router,
                  binlog_file);
 
         // Update binlog_file name
-        sprintf(binlog_file, next_file);
+        strcpy(binlog_file, next_file);
 
         // Get binlog file full-path
         blr_get_file_fullpath(binlog_file,
@@ -7950,7 +8105,7 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
                                            "server_id "
                                        "FROM gtid_maps "
                                            "GROUP BY binlog_file "
-                                           "ORDER BY binlog_file ASC;";
+                                           "ORDER BY id ASC;";
     int seqno;
     char *errmsg = NULL;
     BINARY_LOG_DATA_RESULT result = {};
@@ -8097,6 +8252,7 @@ GWBUF *blr_create_result_row(const char *val1,
 
     return pkt;
 }
+
 /**
  * Binary logs select callback for sqlite3 database
  *

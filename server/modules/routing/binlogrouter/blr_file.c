@@ -450,12 +450,19 @@ blr_file_init(ROUTER_INSTANCE *router)
     return 0;
 }
 
+/**
+ * Rotate the current log file with new one
+ *
+ * @param    router    The router instance
+ * @param    file      The new file to create
+ * @param    pos       The binlog position (not used)
+ * @return             1 on succes, 0 on failure
+ */
 int
 blr_file_rotate(ROUTER_INSTANCE *router, char *file, uint64_t pos)
 {
     return blr_file_create(router, file);
 }
-
 
 /**
  * binlog files need an initial 4 magic bytes at the start. blr_file_add_magic()
@@ -473,7 +480,6 @@ blr_file_add_magic(int fd)
 
     return written == BINLOG_MAGIC_SIZE;
 }
-
 
 /**
  * Create a new binlog file for the router to use.
@@ -511,11 +517,15 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
    {
         char prefix[BINLOG_FILE_EXTRA_INFO];
         sprintf(prefix,
-                "%" PRIu32 "/%" PRIu32 "/",
-                router->mariadb10_gtid_domain,
-                router->orig_masterid);
+                "%" PRIu32 "/",
+                router->mariadb10_gtid_domain);
 
+        // Add domain_id
         strcat(path, prefix);
+
+        /**
+         * - 1 - Check and create $domain_id dir
+         */
         if (access(path, R_OK) == -1)
         {
             int mkdir_rval;
@@ -523,7 +533,32 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
             if (mkdir_rval == -1)
             {
                 MXS_ERROR("Service %s, Failed to create binlog"
-                          " directory tree '%s': [%d] %s",
+                          " directory tree (domain_id) '%s': [%d] %s",
+                          router->service->name,
+                          path,
+                          errno,
+                          mxs_strerror(errno));
+                return 0;
+            }
+        }
+
+        // Add server_id
+        sprintf(prefix,
+                "%" PRIu32 "/",
+                router->orig_masterid);
+        strcat(path, prefix);
+
+        /**
+         * - 2 - Check and create $server_id dir under $domain_id
+         */
+        if (access(path, R_OK) == -1)
+        {
+            int mkdir_rval;
+            mkdir_rval = mkdir(path, 0700);
+            if (mkdir_rval == -1)
+            {
+                MXS_ERROR("Service %s, Failed to create binlog"
+                          " directory tree (domain_id/server_id) '%s': [%d] %s",
                           router->service->name,
                           path,
                           errno,
@@ -1289,7 +1324,7 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         {
             snprintf(errmsg,
                      BINLOG_ERROR_MSG_LEN,
-                     "Error reading the binlog event at %lu in binlog file '%s';"
+                     "Error reading the binlog event at %lu in binlog file '%s'; "
                      "(%s), expected %d bytes.",
                      pos,
                      file->binlogname,
@@ -3257,7 +3292,7 @@ blr_create_ignorable_event(uint32_t event_size,
     {
         MXS_ERROR("blr_create_ignorable_event an event of %lu bytes"
                   " is not valid in blr_file.c",
-                 (unsigned long)event_size);
+                  (unsigned long)event_size);
         return NULL;
     }
 
@@ -4113,14 +4148,17 @@ static int gtid_select_cb(void *data,
         result->file = MXS_STRDUP_A(values[1]);
         result->start = atoll(values[2]);
         result->end = atoll(values[3]);
-        if (cols > 4)
+
+        if (cols > 4 &&
+            (values[4] &&
+             values[5] &&
+             values[6]))
         {
             result->gtid_elms.domain_id = atoll(values[4]);
             result->gtid_elms.server_id = atoll(values[5]);
             result->gtid_elms.seq_no = atoll(values[6]);
         }
 
-        ss_dassert(result->start > 0 && result->start > 0);
         if (result->start > 4)
         {
             ss_dassert(result->end > result->start);
@@ -4149,6 +4187,14 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
     char *errmsg = NULL;
     char select_query[GTID_SQL_BUFFER_SIZE];
     MARIADB_GTID_ELEMS gtid_elms = {};
+    /* The fields in the WHERE clause belong to
+     * primary key but binlog_file cannot be part of
+     * WHERE because GTID is made of X-Y-Z, three elements.
+     *
+     * The query has ORDER BY id DESC LIMIT 1 in order
+     * to get the right GTID, even in case of database
+     * with old content.
+     */
     static const char select_tpl[] = "SELECT "
                                          "(rep_domain ||"
                                            " '-' || server_id ||"
@@ -4162,7 +4208,8 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
                                      "FROM gtid_maps "
                                          "WHERE (rep_domain = %" PRIu32 " AND "
                                                  "server_id = %" PRIu32 " AND "
-                                                 "sequence = %" PRIu64 ");";
+                                                 "sequence = %" PRIu64 ") "
+                                     "ORDER BY id DESC LIMIT 1;";
     ss_dassert(gtid != NULL);
 
     /* Parse GTID value into its components */
@@ -4448,7 +4495,7 @@ bool blr_compare_binlogs(ROUTER_INSTANCE *router,
        // domain_id, server_id and strcmp()
        return ((router->mariadb10_gtid_domain == info->domain_id) &&
                (router->orig_masterid == info->server_id) &&
-               strcmp(r_file, r_file) == 0);
+               strcmp(r_file, s_file) == 0);
     }
 }
 

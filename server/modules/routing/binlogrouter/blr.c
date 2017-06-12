@@ -687,18 +687,21 @@ createInstance(SERVICE *service, char **options)
     else
     {
         MXS_ERROR("%s: Error: No router options supplied for binlogrouter",
-                   service->name);
+                  service->name);
     }
 
     inst->orig_masterid = 0;
+    inst->mariadb10_gtid_domain = BLR_DEFAULT_GTID_DOMAIN_ID;
 
+    /* Override master_id */
     if (inst->masterid)
     {
         inst->set_master_server_id = true;
     }
 
     if ((inst->binlogdir == NULL) ||
-        (inst->binlogdir != NULL && !strlen(inst->binlogdir)))
+        (inst->binlogdir != NULL &&
+         !strlen(inst->binlogdir)))
     {
         MXS_ERROR("Service %s, binlog directory is not specified",
                   service->name);
@@ -956,7 +959,9 @@ createInstance(SERVICE *service, char **options)
         /* Read any cached response messages */
         blr_cache_read_master_data(inst);
 
-        /* Find latest binlog file */
+        /**
+         * Find latest binlog file in binlogdir or GTID maps repo
+         */
         if (blr_file_init(inst) == 0)
         {
             MXS_ERROR("%s: Service not started due to lack of binlog directory %s",
@@ -1036,6 +1041,7 @@ createInstance(SERVICE *service, char **options)
                    f_prefix,
                    inst->binlog_name);
 
+        /* Check current binlog */
         if (!blr_check_binlog(inst))
         {
             if (inst->trx_safe || inst->encryption.enabled)
@@ -1047,8 +1053,8 @@ createInstance(SERVICE *service, char **options)
             }
         }
 
-        /* Report current pos in binlog file and last seen transaction pos */
-        MXS_INFO("Current binlog file is %s, safe pos %lu, current pos is %lu\n",
+        /* Log current pos in binlog file and last seen transaction pos */
+        MXS_INFO("Current binlog file is %s, safe pos %lu, current pos is %lu",
                  inst->binlog_name, inst->binlog_position, inst->current_pos);
 
         /**
@@ -1102,7 +1108,10 @@ createInstance(SERVICE *service, char **options)
             }
         }
 
-        /* Don't start replication if binlog has START_ENCRYPTION_EVENT but binlog encryption is off */
+        /**
+         *  Don't start replication if binlog has START_ENCRYPTION_EVENT
+         *  but binlog encryption is off
+         */
         if (!inst->encryption.enabled && inst->encryption_ctx)
         {
             MXS_ERROR("Found START_ENCRYPTION_EVENT but "
@@ -1211,7 +1220,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     slave->lastEventReceived = 0;
     slave->encryption_ctx = NULL;
     slave->mariadb_gtid = NULL;
-
     slave->gtid_maps = NULL;
     memset(&slave->f_info, 0 , sizeof (MARIADB_GTID_INFO));
 
@@ -2573,7 +2581,7 @@ int
 blr_send_custom_error(DCB *dcb,
                       int packet_number,
                       int affected_rows,
-                      char *msg,
+                      const char *msg,
                       char *statemsg,
                       unsigned int errcode)
 {

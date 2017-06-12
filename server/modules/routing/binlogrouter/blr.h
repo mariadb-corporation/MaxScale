@@ -105,6 +105,9 @@ MXS_BEGIN_DECLS
  */
 #define BINLOG_FILE_EXTRA_INFO GTID_MAX_LEN
 
+/* Default MariaDB GTID Domain Id */
+#define BLR_DEFAULT_GTID_DOMAIN_ID        0
+
 enum binlog_storage_type
 {
     BLR_BINLOG_STORAGE_FLAT,
@@ -362,6 +365,8 @@ typedef struct master_server_config
     char *ssl_ca;
     int ssl_enabled;
     char *ssl_version;
+    /* MariaDB 10 GTID */
+    char *use_mariadb10_gtid;
 } MASTER_SERVER_CFG;
 
 /* Config struct for CHANGE MASTER TO options */
@@ -379,6 +384,8 @@ typedef struct change_master_options
     char *ssl_ca;
     char *ssl_enabled;
     char *ssl_version;
+    /* MariaDB 10 GTID */
+    char *use_mariadb10_gtid;
 } CHANGE_MASTER_OPTIONS;
 
 /**
@@ -979,7 +986,7 @@ extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_send_custom_error(DCB *,
                                  int,
                                  int,
-                                 char *,
+                                 const char *,
                                  char *,
                                  unsigned int);
 extern int blr_file_next_exists(ROUTER_INSTANCE *,

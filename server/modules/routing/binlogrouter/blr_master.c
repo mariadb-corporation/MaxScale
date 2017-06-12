@@ -3107,6 +3107,13 @@ static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
 /**
  * The routine hanldes a Fake ROTATE_EVENT
  *
+ * It takes care of any missing file between
+ * current file and the one in rotate event:
+ * files with 4 bytes size colud be created.
+ *
+ * The filename specified in rotate event
+ * is created/overwritten
+ *
  * @param router    The router instance
  * @param hdr       The Replication event header
  * @param ptr       The packet data
@@ -3240,7 +3247,7 @@ static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
         }
         else
         {
-            // Increment internal offsets
+            // Increment the internal offsets
             spinlock_acquire(&router->binlog_lock);
 
             router->last_written = hdr->next_pos;
@@ -3275,12 +3282,14 @@ static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
     char buf[BLRM_BINLOG_NAME_STR_LEN];
     char bigbuf[PATH_MAX + 1];
 
-    if ((fptr = strrchr(new_file, '.')) == NULL)
+    if (*new_file &&
+        (fptr = strrchr(new_file, '.')) == NULL)
     {
         return false;
     }
     new_fseqno = atol(fptr + 1);
-    if ((fptr = strrchr(router->binlog_name, '.')) == NULL)
+    if (*router->binlog_name &&
+        (fptr = strrchr(router->binlog_name, '.')) == NULL)
     {
         return false;
     }
@@ -3288,7 +3297,10 @@ static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
     int32_t delta_seq = new_fseqno - (curr_fseqno + 1);
 
     /**
-     * Try creating delta_seq empty binlog files
+     * Try creating delta_seq empty binlog files:
+     *
+     * Note: currenlty working for positive delta
+     * and same filestem.
      */
     if (delta_seq > 0)
     {
