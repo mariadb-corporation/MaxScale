@@ -63,8 +63,7 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf)
                 table += info[i].table;
             }
 
-            rses_property_t* prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-            prop->rses_prop_data.temp_tables.erase(table);
+            router_cli_ses->temp_tables.erase(table);
         }
     }
 }
@@ -104,10 +103,8 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                 table += info[i].table;
             }
 
-            rses_property_t* prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-
-            if (prop->rses_prop_data.temp_tables.find(table) !=
-                prop->rses_prop_data.temp_tables.end())
+            if (router_cli_ses->temp_tables.find(table) !=
+                router_cli_ses->temp_tables.end())
             {
                 rval = true;
                 MXS_INFO("Query targets a temporary table: %s", table.c_str());
@@ -149,8 +146,7 @@ void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
         }
 
         /** Add the table to the set of temporary tables */
-        rses_property_t* prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-        prop->rses_prop_data.temp_tables.insert(table);
+        router_cli_ses->temp_tables.insert(table);
 
         MXS_FREE(tblname);
     }

@@ -61,8 +61,7 @@ enum rses_property_type_t
     RSES_PROP_TYPE_UNDEFINED = -1,
     RSES_PROP_TYPE_SESCMD    = 0,
     RSES_PROP_TYPE_FIRST     = RSES_PROP_TYPE_SESCMD,
-    RSES_PROP_TYPE_TMPTABLES,
-    RSES_PROP_TYPE_LAST      = RSES_PROP_TYPE_TMPTABLES,
+    RSES_PROP_TYPE_LAST      = RSES_PROP_TYPE_SESCMD,
     RSES_PROP_TYPE_COUNT     = RSES_PROP_TYPE_LAST + 1
 };
 
@@ -156,8 +155,6 @@ struct mysql_sescmd_t
     skygw_chk_t             my_sescmd_chk_tail;
 };
 
-typedef std::tr1::unordered_set<std::string> TableSet;
-
 /**
  * Property structure
  */
@@ -171,7 +168,6 @@ struct rses_property_t
     struct rses_prop_data // TODO: Remove the properties and integrate them into the session object
     {
         mysql_sescmd_t   sescmd;
-        TableSet         temp_tables;
     } rses_prop_data;
     rses_property_t*     rses_prop_next; /**< next property of same type */
     skygw_chk_t          rses_prop_chk_tail;
@@ -238,6 +234,8 @@ struct rwsplit_config_t
                                              * been idle for too long */
 };
 
+typedef std::tr1::unordered_set<std::string> TableSet;
+
 /**
  * The client session structure used within this router.
  */
@@ -261,6 +259,7 @@ struct ROUTER_CLIENT_SES
     GWBUF*                    query_queue; /**< Queued commands waiting to be executed */
     struct ROUTER_INSTANCE   *router; /**< The router instance */
     struct ROUTER_CLIENT_SES *next;
+    TableSet                  temp_tables; /**< Set of temporary tables */
     skygw_chk_t               rses_chk_tail;
 };
 

@@ -237,10 +237,6 @@ void rses_property_done(rses_property_t *prop)
         mysql_sescmd_done(&prop->rses_prop_data.sescmd);
         break;
 
-    case RSES_PROP_TYPE_TMPTABLES:
-        // Nothing to do
-        break;
-
     default:
         MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
                   "in property %p", pthread_self(), prop->rses_prop_type, prop);
@@ -1019,21 +1015,17 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)router_inst;
     ROUTER_CLIENT_SES* client_rses = new (std::nothrow) ROUTER_CLIENT_SES;
-    rses_property_t* prop = rses_property_init(RSES_PROP_TYPE_TMPTABLES);
 
-    if (client_rses == NULL || prop == NULL)
+    if (client_rses == NULL)
     {
         delete client_rses;
-        delete prop;
         return NULL;
     }
 
-    prop->rses_prop_rsession = client_rses;
     client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
     client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
     client_rses->rses_closed = false;
     client_rses->rses_properties[RSES_PROP_TYPE_SESCMD] = NULL;
-    client_rses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = prop;
     client_rses->router = router;
     client_rses->client_dcb = session->client_dcb;
     client_rses->have_tmp_tables = false;
