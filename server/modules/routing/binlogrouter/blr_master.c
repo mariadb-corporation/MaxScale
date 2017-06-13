@@ -3104,13 +3104,6 @@ static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
                                               GWBUF *buf)
 {
     const char format_gtid_val[] = "SET @slave_connect_state='%s'";
-    // Extract GTID domain
-    char *val = blr_extract_column(buf, 1);
-    // Store the Master GTID domain
-    router->mariadb10_gtid_domain = atol(val);
-    MXS_FREE(val);
-    // Don't save the server response
-    gwbuf_free(buf);
 
     // SET the requested GTID
     char set_gtid[GTID_MAX_LEN + sizeof(format_gtid_val)];
