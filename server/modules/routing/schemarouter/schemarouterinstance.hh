@@ -22,9 +22,8 @@
 
 #include "schemaroutersession.hh"
 
-using std::string;
-using std::set;
-using namespace schemarouter;
+namespace schemarouter
+{
 
 class SchemaRouterSession;
 
@@ -54,3 +53,5 @@ private:
     SPINLOCK              m_lock;          /*< Lock for the instance data */
     Stats                 m_stats;         /*< Statistics for this router */
 };
+
+}

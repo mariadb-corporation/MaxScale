@@ -11,9 +11,12 @@
  * Public License.
  */
 
-#include "session_command.hh"
+#include <maxscale/session_command.hh>
+
 #include <maxscale/modutil.h>
 #include <maxscale/protocol/mysql.h>
+
+using namespace maxscale;
 
 void SessionCommand::mark_reply_received()
 {

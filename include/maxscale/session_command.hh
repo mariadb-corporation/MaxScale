@@ -12,18 +12,21 @@
  * Public License.
  */
 
+#include <maxscale/cppdefs.hh>
+
+#include <tr1/memory>
 #include <list>
 #include <string>
 
 #include <maxscale/buffer.hh>
 
-using namespace maxscale;
-
-class SessionCommand;
-typedef std::list<SessionCommand> SessionCommandList;
+namespace maxscale
+{
 
 class SessionCommand
 {
+    SessionCommand(const SessionCommand&);
+    SessionCommand& operator=(const SessionCommand&);
 public:
     /**
      * @brief Mark reply as received
@@ -54,7 +57,7 @@ public:
      * @brief Creates a copy of the internal buffer
      * @return A copy of the internal buffer
      */
-    Buffer copy_buffer() const;
+    mxs::Buffer copy_buffer() const;
 
     /**
      * @brief Create a new session command
@@ -75,8 +78,13 @@ public:
     std::string to_string();
 
 private:
-    Buffer   m_buffer;    /**< The buffer containing the command */
-    uint8_t  m_command;   /**< The command being executed */
-    uint64_t m_pos;       /**< Unique position identifier */
-    bool     m_reply_sent; /**< Whether the session command reply has been sent */
+    mxs::Buffer m_buffer;    /**< The buffer containing the command */
+    uint8_t     m_command;   /**< The command being executed */
+    uint64_t    m_pos;       /**< Unique position identifier */
+    bool        m_reply_sent; /**< Whether the session command reply has been sent */
 };
+
+typedef std::tr1::shared_ptr<SessionCommand> SSessionCommand;
+typedef std::list<SSessionCommand> SessionCommandList;
+
+}
