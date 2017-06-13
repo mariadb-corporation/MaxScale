@@ -321,8 +321,9 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
 {
     DCB *dcb = (DCB*)data;
 
-    dcb_printf(dcb, "Command: %s %s\n", cmd->domain, cmd->identifier);
-    dcb_printf(dcb, "Parameters: ");
+    dcb_printf(dcb, "Command:\t%s %s\n", cmd->domain, cmd->identifier);
+    dcb_printf(dcb, "Description:\t%s\n", cmd->description);
+    dcb_printf(dcb, "Parameters:\t");
 
     for (int i = 0; i < cmd->arg_count_max; i++)
     {
@@ -1717,10 +1718,18 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
 
         if (arg)
         {
-            if (!modulecmd_call_command(cmd, arg))
+            json_t* output = NULL;
+
+            if (!modulecmd_call_command(cmd, arg, &output))
             {
                 dcb_printf(dcb, "Error: %s\n", modulecmd_get_error());
             }
+            else if (output)
+            {
+                dcb_printf(dcb, "%s\n", json_dumps(output, JSON_INDENT(4)));
+            }
+
+            json_decref(output);
             modulecmd_arg_free(arg);
         }
         else

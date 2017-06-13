@@ -96,7 +96,7 @@ static modulecmd_arg_type_t custom_cmd_args[] =
     {(MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL), "This is an optional bool parameter"}
 };
 
-bool custom_cmd_example(const MODULECMD_ARG *argv);
+bool custom_cmd_example(const MODULECMD_ARG *argv, json_t** output);
 
 using std::string;
 using std::cout;
@@ -675,7 +675,8 @@ static MXS_ROUTER* createInstance(SERVICE* service, char** options)
     /* Register a custom command */
     if (!modulecmd_register_command("rrrouter", "test_command",
                                     MODULECMD_TYPE_ACTIVE, custom_cmd_example,
-                                    2, custom_cmd_args))
+                                    2, custom_cmd_args,
+                                    "This is the command description"))
     {
         MXS_ERROR("Module command registration failed.");
     }
@@ -890,7 +891,7 @@ static void process_finish()
  * A function executed as a custom module command through MaxAdmin
  * @param argv The arguments
  */
-bool custom_cmd_example(const MODULECMD_ARG *argv)
+bool custom_cmd_example(const MODULECMD_ARG *argv, json_t** output)
 {
     cout << MXS_MODULE_NAME << " wishes the Admin a good day.\n";
     int n_args = argv->argc;

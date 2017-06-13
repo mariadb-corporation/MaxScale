@@ -144,6 +144,7 @@ const char* rule_names[] =
 {
     "UNDEFINED",
     "COLUMN",
+    "FUNCTION",
     "THROTTLE",
     "PERMISSION",
     "WILDCARD",
@@ -712,7 +713,7 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
     return tmp;
 }
 
-bool dbfw_reload_rules(const MODULECMD_ARG *argv)
+bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
 {
     bool rval = true;
     MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
@@ -776,7 +777,7 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv)
     return rval;
 }
 
-bool dbfw_show_rules(const MODULECMD_ARG *argv)
+bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
 {
     DCB *dcb = argv->argv[0].value.dcb;
     MXS_FILTER_DEF *filter = argv->argv[1].value.filter;
@@ -799,6 +800,30 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
         dcb_printf(dcb, "%s\n", buf);
     }
 
+    return true;
+}
+
+bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
+{
+    MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
+    FW_INSTANCE *inst = (FW_INSTANCE*)filter_def_get_instance(filter);
+
+    json_t* arr = json_array();
+
+    if (!thr_rules || !thr_users)
+    {
+        if (!replace_rules(inst))
+        {
+            return 0;
+        }
+    }
+
+    for (RULE *rule = thr_rules; rule; rule = rule->next)
+    {
+        json_array_append_new(arr, rule_to_json(rule));
+    }
+
+    *output = arr;
     return true;
 }
 
@@ -827,7 +852,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "rules/reload", MODULECMD_TYPE_ACTIVE,
-                               dbfw_reload_rules, 2, args_rules_reload);
+                               dbfw_reload_rules, 2, args_rules_reload,
+                               "Reload dbfwfilter rules");
 
     modulecmd_arg_type_t args_rules_show[] =
     {
@@ -836,7 +862,17 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "rules", MODULECMD_TYPE_PASSIVE,
-                               dbfw_show_rules, 2, args_rules_show);
+                               dbfw_show_rules, 2, args_rules_show,
+                               "(deprecated) Show dbfwfilter rule statistics");
+
+    modulecmd_arg_type_t args_rules_show_json[] =
+    {
+        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to inspect"}
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "rules/json", MODULECMD_TYPE_PASSIVE,
+                               dbfw_show_rules_json, 1, args_rules_show_json,
+                               "Show dbfwfilter rule statistics as JSON");
 
     static MXS_FILTER_OBJECT MyObject =
     {

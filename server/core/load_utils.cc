@@ -434,6 +434,7 @@ bool modulecmd_cb(const MODULECMD *cmd, void *data)
     json_object_set_new(attr, CN_METHOD, json_string(method));
     json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd->arg_count_min));
     json_object_set_new(attr, CN_ARG_MAX, json_integer(cmd->arg_count_max));
+    json_object_set_new(attr, CN_DESCRIPTION, json_string(cmd->description));
 
     json_t* param = json_array();
 

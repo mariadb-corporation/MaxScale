@@ -92,6 +92,7 @@ const char CN_LOG_THROTTLING[]                = "log_throttling";
 const char CN_MAXSCALE[]                      = "maxscale";
 const char CN_MAX_CONNECTIONS[]               = "max_connections";
 const char CN_MAX_RETRY_INTERVAL[]            = "max_retry_interval";
+const char CN_META[]                          = "meta";
 const char CN_METHOD[]                        = "method";
 const char CN_MODULE[]                        = "module";
 const char CN_MODULES[]                       = "modules";
@@ -163,9 +164,9 @@ static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
 static bool check_first_last_char(const char* string, char expected);
 static void remove_first_last_char(char* value);
-static bool test_regex_string_validity(const char* regex_string);
-static bool compile_regex_string(const char* regex_string, bool jit_enabled, uint32_t options,
-                                 pcre2_code** output_code, uint32_t* output_capcount);
+static bool test_regex_string_validity(const char* regex_string, const char* key);
+static pcre2_code* compile_regex_string(const char* regex_string, bool jit_enabled,
+                                        uint32_t options, uint32_t* output_ovector_size);
 
 int config_get_ifaddr(unsigned char *output);
 static int config_get_release_string(char* release);
@@ -1239,24 +1240,13 @@ char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key)
 }
 
 pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params,
-                                      const char *key, uint32_t options)
-{
-    pcre2_code* code = NULL;
-    uint32_t capcount = 0;
-    config_get_compiled_regex_capcount(params, key, options, &code, &capcount);
-    return code;
-}
-
-bool config_get_compiled_regex_capcount(const MXS_CONFIG_PARAMETER *params,
-                                        const char *key, uint32_t options,
-                                        pcre2_code** output_code,
-                                        uint32_t* output_capcount)
+                                      const char *key, uint32_t options,
+                                      uint32_t* output_ovec_size)
 {
     const char* regex_string = config_get_string(params, key);
     uint32_t jit_available = 0;
     pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
-    return compile_regex_string(regex_string, jit_available, options,
-                                output_code, output_capcount);
+    return compile_regex_string(regex_string, jit_available, options, output_ovec_size);
 }
 
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
@@ -1805,7 +1795,7 @@ global_defaults()
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     gateway.skip_permission_checks = false;
     gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
-    gateway.admin_auth = false;
+    gateway.admin_auth = true;
     gateway.admin_enabled = true;
     strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
     gateway.admin_ssl_key[0] = '\0';
@@ -3633,8 +3623,19 @@ void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p)
                 break;
 
             case MXS_MODULE_PARAM_QUOTEDSTRING:
+                // Remove *if* once '" .. "' is no longer optional
+                if (check_first_last_char(p->value, '"'))
+                {
+                    remove_first_last_char(p->value);
+                }
+                break;
+
             case MXS_MODULE_PARAM_REGEX:
-                remove_first_last_char(p->value);
+                // Remove *if* once '/ .. /' is no longer optional
+                if (check_first_last_char(p->value, '/'))
+                {
+                    remove_first_last_char(p->value);
+                }
                 break;
 
             default:
@@ -3734,7 +3735,20 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 break;
 
             case MXS_MODULE_PARAM_QUOTEDSTRING:
-                valid = check_first_last_char(value, '"');
+                if (*value)
+                {
+                    valid = true;
+                    if (!check_first_last_char(value, '"'))
+                    {
+                        // Change warning to valid=false once quotes are no longer optional
+                        MXS_WARNING("Missing quotes (\") around a quoted string is deprecated: '%s=%s'.",
+                                    key, value);
+                    }
+                }
+                break;
+
+            case MXS_MODULE_PARAM_REGEX:
+                valid = test_regex_string_validity(value, key);
                 break;
 
             case MXS_MODULE_PARAM_ENUM:
@@ -3812,10 +3826,6 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
 
             case MXS_MODULE_PARAM_PATH:
                 valid = check_path_parameter(&params[i], value);
-                break;
-
-            case MXS_MODULE_PARAM_REGEX:
-                valid = test_regex_string_validity(value);
                 break;
 
             default:
@@ -4054,20 +4064,20 @@ static void remove_first_last_char(char* value)
  * Compile a regex string using PCRE2 using the settings provided.
  *
  * @param regex_string The string to compile
- * @param jit_enabled Enable JIT compilation. If not available, a notice is printed.
+ * @param jit_enabled Enable JIT compilation. If true but JIT is not available,
+ * a warning is printed.
  * @param options PCRE2 compilation options
- * @param output_code Output for the regex machine code
- * @param output_capcount Output for the capture count of the regex. Add one to
- * get the optimal ovector size.
- * @return True on success. On error, nothing is written to the outputs.
+ * @param output_ovector_size Output for the match data ovector size. On error,
+ * nothing is written. If NULL, the parameter is ignored.
+ * @return Compiled regex code on success, NULL otherwise
  */
-static bool compile_regex_string(const char* regex_string, bool jit_enabled,
-                                 uint32_t options, pcre2_code** output_code,
-                                 uint32_t* output_capcount)
+static pcre2_code* compile_regex_string(const char* regex_string, bool jit_enabled,
+                                        uint32_t options, uint32_t* output_ovector_size)
 {
     bool success = true;
     int errorcode = -1;
     PCRE2_SIZE error_offset = -1;
+    uint32_t capcount = 0;
     pcre2_code* machine =
         pcre2_compile((PCRE2_SPTR) regex_string, PCRE2_ZERO_TERMINATED, options,
                       &errorcode, &error_offset, NULL);
@@ -4081,21 +4091,13 @@ static bool compile_regex_string(const char* regex_string, bool jit_enabled,
                 MXS_WARNING("PCRE2 JIT compilation of pattern '%s' failed, "
                             "falling back to normal compilation.", regex_string);
             }
-
         }
-        /* Check what is the required match_data size for this pattern.
-         */
-        uint32_t capcount = 0;
+        /* Check what is the required match_data size for this pattern. */
         int ret_info = pcre2_pattern_info(machine, PCRE2_INFO_CAPTURECOUNT, &capcount);
         if (ret_info != 0)
         {
             MXS_PCRE2_PRINT_ERROR(ret_info);
             success = false;
-        }
-        if (success)
-        {
-            *output_code = machine;
-            *output_capcount = capcount;
         }
     }
     else
@@ -4106,11 +4108,16 @@ static bool compile_regex_string(const char* regex_string, bool jit_enabled,
         success = false;
     }
 
-    if (!success && machine)
+    if (!success)
     {
         pcre2_code_free(machine);
+        machine = NULL;
     }
-    return success;
+    else if (output_ovector_size)
+    {
+        *output_ovector_size = capcount + 1;
+    }
+    return machine;
 }
 
 /**
@@ -4121,22 +4128,27 @@ static bool compile_regex_string(const char* regex_string, bool jit_enabled,
  * @return True if compilation succeeded, false if string is invalid or cannot
  * be compiled.
  */
-static bool test_regex_string_validity(const char* regex_string)
+static bool test_regex_string_validity(const char* regex_string, const char* key)
 {
-    if (!check_first_last_char(regex_string, '/'))
+    if (*regex_string == '\0')
     {
         return false;
     }
     char regex_copy[strlen(regex_string) + 1];
     strcpy(regex_copy, regex_string);
-    remove_first_last_char(regex_copy);
-
-    pcre2_code* code;
-    uint32_t capcount;
-    if (compile_regex_string(regex_copy, false, 0, &code, &capcount))
+    if (!check_first_last_char(regex_string, '/'))
     {
-        pcre2_code_free(code);
-        return true;
+        //return false; // Uncomment this line once '/ .. /' is no longer optional
+        MXS_WARNING("Missing slashes (/) around a regular expression is deprecated: '%s=%s'.",
+                    key, regex_string);
     }
-    return false;
+    else
+    {
+        remove_first_last_char(regex_copy);
+    }
+
+    pcre2_code* code = compile_regex_string(regex_copy, false, 0, NULL);
+    bool rval = (code != NULL);
+    pcre2_code_free(code);
+    return rval;
 }

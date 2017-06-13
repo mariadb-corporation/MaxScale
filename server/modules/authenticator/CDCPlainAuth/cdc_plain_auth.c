@@ -78,7 +78,7 @@ static int cdc_auth_set_client_data(
  * @param args Arguments for this command
  * @return True if user was successfully added
  */
-static bool cdc_add_new_user(const MODULECMD_ARG *args)
+static bool cdc_add_new_user(const MODULECMD_ARG *args, json_t** output)
 {
     const char *user = args->argv[1].value.string;
     size_t userlen = strlen(user);
@@ -154,7 +154,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         { MODULECMD_ARG_STRING, "Password of the user"}
     };
 
-    modulecmd_register_command("cdc", "add_user", MODULECMD_TYPE_ACTIVE, cdc_add_new_user, 3, args);
+    modulecmd_register_command("cdc", "add_user", MODULECMD_TYPE_ACTIVE,
+                               cdc_add_new_user, 3, args,
+                               "Add a new CDC user");
 
     static MXS_AUTHENTICATOR MyObject =
     {

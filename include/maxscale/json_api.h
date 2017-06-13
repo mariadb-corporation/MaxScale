@@ -14,6 +14,8 @@
 
 /**
  * @file Helper functions for creating JSON API conforming objects
+ *
+ * @see http://jsonapi.org/format/
  */
 
 #include <maxscale/cppdefs.hh>

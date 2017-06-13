@@ -13,6 +13,8 @@
 
 #include <maxscale/modulecmd.h>
 
+#include <string>
+
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/pcre2.h>
@@ -138,15 +140,18 @@ static MODULECMD_DOMAIN* get_or_create_domain(const char *domain)
 
 static MODULECMD* command_create(const char *identifier, const char *domain,
                                  enum modulecmd_type type, MODULECMDFN entry_point,
-                                 int argc, modulecmd_arg_type_t* argv)
+                                 int argc, modulecmd_arg_type_t* argv,
+                                 const char *description)
 {
     ss_dassert((argc && argv) || (argc == 0 && argv == NULL));
+    ss_dassert(description);
     MODULECMD *rval = (MODULECMD*)MXS_MALLOC(sizeof(*rval));
     char *id = MXS_STRDUP(identifier);
     char *dm = MXS_STRDUP(domain);
+    char *desc = MXS_STRDUP(description);
     modulecmd_arg_type_t *types = (modulecmd_arg_type_t*)MXS_MALLOC(sizeof(*types) * (argc ? argc : 1));
 
-    if (rval && id  && dm && types)
+    if (rval && id  && dm && types && desc)
     {
         int argc_min = 0;
 
@@ -170,6 +175,7 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
         rval->func = entry_point;
         rval->identifier = id;
         rval->domain = dm;
+        rval->description = desc;
         rval->arg_types = types;
         rval->arg_count_min = argc_min;
         rval->arg_count_max = argc;
@@ -181,6 +187,7 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
         MXS_FREE(id);
         MXS_FREE(dm);
         MXS_FREE(types);
+        MXS_FREE(desc);
         rval = NULL;
     }
 
@@ -415,7 +422,8 @@ static void free_argument(struct arg_node *arg)
 
 bool modulecmd_register_command(const char *domain, const char *identifier,
                                 enum modulecmd_type type, MODULECMDFN entry_point,
-                                int argc, modulecmd_arg_type_t *argv)
+                                int argc, modulecmd_arg_type_t *argv,
+                                const char *description)
 {
     reset_error();
     bool rval = false;
@@ -432,7 +440,8 @@ bool modulecmd_register_command(const char *domain, const char *identifier,
         }
         else
         {
-            MODULECMD *cmd = command_create(identifier, domain, type, entry_point, argc, argv);
+            MODULECMD *cmd = command_create(identifier, domain, type, entry_point,
+                                            argc, argv, description);
 
             if (cmd)
             {
@@ -534,7 +543,7 @@ void modulecmd_arg_free(MODULECMD_ARG* arg)
     }
 }
 
-bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args)
+bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, json_t** output)
 {
     bool rval = false;
     reset_error();
@@ -550,7 +559,9 @@ bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args)
             args = &MODULECMD_NO_ARGUMENTS;
         }
 
-        rval = cmd->func(args);
+        json_t* discard = NULL;
+        rval = cmd->func(args, output ? output : &discard);
+        json_decref(discard);
     }
 
     return rval;
@@ -566,10 +577,37 @@ void modulecmd_set_error(const char *format, ...)
     va_end(list);
 }
 
+static void modulecmd_clear_error()
+{
+    prepare_error();
+    errbuf[0] = '\0';
+}
+
 const char* modulecmd_get_error()
 {
     prepare_error();
     return errbuf;
+}
+
+json_t* modulecmd_get_json_error()
+{
+    json_t* obj = NULL;
+    std::string errmsg = modulecmd_get_error();
+    modulecmd_clear_error();
+
+    if (errmsg.length())
+    {
+        json_t* err = json_object();
+        json_object_set_new(err, "detail", json_string(errmsg.c_str()));
+
+        json_t* arr = json_array();
+        json_array_append_new(arr, err);
+
+        obj = json_object();
+        json_object_set_new(obj, "errors", arr);
+    }
+
+    return obj;
 }
 
 bool modulecmd_foreach(const char *domain_re, const char *ident_re,

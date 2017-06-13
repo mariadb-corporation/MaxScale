@@ -6,13 +6,7 @@ datadir=@CMAKE_INSTALL_PREFIX@/
 cachedir=@CMAKE_INSTALL_PREFIX@/
 language=@CMAKE_INSTALL_PREFIX@/lib/maxscale/
 piddir=@CMAKE_INSTALL_PREFIX@/
-
-[feedback]
-feedback_enable=true
-feedback_user_info=user_info
-feedback_url=http://127.0.0.1:8080/load.php
-feedback_timeout=60
-feedback_connect_timeout=60
+admin_auth=false
 
 [MySQL Monitor]
 type=monitor

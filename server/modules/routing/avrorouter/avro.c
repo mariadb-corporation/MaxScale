@@ -101,7 +101,7 @@ static bool conversion_task_ctl(AVRO_INSTANCE *inst, bool start);
 static SPINLOCK instlock;
 static AVRO_INSTANCE *instances;
 
-bool avro_handle_convert(const MODULECMD_ARG *args)
+bool avro_handle_convert(const MODULECMD_ARG *args, json_t** output)
 {
     bool rval = false;
 
@@ -148,7 +148,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         { MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "The avrorouter service" },
         { MODULECMD_ARG_STRING, "Action, whether to 'start' or 'stop' the conversion process" }
     };
-    modulecmd_register_command(MXS_MODULE_NAME, "convert", MODULECMD_TYPE_ACTIVE, avro_handle_convert, 2, args);
+    modulecmd_register_command(MXS_MODULE_NAME, "convert", MODULECMD_TYPE_ACTIVE,
+                               avro_handle_convert, 2, args,
+                               "Start or stop the binlog to avro conversion process");
 
     static MXS_ROUTER_OBJECT MyObject =
     {

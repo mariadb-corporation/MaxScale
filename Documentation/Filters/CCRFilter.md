@@ -12,6 +12,27 @@ a routing hint to all following statements. This routing hint guides the routing
 module to route the statement to the master server where data is guaranteed to
 be in an up-to-date state.
 
+The triggering of the filter can be limited further by adding MaxScale supported
+comments to queries and/or by using regular expressions. The query comments take
+precedence: if a comment is found it is obayed even if a regular expression
+parameter might give a different result. Even a comment cannot cause a
+SELECT-query to trigger the filter. Such a comment is considered an error and
+ignored.
+
+The comments must follow the [MaxScale hint syntax](../Reference/Hint-Syntax.md)
+and the *HintFilter* needs to be in the filter chain before the CCR-filter. If a
+query has a MaxScale supported comment line which defines the parameter `ccr`,
+that comment is caught by the  CCR-filter. Parameter values `match` and `ignore`
+are supported, causing the filter to trigger (`match`) or not trigger (`ignore`)
+on receiving the write query. For example, the query
+```
+INSERT INTO departments VALUES ('d1234', 'NewDepartment'); -- maxscale ccr=ignore
+```
+would normally cause the filter to trigger, but does not because of the
+comment. The `match`-comment typically has no effect, since write queries by
+default trigger the filter anyway. It can be used to override an ignore-type
+regular expression that would othewise prevent triggering.
+
 ## Filter Options
 
 The CCR filter accepts the following options.
@@ -62,7 +83,9 @@ _count_.
 
 An optional parameter that can be used to control which statements trigger the
 statement re-routing. The parameter value is a regular expression that is used
-to match against the SQL text. Only non-SELECT statements are inspected.
+to match against the SQL text. Only non-SELECT statements are inspected. If this
+parameter is defined, *only* matching SQL-queries will trigger the filter
+(assuming no ccr hint comments in the query).
 
 ```
 match=.*INSERT.*

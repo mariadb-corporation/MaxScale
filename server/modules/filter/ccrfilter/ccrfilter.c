@@ -103,6 +103,15 @@ static const MXS_ENUM_VALUE option_values[] =
     {NULL}
 };
 
+typedef enum ccr_hint_value_t
+{
+    CCR_HINT_NONE,
+    CCR_HINT_MATCH,
+    CCR_HINT_IGNORE
+} CCR_HINT_VALUE;
+
+static CCR_HINT_VALUE search_ccr_hint(GWBUF* buffer);
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -148,11 +157,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"match", MXS_MODULE_PARAM_STRING},
             {"ignore", MXS_MODULE_PARAM_STRING},
             {
-             "options",
-             MXS_MODULE_PARAM_ENUM,
-             "ignorecase",
-             MXS_MODULE_OPT_NONE,
-             option_values
+                "options",
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -299,28 +308,49 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
         {
             if ((sql = modutil_get_SQL(queue)) != NULL)
             {
-                if (my_instance->nomatch == NULL ||
-                    (my_instance->nomatch && regexec(&my_instance->nore, sql, 0, NULL, 0) != 0))
+                bool trigger_ccr = true;
+                bool decided = false; // Set by hints to take precedence.
+                CCR_HINT_VALUE ccr_hint_val = search_ccr_hint(queue);
+                if (ccr_hint_val == CCR_HINT_IGNORE)
                 {
-                    if (my_instance->match == NULL ||
-                        (my_instance->match && regexec(&my_instance->re, sql, 0, NULL, 0) == 0))
+                    trigger_ccr = false;
+                    decided = true;
+                }
+                else if (ccr_hint_val == CCR_HINT_MATCH)
+                {
+                    decided = true;
+                }
+                if (!decided)
+                {
+                    if (my_instance->nomatch &&
+                        regexec(&my_instance->nore, sql, 0, NULL, 0) == 0)
                     {
-                        if (my_instance->count)
-                        {
-                            my_session->hints_left = my_instance->count;
-                            MXS_INFO("Write operation detected, next %d queries routed to master", my_instance->count);
-                        }
-
-                        if (my_instance->time)
-                        {
-                            my_session->last_modification = now;
-                            MXS_INFO("Write operation detected, queries routed to master for %d seconds", my_instance->time);
-                        }
-
-                        my_instance->stats.n_modified++;
+                        // Nomatch was present and sql matched it.
+                        trigger_ccr = false;
+                    }
+                    else if (my_instance->match &&
+                             (regexec(&my_instance->re, sql, 0, NULL, 0) != 0))
+                    {
+                        // Match was present but sql did *not* match it.
+                        trigger_ccr = false;
                     }
                 }
+                if (trigger_ccr)
+                {
+                    if (my_instance->count)
+                    {
+                        my_session->hints_left = my_instance->count;
+                        MXS_INFO("Write operation detected, next %d queries routed to master", my_instance->count);
+                    }
 
+                    if (my_instance->time)
+                    {
+                        my_session->last_modification = now;
+                        MXS_INFO("Write operation detected, queries routed to master for %d seconds", my_instance->time);
+                    }
+
+                    my_instance->stats.n_modified++;
+                }
                 MXS_FREE(sql);
             }
         }
@@ -428,4 +458,53 @@ static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESS
 static uint64_t getCapabilities(MXS_FILTER* instance)
 {
     return RCAP_TYPE_NONE;
+}
+
+/**
+ * Find the first CCR filter hint. The hint is removed from the buffer and the
+ * contents returned.
+ *
+ * @param buffer Input buffer
+ * @return The found ccr hint value
+ */
+static CCR_HINT_VALUE search_ccr_hint(GWBUF* buffer)
+{
+    const char CCR[] = "ccr";
+    CCR_HINT_VALUE rval = CCR_HINT_NONE;
+    bool found_ccr = false;
+    HINT** prev_ptr = &buffer->hint;
+    HINT* hint = buffer->hint;
+
+    while (hint && !found_ccr)
+    {
+        if (hint->type == HINT_PARAMETER && strcasecmp(hint->data, CCR) == 0)
+        {
+            found_ccr = true;
+            if (strcasecmp(hint->value, "match") == 0)
+            {
+                rval = CCR_HINT_MATCH;
+            }
+            else if (strcasecmp(hint->value, "ignore") == 0)
+            {
+                rval = CCR_HINT_IGNORE;
+            }
+            else
+            {
+                MXS_ERROR("Unknown value for hint parameter %s: '%s'.",
+                          CCR, (char*)hint->value);
+            }
+        }
+        else
+        {
+            prev_ptr = &hint->next;
+            hint = hint->next;
+        }
+    }
+    // Remove the ccr-hint from the hint chain. Otherwise rwsplit will complain.
+    if (found_ccr)
+    {
+        *prev_ptr = hint->next;
+        hint_free(hint);
+    }
+    return rval;
 }
