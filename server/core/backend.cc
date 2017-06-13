@@ -21,7 +21,6 @@ Backend::Backend(SERVER_REF *ref):
     m_closed(false),
     m_backend(ref),
     m_dcb(NULL),
-    m_num_result_wait(0),
     m_state(0)
 {
 }
@@ -36,7 +35,7 @@ Backend::~Backend()
     }
 }
 
-void Backend::close()
+void Backend::close(close_type type)
 {
     if (!m_closed)
     {
@@ -47,12 +46,17 @@ void Backend::close()
             CHK_DCB(m_dcb);
 
             /** Clean operation counter in bref and in SERVER */
-            while (is_waiting_result())
+            if (is_waiting_result())
             {
-                clear_state(BREF_WAITING_RESULT);
+                clear_state(WAITING_RESULT);
             }
-            clear_state(BREF_IN_USE);
-            set_state(BREF_CLOSED);
+            clear_state(IN_USE);
+            set_state(CLOSED);
+
+            if (type == FATAL)
+            {
+                set_state(FATAL_FAILURE);
+            }
 
             dcb_close(m_dcb);
 
@@ -75,18 +79,22 @@ bool Backend::execute_session_command()
 
     CHK_DCB(m_dcb);
 
-    int rc = 0;
-
     SessionCommandList::iterator iter = m_session_commands.begin();
     SessionCommand& sescmd = *(*iter);
     GWBUF *buffer = sescmd.copy_buffer().release();
+    bool rval = false;
 
     switch (sescmd.get_command())
     {
+    case MYSQL_COM_QUIT:
+    case MYSQL_COM_STMT_CLOSE:
+        rval = write(buffer, NO_RESPONSE);
+        break;
+
     case MYSQL_COM_CHANGE_USER:
         /** This makes it possible to handle replies correctly */
         gwbuf_set_type(buffer, GWBUF_TYPE_SESCMD);
-        rc = m_dcb->func.auth(m_dcb, NULL, m_dcb->session, buffer);
+        rval = auth(buffer);
         break;
 
     case MYSQL_COM_QUERY:
@@ -96,11 +104,11 @@ bool Backend::execute_session_command()
          * MySQL command to protocol
          */
         gwbuf_set_type(buffer, GWBUF_TYPE_SESCMD);
-        rc = m_dcb->func.write(m_dcb, buffer);
+        rval = write(buffer);
         break;
     }
 
-    return rc == 1;
+    return rval;
 }
 
 void Backend::add_session_command(GWBUF* buffer, uint64_t sequence)
@@ -120,32 +128,26 @@ size_t Backend::session_command_count() const
     return m_session_commands.size();
 }
 
-void Backend::clear_state(enum bref_state state)
+void Backend::clear_state(backend_state state)
 {
-    if (state != BREF_WAITING_RESULT)
+    if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT))
     {
-        m_state &= ~state;
-    }
-    else
-    {
-        /** Decrease global operation count */
         ss_debug(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, -1);
         ss_dassert(prev2 > 0);
     }
+
+    m_state &= ~state;
 }
 
-void Backend::set_state(enum bref_state state)
+void Backend::set_state(backend_state state)
 {
-    if (state != BREF_WAITING_RESULT)
+    if ((state & WAITING_RESULT) && (m_state & WAITING_RESULT) == 0)
     {
-        m_state |= state;
-    }
-    else
-    {
-        /** Increase global operation count */
         ss_debug(int prev2 = )atomic_add(&m_backend->server->stats.n_current_ops, 1);
         ss_dassert(prev2 >= 0);
     }
+
+    m_state |= state;
 }
 
 SERVER_REF* Backend::backend() const
@@ -159,7 +161,7 @@ bool Backend::connect(MXS_SESSION* session)
 
     if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol)))
     {
-        m_state = BREF_IN_USE;
+        m_state = IN_USE;
         atomic_add(&m_backend->connections, 1);
         rval = true;
     }
@@ -172,9 +174,35 @@ DCB* Backend::dcb() const
     return m_dcb;
 }
 
-bool Backend::write(GWBUF* buffer)
+bool Backend::write(GWBUF* buffer, response_type type)
 {
-    return m_dcb->func.write(m_dcb, buffer) != 0;
+    bool rval = m_dcb->func.write(m_dcb, buffer) != 0;
+
+    if (rval && type == EXPECT_RESPONSE)
+    {
+        set_state(WAITING_RESULT);
+    }
+
+    return rval;
+}
+
+bool Backend::auth(GWBUF* buffer)
+{
+    bool rval = false;
+
+    if (m_dcb->func.auth(m_dcb, NULL, m_dcb->session, buffer) == 1)
+    {
+        set_state(WAITING_RESULT);
+        rval = true;
+    }
+
+    return rval;
+}
+
+void Backend::ack_write()
+{
+    ss_dassert(is_waiting_result());
+    clear_state(WAITING_RESULT);
 }
 
 void Backend::store_command(GWBUF* buffer)
@@ -201,20 +229,15 @@ bool Backend::write_stored_command()
 
 bool Backend::in_use() const
 {
-    return m_state & BREF_IN_USE;
+    return m_state & IN_USE;
 }
 
 bool Backend::is_waiting_result() const
 {
-    return m_num_result_wait > 0;
-}
-
-bool Backend::is_query_active() const
-{
-    return m_state & BREF_QUERY_ACTIVE;
+    return m_state & WAITING_RESULT;
 }
 
 bool Backend::is_closed() const
 {
-    return m_state & BREF_CLOSED;
+    return m_state & CLOSED;
 }

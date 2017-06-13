@@ -97,9 +97,13 @@ void SchemaRouterSession::close()
 
         for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
         {
+            SSRBackend& bref = *it;
             /** The backends are closed here to trigger the shutdown of
              * the connected DCBs */
-            (*it)->close();
+            if (bref->in_use())
+            {
+                bref->close();
+            }
         }
 
         spinlock_acquire(&m_router->m_lock);
@@ -434,20 +438,19 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             pPacket = NULL;
             ret = 1;
         }
-        else if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(pPacket))) == 1)
+        else if (bref->write(pPacket))
         {
             /** Add one query response waiter to backend reference */
-            bref->set_state(BREF_QUERY_ACTIVE);
-            bref->set_state(BREF_WAITING_RESULT);
             atomic_add(&m_router->m_stats.n_queries, 1);
+            ret = 1;
         }
         else
         {
             MXS_ERROR("Routing query failed.");
+            gwbuf_free(pPacket);
         }
     }
 
-    gwbuf_free(pPacket);
     return ret;
 }
 void SchemaRouterSession::handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket)
@@ -506,17 +509,6 @@ void SchemaRouterSession::process_sescmd_response(SSRBackend& bref, GWBUF** ppPa
                 *ppPacket = NULL;
             }
         }
-
-        if (*ppPacket)
-        {
-            bref->clear_state(BREF_WAITING_RESULT);
-        }
-    }
-    else if (bref->is_query_active())
-    {
-        bref->clear_state(BREF_QUERY_ACTIVE);
-        /** Set response status as replied */
-        bref->clear_state(BREF_WAITING_RESULT);
     }
 }
 
@@ -565,6 +557,10 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     {
         process_sescmd_response(bref, &pPacket);
 
+        ss_dassert(bref->is_waiting_result());
+        /** Set response status as replied */
+        bref->ack_write();
+
         if (pPacket)
         {
             MXS_SESSION_ROUTE_REPLY(pDcb->session, pPacket);
@@ -579,8 +575,6 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
         else if (bref->write_stored_command())
         {
             atomic_add(&m_router->m_stats.n_queries, 1);
-            bref->set_state(BREF_QUERY_ACTIVE);
-            bref->set_state(BREF_WAITING_RESULT);
         }
     }
 
@@ -744,19 +738,6 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
 
             if ((*it)->session_command_count() == 1)
             {
-                /** Only one command, execute it */
-                switch (command)
-                {
-                /** These types of commands don't generate responses */
-                case MYSQL_COM_QUIT:
-                case MYSQL_COM_STMT_CLOSE:
-                    break;
-
-                default:
-                    (*it)->set_state(BREF_WAITING_RESULT);
-                    break;
-                }
-
                 if ((*it)->execute_session_command())
                 {
                     succp = true;
@@ -781,6 +762,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
         }
     }
 
+    gwbuf_free(querybuf);
     return succp;
 }
 
@@ -1246,6 +1228,8 @@ bool SchemaRouterSession::ignore_duplicate_database(const char* data)
         {
             rval = true;
         }
+
+        pcre2_match_data_free(match_data);
     }
 
     return rval;
