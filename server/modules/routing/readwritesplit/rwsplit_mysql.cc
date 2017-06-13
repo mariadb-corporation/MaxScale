@@ -380,8 +380,7 @@ bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
             MYSQL_session* data;
             unsigned int qlen;
 
-            data = (MYSQL_session*)dcb->session->client_dcb->data;
-            *data->db = 0;
+            mxs_mysql_set_current_db(dcb->session, "");
             tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
             qlen = MYSQL_GET_PAYLOAD_LEN((unsigned char *) GWBUF_DATA(tmpbuf));
             if (qlen)
@@ -394,8 +393,10 @@ bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
                     qlen = MYSQL_DATABASE_MAXLEN;
                 }
 
-                memcpy(data->db, (char*)GWBUF_DATA(tmpbuf) + 5, qlen);
-                data->db[qlen] = 0;
+                char db[qlen + 1];
+                memcpy(db, (char*)GWBUF_DATA(tmpbuf) + 5, qlen);
+                db[qlen] = 0;
+                mxs_mysql_set_current_db(dcb->session, db);
             }
         }
     /** Fallthrough */

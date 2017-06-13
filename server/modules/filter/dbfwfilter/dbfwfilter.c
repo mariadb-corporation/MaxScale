@@ -1745,7 +1745,7 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
     }
 
     dcb = session->session->client_dcb;
-    mysql_session = (MYSQL_session*) dcb->data;
+    const char* db = mxs_mysql_get_current_db(session->session);
     errlen = msg != NULL ? strlen(msg) : 0;
     errmsg = (char*) MXS_MALLOC((512 + errlen) * sizeof(char));
 
@@ -1755,14 +1755,14 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
     }
 
 
-    if (mysql_session->db[0] == '\0')
+    if (db[0] == '\0')
     {
         sprintf(errmsg, "Access denied for user '%s'@'%s'", dcb->user, dcb->remote);
     }
     else
     {
         sprintf(errmsg, "Access denied for user '%s'@'%s' to database '%s'",
-                dcb->user, dcb->remote, mysql_session->db);
+                dcb->user, dcb->remote, db);
     }
 
     if (msg != NULL)

@@ -46,26 +46,21 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* rou
 {
     char db[MYSQL_DATABASE_MAXLEN + 1] = "";
     MySQLProtocol* protocol = (MySQLProtocol*)session->client_dcb->protocol;
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
     bool using_db = false;
     bool have_db = false;
+    const char* current_db = mxs_mysql_get_current_db(session);
 
     /* To enable connecting directly to a sharded database we first need
      * to disable it for the client DCB's protocol so that we can connect to them*/
     if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB &&
-        (have_db = strnlen(data->db, MYSQL_DATABASE_MAXLEN) > 0))
+        (have_db = *current_db))
     {
         protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-        strcpy(db, data->db);
-        *data->db = 0;
+        strcpy(db, current_db);
+        mxs_mysql_set_current_db(session, "");
         using_db = true;
         MXS_INFO("Client logging in directly to a database '%s', "
                  "postponing until databases have been mapped.", db);
-    }
-
-    if (!have_db)
-    {
-        MXS_INFO("Client'%s' connecting with empty database.", data->user);
     }
 
     if (using_db)

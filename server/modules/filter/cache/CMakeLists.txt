@@ -17,7 +17,7 @@ if (JANSSON_FOUND)
     storagefactory.cc
     storagereal.cc
     )
-  target_link_libraries(cache maxscale-common ${JANSSON_LIBRARIES})
+  target_link_libraries(cache maxscale-common ${JANSSON_LIBRARIES} MySQLCommon)
   set_target_properties(cache PROPERTIES VERSION "1.0.0")
   set_target_properties(cache PROPERTIES LINK_FLAGS -Wl,-z,defs)
   install_module(cache core)

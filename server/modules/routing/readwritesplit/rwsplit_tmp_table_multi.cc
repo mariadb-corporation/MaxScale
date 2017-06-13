@@ -54,8 +54,8 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf)
 
         for (size_t i = 0; i < n_infos; i++)
         {
-            MYSQL_session* data = static_cast<MYSQL_session*>(router_cli_ses->client_dcb->data);
-            std::string table = info[i].database ? info[i].database : data->db;
+            const char* db = mxs_mysql_get_current_db(router_cli_ses->client_dcb->session);
+            std::string table = info[i].database ? info[i].database : db;
             table += ".";
 
             if (info[i].table)
@@ -95,8 +95,8 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 
         for (size_t i = 0; i < n_infos; i++)
         {
-            MYSQL_session* data = static_cast<MYSQL_session*>(router_cli_ses->client_dcb->data);
-            std::string table = info[i].database ? info[i].database : data->db;
+            const char* db = mxs_mysql_get_current_db(router_cli_ses->client_dcb->session);
+            std::string table = info[i].database ? info[i].database : db;
             table += ".";
 
             if (info[i].table)
@@ -142,8 +142,8 @@ void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 
         if (tblname && *tblname)
         {
-            MYSQL_session* data = static_cast<MYSQL_session*>(router_cli_ses->client_dcb->data);
-            table += data->db;
+            const char* db = mxs_mysql_get_current_db(router_cli_ses->client_dcb->session);
+            table += db;
             table += ".";
             table += tblname;
         }

@@ -205,15 +205,15 @@ CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSess
     ss_dassert(pSession->client_dcb);
     ss_dassert(pSession->client_dcb->data);
 
-    MYSQL_session *pMysqlSession = (MYSQL_session*)pSession->client_dcb->data;
+    const char* zDb = mxs_mysql_get_current_db(pSession);
     char* zDefaultDb = NULL;
 
-    if (pMysqlSession->db[0] != 0)
+    if (zDb[0] != 0)
     {
-        zDefaultDb = MXS_STRDUP(pMysqlSession->db);
+        zDefaultDb = MXS_STRDUP(zDb);
     }
 
-    if ((pMysqlSession->db[0] == 0) || zDefaultDb)
+    if ((zDb[0] == 0) || zDefaultDb)
     {
         pCacheFilterSession = new (std::nothrow) CacheFilterSession(pSession, pCache, zDefaultDb);
 
