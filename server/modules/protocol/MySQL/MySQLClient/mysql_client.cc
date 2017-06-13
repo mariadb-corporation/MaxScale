@@ -888,10 +888,12 @@ void set_qc_mode(MXS_SESSION* session, GWBUF** read_buffer)
         switch (sql_mode)
         {
         case SetSqlModeParser::ORACLE:
+            session_set_autocommit(session, false);
             session->client_protocol_data = QC_SQL_MODE_ORACLE;
             break;
 
         case SetSqlModeParser::DEFAULT:
+            session_set_autocommit(session, true);
             session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             break;
 

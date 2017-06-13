@@ -112,6 +112,12 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     session->stats.connect = time(0);
     session->stmt.buffer = NULL;
     session->stmt.target = NULL;
+
+    MXS_CONFIG *config = config_get_global_options();
+    // If MaxScale is running in Oracle mode, then autocommit needs to
+    // initially be off.
+    bool autocommit = (config->qc_sql_mode == QC_SQL_MODE_ORACLE) ? false : true;
+    session_set_autocommit(session, autocommit);
     /*<
      * Associate the session to the client DCB and set the reference count on
      * the session to indicate that there is a single reference to the
