@@ -213,12 +213,9 @@ rses_property_t *rses_property_init(rses_property_type_t prop_type)
     prop->rses_prop_type = prop_type;
     prop->rses_prop_next = NULL;
     prop->rses_prop_refcount = 1;
-#if defined(SS_DEBUG)
     prop->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
     prop->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-#endif
 
-    CHK_RSES_PROP(prop);
     return prop;
 }
 
@@ -770,12 +767,10 @@ static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* 
     {
         if (sref->active)
         {
-#if defined(SS_DEBUG)
             backend_ref[i].bref_chk_top = CHK_NUM_BACKEND_REF;
             backend_ref[i].bref_chk_tail = CHK_NUM_BACKEND_REF;
             backend_ref[i].bref_sescmd_cur.scmd_cur_chk_top = CHK_NUM_SESCMD_CUR;
             backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
-#endif
             backend_ref[i].closed_at = 0;
             backend_ref[i].bref_state = 0;
             backend_ref[i].ref = sref;
@@ -1034,10 +1029,8 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
     }
 
     prop->rses_prop_rsession = client_rses;
-#if defined(SS_DEBUG)
     client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
     client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
-#endif
     client_rses->rses_closed = false;
     client_rses->rses_properties[RSES_PROP_TYPE_SESCMD] = NULL;
     client_rses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = prop;

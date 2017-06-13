@@ -29,10 +29,6 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 
-#if defined(SS_DEBUG)
-#include <maxscale/protocol/mysql.h>
-#endif
-
 #define RWSPLIT_TRACE_MSG_LEN 1000
 
 /**

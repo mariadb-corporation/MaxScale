@@ -75,10 +75,8 @@ mysql_sescmd_t *mysql_sescmd_init(rses_property_t *rses_prop,
     /** Can't call rses_property_get_sescmd with uninitialized sescmd */
     sescmd = &rses_prop->rses_prop_data.sescmd;
     sescmd->my_sescmd_prop = rses_prop; /*< reference to owning property */
-#if defined(SS_DEBUG)
     sescmd->my_sescmd_chk_top = CHK_NUM_MY_SESCMD;
     sescmd->my_sescmd_chk_tail = CHK_NUM_MY_SESCMD;
-#endif
     /** Set session command buffer */
     sescmd->my_sescmd_buf = sescmd_buf;
     sescmd->my_sescmd_packet_type = packet_type;
