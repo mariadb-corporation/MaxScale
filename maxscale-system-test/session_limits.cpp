@@ -14,49 +14,40 @@ router_options=max_sescmd_history=10
  * - execute one more session commad, excpect failure
  */
 
-
-
-#include <iostream>
 #include "testconnections.h"
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(200);
-    int i;
-    char sql[256];
+    TestConnections test(argc, argv);
+    int first_sleep = 5;
+    int second_sleep = 12;
 
-    Test->tprintf("Open session and wait 20 seconds\n");
-    Test->connect_maxscale();
-    sleep(20);
-    Test->tprintf("Execute query to check session\n");
-    Test->try_query(Test->conn_rwsplit, "SELECT 1");
+    test.set_timeout(200);
 
-    Test->tprintf("Wait 35 seconds more and try quiry again expecting failure\n");
-    sleep(35);
-    if (execute_query(Test->conn_rwsplit, "SELECT 1") == 0)
+    test.tprintf("Open session, wait %d seconds and execute a query", first_sleep);
+    test.connect_maxscale();
+    sleep(first_sleep);
+    test.try_query(test.conn_rwsplit, "SELECT 1");
+
+    test.tprintf("Wait %d seconds and execute query, expecting failure", second_sleep);
+    sleep(second_sleep);
+    test.add_result(execute_query(test.conn_rwsplit, "SELECT 1") == 0,
+                    "Session was not closed after %d seconds",
+                    second_sleep);
+    test.close_maxscale_connections();
+
+    test.tprintf("Open session and execute 10 session commands");
+    test.connect_maxscale();
+    for (int i = 0; i < 10; i++)
     {
-        Test->add_result(1, "Session was not closed after 40 seconds\n");
+        test.try_query(test.conn_rwsplit, "set @test=1");
     }
-    Test->close_maxscale_connections();
 
-    Test->tprintf("Open session and execute 10 session commands\n");
-    fflush(stdout);
-    Test->connect_maxscale();
-    for (i = 0; i < 10; i++)
-    {
-        sprintf(sql, "set @test=%d", i);
-        Test->try_query(Test->conn_rwsplit, sql);
-    }
-    Test->tprintf("done!\n");
+    test.tprintf("Execute one more session command and expect message in error log");
+    execute_query(test.conn_rwsplit, "set @test=1");
+    sleep(1);
+    test.check_log_err("Router session exceeded session command history limit", true);
+    test.close_maxscale_connections();
 
-    Test->tprintf("Execute one more session command and expect message in error log\n");
-    execute_query(Test->conn_rwsplit, "set @test=11");
-    sleep(5);
-    Test->check_log_err((char *) "Router session exceeded session command history limit", true);
-    Test->close_maxscale_connections();
-
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return test.global_result;
 }

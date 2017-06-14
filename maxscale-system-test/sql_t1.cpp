@@ -6,7 +6,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static char** sql = NULL;
 static size_t sql_size = 0;
 
-int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long int rows)
+int execute_select_query_and_check(MYSQL *conn, const char *sql, unsigned long long int rows)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;

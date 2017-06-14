@@ -11,7 +11,7 @@ user=maxskysql
 passwd= skysql
 
 [RW Split Router]
-connection_timeout=30
+connection_timeout=10
 type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4

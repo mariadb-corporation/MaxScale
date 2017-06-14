@@ -15,17 +15,7 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev  wget
-  sudo apt-get install -y --force-yes libgnutls-dev
-  if [ $? != 0 ]
-  then
-       sudo apt-get install -y --force-yes libgnutls28-dev
-  fi
-  sudo apt-get install -y --force-yes libgcrypt20
-  if [ $? != 0 ]
-  then
-      sudo apt-get install -y --force-yes libgcrypt11
-  fi
+       sqlite3 liblua5.1 liblua5.1-dev wget
 else
   ## RPM-based distro
   command -v yum
@@ -36,10 +26,7 @@ else
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
          pcre-devel git wget tcl libuuid-devel \
-         xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls 
-    sudo zypper -n install gcrypt
-    sudo zypper -n install libgcrypt
+         xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
@@ -54,8 +41,7 @@ else
          libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
          libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign wget \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
-         sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         gnutls gcrypt
+         sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils
 
     cat /etc/redhat-release | grep "release 5"
     if [ $? == 0 ]
@@ -149,7 +135,7 @@ then
     echo "Error getting avro-c"
     exit 1
 fi
-avro_filename=`ls -1 *.tar.gz`
+avro_filename=`ls -1 avro*.tar.gz`
 avro_dir=`echo "$avro_filename" | sed "s/.tar.gz//"`
 tar -axf $avro_filename
 mkdir $avro_dir/build
