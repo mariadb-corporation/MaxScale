@@ -13,6 +13,8 @@ SET sql_mode=ORACLE;
 SELECT LENGTH(null), LENGTH('a'), LENGTH(123);
 SELECT LENGTHB(null), LENGTHB('a'), LENGTHB(123);
 
-SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));
-SELECT LENGTHB(_utf8 0xC39F), LENGTHB(CHAR(14844588 USING utf8));
+# qc_sqlite: SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));
+# Sqlite3 error: SQL logic error or missing database, near "0xC39F": syntax error
+# qc_sqlite: SELECT LENGTHB(_utf8 0xC39F), LENGTHB(CHAR(14844588 USING utf8));
+# Sqlite3 error: SQL logic error or missing database, near "0xC39F": syntax error
 EXPLAIN EXTENDED SELECT LENGTH('a'), LENGTHB('a');
