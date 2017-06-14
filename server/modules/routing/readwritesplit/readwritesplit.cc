@@ -1157,6 +1157,22 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
                 }
             }
         }
+
+        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
+            router_cli_ses->sescmd_list.size())
+        {
+            std::string sescmdstr;
+
+            for (mxs::SessionCommandList::iterator it = router_cli_ses->sescmd_list.begin();
+                 it != router_cli_ses->sescmd_list.end(); it++)
+            {
+                mxs::SSessionCommand& scmd = *it;
+                sescmdstr += scmd->to_string();
+                sescmdstr += "\n";
+            }
+
+            MXS_INFO("Executed session commands:\n%s", sescmdstr.c_str());
+        }
     }
 }
 

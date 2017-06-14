@@ -364,6 +364,14 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
         return false;
     }
 
+    if (!router_cli_ses->rses_config.disable_sescmd_history)
+    {
+        /** The stored buffer points to the one in the session command
+         * which is freed in freeSession. */
+        uint64_t id = prop->rses_prop_data.sescmd.position;
+        router_cli_ses->sescmd_list.push_front(mxs::SSessionCommand(new mxs::SessionCommand(querybuf, id)));
+    }
+
     for (i = 0; i < router_cli_ses->rses_nbackends; i++)
     {
         if (BREF_IS_IN_USE((&backend_ref[i])))

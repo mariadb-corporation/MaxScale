@@ -27,6 +27,7 @@
 #include <maxscale/hashtable.h>
 #include <maxscale/router.h>
 #include <maxscale/service.h>
+#include <maxscale/session_command.hh>
 
 enum bref_state_t
 {
@@ -151,7 +152,7 @@ struct mysql_sescmd_t
     unsigned char           reply_cmd; /**< The reply command. One of OK, ERR, RESULTSET or
                                         * LOCAL_INFILE. Slave servers are compared to this
                                         * when they return session command replies.*/
-    int                     position; /**< Position of this command */
+    uint64_t                position; /**< Position of this command */
     skygw_chk_t             my_sescmd_chk_tail;
 };
 
@@ -180,7 +181,7 @@ struct sescmd_cursor_t
     rses_property_t**  scmd_cur_ptr_property; /**< address of pointer to owner property */
     mysql_sescmd_t*    scmd_cur_cmd; /**< pointer to current session command */
     bool               scmd_cur_active; /**< true if command is being executed */
-    int                position; /**< Position of this cursor */
+    uint64_t           position; /**< Position of this cursor */
     skygw_chk_t        scmd_cur_chk_tail;
 };
 
@@ -253,13 +254,14 @@ struct ROUTER_CLIENT_SES
     bool                      have_tmp_tables;
     uint64_t                  rses_load_data_sent; /**< How much data has been sent */
     DCB*                      client_dcb;
-    int                       pos_generator;
+    uint64_t                  pos_generator;
     backend_ref_t            *forced_node; /**< Current server where all queries should be sent */
     int                       expected_responses; /**< Number of expected responses to the current query */
     GWBUF*                    query_queue; /**< Queued commands waiting to be executed */
     struct ROUTER_INSTANCE   *router; /**< The router instance */
     struct ROUTER_CLIENT_SES *next;
     TableSet                  temp_tables; /**< Set of temporary tables */
+    mxs::SessionCommandList   sescmd_list; /**< List of executed session commands */
     skygw_chk_t               rses_chk_tail;
 };
 
