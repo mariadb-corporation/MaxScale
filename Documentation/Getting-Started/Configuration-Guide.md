@@ -9,7 +9,9 @@ plugin modules that tailor the behavior of the program.
 
 # Table of Contents
 
+* [Glossary](#glossary)
 * [Configuration](#configuration)
+  * [Special Parameter Types](#special-parameter-types)
   * [Global Settings](#global-settings)
   * [Service](#service)
   * [Server](#server)
@@ -79,7 +81,9 @@ The values of the parameter that are not on the first line need to have at least
 one whitespace character before them in order for them to be recognized as a
 part of the multi-line parameter.
 
-### Sizes
+### Special Parameter Types
+
+#### Sizes
 
 Where _specifically noted_, a number denoting a size can be suffixed by a subset
 of the IEC binary prefixes or the SI prefixes. In the former case the number
@@ -104,6 +108,16 @@ max_size=1000000M
 max_size=1000G
 max_size=1T
 ```
+#### Regular Expressions
+
+When a regular expression (regex) parameter is accepted, the pattern string
+should be enclosed in slashes e.g. `match=/^select/` defines the pattern
+`^select`. The slashes allow whitespace to be read from the ends of the regex
+string contrary to a normal string parameter and are removed before compiling
+the pattern. For backwards compatibility, the slashes are not yet mandatory.
+Omitting them is, however, deprecated and will be rejected in the next release
+of MaxScale. Currently, *QLAFilter* accepts parameters in regular expression
+form.
 
 ### Global Settings
 
