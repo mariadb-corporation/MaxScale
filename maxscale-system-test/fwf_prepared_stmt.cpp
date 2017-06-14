@@ -47,7 +47,8 @@ int main(int argc, char** argv)
     test.add_result(!mysql_stmt_prepare(stmt, query, strlen(query)), "Binary protocol preparation should fail");
     mysql_stmt_close(stmt);
 
-    test.try_query(test.conn_rwsplit, "DROP TABLE test.t1");
+    test.repl->connect();
+    test.try_query(test.repl->nodes[0], "DROP TABLE test.t1");
 
     return test.global_result;
 }

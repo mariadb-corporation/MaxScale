@@ -101,11 +101,14 @@ two steps from above.
 
 ## Creating additional grants for users
 
-Because MariaDB MaxScale sits between the clients and the backend databases,
-the backend databases will see all clients as if they were connecting from
-MariaDB MaxScale's address.
-This usually requires users to create additional grants for MariaDB MaxScale's hostname.
-The best way to describe this process is with an example.
+**Note:** The client host and MaxScale host must have the same username and
+  password for both client and MaxScale hosts.
+
+Because MariaDB MaxScale sits between the clients and the backend databases, the
+backend databases will see all clients as if they were connecting from MariaDB
+MaxScale's address. This usually requires users to create additional grants for
+MariaDB MaxScale's hostname. The best way to describe this process is with an
+example.
 
 User `'jdoe'@'192.168.0.200` has the following grant on the cluster:
 `GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'192.168.0.200'`.
@@ -134,18 +137,22 @@ MariaDB [(none)]> SHOW GRANTS FOR 'jdoe'@'192.168.0.200';
 ```
 Then creating the user `'jdoe'@'192.168.0.101'` and giving it the same grants:
 ```
-MariaDB [(none)]> CREATE USER 'jdoe'@'192.168.0.101';
+MariaDB [(none)]> CREATE USER 'jdoe'@'192.168.0.101' IDENTIFIED BY 'secret_password';
 Query OK, 0 rows affected (0.00 sec)
 
 MariaDB [(none)]> GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'192.168.0.101';
 Query OK, 0 rows affected (0.00 sec)
 ```
 
-The other option is to use a wildcard grant like
-`GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'%'`.
-This is more convenient but also less secure than having specific grants
-for both the client's address and MariaDB MaxScale's address.
+The other option is to use a wildcard grant like the following:
 
+```
+GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'%' IDENTIFIED BY 'secret_password'
+```
+
+This is more convenient but less secure than having specific grants for both the
+client's address and MariaDB MaxScale's address as it allows access from all
+hosts.
 
 ## Creating the configuration file
 

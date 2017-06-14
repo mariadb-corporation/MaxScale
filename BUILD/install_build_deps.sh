@@ -154,7 +154,7 @@ then
     echo "Error getting avro-c"
     exit 1
 fi
-avro_filename=`ls -1 *.tar.gz`
+avro_filename=`ls -1 avro*.tar.gz`
 avro_dir=`echo "$avro_filename" | sed "s/.tar.gz//"`
 tar -axf $avro_filename
 mkdir $avro_dir/build
