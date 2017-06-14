@@ -182,6 +182,17 @@ public:
      */
     bool is_closed() const;
 
+    /**
+     * @brief Check if the backend has failed fatally
+     *
+     * When a fatal failure occurs in a backend, the backend server can no longer
+     * be used by this session. Fatal failures can occur when the execution of
+     * a session command fails on the backend but the expected result is different.
+     *
+     * @return True if a fatal failure has occurred in the backend server
+     */
+    bool has_failed() const;
+
 private:
     /**
      * Internal state of the backend

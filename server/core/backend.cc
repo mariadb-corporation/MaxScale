@@ -241,3 +241,8 @@ bool Backend::is_closed() const
 {
     return m_state & CLOSED;
 }
+
+bool Backend::has_failed() const
+{
+    return m_state & FATAL_FAILURE;
+}
