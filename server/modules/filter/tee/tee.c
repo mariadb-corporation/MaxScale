@@ -846,16 +846,17 @@ GWBUF* clone_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF* bu
     }
     else
     {
-        char *ptr = modutil_get_SQL(buffer);
+        char *ptr = NULL;
+        regmatch_t limits[] = {{0, 0}};
+        modutil_extract_SQL(buffer, &ptr, &limits[0].rm_eo);
 
         if (ptr)
         {
-            if ((my_instance->match && regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) ||
-                (my_instance->nomatch && regexec(&my_instance->nore, ptr, 0, NULL, 0) != 0))
+            if ((my_instance->match && regexec(&my_instance->re, ptr, 0, limits, REG_STARTEND) == 0) ||
+                (my_instance->nomatch && regexec(&my_instance->nore, ptr, 0, limits, REG_STARTEND) != 0))
             {
                 clone = gwbuf_clone(buffer);
             }
-            MXS_FREE(ptr);
         }
     }
 

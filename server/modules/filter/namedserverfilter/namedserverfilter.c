@@ -310,12 +310,13 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE *) instance;
     REGEXHINT_SESSION *my_session = (REGEXHINT_SESSION *) session;
     char *sql;
+    regmatch_t limits[] = {{0, 0}};
 
     if (modutil_is_SQL(queue) && my_session->active)
     {
-        if ((sql = modutil_get_SQL(queue)) != NULL)
+        if (modutil_extract_SQL(queue, &sql, &limits[0].rm_eo))
         {
-            if (regexec(&my_instance->re, sql, 0, NULL, 0) == 0)
+            if (regexec(&my_instance->re, sql, 0, limits, REG_STARTEND) == 0)
             {
                 queue->hint = hint_create_route(queue->hint,
                                                 HINT_ROUTE_TO_NAMED_SERVER,
@@ -326,7 +327,6 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             {
                 my_session->n_undiverted++;
             }
-            MXS_FREE(sql);
         }
     }
     return my_session->down.routeQuery(my_session->down.instance,

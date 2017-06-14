@@ -507,19 +507,19 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     QLA_INSTANCE *my_instance = (QLA_INSTANCE *) instance;
     QLA_SESSION *my_session = (QLA_SESSION *) session;
-    char *ptr = NULL;
-    int length = 0;
+    char *sql;
     struct tm t;
     struct timeval tv;
+    regmatch_t limits[] = {{0, 0}};
 
     if (my_session->active)
     {
-        if (modutil_extract_SQL(queue, &ptr, &length))
+        if (modutil_extract_SQL(queue, &sql, &limits[0].rm_eo))
         {
             if ((my_instance->match == NULL ||
-                 regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
+                 regexec(&my_instance->re, sql, 0, limits, REG_STARTEND) == 0) &&
                 (my_instance->nomatch == NULL ||
-                 regexec(&my_instance->nore, ptr, 0, NULL, 0) != 0))
+                 regexec(&my_instance->nore, sql, 0, limits, REG_STARTEND) != 0))
             {
                 char buffer[QLA_DATE_BUFFER_SIZE];
                 gettimeofday(&tv, NULL);
@@ -530,8 +530,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                  * Loop over all the possible log file modes and write to
                  * the enabled files.
                  */
-
-                char *sql_string = ptr;
+                int length = limits[0].rm_eo;
                 bool write_error = false;
                 if (my_instance->log_mode_flags & CONFIG_FILE_SESSION)
                 {
@@ -541,7 +540,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                                            ~LOG_DATA_SESSION);
 
                     if (write_log_entry(data_flags, my_session->fp,
-                                        my_instance, my_session, buffer, sql_string, length) < 0)
+                                        my_instance, my_session, buffer, sql, length) < 0)
                     {
                         write_error = true;
                     }
@@ -550,7 +549,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 {
                     uint32_t data_flags = my_instance->log_file_data_flags;
                     if (write_log_entry(data_flags, my_instance->unified_fp,
-                                        my_instance, my_session, buffer, sql_string, length) < 0)
+                                        my_instance, my_session, buffer, sql, length) < 0)
                     {
                         write_error = true;
                     }
