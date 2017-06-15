@@ -116,6 +116,11 @@ void Backend::add_session_command(GWBUF* buffer, uint64_t sequence)
     m_session_commands.push_back(SSessionCommand(new SessionCommand(buffer, sequence)));
 }
 
+void Backend::add_session_command(const SSessionCommand& sescmd)
+{
+    m_session_commands.push_back(sescmd);
+}
+
 uint64_t Backend::complete_session_command()
 {
     uint64_t rval = m_session_commands.front()->get_position();
@@ -126,6 +131,12 @@ uint64_t Backend::complete_session_command()
 size_t Backend::session_command_count() const
 {
     return m_session_commands.size();
+}
+
+const SSessionCommand& Backend::next_session_command() const
+{
+    ss_dassert(session_command_count() > 0);
+    return m_session_commands.front();
 }
 
 void Backend::clear_state(backend_state state)

@@ -73,6 +73,7 @@ public:
      *                 the session command is completed
      */
     void add_session_command(GWBUF* buffer, uint64_t sequence);
+    void add_session_command(const SSessionCommand& sescmd);
 
     /**
      * @brief Mark the current session command as successfully executed
@@ -89,6 +90,20 @@ public:
      * @return Number of session commands
      */
     size_t session_command_count() const;
+
+    /**
+     * @brief Get the first session command
+     *
+     * Returns the first session command in the list of session commands
+     * to be executed.
+     *
+     * This should only be called when at least one session command has been
+     * added to the backend. If no session commands have been added, behavior
+     * is undefined.
+     *
+     * @return The first session command
+     */
+    const SSessionCommand& next_session_command() const;
 
     /**
      * @brief Get pointer to server reference
