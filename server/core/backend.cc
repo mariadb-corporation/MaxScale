@@ -53,7 +53,7 @@ void Backend::close(close_type type)
             clear_state(IN_USE);
             set_state(CLOSED);
 
-            if (type == FATAL)
+            if (type == CLOSE_FATAL)
             {
                 set_state(FATAL_FAILURE);
             }
@@ -246,6 +246,11 @@ bool Backend::write_stored_command()
 bool Backend::in_use() const
 {
     return m_state & IN_USE;
+}
+
+bool Backend::is_active() const
+{
+    return SERVER_REF_IS_ACTIVE(m_backend);
 }
 
 bool Backend::is_waiting_result() const

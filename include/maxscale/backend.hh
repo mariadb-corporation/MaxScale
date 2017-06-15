@@ -36,8 +36,8 @@ public:
      */
     enum close_type
     {
-        NORMAL,
-        FATAL
+        CLOSE_NORMAL,
+        CLOSE_FATAL
     };
 
     /**
@@ -125,7 +125,7 @@ public:
      *
      * This will close all active connections created by the backend.
      */
-    void close(close_type type = NORMAL);
+    void close(close_type type = CLOSE_NORMAL);
 
     /**
      * @brief Get a pointer to the internal DCB
@@ -181,6 +181,13 @@ public:
      * @return True if backend is in use
      */
     bool in_use() const;
+
+    /**
+     * @brief Check if the backend server reference is active
+     *
+     * @return True if the server reference is active
+     */
+    bool is_active() const;
 
     /**
      * @brief Check if backend is waiting for a result
