@@ -80,7 +80,7 @@ static bool valid_for_slave(const SERVER *server, const SERVER *master_host)
  * @return The best slave backend reference or NULL if no candidates could be found
  */
 SRWBackend* get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
-                                   int (*cmpfun)(const void *, const void *))
+                                int (*cmpfun)(const void *, const void *))
 {
     SRWBackend candidate;
 
@@ -129,7 +129,6 @@ SRWBackend* get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
  */
 bool select_connect_backend_servers(int router_nservers,
                                     int max_nslaves,
-                                    int max_slave_rlag,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
                                     ROUTER_INSTANCE *router,
@@ -382,32 +381,32 @@ static void log_server_connections(select_criteria_t select_criteria,
 
         switch (select_criteria)
         {
-            case LEAST_GLOBAL_CONNECTIONS:
-                MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
-                         b->server->stats.n_current, b->server->name,
-                         b->server->port, STRSRVSTATUS(b->server));
-                break;
+        case LEAST_GLOBAL_CONNECTIONS:
+            MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
+                     b->server->stats.n_current, b->server->name,
+                     b->server->port, STRSRVSTATUS(b->server));
+            break;
 
-            case LEAST_ROUTER_CONNECTIONS:
-                MXS_INFO("RWSplit connections : %d in \t[%s]:%d %s",
-                         b->connections, b->server->name,
-                         b->server->port, STRSRVSTATUS(b->server));
-                break;
+        case LEAST_ROUTER_CONNECTIONS:
+            MXS_INFO("RWSplit connections : %d in \t[%s]:%d %s",
+                     b->connections, b->server->name,
+                     b->server->port, STRSRVSTATUS(b->server));
+            break;
 
-            case LEAST_CURRENT_OPERATIONS:
-                MXS_INFO("current operations : %d in \t[%s]:%d %s",
-                         b->server->stats.n_current_ops,
-                         b->server->name, b->server->port,
-                         STRSRVSTATUS(b->server));
-                break;
+        case LEAST_CURRENT_OPERATIONS:
+            MXS_INFO("current operations : %d in \t[%s]:%d %s",
+                     b->server->stats.n_current_ops,
+                     b->server->name, b->server->port,
+                     STRSRVSTATUS(b->server));
+            break;
 
-            case LEAST_BEHIND_MASTER:
-                MXS_INFO("replication lag : %d in \t[%s]:%d %s",
-                         b->server->rlag, b->server->name,
-                         b->server->port, STRSRVSTATUS(b->server));
-            default:
-                ss_dassert(!true);
-                break;
+        case LEAST_BEHIND_MASTER:
+            MXS_INFO("replication lag : %d in \t[%s]:%d %s",
+                     b->server->rlag, b->server->name,
+                     b->server->port, STRSRVSTATUS(b->server));
+        default:
+            ss_dassert(!true);
+            break;
         }
     }
 }
