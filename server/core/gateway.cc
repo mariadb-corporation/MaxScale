@@ -3006,7 +3006,11 @@ static bool handle_debug_args(char* args)
         {
             total_len += strlen(debug_arguments[i].name) + 1;
         }
-        char arglist[total_len] = "";
+        char arglist[total_len];
+        if (total_len > 0)
+        {
+            arglist[0] = '\0';
+        }
         for (int i = 0; debug_arguments[i].action != NULL; i++)
         {
             strcat(arglist, debug_arguments[i].name);
