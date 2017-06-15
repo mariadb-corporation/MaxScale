@@ -102,11 +102,10 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
  * @param   rses Router client session
  * @param   router_nservers The number of backend servers in total
  */
-int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses,
-                            int router_nservers)
+int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses)
 {
     int conf_max_nslaves;
-    int max_nslaves;
+    int router_nservers = rses->rses_nbackends;
 
     CHK_CLIENT_RSES(rses);
 
@@ -118,9 +117,8 @@ int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses,
     {
         conf_max_nslaves = (router_nservers * rses->rses_config.rw_max_slave_conn_percent) / 100;
     }
-    max_nslaves = MXS_MIN(router_nservers - 1, MXS_MAX(1, conf_max_nslaves));
 
-    return max_nslaves;
+    return MXS_MIN(router_nservers - 1, MXS_MAX(1, conf_max_nslaves));
 }
 
 /*
@@ -474,7 +472,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
     /** Close the current connection */
     bref->close();
 
-    int max_nslaves = rses_get_max_slavecount(myrses, myrses->rses_nbackends);
+    int max_nslaves = rses_get_max_slavecount(myrses);
     bool succp;
     /**
      * Try to get replacement slave or at least the minimum
@@ -796,9 +794,10 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
         }
     }
 
-    int max_nslaves = rses_get_max_slavecount(client_rses, router_nservers);
-
     client_rses->rses_nbackends = router_nservers; /*< # of backend servers */
+
+    int max_nslaves = rses_get_max_slavecount(client_rses);
+
 
     if (!select_connect_backend_servers(router_nservers, max_nslaves,
                                         client_rses->rses_config.slave_selection_criteria,
@@ -1122,7 +1121,8 @@ static void clientReply(MXS_ROUTER *instance,
 
     if (reply_is_complete(bref, writebuf))
     {
-        /** Got a complete reply, decrement expected response count */
+        /** Got a complete reply, acknowledge the write decrement expected response count */
+        bref->ack_write();
         router_cli_ses->expected_responses--;
         ss_dassert(router_cli_ses->expected_responses >= 0);
         ss_dassert(bref->get_reply_state() == REPLY_STATE_DONE);
@@ -1140,32 +1140,22 @@ static void clientReply(MXS_ROUTER *instance,
     {
         check_session_command_reply(writebuf, bref);
 
-        if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
-        {
-            /**
-             * Discard all those responses that have already been sent to
-             * the client. Return with buffer including response that
-             * needs to be sent to client or NULL.
-             */
-            bool rconn = false;
-            process_sescmd_response(router_cli_ses, bref, &writebuf, &rconn);
+        /** This discards all responses that have already been sent to the client */
+        bool rconn = false;
+        process_sescmd_response(router_cli_ses, bref, &writebuf, &rconn);
 
-            if (rconn && !router_inst->rwsplit_config.disable_sescmd_history)
-            {
-                select_connect_backend_servers(
-                    router_cli_ses->rses_nbackends,
-                    router_cli_ses->rses_config.max_slave_connections,
-                    router_cli_ses->rses_config.slave_selection_criteria,
-                    router_cli_ses->client_dcb->session,
-                    router_cli_ses->router,
-                    router_cli_ses,
-                    true);
-            }
+        if (rconn && !router_inst->rwsplit_config.disable_sescmd_history)
+        {
+            select_connect_backend_servers(
+                router_cli_ses->rses_nbackends,
+                router_cli_ses->rses_config.max_slave_connections,
+                router_cli_ses->rses_config.slave_selection_criteria,
+                router_cli_ses->client_dcb->session,
+                router_cli_ses->router,
+                router_cli_ses,
+                true);
         }
     }
-
-    /** Complete the write */
-    bref->ack_write();
 
     bool queue_routed = false;
 

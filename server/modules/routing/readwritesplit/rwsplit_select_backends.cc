@@ -79,8 +79,8 @@ static bool valid_for_slave(const SERVER *server, const SERVER *master_host)
  * @param cmpfun qsort() compatible comparison function
  * @return The best slave backend reference or NULL if no candidates could be found
  */
-SRWBackend* get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
-                                int (*cmpfun)(const void *, const void *))
+SRWBackend get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
+                               int (*cmpfun)(const void *, const void *))
 {
     SRWBackend candidate;
 
@@ -210,7 +210,7 @@ bool select_connect_backend_servers(int router_nservers,
     ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
 
     /** Connect to all possible slaves */
-    for (SRWBackend bref(get_slave_candidate(rses, router_nservers, master_host, cmpfun));
+    for (SRWBackend bref(get_slave_candidate(rses, master_host, cmpfun));
          bref && slaves_connected < max_nslaves;
          bref = get_slave_candidate(rses, master_host, cmpfun))
     {
