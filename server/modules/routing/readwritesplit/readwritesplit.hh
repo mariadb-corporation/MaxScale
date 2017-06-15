@@ -178,6 +178,18 @@ public:
         m_reply_state = state;
     }
 
+    bool execute_session_command()
+    {
+        bool rval = mxs::Backend::execute_session_command();
+
+        if (rval)
+        {
+            set_reply_state(REPLY_STATE_START);
+        }
+
+        return rval;
+    }
+
 private:
     reply_state_t m_reply_state;
 };

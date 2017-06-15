@@ -263,7 +263,6 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
 
                 if (expecting_response)
                 {
-                    bref->set_reply_state(REPLY_STATE_START);
                     rses->expected_responses++;
                 }
 

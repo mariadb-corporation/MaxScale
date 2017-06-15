@@ -63,7 +63,7 @@ public:
      *
      * @return True if the command was executed successfully
      */
-    bool execute_session_command();
+    virtual bool execute_session_command();
 
     /**
      * @brief Add a new session command to the tail of the command queue
