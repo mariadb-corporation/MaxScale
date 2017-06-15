@@ -43,7 +43,7 @@ bool handle_target_is_all(route_target_t route_target,
                           GWBUF *querybuf, int packet_type, uint32_t qtype);
 uint8_t determine_packet_type(GWBUF *querybuf, bool *non_empty_packet);
 void log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype);
-bool is_packet_a_one_way_message(int packet_type);
+bool command_will_respond(uint8_t packet_type);
 bool is_packet_a_query(int packet_type);
 bool send_readonly_error(DCB *dcb);
 
@@ -75,10 +75,7 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                              SRWBackend& target);
 bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf, SRWBackend& target, bool store);
-bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
-                         GWBUF *querybuf, ROUTER_INSTANCE *inst,
-                         int packet_type,
-                         uint32_t qtype);
+bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t command);
 
 void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& bref,
                              GWBUF** ppPacket, bool* reconnect);

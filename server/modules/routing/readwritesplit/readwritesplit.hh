@@ -21,6 +21,7 @@
 #include <maxscale/cppdefs.hh>
 
 #include <tr1/unordered_set>
+#include <map>
 #include <string>
 
 #include <maxscale/dcb.h>
@@ -139,7 +140,7 @@ struct rwsplit_config_t
     int               max_slave_replication_lag; /**< Maximum replication lag */
     mxs_target_t      use_sql_variables_in; /**< Whether to send user variables
                                                 * to master or all nodes */
-    int               max_sescmd_history; /**< Maximum amount of session commands to store */
+    uint64_t          max_sescmd_history; /**< Maximum amount of session commands to store */
     bool              disable_sescmd_history; /**< Disable session command history */
     bool              master_accept_reads; /**< Use master for reads */
     bool              strict_multi_stmt; /**< Force non-multistatement queries to be routed
@@ -185,6 +186,7 @@ typedef std::tr1::shared_ptr<RWBackend> SRWBackend;
 typedef std::list<SRWBackend> SRWBackendList;
 
 typedef std::tr1::unordered_set<std::string> TableSet;
+typedef std::map<uint64_t, uint8_t>          ResponseMap;
 
 /**
  * The client session structure used within this router.
@@ -198,18 +200,20 @@ struct ROUTER_CLIENT_SES
     SRWBackend                target_node; /**< The currently locked target node */
     rwsplit_config_t          rses_config; /**< copied config info from router instance */
     int                       rses_nbackends;
-    int                       rses_nsescmd; /**< Number of executed session commands */
     enum ld_state             load_data_state; /**< Current load data state */
     bool                      have_tmp_tables;
     uint64_t                  rses_load_data_sent; /**< How much data has been sent */
     DCB*                      client_dcb;
-    uint64_t                  pos_generator;
+    uint64_t                  sescmd_count;
     int                       expected_responses; /**< Number of expected responses to the current query */
     GWBUF*                    query_queue; /**< Queued commands waiting to be executed */
     struct ROUTER_INSTANCE   *router; /**< The router instance */
     struct ROUTER_CLIENT_SES *next;
     TableSet                  temp_tables; /**< Set of temporary tables */
     mxs::SessionCommandList   sescmd_list; /**< List of executed session commands */
+    ResponseMap               sescmd_responses; /**< Response to each session command */
+    uint64_t                  sent_sescmd; /**< ID of the last sent session command*/
+    uint64_t                  recv_sescmd; /**< ID of the most recently completed session command */
     skygw_chk_t               rses_chk_tail;
 };
 

@@ -230,212 +230,88 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
  * backends being used, otherwise false.
  *
  */
-bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
-                         GWBUF *querybuf, ROUTER_INSTANCE *inst,
-                         int packet_type,
-                         uint32_t qtype)
+bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t command)
 {
-    bool succp;
-    rses_property_t *prop;
-    backend_ref_t *backend_ref;
-    int i;
-    int max_nslaves;
-    int nbackends;
-    int nsucc;
+    /** The SessionCommand takes ownership of the buffer */
+    uint64_t id = rses->sescmd_count++;
+    mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));
+    bool expecting_response = command_will_respond(command);
+    int nsucc = 0;
+    uint64_t lowest_pos = id;
 
     MXS_INFO("Session write, routing to all servers.");
-    /** Maximum number of slaves in this router client session */
-    max_nslaves =
-        rses_get_max_slavecount(router_cli_ses, router_cli_ses->rses_nbackends);
-    nsucc = 0;
-    nbackends = 0;
-    backend_ref = router_cli_ses->rses_backend_ref;
 
-    /**
-     * These are one-way messages and server doesn't respond to them.
-     * Therefore reply processing is unnecessary and session
-     * command property is not needed. It is just routed to all available
-     * backends.
-     */
-    if (is_packet_a_one_way_message(packet_type))
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
     {
-        int rc;
+        SRWBackend& bref = *it;
 
-        for (i = 0; i < router_cli_ses->rses_nbackends; i++)
+        if (bref->in_use())
         {
-            DCB *dcb = backend_ref[i].bref_dcb;
+            bref->add_session_command(sescmd);
 
-            if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
-                BREF_IS_IN_USE((&backend_ref[i])))
+            uint64_t current_pos = bref->next_session_command()->get_position();
+
+            if (current_pos < lowest_pos)
             {
-                MXS_INFO("Route query to %s \t[%s]:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].ref->server)
-                          ? "master" : "slave"),
-                         backend_ref[i].ref->server->name,
-                         backend_ref[i].ref->server->port,
-                         (i + 1 == router_cli_ses->rses_nbackends ? " <" : " "));
+                lowest_pos = current_pos;
             }
 
-            if (BREF_IS_IN_USE((&backend_ref[i])))
+            if (bref->execute_session_command())
             {
-                nbackends += 1;
-                if ((rc = dcb->func.write(dcb, gwbuf_clone(querybuf))) == 1)
+                nsucc += 1;
+
+                if (expecting_response)
                 {
-                    nsucc += 1;
+                    bref->set_reply_state(REPLY_STATE_START);
+                    rses->expected_responses++;
                 }
+
+                MXS_INFO("Route query to %s \t[%s]:%d",
+                         SERVER_IS_MASTER(bref->server()) ? "master" : "slave",
+                         bref->server()->name, bref->server()->port);
+            }
+            else
+            {
+                MXS_ERROR("Failed to execute session command in [%s]:%d",
+                          bref->server()->name, bref->server()->port);
             }
         }
-        gwbuf_free(querybuf);
-        goto return_succp;
     }
 
-    if (router_cli_ses->rses_nbackends <= 0)
-    {
-        MXS_INFO("Router session doesn't have any backends in use. Routing failed. <");
-        goto return_succp;
-    }
-
-    if (router_cli_ses->rses_config.max_sescmd_history > 0 &&
-        router_cli_ses->rses_nsescmd >=
-        router_cli_ses->rses_config.max_sescmd_history)
+    if (rses->rses_config.max_sescmd_history > 0 &&
+        rses->sescmd_count >= rses->rses_config.max_sescmd_history)
     {
         MXS_WARNING("Router session exceeded session command history limit. "
                     "Slave recovery is disabled and only slave servers with "
                     "consistent session state are used "
                     "for the duration of the session.");
-        router_cli_ses->rses_config.disable_sescmd_history = true;
-        router_cli_ses->rses_config.max_sescmd_history = 0;
+        rses->rses_config.disable_sescmd_history = true;
+        rses->rses_config.max_sescmd_history = 0;
+        rses->sescmd_list.clear();
     }
 
-    if (router_cli_ses->rses_config.disable_sescmd_history)
+    if (rses->rses_config.disable_sescmd_history)
     {
-        rses_property_t *prop, *tmp;
-        backend_ref_t *bref;
-        bool conflict;
+        /** Prune stored responses */
+        ResponseMap::iterator it = rses->sescmd_responses.lower_bound(lowest_pos);
 
-        prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
-        while (prop)
+        if (it != rses->sescmd_responses.end())
         {
-            conflict = false;
-
-            for (i = 0; i < router_cli_ses->rses_nbackends; i++)
-            {
-                bref = &backend_ref[i];
-                if (BREF_IS_IN_USE(bref))
-                {
-
-                    if (bref->bref_sescmd_cur.position <=
-                        prop->rses_prop_data.sescmd.position + 1)
-                    {
-                        conflict = true;
-                        break;
-                    }
-                }
-            }
-
-            if (conflict)
-            {
-                break;
-            }
-
-            tmp = prop;
-            router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD] = prop->rses_prop_next;
-            rses_property_done(tmp);
-            prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
+            rses->sescmd_responses.erase(rses->sescmd_responses.begin(), it);
         }
     }
-
-    /**
-     * Additional reference is created to querybuf to
-     * prevent it from being released before properties
-     * are cleaned up as a part of router sessionclean-up.
-     */
-    if ((prop = rses_property_init(RSES_PROP_TYPE_SESCMD)) == NULL)
+    else
     {
-        MXS_ERROR("Router session property initialization failed");
-        return false;
+        rses->sescmd_list.push_back(sescmd);
     }
 
-    mysql_sescmd_init(prop, querybuf, packet_type, router_cli_ses);
-
-    /** Add sescmd property to router client session */
-    if (rses_property_add(router_cli_ses, prop) != 0)
+    if (nsucc)
     {
-        MXS_ERROR("Session property addition failed.");
-        return false;
+        rses->sent_sescmd = id;
     }
 
-    if (!router_cli_ses->rses_config.disable_sescmd_history)
-    {
-        /** The stored buffer points to the one in the session command
-         * which is freed in freeSession. */
-        uint64_t id = prop->rses_prop_data.sescmd.position;
-        router_cli_ses->sescmd_list.push_front(mxs::SSessionCommand(new mxs::SessionCommand(querybuf, id)));
-    }
-
-    for (i = 0; i < router_cli_ses->rses_nbackends; i++)
-    {
-        if (BREF_IS_IN_USE((&backend_ref[i])))
-        {
-            sescmd_cursor_t *scur;
-
-            nbackends += 1;
-
-            if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-            {
-                MXS_INFO("Route query to %s \t[%s]:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].ref->server)
-                          ? "master" : "slave"),
-                         backend_ref[i].ref->server->name,
-                         backend_ref[i].ref->server->port,
-                         (i + 1 == router_cli_ses->rses_nbackends ? " <" : " "));
-            }
-
-            scur = backend_ref_get_sescmd_cursor(&backend_ref[i]);
-
-            /**
-             * Add one waiter to backend reference.
-             */
-            bref_set_state(get_bref_from_dcb(router_cli_ses, backend_ref[i].bref_dcb),
-                           BREF_WAITING_RESULT);
-            /**
-             * Start execution if cursor is not already executing or this is the
-             * master server. Otherwise, cursor will execute pending commands
-             * when it completes the previous command.
-             */
-            if (sescmd_cursor_is_active(scur) && &backend_ref[i] != router_cli_ses->rses_master_ref)
-            {
-                nsucc += 1;
-                MXS_INFO("Backend [%s]:%d already executing sescmd.",
-                         backend_ref[i].ref->server->name,
-                         backend_ref[i].ref->server->port);
-            }
-            else
-            {
-                if (execute_sescmd_in_backend(&backend_ref[i]))
-                {
-                    router_cli_ses->expected_responses++;
-                    nsucc += 1;
-                }
-                else
-                {
-                    MXS_ERROR("Failed to execute session command in [%s]:%d",
-                              backend_ref[i].ref->server->name,
-                              backend_ref[i].ref->server->port);
-                }
-            }
-        }
-    }
-
-    atomic_add(&router_cli_ses->rses_nsescmd, 1);
-
-return_succp:
-    /**
-     * Routing must succeed to all backends that are used.
-     * There must be at least one and at most max_nslaves+1 backends.
-     */
-    succp = (nbackends > 0 && nsucc == nbackends && nbackends <= max_nslaves + 1);
-    return succp;
+    return nsucc;
 }
 
 /**
@@ -1243,55 +1119,6 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         MXS_ERROR("Routing query failed.");
         return false;
     }
-}
-
-/**
- * @brief Add property to the router client session
- *
- * Add property to the router_client_ses structure's rses_properties
- * array. The slot is determined by the type of property.
- * In each slot there is a list of properties of similar type.
- *
- * Router client session must be locked.
- *
- * @param rses      Router session
- * @param prop      Router session property to be added
- *
- * @return -1 on failure, 0 on success
- */
-int rses_property_add(ROUTER_CLIENT_SES *rses, rses_property_t *prop)
-{
-    if (rses == NULL)
-    {
-        MXS_ERROR("Router client session is NULL. (%s:%d)", __FILE__, __LINE__);
-        return -1;
-    }
-    if (prop == NULL)
-    {
-        MXS_ERROR("Router client session property is NULL. (%s:%d)", __FILE__, __LINE__);
-        return -1;
-    }
-    rses_property_t *p;
-
-    CHK_CLIENT_RSES(rses);
-    CHK_RSES_PROP(prop);
-
-    prop->rses_prop_rsession = rses;
-    p = rses->rses_properties[prop->rses_prop_type];
-
-    if (p == NULL)
-    {
-        rses->rses_properties[prop->rses_prop_type] = prop;
-    }
-    else
-    {
-        while (p->rses_prop_next != NULL)
-        {
-            p = p->rses_prop_next;
-        }
-        p->rses_prop_next = prop;
-    }
-    return 0;
 }
 
 /********************************

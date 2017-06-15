@@ -775,6 +775,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
     client_rses->load_data_state = LOAD_DATA_INACTIVE;
     client_rses->sent_sescmd = 0;
     client_rses->recv_sescmd = 0;
+    client_rses->sescmd_count = 1; // Needs to be a positive number to work
     memcpy(&client_rses->rses_config, &router->rwsplit_config, sizeof(client_rses->rses_config));
 
     int router_nservers = router->service->n_dbref;
@@ -977,7 +978,7 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
                router->rwsplit_config.strict_multi_stmt ? "true" : "false");
     dcb_printf(dcb, "\tdisable_sescmd_history:    %s\n",
                router->rwsplit_config.disable_sescmd_history ? "true" : "false");
-    dcb_printf(dcb, "\tmax_sescmd_history:        %d\n",
+    dcb_printf(dcb, "\tmax_sescmd_history:        %lu\n",
                router->rwsplit_config.max_sescmd_history);
     dcb_printf(dcb, "\tmaster_accept_reads:       %s\n",
                router->rwsplit_config.master_accept_reads ? "true" : "false");
