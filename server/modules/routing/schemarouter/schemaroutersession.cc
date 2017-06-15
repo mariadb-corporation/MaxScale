@@ -726,7 +726,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
         {
             GWBUF *buffer = gwbuf_clone(querybuf);
 
-            (*it)->add_session_command(buffer, m_sent_sescmd);
+            (*it)->append_session_command(buffer, m_sent_sescmd);
 
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {

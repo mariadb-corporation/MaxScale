@@ -214,11 +214,22 @@ bool select_connect_backend_servers(int router_nservers,
          bref && slaves_connected < max_nslaves;
          bref = get_slave_candidate(rses, master_host, cmpfun))
     {
-        if (bref->connect(session) &&
-            (bref->session_command_count() == 0 ||
-             bref->execute_session_command()))
+        if (bref->can_connect() && bref->connect(session))
         {
-            slaves_connected += 1;
+            if (rses->sescmd_list.size())
+            {
+                bref->append_session_command(rses->sescmd_list);
+
+                if (bref->execute_session_command())
+                {
+                    rses->expected_responses++;
+                    slaves_connected++;
+                }
+            }
+            else
+            {
+                slaves_connected++;
+            }
         }
     }
 

@@ -248,7 +248,7 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
 
         if (bref->in_use())
         {
-            bref->add_session_command(sescmd);
+            bref->append_session_command(sescmd);
 
             uint64_t current_pos = bref->next_session_command()->get_position();
 

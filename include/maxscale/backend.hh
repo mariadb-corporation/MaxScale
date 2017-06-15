@@ -72,8 +72,9 @@ public:
      * @param sequence Sequence identifier of this session command, returned when
      *                 the session command is completed
      */
-    void add_session_command(GWBUF* buffer, uint64_t sequence);
-    void add_session_command(const SSessionCommand& sescmd);
+    void append_session_command(GWBUF* buffer, uint64_t sequence);
+    void append_session_command(const SSessionCommand& sescmd);
+    void append_session_command(const SessionCommandList& sescmdlist);
 
     /**
      * @brief Mark the current session command as successfully executed

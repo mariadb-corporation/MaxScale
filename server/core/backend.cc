@@ -111,14 +111,19 @@ bool Backend::execute_session_command()
     return rval;
 }
 
-void Backend::add_session_command(GWBUF* buffer, uint64_t sequence)
+void Backend::append_session_command(GWBUF* buffer, uint64_t sequence)
 {
     m_session_commands.push_back(SSessionCommand(new SessionCommand(buffer, sequence)));
 }
 
-void Backend::add_session_command(const SSessionCommand& sescmd)
+void Backend::append_session_command(const SSessionCommand& sescmd)
 {
     m_session_commands.push_back(sescmd);
+}
+
+void Backend::append_session_command(const SessionCommandList& sescmdlist)
+{
+    m_session_commands.insert(m_session_commands.end(), sescmdlist.begin(), sescmdlist.end());
 }
 
 uint64_t Backend::complete_session_command()
