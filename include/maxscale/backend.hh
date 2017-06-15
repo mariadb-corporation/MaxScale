@@ -238,8 +238,7 @@ private:
     {
         IN_USE           = 0x01, /**< Backend has been taken into use */
         WAITING_RESULT   = 0x02, /**< Waiting for a reply */
-        CLOSED           = 0x04, /**< Backend is no longer in use */
-        FATAL_FAILURE    = 0x08  /**< Backend references that should be dropped */
+        FATAL_FAILURE    = 0x04  /**< Backend references that should be dropped */
     };
 
     /**

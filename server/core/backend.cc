@@ -51,7 +51,6 @@ void Backend::close(close_type type)
                 clear_state(WAITING_RESULT);
             }
             clear_state(IN_USE);
-            set_state(CLOSED);
 
             if (type == CLOSE_FATAL)
             {
@@ -189,6 +188,7 @@ bool Backend::connect(MXS_SESSION* session)
 
     if ((m_dcb = dcb_connect(m_backend->server, session, m_backend->server->protocol)))
     {
+        m_closed = false;
         m_state = IN_USE;
         atomic_add(&m_backend->connections, 1);
         rval = true;
@@ -276,7 +276,7 @@ bool Backend::is_waiting_result() const
 
 bool Backend::is_closed() const
 {
-    return m_state & CLOSED;
+    return m_closed;
 }
 
 bool Backend::has_failed() const
