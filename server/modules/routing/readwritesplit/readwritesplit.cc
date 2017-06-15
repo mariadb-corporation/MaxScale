@@ -542,7 +542,8 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, backend_ref_t *old
             }
         }
 
-        if (!success && rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref))
+        if (!success && rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref) &&
+            rses->current_master && rses->current_master->in_use())
         {
             /**
              * Either we failed to write to the slave or no valid slave was found.
@@ -672,7 +673,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                                myrses->rses_nbackends,
                                                max_nslaves, max_slave_rlag,
                                                myrses->rses_config.slave_selection_criteria,
-                                               ses, inst, true);
+                                               ses, inst, myrses, true);
     }
 
     return succp;
@@ -763,6 +764,8 @@ static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* 
     {
         if (sref->active)
         {
+            rses->backends.push_back(SRWBackend(new RWBackend(sref)));
+
             backend_ref[i].bref_chk_top = CHK_NUM_BACKEND_REF;
             backend_ref[i].bref_chk_tail = CHK_NUM_BACKEND_REF;
             backend_ref[i].bref_sescmd_cur.scmd_cur_chk_top = CHK_NUM_SESCMD_CUR;
@@ -919,6 +922,20 @@ bool reply_is_complete(backend_ref_t* bref, GWBUF *buffer)
     return bref->reply_state == REPLY_STATE_DONE;
 }
 
+SRWBackend get_backend_from_bref(ROUTER_CLIENT_SES* rses, backend_ref_t* bref)
+{
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
+    {
+        if ((*it)->backend() == bref->ref)
+        {
+            return *it;
+        }
+    }
+
+    return SRWBackend();
+}
+
 /**
  * API function definitions
  */
@@ -1056,7 +1073,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
     if (!select_connect_backend_servers(&master_ref, backend_ref, router_nservers,
                                         max_nslaves, max_slave_rlag,
                                         client_rses->rses_config.slave_selection_criteria,
-                                        session, router, false))
+                                        session, router, client_rses, false))
     {
         /**
          * Master and at least <min_nslaves> slaves must be found if the router is
@@ -1070,6 +1087,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
 
     /** Copy backend pointers to router session. */
     client_rses->rses_master_ref = master_ref;
+    client_rses->current_master = get_backend_from_bref(client_rses, master_ref);
 
     if (client_rses->rses_config.rw_max_slave_conn_percent)
     {
@@ -1156,6 +1174,13 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
                     bref_clear_state(bref, BREF_WAITING_RESULT);
                 }
             }
+        }
+
+        for (SRWBackendList::iterator it = router_cli_ses->backends.begin();
+             it != router_cli_ses->backends.end(); it++)
+        {
+            SRWBackend& backend = *it;
+            backend->close();
         }
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
@@ -1487,6 +1512,7 @@ static void clientReply(MXS_ROUTER *instance,
                     router_cli_ses->rses_config.slave_selection_criteria,
                     router_cli_ses->rses_master_ref->bref_dcb->session,
                     router_cli_ses->router,
+                    router_cli_ses,
                     true);
             }
         }
@@ -1674,6 +1700,7 @@ static void handleError(MXS_ROUTER *instance,
                               problem_dcb->server->unique_name);
 
                     rses->forced_node = NULL;
+                    rses->target_node.reset();
                     *succp = false;
                     break;
                 }

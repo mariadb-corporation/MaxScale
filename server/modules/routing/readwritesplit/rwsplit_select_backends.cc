@@ -147,6 +147,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
                                     ROUTER_INSTANCE *router,
+                                    ROUTER_CLIENT_SES *rses,
                                     bool active_session)
 {
     if (p_master_ref == NULL || backend_ref == NULL)
@@ -208,6 +209,17 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
             {
                 if (connect_server(&backend_ref[i], session, false))
                 {
+                    for (SRWBackendList::iterator it = rses->backends.begin();
+                         it != rses->backends.end(); it++)
+                    {
+                        SRWBackend& backend = *it;
+                        if (backend->backend()->server == serv)
+                        {
+                            backend->connect(session);
+                            break;
+                        }
+                    }
+
                     *p_master_ref = &backend_ref[i];
                     break;
                 }
@@ -240,6 +252,17 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
         if (connect_server(bref, session, true))
         {
             slaves_connected += 1;
+
+            for (SRWBackendList::iterator it = rses->backends.begin();
+                 it != rses->backends.end(); it++)
+            {
+                SRWBackend& backend = *it;
+                if (backend->backend()->server == bref->ref->server)
+                {
+                    backend->connect(session);
+                    break;
+                }
+            }
         }
         else
         {

@@ -27,6 +27,7 @@
 #include <maxscale/hashtable.h>
 #include <maxscale/router.h>
 #include <maxscale/service.h>
+#include <maxscale/backend.hh>
 #include <maxscale/session_command.hh>
 
 enum bref_state_t
@@ -235,6 +236,39 @@ struct rwsplit_config_t
                                              * been idle for too long */
 };
 
+class RWBackend: public mxs::Backend
+{
+    RWBackend(const RWBackend&);
+    RWBackend& operator=(const RWBackend&);
+
+public:
+    RWBackend(SERVER_REF* ref):
+        mxs::Backend(ref),
+        m_reply_state(REPLY_STATE_DONE)
+    {
+    }
+
+    ~RWBackend()
+    {
+    }
+
+    reply_state_t get_reply_state() const
+    {
+        return m_reply_state;
+    }
+
+    void set_reply_state(reply_state_t state)
+    {
+        m_reply_state = state;
+    }
+
+private:
+    reply_state_t m_reply_state;
+};
+
+typedef std::tr1::shared_ptr<RWBackend> SRWBackend;
+typedef std::list<SRWBackend> SRWBackendList;
+
 typedef std::tr1::unordered_set<std::string> TableSet;
 
 /**
@@ -247,6 +281,9 @@ struct ROUTER_CLIENT_SES
     rses_property_t*          rses_properties[RSES_PROP_TYPE_COUNT]; /**< Properties listed by their type */
     backend_ref_t*            rses_master_ref;
     backend_ref_t*            rses_backend_ref; /**< Pointer to backend reference array */
+    SRWBackendList            backends; /**< List of backend servers */
+    SRWBackend                current_master; /**< Current master server */
+    SRWBackend                target_node; /**< The currently locked target node */
     rwsplit_config_t          rses_config; /**< copied config info from router instance */
     int                       rses_nbackends;
     int                       rses_nsescmd; /**< Number of executed session commands */

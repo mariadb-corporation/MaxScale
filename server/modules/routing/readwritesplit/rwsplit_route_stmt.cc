@@ -190,6 +190,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             {
                 /** Reset the forced node as we're in relaxed multi-statement mode */
                 rses->forced_node = NULL;
+                rses->target_node.reset();
             }
         }
 
@@ -958,6 +959,7 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
         if (rses->rses_master_ref)
         {
             rses->forced_node = rses->rses_master_ref;
+            rses->target_node = rses->current_master;
             MXS_INFO("Multi-statement query, routing all future queries to master.");
         }
         else
@@ -1289,6 +1291,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         session_trx_is_read_only(rses->client_dcb->session))
     {
         rses->forced_node = bref;
+        rses->target_node = get_backend_from_bref(rses, bref);
         MXS_DEBUG("Setting forced_node SLAVE to %s within an opened READ ONLY transaction\n",
                   target_dcb->server->unique_name);
     }
@@ -1356,6 +1359,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         {
             MXS_DEBUG("An opened READ ONLY transaction ends: forced_node is set to NULL");
             rses->forced_node = NULL;
+            rses->target_node.reset();
         }
         return true;
     }

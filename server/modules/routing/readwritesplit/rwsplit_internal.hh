@@ -12,13 +12,12 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/cppdefs.hh>
 
-/* This needs to be removed along with dependency on it - see the
- * rwsplit_tmp_table_multi functions
- */
+#include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
+
+#include "readwritesplit.hh"
 
 #define RW_CHK_DCB(b, d) \
 do{ \
@@ -120,6 +119,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
                                     ROUTER_INSTANCE *router,
+                                    ROUTER_CLIENT_SES *rses,
                                     bool active_session);
 
 /*
@@ -134,3 +134,4 @@ void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type);
 uint32_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
 void close_failed_bref(backend_ref_t *bref, bool fatal);
+SRWBackend get_backend_from_bref(ROUTER_CLIENT_SES* rses, backend_ref_t* bref);
