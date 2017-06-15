@@ -30,15 +30,6 @@
 #include <maxscale/backend.hh>
 #include <maxscale/session_command.hh>
 
-enum bref_state_t
-{
-    BREF_IN_USE         = 0x01,
-    BREF_WAITING_RESULT = 0x02, /**< for session commands only */
-    BREF_QUERY_ACTIVE   = 0x04, /**< for other queries */
-    BREF_CLOSED         = 0x08,
-    BREF_FATAL_FAILURE  = 0x10  /**< Backend references that should be dropped */
-};
-
 enum backend_type_t
 {
     BE_UNDEFINED = -1,
@@ -56,15 +47,6 @@ enum route_target_t
     TARGET_NAMED_SERVER = 0x04,
     TARGET_ALL          = 0x08,
     TARGET_RLAG_MAX     = 0x10
-};
-
-enum rses_property_type_t
-{
-    RSES_PROP_TYPE_UNDEFINED = -1,
-    RSES_PROP_TYPE_SESCMD    = 0,
-    RSES_PROP_TYPE_FIRST     = RSES_PROP_TYPE_SESCMD,
-    RSES_PROP_TYPE_LAST      = RSES_PROP_TYPE_SESCMD,
-    RSES_PROP_TYPE_COUNT     = RSES_PROP_TYPE_LAST + 1
 };
 
 /**
@@ -133,58 +115,11 @@ enum ld_state
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
 /** Reply state change debug logging */
-#define LOG_RS(a, b) MXS_DEBUG("[%s]:%d %s -> %s", (a)->ref->server->name, \
-    (a)->ref->server->port, rstostr((a)->reply_state), rstostr(b));
+#define LOG_RS(a, b) MXS_DEBUG("[%s]:%d %s -> %s", (a)->server()->name, \
+    (a)->server()->port, rstostr((a)->get_reply_state()), rstostr(b));
 
-struct rses_property_t;
 struct ROUTER_INSTANCE;
 struct ROUTER_CLIENT_SES;
-
-/**
- * Session variable command
- */
-struct mysql_sescmd_t
-{
-    skygw_chk_t             my_sescmd_chk_top;
-    struct rses_property_t* my_sescmd_prop; /**< parent property */
-    GWBUF*                  my_sescmd_buf; /**< query buffer */
-    unsigned char           my_sescmd_packet_type; /**< packet type */
-    bool                    my_sescmd_is_replied; /**< is cmd replied to client */
-    unsigned char           reply_cmd; /**< The reply command. One of OK, ERR, RESULTSET or
-                                        * LOCAL_INFILE. Slave servers are compared to this
-                                        * when they return session command replies.*/
-    uint64_t                position; /**< Position of this command */
-    skygw_chk_t             my_sescmd_chk_tail;
-};
-
-/**
- * Property structure
- */
-struct rses_property_t
-{
-    skygw_chk_t          rses_prop_chk_top;
-    ROUTER_CLIENT_SES*   rses_prop_rsession; /**< parent router session */
-    int                  rses_prop_refcount;
-    rses_property_type_t rses_prop_type;
-
-    struct rses_prop_data // TODO: Remove the properties and integrate them into the session object
-    {
-        mysql_sescmd_t   sescmd;
-    } rses_prop_data;
-    rses_property_t*     rses_prop_next; /**< next property of same type */
-    skygw_chk_t          rses_prop_chk_tail;
-};
-
-struct sescmd_cursor_t
-{
-    skygw_chk_t        scmd_cur_chk_top;
-    ROUTER_CLIENT_SES* scmd_cur_rses; /**< pointer to owning router session */
-    rses_property_t**  scmd_cur_ptr_property; /**< address of pointer to owner property */
-    mysql_sescmd_t*    scmd_cur_cmd; /**< pointer to current session command */
-    bool               scmd_cur_active; /**< true if command is being executed */
-    uint64_t           position; /**< Position of this cursor */
-    skygw_chk_t        scmd_cur_chk_tail;
-};
 
 /** Enum for tracking client reply state */
 enum reply_state_t
@@ -258,7 +193,6 @@ struct ROUTER_CLIENT_SES
 {
     skygw_chk_t               rses_chk_top;
     bool                      rses_closed; /**< true when closeSession is called */
-    rses_property_t*          rses_properties[RSES_PROP_TYPE_COUNT]; /**< Properties listed by their type */
     SRWBackendList            backends; /**< List of backend servers */
     SRWBackend                current_master; /**< Current master server */
     SRWBackend                target_node; /**< The currently locked target node */
