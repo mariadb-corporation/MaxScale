@@ -86,7 +86,7 @@ public:
     /**
      * @brief Check if backend has session commands
      *
-     * @return True if backend has session commands
+     * @return Number of session commands
      */
     size_t session_command_count() const;
 
@@ -96,6 +96,20 @@ public:
      * @return Pointer to server reference
      */
     SERVER_REF* backend() const;
+
+    /**
+     * @brief Get pointer to server
+     *
+     * @return Pointer to server
+     */
+    SERVER* server() const;
+
+    /**
+     * @brief Check if a connection to this backend can be made
+     *
+     * @return True if the backend has not failed and a connection can be attempted
+     */
+    bool can_connect() const;
 
     /**
      * @brief Create a new connection

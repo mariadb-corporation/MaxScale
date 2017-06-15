@@ -28,12 +28,10 @@
  * not intended to be called from elsewhere.
  */
 
-static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execute_history);
-
 static void log_server_connections(select_criteria_t select_criteria,
-                                   backend_ref_t *backend_ref, int router_nservers);
+                                   ROUTER_CLIENT_SES* rses);
 
-static SERVER_REF *get_root_master(backend_ref_t *servers, int router_nservers);
+static SERVER_REF *get_root_master(ROUTER_CLIENT_SES* rses);
 
 static int bref_cmp_global_conn(const void *bref1, const void *bref2);
 
@@ -57,27 +55,14 @@ int (*criteria_cmpfun[LAST_CRITERIA])(const void *, const void *) =
 };
 
 /**
- * @brief Check whether it's possible to connect to this server
- *
- * @param bref Backend reference
- * @return True if a connection to this server can be attempted
- */
-static bool bref_valid_for_connect(const backend_ref_t *bref)
-{
-    return !BREF_HAS_FAILED(bref) && SERVER_IS_RUNNING(bref->ref->server);
-}
-
-/**
  * Check whether it's possible to use this server as a slave
  *
  * @param bref Backend reference
  * @param master_host The master server
  * @return True if this server is a valid slave candidate
  */
-static bool bref_valid_for_slave(const backend_ref_t *bref, const SERVER *master_host)
+static bool valid_for_slave(const SERVER *server, const SERVER *master_host)
 {
-    SERVER *server = bref->ref->server;
-
     return (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) &&
            (master_host == NULL || (server != master_host));
 }
@@ -94,27 +79,29 @@ static bool bref_valid_for_slave(const backend_ref_t *bref, const SERVER *master
  * @param cmpfun qsort() compatible comparison function
  * @return The best slave backend reference or NULL if no candidates could be found
  */
-backend_ref_t* get_slave_candidate(backend_ref_t *bref, int n, const SERVER *master,
+SRWBackend* get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
                                    int (*cmpfun)(const void *, const void *))
 {
-    backend_ref_t *candidate = NULL;
+    SRWBackend candidate;
 
-    for (int i = 0; i < n; i++)
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
     {
-        if (!BREF_IS_IN_USE(&bref[i]) &&
-            bref_valid_for_connect(&bref[i]) &&
-            bref_valid_for_slave(&bref[i], master))
+        SRWBackend& bref = *it;
+
+        if (!bref->in_use() && bref->can_connect() &&
+            valid_for_slave(bref->server(), master))
         {
             if (candidate)
             {
-                if (cmpfun(candidate, &bref[i]) > 0)
+                if (cmpfun(&candidate, &bref) > 0)
                 {
-                    candidate = &bref[i];
+                    candidate = bref;
                 }
             }
             else
             {
-                candidate = &bref[i];
+                candidate = bref;
             }
         }
     }
@@ -140,9 +127,8 @@ backend_ref_t* get_slave_candidate(backend_ref_t *bref, int n, const SERVER *mas
  * @param router Router instance
  * @return true, if at least one master and one slave was found.
  */
-bool select_connect_backend_servers(backend_ref_t **p_master_ref,
-                                    backend_ref_t *backend_ref,
-                                    int router_nservers, int max_nslaves,
+bool select_connect_backend_servers(int router_nservers,
+                                    int max_nslaves,
                                     int max_slave_rlag,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
@@ -150,16 +136,8 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                                     ROUTER_CLIENT_SES *rses,
                                     bool active_session)
 {
-    if (p_master_ref == NULL || backend_ref == NULL)
-    {
-        MXS_ERROR("Master reference (%p) or backend reference (%p) is NULL.",
-                  p_master_ref, backend_ref);
-        ss_dassert(false);
-        return false;
-    }
-
     /* get the root Master */
-    SERVER_REF *master_backend = get_root_master(backend_ref, router_nservers);
+    SERVER_REF *master_backend = get_root_master(rses);
     SERVER  *master_host = master_backend ? master_backend->server : NULL;
 
     if (router->rwsplit_config.master_failure_mode == RW_FAIL_INSTANTLY &&
@@ -179,17 +157,15 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
      * Master is already connected or we don't have a master. The function was
      * called because new slaves must be selected to replace failed ones.
      */
-    bool master_connected = active_session || *p_master_ref != NULL;
+    bool master_connected = active_session || rses->current_master;
 
     /** Check slave selection criteria and set compare function */
-    int (*p)(const void *, const void *) = criteria_cmpfun[select_criteria];
-    ss_dassert(p);
-
-    SERVER *old_master = *p_master_ref ? (*p_master_ref)->ref->server : NULL;
+    int (*cmpfun)(const void *, const void *) = criteria_cmpfun[select_criteria];
+    ss_dassert(cmpfun);
 
     if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
     {
-        log_server_connections(select_criteria, backend_ref, router_nservers);
+        log_server_connections(select_criteria, rses);
     }
 
     int slaves_found = 0;
@@ -200,42 +176,32 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
     if (!master_connected)
     {
         /** Find a master server */
-        for (int i = 0; i < router_nservers; i++)
+        for (SRWBackendList::iterator it = rses->backends.begin();
+             it != rses->backends.end(); it++)
         {
-            SERVER *serv = backend_ref[i].ref->server;
+            SRWBackend& bref = *it;
 
-            if (bref_valid_for_connect(&backend_ref[i]) &&
-                master_host && serv == master_host)
+            if (bref->can_connect() && master_host && bref->server() == master_host)
             {
-                if (connect_server(&backend_ref[i], session, false))
+                if (bref->connect(session))
                 {
-                    for (SRWBackendList::iterator it = rses->backends.begin();
-                         it != rses->backends.end(); it++)
-                    {
-                        SRWBackend& backend = *it;
-                        if (backend->backend()->server == serv)
-                        {
-                            backend->connect(session);
-                            break;
-                        }
-                    }
-
-                    *p_master_ref = &backend_ref[i];
-                    break;
+                    rses->current_master = bref;
                 }
             }
         }
     }
 
     /** Calculate how many connections we already have */
-    for (int i = 0; i < router_nservers; i++)
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
     {
-        if (bref_valid_for_connect(&backend_ref[i]) &&
-            bref_valid_for_slave(&backend_ref[i], master_host))
+        SRWBackend& bref = *it;
+
+        if (bref->can_connect() && valid_for_slave(bref->server(), master_host))
         {
             slaves_found += 1;
 
-            if (BREF_IS_IN_USE(&backend_ref[i]))
+            if (bref->in_use())
             {
                 slaves_connected += 1;
             }
@@ -244,38 +210,19 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
 
     ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
 
-    backend_ref_t *bref = get_slave_candidate(backend_ref, router_nservers, master_host, p);
-
     /** Connect to all possible slaves */
-    while (bref && slaves_connected < max_nslaves)
+    for (SRWBackend bref(get_slave_candidate(rses, router_nservers, master_host, cmpfun));
+         bref && slaves_connected < max_nslaves;
+         bref = get_slave_candidate(rses, master_host, cmpfun))
     {
-        if (connect_server(bref, session, true))
+        if (bref->connect(session) &&
+            (bref->session_command_count() == 0 ||
+             bref->execute_session_command()))
         {
             slaves_connected += 1;
-
-            for (SRWBackendList::iterator it = rses->backends.begin();
-                 it != rses->backends.end(); it++)
-            {
-                SRWBackend& backend = *it;
-                if (backend->backend()->server == bref->ref->server)
-                {
-                    backend->connect(session);
-                    break;
-                }
-            }
         }
-        else
-        {
-            /** Failed to connect, mark server as failed */
-            bref_set_state(bref, BREF_FATAL_FAILURE);
-        }
-
-        bref = get_slave_candidate(backend_ref, router_nservers, master_host, p);
     }
 
-    /**
-     * Successful cases
-     */
     if (slaves_connected >= min_nslaves && slaves_connected <= max_nslaves)
     {
         succp = true;
@@ -289,41 +236,24 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                          "of %d of them.", slaves_connected, slaves_found);
             }
 
-            for (int i = 0; i < router_nservers; i++)
+            for (SRWBackendList::iterator it = rses->backends.begin();
+                 it != rses->backends.end(); it++)
             {
-                if (BREF_IS_IN_USE((&backend_ref[i])))
+                SRWBackend& bref = *it;
+                if (bref->in_use())
                 {
-                    MXS_INFO("Selected %s in \t[%s]:%d",
-                             STRSRVSTATUS(backend_ref[i].ref->server),
-                             backend_ref[i].ref->server->name,
-                             backend_ref[i].ref->server->port);
+                    MXS_INFO("Selected %s in \t[%s]:%d", STRSRVSTATUS(bref->server()),
+                             bref->server()->name, bref->server()->port);
                 }
-            } /* for */
+            }
         }
     }
-    /** Failure cases */
     else
     {
         MXS_ERROR("Couldn't establish required amount of slave connections for "
                   "router session. Would need between %d and %d slaves but only have %d.",
                   min_nslaves, max_nslaves, slaves_connected);
-
-        /** Clean up connections */
-        for (int i = 0; i < router_nservers; i++)
-        {
-            if (BREF_IS_IN_USE((&backend_ref[i])))
-            {
-                ss_dassert(backend_ref[i].ref->connections > 0);
-
-                close_failed_bref(&backend_ref[i], true);
-
-                /** Decrease backend's connection counter. */
-                atomic_add(&backend_ref[i].ref->connections, -1);
-                RW_CHK_DCB(&backend_ref[i], backend_ref[i].bref_dcb);
-                dcb_close(backend_ref[i].bref_dcb);
-                RW_CLOSE_BREF(&backend_ref[i]);
-            }
-        }
+        close_all_connections(rses);
     }
 
     return succp;
@@ -332,8 +262,10 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
 /** Compare number of connections from this router in backend servers */
 static int bref_cmp_router_conn(const void *bref1, const void *bref2)
 {
-    SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
-    SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
+    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(bref1);
+    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(bref2);
+    SERVER_REF *b1 = a->backend();
+    SERVER_REF *b2 = b->backend();
 
     if (b1->weight == 0 && b2->weight == 0)
     {
@@ -355,8 +287,10 @@ static int bref_cmp_router_conn(const void *bref1, const void *bref2)
 /** Compare number of global connections in backend servers */
 static int bref_cmp_global_conn(const void *bref1, const void *bref2)
 {
-    SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
-    SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
+    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(bref1);
+    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(bref2);
+    SERVER_REF *b1 = a->backend();
+    SERVER_REF *b2 = b->backend();
 
     if (b1->weight == 0 && b2->weight == 0)
     {
@@ -379,8 +313,10 @@ static int bref_cmp_global_conn(const void *bref1, const void *bref2)
 /** Compare replication lag between backend servers */
 static int bref_cmp_behind_master(const void *bref1, const void *bref2)
 {
-    SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
-    SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
+    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(bref1);
+    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(bref2);
+    SERVER_REF *b1 = a->backend();
+    SERVER_REF *b2 = b->backend();
 
     if (b1->weight == 0 && b2->weight == 0)
     {
@@ -403,8 +339,10 @@ static int bref_cmp_behind_master(const void *bref1, const void *bref2)
 /** Compare number of current operations in backend servers */
 static int bref_cmp_current_load(const void *bref1, const void *bref2)
 {
-    SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
-    SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
+    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(bref1);
+    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(bref2);
+    SERVER_REF *b1 = a->backend();
+    SERVER_REF *b2 = b->backend();
 
     if (b1->weight == 0 && b2->weight == 0)
     {
@@ -424,59 +362,6 @@ static int bref_cmp_current_load(const void *bref1, const void *bref2)
 }
 
 /**
- * @brief Connect a server
- *
- * Connects to a server, adds callbacks to the created DCB and updates
- * router statistics. If @p execute_history is true, the session command
- * history will be executed on this server.
- *
- * @param b Router's backend structure for the server
- * @param session Client's session object
- * @param execute_history Execute session command history
- * @return True if successful, false if an error occurred
- */
-static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execute_history)
-{
-    SERVER *serv = bref->ref->server;
-    bool rval = false;
-
-    bref->bref_dcb = dcb_connect(serv, session, serv->protocol);
-
-    if (bref->bref_dcb != NULL)
-    {
-        bref_clear_state(bref, BREF_CLOSED);
-        bref->closed_at = 0;
-
-        if (!execute_history || execute_sescmd_history(bref))
-        {
-            bref->bref_state = 0;
-            bref_set_state(bref, BREF_IN_USE);
-            atomic_add(&bref->ref->connections, 1);
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to execute session command in %s ([%s]:%d). See earlier "
-                      "errors for more details.",
-                      bref->ref->server->unique_name,
-                      bref->ref->server->name,
-                      bref->ref->server->port);
-            RW_CHK_DCB(bref, bref->bref_dcb);
-            dcb_close(bref->bref_dcb);
-            RW_CLOSE_BREF(bref);
-            bref->bref_dcb = NULL;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Unable to establish connection with server [%s]:%d",
-                  serv->name, serv->port);
-    }
-
-    return rval;
-}
-
-/**
  * @brief Log server connections
  *
  * @param select_criteria Slave selection criteria
@@ -484,23 +369,19 @@ static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execu
  * @param router_nservers Number of backends in @p backend_ref
  */
 static void log_server_connections(select_criteria_t select_criteria,
-                                   backend_ref_t *backend_ref, int router_nservers)
+                                   ROUTER_CLIENT_SES* rses)
 {
-    if (select_criteria == LEAST_GLOBAL_CONNECTIONS ||
-        select_criteria == LEAST_ROUTER_CONNECTIONS ||
-        select_criteria == LEAST_BEHIND_MASTER ||
-        select_criteria == LEAST_CURRENT_OPERATIONS)
+    MXS_INFO("Servers and %s connection counts:",
+             select_criteria == LEAST_GLOBAL_CONNECTIONS ? "all MaxScale"
+             : "router");
+
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
     {
-        MXS_INFO("Servers and %s connection counts:",
-                 select_criteria == LEAST_GLOBAL_CONNECTIONS ? "all MaxScale"
-                 : "router");
+        SERVER_REF* b = (*it)->backend();
 
-        for (int i = 0; i < router_nservers; i++)
+        switch (select_criteria)
         {
-            SERVER_REF *b = backend_ref[i].ref;
-
-            switch (select_criteria)
-            {
             case LEAST_GLOBAL_CONNECTIONS:
                 MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
                          b->server->stats.n_current, b->server->name,
@@ -525,12 +406,11 @@ static void log_server_connections(select_criteria_t select_criteria,
                          b->server->rlag, b->server->name,
                          b->server->port, STRSRVSTATUS(b->server));
             default:
+                ss_dassert(!true);
                 break;
-            }
         }
     }
 }
-
 /********************************
  * This routine returns the root master server from MySQL replication tree
  * Get the root Master rule:
@@ -544,21 +424,14 @@ static void log_server_connections(select_criteria_t select_criteria,
  * @return          The Master found
  *
  */
-static SERVER_REF *get_root_master(backend_ref_t *servers, int router_nservers)
+static SERVER_REF *get_root_master(ROUTER_CLIENT_SES* rses)
 {
-    int i = 0;
     SERVER_REF *master_host = NULL;
 
-    for (i = 0; i < router_nservers; i++)
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
     {
-        if (servers[i].ref == NULL)
-        {
-            /** This should not happen */
-            ss_dassert(false);
-            continue;
-        }
-
-        SERVER_REF *b = servers[i].ref;
+        SERVER_REF* b = (*it)->backend();
 
         if (SERVER_IS_MASTER(b->server))
         {
@@ -569,5 +442,6 @@ static SERVER_REF *get_root_master(backend_ref_t *servers, int router_nservers)
             }
         }
     }
+
     return master_host;
 }

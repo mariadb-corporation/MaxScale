@@ -152,7 +152,19 @@ void Backend::set_state(backend_state state)
 
 SERVER_REF* Backend::backend() const
 {
+    ss_dassert(m_backend);
     return m_backend;
+}
+
+SERVER* Backend::server() const
+{
+    ss_dassert(m_backend);
+    return m_backend->server;
+}
+
+bool Backend::can_connect() const
+{
+    return !has_failed() && SERVER_IS_RUNNING(m_backend->server);
 }
 
 bool Backend::connect(MXS_SESSION* session)
@@ -164,6 +176,10 @@ bool Backend::connect(MXS_SESSION* session)
         m_state = IN_USE;
         atomic_add(&m_backend->connections, 1);
         rval = true;
+    }
+    else
+    {
+        m_state = FATAL_FAILURE;
     }
 
     return rval;

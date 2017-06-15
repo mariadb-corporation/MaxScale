@@ -936,6 +936,23 @@ SRWBackend get_backend_from_bref(ROUTER_CLIENT_SES* rses, backend_ref_t* bref)
     return SRWBackend();
 }
 
+void close_all_connections(ROUTER_CLIENT_SES* rses)
+{
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
+    {
+        if (BREF_IS_IN_USE((&backend_ref[i])))
+        {
+            SRWBackend& bref = *it;
+
+            if (bref->in_use())
+            {
+                bref->close();
+            }
+        }
+    }
+}
+
 /**
  * API function definitions
  */

@@ -195,26 +195,6 @@ enum reply_state_t
     REPLY_STATE_RSET_ROWS       /**< Resultset response, waiting for rows */
 };
 
-/**
- * Reference to BACKEND.
- *
- * Owned by router client session.
- */
-struct backend_ref_t
-{
-    skygw_chk_t     bref_chk_top;
-    SERVER_REF*     ref;
-    DCB*            bref_dcb;
-    int             bref_state;
-    int             bref_num_result_wait;
-    sescmd_cursor_t bref_sescmd_cur;
-    unsigned char   reply_cmd;  /**< The reply the backend server sent to a session command.
-                                 * Used to detect slaves that fail to execute session command. */
-    reply_state_t   reply_state; /**< Reply state of the current query */
-    skygw_chk_t     bref_chk_tail;
-    int             closed_at;  /** DEBUG: Line number where this backend reference was closed */
-};
-
 struct rwsplit_config_t
 {
     int               rw_max_slave_conn_percent; /**< Maximum percentage of slaves
@@ -279,8 +259,6 @@ struct ROUTER_CLIENT_SES
     skygw_chk_t               rses_chk_top;
     bool                      rses_closed; /**< true when closeSession is called */
     rses_property_t*          rses_properties[RSES_PROP_TYPE_COUNT]; /**< Properties listed by their type */
-    backend_ref_t*            rses_master_ref;
-    backend_ref_t*            rses_backend_ref; /**< Pointer to backend reference array */
     SRWBackendList            backends; /**< List of backend servers */
     SRWBackend                current_master; /**< Current master server */
     SRWBackend                target_node; /**< The currently locked target node */
@@ -292,7 +270,6 @@ struct ROUTER_CLIENT_SES
     uint64_t                  rses_load_data_sent; /**< How much data has been sent */
     DCB*                      client_dcb;
     uint64_t                  pos_generator;
-    backend_ref_t            *forced_node; /**< Current server where all queries should be sent */
     int                       expected_responses; /**< Number of expected responses to the current query */
     GWBUF*                    query_queue; /**< Queued commands waiting to be executed */
     struct ROUTER_INSTANCE   *router; /**< The router instance */
