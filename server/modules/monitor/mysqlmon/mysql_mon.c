@@ -592,7 +592,7 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
             (database->server->master_id <= 0 ||
             database->server->master_id != handle->master->server->node_id))
         {
-            monitor_clear_pending_status(database, SERVER_SLAVE);
+            monitor_set_pending_status(database, SERVER_SLAVE);
             monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
         }
         database = database->next;
@@ -1804,7 +1804,7 @@ static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *mon, int num_serve
                         /* this server is slave of another server not in MaxScale configuration
                          * we cannot use it as a real slave.
                          */
-                        monitor_clear_pending_status(ptr, SERVER_SLAVE);
+                        monitor_set_pending_status(ptr, SERVER_SLAVE);
                         monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXTERNAL_MASTER);
                     }
                 }
