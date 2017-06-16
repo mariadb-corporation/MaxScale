@@ -27,9 +27,9 @@ Backend::Backend(SERVER_REF *ref):
 
 Backend::~Backend()
 {
-    ss_dassert(m_closed);
+    ss_dassert(m_closed || !in_use());
 
-    if (!m_closed)
+    if (in_use())
     {
         close();
     }
