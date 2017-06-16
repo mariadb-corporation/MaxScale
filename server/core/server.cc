@@ -1107,6 +1107,32 @@ void server_set_version_string(SERVER* server, const char* version)
 }
 
 /**
+ * Set the version of the server.
+ *
+ * @param server Server to update
+ * @param string Human readable version string.
+ * @param major  The major version.
+ * @param minor  The minor version.
+ * @param patch  The patch version.
+ *
+ * @return True if the assignment of the version string was successful, false if
+ *         memory allocation failed.
+ */
+bool server_set_version(SERVER* server, const char* string, uint32_t major, uint32_t minor, uint32_t patch)
+{
+    bool rv = server_set_version_string(server, string);
+
+    if (rv)
+    {
+        server->version.major = major;
+        server->version.minor = minor;
+        server->version.patch = patch;
+    }
+
+    return rv;
+}
+
+/**
  * Creates a server configuration at the location pointed by @c filename
  *
  * @param server Server to serialize into a configuration
