@@ -524,8 +524,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
     if (server->version_string[0] == 0)
     {
-        const char *version_string = mysql_get_server_info(mysql);
-        server_set_version_string(server, version_string);
+        mxs_mysql_set_server_version(mysql, server);
     }
 
     const char *template = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
@@ -730,8 +729,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
 {
     if (server_ref->server->version_string[0] == 0)
     {
-        const char *version_string = mysql_get_server_info(con);
-        server_set_version_string(server_ref->server, version_string);
+        mxs_mysql_set_server_version(con, server_ref->server);
     }
 
     char *query = get_new_users_query(server_ref->server->version_string, service->enable_root);
