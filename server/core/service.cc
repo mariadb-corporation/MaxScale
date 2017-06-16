@@ -2673,3 +2673,90 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
 
     return rel;
 }
+
+void service_get_version(const SERVICE *service,
+                         service_version_which_t which,
+                         SERVER_VERSION* version)
+{
+    if (which == SERVICE_VERSION_ANY)
+    {
+        SERVER_REF* sref = service->dbref;
+
+        while (sref && !sref->active)
+        {
+            sref = sref->next;
+        }
+
+        if (sref)
+        {
+            *version = sref->server->version;
+        }
+        else
+        {
+            version->major = version->minor = version->patch = 0;
+        }
+    }
+    else
+    {
+        size_t n = 0;
+
+        SERVER_VERSION v;
+
+        if (which == SERVICE_VERSION_MIN)
+        {
+            v.major = UINT32_MAX;
+            v.minor = UINT32_MAX;
+            v.patch = UINT32_MAX;
+        }
+        else
+        {
+            ss_dassert(which == SERVICE_VERSION_MAX);
+
+            v.major = 0;
+            v.minor = 0;
+            v.patch = 0;
+        }
+
+        SERVER_REF* sref = service->dbref;
+
+        while (sref)
+        {
+            if (sref->active)
+            {
+                ++n;
+
+                SERVER* s = sref->server;
+
+                if (which == SERVICE_VERSION_MIN)
+                {
+                    if ((s->version.major < v.major) ||
+                        ((s->version.major == v.major) && (s->version.minor < v.minor)) ||
+                        ((s->version.major == v.major) && (s->version.minor == v.minor) &&
+                         (s->version.patch < v.patch)))
+                    {
+                        v = s->version;
+                    }
+                }
+                else
+                {
+                    if ((s->version.major > v.major) ||
+                        ((s->version.major == v.major) && (s->version.minor > v.minor)) ||
+                        ((s->version.major == v.major) && (s->version.minor == v.minor) &&
+                         (s->version.patch > v.patch)))
+                    {
+                        v = s->version;
+                    }
+                }
+            }
+
+            sref = sref->next;
+        }
+
+        if (n == 0)
+        {
+            v.major = v.minor = v.patch = 0;
+        }
+
+        *version = v;
+    }
+}
