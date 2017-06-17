@@ -331,7 +331,11 @@ bool execute_sescmd_history(backend_ref_t *bref)
     if (!sescmd_cursor_history_empty(scur))
     {
         sescmd_cursor_reset(scur);
-        succp = execute_sescmd_in_backend(bref);
+
+        if ((succp = execute_sescmd_in_backend(bref)))
+        {
+            scur->scmd_cur_rses->expected_responses++;
+        }
     }
 
     return succp;
