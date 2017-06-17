@@ -647,7 +647,7 @@ public:
     int execute_maxadmin_command(char * cmd);
     int execute_maxadmin_command_print(char * cmd);
     int check_maxadmin_param(const char *command, const  char *param, const  char *value);
-    int get_maxadmin_param(char *command, char *param, char *result);
+    int get_maxadmin_param(const char *command, const char *param, char *result);
     void check_current_operations(int value);
     void check_current_connections(int value);
 

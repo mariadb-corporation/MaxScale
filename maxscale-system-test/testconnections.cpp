@@ -1933,7 +1933,7 @@ int TestConnections::check_maxadmin_param(const char *command, const char *param
     return rval;
 }
 
-int TestConnections::get_maxadmin_param(char *command, char *param, char *result)
+int TestConnections::get_maxadmin_param(const char *command, const char *param, char *result)
 {
     char        * buf;
 
