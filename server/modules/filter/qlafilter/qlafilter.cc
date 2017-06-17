@@ -23,6 +23,8 @@
 
 #define MXS_MODULE_NAME "qlafilter"
 
+#include <maxscale/cppdefs.hh>
+
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
@@ -159,6 +161,8 @@ static const char PARAM_LOG_DATA[] = "log_data";
 static const char PARAM_FLUSH[] = "flush";
 static const char PARAM_APPEND[] = "append";
 
+MXS_BEGIN_DECLS
+
 /**
  * The module entry point routine.
  *
@@ -255,6 +259,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
+
+MXS_END_DECLS
 
 /**
  * Create an instance of the filter for a particular service within MaxScale.
