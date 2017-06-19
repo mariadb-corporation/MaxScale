@@ -53,7 +53,7 @@ uint64_t atomic_add_uint64(uint64_t *variable, int64_t value)
 #endif
 }
 
-int atomic_load_int32(int *variable)
+int atomic_load_int32(const int *variable)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
     return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
@@ -62,7 +62,7 @@ int atomic_load_int32(int *variable)
 #endif
 }
 
-int64_t atomic_load_int64(int64_t *variable)
+int64_t atomic_load_int64(const int64_t *variable)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
     return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
@@ -71,7 +71,7 @@ int64_t atomic_load_int64(int64_t *variable)
 #endif
 }
 
-uint64_t atomic_load_uint64(uint64_t *variable)
+uint64_t atomic_load_uint64(const uint64_t *variable)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
     return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
@@ -80,7 +80,7 @@ uint64_t atomic_load_uint64(uint64_t *variable)
 #endif
 }
 
-void* atomic_load_ptr(void **variable)
+void* atomic_load_ptr(void * const *variable)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
     return __atomic_load_n(variable, __ATOMIC_SEQ_CST);

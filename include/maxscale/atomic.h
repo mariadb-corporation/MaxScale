@@ -57,10 +57,10 @@ uint64_t atomic_add_uint64(uint64_t *variable, int64_t value);
  * @param variable      Pointer the the variable to load from
  * @return The stored value
  */
-int atomic_load_int32(int *variable);
-int64_t atomic_load_int64(int64_t *variable);
-uint64_t atomic_load_uint64(uint64_t *variable);
-void* atomic_load_ptr(void **variable);
+int atomic_load_int32(const int *variable);
+int64_t atomic_load_int64(const int64_t *variable);
+uint64_t atomic_load_uint64(const uint64_t *variable);
+void* atomic_load_ptr(void * const *variable);
 
 /**
  * Implementation of an atomic store operation for the GCC environment.
