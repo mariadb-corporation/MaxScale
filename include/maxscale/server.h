@@ -25,7 +25,7 @@
 
 MXS_BEGIN_DECLS
 
-#define MAX_SERVER_NAME_LEN 1024
+#define MAX_SERVER_ADDRESS_LEN 1024
 #define MAX_SERVER_MONUSER_LEN 1024
 #define MAX_SERVER_MONPW_LEN 1024
 #define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
@@ -74,7 +74,7 @@ typedef struct server
 #endif
     SPINLOCK       lock;           /**< Common access lock */
     char           *unique_name;   /**< Unique name for the server */
-    char           name[MAX_SERVER_NAME_LEN]; /**< Server name/IP address*/
+    char           name[MAX_SERVER_ADDRESS_LEN]; /**< Server name/IP address*/
     unsigned short port;           /**< Port to listen on */
     char           *protocol;      /**< Protocol module to use */
     char           *authenticator; /**< Authenticator module name */

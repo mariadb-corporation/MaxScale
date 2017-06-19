@@ -1118,7 +1118,7 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
                                        DCB *master_dcb, DCB *curr_master_dcb)
 {
-    char errmsg[MAX_SERVER_NAME_LEN * 2 + 100]; // Extra space for error message
+    char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100]; // Extra space for error message
 
     if (!found)
     {

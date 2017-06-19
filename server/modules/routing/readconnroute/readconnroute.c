@@ -505,7 +505,7 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
                                SERVER_REF *ref)
 {
-    char msg[MAX_SERVER_NAME_LEN + 200] = ""; // Extra space for message
+    char msg[MAX_SERVER_ADDRESS_LEN + 200] = ""; // Extra space for message
 
     if (is_closed)
     {
