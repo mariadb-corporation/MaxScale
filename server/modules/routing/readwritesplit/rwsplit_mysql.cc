@@ -275,33 +275,34 @@ void closed_session_reply(GWBUF *querybuf)
 /**
  * @brief Check the reply from a backend server to a session command
  *
- * If the reply is an error, a message may be logged.
+ * If the reply is an error, a message is logged.
  *
- * @param writebuf      Query buffer containing reply data
- * @param scur          Session cursor
- * @param bref          Router session data for a backend server
+ * @param buffer  Query buffer containing reply data
+ * @param backend Router session data for a backend server
  */
-void check_session_command_reply(GWBUF *writebuf, SRWBackend bref)
+void check_session_command_reply(GWBUF *buffer, SRWBackend backend)
 {
-    if (MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
+    if (MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(buffer))))
     {
-        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(writebuf));
+        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer));
         char replybuf[replylen];
-        gwbuf_copy_data(writebuf, 0, gwbuf_length(writebuf), (uint8_t*)replybuf);
+        gwbuf_copy_data(buffer, 0, gwbuf_length(buffer), (uint8_t*)replybuf);
         std::string err;
         std::string msg;
         err.append(replybuf + 8, 5);
         msg.append(replybuf + 13, replylen - 4 - 5);
 
         MXS_ERROR("Failed to execute session command in [%s]:%d. Error was: %s %s",
-                  bref->server()->name, bref->server()->port,
+                  backend->server()->name, backend->server()->port,
                   err.c_str(), msg.c_str());
     }
 }
 
 /**
- * Send an error message to the client telling that the server is in read only mode
+ * @brief Send an error message to the client telling that the server is in read only mode
+ *
  * @param dcb Client DCB
+ *
  * @return True if sending the message was successful, false if an error occurred
  */
 bool send_readonly_error(DCB *dcb)

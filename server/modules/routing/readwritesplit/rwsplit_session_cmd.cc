@@ -26,21 +26,22 @@
  * Functions for session command handling
  */
 
-void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& bref, GWBUF** ppPacket, bool* reconnect)
+void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& backend,
+                             GWBUF** ppPacket, bool* pReconnect)
 {
-    if (bref->session_command_count())
+    if (backend->session_command_count())
     {
         /** We are executing a session command */
         if (GWBUF_IS_TYPE_SESCMD_RESPONSE((*ppPacket)))
         {
             uint8_t cmd;
             gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
-            uint64_t id = bref->complete_session_command();
+            uint64_t id = backend->complete_session_command();
 
             if (rses->recv_sescmd < rses->sent_sescmd &&
                 id == rses->recv_sescmd + 1 &&
                 (!rses->current_master || // Session doesn't have a master
-                 rses->current_master == bref)) // This is the master's response
+                 rses->current_master == backend)) // This is the master's response
             {
                 /** First reply to this session command, route it to the client */
                 ++rses->recv_sescmd;
@@ -60,9 +61,9 @@ void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& bref, GWBUF** 
                 {
                     MXS_ERROR("Slave server '%s': response differs from master's response. "
                               "Closing connection due to inconsistent session state.",
-                              bref->server()->unique_name);
-                    bref->close(mxs::Backend::CLOSE_FATAL);
-                    *reconnect = true;
+                              backend->server()->unique_name);
+                    backend->close(mxs::Backend::CLOSE_FATAL);
+                    *pReconnect = true;
                 }
             }
         }

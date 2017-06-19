@@ -28,55 +28,30 @@
  * not intended to be called from elsewhere.
  */
 
-static void log_server_connections(select_criteria_t select_criteria,
-                                   ROUTER_CLIENT_SES* rses);
-
-static SERVER_REF *get_root_master(ROUTER_CLIENT_SES* rses);
-
-static int bref_cmp_global_conn(const void *bref1, const void *bref2);
-
-static int bref_cmp_router_conn(const void *bref1, const void *bref2);
-
-static int bref_cmp_behind_master(const void *bref1, const void *bref2);
-
-static int bref_cmp_current_load(const void *bref1, const void *bref2);
-
-/**
- * The order of functions _must_ match with the order the select criteria are
- * listed in select_criteria_t definition in readwritesplit.h
- */
-int (*criteria_cmpfun[LAST_CRITERIA])(const void *, const void *) =
-{
-    NULL,
-    bref_cmp_global_conn,
-    bref_cmp_router_conn,
-    bref_cmp_behind_master,
-    bref_cmp_current_load
-};
-
 /**
  * Check whether it's possible to use this server as a slave
  *
- * @param bref Backend reference
- * @param master_host The master server
+ * @param server The slave candidate
+ * @param master The master server or NULL if no master is available
+ *
  * @return True if this server is a valid slave candidate
  */
-static bool valid_for_slave(const SERVER *server, const SERVER *master_host)
+static bool valid_for_slave(const SERVER *server, const SERVER *master)
 {
     return (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) &&
-           (master_host == NULL || (server != master_host));
+           (master == NULL || (server != master));
 }
 
 /**
  * @brief Find the best slave candidate
  *
- * This function iterates through @c bref and tries to find the best backend
+ * This function iterates through @c backend and tries to find the best backend
  * reference that is not in use. @c cmpfun will be called to compare the backends.
  *
- * @param bref Backend reference
- * @param n Size of @c bref
+ * @param rses   Router client session
  * @param master The master server
  * @param cmpfun qsort() compatible comparison function
+ *
  * @return The best slave backend reference or NULL if no candidates could be found
  */
 SRWBackend get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
@@ -87,26 +62,218 @@ SRWBackend get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
     {
-        SRWBackend& bref = *it;
+        SRWBackend& backend = *it;
 
-        if (!bref->in_use() && bref->can_connect() &&
-            valid_for_slave(bref->server(), master))
+        if (!backend->in_use() && backend->can_connect() &&
+            valid_for_slave(backend->server(), master))
         {
             if (candidate)
             {
-                if (cmpfun(&candidate, &bref) > 0)
+                if (cmpfun(&candidate, &backend) > 0)
                 {
-                    candidate = bref;
+                    candidate = backend;
                 }
             }
             else
             {
-                candidate = bref;
+                candidate = backend;
             }
         }
     }
 
     return candidate;
+}
+
+/** Compare number of connections from this router in backend servers */
+static int backend_cmp_router_conn(const void *v1, const void *v2)
+{
+    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(v1);
+    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(v2);
+    SERVER_REF *first = a->backend();
+    SERVER_REF *second = b->backend();
+
+    if (first->weight == 0 && second->weight == 0)
+    {
+        return first->connections - second->connections;
+    }
+    else if (first->weight == 0)
+    {
+        return 1;
+    }
+    else if (second->weight == 0)
+    {
+        return -1;
+    }
+
+    return ((1000 + 1000 * first->connections) / first->weight) -
+           ((1000 + 1000 * second->connections) / second->weight);
+}
+
+/** Compare number of global connections in backend servers */
+static int backend_cmp_global_conn(const void *v1, const void *v2)
+{
+    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(v1);
+    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(v2);
+    SERVER_REF *first = a->backend();
+    SERVER_REF *second = b->backend();
+
+    if (first->weight == 0 && second->weight == 0)
+    {
+        return first->server->stats.n_current -
+               second->server->stats.n_current;
+    }
+    else if (first->weight == 0)
+    {
+        return 1;
+    }
+    else if (second->weight == 0)
+    {
+        return -1;
+    }
+
+    return ((1000 + 1000 * first->server->stats.n_current) / first->weight) -
+           ((1000 + 1000 * second->server->stats.n_current) / second->weight);
+}
+
+/** Compare replication lag between backend servers */
+static int backend_cmp_behind_master(const void *v1, const void *v2)
+{
+    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(v1);
+    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(v2);
+    SERVER_REF *first = a->backend();
+    SERVER_REF *second = b->backend();
+
+    if (first->weight == 0 && second->weight == 0)
+    {
+        return first->server->rlag -
+               second->server->rlag;
+    }
+    else if (first->weight == 0)
+    {
+        return 1;
+    }
+    else if (second->weight == 0)
+    {
+        return -1;
+    }
+
+    return ((1000 + 1000 * first->server->rlag) / first->weight) -
+           ((1000 + 1000 * second->server->rlag) / second->weight);
+}
+
+/** Compare number of current operations in backend servers */
+static int backend_cmp_current_load(const void *v1, const void *v2)
+{
+    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(v1);
+    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(v2);
+    SERVER_REF *first = a->backend();
+    SERVER_REF *second = b->backend();
+
+    if (first->weight == 0 && second->weight == 0)
+    {
+        return first->server->stats.n_current_ops - second->server->stats.n_current_ops;
+    }
+    else if (first->weight == 0)
+    {
+        return 1;
+    }
+    else if (second->weight == 0)
+    {
+        return -1;
+    }
+
+    return ((1000 + 1000 * first->server->stats.n_current_ops) / first->weight) -
+           ((1000 + 1000 * second->server->stats.n_current_ops) / second->weight);
+}
+
+/**
+ * The order of functions _must_ match with the order the select criteria are
+ * listed in select_criteria_t definition in readwritesplit.h
+ */
+int (*criteria_cmpfun[LAST_CRITERIA])(const void *, const void *) =
+{
+    NULL,
+    backend_cmp_global_conn,
+    backend_cmp_router_conn,
+    backend_cmp_behind_master,
+    backend_cmp_current_load
+};
+
+/**
+ * @brief Log server connections
+ *
+ * @param criteria Slave selection criteria
+ * @param rses     Router client session
+ */
+static void log_server_connections(select_criteria_t criteria,
+                                   ROUTER_CLIENT_SES* rses)
+{
+    MXS_INFO("Servers and %s connection counts:",
+             criteria == LEAST_GLOBAL_CONNECTIONS ? "all MaxScale" : "router");
+
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
+    {
+        SERVER_REF* b = (*it)->backend();
+
+        switch (criteria)
+        {
+        case LEAST_GLOBAL_CONNECTIONS:
+            MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
+                     b->server->stats.n_current, b->server->name,
+                     b->server->port, STRSRVSTATUS(b->server));
+            break;
+
+        case LEAST_ROUTER_CONNECTIONS:
+            MXS_INFO("RWSplit connections : %d in \t[%s]:%d %s",
+                     b->connections, b->server->name,
+                     b->server->port, STRSRVSTATUS(b->server));
+            break;
+
+        case LEAST_CURRENT_OPERATIONS:
+            MXS_INFO("current operations : %d in \t[%s]:%d %s",
+                     b->server->stats.n_current_ops,
+                     b->server->name, b->server->port,
+                     STRSRVSTATUS(b->server));
+            break;
+
+        case LEAST_BEHIND_MASTER:
+            MXS_INFO("replication lag : %d in \t[%s]:%d %s",
+                     b->server->rlag, b->server->name,
+                     b->server->port, STRSRVSTATUS(b->server));
+        default:
+            ss_dassert(!true);
+            break;
+        }
+    }
+}
+/**
+ * @brief Find the master server that is at the root of the replication tree
+ *
+ * @param rses Router client session
+ *
+ * @return The root master reference or NULL if no master is found
+ */
+static SERVER_REF* get_root_master(ROUTER_CLIENT_SES* rses)
+{
+    SERVER_REF *master_host = NULL;
+
+    for (SRWBackendList::iterator it = rses->backends.begin();
+         it != rses->backends.end(); it++)
+    {
+        SERVER_REF* b = (*it)->backend();
+
+        if (SERVER_IS_MASTER(b->server))
+        {
+            if (master_host == NULL ||
+                (b->server->depth < master_host->server->depth))
+            {
+                master_host = b;
+            }
+        }
+    }
+
+    return master_host;
 }
 
 /**
@@ -117,15 +284,15 @@ SRWBackend get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
  * backend references than connected backends because only those in correct state
  * are connected to.
  *
- * @param p_master_ref Pointer to location where master's backend reference is to  be stored
- * @param backend_ref Pointer to backend server reference object array
- * @param router_nservers Number of backend server pointers pointed to by @p backend_ref
- * @param max_nslaves Upper limit for the number of slaves
- * @param max_slave_rlag Maximum allowed replication lag for any slave
+ * @param router_nservers Number of backend servers
+ * @param max_nslaves     Upper limit for the number of slaves
  * @param select_criteria Slave selection criteria
- * @param session Client session
- * @param router Router instance
- * @return true, if at least one master and one slave was found.
+ * @param session         Client session
+ * @param router          Router instance
+ * @param rses            Router client session
+ * @param type            Connection type, ALL for all types, SLAVE for slaves only
+ *
+ * @return True if at least one master and one slave was found
  */
 bool select_connect_backend_servers(int router_nservers,
                                     int max_nslaves,
@@ -178,13 +345,13 @@ bool select_connect_backend_servers(int router_nservers,
         for (SRWBackendList::iterator it = rses->backends.begin();
              it != rses->backends.end(); it++)
         {
-            SRWBackend& bref = *it;
+            SRWBackend& backend = *it;
 
-            if (bref->can_connect() && master_host && bref->server() == master_host)
+            if (backend->can_connect() && master_host && backend->server() == master_host)
             {
-                if (bref->connect(session))
+                if (backend->connect(session))
                 {
-                    rses->current_master = bref;
+                    rses->current_master = backend;
                 }
             }
         }
@@ -194,13 +361,13 @@ bool select_connect_backend_servers(int router_nservers,
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
     {
-        SRWBackend& bref = *it;
+        SRWBackend& backend = *it;
 
-        if (bref->can_connect() && valid_for_slave(bref->server(), master_host))
+        if (backend->can_connect() && valid_for_slave(backend->server(), master_host))
         {
             slaves_found += 1;
 
-            if (bref->in_use())
+            if (backend->in_use())
             {
                 slaves_connected += 1;
             }
@@ -210,17 +377,17 @@ bool select_connect_backend_servers(int router_nservers,
     ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
 
     /** Connect to all possible slaves */
-    for (SRWBackend bref(get_slave_candidate(rses, master_host, cmpfun));
-         bref && slaves_connected < max_nslaves;
-         bref = get_slave_candidate(rses, master_host, cmpfun))
+    for (SRWBackend backend(get_slave_candidate(rses, master_host, cmpfun));
+         backend && slaves_connected < max_nslaves;
+         backend = get_slave_candidate(rses, master_host, cmpfun))
     {
-        if (bref->can_connect() && bref->connect(session))
+        if (backend->can_connect() && backend->connect(session))
         {
             if (rses->sescmd_list.size())
             {
-                bref->append_session_command(rses->sescmd_list);
+                backend->append_session_command(rses->sescmd_list);
 
-                if (bref->execute_session_command())
+                if (backend->execute_session_command())
                 {
                     rses->expected_responses++;
                     slaves_connected++;
@@ -249,11 +416,11 @@ bool select_connect_backend_servers(int router_nservers,
             for (SRWBackendList::iterator it = rses->backends.begin();
                  it != rses->backends.end(); it++)
             {
-                SRWBackend& bref = *it;
-                if (bref->in_use())
+                SRWBackend& backend = *it;
+                if (backend->in_use())
                 {
-                    MXS_INFO("Selected %s in \t[%s]:%d", STRSRVSTATUS(bref->server()),
-                             bref->server()->name, bref->server()->port);
+                    MXS_INFO("Selected %s in \t[%s]:%d", STRSRVSTATUS(backend->server()),
+                             backend->server()->name, backend->server()->port);
                 }
             }
         }
@@ -267,191 +434,4 @@ bool select_connect_backend_servers(int router_nservers,
     }
 
     return succp;
-}
-
-/** Compare number of connections from this router in backend servers */
-static int bref_cmp_router_conn(const void *bref1, const void *bref2)
-{
-    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(bref1);
-    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(bref2);
-    SERVER_REF *b1 = a->backend();
-    SERVER_REF *b2 = b->backend();
-
-    if (b1->weight == 0 && b2->weight == 0)
-    {
-        return b1->connections - b2->connections;
-    }
-    else if (b1->weight == 0)
-    {
-        return 1;
-    }
-    else if (b2->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * b1->connections) / b1->weight) -
-           ((1000 + 1000 * b2->connections) / b2->weight);
-}
-
-/** Compare number of global connections in backend servers */
-static int bref_cmp_global_conn(const void *bref1, const void *bref2)
-{
-    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(bref1);
-    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(bref2);
-    SERVER_REF *b1 = a->backend();
-    SERVER_REF *b2 = b->backend();
-
-    if (b1->weight == 0 && b2->weight == 0)
-    {
-        return b1->server->stats.n_current -
-               b2->server->stats.n_current;
-    }
-    else if (b1->weight == 0)
-    {
-        return 1;
-    }
-    else if (b2->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * b1->server->stats.n_current) / b1->weight) -
-           ((1000 + 1000 * b2->server->stats.n_current) / b2->weight);
-}
-
-/** Compare replication lag between backend servers */
-static int bref_cmp_behind_master(const void *bref1, const void *bref2)
-{
-    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(bref1);
-    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(bref2);
-    SERVER_REF *b1 = a->backend();
-    SERVER_REF *b2 = b->backend();
-
-    if (b1->weight == 0 && b2->weight == 0)
-    {
-        return b1->server->rlag -
-               b2->server->rlag;
-    }
-    else if (b1->weight == 0)
-    {
-        return 1;
-    }
-    else if (b2->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * b1->server->rlag) / b1->weight) -
-           ((1000 + 1000 * b2->server->rlag) / b2->weight);
-}
-
-/** Compare number of current operations in backend servers */
-static int bref_cmp_current_load(const void *bref1, const void *bref2)
-{
-    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(bref1);
-    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(bref2);
-    SERVER_REF *b1 = a->backend();
-    SERVER_REF *b2 = b->backend();
-
-    if (b1->weight == 0 && b2->weight == 0)
-    {
-        return b1->server->stats.n_current_ops - b2->server->stats.n_current_ops;
-    }
-    else if (b1->weight == 0)
-    {
-        return 1;
-    }
-    else if (b2->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * b1->server->stats.n_current_ops) / b1->weight) -
-           ((1000 + 1000 * b2->server->stats.n_current_ops) / b2->weight);
-}
-
-/**
- * @brief Log server connections
- *
- * @param select_criteria Slave selection criteria
- * @param backend_ref Backend reference array
- * @param router_nservers Number of backends in @p backend_ref
- */
-static void log_server_connections(select_criteria_t select_criteria,
-                                   ROUTER_CLIENT_SES* rses)
-{
-    MXS_INFO("Servers and %s connection counts:",
-             select_criteria == LEAST_GLOBAL_CONNECTIONS ? "all MaxScale"
-             : "router");
-
-    for (SRWBackendList::iterator it = rses->backends.begin();
-         it != rses->backends.end(); it++)
-    {
-        SERVER_REF* b = (*it)->backend();
-
-        switch (select_criteria)
-        {
-        case LEAST_GLOBAL_CONNECTIONS:
-            MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
-                     b->server->stats.n_current, b->server->name,
-                     b->server->port, STRSRVSTATUS(b->server));
-            break;
-
-        case LEAST_ROUTER_CONNECTIONS:
-            MXS_INFO("RWSplit connections : %d in \t[%s]:%d %s",
-                     b->connections, b->server->name,
-                     b->server->port, STRSRVSTATUS(b->server));
-            break;
-
-        case LEAST_CURRENT_OPERATIONS:
-            MXS_INFO("current operations : %d in \t[%s]:%d %s",
-                     b->server->stats.n_current_ops,
-                     b->server->name, b->server->port,
-                     STRSRVSTATUS(b->server));
-            break;
-
-        case LEAST_BEHIND_MASTER:
-            MXS_INFO("replication lag : %d in \t[%s]:%d %s",
-                     b->server->rlag, b->server->name,
-                     b->server->port, STRSRVSTATUS(b->server));
-        default:
-            ss_dassert(!true);
-            break;
-        }
-    }
-}
-/********************************
- * This routine returns the root master server from MySQL replication tree
- * Get the root Master rule:
- *
- * find server with the lowest replication depth level
- * and the SERVER_MASTER bitval
- * Servers are checked even if they are in 'maintenance'
- *
- * @param   servers     The list of servers
- * @param   router_nservers The number of servers
- * @return          The Master found
- *
- */
-static SERVER_REF *get_root_master(ROUTER_CLIENT_SES* rses)
-{
-    SERVER_REF *master_host = NULL;
-
-    for (SRWBackendList::iterator it = rses->backends.begin();
-         it != rses->backends.end(); it++)
-    {
-        SERVER_REF* b = (*it)->backend();
-
-        if (SERVER_IS_MASTER(b->server))
-        {
-            if (master_host == NULL ||
-                (b->server->depth < master_host->server->depth))
-            {
-                master_host = b;
-            }
-        }
-    }
-
-    return master_host;
 }

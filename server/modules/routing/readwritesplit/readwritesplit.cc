@@ -157,7 +157,7 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
  *
  * @return backend reference pointer if succeed or NULL
  */
-SRWBackend get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
+SRWBackend get_backend_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
 {
     ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
@@ -327,9 +327,9 @@ static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
     mxs_session_state_t sesstate = ses->state;
     DCB *client_dcb = ses->client_dcb;
 
-    SRWBackend bref = get_bref_from_dcb(rses, backend_dcb);
+    SRWBackend backend = get_backend_from_dcb(rses, backend_dcb);
 
-    bref->close();
+    backend->close();
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
     {
@@ -351,19 +351,19 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& 
         for (SRWBackendList::iterator it = rses->backends.begin();
              it != rses->backends.end(); it++)
         {
-            SRWBackend& bref = *it;
+            SRWBackend& backend = *it;
 
-            if (bref->in_use() && bref != old &&
-                !SERVER_IS_MASTER(bref->server()) &&
-                SERVER_IS_SLAVE(bref->server()))
+            if (backend->in_use() && backend != old &&
+                !SERVER_IS_MASTER(backend->server()) &&
+                SERVER_IS_SLAVE(backend->server()))
             {
                 /** Found a valid candidate; a non-master slave that's in use */
-                if (bref->write(stored))
+                if (backend->write(stored))
                 {
-                    MXS_INFO("Retrying failed read at '%s'.", bref->server()->unique_name);
-                    ss_dassert(bref->get_reply_state() == REPLY_STATE_DONE);
-                    LOG_RS(bref, REPLY_STATE_START);
-                    bref->set_reply_state(REPLY_STATE_START);
+                    MXS_INFO("Retrying failed read at '%s'.", backend->server()->unique_name);
+                    ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
+                    LOG_RS(backend, REPLY_STATE_START);
+                    backend->set_reply_state(REPLY_STATE_START);
                     rses->expected_responses++;
                     success = true;
                     break;
@@ -412,12 +412,12 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                         DCB *backend_dcb, GWBUF *errmsg)
 {
     ROUTER_CLIENT_SES *myrses = *rses;
-    SRWBackend bref = get_bref_from_dcb(myrses, backend_dcb);
+    SRWBackend backend = get_backend_from_dcb(myrses, backend_dcb);
 
     MXS_SESSION* ses = backend_dcb->session;
     CHK_SESSION(ses);
 
-    if (bref->is_waiting_result())
+    if (backend->is_waiting_result())
     {
         /**
          * A query was sent through the backend and it is waiting for a reply.
@@ -428,8 +428,8 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
         const SERVER *target;
 
         if (!session_take_stmt(backend_dcb->session, &stored, &target) ||
-            target != bref->backend()->server ||
-            !reroute_stored_statement(*rses, bref, stored))
+            target != backend->backend()->server ||
+            !reroute_stored_statement(*rses, backend, stored))
         {
             /**
              * We failed to route the stored statement or no statement was
@@ -439,7 +439,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
             gwbuf_free(stored);
             myrses->expected_responses--;
 
-            if (bref->session_command_count())
+            if (backend->session_command_count())
             {
                 /**
                  * The backend was executing a command that requires a reply.
@@ -462,7 +462,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
     }
 
     /** Close the current connection */
-    bref->close();
+    backend->close();
 
     int max_nslaves = rses_get_max_slavecount(myrses);
     bool succp;
@@ -584,60 +584,60 @@ bool route_stored_query(ROUTER_CLIENT_SES *rses)
 /**
  * @brief Check if we have received a complete reply from the backend
  *
- * @param bref   Backend reference
- * @param buffer Buffer containing the response
+ * @param backend Backend reference
+ * @param buffer  Buffer containing the response
  *
  * @return True if the complete response has been received
  */
-bool reply_is_complete(SRWBackend bref, GWBUF *buffer)
+bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
 {
-    mysql_server_cmd_t cmd = mxs_mysql_current_command(bref->dcb()->session);
+    mysql_server_cmd_t cmd = mxs_mysql_current_command(backend->dcb()->session);
 
-    if (bref->get_reply_state() == REPLY_STATE_START && !mxs_mysql_is_result_set(buffer))
+    if (backend->get_reply_state() == REPLY_STATE_START && !mxs_mysql_is_result_set(buffer))
     {
         if (cmd == MYSQL_COM_STMT_PREPARE || !mxs_mysql_more_results_after_ok(buffer))
         {
             /** Not a result set, we have the complete response */
-            LOG_RS(bref, REPLY_STATE_DONE);
-            bref->set_reply_state(REPLY_STATE_DONE);
+            LOG_RS(backend, REPLY_STATE_DONE);
+            backend->set_reply_state(REPLY_STATE_DONE);
         }
     }
     else
     {
         bool more = false;
-        int old_eof = bref->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
+        int old_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
         int n_eof = modutil_count_signal_packets(buffer, old_eof, &more);
 
         if (n_eof == 0)
         {
             /** Waiting for the EOF packet after the column definitions */
-            LOG_RS(bref, REPLY_STATE_RSET_COLDEF);
-            bref->set_reply_state(REPLY_STATE_RSET_COLDEF);
+            LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
+            backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
         }
         else if (n_eof == 1 && cmd != MYSQL_COM_FIELD_LIST)
         {
             /** Waiting for the EOF packet after the rows */
-            LOG_RS(bref, REPLY_STATE_RSET_ROWS);
-            bref->set_reply_state(REPLY_STATE_RSET_ROWS);
+            LOG_RS(backend, REPLY_STATE_RSET_ROWS);
+            backend->set_reply_state(REPLY_STATE_RSET_ROWS);
         }
         else
         {
             /** We either have a complete result set or a response to
              * a COM_FIELD_LIST command */
             ss_dassert(n_eof == 2 || (n_eof == 1 && cmd == MYSQL_COM_FIELD_LIST));
-            LOG_RS(bref, REPLY_STATE_DONE);
-            bref->set_reply_state(REPLY_STATE_DONE);
+            LOG_RS(backend, REPLY_STATE_DONE);
+            backend->set_reply_state(REPLY_STATE_DONE);
 
             if (more)
             {
                 /** The server will send more resultsets */
-                LOG_RS(bref, REPLY_STATE_START);
-                bref->set_reply_state(REPLY_STATE_START);
+                LOG_RS(backend, REPLY_STATE_START);
+                backend->set_reply_state(REPLY_STATE_START);
             }
         }
     }
 
-    return bref->get_reply_state() == REPLY_STATE_DONE;
+    return backend->get_reply_state() == REPLY_STATE_DONE;
 }
 
 void close_all_connections(ROUTER_CLIENT_SES* rses)
@@ -645,11 +645,11 @@ void close_all_connections(ROUTER_CLIENT_SES* rses)
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
     {
-        SRWBackend& bref = *it;
+        SRWBackend& backend = *it;
 
-        if (bref->in_use())
+        if (backend->in_use())
         {
-            bref->close();
+            backend->close();
         }
     }
 }
@@ -1108,19 +1108,19 @@ static void clientReply(MXS_ROUTER *instance,
      *    and
      */
 
-    SRWBackend bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
+    SRWBackend backend = get_backend_from_dcb(router_cli_ses, backend_dcb);
 
     /** Statement was successfully executed, free the stored statement */
     session_clear_stmt(backend_dcb->session);
-    ss_dassert(bref->get_reply_state() != REPLY_STATE_DONE);
+    ss_dassert(backend->get_reply_state() != REPLY_STATE_DONE);
 
-    if (reply_is_complete(bref, writebuf))
+    if (reply_is_complete(backend, writebuf))
     {
         /** Got a complete reply, acknowledge the write decrement expected response count */
-        bref->ack_write();
+        backend->ack_write();
         router_cli_ses->expected_responses--;
         ss_dassert(router_cli_ses->expected_responses >= 0);
-        ss_dassert(bref->get_reply_state() == REPLY_STATE_DONE);
+        ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
     }
     else
     {
@@ -1131,13 +1131,13 @@ static void clientReply(MXS_ROUTER *instance,
      * Active cursor means that reply is from session command
      * execution.
      */
-    if (bref->session_command_count())
+    if (backend->session_command_count())
     {
-        check_session_command_reply(writebuf, bref);
+        check_session_command_reply(writebuf, backend);
 
         /** This discards all responses that have already been sent to the client */
         bool rconn = false;
-        process_sescmd_response(router_cli_ses, bref, &writebuf, &rconn);
+        process_sescmd_response(router_cli_ses, backend, &writebuf, &rconn);
 
         if (rconn && !router_inst->rwsplit_config.disable_sescmd_history)
         {
@@ -1176,12 +1176,12 @@ static void clientReply(MXS_ROUTER *instance,
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }
     /** Check pending session commands */
-    else if (!queue_routed && bref->session_command_count())
+    else if (!queue_routed && backend->session_command_count())
     {
         MXS_INFO("Backend [%s]:%d processed reply and starts to execute active cursor.",
-                 bref->server()->name, bref->server()->port);
+                 backend->server()->name, backend->server()->port);
 
-        if (bref->execute_session_command())
+        if (backend->execute_session_command())
         {
             router_cli_ses->expected_responses++;
         }
@@ -1250,7 +1250,7 @@ static void handleError(MXS_ROUTER *instance,
     MXS_SESSION *session = problem_dcb->session;
     ss_dassert(session);
 
-    SRWBackend bref = get_bref_from_dcb(rses, problem_dcb);
+    SRWBackend backend = get_backend_from_dcb(rses, problem_dcb);
 
     switch (action)
     {
@@ -1266,7 +1266,7 @@ static void handleError(MXS_ROUTER *instance,
                 bool can_continue = false;
 
                 if (rses->rses_config.master_failure_mode != RW_FAIL_INSTANTLY &&
-                    (!bref || !bref->is_waiting_result()))
+                    (!backend || !backend->is_waiting_result()))
                 {
                     /** The failure of a master is not considered a critical
                      * failure as partial functionality still remains. Reads
@@ -1289,9 +1289,9 @@ static void handleError(MXS_ROUTER *instance,
 
                 *succp = can_continue;
 
-                if (bref)
+                if (backend)
                 {
-                    bref->close(mxs::Backend::CLOSE_FATAL);
+                    backend->close(mxs::Backend::CLOSE_FATAL);
                 }
                 else
                 {
@@ -1299,7 +1299,7 @@ static void handleError(MXS_ROUTER *instance,
                               "corresponding backend ref.", srv->name, srv->port);
                 }
             }
-            else if (bref)
+            else if (backend)
             {
                 /** Check whether problem_dcb is same as dcb of rses->target_node
                  * and within READ ONLY transaction:
@@ -1324,14 +1324,14 @@ static void handleError(MXS_ROUTER *instance,
                 *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
             }
 
-            if (bref)
+            if (backend)
             {
                 /** This is a valid DCB for a backend ref */
-                if (bref->in_use() && bref->dcb() == problem_dcb)
+                if (backend->in_use() && backend->dcb() == problem_dcb)
                 {
                     ss_dassert(false);
                     MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.",
-                              bref->server()->unique_name);
+                              backend->server()->unique_name);
                 }
             }
             else

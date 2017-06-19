@@ -31,7 +31,7 @@
 
 extern int (*criteria_cmpfun[LAST_CRITERIA])(const void *, const void *);
 
-static SRWBackend get_root_master_bref(ROUTER_CLIENT_SES *rses);
+static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses);
 
 /**
  * Find out which of the two backend servers has smaller value for select
@@ -74,18 +74,18 @@ void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
     {
-        SRWBackend bref = *it;
+        SRWBackend backend = *it;
 
-        if (bref->in_use() && bref != target && !bref->is_waiting_result())
+        if (backend->in_use() && backend != target && !backend->is_waiting_result())
         {
             ss_debug(nserv++);
-            int diff = hkheartbeat - bref->dcb()->last_read;
+            int diff = hkheartbeat - backend->dcb()->last_read;
 
             if (diff > keepalive)
             {
                 MXS_INFO("Pinging %s, idle for %d seconds",
-                         bref->server()->unique_name, diff / 10);
-                modutil_ignorable_ping(bref->dcb());
+                         backend->server()->unique_name, diff / 10);
+                modutil_ignorable_ping(backend->dcb());
             }
         }
     }
@@ -246,20 +246,20 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
     {
-        SRWBackend& bref = *it;
+        SRWBackend& backend = *it;
 
-        if (bref->in_use())
+        if (backend->in_use())
         {
-            bref->append_session_command(sescmd);
+            backend->append_session_command(sescmd);
 
-            uint64_t current_pos = bref->next_session_command()->get_position();
+            uint64_t current_pos = backend->next_session_command()->get_position();
 
             if (current_pos < lowest_pos)
             {
                 lowest_pos = current_pos;
             }
 
-            if (bref->execute_session_command())
+            if (backend->execute_session_command())
             {
                 nsucc += 1;
 
@@ -269,13 +269,13 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
                 }
 
                 MXS_INFO("Route query to %s \t[%s]:%d",
-                         SERVER_IS_MASTER(bref->server()) ? "master" : "slave",
-                         bref->server()->name, bref->server()->port);
+                         SERVER_IS_MASTER(backend->server()) ? "master" : "slave",
+                         backend->server()->name, backend->server()->port);
             }
             else
             {
                 MXS_ERROR("Failed to execute session command in [%s]:%d",
-                          bref->server()->name, bref->server()->port);
+                          backend->server()->name, backend->server()->port);
             }
         }
     }
@@ -339,10 +339,8 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
         return rses->target_node;
     }
 
-    bool succp = false;
-
     /** get root master from available servers */
-    SRWBackend master_bref = get_root_master_bref(rses);
+    SRWBackend master = get_root_master_backend(rses);
 
     if (name) /*< Choose backend by name from a hint */
     {
@@ -351,17 +349,17 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
         for (SRWBackendList::iterator it = rses->backends.begin();
              it != rses->backends.end(); it++)
         {
-            SRWBackend& bref = *it;
+            SRWBackend& backend = *it;
 
             /** The server must be a valid slave, relay server, or master */
 
-            if (bref->in_use() && bref->is_active() &&
-                (strcasecmp(name, bref->server()->unique_name) == 0) &&
-                (SERVER_IS_SLAVE(bref->server()) ||
-                 SERVER_IS_RELAY_SERVER(bref->server()) ||
-                 SERVER_IS_MASTER(bref->server())))
+            if (backend->in_use() && backend->is_active() &&
+                (strcasecmp(name, backend->server()->unique_name) == 0) &&
+                (SERVER_IS_SLAVE(backend->server()) ||
+                 SERVER_IS_RELAY_SERVER(backend->server()) ||
+                 SERVER_IS_MASTER(backend->server())))
             {
-                return bref;
+                return backend;
             }
         }
 
@@ -376,14 +374,14 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
         for (SRWBackendList::iterator it = rses->backends.begin();
              it != rses->backends.end(); it++)
         {
-            SRWBackend& bref = *it;
+            SRWBackend& backend = *it;
 
             /**
              * Unused backend or backend which is not master nor
              * slave can't be used
              */
-            if (!bref->in_use() || !bref->is_active() ||
-                (!SERVER_IS_MASTER(bref->server()) && !SERVER_IS_SLAVE(bref->server())))
+            if (!backend->in_use() || !backend->is_active() ||
+                (!SERVER_IS_MASTER(backend->server()) && !SERVER_IS_SLAVE(backend->server())))
             {
                 continue;
             }
@@ -397,10 +395,10 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                  * Ensure that master has not changed during
                  * session and abort if it has.
                  */
-                if (SERVER_IS_MASTER(bref->server()) && bref == rses->current_master)
+                if (SERVER_IS_MASTER(backend->server()) && backend == rses->current_master)
                 {
                     /** found master */
-                    rval = bref;
+                    rval = backend;
                 }
                 /**
                  * Ensure that max replication lag is not set
@@ -408,11 +406,11 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                  * maximum allowed replication lag.
                  */
                 else if (max_rlag == MAX_RLAG_UNDEFINED ||
-                         (bref->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                          bref->server()->rlag <= max_rlag))
+                         (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                          backend->server()->rlag <= max_rlag))
                 {
                     /** found slave */
-                    rval = bref;
+                    rval = backend;
                 }
             }
             /**
@@ -420,36 +418,36 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * replication lag limits replaces it.
              */
             else if (SERVER_IS_MASTER(rval->server()) &&
-                     SERVER_IS_SLAVE(bref->server()) &&
+                     SERVER_IS_SLAVE(backend->server()) &&
                      (max_rlag == MAX_RLAG_UNDEFINED ||
-                      (bref->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                       bref->server()->rlag <= max_rlag)) &&
+                      (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                       backend->server()->rlag <= max_rlag)) &&
                      !rses->rses_config.master_accept_reads)
             {
                 /** found slave */
-                rval = bref;
+                rval = backend;
             }
             /**
              * When candidate exists, compare it against the current
              * backend and update assign it to new candidate if
              * necessary.
              */
-            else if (SERVER_IS_SLAVE(bref->server()) ||
+            else if (SERVER_IS_SLAVE(backend->server()) ||
                      (rses->rses_config.master_accept_reads &&
-                      SERVER_IS_MASTER(bref->server())))
+                      SERVER_IS_MASTER(backend->server())))
             {
                 if (max_rlag == MAX_RLAG_UNDEFINED ||
-                    (bref->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                     bref->server()->rlag <= max_rlag))
+                    (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                     backend->server()->rlag <= max_rlag))
                 {
-                    rval = check_candidate_bref(rval, bref, rses->rses_config.slave_selection_criteria);
+                    rval = compare_backends(rval, backend, rses->rses_config.slave_selection_criteria);
                 }
                 else
                 {
                     MXS_INFO("Server [%s]:%d is too much behind the master "
                              "(%d seconds) and can't be chosen",
-                             bref->server()->name, bref->server()->port,
-                             bref->server()->rlag);
+                             backend->server()->name, backend->server()->port,
+                             backend->server()->rlag);
                 }
             }
         } /*<  for */
@@ -460,32 +458,32 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
      */
     else if (btype == BE_MASTER)
     {
-        if (master_bref && master_bref->is_active())
+        if (master && master->is_active())
         {
             /** It is possible for the server status to change at any point in time
              * so copying it locally will make possible error messages
              * easier to understand */
             SERVER server;
-            server.status = master_bref->server()->status;
+            server.status = master->server()->status;
 
-            if (master_bref->in_use())
+            if (master->in_use())
             {
                 if (SERVER_IS_MASTER(&server))
                 {
-                    rval = master_bref;
+                    rval = master;
                 }
                 else
                 {
                     MXS_ERROR("Server '%s' should be master but is %s instead "
                               "and can't be chosen as the master.",
-                              master_bref->server()->unique_name,
+                              master->server()->unique_name,
                               STRSRVSTATUS(&server));
                 }
             }
             else
             {
                 MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
-                          master_bref->server()->unique_name);
+                          master->server()->unique_name);
             }
         }
     }
@@ -1019,8 +1017,8 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                   GWBUF *querybuf, SRWBackend& target, bool store)
 {
     /**
-     * If the transaction is READ ONLY set forced_node to bref
-     * That SLAVE backend will be used until COMMIT is seen
+     * If the transaction is READ ONLY set forced_node to this backend.
+     * This SLAVE backend will be used until the COMMIT is seen.
      */
     if (!rses->target_node &&
         session_trx_is_read_only(rses->client_dcb->session))
@@ -1116,7 +1114,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
  * @return  pointer to backend reference of the root master or NULL
  *
  */
-static SRWBackend get_root_master_bref(ROUTER_CLIENT_SES *rses)
+static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses)
 {
     SRWBackend candidate;
     SERVER master = {};
@@ -1124,21 +1122,21 @@ static SRWBackend get_root_master_bref(ROUTER_CLIENT_SES *rses)
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
     {
-        SRWBackend& bref = *it;
-        if (bref->in_use())
+        SRWBackend& backend = *it;
+        if (backend->in_use())
         {
-            if (bref == rses->current_master)
+            if (backend == rses->current_master)
             {
                 /** Store master state for better error reporting */
-                master.status = bref->server()->status;
+                master.status = backend->server()->status;
             }
 
-            if (SERVER_IS_MASTER(bref->server()))
+            if (SERVER_IS_MASTER(backend->server()))
             {
                 if (!candidate ||
-                    (bref->server()->depth < candidate->server()->depth))
+                    (backend->server()->depth < candidate->server()->depth))
                 {
-                    candidate = bref;
+                    candidate = backend;
                 }
             }
         }

@@ -51,7 +51,7 @@ bool send_readonly_error(DCB *dcb);
  * The following are implemented in readwritesplit.c
  */
 int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data);
-SRWBackend get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb);
+SRWBackend get_backend_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb);
 int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses);
 int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses);
 
