@@ -2032,6 +2032,7 @@ void maxscaleExecute(Parse* pParse, Token* pName)
 
     info->status = QC_QUERY_PARSED;
     info->type_mask = QUERY_TYPE_WRITE;
+    info->operation = QUERY_OP_EXECUTE;
 
     // If information is collected in several passes, then we may
     // this information already.
