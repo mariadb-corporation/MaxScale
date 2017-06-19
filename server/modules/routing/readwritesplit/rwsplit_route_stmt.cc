@@ -143,6 +143,15 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
          * - route primarily according to the hints and if they failed,
          *   eventually to master
          */
+
+        uint32_t ps_type;
+
+        if (qc_get_operation(querybuf) == QUERY_OP_EXECUTE &&
+            get_text_ps_type(rses, querybuf, &ps_type))
+        {
+            qtype = ps_type;
+        }
+
         route_target = get_route_target(rses, qtype, querybuf->hint);
     }
     else
@@ -511,6 +520,11 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     {
         target = TARGET_MASTER;
     }
+    else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+             qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+    {
+        target = TARGET_ALL;
+    }
     /**
      * These queries are not affected by hints
      */
@@ -539,9 +553,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
          * the execution of the prepared statements to the right server would be
          * an easy one. Currently this is not supported.
          */
-        if (qc_query_is_type(qtype, QUERY_TYPE_READ) &&
-            !(qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
-              qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)))
+        if (qc_query_is_type(qtype, QUERY_TYPE_READ))
         {
             MXS_WARNING("The query can't be routed to all "
                         "backend servers because it includes SELECT and "
@@ -561,8 +573,6 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     else if (!trx_active && !load_active &&
              !qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) &&
              !qc_query_is_type(qtype, QUERY_TYPE_WRITE) &&
-             !qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) &&
-             !qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) &&
              (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
               qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) ||
               qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
@@ -620,9 +630,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
                     qc_query_is_type(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
                     qc_query_is_type(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
                     qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN)) ||
-                   qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT) ||
-                   qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
-                   qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT));
+                   qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT));
 
         target = TARGET_MASTER;
     }
@@ -1030,12 +1038,6 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     /** The session command cursor must not be active */
     ss_dassert(target->session_command_count() == 0);
-
-    /** We only want the complete response to the preparation */
-    if (MYSQL_GET_COMMAND(GWBUF_DATA(querybuf)) == MYSQL_COM_STMT_PREPARE)
-    {
-        gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
-    }
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
     mysql_server_cmd_t cmd = mxs_mysql_current_command(rses->client_dcb->session);

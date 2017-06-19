@@ -207,6 +207,15 @@ bool handle_target_is_all(route_target_t route_target, ROUTER_INSTANCE *inst,
 {
     bool result = false;
 
+    if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+    {
+        store_text_ps(rses, extract_text_ps_id(querybuf), querybuf);
+    }
+    else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
+    {
+        gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
+    }
+
     if (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target))
     {
         /**

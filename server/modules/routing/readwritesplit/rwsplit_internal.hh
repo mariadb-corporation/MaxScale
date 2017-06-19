@@ -14,6 +14,8 @@
 
 #include <maxscale/cppdefs.hh>
 
+#include <string>
+
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 
@@ -110,3 +112,11 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type);
 uint32_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
 
 void close_all_connections(ROUTER_CLIENT_SES* rses);
+
+/**
+ * Functions for prepared statement handling
+ */
+std::string extract_text_ps_id(GWBUF* buffer);
+void store_text_ps(ROUTER_CLIENT_SES* rses, std::string id, GWBUF* buffer);
+void erase_text_ps(ROUTER_CLIENT_SES* rses, std::string id);
+bool get_text_ps_type(ROUTER_CLIENT_SES* rses, GWBUF* buffer, uint32_t* out);

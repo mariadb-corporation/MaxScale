@@ -21,6 +21,7 @@
 #include <maxscale/cppdefs.hh>
 
 #include <tr1/unordered_set>
+#include <tr1/unordered_map>
 #include <map>
 #include <string>
 
@@ -200,6 +201,9 @@ typedef std::list<SRWBackend> SRWBackendList;
 typedef std::tr1::unordered_set<std::string> TableSet;
 typedef std::map<uint64_t, uint8_t>          ResponseMap;
 
+/** Prepared statement ID to type maps for text and binary protocols */
+typedef std::tr1::unordered_map<std::string, uint32_t> TextPSMap;
+
 /**
  * The client session structure used within this router.
  */
@@ -226,6 +230,7 @@ struct ROUTER_CLIENT_SES
     ResponseMap               sescmd_responses; /**< Response to each session command */
     uint64_t                  sent_sescmd; /**< ID of the last sent session command*/
     uint64_t                  recv_sescmd; /**< ID of the most recently completed session command */
+    TextPSMap                 ps_text;     /**< Text protocol prepared statements */
     skygw_chk_t               rses_chk_tail;
 };
 
