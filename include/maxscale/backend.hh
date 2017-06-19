@@ -220,6 +220,27 @@ public:
     bool is_closed() const;
 
     /**
+     * @brief Check if the server is a master
+     *
+     * @return True if server is a master
+     */
+    bool is_master() const;
+
+    /**
+     * @brief Check if the server is a slave
+     *
+     * @return True if the server is a slave
+     */
+    bool is_slave() const;
+
+    /**
+     * @brief Check if the server is a relay server
+     *
+     * @return True if the server is a relay server
+     */
+    bool is_relay() const;
+
+    /**
      * @brief Check if the backend has failed fatally
      *
      * When a fatal failure occurs in a backend, the backend server can no longer

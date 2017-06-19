@@ -354,8 +354,8 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& 
             SRWBackend& backend = *it;
 
             if (backend->in_use() && backend != old &&
-                !SERVER_IS_MASTER(backend->server()) &&
-                SERVER_IS_SLAVE(backend->server()))
+                !backend->is_master() &&
+                backend->is_slave())
             {
                 /** Found a valid candidate; a non-master slave that's in use */
                 if (backend->write(stored))

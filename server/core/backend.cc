@@ -279,6 +279,21 @@ bool Backend::is_closed() const
     return m_closed;
 }
 
+bool Backend::is_master() const
+{
+    return SERVER_IS_MASTER(m_backend->server);
+}
+
+bool Backend::is_slave() const
+{
+    return SERVER_IS_SLAVE(m_backend->server);
+}
+
+bool Backend::is_relay() const
+{
+    return SERVER_IS_RELAY_SERVER(m_backend->server);
+}
+
 bool Backend::has_failed() const
 {
     return m_state & FATAL_FAILURE;

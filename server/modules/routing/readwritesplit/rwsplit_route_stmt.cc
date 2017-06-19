@@ -269,7 +269,7 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
                 }
 
                 MXS_INFO("Route query to %s \t[%s]:%d",
-                         SERVER_IS_MASTER(backend->server()) ? "master" : "slave",
+                         backend->is_master() ? "master" : "slave",
                          backend->server()->name, backend->server()->port);
             }
             else
@@ -355,9 +355,9 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
 
             if (backend->in_use() && backend->is_active() &&
                 (strcasecmp(name, backend->server()->unique_name) == 0) &&
-                (SERVER_IS_SLAVE(backend->server()) ||
-                 SERVER_IS_RELAY_SERVER(backend->server()) ||
-                 SERVER_IS_MASTER(backend->server())))
+                (backend->is_slave() ||
+                 backend->is_relay() ||
+                 backend->is_master()))
             {
                 return backend;
             }
@@ -381,7 +381,7 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * slave can't be used
              */
             if (!backend->in_use() || !backend->is_active() ||
-                (!SERVER_IS_MASTER(backend->server()) && !SERVER_IS_SLAVE(backend->server())))
+                (!backend->is_master() && !backend->is_slave()))
             {
                 continue;
             }
@@ -395,7 +395,7 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                  * Ensure that master has not changed during
                  * session and abort if it has.
                  */
-                if (SERVER_IS_MASTER(backend->server()) && backend == rses->current_master)
+                if (backend->is_master() && backend == rses->current_master)
                 {
                     /** found master */
                     rval = backend;
@@ -417,8 +417,7 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * If candidate is master, any slave which doesn't break
              * replication lag limits replaces it.
              */
-            else if (SERVER_IS_MASTER(rval->server()) &&
-                     SERVER_IS_SLAVE(backend->server()) &&
+            else if (rval->is_master() && backend->is_slave() &&
                      (max_rlag == MAX_RLAG_UNDEFINED ||
                       (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
                        backend->server()->rlag <= max_rlag)) &&
@@ -432,9 +431,9 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * backend and update assign it to new candidate if
              * necessary.
              */
-            else if (SERVER_IS_SLAVE(backend->server()) ||
+            else if (backend->is_slave() ||
                      (rses->rses_config.master_accept_reads &&
-                      SERVER_IS_MASTER(backend->server())))
+                      backend->is_master()))
             {
                 if (max_rlag == MAX_RLAG_UNDEFINED ||
                     (backend->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
@@ -1029,7 +1028,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     }
 
     MXS_INFO("Route query to %s \t[%s]:%d <",
-             (SERVER_IS_MASTER(target->server()) ? "master" : "slave"),
+             (target->is_master() ? "master" : "slave"),
              target->server()->name, target->server()->port);
 
     /** The session command cursor must not be active */
@@ -1131,7 +1130,7 @@ static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses)
                 master.status = backend->server()->status;
             }
 
-            if (SERVER_IS_MASTER(backend->server()))
+            if (backend->is_master())
             {
                 if (!candidate ||
                     (backend->server()->depth < candidate->server()->depth))
