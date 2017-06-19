@@ -55,7 +55,7 @@ static bool valid_for_slave(const SERVER *server, const SERVER *master)
  * @return The best slave backend reference or NULL if no candidates could be found
  */
 SRWBackend get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
-                               int (*cmpfun)(const void *, const void *))
+                               int (*cmpfun)(const SRWBackend&, const SRWBackend&))
 {
     SRWBackend candidate;
 
@@ -69,7 +69,7 @@ SRWBackend get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
         {
             if (candidate)
             {
-                if (cmpfun(&candidate, &backend) > 0)
+                if (cmpfun(candidate, backend) > 0)
                 {
                     candidate = backend;
                 }
@@ -85,10 +85,8 @@ SRWBackend get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
 }
 
 /** Compare number of connections from this router in backend servers */
-static int backend_cmp_router_conn(const void *v1, const void *v2)
+static int backend_cmp_router_conn(const SRWBackend& a, const SRWBackend& b)
 {
-    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(v1);
-    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(v2);
     SERVER_REF *first = a->backend();
     SERVER_REF *second = b->backend();
 
@@ -110,10 +108,8 @@ static int backend_cmp_router_conn(const void *v1, const void *v2)
 }
 
 /** Compare number of global connections in backend servers */
-static int backend_cmp_global_conn(const void *v1, const void *v2)
+static int backend_cmp_global_conn(const SRWBackend& a, const SRWBackend& b)
 {
-    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(v1);
-    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(v2);
     SERVER_REF *first = a->backend();
     SERVER_REF *second = b->backend();
 
@@ -136,10 +132,8 @@ static int backend_cmp_global_conn(const void *v1, const void *v2)
 }
 
 /** Compare replication lag between backend servers */
-static int backend_cmp_behind_master(const void *v1, const void *v2)
+static int backend_cmp_behind_master(const SRWBackend& a, const SRWBackend& b)
 {
-    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(v1);
-    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(v2);
     SERVER_REF *first = a->backend();
     SERVER_REF *second = b->backend();
 
@@ -162,10 +156,8 @@ static int backend_cmp_behind_master(const void *v1, const void *v2)
 }
 
 /** Compare number of current operations in backend servers */
-static int backend_cmp_current_load(const void *v1, const void *v2)
+static int backend_cmp_current_load(const SRWBackend& a, const SRWBackend& b)
 {
-    const SRWBackend& a = *reinterpret_cast<const SRWBackend*>(v1);
-    const SRWBackend& b = *reinterpret_cast<const SRWBackend*>(v2);
     SERVER_REF *first = a->backend();
     SERVER_REF *second = b->backend();
 
@@ -190,7 +182,7 @@ static int backend_cmp_current_load(const void *v1, const void *v2)
  * The order of functions _must_ match with the order the select criteria are
  * listed in select_criteria_t definition in readwritesplit.h
  */
-int (*criteria_cmpfun[LAST_CRITERIA])(const void *, const void *) =
+int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&) =
 {
     NULL,
     backend_cmp_global_conn,
@@ -326,7 +318,7 @@ bool select_connect_backend_servers(int router_nservers,
     bool master_connected = type == SLAVE || rses->current_master;
 
     /** Check slave selection criteria and set compare function */
-    int (*cmpfun)(const void *, const void *) = criteria_cmpfun[select_criteria];
+    int (*cmpfun)(const SRWBackend&, const SRWBackend&) = criteria_cmpfun[select_criteria];
     ss_dassert(cmpfun);
 
     if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
