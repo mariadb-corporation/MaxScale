@@ -263,7 +263,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 
     /* get server version string */
     mxs_mysql_set_server_version(database->con, database->server);
-    server_string = database->server->server_string;
+    server_string = database->server->version_string;
 
     /* get server_id form current node */
     if (mysql_query(database->con, "SELECT @@server_id") == 0

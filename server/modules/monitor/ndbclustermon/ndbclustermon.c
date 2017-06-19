@@ -226,7 +226,7 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
 
     /* get server version string */
     mxs_mysql_set_server_version(database->con, database->server);
-    server_string = database->server->server_string;
+    server_string = database->server->version_string;
 
     /* Check if the the SQL node is able to contact one or more data nodes */
     if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0

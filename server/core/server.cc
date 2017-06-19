@@ -1114,22 +1114,14 @@ void server_set_version_string(SERVER* server, const char* version)
  * @param major  The major version.
  * @param minor  The minor version.
  * @param patch  The patch version.
- *
- * @return True if the assignment of the version string was successful, false if
- *         memory allocation failed.
  */
-bool server_set_version(SERVER* server, const char* string, uint32_t major, uint32_t minor, uint32_t patch)
+void server_set_version(SERVER* server, const char* string, uint32_t major, uint32_t minor, uint32_t patch)
 {
-    bool rv = server_set_version_string(server, string);
+    server_set_version_string(server, string);
 
-    if (rv)
-    {
-        server->version.major = major;
-        server->version.minor = minor;
-        server->version.patch = patch;
-    }
-
-    return rv;
+    server->version.major = major;
+    server->version.minor = minor;
+    server->version.patch = patch;
 }
 
 /**
