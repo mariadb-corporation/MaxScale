@@ -45,26 +45,22 @@ static SRWBackend get_root_master_bref(ROUTER_CLIENT_SES *rses);
  * value in selection criteria. If either reference pointer is NULL then the
  * other reference pointer value is returned.
  */
-static SRWBackend& check_candidate_bref(SRWBackend& cand,
-                                        SRWBackend& new_bref,
-                                        select_criteria_t sc)
+static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t sc)
 {
     int (*p)(const void *, const void *);
     /** get compare function */
     p = criteria_cmpfun[sc];
 
-    if (new_bref == NULL)
+    if (!a)
     {
-        return cand;
+        return b;
     }
-    else if (cand == NULL || (p((void *)&cand, (void *)&new_bref) > 0))
+    else if (!b)
     {
-        return new_bref;
+        return a;
     }
-    else
-    {
-        return cand;
-    }
+
+    return p((void *)&a, (void *)&b) > 0 ? b : a;
 }
 
 void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
