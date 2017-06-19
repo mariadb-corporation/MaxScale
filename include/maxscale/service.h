@@ -378,6 +378,6 @@ typedef enum service_version_which_t
  */
 void service_get_version(const SERVICE *service,
                          service_version_which_t which,
-                         SERVER_VERSION* version);
+                         uint64_t* version);
 
 MXS_END_DECLS

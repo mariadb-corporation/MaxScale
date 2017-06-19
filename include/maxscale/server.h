@@ -73,6 +73,22 @@ typedef struct server_version
     uint32_t patch;
 } SERVER_VERSION;
 
+static inline void server_decode_version(uint64_t version, SERVER_VERSION* server_version)
+{
+    uint32_t major = version / 10000;
+    uint32_t minor = (version - major * 10000) / 100;
+    uint32_t patch = version - major * 10000 - minor * 100;
+
+    server_version->major = major;
+    server_version->minor = minor;
+    server_version->patch = patch;
+}
+
+static uint64_t server_encode_version(const SERVER_VERSION* server_version)
+{
+    return server_version->major * 10000 + server_version->minor * 100 + server_version->patch;
+}
+
 /**
  * The SERVER structure defines a backend server. Each server has a name
  * or IP address for the server, a port that the server listens on and
@@ -101,7 +117,7 @@ typedef struct server
     struct  server *next;          /**< Next server */
     struct  server *nextdb;        /**< Next server in list attached to a service */
     char           version_string[MAX_SERVER_VERSION_LEN]; /**< Server version string, i.e. MySQL server version */
-    SERVER_VERSION version;        /**< Server version information */
+    uint64_t       version;        /**< Server version */
     long           node_id;        /**< Node id, server_id for M/S or local_index for Galera */
     int            rlag;           /**< Replication Lag for Master / Slave replication */
     unsigned long  node_ts;        /**< Last timestamp set from M/S monitor module */
@@ -321,8 +337,9 @@ extern DCB  *server_get_persistent(SERVER *server, const char *user, const char 
 extern void server_update_address(SERVER *server, const char *address);
 extern void server_update_port(SERVER *server,  unsigned short port);
 extern unsigned int server_map_status(const char *str);
-extern void server_set_version_string(SERVER* server, const char* string);
-extern void server_set_version(SERVER* server, const char* string, uint32_t major, uint32_t minor, uint32_t patch);
+extern void server_set_version_string(SERVER* server, const char* version_string);
+extern void server_set_version(SERVER* server, const char* version_string, uint64_t version);
+extern uint64_t server_get_version(const SERVER* server);
 extern void server_set_status(SERVER *server, int bit);
 extern void server_clear_status(SERVER *server, int bit);
 

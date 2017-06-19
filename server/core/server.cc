@@ -1076,17 +1076,17 @@ server_map_status(const char *str)
 /**
  * Set the version string of the server.
  *
- * @param server Server to update
- * @param version Version string
+ * @param server          Server to update
+ * @param version_string  Version string
  */
-void server_set_version_string(SERVER* server, const char* version)
+void server_set_version_string(SERVER* server, const char* version_string)
 {
     // There is a race here. The string may be accessed, while we are
     // updating it. Thus we take some precautions to ensure that the
     // string cannot be completely garbled at any point.
 
     size_t old_len = strlen(server->version_string);
-    size_t new_len = strlen(version);
+    size_t new_len = strlen(version_string);
 
     if (new_len >= MAX_SERVER_VERSION_LEN)
     {
@@ -1100,7 +1100,7 @@ void server_set_version_string(SERVER* server, const char* version)
         memset(server->version_string + new_len, 0, old_len - new_len);
     }
 
-    strncpy(server->version_string, version, new_len);
+    strncpy(server->version_string, version_string, new_len);
     // No null-byte needs to be set. The array starts out as all zeros
     // and the above memset adds the necessary null, should the new string
     // be shorter than the old.
@@ -1109,19 +1109,21 @@ void server_set_version_string(SERVER* server, const char* version)
 /**
  * Set the version of the server.
  *
- * @param server Server to update
- * @param string Human readable version string.
- * @param major  The major version.
- * @param minor  The minor version.
- * @param patch  The patch version.
+ * @param server         Server to update
+ * @param version_string Human readable version string.
+ * @param version        Version encoded as MariaDB encodes the version, i.e.:
+ *                       version = major * 10000 + minor * 100 + patch
  */
-void server_set_version(SERVER* server, const char* string, uint32_t major, uint32_t minor, uint32_t patch)
+void server_set_version(SERVER* server, const char* version_string, uint64_t version)
 {
-    server_set_version_string(server, string);
+    server_set_version_string(server, version_string);
 
-    server->version.major = major;
-    server->version.minor = minor;
-    server->version.patch = patch;
+    atomic_store_uint64(&server->version, version);
+}
+
+uint64_t server_get_version(const SERVER* server)
+{
+    return atomic_load_uint64(&server->version);
 }
 
 /**

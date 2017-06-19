@@ -288,16 +288,12 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
 
 void mxs_mysql_set_server_version(MYSQL* mysql, SERVER* server)
 {
-    const char* s = mysql_get_server_info(mysql);
+    const char* version_string = mysql_get_server_info(mysql);
 
-    if (s)
+    if (version_string)
     {
-        unsigned long v = mysql_get_server_version(mysql);
+        unsigned long version = mysql_get_server_version(mysql);
 
-        unsigned long major = v / 10000;
-        unsigned long minor = (v - major * 10000) / 100;
-        unsigned long patch = v - major * 10000 - minor * 100;
-
-        server_set_version(server, s, major, minor, patch);
+        server_set_version(server, version_string, version);
     }
 }
