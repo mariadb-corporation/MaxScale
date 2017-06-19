@@ -379,21 +379,19 @@ typedef struct query_classifier
      * is classified. Note that the server version is maintained separately
      * for each thread.
      *
-     * @param major  The major version.
-     * @param minor  The minor version.
-     * @param patch  The patch version.
+     * @param version  Version encoded as MariaDB encodes the version, i.e.:
+     *                 version = major * 10000 + minor * 100 + patch
      */
-    void (*qc_set_server_version)(uint32_t major, uint32_t minor, uint32_t patch);
+    void (*qc_set_server_version)(uint64_t version);
 
     /**
      * Get the thread specific version assumed of the server. If the version has
      * not been set, all values are 0.
      *
-     * @param major  The major version.
-     * @param minor  The minor version.
-     * @param patch  The patch version.
+     * @param version  The version encoded as MariaDB encodes the version, i.e.:
+     *                 version = major * 10000 + minor * 100 + patch
      */
-    void (*qc_get_server_version)(uint32_t* major, uint32_t* minor, uint32_t* patch);
+    void (*qc_get_server_version)(uint64_t* version);
 } QUERY_CLASSIFIER;
 
 /**
@@ -784,20 +782,18 @@ char* qc_typemask_to_string(uint32_t typemask);
  * is classified. Note that the server version is maintained separately
  * for each thread.
  *
- * @param major  The major version.
- * @param minor  The minor version.
- * @param patch  The patch version.
+ * @param version  Version encoded as MariaDB encodes the version, i.e.:
+ *                 version = major * 10000 + minor * 100 + patch
  */
-void qc_set_server_version(uint32_t major, uint32_t minor, uint32_t patch);
+void qc_set_server_version(uint64_t version);
 
 /**
  * Get the thread specific version assumed of the server. If the version has
  * not been set, all values are 0.
  *
- * @param major  The major version.
- * @param minor  The minor version.
- * @param patch  The patch version.
+ * @return The version as MariaDB encodes the version, i.e:
+ *         version = major * 10000 + minor * 100 + patch
  */
-void qc_get_server_version(uint32_t* major, uint32_t* minor, uint32_t* patch);
+uint64_t qc_get_server_version();
 
 MXS_END_DECLS

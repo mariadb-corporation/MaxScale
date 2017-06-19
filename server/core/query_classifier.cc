@@ -902,18 +902,22 @@ uint32_t qc_get_trx_type_mask(GWBUF* stmt)
     return qc_get_trx_type_mask_using(stmt, qc_trx_parse_using);
 }
 
-void qc_set_server_version(uint32_t major, uint32_t minor, uint32_t patch)
+void qc_set_server_version(uint64_t version)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    classifier->qc_set_server_version(major, minor, patch);
+    classifier->qc_set_server_version(version);
 }
 
-void qc_get_server_version(uint32_t* major, uint32_t* minor, uint32_t* patch)
+uint64_t qc_get_server_version()
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    classifier->qc_get_server_version(major, minor, patch);
+    uint64_t version;
+
+    classifier->qc_get_server_version(&version);
+
+    return version;
 }

@@ -2910,8 +2910,8 @@ static int32_t qc_sqlite_get_canonical(GWBUF* query, char** canonical);
 static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
 static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** names, int* sizep);
 static int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
-static void qc_sqlite_set_server_version(uint32_t major, uint32_t minor, uint32_t patch);
-static void qc_sqlite_get_server_version(uint32_t* major, uint32_t* minor, uint32_t* patch);
+static void qc_sqlite_set_server_version(uint64_t version);
+static void qc_sqlite_get_server_version(uint64_t* version);
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 {
@@ -3530,22 +3530,24 @@ int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
     return rv;
 }
 
-static void qc_sqlite_set_server_version(uint32_t major, uint32_t minor, uint32_t patch)
+static void qc_sqlite_set_server_version(uint64_t version)
 {
     QC_TRACE();
+
+    uint32_t major = version / 10000;
+    uint32_t minor = (version - major * 10000) / 100;
+    uint32_t patch = version - major * 10000 - minor * 100;
 
     this_thread.version_major = major;
     this_thread.version_minor = minor;
     this_thread.version_patch = patch;
 }
 
-static void qc_sqlite_get_server_version(uint32_t* major, uint32_t* minor, uint32_t* patch)
+static void qc_sqlite_get_server_version(uint64_t* version)
 {
     QC_TRACE();
 
-    *major = this_thread.version_major;
-    *minor = this_thread.version_minor;
-    *patch = this_thread.version_patch;
+    *version = this_thread.version_major * 10000 + this_thread.version_minor * 100 + this_thread.version_patch;
 }
 
 /**
