@@ -292,9 +292,8 @@ void check_session_command_reply(GWBUF *buffer, SRWBackend backend)
         err.append(replybuf + 8, 5);
         msg.append(replybuf + 13, replylen - 4 - 5);
 
-        MXS_ERROR("Failed to execute session command in [%s]:%d. Error was: %s %s",
-                  backend->server()->name, backend->server()->port,
-                  err.c_str(), msg.c_str());
+        MXS_ERROR("Failed to execute session command in %s. Error was: %s %s",
+                  backend->uri(), err.c_str(), msg.c_str());
     }
 }
 

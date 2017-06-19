@@ -15,6 +15,7 @@
 #include <maxscale/cppdefs.hh>
 
 #include <list>
+#include <string>
 #include <tr1/memory>
 
 #include <maxscale/service.h>
@@ -251,6 +252,21 @@ public:
      */
     bool has_failed() const;
 
+
+    /**
+     * @brief Get the object name of this server
+     *
+     * @return The unique object name of this server
+     */
+    const char* name() const;
+
+    /**
+     * @brief Get the address and port as a string
+     *
+     * @return The address and port combined into one string
+     */
+    const char* uri() const;
+
 private:
     /**
      * Internal state of the backend
@@ -284,6 +300,7 @@ private:
     int                m_state;            /**< State of the backend */
     SessionCommandList m_session_commands; /**< List of session commands that are
                                             * to be executed on this backend server */
+    std::string        m_uri;              /**< The combined address and port */
 };
 
 typedef std::tr1::shared_ptr<Backend> SBackend;

@@ -419,8 +419,8 @@ bool select_connect_backend_servers(int router_nservers,
                 SRWBackend& backend = *it;
                 if (backend->in_use())
                 {
-                    MXS_INFO("Selected %s in \t[%s]:%d", STRSRVSTATUS(backend->server()),
-                             backend->server()->name, backend->server()->port);
+                    MXS_INFO("Selected %s in \t%s", STRSRVSTATUS(backend->server()),
+                             backend->uri());
                 }
             }
         }

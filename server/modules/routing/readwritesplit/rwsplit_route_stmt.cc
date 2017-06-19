@@ -84,7 +84,7 @@ void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             if (diff > keepalive)
             {
                 MXS_INFO("Pinging %s, idle for %d seconds",
-                         backend->server()->unique_name, diff / 10);
+                         backend->name(), diff / 10);
                 modutil_ignorable_ping(backend->dcb());
             }
         }
@@ -268,14 +268,13 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
                     rses->expected_responses++;
                 }
 
-                MXS_INFO("Route query to %s \t[%s]:%d",
+                MXS_INFO("Route query to %s \t%s",
                          backend->is_master() ? "master" : "slave",
-                         backend->server()->name, backend->server()->port);
+                         backend->uri());
             }
             else
             {
-                MXS_ERROR("Failed to execute session command in [%s]:%d",
-                          backend->server()->name, backend->server()->port);
+                MXS_ERROR("Failed to execute session command in %s", backend->uri());
             }
         }
     }
@@ -335,7 +334,7 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
     if (rses->target_node && session_trx_is_read_only(rses->client_dcb->session))
     {
         MXS_DEBUG("In READ ONLY transaction, using server '%s'",
-                  rses->target_node->server()->unique_name);
+                  rses->target_node->name());
         return rses->target_node;
     }
 
@@ -354,7 +353,7 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
             /** The server must be a valid slave, relay server, or master */
 
             if (backend->in_use() && backend->is_active() &&
-                (strcasecmp(name, backend->server()->unique_name) == 0) &&
+                (strcasecmp(name, backend->name()) == 0) &&
                 (backend->is_slave() ||
                  backend->is_relay() ||
                  backend->is_master()))
@@ -443,10 +442,9 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 }
                 else
                 {
-                    MXS_INFO("Server [%s]:%d is too much behind the master "
+                    MXS_INFO("Server %s is too much behind the master "
                              "(%d seconds) and can't be chosen",
-                             backend->server()->name, backend->server()->port,
-                             backend->server()->rlag);
+                             backend->uri(), backend->server()->rlag);
                 }
             }
         } /*<  for */
@@ -475,14 +473,14 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 {
                     MXS_ERROR("Server '%s' should be master but is %s instead "
                               "and can't be chosen as the master.",
-                              master->server()->unique_name,
+                              master->name(),
                               STRSRVSTATUS(&server));
                 }
             }
             else
             {
                 MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
-                          master->server()->unique_name);
+                          master->name());
             }
         }
     }
@@ -908,24 +906,24 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
     {
         /** We found a master but it's not the same connection */
         ss_dassert(old_master != curr_master);
-        if (old_master->server() != curr_master->server())
+        if (old_master != curr_master)
         {
             sprintf(errmsg, "Master server changed from '%s' to '%s'",
-                    old_master->server()->unique_name,
-                    curr_master->server()->unique_name);
+                    old_master->name(),
+                    curr_master->name());
         }
         else
         {
             ss_dassert(false); // Currently we don't reconnect to the master
             sprintf(errmsg, "Connection to master '%s' was recreated",
-                    curr_master->server()->unique_name);
+                    curr_master->name());
         }
     }
     else if (old_master)
     {
         /** We have an original master connection but we couldn't find it */
         sprintf(errmsg, "The connection to master server '%s' is not available",
-                old_master->server()->unique_name);
+                old_master->name());
     }
     else
     {
@@ -1024,12 +1022,11 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     {
         rses->target_node = target;
         MXS_DEBUG("Setting forced_node SLAVE to %s within an opened READ ONLY transaction",
-                  target->server()->unique_name);
+                  target->name());
     }
 
-    MXS_INFO("Route query to %s \t[%s]:%d <",
-             (target->is_master() ? "master" : "slave"),
-             target->server()->name, target->server()->port);
+    MXS_INFO("Route query to %s \t%s <", target->is_master() ? "master" : "slave",
+             target->uri());
 
     /** The session command cursor must not be active */
     ss_dassert(target->session_command_count() == 0);

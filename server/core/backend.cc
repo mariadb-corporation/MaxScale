@@ -12,6 +12,9 @@
  */
 
 #include <maxscale/backend.hh>
+
+#include <sstream>
+
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/debug.h>
 
@@ -23,6 +26,9 @@ Backend::Backend(SERVER_REF *ref):
     m_dcb(NULL),
     m_state(0)
 {
+    std::stringstream ss;
+    ss << "[" << server()->name << "]:" << server()->port;
+    m_uri = ss.str();
 }
 
 Backend::~Backend()
@@ -297,4 +303,14 @@ bool Backend::is_relay() const
 bool Backend::has_failed() const
 {
     return m_state & FATAL_FAILURE;
+}
+
+const char* Backend::name() const
+{
+    return m_backend->server->unique_name;
+}
+
+const char* Backend::uri() const
+{
+    return m_uri.c_str();
 }

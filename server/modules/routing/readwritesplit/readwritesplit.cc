@@ -360,7 +360,7 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& 
                 /** Found a valid candidate; a non-master slave that's in use */
                 if (backend->write(stored))
                 {
-                    MXS_INFO("Retrying failed read at '%s'.", backend->server()->unique_name);
+                    MXS_INFO("Retrying failed read at '%s'.", backend->name());
                     ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
                     LOG_RS(backend, REPLY_STATE_START);
                     backend->set_reply_state(REPLY_STATE_START);
@@ -379,7 +379,7 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& 
              */
             if (rses->current_master->write(stored))
             {
-                MXS_INFO("Retrying failed read at '%s'.", rses->current_master->server()->unique_name);
+                MXS_INFO("Retrying failed read at '%s'.", rses->current_master->name());
                 LOG_RS(rses->current_master, REPLY_STATE_START);
                 ss_dassert(rses->current_master->get_reply_state() == REPLY_STATE_DONE);
                 rses->current_master->set_reply_state(REPLY_STATE_START);
@@ -1178,8 +1178,8 @@ static void clientReply(MXS_ROUTER *instance,
     /** Check pending session commands */
     else if (!queue_routed && backend->session_command_count())
     {
-        MXS_INFO("Backend [%s]:%d processed reply and starts to execute active cursor.",
-                 backend->server()->name, backend->server()->port);
+        MXS_INFO("Backend %s processed reply and starts to execute active cursor.",
+                 backend->uri());
 
         if (backend->execute_session_command())
         {
@@ -1331,7 +1331,7 @@ static void handleError(MXS_ROUTER *instance,
                 {
                     ss_dassert(false);
                     MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.",
-                              backend->server()->unique_name);
+                              backend->name());
                 }
             }
             else

@@ -61,7 +61,7 @@ void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& backend,
                 {
                     MXS_ERROR("Slave server '%s': response differs from master's response. "
                               "Closing connection due to inconsistent session state.",
-                              backend->server()->unique_name);
+                              backend->name());
                     backend->close(mxs::Backend::CLOSE_FATAL);
                     *pReconnect = true;
                 }
