@@ -3,6 +3,7 @@ if(BUILD_CDC)
 endif()
 
 add_subdirectory(GSSAPI)
+add_subdirectory(PAM)
 add_subdirectory(HTTPAuth)
 add_subdirectory(MaxAdminAuth)
 add_subdirectory(MySQLAuth)
