@@ -1105,7 +1105,10 @@ static void update_field_infos(QC_SQLITE_INFO* info,
                 {
                     info->type_mask |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
                 }
-                else if (!is_builtin_readonly_function(zToken))
+                else if (!is_builtin_readonly_function(zToken,
+                                                       this_thread.version_major,
+                                                       this_thread.version_minor,
+                                                       this_thread.version_patch))
                 {
                     info->type_mask |= QUERY_TYPE_WRITE;
                 }
