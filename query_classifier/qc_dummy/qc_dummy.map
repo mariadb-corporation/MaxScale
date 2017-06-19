@@ -1,6 +1,0 @@
-{
-    global:
-        mxs_get_module_object;
-    local:
-        *;
-};
