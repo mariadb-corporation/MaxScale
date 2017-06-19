@@ -373,6 +373,27 @@ typedef struct query_classifier
      *         exhaustion or equivalent.
      */
     int32_t (*qc_get_preparable_stmt)(GWBUF* stmt, GWBUF** preparable_stmt);
+
+    /**
+     * Set the version of the server. The version may affect how a statement
+     * is classified. Note that the server version is maintained separately
+     * for each thread.
+     *
+     * @param major  The major version.
+     * @param minor  The minor version.
+     * @param patch  The patch version.
+     */
+    void (*qc_set_server_version)(uint32_t major, uint32_t minor, uint32_t patch);
+
+    /**
+     * Get the thread specific version assumed of the server. If the version has
+     * not been set, all values are 0.
+     *
+     * @param major  The major version.
+     * @param minor  The minor version.
+     * @param patch  The patch version.
+     */
+    void (*qc_get_server_version)(uint32_t* major, uint32_t* minor, uint32_t* patch);
 } QUERY_CLASSIFIER;
 
 /**
@@ -757,5 +778,26 @@ const char* qc_type_to_string(qc_query_type_t type);
  * @note The returned string is dynamically allocated and @b must be freed.
  */
 char* qc_typemask_to_string(uint32_t typemask);
+
+/**
+ * Set the version of the server. The version may affect how a statement
+ * is classified. Note that the server version is maintained separately
+ * for each thread.
+ *
+ * @param major  The major version.
+ * @param minor  The minor version.
+ * @param patch  The patch version.
+ */
+void qc_set_server_version(uint32_t major, uint32_t minor, uint32_t patch);
+
+/**
+ * Get the thread specific version assumed of the server. If the version has
+ * not been set, all values are 0.
+ *
+ * @param major  The major version.
+ * @param minor  The minor version.
+ * @param patch  The patch version.
+ */
+void qc_get_server_version(uint32_t* major, uint32_t* minor, uint32_t* patch);
 
 MXS_END_DECLS

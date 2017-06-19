@@ -94,6 +94,16 @@ typedef struct parsing_info_st
 #endif
 } parsing_info_t;
 
+static thread_local struct
+{
+    // The version information is not used; the embedded library parses according
+    // to the version of the embedded library it has been linked with. However, we
+    // need to store the information so that qc_[get|set]_server_version will work.
+    uint32_t version_major;
+    uint32_t version_minor;
+    uint32_t version_patch;
+} this_thread;
+
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
 
 static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
@@ -2590,6 +2600,20 @@ int32_t qc_mysql_get_function_info(GWBUF* buf,
     return QC_RESULT_OK;
 }
 
+void qc_mysql_set_server_version(uint32_t major, uint32_t minor, uint32_t patch)
+{
+    this_thread.version_major = major;
+    this_thread.version_minor = minor;
+    this_thread.version_patch = patch;
+}
+
+void qc_mysql_get_server_version(uint32_t* major, uint32_t* minor, uint32_t* patch)
+{
+    *major = this_thread.version_major;
+    *minor = this_thread.version_minor;
+    *patch = this_thread.version_patch;
+}
+
 namespace
 {
 
@@ -2743,6 +2767,8 @@ extern "C"
             qc_mysql_get_field_info,
             qc_mysql_get_function_info,
             qc_mysql_get_preparable_stmt,
+            qc_mysql_set_server_version,
+            qc_mysql_get_server_version,
         };
 
         static MXS_MODULE info =

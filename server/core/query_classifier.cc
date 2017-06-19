@@ -901,3 +901,19 @@ uint32_t qc_get_trx_type_mask(GWBUF* stmt)
 {
     return qc_get_trx_type_mask_using(stmt, qc_trx_parse_using);
 }
+
+void qc_set_server_version(uint32_t major, uint32_t minor, uint32_t patch)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    classifier->qc_set_server_version(major, minor, patch);
+}
+
+void qc_get_server_version(uint32_t* major, uint32_t* minor, uint32_t* patch)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    classifier->qc_get_server_version(major, minor, patch);
+}
