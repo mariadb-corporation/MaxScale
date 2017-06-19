@@ -928,6 +928,10 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         }
     }
 
+    /** The query classifier classifies according to the service's server that has
+     * the smallest version number. */
+    qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
+
     spec_com_res_t res = process_special_commands(dcb, read_buffer, nbytes_read);
     int rval = 1;
     switch (res)
