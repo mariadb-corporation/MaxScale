@@ -374,10 +374,9 @@ typedef enum service_version_which_t
  *
  * @param service  The service.
  * @param which    Which version.
- * @param version  On output contains the version of the service.
+ *
+ * @return The version of the service.
  */
-void service_get_version(const SERVICE *service,
-                         service_version_which_t which,
-                         uint64_t* version);
+uint64_t service_get_version(const SERVICE *service, service_version_which_t which);
 
 MXS_END_DECLS

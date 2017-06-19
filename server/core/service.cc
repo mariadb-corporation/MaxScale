@@ -2674,10 +2674,10 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     return rel;
 }
 
-void service_get_version(const SERVICE *service,
-                         service_version_which_t which,
-                         uint64_t* version)
+uint64_t service_get_version(const SERVICE *service, service_version_which_t which)
 {
+    uint64_t version = 0;
+
     if (which == SERVICE_VERSION_ANY)
     {
         SERVER_REF* sref = service->dbref;
@@ -2689,11 +2689,7 @@ void service_get_version(const SERVICE *service,
 
         if (sref)
         {
-            *version = server_get_version(sref->server);
-        }
-        else
-        {
-            *version = 0;
+            version = server_get_version(sref->server);
         }
     }
     else
@@ -2750,6 +2746,8 @@ void service_get_version(const SERVICE *service,
             v = 0;
         }
 
-        *version = v;
+        version = v;
     }
+
+    return version;
 }
