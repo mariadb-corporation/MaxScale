@@ -175,16 +175,22 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         if (TARGET_IS_NAMED_SERVER(route_target) ||
             TARGET_IS_RLAG_MAX(route_target))
         {
-            succp = handle_hinted_target(rses, querybuf, route_target, target);
+            if ((target = handle_hinted_target(rses, querybuf, route_target)))
+            {
+                succp = true;
+            }
         }
         else if (TARGET_IS_SLAVE(route_target))
         {
-            succp = handle_slave_is_target(inst, rses, target);
-            store_stmt = rses->rses_config.retry_failed_reads;
+            if ((target = handle_slave_is_target(inst, rses)))
+            {
+                succp = true;
+                store_stmt = rses->rses_config.retry_failed_reads;
+            }
         }
         else if (TARGET_IS_MASTER(route_target))
         {
-            succp = handle_master_is_target(inst, rses, target);
+            succp = handle_master_is_target(inst, rses, &target);
 
             if (!rses->rses_config.strict_multi_stmt &&
                 rses->target_node == rses->current_master)
@@ -324,8 +330,8 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
  *
  * @return True if a backend was found
  */
-bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
-                        char *name, int max_rlag, SRWBackend& target)
+SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
+                              char *name, int max_rlag)
 {
     CHK_CLIENT_RSES(rses);
 
@@ -334,8 +340,7 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
     {
         MXS_DEBUG("In READ ONLY transaction, using server '%s'",
                   rses->target_node->server()->unique_name);
-        target = rses->target_node;
-        return true;
+        return rses->target_node;
     }
 
     bool succp = false;
@@ -360,8 +365,7 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                  SERVER_IS_RELAY_SERVER(bref->server()) ||
                  SERVER_IS_MASTER(bref->server())))
             {
-                target = bref;
-                return true;
+                return bref;
             }
         }
 
@@ -369,10 +373,10 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
         btype = BE_SLAVE;
     }
 
+    SRWBackend rval;
+
     if (btype == BE_SLAVE)
     {
-        SRWBackend candidate_bref;
-
         for (SRWBackendList::iterator it = rses->backends.begin();
              it != rses->backends.end(); it++)
         {
@@ -391,7 +395,7 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * If there are no candidates yet accept both master or
              * slave.
              */
-            else if (!candidate_bref)
+            else if (!rval)
             {
                 /**
                  * Ensure that master has not changed during
@@ -400,8 +404,7 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 if (SERVER_IS_MASTER(bref->server()) && bref == rses->current_master)
                 {
                     /** found master */
-                    candidate_bref = bref;
-                    succp = true;
+                    rval = bref;
                 }
                 /**
                  * Ensure that max replication lag is not set
@@ -413,15 +416,14 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                           bref->server()->rlag <= max_rlag))
                 {
                     /** found slave */
-                    candidate_bref = bref;
-                    succp = true;
+                    rval = bref;
                 }
             }
             /**
              * If candidate is master, any slave which doesn't break
              * replication lag limits replaces it.
              */
-            else if (SERVER_IS_MASTER(candidate_bref->server()) &&
+            else if (SERVER_IS_MASTER(rval->server()) &&
                      SERVER_IS_SLAVE(bref->server()) &&
                      (max_rlag == MAX_RLAG_UNDEFINED ||
                       (bref->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
@@ -429,8 +431,7 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                      !rses->rses_config.master_accept_reads)
             {
                 /** found slave */
-                candidate_bref = bref;
-                succp = true;
+                rval = bref;
             }
             /**
              * When candidate exists, compare it against the current
@@ -445,8 +446,7 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                     (bref->server()->rlag != MAX_RLAG_NOT_AVAILABLE &&
                      bref->server()->rlag <= max_rlag))
                 {
-                    candidate_bref = check_candidate_bref(candidate_bref, bref,
-                                                          rses->rses_config.slave_selection_criteria);
+                    rval = check_candidate_bref(rval, bref, rses->rses_config.slave_selection_criteria);
                 }
                 else
                 {
@@ -457,13 +457,6 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 }
             }
         } /*<  for */
-
-        /** Assign selected DCB's pointer value */
-        if (candidate_bref)
-        {
-            target = candidate_bref;
-        }
-
     }
     /**
      * If target was originally master only then the execution jumps
@@ -483,8 +476,7 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
             {
                 if (SERVER_IS_MASTER(&server))
                 {
-                    target = master_bref;
-                    succp = true;
+                    rval = master_bref;
                 }
                 else
                 {
@@ -492,19 +484,17 @@ bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                               "and can't be chosen as the master.",
                               master_bref->server()->unique_name,
                               STRSRVSTATUS(&server));
-                    succp = false;
                 }
             }
             else
             {
                 MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
                           master_bref->server()->unique_name);
-                succp = false;
             }
         }
     }
 
-    return succp;
+    return rval;
 }
 
 /**
@@ -811,12 +801,11 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
-                          route_target_t route_target, SRWBackend& target)
+SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+                                route_target_t route_target)
 {
     char *named_server = NULL;
     int rlag_max = MAX_RLAG_UNDEFINED;
-    bool succp;
 
     HINT* hint = querybuf->hint;
 
@@ -859,9 +848,9 @@ bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
      * Search backend server by name or replication lag.
      * If it fails, then try to find valid slave or master.
      */
-    succp = get_target_backend(rses, btype, named_server, rlag_max, target);
+    SRWBackend target = get_target_backend(rses, btype, named_server, rlag_max);
 
-    if (!succp)
+    if (!target)
     {
         if (TARGET_IS_NAMED_SERVER(route_target))
         {
@@ -876,7 +865,8 @@ bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                      "find such a slave.", rlag_max);
         }
     }
-    return succp;
+
+    return target;
 }
 
 /**
@@ -890,24 +880,21 @@ bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                            SRWBackend& target)
+SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses)
 {
     int rlag_max = rses_get_max_replication_lag(rses);
+    SRWBackend target = get_target_backend(rses, BE_SLAVE, NULL, rlag_max);
 
-    /**
-     * Search suitable backend server, get DCB in target_dcb
-     */
-    if (get_target_backend(rses, BE_SLAVE, NULL, rlag_max, target))
+    if (target)
     {
         atomic_add_uint64(&inst->stats.n_slave, 1);
-        return true;
     }
     else
     {
         MXS_INFO("Was supposed to route to slave but finding suitable one failed.");
-        return false;
     }
+
+    return target;
 }
 
 /**
@@ -980,12 +967,12 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
  *  @return bool - true if succeeded, false otherwise
  */
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                             SRWBackend& target)
+                             SRWBackend* dest)
 {
-    DCB *curr_master_dcb = NULL;
-    bool succp = get_target_backend(rses, BE_MASTER, NULL, MAX_RLAG_UNDEFINED, target);
+    SRWBackend target = get_target_backend(rses, BE_MASTER, NULL, MAX_RLAG_UNDEFINED);
+    bool succp = true;
 
-    if (succp && target == rses->current_master)
+    if (target && target == rses->current_master)
     {
         atomic_add_uint64(&inst->stats.n_master, 1);
     }
@@ -1008,6 +995,7 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
     }
 
+    *dest = target;
     return succp;
 }
 

@@ -51,7 +51,7 @@ bool send_readonly_error(DCB *dcb);
  * The following are implemented in readwritesplit.c
  */
 int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data);
-SRWBackend& get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb);
+SRWBackend get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb);
 int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses);
 int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses);
 
@@ -61,18 +61,17 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses);
 
 bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf);
-bool get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
-                        char *name, int max_rlag, SRWBackend& target);
+SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
+                              char *name, int max_rlag);
 route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
                                 uint32_t qtype, HINT *hint);
 void handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                                 uint8_t packet_type, uint32_t *qtype);
-bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
-                          route_target_t route_target, SRWBackend& target);
-bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                            SRWBackend& target);
+SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+                                route_target_t route_target);
+SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses);
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                             SRWBackend& target);
+                             SRWBackend* dest);
 bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf, SRWBackend& target, bool store);
 bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t command);
@@ -82,13 +81,21 @@ void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& bref,
 /*
  * The following are implemented in rwsplit_select_backends.c
  */
+
+/** What sort of connections should be create */
+enum connection_type
+{
+    ALL,
+    SLAVE
+};
+
 bool select_connect_backend_servers(int router_nservers,
                                     int max_nslaves,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
                                     ROUTER_INSTANCE *router,
                                     ROUTER_CLIENT_SES *rses,
-                                    bool active_session);
+                                    connection_type type);
 
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c

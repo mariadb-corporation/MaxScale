@@ -146,14 +146,6 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
     return conf_max_rlag;
 }
 
-namespace
-{
-
-/** This will never get used but it should catch faults in the code */
-static SRWBackend no_backend;
-
-}
-
 /**
  * @brief Find a back end reference that matches the given DCB
  *
@@ -165,7 +157,7 @@ static SRWBackend no_backend;
  *
  * @return backend reference pointer if succeed or NULL
  */
-SRWBackend& get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
+SRWBackend get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
 {
     ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
@@ -184,7 +176,7 @@ SRWBackend& get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
 
     /** We should always have a valid backend reference */
     ss_dassert(false);
-    return no_backend;
+    return SRWBackend();
 }
 
 /**
@@ -335,7 +327,7 @@ static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
     mxs_session_state_t sesstate = ses->state;
     DCB *client_dcb = ses->client_dcb;
 
-    SRWBackend& bref = get_bref_from_dcb(rses, backend_dcb);
+    SRWBackend bref = get_bref_from_dcb(rses, backend_dcb);
 
     bref->close();
 
@@ -346,7 +338,7 @@ static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
     }
 }
 
-static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, SRWBackend& old, GWBUF *stored)
+static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& old, GWBUF *stored)
 {
     bool success = false;
 
@@ -420,7 +412,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                         DCB *backend_dcb, GWBUF *errmsg)
 {
     ROUTER_CLIENT_SES *myrses = *rses;
-    SRWBackend& bref = get_bref_from_dcb(myrses, backend_dcb);
+    SRWBackend bref = get_bref_from_dcb(myrses, backend_dcb);
 
     MXS_SESSION* ses = backend_dcb->session;
     CHK_SESSION(ses);
@@ -486,7 +478,8 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
     {
         succp = select_connect_backend_servers(myrses->rses_nbackends, max_nslaves,
                                                myrses->rses_config.slave_selection_criteria,
-                                               ses, inst, myrses, true);
+                                               ses, inst, myrses,
+                                               connection_type::SLAVE);
     }
 
     return succp;
@@ -596,7 +589,7 @@ bool route_stored_query(ROUTER_CLIENT_SES *rses)
  *
  * @return True if the complete response has been received
  */
-bool reply_is_complete(SRWBackend& bref, GWBUF *buffer)
+bool reply_is_complete(SRWBackend bref, GWBUF *buffer)
 {
     mysql_server_cmd_t cmd = mxs_mysql_current_command(bref->dcb()->session);
 
@@ -802,7 +795,8 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
 
     if (!select_connect_backend_servers(router_nservers, max_nslaves,
                                         client_rses->rses_config.slave_selection_criteria,
-                                        session, router, client_rses, false))
+                                        session, router, client_rses,
+                                        connection_type::ALL))
     {
         /**
          * Master and at least <min_nslaves> slaves must be found if the router is
@@ -1114,7 +1108,7 @@ static void clientReply(MXS_ROUTER *instance,
      *    and
      */
 
-    SRWBackend& bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
+    SRWBackend bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
 
     /** Statement was successfully executed, free the stored statement */
     session_clear_stmt(backend_dcb->session);
@@ -1154,7 +1148,7 @@ static void clientReply(MXS_ROUTER *instance,
                 router_cli_ses->client_dcb->session,
                 router_cli_ses->router,
                 router_cli_ses,
-                true);
+                connection_type::SLAVE);
         }
     }
 
@@ -1256,7 +1250,7 @@ static void handleError(MXS_ROUTER *instance,
     MXS_SESSION *session = problem_dcb->session;
     ss_dassert(session);
 
-    SRWBackend& bref = get_bref_from_dcb(rses, problem_dcb);
+    SRWBackend bref = get_bref_from_dcb(rses, problem_dcb);
 
     switch (action)
     {

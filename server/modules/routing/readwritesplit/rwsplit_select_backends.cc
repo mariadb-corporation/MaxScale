@@ -133,7 +133,7 @@ bool select_connect_backend_servers(int router_nservers,
                                     MXS_SESSION *session,
                                     ROUTER_INSTANCE *router,
                                     ROUTER_CLIENT_SES *rses,
-                                    bool active_session)
+                                    connection_type type)
 {
     /* get the root Master */
     SERVER_REF *master_backend = get_root_master(rses);
@@ -156,7 +156,7 @@ bool select_connect_backend_servers(int router_nservers,
      * Master is already connected or we don't have a master. The function was
      * called because new slaves must be selected to replace failed ones.
      */
-    bool master_connected = active_session || rses->current_master;
+    bool master_connected = type == SLAVE || rses->current_master;
 
     /** Check slave selection criteria and set compare function */
     int (*cmpfun)(const void *, const void *) = criteria_cmpfun[select_criteria];
