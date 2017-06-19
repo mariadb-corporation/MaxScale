@@ -27,7 +27,9 @@ MXS_BEGIN_DECLS
 
 #define MAX_SERVER_ADDRESS_LEN 1024
 #define MAX_SERVER_MONUSER_LEN 1024
-#define MAX_SERVER_MONPW_LEN 1024
+#define MAX_SERVER_MONPW_LEN   1024
+#define MAX_SERVER_VERSION_LEN 256
+
 #define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
 
 /**
@@ -88,7 +90,7 @@ typedef struct server
     SERVER_STATS   stats;          /**< The server statistics */
     struct  server *next;          /**< Next server */
     struct  server *nextdb;        /**< Next server in list attached to a service */
-    char           *server_string; /**< Server version string, i.e. MySQL server version */
+    char           version_string[MAX_SERVER_VERSION_LEN]; /**< Server version string, i.e. MySQL server version */
     long           node_id;        /**< Node id, server_id for M/S or local_index for Galera */
     int            rlag;           /**< Replication Lag for Master / Slave replication */
     unsigned long  node_ts;        /**< Last timestamp set from M/S monitor module */
@@ -308,7 +310,7 @@ extern DCB  *server_get_persistent(SERVER *server, const char *user, const char 
 extern void server_update_address(SERVER *server, const char *address);
 extern void server_update_port(SERVER *server,  unsigned short port);
 extern unsigned int server_map_status(const char *str);
-extern bool server_set_version_string(SERVER* server, const char* string);
+extern void server_set_version_string(SERVER* server, const char* string);
 extern void server_set_status(SERVER *server, int bit);
 extern void server_clear_status(SERVER *server, int bit);
 

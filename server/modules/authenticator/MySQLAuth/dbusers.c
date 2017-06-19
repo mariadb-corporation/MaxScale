@@ -522,14 +522,14 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     mysql_get_character_set_info(mysql, &cs_info);
     server->charset = cs_info.number;
 
-    if (server->server_string == NULL)
+    if (server->version_string[0] == 0)
     {
-        const char *server_string = mysql_get_server_info(mysql);
-        server_set_version_string(server, server_string);
+        const char *version_string = mysql_get_server_info(mysql);
+        server_set_version_string(server, version_string);
     }
 
     const char *template = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
-    const char* query_pw = strstr(server->server_string, "5.7.") ?
+    const char* query_pw = strstr(server->version_string, "5.7.") ?
     MYSQL57_PASSWORD : MYSQL_PASSWORD;
     char query[strlen(template) + strlen(query_pw) + 1];
     bool rval = true;
@@ -726,18 +726,15 @@ void commit_sqlite_transaction(sqlite3 *handle)
     }
 }
 
-int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV_LISTENER *listener)
+int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, SERV_LISTENER *listener)
 {
-    if (server->server->server_string == NULL)
+    if (server_ref->server->version_string[0] == 0)
     {
-        const char *server_string = mysql_get_server_info(con);
-        if (!server_set_version_string(server->server, server_string))
-        {
-            return -1;
-        }
+        const char *version_string = mysql_get_server_info(con);
+        server_set_version_string(server_ref->server, version_string);
     }
 
-    char *query = get_new_users_query(server->server->server_string, service->enable_root);
+    char *query = get_new_users_query(server_ref->server->version_string, service->enable_root);
     MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
     bool anon_user = false;
     int users = 0;
