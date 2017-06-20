@@ -1256,6 +1256,40 @@ pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params,
     return code;
 }
 
+bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER *params,
+                                 const char* keys[], int keys_size,
+                                 uint32_t options, uint32_t* out_ovec_size,
+                                 pcre2_code** out_codes[])
+{
+    bool rval = true;
+    uint32_t max_ovec_size = 0;
+    uint32_t ovec_size_temp = 0;
+    for (int i = 0; i < keys_size; i++)
+    {
+        ss_dassert(out_codes[i]);
+        *out_codes[i] = config_get_compiled_regex(params, keys[i], options,
+                                                    &ovec_size_temp);
+        if (*out_codes[i])
+        {
+            if (ovec_size_temp > max_ovec_size)
+            {
+                max_ovec_size = ovec_size_temp;
+            }
+        }
+        /* config_get_compiled_regex() returns null also if the config setting
+         * didn't exist. Check that before setting error state. */
+        else if (*(config_get_value_string(params, keys[i])))
+        {
+            rval = false;
+        }
+    }
+    if (out_ovec_size)
+    {
+        *out_ovec_size = max_ovec_size;
+    }
+    return rval;
+}
+
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
 {
     MXS_CONFIG_PARAMETER *p2 = (MXS_CONFIG_PARAMETER*)MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER));
