@@ -96,7 +96,11 @@ static const char* token_get_keyword(
 {
     switch (token->token)
     {
-    case TOK_EOL:
+    case TOK_END:
+        return "End of hint";
+        break;
+
+    case TOK_LINEBRK:
         return "End of line";
         break;
 
@@ -107,14 +111,14 @@ static const char* token_get_keyword(
     default:
         {
             int i = 0;
-            while (i < TOK_EOL && keywords[i].token != token->token)
+            while (i < TOK_LINEBRK && keywords[i].token != token->token)
             {
                 i++;
             }
 
-            ss_dassert(i != TOK_EOL);
+            ss_dassert(i != TOK_LINEBRK);
 
-            if (i == TOK_EOL)
+            if (i == TOK_LINEBRK)
             {
                 return "Unknown token";
             }
@@ -147,7 +151,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
     GWBUF *buf;
     HINT_TOKEN *tok;
     HINT_MODE mode = HM_EXECUTE;
-
+    bool multiline_comment = false;
     /* First look for any comment in the SQL */
     modutil_MySQL_Query(request, &ptr, &len, &residual);
     buf = request;
@@ -180,7 +184,9 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                 squoted = 0;
             }
             else if (quoted || squoted)
+            {
                 ;
+            }
             else if (escape)
             {
                 escape = 0;
@@ -197,6 +203,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             else if (*ptr == '*' && lastch == '/')
             {
                 found = 1;
+                multiline_comment = true;
                 break;
             }
             else if (*ptr == '-' && lastch == '-')
@@ -271,9 +278,24 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
 
     state = HS_INIT;
 
-    while ((tok = hint_next_token(&buf, &ptr)) != NULL
-           && tok->token != TOK_EOL)
+    while (((tok = hint_next_token(&buf, &ptr)) != NULL) &&
+           (tok->token != TOK_END))
     {
+        if (tok->token == TOK_LINEBRK)
+        {
+            if (multiline_comment)
+            {
+                // Skip token
+                token_free(tok);
+                continue;
+            }
+            else
+            {
+                // Treat as TOK_END
+                tok->token = TOK_END;
+                break;
+            }
+        }
         switch (state)
         {
         case HS_INIT:
@@ -365,6 +387,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
             {
             case TOK_EQUAL:
                 pname = lvalue;
+                lvalue = NULL;
                 state = HS_PVALUE;
                 break;
             case TOK_PREPARE:
@@ -390,6 +413,8 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
         case HS_PVALUE:
             /* Action: pname = tok->value */
             rval = hint_create_parameter(rval, pname, tok->value);
+            MXS_FREE(pname);
+            pname = NULL;
             state = HS_INIT;
             break;
         case HS_PREPARE:
@@ -418,7 +443,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
         token_free(tok);
     } /*< while */
 
-    if (tok && tok->token == TOK_EOL)
+    if (tok && tok->token == TOK_END)
     {
         token_free(tok);
     }
@@ -536,8 +561,8 @@ hint_next_token(GWBUF **buf, char **ptr)
             inword = 0;
             break;
         }
-        /** found '=', move ptr and return with '=' */
-        else if (!inword && inquote == '\0' && **ptr == '=')
+        /** found '=' or '\n', move ptr and return with the char */
+        else if (!inword && inquote == '\0' && ((**ptr == '=') || (**ptr == '\n')))
         {
             *dest = **ptr;
             dest++;
@@ -590,7 +615,12 @@ hint_next_token(GWBUF **buf, char **ptr)
      */
     if (word[0] == '\0' || (word[0] == '*' && word[1] == '/'))
     {
-        tok->token = TOK_EOL;
+        tok->token = TOK_END;
+        return tok;
+    }
+    if (word[0] == '\n')
+    {
+        tok->token = TOK_LINEBRK;
         return tok;
     }
     found = 0;

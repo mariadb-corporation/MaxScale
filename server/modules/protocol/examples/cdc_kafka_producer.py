@@ -38,7 +38,7 @@ while True:
       if len(buf) == 0:
          break
 
-      data = buf.encode().strip()
+      data = buf[:-1]
       producer.send(topic=opts.kafka_topic, value=data)
       producer.flush()
 

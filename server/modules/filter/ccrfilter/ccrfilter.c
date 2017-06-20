@@ -296,6 +296,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     CCR_SESSION  *my_session = (CCR_SESSION *)session;
     char *sql;
+    regmatch_t limits[] = {{0, 0}};
     time_t now = time(NULL);
 
     if (modutil_is_SQL(queue))
@@ -306,7 +307,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
          */
         if (qc_query_is_type(qc_get_type_mask(queue), QUERY_TYPE_WRITE))
         {
-            if ((sql = modutil_get_SQL(queue)) != NULL)
+            if (modutil_extract_SQL(queue, &sql, &limits[0].rm_eo))
             {
                 bool trigger_ccr = true;
                 bool decided = false; // Set by hints to take precedence.
@@ -323,13 +324,13 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 if (!decided)
                 {
                     if (my_instance->nomatch &&
-                        regexec(&my_instance->nore, sql, 0, NULL, 0) == 0)
+                        regexec(&my_instance->nore, sql, 0, limits, 0) == 0)
                     {
                         // Nomatch was present and sql matched it.
                         trigger_ccr = false;
                     }
                     else if (my_instance->match &&
-                             (regexec(&my_instance->re, sql, 0, NULL, 0) != 0))
+                             (regexec(&my_instance->re, sql, 0, limits, 0) != 0))
                     {
                         // Match was present but sql did *not* match it.
                         trigger_ccr = false;
@@ -351,7 +352,6 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
                     my_instance->stats.n_modified++;
                 }
-                MXS_FREE(sql);
             }
         }
         else if (my_session->hints_left > 0)

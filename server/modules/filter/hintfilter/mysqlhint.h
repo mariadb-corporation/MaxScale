@@ -40,7 +40,8 @@ typedef enum
     TOK_MASTER,
     TOK_SLAVE,
     TOK_SERVER,
-    TOK_EOL
+    TOK_LINEBRK,
+    TOK_END
 } TOKEN_VALUE;
 
 /* The tokenising return type */
