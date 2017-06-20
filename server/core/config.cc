@@ -1244,9 +1244,16 @@ pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params,
                                       uint32_t* output_ovec_size)
 {
     const char* regex_string = config_get_string(params, key);
-    uint32_t jit_available = 0;
-    pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
-    return compile_regex_string(regex_string, jit_available, options, output_ovec_size);
+    pcre2_code* code = NULL;
+
+    if (*regex_string)
+    {
+        uint32_t jit_available = 0;
+        pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
+        code = compile_regex_string(regex_string, jit_available, options, output_ovec_size);
+    }
+
+    return code;
 }
 
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
