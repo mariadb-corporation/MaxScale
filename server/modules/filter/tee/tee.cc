@@ -29,31 +29,23 @@
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", REG_ICASE},
-    {"case", 0},
-    {"extended", REG_EXTENDED},
+    {"ignorecase", PCRE2_CASELESS},
+    {"case",       0},
+    {"extended",   PCRE2_EXTENDED},
     {NULL}
 };
 
-Tee::Tee(SERVICE* service, const char* user, const char* remote,
-         const char* match, const char* nomatch, int cflags):
+Tee::Tee(SERVICE* service, std::string user, std::string remote,
+         pcre2_code* match, std::string match_string,
+         pcre2_code* exclude, std::string exclude_string):
     m_service(service),
     m_user(user),
     m_source(remote),
-    m_match(match),
-    m_nomatch(nomatch)
+    m_match_code(match),
+    m_exclude_code(exclude),
+    m_match(match_string),
+    m_exclude(exclude_string)
 {
-    if (*match)
-    {
-        ss_debug(int rc = )regcomp(&m_re, match, cflags);
-        ss_dassert(rc == 0);
-    }
-
-    if (*nomatch)
-    {
-        ss_debug(int rc = )regcomp(&m_nore, nomatch, cflags);
-        ss_dassert(rc == 0);
-    }
 }
 
 /**
@@ -68,34 +60,22 @@ Tee::Tee(SERVICE* service, const char* user, const char* remote,
  */
 Tee* Tee::create(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    Tee *my_instance = NULL;
-
     SERVICE* service = config_get_service(params, "service");
     const char* source = config_get_string(params, "source");
     const char* user = config_get_string(params, "user");
-    const char* match = config_get_string(params, "match");
-    const char* nomatch = config_get_string(params, "exclude");
+    uint32_t cflags = config_get_enum(params, "options", option_values);
+    pcre2_code* match = config_get_compiled_regex(params, "match", cflags, NULL);
+    pcre2_code* exclude = config_get_compiled_regex(params, "exclude", cflags, NULL);
+    const char* match_str = config_get_string(params, "match");
+    const char* exclude_str = config_get_string(params, "exclude");
 
-    int cflags = config_get_enum(params, "options", option_values);
-    regex_t re;
-    regex_t nore;
+    Tee* my_instance = new (std::nothrow) Tee(service, source, user, match,
+                                              match_str, exclude, exclude_str);
 
-    if (*match && regcomp(&re, match, cflags) != 0)
+    if (my_instance == NULL)
     {
-        MXS_ERROR("Invalid regular expression '%s' for the match parameter.", match);
-    }
-    else if (*nomatch && regcomp(&nore, nomatch, cflags) != 0)
-    {
-        MXS_ERROR("Invalid regular expression '%s' for the nomatch parameter.", nomatch);
-
-        if (*match)
-        {
-            regfree(&re);
-        }
-    }
-    else
-    {
-        my_instance = new (std::nothrow) Tee(service, source, user, match, nomatch, cflags);
+        pcre2_code_free(match);
+        pcre2_code_free(exclude);
     }
 
     return my_instance;
@@ -136,10 +116,10 @@ void Tee::diagnostics(DCB *dcb)
         dcb_printf(dcb, "\t\tInclude queries that match		%s\n",
                    m_match.c_str());
     }
-    if (m_nomatch.c_str())
+    if (m_exclude.c_str())
     {
         dcb_printf(dcb, "\t\tExclude queries that match		%s\n",
-                   m_nomatch.c_str());
+                   m_exclude.c_str());
     }
 }
 
@@ -174,9 +154,9 @@ json_t* Tee::diagnostics_json() const
         json_object_set_new(rval, "match", json_string(m_match.c_str()));
     }
 
-    if (m_nomatch.length())
+    if (m_exclude.length())
     {
-        json_object_set_new(rval, "exclude", json_string(m_nomatch.c_str()));
+        json_object_set_new(rval, "exclude", json_string(m_exclude.c_str()));
     }
 
     return rval;
@@ -210,8 +190,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread finish. */
         {
             {"service", MXS_MODULE_PARAM_SERVICE, NULL, MXS_MODULE_OPT_REQUIRED},
-            {"match", MXS_MODULE_PARAM_STRING},
-            {"exclude", MXS_MODULE_PARAM_STRING},
+            {"match", MXS_MODULE_PARAM_REGEX},
+            {"exclude", MXS_MODULE_PARAM_REGEX},
             {"source", MXS_MODULE_PARAM_STRING},
             {"user", MXS_MODULE_PARAM_STRING},
             {

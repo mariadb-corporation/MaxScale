@@ -57,15 +57,26 @@ public:
         return m_service;
     }
 
+    pcre2_code* get_match() const
+    {
+        return m_match_code;
+    }
+
+    pcre2_code* get_exclude() const
+    {
+        return m_exclude_code;
+    }
+
 private:
-    Tee(SERVICE* service, const char* user, const char* remote,
-        const char* match, const char* nomatch, int cflags);
+    Tee(SERVICE* service, std::string user, std::string remote,
+        pcre2_code* match, std::string match_string,
+        pcre2_code* exclude, std::string exclude_string);
 
     SERVICE*    m_service;
-    std::string m_user; /* The user name to filter on */
-    std::string m_source; /* The source of the client connection */
-    std::string m_match; /* Optional text to match against */
-    std::string m_nomatch; /* Optional text to match against for exclusion */
-    regex_t m_re; /* Compiled regex text */
-    regex_t m_nore; /* Compiled regex nomatch text */
+    std::string m_user;         /* The user name to filter on */
+    std::string m_source;       /* The source of the client connection */
+    pcre2_code* m_match_code;   /* Compiled match pattern */
+    pcre2_code* m_exclude_code; /* Compiled exclude pattern*/
+    std::string m_match;        /* Pattern for matching queries */
+    std::string m_exclude;      /* Pattern for excluding queries */
 };

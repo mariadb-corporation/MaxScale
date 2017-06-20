@@ -15,6 +15,6 @@ file.
 ### Regular Expression Parameters
 
 Modules may now use a built-in regular expression string parameter type instead
-of a normal string when accepting patterns. The only module using the new regex
-parameter type is currently *QLAFilter*. When inputting pattern, enclose the
+of a normal string when accepting patterns. The modules that use the new regex
+parameter type are *qlafilter* and *tee*. When inputting pattern, enclose the
 string in slashes, e.g. `match=/^select/` defines the pattern `^select`.

@@ -38,6 +38,14 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    TeeSession(MXS_SESSION* session, LocalClient* client);
-    LocalClient*   m_client;  /**< The client connection to the local service */
+    TeeSession(MXS_SESSION* session, LocalClient* client,
+               pcre2_code* match, pcre2_match_data* md_match,
+               pcre2_code* exclude, pcre2_match_data* md_exclude);
+    bool query_matches(GWBUF* buffer);
+
+    LocalClient*      m_client;  /**< The client connection to the local service */
+    pcre2_code*       m_match;
+    pcre2_match_data* m_md_match;
+    pcre2_code*       m_exclude;
+    pcre2_match_data* m_md_exclude;
 };

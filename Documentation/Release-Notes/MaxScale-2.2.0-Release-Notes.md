@@ -50,6 +50,10 @@ In addition to the aforementioned requirements, a failure to create a branched
 session no longer causes the actual client session to be closed. In most cases,
 this is desired behavior.
 
+The `match` and `exclude` parameters were changed to use PCRE2 syntax for the
+regular expressions. The regular expression should be enclosed by slashes
+e.g. `match=/select.*from.*test/`.
+
 ## Dropped Features
 
 ### MaxAdmin
