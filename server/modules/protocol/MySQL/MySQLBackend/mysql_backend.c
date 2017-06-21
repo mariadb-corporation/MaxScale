@@ -808,18 +808,27 @@ gw_read_and_write(DCB *dcb)
          */
         if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, true) != MYSQL_COM_UNDEFINED)
         {
-            stmt = process_response_data(dcb, &read_buffer, gwbuf_length(read_buffer));
-            /**
-             * Received incomplete response to session command.
-             * Store it to readqueue and return.
-             */
-            if (!sescmd_response_complete(dcb))
+            if (result_collected)
             {
-                stmt = gwbuf_append(stmt, read_buffer);
-                dcb->dcb_readqueue = gwbuf_append(stmt, dcb->dcb_readqueue);
-                return 0;
+                /** The result set or PS response was collected, we know it's complete */
+                stmt = read_buffer;
+                read_buffer = NULL;
+                gwbuf_set_type(stmt, GWBUF_TYPE_RESPONSE_END | GWBUF_TYPE_SESCMD_RESPONSE);
             }
-
+            else
+            {
+                stmt = process_response_data(dcb, &read_buffer, gwbuf_length(read_buffer));
+                /**
+                 * Received incomplete response to session command.
+                 * Store it to readqueue and return.
+                 */
+                if (!sescmd_response_complete(dcb))
+                {
+                    stmt = gwbuf_append(stmt, read_buffer);
+                    dcb->dcb_readqueue = gwbuf_append(stmt, dcb->dcb_readqueue);
+                    return 0;
+                }
+            }
             if (!stmt)
             {
                 MXS_ERROR("Read buffer unexpectedly null, even though response "

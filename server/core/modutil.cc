@@ -1310,7 +1310,7 @@ bool modutil_ignorable_ping(DCB *dcb)
     return rval;
 }
 
-const char format_str[] = "COM_UNKNOWN(%02x)";
+const char format_str[] = "COM_UNKNOWN(%02hhx)";
 
 // The message always fits inside the buffer
 thread_local char unknow_type[sizeof(format_str)] = "";
