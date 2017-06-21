@@ -38,9 +38,12 @@ uint64_t SessionCommand::get_position() const
     return m_pos;
 }
 
-Buffer SessionCommand::copy_buffer() const
+GWBUF* SessionCommand::deep_copy_buffer()
 {
-    return m_buffer;
+    GWBUF* temp = m_buffer.release();
+    GWBUF* rval = gwbuf_deep_clone(temp);
+    m_buffer.reset(temp);
+    return rval;
 }
 
 SessionCommand::SessionCommand(GWBUF *buffer, uint64_t id):

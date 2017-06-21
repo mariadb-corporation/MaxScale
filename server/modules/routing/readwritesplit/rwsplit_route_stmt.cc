@@ -91,15 +91,9 @@ void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     ss_dassert(nserv < rses->rses_nbackends);
 }
 
-static inline bool is_ps_command(uint8_t cmd)
+uint32_t get_stmt_id(ROUTER_CLIENT_SES* rses, GWBUF* buffer)
 {
-    return cmd == MYSQL_COM_STMT_EXECUTE ||
-           cmd == MYSQL_COM_STMT_SEND_LONG_DATA;
-}
-
-uint64_t get_stmt_id(ROUTER_CLIENT_SES* rses, GWBUF* buffer)
-{
-    uint64_t rval = 0;
+    uint32_t rval = 0;
 
     // All COM_STMT type statements store the ID in the same place
     uint32_t id = mxs_mysql_extract_ps_id(buffer);
@@ -111,6 +105,12 @@ uint64_t get_stmt_id(ROUTER_CLIENT_SES* rses, GWBUF* buffer)
     }
 
     return rval;
+}
+
+void replace_stmt_id(GWBUF* buffer, uint32_t id)
+{
+    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+    gw_mysql_set_byte4(ptr, id);
 }
 
 /**
@@ -135,7 +135,6 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     /* packet_type is a problem as it is MySQL specific */
     uint8_t command = determine_packet_type(querybuf, &non_empty_packet);
     uint32_t qtype = determine_query_type(querybuf, command, non_empty_packet);
-    uint64_t stmt_id = 0;
 
     if (non_empty_packet)
     {
@@ -163,8 +162,6 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
          *   eventually to master
          */
 
-        uint32_t ps_type;
-
         if (command == MYSQL_COM_QUERY &&
             qc_get_operation(querybuf) == QUERY_OP_EXECUTE)
         {
@@ -173,11 +170,12 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
         else if (is_ps_command(command))
         {
-            stmt_id = get_stmt_id(rses, querybuf);
+            uint32_t stmt_id = get_stmt_id(rses, querybuf);
             qtype = rses->ps_manager.get_type(stmt_id);
+            replace_stmt_id(querybuf, stmt_id);
         }
 
-        route_target = get_route_target(rses, qtype, querybuf->hint);
+        route_target = get_route_target(rses, command, qtype, querybuf->hint);
     }
     else
     {
@@ -233,7 +231,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         if (target && succp) /*< Have DCB of the target backend */
         {
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
-            handle_got_target(inst, rses, querybuf, target, store_stmt, stmt_id);
+            handle_got_target(inst, rses, querybuf, target, store_stmt);
         }
     }
 
@@ -541,7 +539,7 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
  *  @return bitfield including the routing target, or the target server name
  *          if the query would otherwise be routed to slave.
  */
-route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
+route_target_t get_route_target(ROUTER_CLIENT_SES *rses, uint8_t command,
                                 uint32_t qtype, HINT *hint)
 {
     bool trx_active = session_trx_is_active(rses->client_dcb->session);
@@ -1044,8 +1042,7 @@ static inline bool query_creates_reply(mysql_server_cmd_t cmd)
  *  @return True on success
  */
 bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                       GWBUF *querybuf, SRWBackend& target,
-                       bool store, uint64_t stmt_id)
+                       GWBUF *querybuf, SRWBackend& target, bool store)
 {
     /**
      * If the transaction is READ ONLY set forced_node to this backend.
@@ -1074,7 +1071,7 @@ bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         response = mxs::Backend::EXPECT_RESPONSE;
     }
 
-    if (target->write(gwbuf_clone(querybuf), response, stmt_id))
+    if (target->write(gwbuf_clone(querybuf), response))
     {
         if (store && !session_store_stmt(rses->client_dcb->session, querybuf, target->server()))
         {

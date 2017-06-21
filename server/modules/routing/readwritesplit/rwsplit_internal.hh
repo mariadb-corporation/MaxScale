@@ -65,7 +65,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf);
 SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                               char *name, int max_rlag);
-route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
+route_target_t get_route_target(ROUTER_CLIENT_SES *rses, uint8_t command,
                                 uint32_t qtype, HINT *hint);
 void handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                                 uint8_t packet_type, uint32_t *qtype);
@@ -75,8 +75,7 @@ SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                              SRWBackend* dest);
 bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                       GWBUF *querybuf, SRWBackend& target,
-                       bool store, uint64_t stmt_id);
+                       GWBUF *querybuf, SRWBackend& target, bool store);
 bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                          uint8_t command, uint32_t type);
 

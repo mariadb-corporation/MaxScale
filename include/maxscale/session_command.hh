@@ -54,10 +54,11 @@ public:
     uint64_t get_position() const;
 
     /**
-     * @brief Creates a copy of the internal buffer
-     * @return A copy of the internal buffer
+     * @brief Creates a deep copy of the internal buffer
+     *
+     * @return A deep copy of the internal buffer or NULL on error
      */
-    mxs::Buffer copy_buffer() const;
+    GWBUF* deep_copy_buffer();
 
     /**
      * @brief Create a new session command

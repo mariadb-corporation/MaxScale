@@ -213,6 +213,21 @@ extern void gwbuf_free(GWBUF *buf);
 extern GWBUF *gwbuf_clone(GWBUF *buf);
 
 /**
+ * @brief Deep clone a GWBUF
+ *
+ * Clone the data inside a GWBUF into a new buffer. The created buffer has its
+ * own internal buffer and any modifications to the deep cloned buffer will not
+ * reflect on the original one. Any buffer objects attached to the original buffer
+ * will not be copied. Only the buffer type of the original buffer will be copied
+ * over to the cloned buffer.
+ *
+ * @param buf Buffer to clone
+ *
+ * @return Deep copy of @c buf or NULL on error
+ */
+extern GWBUF* gwbuf_deep_clone(const GWBUF* buf);
+
+/**
  * Compare two GWBUFs. Two GWBUFs are considered identical if their
  * content is identical, irrespective of whether one is segmented and
  * the other is not.

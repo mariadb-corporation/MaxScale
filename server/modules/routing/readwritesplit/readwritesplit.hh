@@ -155,8 +155,17 @@ struct rwsplit_config_t
                                              * been idle for too long */
 };
 
-typedef std::map<uint64_t, uint32_t> BackendHandleMap;
-typedef std::map<uint32_t, uint64_t> ClientHandleMap;
+static inline bool is_ps_command(uint8_t cmd)
+{
+    return cmd == MYSQL_COM_STMT_EXECUTE ||
+           cmd == MYSQL_COM_STMT_SEND_LONG_DATA ||
+           cmd == MYSQL_COM_STMT_CLOSE ||
+           cmd == MYSQL_COM_STMT_FETCH ||
+           cmd == MYSQL_COM_STMT_RESET;
+}
+
+typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
+typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
 
 class RWBackend: public mxs::Backend
 {
@@ -196,15 +205,15 @@ public:
         return rval;
     }
 
-    void add_ps_handle(uint64_t id, uint32_t handle)
+    void add_ps_handle(uint32_t id, uint32_t handle)
     {
         m_ps_handles[id] = handle;
-        MXS_INFO("PS response for %s: %lu -> %u", name(), id, handle);
+        MXS_INFO("PS response for %s: %u -> %u", name(), id, handle);
     }
 
-    uint32_t get_ps_handle(uint64_t id) const
+    uint32_t get_ps_handle(uint32_t id) const
     {
-        HandleMap::const_iterator it = m_ps_handles.find(id);
+        BackendHandleMap::const_iterator it = m_ps_handles.find(id);
 
         if (it != m_ps_handles.end())
         {
@@ -214,10 +223,13 @@ public:
         return 0;
     }
 
-    bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE, uint64_t id = 0)
+    bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE)
     {
-        if (id)
+        uint8_t cmd = mxs_mysql_get_command(buffer);
+
+        if (is_ps_command(cmd))
         {
+            uint32_t id = mxs_mysql_extract_ps_id(buffer);
             BackendHandleMap::iterator it = m_ps_handles.find(id);
 
             if (it != m_ps_handles.end())
@@ -237,7 +249,7 @@ private:
 };
 
 /** Prepared statement ID to type maps for text protocols */
-typedef std::tr1::unordered_map<uint64_t, uint32_t>    BinaryPSMap;
+typedef std::tr1::unordered_map<uint32_t, uint32_t>    BinaryPSMap;
 typedef std::tr1::unordered_map<std::string, uint32_t> TextPSMap;
 
 class PSManager
@@ -256,7 +268,7 @@ public:
      *               prepared statement
      * @param id     The unique ID for this statement
      */
-    void store(GWBUF* buffer, uint64_t id);
+    void store(GWBUF* buffer, uint32_t id);
 
     /**
      * @brief Get the type of a stored prepared statement
@@ -266,7 +278,7 @@ public:
      *
      * @return The type of the prepared statement
      */
-    uint32_t get_type(uint64_t id) const;
+    uint32_t get_type(uint32_t id) const;
     uint32_t get_type(std::string id) const;
 
     /**
@@ -275,7 +287,7 @@ public:
      * @param id Statement identifier to remove
      */
     void erase(std::string id);
-    void erase(uint64_t id);
+    void erase(uint32_t id);
 
 private:
     BinaryPSMap m_binary_ps;

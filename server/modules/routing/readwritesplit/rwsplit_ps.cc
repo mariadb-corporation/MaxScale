@@ -78,11 +78,11 @@ PSManager::~PSManager()
 {
 }
 
-void PSManager::erase(uint64_t id)
+void PSManager::erase(uint32_t id)
 {
     if (m_binary_ps.erase(id) == 0)
     {
-        MXS_WARNING("Closing unknown prepared statement with ID %lu", id);
+        MXS_WARNING("Closing unknown prepared statement with ID %u", id);
     }
 }
 
@@ -112,7 +112,7 @@ uint32_t PSManager::get_type(std::string id) const
 }
 
 
-uint32_t PSManager::get_type(uint64_t id) const
+uint32_t PSManager::get_type(uint32_t id) const
 {
     uint32_t rval = QUERY_TYPE_UNKNOWN;
     BinaryPSMap::const_iterator it = m_binary_ps.find(id);
@@ -123,14 +123,13 @@ uint32_t PSManager::get_type(uint64_t id) const
     }
     else
     {
-        MXS_WARNING("Using unknown prepared statement with ID %lu", id);
+        MXS_WARNING("Using unknown prepared statement with ID %u", id);
     }
 
-    ss_dassert(rval != QUERY_TYPE_UNKNOWN);
     return rval;
 }
 
-void PSManager::store(GWBUF* buffer, uint64_t id)
+void PSManager::store(GWBUF* buffer, uint32_t id)
 {
     ss_dassert(mxs_mysql_get_command(buffer) == MYSQL_COM_STMT_PREPARE ||
                qc_query_is_type(qc_get_type_mask(buffer),
