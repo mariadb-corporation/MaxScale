@@ -27,6 +27,7 @@
 
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/router.h>
 #include <maxscale/service.h>
 #include <maxscale/backend.hh>
@@ -117,8 +118,8 @@ enum ld_state
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
 /** Reply state change debug logging */
-#define LOG_RS(a, b) MXS_DEBUG("[%s]:%d %s -> %s", (a)->server()->name, \
-    (a)->server()->port, rstostr((a)->get_reply_state()), rstostr(b));
+#define LOG_RS(a, b) MXS_INFO("%s %s -> %s", (a)->uri(), \
+    rstostr((a)->get_reply_state()), rstostr(b));
 
 struct ROUTER_INSTANCE;
 struct ROUTER_CLIENT_SES;
@@ -152,6 +153,8 @@ struct rwsplit_config_t
     int               connection_keepalive; /**< Send pings to servers that have
                                              * been idle for too long */
 };
+
+typedef std::map<uint64_t, uint32_t> HandleMap;
 
 class RWBackend: public mxs::Backend
 {
@@ -191,8 +194,27 @@ public:
         return rval;
     }
 
+    void add_ps_handle(uint64_t id, uint32_t handle)
+    {
+        m_ps_handles[id] = handle;
+        MXS_INFO("PS response for %s: %lu -> %u", name(), id, handle);
+    }
+
+    uint32_t get_ps_handle(uint64_t id) const
+    {
+        HandleMap::const_iterator it = m_ps_handles.find(id);
+
+        if (it != m_ps_handles.end())
+        {
+            return it->second;
+        }
+
+        return 0;
+    }
+
 private:
     reply_state_t m_reply_state;
+    HandleMap     m_ps_handles;
 };
 
 typedef std::tr1::shared_ptr<RWBackend> SRWBackend;

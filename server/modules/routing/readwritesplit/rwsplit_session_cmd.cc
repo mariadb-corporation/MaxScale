@@ -36,7 +36,18 @@ void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& backend,
         {
             uint8_t cmd;
             gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
+            uint8_t command = backend->next_session_command()->get_command();
             uint64_t id = backend->complete_session_command();
+
+            if (command == MYSQL_COM_STMT_PREPARE)
+            {
+                MXS_PS_RESPONSE resp;
+
+                if (mxs_mysql_extract_ps_response(*ppPacket, &resp))
+                {
+                    backend->add_ps_handle(id, resp.id);
+                }
+            }
 
             if (rses->recv_sescmd < rses->sent_sescmd &&
                 id == rses->recv_sescmd + 1 &&
