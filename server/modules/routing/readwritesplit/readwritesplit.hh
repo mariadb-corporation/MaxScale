@@ -154,7 +154,8 @@ struct rwsplit_config_t
                                              * been idle for too long */
 };
 
-typedef std::map<uint64_t, uint32_t> HandleMap;
+typedef std::map<uint64_t, uint32_t> BackendHandleMap;
+typedef std::map<uint32_t, uint64_t> ClientHandleMap;
 
 class RWBackend: public mxs::Backend
 {
@@ -213,8 +214,8 @@ public:
     }
 
 private:
-    reply_state_t m_reply_state;
-    HandleMap     m_ps_handles;
+    reply_state_t    m_reply_state;
+    BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
 };
 
 /** Prepared statement ID to type maps for text protocols */
@@ -295,7 +296,8 @@ struct ROUTER_CLIENT_SES
     ResponseMap               sescmd_responses; /**< Response to each session command */
     uint64_t                  sent_sescmd; /**< ID of the last sent session command*/
     uint64_t                  recv_sescmd; /**< ID of the most recently completed session command */
-    PSManager                 ps_manager;   /**< Prepared statement manager*/
+    PSManager                 ps_manager;  /**< Prepared statement manager*/
+    ClientHandleMap           ps_handles;  /**< Client PS handle to internal ID mapping */
     skygw_chk_t               rses_chk_tail;
 };
 

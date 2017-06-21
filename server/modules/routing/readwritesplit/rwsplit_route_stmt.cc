@@ -148,6 +148,18 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             std::string id = extract_text_ps_id(querybuf);
             qtype = rses->ps_manager.get_type(id);
         }
+        else if (command == MYSQL_COM_STMT_EXECUTE)
+        {
+            uint32_t id = mxs_mysql_extract_execute(querybuf);
+            ClientHandleMap::iterator it = rses->ps_handles.find(id);
+
+            if (it != rses->ps_handles.end())
+            {
+                char *qtypestr = qc_typemask_to_string(rses->ps_manager.get_type(it->second));
+                MXS_INFO("Client handle %u maps to %lu of type %s", id, it->second, qtypestr);
+                MXS_FREE(qtypestr);
+            }
+        }
 
         route_target = get_route_target(rses, qtype, querybuf->hint);
     }

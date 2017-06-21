@@ -1636,3 +1636,16 @@ bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
 
     return rval;
 }
+
+uint32_t mxs_mysql_extract_execute(GWBUF* buffer)
+{
+    uint32_t rval = 0;
+    uint8_t id[MYSQL_PS_ID_SIZE];
+
+    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
+    {
+        rval = gw_mysql_get_byte4(id);
+    }
+
+    return rval;
+}

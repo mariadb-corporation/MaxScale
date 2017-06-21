@@ -126,6 +126,7 @@ uint32_t PSManager::get_type(uint64_t id) const
         MXS_WARNING("Using unknown prepared statement with ID %lu", id);
     }
 
+    ss_dassert(rval != QUERY_TYPE_UNKNOWN);
     return rval;
 }
 
