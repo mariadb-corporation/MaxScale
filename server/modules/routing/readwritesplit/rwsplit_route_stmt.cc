@@ -142,10 +142,11 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
         uint32_t ps_type;
 
-        if (qc_get_operation(querybuf) == QUERY_OP_EXECUTE &&
-            get_text_ps_type(rses, querybuf, &ps_type))
+        if (command == MYSQL_COM_QUERY &&
+            qc_get_operation(querybuf) == QUERY_OP_EXECUTE)
         {
-            qtype = ps_type;
+            std::string id = extract_text_ps_id(querybuf);
+            qtype = rses->ps_manager.get_type(id);
         }
 
         route_target = get_route_target(rses, qtype, querybuf->hint);
@@ -237,7 +238,8 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
  * backends being used, otherwise false.
  *
  */
-bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t command)
+bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+                         uint8_t command, uint32_t type)
 {
     /** The SessionCommand takes ownership of the buffer */
     uint64_t id = rses->sescmd_count++;
@@ -245,6 +247,13 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
     bool expecting_response = command_will_respond(command);
     int nsucc = 0;
     uint64_t lowest_pos = id;
+
+    if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
+    {
+        gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
+        rses->ps_manager.store(querybuf, id);
+    }
 
     MXS_INFO("Session write, routing to all servers.");
 

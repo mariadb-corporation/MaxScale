@@ -76,7 +76,8 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                              SRWBackend* dest);
 bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf, SRWBackend& target, bool store);
-bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t command);
+bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+                         uint8_t command, uint32_t type);
 
 void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& bref,
                              GWBUF** ppPacket, bool* reconnect);
@@ -114,9 +115,10 @@ uint32_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_p
 void close_all_connections(ROUTER_CLIENT_SES* rses);
 
 /**
- * Functions for prepared statement handling
+ * @brief Extract text identifier of a PREPARE or EXECUTE statement
+ *
+ * @param buffer Buffer containing a PREPARE or EXECUTE command
+ *
+ * @return The string identifier of the statement
  */
 std::string extract_text_ps_id(GWBUF* buffer);
-void store_text_ps(ROUTER_CLIENT_SES* rses, std::string id, GWBUF* buffer);
-void erase_text_ps(ROUTER_CLIENT_SES* rses, std::string id);
-bool get_text_ps_type(ROUTER_CLIENT_SES* rses, GWBUF* buffer, uint32_t* out);

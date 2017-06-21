@@ -217,14 +217,57 @@ private:
     HandleMap     m_ps_handles;
 };
 
+/** Prepared statement ID to type maps for text protocols */
+typedef std::tr1::unordered_map<uint64_t, uint32_t>    BinaryPSMap;
+typedef std::tr1::unordered_map<std::string, uint32_t> TextPSMap;
+
+class PSManager
+{
+    PSManager(const PSManager&);
+    PSManager& operator =(const PSManager&);
+
+public:
+    PSManager();
+    ~PSManager();
+
+    /**
+     * @brief Store and process a prepared statement
+     *
+     * @param buffer Buffer containing either a text or a binary protocol
+     *               prepared statement
+     * @param id     The unique ID for this statement
+     */
+    void store(GWBUF* buffer, uint64_t id);
+
+    /**
+     * @brief Get the type of a stored prepared statement
+     *
+     * @param id The unique identifier for the prepared statement or the plaintext
+     *           name of the prepared statement
+     *
+     * @return The type of the prepared statement
+     */
+    uint32_t get_type(uint64_t id) const;
+    uint32_t get_type(std::string id) const;
+
+    /**
+     * @brief Remove a prepared statement
+     *
+     * @param id Statement identifier to remove
+     */
+    void erase(std::string id);
+    void erase(uint64_t id);
+
+private:
+    BinaryPSMap m_binary_ps;
+    TextPSMap   m_text_ps;
+};
+
 typedef std::tr1::shared_ptr<RWBackend> SRWBackend;
 typedef std::list<SRWBackend> SRWBackendList;
 
 typedef std::tr1::unordered_set<std::string> TableSet;
 typedef std::map<uint64_t, uint8_t>          ResponseMap;
-
-/** Prepared statement ID to type maps for text and binary protocols */
-typedef std::tr1::unordered_map<std::string, uint32_t> TextPSMap;
 
 /**
  * The client session structure used within this router.
@@ -252,7 +295,7 @@ struct ROUTER_CLIENT_SES
     ResponseMap               sescmd_responses; /**< Response to each session command */
     uint64_t                  sent_sescmd; /**< ID of the last sent session command*/
     uint64_t                  recv_sescmd; /**< ID of the most recently completed session command */
-    TextPSMap                 ps_text;     /**< Text protocol prepared statements */
+    PSManager                 ps_manager;   /**< Prepared statement manager*/
     skygw_chk_t               rses_chk_tail;
 };
 
