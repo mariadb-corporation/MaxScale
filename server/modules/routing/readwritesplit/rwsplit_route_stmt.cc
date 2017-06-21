@@ -29,7 +29,7 @@
  * write split router, and not intended to be called from anywhere else.
  */
 
-extern int (*criteria_cmpfun[LAST_CRITERIA])(const void *, const void *);
+extern int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&);
 
 static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses);
 
@@ -47,9 +47,7 @@ static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses);
  */
 static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t sc)
 {
-    int (*p)(const void *, const void *);
-    /** get compare function */
-    p = criteria_cmpfun[sc];
+    int (*p)(const SRWBackend&, const SRWBackend&) = criteria_cmpfun[sc];
 
     if (!a)
     {
@@ -60,7 +58,7 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
         return a;
     }
 
-    return p((void *)&a, (void *)&b) > 0 ? b : a;
+    return p(a, b) < 0 ? a : b;
 }
 
 void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
@@ -106,8 +104,6 @@ void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf)
 {
-    uint32_t qtype = QUERY_TYPE_UNKNOWN;
-    uint8_t packet_type;
     route_target_t route_target;
     bool succp = false;
     bool non_empty_packet;
@@ -115,12 +111,12 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     ss_dassert(querybuf->next == NULL); // The buffer must be contiguous.
 
     /* packet_type is a problem as it is MySQL specific */
-    packet_type = determine_packet_type(querybuf, &non_empty_packet);
-    qtype = determine_query_type(querybuf, packet_type, non_empty_packet);
+    uint8_t command = determine_packet_type(querybuf, &non_empty_packet);
+    uint32_t qtype = determine_query_type(querybuf, command, non_empty_packet);
 
     if (non_empty_packet)
     {
-        handle_multi_temp_and_load(rses, querybuf, packet_type, &qtype);
+        handle_multi_temp_and_load(rses, querybuf, command, &qtype);
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -167,7 +163,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     if (TARGET_IS_ALL(route_target))
     {
-        succp = handle_target_is_all(route_target, inst, rses, querybuf, packet_type, qtype);
+        succp = handle_target_is_all(route_target, inst, rses, querybuf, command, qtype);
     }
     else
     {
@@ -219,7 +215,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     }
 
     return succp;
-} /* route_single_stmt */
+}
 
 /**
  * Execute in backends used by current router session.
@@ -1100,17 +1096,16 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     }
 }
 
-/********************************
- * This routine returns the root master server from MySQL replication tree
- * Get the root Master rule:
+/**
+ * @brief Get the root master server from MySQL replication tree
  *
- * find server with the lowest replication depth level
- * and the SERVER_MASTER bitval
- * Servers are checked even if they are in 'maintenance'
+ * Finds the server with the lowest replication depth level which has the master
+ * status. Servers are checked even if they are in 'maintenance'.
  *
- * @param   rses pointer to router session
- * @return  pointer to backend reference of the root master or NULL
+ * @param rses Router client session
  *
+ * @return The backend that points to the master server or an empty reference
+ * if the master cannot be found
  */
 static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses)
 {
