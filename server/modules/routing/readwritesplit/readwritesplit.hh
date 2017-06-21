@@ -32,6 +32,7 @@
 #include <maxscale/service.h>
 #include <maxscale/backend.hh>
 #include <maxscale/session_command.hh>
+#include <maxscale/protocol/mysql.h>
 
 enum backend_type_t
 {
@@ -211,6 +212,23 @@ public:
         }
 
         return 0;
+    }
+
+    bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE, uint64_t id = 0)
+    {
+        if (id)
+        {
+            BackendHandleMap::iterator it = m_ps_handles.find(id);
+
+            if (it != m_ps_handles.end())
+            {
+                /** Replace the client handle with the real PS handle */
+                uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+                gw_mysql_set_byte4(ptr, it->second);
+            }
+        }
+
+        return mxs::Backend::write(buffer);
     }
 
 private:

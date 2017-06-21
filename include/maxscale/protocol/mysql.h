@@ -537,12 +537,14 @@ uint8_t mxs_mysql_get_command(GWBUF* buffer);
 bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out);
 
 /**
- * @brief Extract the ID of a COM_STMT_EXECUTE
+ * @brief Extract the ID from a COM_STMT command
  *
- * @param buffer Buffer containing a COM_STMT_EXECUTE packet
+ * All the COM_STMT type commands store the statement ID in the same place.
  *
- * @return The ID of the prepared statement being executed or 0 on failure
+ * @param buffer Buffer containing one of the COM_STMT commands (not COM_STMT_PREPARE)
+ *
+ * @return The statement ID
  */
-uint32_t mxs_mysql_extract_execute(GWBUF* buffer);
+uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer);
 
 MXS_END_DECLS

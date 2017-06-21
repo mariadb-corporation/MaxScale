@@ -91,6 +91,28 @@ void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     ss_dassert(nserv < rses->rses_nbackends);
 }
 
+static inline bool is_ps_command(uint8_t cmd)
+{
+    return cmd == MYSQL_COM_STMT_EXECUTE ||
+           cmd == MYSQL_COM_STMT_SEND_LONG_DATA;
+}
+
+uint64_t get_stmt_id(ROUTER_CLIENT_SES* rses, GWBUF* buffer)
+{
+    uint64_t rval = 0;
+
+    // All COM_STMT type statements store the ID in the same place
+    uint32_t id = mxs_mysql_extract_ps_id(buffer);
+    ClientHandleMap::iterator it = rses->ps_handles.find(id);
+
+    if (it != rses->ps_handles.end())
+    {
+        rval = it->second;
+    }
+
+    return rval;
+}
+
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).
@@ -113,6 +135,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     /* packet_type is a problem as it is MySQL specific */
     uint8_t command = determine_packet_type(querybuf, &non_empty_packet);
     uint32_t qtype = determine_query_type(querybuf, command, non_empty_packet);
+    uint64_t stmt_id = 0;
 
     if (non_empty_packet)
     {
@@ -148,17 +171,10 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             std::string id = extract_text_ps_id(querybuf);
             qtype = rses->ps_manager.get_type(id);
         }
-        else if (command == MYSQL_COM_STMT_EXECUTE)
+        else if (is_ps_command(command))
         {
-            uint32_t id = mxs_mysql_extract_execute(querybuf);
-            ClientHandleMap::iterator it = rses->ps_handles.find(id);
-
-            if (it != rses->ps_handles.end())
-            {
-                char *qtypestr = qc_typemask_to_string(rses->ps_manager.get_type(it->second));
-                MXS_INFO("Client handle %u maps to %lu of type %s", id, it->second, qtypestr);
-                MXS_FREE(qtypestr);
-            }
+            stmt_id = get_stmt_id(rses, querybuf);
+            qtype = rses->ps_manager.get_type(stmt_id);
         }
 
         route_target = get_route_target(rses, qtype, querybuf->hint);
@@ -217,7 +233,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         if (target && succp) /*< Have DCB of the target backend */
         {
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
-            handle_got_target(inst, rses, querybuf, target, store_stmt);
+            handle_got_target(inst, rses, querybuf, target, store_stmt, stmt_id);
         }
     }
 
@@ -1023,20 +1039,13 @@ static inline bool query_creates_reply(mysql_server_cmd_t cmd)
 }
 
 /**
- * @brief Handle got a target
+ * @brief Handle writing to a target server
  *
- * One of the possible types of handling required when a request is routed
- *
- *  @param inst         Router instance
- *  @param ses          Router session
- *  @param querybuf     Buffer containing query to be routed
- *  @param target_dcb   DCB for the target server
- *
- *  @return bool - true if succeeded, false otherwise
+ *  @return True on success
  */
-bool
-handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                  GWBUF *querybuf, SRWBackend& target, bool store)
+bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+                       GWBUF *querybuf, SRWBackend& target,
+                       bool store, uint64_t stmt_id)
 {
     /**
      * If the transaction is READ ONLY set forced_node to this backend.
@@ -1065,7 +1074,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         response = mxs::Backend::EXPECT_RESPONSE;
     }
 
-    if (target->write(gwbuf_clone(querybuf), response))
+    if (target->write(gwbuf_clone(querybuf), response, stmt_id))
     {
         if (store && !session_store_stmt(rses->client_dcb->session, querybuf, target->server()))
         {

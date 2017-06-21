@@ -75,7 +75,8 @@ SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                              SRWBackend* dest);
 bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                       GWBUF *querybuf, SRWBackend& target, bool store);
+                       GWBUF *querybuf, SRWBackend& target,
+                       bool store, uint64_t stmt_id);
 bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                          uint8_t command, uint32_t type);
 

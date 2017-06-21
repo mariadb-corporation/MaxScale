@@ -159,7 +159,7 @@ public:
      *
      * @return True if data was written successfully
      */
-    bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
+    virtual bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
 
     /**
      * @brief Write an authentication switch request to the backend server
