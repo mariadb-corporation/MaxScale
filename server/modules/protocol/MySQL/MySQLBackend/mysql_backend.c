@@ -629,26 +629,32 @@ static inline bool expecting_ps_response(MySQLProtocol *proto)
 static inline bool complete_ps_response(GWBUF *buffer)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(buffer));
-    uint16_t cols = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_PS_COLS_OFFSET);
-    uint16_t params = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_PS_PARAMS_OFFSET);
-    int expected_eof = 0;
+    MXS_PS_RESPONSE resp;
+    bool rval = false;
 
-    if (cols > 0)
+    if (mxs_mysql_extract_ps_response(buffer, &resp))
     {
-        expected_eof++;
+        int expected_eof = 0;
+
+        if (resp.columns > 0)
+        {
+            expected_eof++;
+        }
+
+        if (resp.parameters > 0)
+        {
+            expected_eof++;
+        }
+
+        bool more;
+        int n_eof = modutil_count_signal_packets(buffer, 0, &more);
+
+        MXS_DEBUG("Expecting %u EOF, have %u", n_eof, expected_eof);
+
+        rval = n_eof == expected_eof;
     }
 
-    if (params > 0)
-    {
-        expected_eof++;
-    }
-
-    bool more;
-    int n_eof = modutil_count_signal_packets(buffer, 0, &more);
-
-    MXS_DEBUG("Expecting %u EOF, have %u", n_eof, expected_eof);
-
-    return n_eof == expected_eof;
+    return rval;
 }
 
 static inline bool collecting_resultset(MySQLProtocol *proto, uint64_t capabilities)
