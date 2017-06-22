@@ -547,7 +547,10 @@ bool route_stored_query(ROUTER_CLIENT_SES *rses)
 {
     bool rval = true;
 
-    if (rses->query_queue)
+    /** Loop over the stored statements as long as the routeQuery call doesn't
+     * append more data to the queue. If it appends data to the queue, we need
+     * to wait for a response before attempting another reroute */
+    while (rses->query_queue)
     {
         GWBUF* query_queue = modutil_get_next_MySQL_packet(&rses->query_queue);
         query_queue = gwbuf_make_contiguous(query_queue);
@@ -574,8 +577,17 @@ bool route_stored_query(ROUTER_CLIENT_SES *rses)
             gwbuf_free(query_queue);
         }
 
-        ss_dassert(rses->query_queue == NULL);
-        rses->query_queue = temp_storage;
+        if (rses->query_queue == NULL)
+        {
+            /** Query successfully routed and no responses are expected */
+            rses->query_queue = temp_storage;
+        }
+        else
+        {
+            /** Routing was stopped, we need to wait for a response before retrying */
+            rses->query_queue = gwbuf_append(temp_storage, rses->query_queue);
+            break;
+        }
     }
 
     return rval;

@@ -45,7 +45,6 @@ bool handle_target_is_all(route_target_t route_target,
                           GWBUF *querybuf, int packet_type, uint32_t qtype);
 uint8_t determine_packet_type(GWBUF *querybuf, bool *non_empty_packet);
 void log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype);
-bool command_will_respond(uint8_t packet_type);
 bool is_packet_a_query(int packet_type);
 bool send_readonly_error(DCB *dcb);
 

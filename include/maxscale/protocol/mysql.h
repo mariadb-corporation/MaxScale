@@ -547,4 +547,13 @@ bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out);
  */
 uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer);
 
+/**
+ * @brief Determine if a packet contains a one way message
+ *
+ * @param cmd Command to inspect
+ *
+ * @return True if a response is expected from the server
+ */
+bool mxs_mysql_command_will_respond(uint8_t cmd);
+
 MXS_END_DECLS

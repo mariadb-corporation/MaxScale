@@ -270,7 +270,7 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
     /** The SessionCommand takes ownership of the buffer */
     uint64_t id = rses->sescmd_count++;
     mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));
-    bool expecting_response = command_will_respond(command);
+    bool expecting_response = mxs_mysql_command_will_respond(command);
     int nsucc = 0;
     uint64_t lowest_pos = id;
 
@@ -349,6 +349,13 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
     if (nsucc)
     {
         rses->sent_sescmd = id;
+
+        if (!expecting_response)
+        {
+            /** The command doesn't generate a response so we increment the
+             * completed session command count */
+            rses->recv_sescmd++;
+        }
     }
 
     return nsucc;
@@ -552,7 +559,9 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses, uint8_t command,
         target = TARGET_MASTER;
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
-             qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+             qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+             command == MYSQL_COM_STMT_CLOSE ||
+             command == MYSQL_COM_STMT_RESET)
     {
         target = TARGET_ALL;
     }

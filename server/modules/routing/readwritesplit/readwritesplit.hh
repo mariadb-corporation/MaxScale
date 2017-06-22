@@ -195,9 +195,10 @@ public:
 
     bool execute_session_command()
     {
+        bool expect_response = mxs_mysql_command_will_respond(next_session_command()->get_command());
         bool rval = mxs::Backend::execute_session_command();
 
-        if (rval)
+        if (rval && expect_response)
         {
             set_reply_state(REPLY_STATE_START);
         }

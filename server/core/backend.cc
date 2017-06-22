@@ -93,7 +93,9 @@ bool Backend::execute_session_command()
     {
     case MYSQL_COM_QUIT:
     case MYSQL_COM_STMT_CLOSE:
+        /** These commands do not generate responses */
         rval = write(buffer, NO_RESPONSE);
+        complete_session_command();
         break;
 
     case MYSQL_COM_CHANGE_USER:

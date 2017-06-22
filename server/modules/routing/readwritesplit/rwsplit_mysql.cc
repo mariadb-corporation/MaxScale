@@ -105,27 +105,6 @@ is_packet_a_query(int packet_type)
 }
 
 /*
- * This looks MySQL specific
- */
-/**
- * @brief Determine if a packet contains a one way message
- *
- * Packet type tells us this, but in a DB specific way. This function is
- * provided so that code that is not DB specific can find out whether a packet
- * contains a one way messsage. Clearly, to be effective different functions must be
- * called for different DB types.
- *
- * @param packet_type   Type of packet (integer)
- * @return bool indicating whether packet contains a one way message
- */
-bool command_will_respond(uint8_t packet_type)
-{
-    return packet_type != MYSQL_COM_STMT_SEND_LONG_DATA &&
-           packet_type != MYSQL_COM_QUIT &&
-           packet_type != MYSQL_COM_STMT_CLOSE;
-}
-
-/*
  * This one is problematic because it is MySQL specific, but also router
  * specific.
  */
