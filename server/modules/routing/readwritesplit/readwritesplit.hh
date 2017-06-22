@@ -311,6 +311,7 @@ struct ROUTER_CLIENT_SES
     SRWBackendList            backends; /**< List of backend servers */
     SRWBackend                current_master; /**< Current master server */
     SRWBackend                target_node; /**< The currently locked target node */
+    SRWBackend                last_exec_target; /**< Node where the latest COM_STMT_EXECUTE was sent */
     rwsplit_config_t          rses_config; /**< copied config info from router instance */
     int                       rses_nbackends;
     enum ld_state             load_data_state; /**< Current load data state */

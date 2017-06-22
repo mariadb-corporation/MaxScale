@@ -70,7 +70,7 @@ void handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                                 uint8_t packet_type, uint32_t *qtype);
 SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                                 route_target_t route_target);
-SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses);
+SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses, uint8_t cmd);
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                              SRWBackend* dest);
 bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,

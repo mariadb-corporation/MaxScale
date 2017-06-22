@@ -210,7 +210,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
         else if (TARGET_IS_SLAVE(route_target))
         {
-            if ((target = handle_slave_is_target(inst, rses)))
+            if ((target = handle_slave_is_target(inst, rses, command)))
             {
                 succp = true;
                 store_stmt = rses->rses_config.retry_failed_reads;
@@ -231,7 +231,16 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         if (target && succp) /*< Have DCB of the target backend */
         {
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
-            handle_got_target(inst, rses, querybuf, target, store_stmt);
+            succp = handle_got_target(inst, rses, querybuf, target, store_stmt);
+
+            if (succp && command == MYSQL_COM_STMT_EXECUTE)
+            {
+                /** Track where the target of the last COM_STMT_EXECUTE. This
+                 * information is used to route all COM_STMT_FETCH commands
+                 * to the same server where the COM_STMT_EXECUTE was done. */
+                rses->last_exec_target = target;
+                MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
+            }
         }
     }
 
@@ -919,10 +928,23 @@ SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses)
+SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+                                  uint8_t cmd)
 {
     int rlag_max = rses_get_max_replication_lag(rses);
-    SRWBackend target = get_target_backend(rses, BE_SLAVE, NULL, rlag_max);
+    SRWBackend target;
+
+    if (cmd == MYSQL_COM_STMT_FETCH && rses->last_exec_target)
+    {
+        /** The COM_STMT_FETCH must be executed on the same server as the
+         * COM_STMT_EXECUTE was executed on */
+        target = rses->last_exec_target;
+        MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+    }
+    else
+    {
+        target = get_target_backend(rses, BE_SLAVE, NULL, rlag_max);
+    }
 
     if (target)
     {
