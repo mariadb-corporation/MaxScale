@@ -1076,7 +1076,8 @@ static inline bool query_creates_reply(mysql_server_cmd_t cmd)
 {
     return cmd != MYSQL_COM_QUIT &&
            cmd != MYSQL_COM_STMT_SEND_LONG_DATA &&
-           cmd != MYSQL_COM_STMT_CLOSE;
+           cmd != MYSQL_COM_STMT_CLOSE &&
+           cmd != MYSQL_COM_STMT_FETCH; // Fetch is done mid-result
 }
 
 /**
