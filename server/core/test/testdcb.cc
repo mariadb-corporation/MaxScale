@@ -48,14 +48,12 @@ test1()
     DCB   *dcb;
     SERV_LISTENER dummy;
     /* Single buffer tests */
-    ss_dfprintf(stderr,
-                "testdcb : creating buffer with type DCB_ROLE_SERVICE_LISTENER");
-    dcb = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, &dummy);
+    ss_dfprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_SERVICE_LISTENER");
+    dcb = dcb_alloc(DCB_ROLE_INTERNAL, &dummy);
     printDCB(dcb);
     ss_info_dassert(dcb_isvalid(dcb), "New DCB must be valid");
     ss_dfprintf(stderr, "\t..done\nAllocated dcb.");
     printAllDCBs();
-    ss_info_dassert(true, "Something is true");
     ss_dfprintf(stderr, "\t..done\n");
     dcb->state = DCB_STATE_POLLING;
     dcb_close(dcb);
