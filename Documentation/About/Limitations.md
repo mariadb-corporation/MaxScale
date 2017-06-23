@@ -124,7 +124,6 @@ Sending of binary data with `LOAD DATA LOCAL INFILE` is not supported.
 Read queries are routed to the master server in the following situations:
 
 * query is executed inside an open transaction
-* query is a prepared statement
 * statement includes a stored procedure or an UDF call
 * if there are multiple statements inside one query e.g. `INSERT INTO ... ; SELECT
 LAST_INSERT_ID();`
@@ -140,19 +139,14 @@ requests without waiting for the protocol to be idle. If you are using the
 MariaDB Connector/J, add `useBatchMultiSend=false` to the JDBC connection string
 to disable batched statement execution.
 
-#### Backend write timeout handling
+#### Prepared Statement Limitations
 
-The backend connections opened by readwritesplit will not be kept alive if they
-aren't used. To keep all of the connections alive, a session command must be
-periodically executed (for example `SET @a = 1;`).
+Readwritesplit does not support the parallel execution of binary protocol
+prepared statements that use cursors. In practice this means that only one
+open cursor is allowed when readwritesplit is used.
 
-If the backend server is configured with a low
-[wait_timeout](https://mariadb.com/kb/en/mariadb/server-system-variables/#wait_timeout),
-it is possible that connections get closed during long sessions. It is
-recommended to set the `wait_timeout` to a high value and let MariaDB MaxScale
-handle the client timeouts. This can be achieved by using the
-[_connection_timeout_](../Getting-Started/Configuration-Guide.md#connection_timeout)
-parameter for the service.
+Opening more than one cursor will cause the execution of the prepared
+statements to stall.
 
 #### Limitations in multi-statement handling
 
