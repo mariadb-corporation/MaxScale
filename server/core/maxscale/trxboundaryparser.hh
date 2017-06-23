@@ -557,11 +557,6 @@ private:
             ((*(m_pI + offset) == uc) || (*(m_pI + offset) == lc));
     }
 
-    bool is_next_char(char c, int offset = 1) const
-    {
-        return ((m_pI + offset) < m_pEnd) && (*(m_pI + offset) == c);
-    }
-
     bool peek_next_char(char* pC) const
     {
         bool rc = (m_pI + 1 < m_pEnd);
@@ -730,7 +725,7 @@ private:
                 }
                 else if (is_next_alpha('N'))
                 {
-                    if (is_next_char('L', 2))
+                    if (is_next_alpha('L', 2))
                     {
                         token = expect_token(TBP_EXPECT_TOKEN("ONLY"), TK_ONLY);
                     }
@@ -770,7 +765,7 @@ private:
                 {
                     token = expect_token(TBP_EXPECT_TOKEN("SNAPSHOT"), TK_SNAPSHOT);
                 }
-                else if (is_next_char('T'))
+                else if (is_next_alpha('T'))
                 {
                     token = expect_token(TBP_EXPECT_TOKEN("START"), TK_START);
                 }
