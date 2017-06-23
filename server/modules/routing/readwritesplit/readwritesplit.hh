@@ -119,7 +119,7 @@ enum ld_state
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
 /** Reply state change debug logging */
-#define LOG_RS(a, b) MXS_INFO("%s %s -> %s", (a)->uri(), \
+#define LOG_RS(a, b) MXS_DEBUG("%s %s -> %s", (a)->uri(), \
     rstostr((a)->get_reply_state()), rstostr(b));
 
 struct ROUTER_INSTANCE;
