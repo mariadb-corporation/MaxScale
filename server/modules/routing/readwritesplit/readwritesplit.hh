@@ -301,6 +301,9 @@ typedef std::list<SRWBackend> SRWBackendList;
 typedef std::tr1::unordered_set<std::string> TableSet;
 typedef std::map<uint64_t, uint8_t>          ResponseMap;
 
+/** Map of COM_STMT_EXECUTE targets by internal ID */
+typedef std::tr1::unordered_map<uint32_t, SRWBackend> ExecMap;
+
 /**
  * The client session structure used within this router.
  */
@@ -311,7 +314,6 @@ struct ROUTER_CLIENT_SES
     SRWBackendList            backends; /**< List of backend servers */
     SRWBackend                current_master; /**< Current master server */
     SRWBackend                target_node; /**< The currently locked target node */
-    SRWBackend                last_exec_target; /**< Node where the latest COM_STMT_EXECUTE was sent */
     rwsplit_config_t          rses_config; /**< copied config info from router instance */
     int                       rses_nbackends;
     enum ld_state             load_data_state; /**< Current load data state */
@@ -330,6 +332,7 @@ struct ROUTER_CLIENT_SES
     uint64_t                  recv_sescmd; /**< ID of the most recently completed session command */
     PSManager                 ps_manager;  /**< Prepared statement manager*/
     ClientHandleMap           ps_handles;  /**< Client PS handle to internal ID mapping */
+    ExecMap                   exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
     skygw_chk_t               rses_chk_tail;
 };
 

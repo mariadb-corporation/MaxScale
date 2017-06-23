@@ -129,6 +129,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     route_target_t route_target;
     bool succp = false;
     bool non_empty_packet;
+    uint32_t stmt_id = 0;
 
     ss_dassert(querybuf->next == NULL); // The buffer must be contiguous.
 
@@ -170,7 +171,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
         else if (is_ps_command(command))
         {
-            uint32_t stmt_id = get_stmt_id(rses, querybuf);
+            stmt_id = get_stmt_id(rses, querybuf);
             qtype = rses->ps_manager.get_type(stmt_id);
             replace_stmt_id(querybuf, stmt_id);
         }
@@ -210,7 +211,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
         else if (TARGET_IS_SLAVE(route_target))
         {
-            if ((target = handle_slave_is_target(inst, rses, command)))
+            if ((target = handle_slave_is_target(inst, rses, command, stmt_id)))
             {
                 succp = true;
                 store_stmt = rses->rses_config.retry_failed_reads;
@@ -235,10 +236,11 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
             if (succp && command == MYSQL_COM_STMT_EXECUTE)
             {
-                /** Track where the target of the last COM_STMT_EXECUTE. This
+                /** Track the targets of the COM_STMT_EXECUTE statements. This
                  * information is used to route all COM_STMT_FETCH commands
                  * to the same server where the COM_STMT_EXECUTE was done. */
-                rses->last_exec_target = target;
+                ss_dassert(stmt_id > 0);
+                rses->exec_map[stmt_id] = target;
                 MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
             }
         }
@@ -929,19 +931,29 @@ SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *  @return bool - true if succeeded, false otherwise
  */
 SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                                  uint8_t cmd)
+                                  uint8_t cmd, uint32_t stmt_id)
 {
     int rlag_max = rses_get_max_replication_lag(rses);
     SRWBackend target;
 
-    if (cmd == MYSQL_COM_STMT_FETCH && rses->last_exec_target)
+    if (cmd == MYSQL_COM_STMT_FETCH)
     {
         /** The COM_STMT_FETCH must be executed on the same server as the
          * COM_STMT_EXECUTE was executed on */
-        target = rses->last_exec_target;
-        MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+        ExecMap::iterator it = rses->exec_map.find(stmt_id);
+
+        if (it != rses->exec_map.end())
+        {
+            target = it->second;
+            MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+        }
+        else
+        {
+            MXS_WARNING("Unknown statement ID %u used in COM_STMT_FETCH", stmt_id);
+        }
     }
-    else
+
+    if (!target)
     {
         target = get_target_backend(rses, BE_SLAVE, NULL, rlag_max);
     }

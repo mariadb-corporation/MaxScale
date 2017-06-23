@@ -933,9 +933,9 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
             ss_dassert(rses->expected_responses || rses->query_queue);
             /** We are already processing a request from the client. Store the
              * new query and wait for the previous one to complete. */
-            MXS_DEBUG("Storing query (len: %d cmd: %0x), expecting %d replies",
-                      gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4],
-                      rses->expected_responses);
+            MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command",
+                     gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4],
+                     rses->expected_responses);
             rses->query_queue = gwbuf_append(rses->query_queue, querybuf);
             querybuf = NULL;
             rval = 1;
