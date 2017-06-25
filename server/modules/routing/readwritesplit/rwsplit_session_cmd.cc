@@ -26,7 +26,7 @@
  * Functions for session command handling
  */
 
-void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& backend,
+void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
                              GWBUF** ppPacket, bool* pReconnect)
 {
     if (backend->session_command_count())

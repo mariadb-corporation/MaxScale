@@ -53,14 +53,14 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *
 
 static bool rwsplit_process_router_options(RWSplit *router,
                                            char **options);
-static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
+static void handle_error_reply_client(MXS_SESSION *ses, RWSplitSession *rses,
                                       DCB *backend_dcb, GWBUF *errmsg);
 static bool handle_error_new_connection(RWSplit *inst,
-                                        ROUTER_CLIENT_SES **rses,
+                                        RWSplitSession **rses,
                                         DCB *backend_dcb, GWBUF *errmsg);
-static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
+static bool have_enough_servers(RWSplitSession *rses, const int min_nsrv,
                                 int router_nsrv, RWSplit *router);
-static bool route_stored_query(ROUTER_CLIENT_SES *rses);
+static bool route_stored_query(RWSplitSession *rses);
 
 /**
  * Internal functions
@@ -76,7 +76,7 @@ static bool route_stored_query(ROUTER_CLIENT_SES *rses);
  * @param   rses Router client session
  * @param   router_nservers The number of backend servers in total
  */
-int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses)
+int rses_get_max_slavecount(RWSplitSession *rses)
 {
     int conf_max_nslaves;
     int router_nservers = rses->rses_nbackends;
@@ -101,7 +101,7 @@ int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses)
  * @param   rses    Router client session
  * @return  Replication lag from configuration or very large number
  */
-int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
+int rses_get_max_replication_lag(RWSplitSession *rses)
 {
     int conf_max_rlag;
 
@@ -131,7 +131,7 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
  *
  * @return backend reference pointer if succeed or NULL
  */
-SRWBackend get_backend_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
+SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
 {
     ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
@@ -294,7 +294,7 @@ static bool handle_max_slaves(Config& config, const char *str)
  * @param backend_dcb   DCB for the backend server that has failed
  * @param errmsg        GWBUF containing the error message
  */
-static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
+static void handle_error_reply_client(MXS_SESSION *ses, RWSplitSession *rses,
                                       DCB *backend_dcb, GWBUF *errmsg)
 {
 
@@ -312,7 +312,7 @@ static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
     }
 }
 
-static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& old, GWBUF *stored)
+static bool reroute_stored_statement(RWSplitSession *rses, const SRWBackend& old, GWBUF *stored)
 {
     bool success = false;
 
@@ -382,10 +382,10 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& 
  * not
  */
 static bool handle_error_new_connection(RWSplit *inst,
-                                        ROUTER_CLIENT_SES **rses,
+                                        RWSplitSession **rses,
                                         DCB *backend_dcb, GWBUF *errmsg)
 {
-    ROUTER_CLIENT_SES *myrses = *rses;
+    RWSplitSession *myrses = *rses;
     SRWBackend backend = get_backend_from_dcb(myrses, backend_dcb);
 
     MXS_SESSION* ses = backend_dcb->session;
@@ -469,7 +469,7 @@ static bool handle_error_new_connection(RWSplit *inst,
  *
  * @return bool - whether enough, side effect is error logging
  */
-static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
+static bool have_enough_servers(RWSplitSession *rses, const int min_nsrv,
                                 int router_nsrv, RWSplit *router)
 {
     bool succp = true;
@@ -527,7 +527,7 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
  * @param rses Router client session
  * @return True if a stored query was routed successfully
  */
-static bool route_stored_query(ROUTER_CLIENT_SES *rses)
+static bool route_stored_query(RWSplitSession *rses)
 {
     bool rval = true;
 
@@ -636,7 +636,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
     return backend->get_reply_state() == REPLY_STATE_DONE;
 }
 
-void close_all_connections(ROUTER_CLIENT_SES* rses)
+void close_all_connections(RWSplitSession* rses)
 {
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
@@ -675,7 +675,7 @@ Stats& RWSplit::stats()
     return m_stats;
 }
 
-ROUTER_CLIENT_SES::ROUTER_CLIENT_SES(const Config& config):
+RWSplitSession::RWSplitSession(const Config& config):
     rses_config(config)
 {
 }
@@ -737,7 +737,7 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
 static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
 {
     RWSplit* router = (RWSplit*)router_inst;
-    ROUTER_CLIENT_SES* client_rses = new (std::nothrow) ROUTER_CLIENT_SES(router->config());
+    RWSplitSession* client_rses = new (std::nothrow) RWSplitSession(router->config());
 
     if (client_rses == NULL)
     {
@@ -821,7 +821,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
  */
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    RWSplitSession *router_cli_ses = (RWSplitSession *)router_session;
     CHK_CLIENT_RSES(router_cli_ses);
 
     if (!router_cli_ses->rses_closed)
@@ -863,7 +863,7 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
  */
 static void freeSession(MXS_ROUTER *router_instance, MXS_ROUTER_SESSION *router_client_session)
 {
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
+    RWSplitSession *router_cli_ses = (RWSplitSession *)router_client_session;
     delete router_cli_ses;
 }
 
@@ -883,7 +883,7 @@ static void freeSession(MXS_ROUTER *router_instance, MXS_ROUTER_SESSION *router_
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *querybuf)
 {
     RWSplit *inst = (RWSplit *) instance;
-    ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *) router_session;
+    RWSplitSession *rses = (RWSplitSession *) router_session;
     int rval = 0;
 
     CHK_CLIENT_RSES(rses);
@@ -1071,7 +1071,7 @@ static void clientReply(MXS_ROUTER *instance,
                         GWBUF *writebuf,
                         DCB *backend_dcb)
 {
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    RWSplitSession *router_cli_ses = (RWSplitSession *)router_session;
     RWSplit *router_inst = (RWSplit *)instance;
     DCB *client_dcb = backend_dcb->session->client_dcb;
 
@@ -1226,7 +1226,7 @@ static void handleError(MXS_ROUTER *instance,
 {
     ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     RWSplit *inst = (RWSplit *)instance;
-    ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
+    RWSplitSession *rses = (RWSplitSession *)router_session;
     CHK_CLIENT_RSES(rses);
     CHK_DCB(problem_dcb);
 

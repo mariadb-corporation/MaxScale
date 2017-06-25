@@ -34,17 +34,17 @@ do{ \
 /*
  * The following are implemented in rwsplit_mysql.c
  */
-bool route_single_stmt(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf);
 void closed_session_reply(GWBUF *querybuf);
-void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb);
+void print_error_packet(RWSplitSession *rses, GWBUF *buf, DCB *dcb);
 void check_session_command_reply(GWBUF *writebuf, SRWBackend bref);
 bool execute_sescmd_in_backend(SRWBackend& backend_ref);
 bool handle_target_is_all(route_target_t route_target,
-                          RWSplit *inst, ROUTER_CLIENT_SES *rses,
+                          RWSplit *inst, RWSplitSession *rses,
                           GWBUF *querybuf, int packet_type, uint32_t qtype);
 uint8_t determine_packet_type(GWBUF *querybuf, bool *non_empty_packet);
-void log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype);
+void log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype);
 bool is_packet_a_query(int packet_type);
 bool send_readonly_error(DCB *dcb);
 
@@ -52,34 +52,34 @@ bool send_readonly_error(DCB *dcb);
  * The following are implemented in readwritesplit.c
  */
 int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data);
-SRWBackend get_backend_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb);
-int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses);
-int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses);
+SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb);
+int rses_get_max_slavecount(RWSplitSession *rses);
+int rses_get_max_replication_lag(RWSplitSession *rses);
 
 /*
  * The following are implemented in rwsplit_route_stmt.c
  */
 
-bool route_single_stmt(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf);
-SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
+SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
                               char *name, int max_rlag);
-route_target_t get_route_target(ROUTER_CLIENT_SES *rses, uint8_t command,
+route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
                                 uint32_t qtype, HINT *hint);
-void handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+void handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
                                 uint8_t packet_type, uint32_t *qtype);
-SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+SRWBackend handle_hinted_target(RWSplitSession *rses, GWBUF *querybuf,
                                 route_target_t route_target);
-SRWBackend handle_slave_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
                                   uint8_t cmd, uint32_t id);
-bool handle_master_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
                              SRWBackend* dest);
-bool handle_got_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf, SRWBackend& target, bool store);
-bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
                          uint8_t command, uint32_t type);
 
-void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& bref,
+void process_sescmd_response(RWSplitSession* rses, SRWBackend& bref,
                              GWBUF** ppPacket, bool* reconnect);
 /*
  * The following are implemented in rwsplit_select_backends.c
@@ -97,22 +97,22 @@ bool select_connect_backend_servers(int router_nservers,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
                                     RWSplit *router,
-                                    ROUTER_CLIENT_SES *rses,
+                                    RWSplitSession *rses,
                                     connection_type type);
 
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
-void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf);
-bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+void check_drop_tmp_table(RWSplitSession *router_cli_ses, GWBUF *querybuf);
+bool is_read_tmp_table(RWSplitSession *router_cli_ses,
                        GWBUF *querybuf,
                        uint32_t type);
-void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+void check_create_tmp_table(RWSplitSession *router_cli_ses,
                             GWBUF *querybuf, uint32_t type);
 bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type);
 uint32_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
 
-void close_all_connections(ROUTER_CLIENT_SES* rses);
+void close_all_connections(RWSplitSession* rses);
 
 /**
  * @brief Extract text identifier of a PREPARE or EXECUTE statement

@@ -44,7 +44,7 @@
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf)
+void check_drop_tmp_table(RWSplitSession *router_cli_ses, GWBUF *querybuf)
 {
     if (qc_is_drop_table_query(querybuf))
     {
@@ -75,7 +75,7 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf)
  * @param type The type of the query resolved so far
  * @return The type of the query
  */
-bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+bool is_read_tmp_table(RWSplitSession *router_cli_ses,
                        GWBUF *querybuf,
                        uint32_t qtype)
 {
@@ -125,7 +125,7 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+void check_create_tmp_table(RWSplitSession *router_cli_ses,
                             GWBUF *querybuf, uint32_t type)
 {
     if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))

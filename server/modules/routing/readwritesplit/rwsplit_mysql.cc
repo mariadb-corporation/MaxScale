@@ -120,7 +120,7 @@ is_packet_a_query(int packet_type)
  * @param qtype     Query type
  */
 void
-log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype)
+log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
 {
     if (rses->load_data_state == LOAD_DATA_INACTIVE)
     {
@@ -181,7 +181,7 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype)
  * @return bool indicating whether the session can continue
  */
 bool handle_target_is_all(route_target_t route_target, RWSplit *inst,
-                          ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+                          RWSplitSession *rses, GWBUF *querybuf,
                           int packet_type, uint32_t qtype)
 {
     bool result = false;

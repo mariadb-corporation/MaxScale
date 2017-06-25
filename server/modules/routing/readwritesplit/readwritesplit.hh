@@ -440,37 +440,41 @@ typedef std::map<uint64_t, uint8_t>          ResponseMap;
 typedef std::tr1::unordered_map<uint32_t, SRWBackend> ExecMap;
 
 /**
- * The client session structure used within this router.
+ * The client session of a RWSplit instance
  */
-struct ROUTER_CLIENT_SES
+class RWSplitSession
 {
-    ROUTER_CLIENT_SES(const Config& config);
+    RWSplitSession(const RWSplitSession&);
+    RWSplitSession& operator=(const RWSplitSession&);
 
-    skygw_chk_t               rses_chk_top;
-    bool                      rses_closed; /**< true when closeSession is called */
-    SRWBackendList            backends; /**< List of backend servers */
-    SRWBackend                current_master; /**< Current master server */
-    SRWBackend                target_node; /**< The currently locked target node */
-    Config                    rses_config; /**< copied config info from router instance */
-    int                       rses_nbackends;
-    enum ld_state             load_data_state; /**< Current load data state */
-    bool                      have_tmp_tables;
-    uint64_t                  rses_load_data_sent; /**< How much data has been sent */
-    DCB*                      client_dcb;
-    uint64_t                  sescmd_count;
-    int                       expected_responses; /**< Number of expected responses to the current query */
-    GWBUF*                    query_queue; /**< Queued commands waiting to be executed */
-    class RWSplit   *router; /**< The router instance */
-    struct ROUTER_CLIENT_SES *next;
-    TableSet                  temp_tables; /**< Set of temporary tables */
-    mxs::SessionCommandList   sescmd_list; /**< List of executed session commands */
-    ResponseMap               sescmd_responses; /**< Response to each session command */
-    uint64_t                  sent_sescmd; /**< ID of the last sent session command*/
-    uint64_t                  recv_sescmd; /**< ID of the most recently completed session command */
-    PSManager                 ps_manager;  /**< Prepared statement manager*/
-    ClientHandleMap           ps_handles;  /**< Client PS handle to internal ID mapping */
-    ExecMap                   exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
-    skygw_chk_t               rses_chk_tail;
+public:
+    RWSplitSession(const Config& config);
+
+    // TODO: Make member variables private
+    skygw_chk_t             rses_chk_top;
+    bool                    rses_closed; /**< true when closeSession is called */
+    SRWBackendList          backends; /**< List of backend servers */
+    SRWBackend              current_master; /**< Current master server */
+    SRWBackend              target_node; /**< The currently locked target node */
+    Config                  rses_config; /**< copied config info from router instance */
+    int                     rses_nbackends;
+    enum ld_state           load_data_state; /**< Current load data state */
+    bool                    have_tmp_tables;
+    uint64_t                rses_load_data_sent; /**< How much data has been sent */
+    DCB*                    client_dcb;
+    uint64_t                sescmd_count;
+    int                     expected_responses; /**< Number of expected responses to the current query */
+    GWBUF*                  query_queue; /**< Queued commands waiting to be executed */
+    RWSplit*                router; /**< The router instance */
+    TableSet                temp_tables; /**< Set of temporary tables */
+    mxs::SessionCommandList sescmd_list; /**< List of executed session commands */
+    ResponseMap             sescmd_responses; /**< Response to each session command */
+    uint64_t                sent_sescmd; /**< ID of the last sent session command*/
+    uint64_t                recv_sescmd; /**< ID of the most recently completed session command */
+    PSManager               ps_manager;  /**< Prepared statement manager*/
+    ClientHandleMap         ps_handles;  /**< Client PS handle to internal ID mapping */
+    ExecMap                 exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
+    skygw_chk_t             rses_chk_tail;
 };
 
 /**

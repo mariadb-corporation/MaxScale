@@ -31,7 +31,7 @@
 
 extern int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&);
 
-static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses);
+static SRWBackend get_root_master_backend(RWSplitSession *rses);
 
 /**
  * Find out which of the two backend servers has smaller value for select
@@ -61,7 +61,7 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
     return p(a, b) < 0 ? a : b;
 }
 
-void handle_connection_keepalive(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+void handle_connection_keepalive(RWSplit *inst, RWSplitSession *rses,
                                  SRWBackend& target)
 {
     ss_dassert(target);
@@ -91,7 +91,7 @@ void handle_connection_keepalive(RWSplit *inst, ROUTER_CLIENT_SES *rses,
     ss_dassert(nserv < rses->rses_nbackends);
 }
 
-uint32_t get_stmt_id(ROUTER_CLIENT_SES* rses, GWBUF* buffer)
+uint32_t get_stmt_id(RWSplitSession* rses, GWBUF* buffer)
 {
     uint32_t rval = 0;
 
@@ -123,7 +123,7 @@ void replace_stmt_id(GWBUF* buffer, uint32_t id)
  * @return true if routing succeed or if it failed due to unsupported query.
  * false if backend failure was encountered.
  */
-bool route_single_stmt(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf)
 {
     route_target_t route_target;
@@ -275,7 +275,7 @@ bool route_single_stmt(RWSplit *inst, ROUTER_CLIENT_SES *rses,
  * backends being used, otherwise false.
  *
  */
-bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
                          uint8_t command, uint32_t type)
 {
     /** The SessionCommand takes ownership of the buffer */
@@ -383,7 +383,7 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  * @return True if a backend was found
  */
-SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
+SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
                               char *name, int max_rlag)
 {
     CHK_CLIENT_RSES(rses);
@@ -557,7 +557,7 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
  *  @return bitfield including the routing target, or the target server name
  *          if the query would otherwise be routed to slave.
  */
-route_target_t get_route_target(ROUTER_CLIENT_SES *rses, uint8_t command,
+route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
                                 uint32_t qtype, HINT *hint)
 {
     bool trx_active = session_trx_is_active(rses->client_dcb->session);
@@ -754,7 +754,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses, uint8_t command,
  *  @param qtype        Query type
  */
 void
-handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
                            uint8_t packet_type, uint32_t *qtype)
 {
     /** Check for multi-statement queries. If no master server is available
@@ -851,7 +851,7 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+SRWBackend handle_hinted_target(RWSplitSession *rses, GWBUF *querybuf,
                                 route_target_t route_target)
 {
     char *named_server = NULL;
@@ -930,7 +930,7 @@ SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-SRWBackend handle_slave_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
                                   uint8_t cmd, uint32_t stmt_id)
 {
     int rlag_max = rses_get_max_replication_lag(rses);
@@ -975,7 +975,7 @@ SRWBackend handle_slave_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
  *
  * @param rses Router session
  */
-static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
+static void log_master_routing_failure(RWSplitSession *rses, bool found,
                                        SRWBackend& old_master, SRWBackend& curr_master)
 {
     char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100]; // Extra space for error message
@@ -1039,7 +1039,7 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-bool handle_master_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
                              SRWBackend* dest)
 {
     SRWBackend target = get_target_backend(rses, BE_MASTER, NULL, MAX_RLAG_UNDEFINED);
@@ -1085,7 +1085,7 @@ static inline bool query_creates_reply(mysql_server_cmd_t cmd)
  *
  *  @return True on success
  */
-bool handle_got_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
+bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf, SRWBackend& target, bool store)
 {
     /**
@@ -1178,7 +1178,7 @@ bool handle_got_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
  * @return The backend that points to the master server or an empty reference
  * if the master cannot be found
  */
-static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses)
+static SRWBackend get_root_master_backend(RWSplitSession *rses)
 {
     SRWBackend candidate;
     SERVER master = {};
