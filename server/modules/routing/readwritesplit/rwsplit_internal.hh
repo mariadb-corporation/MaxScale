@@ -34,14 +34,14 @@ do{ \
 /*
  * The following are implemented in rwsplit_mysql.c
  */
-bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+bool route_single_stmt(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf);
 void closed_session_reply(GWBUF *querybuf);
 void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb);
 void check_session_command_reply(GWBUF *writebuf, SRWBackend bref);
 bool execute_sescmd_in_backend(SRWBackend& backend_ref);
 bool handle_target_is_all(route_target_t route_target,
-                          ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+                          RWSplit *inst, ROUTER_CLIENT_SES *rses,
                           GWBUF *querybuf, int packet_type, uint32_t qtype);
 uint8_t determine_packet_type(GWBUF *querybuf, bool *non_empty_packet);
 void log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype);
@@ -60,7 +60,7 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses);
  * The following are implemented in rwsplit_route_stmt.c
  */
 
-bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+bool route_single_stmt(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf);
 SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
                               char *name, int max_rlag);
@@ -70,11 +70,11 @@ void handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                                 uint8_t packet_type, uint32_t *qtype);
 SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                                 route_target_t route_target);
-SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+SRWBackend handle_slave_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                                   uint8_t cmd, uint32_t id);
-bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+bool handle_master_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                              SRWBackend* dest);
-bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+bool handle_got_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf, SRWBackend& target, bool store);
 bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                          uint8_t command, uint32_t type);
@@ -96,7 +96,7 @@ bool select_connect_backend_servers(int router_nservers,
                                     int max_nslaves,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
-                                    ROUTER_INSTANCE *router,
+                                    RWSplit *router,
                                     ROUTER_CLIENT_SES *rses,
                                     connection_type type);
 

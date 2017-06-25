@@ -290,7 +290,7 @@ bool select_connect_backend_servers(int router_nservers,
                                     int max_nslaves,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
-                                    ROUTER_INSTANCE *router,
+                                    RWSplit *router,
                                     ROUTER_CLIENT_SES *rses,
                                     connection_type type)
 {
@@ -298,7 +298,7 @@ bool select_connect_backend_servers(int router_nservers,
     SERVER_REF *master_backend = get_root_master(rses);
     SERVER  *master_host = master_backend ? master_backend->server : NULL;
 
-    if (router->rwsplit_config.master_failure_mode == RW_FAIL_INSTANTLY &&
+    if (router->config().master_failure_mode == RW_FAIL_INSTANTLY &&
         (master_host == NULL || SERVER_IS_DOWN(master_host)))
     {
         MXS_ERROR("Couldn't find suitable Master from %d candidates.", router_nservers);

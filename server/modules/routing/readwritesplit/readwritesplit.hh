@@ -13,7 +13,7 @@
  */
 
 /**
- * @file router.h - The read write split router module heder file
+ * @file Readwritesplit common header
  */
 
 #define MXS_MODULE_NAME "readwritesplit"
@@ -79,6 +79,33 @@ enum failure_mode
     RW_ERROR_ON_WRITE           /**< Don't close the connection but send an error for writes */
 };
 
+/**
+ * Enum values for router parameters
+ */
+static const MXS_ENUM_VALUE use_sql_variables_in_values[] =
+{
+    {"all",    TYPE_ALL},
+    {"master", TYPE_MASTER},
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE slave_selection_criteria_values[] =
+{
+    {"LEAST_GLOBAL_CONNECTIONS", LEAST_GLOBAL_CONNECTIONS},
+    {"LEAST_ROUTER_CONNECTIONS", LEAST_ROUTER_CONNECTIONS},
+    {"LEAST_BEHIND_MASTER",      LEAST_BEHIND_MASTER},
+    {"LEAST_CURRENT_OPERATIONS", LEAST_CURRENT_OPERATIONS},
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE master_failure_mode_values[] =
+{
+    {"fail_instantly", RW_FAIL_INSTANTLY},
+    {"fail_on_write",  RW_FAIL_ON_WRITE},
+    {"error_on_write", RW_ERROR_ON_WRITE},
+    {NULL}
+};
+
 /** States of a LOAD DATA LOCAL INFILE */
 enum ld_state
 {
@@ -118,12 +145,137 @@ enum ld_state
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
-/** Reply state change debug logging */
-#define LOG_RS(a, b) MXS_DEBUG("%s %s -> %s", (a)->uri(), \
-    rstostr((a)->get_reply_state()), rstostr(b));
+struct Config
+{
+    Config(MXS_CONFIG_PARAMETER* params):
+        slave_selection_criteria(
+            (select_criteria_t)config_get_enum(
+                params, "slave_selection_criteria", slave_selection_criteria_values)),
+        use_sql_variables_in(
+            (mxs_target_t)config_get_enum(
+                params, "use_sql_variables_in", use_sql_variables_in_values)),
+        master_failure_mode(
+            (enum failure_mode)config_get_enum(
+                params, "master_failure_mode", master_failure_mode_values)),
+        max_sescmd_history(config_get_integer(params, "max_sescmd_history")),
+        disable_sescmd_history(config_get_bool(params, "disable_sescmd_history")),
+        master_accept_reads(config_get_bool(params, "master_accept_reads")),
+        strict_multi_stmt(config_get_bool(params, "strict_multi_stmt")),
+        retry_failed_reads(config_get_bool(params, "retry_failed_reads")),
+        connection_keepalive(config_get_integer(params, "connection_keepalive")),
+        max_slave_replication_lag(config_get_integer(params, "max_slave_replication_lag")),
+        rw_max_slave_conn_percent(0),
+        max_slave_connections(0)
+    {
+    }
 
-struct ROUTER_INSTANCE;
-struct ROUTER_CLIENT_SES;
+    select_criteria_t slave_selection_criteria;  /**< The slave selection criteria */
+    mxs_target_t      use_sql_variables_in;      /**< Whether to send user variables to
+                                                  * master or all nodes */
+    failure_mode      master_failure_mode;       /**< Master server failure handling mode */
+    uint64_t          max_sescmd_history;        /**< Maximum amount of session commands to store */
+    bool              disable_sescmd_history;    /**< Disable session command history */
+    bool              master_accept_reads;       /**< Use master for reads */
+    bool              strict_multi_stmt;         /**< Force non-multistatement queries to be routed to
+                                                  * the master after a multistatement query. */
+    bool              retry_failed_reads;        /**< Retry failed reads on other servers */
+    int               connection_keepalive;      /**< Send pings to servers that have been idle
+                                                  * for too long */
+    int               max_slave_replication_lag; /**< Maximum replication lag */
+    int               rw_max_slave_conn_percent; /**< Maximum percentage of slaves to use for
+                                                  * each connection*/
+    int               max_slave_connections;     /**< Maximum number of slaves for each connection*/
+
+};
+
+/**
+ * The statistics for this router instance
+ */
+struct Stats
+{
+public:
+
+    Stats():
+        n_sessions(0),
+        n_queries(0),
+        n_master(0),
+        n_slave(0),
+        n_all(0)
+    {
+    }
+
+    uint64_t n_sessions;        /**< Number sessions created */
+    uint64_t n_queries;         /**< Number of queries forwarded */
+    uint64_t n_master;          /**< Number of stmts sent to master */
+    uint64_t n_slave;           /**< Number of stmts sent to slave */
+    uint64_t n_all;             /**< Number of stmts sent to all */
+};
+
+/**
+ * The per instance data for the router.
+ */
+class RWSplit
+{
+    RWSplit(const RWSplit&);
+    RWSplit& operator=(const RWSplit&);
+
+public:
+    RWSplit(SERVICE* service, const Config& config);
+    ~RWSplit();
+
+    SERVICE* service() const;
+    Config&  config();
+    Stats&   stats();
+
+private:
+    SERVICE* m_service; /**< Service where the router belongs*/
+    Config   m_config;
+    Stats    m_stats;
+};
+
+static inline const char* select_criteria_to_str(select_criteria_t type)
+{
+    switch (type)
+    {
+    case LEAST_GLOBAL_CONNECTIONS:
+        return "LEAST_GLOBAL_CONNECTIONS";
+
+    case LEAST_ROUTER_CONNECTIONS:
+        return "LEAST_ROUTER_CONNECTIONS";
+
+    case LEAST_BEHIND_MASTER:
+        return "LEAST_BEHIND_MASTER";
+
+    case LEAST_CURRENT_OPERATIONS:
+        return "LEAST_CURRENT_OPERATIONS";
+
+    default:
+        return "UNDEFINED_CRITERIA";
+    }
+}
+
+static inline const char* failure_mode_to_str(enum failure_mode type)
+{
+    switch (type)
+    {
+    case RW_FAIL_INSTANTLY:
+        return "fail_instantly";
+
+    case RW_FAIL_ON_WRITE:
+        return "fail_on_write";
+
+    case RW_ERROR_ON_WRITE:
+        return "error_on_write";
+
+    default:
+        ss_dassert(false);
+        return "UNDEFINED_MODE";
+    }
+}
+
+/**
+ * The following code is client session specific, to be moved into a separate file
+ */
 
 /** Enum for tracking client reply state */
 enum reply_state_t
@@ -134,26 +286,9 @@ enum reply_state_t
     REPLY_STATE_RSET_ROWS       /**< Resultset response, waiting for rows */
 };
 
-struct rwsplit_config_t
-{
-    int               rw_max_slave_conn_percent; /**< Maximum percentage of slaves
-                                                  * to use for each connection*/
-    int               max_slave_connections; /**< Maximum number of slaves for each connection*/
-    select_criteria_t slave_selection_criteria; /**< The slave selection criteria */
-    int               max_slave_replication_lag; /**< Maximum replication lag */
-    mxs_target_t      use_sql_variables_in; /**< Whether to send user variables
-                                                * to master or all nodes */
-    uint64_t          max_sescmd_history; /**< Maximum amount of session commands to store */
-    bool              disable_sescmd_history; /**< Disable session command history */
-    bool              master_accept_reads; /**< Use master for reads */
-    bool              strict_multi_stmt; /**< Force non-multistatement queries to be routed
-                                             * to the master after a multistatement query. */
-    enum failure_mode master_failure_mode; /**< Master server failure handling mode.
-                                               * @see enum failure_mode */
-    bool              retry_failed_reads; /**< Retry failed reads on other servers */
-    int               connection_keepalive; /**< Send pings to servers that have
-                                             * been idle for too long */
-};
+/** Reply state change debug logging */
+#define LOG_RS(a, b) MXS_DEBUG("%s %s -> %s", (a)->uri(), \
+    rstostr((a)->get_reply_state()), rstostr(b));
 
 static inline bool is_ps_command(uint8_t cmd)
 {
@@ -309,12 +444,14 @@ typedef std::tr1::unordered_map<uint32_t, SRWBackend> ExecMap;
  */
 struct ROUTER_CLIENT_SES
 {
+    ROUTER_CLIENT_SES(const Config& config);
+
     skygw_chk_t               rses_chk_top;
     bool                      rses_closed; /**< true when closeSession is called */
     SRWBackendList            backends; /**< List of backend servers */
     SRWBackend                current_master; /**< Current master server */
     SRWBackend                target_node; /**< The currently locked target node */
-    rwsplit_config_t          rses_config; /**< copied config info from router instance */
+    Config                    rses_config; /**< copied config info from router instance */
     int                       rses_nbackends;
     enum ld_state             load_data_state; /**< Current load data state */
     bool                      have_tmp_tables;
@@ -323,7 +460,7 @@ struct ROUTER_CLIENT_SES
     uint64_t                  sescmd_count;
     int                       expected_responses; /**< Number of expected responses to the current query */
     GWBUF*                    query_queue; /**< Queued commands waiting to be executed */
-    struct ROUTER_INSTANCE   *router; /**< The router instance */
+    class RWSplit   *router; /**< The router instance */
     struct ROUTER_CLIENT_SES *next;
     TableSet                  temp_tables; /**< Set of temporary tables */
     mxs::SessionCommandList   sescmd_list; /**< List of executed session commands */
@@ -335,63 +472,6 @@ struct ROUTER_CLIENT_SES
     ExecMap                   exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
     skygw_chk_t               rses_chk_tail;
 };
-
-/**
- * The statistics for this router instance
- */
-struct ROUTER_STATS
-{
-    uint64_t n_sessions;        /**< Number sessions created */
-    uint64_t n_queries;         /**< Number of queries forwarded */
-    uint64_t n_master;          /**< Number of stmts sent to master */
-    uint64_t n_slave;           /**< Number of stmts sent to slave */
-    uint64_t n_all;             /**< Number of stmts sent to all */
-};
-
-/**
- * The per instance data for the router.
- */
-struct ROUTER_INSTANCE
-{
-    SERVICE*         service;   /**< Pointer to service */
-    rwsplit_config_t rwsplit_config; /**< expanded config info from SERVICE */
-    int              rwsplit_version; /**< version number for router's config */
-    ROUTER_STATS     stats;     /**< Statistics for this router */
-    bool             available_slaves; /**< The router has some slaves avialable */
-};
-
-/**
- * @brief Route a stored query
- *
- * When multiple queries are executed in a pipeline fashion, the readwritesplit
- * stores the extra queries in a queue. This queue is emptied after reading a
- * reply from the backend server.
- *
- * @param rses Router client session
- * @return True if a stored query was routed successfully
- */
-bool route_stored_query(ROUTER_CLIENT_SES *rses);
-
-static inline const char* select_criteria_to_str(select_criteria_t type)
-{
-    switch (type)
-    {
-    case LEAST_GLOBAL_CONNECTIONS:
-        return "LEAST_GLOBAL_CONNECTIONS";
-
-    case LEAST_ROUTER_CONNECTIONS:
-        return "LEAST_ROUTER_CONNECTIONS";
-
-    case LEAST_BEHIND_MASTER:
-        return "LEAST_BEHIND_MASTER";
-
-    case LEAST_CURRENT_OPERATIONS:
-        return "LEAST_CURRENT_OPERATIONS";
-
-    default:
-        return "UNDEFINED_CRITERIA";
-    }
-}
 
 /**
  * Helper function to convert reply_state_t to string
@@ -415,23 +495,4 @@ static inline const char* rstostr(reply_state_t state)
 
     ss_dassert(false);
     return "UNKNOWN";
-}
-
-static inline const char* failure_mode_to_str(enum failure_mode type)
-{
-    switch (type)
-    {
-    case RW_FAIL_INSTANTLY:
-        return "fail_instantly";
-
-    case RW_FAIL_ON_WRITE:
-        return "fail_on_write";
-
-    case RW_ERROR_ON_WRITE:
-        return "error_on_write";
-
-    default:
-        ss_dassert(false);
-        return "UNDEFINED_MODE";
-    }
 }

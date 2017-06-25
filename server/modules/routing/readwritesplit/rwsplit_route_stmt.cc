@@ -61,13 +61,13 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
     return p(a, b) < 0 ? a : b;
 }
 
-void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+void handle_connection_keepalive(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                                  SRWBackend& target)
 {
     ss_dassert(target);
     ss_debug(int nserv = 0);
     /** Each heartbeat is 1/10th of a second */
-    int keepalive = inst->rwsplit_config.connection_keepalive * 10;
+    int keepalive = inst->config().connection_keepalive * 10;
 
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
@@ -123,7 +123,7 @@ void replace_stmt_id(GWBUF* buffer, uint32_t id)
  * @return true if routing succeed or if it failed due to unsupported query.
  * false if backend failure was encountered.
  */
-bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+bool route_single_stmt(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf)
 {
     route_target_t route_target;
@@ -246,7 +246,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
     }
 
-    if (succp && inst->rwsplit_config.connection_keepalive &&
+    if (succp && inst->config().connection_keepalive &&
         (TARGET_IS_SLAVE(route_target) || TARGET_IS_MASTER(route_target)))
     {
         handle_connection_keepalive(inst, rses, target);
@@ -930,7 +930,7 @@ SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+SRWBackend handle_slave_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                                   uint8_t cmd, uint32_t stmt_id)
 {
     int rlag_max = rses_get_max_replication_lag(rses);
@@ -960,7 +960,7 @@ SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses
 
     if (target)
     {
-        atomic_add_uint64(&inst->stats.n_slave, 1);
+        atomic_add_uint64(&inst->stats().n_slave, 1);
     }
     else
     {
@@ -1024,7 +1024,7 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
     }
 
     MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
-                rses->router->service->name, rses->client_dcb->user,
+                rses->router->service()->name, rses->client_dcb->user,
                 rses->client_dcb->remote, errmsg);
 }
 
@@ -1039,7 +1039,7 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+bool handle_master_is_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                              SRWBackend* dest)
 {
     SRWBackend target = get_target_backend(rses, BE_MASTER, NULL, MAX_RLAG_UNDEFINED);
@@ -1047,7 +1047,7 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     if (target && target == rses->current_master)
     {
-        atomic_add_uint64(&inst->stats.n_master, 1);
+        atomic_add_uint64(&inst->stats().n_master, 1);
     }
     else
     {
@@ -1085,7 +1085,7 @@ static inline bool query_creates_reply(mysql_server_cmd_t cmd)
  *
  *  @return True on success
  */
-bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+bool handle_got_target(RWSplit *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf, SRWBackend& target, bool store)
 {
     /**
@@ -1122,7 +1122,7 @@ bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             MXS_ERROR("Failed to store current statement, it won't be retried if it fails.");
         }
 
-        atomic_add_uint64(&inst->stats.n_queries, 1);
+        atomic_add_uint64(&inst->stats().n_queries, 1);
 
         if (response == mxs::Backend::EXPECT_RESPONSE)
         {

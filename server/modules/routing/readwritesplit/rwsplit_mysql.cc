@@ -180,7 +180,7 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint32_t qtype)
  * @param qtype         Query type
  * @return bool indicating whether the session can continue
  */
-bool handle_target_is_all(route_target_t route_target, ROUTER_INSTANCE *inst,
+bool handle_target_is_all(route_target_t route_target, RWSplit *inst,
                           ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
                           int packet_type, uint32_t qtype)
 {
@@ -217,7 +217,7 @@ bool handle_target_is_all(route_target_t route_target, ROUTER_INSTANCE *inst,
     {
 
         result = true;
-        atomic_add_uint64(&inst->stats.n_all, 1);
+        atomic_add_uint64(&inst->stats().n_all, 1);
     }
 
     return result;
