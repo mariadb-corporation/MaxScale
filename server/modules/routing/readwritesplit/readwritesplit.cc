@@ -12,7 +12,6 @@
  */
 
 #include "readwritesplit.hh"
-#include "rwsplit_internal.hh"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -31,6 +30,9 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
+
+#include "rwsplit_internal.hh"
+#include "rwsplitsession.hh"
 
 /**
  * The entry points for the read/write query splitting router module.

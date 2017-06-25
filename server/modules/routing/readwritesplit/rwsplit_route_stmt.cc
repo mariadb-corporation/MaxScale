@@ -91,28 +91,6 @@ void handle_connection_keepalive(RWSplit *inst, RWSplitSession *rses,
     ss_dassert(nserv < rses->rses_nbackends);
 }
 
-uint32_t get_stmt_id(RWSplitSession* rses, GWBUF* buffer)
-{
-    uint32_t rval = 0;
-
-    // All COM_STMT type statements store the ID in the same place
-    uint32_t id = mxs_mysql_extract_ps_id(buffer);
-    ClientHandleMap::iterator it = rses->ps_handles.find(id);
-
-    if (it != rses->ps_handles.end())
-    {
-        rval = it->second;
-    }
-
-    return rval;
-}
-
-void replace_stmt_id(GWBUF* buffer, uint32_t id)
-{
-    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-    gw_mysql_set_byte4(ptr, id);
-}
-
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).
@@ -166,14 +144,14 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
         if (command == MYSQL_COM_QUERY &&
             qc_get_operation(querybuf) == QUERY_OP_EXECUTE)
         {
-            std::string id = extract_text_ps_id(querybuf);
+            std::string id = get_text_ps_id(querybuf);
             qtype = rses->ps_manager.get_type(id);
         }
         else if (is_ps_command(command))
         {
-            stmt_id = get_stmt_id(rses, querybuf);
+            stmt_id = get_internal_ps_id(rses, querybuf);
             qtype = rses->ps_manager.get_type(stmt_id);
-            replace_stmt_id(querybuf, stmt_id);
+            replace_binary_ps_id(querybuf, stmt_id);
         }
 
         route_target = get_route_target(rses, command, qtype, querybuf->hint);

@@ -17,7 +17,9 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 
-static uint32_t get_prepare_type(GWBUF* buffer)
+#include "rwsplit_internal.hh"
+
+uint32_t get_prepare_type(GWBUF* buffer)
 {
     uint32_t type;
 
@@ -56,7 +58,7 @@ static uint32_t get_prepare_type(GWBUF* buffer)
     return type;
 }
 
-std::string extract_text_ps_id(GWBUF* buffer)
+std::string get_text_ps_id(GWBUF* buffer)
 {
     std::string rval;
     char* name = qc_get_prepare_name(buffer);
@@ -68,6 +70,12 @@ std::string extract_text_ps_id(GWBUF* buffer)
     }
 
     return rval;
+}
+
+void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
+{
+    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+    gw_mysql_set_byte4(ptr, id);
 }
 
 PSManager::PSManager()
@@ -138,7 +146,7 @@ void PSManager::store(GWBUF* buffer, uint32_t id)
     switch (mxs_mysql_get_command(buffer))
     {
     case MYSQL_COM_QUERY:
-        m_text_ps[extract_text_ps_id(buffer)] = get_prepare_type(buffer);
+        m_text_ps[get_text_ps_id(buffer)] = get_prepare_type(buffer);
         break;
 
     case MYSQL_COM_STMT_PREPARE:

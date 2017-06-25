@@ -12,14 +12,14 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include "readwritesplit.hh"
 
 #include <string>
 
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 
-#include "readwritesplit.hh"
+#include "rwsplitsession.hh"
 
 #define RW_CHK_DCB(b, d) \
 do{ \
@@ -30,6 +30,15 @@ do{ \
 }while (false)
 
 #define RW_CLOSE_BREF(b) do{ if (b){ (b)->closed_at = __LINE__; } } while (false)
+
+static inline bool is_ps_command(uint8_t cmd)
+{
+    return cmd == MYSQL_COM_STMT_EXECUTE ||
+           cmd == MYSQL_COM_STMT_SEND_LONG_DATA ||
+           cmd == MYSQL_COM_STMT_CLOSE ||
+           cmd == MYSQL_COM_STMT_FETCH ||
+           cmd == MYSQL_COM_STMT_RESET;
+}
 
 /*
  * The following are implemented in rwsplit_mysql.c
@@ -113,12 +122,3 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type);
 uint32_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
 
 void close_all_connections(RWSplitSession* rses);
-
-/**
- * @brief Extract text identifier of a PREPARE or EXECUTE statement
- *
- * @param buffer Buffer containing a PREPARE or EXECUTE command
- *
- * @return The string identifier of the statement
- */
-std::string extract_text_ps_id(GWBUF* buffer);
