@@ -12,6 +12,7 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <algorithm>
 #include <iostream>
 #include <maxscale/modutil.h>
 #include <maxscale/paths.h>
@@ -69,6 +70,7 @@ struct test_case
     uint32_t    type_mask;
 } test_cases[] =
 {
+    // Keep these all uppercase, lowercase are tested programmatically.
     { "BEGIN", QUERY_TYPE_BEGIN_TRX },
     { "BEGIN WORK", QUERY_TYPE_BEGIN_TRX },
 
@@ -299,12 +301,21 @@ bool test(uint32_t (*getter)(GWBUF*), bool dont_bail_out)
         string base(pTest->zStmt);
         cout << base << endl;
 
-        string s;
-
-        s = base;
-        if (!test(getter, s.c_str(), pTest->type_mask))
+        if (!test(getter, base.c_str(), pTest->type_mask))
         {
             rc = false;
+        }
+
+        if (dont_bail_out || rc)
+        {
+            // Test all lowercase.
+            string lc(base);
+            transform(lc.begin(), lc.end(), lc.begin(), ::tolower);
+
+            if (!test(getter, lc.c_str(), pTest->type_mask))
+            {
+                rc = false;
+            }
         }
 
         if (dont_bail_out || rc)
