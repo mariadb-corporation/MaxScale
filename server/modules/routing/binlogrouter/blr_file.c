@@ -72,6 +72,7 @@
 #include <maxscale/alloc.h>
 #include <inttypes.h>
 #include <maxscale/secrets.h>
+#include <maxscale/encryption.h>
 
 /**
  * AES_CTR handling
@@ -3025,7 +3026,6 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
                             uint8_t *iv,
                             int action)
 {
-    EVP_CIPHER_CTX ctx;
     uint8_t *key = router->encryption.key_value;
     unsigned int key_len = router->encryption.key_len;
     int outlen;
@@ -3048,10 +3048,10 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
 
     out_ptr = GWBUF_DATA(outbuf);
 
-    EVP_CIPHER_CTX_init(&ctx);
+    EVP_CIPHER_CTX *ctx = mxs_evp_cipher_ctx_alloc();
 
     /* Set the encryption algorithm accordingly to key_len and encryption mode */
-    if (!EVP_CipherInit_ex(&ctx,
+    if (!EVP_CipherInit_ex(ctx,
                            ciphers[router->encryption.encryption_algorithm](router->encryption.key_len),
                            NULL,
                            key,
@@ -3059,23 +3059,23 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
                            action))
     {
         MXS_ERROR("Error in EVP_CipherInit_ex for algo %d", router->encryption.encryption_algorithm);
-        EVP_CIPHER_CTX_cleanup(&ctx);
+        mxs_evp_cipher_ctx_free(ctx);
         MXS_FREE(outbuf);
         return NULL;
     }
 
     /* Set no padding */
-    EVP_CIPHER_CTX_set_padding(&ctx, 0);
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
 
     /* Encryt/Decrypt the input data */
-    if (!EVP_CipherUpdate(&ctx,
+    if (!EVP_CipherUpdate(ctx,
                           out_ptr + 4,
                           &outlen,
                           buffer,
                           size))
     {
         MXS_ERROR("Error in EVP_CipherUpdate");
-        EVP_CIPHER_CTX_cleanup(&ctx);
+        mxs_evp_cipher_ctx_free(ctx);
         MXS_FREE(outbuf);
         return NULL;
     }
@@ -3086,7 +3086,7 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
     if (router->encryption.encryption_algorithm != BLR_AES_CBC)
     {
         /* Call Final_ex */
-        if (!EVP_CipherFinal_ex(&ctx,
+        if (!EVP_CipherFinal_ex(ctx,
                                 (out_ptr + 4 + outlen),
                                 (int*)&flen))
         {
@@ -3100,12 +3100,12 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
          * If some bytes (ctx.buf_len) are still available in ctx.buf
          * handle them with ECB and XOR
          */
-        if (ctx.buf_len)
+        if (size - outlen > 0)
         {
             if (!blr_aes_create_tail_for_cbc(out_ptr + 4 + outlen,
-                                             ctx.buf,
-                                             ctx.buf_len,
-                                             ctx.oiv,
+                                             buffer + outlen,
+                                             size - outlen,
+                                             iv,
                                              router->encryption.key_value,
                                              router->encryption.key_len))
             {
@@ -3121,7 +3121,7 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
         outbuf = NULL;
     }
 
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    mxs_evp_cipher_ctx_free(ctx);
 
     return outbuf;
 }
@@ -3299,14 +3299,13 @@ static int blr_aes_create_tail_for_cbc(uint8_t *output,
                                        uint8_t *key,
                                        unsigned int key_len)
 {
-    EVP_CIPHER_CTX t_ctx;
     uint8_t mask[AES_BLOCK_SIZE];
     int mlen = 0;
 
-    EVP_CIPHER_CTX_init(&t_ctx);
+    EVP_CIPHER_CTX* t_ctx = mxs_evp_cipher_ctx_alloc();
 
     /* Initialise with AES_ECB and NULL iv */
-    if (!EVP_CipherInit_ex(&t_ctx,
+    if (!EVP_CipherInit_ex(t_ctx,
                            ciphers[BLR_AES_ECB](key_len),
                            NULL,
                            key,
@@ -3314,22 +3313,22 @@ static int blr_aes_create_tail_for_cbc(uint8_t *output,
                            BINLOG_FLAG_ENCRYPT))
     {
         MXS_ERROR("Error in EVP_CipherInit_ex CBC for last block (ECB)");
-        EVP_CIPHER_CTX_cleanup(&t_ctx);
+        mxs_evp_cipher_ctx_free(t_ctx);
         return 0;
     }
 
     /* Set no padding */
-    EVP_CIPHER_CTX_set_padding(&t_ctx, 0);
+    EVP_CIPHER_CTX_set_padding(t_ctx, 0);
 
     /* Do the enc/dec of the IV (the one from previous stage) */
-    if (!EVP_CipherUpdate(&t_ctx,
+    if (!EVP_CipherUpdate(t_ctx,
                           mask,
                           &mlen,
                           iv,
                           sizeof(mask)))
     {
         MXS_ERROR("Error in EVP_CipherUpdate ECB");
-        EVP_CIPHER_CTX_cleanup(&t_ctx);
+        mxs_evp_cipher_ctx_free(t_ctx);
         return 0;
     }
 
@@ -3344,7 +3343,7 @@ static int blr_aes_create_tail_for_cbc(uint8_t *output,
         output[i] = input[i] ^ mask[i];
     }
 
-    EVP_CIPHER_CTX_cleanup(&t_ctx);
+    mxs_evp_cipher_ctx_free(t_ctx);
 
     return 1;
 }
