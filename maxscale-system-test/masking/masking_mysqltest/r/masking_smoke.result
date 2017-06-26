@@ -31,46 +31,46 @@ insert into masking_ENUM       values ("aaa");
 insert into masking_SET        values ("aaa");
 select * from masking_BINARY;
 a
-XXX
+YYY
 select * from masking_VARBINARY;
 a
-XXX
+YYY
 select * from masking_CHAR;
 a
-XXX
+YYY
 select * from masking_VARCHAR;
 a
-XXX
+YYY
 select * from masking_BLOB;
 a
-XXX
+YYY
 select * from masking_TINYBLOB;
 a
-XXX
+YYY
 select * from masking_MEDIUMBLOB;
 a
-XXX
+YYY
 select * from masking_LONGBLOB;
 a
-XXX
+YYY
 select * from masking_TEXT;
 a
-XXX
+YYY
 select * from masking_TINYTEXT;
 a
-XXX
+YYY
 select * from masking_MEDIUMTEXT;
 a
-XXX
+YYY
 select * from masking_LONGTEXT;
 a
-XXX
+YYY
 select * from masking_ENUM;
 a
-XXX
+YYY
 select * from masking_SET;
 a
-XXX
+YYY
 create table masking_INT       (a INT);
 create table masking_REAL      (a REAL(3, 2));
 create table masking_DECIMAL   (a DECIMAL(3, 2));
