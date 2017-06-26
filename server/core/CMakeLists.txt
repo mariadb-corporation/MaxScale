@@ -1,4 +1,4 @@
-add_library(maxscale-common SHARED adminusers.c alloc.c authenticator.c atomic.c buffer.c config.c config_runtime.c dcb.c filter.c filter.cc externcmd.c paths.c hashtable.c hint.c housekeeper.c load_utils.c log_manager.cc maxscale_pcre2.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.cc poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
+add_library(maxscale-common SHARED adminusers.c alloc.c authenticator.c atomic.c buffer.c config.c config_runtime.c dcb.c filter.c filter.cc externcmd.c paths.c hashtable.c hint.c housekeeper.c load_utils.c log_manager.cc maxscale_pcre2.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.cc poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c encryption.c)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})
