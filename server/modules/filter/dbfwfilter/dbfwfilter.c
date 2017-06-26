@@ -120,6 +120,80 @@ typedef enum
 } ruletype_t;
 
 /**
+ * What operator a rule should apply to.
+ *
+ * Note that each operator is represented by a unique bit, so that they
+ * can be combined as a bitmask, while query_op_t enumeration of the query
+ * classifier consists of a sequence of unique numbers.
+ */
+typedef enum fw_op
+{
+    FW_OP_UNDEFINED = 0,
+
+    // NOTE: If you add something here, check the 'qc_op_to_fw_op' function below.
+    FW_OP_ALTER     = (1 << 0),
+    FW_OP_CHANGE_DB = (1 << 1),
+    FW_OP_CREATE    = (1 << 2),
+    FW_OP_DELETE    = (1 << 3),
+    FW_OP_DROP      = (1 << 4),
+    FW_OP_GRANT     = (1 << 5),
+    FW_OP_INSERT    = (1 << 6),
+    FW_OP_LOAD      = (1 << 7),
+    FW_OP_REVOKE    = (1 << 8),
+    FW_OP_SELECT    = (1 << 9),
+    FW_OP_UPDATE    = (1 << 10),
+} fw_op_t;
+
+/**
+ * Convert a qc_query_op_t to the equivalent fw_op_t.
+ *
+ * @param op A query classifier operator.
+ *
+ * @return The corresponding bit value.
+ */
+static inline fw_op_t qc_op_to_fw_op(qc_query_op_t op)
+{
+    switch (op)
+    {
+    case QUERY_OP_ALTER:
+        return FW_OP_ALTER;
+
+    case QUERY_OP_CHANGE_DB:
+        return FW_OP_CHANGE_DB;
+
+    case QUERY_OP_CREATE:
+        return FW_OP_CREATE;
+
+    case QUERY_OP_DELETE:
+        return FW_OP_DELETE;
+
+    case QUERY_OP_DROP:
+        return FW_OP_DROP;
+
+    case QUERY_OP_GRANT:
+        return FW_OP_GRANT;
+
+    case QUERY_OP_INSERT:
+        return FW_OP_INSERT;
+
+    case QUERY_OP_LOAD:
+        return FW_OP_LOAD;
+
+    case QUERY_OP_REVOKE:
+        return FW_OP_REVOKE;
+
+    case QUERY_OP_SELECT:
+        return FW_OP_SELECT;
+
+    case QUERY_OP_UPDATE:
+        return FW_OP_UPDATE;
+
+    default:
+        return FW_OP_UNDEFINED;
+    };
+}
+
+/**
  * Possible actions to take when the query matches a rule
  */
 enum fw_actions
@@ -197,7 +271,7 @@ typedef struct rule_t
     void*          data;        /*< Actual implementation of the rule */
     char*          name;        /*< Name of the rule */
     ruletype_t     type;        /*< Type of the rule */
-    qc_query_op_t  on_queries;  /*< Types of queries to inspect */
+    uint32_t       on_queries;  /*< Types of queries to inspect */
     int            times_matched; /*< Number of times this rule has been matched */
     TIMERANGE*     active;      /*< List of times when this rule is active */
     struct rule_t *next;
@@ -511,47 +585,47 @@ bool parse_querytypes(const char* str, RULE* rule)
             *dest = '\0';
             if (strcmp(buffer, "select") == 0)
             {
-                rule->on_queries |= QUERY_OP_SELECT;
+                rule->on_queries |= FW_OP_SELECT;
             }
             else if (strcmp(buffer, "insert") == 0)
             {
-                rule->on_queries |= QUERY_OP_INSERT;
+                rule->on_queries |= FW_OP_INSERT;
             }
             else if (strcmp(buffer, "update") == 0)
             {
-                rule->on_queries |= QUERY_OP_UPDATE;
+                rule->on_queries |= FW_OP_UPDATE;
             }
             else if (strcmp(buffer, "delete") == 0)
             {
-                rule->on_queries |= QUERY_OP_DELETE;
+                rule->on_queries |= FW_OP_DELETE;
             }
             else if (strcmp(buffer, "use") == 0)
             {
-                rule->on_queries |= QUERY_OP_CHANGE_DB;
+                rule->on_queries |= FW_OP_CHANGE_DB;
             }
             else if (strcmp(buffer, "grant") == 0)
             {
-                rule->on_queries |= QUERY_OP_GRANT;
+                rule->on_queries |= FW_OP_GRANT;
             }
             else if (strcmp(buffer, "revoke") == 0)
             {
-                rule->on_queries |= QUERY_OP_REVOKE;
+                rule->on_queries |= FW_OP_REVOKE;
             }
             else if (strcmp(buffer, "drop") == 0)
             {
-                rule->on_queries |= QUERY_OP_DROP;
+                rule->on_queries |= FW_OP_DROP;
             }
             else if (strcmp(buffer, "create") == 0)
             {
-                rule->on_queries |= QUERY_OP_CREATE;
+                rule->on_queries |= FW_OP_CREATE;
             }
             else if (strcmp(buffer, "alter") == 0)
             {
-                rule->on_queries |= QUERY_OP_ALTER;
+                rule->on_queries |= FW_OP_ALTER;
             }
             else if (strcmp(buffer, "load") == 0)
             {
-                rule->on_queries |= QUERY_OP_LOAD;
+                rule->on_queries |= FW_OP_LOAD;
             }
 
             if (done)
@@ -1008,7 +1082,7 @@ bool create_rule(void* scanner, const char* name)
         if (ruledef && (ruledef->name = MXS_STRDUP(name)))
         {
             ruledef->type = RT_UNDEFINED;
-            ruledef->on_queries = QUERY_OP_UNDEFINED;
+            ruledef->on_queries = FW_OP_UNDEFINED;
             ruledef->next = rstack->rule;
             ruledef->active = NULL;
             ruledef->times_matched = 0;
@@ -2044,10 +2118,10 @@ bool rule_matches(FW_INSTANCE* my_instance,
         }
     }
 
-    if (rulebook->rule->on_queries == QUERY_OP_UNDEFINED ||
-        rulebook->rule->on_queries & optype ||
+    if (rulebook->rule->on_queries == FW_OP_UNDEFINED ||
+        rulebook->rule->on_queries & qc_op_to_fw_op(optype) ||
         (MYSQL_IS_COM_INIT_DB((uint8_t*)GWBUF_DATA(queue)) &&
-         rulebook->rule->on_queries & QUERY_OP_CHANGE_DB))
+         rulebook->rule->on_queries & FW_OP_CHANGE_DB))
     {
         switch (rulebook->rule->type)
         {
