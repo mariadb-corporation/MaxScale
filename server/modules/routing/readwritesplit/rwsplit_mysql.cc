@@ -51,37 +51,65 @@
  */
 
 /**
- * @brief Determine packet type
+ * @brief Determine the type of a query
  *
- * Examine the packet in the buffer to extract the type, if possible. At the
- * same time set the second parameter to indicate whether the packet was
- * empty.
+ * @param querybuf      GWBUF containing the query
+ * @param packet_type   Integer denoting DB specific enum
+ * @param non_empty_packet  Boolean to be set by this function
  *
- * It is assumed that the packet length and type are contained within a single
- * buffer, the one indicated by the first parameter.
- *
- * @param querybuf  Buffer containing the packet
- * @param non_empty_packet  bool indicating whether the packet is non-empty
- * @return The packet type, or MYSQL_COM_UNDEFINED; also the second parameter is set
+ * @return uint32_t the query type; also the non_empty_packet bool is set
  */
-uint8_t
-determine_packet_type(GWBUF *querybuf, bool *non_empty_packet)
+uint32_t determine_query_type(GWBUF *querybuf, int command)
 {
-    uint8_t packet_type;
-    uint8_t *packet = GWBUF_DATA(querybuf);
+    uint32_t type = QUERY_TYPE_UNKNOWN;
 
-    if (gw_mysql_get_byte3(packet) == 0)
+    switch (command)
     {
-        /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-        *non_empty_packet = false;
-        packet_type = (uint8_t)MYSQL_COM_UNDEFINED;
+    case MYSQL_COM_QUIT: /*< 1 QUIT will close all sessions */
+    case MYSQL_COM_INIT_DB: /*< 2 DDL must go to the master */
+    case MYSQL_COM_REFRESH: /*< 7 - I guess this is session but not sure */
+    case MYSQL_COM_DEBUG: /*< 0d all servers dump debug info to stdout */
+    case MYSQL_COM_PING: /*< 0e all servers are pinged */
+    case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
+    case MYSQL_COM_SET_OPTION: /*< 1b send options to all servers */
+        type = QUERY_TYPE_SESSION_WRITE;
+        break;
+
+    case MYSQL_COM_CREATE_DB: /**< 5 DDL must go to the master */
+    case MYSQL_COM_DROP_DB: /**< 6 DDL must go to the master */
+    case MYSQL_COM_STMT_CLOSE: /*< free prepared statement */
+    case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
+    case MYSQL_COM_STMT_RESET: /*< resets the data of a prepared statement */
+        type = QUERY_TYPE_WRITE;
+        break;
+
+    case MYSQL_COM_QUERY:
+        type = qc_get_type_mask(querybuf);
+        break;
+
+    case MYSQL_COM_STMT_PREPARE:
+        type = qc_get_type_mask(querybuf);
+        type |= QUERY_TYPE_PREPARE_STMT;
+        break;
+
+    case MYSQL_COM_STMT_EXECUTE:
+        /** Parsing is not needed for this type of packet */
+        type = QUERY_TYPE_EXEC_STMT;
+        break;
+
+    case MYSQL_COM_SHUTDOWN: /**< 8 where should shutdown be routed ? */
+    case MYSQL_COM_STATISTICS: /**< 9 ? */
+    case MYSQL_COM_PROCESS_INFO: /**< 0a ? */
+    case MYSQL_COM_CONNECT: /**< 0b ? */
+    case MYSQL_COM_PROCESS_KILL: /**< 0c ? */
+    case MYSQL_COM_TIME: /**< 0f should this be run in gateway ? */
+    case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
+    case MYSQL_COM_DAEMON: /**< 1d ? */
+    default:
+        break;
     }
-    else
-    {
-        *non_empty_packet = true;
-        packet_type = packet[4];
-    }
-    return packet_type;
+
+    return type;
 }
 
 /*

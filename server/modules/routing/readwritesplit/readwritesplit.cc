@@ -896,13 +896,16 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
     }
     else
     {
+        /** Gather the information required to make routing decisions */
+        RouteInfo info(rses, querybuf);
+
         if (rses->query_queue == NULL &&
             (rses->expected_responses == 0 ||
-             mxs_mysql_get_command(querybuf) == MYSQL_COM_STMT_FETCH ||
+             info.command == MYSQL_COM_STMT_FETCH ||
              rses->load_data_state == LOAD_DATA_ACTIVE))
         {
             /** No active or pending queries */
-            if (route_single_stmt(inst, rses, querybuf))
+            if (route_single_stmt(inst, rses, querybuf, info))
             {
                 rval = 1;
             }

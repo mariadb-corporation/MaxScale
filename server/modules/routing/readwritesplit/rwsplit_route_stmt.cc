@@ -91,37 +91,21 @@ void handle_connection_keepalive(RWSplit *inst, RWSplitSession *rses,
     ss_dassert(nserv < rses->rses_nbackends);
 }
 
-/**
- * Routing function. Find out query type, backend type, and target DCB(s).
- * Then route query to found target(s).
- * @param inst      router instance
- * @param rses      router session
- * @param querybuf  GWBUF including the query
- *
- * @return true if routing succeed or if it failed due to unsupported query.
- * false if backend failure was encountered.
- */
-bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
-                       GWBUF *querybuf)
+route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
+                               uint8_t* command, uint32_t* type, uint32_t* stmt_id)
 {
-    route_target_t route_target;
-    bool succp = false;
-    bool non_empty_packet;
-    uint32_t stmt_id = 0;
+    route_target_t route_target = TARGET_MASTER;
 
-    ss_dassert(querybuf->next == NULL); // The buffer must be contiguous.
-
-    /* packet_type is a problem as it is MySQL specific */
-    uint8_t command = determine_packet_type(querybuf, &non_empty_packet);
-    uint32_t qtype = determine_query_type(querybuf, command, non_empty_packet);
-
-    if (non_empty_packet)
+    if (gwbuf_length(buffer) > MYSQL_HEADER_LEN)
     {
-        handle_multi_temp_and_load(rses, querybuf, command, &qtype);
+        *command = mxs_mysql_get_command(buffer);
+        *type = determine_query_type(buffer, *command);
+
+        handle_multi_temp_and_load(rses, buffer, *command, type);
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_transaction_status(rses, querybuf, qtype);
+            log_transaction_status(rses, buffer, *type);
         }
         /**
          * Find out where to route the query. Result may not be clear; it is
@@ -141,28 +125,53 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
          *   eventually to master
          */
 
-        if (command == MYSQL_COM_QUERY &&
-            qc_get_operation(querybuf) == QUERY_OP_EXECUTE)
+        if (*command == MYSQL_COM_QUERY &&
+            qc_get_operation(buffer) == QUERY_OP_EXECUTE)
         {
-            std::string id = get_text_ps_id(querybuf);
-            qtype = rses->ps_manager.get_type(id);
+            std::string id = get_text_ps_id(buffer);
+            *type = rses->ps_manager.get_type(id);
         }
-        else if (is_ps_command(command))
+        else if (is_ps_command(*command))
         {
-            stmt_id = get_internal_ps_id(rses, querybuf);
-            qtype = rses->ps_manager.get_type(stmt_id);
-            replace_binary_ps_id(querybuf, stmt_id);
+            *stmt_id = get_internal_ps_id(rses, buffer);
+            *type = rses->ps_manager.get_type(*stmt_id);
         }
 
-        route_target = get_route_target(rses, command, qtype, querybuf->hint);
+        route_target = get_route_target(rses, *command, *type, buffer->hint);
     }
     else
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-        route_target = TARGET_MASTER;
         rses->load_data_state = LOAD_DATA_END;
         MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
-                 rses->rses_load_data_sent + gwbuf_length(querybuf));
+                 rses->rses_load_data_sent + gwbuf_length(buffer));
+    }
+
+    return route_target;
+}
+
+/**
+ * Routing function. Find out query type, backend type, and target DCB(s).
+ * Then route query to found target(s).
+ * @param inst      router instance
+ * @param rses      router session
+ * @param querybuf  GWBUF including the query
+ *
+ * @return true if routing succeed or if it failed due to unsupported query.
+ * false if backend failure was encountered.
+ */
+bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, const RouteInfo& info)
+{
+    bool succp = false;
+    uint32_t stmt_id = info.stmt_id;
+    uint8_t command = info.command;
+    uint32_t qtype = info.type;
+    route_target_t route_target = info.target;
+
+    if (is_ps_command(command))
+    {
+        /** Replace the client statement ID with our internal one */
+        replace_binary_ps_id(querybuf, stmt_id);
     }
 
     SRWBackend target;

@@ -52,7 +52,6 @@ bool execute_sescmd_in_backend(SRWBackend& backend_ref);
 bool handle_target_is_all(route_target_t route_target,
                           RWSplit *inst, RWSplitSession *rses,
                           GWBUF *querybuf, int packet_type, uint32_t qtype);
-uint8_t determine_packet_type(GWBUF *querybuf, bool *non_empty_packet);
 void log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype);
 bool is_packet_a_query(int packet_type);
 bool send_readonly_error(DCB *dcb);
@@ -70,7 +69,7 @@ int rses_get_max_replication_lag(RWSplitSession *rses);
  */
 
 bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
-                       GWBUF *querybuf);
+                       GWBUF *querybuf, const RouteInfo& info);
 SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
                               char *name, int max_rlag);
 route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
@@ -119,6 +118,21 @@ bool is_read_tmp_table(RWSplitSession *router_cli_ses,
 void check_create_tmp_table(RWSplitSession *router_cli_ses,
                             GWBUF *querybuf, uint32_t type);
 bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type);
-uint32_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
 
 void close_all_connections(RWSplitSession* rses);
+
+uint32_t determine_query_type(GWBUF *querybuf, int command);
+
+/**
+ * @brief Get the routing requirements for a query
+ *
+ * @param rses Router client session
+ * @param buffer Buffer containing the query
+ * @param command Output parameter where the packet command is stored
+ * @param type    Output parameter where the query type is stored
+ * @param stmt_id Output parameter where statement ID, if the query is a binary protocol command, is stored
+ *
+ * @return The target type where this query should be routed
+ */
+route_target_t get_target_type(RWSplitSession* rses, GWBUF* buffer, uint8_t* command,
+                               uint32_t* type, uint32_t* stmt_id);

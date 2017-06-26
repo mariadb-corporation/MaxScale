@@ -102,6 +102,17 @@ public:
     skygw_chk_t             rses_chk_tail;
 };
 
+/** Struct for holding routing related information */
+struct RouteInfo
+{
+    RouteInfo(RWSplitSession* rses, GWBUF* buffer);
+
+    route_target_t target;  /**< Route target type, TARGET_UNDEFINED for unknown */
+    uint8_t        command; /**< The command byte, 0xff for unknown commands */
+    uint32_t       type;    /**< The query type, QUERY_TYPE_UNKNOWN for unknown types*/
+    uint32_t       stmt_id; /**< Prepared statement ID, 0 for unknown */
+};
+
 /**
  * Helper function to convert reply_state_t to string
  */
