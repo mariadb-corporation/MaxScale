@@ -34,7 +34,7 @@ Ubuntu 16.04:
 sudo apt-get update
 sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
      cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
-     uuid-dev libsqlite3-dev libgnutls30 libgcrypt20
+     uuid-dev libsqlite3-dev gnutls-dev libgcrypt20-dev
 ```
 
 ### Build and Install MaxScale
