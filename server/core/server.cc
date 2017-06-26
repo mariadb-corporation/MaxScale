@@ -1459,7 +1459,7 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
     json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
 
-    json_object_set_new(attr, "statictics", stats);
+    json_object_set_new(attr, "statistics", stats);
 
     return attr;
 }

@@ -72,7 +72,7 @@ Status: 200 OK
             "slaves": [ // List of slave server IDs
                 3001
             ],
-            "statictics": { // Server statistics
+            "statistics": { // Server statistics
                 "connections": 0,
                 "total_connections": 0,
                 "active_operations": 0
@@ -156,7 +156,7 @@ Status: 200 OK
                 "slaves": [
                     3001
                 ],
-                "statictics": {
+                "statistics": {
                     "connections": 0,
                     "total_connections": 0,
                     "active_operations": 0
@@ -205,7 +205,7 @@ Status: 200 OK
                 "master_id": 3000,
                 "replication_depth": 1,
                 "slaves": [],
-                "statictics": {
+                "statistics": {
                     "connections": 0,
                     "total_connections": 0,
                     "active_operations": 0
@@ -401,7 +401,7 @@ Response to `GET /v1/server/server1`:
                 3001,
                 3002
             ],
-            "statictics": {
+            "statistics": {
                 "connections": 0,
                 "total_connections": 0,
                 "active_operations": 0
