@@ -189,6 +189,7 @@ static void modules_process_finish();
 static bool modules_thread_init();
 static void modules_thread_finish();
 
+#ifndef OPENSSL_1_1
 /** SSL multi-threading functions and structures */
 
 static SPINLOCK* ssl_locks;
@@ -269,6 +270,7 @@ static void maxscale_ssl_id(CRYPTO_THREADID* id)
 {
     CRYPTO_THREADID_set_numeric(id, pthread_self());
 }
+#endif
 #endif
 
 /**
@@ -1741,6 +1743,7 @@ int main(int argc, char **argv)
     SSL_load_error_strings();
     OPENSSL_add_all_algorithms_noconf();
 
+#ifndef OPENSSL_1_1
     numlocks = CRYPTO_num_locks();
     if ((ssl_locks = (SPINLOCK*)MXS_MALLOC(sizeof(SPINLOCK) * (numlocks + 1))) == NULL)
     {
@@ -1760,6 +1763,7 @@ int main(int argc, char **argv)
     CRYPTO_THREADID_set_callback(maxscale_ssl_id);
 #else
     CRYPTO_set_id_callback(pthread_self);
+#endif
 #endif
 
     /**
