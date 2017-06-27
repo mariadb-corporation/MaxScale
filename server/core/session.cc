@@ -1156,8 +1156,12 @@ struct SessionListData
 
 bool seslist_cb(DCB* dcb, void* data)
 {
-    SessionListData* d = (SessionListData*)data;
-    json_array_append_new(d->json, session_json_data(dcb->session, d->host));
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    {
+        SessionListData* d = (SessionListData*)data;
+        json_array_append_new(d->json, session_json_data(dcb->session, d->host));
+    }
+
     return true;
 }
 
