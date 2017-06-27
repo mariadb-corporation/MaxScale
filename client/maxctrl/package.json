@@ -1,0 +1,25 @@
+{
+  "name": "maxctrl",
+  "version": "1.0.0",
+  "description": "MaxScale Administrative Client",
+  "repository": "https://github.com/mariadb-corporation/MaxScale",
+  "main": "maxctrl.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "maxscale"
+  ],
+  "bin": {
+    "maxctrl": "./maxctrl.js"
+  },
+  "author": "MariaDB Corporation Ab",
+  "license": "SEE LICENSE IN ../../LICENSE.TXT",
+  "dependencies": {
+    "cli-table": "^0.3.1",
+    "lodash": "^4.17.4",
+    "lodash-getpath": "^0.2.4",
+    "request": "^2.81.0",
+    "yargs": "^8.0.2"
+  }
+}
