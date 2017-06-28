@@ -165,6 +165,10 @@ matched. The symbolic comparison operators (`<`, `>`, `>=` etc.) are also
 considered functions whereas the text versions (`NOT`, `IS`, `IS NOT` etc.) are
 not considered functions.
 
+When the filter is in whitelist mode (`action=allow`) the function rule
+will match any query that does not use a function. This means that queries
+that do not use functions will be allowed through a function type rule.
+
 ##### Example
 
 Deny SUM and COUNT functions:

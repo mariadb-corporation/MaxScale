@@ -2082,11 +2082,17 @@ void match_column(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg)
     }
 }
 
-void match_function(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg)
+void match_function(RULE_BOOK *rulebook, GWBUF *queue, enum fw_actions mode,
+                    bool *matches, char **msg)
 {
     const QC_FUNCTION_INFO* infos;
     size_t n_infos;
     qc_get_function_info(queue, &infos, &n_infos);
+
+    if (n_infos == 0 && mode == FW_ACTION_ALLOW)
+    {
+        *matches = true;
+    }
 
     for (size_t i = 0; i < n_infos; ++i)
     {
@@ -2219,7 +2225,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
         case RT_FUNCTION:
             if (is_sql)
             {
-                match_function(rulebook, queue, &matches, &msg);
+                match_function(rulebook, queue, my_instance->action, &matches, &msg);
             }
             break;
 
