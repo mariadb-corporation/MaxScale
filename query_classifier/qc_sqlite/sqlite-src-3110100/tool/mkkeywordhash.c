@@ -218,6 +218,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "DATABASES",        "TK_DATABASES_KW", ALWAYS                 },
   { "DEALLOCATE",       "TK_DEALLOCATE",   ALWAYS                 },
+  { "DECLARE",          "TK_DECLARE",      ALWAYS                 },
 #endif
   { "DEFAULT",          "TK_DEFAULT",      ALWAYS                 },
   { "DEFERRED",         "TK_DEFERRED",     ALWAYS                 },
@@ -268,6 +269,9 @@ static Keyword aKeywordTable[] = {
   { "FORCE",            "TK_FORCE",        ALWAYS                 },
 #endif
   { "FOREIGN",          "TK_FOREIGN",      FKEY                   },
+#ifdef MAXSCALE
+  { "FORMAT",           "TK_FORMAT",       ALWAYS                 },
+#endif
   { "FROM",             "TK_FROM",         ALWAYS                 },
   { "FULL",             "TK_JOIN_KW",      ALWAYS                 },
 #ifdef MAXSCALE
@@ -396,6 +400,7 @@ static Keyword aKeywordTable[] = {
   { "SAVEPOINT",        "TK_SAVEPOINT",    ALWAYS                 },
 #ifdef MAXSCALE
   { "SCHEMAS",          "TK_DATABASES_KW", ALWAYS                 },
+  { "SEQUENCE",         "TK_SEQUENCE",     ALWAYS                 },
 #endif
   { "SELECT",           "TK_SELECT",       ALWAYS                 },
 #ifdef MAXSCALE

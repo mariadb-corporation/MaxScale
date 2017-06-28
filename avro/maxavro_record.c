@@ -182,7 +182,7 @@ json_t* maxavro_record_read_json(MAXAVRO_FILE *file)
                 {
                     long pos = ftell(file->file);
                     MXS_ERROR("Failed to read field value '%s', type '%s' at "
-                              "file offset %ld, record numer %lu.",
+                              "file offset %ld, record number %lu.",
                               file->schema->fields[i].name,
                               type_to_string(file->schema->fields[i].type),
                               pos, file->records_read);

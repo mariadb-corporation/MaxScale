@@ -131,13 +131,13 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
 
                         if (old)
                         {
-                            router->active_maps[old->id % sizeof(router->active_maps)] = NULL;
+                            router->active_maps[old->id % MAX_MAPPED_TABLES] = NULL;
                         }
                         hashtable_delete(router->table_maps, table_ident);
                         hashtable_add(router->table_maps, (void*) table_ident, map);
                         hashtable_add(router->open_tables, table_ident, avro_table);
                         save_avro_schema(router->avrodir, json_schema, map);
-                        router->active_maps[map->id % sizeof(router->active_maps)] = map;
+                        router->active_maps[map->id % MAX_MAPPED_TABLES] = map;
                         MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
                         rval = true;
 
@@ -164,10 +164,10 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
         }
         else
         {
-            ss_dassert(router->active_maps[old->id % sizeof(router->active_maps)] == old);
-            router->active_maps[old->id % sizeof(router->active_maps)] = NULL;
+            ss_dassert(router->active_maps[old->id % MAX_MAPPED_TABLES] == old);
+            router->active_maps[old->id % MAX_MAPPED_TABLES] = NULL;
             table_map_remap(ptr, ev_len, old);
-            router->active_maps[old->id % sizeof(router->active_maps)] = old;
+            router->active_maps[old->id % MAX_MAPPED_TABLES] = old;
             MXS_DEBUG("Table %s re-mapped to %lu", table_ident, old->id);
             /** No changes in the schema */
             rval = true;
@@ -294,7 +294,7 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
 
     /** There should always be a table map event prior to a row event.
      * TODO: Make the active_maps dynamic */
-    TABLE_MAP *map = router->active_maps[table_id % sizeof(router->active_maps)];
+    TABLE_MAP *map = router->active_maps[table_id % MAX_MAPPED_TABLES];
 
     if (map)
     {

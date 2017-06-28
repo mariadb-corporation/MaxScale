@@ -1,8 +1,8 @@
 #include <maxscale/cdefs.h>
 
-#include "../MySQLClient/mysql_client.c"
+#include "../MySQLClient/mysql_client.cc"
 
-int test_one_query(char *query, bool should_succeed, uint64_t expected_tid,
+int test_one_query(const char *query, bool should_succeed, uint64_t expected_tid,
                    kill_type_t expected_kt)
 {
     char *query_copy = MXS_STRDUP_A(query);
@@ -46,7 +46,7 @@ int test_one_query(char *query, bool should_succeed, uint64_t expected_tid,
 }
 typedef struct test_t
 {
-    char *query;
+    const char *query;
     bool should_succeed;
     uint64_t correct_id;
     kill_type_t correct_kt;
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     int arr_size = sizeof(tests) / sizeof(test_t);
     for (int i = 0; i < arr_size; i++)
     {
-        char *query = tests[i].query;
+        const char *query = tests[i].query;
         bool should_succeed = tests[i].should_succeed;
         uint64_t expected_tid = tests[i].correct_id;
         kill_type_t expected_kt = tests[i].correct_kt;

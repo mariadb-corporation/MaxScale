@@ -591,6 +591,8 @@ add_test_script(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND)
 #add_test_script(ssl_load load_balancing ssl_load LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Check load balancing, client ssl is ON, Galera backend
+
+# Galera version is also disabled due to C/C 3.0 strangeness
 #add_test_script(ssl_load_galera load_balancing_galera ssl_load_galera LABELS maxscale readwritesplit GALERA_BACKEND)
 
 # Testing slaves who have lost their master and how MaxScale works with them

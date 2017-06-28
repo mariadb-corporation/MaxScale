@@ -45,7 +45,7 @@ static QUERY_CLASSIFIER* classifier;
 static qc_trx_parse_using_t qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
 
 
-bool qc_setup(const char* plugin_name, const char* plugin_args)
+bool qc_setup(const char* plugin_name, qc_sql_mode_t sql_mode, const char* plugin_args)
 {
     QC_TRACE();
     ss_dassert(!classifier);
@@ -61,7 +61,7 @@ bool qc_setup(const char* plugin_name, const char* plugin_args)
 
     if (classifier)
     {
-        rv = classifier->qc_setup(plugin_args);
+        rv = classifier->qc_setup(sql_mode, plugin_args);
 
         if (rv != QC_RESULT_OK)
         {
@@ -494,41 +494,47 @@ const char* qc_op_to_string(qc_query_op_t op)
     case QUERY_OP_UNDEFINED:
         return "QUERY_OP_UNDEFINED";
 
-    case QUERY_OP_SELECT:
-        return "QUERY_OP_SELECT";
-
-    case QUERY_OP_UPDATE:
-        return "QUERY_OP_UPDATE";
-
-    case QUERY_OP_INSERT:
-        return "QUERY_OP_INSERT";
-
-    case QUERY_OP_DELETE:
-        return "QUERY_OP_DELETE";
-
-    case QUERY_OP_TRUNCATE:
-        return "QUERY_OP_TRUNCATE";
-
     case QUERY_OP_ALTER:
         return "QUERY_OP_ALTER";
-
-    case QUERY_OP_CREATE:
-        return "QUERY_OP_CREATE";
-
-    case QUERY_OP_DROP:
-        return "QUERY_OP_DROP";
 
     case QUERY_OP_CHANGE_DB:
         return "QUERY_OP_CHANGE_DB";
 
-    case QUERY_OP_LOAD:
-        return "QUERY_OP_LOAD";
+    case QUERY_OP_CREATE:
+        return "QUERY_OP_CREATE";
+
+    case QUERY_OP_DELETE:
+        return "QUERY_OP_DELETE";
+
+    case QUERY_OP_DROP:
+        return "QUERY_OP_DROP";
+
+    case QUERY_OP_EXPLAIN:
+        return "QUERY_OP_EXPLAIN";
 
     case QUERY_OP_GRANT:
         return "QUERY_OP_GRANT";
 
+    case QUERY_OP_INSERT:
+        return "QUERY_OP_INSERT";
+
+    case QUERY_OP_LOAD:
+        return "QUERY_OP_LOAD";
+
     case QUERY_OP_REVOKE:
         return "QUERY_OP_REVOKE";
+
+    case QUERY_OP_SELECT:
+        return "QUERY_OP_SELECT";
+
+    case QUERY_OP_SHOW:
+        return "QUERY_OP_SHOW";
+
+    case QUERY_OP_TRUNCATE:
+        return "QUERY_OP_TRUNCATE";
+
+    case QUERY_OP_UPDATE:
+        return "QUERY_OP_UPDATE";
 
     default:
         return "UNKNOWN_QUERY_OP";
@@ -920,4 +926,26 @@ uint64_t qc_get_server_version()
     classifier->qc_get_server_version(&version);
 
     return version;
+}
+
+qc_sql_mode_t qc_get_sql_mode()
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    qc_sql_mode_t sql_mode;
+
+    ss_debug(int32_t rv =) classifier->qc_get_sql_mode(&sql_mode);
+    ss_dassert(rv == QC_RESULT_OK);
+
+    return sql_mode;
+}
+
+void qc_set_sql_mode(qc_sql_mode_t sql_mode)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    ss_debug(int32_t rv =) classifier->qc_set_sql_mode(sql_mode);
+    ss_dassert(rv == QC_RESULT_OK);
 }

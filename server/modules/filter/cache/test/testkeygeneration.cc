@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
     {
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup(NULL, NULL) && qc_process_init(QC_INIT_BOTH))
+            if (qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL) && qc_process_init(QC_INIT_BOTH))
             {
                 const char* zModule = argv[1];
 

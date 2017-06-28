@@ -14,6 +14,7 @@
 #include "testreader.hh"
 #include <algorithm>
 #include <map>
+#include <iostream>
 
 using std::istream;
 using std::string;
@@ -149,19 +150,34 @@ void init_keywords()
     }
 }
 
-skip_action_t get_action(const string& keyword)
+skip_action_t get_action(const string& keyword, const string& delimiter)
 {
     skip_action_t action = SKIP_NOTHING;
 
     string key(keyword);
-
     std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 
-    KeywordActionMapping::iterator i = mtl_keywords.find(key);
-
-    if (i != mtl_keywords.end())
+    if (key == "delimiter")
     {
-        action = i->second;
+        // DELIMITER is directly understood by the parser so it needs to
+        // be handled explicitly.
+        action = SKIP_DELIMITER;
+    }
+    else if (delimiter == ";")
+    {
+        // Some mysqltest keywords, such as "while", "exit" and "if" are also
+        // PL/SQL keywords. We assume they can only be used in the former role,
+        // if the delimiter is ";".
+        string key(keyword);
+
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+
+        KeywordActionMapping::iterator i = mtl_keywords.find(key);
+
+        if (i != mtl_keywords.end())
+        {
+            action = i->second;
+        }
     }
 
     return action;
@@ -193,7 +209,7 @@ TestReader::TestReader(istream& in,
                        size_t   line)
     : m_in(in)
     , m_line(line)
-    , m_delimiter(';')
+    , m_delimiter(";")
 {
     init();
 }
@@ -216,6 +232,12 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
         if (!line.empty() && (line.at(0) != '#'))
         {
+            // Ignore comment lines.
+            if ((line.substr(0, 3) == "-- ") || (line.substr(0, 1) == "#"))
+            {
+                continue;
+            }
+
             if (!skip)
             {
                 if (line.substr(0, 2) == "--")
@@ -228,7 +250,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                                                   std::ptr_fun<int,int>(std::isspace));
                 string keyword = line.substr(0, i - line.begin());
 
-                skip_action_t action = get_action(keyword);
+                skip_action_t action = get_action(keyword, m_delimiter);
 
                 switch (action)
                 {
@@ -244,7 +266,21 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     trim(line);
                     if (line.length() > 0)
                     {
-                        m_delimiter = line.at(0);
+                        if (line.length() >= m_delimiter.length())
+                        {
+                            if (line.substr(line.length() - m_delimiter.length()) == m_delimiter)
+                            {
+                                m_delimiter = line.substr(0, line.length() - m_delimiter.length());
+                            }
+                            else
+                            {
+                                m_delimiter = line;
+                            }
+                        }
+                        else
+                        {
+                            m_delimiter = line;
+                        }
                     }
                     continue;
 
@@ -268,15 +304,42 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
             stmt += line;
 
-            char c = line.at(line.length() - 1);
+            // Look for a ';'. If we are dealing with a one line test statment
+            // the delimiter will in practice be ';' and if it is a multi-line
+            // test statement then the test-script delimiter will be something
+            // else than ';' and ';' will be the delimiter used in the multi-line
+            // statement.
+            string::size_type i = line.find(";");
+
+            if (i != string::npos)
+            {
+                // Is there a "-- " or "#" after the delimiter?
+                if ((line.find("-- ", i) != string::npos) ||
+                    (line.find("#", i) != string::npos))
+                {
+                    // If so, add a newline. Otherwise the rest of the
+                    // statement would be included in the comment.
+                    stmt += "\n";
+                }
+
+                // This is somewhat fragile as a ";", "#" or "-- " inside a
+                // string will trigger this behaviour...
+            }
+
+            string c;
+
+            if (line.length() >= m_delimiter.length())
+            {
+                c = line.substr(line.length() - m_delimiter.length());
+            }
 
             if (c == m_delimiter)
             {
-                if (c != ';')
+                if (c != ";")
                 {
                     // If the delimiter was something else but ';' we need to
                     // remove that before giving the line to the classifiers.
-                    stmt.erase(stmt.length() - 1);
+                    stmt.erase(stmt.length() - m_delimiter.length());
                 }
 
                 if (!skip)

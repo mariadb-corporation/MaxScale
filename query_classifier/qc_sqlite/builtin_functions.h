@@ -22,7 +22,9 @@ extern "C" {
 void init_builtin_functions();
 void finish_builtin_functions();
 
-bool is_builtin_readonly_function(const char* zToken, uint32_t major, uint32_t minor, uint32_t patch);
+bool is_builtin_readonly_function(const char* zToken,
+                                  uint32_t major, uint32_t minor, uint32_t patch,
+                                  bool check_oracle);
 
 #ifdef __cplusplus
 }

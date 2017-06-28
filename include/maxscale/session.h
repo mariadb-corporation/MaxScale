@@ -146,6 +146,7 @@ typedef struct session
     int                     refcount;         /*< Reference count on the session */
     mxs_session_trx_state_t trx_state;        /*< The current transaction state. */
     bool                    autocommit;       /*< Whether autocommit is on. */
+    intptr_t                client_protocol_data; /*< Owned and managed by the client protocol. */
     struct
     {
         GWBUF *buffer; /**< Buffer containing the statement */
