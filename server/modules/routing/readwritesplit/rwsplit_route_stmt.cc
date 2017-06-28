@@ -1059,7 +1059,7 @@ bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
     return succp;
 }
 
-static inline bool query_creates_reply(mysql_server_cmd_t cmd)
+static inline bool query_creates_reply(uint8_t cmd)
 {
     return cmd != MYSQL_COM_QUIT &&
            cmd != MYSQL_COM_STMT_SEND_LONG_DATA &&
@@ -1094,7 +1094,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
     ss_dassert(target->session_command_count() == 0);
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
-    mysql_server_cmd_t cmd = mxs_mysql_current_command(rses->client_dcb->session);
+    uint8_t cmd = mxs_mysql_get_command(querybuf);
 
     if (rses->load_data_state != LOAD_DATA_ACTIVE &&
         query_creates_reply(cmd))
