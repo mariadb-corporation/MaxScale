@@ -6,7 +6,8 @@ MariaDB MaxScale from version 2.0 to 2.1.
 For more information about MariaDB MaxScale 2.1, please refer to the
 [ChangeLog](../Changelog.md).
 
-For a complete list of changes in MaxScale 2.1.0, refer to the
+For a complete list of changes in MaxScale 2.1, refer to the
+[MaxScale 2.1.4 Release Notes](../Release-Notes/MaxScale-2.1.4-Release-Notes.md).
 [MaxScale 2.1.3 Release Notes](../Release-Notes/MaxScale-2.1.3-Release-Notes.md).
 [MaxScale 2.1.2 Release Notes](../Release-Notes/MaxScale-2.1.2-Release-Notes.md).
 [MaxScale 2.1.1 Release Notes](../Release-Notes/MaxScale-2.1.1-Release-Notes.md).
