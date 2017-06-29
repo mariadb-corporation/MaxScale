@@ -58,7 +58,7 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
         return a;
     }
 
-    return p(a, b) < 0 ? a : b;
+    return p(a, b) <= 0 ? a : b;
 }
 
 void handle_connection_keepalive(RWSplit *inst, RWSplitSession *rses,
