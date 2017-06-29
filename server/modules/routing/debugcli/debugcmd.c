@@ -948,7 +948,8 @@ struct subcommand pingoptions[] =
         "Ping Workers",
         "Ping Workers",
         {ARG_TYPE_NONE}
-    }
+    },
+    {EMPTY_OPTION}
 };
 
 /**
