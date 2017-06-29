@@ -21,5 +21,7 @@ MXS_BEGIN_DECLS
 
 EVP_CIPHER_CTX* mxs_evp_cipher_ctx_alloc();
 void mxs_evp_cipher_ctx_free(EVP_CIPHER_CTX* ctx);
+uint8_t* mxs_evp_cipher_ctx_buf(EVP_CIPHER_CTX* ctx);
+uint8_t* mxs_evp_cipher_ctx_oiv(EVP_CIPHER_CTX* ctx);
 
 MXS_END_DECLS
