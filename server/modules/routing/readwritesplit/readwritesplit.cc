@@ -690,7 +690,7 @@ SERVICE* RWSplit::service() const
     return m_service;
 }
 
-Config& RWSplit::config()
+const Config& RWSplit::config() const
 {
     return m_config;
 }

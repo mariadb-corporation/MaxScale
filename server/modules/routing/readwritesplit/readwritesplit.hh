@@ -224,7 +224,7 @@ public:
     ~RWSplit();
 
     SERVICE* service() const;
-    Config&  config();
+    const Config&  config() const;
     Stats&   stats();
 
 private:
