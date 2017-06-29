@@ -125,19 +125,33 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
          *   eventually to master
          */
 
-        if (*command == MYSQL_COM_QUERY &&
-            qc_get_operation(buffer) == QUERY_OP_EXECUTE)
+        if (rses->target_node && rses->target_node == rses->current_master)
         {
-            std::string id = get_text_ps_id(buffer);
-            *type = rses->ps_manager.get_type(id);
-        }
-        else if (is_ps_command(*command))
-        {
-            *stmt_id = get_internal_ps_id(rses, buffer);
-            *type = rses->ps_manager.get_type(*stmt_id);
-        }
+            /** The session is locked to the master */
+            route_target = TARGET_MASTER;
 
-        route_target = get_route_target(rses, *command, *type, buffer->hint);
+            if (qc_query_is_type(*type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+                qc_query_is_type(*type, QUERY_TYPE_PREPARE_STMT))
+            {
+                gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
+            }
+        }
+        else
+        {
+            if (*command == MYSQL_COM_QUERY &&
+                qc_get_operation(buffer) == QUERY_OP_EXECUTE)
+            {
+                std::string id = get_text_ps_id(buffer);
+                *type = rses->ps_manager.get_type(id);
+            }
+            else if (is_ps_command(*command))
+            {
+                *stmt_id = get_internal_ps_id(rses, buffer);
+                *type = rses->ps_manager.get_type(*stmt_id);
+            }
+
+            route_target = get_route_target(rses, *command, *type, buffer->hint);
+        }
     }
     else
     {
@@ -167,10 +181,12 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
     uint8_t command = info.command;
     uint32_t qtype = info.type;
     route_target_t route_target = info.target;
+    bool not_locked_to_master = !rses->target_node || rses->target_node != rses->current_master;
 
-    if (is_ps_command(command))
+    if (is_ps_command(command) && not_locked_to_master)
     {
-        /** Replace the client statement ID with our internal one */
+        /** Replace the client statement ID with our internal one only if the
+         * target node is not the current master */
         replace_binary_ps_id(querybuf, stmt_id);
     }
 
@@ -221,7 +237,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
             succp = handle_got_target(inst, rses, querybuf, target, store_stmt);
 
-            if (succp && command == MYSQL_COM_STMT_EXECUTE)
+            if (succp && command == MYSQL_COM_STMT_EXECUTE && not_locked_to_master)
             {
                 /** Track the targets of the COM_STMT_EXECUTE statements. This
                  * information is used to route all COM_STMT_FETCH commands
@@ -552,17 +568,13 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
     mxs_target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
     int target = TARGET_UNDEFINED;
 
-    if (rses->target_node && rses->target_node == rses->current_master)
-    {
-        target = TARGET_MASTER;
-    }
     /**
      * Prepared statements preparations should go to all servers
      */
-    else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
-             qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-             command == MYSQL_COM_STMT_CLOSE ||
-             command == MYSQL_COM_STMT_RESET)
+    if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+        qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        command == MYSQL_COM_STMT_CLOSE ||
+        command == MYSQL_COM_STMT_RESET)
     {
         target = TARGET_ALL;
     }
