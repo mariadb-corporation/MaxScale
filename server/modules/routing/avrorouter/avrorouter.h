@@ -310,6 +310,7 @@ extern void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *tab
 extern TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create);
 extern void table_map_free(TABLE_MAP *map);
 extern TABLE_CREATE* table_create_alloc(const char* sql, const char* db);
+extern TABLE_CREATE* table_create_copy(AVRO_INSTANCE *router, const char* sql, size_t len, const char* db);
 extern void table_create_free(TABLE_CREATE* value);
 extern bool table_create_save(TABLE_CREATE *create, const char *filename);
 extern bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end);

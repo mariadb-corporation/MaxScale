@@ -1672,7 +1672,7 @@ void *timeout_thread( void *ptr )
         Test->timeout--;
     }
     Test->tprintf("\n **** Timeout! *** \n");
-    delete Test;
+    Test->~TestConnections();
     exit(250);
 }
 

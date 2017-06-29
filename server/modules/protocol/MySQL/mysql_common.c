@@ -1599,3 +1599,61 @@ void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
     MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
     snprintf(data->db, sizeof(data->db), "%s", db);
 }
+
+uint8_t mxs_mysql_get_command(GWBUF* buffer)
+{
+    if (GWBUF_LENGTH(buffer) > MYSQL_HEADER_LEN)
+    {
+        return GWBUF_DATA(buffer)[4];
+    }
+    else
+    {
+        uint8_t command = 0;
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &command);
+        return command;
+    }
+}
+
+bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
+{
+    bool rval = false;
+    uint8_t id[MYSQL_PS_ID_SIZE];
+    uint8_t cols[MYSQL_PS_ID_SIZE];
+    uint8_t params[MYSQL_PS_ID_SIZE];
+    uint8_t warnings[MYSQL_PS_WARN_SIZE];
+
+    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id) &&
+        gwbuf_copy_data(buffer, MYSQL_PS_COLS_OFFSET, sizeof(cols), cols) == sizeof(cols) &&
+        gwbuf_copy_data(buffer, MYSQL_PS_PARAMS_OFFSET, sizeof(params), params) == sizeof(params) &&
+        gwbuf_copy_data(buffer, MYSQL_PS_WARN_OFFSET, sizeof(warnings), warnings) == sizeof(warnings))
+    {
+        out->id = gw_mysql_get_byte4(id);
+        out->columns = gw_mysql_get_byte2(cols);
+        out->parameters = gw_mysql_get_byte2(params);
+        out->warnings = gw_mysql_get_byte2(warnings);
+        rval = true;
+    }
+
+    return rval;
+}
+
+uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer)
+{
+    uint32_t rval = 0;
+    uint8_t id[MYSQL_PS_ID_SIZE];
+
+    if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
+    {
+        rval = gw_mysql_get_byte4(id);
+    }
+
+    return rval;
+}
+
+bool mxs_mysql_command_will_respond(uint8_t cmd)
+{
+    return cmd != MYSQL_COM_STMT_SEND_LONG_DATA &&
+           cmd != MYSQL_COM_QUIT &&
+           cmd != MYSQL_COM_STMT_CLOSE &&
+           cmd != MYSQL_COM_STMT_FETCH;
+}

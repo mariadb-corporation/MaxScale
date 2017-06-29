@@ -25,6 +25,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/jansson.h>
 #include <maxscale/pcre2.h>
+#include <maxscale/query_classifier.h>
 
 MXS_BEGIN_DECLS
 
@@ -204,6 +205,7 @@ typedef struct
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
+    qc_sql_mode_t qc_sql_mode;                         /**< The query classifier sql mode */
     char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
     uint16_t      admin_port;                          /**< Admin interface port */
     bool          admin_auth;                          /**< Admin interface authentication */

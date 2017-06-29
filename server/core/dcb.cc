@@ -2600,6 +2600,15 @@ int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
     else if (port > 0)
     {
         listener_socket = dcb_listen_create_socket_inet(host, port);
+
+        if (listener_socket == -1 && strcmp(host, "::") == 0)
+        {
+            /** Attempt to bind to the IPv4 if the default IPv6 one is used */
+            MXS_WARNING("Failed to bind on default IPv6 host '::', attempting "
+                        "to bind on IPv4 version '0.0.0.0'");
+            strcpy(host, "0.0.0.0");
+            listener_socket = dcb_listen_create_socket_inet(host, port);
+        }
     }
     else
     {

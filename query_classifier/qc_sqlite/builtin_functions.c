@@ -413,6 +413,14 @@ static const char* BUILTIN_10_2_3_FUNCTIONS[] =
 const size_t N_BUILTIN_10_2_3_FUNCTIONS =
     sizeof(BUILTIN_10_2_3_FUNCTIONS) / sizeof(BUILTIN_10_2_3_FUNCTIONS[0]);
 
+static const char* ORACLE_FUNCTIONS[] =
+{
+    "nvl",
+    "nvl2"
+};
+
+const size_t N_ORACLE_FUNCTIONS = sizeof(ORACLE_FUNCTIONS) / sizeof(ORACLE_FUNCTIONS[0]);
+
 // NOTE: sort_compare and search_compare are not identical, so don't
 // NOTE: optimize either of them away.
 static int sort_compare(const void* key, const void* value)
@@ -435,6 +443,7 @@ void init_builtin_functions()
 
     qsort(BUILTIN_FUNCTIONS, N_BUILTIN_FUNCTIONS, sizeof(char*), sort_compare);
     qsort(BUILTIN_10_2_3_FUNCTIONS, N_BUILTIN_10_2_3_FUNCTIONS, sizeof(char*), sort_compare);
+    qsort(ORACLE_FUNCTIONS, N_ORACLE_FUNCTIONS, sizeof(char*), sort_compare);
 
     unit.inited = true;
 }
@@ -445,7 +454,9 @@ void finish_builtin_functions()
     unit.inited = false;
 }
 
-bool is_builtin_readonly_function(const char* key, uint32_t major, uint32_t minor, uint32_t patch)
+bool is_builtin_readonly_function(const char* key,
+                                  uint32_t major, uint32_t minor, uint32_t patch,
+                                  bool check_oracle)
 {
     ss_dassert(unit.inited);
 
@@ -460,6 +471,11 @@ bool is_builtin_readonly_function(const char* key, uint32_t major, uint32_t mino
             value = bsearch(key, BUILTIN_10_2_3_FUNCTIONS, N_BUILTIN_10_2_3_FUNCTIONS,
                             sizeof(char*), search_compare);
         }
+    }
+
+    if (!value && check_oracle)
+    {
+        value = bsearch(key, ORACLE_FUNCTIONS, N_ORACLE_FUNCTIONS, sizeof(char*), search_compare);
     }
 
     return value ? true : false;

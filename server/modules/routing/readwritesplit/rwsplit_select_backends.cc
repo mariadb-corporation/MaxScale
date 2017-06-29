@@ -54,7 +54,7 @@ static bool valid_for_slave(const SERVER *server, const SERVER *master)
  *
  * @return The best slave backend reference or NULL if no candidates could be found
  */
-SRWBackend get_slave_candidate(ROUTER_CLIENT_SES* rses, const SERVER *master,
+SRWBackend get_slave_candidate(RWSplitSession* rses, const SERVER *master,
                                int (*cmpfun)(const SRWBackend&, const SRWBackend&))
 {
     SRWBackend candidate;
@@ -198,7 +198,7 @@ int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&) =
  * @param rses     Router client session
  */
 static void log_server_connections(select_criteria_t criteria,
-                                   ROUTER_CLIENT_SES* rses)
+                                   RWSplitSession* rses)
 {
     MXS_INFO("Servers and %s connection counts:",
              criteria == LEAST_GLOBAL_CONNECTIONS ? "all MaxScale" : "router");
@@ -246,7 +246,7 @@ static void log_server_connections(select_criteria_t criteria,
  *
  * @return The root master reference or NULL if no master is found
  */
-static SERVER_REF* get_root_master(ROUTER_CLIENT_SES* rses)
+static SERVER_REF* get_root_master(RWSplitSession* rses)
 {
     SERVER_REF *master_host = NULL;
 
@@ -290,15 +290,15 @@ bool select_connect_backend_servers(int router_nservers,
                                     int max_nslaves,
                                     select_criteria_t select_criteria,
                                     MXS_SESSION *session,
-                                    ROUTER_INSTANCE *router,
-                                    ROUTER_CLIENT_SES *rses,
+                                    RWSplit *router,
+                                    RWSplitSession *rses,
                                     connection_type type)
 {
     /* get the root Master */
     SERVER_REF *master_backend = get_root_master(rses);
     SERVER  *master_host = master_backend ? master_backend->server : NULL;
 
-    if (router->rwsplit_config.master_failure_mode == RW_FAIL_INSTANTLY &&
+    if (router->config().master_failure_mode == RW_FAIL_INSTANTLY &&
         (master_host == NULL || SERVER_IS_DOWN(master_host)))
     {
         MXS_ERROR("Couldn't find suitable Master from %d candidates.", router_nservers);

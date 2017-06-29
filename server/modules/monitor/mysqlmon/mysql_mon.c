@@ -104,6 +104,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
             {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
+            {"allow_external_slaves", MXS_MODULE_PARAM_BOOL, "true"},
             {"journal_max_age", MXS_MODULE_PARAM_COUNT, DEFAULT_JOURNAL_MAX_AGE},
             {
                 "script",
@@ -264,6 +265,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     handle->journal_max_age = config_get_integer(params, "journal_max_age");
+    handle->allow_external_slaves = config_get_bool(params, "allow_external_slaves");
 
     if (journal_is_stale(monitor, handle->journal_max_age))
     {
@@ -641,7 +643,14 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
             (database->server->master_id <= 0 ||
             database->server->master_id != handle->master->server->node_id))
         {
-            monitor_set_pending_status(database, SERVER_SLAVE);
+            if (handle->allow_external_slaves)
+            {
+                monitor_set_pending_status(database, SERVER_SLAVE);
+            }
+            else
+            {
+                monitor_clear_pending_status(database, SERVER_SLAVE);
+            }
             monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
         }
         database = database->next;
@@ -1848,10 +1857,14 @@ static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *mon, int num_serve
                 {
                     if (current->master_id > 0)
                     {
-                        /* this server is slave of another server not in MaxScale configuration
-                         * we cannot use it as a real slave.
-                         */
-                        monitor_set_pending_status(ptr, SERVER_SLAVE);
+                        if (handle->allow_external_slaves)
+                        {
+                            monitor_set_pending_status(ptr, SERVER_SLAVE);
+                        }
+                        else
+                        {
+                            monitor_clear_pending_status(ptr, SERVER_SLAVE);
+                        }
                         monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXTERNAL_MASTER);
                     }
                 }

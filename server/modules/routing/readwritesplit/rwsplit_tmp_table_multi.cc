@@ -36,6 +36,68 @@
  */
 
 /**
+ * @brief Map a function over the list of tables in the query
+ *
+ * @param rses     Router client session
+ * @param querybuf The query to inspect
+ * @param func     Callback that is called for each table
+ *
+ * @return True if all tables were iterated, false if the iteration was stopped early
+ */
+static bool foreach_table(RWSplitSession* rses, GWBUF* querybuf, bool (*func)(RWSplitSession*,
+                                                                              const std::string&))
+{
+    bool rval = true;
+    int n_tables;
+    char** tables = qc_get_table_names(querybuf, &n_tables, true);
+
+    for (int i = 0; i < n_tables; i++)
+    {
+        const char* db = mxs_mysql_get_current_db(rses->client_dcb->session);
+        std::string table;
+
+        if (strchr(tables[i], '.') == NULL)
+        {
+            table += db;
+            table += ".";
+        }
+
+        table += tables[i];
+
+        if (!func(rses, table))
+        {
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * Delete callback for foreach_table
+ */
+bool delete_table(RWSplitSession *rses, const std::string& table)
+{
+    rses->temp_tables.erase(table);
+    return true;
+}
+
+/**
+ * Find callback for foreach_table
+ */
+bool find_table(RWSplitSession* rses, const std::string& table)
+{
+    if (rses->temp_tables.find(table) != rses->temp_tables.end())
+    {
+        MXS_INFO("Query targets a temporary table: %s", table.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * @brief Check for dropping of temporary tables
  *
  * Check if the query is a DROP TABLE... query and
@@ -44,27 +106,11 @@
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf)
+void check_drop_tmp_table(RWSplitSession *rses, GWBUF *querybuf)
 {
     if (qc_is_drop_table_query(querybuf))
     {
-        const QC_FIELD_INFO* info;
-        size_t n_infos;
-        qc_get_field_info(querybuf, &info, &n_infos);
-
-        for (size_t i = 0; i < n_infos; i++)
-        {
-            const char* db = mxs_mysql_get_current_db(router_cli_ses->client_dcb->session);
-            std::string table = info[i].database ? info[i].database : db;
-            table += ".";
-
-            if (info[i].table)
-            {
-                table += info[i].table;
-            }
-
-            router_cli_ses->temp_tables.erase(table);
-        }
+        foreach_table(rses, querybuf, delete_table);
     }
 }
 
@@ -75,41 +121,22 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf)
  * @param type The type of the query resolved so far
  * @return The type of the query
  */
-bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+bool is_read_tmp_table(RWSplitSession *rses,
                        GWBUF *querybuf,
                        uint32_t qtype)
 {
-    ss_dassert(router_cli_ses && querybuf && router_cli_ses->client_dcb);
+    ss_dassert(rses && querybuf && rses->client_dcb);
     bool rval = false;
 
-    if (qtype & (QUERY_TYPE_READ |
-                 QUERY_TYPE_LOCAL_READ |
-                 QUERY_TYPE_USERVAR_READ |
-                 QUERY_TYPE_SYSVAR_READ |
-                 QUERY_TYPE_GSYSVAR_READ))
+    if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
-        const QC_FIELD_INFO* info;
-        size_t n_infos;
-        qc_get_field_info(querybuf, &info, &n_infos);
-
-        for (size_t i = 0; i < n_infos; i++)
+        if (!foreach_table(rses, querybuf, find_table))
         {
-            const char* db = mxs_mysql_get_current_db(router_cli_ses->client_dcb->session);
-            std::string table = info[i].database ? info[i].database : db;
-            table += ".";
-
-            if (info[i].table)
-            {
-                table += info[i].table;
-            }
-
-            if (router_cli_ses->temp_tables.find(table) !=
-                router_cli_ses->temp_tables.end())
-            {
-                rval = true;
-                MXS_INFO("Query targets a temporary table: %s", table.c_str());
-                break;
-            }
+            rval = true;
         }
     }
 
@@ -125,7 +152,7 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+void check_create_tmp_table(RWSplitSession *router_cli_ses,
                             GWBUF *querybuf, uint32_t type)
 {
     if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
@@ -137,7 +164,7 @@ void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
         char* tblname = qc_get_created_table_name(querybuf);
         std::string table;
 
-        if (tblname && *tblname)
+        if (tblname && *tblname && strchr(tblname, '.') == NULL)
         {
             const char* db = mxs_mysql_get_current_db(router_cli_ses->client_dcb->session);
             table += db;
@@ -196,70 +223,4 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type)
     }
 
     return rval;
-}
-
-/**
- * @brief Determine the type of a query
- *
- * @param querybuf      GWBUF containing the query
- * @param packet_type   Integer denoting DB specific enum
- * @param non_empty_packet  Boolean to be set by this function
- *
- * @return uint32_t the query type; also the non_empty_packet bool is set
- */
-uint32_t
-determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet)
-{
-    uint32_t qtype = QUERY_TYPE_UNKNOWN;
-
-    if (non_empty_packet)
-    {
-        uint8_t my_packet_type = (uint8_t)packet_type;
-        switch (my_packet_type)
-        {
-        case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
-        case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
-        case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
-        case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
-        case MYSQL_COM_PING:        /*< 0e all servers are pinged */
-        case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
-        case MYSQL_COM_SET_OPTION:  /*< 1b send options to all servers */
-            qtype = QUERY_TYPE_SESSION_WRITE;
-            break;
-
-        case MYSQL_COM_CREATE_DB:           /**< 5 DDL must go to the master */
-        case MYSQL_COM_DROP_DB:             /**< 6 DDL must go to the master */
-        case MYSQL_COM_STMT_CLOSE:          /*< free prepared statement */
-        case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-        case MYSQL_COM_STMT_RESET: /*< resets the data of a prepared statement */
-            qtype = QUERY_TYPE_WRITE;
-            break;
-
-        case MYSQL_COM_QUERY:
-            qtype = qc_get_type_mask(querybuf);
-            break;
-
-        case MYSQL_COM_STMT_PREPARE:
-            qtype = qc_get_type_mask(querybuf);
-            qtype |= QUERY_TYPE_PREPARE_STMT;
-            break;
-
-        case MYSQL_COM_STMT_EXECUTE:
-            /** Parsing is not needed for this type of packet */
-            qtype = QUERY_TYPE_EXEC_STMT;
-            break;
-
-        case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
-        case MYSQL_COM_STATISTICS:     /**< 9 ? */
-        case MYSQL_COM_PROCESS_INFO:   /**< 0a ? */
-        case MYSQL_COM_CONNECT:        /**< 0b ? */
-        case MYSQL_COM_PROCESS_KILL:   /**< 0c ? */
-        case MYSQL_COM_TIME:           /**< 0f should this be run in gateway ? */
-        case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
-        case MYSQL_COM_DAEMON:         /**< 1d ? */
-        default:
-            break;
-        } /**< switch by packet type */
-    }
-    return qtype;
 }

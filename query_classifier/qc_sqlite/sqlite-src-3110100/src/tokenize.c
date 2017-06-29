@@ -497,6 +497,20 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         }else if( c==':' && z[i+1]==':' ){
           i++;
 #endif
+#ifdef MAXSCALE
+        }else if ( c=='\'' || c=='"' || c=='`' ){
+          int q=c;
+          ++i;
+          while ( IdChar(z[i]) ) {
+            ++i;
+            ++n;
+          }
+          if ( z[i]==q )
+          {
+            ++i;
+            break;
+          }
+#endif
         }else{
           break;
         }
@@ -554,8 +568,20 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         }
 
         if (*tokenType != TK_ID) {
-          extern void maxscaleKeyword(int);
-          maxscaleKeyword(*tokenType);
+          extern int maxscaleKeyword(int);
+          extern int maxscaleTranslateKeyword(int);
+
+          *tokenType = maxscaleTranslateKeyword(*tokenType);
+
+          if (*tokenType != TK_ID) {
+            if (maxscaleKeyword(*tokenType) != 0)
+            {
+              /* Consume the entire string. */
+              while ( z[i] ) {
+                ++i;
+              }
+            }
+          }
         }
       }
       return i;

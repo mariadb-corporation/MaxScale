@@ -30,6 +30,16 @@ typedef enum qc_init_kind
 } qc_init_kind_t;
 
 /**
+ * qc_sql_mode_t specifies what should be assumed of the statements
+ * that will be parsed.
+ */
+typedef enum qc_sql_mode
+{
+    QC_SQL_MODE_DEFAULT, /*< Assume the statements are MariaDB SQL. */
+    QC_SQL_MODE_ORACLE   /*< Assume the statements are PL/SQL. */
+} qc_sql_mode_t;
+
+/**
  * @c qc_collect_info_t specifies what information should be collected during parsing.
  */
 typedef enum qc_collect_info
@@ -83,19 +93,22 @@ typedef enum qc_query_type
 typedef enum qc_query_op
 {
     QUERY_OP_UNDEFINED = 0,
-    QUERY_OP_SELECT,
-    QUERY_OP_UPDATE,
-    QUERY_OP_INSERT,
-    QUERY_OP_DELETE,
-    QUERY_OP_TRUNCATE,
+
     QUERY_OP_ALTER,
-    QUERY_OP_CREATE,
-    QUERY_OP_DROP,
     QUERY_OP_CHANGE_DB,
-    QUERY_OP_LOAD,
-    QUERY_OP_GRANT,
-    QUERY_OP_REVOKE,
+    QUERY_OP_CREATE,
+    QUERY_OP_DELETE,
+    QUERY_OP_DROP,
     QUERY_OP_EXECUTE,
+    QUERY_OP_EXPLAIN,
+    QUERY_OP_GRANT,
+    QUERY_OP_INSERT,
+    QUERY_OP_LOAD,
+    QUERY_OP_REVOKE,
+    QUERY_OP_SELECT,
+    QUERY_OP_SHOW,
+    QUERY_OP_TRUNCATE,
+    QUERY_OP_UPDATE,
 } qc_query_op_t;
 
 /**
@@ -173,12 +186,13 @@ typedef struct query_classifier
     /**
      * Called once to setup the query classifier
      *
-     * @param args  The value of `query_classifier_args` in the configuration file.
+     * @param sql_mode  The default sql mode.
+     * @param args      The value of `query_classifier_args` in the configuration file.
      *
      * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
      *         some specific error code.
      */
-    int32_t (*qc_setup)(const char* args);
+    int32_t (*qc_setup)(qc_sql_mode_t sql_mode, const char* args);
 
     /**
      * Called once at process startup, after @c qc_setup has successfully
@@ -393,6 +407,24 @@ typedef struct query_classifier
      *                 version = major * 10000 + minor * 100 + patch
      */
     void (*qc_get_server_version)(uint64_t* version);
+
+    /**
+     * Gets the sql mode of the *calling* thread.
+     *
+     * @param sql_mode  The mode.
+     *
+     * @return QC_RESULT_OK
+     */
+    int32_t (*qc_get_sql_mode)(qc_sql_mode_t* sql_mode);
+
+    /**
+     * Sets the sql mode for the *calling* thread.
+     *
+     * @param sql_mode  The mode.
+     *
+     * @return QC_RESULT_OK if @sql_mode is valid, otherwise QC_RESULT_ERROR.
+     */
+    int32_t (*qc_set_sql_mode)(qc_sql_mode_t sql_mode);
 } QUERY_CLASSIFIER;
 
 /**
@@ -406,6 +438,7 @@ typedef struct query_classifier
  *
  * @param plugin_name  The name of the plugin from which the query classifier
  *                     should be loaded.
+ * @param sql_mode     The default sql mode.
  * @param plugin_args  The arguments to be provided to the query classifier.
  *
  * @return True if the query classifier could be loaded and initialized,
@@ -413,7 +446,7 @@ typedef struct query_classifier
  *
  * @see qc_end qc_thread_init
  */
-bool qc_setup(const char* plugin_name, const char* plugin_args);
+bool qc_setup(const char* plugin_name, qc_sql_mode_t sql_mode, const char* plugin_args);
 
 /**
  * Intializes the query classifier.
@@ -659,6 +692,13 @@ char* qc_get_prepare_name(GWBUF* stmt);
 GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
 
 /**
+ * Gets the sql mode of the *calling* thread.
+ *
+ * @return The mode.
+ */
+qc_sql_mode_t qc_get_sql_mode();
+
+/**
  * Returns the tables accessed by the statement.
  *
  * @param stmt       A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
@@ -755,6 +795,13 @@ static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
  *         otherwise.
  */
 bool qc_query_has_clause(GWBUF* stmt);
+
+/**
+ * Sets the sql mode for the *calling* thread.
+ *
+ * @param sql_mode  The mode.
+ */
+void qc_set_sql_mode(qc_sql_mode_t sql_mode);
 
 /**
  * Returns the string representation of a query type.

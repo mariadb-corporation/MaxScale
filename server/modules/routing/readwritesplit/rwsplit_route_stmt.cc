@@ -31,7 +31,7 @@
 
 extern int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&);
 
-static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses);
+static SRWBackend get_root_master_backend(RWSplitSession *rses);
 
 /**
  * Find out which of the two backend servers has smaller value for select
@@ -58,16 +58,16 @@ static SRWBackend compare_backends(SRWBackend a, SRWBackend b, select_criteria_t
         return a;
     }
 
-    return p(a, b) < 0 ? a : b;
+    return p(a, b) <= 0 ? a : b;
 }
 
-void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+void handle_connection_keepalive(RWSplit *inst, RWSplitSession *rses,
                                  SRWBackend& target)
 {
     ss_dassert(target);
     ss_debug(int nserv = 0);
     /** Each heartbeat is 1/10th of a second */
-    int keepalive = inst->rwsplit_config.connection_keepalive * 10;
+    int keepalive = inst->config().connection_keepalive * 10;
 
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
@@ -91,36 +91,21 @@ void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     ss_dassert(nserv < rses->rses_nbackends);
 }
 
-/**
- * Routing function. Find out query type, backend type, and target DCB(s).
- * Then route query to found target(s).
- * @param inst      router instance
- * @param rses      router session
- * @param querybuf  GWBUF including the query
- *
- * @return true if routing succeed or if it failed due to unsupported query.
- * false if backend failure was encountered.
- */
-bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                       GWBUF *querybuf)
+route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
+                               uint8_t* command, uint32_t* type, uint32_t* stmt_id)
 {
-    route_target_t route_target;
-    bool succp = false;
-    bool non_empty_packet;
+    route_target_t route_target = TARGET_MASTER;
 
-    ss_dassert(querybuf->next == NULL); // The buffer must be contiguous.
-
-    /* packet_type is a problem as it is MySQL specific */
-    uint8_t command = determine_packet_type(querybuf, &non_empty_packet);
-    uint32_t qtype = determine_query_type(querybuf, command, non_empty_packet);
-
-    if (non_empty_packet)
+    if (gwbuf_length(buffer) > MYSQL_HEADER_LEN)
     {
-        handle_multi_temp_and_load(rses, querybuf, command, &qtype);
+        *command = mxs_mysql_get_command(buffer);
+        *type = determine_query_type(buffer, *command);
+
+        handle_multi_temp_and_load(rses, buffer, *command, type);
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_transaction_status(rses, querybuf, qtype);
+            log_transaction_status(rses, buffer, *type);
         }
         /**
          * Find out where to route the query. Result may not be clear; it is
@@ -140,23 +125,69 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
          *   eventually to master
          */
 
-        uint32_t ps_type;
-
-        if (qc_get_operation(querybuf) == QUERY_OP_EXECUTE &&
-            get_text_ps_type(rses, querybuf, &ps_type))
+        if (rses->target_node && rses->target_node == rses->current_master)
         {
-            qtype = ps_type;
-        }
+            /** The session is locked to the master */
+            route_target = TARGET_MASTER;
 
-        route_target = get_route_target(rses, qtype, querybuf->hint);
+            if (qc_query_is_type(*type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+                qc_query_is_type(*type, QUERY_TYPE_PREPARE_STMT))
+            {
+                gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
+            }
+        }
+        else
+        {
+            if (*command == MYSQL_COM_QUERY &&
+                qc_get_operation(buffer) == QUERY_OP_EXECUTE)
+            {
+                std::string id = get_text_ps_id(buffer);
+                *type = rses->ps_manager.get_type(id);
+            }
+            else if (is_ps_command(*command))
+            {
+                *stmt_id = get_internal_ps_id(rses, buffer);
+                *type = rses->ps_manager.get_type(*stmt_id);
+            }
+
+            route_target = get_route_target(rses, *command, *type, buffer->hint);
+        }
     }
     else
     {
         /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-        route_target = TARGET_MASTER;
         rses->load_data_state = LOAD_DATA_END;
         MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
-                 rses->rses_load_data_sent + gwbuf_length(querybuf));
+                 rses->rses_load_data_sent + gwbuf_length(buffer));
+    }
+
+    return route_target;
+}
+
+/**
+ * Routing function. Find out query type, backend type, and target DCB(s).
+ * Then route query to found target(s).
+ * @param inst      router instance
+ * @param rses      router session
+ * @param querybuf  GWBUF including the query
+ *
+ * @return true if routing succeed or if it failed due to unsupported query.
+ * false if backend failure was encountered.
+ */
+bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, const RouteInfo& info)
+{
+    bool succp = false;
+    uint32_t stmt_id = info.stmt_id;
+    uint8_t command = info.command;
+    uint32_t qtype = info.type;
+    route_target_t route_target = info.target;
+    bool not_locked_to_master = !rses->target_node || rses->target_node != rses->current_master;
+
+    if (is_ps_command(command) && not_locked_to_master)
+    {
+        /** Replace the client statement ID with our internal one only if the
+         * target node is not the current master */
+        replace_binary_ps_id(querybuf, stmt_id);
     }
 
     SRWBackend target;
@@ -183,7 +214,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
         else if (TARGET_IS_SLAVE(route_target))
         {
-            if ((target = handle_slave_is_target(inst, rses)))
+            if ((target = handle_slave_is_target(inst, rses, command, stmt_id)))
             {
                 succp = true;
                 store_stmt = rses->rses_config.retry_failed_reads;
@@ -204,11 +235,21 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         if (target && succp) /*< Have DCB of the target backend */
         {
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
-            handle_got_target(inst, rses, querybuf, target, store_stmt);
+            succp = handle_got_target(inst, rses, querybuf, target, store_stmt);
+
+            if (succp && command == MYSQL_COM_STMT_EXECUTE && not_locked_to_master)
+            {
+                /** Track the targets of the COM_STMT_EXECUTE statements. This
+                 * information is used to route all COM_STMT_FETCH commands
+                 * to the same server where the COM_STMT_EXECUTE was done. */
+                ss_dassert(stmt_id > 0);
+                rses->exec_map[stmt_id] = target;
+                MXS_INFO("COM_STMT_EXECUTE on %s", target->uri());
+            }
         }
     }
 
-    if (succp && inst->rwsplit_config.connection_keepalive &&
+    if (succp && inst->config().connection_keepalive &&
         (TARGET_IS_SLAVE(route_target) || TARGET_IS_MASTER(route_target)))
     {
         handle_connection_keepalive(inst, rses, target);
@@ -237,14 +278,22 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
  * backends being used, otherwise false.
  *
  */
-bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t command)
+bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
+                         uint8_t command, uint32_t type)
 {
     /** The SessionCommand takes ownership of the buffer */
     uint64_t id = rses->sescmd_count++;
     mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));
-    bool expecting_response = command_will_respond(command);
+    bool expecting_response = mxs_mysql_command_will_respond(command);
     int nsucc = 0;
     uint64_t lowest_pos = id;
+
+    if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
+    {
+        gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
+        rses->ps_manager.store(querybuf, id);
+    }
 
     MXS_INFO("Session write, routing to all servers.");
 
@@ -314,6 +363,13 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
     if (nsucc)
     {
         rses->sent_sescmd = id;
+
+        if (!expecting_response)
+        {
+            /** The command doesn't generate a response so we increment the
+             * completed session command count */
+            rses->recv_sescmd++;
+        }
     }
 
     return nsucc;
@@ -330,7 +386,7 @@ bool route_session_write(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, uint8_t comma
  *
  * @return True if a backend was found
  */
-SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
+SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
                               char *name, int max_rlag)
 {
     CHK_CLIENT_RSES(rses);
@@ -504,25 +560,26 @@ SRWBackend get_target_backend(ROUTER_CLIENT_SES *rses, backend_type_t btype,
  *  @return bitfield including the routing target, or the target server name
  *          if the query would otherwise be routed to slave.
  */
-route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
-                                uint32_t qtype, HINT *hint)
+route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
+                                uint32_t qtype, HINT *query_hints)
 {
     bool trx_active = session_trx_is_active(rses->client_dcb->session);
     bool load_active = rses->load_data_state != LOAD_DATA_INACTIVE;
     mxs_target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
     int target = TARGET_UNDEFINED;
 
-    if (rses->target_node && rses->target_node == rses->current_master)
-    {
-        target = TARGET_MASTER;
-    }
-    else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
-             qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+    /**
+     * Prepared statements preparations should go to all servers
+     */
+    if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+        qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        command == MYSQL_COM_STMT_CLOSE ||
+        command == MYSQL_COM_STMT_RESET)
     {
         target = TARGET_ALL;
     }
     /**
-     * These queries are not affected by hints
+     * These queries should be routed to all servers
      */
     else if (!load_active &&
              (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
@@ -598,7 +655,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     }
     else if (session_trx_is_read_only(rses->client_dcb->session))
     {
-        /* Force TARGET_SLAVE for READ ONLY tranaction (active or ending) */
+        /* Force TARGET_SLAVE for READ ONLY transaction (active or ending) */
         target = TARGET_SLAVE;
     }
     else
@@ -631,14 +688,13 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
         target = TARGET_MASTER;
     }
 
-    /** process routing hints */
-    while (hint != NULL)
+    /** Process routing hints */
+    for (HINT* hint = query_hints; hint; hint = hint->next)
     {
         if (hint->type == HINT_ROUTE_TO_MASTER)
         {
             target = TARGET_MASTER; /*< override */
-            MXS_DEBUG("%lu [get_route_target] Hint: route to master.",
-                      pthread_self());
+            MXS_DEBUG("Hint: route to master");
             break;
         }
         else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
@@ -648,42 +704,38 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
              * found, the oroginal target is chosen.
              */
             target |= TARGET_NAMED_SERVER;
-            MXS_DEBUG("%lu [get_route_target] Hint: route to "
-                      "named server : ",
-                      pthread_self());
+            MXS_DEBUG("Hint: route to named server: %s", (char*)hint->data);
         }
         else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
         {
             /** not implemented */
+            ss_dassert(false);
         }
         else if (hint->type == HINT_ROUTE_TO_ALL)
         {
             /** not implemented */
+            ss_dassert(false);
         }
         else if (hint->type == HINT_PARAMETER)
         {
-            if (strncasecmp((char *)hint->data, "max_slave_replication_lag",
+            if (strncasecmp((char*)hint->data, "max_slave_replication_lag",
                             strlen("max_slave_replication_lag")) == 0)
             {
                 target |= TARGET_RLAG_MAX;
             }
             else
             {
-                MXS_ERROR("Unknown hint parameter "
-                          "'%s' when 'max_slave_replication_lag' "
-                          "was expected.",
-                          (char *)hint->data);
+                MXS_ERROR("Unknown hint parameter '%s' when "
+                          "'max_slave_replication_lag' was expected.",
+                          (char*)hint->data);
             }
         }
         else if (hint->type == HINT_ROUTE_TO_SLAVE)
         {
             target = TARGET_SLAVE;
-            MXS_DEBUG("%lu [get_route_target] Hint: route to "
-                      "slave.",
-                      pthread_self());
+            MXS_DEBUG("Hint: route to slave.");
         }
-        hint = hint->next;
-    } /*< while (hint != NULL) */
+    }
 
     return (route_target_t)target;
 }
@@ -699,7 +751,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
  *  @param qtype        Query type
  */
 void
-handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
                            uint8_t packet_type, uint32_t *qtype)
 {
     /** Check for multi-statement queries. If no master server is available
@@ -796,7 +848,7 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+SRWBackend handle_hinted_target(RWSplitSession *rses, GWBUF *querybuf,
                                 route_target_t route_target)
 {
     char *named_server = NULL;
@@ -875,14 +927,37 @@ SRWBackend handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses)
+SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
+                                  uint8_t cmd, uint32_t stmt_id)
 {
     int rlag_max = rses_get_max_replication_lag(rses);
-    SRWBackend target = get_target_backend(rses, BE_SLAVE, NULL, rlag_max);
+    SRWBackend target;
+
+    if (cmd == MYSQL_COM_STMT_FETCH)
+    {
+        /** The COM_STMT_FETCH must be executed on the same server as the
+         * COM_STMT_EXECUTE was executed on */
+        ExecMap::iterator it = rses->exec_map.find(stmt_id);
+
+        if (it != rses->exec_map.end())
+        {
+            target = it->second;
+            MXS_INFO("COM_STMT_FETCH on %s", target->uri());
+        }
+        else
+        {
+            MXS_WARNING("Unknown statement ID %u used in COM_STMT_FETCH", stmt_id);
+        }
+    }
+
+    if (!target)
+    {
+        target = get_target_backend(rses, BE_SLAVE, NULL, rlag_max);
+    }
 
     if (target)
     {
-        atomic_add_uint64(&inst->stats.n_slave, 1);
+        atomic_add_uint64(&inst->stats().n_slave, 1);
     }
     else
     {
@@ -897,7 +972,7 @@ SRWBackend handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses
  *
  * @param rses Router session
  */
-static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
+static void log_master_routing_failure(RWSplitSession *rses, bool found,
                                        SRWBackend& old_master, SRWBackend& curr_master)
 {
     char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100]; // Extra space for error message
@@ -946,7 +1021,7 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
     }
 
     MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
-                rses->router->service->name, rses->client_dcb->user,
+                rses->router->service()->name, rses->client_dcb->user,
                 rses->client_dcb->remote, errmsg);
 }
 
@@ -961,7 +1036,7 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
  *
  *  @return bool - true if succeeded, false otherwise
  */
-bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
                              SRWBackend* dest)
 {
     SRWBackend target = get_target_backend(rses, BE_MASTER, NULL, MAX_RLAG_UNDEFINED);
@@ -969,7 +1044,7 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     if (target && target == rses->current_master)
     {
-        atomic_add_uint64(&inst->stats.n_master, 1);
+        atomic_add_uint64(&inst->stats().n_master, 1);
     }
     else
     {
@@ -994,28 +1069,21 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     return succp;
 }
 
-static inline bool query_creates_reply(mysql_server_cmd_t cmd)
+static inline bool query_creates_reply(uint8_t cmd)
 {
     return cmd != MYSQL_COM_QUIT &&
            cmd != MYSQL_COM_STMT_SEND_LONG_DATA &&
-           cmd != MYSQL_COM_STMT_CLOSE;
+           cmd != MYSQL_COM_STMT_CLOSE &&
+           cmd != MYSQL_COM_STMT_FETCH; // Fetch is done mid-result
 }
 
 /**
- * @brief Handle got a target
+ * @brief Handle writing to a target server
  *
- * One of the possible types of handling required when a request is routed
- *
- *  @param inst         Router instance
- *  @param ses          Router session
- *  @param querybuf     Buffer containing query to be routed
- *  @param target_dcb   DCB for the target server
- *
- *  @return bool - true if succeeded, false otherwise
+ *  @return True on success
  */
-bool
-handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                  GWBUF *querybuf, SRWBackend& target, bool store)
+bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
+                       GWBUF *querybuf, SRWBackend& target, bool store)
 {
     /**
      * If the transaction is READ ONLY set forced_node to this backend.
@@ -1036,7 +1104,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     ss_dassert(target->session_command_count() == 0);
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
-    mysql_server_cmd_t cmd = mxs_mysql_current_command(rses->client_dcb->session);
+    uint8_t cmd = mxs_mysql_get_command(querybuf);
 
     if (rses->load_data_state != LOAD_DATA_ACTIVE &&
         query_creates_reply(cmd))
@@ -1051,7 +1119,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             MXS_ERROR("Failed to store current statement, it won't be retried if it fails.");
         }
 
-        atomic_add_uint64(&inst->stats.n_queries, 1);
+        atomic_add_uint64(&inst->stats().n_queries, 1);
 
         if (response == mxs::Backend::EXPECT_RESPONSE)
         {
@@ -1107,7 +1175,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
  * @return The backend that points to the master server or an empty reference
  * if the master cannot be found
  */
-static SRWBackend get_root_master_backend(ROUTER_CLIENT_SES *rses)
+static SRWBackend get_root_master_backend(RWSplitSession *rses)
 {
     SRWBackend candidate;
     SERVER master = {};

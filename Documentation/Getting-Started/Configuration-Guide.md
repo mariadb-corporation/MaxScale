@@ -584,6 +584,43 @@ documentation for more details.
 Enable or disable the admin interface. This allows the admin interface to
 be completely disabled to prevent access to it.
 
+#### `sql_mode`
+
+Specifies whether the query classifier parser should initially expect _MariaDB_
+or _PL/SQL_ kind of SQL.
+
+The allowed values are:
+   `default`: The parser expects regular _MariaDB_ SQL.
+   `oracle` : The parser expects PL/SQL.
+
+```
+sql_mode=oracle
+```
+
+The default value is `default`.
+
+**NOTE** If `sql_mode` is set to `oracle`, then MaxScale will also assume
+that `autocommit` initially is off.
+
+At runtime, MariaDB MaxScale will recognize statements like
+```
+set sql_mode=oracle;
+```
+and
+```
+set sql_mode=default;
+```
+and change mode accordingly.
+
+**NOTE** If `set sql_mode=oracle;` is encountered, then MaxScale will also
+behave as if `autocommit` had been turned off and conversely, if
+`set sql_mode=default;` is encountered, then MaxScale will also behave
+as if `autocommit` had been turned on.
+
+Note that MariaDB MaxScale is **not** explicitly aware of the sql mode of
+the server, so the value of `sql_mode` should reflect the sql mode used
+when the server is started.
+
 ### Service
 
 A service represents the database service that MariaDB MaxScale offers to the

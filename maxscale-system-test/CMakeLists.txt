@@ -344,6 +344,10 @@ add_test_executable(mxs280_select_outfile.cpp mxs280_select_outfile replication 
 # Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
 add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol LIGHT GALERA_BACKEND)
 
+# Binary protocol prepared statement tests
+add_test_executable(binary_ps.cpp binary_ps replication LABELS readwritesplit LIGHT REPL_BACKEND)
+add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS readwritesplit LIGHT REPL_BACKEND)
+
 # Creates and closes a lot of connections, checks that 'maxadmin list servers' shows 0 connections at the end
 add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale REPL_BACKEND)
 
@@ -591,6 +595,8 @@ add_test_script(ssl sql_queries ssl LABELS maxscale readwritesplit REPL_BACKEND)
 #add_test_script(ssl_load load_balancing ssl_load LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Check load balancing, client ssl is ON, Galera backend
+
+# Galera version is also disabled due to C/C 3.0 strangeness
 #add_test_script(ssl_load_galera load_balancing_galera ssl_load_galera LABELS maxscale readwritesplit GALERA_BACKEND)
 
 # Testing slaves who have lost their master and how MaxScale works with them

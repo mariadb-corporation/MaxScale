@@ -12,7 +12,6 @@
  */
 
 #include "readwritesplit.hh"
-#include "rwsplit_internal.hh"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -31,6 +30,9 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
+
+#include "rwsplit_internal.hh"
+#include "rwsplitsession.hh"
 
 /**
  * The entry points for the read/write query splitting router module.
@@ -51,42 +53,16 @@
 
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue);
 
-static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
+static bool rwsplit_process_router_options(RWSplit *router,
                                            char **options);
-static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
+static void handle_error_reply_client(MXS_SESSION *ses, RWSplitSession *rses,
                                       DCB *backend_dcb, GWBUF *errmsg);
-static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
-                                        ROUTER_CLIENT_SES **rses,
+static bool handle_error_new_connection(RWSplit *inst,
+                                        RWSplitSession **rses,
                                         DCB *backend_dcb, GWBUF *errmsg);
-static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
-                                int router_nsrv, ROUTER_INSTANCE *router);
-
-/**
- * Enum values for router parameters
- */
-static const MXS_ENUM_VALUE use_sql_variables_in_values[] =
-{
-    {"all",    TYPE_ALL},
-    {"master", TYPE_MASTER},
-    {NULL}
-};
-
-static const MXS_ENUM_VALUE slave_selection_criteria_values[] =
-{
-    {"LEAST_GLOBAL_CONNECTIONS", LEAST_GLOBAL_CONNECTIONS},
-    {"LEAST_ROUTER_CONNECTIONS", LEAST_ROUTER_CONNECTIONS},
-    {"LEAST_BEHIND_MASTER",      LEAST_BEHIND_MASTER},
-    {"LEAST_CURRENT_OPERATIONS", LEAST_CURRENT_OPERATIONS},
-    {NULL}
-};
-
-static const MXS_ENUM_VALUE master_failure_mode_values[] =
-{
-    {"fail_instantly", RW_FAIL_INSTANTLY},
-    {"fail_on_write",  RW_FAIL_ON_WRITE},
-    {"error_on_write", RW_ERROR_ON_WRITE},
-    {NULL}
-};
+static bool have_enough_servers(RWSplitSession *rses, const int min_nsrv,
+                                int router_nsrv, RWSplit *router);
+static bool route_stored_query(RWSplitSession *rses);
 
 /**
  * Internal functions
@@ -102,7 +78,7 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
  * @param   rses Router client session
  * @param   router_nservers The number of backend servers in total
  */
-int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses)
+int rses_get_max_slavecount(RWSplitSession *rses)
 {
     int conf_max_nslaves;
     int router_nservers = rses->rses_nbackends;
@@ -127,7 +103,7 @@ int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses)
  * @param   rses    Router client session
  * @return  Replication lag from configuration or very large number
  */
-int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
+int rses_get_max_replication_lag(RWSplitSession *rses)
 {
     int conf_max_rlag;
 
@@ -157,7 +133,7 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
  *
  * @return backend reference pointer if succeed or NULL
  */
-SRWBackend get_backend_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
+SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
 {
     ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
@@ -186,7 +162,7 @@ SRWBackend get_backend_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
  * @param options Router options
  * @return True on success, false if a configuration error was found
  */
-static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
+static bool rwsplit_process_router_options(Config& config,
                                            char **options)
 {
     int i;
@@ -226,47 +202,47 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
                               "Allowed values are LEAST_GLOBAL_CONNECTIONS, "
                               "LEAST_ROUTER_CONNECTIONS, LEAST_BEHIND_MASTER,"
                               "and LEAST_CURRENT_OPERATIONS.",
-                              STRCRITERIA(router->rwsplit_config.slave_selection_criteria));
+                              STRCRITERIA(config.slave_selection_criteria));
                     success = false;
                 }
                 else
                 {
-                    router->rwsplit_config.slave_selection_criteria = c;
+                    config.slave_selection_criteria = c;
                 }
             }
             else if (strcmp(options[i], "max_sescmd_history") == 0)
             {
-                router->rwsplit_config.max_sescmd_history = atoi(value);
+                config.max_sescmd_history = atoi(value);
             }
             else if (strcmp(options[i], "disable_sescmd_history") == 0)
             {
-                router->rwsplit_config.disable_sescmd_history = config_truth_value(value);
+                config.disable_sescmd_history = config_truth_value(value);
             }
             else if (strcmp(options[i], "master_accept_reads") == 0)
             {
-                router->rwsplit_config.master_accept_reads = config_truth_value(value);
+                config.master_accept_reads = config_truth_value(value);
             }
             else if (strcmp(options[i], "strict_multi_stmt") == 0)
             {
-                router->rwsplit_config.strict_multi_stmt = config_truth_value(value);
+                config.strict_multi_stmt = config_truth_value(value);
             }
             else if (strcmp(options[i], "retry_failed_reads") == 0)
             {
-                router->rwsplit_config.retry_failed_reads = config_truth_value(value);
+                config.retry_failed_reads = config_truth_value(value);
             }
             else if (strcmp(options[i], "master_failure_mode") == 0)
             {
                 if (strcasecmp(value, "fail_instantly") == 0)
                 {
-                    router->rwsplit_config.master_failure_mode = RW_FAIL_INSTANTLY;
+                    config.master_failure_mode = RW_FAIL_INSTANTLY;
                 }
                 else if (strcasecmp(value, "fail_on_write") == 0)
                 {
-                    router->rwsplit_config.master_failure_mode = RW_FAIL_ON_WRITE;
+                    config.master_failure_mode = RW_FAIL_ON_WRITE;
                 }
                 else if (strcasecmp(value, "error_on_write") == 0)
                 {
-                    router->rwsplit_config.master_failure_mode = RW_ERROR_ON_WRITE;
+                    config.master_failure_mode = RW_ERROR_ON_WRITE;
                 }
                 else
                 {
@@ -287,7 +263,7 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
 }
 
 // TODO: Don't process parameters in readwritesplit
-static bool handle_max_slaves(ROUTER_INSTANCE *router, const char *str)
+static bool handle_max_slaves(Config& config, const char *str)
 {
     bool rval = true;
     char *endptr;
@@ -295,13 +271,13 @@ static bool handle_max_slaves(ROUTER_INSTANCE *router, const char *str)
 
     if (*endptr == '%' && *(endptr + 1) == '\0')
     {
-        router->rwsplit_config.rw_max_slave_conn_percent = val;
-        router->rwsplit_config.max_slave_connections = 0;
+        config.rw_max_slave_conn_percent = val;
+        config.max_slave_connections = 0;
     }
     else if (*endptr == '\0')
     {
-        router->rwsplit_config.max_slave_connections = val;
-        router->rwsplit_config.rw_max_slave_conn_percent = 0;
+        config.max_slave_connections = val;
+        config.rw_max_slave_conn_percent = 0;
     }
     else
     {
@@ -320,7 +296,7 @@ static bool handle_max_slaves(ROUTER_INSTANCE *router, const char *str)
  * @param backend_dcb   DCB for the backend server that has failed
  * @param errmsg        GWBUF containing the error message
  */
-static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
+static void handle_error_reply_client(MXS_SESSION *ses, RWSplitSession *rses,
                                       DCB *backend_dcb, GWBUF *errmsg)
 {
 
@@ -338,7 +314,7 @@ static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
     }
 }
 
-static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& old, GWBUF *stored)
+static bool reroute_stored_statement(RWSplitSession *rses, const SRWBackend& old, GWBUF *stored)
 {
     bool success = false;
 
@@ -407,11 +383,11 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, const SRWBackend& 
  * @return true if there are enough backend connections to continue, false if
  * not
  */
-static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
-                                        ROUTER_CLIENT_SES **rses,
+static bool handle_error_new_connection(RWSplit *inst,
+                                        RWSplitSession **rses,
                                         DCB *backend_dcb, GWBUF *errmsg)
 {
-    ROUTER_CLIENT_SES *myrses = *rses;
+    RWSplitSession *myrses = *rses;
     SRWBackend backend = get_backend_from_dcb(myrses, backend_dcb);
 
     MXS_SESSION* ses = backend_dcb->session;
@@ -470,7 +446,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      * Try to get replacement slave or at least the minimum
      * number of slave connections for router session.
      */
-    if (inst->rwsplit_config.disable_sescmd_history)
+    if (inst->config().disable_sescmd_history)
     {
         succp = have_enough_servers(myrses, 1, myrses->rses_nbackends, inst) ? true : false;
     }
@@ -495,8 +471,8 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
  *
  * @return bool - whether enough, side effect is error logging
  */
-static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
-                                int router_nsrv, ROUTER_INSTANCE *router)
+static bool have_enough_servers(RWSplitSession *rses, const int min_nsrv,
+                                int router_nsrv, RWSplit *router)
 {
     bool succp = true;
 
@@ -511,7 +487,7 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
             MXS_ERROR("Unable to start %s service. There are "
                       "too few backend servers available. Found %d "
                       "when %d is required.",
-                      router->service->name, router_nsrv, min_nsrv);
+                      router->service()->name, router_nsrv, min_nsrv);
         }
         else
         {
@@ -523,7 +499,7 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
                 MXS_ERROR("Unable to start %s service. There are "
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d when %d is required.",
-                          router->service->name,
+                          router->service()->name,
                           (rses)->rses_config.max_slave_connections, min_nsrv);
             }
             if (nservers < min_nsrv)
@@ -533,7 +509,7 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d%% when at least %.0f%% "
                           "would be required.",
-                          router->service->name,
+                          router->service()->name,
                           (rses)->rses_config.rw_max_slave_conn_percent, dbgpct);
             }
         }
@@ -543,11 +519,24 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
     return succp;
 }
 
-bool route_stored_query(ROUTER_CLIENT_SES *rses)
+/**
+ * @brief Route a stored query
+ *
+ * When multiple queries are executed in a pipeline fashion, the readwritesplit
+ * stores the extra queries in a queue. This queue is emptied after reading a
+ * reply from the backend server.
+ *
+ * @param rses Router client session
+ * @return True if a stored query was routed successfully
+ */
+static bool route_stored_query(RWSplitSession *rses)
 {
     bool rval = true;
 
-    if (rses->query_queue)
+    /** Loop over the stored statements as long as the routeQuery call doesn't
+     * append more data to the queue. If it appends data to the queue, we need
+     * to wait for a response before attempting another reroute */
+    while (rses->query_queue)
     {
         GWBUF* query_queue = modutil_get_next_MySQL_packet(&rses->query_queue);
         query_queue = gwbuf_make_contiguous(query_queue);
@@ -574,8 +563,17 @@ bool route_stored_query(ROUTER_CLIENT_SES *rses)
             gwbuf_free(query_queue);
         }
 
-        ss_dassert(rses->query_queue == NULL);
-        rses->query_queue = temp_storage;
+        if (rses->query_queue == NULL)
+        {
+            /** Query successfully routed and no responses are expected */
+            rses->query_queue = temp_storage;
+        }
+        else
+        {
+            /** Routing was stopped, we need to wait for a response before retrying */
+            rses->query_queue = gwbuf_append(temp_storage, rses->query_queue);
+            break;
+        }
     }
 
     return rval;
@@ -640,7 +638,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
     return backend->get_reply_state() == REPLY_STATE_DONE;
 }
 
-void close_all_connections(ROUTER_CLIENT_SES* rses)
+void close_all_connections(RWSplitSession* rses)
 {
     for (SRWBackendList::iterator it = rses->backends.begin();
          it != rses->backends.end(); it++)
@@ -654,83 +652,97 @@ void close_all_connections(ROUTER_CLIENT_SES* rses)
     }
 }
 
+void check_and_log_backend_state(const SRWBackend& backend, DCB* problem_dcb)
+{
+    if (backend)
+    {
+        /** This is a valid DCB for a backend ref */
+        if (backend->in_use() && backend->dcb() == problem_dcb)
+        {
+            ss_dassert(false);
+            MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.",
+                      backend->name());
+        }
+    }
+    else
+    {
+        const char *remote = problem_dcb->state == DCB_STATE_POLLING &&
+                             problem_dcb->server ? problem_dcb->server->unique_name : "CLOSED";
+
+        MXS_ERROR("DCB connected to '%s' is not in use by the router "
+                  "session, not closing it. DCB is in state '%s'",
+                  remote, STRDCBSTATE(problem_dcb->state));
+    }
+}
+
+RWSplit::RWSplit(SERVICE* service, const Config& config):
+    m_service(service),
+    m_config(config)
+{
+}
+
+RWSplit::~RWSplit()
+{
+}
+
+SERVICE* RWSplit::service() const
+{
+    return m_service;
+}
+
+const Config& RWSplit::config() const
+{
+    return m_config;
+}
+
+Stats& RWSplit::stats()
+{
+    return m_stats;
+}
+
+RWSplitSession::RWSplitSession(const Config& config):
+    rses_config(config)
+{
+}
+
 /**
  * API function definitions
  */
 
 /**
- * @brief Create an instance of the read/write router (API).
+ * @brief Create a new readwritesplit router instance
  *
- * Create an instance of read/write statement router within the MaxScale. One
- * instance of the router is required for each service that is defined in the
- * configuration as using this router. One instance of the router will handle
- * multiple connections (or router sessions).
+ * An instance of the router is required for each service that uses this router.
+ * One instance of the router will handle multiple router sessions.
  *
- * @param service   The service this router is being create for
- * @param options   The options for this query router
- * @return NULL in failure, pointer to router in success.
+ * @param service The service this router is being create for
+ * @param options The options for this query router
+ *
+ * @return New router instance or NULL on error
  */
-static MXS_ROUTER *createInstance(SERVICE *service, char **options)
+static MXS_ROUTER* createInstance(SERVICE *service, char **options)
 {
-    ROUTER_INSTANCE* router = new (std::nothrow) ROUTER_INSTANCE;
 
-    if (router == NULL)
+    MXS_CONFIG_PARAMETER* params = service->svc_config_param;
+    Config config(params);
+
+    if (!handle_max_slaves(config, config_get_string(params, "max_slave_connections")) ||
+        (options && !rwsplit_process_router_options(config, options)))
     {
-        return NULL;
-    }
-
-    router->service = service;
-
-    /*
-     * Until we know otherwise assume we have some available slaves.
-     */
-    router->available_slaves = true;
-
-    /** By default, the client connection is closed immediately when a master
-     * failure is detected */
-    router->rwsplit_config.master_failure_mode = RW_FAIL_INSTANTLY;
-
-    MXS_CONFIG_PARAMETER *params = service->svc_config_param;
-
-    router->rwsplit_config.use_sql_variables_in =
-        (mxs_target_t)config_get_enum(params, "use_sql_variables_in",
-                                      use_sql_variables_in_values);
-
-    router->rwsplit_config.slave_selection_criteria =
-        (select_criteria_t)config_get_enum(params, "slave_selection_criteria",
-                                           slave_selection_criteria_values);
-
-    router->rwsplit_config.master_failure_mode =
-        (enum failure_mode)config_get_enum(params, "master_failure_mode",
-                                           master_failure_mode_values);
-
-    router->rwsplit_config.max_slave_replication_lag = config_get_integer(params, "max_slave_replication_lag");
-    router->rwsplit_config.retry_failed_reads = config_get_bool(params, "retry_failed_reads");
-    router->rwsplit_config.strict_multi_stmt = config_get_bool(params, "strict_multi_stmt");
-    router->rwsplit_config.disable_sescmd_history = config_get_bool(params, "disable_sescmd_history");
-    router->rwsplit_config.max_sescmd_history = config_get_integer(params, "max_sescmd_history");
-    router->rwsplit_config.master_accept_reads = config_get_bool(params, "master_accept_reads");
-    router->rwsplit_config.connection_keepalive = config_get_integer(params, "connection_keepalive");
-
-    if (!handle_max_slaves(router, config_get_string(params, "max_slave_connections")) ||
-        (options && !rwsplit_process_router_options(router, options)))
-    {
-        delete router;
         return NULL;
     }
 
     /** These options cancel each other out */
-    if (router->rwsplit_config.disable_sescmd_history &&
-        router->rwsplit_config.max_sescmd_history > 0)
+    if (config.disable_sescmd_history && config.max_sescmd_history > 0)
     {
-        router->rwsplit_config.max_sescmd_history = 0;
+        config.max_sescmd_history = 0;
     }
 
-    return (MXS_ROUTER*)router;
+    return (MXS_ROUTER*)new (std::nothrow) RWSplit(service, config);
 }
 
 /**
- * @brief Associate a new session with this instance of the router (API).
+ * @brief Create a new session for this router instance
  *
  * The session is used to store all the data required by the router for a
  * particular client connection. The instance of the router that relates to a
@@ -742,18 +754,18 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
  * sessions, although it is possible to create configurations where a
  * connection is handled by multiple routers, one after another.
  *
- * @param instance  The router instance data
- * @param session   The MaxScale session (generic connection data)
- * @return Session specific data for this session, i.e. a router session
+ * @param instance The router instance data
+ * @param session  The MaxScale session (generic connection data)
+ *
+ * @return New router session or NULL on error
  */
-static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
 {
-    ROUTER_INSTANCE* router = (ROUTER_INSTANCE*)router_inst;
-    ROUTER_CLIENT_SES* client_rses = new (std::nothrow) ROUTER_CLIENT_SES;
+    RWSplit* router = (RWSplit*)router_inst;
+    RWSplitSession* client_rses = new (std::nothrow) RWSplitSession(router->config());
 
     if (client_rses == NULL)
     {
-        delete client_rses;
         return NULL;
     }
 
@@ -769,10 +781,9 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
     client_rses->sent_sescmd = 0;
     client_rses->recv_sescmd = 0;
     client_rses->sescmd_count = 1; // Needs to be a positive number to work
-    memcpy(&client_rses->rses_config, &router->rwsplit_config, sizeof(client_rses->rses_config));
 
-    int router_nservers = router->service->n_dbref;
-    const int min_nservers = 1; /*< hard-coded for now */
+    int router_nservers = router->service()->n_dbref;
+    const int min_nservers = 1;
 
     if (!have_enough_servers(client_rses, min_nservers, router_nservers, router))
     {
@@ -780,7 +791,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
         return NULL;
     }
 
-    for (SERVER_REF *sref = router->service->dbref; sref; sref = sref->next)
+    for (SERVER_REF *sref = router->service()->dbref; sref; sref = sref->next)
     {
         if (sref->active)
         {
@@ -788,10 +799,9 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
         }
     }
 
-    client_rses->rses_nbackends = router_nservers; /*< # of backend servers */
+    client_rses->rses_nbackends = router_nservers;
 
     int max_nslaves = rses_get_max_slavecount(client_rses);
-
 
     if (!select_connect_backend_servers(router_nservers, max_nslaves,
                                         client_rses->rses_config.slave_selection_criteria,
@@ -799,9 +809,8 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
                                         connection_type::ALL))
     {
         /**
-         * Master and at least <min_nslaves> slaves must be found if the router is
-         * in the strict mode. If sessions without master are allowed, only
-         * <min_nslaves> slaves must be found.
+         * At least the master must be found if the router is in the strict mode.
+         * If sessions without master are allowed, only a slave must be found.
          */
         delete client_rses;
         return NULL;
@@ -815,34 +824,29 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
         client_rses->rses_config.max_slave_connections = n_conn;
     }
 
-    router->stats.n_sessions += 1;
+    router->stats().n_sessions += 1;
 
     return (MXS_ROUTER_SESSION*)client_rses;
 }
 
 /**
- * @brief Close a router session (API).
+ * @brief Close a router session
  *
  * Close a session with the router, this is the mechanism by which a router
- * may cleanup data structure etc. The instance of the router that relates to
+ * may perform cleanup. The instance of the router that relates to
  * the relevant service is passed, along with the router session that is to
- * be closed. Typically the function is used in conjunction with freeSession
- * which will release the resources used by a router session (see below).
+ * be closed. The freeSession will be called once the session has been closed.
  *
- * @param instance  The router instance data
- * @param session   The router session being closed
+ * @param instance The router instance data
+ * @param session  The router session being closed
  */
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    RWSplitSession *router_cli_ses = (RWSplitSession *)router_session;
     CHK_CLIENT_RSES(router_cli_ses);
 
     if (!router_cli_ses->rses_closed)
     {
-        /**
-         * Mark router session as closed. @c rses_closed is checked at the start
-         * of every API function to quickly stop the processing of closed sessions.
-         */
         router_cli_ses->rses_closed = true;
         close_all_connections(router_cli_ses);
 
@@ -865,23 +869,23 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
 }
 
 /**
- * @brief Free a router session (API).
+ * @brief Free a router session
  *
  * When a router session has been closed, freeSession can be called to free
  * allocated resources.
  *
- * @param router_instance   The router instance the session belongs to
- * @param router_client_session Client session
+ * @param instance The router instance
+ * @param session  The router session
  *
  */
-static void freeSession(MXS_ROUTER *router_instance, MXS_ROUTER_SESSION *router_client_session)
+static void freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session)
 {
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
-    delete router_cli_ses;
+    RWSplitSession* rses = reinterpret_cast<RWSplitSession*>(session);
+    delete rses;
 }
 
 /**
- * @brief The main routing entry point for a query (API)
+ * @brief The main routing entry point
  *
  * The routeQuery function will make the routing decision based on the contents
  * of the instance, session and the query itself. The query always represents
@@ -891,12 +895,13 @@ static void freeSession(MXS_ROUTER *router_instance, MXS_ROUTER_SESSION *router_
  * @param instance       Router instance
  * @param router_session Router session associated with the client
  * @param querybuf       Buffer containing the query
+ *
  * @return 1 on success, 0 on error
  */
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *querybuf)
 {
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
-    ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *) router_session;
+    RWSplit *inst = (RWSplit *) instance;
+    RWSplitSession *rses = (RWSplitSession *) router_session;
     int rval = 0;
 
     CHK_CLIENT_RSES(rses);
@@ -907,23 +912,30 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
     }
     else
     {
-        if ((rses->expected_responses == 0 && rses->query_queue == NULL) ||
-            rses->load_data_state == LOAD_DATA_ACTIVE)
+        /** Gather the information required to make routing decisions */
+        RouteInfo info(rses, querybuf);
+
+        if (rses->query_queue == NULL &&
+            (rses->expected_responses == 0 ||
+             info.command == MYSQL_COM_STMT_FETCH ||
+             rses->load_data_state == LOAD_DATA_ACTIVE))
         {
             /** No active or pending queries */
-            if (route_single_stmt(inst, rses, querybuf))
+            if (route_single_stmt(inst, rses, querybuf, info))
             {
                 rval = 1;
             }
         }
         else
         {
+            /**
+             * We are already processing a request from the client. Store the
+             * new query and wait for the previous one to complete.
+             */
             ss_dassert(rses->expected_responses || rses->query_queue);
-            /** We are already processing a request from the client. Store the
-             * new query and wait for the previous one to complete. */
-            MXS_DEBUG("Storing query (len: %d cmd: %0x), expecting %d replies",
-                      gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4],
-                      rses->expected_responses);
+            MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command",
+                     gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4],
+                     rses->expected_responses);
             rses->query_queue = gwbuf_append(rses->query_queue, querybuf);
             querybuf = NULL;
             rval = 1;
@@ -944,59 +956,59 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
 }
 
 /**
- * @brief Diagnostics routine (API)
+ * @brief Diagnostics routine
  *
  * Print query router statistics to the DCB passed in
  *
- * @param   instance    The router instance
- * @param   dcb     The DCB for diagnostic output
+ * @param instance The router instance
+ * @param dcb      The DCB for diagnostic output
  */
 static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
 {
-    ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
-    const char *weightby = serviceGetWeightingParameter(router->service);
+    RWSplit *router = (RWSplit *)instance;
+    const char *weightby = serviceGetWeightingParameter(router->service());
     double master_pct = 0.0, slave_pct = 0.0, all_pct = 0.0;
 
     dcb_printf(dcb, "\n");
     dcb_printf(dcb, "\tuse_sql_variables_in:      %s\n",
-               mxs_target_to_str(router->rwsplit_config.use_sql_variables_in));
+               mxs_target_to_str(router->config().use_sql_variables_in));
     dcb_printf(dcb, "\tslave_selection_criteria:  %s\n",
-               select_criteria_to_str(router->rwsplit_config.slave_selection_criteria));
+               select_criteria_to_str(router->config().slave_selection_criteria));
     dcb_printf(dcb, "\tmaster_failure_mode:       %s\n",
-               failure_mode_to_str(router->rwsplit_config.master_failure_mode));
+               failure_mode_to_str(router->config().master_failure_mode));
     dcb_printf(dcb, "\tmax_slave_replication_lag: %d\n",
-               router->rwsplit_config.max_slave_replication_lag);
+               router->config().max_slave_replication_lag);
     dcb_printf(dcb, "\tretry_failed_reads:        %s\n",
-               router->rwsplit_config.retry_failed_reads ? "true" : "false");
+               router->config().retry_failed_reads ? "true" : "false");
     dcb_printf(dcb, "\tstrict_multi_stmt:         %s\n",
-               router->rwsplit_config.strict_multi_stmt ? "true" : "false");
+               router->config().strict_multi_stmt ? "true" : "false");
     dcb_printf(dcb, "\tdisable_sescmd_history:    %s\n",
-               router->rwsplit_config.disable_sescmd_history ? "true" : "false");
+               router->config().disable_sescmd_history ? "true" : "false");
     dcb_printf(dcb, "\tmax_sescmd_history:        %lu\n",
-               router->rwsplit_config.max_sescmd_history);
+               router->config().max_sescmd_history);
     dcb_printf(dcb, "\tmaster_accept_reads:       %s\n",
-               router->rwsplit_config.master_accept_reads ? "true" : "false");
+               router->config().master_accept_reads ? "true" : "false");
     dcb_printf(dcb, "\n");
 
-    if (router->stats.n_queries > 0)
+    if (router->stats().n_queries > 0)
     {
-        master_pct = ((double)router->stats.n_master / (double)router->stats.n_queries) * 100.0;
-        slave_pct = ((double)router->stats.n_slave / (double)router->stats.n_queries) * 100.0;
-        all_pct = ((double)router->stats.n_all / (double)router->stats.n_queries) * 100.0;
+        master_pct = ((double)router->stats().n_master / (double)router->stats().n_queries) * 100.0;
+        slave_pct = ((double)router->stats().n_slave / (double)router->stats().n_queries) * 100.0;
+        all_pct = ((double)router->stats().n_all / (double)router->stats().n_queries) * 100.0;
     }
 
     dcb_printf(dcb, "\tNumber of router sessions:           	%" PRIu64 "\n",
-               router->stats.n_sessions);
+               router->stats().n_sessions);
     dcb_printf(dcb, "\tCurrent no. of router sessions:      	%d\n",
-               router->service->stats.n_current);
+               router->service()->stats.n_current);
     dcb_printf(dcb, "\tNumber of queries forwarded:          	%" PRIu64 "\n",
-               router->stats.n_queries);
+               router->stats().n_queries);
     dcb_printf(dcb, "\tNumber of queries forwarded to master:	%" PRIu64 " (%.2f%%)\n",
-               router->stats.n_master, master_pct);
+               router->stats().n_master, master_pct);
     dcb_printf(dcb, "\tNumber of queries forwarded to slave: 	%" PRIu64 " (%.2f%%)\n",
-               router->stats.n_slave, slave_pct);
+               router->stats().n_slave, slave_pct);
     dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%" PRIu64 " (%.2f%%)\n",
-               router->stats.n_all, all_pct);
+               router->stats().n_all, all_pct);
 
     if (*weightby)
     {
@@ -1006,7 +1018,7 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
         dcb_printf(dcb, "\t\tServer               Target %%    Connections  "
                    "Operations\n");
         dcb_printf(dcb, "\t\t                               Global  Router\n");
-        for (SERVER_REF *ref = router->service->dbref; ref; ref = ref->next)
+        for (SERVER_REF *ref = router->service()->dbref; ref; ref = ref->next)
         {
             dcb_printf(dcb, "\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
                        ref->server->unique_name, (float)ref->weight / 10,
@@ -1017,47 +1029,45 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
 }
 
 /**
- * @brief Diagnostics routine (API)
+ * @brief JSON diagnostics routine
  *
- * Print query router statistics to the DCB passed in
- *
- * @param   instance    The router instance
- * @param   dcb     The DCB for diagnostic output
+ * @param instance The router instance
+ * @param dcb      The DCB for diagnostic output
  */
 static json_t* diagnostics_json(const MXS_ROUTER *instance)
 {
-    ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
+    RWSplit *router = (RWSplit *)instance;
 
     json_t* rval = json_object();
 
     json_object_set_new(rval, "use_sql_variables_in",
-                        json_string(mxs_target_to_str(router->rwsplit_config.use_sql_variables_in)));
+                        json_string(mxs_target_to_str(router->config().use_sql_variables_in)));
     json_object_set_new(rval, "slave_selection_criteria",
-                        json_string(select_criteria_to_str(router->rwsplit_config.slave_selection_criteria)));
+                        json_string(select_criteria_to_str(router->config().slave_selection_criteria)));
     json_object_set_new(rval, "master_failure_mode",
-                        json_string(failure_mode_to_str(router->rwsplit_config.master_failure_mode)));
+                        json_string(failure_mode_to_str(router->config().master_failure_mode)));
     json_object_set_new(rval, "max_slave_replication_lag",
-                        json_integer(router->rwsplit_config.max_slave_replication_lag));
+                        json_integer(router->config().max_slave_replication_lag));
     json_object_set_new(rval, "retry_failed_reads",
-                        json_boolean(router->rwsplit_config.retry_failed_reads));
+                        json_boolean(router->config().retry_failed_reads));
     json_object_set_new(rval, "strict_multi_stmt",
-                        json_boolean(router->rwsplit_config.strict_multi_stmt));
+                        json_boolean(router->config().strict_multi_stmt));
     json_object_set_new(rval, "disable_sescmd_history",
-                        json_boolean(router->rwsplit_config.disable_sescmd_history));
+                        json_boolean(router->config().disable_sescmd_history));
     json_object_set_new(rval, "max_sescmd_history",
-                        json_integer(router->rwsplit_config.max_sescmd_history));
+                        json_integer(router->config().max_sescmd_history));
     json_object_set_new(rval, "master_accept_reads",
-                        json_boolean(router->rwsplit_config.master_accept_reads));
+                        json_boolean(router->config().master_accept_reads));
 
 
-    json_object_set_new(rval, "connections", json_integer(router->stats.n_sessions));
-    json_object_set_new(rval, "current_connections", json_integer(router->service->stats.n_current));
-    json_object_set_new(rval, "queries", json_integer(router->stats.n_queries));
-    json_object_set_new(rval, "route_master", json_integer(router->stats.n_master));
-    json_object_set_new(rval, "route_slave", json_integer(router->stats.n_slave));
-    json_object_set_new(rval, "route_all", json_integer(router->stats.n_all));
+    json_object_set_new(rval, "connections", json_integer(router->stats().n_sessions));
+    json_object_set_new(rval, "current_connections", json_integer(router->service()->stats.n_current));
+    json_object_set_new(rval, "queries", json_integer(router->stats().n_queries));
+    json_object_set_new(rval, "route_master", json_integer(router->stats().n_master));
+    json_object_set_new(rval, "route_slave", json_integer(router->stats().n_slave));
+    json_object_set_new(rval, "route_all", json_integer(router->stats().n_all));
 
-    const char *weightby = serviceGetWeightingParameter(router->service);
+    const char *weightby = serviceGetWeightingParameter(router->service());
 
     if (*weightby)
     {
@@ -1068,47 +1078,30 @@ static json_t* diagnostics_json(const MXS_ROUTER *instance)
 }
 
 /**
- * @brief Client Reply routine (API)
+ * @brief Client Reply routine
  *
- * The routine will reply to client for session change with master server data
- *
- * @param   instance    The router instance
- * @param   router_session  The router session
- * @param   backend_dcb The backend DCB
- * @param   queue       The GWBUF with reply data
+ * @param   instance       The router instance
+ * @param   router_session The router session
+ * @param   backend_dcb    The backend DCB
+ * @param   queue          The Buffer containing the reply
  */
 static void clientReply(MXS_ROUTER *instance,
                         MXS_ROUTER_SESSION *router_session,
                         GWBUF *writebuf,
                         DCB *backend_dcb)
 {
-    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)instance;
+    RWSplitSession *rses = (RWSplitSession *)router_session;
     DCB *client_dcb = backend_dcb->session->client_dcb;
 
-    CHK_CLIENT_RSES(router_cli_ses);
+    CHK_CLIENT_RSES(rses);
 
-    /**
-     * Lock router client session for secure read of router session members.
-     * Note that this could be done without lock by using version #
-     */
-    if (router_cli_ses->rses_closed)
+    if (rses->rses_closed)
     {
         gwbuf_free(writebuf);
         return;
     }
 
-    /**
-     * 1. Check if backend received reply to sescmd.
-     * 2. Check sescmd's state whether OK_PACKET has been
-     *    sent to client already and if not, lock property cursor,
-     *    reply to client, and move property cursor forward. Finally
-     *    release the lock.
-     * 3. If reply for this sescmd is sent, lock property cursor
-     *    and
-     */
-
-    SRWBackend backend = get_backend_from_dcb(router_cli_ses, backend_dcb);
+    SRWBackend backend = get_backend_from_dcb(rses, backend_dcb);
 
     /** Statement was successfully executed, free the stored statement */
     session_clear_stmt(backend_dcb->session);
@@ -1116,15 +1109,15 @@ static void clientReply(MXS_ROUTER *instance,
 
     if (reply_is_complete(backend, writebuf))
     {
-        /** Got a complete reply, acknowledge the write decrement expected response count */
+        /** Got a complete reply, acknowledge the write and decrement expected response count */
         backend->ack_write();
-        router_cli_ses->expected_responses--;
-        ss_dassert(router_cli_ses->expected_responses >= 0);
+        rses->expected_responses--;
+        ss_dassert(rses->expected_responses >= 0);
         ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
     }
     else
     {
-        MXS_DEBUG("Reply not yet complete, waiting for %d replies", router_cli_ses->expected_responses);
+        MXS_DEBUG("Reply not yet complete, waiting for %d replies", rses->expected_responses);
     }
 
     /**
@@ -1137,37 +1130,37 @@ static void clientReply(MXS_ROUTER *instance,
 
         /** This discards all responses that have already been sent to the client */
         bool rconn = false;
-        process_sescmd_response(router_cli_ses, backend, &writebuf, &rconn);
+        process_sescmd_response(rses, backend, &writebuf, &rconn);
 
-        if (rconn && !router_inst->rwsplit_config.disable_sescmd_history)
+        if (rconn && !rses->router->config().disable_sescmd_history)
         {
             select_connect_backend_servers(
-                router_cli_ses->rses_nbackends,
-                router_cli_ses->rses_config.max_slave_connections,
-                router_cli_ses->rses_config.slave_selection_criteria,
-                router_cli_ses->client_dcb->session,
-                router_cli_ses->router,
-                router_cli_ses,
+                rses->rses_nbackends,
+                rses->rses_config.max_slave_connections,
+                rses->rses_config.slave_selection_criteria,
+                rses->client_dcb->session,
+                rses->router,
+                rses,
                 connection_type::SLAVE);
         }
     }
 
     bool queue_routed = false;
 
-    if (router_cli_ses->expected_responses == 0)
+    if (rses->expected_responses == 0)
     {
-        for (SRWBackendList::iterator it = router_cli_ses->backends.begin();
-             it != router_cli_ses->backends.end(); it++)
+        for (SRWBackendList::iterator it = rses->backends.begin();
+             it != rses->backends.end(); it++)
         {
             ss_dassert((*it)->get_reply_state() == REPLY_STATE_DONE);
         }
 
-        queue_routed = router_cli_ses->query_queue != NULL;
-        route_stored_query(router_cli_ses);
+        queue_routed = rses->query_queue != NULL;
+        route_stored_query(rses);
     }
     else
     {
-        ss_dassert(router_cli_ses->expected_responses > 0);
+        ss_dassert(rses->expected_responses > 0);
     }
 
     if (writebuf && client_dcb)
@@ -1183,50 +1176,34 @@ static void clientReply(MXS_ROUTER *instance,
 
         if (backend->execute_session_command())
         {
-            router_cli_ses->expected_responses++;
+            rses->expected_responses++;
         }
     }
 }
 
 
 /**
- * @brief Get router capabilities (API)
- *
- * Return a bit map indicating the characteristics of this particular router.
- * In this case, the only bit set indicates that the router wants to receive
- * data for routing as whole SQL statements.
- *
- * @return RCAP_TYPE_STMT_INPUT.
+ * @brief Get router capabilities
  */
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_OUTPUT;
 }
 
-/*
- * This is the end of the API functions, and the start of functions that are
- * used by the API functions and also used in other modules of the router
- * code. Their prototypes are included in rwsplit_internal.h since these
- * functions are not intended for use outside the read write split router.
- */
-
 /**
- * @brief Router error handling routine (API)
+ * @brief Router error handling routine
  *
- * Error Handler routine to resolve _backend_ failures. If it succeeds then
+ * Error Handler routine to resolve backend failures. If it succeeds then
  * there are enough operative backends available and connected. Otherwise it
  * fails, and session is terminated.
  *
- * @param       instance        The router instance
- * @param       router_session  The router session
- * @param       errmsgbuf       The error message to reply
- * @param       backend_dcb     The backend DCB
- * @param       action      The action: ERRACT_NEW_CONNECTION or
- * ERRACT_REPLY_CLIENT
- * @param   succp       Result of action: true iff router can continue
- *
- * Even if succp == true connecting to new slave may have failed. succp is to
- * tell whether router has enough master/slave connections to continue work.
+ * @param instance       The router instance
+ * @param router_session The router session
+ * @param errmsgbuf      The error message to reply
+ * @param backend_dcb    The backend DCB
+ * @param action         The action: ERRACT_NEW_CONNECTION or
+ *                       ERRACT_REPLY_CLIENT
+ * @param succp          Result of action: true if router can continue
  */
 static void handleError(MXS_ROUTER *instance,
                         MXS_ROUTER_SESSION *router_session,
@@ -1236,8 +1213,8 @@ static void handleError(MXS_ROUTER *instance,
                         bool *succp)
 {
     ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
-    ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
+    RWSplit *inst = (RWSplit *)instance;
+    RWSplitSession *rses = (RWSplitSession *)router_session;
     CHK_CLIENT_RSES(rses);
     CHK_DCB(problem_dcb);
 
@@ -1256,12 +1233,9 @@ static void handleError(MXS_ROUTER *instance,
     {
     case ERRACT_NEW_CONNECTION:
         {
-            /**
-             * If master has lost its Master status error can't be
-             * handled so that session could continue.
-             */
             if (rses->current_master && rses->current_master->dcb() == problem_dcb)
             {
+                /** The connection to the master has failed */
                 SERVER *srv = rses->current_master->server();
                 bool can_continue = false;
 
@@ -1301,48 +1275,23 @@ static void handleError(MXS_ROUTER *instance,
             }
             else if (backend)
             {
-                /** Check whether problem_dcb is same as dcb of rses->target_node
-                 * and within READ ONLY transaction:
-                 * if true reset rses->target_node and close session
-                 */
                 if (rses->target_node &&
                     (rses->target_node->dcb() == problem_dcb &&
                      session_trx_is_read_only(problem_dcb->session)))
                 {
-                    MXS_ERROR("forced_node SLAVE %s in opened READ ONLY transaction has failed:"
-                              " closing session",
-                              problem_dcb->server->unique_name);
-
+                    /** The problem DCB is the current target of a READ ONLY transaction.
+                     * Reset the target and close the session. */
                     rses->target_node.reset();
                     *succp = false;
-                    break;
                 }
-
-                /** We should reconnect only if we find a backend for this
-                 * DCB. If this DCB is an older DCB that has been closed,
-                 * we can ignore it. */
-                *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
-            }
-
-            if (backend)
-            {
-                /** This is a valid DCB for a backend ref */
-                if (backend->in_use() && backend->dcb() == problem_dcb)
+                else
                 {
-                    ss_dassert(false);
-                    MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.",
-                              backend->name());
+                    /** Try to replace the failed connection with a new one */
+                    *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
                 }
             }
-            else
-            {
-                const char *remote = problem_dcb->state == DCB_STATE_POLLING &&
-                                     problem_dcb->server ? problem_dcb->server->unique_name : "CLOSED";
 
-                MXS_ERROR("DCB connected to '%s' is not in use by the router "
-                          "session, not closing it. DCB is in state '%s'",
-                          remote, STRDCBSTATE(problem_dcb->state));
-            }
+            check_and_log_backend_state(backend, problem_dcb);
             break;
         }
 
@@ -1363,12 +1312,9 @@ static void handleError(MXS_ROUTER *instance,
 MXS_BEGIN_DECLS
 
 /**
- * The module entry point routine. It is this routine that
- * must return the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
+ * The module entry point routine. It is this routine that must return
+ * the structure that is referred to as the "module object". This is a
+ * structure with the set of external entry points for this module.
  */
 MXS_MODULE *MXS_CREATE_MODULE()
 {

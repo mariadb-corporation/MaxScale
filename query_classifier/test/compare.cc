@@ -20,6 +20,8 @@
 #include <set>
 #include <string>
 #include <sstream>
+#include <my_config.h>
+#define MYSQL_COM_QUERY       COM_QUERY
 #define MYSQL_COM_QUIT        COM_QUIT
 #define MYSQL_COM_INIT_DB     COM_INIT_DB
 #define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
@@ -27,6 +29,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
+#include "../../server/modules/protocol/MySQL/MySQLClient/setsqlmodeparser.hh"
 #include "testreader.hh"
 using std::cerr;
 using std::cin;
@@ -39,20 +42,29 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
+#if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR == 3
+#define USING_MARIADB_103
+#else
+#undef USING_MARIADB_103
+#endif
+
 namespace
 {
 
 char USAGE[] =
     "usage: compare [-r count] [-d] [-1 classfier1] [-2 classifier2] "
-        "[-A args] [-B args] [-v [0..2]] [-s statement]|[file]]\n\n"
+        "[-A args] [-B args] [-C args] [-m [default|oracle]] [-v [0..2]] [-s statement]|[file]]\n\n"
     "-r    redo the test the specified number of times; 0 means forever, default is 1\n"
     "-d    don't stop after first failed query\n"
-    "-1    the first classifier, default qc_mysqlembedded\n"
-    "-2    the second classifier, default qc_sqlite\n"
+    "-1    the first classifier, default 'qc_mysqlembedded'\n"
+    "-2    the second classifier, default 'qc_sqlite'\n"
     "-A    arguments for the first classifier\n"
     "-B    arguments for the second classifier\n"
+    "-C    arguments for both classifiers\n"
+    "-m    initial sql mode, 'default' or 'oracle', default is 'default'\n"
     "-s    compare single statement\n"
     "-S    strict, also require that the parse result is identical\n"
+    "-R    strict reporting, report if parse result is different\n"
     "-v 0, only return code\n"
     "   1, query and result for failed cases\n"
     "   2, all queries, and result for failed cases\n"
@@ -75,6 +87,7 @@ struct State
     bool result_printed;
     bool stop_at_error;
     bool strict;
+    bool strict_reporting;
     size_t line;
     size_t n_statements;
     size_t n_errors;
@@ -87,6 +100,7 @@ struct State
              false,            // result_printed
              true,             // stop_at_error
              false,            // strict
+             false,            // strict reporting
              0,                // line
              0,                // n_statements
              0,                // n_errors
@@ -160,13 +174,13 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
     return pClassifier;
 }
 
-QUERY_CLASSIFIER* get_classifier(const char* zName, const char* zArgs)
+QUERY_CLASSIFIER* get_classifier(const char* zName, qc_sql_mode_t sql_mode, const char* zArgs)
 {
     QUERY_CLASSIFIER* pClassifier = load_classifier(zName);
 
     if (pClassifier)
     {
-        if ((pClassifier->qc_setup(zArgs) != QC_RESULT_OK) ||
+        if ((pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK) ||
             ((pClassifier->qc_process_init() != QC_RESULT_OK)))
         {
             cerr << "error: Could not setup or init classifier " << zName << "." << endl;
@@ -187,16 +201,17 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
     }
 }
 
-bool get_classifiers(const char* zName1, const char* zArgs1, QUERY_CLASSIFIER** ppClassifier1,
+bool get_classifiers(qc_sql_mode_t sql_mode,
+                     const char* zName1, const char* zArgs1, QUERY_CLASSIFIER** ppClassifier1,
                      const char* zName2, const char* zArgs2, QUERY_CLASSIFIER** ppClassifier2)
 {
     bool rc = false;
 
-    QUERY_CLASSIFIER* pClassifier1 = get_classifier(zName1, zArgs1);
+    QUERY_CLASSIFIER* pClassifier1 = get_classifier(zName1, sql_mode, zArgs1);
 
     if (pClassifier1)
     {
-        QUERY_CLASSIFIER* pClassifier2 = get_classifier(zName2, zArgs2);
+        QUERY_CLASSIFIER* pClassifier2 = get_classifier(zName2, sql_mode, zArgs2);
 
         if (pClassifier2)
         {
@@ -339,7 +354,10 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
         else
         {
             ss << "INF: ";
-            success = true;
+            if (!global.strict_reporting)
+            {
+                success = true;
+            }
         }
 
         ss << static_cast<qc_parse_result_t>(rv1) << " != " << static_cast<qc_parse_result_t>(rv2);
@@ -1221,6 +1239,33 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
 
     bool success = compare(pClassifier1, pCopy1, pClassifier2, pCopy2);
 
+    if (success)
+    {
+        SetSqlModeParser::sql_mode_t sql_mode;
+        SetSqlModeParser parser;
+
+        if (parser.get_sql_mode(&pCopy1, &sql_mode) == SetSqlModeParser::IS_SET_SQL_MODE)
+        {
+            switch (sql_mode)
+            {
+            case SetSqlModeParser::DEFAULT:
+                pClassifier1->qc_set_sql_mode(QC_SQL_MODE_DEFAULT);
+                pClassifier2->qc_set_sql_mode(QC_SQL_MODE_DEFAULT);
+                break;
+
+            case SetSqlModeParser::ORACLE:
+                pClassifier1->qc_set_sql_mode(QC_SQL_MODE_ORACLE);
+                pClassifier2->qc_set_sql_mode(QC_SQL_MODE_ORACLE);
+                break;
+
+            default:
+                ss_dassert(!true);
+            case SetSqlModeParser::SOMETHING:
+                break;
+            };
+        }
+    }
+
     gwbuf_free(pCopy1);
     gwbuf_free(pCopy2);
 
@@ -1302,6 +1347,15 @@ int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const st
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+void append_arg(string& args, const string& arg)
+{
+    if (!args.empty())
+    {
+        args += ",";
+    }
+    args += arg;
+}
+
 }
 
 int main(int argc, char* argv[])
@@ -1310,14 +1364,19 @@ int main(int argc, char* argv[])
 
     const char* zClassifier1 = "qc_mysqlembedded";
     const char* zClassifier2 = "qc_sqlite";
-    const char* zClassifier1Args = NULL;
-    const char* zClassifier2Args = "log_unrecognized_statements=1";
+    string classifier1Args;
+#if defined(USING_MARIADB_103)
+    string classifier2Args("parse_as=10.3,log_unrecognized_statements=1");
+#else
+    string classifier2Args("log_unrecognized_statements=1");
+#endif
     const char* zStatement = NULL;
+    qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
 
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:s:S")) != -1)
+    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:C:m:s:SR")) != -1)
     {
         switch (c)
         {
@@ -1338,11 +1397,16 @@ int main(int argc, char* argv[])
             break;
 
         case 'A':
-            zClassifier1Args = optarg;
+            append_arg(classifier1Args, optarg);
             break;
 
         case 'B':
-            zClassifier2Args = optarg;
+            append_arg(classifier2Args, optarg);
+            break;
+
+        case 'C':
+            append_arg(classifier1Args, optarg);
+            append_arg(classifier2Args, optarg);
             break;
 
         case 'd':
@@ -1353,8 +1417,28 @@ int main(int argc, char* argv[])
             zStatement = optarg;
             break;
 
+        case 'm':
+            if (strcasecmp(optarg, "default") == 0)
+            {
+                sql_mode = QC_SQL_MODE_DEFAULT;
+            }
+            else if (strcasecmp(optarg, "oracle") == 0)
+            {
+                sql_mode = QC_SQL_MODE_ORACLE;
+            }
+            else
+            {
+                rc = EXIT_FAILURE;
+                break;
+            }
+            break;
+
         case 'S':
             global.strict = true;
+            break;
+
+        case 'R':
+            global.strict_reporting = true;
             break;
 
         default:
@@ -1378,10 +1462,14 @@ int main(int argc, char* argv[])
 
             if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
             {
+                const char* zClassifier1Args = classifier1Args.c_str();
+                const char* zClassifier2Args = classifier2Args.c_str();
+
                 QUERY_CLASSIFIER* pClassifier1;
                 QUERY_CLASSIFIER* pClassifier2;
 
-                if (get_classifiers(zClassifier1, zClassifier1Args, &pClassifier1,
+                if (get_classifiers(sql_mode,
+                                    zClassifier1, zClassifier1Args, &pClassifier1,
                                     zClassifier2, zClassifier2Args, &pClassifier2))
                 {
                     size_t round = 0;

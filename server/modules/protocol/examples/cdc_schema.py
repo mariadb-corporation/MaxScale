@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Copyright (c) 2016 MariaDB Corporation Ab
 #
@@ -38,7 +38,7 @@ def parse_field(row):
 
     res["real_type"] = name
 
-    if len(parts) > 1:
+    if len(parts) > 1 and name not in ["enum", "set", "decimal"]:
         res["length"] = int(parts[1].split(')')[0])
     else:
         res["length"] = -1

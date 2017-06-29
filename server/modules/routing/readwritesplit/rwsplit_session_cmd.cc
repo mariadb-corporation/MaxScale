@@ -26,7 +26,7 @@
  * Functions for session command handling
  */
 
-void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& backend,
+void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
                              GWBUF** ppPacket, bool* pReconnect)
 {
     if (backend->session_command_count())
@@ -36,7 +36,17 @@ void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& backend,
         {
             uint8_t cmd;
             gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
+            uint8_t command = backend->next_session_command()->get_command();
             uint64_t id = backend->complete_session_command();
+            MXS_PS_RESPONSE resp = {};
+
+            if (command == MYSQL_COM_STMT_PREPARE)
+            {
+                // This should never fail or the backend protocol is broken
+                ss_debug(bool b = )mxs_mysql_extract_ps_response(*ppPacket, &resp);
+                ss_dassert(b);
+                backend->add_ps_handle(id, resp.id);
+            }
 
             if (rses->recv_sescmd < rses->sent_sescmd &&
                 id == rses->recv_sescmd + 1 &&
@@ -49,6 +59,12 @@ void process_sescmd_response(ROUTER_CLIENT_SES* rses, SRWBackend& backend,
                 /** Store the master's response so that the slave responses can
                  * be compared to it */
                 rses->sescmd_responses[id] = cmd;
+
+                if (command == MYSQL_COM_STMT_PREPARE)
+                {
+                    /** Map the returned response to the internal ID */
+                    rses->ps_handles[resp.id] = id;
+                }
             }
             else
             {

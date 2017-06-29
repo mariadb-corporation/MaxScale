@@ -352,6 +352,28 @@ GWBUF* gwbuf_clone(GWBUF* buf)
     return rval;
 }
 
+GWBUF* gwbuf_deep_clone(const GWBUF* buf)
+{
+    GWBUF* rval = NULL;
+
+    if (buf)
+    {
+        size_t buflen = gwbuf_length(buf);
+        rval = gwbuf_alloc(buflen);
+
+        if (rval && gwbuf_copy_data(buf, 0, buflen, GWBUF_DATA(rval)) == buflen)
+        {
+            rval->gwbuf_type = buf->gwbuf_type;
+        }
+        else
+        {
+            gwbuf_free(rval);
+            rval = NULL;
+        }
+    }
+
+    return rval;
+}
 
 static GWBUF *gwbuf_clone_portion(GWBUF *buf,
                                   size_t start_offset,

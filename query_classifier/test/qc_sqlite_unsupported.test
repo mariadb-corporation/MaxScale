@@ -53,3 +53,7 @@ PREPARE stmt FROM 'UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1';
 # (Sqlite3 error: SQL logic error or missing database, near "SET": syntax error):
 # "UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1"
 
+SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));
+# warning: [qc_sqlite] Statement was classified only based on keywords
+# (Sqlite3 error: SQL logic error or missing database, near "0xC39F": syntax error):
+# "SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));"

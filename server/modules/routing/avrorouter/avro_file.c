@@ -911,6 +911,15 @@ bool is_create_table_statement(AVRO_INSTANCE *router, char* ptr, size_t len)
     return rc > 0;
 }
 
+bool is_create_like_statement(const char* ptr, size_t len)
+{
+    char sql[len + 1];
+    memcpy(sql, ptr, len);
+    sql[len] = '\0';
+
+    // This is not pretty but it should work
+    return strcasestr(sql, " like ") || strcasestr(sql, "(like ");
+}
 
 /**
  * @brief Detection of table alteration statements
@@ -1020,7 +1029,16 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
 
     if (is_create_table_statement(router, sql, len))
     {
-        TABLE_CREATE *created = table_create_alloc(sql, db);
+        TABLE_CREATE *created = NULL;
+
+        if (is_create_like_statement(sql, len))
+        {
+            created = table_create_copy(router, sql, len, db);
+        }
+        else
+        {
+            created = table_create_alloc(sql, db);
+        }
 
         if (created && !save_and_replace_table_create(router, created))
         {
@@ -1053,7 +1071,6 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         strcat(full_ident, ident);
 
         TABLE_CREATE *created = hashtable_fetch(router->created_tables, full_ident);
-        ss_dassert(created);
 
         if (created)
         {

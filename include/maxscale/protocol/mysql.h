@@ -84,9 +84,13 @@ MXS_BEGIN_DECLS
  * [10-11] warning_count (2) -- number of warnings
  */
 #define MYSQL_PS_ID_OFFSET     MYSQL_HEADER_LEN + 1
+#define MYSQL_PS_ID_SIZE       4
 #define MYSQL_PS_COLS_OFFSET   MYSQL_HEADER_LEN + 5
+#define MYSQL_PS_COLS_SIZE     2
 #define MYSQL_PS_PARAMS_OFFSET MYSQL_HEADER_LEN + 7
+#define MYSQL_PS_PARAMS_SIZE   2
 #define MYSQL_PS_WARN_OFFSET   MYSQL_HEADER_LEN + 10
+#define MYSQL_PS_WARN_SIZE     2
 
 /** Name of the default server side authentication plugin */
 #define DEFAULT_MYSQL_AUTH_PLUGIN "mysql_native_password"
@@ -308,6 +312,14 @@ typedef struct
 #endif
 } MySQLProtocol;
 
+typedef struct
+{
+    uint32_t id;
+    uint16_t columns;
+    uint16_t parameters;
+    uint16_t warnings;
+} MXS_PS_RESPONSE;
+
 /** Defines for response codes */
 #define MYSQL_REPLY_ERR               0xff
 #define MYSQL_REPLY_OK                0x00
@@ -503,5 +515,45 @@ const char* mxs_mysql_get_current_db(MXS_SESSION* session);
  * @param db      The new database
  */
 void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db);
+
+/**
+ * @brief Get the command byte
+ *
+ * @param buffer Buffer containing a complete MySQL packet
+ *
+ * @return The command byte
+ */
+uint8_t mxs_mysql_get_command(GWBUF* buffer);
+
+/**
+ * @brief Extract PS response values
+ *
+ * @param buffer Buffer containing a complete response to a binary protocol
+ *               preparation of a prepared statement
+ * @param out    Destination where the values are extracted
+ *
+ * @return True if values were extracted successfully
+ */
+bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out);
+
+/**
+ * @brief Extract the ID from a COM_STMT command
+ *
+ * All the COM_STMT type commands store the statement ID in the same place.
+ *
+ * @param buffer Buffer containing one of the COM_STMT commands (not COM_STMT_PREPARE)
+ *
+ * @return The statement ID
+ */
+uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer);
+
+/**
+ * @brief Determine if a packet contains a one way message
+ *
+ * @param cmd Command to inspect
+ *
+ * @return True if a response is expected from the server
+ */
+bool mxs_mysql_command_will_respond(uint8_t cmd);
 
 MXS_END_DECLS

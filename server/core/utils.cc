@@ -245,8 +245,6 @@ void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, u
     {
         *output++ = *input1++ ^ *input2++;
     }
-
-    *output = '\0';
 }
 
 /**********************************************************
