@@ -35,3 +35,21 @@ void mxs_evp_cipher_ctx_free(EVP_CIPHER_CTX* ctx)
     MXS_FREE(ctx);
 #endif
 }
+
+uint8_t* mxs_evp_cipher_ctx_buf(EVP_CIPHER_CTX* ctx)
+{
+#ifdef OPENSSL_1_1
+    return (uint8_t*)EVP_CIPHER_CTX_buf_noconst(ctx);
+#else
+    return (uint8_t*)ctx->buf;
+#endif
+}
+
+uint8_t* mxs_evp_cipher_ctx_oiv(EVP_CIPHER_CTX* ctx)
+{
+#ifdef OPENSSL_1_1
+    return (uint8_t*)EVP_CIPHER_CTX_original_iv(ctx);
+#else
+    return (uint8_t*)ctx->oiv;
+#endif
+}

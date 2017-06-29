@@ -3103,9 +3103,9 @@ static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
         if (size - outlen > 0)
         {
             if (!blr_aes_create_tail_for_cbc(out_ptr + 4 + outlen,
-                                             buffer + outlen,
+                                             mxs_evp_cipher_ctx_buf(ctx),
                                              size - outlen,
-                                             iv,
+                                             mxs_evp_cipher_ctx_oiv(ctx),
                                              router->encryption.key_value,
                                              router->encryption.key_len))
             {
