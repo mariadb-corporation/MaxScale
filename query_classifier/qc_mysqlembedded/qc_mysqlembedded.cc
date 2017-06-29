@@ -2442,6 +2442,7 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
         (strcasecmp(func_name, "cast_as_unsigned") == 0) ||
         (strcasecmp(func_name, "get_user_var") == 0) ||
         (strcasecmp(func_name, "get_system_var") == 0) ||
+        (strcasecmp(func_name, "not") == 0) ||
         (strcasecmp(func_name, "set_user_var") == 0) ||
         (strcasecmp(func_name, "set_system_var") == 0))
     {
@@ -2678,7 +2679,25 @@ static void update_field_infos(parsing_info_t* pi,
                 break;
 
             case Item_subselect::EXISTS_SUBS:
-                // TODO: Handle these explicitly as well.
+                {
+                    Item_exists_subselect* exists_subselect_item =
+                        static_cast<Item_exists_subselect*>(item);
+
+                    st_select_lex* ssl = exists_subselect_item->get_select_lex();
+                    if (ssl)
+                    {
+                        uint32_t sub_usage = usage;
+
+                        sub_usage &= ~QC_USED_IN_SELECT;
+                        sub_usage |= QC_USED_IN_SUBSELECT;
+
+                        update_field_infos(pi,
+                                           get_lex(pi),
+                                           ssl,
+                                           sub_usage,
+                                           excludep);
+                    }
+                }
                 break;
 
             case Item_subselect::SINGLEROW_SUBS:
