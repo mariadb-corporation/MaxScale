@@ -545,7 +545,7 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
  *          if the query would otherwise be routed to slave.
  */
 route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
-                                uint32_t qtype, HINT *hint)
+                                uint32_t qtype, HINT *query_hints)
 {
     bool trx_active = session_trx_is_active(rses->client_dcb->session);
     bool load_active = rses->load_data_state != LOAD_DATA_INACTIVE;
@@ -556,6 +556,9 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
     {
         target = TARGET_MASTER;
     }
+    /**
+     * Prepared statements preparations should go to all servers
+     */
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
              qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
              command == MYSQL_COM_STMT_CLOSE ||
@@ -564,7 +567,7 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
         target = TARGET_ALL;
     }
     /**
-     * These queries are not affected by hints
+     * These queries should be routed to all servers
      */
     else if (!load_active &&
              (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
@@ -640,7 +643,7 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
     }
     else if (session_trx_is_read_only(rses->client_dcb->session))
     {
-        /* Force TARGET_SLAVE for READ ONLY tranaction (active or ending) */
+        /* Force TARGET_SLAVE for READ ONLY transaction (active or ending) */
         target = TARGET_SLAVE;
     }
     else
@@ -673,14 +676,13 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
         target = TARGET_MASTER;
     }
 
-    /** process routing hints */
-    while (hint != NULL)
+    /** Process routing hints */
+    for (HINT* hint = query_hints; hint; hint = hint->next)
     {
         if (hint->type == HINT_ROUTE_TO_MASTER)
         {
             target = TARGET_MASTER; /*< override */
-            MXS_DEBUG("%lu [get_route_target] Hint: route to master.",
-                      pthread_self());
+            MXS_DEBUG("Hint: route to master");
             break;
         }
         else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
@@ -690,42 +692,38 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
              * found, the oroginal target is chosen.
              */
             target |= TARGET_NAMED_SERVER;
-            MXS_DEBUG("%lu [get_route_target] Hint: route to "
-                      "named server : ",
-                      pthread_self());
+            MXS_DEBUG("Hint: route to named server: %s", (char*)hint->data);
         }
         else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
         {
             /** not implemented */
+            ss_dassert(false);
         }
         else if (hint->type == HINT_ROUTE_TO_ALL)
         {
             /** not implemented */
+            ss_dassert(false);
         }
         else if (hint->type == HINT_PARAMETER)
         {
-            if (strncasecmp((char *)hint->data, "max_slave_replication_lag",
+            if (strncasecmp((char*)hint->data, "max_slave_replication_lag",
                             strlen("max_slave_replication_lag")) == 0)
             {
                 target |= TARGET_RLAG_MAX;
             }
             else
             {
-                MXS_ERROR("Unknown hint parameter "
-                          "'%s' when 'max_slave_replication_lag' "
-                          "was expected.",
-                          (char *)hint->data);
+                MXS_ERROR("Unknown hint parameter '%s' when "
+                          "'max_slave_replication_lag' was expected.",
+                          (char*)hint->data);
             }
         }
         else if (hint->type == HINT_ROUTE_TO_SLAVE)
         {
             target = TARGET_SLAVE;
-            MXS_DEBUG("%lu [get_route_target] Hint: route to "
-                      "slave.",
-                      pthread_self());
+            MXS_DEBUG("Hint: route to slave.");
         }
-        hint = hint->next;
-    } /*< while (hint != NULL) */
+    }
 
     return (route_target_t)target;
 }
