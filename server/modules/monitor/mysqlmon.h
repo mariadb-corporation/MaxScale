@@ -80,6 +80,7 @@ typedef struct
     bool warn_failover; /**< Log a warning when failover happens */
     bool load_journal; /**< Whether journal file should be loaded */
     time_t journal_max_age; /**< Maximum age of journal file */
+    bool allow_external_slaves; /**< Whether to allow usage of external slave servers */
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
 
