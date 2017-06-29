@@ -12,6 +12,8 @@
  */
 
 #include "schemarouter.hh"
+#include "schemaroutersession.hh"
+#include "schemarouterinstance.hh"
 
 #include <inttypes.h>
 
@@ -19,10 +21,10 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/modutil.h>
 
-#include "schemaroutersession.hh"
-#include "schemarouterinstance.hh"
+namespace schemarouter
+{
 
-bool connect_backend_servers(BackendList& backends, MXS_SESSION* session);
+bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session);
 
 enum route_target get_shard_route_target(uint32_t qtype);
 bool change_current_db(string& dest, Shard& shard, GWBUF* buf);
@@ -30,7 +32,8 @@ bool extract_database(GWBUF* buf, char* str);
 bool detect_show_shards(GWBUF* query);
 void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const char* errmsg);
 
-SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router, BackendList& backends):
+SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router,
+                                         SSRBackendList& backends):
     mxs::RouterSession(session),
     m_closed(false),
     m_client(session->client_dcb),
@@ -46,26 +49,21 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* rou
 {
     char db[MYSQL_DATABASE_MAXLEN + 1] = "";
     MySQLProtocol* protocol = (MySQLProtocol*)session->client_dcb->protocol;
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
     bool using_db = false;
     bool have_db = false;
+    const char* current_db = mxs_mysql_get_current_db(session);
 
     /* To enable connecting directly to a sharded database we first need
      * to disable it for the client DCB's protocol so that we can connect to them*/
     if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB &&
-        (have_db = strnlen(data->db, MYSQL_DATABASE_MAXLEN) > 0))
+        (have_db = *current_db))
     {
         protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-        strcpy(db, data->db);
-        *data->db = 0;
+        strcpy(db, current_db);
+        mxs_mysql_set_current_db(session, "");
         using_db = true;
         MXS_INFO("Client logging in directly to a database '%s', "
                  "postponing until databases have been mapped.", db);
-    }
-
-    if (!have_db)
-    {
-        MXS_INFO("Client'%s' connecting with empty database.", data->user);
     }
 
     if (using_db)
@@ -97,11 +95,15 @@ void SchemaRouterSession::close()
     {
         m_closed = true;
 
-        for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+        for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
         {
+            SSRBackend& bref = *it;
             /** The backends are closed here to trigger the shutdown of
              * the connected DCBs */
-            (*it)->close();
+            if (bref->in_use())
+            {
+                bref->close();
+            }
         }
 
         spinlock_acquire(&m_router->m_lock);
@@ -230,7 +232,7 @@ SERVER* SchemaRouterSession::resolve_query_target(GWBUF* pPacket,
 
     if (TARGET_IS_ANY(route_target))
     {
-        for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+        for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
         {
             SERVER *server = (*it)->backend()->server;
             if (SERVER_IS_RUNNING(server))
@@ -419,7 +421,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         get_shard_dcb(&target_dcb, target->unique_name))
     {
         /** We know where to route this query */
-        SBackend bref = get_bref_from_dcb(target_dcb);
+        SSRBackend bref = get_bref_from_dcb(target_dcb);
 
         if (op == QUERY_OP_LOAD)
         {
@@ -436,23 +438,22 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             pPacket = NULL;
             ret = 1;
         }
-        else if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(pPacket))) == 1)
+        else if (bref->write(pPacket))
         {
             /** Add one query response waiter to backend reference */
-            bref->set_state(BREF_QUERY_ACTIVE);
-            bref->set_state(BREF_WAITING_RESULT);
             atomic_add(&m_router->m_stats.n_queries, 1);
+            ret = 1;
         }
         else
         {
             MXS_ERROR("Routing query failed.");
+            gwbuf_free(pPacket);
         }
     }
 
-    gwbuf_free(pPacket);
     return ret;
 }
-void SchemaRouterSession::handle_mapping_reply(SBackend& bref, GWBUF** pPacket)
+void SchemaRouterSession::handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket)
 {
     int rc = inspect_mapping_states(bref, pPacket);
 
@@ -486,7 +487,7 @@ void SchemaRouterSession::handle_mapping_reply(SBackend& bref, GWBUF** pPacket)
     }
 }
 
-void SchemaRouterSession::process_sescmd_response(SBackend& bref, GWBUF** ppPacket)
+void SchemaRouterSession::process_sescmd_response(SSRBackend& bref, GWBUF** ppPacket)
 {
     if (bref->session_command_count())
     {
@@ -508,23 +509,12 @@ void SchemaRouterSession::process_sescmd_response(SBackend& bref, GWBUF** ppPack
                 *ppPacket = NULL;
             }
         }
-
-        if (*ppPacket)
-        {
-            bref->clear_state(BREF_WAITING_RESULT);
-        }
-    }
-    else if (bref->is_query_active())
-    {
-        bref->clear_state(BREF_QUERY_ACTIVE);
-        /** Set response status as replied */
-        bref->clear_state(BREF_WAITING_RESULT);
     }
 }
 
 void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 {
-    SBackend bref = get_bref_from_dcb(pDcb);
+    SSRBackend bref = get_bref_from_dcb(pDcb);
 
     if (m_closed || bref.get() == NULL) // The bref should always be valid
     {
@@ -567,6 +557,10 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     {
         process_sescmd_response(bref, &pPacket);
 
+        ss_dassert(bref->is_waiting_result());
+        /** Set response status as replied */
+        bref->ack_write();
+
         if (pPacket)
         {
             MXS_SESSION_ROUTE_REPLY(pDcb->session, pPacket);
@@ -581,8 +575,6 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
         else if (bref->write_stored_command())
         {
             atomic_add(&m_router->m_stats.n_queries, 1);
-            bref->set_state(BREF_QUERY_ACTIVE);
-            bref->set_state(BREF_WAITING_RESULT);
         }
     }
 
@@ -596,7 +588,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
 {
     ss_dassert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(pProblem);
-    SBackend bref = get_bref_from_dcb(pProblem);
+    SSRBackend bref = get_bref_from_dcb(pProblem);
 
     if (bref.get() == NULL) // Should never happen
     {
@@ -728,13 +720,13 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
     /** Increment the session command count */
     ++m_sent_sescmd;
 
-    for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         if ((*it)->in_use())
         {
             GWBUF *buffer = gwbuf_clone(querybuf);
 
-            (*it)->add_session_command(buffer, m_sent_sescmd);
+            (*it)->append_session_command(buffer, m_sent_sescmd);
 
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
@@ -746,19 +738,6 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
 
             if ((*it)->session_command_count() == 1)
             {
-                /** Only one command, execute it */
-                switch (command)
-                {
-                /** These types of commands don't generate responses */
-                case MYSQL_COM_QUIT:
-                case MYSQL_COM_STMT_CLOSE:
-                    break;
-
-                default:
-                    (*it)->set_state(BREF_WAITING_RESULT);
-                    break;
-                }
-
                 if ((*it)->execute_session_command())
                 {
                     succp = true;
@@ -783,6 +762,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
         }
     }
 
+    gwbuf_free(querybuf);
     return succp;
 }
 
@@ -794,7 +774,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
  */
 bool SchemaRouterSession::have_servers()
 {
-    for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         if ((*it)->in_use() && !(*it)->is_closed())
         {
@@ -813,11 +793,11 @@ bool SchemaRouterSession::have_servers()
  *
  * @return backend reference pointer if succeed or NULL
  */
-SBackend SchemaRouterSession::get_bref_from_dcb(DCB* dcb)
+SSRBackend SchemaRouterSession::get_bref_from_dcb(DCB* dcb)
 {
     CHK_DCB(dcb);
 
-    for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         if ((*it)->dcb() == dcb)
         {
@@ -827,7 +807,7 @@ SBackend SchemaRouterSession::get_bref_from_dcb(DCB* dcb)
 
     // This should not happen
     ss_dassert(false);
-    return SBackend(reinterpret_cast<Backend*>(NULL));
+    return SSRBackend(reinterpret_cast<SRBackend*>(NULL));
 }
 
 /**
@@ -1024,13 +1004,13 @@ void SchemaRouterSession::route_queued_query()
  * @param router_cli_ses Router client session
  * @return 1 if mapping is done, 0 if it is still ongoing and -1 on error
  */
-int SchemaRouterSession::inspect_mapping_states(SBackend& bref,
+int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
                                                 GWBUF** wbuf)
 {
     bool mapped = true;
     GWBUF* writebuf = *wbuf;
 
-    for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         if (bref->dcb() == (*it)->dcb() && !(*it)->is_mapped())
         {
@@ -1248,6 +1228,8 @@ bool SchemaRouterSession::ignore_duplicate_database(const char* data)
         {
             rval = true;
         }
+
+        pcre2_match_data_free(match_data);
     }
 
     return rval;
@@ -1264,7 +1246,7 @@ bool SchemaRouterSession::ignore_duplicate_database(const char* data)
  * @return 1 if a complete response was received, 0 if a partial response was received
  * and -1 if a database was found on more than one server.
  */
-enum showdb_response SchemaRouterSession::parse_mapping_response(SBackend& bref, GWBUF** buffer)
+enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bref, GWBUF** buffer)
 {
     unsigned char* ptr;
     SERVER* target = bref->backend()->server;
@@ -1383,7 +1365,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SBackend& bref,
 void SchemaRouterSession::query_databases()
 {
 
-    for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         (*it)->set_mapped(false);
     }
@@ -1394,7 +1376,7 @@ void SchemaRouterSession::query_databases()
     GWBUF *buffer = modutil_create_query("SHOW DATABASES");
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
-    for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         if ((*it)->in_use() && !(*it)->is_closed() &
             SERVER_IS_RUNNING((*it)->backend()->server))
@@ -1502,7 +1484,7 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
     }
     else if (buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
     {
-        for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+        for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
         {
             char *srvnm = (*it)->backend()->server->unique_name;
 
@@ -1551,7 +1533,7 @@ bool SchemaRouterSession::get_shard_dcb(DCB** p_dcb, char* name)
     bool succp = false;
     ss_dassert(p_dcb != NULL && *(p_dcb) == NULL);
 
-    for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
+    for (SSRBackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
         SERVER_REF* b = (*it)->backend();
         /**
@@ -1665,4 +1647,6 @@ bool SchemaRouterSession::send_databases()
     resultset_free(resultset);
 
     return rval;
+}
+
 }

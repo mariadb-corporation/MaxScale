@@ -131,7 +131,6 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->master_id = -1;
     server->depth = -1;
     server->parameters = NULL;
-    server->server_string = NULL;
     spinlock_init(&server->lock);
     server->persistent = persistent;
     server->persistmax = 0;
@@ -187,7 +186,6 @@ server_free(SERVER *tofreeserver)
     /* Clean up session and free the memory */
     MXS_FREE(tofreeserver->protocol);
     MXS_FREE(tofreeserver->unique_name);
-    MXS_FREE(tofreeserver->server_string);
     server_parameter_free(tofreeserver->parameters);
 
     if (tofreeserver->persistent)
@@ -496,10 +494,7 @@ dprintServer(DCB *dcb, const SERVER *server)
     MXS_FREE(stat);
     dcb_printf(dcb, "\tProtocol:                            %s\n", server->protocol);
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
-    if (server->server_string)
-    {
-        dcb_printf(dcb, "\tServer Version:                      %s\n", server->server_string);
-    }
+    dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string);
     dcb_printf(dcb, "\tNode Id:                             %ld\n", server->node_id);
     dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
     if (server->slaves)
@@ -1080,28 +1075,55 @@ server_map_status(const char *str)
 
 /**
  * Set the version string of the server.
- * @param server Server to update
- * @param string Version string
- * @return True if the assignment of the version string was successful, false if
- * memory allocation failed.
+ *
+ * @param server          Server to update
+ * @param version_string  Version string
  */
-bool server_set_version_string(SERVER* server, const char* string)
+void server_set_version_string(SERVER* server, const char* version_string)
 {
-    bool rval = true;
-    string = MXS_STRDUP(string);
+    // There is a race here. The string may be accessed, while we are
+    // updating it. Thus we take some precautions to ensure that the
+    // string cannot be completely garbled at any point.
 
-    if (string)
+    size_t old_len = strlen(server->version_string);
+    size_t new_len = strlen(version_string);
+
+    if (new_len >= MAX_SERVER_VERSION_LEN)
     {
-        char* old = server->server_string;
-        server->server_string = (char*)string;
-        MXS_FREE(old);
-    }
-    else
-    {
-        rval = false;
+        new_len = MAX_SERVER_VERSION_LEN - 1;
     }
 
-    return rval;
+    if (new_len < old_len)
+    {
+        // If the new string is shorter, we start by nulling out the
+        // excess data.
+        memset(server->version_string + new_len, 0, old_len - new_len);
+    }
+
+    strncpy(server->version_string, version_string, new_len);
+    // No null-byte needs to be set. The array starts out as all zeros
+    // and the above memset adds the necessary null, should the new string
+    // be shorter than the old.
+}
+
+/**
+ * Set the version of the server.
+ *
+ * @param server         Server to update
+ * @param version_string Human readable version string.
+ * @param version        Version encoded as MariaDB encodes the version, i.e.:
+ *                       version = major * 10000 + minor * 100 + patch
+ */
+void server_set_version(SERVER* server, const char* version_string, uint64_t version)
+{
+    server_set_version_string(server, version_string);
+
+    atomic_store_uint64(&server->version, version);
+}
+
+uint64_t server_get_version(const SERVER* server)
+{
+    return atomic_load_uint64(&server->version);
 }
 
 /**
@@ -1396,10 +1418,7 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(attr, CN_STATUS, json_string(stat));
     MXS_FREE(stat);
 
-    if (server->server_string)
-    {
-        json_object_set_new(attr, CN_VERSION_STRING, json_string(server->server_string));
-    }
+    json_object_set_new(attr, CN_VERSION_STRING, json_string(server->version_string));
 
     json_object_set_new(attr, "node_id", json_integer(server->node_id));
     json_object_set_new(attr, "master_id", json_integer(server->master_id));
@@ -1440,7 +1459,7 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
     json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
 
-    json_object_set_new(attr, "statictics", stats);
+    json_object_set_new(attr, "statistics", stats);
 
     return attr;
 }

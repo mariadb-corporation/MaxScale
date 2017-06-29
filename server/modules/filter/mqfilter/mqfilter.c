@@ -807,21 +807,15 @@ void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg
 static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
-    MYSQL_session *sessauth = session->client_dcb->data;
-    char *db = sessauth->db;
-    if (db)
+    const char *db = mxs_mysql_get_current_db(session);
+    char* my_db = NULL;
+
+    if (*db)
     {
-        if (strnlen(db, 128) > 0)
+        my_db = MXS_STRDUP(my_db);
+        if (!my_db)
         {
-            db = MXS_STRDUP(db);
-            if (!db)
-            {
-                return NULL;
-            }
-        }
-        else
-        {
-            db = NULL;
+            return NULL;
         }
     }
 
@@ -832,11 +826,11 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
         my_session->was_query = false;
         my_session->uid = NULL;
         my_session->session = session;
-        my_session->db = db;
+        my_session->db = my_db;
     }
     else
     {
-        MXS_FREE(db);
+        MXS_FREE(my_db);
     }
 
     return (MXS_FILTER_SESSION*)my_session;

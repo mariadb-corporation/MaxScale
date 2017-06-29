@@ -114,6 +114,9 @@ static thread_local struct
     bool initialized;
     sqlite3* db;      // Thread specific database handle.
     QC_SQLITE_INFO* info;
+    uint32_t version_major;
+    uint32_t version_minor;
+    uint32_t version_patch;
 } this_thread;
 
 /**
@@ -1102,7 +1105,10 @@ static void update_field_infos(QC_SQLITE_INFO* info,
                 {
                     info->type_mask |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
                 }
-                else if (!is_builtin_readonly_function(zToken))
+                else if (!is_builtin_readonly_function(zToken,
+                                                       this_thread.version_major,
+                                                       this_thread.version_minor,
+                                                       this_thread.version_patch))
                 {
                     info->type_mask |= QUERY_TYPE_WRITE;
                 }
@@ -2026,6 +2032,7 @@ void maxscaleExecute(Parse* pParse, Token* pName)
 
     info->status = QC_QUERY_PARSED;
     info->type_mask = QUERY_TYPE_WRITE;
+    info->operation = QUERY_OP_EXECUTE;
 
     // If information is collected in several passes, then we may
     // this information already.
@@ -2907,6 +2914,8 @@ static int32_t qc_sqlite_get_canonical(GWBUF* query, char** canonical);
 static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
 static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** names, int* sizep);
 static int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
+static void qc_sqlite_set_server_version(uint64_t version);
+static void qc_sqlite_get_server_version(uint64_t* version);
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 {
@@ -3080,6 +3089,9 @@ static int32_t qc_sqlite_thread_init(void)
             this_thread.info = NULL;
 
             this_thread.initialized = true;
+            this_thread.version_major = 0;
+            this_thread.version_minor = 0;
+            this_thread.version_patch = 0;
         }
         else
         {
@@ -3522,6 +3534,26 @@ int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
     return rv;
 }
 
+static void qc_sqlite_set_server_version(uint64_t version)
+{
+    QC_TRACE();
+
+    uint32_t major = version / 10000;
+    uint32_t minor = (version - major * 10000) / 100;
+    uint32_t patch = version - major * 10000 - minor * 100;
+
+    this_thread.version_major = major;
+    this_thread.version_minor = minor;
+    this_thread.version_patch = patch;
+}
+
+static void qc_sqlite_get_server_version(uint64_t* version)
+{
+    QC_TRACE();
+
+    *version = this_thread.version_major * 10000 + this_thread.version_minor * 100 + this_thread.version_patch;
+}
+
 /**
  * EXPORTS
  */
@@ -3548,6 +3580,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_field_info,
         qc_sqlite_get_function_info,
         qc_sqlite_get_preparable_stmt,
+        qc_sqlite_set_server_version,
+        qc_sqlite_get_server_version,
     };
 
     static MXS_MODULE info =

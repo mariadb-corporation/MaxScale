@@ -5,7 +5,7 @@
                 "column": "a"
             },
             "with": {
-                "fill": "X"
+                "fill": "Y"
             }
         },
         {
@@ -22,7 +22,7 @@
             },
             "with": {
                 "value": "012345-ABCD",
-                "fill": "X"
+                "fill": "Y"
             }
         }
     ]

@@ -22,6 +22,9 @@ if (BUILD_QC_MYSQLEMBEDDED)
   add_executable(compare compare.cc testreader.cc)
   target_link_libraries(compare maxscale-common)
 
+  add_executable(version_sensitivity version_sensitivity.cc)
+  target_link_libraries(version_sensitivity maxscale-common)
+
   add_executable(crash_qc_sqlite crash_qc_sqlite.c)
   target_link_libraries(crash_qc_sqlite maxscale-common)
 
@@ -39,6 +42,8 @@ if (BUILD_QC_MYSQLEMBEDDED)
   add_test(TestQC_CompareUpdate compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/update.test)
   add_test(TestQC_CompareMaxScale compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/maxscale.test)
   add_test(TestQC_CompareWhiteSpace compare -v 2 -S -s "select user from mysql.user; ")
+
+  add_test(TestQC_version_sensitivity version_sensitivity)
 endif()
 
 add_subdirectory(canonical_tests)

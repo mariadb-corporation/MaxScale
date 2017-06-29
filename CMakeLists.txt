@@ -16,7 +16,7 @@ endif()
 
 # Set default values for cache entries and set the MaxScale version
 include(cmake/defaults.cmake)
-include(VERSION.cmake)
+include(VERSION22.cmake)
 include(ExternalProject)
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
@@ -41,7 +41,6 @@ find_package(Git)
 find_package(CURL)
 find_package(RabbitMQ)
 find_package(LibUUID)
-find_package(Jansson)
 find_package(Avro)
 find_package(GSSAPI)
 find_package(SQLite)
@@ -62,11 +61,7 @@ else()
   message(STATUS "Using system Connector-C")
 endif()
 
-if(NOT JANSSON_FOUND)
-  message(STATUS "Building Jansson from source.")
-  include(cmake/BuildJansson.cmake)
-endif()
-
+include(cmake/BuildJansson.cmake)
 include(cmake/BuildMicroHttpd.cmake)
 
 include_directories(${JANSSON_INCLUDE_DIR})

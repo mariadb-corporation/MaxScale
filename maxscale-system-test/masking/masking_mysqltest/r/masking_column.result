@@ -11,12 +11,12 @@ insert into masking values ("hello",  NULL,    NULL);
 insert into masking values (NULL,     NULL,    NULL);
 select * from masking;
 a	x	y
-XXXXX	hello	hello
+YYYYY	hello	hello
 NULL	hello	hello
-XXXXX	NULL	hello
-XXXXX	hello	NULL
+YYYYY	NULL	hello
+YYYYY	hello	NULL
 NULL	NULL	hello
-XXXXX	NULL	NULL
+YYYYY	NULL	NULL
 NULL	NULL	NULL
 drop table masking;
 create table masking (x TEXT, a TEXT, y TEXT);
@@ -29,10 +29,10 @@ insert into masking values ("hello",  NULL,    NULL);
 insert into masking values (NULL,     NULL,    NULL);
 select * from masking;
 x	a	y
-hello	XXXXX	hello
-NULL	XXXXX	hello
+hello	YYYYY	hello
+NULL	YYYYY	hello
 hello	NULL	hello
-hello	XXXXX	NULL
+hello	YYYYY	NULL
 NULL	NULL	hello
 hello	NULL	NULL
 NULL	NULL	NULL
@@ -47,11 +47,11 @@ insert into masking values ("hello",  NULL,    NULL);
 insert into masking values (NULL,     NULL,    NULL);
 select * from masking;
 x	y	a
-hello	hello	XXXXX
-NULL	hello	XXXXX
-hello	NULL	XXXXX
+hello	hello	YYYYY
+NULL	hello	YYYYY
+hello	NULL	YYYYY
 hello	hello	NULL
-NULL	NULL	XXXXX
+NULL	NULL	YYYYY
 hello	NULL	NULL
 NULL	NULL	NULL
 drop table masking;

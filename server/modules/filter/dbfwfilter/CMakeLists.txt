@@ -7,13 +7,13 @@ if(BISON_FOUND AND FLEX_FOUND)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   add_library(dbfwfilter SHARED dbfwfilter.c ${BISON_ruleparser_OUTPUTS} ${FLEX_token_OUTPUTS})
-  target_link_libraries(dbfwfilter maxscale-common)
+  target_link_libraries(dbfwfilter maxscale-common MySQLCommon)
   set_target_properties(dbfwfilter PROPERTIES VERSION "1.0.0")
   install_module(dbfwfilter core)
 
   # The offline rule check utility
   add_executable(dbfwchk dbfw_rule_check.c ${BISON_ruleparser_OUTPUTS} ${FLEX_token_OUTPUTS})
-  target_link_libraries(dbfwchk maxscale-common)
+  target_link_libraries(dbfwchk maxscale-common MySQLCommon)
   install_executable(dbfwchk core)
 
 else()

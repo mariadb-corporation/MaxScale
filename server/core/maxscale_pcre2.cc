@@ -141,7 +141,6 @@ mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subje
 void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *filename,
                            int line_num, const char* func_name)
 {
-    ss_dassert(module_name);
     ss_dassert(filename);
     ss_dassert(func_name);
 
@@ -157,4 +156,54 @@ void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *f
                         "PCRE2 error buffer was too small to contain the complete"
                         "message.");
     }
+}
+
+bool mxs_pcre2_check_match_exclude(pcre2_code* re_match, pcre2_code* re_exclude,
+                                   pcre2_match_data* md, const char* subject,
+                                   int length, const char* calling_module)
+{
+    ss_dassert((!re_match && !re_exclude) || (md && subject));
+    bool rval = true;
+    int string_len = ((size_t)length == PCRE2_ZERO_TERMINATED) ? strlen(subject) : length;
+    if (re_match)
+    {
+        int result = pcre2_match(re_match, (PCRE2_SPTR)subject, string_len, 0, 0, md, NULL);
+        if (result == PCRE2_ERROR_NOMATCH)
+        {
+            rval = false; // Didn't match the "match"-regex
+            if (mxs_log_priority_is_enabled(LOG_INFO))
+            {
+                mxs_log_message(LOG_INFO, calling_module, __FILE__, __LINE__, __func__,
+                                "Subject does not match the 'match' pattern: %.*s",
+                                string_len, subject);
+            }
+        }
+        else if (result < 0)
+        {
+            rval = false;
+            /* The __FILE__ etc macros here do not match calling_module, but
+             * the values are only used for throttling messages. */
+            mxs_pcre2_print_error(result, calling_module, __FILE__, __LINE__, __func__);
+        }
+    }
+    if (rval && re_exclude)
+    {
+        int result = pcre2_match(re_exclude, (PCRE2_SPTR)subject, string_len, 0, 0, md, NULL);
+        if (result >= 0)
+        {
+            rval = false; // Matched the "exclude"-regex
+            if (mxs_log_priority_is_enabled(LOG_INFO))
+            {
+                mxs_log_message(LOG_INFO, calling_module, __FILE__, __LINE__, __func__,
+                                "Query matches the 'exclude' pattern: %.*s",
+                                string_len, subject);
+            }
+        }
+        else if (result != PCRE2_ERROR_NOMATCH)
+        {
+            rval = false;
+            mxs_pcre2_print_error(result, calling_module, __FILE__, __LINE__, __func__);
+        }
+    }
+    return rval;
 }

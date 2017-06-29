@@ -83,4 +83,12 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
                                              const char *mysql,
                                              mxs_pcre_quote_approach_t approach);
 
+/**
+ * Set the server information
+ *
+ * @param mysql   A MySQL handle to the server.
+ * @param server  The server whose version information should be updated.
+ */
+void mxs_mysql_set_server_version(MYSQL* mysql, SERVER* server);
+
 MXS_END_DECLS

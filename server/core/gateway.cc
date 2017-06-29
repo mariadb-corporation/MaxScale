@@ -125,12 +125,15 @@ static struct option long_options[] =
     {"version-full",     no_argument,       0, 'V'},
     {"help",             no_argument,       0, '?'},
     {"connector_plugindir", required_argument, 0, 'H'},
+    {"debug",            required_argument, 0, 'g'},
     {0, 0, 0, 0}
 };
+
 static bool syslog_configured = false;
 static bool maxlog_configured = false;
 static bool log_to_shm_configured = false;
 static volatile sig_atomic_t  last_signal = 0;
+static bool unload_modules_at_exit = true;
 
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static void log_flush_shutdown(void);
@@ -145,6 +148,7 @@ static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 static bool file_is_readable(const char* absolute_pathname);
 static bool file_is_writable(const char* absolute_pathname);
 bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr);
+static bool handle_debug_args(char* args);
 static void set_log_augmentation(const char* value);
 static void usage(void);
 static char* get_expanded_pathname(
@@ -172,6 +176,32 @@ static bool daemonize();
 static bool sniff_configuration(const char* filepath);
 static bool modules_process_init();
 static void modules_process_finish();
+static void disable_module_unloading();
+static void enable_module_unloading();
+
+struct DEBUG_ARGUMENT
+{
+    const char* name;        /**< The name of the debug argument */
+    void (*action)();        /**< The function implementing the argument */
+    const char* description; /**< Help text */
+};
+
+#define SPACER "                              "
+
+const DEBUG_ARGUMENT debug_arguments[] =
+{
+    {
+        "disable-module-unloading", disable_module_unloading,
+        "disable module unloading at exit. Will produce better\n"
+        SPACER "Valgring leak reports if leaked memory was allocated in\n"
+        SPACER "a shared library"
+    },
+    {
+        "enable-module-unloading", enable_module_unloading,
+        "cancels disable-module-unloading"
+    },
+    {NULL, NULL, NULL}
+};
 
 /** SSL multi-threading functions and structures */
 
@@ -916,6 +946,14 @@ static void usage(void)
             "  -S, --maxlog=[yes|no]       log messages to MaxScale log (default: yes)\n"
             "  -G, --log_augmentation=0|1  augment messages with the name of the function\n"
             "                              where the message was logged (default: 0)\n"
+            "  -g, --debug=arg1,arg2,...   enable or disable debug features. Supported arguments:\n",
+            progname);
+    for (int i = 0; debug_arguments[i].action != NULL; i++)
+    {
+        fprintf(stderr,
+                "   %-24s   %s\n", debug_arguments[i].name, debug_arguments[i].description);
+    }
+    fprintf(stderr,
             "  -v, --version               print version info and exit\n"
             "  -V, --version-full          print full version info and exit\n"
             "  -?, --help                  show this help\n"
@@ -940,7 +978,6 @@ static void usage(void)
             "dir will be '/path/maxscale/var/log/maxscale', the config dir will be\n"
             "'/path/maxscale/etc' and the default config file will be\n"
             "'/path/maxscale/etc/maxscale.cnf'.\n",
-            progname,
             get_configdir(), default_cnf_fname,
             get_configdir(), get_logdir(), get_cachedir(), get_libdir(),
             get_datadir(), get_execdir(), get_langdir(), get_piddir(),
@@ -1299,7 +1336,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:",
+    while ((opt = getopt_long(argc, argv, "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
@@ -1563,6 +1600,13 @@ int main(int argc, char **argv)
 
         case 'c':
             config_check = true;
+            break;
+
+        case 'g':
+            if (!handle_debug_args(optarg))
+            {
+                succp = false;
+            }
             break;
 
         default:
@@ -2067,8 +2111,10 @@ int main(int argc, char **argv)
     utils_end();
     cleanup_process_datadir();
     MXS_NOTICE("MaxScale shutdown completed.");
-
-    unload_all_modules();
+    if (unload_modules_at_exit)
+    {
+        unload_all_modules();
+    }
     /* Remove Pidfile */
     unlock_pidfile();
     unlink_pidfile();
@@ -2898,4 +2944,89 @@ static void modules_process_finish()
             (module->process_finish)();
         }
     }
+}
+
+static void enable_module_unloading()
+{
+    unload_modules_at_exit = true;
+}
+
+static void disable_module_unloading()
+{
+    unload_modules_at_exit = false;
+}
+
+/**
+ * Process command line debug arguments
+ *
+ * @param args The debug argument list
+ * @return True on success, false on error
+ */
+static bool handle_debug_args(char* args)
+{
+    bool arg_error = false;
+    int args_found = 0;
+    char *endptr = NULL;
+    char* token = strtok_r(args, ",", &endptr);
+    while (token)
+    {
+        bool found = false;
+        for (int i = 0; debug_arguments[i].action != NULL; i++)
+        {
+            // Debug features are activated by running functions in the struct-array.
+            if (strcmp(token, debug_arguments[i].name) == 0)
+            {
+                found = true;
+                args_found++;
+                debug_arguments[i].action();
+                break;
+            }
+        }
+        if (!found)
+        {
+            const char UNRECOG_P1[] = "Unrecognized debug setting: '";
+            const char UNRECOG_P2[] = "'.";
+            size_t unrecog_msg_len = sizeof(UNRECOG_P1) + strlen(token) + sizeof(UNRECOG_P2);
+            char unrecog_msg[unrecog_msg_len];
+            snprintf(unrecog_msg, unrecog_msg_len, "%s%s%s", UNRECOG_P1, token, UNRECOG_P2);
+            print_log_n_stderr(true, true, unrecog_msg, unrecog_msg, 0);
+            arg_error = true;
+        }
+        token = strtok_r(NULL, ",", &endptr);
+    }
+    if (args_found == 0)
+    {
+        arg_error = true;
+    }
+    if (arg_error)
+    {
+        // Form a string with all debug argument names listed.
+        size_t total_len = 1;
+        for (int i = 0; debug_arguments[i].action != NULL; i++)
+        {
+            total_len += strlen(debug_arguments[i].name) + 1;
+        }
+        char arglist[total_len];
+        arglist[0] = '\0';
+        for (int i = 0; debug_arguments[i].action != NULL; i++)
+        {
+            strcat(arglist, debug_arguments[i].name);
+            // If not the last element, add a comma
+            if (debug_arguments[i + 1].action != NULL)
+            {
+                strcat(arglist, ", ");
+            }
+        }
+        const char DEBUG_ERROR_P1[] =
+            "Debug argument identifier '-g' or '--debug' was specified "
+            "but no arguments were found or one of them was invalid. Supported "
+            "arguments are: ";
+        const char DEBUG_ERROR_P2[] = ".";
+        size_t arg_error_msg_len = sizeof(DEBUG_ERROR_P1) + total_len + sizeof(DEBUG_ERROR_P2);
+        char arg_error_msg[arg_error_msg_len];
+        snprintf(arg_error_msg, arg_error_msg_len, "%s%s%s", DEBUG_ERROR_P1, arglist,
+                 DEBUG_ERROR_P2);
+        print_log_n_stderr(true, true, arg_error_msg, arg_error_msg, 0);
+    }
+    return !arg_error;
 }

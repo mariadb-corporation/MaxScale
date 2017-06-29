@@ -34,6 +34,9 @@
 using std::string;
 using std::map;
 
+namespace schemarouter
+{
+
 #define DEFAULT_REFRESH_INTERVAL "300"
 
 /**
@@ -195,7 +198,7 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService, char** pzOptions)
  *      connections because all servers are supposed to be operational. It is,
  *      however, possible that there are less available servers than expected.
  */
-bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
+bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session)
 {
     bool succp = false;
     int servers_found = 0;
@@ -206,7 +209,7 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
     {
         MXS_INFO("Servers and connection counts:");
 
-        for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
+        for (SSRBackendList::iterator it = backends.begin(); it != backends.end(); it++)
         {
             SERVER_REF* b = (*it)->backend();
 
@@ -222,7 +225,7 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
      * Scan server list and connect each of them. None should fail or session
      * can't be established.
      */
-    for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
+    for (SSRBackendList::iterator it = backends.begin(); it != backends.end(); it++)
     {
         SERVER_REF* b = (*it)->backend();
 
@@ -262,7 +265,7 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
+            for (SSRBackendList::iterator it = backends.begin(); it != backends.end(); it++)
             {
                 SERVER_REF* b = (*it)->backend();
 
@@ -282,13 +285,13 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
 
 SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
 {
-    BackendList backends;
+    SSRBackendList backends;
 
     for (SERVER_REF *ref = m_service->dbref; ref; ref = ref->next)
     {
         if (ref->active)
         {
-            backends.push_back(SBackend(new Backend(ref)));
+            backends.push_back(SSRBackend(new SRBackend(ref)));
         }
     }
 
@@ -336,8 +339,8 @@ void SchemaRouter::diagnostics(DCB* dcb)
 json_t* SchemaRouter::diagnostics_json() const
 {
     double sescmd_pct = m_stats.n_sescmd != 0 ?
-        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
-        0.0;
+                        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
+                        0.0;
 
     json_t* rval = json_object();
     json_object_set_new(rval, "queries", json_integer(m_stats.n_queries));
@@ -364,6 +367,8 @@ uint64_t SchemaRouter::getCapabilities()
     return RCAP_TYPE_NONE;
 }
 
+}
+
 MXS_BEGIN_DECLS
 
 /**
@@ -384,7 +389,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A database sharding router for simple sharding",
         "V1.0.0",
         RCAP_TYPE_CONTIGUOUS_INPUT,
-        &SchemaRouter::s_object,
+        &schemarouter::SchemaRouter::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */

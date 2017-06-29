@@ -285,3 +285,15 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
 
     return rv;
 }
+
+void mxs_mysql_set_server_version(MYSQL* mysql, SERVER* server)
+{
+    const char* version_string = mysql_get_server_info(mysql);
+
+    if (version_string)
+    {
+        unsigned long version = mysql_get_server_version(mysql);
+
+        server_set_version(server, version_string, version);
+    }
+}

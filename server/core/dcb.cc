@@ -3401,7 +3401,7 @@ int poll_remove_dcb(DCB *dcb)
      * Only positive fds can be removed from epoll set.
      */
     dcbfd = dcb->fd;
-    ss_dassert(dcbfd > 0);
+    ss_dassert(dcbfd > 0 || dcb->dcb_role == DCB_ROLE_INTERNAL);
 
     if (dcbfd > 0)
     {

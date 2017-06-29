@@ -82,19 +82,20 @@ typedef enum qc_query_type
  */
 typedef enum qc_query_op
 {
-    QUERY_OP_UNDEFINED     = 0,
-    QUERY_OP_SELECT        = (1 << 0),
-    QUERY_OP_UPDATE        = (1 << 1),
-    QUERY_OP_INSERT        = (1 << 2),
-    QUERY_OP_DELETE        = (1 << 3),
-    QUERY_OP_TRUNCATE      = (1 << 4),
-    QUERY_OP_ALTER         = (1 << 5),
-    QUERY_OP_CREATE        = (1 << 6),
-    QUERY_OP_DROP          = (1 << 7),
-    QUERY_OP_CHANGE_DB     = (1 << 8),
-    QUERY_OP_LOAD          = (1 << 9),
-    QUERY_OP_GRANT         = (1 << 10),
-    QUERY_OP_REVOKE        = (1 << 11)
+    QUERY_OP_UNDEFINED = 0,
+    QUERY_OP_SELECT,
+    QUERY_OP_UPDATE,
+    QUERY_OP_INSERT,
+    QUERY_OP_DELETE,
+    QUERY_OP_TRUNCATE,
+    QUERY_OP_ALTER,
+    QUERY_OP_CREATE,
+    QUERY_OP_DROP,
+    QUERY_OP_CHANGE_DB,
+    QUERY_OP_LOAD,
+    QUERY_OP_GRANT,
+    QUERY_OP_REVOKE,
+    QUERY_OP_EXECUTE,
 } qc_query_op_t;
 
 /**
@@ -373,6 +374,25 @@ typedef struct query_classifier
      *         exhaustion or equivalent.
      */
     int32_t (*qc_get_preparable_stmt)(GWBUF* stmt, GWBUF** preparable_stmt);
+
+    /**
+     * Set the version of the server. The version may affect how a statement
+     * is classified. Note that the server version is maintained separately
+     * for each thread.
+     *
+     * @param version  Version encoded as MariaDB encodes the version, i.e.:
+     *                 version = major * 10000 + minor * 100 + patch
+     */
+    void (*qc_set_server_version)(uint64_t version);
+
+    /**
+     * Get the thread specific version assumed of the server. If the version has
+     * not been set, all values are 0.
+     *
+     * @param version  The version encoded as MariaDB encodes the version, i.e.:
+     *                 version = major * 10000 + minor * 100 + patch
+     */
+    void (*qc_get_server_version)(uint64_t* version);
 } QUERY_CLASSIFIER;
 
 /**
@@ -757,5 +777,24 @@ const char* qc_type_to_string(qc_query_type_t type);
  * @note The returned string is dynamically allocated and @b must be freed.
  */
 char* qc_typemask_to_string(uint32_t typemask);
+
+/**
+ * Set the version of the server. The version may affect how a statement
+ * is classified. Note that the server version is maintained separately
+ * for each thread.
+ *
+ * @param version  Version encoded as MariaDB encodes the version, i.e.:
+ *                 version = major * 10000 + minor * 100 + patch
+ */
+void qc_set_server_version(uint64_t version);
+
+/**
+ * Get the thread specific version assumed of the server. If the version has
+ * not been set, all values are 0.
+ *
+ * @return The version as MariaDB encodes the version, i.e:
+ *         version = major * 10000 + minor * 100 + patch
+ */
+uint64_t qc_get_server_version();
 
 MXS_END_DECLS

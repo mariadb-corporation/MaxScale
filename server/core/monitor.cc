@@ -972,7 +972,7 @@ static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
 static void mon_append_node_names(MXS_MONITOR_SERVERS* servers, char* dest, int len, int status)
 {
     const char *separator = "";
-    char arr[MAX_SERVER_NAME_LEN + 64]; // Some extra space for port and separator
+    char arr[MAX_SERVER_ADDRESS_LEN + 64]; // Some extra space for port and separator
     dest[0] = '\0';
 
     while (servers && len)

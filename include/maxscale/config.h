@@ -370,6 +370,28 @@ pcre2_code* config_get_compiled_regex(const MXS_CONFIG_PARAMETER *params,
                                       uint32_t* output_ovec_size);
 
 /**
+ * Get multiple compiled regular expressions and the maximum ovector size of
+ * the patterns. The returned regex codes should be freed by the caller.
+ *
+ * @param params List of configuration parameters
+ * @param keys An array of parameter names. If an element is not found in @c params,
+ * the corresponding spot in @c out_codes is set to NULL.
+ * @param keys_size Size of both @c keys and @c out_arr
+ * @param options PCRE2 compilation options
+ * @param out_ovec_size If not NULL, the maximum ovector size of successfully
+ * compiled patterns is written here.
+ * @param out_codes An array of handles to compiled codes. The referenced pointers
+ * will be set to point to the compiled codes. The array size must be equal to
+ * @c keys array size and it must contain valid pointers.
+ *
+ * @return True, if all patterns given by @c keys were successfully compiled.
+ * False otherwise.
+ */
+bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER *params,
+                                 const char* keys[], int keys_size,
+                                 uint32_t options, uint32_t* out_ovec_size,
+                                 pcre2_code** out_codes[]);
+/**
  * Parse a list of server names and write the results in an array of strings
  * with one server name in each. The output array and its elements should be
  * deallocated by the caller. The server names are not checked to be actual

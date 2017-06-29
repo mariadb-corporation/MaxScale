@@ -13,31 +13,14 @@
 
 /**
  * @file galera_mon.c - A MySQL Galera cluster monitor
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 22/07/13 Mark Riddoch        Initial implementation
- * 21/05/14 Massimiliano Pinto  Monitor sets a master server that has the lowest value of wsrep_local_index
- * 23/05/14 Massimiliano Pinto  Added 1 configuration option (setInterval). Interval is printed in diagnostics.
- * 03/06/14 Mark Riddoch        Add support for maintenance mode
- * 24/06/14 Massimiliano Pinto  Added depth level 0 for each node
- * 30/10/14 Massimiliano Pinto  Added disableMasterFailback feature
- * 10/11/14 Massimiliano Pinto  Added setNetworkTimeout for connect,read,write
- * 20/04/15 Guillaume Lefranc   Added availableWhenDonor feature
- * 22/04/15 Martin Brampton     Addition of disableMasterRoleSetting
- * 08/05/15 Markus Makela       Addition of launchable scripts
- * 17/10/15 Martin Brampton     Change DCB callback to hangup
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "galeramon"
 
 #include "galeramon.h"
-#include <maxscale/dcb.h>
 #include <maxscale/alloc.h>
+#include <maxscale/dcb.h>
+#include <maxscale/mysql_utils.h>
 
 #define DONOR_NODE_NAME_MAX_LEN 60
 #define DONOR_LIST_SET_VAR "SET GLOBAL wsrep_sst_donor = \""
@@ -331,11 +314,8 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
     server_set_status_nolock(database->server, SERVER_RUNNING);
 
     /* get server version string */
-    server_string = (char *) mysql_get_server_info(database->con);
-    if (server_string)
-    {
-        server_set_version_string(database->server, server_string);
-    }
+    mxs_mysql_set_server_version(database->con, database->server);
+    server_string = database->server->version_string;
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
     char *cluster_member = "SHOW STATUS WHERE Variable_name IN"

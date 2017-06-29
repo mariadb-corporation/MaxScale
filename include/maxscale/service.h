@@ -355,4 +355,28 @@ static inline uint64_t service_get_capabilities(const SERVICE *service)
     return service->capabilities;
 }
 
+typedef enum service_version_which_t
+{
+    SERVICE_VERSION_ANY,  /*< Any version of the servers of a service. */
+    SERVICE_VERSION_MIN,  /*< The minimum version. */
+    SERVICE_VERSION_MAX,  /*< The maximum version. */
+} service_version_which_t;
+
+/**
+ * Return the version of the service. The returned version can be
+ *
+ * - the version of any (in practice the first) server associated
+ *   with the service,
+ * - the smallest version of any of the servers associated with
+ *   the service, or
+ * - the largest version of any of the servers associated with
+ *   the service.
+ *
+ * @param service  The service.
+ * @param which    Which version.
+ *
+ * @return The version of the service.
+ */
+uint64_t service_get_version(const SERVICE *service, service_version_which_t which);
+
 MXS_END_DECLS

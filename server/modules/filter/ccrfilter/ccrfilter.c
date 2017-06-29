@@ -13,16 +13,18 @@
 
 #define MXS_MODULE_NAME "ccrfilter"
 
+#include <maxscale/cdefs.h>
+
 #include <stdio.h>
+#include <string.h>
+#include <maxscale/alloc.h>
 #include <maxscale/filter.h>
+#include <maxscale/hint.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/log_manager.h>
-#include <string.h>
-#include <maxscale/hint.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/query_classifier.h>
-#include <regex.h>
-#include <maxscale/alloc.h>
 
 /**
  * @file ccrfilter.c - a very simple filter designed to send queries to the
@@ -81,8 +83,9 @@ typedef struct
     int count;       /*< Number of hints to add after each operation
                      * that modifies data. */
     LAGSTATS stats;
-    regex_t re;      /* Compiled regex text of match */
-    regex_t nore;    /* Compiled regex text of ignore */
+    pcre2_code* re;        /* Compiled regex text of match */
+    pcre2_code* nore;      /* Compiled regex text of ignore */
+    uint32_t ovector_size; /* PCRE2 match data ovector size */
 } CCR_INSTANCE;
 
 /**
@@ -93,15 +96,19 @@ typedef struct
     MXS_DOWNSTREAM down;              /*< The downstream filter */
     int            hints_left;        /*< Number of hints left to add to queries*/
     time_t         last_modification; /*< Time of the last data modifying operation */
+    pcre2_match_data* md;             /*< PCRE2 match data */
 } CCR_SESSION;
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", REG_ICASE},
+    {"ignorecase", PCRE2_CASELESS},
     {"case",       0},
-    {"extended",   REG_EXTENDED},
+    {"extended",   PCRE2_EXTENDED},
     {NULL}
 };
+
+static const char PARAM_MATCH[] = "match";
+static const char PARAM_IGNORE[] = "ignore";
 
 typedef enum ccr_hint_value_t
 {
@@ -154,8 +161,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         {
             {"count", MXS_MODULE_PARAM_COUNT, "0"},
             {"time", MXS_MODULE_PARAM_COUNT, CCR_DEFAULT_TIME},
-            {"match", MXS_MODULE_PARAM_STRING},
-            {"ignore", MXS_MODULE_PARAM_STRING},
+            {PARAM_MATCH, MXS_MODULE_PARAM_REGEX},
+            {PARAM_IGNORE, MXS_MODULE_PARAM_REGEX},
             {
                 "options",
                 MXS_MODULE_PARAM_ENUM,
@@ -192,23 +199,26 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         my_instance->stats.n_add_count = 0;
         my_instance->stats.n_add_time = 0;
         my_instance->stats.n_modified = 0;
+        my_instance->ovector_size = 0;
+        my_instance->re = NULL;
+        my_instance->nore = NULL;
 
         int cflags = config_get_enum(params, "options", option_values);
+        my_instance->match = config_copy_string(params, PARAM_MATCH);
+        my_instance->nomatch = config_copy_string(params, PARAM_IGNORE);
+        const char* keys[] = {PARAM_MATCH, PARAM_IGNORE};
+        pcre2_code** code_arr[] = {&my_instance->re, &my_instance->nore};
 
-        if ((my_instance->match = config_copy_string(params, "match")))
+        if (!config_get_compiled_regexes(params, keys, sizeof(keys)/sizeof(char*),
+                                     cflags, &my_instance->ovector_size,
+                                     code_arr))
         {
-            if (regcomp(&my_instance->re, my_instance->match, cflags))
-            {
-                MXS_ERROR("Failed to compile regex '%s'.", my_instance->match);
-            }
-        }
-
-        if ((my_instance->nomatch = config_copy_string(params, "ignore")))
-        {
-            if (regcomp(&my_instance->nore, my_instance->nomatch, cflags))
-            {
-                MXS_ERROR("Failed to compile regex '%s'.", my_instance->nomatch);
-            }
+            MXS_FREE(my_instance->match);
+            MXS_FREE(my_instance->nomatch);
+            pcre2_code_free(my_instance->re);
+            pcre2_code_free(my_instance->nore);
+            MXS_FREE(my_instance);
+            my_instance = NULL;
         }
     }
 
@@ -226,12 +236,23 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
+    CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     CCR_SESSION  *my_session = MXS_MALLOC(sizeof(CCR_SESSION));
 
     if (my_session)
     {
+        bool error = false;
         my_session->hints_left = 0;
         my_session->last_modification = 0;
+        if (my_instance->ovector_size)
+        {
+            my_session->md = pcre2_match_data_create(my_instance->ovector_size, NULL);
+            if (!my_session->md)
+            {
+                MXS_FREE(my_session);
+                my_session = NULL;
+            }
+        }
     }
 
     return (MXS_FILTER_SESSION*)my_session;
@@ -296,6 +317,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     CCR_SESSION  *my_session = (CCR_SESSION *)session;
     char *sql;
+    int length;
     time_t now = time(NULL);
 
     if (modutil_is_SQL(queue))
@@ -306,7 +328,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
          */
         if (qc_query_is_type(qc_get_type_mask(queue), QUERY_TYPE_WRITE))
         {
-            if ((sql = modutil_get_SQL(queue)) != NULL)
+            if (modutil_extract_SQL(queue, &sql, &length))
             {
                 bool trigger_ccr = true;
                 bool decided = false; // Set by hints to take precedence.
@@ -322,18 +344,10 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                 }
                 if (!decided)
                 {
-                    if (my_instance->nomatch &&
-                        regexec(&my_instance->nore, sql, 0, NULL, 0) == 0)
-                    {
-                        // Nomatch was present and sql matched it.
-                        trigger_ccr = false;
-                    }
-                    else if (my_instance->match &&
-                             (regexec(&my_instance->re, sql, 0, NULL, 0) != 0))
-                    {
-                        // Match was present but sql did *not* match it.
-                        trigger_ccr = false;
-                    }
+                    trigger_ccr =
+                        mxs_pcre2_check_match_exclude(my_instance->re, my_instance->nore,
+                                                      my_session->md, sql, length,
+                                                      MXS_MODULE_NAME);
                 }
                 if (trigger_ccr)
                 {
@@ -351,7 +365,6 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
                     my_instance->stats.n_modified++;
                 }
-                MXS_FREE(sql);
             }
         }
         else if (my_session->hints_left > 0)
@@ -435,7 +448,7 @@ static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESS
 
     if (my_instance->match)
     {
-        json_object_set_new(rval, "match", json_string(my_instance->match));
+        json_object_set_new(rval, PARAM_MATCH, json_string(my_instance->match));
     }
 
     if (my_instance->nomatch)

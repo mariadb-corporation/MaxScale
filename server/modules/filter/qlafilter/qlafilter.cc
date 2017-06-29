@@ -23,6 +23,8 @@
 
 #define MXS_MODULE_NAME "qlafilter"
 
+#include <maxscale/cppdefs.hh>
+
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
@@ -99,8 +101,6 @@ typedef struct
 
     /* Avoid repeatedly printing some errors/warnings. */
     bool write_warning_given;
-    bool match_error_printed;
-    bool exclude_error_printed;
 } QLA_INSTANCE;
 
 /* The session structure for this QLA filter. */
@@ -120,8 +120,6 @@ typedef struct
 static FILE* open_log_file(uint32_t, QLA_INSTANCE *, const char *);
 static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const char*,
                            const char*, size_t);
-static bool regex_check(QLA_INSTANCE* my_instance, QLA_SESSION* my_session,
-                        const char* ptr, int length);
 
 static const MXS_ENUM_VALUE option_values[] =
 {
@@ -158,6 +156,8 @@ static const char PARAM_LOG_TYPE[] = "log_type";
 static const char PARAM_LOG_DATA[] = "log_data";
 static const char PARAM_FLUSH[] = "flush";
 static const char PARAM_APPEND[] = "append";
+
+MXS_BEGIN_DECLS
 
 /**
  * The module entry point routine.
@@ -256,6 +256,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+MXS_END_DECLS
+
 /**
  * Create an instance of the filter for a particular service within MaxScale.
  *
@@ -277,8 +279,6 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         my_instance->ovec_size = 0;
         my_instance->unified_fp = NULL;
         my_instance->write_warning_given = false;
-        my_instance->match_error_printed = false;
-        my_instance->exclude_error_printed = false;
 
         my_instance->source = config_copy_string(params, PARAM_SOURCE);
         my_instance->user_name = config_copy_string(params, PARAM_USER);
@@ -296,29 +296,13 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         bool error = false;
 
         int cflags = config_get_enum(params, PARAM_OPTIONS, option_values);
-        if (my_instance->match)
-        {
-            my_instance->re_match =
-                config_get_compiled_regex(params, PARAM_MATCH, cflags, &my_instance->ovec_size);
-            if (!my_instance->re_match)
-            {
-                error = true;
-            }
-        }
 
-        if (my_instance->exclude)
+        const char* keys[] = {PARAM_MATCH, PARAM_EXCLUDE};
+        pcre2_code** code_arr[] = {&my_instance->re_match, &my_instance->re_exclude};
+        if (!config_get_compiled_regexes(params, keys, sizeof(keys) / sizeof(char*),
+                                         cflags, &my_instance->ovec_size, code_arr))
         {
-            uint32_t ovec_size_temp = 0;
-            my_instance->re_exclude =
-                config_get_compiled_regex(params, PARAM_EXCLUDE, cflags, &ovec_size_temp);
-            if (ovec_size_temp > my_instance->ovec_size)
-            {
-                my_instance->ovec_size = ovec_size_temp;
-            }
-            if (!my_instance->re_exclude)
-            {
-                error = true;
-            }
+            error = true;
         }
 
         // Try to open the unified log file
@@ -328,7 +312,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
             const char UNIFIED[] = ".unified";
             int namelen = strlen(my_instance->filebase) + sizeof(UNIFIED);
             char *filename = NULL;
-            if ((filename = MXS_CALLOC(namelen, sizeof(char))) != NULL)
+            if ((filename = (char*)MXS_CALLOC(namelen, sizeof(char))) != NULL)
             {
                 snprintf(filename, namelen, "%s.unified", my_instance->filebase);
                 // Open the file. It is only closed at program exit
@@ -386,7 +370,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     QLA_SESSION *my_session;
     const char *remote, *userName;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(QLA_SESSION))) != NULL)
+    if ((my_session = (QLA_SESSION*)MXS_CALLOC(1, sizeof(QLA_SESSION))) != NULL)
     {
         my_session->fp = NULL;
         my_session->match_data = NULL;
@@ -525,7 +509,8 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
     if (my_session->active &&
         modutil_extract_SQL(queue, &ptr, &length) &&
-        regex_check(my_instance, my_session, ptr, length))
+        mxs_pcre2_check_match_exclude(my_instance->re_match, my_instance->re_exclude,
+                                      my_session->match_data, ptr, length, MXS_MODULE_NAME))
     {
         char buffer[QLA_DATE_BUFFER_SIZE];
         gettimeofday(&tv, NULL);
@@ -830,7 +815,7 @@ static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *ins
        cause garbled printing if several threads write simultaneously, so we
        have to first print to a string. */
     char *print_str = NULL;
-    if ((print_str = MXS_CALLOC(print_len, sizeof(char))) == NULL)
+    if ((print_str = (char*)MXS_CALLOC(print_len, sizeof(char))) == NULL)
     {
         return -1;
     }
@@ -917,47 +902,4 @@ static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *ins
         }
         return rval;
     }
-}
-
-static bool regex_check(QLA_INSTANCE* my_instance, QLA_SESSION* my_session,
-                        const char* ptr, int length)
-{
-    bool rval = true;
-    if (my_instance->re_match)
-    {
-        int result = pcre2_match(my_instance->re_match, (PCRE2_SPTR)ptr,
-                                 length, 0, 0, my_session->match_data, NULL);
-        if (result == PCRE2_ERROR_NOMATCH)
-        {
-            rval = false; // Didn't match the "match"-regex
-        }
-        else if (result < 0)
-        {
-            rval = false;
-            if (!my_instance->match_error_printed)
-            {
-                MXS_PCRE2_PRINT_ERROR(result);
-                my_instance->match_error_printed = true;
-            }
-        }
-    }
-    if (rval && my_instance->re_exclude)
-    {
-        int result = pcre2_match(my_instance->re_exclude, (PCRE2_SPTR)ptr,
-                                 length, 0, 0, my_session->match_data, NULL);
-        if (result >= 0)
-        {
-            rval = false; // Matched the "exclude"-regex
-        }
-        else if (result != PCRE2_ERROR_NOMATCH)
-        {
-            rval = false;
-            if (!my_instance->exclude_error_printed)
-            {
-                MXS_PCRE2_PRINT_ERROR(result);
-                my_instance->exclude_error_printed = true;
-            }
-        }
-    }
-    return rval;
 }

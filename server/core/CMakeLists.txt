@@ -4,6 +4,7 @@ add_library(maxscale-common SHARED
   alloc.cc
   atomic.cc
   authenticator.cc
+  backend.cc
   buffer.cc
   config.cc
   config_runtime.cc
@@ -41,6 +42,7 @@ add_library(maxscale-common SHARED
   server.cc
   service.cc
   session.cc
+  session_command.cc
   skygw_utils.cc
   spinlock.cc
   ssl.cc

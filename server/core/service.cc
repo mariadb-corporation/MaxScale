@@ -2673,3 +2673,81 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
 
     return rel;
 }
+
+uint64_t service_get_version(const SERVICE *service, service_version_which_t which)
+{
+    uint64_t version = 0;
+
+    if (which == SERVICE_VERSION_ANY)
+    {
+        SERVER_REF* sref = service->dbref;
+
+        while (sref && !sref->active)
+        {
+            sref = sref->next;
+        }
+
+        if (sref)
+        {
+            version = server_get_version(sref->server);
+        }
+    }
+    else
+    {
+        size_t n = 0;
+
+        uint64_t v;
+
+        if (which == SERVICE_VERSION_MIN)
+        {
+            v = UINT64_MAX;
+        }
+        else
+        {
+            ss_dassert(which == SERVICE_VERSION_MAX);
+
+            v = 0;
+        }
+
+        SERVER_REF* sref = service->dbref;
+
+        while (sref)
+        {
+            if (sref->active)
+            {
+                ++n;
+
+                SERVER* s = sref->server;
+                uint64_t server_version = server_get_version(s);
+
+                if (which == SERVICE_VERSION_MIN)
+                {
+                    if (server_version < v)
+                    {
+                        v = server_version;
+                    }
+                }
+                else
+                {
+                    ss_dassert(which == SERVICE_VERSION_MAX);
+
+                    if (server_version > v)
+                    {
+                        v = server_version;
+                    }
+                }
+            }
+
+            sref = sref->next;
+        }
+
+        if (n == 0)
+        {
+            v = 0;
+        }
+
+        version = v;
+    }
+
+    return version;
+}

@@ -40,6 +40,7 @@
 #include <maxscale/utils.h>
 #include <mysql.h>
 #include <mysql_com.h>
+#include <mysqld_error.h>
 
 MXS_BEGIN_DECLS
 
@@ -483,5 +484,24 @@ mysql_server_cmd_t mxs_mysql_current_command(MXS_SESSION* session);
  */
 void mysql_num_response_packets(GWBUF *buf, uint8_t cmd,
                                 int* npackets, size_t *nbytes);
+
+/**
+ * @brief Return current database of the session
+ *
+ * If no active database is in use, the database is an empty string.
+ *
+ * @param session Session to inspect
+ *
+ * @return The current database
+ */
+const char* mxs_mysql_get_current_db(MXS_SESSION* session);
+
+/**
+ * @brief Set the currently active database for a session
+ *
+ * @param session Session to modify
+ * @param db      The new database
+ */
+void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db);
 
 MXS_END_DECLS

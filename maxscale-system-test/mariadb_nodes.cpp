@@ -432,6 +432,7 @@ int Mariadb_nodes::start_replication()
                 "mysql -u root %s -e \"STOP SLAVE; RESET SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only=OFF;\"",
                 socket_cmd[i]);
         ssh_node(i, str, true);
+        ssh_node(i, "sudo rm -f /etc/my.cnf.d/kerb.cnf", true);
     }
 
     sprintf(str, "%s/create_user.sh", test_dir);

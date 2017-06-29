@@ -10,7 +10,7 @@
 #                 "column": "a"
 #             },
 #             "with": {
-#                 "fill": "X"
+#                 "fill": "Y"
 #             }
 #         },
 #         {
@@ -27,7 +27,7 @@
 #             },
 #             "with": {
 #                 "value": "012345-ABCD",
-#                 "fill": "X"
+#                 "fill": "Y"
 #             }
 #         }
 #     ]
@@ -46,38 +46,38 @@ use maskingdb;
 #
 create table masking (a TEXT, b TEXT, c TEXT);
 
-# - a should be just "X...",
-# - b should be unchanged as the length does not match the string of "value", and
-#   there is no catch all "fill".
-# - c should be just "X..." as the length does not match, so "value" is not applied
+# - a should be just "Y...",
+# - b should be changed into "X..." as the length does not match and there is no
+#   specific fill value, so the default "X" is used.
+# - c should be just "Y..." as the length does not match, so "value" is not applied
 #   and has "fill", which is applied.
 #
 #a	b	c
-#XXXX	012345-ABC	XXXXXXXXXX
+#YYYY	XXXXXXXXXX	YYYYYYYYYY
 insert into masking values ("blah", "012345-ABC", "012345-ABC");
 select * from masking;
 delete from masking;
 
-# - a should be just "X...",
+# - a should be just "Y...",
 # - b should be changed as the length matches the length of the string of "value"
-# - c should be just "X..." as the length does not match, so "value" is not applied
+# - c should be just "Y..." as the length does not match, so "value" is not applied
 #   and has "fill", which is applied.
 #
 #a	b	c
-#XXXXXXXX	012345-ABCD	XXXXXXXXXX
+#YYYYYYYY	012345-ABCD	YYYYYYYYYY
 insert into masking values ("blahblah", "221073-01AB", "012345-ABC");
 select * from masking;
 delete from masking;
 
-# - a should be just "X...",
+# - a should be just "Y...",
 # - b should be changed as the length matches the length of the string of "value"
 # - c should be chanched into a specific string as the length matches the string of
 #   "value"
 #
 #a	b	c
 #a	b	c
-#XXXXXXXXXXX	012345-ABCD	012345-ABCD
-# a should still be just "X", b should be "012345-ABCD" and c should be "012345-ABCD"
+#YYYYYYYYYYY	012345-ABCD	012345-ABCD
+# a should still be just "Y", b should be "012345-ABCD" and c should be "012345-ABCD"
 insert into masking values ("221073-01AB", "221073-01AB", "221073-01AB");
 select * from masking;
 delete from masking;

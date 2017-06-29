@@ -31,9 +31,41 @@ passwd=mypasswd
 filters=DataMartFilter
 ```
 
-## Filter Options
+## Filter Parameters
 
-The tee filter accepts the following options.
+The tee filter requires a mandatory parameter to define the service to replicate
+statements to and accepts a number of optional parameters.
+
+### `match`
+
+An optional parameter used to limit the queries that will be replicated by the
+tee filter. The parameter value is a PCRE2 regular expression that is used to
+match against the SQL text. Only SQL statements that match the text passed as
+the value of this parameter will be sent to the service defined in the filter
+section.
+
+```
+match=/insert.*into.*order*/
+```
+
+### `exclude`
+
+An optional parameter used to limit the queries that will be replicated by the
+tee filter. The parameter value is a PCRE2 regular expression that is used to
+match against the SQL text. Any SQL statements that match the text passed as the
+value of this parameter will be excluded from the replication stream.
+
+```
+exclude=/select.*from.*t1/
+```
+
+If both `match` and `exclude` parameters are defined, `exclude` takes
+precedence.
+
+### `options`
+
+The options parameter controls the regular expression options. The following
+options are accepted.
 
 |Option    |Description                                 |
 |----------|--------------------------------------------|
@@ -47,43 +79,7 @@ To use multiple filter options, list them in a comma-separated list.
 options=case,extended
 ```
 
-## Filter Parameters
-
-The tee filter requires a mandatory parameter to define the service to replicate
-statements to and accepts a number of optional parameters.
-
-### Match
-
-An optional parameter used to limit the queries that will be replicated by the
-tee filter. The parameter value is a regular expression that is used to match
-against the SQL text. Only SQL statements that matches the text passed as the
-value of this parameter will be sent to the service defined in the filter
-section.
-
-```
-match=insert.*into.*order*
-```
-
-All regular expressions are evaluated with the option to ignore the case of the
-text, therefore a match option of select will match both insert, INSERT and any
-form of the word with upper or lowercase characters.
-
-### Exclude
-
-An optional parameter used to limit the queries that will be replicated by the
-tee filter. The parameter value is a regular expression that is used to match
-against the SQL text. SQL statements that match the text passed as the value of
-this parameter will be excluded from the replication stream.
-
-```
-exclude=select
-```
-
-All regular expressions are evaluated with the option to ignore the case of the
-text, therefore an exclude option of select will exclude statements that contain
-both select, SELECT or any form of the word with upper or lowercase characters.
-
-### Source
+### `source`
 
 The optional source parameter defines an address that is used to match against
 the address from which the client connection to MariaDB MaxScale originates.
@@ -93,7 +89,7 @@ Only sessions that originate from this address will be replicated.
 source=127.0.0.1
 ```
 
-### User
+### `user`
 
 The optional user parameter defines a user name that is used to match against
 the user from which the client connection to MariaDB MaxScale originates. Only

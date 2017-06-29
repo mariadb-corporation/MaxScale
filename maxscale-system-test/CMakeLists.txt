@@ -607,6 +607,7 @@ add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter LIGHT REP
 
 # Binlogrouter tests, these heavily alter the replication so they are run last
 add_test_executable(avro.cpp avro avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)
+add_test_executable(avro_alter.cpp avro_alter avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)
 
 # Test avrorouter file compression
 #add_test_script(avro_compression avro avro_compression LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)

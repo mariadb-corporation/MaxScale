@@ -17,11 +17,26 @@ Significant whitespace in object names is now deprecated. All object names
 squeezing repeating whitespace and replacing it with hyphens. If any
 object name conversions take place, a warning will be logged.
 
+### Regular Expression Parameters
+
+Modules may now use a built-in regular expression (regex) string parameter type
+instead of a normal string when accepting patterns. The regex parameters are
+checked by the config file loader to compile using the PCRE2 library embedded
+within MaxScale. The only module using the new regex parameter type is currently
+*QLAFilter*.
+
+The only action users should take is enclose their regular expressions in
+slashes, e.g. `match=/^select/` defines the pattern `^select`. The slashes allow
+whitespace to be read from the ends of the regex string contrary to a normal
+string parameter and are removed before compiling the pattern. For backwards
+compatibility, the slashes are not yet mandatory. Omitting them is, however,
+deprecated and will be rejected in the next release of MaxScale.
+
 ### NamedServerFilter
 
-This filter now uses the PCRE2-libarary to match queries. Previously, it used
-the POSIX-version of PCRE2. The filter also accepts multiple match-server pairs.
-Please see the NamedServerFilter documentation for details.
+The filter now accepts multiple match-server pairs. Please see the
+[NamedServerFilter](../Filters/Named-Server-Filter.md) documentation for
+details.
 
 ### Tee Filter
 
@@ -34,6 +49,10 @@ the loopback address is required (e.g. `myuser@127.0.0.1`).
 In addition to the aforementioned requirements, a failure to create a branched
 session no longer causes the actual client session to be closed. In most cases,
 this is desired behavior.
+
+The `match` and `exclude` parameters were changed to use PCRE2 syntax for the
+regular expressions. The regular expression should be enclosed by slashes
+e.g. `match=/select.*from.*test/`.
 
 ## Dropped Features
 

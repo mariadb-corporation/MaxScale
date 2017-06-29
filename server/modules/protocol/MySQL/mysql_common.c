@@ -1587,3 +1587,15 @@ mysql_server_cmd_t mxs_mysql_current_command(MXS_SESSION* session)
     MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
     return proto->current_command;
 }
+
+const char* mxs_mysql_get_current_db(MXS_SESSION* session)
+{
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+    return data->db;
+}
+
+void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
+{
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->data;
+    snprintf(data->db, sizeof(data->db), "%s", db);
+}

@@ -11,7 +11,7 @@
  * @param rows Expected number of rows
  * @return 0 in case of success
  */
-int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long int rows);
+int execute_select_query_and_check(MYSQL *conn, const char *sql, unsigned long long int rows);
 
 /**
  * @brief create_t1 Create t1 table, fileds: (x1 int, fl int)

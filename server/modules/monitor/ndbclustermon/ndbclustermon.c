@@ -13,22 +13,13 @@
 
 /**
  * @file ndbcluster_mon.c - A MySQL cluster SQL node monitor
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 25/07/14 Massimiliano Pinto  Initial implementation
- * 10/11/14 Massimiliano Pinto  Added setNetworkTimeout for connect,read,write
- * 08/05/15 Markus Makela       Addition of launchable scripts
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "ndbclustermon"
 
 #include "../mysqlmon.h"
 #include <maxscale/alloc.h>
+#include <maxscale/mysql_utils.h>
 
 static void monitorMain(void *);
 
@@ -234,11 +225,8 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
     server_set_status_nolock(database->server, SERVER_RUNNING);
 
     /* get server version string */
-    server_string = (char *) mysql_get_server_info(database->con);
-    if (server_string)
-    {
-        server_set_version_string(database->server, server_string);
-    }
+    mxs_mysql_set_server_version(database->con, database->server);
+    server_string = database->server->version_string;
 
     /* Check if the the SQL node is able to contact one or more data nodes */
     if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0

@@ -224,8 +224,7 @@ int MySQLSendHandshake(DCB* dcb)
     {
         mysql_server_language = dcb->service->dbref->server->charset;
 
-        if (dcb->service->dbref->server->server_string &&
-            strstr(dcb->service->dbref->server->server_string, "10.2."))
+        if (strstr(dcb->service->dbref->server->version_string, "10.2."))
         {
             /** The backend servers support the extended capabilities */
             is_maria = true;
@@ -928,6 +927,10 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             return 0;
         }
     }
+
+    /** The query classifier classifies according to the service's server that has
+     * the smallest version number. */
+    qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
 
     spec_com_res_t res = process_special_commands(dcb, read_buffer, nbytes_read);
     int rval = 1;

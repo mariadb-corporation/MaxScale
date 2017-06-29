@@ -20,6 +20,7 @@
 #include "mmmon.h"
 #include <maxscale/dcb.h>
 #include <maxscale/alloc.h>
+#include <maxscale/mysql_utils.h>
 
 static void monitorMain(void *);
 
@@ -261,11 +262,8 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     server_version = mysql_get_server_version(database->con);
 
     /* get server version string */
-    server_string = (char *) mysql_get_server_info(database->con);
-    if (server_string)
-    {
-        server_set_version_string(database->server, server_string);
-    }
+    mxs_mysql_set_server_version(database->con, database->server);
+    server_string = database->server->version_string;
 
     /* get server_id form current node */
     if (mysql_query(database->con, "SELECT @@server_id") == 0

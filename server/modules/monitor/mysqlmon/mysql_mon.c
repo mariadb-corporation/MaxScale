@@ -18,10 +18,11 @@
 #define MXS_MODULE_NAME "mysqlmon"
 
 #include "../mysqlmon.h"
-#include <maxscale/dcb.h>
-#include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
+#include <maxscale/dcb.h>
 #include <maxscale/debug.h>
+#include <maxscale/modutil.h>
+#include <maxscale/mysql_utils.h>
 
 #define DEFAULT_JOURNAL_MAX_AGE "28800"
 
@@ -640,7 +641,7 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
             (database->server->master_id <= 0 ||
             database->server->master_id != handle->master->server->node_id))
         {
-            monitor_clear_pending_status(database, SERVER_SLAVE);
+            monitor_set_pending_status(database, SERVER_SLAVE);
             monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
         }
         database = database->next;
@@ -726,11 +727,8 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
     server_version = mysql_get_server_version(database->con);
 
     /* get server version string */
-    server_string = (char *) mysql_get_server_info(database->con);
-    if (server_string)
-    {
-        server_set_version_string(database->server, server_string);
-    }
+    mxs_mysql_set_server_version(database->con, database->server);
+    server_string = database->server->version_string;
 
     MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, database->server->unique_name);
     ss_dassert(serv_info);
@@ -1853,7 +1851,7 @@ static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *mon, int num_serve
                         /* this server is slave of another server not in MaxScale configuration
                          * we cannot use it as a real slave.
                          */
-                        monitor_clear_pending_status(ptr, SERVER_SLAVE);
+                        monitor_set_pending_status(ptr, SERVER_SLAVE);
                         monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXTERNAL_MASTER);
                     }
                 }

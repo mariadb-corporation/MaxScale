@@ -19,15 +19,12 @@
 
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/router.hh>
+#include <maxscale/session_command.hh>
 
 #include "shard_map.hh"
-#include "session_command.hh"
 
-using std::string;
-using std::list;
-
-using namespace schemarouter;
-
+namespace schemarouter
+{
 /**
  * Bitmask values for the router session's initialization. These values are used
  * to prevent responses from internal commands being forwarded to the client.
@@ -80,7 +77,7 @@ class SchemaRouterSession: public mxs::RouterSession
 {
 public:
 
-    SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router, BackendList& backends);
+    SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router, SSRBackendList& backends);
 
     /**
      * The RouterSession instance will be deleted when a client session
@@ -128,7 +125,7 @@ private:
 
     /** Helper functions */
     SERVER*  get_shard_target(GWBUF* buffer, uint32_t qtype);
-    SBackend get_bref_from_dcb(DCB* dcb);
+    SSRBackend get_bref_from_dcb(DCB* dcb);
     bool     get_shard_dcb(DCB** dcb, char* name);
     bool     have_servers();
     bool     handle_default_db();
@@ -136,7 +133,7 @@ private:
 
     /** Routing functions */
     bool    route_session_write(GWBUF* querybuf, uint8_t command);
-    void    process_sescmd_response(SBackend& bref, GWBUF** ppPacket);
+    void    process_sescmd_response(SSRBackend& bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
                                  enum route_target& route_target);
 
@@ -144,26 +141,27 @@ private:
     bool                 send_databases();
     bool                 send_shards();
     void                 query_databases();
-    int                  inspect_mapping_states(SBackend& bref, GWBUF** wbuf);
-    enum showdb_response parse_mapping_response(SBackend& bref, GWBUF** buffer);
+    int                  inspect_mapping_states(SSRBackend& bref, GWBUF** wbuf);
+    enum showdb_response parse_mapping_response(SSRBackend& bref, GWBUF** buffer);
     void                 route_queued_query();
     void                 synchronize_shards();
-    void                 handle_mapping_reply(SBackend& bref, GWBUF** pPacket);
+    void                 handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket);
 
     /** Member variables */
-    bool                  m_closed;         /**< True if session closed */
-    DCB*                  m_client;         /**< The client DCB */
-    MYSQL_session*        m_mysql_session;  /**< Session client data (username, password, SHA1). */
-    BackendList           m_backends;       /**< Backend references */
-    Config*               m_config;         /**< Pointer to router config */
-    SchemaRouter*         m_router;         /**< The router instance */
-    Shard                 m_shard;          /**< Database to server mapping */
-    string                m_connect_db;     /**< Database the user was trying to connect to */
-    string                m_current_db;     /**< Current active database */
-    int                   m_state;          /**< Initialization state bitmask */
-    list<Buffer>          m_queue;          /**< Query that was received before the session was ready */
-    Stats                 m_stats;          /**< Statistics for this router */
-    uint64_t              m_sent_sescmd;    /**< The latest session command being executed */
-    uint64_t              m_replied_sescmd; /**< The last session command reply that was sent to the client */
-    SERVER*               m_load_target;    /**< Target for LOAD DATA LOCAL INFILE */
+    bool                   m_closed;         /**< True if session closed */
+    DCB*                   m_client;         /**< The client DCB */
+    MYSQL_session*         m_mysql_session;  /**< Session client data (username, password, SHA1). */
+    SSRBackendList         m_backends;       /**< Backend references */
+    Config*                m_config;         /**< Pointer to router config */
+    SchemaRouter*          m_router;         /**< The router instance */
+    Shard                  m_shard;          /**< Database to server mapping */
+    std::string            m_connect_db;     /**< Database the user was trying to connect to */
+    std::string            m_current_db;     /**< Current active database */
+    int                    m_state;          /**< Initialization state bitmask */
+    std::list<mxs::Buffer> m_queue;          /**< Query that was received before the session was ready */
+    Stats                  m_stats;          /**< Statistics for this router */
+    uint64_t               m_sent_sescmd;    /**< The latest session command being executed */
+    uint64_t               m_replied_sescmd; /**< The last session command reply that was sent to the client */
+    SERVER*                m_load_target;    /**< Target for LOAD DATA LOCAL INFILE */
 };
+}
