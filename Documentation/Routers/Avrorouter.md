@@ -174,7 +174,11 @@ data block. The default value is 1000 row events.
 #### `block_size`
 
 The Avro data block size in bytes. The default is 16 kilobytes. Increase this
-value if individual events in the binary logs are very large.
+value if individual events in the binary logs are very large. The value is a
+size type parameter which means that it can also be defined with an SI
+suffix. Refer to the
+[Configuration Guide](../Getting-Started/Configuration-Guide.md) for more
+details about size type parameters and how to use them.
 
 ## Module commands
 
