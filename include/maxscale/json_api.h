@@ -86,8 +86,19 @@ json_t* mxs_json_self_link(const char* host, const char* path, const char* id);
  *
  * @param json     JSON object
  * @param json_ptr JSON Pointer to object
+ *
  * @return Pointed value or NULL if no value is found
  */
 json_t* mxs_json_pointer(json_t* json, const char* json_ptr);
+
+
+/**
+ * @brief Return a JSON formatted error
+ *
+ * @param err Error description
+ *
+ * @return The error as JSON
+ */
+json_t* mxs_json_error(const char* err);
 
 MXS_END_DECLS

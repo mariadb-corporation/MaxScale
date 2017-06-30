@@ -562,6 +562,34 @@ HttpResponse cb_delete_user(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_set_server(const HttpRequest& request)
+{
+    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    int opt = server_map_status(request.get_option("status").c_str());
+
+    if (opt)
+    {
+        server_set_status(server, opt);
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Invalid or missing value for the `status` parameter"));
+}
+
+HttpResponse cb_clear_server(const HttpRequest& request)
+{
+    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    int opt = server_map_status(request.get_option("status").c_str());
+
+    if (opt)
+    {
+        server_clear_status(server, opt);
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Invalid or missing value for the `status` parameter"));
+}
+
 HttpResponse cb_modulecmd(const HttpRequest& request)
 {
     std::string module = request.uri_part(2);
@@ -699,6 +727,8 @@ public:
                                                 "services", ":service", "listeners")));
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "inet")));
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "unix")));
+        m_post.push_back(SResource(new Resource(cb_set_server, 3, "servers", ":server", "set")));
+        m_post.push_back(SResource(new Resource(cb_clear_server, 3, "servers", ":server", "clear")));
 
         /** For all module commands that modify state/data */
         m_post.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));

@@ -80,3 +80,51 @@ describe("Server Relationships", function() {
 
     after(stopMaxScale)
 });
+
+describe("Server Status", function() {
+    before(startMaxScale)
+
+    it("create new server", function() {
+        return request.post(base_url + "/servers/", {json: server })
+            .should.be.fulfilled
+    });
+
+    it("set server into maintenance", function() {
+        return request.post(base_url + "/servers/" + server.data.id + "/set?status=maintenance")
+            .then(function(resp) {
+                return request.get(base_url + "/servers/" + server.data.id)
+            })
+            .then(function(resp) {
+                var srv = JSON.parse(resp)
+                srv.data.attributes.status.should.match(/Maintenance/)
+            })
+    });
+
+    it("clear maintenance", function() {
+        return request.post(base_url + "/servers/" + server.data.id + "/clear?status=maintenance")
+            .then(function(resp) {
+                return request.get(base_url + "/servers/" + server.data.id)
+            })
+            .then(function(resp) {
+                var srv = JSON.parse(resp)
+                srv.data.attributes.status.should.not.match(/Maintenance/)
+            })
+    });
+
+    it("set invalid status value", function() {
+        return request.post(base_url + "/servers/" + server.data.id + "/set?status=somethingstrange")
+            .should.be.rejected
+    });
+
+    it("clear invalid status value", function() {
+        return request.post(base_url + "/servers/" + server.data.id + "/clear?status=somethingstrange")
+            .should.be.rejected
+    });
+
+    it("destroy server", function() {
+        return request.delete(base_url + "/servers/" + server.data.id)
+            .should.be.fulfilled
+    });
+
+    after(stopMaxScale)
+});

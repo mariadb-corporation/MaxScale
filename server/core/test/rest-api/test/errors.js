@@ -5,7 +5,7 @@ describe("Errors", function()
 {
     before(startMaxScale)
 
-    it("error on invalid PUT request", function()
+    it("error on invalid PATCH request", function()
     {
         return request.patch(base_url + "/servers/server1", { json: {this_is: "a test"}})
                .should.be.rejected

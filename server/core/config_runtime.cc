@@ -1622,14 +1622,7 @@ json_t* runtime_get_json_error()
 
     if (errmsg.length())
     {
-        json_t* err = json_object();
-        json_object_set_new(err, "detail", json_string(errmsg.c_str()));
-
-        json_t* arr = json_array();
-        json_array_append_new(arr, err);
-
-        obj = json_object();
-        json_object_set_new(obj, "errors", arr);
+        obj = mxs_json_error(errmsg.c_str());
     }
 
     return obj;

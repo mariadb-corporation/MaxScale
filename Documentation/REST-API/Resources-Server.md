@@ -501,29 +501,80 @@ Server is in use:
 Status: 403 Forbidden
 ```
 
-# **TODO:** Implement the following features
-
-### Get all connections to a server
-
-Get all connections that are connected to a server.
+### Set server status
 
 ```
-GET /v1/servers/:name/connections
+POST /v1/servers/:name/set
+```
+
+The _:name_ in the URI must map to a server name with all whitespace replaced
+with hyphens. This endpoint requires that the `status` parameter is passed with
+the request. The value of `status` must be one of the following values.
+
+|Value      | Status Description             |
+|-----------|--------------------------------|
+|master     | Server is a Master             |
+|slave      | Server is a Slave              |
+|maintenance| Server is put into maintenance |
+|running    | Server is up and running       |
+|synced     | Server is a Galera node        |
+|ndb        | Server is a NDBCluster node    |
+|stale      | Server is a stale Master       |
+
+For example, to set the server _db-server-1_ into maintenance mode, a request to
+the following URL must be made:
+
+```
+POST /v1/servers/db-server-1/set?status=maintenance
 ```
 
 #### Response
 
-### Close all connections to a server
-
-Close all connections to a particular server. This will forcefully close all
-backend connections.
-
-```
-DELETE /v1/servers/:name/connections
-```
-
-#### Response
+OK:
 
 ```
 Status: 204 No Content
+```
+
+Server not found:
+
+```
+Status: 404 Not Found
+```
+
+Missing or invalid parameter:
+
+```
+Status: 403 Forbidden
+```
+
+### Clear server status
+
+```
+POST /v1/servers/:name/clear
+```
+
+The _:name_ in the URI must map to a server name with all whitespace replaced
+with hyphens. This endpoint requires that the `status` parameter is passed with
+the request. The value of `status` must be one of the values defined in the
+_set_ endpoint documentation.
+
+#### Response
+
+OK:
+
+```
+Status: 204 No Content
+```
+
+Server not found:
+
+```
+Status: 404 Not Found
+```
+
+Missing or invalid parameter:
+
+```
+Status: 403 Forbidden
 ```

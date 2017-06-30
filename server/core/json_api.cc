@@ -155,3 +155,17 @@ json_t* mxs_json_self_link(const char* host, const char* path, const char* id)
 
     return links;
 }
+
+json_t* mxs_json_error(const char* message)
+{
+    json_t* err = json_object();
+    json_object_set_new(err, "detail", json_string(message));
+
+    json_t* arr = json_array();
+    json_array_append_new(arr, err);
+
+    json_t* obj = json_object();
+    json_object_set_new(obj, "errors", arr);
+
+    return obj;
+}
