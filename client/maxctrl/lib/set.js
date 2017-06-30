@@ -21,8 +21,9 @@ exports.builder = function(yargs) {
             var target = 'servers/' + argv.server + "/set?status=" + argv.status
             doRequest(target, null, {method: "POST"})
         })
+        .usage("Usage: set <command>")
+        .help()
         .command('*', 'the default command', {}, () => {
             console.log("Unknown command. See output of 'help set' for a list of commands.")
         })
-    .help()
 }
