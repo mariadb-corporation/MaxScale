@@ -34,19 +34,19 @@ program
     })
     .option('h', {
         alias: 'host',
-        describe: 'The hostname or address where MaxScale is located',
+        describe: 'MaxScale hostname',
         default: 'localhost',
         type: 'string'
     })
     .option('P', {
         alias: 'port',
-        describe: 'The port where MaxScale REST API listens on',
+        describe: 'MaxScale REST API port',
         default: 8989,
         type: 'number'
     })
     .option('s', {
         alias: 'secure',
-        describe: 'Enable TLS encryption of connections',
+        describe: 'Enable HTTPS requests',
         default: 'false',
         type: 'boolean'
     })
