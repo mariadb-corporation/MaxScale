@@ -199,32 +199,6 @@ static struct
     function_name_mappings_default
 };
 
-#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
-inline void get_string_and_length(const LEX_CSTRING& ls, const char** s, size_t* length)
-{
-    *s = ls.str;
-    *length = ls.length;
-}
-#else
-inline void get_string_and_length(const char* cs, const char** s, size_t* length)
-{
-    *s = cs;
-    *length = cs ? strlen(cs) : 0;
-}
-#endif
-
-static struct
-{
-    qc_sql_mode_t   sql_mode;
-    pthread_mutex_t sql_mode_mutex;
-    NAME_MAPPING*   function_name_mappings;
-} this_unit =
-{
-    QC_SQL_MODE_DEFAULT,
-    PTHREAD_MUTEX_INITIALIZER,
-    function_name_mappings_default
-};
-
 static thread_local struct
 {
     qc_sql_mode_t sql_mode;
