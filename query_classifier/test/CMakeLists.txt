@@ -48,8 +48,12 @@ if (BUILD_QC_MYSQLEMBEDDED)
   add_test(TestQC_version_sensitivity version_sensitivity)
 
   if(NOT (MYSQL_EMBEDDED_VERSION VERSION_LESS 10.2))
-    add_test(TestQC_cte_simple compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/cte_simple.test)
+    add_test(TestQC_cte_simple       compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/cte_simple.test)
+    add_test(TestQC_cte_grant        compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/cte_grant.test)
+    add_test(TestQC_cte_nonrecursive compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/cte_nonrecursive.test)
+    add_test(TestQC_cte_recursive    compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/cte_recursive.test)
   endif()
+
   if(NOT (MYSQL_EMBEDDED_VERSION VERSION_LESS 10.3))
     add_test(TestQC_Oracle-binlog_stm_ps     compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/binlog_stm_ps.test)
     add_test(TestQC_Oracle-binlog_stm_sp     compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/binlog_stm_sp.test)
