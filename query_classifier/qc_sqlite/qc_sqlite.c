@@ -1081,7 +1081,7 @@ static void update_field_infos_from_with(QC_SQLITE_INFO* info,
 
         if (pCte->pSelect)
         {
-            update_field_infos_from_select(info, pCte->pSelect, QC_USED_IN_SELECT, NULL);
+            update_field_infos_from_select(info, pCte->pSelect, QC_USED_IN_SUBSELECT, NULL);
         }
     }
 }
@@ -1486,6 +1486,11 @@ static void update_field_infos_from_select(QC_SQLITE_INFO* info,
     if (pSelect->pWith)
     {
         update_field_infos_from_with(info, pSelect->pWith);
+    }
+
+    if ((pSelect->op == TK_UNION) && pSelect->pPrior)
+    {
+        update_field_infos_from_select(info, pSelect->pPrior, usage, pExclude);
     }
 }
 

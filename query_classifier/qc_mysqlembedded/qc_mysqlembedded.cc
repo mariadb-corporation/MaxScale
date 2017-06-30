@@ -2872,6 +2872,9 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 #ifdef CTE_SUPPORTED
         if (lex->with_clauses_list)
         {
+            usage &= ~QC_USED_IN_SELECT;
+            usage |= QC_USED_IN_SUBSELECT;
+
             With_clause* with_clause = lex->with_clauses_list;
 
             while (with_clause)
@@ -2923,23 +2926,32 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             }
         }
 
+#ifdef CTE_SUPPORTED
+        if ((lex->sql_command == SQLCOM_SET_OPTION) ||
+            (lex->with_clauses_list))
+#else
         if (lex->sql_command == SQLCOM_SET_OPTION)
-        {
-#if defined(WAY_TO_DOWNCAST_SET_VAR_BASE_EXISTS)
-            // The list of set_var_base contains the value of variables.
-            // However, the actual type is a derived type of set_var_base
-            // and there is no information using which we could do the
-            // downcast...
-            List_iterator<set_var_base> ilist(lex->var_list);
-            while (set_var_base* var = ilist++)
-            {
-                // Is set_var_base a set_var, set_var_user, set_var_password
-                // set_var_role
-                ...
-            }
 #endif
-            // ...so, we will simply assume that any nested selects are
-            // from statements like "set @a:=(SELECT a from t1)".
+        {
+            if (lex->sql_command == SQLCOM_SET_OPTION)
+            {
+#if defined(WAY_TO_DOWNCAST_SET_VAR_BASE_EXISTS)
+                // The list of set_var_base contains the value of variables.
+                // However, the actual type is a derived type of set_var_base
+                // and there is no information using which we could do the
+                // downcast...
+                List_iterator<set_var_base> ilist(lex->var_list);
+                while (set_var_base* var = ilist++)
+                {
+                    // Is set_var_base a set_var, set_var_user, set_var_password
+                    // set_var_role
+                    ...
+                }
+#endif
+                // ...so, we will simply assume that any nested selects are
+                // from statements like "set @a:=(SELECT a from t1)". The
+                // code after the closing }.
+            }
 
             usage &= ~QC_USED_IN_SELECT;
             usage |= QC_USED_IN_SUBSELECT;
