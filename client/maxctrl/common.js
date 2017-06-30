@@ -59,16 +59,23 @@ module.exports = function() {
         .help()
 
     // Request a resource collection and format it as a table
-    this.getCollection = function (resource, headers, parts) {
+    this.getCollection = function (resource, fields) {
 
         doRequest(resource, function(res) {
-            var table = getTable(headers)
+
+            var header = []
+
+            fields.forEach(function(i) {
+                header.push(Object.keys(i))
+            })
+
+            var table = getTable(header)
 
             res.data.forEach(function(i) {
                 row = []
 
-                parts.forEach(function(p) {
-                    var v = _.getPath(i, p, "")
+                fields.forEach(function(p) {
+                    var v = _.getPath(i, p[Object.keys(p)[0]], "")
 
                     if (Array.isArray(v)) {
                         v = v.join(", ")
@@ -87,7 +94,7 @@ module.exports = function() {
     this.getResource = function (resource, fields) {
 
         doRequest(resource, function(res) {
-            var table = new Table()
+            var table = getList()
 
             fields.forEach(function(i) {
                 var k = Object.keys(i)[0]
@@ -128,11 +135,17 @@ module.exports = function() {
             uri: getUri(resource),
             json: true
         }, function(err, resp, res) {
-            if (resp.statusCode == 200) {
+            if (err) {
+                // Failed to request
+                console.log("Error:", JSON.stringify(err, null, 4))
+            } else if (resp.statusCode == 200) {
+                // Reuqest OK, returns data
                 cb(res)
             } else if (resp.statusCode == 204) {
+                // Request OK, no data
                 console.log(colors.green("OK"))
             } else {
+                // Unexpected return code, probably an error
                 console.log("Error:", resp.statusCode, resp.statusMessage)
                 if (res) {
                     console.log(res)
@@ -140,6 +153,10 @@ module.exports = function() {
             }
         })
     }
+}
+
+function getList() {
+    return new Table({ style: { head: ['cyan'] } })
 }
 
 // Creates a table-like array for output. The parameter is an array of header names
