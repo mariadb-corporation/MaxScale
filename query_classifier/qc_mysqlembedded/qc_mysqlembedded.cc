@@ -74,6 +74,20 @@
 #include <string.h>
 #include <stdarg.h>
 
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 2
+#define CTE_SUPPORTED
+#endif
+
+#if defined(CTE_SUPPORTED)
+// We need to be able to access private data of With_element that has no
+// public access methods. So, we use this very questionable method of
+// making the private parts public. Ok, as qc_myselembedded is only
+// used for verifying the output of qc_sqlite.
+#define private public
+#include <sql_cte.h>
+#undef private
+#endif
+
 /**
  * Defines what a particular name should be mapped to.
  */
@@ -159,6 +173,31 @@ static bool parse_query(GWBUF* querybuf);
 static bool query_is_parsed(GWBUF* buf);
 int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_t* n_infos);
 
+#if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
+inline void get_string_and_length(const LEX_CSTRING& ls, const char** s, size_t* length)
+{
+    *s = ls.str;
+    *length = ls.length;
+}
+#else
+inline void get_string_and_length(const char* cs, const char** s, size_t* length)
+{
+    *s = cs;
+    *length = cs ? strlen(cs) : 0;
+}
+#endif
+
+static struct
+{
+    qc_sql_mode_t   sql_mode;
+    pthread_mutex_t sql_mode_mutex;
+    NAME_MAPPING*   function_name_mappings;
+} this_unit =
+{
+    QC_SQL_MODE_DEFAULT,
+    PTHREAD_MUTEX_INITIALIZER,
+    function_name_mappings_default
+};
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 3
 inline void get_string_and_length(const LEX_CSTRING& ls, const char** s, size_t* length)
@@ -2442,6 +2481,7 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
         (strcasecmp(func_name, "cast_as_unsigned") == 0) ||
         (strcasecmp(func_name, "get_user_var") == 0) ||
         (strcasecmp(func_name, "get_system_var") == 0) ||
+        (strcasecmp(func_name, "not") == 0) ||
         (strcasecmp(func_name, "set_user_var") == 0) ||
         (strcasecmp(func_name, "set_system_var") == 0))
     {
@@ -2678,7 +2718,25 @@ static void update_field_infos(parsing_info_t* pi,
                 break;
 
             case Item_subselect::EXISTS_SUBS:
-                // TODO: Handle these explicitly as well.
+                {
+                    Item_exists_subselect* exists_subselect_item =
+                        static_cast<Item_exists_subselect*>(item);
+
+                    st_select_lex* ssl = exists_subselect_item->get_select_lex();
+                    if (ssl)
+                    {
+                        uint32_t sub_usage = usage;
+
+                        sub_usage &= ~QC_USED_IN_SELECT;
+                        sub_usage |= QC_USED_IN_SUBSELECT;
+
+                        update_field_infos(pi,
+                                           get_lex(pi),
+                                           ssl,
+                                           sub_usage,
+                                           excludep);
+                    }
+                }
                 break;
 
             case Item_subselect::SINGLEROW_SUBS:
@@ -2705,6 +2763,22 @@ static void update_field_infos(parsing_info_t* pi,
         break;
     }
 }
+
+#ifdef CTE_SUPPORTED
+static void update_field_infos(parsing_info_t* pi,
+                               LEX* lex,
+                               st_select_lex_unit* select,
+                               uint32_t usage,
+                               List<Item>* excludep)
+{
+    st_select_lex* s = select->first_select();
+
+    if (s)
+    {
+        update_field_infos(pi, lex, s, usage, excludep);
+    }
+}
+#endif
 
 static void update_field_infos(parsing_info_t* pi,
                                LEX* lex,
@@ -2820,6 +2894,33 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
         lex->current_select = &lex->select_lex;
 
         update_field_infos(pi, lex, &lex->select_lex, usage, NULL);
+
+#ifdef CTE_SUPPORTED
+        if (lex->with_clauses_list)
+        {
+            With_clause* with_clause = lex->with_clauses_list;
+
+            while (with_clause)
+            {
+                SQL_I_List<With_element>& with_list = with_clause->with_list;
+                With_element* element = with_list.first;
+
+                while (element)
+                {
+                    update_field_infos(pi, lex, element->spec, usage, NULL);
+
+                    if (element->first_recursive)
+                    {
+                        update_field_infos(pi, lex, element->first_recursive, usage, NULL);
+                    }
+
+                    element = element->next;
+                }
+
+                with_clause = with_clause->next_with_clause;
+            }
+        }
+#endif
 
         List_iterator<Item> ilist(lex->value_list);
         while (Item* item = ilist++)

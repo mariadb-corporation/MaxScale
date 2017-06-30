@@ -1,0 +1,15 @@
+WITH t AS (SELECT a FROM t1 WHERE b >= 'c') SELECT * FROM t2,t WHERE t2.c=t.a;
+
+SELECT t1.a,t1.b FROM t1,t2
+  WHERE t1.a>t2.c AND
+        t2.c in (WITH t as (SELECT * FROM t1 WHERE t1.a<5)
+                   SELECT t2.c FROM t2,t WHERE t2.c=t.a);
+
+WITH engineers AS (
+  SELECT * FROM employees WHERE dept IN ('Development','Support')
+)
+SELECT * FROM engineers E1
+  WHERE NOT EXISTS (SELECT 1
+    FROM engineers E2
+    WHERE E2.country=E1.country
+    AND E2.name <> E1.name);

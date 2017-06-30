@@ -220,6 +220,8 @@ static void update_field_infos_from_select(QC_SQLITE_INFO* info,
                                            const Select* pSelect,
                                            uint32_t usage,
                                            const ExprList* pExclude);
+static void update_field_infos_from_with(QC_SQLITE_INFO* info,
+                                          const With* pWith);
 static void update_function_info(QC_SQLITE_INFO* info,
                                  const char* name,
                                  uint32_t usage);
@@ -1070,6 +1072,20 @@ static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
     }
 }
 
+static void update_field_infos_from_with(QC_SQLITE_INFO* info,
+                                         const With* pWith)
+{
+    for (int i = 0; i < pWith->nCte; ++i)
+    {
+        const struct Cte* pCte = &pWith->a[i];
+
+        if (pCte->pSelect)
+        {
+            update_field_infos_from_select(info, pCte->pSelect, QC_USED_IN_SELECT, NULL);
+        }
+    }
+}
+
 static const char* get_token_symbol(int token)
 {
     switch (token)
@@ -1465,6 +1481,11 @@ static void update_field_infos_from_select(QC_SQLITE_INFO* info,
         // mentioned. Consequently, they need not be collected.
         update_field_infos(info, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
 #endif
+    }
+
+    if (pSelect->pWith)
+    {
+        update_field_infos_from_with(info, pSelect->pWith);
     }
 }
 
