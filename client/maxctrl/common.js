@@ -18,45 +18,9 @@ var Table = require('cli-table');
 var assert = require('assert')
 
 module.exports = function() {
-    const maxctrl_version = '1.0.0';
 
     // Common options for all commands
     this.program = require('yargs');
-    this.program
-        .group(['u', 'p', 'h', 'p', 'P', 's'], 'Global Options:')
-        .option('u', {
-            alias:'user',
-            global: true,
-            default: 'mariadb',
-            describe: 'Username to use',
-            type: 'string'
-        })
-        .option('p', {
-            alias: 'password',
-            describe: 'Password for the user',
-            default: 'admin',
-            type: 'string'
-        })
-        .option('h', {
-            alias: 'host',
-            describe: 'The hostname or address where MaxScale is located',
-            default: 'localhost',
-            type: 'string'
-        })
-        .option('P', {
-            alias: 'port',
-            describe: 'The port where MaxScale REST API listens on',
-            default: 8989,
-            type: 'number'
-        })
-        .option('s', {
-            alias: 'secure',
-            describe: 'Enable TLS encryption of connections',
-            default: 'false',
-            type: 'boolean'
-        })
-        .version(maxctrl_version)
-        .help()
 
     // Request a resource collection and format it as a table
     this.getCollection = function (resource, fields) {
@@ -130,16 +94,18 @@ module.exports = function() {
     }
 
     // Helper for executing requests and handling their responses
-    this.doRequest = function(resource, cb) {
-        request({
-            uri: getUri(resource),
-            json: true
-        }, function(err, resp, res) {
+    this.doRequest = function(resource, cb, obj) {
+
+        args = obj || {}
+        args.uri = getUri(resource),
+        args.json = true
+
+        request(args, function(err, resp, res) {
             if (err) {
                 // Failed to request
                 console.log("Error:", JSON.stringify(err, null, 4))
-            } else if (resp.statusCode == 200) {
-                // Reuqest OK, returns data
+            } else if (resp.statusCode == 200 && cb) {
+                // Request OK, returns data
                 cb(res)
             } else if (resp.statusCode == 204) {
                 // Request OK, no data

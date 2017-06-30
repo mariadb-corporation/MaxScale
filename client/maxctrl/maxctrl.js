@@ -14,8 +14,48 @@ require('./common.js')()
 
 'use strict';
 
+const maxctrl_version = '1.0.0';
+
 program
+    .version(maxctrl_version)
+    .group(['u', 'p', 'h', 'p', 'P', 's'], 'Global Options:')
+    .option('u', {
+        alias:'user',
+        global: true,
+        default: 'mariadb',
+        describe: 'Username to use',
+        type: 'string'
+    })
+    .option('p', {
+        alias: 'password',
+        describe: 'Password for the user',
+        default: 'admin',
+        type: 'string'
+    })
+    .option('h', {
+        alias: 'host',
+        describe: 'The hostname or address where MaxScale is located',
+        default: 'localhost',
+        type: 'string'
+    })
+    .option('P', {
+        alias: 'port',
+        describe: 'The port where MaxScale REST API listens on',
+        default: 8989,
+        type: 'number'
+    })
+    .option('s', {
+        alias: 'secure',
+        describe: 'Enable TLS encryption of connections',
+        default: 'false',
+        type: 'boolean'
+    })
     .command(require('./lib/list.js'))
     .command(require('./lib/show.js'))
+    .recommendCommands()
+    .help()
     .demandCommand(1, 'At least one command is required')
+    .command('*', 'the default command', {}, () => {
+        console.log("Unknown command. See output of 'help' for a list of commands.")
+    })
     .argv
