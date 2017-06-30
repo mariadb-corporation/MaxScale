@@ -2909,7 +2909,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
                 {
                     update_field_infos(pi, lex, element->spec, usage, NULL);
 
-                    if (element->first_recursive)
+                    if (element->is_recursive && element->first_recursive)
                     {
                         update_field_infos(pi, lex, element->first_recursive, usage, NULL);
                     }
