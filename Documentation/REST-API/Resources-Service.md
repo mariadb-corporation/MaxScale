@@ -293,3 +293,31 @@ Service is modified.
 ```
 Status: 204 No Content
 ```
+
+### Stop a service
+
+Stops a started service.
+
+```
+PUT /v1/service/:name/stop
+```
+
+#### Response
+
+Service is stopped.
+
+`Status: 204 No Content`
+
+### Start a service
+
+Starts a stopped service.
+
+```
+PUT /v1/service/:name/start
+```
+
+#### Response
+
+Service is started.
+
+`Status: 204 No Content`
