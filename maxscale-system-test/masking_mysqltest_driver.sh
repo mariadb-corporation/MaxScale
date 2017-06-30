@@ -36,6 +36,10 @@ fi
 
 echo $source copied to $target
 
+test_dir=`pwd`
+
+$test_dir/non_native_setup $1
+
 password=
 if [ $# -ge 3 ]
 then

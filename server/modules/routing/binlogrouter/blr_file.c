@@ -490,16 +490,19 @@ blr_file_add_magic(int fd)
  * @return              Non-zero if the fie creation succeeded
  */
 static int
-blr_file_create(ROUTER_INSTANCE *router, char *file)
+blr_file_create(ROUTER_INSTANCE *router, char *orig_file)
 {
-    if (strlen(file) > BINLOG_FNAMELEN)
+    if (strlen(orig_file) > BINLOG_FNAMELEN)
     {
         MXS_ERROR("The binlog filename %s is longer than "
                   "the maximum allowed length %d.",
-                  file,
+                  orig_file,
                   BINLOG_FNAMELEN);
         return 0;
     }
+
+    char file[strlen(orig_file) + 1];
+    strcpy(file, orig_file);
 
     int created = 0;
     char err_msg[MXS_STRERROR_BUFLEN];

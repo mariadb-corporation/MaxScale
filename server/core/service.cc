@@ -56,6 +56,11 @@
 #include "maxscale/queuemanager.h"
 #include "maxscale/service.h"
 
+/** This define is needed in CentOS 6 systems */
+#if !defined(UINT64_MAX)
+#define UINT64_MAX      (18446744073709551615UL)
+#endif
+
 using std::string;
 using std::set;
 

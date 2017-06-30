@@ -201,7 +201,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"group_rows", MXS_MODULE_PARAM_COUNT, "1000"},
             {"group_trx", MXS_MODULE_PARAM_COUNT, "1"},
             {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
-            {"block_size", MXS_MODULE_PARAM_COUNT, "0"},
+            {"block_size", MXS_MODULE_PARAM_SIZE, "0"},
             {"codec", MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
             {MXS_END_MODULE_PARAMS}
         }
@@ -425,7 +425,7 @@ createInstance(SERVICE *service, char **options)
     inst->trx_target = config_get_integer(params, "group_trx");
     inst->codec = config_get_enum(params, "codec", codec_values);
     int first_file = config_get_integer(params, "start_index");
-    inst->block_size = config_get_integer(params, "block_size");
+    inst->block_size = config_get_size(params, "block_size");
 
     MXS_CONFIG_PARAMETER *param = config_get_param(params, "source");
     inst->gtid.domain = 0;

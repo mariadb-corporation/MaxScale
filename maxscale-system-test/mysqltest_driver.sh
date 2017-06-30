@@ -36,8 +36,6 @@ fi
 test_dir=`pwd`
 port=$3
 
-$test_dir/non_native_setup $1
-
 cd $2 || exit 1
 
 res=0

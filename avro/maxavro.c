@@ -246,11 +246,16 @@ bool maxavro_read_float(MAXAVRO_FILE* file, float *dest)
 {
     bool rval = false;
 
-    if (file->buffer_ptr + sizeof(*dest) < file->buffer_end)
+    if (file->buffer_ptr + sizeof(*dest) <= file->buffer_end)
     {
         memcpy(dest, file->buffer_ptr, sizeof(*dest));
         file->buffer_ptr += sizeof(*dest);
         rval = true;
+    }
+    else
+    {
+        ss_dassert(!true);
+        MXS_ERROR("Block cannot hold a value of type float");
     }
 
     return rval;
@@ -280,11 +285,16 @@ bool maxavro_read_double(MAXAVRO_FILE* file, double *dest)
 {
     bool rval = false;
 
-    if (file->buffer_ptr + sizeof(*dest) < file->buffer_end)
+    if (file->buffer_ptr + sizeof(*dest) <= file->buffer_end)
     {
         memcpy(dest, file->buffer_ptr, sizeof(*dest));
         file->buffer_ptr += sizeof(*dest);
         rval = true;
+    }
+    else
+    {
+        ss_dassert(!true);
+        MXS_ERROR("Block cannot hold a value of type double");
     }
 
     return rval;

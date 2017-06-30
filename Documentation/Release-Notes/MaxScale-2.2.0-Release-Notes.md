@@ -54,6 +54,12 @@ The `match` and `exclude` parameters were changed to use PCRE2 syntax for the
 regular expressions. The regular expression should be enclosed by slashes
 e.g. `match=/select.*from.*test/`.
 
+### Dbfwfilter
+
+The `function` type rule will now match a query that does not use a function
+when the filter is in whitelist mode (`action=allow`). This means that queries
+that don't use functions are allowed though in whitelist mode.
+
 ## Dropped Features
 
 ### MaxAdmin

@@ -700,14 +700,13 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         MXS_SESSION *session =
             session_alloc_with_id(dcb->service, dcb, protocol->thread_id);
 
-        // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
-        session->client_protocol_data = QC_SQL_MODE_DEFAULT;
-
         if (session != NULL)
         {
             CHK_SESSION(session);
             ss_dassert(session->state != SESSION_STATE_ALLOC &&
                        session->state != SESSION_STATE_DUMMY);
+            // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
+            session->client_protocol_data = QC_SQL_MODE_DEFAULT;
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
             ss_debug(bool check = ) mxs_worker_register_session(session);
             ss_dassert(check);
