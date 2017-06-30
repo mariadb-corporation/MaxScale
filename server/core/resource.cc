@@ -727,8 +727,6 @@ public:
                                                 "services", ":service", "listeners")));
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "inet")));
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "unix")));
-        m_post.push_back(SResource(new Resource(cb_set_server, 3, "servers", ":server", "set")));
-        m_post.push_back(SResource(new Resource(cb_clear_server, 3, "servers", ":server", "clear")));
 
         /** For all module commands that modify state/data */
         m_post.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
@@ -745,6 +743,8 @@ public:
         m_put.push_back(SResource(new Resource(cb_start_monitor, 3, "monitors", ":monitor", "start")));
         m_put.push_back(SResource(new Resource(cb_stop_service, 3, "services", ":service", "stop")));
         m_put.push_back(SResource(new Resource(cb_start_service, 3, "services", ":service", "start")));
+        m_put.push_back(SResource(new Resource(cb_set_server, 3, "servers", ":server", "set")));
+        m_put.push_back(SResource(new Resource(cb_clear_server, 3, "servers", ":server", "clear")));
 
         m_delete.push_back(SResource(new Resource(cb_delete_server, 2, "servers", ":server")));
         m_delete.push_back(SResource(new Resource(cb_delete_monitor, 2, "monitors", ":monitor")));

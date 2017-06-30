@@ -90,7 +90,7 @@ describe("Server Status", function() {
     });
 
     it("set server into maintenance", function() {
-        return request.post(base_url + "/servers/" + server.data.id + "/set?status=maintenance")
+        return request.put(base_url + "/servers/" + server.data.id + "/set?status=maintenance")
             .then(function(resp) {
                 return request.get(base_url + "/servers/" + server.data.id)
             })
@@ -101,7 +101,7 @@ describe("Server Status", function() {
     });
 
     it("clear maintenance", function() {
-        return request.post(base_url + "/servers/" + server.data.id + "/clear?status=maintenance")
+        return request.put(base_url + "/servers/" + server.data.id + "/clear?status=maintenance")
             .then(function(resp) {
                 return request.get(base_url + "/servers/" + server.data.id)
             })
@@ -112,12 +112,12 @@ describe("Server Status", function() {
     });
 
     it("set invalid status value", function() {
-        return request.post(base_url + "/servers/" + server.data.id + "/set?status=somethingstrange")
+        return request.put(base_url + "/servers/" + server.data.id + "/set?status=somethingstrange")
             .should.be.rejected
     });
 
     it("clear invalid status value", function() {
-        return request.post(base_url + "/servers/" + server.data.id + "/clear?status=somethingstrange")
+        return request.put(base_url + "/servers/" + server.data.id + "/clear?status=somethingstrange")
             .should.be.rejected
     });
 

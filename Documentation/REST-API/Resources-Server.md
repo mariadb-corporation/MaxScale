@@ -504,7 +504,7 @@ Status: 403 Forbidden
 ### Set server status
 
 ```
-POST /v1/servers/:name/set
+PUT /v1/servers/:name/set
 ```
 
 The _:name_ in the URI must map to a server name with all whitespace replaced
@@ -525,7 +525,7 @@ For example, to set the server _db-server-1_ into maintenance mode, a request to
 the following URL must be made:
 
 ```
-POST /v1/servers/db-server-1/set?status=maintenance
+PUT /v1/servers/db-server-1/set?status=maintenance
 ```
 
 #### Response
