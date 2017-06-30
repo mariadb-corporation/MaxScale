@@ -39,10 +39,10 @@ module.exports = function() {
                 row = []
 
                 fields.forEach(function(p) {
-                    var v = _.getPath(i, p[Object.keys(p)[0]], "")
+                    var v = _.getPath(i, p[Object.keys(p)[0]], '')
 
                     if (Array.isArray(v)) {
-                        v = v.join(", ")
+                        v = v.join(', ')
                     }
                     row.push(v)
                 })
@@ -63,10 +63,10 @@ module.exports = function() {
             fields.forEach(function(i) {
                 var k = Object.keys(i)[0]
                 var path = i[k]
-                var v = _.getPath(res.data, path, "")
+                var v = _.getPath(res.data, path, '')
 
                 if (Array.isArray(v) && typeof(v[0]) != 'object') {
-                    v = v.join(", ")
+                    v = v.join(', ')
                 } else if (typeof(v) == 'object') {
                     v = JSON.stringify(v, null, 4)
                 }
@@ -103,16 +103,16 @@ module.exports = function() {
         request(args, function(err, resp, res) {
             if (err) {
                 // Failed to request
-                console.log("Error:", JSON.stringify(err, null, 4))
+                console.log('Error:', JSON.stringify(err, null, 4))
             } else if (resp.statusCode == 200 && cb) {
                 // Request OK, returns data
                 cb(res)
             } else if (resp.statusCode == 204) {
                 // Request OK, no data
-                console.log(colors.green("OK"))
+                console.log(colors.green('OK'))
             } else {
                 // Unexpected return code, probably an error
-                console.log("Error:", resp.statusCode, resp.statusMessage)
+                console.log('Error:', resp.statusCode, resp.statusMessage)
                 if (res) {
                     console.log(res)
                 }

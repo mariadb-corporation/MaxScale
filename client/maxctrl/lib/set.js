@@ -18,12 +18,12 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('server <server> <status>', 'Set server status', {}, function(argv) {
-            var target = 'servers/' + argv.server + "/set?status=" + argv.status
-            doRequest(target, null, {method: "POST"})
+            var target = 'servers/' + argv.server + '/set?status=' + argv.status
+            doRequest(target, null, {method: 'POST'})
         })
-        .usage("Usage: set <command>")
+        .usage('Usage: set <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            console.log("Unknown command. See output of 'help set' for a list of commands.")
+            console.log('Unknown command. See output of `help set` for a list of commands.')
         })
 }

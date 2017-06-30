@@ -57,6 +57,6 @@ program
     .help()
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, () => {
-        console.log("Unknown command. See output of 'help' for a list of commands.")
+        console.log('Unknown command. See output of `help` for a list of commands.')
     })
     .argv

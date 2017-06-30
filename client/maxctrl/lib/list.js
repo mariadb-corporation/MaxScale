@@ -65,9 +65,9 @@ exports.builder = function(yargs) {
                 {'Version': 'attributes.version'}
             ])
         })
-        .usage("Usage: list <command>")
+        .usage('Usage: list <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            console.log("Unknown command. See output of 'help list' for a list of commands.")
+            console.log('Unknown command. See output of `help list` for a list of commands.')
         })
 }
