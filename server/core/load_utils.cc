@@ -416,7 +416,7 @@ static json_t* module_json_data(const LOADED_MODULE *mod, const char* host)
     json_object_set_new(attr, "version", json_string(mod->info->version));
     json_object_set_new(attr, CN_DESCRIPTION, json_string(mod->info->description));
     json_object_set_new(attr, "api", json_string(mxs_module_api_to_string(mod->info->modapi)));
-    json_object_set_new(attr, CN_STATUS, json_string(mxs_module_status_to_string(mod->info->status)));
+    json_object_set_new(attr, "maturity", json_string(mxs_module_status_to_string(mod->info->status)));
 
     json_t* commands = json_array();
     cb_param p = {commands, mod->module, host};

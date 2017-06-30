@@ -95,10 +95,11 @@ json_t* mxs_json_pointer(json_t* json, const char* json_ptr);
 /**
  * @brief Return a JSON formatted error
  *
- * @param err Error description
+ * @param format Format string
+ * @param ...    Variable argument list
  *
  * @return The error as JSON
  */
-json_t* mxs_json_error(const char* err);
+json_t* mxs_json_error(const char* format, ...);
 
 MXS_END_DECLS

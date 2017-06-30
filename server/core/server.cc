@@ -1412,10 +1412,9 @@ static json_t* server_json_attributes(const SERVER* server)
 
     json_object_set_new(attr, CN_PARAMETERS, params);
 
-
     /** Store general information about the server state */
     char* stat = server_status(server);
-    json_object_set_new(attr, CN_STATUS, json_string(stat));
+    json_object_set_new(attr, CN_STATE, json_string(stat));
     MXS_FREE(stat);
 
     json_object_set_new(attr, CN_VERSION_STRING, json_string(server->version_string));

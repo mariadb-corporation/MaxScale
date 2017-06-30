@@ -64,7 +64,7 @@ Status: 200 OK
                 "port": 3000,
                 "protocol": "MySQLBackend"
             },
-            "status": "Master, Running", // Server status string
+            "state": "Master, Running", // Server state string
             "version_string": "10.1.22-MariaDB", // Server version
             "node_id": 3000, // Server node ID i.e. value of @@server_id
             "master_id": -1,
@@ -148,7 +148,7 @@ Status: 200 OK
                     "port": 3000,
                     "protocol": "MySQLBackend"
                 },
-                "status": "Master, Running",
+                "state": "Master, Running",
                 "version_string": "10.1.22-MariaDB",
                 "node_id": 3000,
                 "master_id": -1,
@@ -199,7 +199,7 @@ Status: 200 OK
                     "port": 3001,
                     "protocol": "MySQLBackend"
                 },
-                "status": "Slave, Running",
+                "state": "Slave, Running",
                 "version_string": "10.1.22-MariaDB",
                 "node_id": 3001,
                 "master_id": 3000,
@@ -392,7 +392,7 @@ Response to `GET /v1/server/server1`:
                 "port": 3000,
                 "protocol": "MySQLBackend"
             },
-            "status": "Master, Running",
+            "state": "Master, Running",
             "version_string": "10.1.22-MariaDB",
             "node_id": 3000,
             "master_id": -1,
@@ -501,17 +501,17 @@ Server is in use:
 Status: 403 Forbidden
 ```
 
-### Set server status
+### Set server state
 
 ```
 PUT /v1/servers/:name/set
 ```
 
 The _:name_ in the URI must map to a server name with all whitespace replaced
-with hyphens. This endpoint requires that the `status` parameter is passed with
-the request. The value of `status` must be one of the following values.
+with hyphens. This endpoint requires that the `state` parameter is passed with
+the request. The value of `state` must be one of the following values.
 
-|Value      | Status Description             |
+|Value      | State Description              |
 |-----------|--------------------------------|
 |master     | Server is a Master             |
 |slave      | Server is a Slave              |
@@ -525,7 +525,7 @@ For example, to set the server _db-server-1_ into maintenance mode, a request to
 the following URL must be made:
 
 ```
-PUT /v1/servers/db-server-1/set?status=maintenance
+PUT /v1/servers/db-server-1/set?state=maintenance
 ```
 
 #### Response
@@ -548,15 +548,15 @@ Missing or invalid parameter:
 Status: 403 Forbidden
 ```
 
-### Clear server status
+### Clear server state
 
 ```
 POST /v1/servers/:name/clear
 ```
 
 The _:name_ in the URI must map to a server name with all whitespace replaced
-with hyphens. This endpoint requires that the `status` parameter is passed with
-the request. The value of `status` must be one of the values defined in the
+with hyphens. This endpoint requires that the `state` parameter is passed with
+the request. The value of `state` must be one of the values defined in the
 _set_ endpoint documentation.
 
 #### Response

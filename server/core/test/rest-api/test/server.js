@@ -81,7 +81,7 @@ describe("Server Relationships", function() {
     after(stopMaxScale)
 });
 
-describe("Server Status", function() {
+describe("Server State", function() {
     before(startMaxScale)
 
     it("create new server", function() {
@@ -90,34 +90,34 @@ describe("Server Status", function() {
     });
 
     it("set server into maintenance", function() {
-        return request.put(base_url + "/servers/" + server.data.id + "/set?status=maintenance")
+        return request.put(base_url + "/servers/" + server.data.id + "/set?state=maintenance")
             .then(function(resp) {
                 return request.get(base_url + "/servers/" + server.data.id)
             })
             .then(function(resp) {
                 var srv = JSON.parse(resp)
-                srv.data.attributes.status.should.match(/Maintenance/)
+                srv.data.attributes.state.should.match(/Maintenance/)
             })
     });
 
     it("clear maintenance", function() {
-        return request.put(base_url + "/servers/" + server.data.id + "/clear?status=maintenance")
+        return request.put(base_url + "/servers/" + server.data.id + "/clear?state=maintenance")
             .then(function(resp) {
                 return request.get(base_url + "/servers/" + server.data.id)
             })
             .then(function(resp) {
                 var srv = JSON.parse(resp)
-                srv.data.attributes.status.should.not.match(/Maintenance/)
+                srv.data.attributes.state.should.not.match(/Maintenance/)
             })
     });
 
-    it("set invalid status value", function() {
-        return request.put(base_url + "/servers/" + server.data.id + "/set?status=somethingstrange")
+    it("set invalid state value", function() {
+        return request.put(base_url + "/servers/" + server.data.id + "/set?state=somethingstrange")
             .should.be.rejected
     });
 
-    it("clear invalid status value", function() {
-        return request.put(base_url + "/servers/" + server.data.id + "/clear?status=somethingstrange")
+    it("clear invalid state value", function() {
+        return request.put(base_url + "/servers/" + server.data.id + "/clear?state=somethingstrange")
             .should.be.rejected
     });
 

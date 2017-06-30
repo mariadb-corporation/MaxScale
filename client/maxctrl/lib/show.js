@@ -23,7 +23,7 @@ exports.builder = function(yargs) {
                 {'Server': 'id'},
                 {'Address': 'attributes.parameters.address'},
                 {'Port': 'attributes.parameters.port'},
-                {'Status': 'attributes.status'},
+                {'State': 'attributes.state'},
                 {'Services': 'relationships.services.data[].id'},
                 {'Monitors': 'relationships.monitors.data[].id'},
                 {'Master ID': 'attributes.master_id'},
@@ -36,6 +36,7 @@ exports.builder = function(yargs) {
             getResource('services/' + argv.service, [
                 {'Service': 'id'},
                 {'Router': 'attributes.router'},
+                {'State': 'attributes.state'},
                 {'Started At': 'attributes.started'},
                 {'Current Connections': 'attributes.connections'},
                 {'Total Connections': 'attributes.total_connections'},
@@ -47,7 +48,7 @@ exports.builder = function(yargs) {
         .command('monitor <monitor>', 'Show monitor', {}, function(argv) {
             getResource('monitors/' + argv.monitor, [
                 {'Monitor': 'id'},
-                {'Status': 'attributes.state'},
+                {'State': 'attributes.state'},
                 {'Servers': 'relationships.servers.data[].id'},
                 {'Parameters': 'attributes.parameters'},
                 {'Monitor Diagnostics': 'attributes.monitor_diagnostics'}
@@ -57,7 +58,7 @@ exports.builder = function(yargs) {
             getResource('sessions/' + argv.session, [
                 {'Id': 'id'},
                 {'Service': 'relationships.services.data[].id'},
-                {'Status': 'attributes.state'},
+                {'State': 'attributes.state'},
                 {'User': 'attributes.user'},
                 {'Host': 'attributes.remote'},
                 {'Connected': 'attributes.connected'},
@@ -77,7 +78,7 @@ exports.builder = function(yargs) {
                 {'Module': 'id'},
                 {'Type': 'attributes.module_type'},
                 {'Version': 'attributes.version'},
-                {'Maturity': 'attributes.status'},
+                {'Maturity': 'attributes.maturity'},
                 {'Description': 'attributes.description'},
                 {'Parameters': 'attributes.parameters'},
                 {'Commands': 'attributes.commands'}

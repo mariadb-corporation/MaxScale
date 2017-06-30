@@ -565,7 +565,7 @@ HttpResponse cb_delete_user(const HttpRequest& request)
 HttpResponse cb_set_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-    int opt = server_map_status(request.get_option("status").c_str());
+    int opt = server_map_status(request.get_option(CN_STATE).c_str());
 
     if (opt)
     {
@@ -573,13 +573,15 @@ HttpResponse cb_set_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Invalid or missing value for the `status` parameter"));
+    return HttpResponse(MHD_HTTP_FORBIDDEN,
+                        mxs_json_error("Invalid or missing value for the `%s` "
+                                       "parameter", CN_STATE));
 }
 
 HttpResponse cb_clear_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-    int opt = server_map_status(request.get_option("status").c_str());
+    int opt = server_map_status(request.get_option(CN_STATE).c_str());
 
     if (opt)
     {
@@ -587,7 +589,9 @@ HttpResponse cb_clear_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Invalid or missing value for the `status` parameter"));
+    return HttpResponse(MHD_HTTP_FORBIDDEN,
+                        mxs_json_error( "Invalid or missing value for the `%s` "
+                                        "parameter", CN_STATE));
 }
 
 HttpResponse cb_modulecmd(const HttpRequest& request)

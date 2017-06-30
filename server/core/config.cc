@@ -124,7 +124,6 @@ const char CN_SKIP_PERMISSION_CHECKS[]        = "skip_permission_checks";
 const char CN_SOCKET[]                        = "socket";
 const char CN_SQL_MODE[]                      = "sql_mode";
 const char CN_STATE[]                         = "state";
-const char CN_STATUS[]                        = "status";
 const char CN_SSL[]                           = "ssl";
 const char CN_SSL_CA_CERT[]                   = "ssl_ca_cert";
 const char CN_SSL_CERT[]                      = "ssl_cert";

@@ -24,7 +24,7 @@ exports.builder = function(yargs) {
                 {'Address': 'attributes.parameters.address'},
                 {'Port': 'attributes.parameters.port'},
                 {'Connections': 'attributes.statistics.connections'},
-                {'Status': 'attributes.status'}
+                {'State': 'attributes.state'}
             ])
         })
         .command('services', 'List services', {}, function() {
@@ -39,7 +39,7 @@ exports.builder = function(yargs) {
         .command('monitors', 'List monitors', {}, function() {
             getCollection('monitors', [
                 {'Monitor': 'id'},
-                {'Status': 'attributes.state'},
+                {'State': 'attributes.state'},
                 {'Servers': 'relationships.servers.data[].id'}
             ])
         })

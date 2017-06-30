@@ -13,12 +13,12 @@
 require('../common.js')()
 
 exports.command = 'clear <command>'
-exports.desc = 'Clear object status'
+exports.desc = 'Clear object state'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('server <server> <status>', 'Clear server status', {}, function(argv) {
-            var target = 'servers/' + argv.server + '/clear?status=' + argv.status
+        .command('server <server> <state>', 'Clear server state', {}, function(argv) {
+            var target = 'servers/' + argv.server + '/clear?state=' + argv.state
             doRequest(target, null, {method: 'POST'})
         })
         .usage('Usage: clear <command>')

@@ -156,8 +156,19 @@ json_t* mxs_json_self_link(const char* host, const char* path, const char* id)
     return links;
 }
 
-json_t* mxs_json_error(const char* message)
+json_t* mxs_json_error(const char* format, ...)
 {
+    va_list args;
+
+    va_start(args, format);
+    int len = vsnprintf(NULL, 0, format, args);
+    va_end(args);
+
+    char message[len + 1];
+    va_start(args, format);
+    vsnprintf(message, sizeof(message), format, args);
+    va_end(args);
+
     json_t* err = json_object();
     json_object_set_new(err, "detail", json_string(message));
 
