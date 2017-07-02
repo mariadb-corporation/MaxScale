@@ -163,7 +163,7 @@ GET /v1/users
 Create a new network user.
 
 ```
-PUT /v1/users/inet
+POST /v1/users/inet
 ```
 
 The request body must fulfill the following requirements.
@@ -201,7 +201,7 @@ This enables an existing UNIX account on the system for administrative
 operations.
 
 ```
-PUT /v1/users/unix
+POST /v1/users/unix
 ```
 
 The request body must fulfill the following requirements.
