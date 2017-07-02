@@ -15,7 +15,6 @@ var _ = require('lodash-getpath')
 var request = require('request');
 var colors = require('colors/safe');
 var Table = require('cli-table');
-var assert = require('assert')
 
 module.exports = function() {
 
@@ -103,7 +102,7 @@ module.exports = function() {
         request(args, function(err, resp, res) {
             if (err) {
                 // Failed to request
-                console.log('Error:', JSON.stringify(err, null, 4))
+                logError(JSON.stringify(err, null, 4))
             } else if (resp.statusCode == 200 && cb) {
                 // Request OK, returns data
                 cb(res)
@@ -112,12 +111,23 @@ module.exports = function() {
                 console.log(colors.green('OK'))
             } else {
                 // Unexpected return code, probably an error
-                console.log('Error:', resp.statusCode, resp.statusMessage)
+                var errstr = resp.statusCode + ' ' + resp.statusMessage
                 if (res) {
-                    console.log(res)
+                    errstr += ' ' + JSON.stringify(res, null, 4)
                 }
+                logError(errstr)
             }
         })
+    }
+
+    this.updateValue = function(resource, key, value) {
+        var body = {}
+        _.set(body, key, value)
+        doRequest(resource, null, { method: 'PATCH', body: body })
+    }
+
+    this.logError = function(err) {
+        console.log(colors.red('Error:'), err)
     }
 }
 
