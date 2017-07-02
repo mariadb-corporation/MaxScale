@@ -898,7 +898,10 @@ static void visit_node(struct graph_node *node, struct graph_node **stack,
     {
         /** Pop invalid nodes off the stack */
         node->active = false;
-        *stacksize -= 1;
+        if (*stacksize > 0)
+        {
+            *stacksize -= 1;
+        }
     }
 }
 
@@ -1256,7 +1259,7 @@ monitorMain(void *arg)
 
         }
 
-        if (handle->multimaster)
+        if (handle->multimaster && num_servers > 0)
         {
             /** Find all the master server cycles in the cluster graph. If
                 multiple masters are found, the servers with the read_only
