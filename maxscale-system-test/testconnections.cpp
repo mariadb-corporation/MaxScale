@@ -796,36 +796,35 @@ int TestConnections::copy_all_logs_periodic()
 
 int TestConnections::prepare_binlog()
 {
-    char version_str[1024];
-    find_field(repl->nodes[0], "SELECT @@VERSION", "@@version", version_str);
-    tprintf("Master server version %s\n", version_str);
+    char version_str[1024] = "";
 
-    if ((strstr(version_str, "10.0") != NULL) ||
-            (strstr(version_str, "10.1") != NULL) ||
-            (strstr(version_str, "10.2") != NULL))
-    {
-        tprintf("10.0!\n");
-    }
-    else
+    repl->connect();
+    find_field(repl->nodes[0], "SELECT @@version", "@@version", version_str);
+    tprintf("Master server version '%s'", version_str);
+
+    if (*version_str &&
+        strstr(version_str, "10.0") == NULL &&
+        strstr(version_str, "10.1") == NULL &&
+        strstr(version_str, "10.2") == NULL)
     {
         add_result(ssh_maxscale(true,
                                 "sed -i \"s/,mariadb10-compatibility=1//\" %s",
                                 maxscale_cnf), "Error editing maxscale.cnf");
     }
 
-    tprintf("Removing all binlog data from Maxscale node\n");
+    tprintf("Removing all binlog data from Maxscale node");
     add_result(ssh_maxscale(true, "rm -rf %s", maxscale_binlog_dir),
-               "Removing binlog data failed\n");
+               "Removing binlog data failed");
 
-    tprintf("Creating binlog dir\n");
+    tprintf("Creating binlog dir");
     add_result(ssh_maxscale(true, "mkdir -p %s", maxscale_binlog_dir),
-               "Creating binlog data dir failed\n");
-    tprintf("Set 'maxscale' as a owner of binlog dir\n");
+               "Creating binlog data dir failed");
+    tprintf("Set 'maxscale' as a owner of binlog dir");
     add_result(ssh_maxscale(false,
                             "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
                             maxscale_access_sudo, maxscale_binlog_dir,
                             maxscale_access_sudo, maxscale_binlog_dir),
-               "directory ownership change failed\n");
+               "directory ownership change failed");
     return 0;
 }
 
