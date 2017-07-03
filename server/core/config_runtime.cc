@@ -806,6 +806,7 @@ bool runtime_destroy_listener(SERVICE *service, const char *name)
         else
         {
             MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name);
+            runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name);
         }
     }
 

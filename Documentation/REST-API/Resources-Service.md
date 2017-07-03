@@ -302,6 +302,35 @@ object.
 |ssl_version            | The SSL version to use [TLSv1.2|TLSv1.1|TLSv1.0]  |
 |ssl_cert_verify_depth  | Certificate verification depth                    |
 
+### Destroy a listener
+
+```
+DELETE /v1/services/:service/listeners/:name
+```
+
+In the URI , the _:name_ must map to a listener and the _:service_ must map to a
+service. Both names must have all whitespace replaced with hyphens.
+
+#### Response
+
+OK:
+
+```
+Status: 204 No Content
+```
+
+Listener not found:
+
+```
+Status: 404 Not Found
+```
+
+Listener cannot be deleted:
+
+```
+Status: 403 Forbidden
+```
+
 ### Update a service
 
 The _:name_ in the URI must map to a service name and the request body must be a

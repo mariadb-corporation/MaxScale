@@ -353,6 +353,29 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_delete_listener(const HttpRequest& request)
+{
+
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+    ss_dassert(service);
+
+    if (service)
+    {
+        std::string listener = request.uri_part(3);
+
+        if (!service_has_named_listener(service, listener.c_str()))
+        {
+            return HttpResponse(MHD_HTTP_NOT_FOUND);
+        }
+        else if (runtime_destroy_listener(service, listener.c_str()))
+        {
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
+        }
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
@@ -754,6 +777,12 @@ public:
         m_delete.push_back(SResource(new Resource(cb_delete_monitor, 2, "monitors", ":monitor")));
         m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "inet", ":inetuser")));
         m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "unix", ":unixuser")));
+
+        /** The wildcard for listener name isn't a good solution as it adds
+         * a burden to the callback and requires it to do the checking but it'll
+         * do for the time being */
+        m_delete.push_back(SResource(new Resource(cb_delete_listener, 4,
+                                                  "services", ":service", "listeners", "?")));
     }
 
     ~RootResource()

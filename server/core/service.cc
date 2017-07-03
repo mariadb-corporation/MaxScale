@@ -796,6 +796,22 @@ bool serviceHasListener(SERVICE *service, const char *protocol,
     return false;
 }
 
+bool service_has_named_listener(SERVICE *service, const char *name)
+{
+    LISTENER_ITERATOR iter;
+
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
+    {
+        if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * Allocate a new server reference
  *

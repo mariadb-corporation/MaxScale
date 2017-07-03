@@ -258,6 +258,16 @@ bool serviceHasListener(SERVICE *service, const char *protocol,
  */
 bool service_port_is_used(unsigned short port);
 
+/**
+ * @brief Check if the service has a listener with a matching name
+ *
+ * @param service Service to check
+ * @param name    Name to compare to
+ *
+ * @return True if the service has a listener with a matching name
+ */
+bool service_has_named_listener(SERVICE *service, const char *name);
+
 int   serviceGetUser(SERVICE *service, char **user, char **auth);
 int   serviceSetUser(SERVICE *service, const char *user, const char *auth);
 bool  serviceSetFilters(SERVICE *service, char *filters);
