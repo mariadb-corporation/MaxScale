@@ -1386,6 +1386,11 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                 blr_master_delayed_connect(router);
                                 return;
                             }
+
+                            MXS_INFO("Fake ROTATE_EVENT received: "
+                                     "binlog file %s, pos %" PRIu64 "",
+                                     router->binlog_name,
+                                     router->current_pos);
                         }
                         else if (hdr.event_type == MARIADB10_GTID_GTID_LIST_EVENT)
                         {
@@ -3056,12 +3061,15 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
         router->master_state = BLRM_BINLOGDUMP;
         router->master->func.write(router->master, buf);
 
-        MXS_NOTICE("%s: Request binlog records from %s at "
-                   "position %lu from master server [%s]:%d",
-                   router->service->name, router->binlog_name,
-                   router->current_pos,
-                   router->service->dbref->server->name,
-                   router->service->dbref->server->port);
+        if (router->binlog_name[0])
+        {
+            MXS_NOTICE("%s: Request binlog records from %s at "
+                       "position %lu from master server [%s]:%d",
+                       router->service->name, router->binlog_name,
+                       router->current_pos,
+                       router->service->dbref->server->name,
+                       router->service->dbref->server->port);
+        }
 
         /* Log binlog router identity */
         blr_log_identity(router);
