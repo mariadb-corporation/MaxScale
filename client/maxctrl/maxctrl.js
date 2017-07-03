@@ -56,6 +56,8 @@ program
     .command(require('./lib/clear.js'))
     .command(require('./lib/enable.js'))
     .command(require('./lib/disable.js'))
+    .command(require('./lib/create.js'))
+    .command(require('./lib/destroy.js'))
     .help()
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, () => {

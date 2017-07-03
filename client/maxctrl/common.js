@@ -11,13 +11,13 @@
  * Public License.
  */
 
-var _ = require('lodash-getpath')
 var request = require('request');
 var colors = require('colors/safe');
 var Table = require('cli-table');
 
 module.exports = function() {
 
+    this._ = require('lodash-getpath')
     // Common options for all commands
     this.program = require('yargs');
 
