@@ -158,7 +158,7 @@ int main(int argc, char** argv)
     {
         if (check_file(realpath(argv[i], pathbuf)))
         {
-            printf("Failed to process file: %s\n", argv[i]);
+            fprintf(stderr, "Failed to process file: %s\n", argv[i]);
             rval = 1;
         }
     }
