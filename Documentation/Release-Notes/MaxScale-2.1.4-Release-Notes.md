@@ -36,6 +36,7 @@ report at [Jira](https://jira.mariadb.org).
 
 [Here is a list of bugs fixed since the release of MaxScale 2.1.3.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.4)
 
+* [MXS-1308](https://jira.mariadb.org/browse/MXS-1308) Crash with multimaster=true in mysqlmon
 * [MXS-1304](https://jira.mariadb.org/browse/MXS-1304) Invalid write in gw_str_xor
 * [MXS-1299](https://jira.mariadb.org/browse/MXS-1299) CREATE TABLE LIKE fails with avrorouter
 * [MXS-1296](https://jira.mariadb.org/browse/MXS-1296) Lowercase start transaction is not detected
