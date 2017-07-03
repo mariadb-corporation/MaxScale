@@ -226,9 +226,10 @@ POST /v1/servers
 ```
 
 Create a new server by defining the resource. The posted object must define the
-_name_ field with the name of the server and the _parameters_ field with JSON
-object containing values for the _address_ and _port_ parameters. The following
-is the minimal required JSON object for defining a new server.
+_data.id_ field with the name of the server and the
+_data.atttributes.parameters_ field with JSON object containing values for the
+_address_ and _port_ parameters. The following is the minimal required JSON
+object for defining a new server.
 
 ```javascript
 {

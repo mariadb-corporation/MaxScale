@@ -259,6 +259,49 @@ GET /v1/services/:name/listeners
 }
 ```
 
+### Create a new listener
+
+
+```
+POST /v1/services/:name/listeners
+```
+
+Create a new listener for a service by defining the resource. The _:name_ in the
+URI must map to a service name with all whitespace replaced with hyphens. The
+posted object must define the _data.id_ field with the name of the server and
+the _data.attributes.parameters.port_ field with the port where the listener
+will listen on. The following is the minimal required JSON object for defining a
+new listener.
+
+```javascript
+{
+    "data": {
+        "id": "my-listener",
+        "type": "listeners",
+        "attributes": {
+            "parameters": {
+                "port": 3306
+            }
+        }
+    }
+}
+```
+
+The following table contains all values that can be given in the _parameters_
+object.
+
+|Parameter              | Description                                       |
+|-----------------------|---------------------------------------------------|
+|port                   | Port to listen on                                 |
+|address                | Interface to listen on                            |
+|authenticator          | Authenticator module                              |
+|authenticator_options  | Options for the authenticator                     |
+|ssl_key                | Path to SSL key                                   |
+|ssl_cert               | Path to SSL certificate                           |
+|ssl_ca_cert            | Path to SSL CA certificate                        |
+|ssl_version            | The SSL version to use [TLSv1.2|TLSv1.1|TLSv1.0]  |
+|ssl_cert_verify_depth  | Certificate verification depth                    |
+
 ### Update a service
 
 The _:name_ in the URI must map to a service name and the request body must be a
