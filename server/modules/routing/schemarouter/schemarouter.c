@@ -459,10 +459,29 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
     char** dbnms = NULL;
     char* rval = NULL, *query, *tmp = NULL;
     bool has_dbs = false; /**If the query targets any database other than the current one*/
+    bool uses_implicit_databases = false;
 
-    dbnms = qc_get_database_names(buffer, &sz);
+    dbnms = qc_get_table_names(buffer, &sz, true);
+
+    for (i = 0; i < sz; i++)
+    {
+        if (strchr(dbnms[i], '.') == NULL)
+        {
+            uses_implicit_databases = true;
+        }
+        MXS_FREE(dbnms[i]);
+    }
+    MXS_FREE(dbnms);
 
     HASHTABLE* ht = client->shardmap->hash;
+
+    if (uses_implicit_databases)
+    {
+        MXS_INFO("Query implicitly uses the current database");
+        return (char*)hashtable_fetch(ht, client->current_db);
+    }
+
+    dbnms = qc_get_database_names(buffer, &sz);
 
     if (sz > 0)
     {
