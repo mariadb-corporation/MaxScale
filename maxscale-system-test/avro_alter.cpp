@@ -3,7 +3,9 @@
  */
 
 #include "testconnections.h"
+#include <jansson.h>
 #include <sstream>
+#include <iostream>
 
 int main(int argc, char *argv[])
 {
@@ -43,11 +45,23 @@ int main(int argc, char *argv[])
     for (int i = 1; i <=5; i++)
     {
         std::stringstream cmd;
-        cmd << "maxavrocheck -d /var/lib/maxscale/avro/test.t1.00000" << i << ".avro|wc -l";
+        cmd << "maxavrocheck -d /var/lib/maxscale/avro/test.t1.00000" << i << ".avro";
         char* rows = test.ssh_maxscale_output(true, cmd.str().c_str());
-        int nrows = atoi(rows);
+        int nrows = 0;
+        std::istringstream iss;
+        iss.str(rows);
+
+        for (std::string line; std::getline(iss, line);)
+        {
+            json_error_t err;
+            json_t* json = json_loads(line.c_str(), 0, &err);
+            test.add_result(json == NULL, "Failed to parse JSON: %s", line.c_str());
+            json_decref(json);
+            nrows++;
+        }
+
+        test.add_result(nrows != 1, "Expected 1 line in file number %d, got %d: %s", i, nrows, rows);
         free(rows);
-        test.add_result(nrows != 1, "Expected 1 line in file number %d, got %d", i, nrows);
     }
 
     execute_query(test.repl->nodes[0], "DROP TABLE test.t1;RESET MASTER");
