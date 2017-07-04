@@ -185,10 +185,10 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
         char *sql;
         int sql_len;
         char* qtypestr = qc_typemask_to_string(*type);
-        modutil_extract_SQL(pPacket, &sql, &sql_len);
+        int rc = modutil_extract_SQL(pPacket, &sql, &sql_len);
 
         MXS_INFO("> Command: %s, stmt: %.*s %s%s",
-                 STRPACKETTYPE(*command), sql_len, sql,
+                 STRPACKETTYPE(*command), rc ? sql_len : 0, rc ? sql : "",
                  (pPacket->hint == NULL ? "" : ", Hint:"),
                  (pPacket->hint == NULL ? "" : STRHINTTYPE(pPacket->hint->type)));
 
