@@ -1055,14 +1055,14 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
 
         bool combine = (strnlen(db, 1) && strchr(ident, '.') == NULL);
 
-        size_t len = strlen(ident) + 1; // + 1 for the NULL
+        size_t ident_len = strlen(ident) + 1; // + 1 for the NULL
 
         if (combine)
         {
-            len += (strlen(db) + 1); // + 1 for the "."
+            ident_len += (strlen(db) + 1); // + 1 for the "."
         }
 
-        char full_ident[len];
+        char full_ident[ident_len];
         full_ident[0] = 0; // Set full_ident to "".
 
         if (combine)

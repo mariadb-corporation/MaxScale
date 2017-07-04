@@ -7,7 +7,6 @@
  */
 
 
-#include <iostream>
 #include "testconnections.h"
 #include "maxadmin_operations.h"
 #include "sql_t1.h"
@@ -49,8 +48,6 @@ int main(int argc, char *argv[])
     sleep(10);
     test.set_timeout(120);
 
-    char * avro_check = test.ssh_maxscale_output(true,
-                                                 "maxavrocheck -vv /var/lib/maxscale/avro/test.t1.000001.avro | grep \"{\"");
     char * output = test.ssh_maxscale_output(true, "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro");
 
     std::istringstream iss;
