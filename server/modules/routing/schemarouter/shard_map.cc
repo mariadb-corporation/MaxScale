@@ -24,12 +24,12 @@ Shard::~Shard()
 {
 }
 
-bool Shard::add_location(string db, SERVER* target)
+bool Shard::add_location(std::string db, SERVER* target)
 {
-    return m_map.insert(make_pair(db, target)).second;
+    return m_map.insert(std::make_pair(db, target)).second;
 }
 
-SERVER* Shard::get_location(string db)
+SERVER* Shard::get_location(std::string db)
 {
     SERVER* rval = NULL;
     ServerMap::iterator iter = m_map.find(db);
@@ -76,9 +76,9 @@ ShardManager::~ShardManager()
 {
 }
 
-Shard ShardManager::get_shard(string user, double max_interval)
+Shard ShardManager::get_shard(std::string user, double max_interval)
 {
-    SpinLockGuard guard(m_lock);
+    mxs::SpinLockGuard guard(m_lock);
 
     ShardMap::iterator iter = m_maps.find(user);
 
@@ -98,9 +98,9 @@ Shard ShardManager::get_shard(string user, double max_interval)
     return iter->second;
 }
 
-void ShardManager::update_shard(Shard& shard, string user)
+void ShardManager::update_shard(Shard& shard, std::string user)
 {
-    SpinLockGuard guard(m_lock);
+    mxs::SpinLockGuard guard(m_lock);
     ShardMap::iterator iter = m_maps.find(user);
 
     if (iter == m_maps.end() || shard.newer_than(iter->second))

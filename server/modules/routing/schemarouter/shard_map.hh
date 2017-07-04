@@ -14,7 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include <map>
+#include <tr1/unordered_map>
 #include <string>
 #include <list>
 
@@ -23,11 +23,9 @@
 #include <maxscale/spinlock.hh>
 
 using namespace maxscale;
-using std::map;
-using std::string;
 
 /** This contains the database to server mapping */
-typedef map<string, SERVER*> ServerMap;
+typedef std::tr1::unordered_map<std::string, SERVER*> ServerMap;
 
 class Shard
 {
@@ -43,7 +41,7 @@ public:
      *
      * @return True if location was added
      */
-    bool add_location(string db, SERVER* target);
+    bool add_location(std::string db, SERVER* target);
 
     /**
      * @brief Retrieve the location of a database
@@ -52,7 +50,7 @@ public:
      *
      * @return The database or NULL if no server contains the database
      */
-    SERVER* get_location(string db);
+    SERVER* get_location(std::string db);
 
     /**
      * @brief Check if shard contains stale information
@@ -91,7 +89,7 @@ private:
     time_t    m_last_updated;
 };
 
-typedef map<string, Shard> ShardMap;
+typedef std::tr1::unordered_map<std::string, Shard> ShardMap;
 
 class ShardManager
 {
@@ -108,7 +106,7 @@ public:
      * @return The latest version of the shard or a newly created shard if no
      * old version is available
      */
-    Shard get_shard(string user, double max_lifetime);
+    Shard get_shard(std::string user, double max_lifetime);
 
     /**
      * @brief Update the shard information
@@ -119,7 +117,7 @@ public:
      * @param shard New version of the shard
      * @param user  The user whose shard this is
      */
-    void update_shard(Shard& shard, string user);
+    void update_shard(Shard& shard, std::string user);
 
 private:
     SPINLOCK m_lock;

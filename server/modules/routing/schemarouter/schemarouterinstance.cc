@@ -32,7 +32,6 @@
 #include <maxscale/spinlock.h>
 
 using std::string;
-using std::map;
 
 namespace schemarouter
 {

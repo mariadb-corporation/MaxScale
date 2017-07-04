@@ -27,7 +27,7 @@ namespace schemarouter
 bool connect_backend_servers(SSRBackendList& backends, MXS_SESSION* session);
 
 enum route_target get_shard_route_target(uint32_t qtype);
-bool change_current_db(string& dest, Shard& shard, GWBUF* buf);
+bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf);
 bool extract_database(GWBUF* buf, char* str);
 bool detect_show_shards(GWBUF* query);
 void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const char* errmsg);
@@ -1114,7 +1114,7 @@ void create_error_reply(char* fail_str, DCB* dcb)
  * @return true if new database is set, false if non-existent database was tried
  * to be set
  */
-bool change_current_db(string& dest, Shard& shard, GWBUF* buf)
+bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf)
 {
     bool succp = false;
     char db[MYSQL_DATABASE_MAXLEN + 1];
