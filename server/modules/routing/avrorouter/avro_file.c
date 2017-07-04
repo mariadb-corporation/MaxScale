@@ -1037,7 +1037,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         }
         else
         {
-            created = table_create_alloc(sql, db);
+            created = table_create_alloc(sql, len, db);
         }
 
         if (created && !save_and_replace_table_create(router, created))
