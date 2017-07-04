@@ -663,7 +663,8 @@ bool extract_database(GWBUF* buf, char* str)
     plen = gw_mysql_get_byte3(packet) - 1;
 
     /** Copy database name from MySQL packet to session */
-    if (qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
+    if (mxs_mysql_get_command(buf) == MYSQL_COM_QUERY &&
+        qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
     {
         const char *delim = "` \n\t;";
 
@@ -1405,22 +1406,43 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
 {
     SERVER *rval = NULL;
     bool has_dbs = false; /**If the query targets any database other than the current one*/
-    const QC_FIELD_INFO* info;
-    size_t n_info;
 
-    qc_get_field_info(buffer, &info, &n_info);
-
-    for (size_t i = 0; i < n_info; i++)
+    if (mxs_mysql_get_command(buffer) == MYSQL_COM_QUERY)
     {
-        if (info[i].database)
+        bool uses_current_database = false;
+        int n_tables = 0;
+        char** tables = qc_get_table_names(buffer, &n_tables, true);
+
+        for (int i = 0; i < n_tables; i++)
         {
-            if (strcmp(info[i].database, "information_schema") == 0 && rval == NULL)
+            if (strchr(tables[i], '.') == NULL)
+            {
+                uses_current_database = true;
+            }
+
+            MXS_FREE(tables[i]);
+        }
+
+        MXS_FREE(tables);
+
+        if (uses_current_database)
+        {
+            MXS_INFO("Query uses current database");
+            return m_shard.get_location(m_current_db);
+        }
+
+        int n_databases = 0;
+        char** databases = qc_get_database_names(buffer, &n_databases);
+
+        for (int i = 0; i < n_databases; i++)
+        {
+            if (strcasecmp(databases[i], "information_schema") == 0 && rval == NULL)
             {
                 has_dbs = false;
             }
             else
             {
-                SERVER* target = m_shard.get_location(info[i].database);
+                SERVER* target = m_shard.get_location(databases[i]);
 
                 if (target)
                 {
@@ -1435,15 +1457,18 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
                         rval = target;
                         has_dbs = true;
                         MXS_INFO("Query targets database '%s' on server '%s'",
-                                 info[i].database, rval->unique_name);
+                                 databases[i], rval->unique_name);
                     }
                 }
             }
+
+            MXS_FREE(databases[i]);
         }
+
+        MXS_FREE(databases);
     }
 
     /* Check if the query is a show tables query with a specific database */
-
     if (qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES))
     {
         char *query = modutil_get_SQL(buffer);

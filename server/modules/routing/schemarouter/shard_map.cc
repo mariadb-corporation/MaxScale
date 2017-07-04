@@ -13,6 +13,8 @@
 
 #include "shard_map.hh"
 
+#include <algorithm>
+
 #include <maxscale/alloc.h>
 
 Shard::Shard():
@@ -26,12 +28,14 @@ Shard::~Shard()
 
 bool Shard::add_location(std::string db, SERVER* target)
 {
+    std::transform(db.begin(), db.end(), db.begin(), ::tolower);
     return m_map.insert(std::make_pair(db, target)).second;
 }
 
 SERVER* Shard::get_location(std::string db)
 {
     SERVER* rval = NULL;
+    std::transform(db.begin(), db.end(), db.begin(), ::tolower);
     ServerMap::iterator iter = m_map.find(db);
 
     if (iter != m_map.end())
