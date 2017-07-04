@@ -694,7 +694,7 @@ TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
  * @param db Database where this query was executed
  * @return New CREATE_TABLE object or NULL if an error occurred
  */
-TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
+TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* event_db)
 {
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
@@ -704,7 +704,7 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
     char database[MYSQL_DATABASE_MAXLEN + 1];
     const char *db = event_db;
 
-    MXS_INFO("Create table: %s", sql);
+    MXS_INFO("Create table: %.*s", len, sql);
 
     if (!get_table_name(sql, table))
     {
