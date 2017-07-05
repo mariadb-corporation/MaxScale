@@ -357,6 +357,17 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
                               rses->rses_client_dcb->user,
                               rses->rses_client_dcb->remote);
                 }
+                else if (rses->router->preferred_server &&
+                         strcmp(target, rses->router->preferred_server->unique_name) == 0)
+                {
+                    /** In conflict situations, use the preferred server */
+                    MXS_INFO("Forcing location of '%s' from '%s' to ''%s",
+                             data, (char*)hashtable_fetch(rses->shardmap->hash,
+                                                          data), target);
+
+                    hashtable_delete(rses->shardmap->hash, data);
+                    hashtable_add(rses->shardmap->hash, data, target);
+                }
             }
             MXS_FREE(data);
         }
@@ -651,6 +662,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"refresh_databases", MXS_MODULE_PARAM_BOOL, "true"},
             {"refresh_interval", MXS_MODULE_PARAM_COUNT, DEFAULT_REFRESH_INTERVAL},
             {"debug", MXS_MODULE_PARAM_BOOL, "false"},
+            {"preferred_server", MXS_MODULE_PARAM_SERVER},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -719,6 +731,7 @@ static MXS_ROUTER* createInstance(SERVICE *service, char **options)
     router->schemarouter_config.max_sescmd_hist = config_get_integer(conf, "max_sescmd_history");
     router->schemarouter_config.disable_sescmd_hist = config_get_bool(conf, "disable_sescmd_history");
     router->schemarouter_config.debug = config_get_bool(conf, "debug");
+    router->preferred_server = config_get_server(conf, "preferred_server");
 
     if ((config_get_param(conf, "auth_all_servers")) == NULL)
     {

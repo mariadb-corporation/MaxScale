@@ -51,6 +51,17 @@ List of databases to ignore when checking for duplicate databases.
 
 Regular expression that is matched against database names when checking for duplicate databases.
 
+### `preferred_server`
+
+The name of a server in MaxScale which will be used as the preferred server when
+a database is found on more than one server. If a database exists on two
+servers, of which neither is the server referred by this parameter, the server
+that replies first will be assigned as the location of the database.
+
+This parameter allows deterministic conflict resolution when a sharded cluster
+has a central database server and one or more sharded databases spread across
+multiple servers which replicate from the central database server.
+
 **Note:** As of version 2.1 of MaxScale, all of the router options can also be
 defined as parameters. The values defined in _router_options_ will have priority
 over the parameters.

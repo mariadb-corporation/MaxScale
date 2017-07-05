@@ -365,14 +365,15 @@ typedef struct router_instance
     unsigned int            bitvalue;    /*< Required value of server->status   */
     ROUTER_STATS            stats;       /*< Statistics for this router         */
     struct router_instance* next;        /*< Next router on the list            */
-    bool            available_slaves; /*< The router has some slaves available */
+    bool                    available_slaves; /*< The router has some slaves available */
     HASHTABLE*              ignored_dbs; /*< List of databases to ignore when the
                                           * database mapping finds multiple servers
                                           * with the same database */
-    pcre2_code*                   ignore_regex; /*< Databases matching this regex will
+    pcre2_code*             ignore_regex; /*< Databases matching this regex will
                                            * not cause the session to be terminated
                                            * if they are found on more than one server. */
-    pcre2_match_data*             ignore_match_data;
+    pcre2_match_data*       ignore_match_data;
+    SERVER*                 preferred_server; /**< Server to prefer in conflict situations */
 
 } ROUTER_INSTANCE;
 
