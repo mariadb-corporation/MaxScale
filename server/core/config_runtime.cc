@@ -1377,7 +1377,7 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
     if (is_valid_resource_body(new_json) &&
         object_to_server_relations(service->name, old_json.get(), new_json))
     {
-        bool changed = false;
+        rval = true;
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
@@ -1395,7 +1395,6 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                 }
             }
 
-            rval = true;
             const char* key;
             json_t* value;
 
