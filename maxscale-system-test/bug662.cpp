@@ -49,7 +49,8 @@ int main(int argc, char *argv[])
         fflush(stdout);
     }
 
-    Test->set_timeout(100);
+    Test->set_timeout(200);
+    Test->tprintf("Restarting MaxScale");
     Test->restart_maxscale();
 
     Test->set_timeout(20);

@@ -187,7 +187,7 @@ add_test_executable(bug654.cpp bug654 replication LABELS maxscale REPL_BACKEND)
 add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
 
 # Block all backends
-add_test_executable(bug662.cpp bug662 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
+add_test_executable(bug662.cpp bug662 bug662 LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
 
 # Bad TEE filter configuration
 add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol)
