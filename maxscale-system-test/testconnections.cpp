@@ -967,8 +967,9 @@ bool TestConnections::replicate_from_master()
     mysql_close(conn);
 
     /** Clean up MaxScale directories */
+    ssh_maxscale(true, "service maxscale stop");
     prepare_binlog();
-    ssh_maxscale(true, "service maxscale restart");
+    ssh_maxscale(true, "service maxscale start");
 
     char log_file[256] = "";
     char log_pos[256] = "4";

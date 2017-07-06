@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
         {
             json_error_t err;
             json_t* json = json_loads(line.c_str(), 0, &err);
+            test.tprintf("%s", line.c_str());
             test.add_result(json == NULL, "Failed to parse JSON: %s", line.c_str());
             json_decref(json);
             nrows++;
