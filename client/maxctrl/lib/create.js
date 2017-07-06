@@ -159,6 +159,20 @@ exports.builder = function(yargs) {
 
             doRequest('services/' + argv.service + '/listeners', null, {method: 'POST', body: listener})
         })
+        .command('user <name> <password>', 'Create a new network user', {}, function(argv) {
+
+            var user = {
+                'data': {
+                    'id': argv.name,
+                    'type': 'inet',
+                    'attributes': {
+                        'password': argv.password
+                    }
+                }
+            }
+
+            doRequest('users/inet', null, {method: 'POST', body: user})
+        })
 
         .usage('Usage: create <command>')
         .help()

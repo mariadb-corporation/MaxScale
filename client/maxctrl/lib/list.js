@@ -65,6 +65,11 @@ exports.builder = function(yargs) {
                 {'Version': 'attributes.version'}
             ])
         })
+        .command('users', 'List created network users', {}, function() {
+            getCollection('users/inet',[
+                {'Name':'id'}
+            ])
+        })
         .usage('Usage: list <command>')
         .help()
         .command('*', 'the default command', {}, () => {

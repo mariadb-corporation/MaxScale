@@ -26,6 +26,9 @@ exports.builder = function(yargs) {
         .command('listener <service> <name>', 'Destroy an unused listener', {}, function(argv) {
             doRequest('services/' + argv.service + '/listeners/' + argv.name, null, {method: 'DELETE'})
         })
+        .command('user <name>', 'Remove a network user', {}, function(argv) {
+            doRequest('users/inet/' + argv.name, null, {method: 'DELETE'})
+        })
         .usage('Usage: destroy <command>')
         .help()
         .command('*', 'the default command', {}, () => {
