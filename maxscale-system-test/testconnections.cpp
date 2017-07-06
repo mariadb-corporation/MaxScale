@@ -966,6 +966,8 @@ bool TestConnections::replicate_from_master()
     }
     mysql_close(conn);
 
+    repl->execute_query_all_nodes("STOP SLAVE");
+
     /** Clean up MaxScale directories */
     ssh_maxscale(true, "service maxscale stop");
     prepare_binlog();
@@ -974,7 +976,6 @@ bool TestConnections::replicate_from_master()
     char log_file[256] = "";
     char log_pos[256] = "4";
 
-    repl->execute_query_all_nodes("STOP SLAVE");
     repl->connect();
     execute_query(repl->nodes[0], "RESET MASTER");
 
