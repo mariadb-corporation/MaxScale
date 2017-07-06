@@ -19,7 +19,7 @@ exports.builder = function(yargs) {
     yargs
         .command('server <server> <state>', 'Clear server state', {}, function(argv) {
             var target = 'servers/' + argv.server + '/clear?state=' + argv.state
-            doRequest(target, null, {method: 'POST'})
+            doRequest(target, null, {method: 'PUT'})
         })
         .usage('Usage: clear <command>')
         .help()

@@ -552,7 +552,7 @@ Status: 403 Forbidden
 ### Clear server state
 
 ```
-POST /v1/servers/:name/clear
+PUT /v1/servers/:name/clear
 ```
 
 The _:name_ in the URI must map to a server name with all whitespace replaced

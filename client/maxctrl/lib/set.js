@@ -19,7 +19,7 @@ exports.builder = function(yargs) {
     yargs
         .command('server <server> <state>', 'Set server state', {}, function(argv) {
             var target = 'servers/' + argv.server + '/set?state=' + argv.state
-            doRequest(target, null, {method: 'POST'})
+            doRequest(target, null, {method: 'PUT'})
         })
         .usage('Usage: set <command>')
         .help()
