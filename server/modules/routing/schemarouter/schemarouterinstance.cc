@@ -75,6 +75,7 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService, char** pzOptions)
     config.refresh_databases = config_get_bool(conf, "refresh_databases");
     config.refresh_min_interval = config_get_integer(conf, "refresh_interval");
     config.debug = config_get_bool(conf, "debug");
+    config.preferred_server = config_get_server(conf, "preferred_server");
 
     /** Add default system databases to ignore */
     config.ignored_dbs.insert("mysql");
@@ -401,6 +402,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"refresh_databases", MXS_MODULE_PARAM_BOOL, "true"},
             {"refresh_interval", MXS_MODULE_PARAM_COUNT, DEFAULT_REFRESH_INTERVAL},
             {"debug", MXS_MODULE_PARAM_BOOL, "false"},
+            {"preferred_server", MXS_MODULE_PARAM_SERVER},
             {MXS_END_MODULE_PARAMS}
         }
     };

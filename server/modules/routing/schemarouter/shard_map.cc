@@ -32,6 +32,12 @@ bool Shard::add_location(std::string db, SERVER* target)
     return m_map.insert(std::make_pair(db, target)).second;
 }
 
+void Shard::replace_location(std::string db, SERVER* target)
+{
+    std::transform(db.begin(), db.end(), db.begin(), ::tolower);
+    m_map[db] = target;
+}
+
 SERVER* Shard::get_location(std::string db)
 {
     SERVER* rval = NULL;

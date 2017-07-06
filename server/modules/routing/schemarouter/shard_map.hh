@@ -53,6 +53,14 @@ public:
     SERVER* get_location(std::string db);
 
     /**
+     * @brief Change the location of a database
+     *
+     * @param db     Database to relocate
+     * @param target Target where database is relocated to
+     */
+    void replace_location(std::string db, SERVER* target);
+
+    /**
      * @brief Check if shard contains stale information
      *
      * @param max_interval The maximum lifetime of the shard

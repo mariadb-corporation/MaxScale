@@ -46,13 +46,15 @@ struct Config
     pcre2_code*       ignore_regex;         /**< Regular expression used to ignore databases */
     pcre2_match_data* ignore_match_data;    /**< Match data for @c ignore_regex */
     std::set<std::string> ignored_dbs;      /**< Set of ignored databases */
+    SERVER*           preferred_server;     /**< Server to prefer in conflict situations */
 
     Config():
         refresh_min_interval(0.0),
         refresh_databases(false),
         debug(false),
         ignore_regex(NULL),
-        ignore_match_data(NULL)
+        ignore_match_data(NULL),
+        preferred_server(NULL)
     {
     }
 };

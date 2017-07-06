@@ -1322,6 +1322,14 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
                               data, target->unique_name, duplicate->unique_name,
                               m_client->user, m_client->remote);
                 }
+                else if (m_config->preferred_server == target)
+                {
+                    /** In conflict situations, use the preferred server */
+                    MXS_INFO("Forcing location of '%s' from '%s' to '%s'",
+                             data, m_shard.get_location(data)->unique_name,
+                             target->unique_name);
+                    m_shard.replace_location(data, target);
+                }
             }
             MXS_FREE(data);
         }
