@@ -60,6 +60,8 @@ program
     .command(require('./lib/destroy.js'))
     .command(require('./lib/link.js'))
     .command(require('./lib/unlink.js'))
+    .command(require('./lib/start.js'))
+    .command(require('./lib/stop.js'))
     .help()
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, () => {
