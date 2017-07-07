@@ -166,7 +166,17 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
         mysql_ssl_set(con, listener->ssl_key, listener->ssl_cert, listener->ssl_ca_cert, NULL, NULL);
     }
 
-    return mysql_real_connect(con, server->name, user, passwd, NULL, server->port, NULL, 0);
+    MYSQL* mysql = mysql_real_connect(con, server->name, user, passwd, NULL, server->port, NULL, 0);
+
+    if (mysql)
+    {
+        /** Copy the server charset */
+        MY_CHARSET_INFO cs_info;
+        mysql_get_character_set_info(mysql, &cs_info);
+        server->charset = cs_info.number;
+    }
+
+    return mysql;
 }
 
 bool mxs_mysql_trim_quotes(char *s)

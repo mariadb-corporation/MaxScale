@@ -517,11 +517,6 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         return my_errno != ER_ACCESS_DENIED_ERROR;
     }
 
-    /** Copy the server charset */
-    MY_CHARSET_INFO cs_info;
-    mysql_get_character_set_info(mysql, &cs_info);
-    server->charset = cs_info.number;
-
     if (server->server_string == NULL)
     {
         const char *server_string = mysql_get_server_info(mysql);
