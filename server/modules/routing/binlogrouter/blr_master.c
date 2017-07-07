@@ -1974,7 +1974,7 @@ bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first
         }
 
         slave->stats.n_bytes += GWBUF_LENGTH(buffer);
-        slave->dcb->func.write(slave->dcb, buffer);
+        MXS_SESSION_ROUTE_REPLY(slave->dcb->session, buffer);
     }
     else
     {
