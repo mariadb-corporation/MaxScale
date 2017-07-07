@@ -67,13 +67,11 @@ public:
         typedef std::tr1::shared_ptr<Account> SAccount;
 
         /**
-         * Constructor
+         * Constructor of base Rule class
          *
          * @param column      The column value from the json file.
          * @param table       The table value from the json file.
          * @param database    The database value from the json file.
-         * @param value       The value value from the json file.
-         * @param fill        The file value from the json file.
          * @param applies_to  Account instances corresponding to the
          *                    accounts listed in 'applies_to' in the json file.
          * @param exempted    Account instances corresponding to the
@@ -82,8 +80,6 @@ public:
         Rule(const std::string& column,
              const std::string& table,
              const std::string& database,
-             const std::string& value,
-             const std::string& fill,
              const std::vector<SAccount>& applies_to,
              const std::vector<SAccount>& exempted);
         ~Rule();
@@ -102,14 +98,6 @@ public:
         {
             return m_database;
         }
-        const std::string& value() const
-        {
-            return m_value;
-        }
-        const std::string& fill() const
-        {
-            return m_fill;
-        }
         const std::vector<SAccount>& applies_to() const
         {
             return m_applies_to;
@@ -118,16 +106,6 @@ public:
         {
             return m_exempted;
         }
-
-        /**
-         * Create a Rule instance
-         *
-         * @param pRule  A json object corresponding to a single
-         *               rule in the rules json file.
-         *
-         * @return A Rule instance or NULL.
-         */
-        static std::auto_ptr<Rule> create_from(json_t* pRule);
 
         /**
          * Establish whether a rule matches a column definition and user/host.
@@ -142,7 +120,12 @@ public:
                      const char* zUser,
                      const char* zHost) const;
 
-        void rewrite(LEncString& s) const;
+        /**
+         * Mask the column content with value or fill.
+         *
+         * @param s    The current value to be rewritten.
+         */
+        virtual void rewrite(LEncString& s) const = 0;
 
     private:
         Rule(const Rule&);
@@ -152,10 +135,68 @@ public:
         std::string           m_column;
         std::string           m_table;
         std::string           m_database;
-        std::string           m_value;
-        std::string           m_fill;
         std::vector<SAccount> m_applies_to;
         std::vector<SAccount> m_exempted;
+    };
+
+    class ReplaceRule : public Rule
+    {
+    public:
+        /**
+         * Constructor of ReplaceRule
+         *
+         * @param column      The column value from the json file.
+         * @param table       The table value from the json file.
+         * @param database    The database value from the json file.
+         * @param applies_to  Account instances corresponding to the
+         *                    accounts listed in 'applies_to' in the json file.
+         * @param exempted    Account instances corresponding to the
+         *                    accounts listed in 'exempted' in the json file.
+         * @param value       The replace value from the json file.
+         * @param fill        The fill value from the json file.
+         */
+        ReplaceRule(const std::string& column,
+                    const std::string& table,
+                    const std::string& database,
+                    const std::vector<SAccount>& applies_to,
+                    const std::vector<SAccount>& exempted,
+                    const std::string& value,
+                    const std::string& fill);
+
+        ~ReplaceRule();
+
+        const std::string& value() const
+        {
+            return m_value;
+        }
+        const std::string& fill() const
+        {
+            return m_fill;
+        }
+
+        /**
+         * Create a ReplaceRule instance
+         *
+         * @param pRule  A json object corresponding to a single
+         *               rule in the rules json file.
+         *
+         * @return A Rule instance or NULL.
+         */
+        static std::auto_ptr<Rule> create_from(json_t* pRule);
+
+        /**
+         * Rewrite the column value based on rules
+         *
+         * @param s     The column value to rewrite.
+         */
+        void rewrite(LEncString& s) const;
+
+    private:
+        std::string           m_value;
+        std::string           m_fill;
+    private:
+        ReplaceRule(const ReplaceRule&);
+        ReplaceRule& operator = (const ReplaceRule&);
     };
 
     ~MaskingRules();
