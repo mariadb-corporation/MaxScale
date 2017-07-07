@@ -45,6 +45,7 @@ MXS_BEGIN_DECLS
 #define MXS_JSON_PTR_PARAMETERS "/data/attributes/parameters"
 
 /** Pointers to relation lists */
+#define MXS_JSON_PTR_RELATIONSHIPS          "/data/relationships"
 #define MXS_JSON_PTR_RELATIONSHIPS_SERVERS  "/data/relationships/servers/data"
 #define MXS_JSON_PTR_RELATIONSHIPS_SERVICES "/data/relationships/services/data"
 #define MXS_JSON_PTR_RELATIONSHIPS_MONITORS "/data/relationships/monitors/data"
