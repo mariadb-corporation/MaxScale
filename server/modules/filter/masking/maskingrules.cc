@@ -42,6 +42,7 @@ static const char KEY_RULES[]      = "rules";
 static const char KEY_TABLE[]      = "table";
 static const char KEY_VALUE[]      = "value";
 static const char KEY_WITH[]       = "with";
+static const char KEY_OBFUSCATE[]  = "obfuscate";
 
 /**
  * @class AccountVerbatim
@@ -478,7 +479,18 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
 
         if (json_is_object(pRule))
         {
-            auto_ptr<MaskingRules::Rule> sRule = MaskingRules::ReplaceRule::create_from(pRule);
+            auto_ptr<MaskingRules::Rule> sRule;
+            json_t* pObfuscate = json_object_get(pRule, KEY_OBFUSCATE);
+            json_t* pReplace = json_object_get(pRule, KEY_REPLACE);
+
+            if (pObfuscate)
+            {
+                sRule = MaskingRules::ObfuscateRule::create_from(pRule);
+            }
+            else
+            {
+                sRule = MaskingRules::ReplaceRule::create_from(pRule);
+            }
 
             if (sRule.get())
             {
@@ -573,12 +585,57 @@ MaskingRules::ReplaceRule::ReplaceRule(const std::string& column,
 {
 }
 
+MaskingRules::ObfuscateRule::ObfuscateRule(const std::string& column,
+                                           const std::string& table,
+                                           const std::string& database,
+                                           const std::vector<SAccount>& applies_to,
+                                           const std::vector<SAccount>& exempted)
+    : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
+{
+}
+
 MaskingRules::Rule::~Rule()
 {
 }
 
 MaskingRules::ReplaceRule::~ReplaceRule()
 {
+}
+
+MaskingRules::ObfuscateRule::~ObfuscateRule()
+{
+}
+
+/** Check the Json array for user rules
+ *
+ * @param pApplies_to    The array of users the rule is applied to
+ * @param pExempted      The array of users the rule is NOT applied to
+ *
+ * @return               False on errors, True otherwise
+ */
+static bool validate_user_rules(json_t* pApplies_to, json_t* pExempted)
+{
+    const char *err = NULL;
+    // Check for pApplies_to and pExempted
+    if (pApplies_to && !json_is_array(pApplies_to))
+    {
+        err = KEY_APPLIES_TO;
+    }
+
+    if (pExempted && !json_is_array(pExempted))
+    {
+        err = KEY_EXEMPTED;
+    }
+
+    if (err)
+    {
+        MXS_ERROR("A masking rule contains a '%s' key, "
+                  "but the value is not an array.",
+                  err);
+        return false;
+    }
+
+    return true;
 }
 
 //static
@@ -633,6 +690,81 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
     else
     {
         MXS_ERROR("A masking rule does not contain a '%s' and/or a '%s' key.", KEY_REPLACE, KEY_WITH);
+    }
+
+    return sRule;
+}
+
+//static
+auto_ptr<MaskingRules::Rule> MaskingRules::ObfuscateRule::create_from(json_t* pRule)
+{
+    ss_dassert(json_is_object(pRule));
+
+    auto_ptr<MaskingRules::Rule> sRule;
+
+    // Get obfuscate
+    json_t* pObfuscate = json_object_get(pRule, KEY_OBFUSCATE);
+    // Get applies_to
+    json_t* pApplies_to = json_object_get(pRule, KEY_APPLIES_TO);
+    // Get applies_to
+    json_t* pExempted = json_object_get(pRule, KEY_EXEMPTED);
+
+    // Check the pObfuscate object
+    if (pObfuscate && !json_is_object(pObfuscate))
+    {
+        MXS_ERROR("A masking rule contains a '%s' key, "
+                  "but the value is not an object.",
+                  KEY_OBFUSCATE);
+        return sRule;
+    }
+
+    // Check for pApplies_to and pExempted
+    if (!validate_user_rules(pApplies_to, pExempted))
+    {
+        return sRule;
+    }
+
+    vector<shared_ptr<MaskingRules::Rule::Account> > applies_to;
+    vector<shared_ptr<MaskingRules::Rule::Account> > exempted;
+
+    // Set the account rules
+    if (pApplies_to && pExempted &&
+        (!get_accounts(KEY_APPLIES_TO, pApplies_to, applies_to) ||
+        (!get_accounts(KEY_EXEMPTED, pExempted, exempted))))
+    {
+        return sRule;
+    }
+
+    // Get database, table and column from obfuscate object
+    json_t* pDatabase = json_object_get(pObfuscate, KEY_DATABASE);
+    json_t* pTable = json_object_get(pObfuscate, KEY_TABLE);
+    json_t* pColumn = json_object_get(pObfuscate, KEY_COLUMN);
+
+    // A column is mandatory; both table and database are optional.
+    if ((pColumn && json_is_string(pColumn)) &&
+        (!pTable || json_is_string(pTable)) &&
+        (!pDatabase || json_is_string(pDatabase)))
+    {
+        // Instantiate the ObfuscateRule class
+        string column(json_string_value(pColumn));
+        string table(pTable ? json_string_value(pTable) : "");
+        string database(pDatabase ? json_string_value(pDatabase) : "");
+
+        sRule = auto_ptr<MaskingRules::Rule>(new MaskingRules::ObfuscateRule(column,
+                                                                             table,
+                                                                             database,
+                                                                             applies_to,
+                                                                             exempted));
+    }
+    else
+    {
+        MXS_ERROR("The '%s' object of a masking rule does not have a '%s' key, or "
+                  "the values of that key and/or possible '%s' and '%s' keys are "
+                  "not strings.",
+                  KEY_OBFUSCATE,
+                  KEY_COLUMN,
+                  KEY_TABLE,
+                  KEY_DATABASE);
     }
 
     return sRule;
@@ -715,6 +847,41 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
     }
 
     return match;
+}
+
+/**
+ * Basic obfuscation routine
+ *
+ * @param c    The bye to obfuscate
+ *
+ * @return     The obfuscated byte
+ */
+static inline char maxscale_basic_obfuscation(const char c)
+{
+    if (c >= 'a' && c <= 'z')
+    {
+        return (c - 'a' + 13) % 26 + 'a';
+    }
+    else if (c >= 'A' && c <= 'Z')
+    {
+        return (c - 'A' + 13) % 26 + 'A';
+    }
+    else
+    {
+        char d = c + 32;
+        d = d > 127 ? 127 : d;
+        return d;
+    }
+    return c;
+}
+
+void MaskingRules::ObfuscateRule::rewrite(LEncString& s) const
+{
+    // Basic Obfuscation routine
+    std::transform(s.begin(),
+                   s.end(),
+                   s.begin(),
+                   maxscale_basic_obfuscation);
 }
 
 void MaskingRules::ReplaceRule::rewrite(LEncString& s) const

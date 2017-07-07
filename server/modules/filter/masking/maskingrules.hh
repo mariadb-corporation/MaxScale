@@ -199,6 +199,50 @@ public:
         ReplaceRule& operator = (const ReplaceRule&);
     };
 
+    class ObfuscateRule : public Rule
+    {
+    public:
+        /**
+         * Constructor of ObfuscateRule
+         *
+         * @param column      The column value from the json file.
+         * @param table       The table value from the json file.
+         * @param database    The database value from the json file.
+         * @param applies_to  Account instances corresponding to the
+         *                    accounts listed in 'applies_to' in the json file.
+         * @param exempted    Account instances corresponding to the
+         *                    accounts listed in 'exempted' in the json file.
+         */
+        ObfuscateRule(const std::string& column,
+                      const std::string& table,
+                      const std::string& database,
+                      const std::vector<SAccount>& applies_to,
+                      const std::vector<SAccount>& exempted);
+
+        ~ObfuscateRule();
+
+        /**
+         * Create a ObfuscateRule instance
+         *
+         * @param pRule  A json object corresponding to a single
+         *               rule in the rules json file.
+         *
+         * @return A Rule instance or NULL.
+         */
+        static std::auto_ptr<Rule> create_from(json_t* pRule);
+
+        /**
+         * Obfuscate the column value based on rules
+         *
+         * @param s     The column value to obfuscate.
+         */
+        void rewrite(LEncString& s) const;
+
+    private:
+        ObfuscateRule(const ObfuscateRule&);
+        ObfuscateRule& operator = (const ObfuscateRule&);
+    };
+
     ~MaskingRules();
 
     /**
