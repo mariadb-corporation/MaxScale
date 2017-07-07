@@ -653,33 +653,30 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
     if (pReplace && pWith)
     {
         bool ok = true;
+        const char *err = NULL;
 
+        // Check replace
         if (!json_is_object(pReplace))
         {
-            MXS_ERROR("A masking rule contains a '%s' key, but the value is not an object.",
-                      KEY_REPLACE);
-            ok = false;
+            err = KEY_REPLACE;
         }
-
+        // Check with
         if (!json_is_object(pWith))
         {
-            MXS_ERROR("A masking rule contains a '%s' key, but the value is not an object.",
-                      KEY_WITH);
-            ok = false;
+            err = KEY_WITH;
+        }
+        if (err)
+        {
+            MXS_ERROR("A masking rule contains a '%s' key, "
+                      "but the value is not an object.",
+                      err);
+            return sRule;
         }
 
-        if (pApplies_to && !json_is_array(pApplies_to))
+        // Check for pApplies_to and pExempted
+        if (!validate_user_rules(pApplies_to, pExempted))
         {
-            MXS_ERROR("A masking rule contains a '%s' key, but the value is not an array.",
-                      KEY_APPLIES_TO);
-            ok = false;
-        }
-
-        if (pExempted && !json_is_array(pExempted))
-        {
-            MXS_ERROR("A masking rule contains a '%s' key, but the value is not an array.",
-                      KEY_EXEMPTED);
-            ok = false;
+            return sRule;
         }
 
         if (ok)
