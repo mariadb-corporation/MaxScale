@@ -319,143 +319,6 @@ bool get_accounts(const char* zName,
 }
 
 /**
- * Create a MaskingRules::Rule instance
- *
- * @param pColumn      A JSON string containing a column name.
- * @param pTable       A JSON string containing a table name, or NULL.
- * @param pDatabase    A JSON string containing a table name, or NULL.
- * @param pValue       A JSON string representing the 'value' of a 'with' object from the rules file.
- * @param pFill        A JSON string representing the 'fill' of a 'with' object from the rules file.
- * @param pApplies_to  A JSON array representing the 'applies_to' account names.
- * @param pExempted    A JSON array representing the 'exempted' account names.
- *
- * @return A Rule instance or NULL in case of error.
- */
-auto_ptr<MaskingRules::ReplaceRule> create_rule_from_elements(json_t* pColumn,
-                                                              json_t* pTable,
-                                                              json_t* pDatabase,
-                                                              json_t* pValue,
-                                                              json_t* pFill,
-                                                              json_t* pApplies_to,
-                                                              json_t* pExempted)
-{
-    ss_dassert(pColumn && json_is_string(pColumn));
-    ss_dassert(!pTable || json_is_string(pTable));
-    ss_dassert(!pDatabase || json_is_string(pDatabase));
-    ss_dassert(pValue || pFill);
-    ss_dassert(!pValue || json_is_string(pValue));
-    ss_dassert(!pFill || json_is_string(pFill));
-    ss_dassert(!pApplies_to || json_is_array(pApplies_to));
-    ss_dassert(!pExempted || json_is_array(pExempted));
-
-    auto_ptr<MaskingRules::ReplaceRule> sRule;
-
-    string column(json_string_value(pColumn));
-    string table(pTable ? json_string_value(pTable) : "");
-    string database(pDatabase ? json_string_value(pDatabase) : "");
-    string value(pValue ? json_string_value(pValue) : "");
-    string fill(pFill ? json_string_value(pFill) : "");
-
-    bool ok = true;
-    vector<shared_ptr<MaskingRules::Rule::Account> > applies_to;
-    vector<shared_ptr<MaskingRules::Rule::Account> > exempted;
-
-    if (ok && pApplies_to)
-    {
-        ok = get_accounts(KEY_APPLIES_TO, pApplies_to, applies_to);
-    }
-
-    if (ok && pExempted)
-    {
-        ok = get_accounts(KEY_EXEMPTED, pExempted, exempted);
-    }
-
-    if (ok)
-    {
-        sRule = auto_ptr<MaskingRules::ReplaceRule>(new MaskingRules::ReplaceRule(column, table, database,
-                                                                                  applies_to, exempted,
-                                                                                  value, fill));
-    }
-
-    return sRule;
-}
-
-/**
- * Create a MaskingRules::Rule instance
- *
- * @param pReplace     A JSON object representing 'replace' of a rule from the rules file.
- * @param pWith        A JSON object representing 'with' of a rule from the rules file.
- * @param pApplies_to  A JSON object representing 'applies_to' of a rule from the rules file.
- * @param pExempted    A JSON object representing 'exempted' of a rule from the rules file.
- *
- * @return A Rule instance or NULL in case of error.
- */
-auto_ptr<MaskingRules::ReplaceRule> create_rule_from_elements(json_t* pReplace,
-                                                              json_t* pWith,
-                                                              json_t* pApplies_to,
-                                                              json_t* pExempted)
-{
-    ss_dassert(pReplace && json_is_object(pReplace));
-    ss_dassert(pWith && json_is_object(pWith));
-    ss_dassert(!pApplies_to || json_is_array(pApplies_to));
-    ss_dassert(!pExempted || json_is_array(pExempted));
-
-    auto_ptr<MaskingRules::ReplaceRule> sRule;
-
-    json_t* pDatabase = json_object_get(pReplace, KEY_DATABASE);
-    json_t* pTable = json_object_get(pReplace, KEY_TABLE);
-    json_t* pColumn = json_object_get(pReplace, KEY_COLUMN);
-
-    // A column is mandatory; both table and database are optional.
-    if ((pColumn && json_is_string(pColumn)) &&
-        (!pTable || json_is_string(pTable)) &&
-        (!pDatabase || json_is_string(pDatabase)))
-    {
-        json_t* pValue = json_object_get(pWith, KEY_VALUE);
-        json_t* pFill = json_object_get(pWith, KEY_FILL);
-
-        if (!pFill)
-        {
-            // Allowed. Use default value for fill and add it to pWith.
-            pFill = json_string("X");
-            if (pFill)
-            {
-                json_object_set_new(pWith, KEY_FILL, pFill);
-            }
-            else
-            {
-                MXS_ERROR("json_string() error, cannot produce a valid rule.");
-            }
-        }
-        if (pFill)
-        {
-            if ((!pValue || (json_is_string(pValue) && json_string_length(pValue))) &&
-                (json_is_string(pFill) && json_string_length(pFill)))
-            {
-                sRule = create_rule_from_elements(pColumn, pTable, pDatabase,
-                                                  pValue, pFill,
-                                                  pApplies_to, pExempted);
-            }
-            else
-            {
-                MXS_ERROR("One of the keys '%s' or '%s' of masking rule object '%s' "
-                          "has a non-string value or the string is empty.",
-                          KEY_VALUE, KEY_FILL, KEY_WITH);
-            }
-        }
-    }
-    else
-    {
-        MXS_ERROR("The '%s' object of a masking rule does not have a '%s' key, or "
-                  "the values of that key and/or possible '%s' and '%s' keys are "
-                  "not strings.",
-                  KEY_REPLACE, KEY_COLUMN, KEY_TABLE, KEY_DATABASE);
-    }
-
-    return sRule;
-}
-
-/**
  * Create all MaskingRules::Rule instances
  *
  * @param pRules  A JSON array representing 'rules' from the rules file.
@@ -650,17 +513,15 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
     json_t* pApplies_to = json_object_get(pRule, KEY_APPLIES_TO);
     json_t* pExempted = json_object_get(pRule, KEY_EXEMPTED);
 
+    // Check replace && with
     if (pReplace && pWith)
     {
-        bool ok = true;
         const char *err = NULL;
 
-        // Check replace
         if (!json_is_object(pReplace))
         {
             err = KEY_REPLACE;
         }
-        // Check with
         if (!json_is_object(pWith))
         {
             err = KEY_WITH;
@@ -672,21 +533,94 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
                       err);
             return sRule;
         }
+    }
+    else
+    {
+        MXS_ERROR("A masking rule does not contain a '%s' and/or a '%s' key.",
+                  KEY_REPLACE,
+                  KEY_WITH);
+        return sRule;
+    }
 
-        // Check for pApplies_to and pExempted
-        if (!validate_user_rules(pApplies_to, pExempted))
+    // Check for pApplies_to and pExempted
+    if (!validate_user_rules(pApplies_to, pExempted))
+    {
+        return sRule;
+    }
+
+    vector<shared_ptr<MaskingRules::Rule::Account> > applies_to;
+    vector<shared_ptr<MaskingRules::Rule::Account> > exempted;
+
+    // Set the account rules
+    if (pApplies_to && pExempted &&
+        (!get_accounts(KEY_APPLIES_TO, pApplies_to, applies_to) ||
+        (!get_accounts(KEY_EXEMPTED, pExempted, exempted))))
+    {
+        return sRule;
+    }
+
+    // Get database, table && column
+    json_t* pDatabase = json_object_get(pReplace, KEY_DATABASE);
+    json_t* pTable = json_object_get(pReplace, KEY_TABLE);
+    json_t* pColumn = json_object_get(pReplace, KEY_COLUMN);
+
+    // A column is mandatory; both table and database are optional.
+    if ((pColumn && json_is_string(pColumn)) &&
+        (!pTable || json_is_string(pTable)) &&
+        (!pDatabase || json_is_string(pDatabase)))
+    {
+        json_t* pValue = json_object_get(pWith, KEY_VALUE);
+        json_t* pFill = json_object_get(pWith, KEY_FILL);
+
+        if (!pFill)
         {
-            return sRule;
+            // Allowed. Use default value for fill and add it to pWith.
+            pFill = json_string("X");
+            if (pFill)
+            {
+                json_object_set_new(pWith, KEY_FILL, pFill);
+            }
+            else
+            {
+                MXS_ERROR("json_string() error, cannot produce a valid rule.");
+            }
         }
-
-        if (ok)
+        if (pFill)
         {
-            sRule = create_rule_from_elements(pReplace, pWith, pApplies_to, pExempted);
+            if ((!pValue || (json_is_string(pValue) && json_string_length(pValue))) &&
+                (json_is_string(pFill) && json_string_length(pFill)))
+            {
+                string column(json_string_value(pColumn));
+                string table(pTable ? json_string_value(pTable) : "");
+                string database(pDatabase ? json_string_value(pDatabase) : "");
+                string value(pValue ? json_string_value(pValue) : "");
+                string fill(pFill ? json_string_value(pFill) : "");
+
+                sRule = auto_ptr<MaskingRules::ReplaceRule>(new MaskingRules::ReplaceRule(column,
+                                                                                          table,
+                                                                                          database,
+                                                                                          applies_to,
+                                                                                          exempted,
+                                                                                          value,
+                                                                                          fill));
+            }
+            else
+            {
+                MXS_ERROR("One of the keys '%s' or '%s' of masking rule object '%s' "
+                          "has a non-string value or the string is empty.",
+                          KEY_VALUE, KEY_FILL, KEY_WITH);
+            }
         }
     }
     else
     {
-        MXS_ERROR("A masking rule does not contain a '%s' and/or a '%s' key.", KEY_REPLACE, KEY_WITH);
+        MXS_ERROR("The '%s' object of a masking rule does not have a '%s' key, or "
+                  "the values of that key and/or possible '%s' and '%s' keys are "
+                  "not strings.",
+                  KEY_REPLACE,
+                  KEY_COLUMN,
+                  KEY_TABLE,
+                  KEY_DATABASE);
     }
 
     return sRule;
