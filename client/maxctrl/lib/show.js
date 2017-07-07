@@ -84,6 +84,14 @@ exports.builder = function(yargs) {
                 {'Commands': 'attributes.commands'}
             ])
         })
+        .command('maxscale', 'Show MaxScale information', {}, function(argv) {
+            getResource('maxscale', [
+                {'Version': 'attributes.version'},
+                {'Commit': 'attributes.commit'},
+                {'Started At': 'attributes.started_at'},
+                {'Uptime': 'attributes.uptime'}
+            ])
+        })
         .usage('Usage: show <command>')
         .help()
         .command('*', 'the default command', {}, () => {
