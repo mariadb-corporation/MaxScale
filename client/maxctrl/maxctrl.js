@@ -62,6 +62,7 @@ program
     .command(require('./lib/unlink.js'))
     .command(require('./lib/start.js'))
     .command(require('./lib/stop.js'))
+    .command(require('./lib/alter.js'))
     .help()
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, () => {

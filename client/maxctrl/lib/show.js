@@ -29,7 +29,8 @@ exports.builder = function(yargs) {
                 {'Master ID': 'attributes.master_id'},
                 {'Node ID': 'attributes.node_id'},
                 {'Slave Server IDs': 'attributes.slaves'},
-                {'Statistics': 'attributes.statistics'}
+                {'Statistics': 'attributes.statistics'},
+                {'Parameters': 'attributes.parameters'}
             ])
         })
         .command('service <service>', 'Show service', {}, function(argv) {
