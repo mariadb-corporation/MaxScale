@@ -131,6 +131,7 @@ functionlist:
 functionvalue:
     FWTOK_CMP {if (!define_function_rule(scanner, $1)){YYERROR;}}
     | FWTOK_STR {if (!define_function_rule(scanner, $1)){YYERROR;}}
+    | FWTOK_BTSTR  {if (!define_function_rule(scanner, $1)){YYERROR;}}
     ;
 
 optional:
