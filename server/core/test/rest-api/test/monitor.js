@@ -133,3 +133,30 @@ describe("Monitor Actions", function() {
 
     after(stopMaxScale)
 })
+
+
+describe("Monitor Regressions", function() {
+    before(startMaxScale)
+
+    it("alter monitor should not remove servers", function() {
+        var b = {
+            data: {
+                attributes: {
+                    parameters: {
+                        user: "test"
+                    }
+                }
+            }
+        }
+        return request.patch(base_url + "/monitors/MySQL-Monitor", {json: b})
+            .then(function() {
+                return request.get(base_url + "/monitors/MySQL-Monitor")
+            })
+            .then(function(resp) {
+                var mon = JSON.parse(resp)
+                mon.data.relationships.servers.data.should.not.be.empty
+            })
+    });
+
+    after(stopMaxScale)
+})
