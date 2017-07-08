@@ -65,7 +65,6 @@ target_link_libraries(maxscale-common
   ${MARIADB_CONNECTOR_LIBRARIES}
   ${LZMA_LINK_FLAGS}
   ${PCRE2_LIBRARIES}
-  ${CURL_LIBRARIES}
   ${JANSSON_LIBRARIES}
   ssl
   pthread

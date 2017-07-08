@@ -596,8 +596,6 @@ int service_launch_all()
     int n = 0, i;
     bool error = false;
 
-    config_enable_feedback_task();
-
     ptr = allServices;
     while (ptr && !ptr->svc_do_shutdown)
     {

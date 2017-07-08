@@ -14,8 +14,8 @@ then
 
   sudo apt-get install -y --force-yes dpkg-dev git wget \
        build-essential libssl-dev ncurses-dev bison flex \
-       perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
-       uuid-dev libsqlite3-dev 
+       perl libtool libpcre3-dev tcl tcl-dev uuid \
+       uuid-dev libsqlite3-dev
   ## separatelibgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep "Trusty"
   if [ $? == 0 ]
@@ -41,7 +41,7 @@ else
   then
     # We need zypper here
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
-         make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
+         make libtool libopenssl-devel libaio libaio-devel flex \
          pcre-devel git wget tcl libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
          gnutls-devel libgcrypt-devel
@@ -57,7 +57,7 @@ else
     sudo yum clean all
     sudo yum install -y --nogpgcheck gcc gcc-c++ ncurses-devel bison glibc-devel \
          libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
-         libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign wget \
+         libedit-devel systemtap-sdt-devel rpm-sign wget \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel

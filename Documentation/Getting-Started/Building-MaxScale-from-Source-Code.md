@@ -6,7 +6,6 @@ requirements are as follows:
 * CMake version 2.8 or later (Packaging requires version 2.8.12 or later)
 * GCC version 4.4.7 or later
 * SQLite3 version 3.3 or later
-* libcurl
 * OpenSSL
 * Bison 2.7 or later
 * Flex 2.5.35 or later
@@ -23,7 +22,7 @@ CentOS 7:
 
 ```
 sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake \
-     libgcc perl make libtool openssl openssl-devel libcurl-devel pcre-devel \
+     libgcc perl make libtool openssl openssl-devel pcre-devel \
      tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel \
      gnutls-devel libgcrypt-devel
 ```
@@ -33,7 +32,7 @@ Ubuntu 16.04:
 ```
 sudo apt-get update
 sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
-     cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
+     cmake perl libtool libpcre3-dev tcl tcl-dev uuid \
      uuid-dev libsqlite3-dev gnutls-dev libgcrypt20-dev
 ```
 
@@ -58,7 +57,7 @@ other packages in addition to these.
 
 ```
 git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl make \
-libtool openssl openssl-devel libcurl-devel pcre-devel tcl tcl-devel \
+libtool openssl openssl-devel pcre-devel tcl tcl-devel \
 systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel
 gnutls-devel libgcrypt-devel
 ```
@@ -70,7 +69,7 @@ require other packages in addition to these.
 
 ```
 git build-essential libssl-dev ncurses-dev bison flex cmake perl libtool \
-libcurl4-openssl-dev libpcre3-dev tlc tcl-dev uuid uuid-dev sqlite3-dev
+ libpcre3-dev tlc tcl-dev uuid uuid-dev sqlite3-dev
 libgnutls30 libgcrypt20
 ```
 

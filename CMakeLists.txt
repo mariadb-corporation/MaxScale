@@ -38,7 +38,6 @@ find_package(Pandoc)
 find_package(TCMalloc)
 find_package(Jemalloc)
 find_package(Git)
-find_package(CURL)
 find_package(RabbitMQ)
 find_package(LibUUID)
 find_package(Avro)
@@ -65,13 +64,6 @@ include(cmake/BuildJansson.cmake)
 include(cmake/BuildMicroHttpd.cmake)
 
 include_directories(${JANSSON_INCLUDE_DIR})
-
-# You can find the variables set by this in the FindCURL.cmake file
-# which is a default module in CMake.
-
-if(NOT CURL_FOUND)
-  message(FATAL_ERROR "Failed to locate dependency: libcurl")
-endif()
 
 if(NOT OPENSSL_FOUND)
   message(FATAL_ERROR "Failed to locate dependency: OpenSSL")

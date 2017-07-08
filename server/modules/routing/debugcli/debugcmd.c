@@ -24,27 +24,6 @@
  *
  * There are two "built in" commands, the help command and the quit
  * command.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 20/06/13     Mark Riddoch            Initial implementation
- * 17/07/13     Mark Riddoch            Additional commands
- * 09/08/13     Massimiliano Pinto      Added enable/disable commands (now only for log)
- * 20/05/14     Mark Riddoch            Added ability to give server and service names rather
- *                                      than simply addresses
- * 23/05/14     Mark Riddoch            Added support for developer and user modes
- * 29/05/14     Mark Riddoch            Add Filter support
- * 16/10/14     Mark Riddoch            Add show eventq
- * 05/03/15     Massimiliano Pinto      Added enable/disable feedback
- * 27/05/15     Martin Brampton         Add show persistent [server]
- * 06/11/15     Martin Brampton         Add show buffers (conditional compilation)
- * 23/05/16     Massimiliano Pinto      'add user' and 'remove user'
- *                                      no longer accept password parameter
- * 27/06/16     Martin Brampton         Modify to work with list manager sessions
- *
- * @endverbatim
  */
 #include <maxscale/cdefs.h>
 
@@ -168,12 +147,6 @@ struct subcommand showoptions[] =
         "eventstats", 0, 0, dShowEventStats,
         "Show event queue statistics",
         "Usage: show eventstats",
-        {0}
-    },
-    {
-        "feedbackreport", 0, 0, moduleShowFeedbackReport,
-        "Show the report of MaxScale loaded modules, suitable for Notification Service",
-        "Usage: show feedbackreport",
         {0}
     },
     {
@@ -723,8 +696,6 @@ static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2);
 static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2);
 static void enable_service_root(DCB *dcb, SERVICE *service);
 static void disable_service_root(DCB *dcb, SERVICE *service);
-static void enable_feedback_action();
-static void disable_feedback_action();
 static void enable_syslog();
 static void disable_syslog();
 static void enable_maxlog();
@@ -770,14 +741,6 @@ struct subcommand enableoptions[] =
         "\n"
         "Example: enable root my-service",
         {ARG_TYPE_SERVICE}
-    },
-    {
-        "feedback",
-        0, 0,
-        enable_feedback_action,
-        "Enable MaxScale feedback to notification service",
-        "Usage: enable feedback",
-        {0}
     },
     {
         "syslog",
@@ -853,14 +816,6 @@ struct subcommand disableoptions[] =
         "\n"
         "Example: disable root my-service",
         {ARG_TYPE_SERVICE}
-    },
-    {
-        "feedback",
-        0, 0,
-        disable_feedback_action,
-        "Disable MaxScale feedback to notification service",
-        "Usage: disable feedback",
-        {0}
     },
     {
         "syslog",
@@ -2548,29 +2503,6 @@ set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_ms)
                    "where the X denotes how many times particular message may be logged "
                    "during a period of Y milliseconds before it is suppressed for Z milliseconds.");
     }
-}
-
-/**
- * Re-enable sendig MaxScale module list via http
- * Proper [feedback] section in MaxSclale.cnf
- * is required.
- */
-static void
-enable_feedback_action(void)
-{
-    config_enable_feedback_task();
-    return;
-}
-
-/**
- * Disable sendig MaxScale module list via http
- */
-
-static void
-disable_feedback_action(void)
-{
-    config_disable_feedback_task();
-    return;
 }
 
 /**

@@ -96,7 +96,6 @@ extern const char CN_DATA[];
 extern const char CN_DEFAULT[];
 extern const char CN_DESCRIPTION[];
 extern const char CN_ENABLE_ROOT_USER[];
-extern const char CN_FEEDBACK[];
 extern const char CN_FILTERS[];
 extern const char CN_FILTER[];
 extern const char CN_GATEWAY[];
@@ -459,16 +458,6 @@ unsigned int config_nbpolls(void);
  * @return The time each thread waits for a blocking poll
  */
 unsigned int config_pollsleep(void);
-
-/**
- * @brief Enable feedback task
- */
-void config_enable_feedback_task(void);
-
-/**
- * @brief Disable feedback task
- */
-void config_disable_feedback_task(void);
 
 /**
  * @brief Reload the configuration

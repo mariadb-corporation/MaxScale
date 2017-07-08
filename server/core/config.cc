@@ -35,7 +35,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/limits.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/notification.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
@@ -78,7 +77,6 @@ const char CN_DATA[]                          = "data";
 const char CN_DEFAULT[]                       = "default";
 const char CN_DESCRIPTION[]                   = "description";
 const char CN_ENABLE_ROOT_USER[]              = "enable_root_user";
-const char CN_FEEDBACK[]                      = "feedback";
 const char CN_FILTERS[]                       = "filters";
 const char CN_FILTER[]                        = "filter";
 const char CN_GATEWAY[]                       = "gateway";
@@ -158,9 +156,7 @@ static char *config_get_value(MXS_CONFIG_PARAMETER *, const char *);
 static char *config_get_password(MXS_CONFIG_PARAMETER *);
 static const char* config_get_value_string(const MXS_CONFIG_PARAMETER *params, const char *name);
 static int handle_global_item(const char *, const char *);
-static int handle_feedback_item(const char *, const char *);
 static void global_defaults();
-static void feedback_defaults();
 static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
 static bool check_first_last_char(const char* string, char expected);
@@ -171,7 +167,6 @@ static pcre2_code* compile_regex_string(const char* regex_string, bool jit_enabl
 
 int config_get_ifaddr(unsigned char *output);
 static int config_get_release_string(char* release);
-FEEDBACK_CONF *config_get_feedback_data();
 bool config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
 int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
@@ -183,7 +178,6 @@ void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p);
 
 static const char *config_file = NULL;
 static MXS_CONFIG gateway;
-static FEEDBACK_CONF feedback;
 char *version_string = NULL;
 static bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
 
@@ -465,10 +459,6 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
     if (strcmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0)
     {
         return handle_global_item(name, value);
-    }
-    else if (strcasecmp(section, CN_FEEDBACK) == 0)
-    {
-        return handle_feedback_item(name, value);
     }
     else if (strlen(section) == 0)
     {
@@ -837,7 +827,6 @@ config_load(const char *filename)
     ss_dassert(!config_file);
 
     global_defaults();
-    feedback_defaults();
 
     config_file = filename;
     bool rval = config_load_and_process(filename, process_config_context);
@@ -862,7 +851,6 @@ bool config_reload()
         }
 
         global_defaults();
-        feedback_defaults();
 
         rval = config_load_and_process(config_file, process_config_update);
     }
@@ -1370,17 +1358,6 @@ config_pollsleep()
     return gateway.pollsleep;
 }
 
-/**
- * Return the feedback config data pointer
- *
- * @return  The feedback config data pointer
- */
-FEEDBACK_CONF *
-config_get_feedback_data()
-{
-    return &feedback;
-}
-
 static struct
 {
     const char* name;
@@ -1799,44 +1776,6 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
 }
 
 /**
- * Configuration handler for items in the feedback [feedback] section
- *
- * @param name  The item name
- * @param value The item value
- * @return 0 on error
- */
-static  int
-handle_feedback_item(const char *name, const char *value)
-{
-    int i;
-    if (strcmp(name, "feedback_enable") == 0)
-    {
-        feedback.feedback_enable = config_truth_value(value);
-    }
-    else if (strcmp(name, "feedback_user_info") == 0)
-    {
-        feedback.feedback_user_info = MXS_STRDUP_A(value);
-    }
-    else if (strcmp(name, "feedback_url") == 0)
-    {
-        feedback.feedback_url = MXS_STRDUP_A(value);
-    }
-    if (strcmp(name, "feedback_timeout") == 0)
-    {
-        feedback.feedback_timeout = atoi(value);
-    }
-    if (strcmp(name, "feedback_connect_timeout") == 0)
-    {
-        feedback.feedback_connect_timeout = atoi(value);
-    }
-    if (strcmp(name, "feedback_frequency") == 0)
-    {
-        feedback.feedback_frequency = atoi(value);
-    }
-    return 1;
-}
-
-/**
  * Set the defaults for the global configuration options
  */
 static void
@@ -1901,24 +1840,6 @@ global_defaults()
     memset(gateway.qc_name, 0, sizeof(gateway.qc_name));
     gateway.qc_args = NULL;
     gateway.qc_sql_mode = QC_SQL_MODE_DEFAULT;
-}
-
-/**
- * Set the defaults for the feedback configuration options
- */
-static void
-feedback_defaults()
-{
-    feedback.feedback_enable = 0;
-    feedback.feedback_user_info = NULL;
-    feedback.feedback_last_action = _NOTIFICATION_SEND_PENDING;
-    feedback.feedback_timeout = _NOTIFICATION_OPERATION_TIMEOUT;
-    feedback.feedback_connect_timeout = _NOTIFICATION_CONNECT_TIMEOUT;
-    feedback.feedback_url = NULL;
-    feedback.feedback_frequency = 1800;
-    feedback.release_info = gateway.release_string;
-    feedback.sysname = gateway.sysname;
-    feedback.mac_sha1 = gateway.mac_sha1;
 }
 
 /**
@@ -2443,58 +2364,6 @@ config_get_release_string(char* release)
     {
         return 0;
     }
-}
-
-/**
- * Add the 'send_feedback' task to the task list
- */
-void
-config_enable_feedback_task(void)
-{
-    FEEDBACK_CONF *cfg = config_get_feedback_data();
-    int url_set = 0;
-    int user_info_set = 0;
-    int enable_set = cfg->feedback_enable;
-
-    url_set = cfg->feedback_url != NULL && strlen(cfg->feedback_url);
-    user_info_set = cfg->feedback_user_info != NULL && strlen(cfg->feedback_user_info);
-
-    if (enable_set && url_set && user_info_set)
-    {
-        /* Add the task to the tasl list */
-        if (hktask_add("send_feedback", module_feedback_send, cfg, cfg->feedback_frequency))
-        {
-            MXS_NOTICE("Notification service feedback task started: URL=%s, User-Info=%s, "
-                       "Frequency %u seconds",
-                       cfg->feedback_url,
-                       cfg->feedback_user_info,
-                       cfg->feedback_frequency);
-        }
-    }
-    else
-    {
-        if (enable_set)
-        {
-            MXS_ERROR("Notification service feedback cannot start: feedback_enable=1 but"
-                      " some required parameters are not set: %s%s%s",
-                      url_set == 0 ? "feedback_url is not set" : "",
-                      (user_info_set == 0 && url_set == 0) ? ", " : "",
-                      user_info_set == 0 ? "feedback_user_info is not set" : "");
-        }
-        else
-        {
-            MXS_INFO("Notification service feedback is not enabled.");
-        }
-    }
-}
-
-/**
- * Remove the 'send_feedback' task
- */
-void
-config_disable_feedback_task(void)
-{
-    hktask_remove("send_feedback");
 }
 
 unsigned long config_get_gateway_id()

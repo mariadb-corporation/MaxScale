@@ -371,7 +371,6 @@ disable:
     disable log-priority - Disable a logging priority
     disable sessionlog-priority - [Deprecated] Disable a logging priority for a particular session
     disable root - Disable root access
-    disable feedback - Disable MaxScale feedback to notification service
     disable syslog - Disable syslog logging
     disable maxlog - Disable MaxScale logging
     disable account - Disable Linux user
@@ -380,7 +379,6 @@ enable:
     enable log-priority - Enable a logging priority
     enable sessionlog-priority - [Deprecated] Enable a logging priority for a session
     enable root - Enable root user access to a service
-    enable feedback - Enable MaxScale feedback to notification service
     enable syslog - Enable syslog logging
     enable maxlog - Enable MaxScale logging
     enable account - Activate a Linux user account for MaxAdmin use
@@ -423,7 +421,6 @@ show:
     show authenticators - Show authenticator diagnostics for a service
     show epoll - Show the polling system statistics
     show eventstats - Show event queue statistics
-    show feedbackreport - Show the report of MaxScale loaded modules, suitable for Notification Service
     show filter - Show filter details
     show filters - Show all filters
     show log_throttling - Show the current log throttling setting (count, window (ms), suppression (ms))

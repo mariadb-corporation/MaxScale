@@ -18,7 +18,6 @@ add_executable(test_spinlock testspinlock.cc)
 add_executable(test_trxcompare testtrxcompare.cc ../../../query_classifier/test/testreader.cc)
 add_executable(test_trxtracking testtrxtracking.cc)
 add_executable(test_users testusers.cc)
-add_executable(testfeedback testfeedback.cc)
 add_executable(testmaxscalepcre2 testmaxscalepcre2.cc)
 add_executable(testmodulecmd testmodulecmd.cc)
 add_executable(testconfig testconfig.cc)
@@ -45,7 +44,6 @@ target_link_libraries(test_spinlock maxscale-common)
 target_link_libraries(test_trxcompare maxscale-common)
 target_link_libraries(test_trxtracking maxscale-common)
 target_link_libraries(test_users maxscale-common)
-target_link_libraries(testfeedback maxscale-common)
 target_link_libraries(testmaxscalepcre2 maxscale-common)
 target_link_libraries(testmodulecmd maxscale-common)
 target_link_libraries(testconfig maxscale-common)
@@ -85,12 +83,5 @@ add_test(TestTrxCompare_Update test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../..
 add_test(TestTrxCompare_MaxScale test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../../../query_classifier/test/maxscale.test)
 add_test(TestJson testjson)
 add_test(TestHttp testhttp)
-
-# This test requires external dependencies and thus cannot be run
-# as a part of the core test set
-if(TEST_FEEDBACK)
-  add_test(TestFeedback testfeedback)
-  set_tests_properties(TestFeedback PROPERTIES TIMEOUT 30)
-endif()
 
 add_subdirectory(rest-api)
