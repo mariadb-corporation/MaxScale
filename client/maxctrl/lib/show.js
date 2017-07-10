@@ -93,6 +93,13 @@ exports.builder = function(yargs) {
                 {'Uptime': 'attributes.uptime'}
             ])
         })
+        .command('commands <module>', 'Show module commands of a module', {}, function(argv) {
+            getSubCollection('maxscale/modules/' + argv.module, 'attributes.commands', [
+                {'Command': 'id'},
+                {'Parameters': 'attributes.parameters[].type'},
+                {'Descriptions': 'attributes.parameters[].description'}
+            ])
+        })
         .usage('Usage: show <command>')
         .help()
         .command('*', 'the default command', {}, () => {

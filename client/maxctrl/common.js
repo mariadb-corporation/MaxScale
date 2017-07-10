@@ -53,6 +53,40 @@ module.exports = function() {
         })
     }
 
+    // Request a part of a resource as a collection
+    this.getSubCollection = function (resource, subres, fields) {
+
+        doRequest(resource, function(res) {
+
+            var header = []
+
+            fields.forEach(function(i) {
+                header.push(Object.keys(i))
+            })
+
+            var table = getTable(header)
+
+            _.getPath(res.data, subres, []).forEach(function(i) {
+                row = []
+
+                fields.forEach(function(p) {
+                    var v = _.getPath(i, p[Object.keys(p)[0]], '')
+
+                    if (Array.isArray(v) && typeof(v[0]) != 'object') {
+                        v = v.join(', ')
+                    } else if (typeof(v) == 'object') {
+                        v = JSON.stringify(v, null, 4)
+                    }
+                    row.push(v)
+                })
+
+                table.push(row)
+            })
+
+            console.log(table.toString())
+        })
+    }
+
     // Request a single resource and format it as a key-value list
     this.getResource = function (resource, fields) {
 

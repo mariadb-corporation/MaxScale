@@ -70,6 +70,12 @@ exports.builder = function(yargs) {
                 {'Name':'id'}
             ])
         })
+        .command('commands', 'List module commands', {}, function() {
+            getCollection('maxscale/modules',[
+                {'Module':'id'},
+                {'Commands': 'attributes.commands[].id'}
+            ])
+        })
         .usage('Usage: list <command>')
         .help()
         .command('*', 'the default command', {}, () => {
