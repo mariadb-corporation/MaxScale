@@ -468,6 +468,19 @@ MaskingRules::ObfuscateRule::ObfuscateRule(const std::string& column,
 {
 }
 
+MaskingRules::CaptureRule::CaptureRule(const std::string& column,
+                                       const std::string& table,
+                                       const std::string& database,
+                                       const std::vector<SAccount>& applies_to,
+                                       const std::vector<SAccount>& exempted,
+                                       const std::string& regexp,
+                                       const std::string& fill)
+    : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
+    , m_regexp(regexp)
+    , m_fill(fill)
+{
+}
+
 MaskingRules::Rule::~Rule()
 {
 }
@@ -477,6 +490,10 @@ MaskingRules::ReplaceRule::~ReplaceRule()
 }
 
 MaskingRules::ObfuscateRule::~ObfuscateRule()
+{
+}
+
+MaskingRules::CaptureRule::~CaptureRule()
 {
 }
 
@@ -815,6 +832,10 @@ static inline char maxscale_basic_obfuscation(const char c)
         return d;
     }
     return c;
+}
+
+void MaskingRules::CaptureRule::rewrite(LEncString& s) const
+{
 }
 
 void MaskingRules::ObfuscateRule::rewrite(LEncString& s) const

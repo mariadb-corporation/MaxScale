@@ -243,6 +243,68 @@ public:
         ObfuscateRule& operator = (const ObfuscateRule&);
     };
 
+    class CaptureRule : public Rule
+    {
+    public:
+        /**
+         * Constructor of CaptureRule
+         *
+         * @param column      The column value from the json file.
+         * @param table       The table value from the json file.
+         * @param database    The database value from the json file.
+         * @param applies_to  Account instances corresponding to the
+         *                    accounts listed in 'applies_to' in the json file.
+         * @param exempted    Account instances corresponding to the
+         *                    accounts listed in 'exempted' in the json file.
+         * @param regexp      The capture regexp from the json file.
+         * @param fill        The fill value from the json file.
+         */
+        CaptureRule(const std::string& column,
+                    const std::string& table,
+                    const std::string& database,
+                    const std::vector<SAccount>& applies_to,
+                    const std::vector<SAccount>& exempted,
+                    const std::string& regexp,
+                    const std::string& fill);
+
+        ~CaptureRule();
+
+        const std::string& capture() const
+        {
+            return m_regexp;
+        }
+
+        const std::string& fill() const
+        {
+            return m_fill;
+        }
+
+        /**
+         * Create a CaptureRule instance
+         *
+         * @param pRule  A json object corresponding to a single
+         *               rule in the rules json file.
+         *
+         * @return A Rule instance or NULL.
+         */
+        static std::auto_ptr<Rule> create_from(json_t* pRule);
+
+        /**
+         * Rewrite the column value based on rules
+         *
+         * @param s     The column value to rewrite.
+         */
+        void rewrite(LEncString& s) const;
+
+    private:
+        std::string           m_regexp;
+        std::string           m_fill;
+
+    private:
+        CaptureRule(const CaptureRule&);
+        CaptureRule& operator = (const CaptureRule&);
+    };
+
     ~MaskingRules();
 
     /**
