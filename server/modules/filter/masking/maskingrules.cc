@@ -346,6 +346,17 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
             json_t* pObfuscate = json_object_get(pRule, KEY_OBFUSCATE);
             json_t* pReplace = json_object_get(pRule, KEY_REPLACE);
 
+            // Check whether we have KEY_OBFUSCATE or KEY_REPLACE
+            if (!pReplace && !pObfuscate)
+            {
+                MXS_ERROR("A masking rule does not contain a '%s' or '%s' key.",
+                          KEY_OBFUSCATE,
+                          KEY_REPLACE);
+                parsed = false;
+                continue;
+            }
+
+            // Obfuscate takes the precedence
             if (pObfuscate)
             {
                 sRule = MaskingRules::ObfuscateRule::create_from(pRule);
@@ -554,7 +565,7 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
     // Set the account rules
     if (pApplies_to && pExempted &&
         (!get_accounts(KEY_APPLIES_TO, pApplies_to, applies_to) ||
-        (!get_accounts(KEY_EXEMPTED, pExempted, exempted))))
+         !get_accounts(KEY_EXEMPTED, pExempted, exempted)))
     {
         return sRule;
     }
@@ -661,7 +672,7 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ObfuscateRule::create_from(json_t* pR
     // Set the account rules
     if (pApplies_to && pExempted &&
         (!get_accounts(KEY_APPLIES_TO, pApplies_to, applies_to) ||
-        (!get_accounts(KEY_EXEMPTED, pExempted, exempted))))
+         !get_accounts(KEY_EXEMPTED, pExempted, exempted)))
     {
         return sRule;
     }

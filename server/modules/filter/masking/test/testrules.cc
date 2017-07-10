@@ -29,6 +29,11 @@ const char valid_minimal[] =
     "      \"with\": {"
     "        \"value\": \"blah\" "
     "      }"
+    "    },"
+    "    {"
+    "      \"obfuscate\": { "
+    "        \"column\": \"b\" "
+    "      }"
     "    }"
     "  ]"
     "}";
@@ -54,11 +59,18 @@ const char valid_maximal[] =
     "      \"exempted\": ["
     "        \"'admin'\""
     "      ]"
+    "    },"
+    "    {"
+    "      \"obfuscate\": { "
+    "        \"column\": \"c\", "
+    "        \"table\": \"d\", "
+    "        \"database\": \"e\" "
+    "      }"
     "    }"
     "  ]"
     "}";
 
-// Neither "replace", nor "with".
+// Neither "obfuscate", nor "replace".
 const char invalid1[] =
     "{"
     "  \"rules\": ["
@@ -82,13 +94,24 @@ const char invalid2[] =
     "      \"replace\": { "
     "      },"
     "      \"with\": { "
-    "        \"value\": \"blah\", "
+    "        \"value\": \"blah\" "
     "      }"
     "    }"
     "  ]"
     "}";
 
 // No "value" or "fill" in "with"
+/**
+ * NOTE:
+ * This test fails for ", " after column
+ * and after "}," (Json parsing).
+ *
+ * If Json is ok the test doesn't fail at all.
+ * The default 'fill' is used even if value is not set:
+ *
+ * void MaskingRules::ReplaceRule::rewrite(LEncString& s)
+ *
+ */
 const char invalid3[] =
     "{"
     "  \"rules\": ["
@@ -98,6 +121,36 @@ const char invalid3[] =
     "      },"
     "      \"with\": {"
     "      },"
+    "    }"
+    "  ]"
+    "}";
+
+// No "column" in "obfuscate"
+const char invalid4[] =
+    "{"
+    "  \"rules\": ["
+    "    {"
+    "      \"obfuscate\": { "
+    "      }"
+    "    }"
+    "  ]"
+    "}";
+
+// No "with" in "replace"
+const char invalid5[] =
+    "{"
+    "  \"rules\": ["
+    "    {"
+    "      \"replace\": { "
+    "        \"column\": \"a\" "
+    "      },"
+    "      \"applies_to\": ["
+    "        \"'alice'@'host'\","
+    "        \"'bob'@'%'\""
+    "      ],"
+    "      \"exempted\": ["
+    "        \"'admin'\""
+    "      ]"
     "    }"
     "  ]"
     "}";
@@ -113,6 +166,8 @@ struct rule_test
     { invalid1,      false },
     { invalid2,      false },
     { invalid3,      false },
+    { invalid4,      false },
+    { invalid5,      false },
 };
 
 const size_t nRule_tests = (sizeof(rule_tests) / sizeof(rule_tests[0]));
@@ -244,10 +299,13 @@ int main()
 {
     int rc = EXIT_SUCCESS;
 
-    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_STDOUT))
     {
         rc = (MaskingRulesTester::test_parsing() == EXIT_FAILURE) ? EXIT_FAILURE : EXIT_SUCCESS;
-        rc = (MaskingRulesTester::test_account_handling() == EXIT_FAILURE) ? EXIT_FAILURE : EXIT_SUCCESS;
+        if (!rc)
+        {
+            rc = (MaskingRulesTester::test_account_handling() == EXIT_FAILURE) ? EXIT_FAILURE : EXIT_SUCCESS;
+        }
     }
 
     return rc;
