@@ -26,6 +26,9 @@ exports.builder = function(yargs) {
         .command('service <service> <key> <value>', 'Alter service parameters', {}, function(argv) {
             updateValue('services/' + argv.service, "data.attributes.parameters." + argv.key, argv.value)
         })
+        .command('logging <key> <value>', 'Alter logging parameters', {}, function(argv) {
+            updateValue('maxscale/logs', "attributes.parameters." + argv.key, argv.value)
+        })
         .command('maxscale <key> <value>', 'Alter MaxScale parameters', {}, function(argv) {
             updateValue('maxscale', "attributes.parameters." + argv.key, argv.value)
         })
