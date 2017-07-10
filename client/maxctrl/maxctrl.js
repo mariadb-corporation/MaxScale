@@ -64,6 +64,7 @@ program
     .command(require('./lib/stop.js'))
     .command(require('./lib/alter.js'))
     .command(require('./lib/rotate.js'))
+    .command(require('./lib/call.js'))
     .help()
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, () => {
