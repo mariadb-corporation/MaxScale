@@ -23,7 +23,7 @@ exports.builder = function(yargs) {
             doRequest('maxscale/modules/' + argv.module + '/', function(resp) {
 
                 // A GET request will return the correct error if the command is not found
-                var verb = "GET"
+                var verb = 'GET'
 
                 resp.data.attributes.commands.forEach(function(i) {
                     if (i.id == argv.command) {
