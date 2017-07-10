@@ -18,31 +18,26 @@ const maxctrl_version = '1.0.0';
 
 program
     .version(maxctrl_version)
-    .group(['u', 'p', 'h', 'p', 'P', 's'], 'Global Options:')
+    .group(['u', 'p', 'h', 's', 't'], 'Global Options:')
     .option('u', {
         alias:'user',
         global: true,
-        default: 'mariadb',
+        default: 'admin',
         describe: 'Username to use',
         type: 'string'
     })
     .option('p', {
         alias: 'password',
         describe: 'Password for the user',
-        default: 'admin',
+        default: 'mariadb',
         type: 'string'
     })
     .option('h', {
-        alias: 'host',
-        describe: 'MaxScale hostname',
-        default: 'localhost',
-        type: 'string'
-    })
-    .option('P', {
-        alias: 'port',
-        describe: 'MaxScale REST API port',
-        default: 8989,
-        type: 'number'
+        alias: 'hosts',
+        describe: 'List of MaxScale hosts. The hosts must be in ' +
+            '<hostname>:<port> format and each host must be separated by spaces.',
+        default: 'localhost:8989',
+        type: 'array'
     })
     .option('s', {
         alias: 'secure',
@@ -50,6 +45,13 @@ program
         default: 'false',
         type: 'boolean'
     })
+    .option('t', {
+        alias: 'timeout',
+        describe: 'Request timeout in milliseconds',
+        default: '10000',
+        type: 'number'
+    })
+
     .command(require('./lib/list.js'))
     .command(require('./lib/show.js'))
     .command(require('./lib/set.js'))

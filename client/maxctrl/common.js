@@ -114,44 +114,52 @@ module.exports = function() {
     }
 
     // Helper for converting endpoints to acutal URLs
-    this.getUri = function(endpoint, options) {
-        var base = 'http://';
+    this.getUri = function(host, endpoint) {
+        var base = 'http://'
         var argv = this.program.argv
 
         if (argv.secure) {
-            base = 'https://';
+            base = 'https://'
         }
 
-        return base + argv.user + ':' + argv.password + '@' +
-            argv.host + ':' + argv.port + '/v1/' + endpoint;
+        return base + argv.user + ':' + argv.password + '@' + host + '/v1/' + endpoint
     }
 
     // Helper for executing requests and handling their responses
     this.doRequest = function(resource, cb, obj) {
+        pingCluster()
+            .then(function() {
+                var argv = this.program.argv
+                argv.hosts.forEach(function(host) {
+                    args = obj || {}
+                    args.uri = getUri(host, resource)
+                    args.json = true
+                    args.timeout = argv.timeout
 
-        args = obj || {}
-        args.uri = getUri(resource),
-        args.json = true
-
-        request(args, function(err, resp, res) {
-            if (err) {
-                // Failed to request
-                logError(JSON.stringify(err, null, 4))
-            } else if (resp.statusCode == 200 && cb) {
-                // Request OK, returns data
-                cb(res)
-            } else if (resp.statusCode == 204) {
-                // Request OK, no data
-                console.log(colors.green('OK'))
-            } else {
-                // Unexpected return code, probably an error
-                var errstr = resp.statusCode + ' ' + resp.statusMessage
-                if (res) {
-                    errstr += ' ' + JSON.stringify(res, null, 4)
-                }
-                logError(errstr)
-            }
-        })
+                    request(args, function(err, resp, res) {
+                        if (err) {
+                            // Failed to request
+                            console.log(colors.yellow(host) + ':')
+                            logError(JSON.stringify(err, null, 4))
+                        } else if (resp.statusCode == 200 && cb) {
+                            // Request OK, returns data
+                            console.log(colors.yellow(host) + ':')
+                            cb(res)
+                        } else if (resp.statusCode == 204) {
+                            // Request OK, no data
+                            console.log(colors.yellow(host) + ': ' + colors.green('OK'))
+                        } else {
+                            // Unexpected return code, probably an error
+                            var errstr = resp.statusCode + ' ' + resp.statusMessage
+                            if (res) {
+                                errstr += ' ' + JSON.stringify(res, null, 4)
+                            }
+                            console.log(colors.yellow(host) + ':')
+                            logError(errstr)
+                        }
+                    })
+                })
+            })
     }
 
     this.updateValue = function(resource, key, value) {
@@ -179,4 +187,28 @@ function getTable(headobj) {
     return new Table({
         head: headobj
     })
+}
+
+function pingMaxScale(host) {
+    return new Promise(function(resolve, reject) {
+        request('http://' + host + '/v1', function(err, resp, res) {
+            if (err) {
+                reject(err)
+            } else if (resp.statusCode != 200) {
+                reject(resp.statusCode + ' ' + resp.statusMessage)
+            } else {
+                resolve()
+            }
+        })
+    })
+}
+
+function pingCluster() {
+    var promises = []
+
+    this.program.argv.hosts.forEach(function(i) {
+        promises.push(pingMaxScale(i))
+    })
+
+    return Promise.all(promises)
 }
