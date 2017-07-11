@@ -24,8 +24,6 @@ int main(int argc, char *argv[])
     test.repl->connect();
 
     MYSQL *conn = test.open_rwsplit_connection();
-    execute_query(conn, "DROP DATABASE IF EXISTS test;");
-    execute_query(conn, "CREATE DATABASE test;");
     execute_query(conn, "USE test;");
     create_t1(conn);
     mysql_close(conn);
