@@ -16,7 +16,7 @@ testdir=$PWD/local_test/
 mkdir -p $testdir && cd $testdir
 
 # Currently all tests that use npm are for the REST API
-cp -t $testdir -r $srcdir/server/core/test/rest-api/*
+cp -t $testdir -r $srcdir/maxctrl/test/*
 npm install
 
 mkdir -p $maxscaledir && cd $maxscaledir
