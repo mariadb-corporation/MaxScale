@@ -1,3 +1,4 @@
+RESET MASTER;
 CREATE DATABASE test;
 
 CREATE USER 'maxuser'@'127.0.0.1' IDENTIFIED BY 'maxpwd';
