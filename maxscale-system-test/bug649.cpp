@@ -126,8 +126,7 @@ int main(int argc, char *argv[])
 
     /** Clean up */
     Test->repl->connect();
-    execute_query(Test->repl->nodes[0], "DROP DATABASE test");
-    execute_query(Test->repl->nodes[0], "CREATE DATABASE test");
+    execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
 
     int rval = Test->global_result;
     delete Test;
