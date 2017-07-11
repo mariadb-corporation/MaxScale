@@ -24,7 +24,8 @@ describe("Service", function() {
         return request.get(base_url + "/services/RW-Split-Router")
             .then(function(resp) {
                 var svc = JSON.parse(resp)
-                delete svc.data.relationships
+                delete svc.data.relationships["servers"]
+                delete svc.data.relationships["servers"]
                 return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {

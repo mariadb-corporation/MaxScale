@@ -68,7 +68,8 @@ describe("Server Relationships", function() {
     });
 
     it("remove relationships", function() {
-        delete rel_server.data["relationships"]
+        delete rel_server.data.relationships["services"]
+        delete rel_server.data.relationships["monitors"]
         return request.patch(base_url + "/servers/" + rel_server.data.id, {json: rel_server})
             .should.be.fulfilled
     });
