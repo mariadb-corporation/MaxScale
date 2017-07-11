@@ -50,12 +50,32 @@ chmod 0755 $maxscaledir/lib/maxscale
 chmod 0755 $maxscaledir/cache/maxscale
 chmod 0755 $maxscaledir/run/maxscale
 
+# Go to the test directory
+cd $testdir
+
 # This variable is used to start and stop MaxScale before each test
 export MAXSCALE_DIR=$maxscaledir
 
+# Start MariaDB servers
+docker-compose up -d
+
+# Wait until the servers are up
+for node in server1 server2 server3 server4
+do
+    printf "Waiting for $node to start... "
+    for ((i=0; i<60; i++))
+    do
+        docker-compose exec $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null && break
+        sleep 1
+    done
+    echo "Done!"
+done
+
 # Run tests
-cd $testdir
 npm test
 rval=$?
+
+# Stop MariaDB servers
+docker-compose down -v
 
 exit $rval
