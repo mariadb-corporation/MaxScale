@@ -160,6 +160,9 @@ module.exports = function() {
                     })
                 })
             })
+            .catch(function(err) {
+                logError(JSON.stringify(err, null, 4))
+            })
     }
 
     this.updateValue = function(resource, key, value) {
