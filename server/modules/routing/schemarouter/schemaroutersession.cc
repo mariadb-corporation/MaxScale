@@ -473,10 +473,10 @@ void SchemaRouterSession::handle_mapping_reply(SSRBackend& bref, GWBUF** pPacket
                 rc = -1;
             }
         }
-
-        if (m_queue.size() && rc != -1)
+        else if (m_queue.size() && rc != -1)
         {
             ss_dassert(m_state == INIT_READY || m_state == INIT_USE_DB);
+            MXS_INFO("Routing stored query");
             route_queued_query();
         }
     }
@@ -943,11 +943,13 @@ bool SchemaRouterSession::handle_default_db()
             data[3] = 0x0;
             data[4] = 0x2;
             memcpy(data + 5, m_connect_db.c_str(), qlen);
+            SSRBackend backend;
             DCB* dcb = NULL;
 
-            if (get_shard_dcb(&dcb, target->unique_name))
+            if (get_shard_dcb(&dcb, target->unique_name) &&
+                (backend = get_bref_from_dcb(dcb)))
             {
-                dcb->func.write(dcb, buffer);
+                backend->write(buffer);
                 MXS_DEBUG("USE '%s' sent to %s for session %p",
                           m_connect_db.c_str(),
                           target->unique_name,
@@ -1020,6 +1022,7 @@ int SchemaRouterSession::inspect_mapping_states(SSRBackend& bref,
             if (rc == SHOWDB_FULL_RESPONSE)
             {
                 (*it)->set_mapped(true);
+                (*it)->ack_write();
                 MXS_DEBUG("Received SHOW DATABASES reply from %s for session %p",
                           (*it)->backend()->server->unique_name,
                           m_client->session);

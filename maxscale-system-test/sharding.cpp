@@ -47,10 +47,7 @@ int main(int argc, char *argv[])
     char user_str[256];
     char pass_str[256];
 
-    Test->repl->stop_slaves();
-
-    Test->restart_maxscale();
-
+    Test->repl->execute_query_all_nodes("STOP SLAVE");
     Test->repl->connect();
 
     for (i = 0; i < Test->repl->N; i++)   //nodes
@@ -68,7 +65,6 @@ int main(int argc, char *argv[])
     }
     Test->stop_timeout();
 
-    sleep(10);
     for (i = 0; i < Test->repl->N; i++)   //nodes
     {
         Test->set_timeout(30);
@@ -81,8 +77,9 @@ int main(int argc, char *argv[])
 
     Test->repl->close_connections();
     Test->stop_timeout();
-    sleep(30);
-    MYSQL * conn;
+    sleep(10);
+
+    MYSQL *conn;
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(30);
@@ -133,6 +130,7 @@ int main(int argc, char *argv[])
     Test->check_log_err((char *) "Unable to parse query", false);
     Test->check_log_err((char *) "query string allocation failed", false);
 
+    Test->repl->connect();
     /** Cleanup */
     for (i = 0; i < Test->repl->N; i++)
     {
@@ -146,6 +144,9 @@ int main(int argc, char *argv[])
         execute_query(Test->repl->nodes[i], "DROP DATABASE IF EXISTS shard_db%d", i);
     }
 
+    Test->repl->execute_query_all_nodes("START SLAVE");
+    sleep(1);
+    Test->repl->fix_replication();
     int rval = Test->global_result;
     delete Test;
     return rval;
