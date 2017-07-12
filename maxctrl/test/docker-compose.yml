@@ -12,8 +12,6 @@ services:
     server2:
         image: mariadb:10.1
         network_mode: "host"
-        depends_on:
-            - server1
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
         volumes:
@@ -23,8 +21,6 @@ services:
     server3:
         image: mariadb:10.1
         network_mode: "host"
-        depends_on:
-            - server1
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
         volumes:
@@ -34,8 +30,6 @@ services:
     server4:
         image: mariadb:10.1
         network_mode: "host"
-        depends_on:
-            - server1
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: Y
         volumes:

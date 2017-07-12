@@ -17,6 +17,11 @@ mkdir -p $testdir && cd $testdir
 
 # Currently all tests that use npm are for the REST API
 cp -t $testdir -r $srcdir/maxctrl/test/*
+
+# Bring MariaDB servers up, this is an asynchronous process
+docker-compose up -d || exit 1
+
+# Install dependencies
 npm install
 
 mkdir -p $maxscaledir && cd $maxscaledir
@@ -55,9 +60,6 @@ cd $testdir
 
 # This variable is used to start and stop MaxScale before each test
 export MAXSCALE_DIR=$maxscaledir
-
-# Start MariaDB servers
-docker-compose up -d
 
 # Wait until the servers are up
 for node in server1 server2 server3 server4
