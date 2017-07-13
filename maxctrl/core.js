@@ -23,7 +23,7 @@ module.exports = function(argv) {
     return new Promise(function(resolve, reject) {
         program
             .version(maxctrl_version)
-            .group(['u', 'p', 'h', 's', 't'], 'Global Options:')
+            .group(['u', 'p', 'h', 's', 't', 'tsv'], 'Global Options:')
             .option('u', {
                 alias:'user',
                 global: true,
@@ -55,6 +55,11 @@ module.exports = function(argv) {
                 describe: 'Request timeout in milliseconds',
                 default: '10000',
                 type: 'number'
+            })
+            .option('tsv', {
+                describe: 'Print tab separated output',
+                default: 'false',
+                type: 'boolean'
             })
 
             .command(require('./lib/list.js'))

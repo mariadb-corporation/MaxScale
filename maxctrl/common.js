@@ -145,7 +145,9 @@ module.exports = function() {
                             logError(JSON.stringify(err, null, 4))
                         } else if (resp.statusCode == 200 && cb) {
                             // Request OK, returns data
-                            console.log(colors.yellow(host) + ':')
+                            if (!argv.tsv) {
+                                console.log(colors.yellow(host) + ':')
+                            }
                             cb(res)
                         } else if (resp.statusCode == 204) {
                             // Request OK, no data
@@ -178,8 +180,33 @@ module.exports = function() {
     }
 }
 
+var tsvopts = {
+    chars: {
+        'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
+        , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
+        , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
+        , 'right': '' , 'right-mid': '' , 'middle': '	'
+    },
+    style: {
+        'padding-left': 0,
+        'padding-right': 0,
+        compact: true
+    },
+
+
+}
+
 function getList() {
-    return new Table({ style: { head: ['cyan'] } })
+    var opts = {
+        style: { head: ['cyan'] }
+    }
+
+    if (this.argv.tsv)
+    {
+        opts = _.assign(opts, tsvopts)
+    }
+
+    return new Table(opts)
 }
 
 // Creates a table-like array for output. The parameter is an array of header names
@@ -189,9 +216,18 @@ function getTable(headobj) {
         headobj[i] = colors.cyan(headobj[i])
     }
 
-    return new Table({
-        head: headobj
-    })
+    var opts
+
+    if (this.argv.tsv)
+    {
+        opts = _.assign(opts, tsvopts)
+    } else {
+        opts = {
+            head: headobj
+        }
+    }
+
+    return new Table(opts)
 }
 
 function pingMaxScale(host) {
