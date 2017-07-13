@@ -1,22 +1,31 @@
 #!/bin/bash
 
-# This script builds and installs MaxScale, starts a MaxScale instance, runs the
-# tests use npm and stops MaxScale.
+# This script builds and installs MaxScale, starts a MariaDB cluster and runs any
+# tests that define a `npm test` target
 #
 # This is definitely not the most efficient way to test the binaries but it's a
 # guaranteed method of creating a consistent and "safe" testing environment.
-#
-# TODO: Install and start a local MariaDB server for testing purposes
 
+if [ $# -lt 3 ]
+then
+    echo "USAGE: $0 <MaxScale sources> <test sources> <test directory>"
+    exit 1
+fi
 
 srcdir=$1
-maxscaledir=$PWD/maxscale_test/
-testdir=$PWD/local_test/
+testsrc=$2
+testdir=$3
 
+maxscaledir=$PWD/maxscale_test/
+
+# Create the test directory
 mkdir -p $testdir && cd $testdir
 
-# Currently all tests that use npm are for the REST API
-cp -t $testdir -r $srcdir/server/core/test/rest-api/*
+# Copy the common test files (docker-compose.yml etc.)
+cp -t $testdir -r $srcdir/test/*
+
+# Copy test sources to test workspace
+cp -t $testdir -r $testsrc/*
 
 # Bring MariaDB servers up, this is an asynchronous process
 docker-compose up -d || exit 1
