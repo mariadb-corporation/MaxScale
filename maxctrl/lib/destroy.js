@@ -18,16 +18,20 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('server <name>', 'Destroy an unused server', {}, function(argv) {
-            doRequest('servers/' + argv.name, null, {method: 'DELETE'})
+            maxctrl(argv)
+                .doRequest('servers/' + argv.name, null, {method: 'DELETE'})
         })
         .command('monitor <name>', 'Destroy an unused monitor', {}, function(argv) {
-            doRequest('monitors/' + argv.name, null, {method: 'DELETE'})
+            maxctrl(argv)
+                .doRequest('monitors/' + argv.name, null, {method: 'DELETE'})
         })
         .command('listener <service> <name>', 'Destroy an unused listener', {}, function(argv) {
-            doRequest('services/' + argv.service + '/listeners/' + argv.name, null, {method: 'DELETE'})
+            maxctrl(argv)
+                .doRequest('services/' + argv.service + '/listeners/' + argv.name, null, {method: 'DELETE'})
         })
         .command('user <name>', 'Remove a network user', {}, function(argv) {
-            doRequest('users/inet/' + argv.name, null, {method: 'DELETE'})
+            maxctrl(argv)
+                .doRequest('users/inet/' + argv.name, null, {method: 'DELETE'})
         })
         .usage('Usage: destroy <command>')
         .help()

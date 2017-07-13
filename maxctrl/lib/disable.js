@@ -26,19 +26,24 @@ exports.builder = function(yargs) {
     yargs
         .command('log-priority <log>', 'Disable log priority [warning|notice|info|debug]', {}, function(argv) {
             if (log_levels.indexOf(argv.log) != -1) {
-                updateValue('maxscale/logs', 'data.attributes.parameters.log_' + argv.log, false)
+                maxctrl(argv)
+                    .updateValue('maxscale/logs', 'data.attributes.parameters.log_' + argv.log, false)
             } else {
-                logError('Invalid log priority: ' + argv.log);
+                maxctrl(argv)
+                    .logError('Invalid log priority: ' + argv.log);
             }
         })
         .command('maxlog', 'Disable MaxScale logging', {}, function(argv) {
-            updateValue('maxscale/logs', 'data.attributes.parameters.maxlog', false)
+            maxctrl(argv)
+                .updateValue('maxscale/logs', 'data.attributes.parameters.maxlog', false)
         })
         .command('syslog', 'Disable syslog logging', {}, function(argv) {
-            updateValue('maxscale/logs', 'data.attributes.parameters.syslog', false)
+            maxctrl(argv)
+                .updateValue('maxscale/logs', 'data.attributes.parameters.syslog', false)
         })
         .command('account <name>', 'Disable a Linux user account from administrative use', {}, function(argv) {
-            doRequest('users/unix/' + argv.name, null, { method: 'DELETE'})
+            maxctrl(argv)
+                .doRequest('users/unix/' + argv.name, null, { method: 'DELETE'})
         })
         .usage('Usage: disable <command>')
         .help()

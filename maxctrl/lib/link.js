@@ -12,20 +12,22 @@
  */
 require('../common.js')()
 
-function addServer(path, targets) {
-    doRequest(path, function(res) {
-        var servers =_.get(res, 'data.relationships.servers.data', [])
+function addServer(argv, path, targets) {
+    maxctrl(argv)
+        .doRequest(path, function(res) {
+            var servers =_.get(res, 'data.relationships.servers.data', [])
 
-        targets.forEach(function(i){
-            servers.push({id: i, type: 'servers'})
+            targets.forEach(function(i){
+                servers.push({id: i, type: 'servers'})
+            })
+
+            // Update relationships and remove unnecessary parts
+            _.set(res, 'data.relationships.servers.data', servers)
+            delete res.data.attributes
+
+            maxctrl(argv)
+                .doRequest(path, null, {method: 'PATCH', body: res})
         })
-
-        // Update relationships and remove unnecessary parts
-        _.set(res, 'data.relationships.servers.data', servers)
-        delete res.data.attributes
-
-        doRequest(path, null, {method: 'PATCH', body: res})
-    })
 }
 
 exports.command = 'link <command>'
@@ -34,10 +36,10 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('service <name> <server...>', 'Link servers to a service', {}, function(argv) {
-            addServer('services/' + argv.name, argv.server)
+            addServer(argv, 'services/' + argv.name, argv.server)
         })
         .command('monitor <name> <server...>', 'Link servers to a monitor', {}, function(argv) {
-            addServer('monitors/' + argv.name, argv.server)
+            addServer(argv, 'monitors/' + argv.name, argv.server)
         })
         .usage('Usage: link <command>')
         .help()

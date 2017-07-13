@@ -13,4 +13,18 @@
 
 'use strict';
 
-require('./core.js')(process.argv)
+var argv = process.argv
+
+// Mangle the arguments if we are being called from the command line
+if (argv[0] == process.execPath) {
+    argv.shift()
+    // The first argument is always the script
+    argv.shift()
+}
+
+require('./core.js')(argv)
+    .then(function(output){
+        if (output.length > 0) {
+            console.log(output)
+        }
+    }, console.log)

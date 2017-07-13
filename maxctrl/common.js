@@ -18,8 +18,11 @@ var Table = require('cli-table');
 module.exports = function() {
 
     this._ = require('lodash-getpath')
-    // Common options for all commands
-    this.program = require('yargs');
+
+    this.maxctrl = function(argv) {
+        this.argv = argv
+        return this
+    }
 
     // Request a resource collection and format it as a table
     this.getCollection = function (resource, fields) {
@@ -114,11 +117,10 @@ module.exports = function() {
     }
 
     // Helper for converting endpoints to acutal URLs
-    this.getUri = function(host, endpoint) {
+    this.getUri = function(host, secure, endpoint) {
         var base = 'http://'
-        var argv = this.program.argv
 
-        if (argv.secure) {
+        if (secure) {
             base = 'https://'
         }
 
@@ -127,12 +129,12 @@ module.exports = function() {
 
     // Helper for executing requests and handling their responses
     this.doRequest = function(resource, cb, obj) {
-        pingCluster()
+        pingCluster(this.argv.hosts)
             .then(function() {
-                var argv = this.program.argv
+                var argv = this.argv
                 argv.hosts.forEach(function(host) {
                     args = obj || {}
-                    args.uri = getUri(host, resource)
+                    args.uri = getUri(host, argv.secure, resource)
                     args.json = true
                     args.timeout = argv.timeout
 
@@ -206,10 +208,10 @@ function pingMaxScale(host) {
     })
 }
 
-function pingCluster() {
+function pingCluster(hosts) {
     var promises = []
 
-    this.program.argv.hosts.forEach(function(i) {
+    hosts.forEach(function(i) {
         promises.push(pingMaxScale(i))
     })
 

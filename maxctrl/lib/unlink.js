@@ -12,20 +12,22 @@
  */
 require('../common.js')()
 
-function removeServer(path, targets) {
-    doRequest(path, function(res) {
-        var servers =_.get(res, 'data.relationships.servers.data', [])
+function removeServer(argv, path, targets) {
+    maxctrl(argv)
+        .doRequest(path, function(res) {
+            var servers =_.get(res, 'data.relationships.servers.data', [])
 
-        _.remove(servers, function(i) {
-            return targets.indexOf(i.id) != -1
+            _.remove(servers, function(i) {
+                return targets.indexOf(i.id) != -1
+            })
+
+            // Update relationships and remove unnecessary parts
+            _.set(res, 'data.relationships.servers.data', servers)
+            delete res.data.attributes
+
+            maxctrl(argv)
+                .doRequest(path, null, {method: 'PATCH', body: res})
         })
-
-        // Update relationships and remove unnecessary parts
-        _.set(res, 'data.relationships.servers.data', servers)
-        delete res.data.attributes
-
-        doRequest(path, null, {method: 'PATCH', body: res})
-    })
 }
 
 exports.command = 'unlink <command>'
@@ -34,10 +36,10 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('service <name> <server...>', 'Unlink servers from a service', {}, function(argv) {
-            removeServer('services/' + argv.name, argv.server)
+            removeServer(argv, 'services/' + argv.name, argv.server)
         })
         .command('monitor <name> <server...>', 'Unlink servers from a monitor', {}, function(argv) {
-            removeServer('monitors/' + argv.name, argv.server)
+            removeServer(argv, 'monitors/' + argv.name, argv.server)
         })
         .usage('Usage: unlink <command>')
         .help()

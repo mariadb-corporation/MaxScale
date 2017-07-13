@@ -10,23 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('./common.js')()
+
 var fs = require('fs')
+var program = require('yargs');
+
 const maxctrl_version = '1.0.0';
 
+require('./common.js')()
+
 module.exports = function(argv) {
-
-    // Mangle the arguments if we are being called from the command line
-    if (argv[0] == process.execPath) {
-        argv.shift()
-    }
-
-    try {
-        while (argv.length > 0) {
-            fs.accessSync(argv[0])
-            argv.shift()
-        }
-    } catch (err) { }
 
     return new Promise(function(resolve, reject) {
         program
