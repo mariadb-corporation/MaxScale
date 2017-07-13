@@ -30,6 +30,7 @@ parser.add_argument("-T", "--kafka-topic", dest="kafka_topic",
 
 opts = parser.parse_args(sys.argv[1:])
 producer = KafkaProducer(bootstrap_servers=[opts.kafka_broker])
+sys.stdin = sys.stdin.detach()
 
 while True:
    try:
