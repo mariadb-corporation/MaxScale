@@ -423,7 +423,7 @@ module.exports = function() {
     this.host = "localhost:8989/v1"
     this.base_url = "http://" + this.host
     this.startMaxScale = function(done) {
-        child_process.execFile("./before.sh", function(err, stdout, stderr) {
+        child_process.execFile("./start_maxscale.sh", function(err, stdout, stderr) {
             if (process.env.MAXSCALE_DIR == null) {
                 throw new Error("MAXSCALE_DIR is not set");
             }
@@ -432,7 +432,7 @@ module.exports = function() {
         })
     };
     this.stopMaxScale = function(done) {
-        child_process.execFile("./after.sh", function(err, stdout, stderr) {
+        child_process.execFile("./stop_maxscale.sh", function(err, stdout, stderr) {
             done()
         })
     };

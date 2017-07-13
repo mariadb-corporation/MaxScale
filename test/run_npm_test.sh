@@ -82,6 +82,9 @@ do
     echo "Done!"
 done
 
+# Make sure no stale processes of files are left from an earlier run
+./stop_maxscale.sh
+
 # Run tests
 npm test
 rval=$?

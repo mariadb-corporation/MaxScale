@@ -1,11 +1,11 @@
 [maxscale]
 threads=4
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
-logdir=@CMAKE_INSTALL_PREFIX@/
-datadir=@CMAKE_INSTALL_PREFIX@/
-cachedir=@CMAKE_INSTALL_PREFIX@/
+logdir=@CMAKE_INSTALL_PREFIX@/log/maxscale/
+datadir=@CMAKE_INSTALL_PREFIX@/lib/maxscale
+cachedir=@CMAKE_INSTALL_PREFIX@/cache/maxscale
 language=@CMAKE_INSTALL_PREFIX@/lib/maxscale/
-piddir=@CMAKE_INSTALL_PREFIX@/
+piddir=@CMAKE_INSTALL_PREFIX@/run/maxscale/
 admin_auth=false
 
 [MySQL Monitor]
