@@ -83,3 +83,5 @@ add_test(TestTrxCompare_Update test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../..
 add_test(TestTrxCompare_MaxScale test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../../../query_classifier/test/maxscale.test)
 add_test(TestJson testjson)
 add_test(TestHttp testhttp)
+
+add_subdirectory(rest-api)

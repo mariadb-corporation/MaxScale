@@ -9,5 +9,3 @@ if (NPM_FOUND)
 else()
   message(STATUS "Not building MaxCtrl: npm not found")
 endif()
-
-add_subdirectory(test)

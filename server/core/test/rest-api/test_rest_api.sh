@@ -16,7 +16,7 @@ testdir=$PWD/local_test/
 mkdir -p $testdir && cd $testdir
 
 # Currently all tests that use npm are for the REST API
-cp -t $testdir -r $srcdir/maxctrl/test/*
+cp -t $testdir -r $srcdir/server/core/test/rest-api/*
 
 # Bring MariaDB servers up, this is an asynchronous process
 docker-compose up -d || exit 1
