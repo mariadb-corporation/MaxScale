@@ -22,5 +22,5 @@ if (process.argv[0] == process.execPath) {
     process.argv.shift()
 }
 
-maxctrl(process.argv)
+maxctrl.execute(process.argv)
     .then(function(out) {}, function(out) {})

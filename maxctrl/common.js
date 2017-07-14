@@ -14,19 +14,27 @@
 var request = require('request-promise-native');
 var colors = require('colors/safe');
 var Table = require('cli-table');
+var consoleLib = require('console')
+var fs = require('fs')
 
 module.exports = function() {
 
     this._ = require('lodash-getpath')
 
+    this.logger = console
+
     this.maxctrl = function(argv) {
+
+        if (argv.quiet) {
+            this.logger = new consoleLib.Console(fs.createWriteStream('/dev/null'), process.stderr)
+        }
+
         this.argv = argv
         return this
     }
 
     // Request a resource collection and format it as a table
     this.getCollection = function (resource, fields) {
-
         doRequest(resource, function(res) {
 
             var header = []
@@ -52,7 +60,7 @@ module.exports = function() {
                 table.push(row)
             })
 
-            console.log(table.toString())
+            logger.log(table.toString())
         })
     }
 
@@ -86,7 +94,7 @@ module.exports = function() {
                 table.push(row)
             })
 
-            console.log(table.toString())
+            logger.log(table.toString())
         })
     }
 
@@ -112,7 +120,7 @@ module.exports = function() {
                 table.push(o)
             })
 
-            console.log(table.toString())
+            logger.log(table.toString())
         })
     }
 
@@ -147,17 +155,24 @@ module.exports = function() {
                             .then(function(res) {
                                 if (res && cb) {
                                     // Request OK, returns data
-                                    if (!this.argv.tsv) {
-                                        console.log(colors.yellow(host) + ':')
+                                    if (!this.argv.tsv && this.argv.hosts.length > 1) {
+                                        logger.log(colors.yellow(host) + ':')
                                     }
+
                                     return cb(res)
                                 } else {
                                     // Request OK, no data or data is ignored
-                                    console.log(colors.yellow(host) + ': ' + colors.green('OK'))
+                                    if (this.argv.hosts.length > 1) {
+                                        logger.log(colors.yellow(host) + ': ' + colors.green('OK'))
+                                    } else {
+                                        logger.log(colors.green('OK'))
+                                    }
+                                    return Promise.resolve()
                                 }
-                                return Promise.resolve()
                             }, function(err) {
-                                console.log(colors.yellow(host) + ':')
+                                if (this.argv.hosts.length > 1) {
+                                    logger.log(colors.yellow(host) + ':')
+                                }
                                 if (err.response.body) {
                                     logError(JSON.stringify(err.response.body, null, 4))
                                 } else {
@@ -193,11 +208,11 @@ module.exports = function() {
     }
 
     this.logError = function(err) {
-        console.log(colors.red('Error:'), err)
+        this.logger.error(colors.red('Error:'), err)
     }
 
     this.error = function(err) {
-        console.log(colors.red('Error:'), err)
+        logger.log(colors.red('Error:'), err)
         this.argv.reject()
     }
 }

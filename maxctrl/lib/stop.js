@@ -28,6 +28,6 @@ exports.builder = function(yargs) {
         .usage('Usage: stop <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            console.log('Unknown command. See output of `help stop` for a list of commands.')
+            logger.log('Unknown command. See output of `help stop` for a list of commands.')
         })
 }

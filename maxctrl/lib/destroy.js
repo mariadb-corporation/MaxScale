@@ -36,6 +36,6 @@ exports.builder = function(yargs) {
         .usage('Usage: destroy <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            console.log('Unknown command. See output of `help destroy` for a list of commands.')
+            logger.log('Unknown command. See output of `help destroy` for a list of commands.')
         })
 }

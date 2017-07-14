@@ -35,13 +35,13 @@ exports.builder = function(yargs) {
                     return maxctrl
                         .doAsyncRequest('maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.parameters.join('&'),
                                         function(resp) {
-                                            console.log(JSON.stringify(resp, null, 4))
+                                            logger.log(JSON.stringify(resp, null, 4))
                                         }, { method: verb })
                 })
         })
         .usage('Usage: call <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            console.log('Unknown command. See output of `help call` for a list of commands.')
+            logger.log('Unknown command. See output of `help call` for a list of commands.')
         })
 }

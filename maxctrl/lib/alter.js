@@ -40,6 +40,6 @@ exports.builder = function(yargs) {
         .usage('Usage: alter <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            console.log('Unknown command. See output of `help alter` for a list of commands.')
+            logger.log('Unknown command. See output of `help alter` for a list of commands.')
         })
 }
