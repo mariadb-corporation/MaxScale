@@ -55,7 +55,7 @@ program
     })
     .option('q', {
         alias: 'quiet',
-        describe: 'Output only errors',
+        describe: 'Silence all output',
         default: 'false',
         type: 'boolean'
     })

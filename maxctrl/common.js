@@ -26,7 +26,8 @@ module.exports = function() {
     this.maxctrl = function(argv) {
 
         if (argv.quiet) {
-            this.logger = new consoleLib.Console(fs.createWriteStream('/dev/null'), process.stderr)
+            this.logger = new consoleLib.Console(fs.createWriteStream('/dev/null'),
+                                                 fs.createWriteStream('/dev/null'))
         }
 
         this.argv = argv
