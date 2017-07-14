@@ -5,7 +5,7 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "main": "maxctrl.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --timeout 30000 --slow 10000"
   },
   "keywords": [
     "maxscale"
@@ -22,5 +22,10 @@
     "request": "^2.81.0",
     "request-promise-native": "^1.0.3",
     "yargs": "^8.0.2"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-as-promised": "^6.0.0",
+    "mocha": "^3.3.0"
   }
 }
