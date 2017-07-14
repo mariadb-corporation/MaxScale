@@ -30,7 +30,7 @@ exports.builder = function(yargs) {
                     .updateValue('maxscale/logs', 'data.attributes.parameters.log_' + argv.log, true)
             } else {
                 maxctrl(argv)
-                    .logError('Invalid log priority: ' + argv.log);
+                    .error('Invalid log priority: ' + argv.log);
             }
         })
         .command('maxlog', 'Enable MaxScale logging', {}, function(argv) {

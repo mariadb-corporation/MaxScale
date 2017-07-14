@@ -25,8 +25,8 @@ function addServer(argv, path, targets) {
             _.set(res, 'data.relationships.servers.data', servers)
             delete res.data.attributes
 
-            maxctrl(argv)
-                .doRequest(path, null, {method: 'PATCH', body: res})
+            return maxctrl(argv)
+                .doAsyncRequest(path, null, {method: 'PATCH', body: res})
         })
 }
 

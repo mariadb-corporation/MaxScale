@@ -11,7 +11,7 @@
  * Public License.
  */
 
-var request = require('request');
+var request = require('request-promise-native');
 var colors = require('colors/safe');
 var Table = require('cli-table');
 
@@ -127,46 +127,63 @@ module.exports = function() {
         return base + argv.user + ':' + argv.password + '@' + host + '/v1/' + endpoint
     }
 
-    // Helper for executing requests and handling their responses
-    this.doRequest = function(resource, cb, obj) {
-        pingCluster(this.argv.hosts)
-            .then(function() {
-                var argv = this.argv
-                argv.hosts.forEach(function(host) {
-                    args = obj || {}
-                    args.uri = getUri(host, argv.secure, resource)
-                    args.json = true
-                    args.timeout = argv.timeout
+    // Helper for executing requests and handling their responses, returns a
+    // promise that is fulfilled when all requests successfully complete. The
+    // promise is rejected if any of the requests fails.
+    this.doAsyncRequest = function(resource, cb, obj) {
+        return new Promise(function (resolve, reject) {
+            pingCluster(this.argv.hosts)
+                .then(function() {
 
-                    request(args, function(err, resp, res) {
-                        if (err) {
-                            // Failed to request
-                            console.log(colors.yellow(host) + ':')
-                            logError(JSON.stringify(err, null, 4))
-                        } else if (resp.statusCode == 200 && cb) {
-                            // Request OK, returns data
-                            if (!argv.tsv) {
+                    var promises = []
+
+                    this.argv.hosts.forEach(function(host) {
+                        args = obj || {}
+                        args.uri = getUri(host, this.argv.secure, resource)
+                        args.json = true
+                        args.timeout = this.argv.timeout
+
+                        var p = request(args)
+                            .then(function(res) {
+                                if (res && cb) {
+                                    // Request OK, returns data
+                                    if (!this.argv.tsv) {
+                                        console.log(colors.yellow(host) + ':')
+                                    }
+                                    return cb(res)
+                                } else {
+                                    // Request OK, no data or data is ignored
+                                    console.log(colors.yellow(host) + ': ' + colors.green('OK'))
+                                }
+                                return Promise.resolve()
+                            }, function(err) {
                                 console.log(colors.yellow(host) + ':')
-                            }
-                            cb(res)
-                        } else if (resp.statusCode == 204) {
-                            // Request OK, no data
-                            console.log(colors.yellow(host) + ': ' + colors.green('OK'))
-                        } else {
-                            // Unexpected return code, probably an error
-                            var errstr = resp.statusCode + ' ' + resp.statusMessage
-                            if (res) {
-                                errstr += ' ' + JSON.stringify(res, null, 4)
-                            }
-                            console.log(colors.yellow(host) + ':')
-                            logError(errstr)
-                        }
+                                if (err.response.body) {
+                                    logError(JSON.stringify(err.response.body, null, 4))
+                                } else {
+                                    logError('Server responded with ' + err.statusCode)
+                                }
+                                return Promise.reject()
+                            })
+
+                        // Push the request on to the stack
+                        promises.push(p)
                     })
+
+                    // Wait for all promises to resolve or reject
+                    Promise.all(promises)
+                        .then(resolve, reject)
+                }, function(err) {
+                    // One of the HTTP request pings to the cluster failed, log the error
+                    logError(JSON.stringify(err.error, null, 4))
+                    reject()
                 })
-            })
-            .catch(function(err) {
-                logError(JSON.stringify(err, null, 4))
-            })
+        })
+    }
+
+    this.doRequest = function(resource, cb, obj) {
+        return doAsyncRequest(resource, cb, obj)
+            .then(this.argv.resolve, this.argv.reject)
     }
 
     this.updateValue = function(resource, key, value) {
@@ -177,6 +194,11 @@ module.exports = function() {
 
     this.logError = function(err) {
         console.log(colors.red('Error:'), err)
+    }
+
+    this.error = function(err) {
+        console.log(colors.red('Error:'), err)
+        this.argv.reject()
     }
 }
 
@@ -230,25 +252,11 @@ function getTable(headobj) {
     return new Table(opts)
 }
 
-function pingMaxScale(host) {
-    return new Promise(function(resolve, reject) {
-        request('http://' + host + '/v1', function(err, resp, res) {
-            if (err) {
-                reject(err)
-            } else if (resp.statusCode != 200) {
-                reject(resp.statusCode + ' ' + resp.statusMessage)
-            } else {
-                resolve()
-            }
-        })
-    })
-}
-
 function pingCluster(hosts) {
     var promises = []
 
     hosts.forEach(function(i) {
-        promises.push(pingMaxScale(i))
+        promises.push(request('http://' + i + '/v1'))
     })
 
     return Promise.all(promises)

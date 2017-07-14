@@ -32,11 +32,11 @@ exports.builder = function(yargs) {
                         }
                     })
 
-                    maxctrl
-                        .doRequest('maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.parameters.join('&'),
-                                   function(resp) {
-                                       console.log(JSON.stringify(resp, null, 4))
-                                   }, { method: verb })
+                    return maxctrl
+                        .doAsyncRequest('maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.parameters.join('&'),
+                                        function(resp) {
+                                            console.log(JSON.stringify(resp, null, 4))
+                                        }, { method: verb })
                 })
         })
         .usage('Usage: call <command>')

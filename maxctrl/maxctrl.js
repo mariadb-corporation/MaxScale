@@ -13,18 +13,14 @@
 
 'use strict';
 
-var argv = process.argv
+var maxctrl = require('./core.js')
 
 // Mangle the arguments if we are being called from the command line
-if (argv[0] == process.execPath) {
-    argv.shift()
+if (process.argv[0] == process.execPath) {
+    process.argv.shift()
     // The first argument is always the script
-    argv.shift()
+    process.argv.shift()
 }
 
-require('./core.js')(argv)
-    .then(function(output){
-        if (output.length > 0) {
-            console.log(output)
-        }
-    }, console.log)
+maxctrl(process.argv)
+    .then(function(out) {}, function(out) {})

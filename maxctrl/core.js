@@ -82,12 +82,6 @@ module.exports = function(argv) {
             .command('*', 'the default command', {}, () => {
                 console.log('Unknown command. See output of `help` for a list of commands.')
             })
-            .parse(process.argv, function(err, argv, output) {
-                if (err) {
-                    reject(output)
-                } else {
-                    resolve(output);
-                }
-            })
+            .parse(argv, {resolve: resolve, reject: reject})
     })
 }

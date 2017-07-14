@@ -20,6 +20,7 @@
     "lodash": "^4.17.4",
     "lodash-getpath": "^0.2.4",
     "request": "^2.81.0",
+    "request-promise-native": "^1.0.3",
     "yargs": "^8.0.2"
   }
 }
