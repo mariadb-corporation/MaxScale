@@ -140,6 +140,14 @@ public:
             return rv;
         }
 
+        iterator operator + (ptrdiff_t n)
+        {
+            ss_dassert(m_pS);
+            iterator rv = m_pS;
+            rv += n;
+            return rv;
+        }
+
         iterator& operator += (ptrdiff_t n)
         {
             ss_dassert(m_pS);

@@ -256,7 +256,7 @@ public:
          *                    accounts listed in 'applies_to' in the json file.
          * @param exempted    Account instances corresponding to the
          *                    accounts listed in 'exempted' in the json file.
-         * @param regexp      The capture regexp from the json file.
+         * @param regexp      The compiled capture regexp from the json file.
          * @param fill        The fill value from the json file.
          */
         CaptureRule(const std::string& column,
@@ -264,14 +264,14 @@ public:
                     const std::string& database,
                     const std::vector<SAccount>& applies_to,
                     const std::vector<SAccount>& exempted,
-                    const std::string& regexp,
+                    pcre2_code* regexp,
                     const std::string& fill);
 
         ~CaptureRule();
 
-        const std::string& capture() const
+        const pcre2_code& capture() const
         {
-            return m_regexp;
+            return *m_regexp;
         }
 
         const std::string& fill() const
@@ -297,7 +297,7 @@ public:
         void rewrite(LEncString& s) const;
 
     private:
-        std::string           m_regexp;
+        pcre2_code*           m_regexp;
         std::string           m_fill;
 
     private:
