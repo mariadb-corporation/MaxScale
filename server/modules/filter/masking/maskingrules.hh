@@ -243,11 +243,11 @@ public:
         ObfuscateRule& operator = (const ObfuscateRule&);
     };
 
-    class CaptureRule : public Rule
+    class MatchRule : public Rule
     {
     public:
         /**
-         * Constructor of CaptureRule
+         * Constructor of MatchRule
          *
          * @param column      The column value from the json file.
          * @param table       The table value from the json file.
@@ -259,15 +259,15 @@ public:
          * @param regexp      The compiled capture regexp from the json file.
          * @param fill        The fill value from the json file.
          */
-        CaptureRule(const std::string& column,
-                    const std::string& table,
-                    const std::string& database,
-                    const std::vector<SAccount>& applies_to,
-                    const std::vector<SAccount>& exempted,
-                    pcre2_code* regexp,
-                    const std::string& fill);
+        MatchRule(const std::string& column,
+                  const std::string& table,
+                  const std::string& database,
+                  const std::vector<SAccount>& applies_to,
+                  const std::vector<SAccount>& exempted,
+                  pcre2_code* regexp,
+                  const std::string& fill);
 
-        ~CaptureRule();
+        ~MatchRule();
 
         const pcre2_code& capture() const
         {
@@ -280,7 +280,7 @@ public:
         }
 
         /**
-         * Create a CaptureRule instance
+         * Create a MatchRule instance
          *
          * @param pRule  A json object corresponding to a single
          *               rule in the rules json file.
@@ -301,8 +301,8 @@ public:
         std::string           m_fill;
 
     private:
-        CaptureRule(const CaptureRule&);
-        CaptureRule& operator = (const CaptureRule&);
+        MatchRule(const MatchRule&);
+        MatchRule& operator = (const MatchRule&);
     };
 
     ~MaskingRules();

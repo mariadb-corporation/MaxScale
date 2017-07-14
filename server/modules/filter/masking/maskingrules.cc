@@ -46,7 +46,7 @@ static const char KEY_TABLE[]      = "table";
 static const char KEY_VALUE[]      = "value";
 static const char KEY_WITH[]       = "with";
 static const char KEY_OBFUSCATE[]  = "obfuscate";
-static const char KEY_CAPTURE[]    = "capture";
+static const char KEY_MATCH[]      = "match";
 
 /**
  * @class AccountVerbatim
@@ -367,10 +367,10 @@ bool create_rules_from_array(json_t* pRules, vector<shared_ptr<MaskingRules::Rul
             }
             else
             {
-                json_t* pCapture = json_object_get(pReplace, KEY_CAPTURE);
-                // Capture takes the precedence
-                sRule = pCapture ?
-                        MaskingRules::CaptureRule::create_from(pRule) :
+                json_t* pMatch = json_object_get(pReplace, KEY_MATCH);
+                // Match takes the precedence
+                sRule = pMatch ?
+                        MaskingRules::MatchRule::create_from(pRule) :
                         MaskingRules::ReplaceRule::create_from(pRule);
             }
 
@@ -479,13 +479,13 @@ MaskingRules::ObfuscateRule::ObfuscateRule(const std::string& column,
 {
 }
 
-MaskingRules::CaptureRule::CaptureRule(const std::string& column,
-                                       const std::string& table,
-                                       const std::string& database,
-                                       const std::vector<SAccount>& applies_to,
-                                       const std::vector<SAccount>& exempted,
-                                       pcre2_code* regexp,
-                                       const std::string& fill)
+MaskingRules::MatchRule::MatchRule(const std::string& column,
+                                   const std::string& table,
+                                   const std::string& database,
+                                   const std::vector<SAccount>& applies_to,
+                                   const std::vector<SAccount>& exempted,
+                                   pcre2_code* regexp,
+                                   const std::string& fill)
     : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
     , m_regexp(regexp)
     , m_fill(fill)
@@ -504,7 +504,7 @@ MaskingRules::ObfuscateRule::~ObfuscateRule()
 {
 }
 
-MaskingRules::CaptureRule::~CaptureRule()
+MaskingRules::MatchRule::~MatchRule()
 {
     pcre2_code_free(m_regexp);
 }
@@ -758,17 +758,17 @@ bool rule_get_values(json_t* pRule,
 }
 
 /**
- * Returns 'capture' regexp & 'fill' value from a 'replace' rule
+ * Returns 'match' regexp & 'fill' value from a 'replace' rule
  *
  * @param pRule       The Json rule doc
- * @param pCapture    The string buffer for 'capture'value
+ * @param pMatch      The string buffer for 'match'value
  * @param pFill       The string buffer for 'fill' value
  *
  * @return            True on success, false on errors
  */
-bool rule_get_capture_fill(json_t* pRule,
-                           std::string *pCapture,
-                           std::string* pFill)
+bool rule_get_match_fill(json_t* pRule,
+                         std::string *pMatch,
+                         std::string* pFill)
 {
     // Get the 'with' key from the rule
     json_t* pWith = json_object_get(pRule, KEY_WITH);
@@ -789,17 +789,17 @@ bool rule_get_capture_fill(json_t* pRule,
 
     // Get fill from 'with' object
     json_t* pTheFill = rule_get_fill(pWith);
-    // Get 'capture' from 'replace' ojbect
-    json_t* pTheCapture = json_object_get(pKeyObj, KEY_CAPTURE);
+    // Get 'match' from 'replace' ojbect
+    json_t* pTheMatch = json_object_get(pKeyObj, KEY_MATCH);
 
     // Check values
     if ((!pTheFill || !json_is_string(pTheFill)) ||
-        ((!pTheCapture || !json_is_string(pTheCapture))))
+        ((!pTheMatch || !json_is_string(pTheMatch))))
     {
         MXS_ERROR("A masking '%s' rule has '%s' and/or '%s' "
                   "invalid Json strings.",
                   KEY_REPLACE,
-                  KEY_CAPTURE,
+                  KEY_MATCH,
                   KEY_FILL);
         return false;
     }
@@ -807,7 +807,7 @@ bool rule_get_capture_fill(json_t* pRule,
     {
         // Update the string buffers
         pFill->assign(json_string_value(pTheFill));
-        pCapture->assign(json_string_value(pTheCapture));
+        pMatch->assign(json_string_value(pTheMatch));
 
         return true;
     }
@@ -968,17 +968,17 @@ static pcre2_code* rule_compile_pcre2_match(const char* match_string)
 }
 
 //static
-auto_ptr<MaskingRules::Rule> MaskingRules::CaptureRule::create_from(json_t* pRule)
+auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
 {
     ss_dassert(json_is_object(pRule));
 
-    std::string column, table, database, value, fill, capture;
+    std::string column, table, database, value, fill, match;
     vector<shared_ptr<MaskingRules::Rule::Account> > applies_to;
     vector<shared_ptr<MaskingRules::Rule::Account> > exempted;
     auto_ptr<MaskingRules::Rule> sRule;
 
     // Check rule, extract base values
-    // Note: the capture rule has same rule_type of "replace"
+    // Note: the match rule has same rule_type of "replace"
     if (rule_get_values(pRule,
                         &applies_to,
                         &exempted,
@@ -986,29 +986,29 @@ auto_ptr<MaskingRules::Rule> MaskingRules::CaptureRule::create_from(json_t* pRul
                         &table,
                         &database,
                         KEY_REPLACE) &&
-        rule_get_capture_fill(pRule,  // get capture/fill
-                              &capture,
-                              &fill))
+        rule_get_match_fill(pRule,  // get match/fill
+                            &match,
+                            &fill))
     {
 
-        if (!capture.empty() && !fill.empty())
+        if (!match.empty() && !fill.empty())
         {
-            // Compile the regexp capture
-            pcre2_code* pCode = rule_compile_pcre2_match(capture.c_str());
+            // Compile the regexp
+            pcre2_code* pCode = rule_compile_pcre2_match(match.c_str());
 
             if (pCode)
             {
                 Closer<pcre2_code*> code(pCode);
-                // Instantiate the CaptureRule class
-                sRule = auto_ptr<MaskingRules::CaptureRule>(new MaskingRules::CaptureRule(column,
-                                                                                          table,
-                                                                                          database,
-                                                                                          applies_to,
-                                                                                          exempted,
-                                                                                          pCode,
-                                                                                          fill));
+                // Instantiate the MatchRule class
+                sRule = auto_ptr<MaskingRules::MatchRule>(new MaskingRules::MatchRule(column,
+                                                                                      table,
+                                                                                      database,
+                                                                                      applies_to,
+                                                                                      exempted,
+                                                                                      pCode,
+                                                                                      fill));
 
-                // Ownership of pCode has been moved to the CaptureRule object.
+                // Ownership of pCode has been moved to the MatchRule object.
                 code.release();
             }
         }
@@ -1147,7 +1147,7 @@ inline void fill_buffer(FillIter f_first,
     }
 }
 
-void MaskingRules::CaptureRule::rewrite(LEncString& s) const
+void MaskingRules::MatchRule::rewrite(LEncString& s) const
 {
     int rv = 0;
     uint32_t n_matches = 0;
