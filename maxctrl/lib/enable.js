@@ -26,20 +26,25 @@ exports.builder = function(yargs) {
     yargs
         .command('log-priority <log>', 'Enable log priority [warning|notice|info|debug]', {}, function(argv) {
             if (log_levels.indexOf(argv.log) != -1) {
-                maxctrl(argv)
-                    .updateValue('maxscale/logs', 'data.attributes.parameters.log_' + argv.log, true)
+                maxctrl(argv, function(host) {
+                    return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.log_' + argv.log, true)
+                })
             } else {
-                maxctrl(argv)
-                    .error('Invalid log priority: ' + argv.log);
+                maxctrl(argv, function() {
+                    error('Invalid log priority: ' + argv.log)
+                    return Promise.reject()
+                })
             }
         })
         .command('maxlog', 'Enable MaxScale logging', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('maxscale/logs', 'data.attributes.parameters.maxlog', true)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.maxlog', true)
+            })
         })
         .command('syslog', 'Enable syslog logging', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('maxscale/logs', 'data.attributes.parameters.syslog', true)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.syslog', true)
+            })
         })
         .command('account <name>', 'Activate a Linux user account for administrative use', {}, function(argv) {
             var req_body = {
@@ -48,8 +53,9 @@ exports.builder = function(yargs) {
                     type: 'unix'
                 }
             }
-            maxctrl(argv)
-                .doRequest('users/unix', null, { method: 'POST', body: req_body})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'users/unix', null, { method: 'POST', body: req_body})
+            })
         })
         .usage('Usage: enable <command>')
         .help()

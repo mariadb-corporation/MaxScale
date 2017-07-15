@@ -52,7 +52,7 @@ module.exports = function() {
 
     // Request a resource collection and format it as a table
     this.getCollection = function (host, resource, fields) {
-        doRequest(host, resource, function(res) {
+        return doRequest(host, resource, function(res) {
 
             var header = []
 
@@ -84,8 +84,7 @@ module.exports = function() {
     // Request a part of a resource as a collection
     this.getSubCollection = function (host, resource, subres, fields) {
 
-        doRequest(host, resource, function(res) {
-
+        return doRequest(host, resource, function(res) {
             var header = []
 
             fields.forEach(function(i) {
@@ -118,7 +117,7 @@ module.exports = function() {
     // Request a single resource and format it as a key-value list
     this.getResource = function (host, resource, fields) {
 
-        doRequest(resource, function(res) {
+        return doRequest(host, resource, function(res) {
             var table = getList()
 
             fields.forEach(function(i) {
@@ -139,6 +138,12 @@ module.exports = function() {
 
             logger.log(table.toString())
         })
+    }
+
+    this.updateValue = function(host, resource, key, value) {
+        var body = {}
+        _.set(body, key, value)
+        return doRequest(host, resource, null, { method: 'PATCH', body: body })
     }
 
     // Helper for converting endpoints to acutal URLs
@@ -172,10 +177,12 @@ module.exports = function() {
                     return Promise.resolve()
                 }
             }, function(err) {
-                if (err.response.body) {
+                if (err.response && err.response.body) {
                     logError(JSON.stringify(err.response.body, null, 4))
-                } else {
+                } else if (err.statusCode) {
                     logError('Server responded with ' + err.statusCode)
+                } else {
+                    logError('Undefined error: ' + JSON.stringify(err, null, 4))
                 }
                 return Promise.reject()
             })
@@ -184,12 +191,6 @@ module.exports = function() {
     this.doRequest = function(host, resource, cb, obj) {
         return doAsyncRequest(host, resource, cb, obj)
             .then(this.argv.resolve, this.argv.reject)
-    }
-
-    this.updateValue = function(host, resource, key, value) {
-        var body = {}
-        _.set(body, key, value)
-        doRequest(host, resource, null, { method: 'PATCH', body: body })
     }
 
     this.logError = function(err) {

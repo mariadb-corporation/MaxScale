@@ -13,8 +13,8 @@
 require('../common.js')()
 
 function removeServer(argv, path, targets) {
-    maxctrl(argv)
-        .doRequest(path, function(res) {
+    maxctrl(argv, function(host) {
+        return doRequest(host, path, function(res) {
             var servers =_.get(res, 'data.relationships.servers.data', [])
 
             _.remove(servers, function(i) {
@@ -25,9 +25,9 @@ function removeServer(argv, path, targets) {
             _.set(res, 'data.relationships.servers.data', servers)
             delete res.data.attributes
 
-            return maxctrl(argv)
-                .doAsyncRequest(path, null, {method: 'PATCH', body: res})
+            return doAsyncRequest(host, path, null, {method: 'PATCH', body: res})
         })
+    })
 }
 
 exports.command = 'unlink <command>'

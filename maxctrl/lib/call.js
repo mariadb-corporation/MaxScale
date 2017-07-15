@@ -18,10 +18,9 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('command <module> <command> [parameters...]', 'Call a module command', {}, function(argv) {
-
             // First we have to find the correct method to use
-            maxctrl(argv)
-                .doRequest('maxscale/modules/' + argv.module + '/', function(resp) {
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'maxscale/modules/' + argv.module + '/', function(resp) {
 
                     // A GET request will return the correct error if the command is not found
                     var verb = 'GET'
@@ -32,12 +31,12 @@ exports.builder = function(yargs) {
                         }
                     })
 
-                    return maxctrl
-                        .doAsyncRequest('maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.parameters.join('&'),
-                                        function(resp) {
-                                            logger.log(JSON.stringify(resp, null, 4))
-                                        }, { method: verb })
+                    return doAsyncRequest(host, 'maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.parameters.join('&'),
+                                          function(resp) {
+                                              logger.log(JSON.stringify(resp, null, 4))
+                                          }, { method: verb })
                 })
+            })
         })
         .usage('Usage: call <command>')
         .help()

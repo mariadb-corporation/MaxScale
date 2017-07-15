@@ -23,4 +23,12 @@ if (process.argv[0] == process.execPath) {
 }
 
 maxctrl.execute(process.argv)
-    .then(function(out) {}, function(out) {})
+    .then(function(out) {
+        if (out) {
+            console.log(out)
+        }
+    }, function(out) {
+       if (out) {
+            console.log(out)
+        }
+    })

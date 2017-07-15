@@ -18,20 +18,24 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('server <name>', 'Destroy an unused server', {}, function(argv) {
-            maxctrl(argv)
-                .doRequest('servers/' + argv.name, null, {method: 'DELETE'})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'servers/' + argv.name, null, {method: 'DELETE'})
+            })
         })
         .command('monitor <name>', 'Destroy an unused monitor', {}, function(argv) {
-            maxctrl(argv)
-                .doRequest('monitors/' + argv.name, null, {method: 'DELETE'})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'monitors/' + argv.name, null, {method: 'DELETE'})
+            })
         })
         .command('listener <service> <name>', 'Destroy an unused listener', {}, function(argv) {
-            maxctrl(argv)
-                .doRequest('services/' + argv.service + '/listeners/' + argv.name, null, {method: 'DELETE'})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'services/' + argv.service + '/listeners/' + argv.name, null, {method: 'DELETE'})
+            })
         })
         .command('user <name>', 'Remove a network user', {}, function(argv) {
-            maxctrl(argv)
-                .doRequest('users/inet/' + argv.name, null, {method: 'DELETE'})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'users/inet/' + argv.name, null, {method: 'DELETE'})
+            })
         })
         .usage('Usage: destroy <command>')
         .help()

@@ -18,24 +18,29 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('server <server> <key> <value>', 'Alter server parameters', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('servers/' + argv.server, 'data.attributes.parameters.' + argv.key, argv.value)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'servers/' + argv.server, 'data.attributes.parameters.' + argv.key, argv.value)
+            })
         })
         .command('monitor <monitor> <key> <value>', 'Alter monitor parameters', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('monitors/' + argv.monitor, 'data.attributes.parameters.' + argv.key, argv.value)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'monitors/' + argv.monitor, 'data.attributes.parameters.' + argv.key, argv.value)
+            })
         })
         .command('service <service> <key> <value>', 'Alter service parameters', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('services/' + argv.service, 'data.attributes.parameters.' + argv.key, argv.value)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'services/' + argv.service, 'data.attributes.parameters.' + argv.key, argv.value)
+            })
         })
         .command('logging <key> <value>', 'Alter logging parameters', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('maxscale/logs', 'attributes.parameters.' + argv.key, argv.value)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'maxscale/logs', 'attributes.parameters.' + argv.key, argv.value)
+            })
         })
         .command('maxscale <key> <value>', 'Alter MaxScale parameters', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('maxscale', 'attributes.parameters.' + argv.key, argv.value)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'maxscale', 'attributes.parameters.' + argv.key, argv.value)
+            })
         })
         .usage('Usage: alter <command>')
         .help()

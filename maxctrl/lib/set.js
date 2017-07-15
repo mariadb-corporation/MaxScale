@@ -19,8 +19,9 @@ exports.builder = function(yargs) {
     yargs
         .command('server <server> <state>', 'Set server state', {}, function(argv) {
             var target = 'servers/' + argv.server + '/set?state=' + argv.state
-            maxctrl(argv)
-                .doRequest(target, null, {method: 'PUT'})
+            maxctrl(argv, function(host) {
+                return doRequest(host, target, null, {method: 'PUT'})
+            })
         })
         .usage('Usage: set <command>')
         .help()

@@ -19,70 +19,78 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('servers', 'List servers', {}, function(argv) {
-            maxctrl(argv)
-                .getCollection('servers', [
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'servers', [
                     {'Server': 'id'},
                     {'Address': 'attributes.parameters.address'},
                     {'Port': 'attributes.parameters.port'},
                     {'Connections': 'attributes.statistics.connections'},
                     {'State': 'attributes.state'}
                 ])
+            })
         })
         .command('services', 'List services', {}, function(argv) {
-            maxctrl(argv)
-                .getCollection('services',[
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'services',[
                     {'Service': 'id'},
                     {'Router': 'attributes.router'},
                     {'Connections': 'attributes.connections'},
                     {'Total Connections': 'attributes.total_connections'},
                     {'Servers': 'relationships.servers.data[].id'}
                 ])
+            })
         })
         .command('monitors', 'List monitors', {}, function(argv) {
-            maxctrl(argv)
-                .getCollection('monitors', [
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'monitors', [
                     {'Monitor': 'id'},
                     {'State': 'attributes.state'},
                     {'Servers': 'relationships.servers.data[].id'}
                 ])
+            })
         })
         .command('sessions', 'List sessions', {}, function(argv) {
-            maxctrl(argv)
-                .getCollection('sessions',[
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'sessions',[
                     {'Id': 'id'},
                     {'Service': 'relationships.services.data[].id'},
                     {'User': 'attributes.user'},
                     {'Host': 'attributes.remote'}
                 ])
+            })
         })
         .command('filters', 'List filters', {}, function(argv) {
-            maxctrl(argv)
-                .getCollection('filters', [
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'filters', [
                     {'Filter': 'id'},
                     {'Service': 'relationships.services.data[].id'},
                     {'Module': 'attributes.module'}
                 ])
+            })
         })
         .command('modules', 'List loaded modules', {}, function(argv) {
-            maxctrl(argv)
-                .getCollection('maxscale/modules',[
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'maxscale/modules',[
                     {'Module':'id'},
                     {'Type':'attributes.module_type'},
                     {'Version': 'attributes.version'}
                 ])
+            })
         })
         .command('users', 'List created network users', {}, function(argv) {
-            maxctrl(argv)
-                .getCollection('users/inet',[
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'users/inet',[
                     {'Name':'id'}
                 ])
+            })
         })
         .command('commands', 'List module commands', {}, function(argv) {
-            maxctrl(argv)
-                .getCollection('maxscale/modules',[
+            maxctrl(argv, function(host) {
+                return getCollection(host, 'maxscale/modules',[
                     {'Module':'id'},
                     {'Commands': 'attributes.commands[].id'}
                 ])
+            })
         })
         .usage('Usage: list <command>')
         .help()

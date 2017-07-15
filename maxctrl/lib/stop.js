@@ -18,12 +18,14 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('service <name>', 'Stop a service', {}, function(argv) {
-            maxctrl(argv)
-                .doRequest('services/' + argv.name + '/stop', null, {method: 'PUT'})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'services/' + argv.name + '/stop', null, {method: 'PUT'})
+            })
         })
         .command('monitor <name>', 'Stop a monitor', {}, function(argv) {
-            maxctrl(argv)
-                .doRequest('monitors/' + argv.name + '/stop', null, {method: 'PUT'})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'monitors/' + argv.name + '/stop', null, {method: 'PUT'})
+            })
         })
         .usage('Usage: stop <command>')
         .help()

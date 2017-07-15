@@ -71,8 +71,9 @@ exports.builder = function(yargs) {
                 }
             }
 
-            maxctrl(argv)
-                .doRequest('servers', null, {method: 'POST', body: server})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'servers', null, {method: 'POST', body: server})
+            })
         })
 
     // Create monitor
@@ -98,8 +99,9 @@ exports.builder = function(yargs) {
                 }
             }
 
-            maxctrl(argv)
-                .doRequest('monitors', null, {method: 'POST', body: monitor})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'monitors', null, {method: 'POST', body: monitor})
+            })
         })
 
     // Create listener
@@ -159,8 +161,9 @@ exports.builder = function(yargs) {
                 }
             }
 
-            maxctrl(argv)
-                .doRequest('services/' + argv.service + '/listeners', null, {method: 'POST', body: listener})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'services/' + argv.service + '/listeners', null, {method: 'POST', body: listener})
+            })
         })
         .command('user <name> <password>', 'Create a new network user', {}, function(argv) {
 
@@ -174,8 +177,9 @@ exports.builder = function(yargs) {
                 }
             }
 
-            maxctrl(argv)
-                .doRequest('users/inet', null, {method: 'POST', body: user})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'users/inet', null, {method: 'POST', body: user})
+            })
         })
 
         .usage('Usage: create <command>')

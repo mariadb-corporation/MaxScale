@@ -26,24 +26,30 @@ exports.builder = function(yargs) {
     yargs
         .command('log-priority <log>', 'Disable log priority [warning|notice|info|debug]', {}, function(argv) {
             if (log_levels.indexOf(argv.log) != -1) {
-                maxctrl(argv)
-                    .updateValue('maxscale/logs', 'data.attributes.parameters.log_' + argv.log, false)
+                maxctrl(argv, function(host) {
+                    return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.log_' + argv.log, false)
+                })
             } else {
-                maxctrl(argv)
-                    .error('Invalid log priority: ' + argv.log);
+                maxctrl(argv, function() {
+                    error('Invalid log priority: ' + argv.log)
+                    return Promise.reject()
+                })
             }
         })
         .command('maxlog', 'Disable MaxScale logging', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('maxscale/logs', 'data.attributes.parameters.maxlog', false)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.maxlog', false)
+            })
         })
         .command('syslog', 'Disable syslog logging', {}, function(argv) {
-            maxctrl(argv)
-                .updateValue('maxscale/logs', 'data.attributes.parameters.syslog', false)
+            maxctrl(argv, function(host) {
+                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.syslog', false)
+            })
         })
         .command('account <name>', 'Disable a Linux user account from administrative use', {}, function(argv) {
-            maxctrl(argv)
-                .doRequest('users/unix/' + argv.name, null, { method: 'DELETE'})
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'users/unix/' + argv.name, null, { method: 'DELETE'})
+            })
         })
         .usage('Usage: disable <command>')
         .help()

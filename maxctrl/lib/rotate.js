@@ -18,8 +18,9 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('logs', 'Rotate log files by closing and reopening the files', {}, function(argv) {
-            maxctrl(argv)
-                .doRequest('maxscale/logs/flush/', null, {method: 'POST'})
+            maxctrl(argv, function(host){
+                return doRequest(host, 'maxscale/logs/flush/', null, {method: 'POST'})
+            })
         })
         .usage('Usage: rotate <command>')
         .help()
