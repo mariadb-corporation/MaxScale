@@ -23,7 +23,10 @@ module.exports = function() {
 
     this.logger = console
 
-    this.maxctrl = function(argv) {
+    // The main entry point into the library. This function is used to do
+    // cluster health checks and to propagate the commands to multiple
+    // servers.
+    this.maxctrl = function(argv, cb) {
 
         if (argv.quiet) {
             this.logger = new consoleLib.Console(fs.createWriteStream('/dev/null'),
@@ -31,12 +34,25 @@ module.exports = function() {
         }
 
         this.argv = argv
-        return this
+
+        return pingCluster(argv.hosts)
+            .then(function() {
+                var promises = []
+
+                argv.hosts.forEach(function(i) {
+                    promises.push(cb(i))
+                })
+
+                return Promise.all(promises)
+            }, function(err) {
+                // One of the HTTP request pings to the cluster failed, log the error
+                logError(JSON.stringify(err.error, null, 4))
+            })
     }
 
     // Request a resource collection and format it as a table
-    this.getCollection = function (resource, fields) {
-        doRequest(resource, function(res) {
+    this.getCollection = function (host, resource, fields) {
+        doRequest(host, resource, function(res) {
 
             var header = []
 
@@ -66,9 +82,9 @@ module.exports = function() {
     }
 
     // Request a part of a resource as a collection
-    this.getSubCollection = function (resource, subres, fields) {
+    this.getSubCollection = function (host, resource, subres, fields) {
 
-        doRequest(resource, function(res) {
+        doRequest(host, resource, function(res) {
 
             var header = []
 
@@ -100,7 +116,7 @@ module.exports = function() {
     }
 
     // Request a single resource and format it as a key-value list
-    this.getResource = function (resource, fields) {
+    this.getResource = function (host, resource, fields) {
 
         doRequest(resource, function(res) {
             var table = getList()
@@ -139,73 +155,41 @@ module.exports = function() {
     // Helper for executing requests and handling their responses, returns a
     // promise that is fulfilled when all requests successfully complete. The
     // promise is rejected if any of the requests fails.
-    this.doAsyncRequest = function(resource, cb, obj) {
-        return new Promise(function (resolve, reject) {
-            pingCluster(this.argv.hosts)
-                .then(function() {
+    this.doAsyncRequest = function(host, resource, cb, obj) {
+        args = obj || {}
+        args.uri = getUri(host, this.argv.secure, resource)
+        args.json = true
+        args.timeout = this.argv.timeout
 
-                    var promises = []
-
-                    this.argv.hosts.forEach(function(host) {
-                        args = obj || {}
-                        args.uri = getUri(host, this.argv.secure, resource)
-                        args.json = true
-                        args.timeout = this.argv.timeout
-
-                        var p = request(args)
-                            .then(function(res) {
-                                if (res && cb) {
-                                    // Request OK, returns data
-                                    if (!this.argv.tsv && this.argv.hosts.length > 1) {
-                                        logger.log(colors.yellow(host) + ':')
-                                    }
-
-                                    return cb(res)
-                                } else {
-                                    // Request OK, no data or data is ignored
-                                    if (this.argv.hosts.length > 1) {
-                                        logger.log(colors.yellow(host) + ': ' + colors.green('OK'))
-                                    } else {
-                                        logger.log(colors.green('OK'))
-                                    }
-                                    return Promise.resolve()
-                                }
-                            }, function(err) {
-                                if (this.argv.hosts.length > 1) {
-                                    logger.log(colors.yellow(host) + ':')
-                                }
-                                if (err.response.body) {
-                                    logError(JSON.stringify(err.response.body, null, 4))
-                                } else {
-                                    logError('Server responded with ' + err.statusCode)
-                                }
-                                return Promise.reject()
-                            })
-
-                        // Push the request on to the stack
-                        promises.push(p)
-                    })
-
-                    // Wait for all promises to resolve or reject
-                    Promise.all(promises)
-                        .then(resolve, reject)
-                }, function(err) {
-                    // One of the HTTP request pings to the cluster failed, log the error
-                    logError(JSON.stringify(err.error, null, 4))
-                    reject()
-                })
-        })
+        return request(args)
+            .then(function(res) {
+                if (res && cb) {
+                    // Request OK, returns data
+                    return cb(res)
+                } else {
+                    // Request OK, no data or data is ignored
+                    logger.log(colors.green('OK'))
+                    return Promise.resolve()
+                }
+            }, function(err) {
+                if (err.response.body) {
+                    logError(JSON.stringify(err.response.body, null, 4))
+                } else {
+                    logError('Server responded with ' + err.statusCode)
+                }
+                return Promise.reject()
+            })
     }
 
-    this.doRequest = function(resource, cb, obj) {
-        return doAsyncRequest(resource, cb, obj)
+    this.doRequest = function(host, resource, cb, obj) {
+        return doAsyncRequest(host, resource, cb, obj)
             .then(this.argv.resolve, this.argv.reject)
     }
 
-    this.updateValue = function(resource, key, value) {
+    this.updateValue = function(host, resource, key, value) {
         var body = {}
         _.set(body, key, value)
-        doRequest(resource, null, { method: 'PATCH', body: body })
+        doRequest(host, resource, null, { method: 'PATCH', body: body })
     }
 
     this.logError = function(err) {
