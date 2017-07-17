@@ -194,15 +194,61 @@ specified name.
         }
     ]
 }
+
+```
+
+
+The optional key `match` makes partial replacement of the original
+value possible: only the matched part would be replaced
+with the fill character.
+The `match` value must be a valid pcre2 regular expression.
+
+```
+
+            "replace": {
+                "column": "ssn"
+                "match": "(123)",
+            },
+            "with": {
+                "fill": "X#"
+            }
+```
+
+#### `obfuscate`
+
+The obfuscate rule allows the obfuscation of the value
+by passing it through an obfuscation algorithm.
+Current solution uses a reversible obfuscation approach.
+
+The minimal configuration is:
+
+```
+            "obfuscate": {
+                "column": "name"
+            }
+
+```
+
+Output example for Db field `name` = 'remo'
+
+```
+SELECT name from db1.tbl1;`
+
++-------+
+| name  |
++-------+
+| znffv |
++-------+
 ```
 
 #### `with`
 
 The value of this key is an object that specifies what the value of the matched
-column should be replaced with. Currently, the object is expected to contain
-either the key `value` or the key `fill`. The value of both must be a string
-with length greater than zero. If both keys are specified, `value` takes
-precedence. If `fill` is not specified, the default `X` is used as its value.
+column should be replaced with for the `replace` rule. Currently, the object
+is expected to contain either the key `value` or the key `fill`.
+The value of both must be a string with length greater than zero.
+If both keys are specified, `value` takes precedence.
+If `fill` is not specified, the default `X` is used as its value.
 
 If `value` is specified, then its value is used to replace the actual value
 verbatim and the length of the specified value must match the actual returned
@@ -213,6 +259,7 @@ When the value of `fill` (fill-value) is used for masking the returned value,
 the fill-value is used as many times as necessary to match the length of the
 return value. If required, only a part of the fill-value may be used in the end
 of the mask value to get the lengths to match.
+
 ```
 {
     "rules": [
