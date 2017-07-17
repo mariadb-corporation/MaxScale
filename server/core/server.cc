@@ -1395,6 +1395,16 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(params, CN_PORT, json_integer(server->port));
     json_object_set_new(params, CN_PROTOCOL, json_string(server->protocol));
 
+    if (server->authenticator)
+    {
+        json_object_set_new(params, CN_AUTHENTICATOR, json_string(server->authenticator));
+    }
+
+    if (server->auth_options)
+    {
+        json_object_set_new(params, CN_AUTHENTICATOR_OPTIONS, json_string(server->auth_options));
+    }
+
     if (*server->monuser)
     {
         json_object_set_new(params, CN_MONITORUSER, json_string(server->monuser));
