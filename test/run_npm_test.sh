@@ -90,6 +90,9 @@ npm test
 rval=$?
 
 # Stop MariaDB servers
-docker-compose down -v
+if [ -z  "$SKIP_SHUTDOWN" ]
+then
+    docker-compose down -v
+fi
 
 exit $rval
