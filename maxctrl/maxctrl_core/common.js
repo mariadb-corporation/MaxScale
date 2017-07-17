@@ -181,6 +181,8 @@ module.exports = function() {
                     logError(JSON.stringify(err.response.body, null, 4))
                 } else if (err.statusCode) {
                     logError('Server responded with ' + err.statusCode)
+                } else if (err.error) {
+                    logError(JSON.stringify(err.error, null, 4))
                 } else {
                     logError('Undefined error: ' + JSON.stringify(err, null, 4))
                 }
