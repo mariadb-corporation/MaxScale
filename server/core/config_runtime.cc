@@ -314,61 +314,6 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
     return rval;
 }
 
-bool runtime_alter_server(SERVER *server, const char *key, const char *value)
-{
-    spinlock_acquire(&crt_lock);
-    bool valid = true;
-
-    if (strcmp(key, CN_ADDRESS) == 0)
-    {
-        server_update_address(server, value);
-    }
-    else if (strcmp(key, CN_PORT) == 0)
-    {
-        server_update_port(server, atoi(value));
-    }
-    else if (strcmp(key, CN_MONITORUSER) == 0)
-    {
-        server_update_credentials(server, value, server->monpw);
-    }
-    else if (strcmp(key, CN_MONITORPW) == 0)
-    {
-        server_update_credentials(server, server->monuser, value);
-    }
-    else
-    {
-        if (!server_remove_parameter(server, key) && !value[0])
-        {
-            valid = false;
-        }
-        else if (value[0])
-        {
-            server_add_parameter(server, key, value);
-
-            /**
-             * It's likely that this parameter is used as a weighting parameter.
-             * We need to update the weights of services that use this.
-             */
-            service_update_weights();
-        }
-    }
-
-    if (valid)
-    {
-        if (server_serialize(server))
-        {
-            MXS_NOTICE("Updated server '%s': %s=%s", server->unique_name, key, value);
-        }
-    }
-    else
-    {
-        runtime_error("Invalid server parameter: %s", key);
-    }
-
-    spinlock_release(&crt_lock);
-    return valid;
-}
-
 /**
  * @brief Convert a string value to a positive integer
  *
@@ -388,6 +333,71 @@ static long get_positive_int(const char *value)
     }
 
     return 0;
+}
+
+bool runtime_alter_server(SERVER *server, const char *key, const char *value)
+{
+    spinlock_acquire(&crt_lock);
+    bool valid = false;
+
+    if (strcmp(key, CN_ADDRESS) == 0)
+    {
+        valid = true;
+        server_update_address(server, value);
+    }
+    else if (strcmp(key, CN_PORT) == 0)
+    {
+        long ival = get_positive_int(value);
+
+        if (ival)
+        {
+            valid = true;
+            server_update_port(server, ival);
+        }
+    }
+    else if (strcmp(key, CN_MONITORUSER) == 0)
+    {
+        valid = true;
+        server_update_credentials(server, value, server->monpw);
+    }
+    else if (strcmp(key, CN_MONITORPW) == 0)
+    {
+        valid = true;
+        server_update_credentials(server, server->monuser, value);
+    }
+    else
+    {
+        if (!server_remove_parameter(server, key) && !value[0])
+        {
+            // Not a valid parameter
+        }
+        else if (value[0])
+        {
+            valid = true;
+            server_add_parameter(server, key, value);
+
+            /**
+             * It's likely that this parameter is used as a weighting parameter.
+             * We need to update the weights of services that use this.
+             */
+            service_update_weights();
+        }
+    }
+
+    if (valid)
+    {
+        if (server_serialize(server))
+        {
+            MXS_NOTICE("Updated server '%s': %s=%s", server->unique_name, key, value);
+        }
+    }
+    else
+    {
+        runtime_error("Invalid server parameter: %s=%s", key, value);
+    }
+
+    spinlock_release(&crt_lock);
+    return valid;
 }
 
 /**
@@ -522,70 +532,94 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
 {
     string key(zKey);
     string value(zValue);
-    bool valid = true;
+    bool valid = false;
 
     spinlock_acquire(&crt_lock);
 
     if (key == CN_USER)
     {
+        valid = true;
         serviceSetUser(service, value.c_str(), service->credentials.authdata);
     }
     else if (key == CN_PASSWORD)
     {
+        valid = true;
         serviceSetUser(service, service->credentials.name, value.c_str());
     }
     else if (key == CN_ENABLE_ROOT_USER)
     {
+        valid = true;
         serviceEnableRootUser(service, config_truth_value(value.c_str()));
     }
     else if (key == CN_MAX_RETRY_INTERVAL)
     {
-        service_set_retry_interval(service, strtol(value.c_str(), NULL, 10));
+        long i = get_positive_int(zValue);
+        if (i)
+        {
+            valid = true;
+            service_set_retry_interval(service, i);
+        }
     }
     else if (key == CN_MAX_CONNECTIONS)
     {
-        // TODO: Once connection queues are implemented, use correct values
-        serviceSetConnectionLimits(service, strtol(value.c_str(), NULL, 10), 0, 0);
+        long i = get_positive_int(zValue);
+        if (i)
+        {
+            valid = true;
+            // TODO: Once connection queues are implemented, use correct values
+            serviceSetConnectionLimits(service, i, 0, 0);
+        }
     }
     else if (key == CN_CONNECTION_TIMEOUT)
     {
-        serviceSetTimeout(service, strtol(value.c_str(), NULL, 10));
+        long i = get_positive_int(zValue);
+        if (i)
+        {
+            valid = true;
+            serviceSetTimeout(service, i);
+        }
     }
     else if (key == CN_AUTH_ALL_SERVERS)
     {
+        valid = true;
         serviceAuthAllServers(service, config_truth_value(value.c_str()));
     }
     else if (key == CN_STRIP_DB_ESC)
     {
+        valid = true;
         serviceStripDbEsc(service, config_truth_value(value.c_str()));
     }
     else if (key == CN_LOCALHOST_MATCH_WILDCARD_HOST)
     {
+        valid = true;
         serviceEnableLocalhostMatchWildcardHost(service, config_truth_value(value.c_str()));
     }
     else if (key == CN_VERSION_STRING)
     {
+        valid = true;
         serviceSetVersionString(service, value.c_str());
     }
     else if (key == CN_WEIGHTBY)
     {
+        valid = true;
         serviceWeightBy(service, value.c_str());
     }
     else if (key == CN_LOG_AUTH_WARNINGS)
     {
+        valid = true;
         // TODO: Move this inside the service source
         service->log_auth_warnings = config_truth_value(value.c_str());
     }
     else if (key == CN_RETRY_ON_FAILURE)
     {
+        valid = true;
         serviceSetRetryOnFailure(service, value.c_str());
     }
     else
     {
-        runtime_error("Invalid service parameter: %s", key.c_str());
+        runtime_error("Invalid service parameter: %s=%s", key.c_str(), zValue);
         MXS_ERROR("Unknown parameter for service '%s': %s=%s",
                   service->name, key.c_str(), value.c_str());
-        valid = false;
     }
 
     if (valid)
@@ -609,9 +643,8 @@ bool runtime_alter_maxscale(const char* name, const char* value)
 
     if (key == CN_AUTH_CONNECT_TIMEOUT)
     {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval > 0)
+        int intval = get_positive_int(value);
+        if (intval)
         {
             MXS_NOTICE("Updated '%s' from %d to %d", CN_AUTH_CONNECT_TIMEOUT,
                        cnf.auth_conn_timeout, intval);
@@ -625,9 +658,8 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else if (key == CN_AUTH_READ_TIMEOUT)
     {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval > 0)
+        int intval = get_positive_int(value);
+        if (intval)
         {
             MXS_NOTICE("Updated '%s' from %d to %d", CN_AUTH_READ_TIMEOUT,
                        cnf.auth_read_timeout, intval);
@@ -641,9 +673,8 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else if (key == CN_AUTH_WRITE_TIMEOUT)
     {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval > 0)
+        int intval = get_positive_int(value);
+        if (intval)
         {
             MXS_NOTICE("Updated '%s' from %d to %d", CN_AUTH_WRITE_TIMEOUT,
                        cnf.auth_write_timeout, intval);
