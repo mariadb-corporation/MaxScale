@@ -1243,9 +1243,6 @@ void MaskingRules::ReplaceRule::rewrite(LEncString& s) const
     {
         if (!m_fill.empty())
         {
-            LEncString::iterator i = s.begin();
-            size_t len = m_fill.length();
-
             // Copy the fill string
             fill_buffer(m_fill.begin(), m_fill.end(), s.begin(), s.end());
         }
