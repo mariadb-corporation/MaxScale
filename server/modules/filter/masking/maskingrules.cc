@@ -565,15 +565,17 @@ static json_t* rule_get_object(json_t* pRule,
 /**
  * Checks database, table and column values
  *
- * @param pColumn    The database column
- * @param pTable     The database table
- * @param pDatabase  The database name
+ * @param pColumn      The database column
+ * @param pTable       The database table
+ * @param pDatabase    The database name
+ * @param rule_type    The rule type
  *
  * @return           true on success, false otherwise
  */
 static bool rule_check_database_options(json_t* pColumn,
                                         json_t* pTable,
-                                        json_t* pDatabase)
+                                        json_t* pDatabase,
+                                        const char* rule_type)
 {
 
     // Only column is mandatory; both table and database are optional.
@@ -587,16 +589,16 @@ static bool rule_check_database_options(json_t* pColumn,
     {
         if (!pColumn || !json_is_string(pColumn))
         {
-            MXS_ERROR("The '%s' object of a masking rule does not have "
+            MXS_ERROR("A masking rule '%s' does not have "
                       "the mandatory '%s' key or it's not a valid Json string.",
-                      KEY_REPLACE,
+                      rule_type,
                       KEY_COLUMN);
         }
         else
         {
-            MXS_ERROR("In the '%s' object of a masking rule, the keys "
-                      "'%s' and/or '%s' re not valid Json strings.",
-                      KEY_REPLACE,
+            MXS_ERROR("In a masking rule '%s', the keys "
+                      "'%s' and/or '%s' are not valid Json strings.",
+                      rule_type,
                       KEY_TABLE,
                       KEY_DATABASE);
        }
@@ -677,13 +679,15 @@ static bool rule_run_common_checks(json_t* pRule,
  * @param column        The column value from the json file.
  * @param table         The table value from the json file.
  * @param database      The database value from the json file.
+ * @param rule_type     The rule type
  *
  * @return              True on success, false on errors.
  */
 static bool rule_get_common_values(json_t* pRule,
                                    std::string* column,
                                    std::string* table,
-                                   std::string* database)
+                                   std::string* database,
+                                   const char* rule_type)
 {
     // Get database, table && column
     json_t* pDatabase = json_object_get(pRule, KEY_DATABASE);
@@ -693,7 +697,8 @@ static bool rule_get_common_values(json_t* pRule,
     // Check column/table/dataase
     if (!rule_check_database_options(pColumn,
                                      pTable,
-                                     pDatabase))
+                                     pDatabase,
+                                     rule_type))
     {
         return false;
     }
@@ -735,7 +740,7 @@ bool rule_get_values(json_t* pRule,
                      std::string* column,
                      std::string* table,
                      std::string* database,
-                     const char *rule_type)
+                     const char* rule_type)
 {
     json_t *pKeyObj;
     // Get Key object based on 'rule_type' param
@@ -749,7 +754,8 @@ bool rule_get_values(json_t* pRule,
         rule_get_common_values(pKeyObj,
                                column,
                                table,
-                               database))
+                               database,
+                               rule_type))
     {
         return true;
     }
