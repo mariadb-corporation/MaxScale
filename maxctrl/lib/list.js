@@ -40,6 +40,15 @@ exports.builder = function(yargs) {
                 ])
             })
         })
+        .command('listeners <service>', 'List listeners of a service', {}, function(argv) {
+            maxctrl(argv, function(host) {
+                return getSubCollection(host, 'services/' + argv.service, 'attributes.listeners', [
+                    {'Name': 'id'},
+                    {'Port': 'attributes.parameters.port'},
+                    {'Host': 'attributes.parameters.host'}
+                ])
+            })
+        })
         .command('monitors', 'List monitors', {}, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'monitors', [
