@@ -21,10 +21,10 @@ GET /v1/sessions/:id
 ```javascript
 {
     "links": {
-        "self": "http://localhost:8989/v1/sessions/1"
+        "self": "http://localhost:8989/v1/sessions/9"
     },
     "data": {
-        "id": "1",
+        "id": "9",
         "type": "sessions",
         "relationships": {
             "services": {
@@ -40,11 +40,14 @@ GET /v1/sessions/:id
             }
         },
         "attributes": {
-            "state": "Listener Session",
-            "connected": "Wed May 17 10:06:35 2017"
+            "state": "Session ready for routing",
+            "user": "maxuser",
+            "remote": "::ffff:127.0.0.1",
+            "connected": "Mon Jul 17 11:10:39 2017",
+            "idle": 23.800000000000001
         },
         "links": {
-            "self": "http://localhost:8989/v1/sessions/1"
+            "self": "http://localhost:8989/v1/sessions/9"
         }
     }
 }
@@ -69,7 +72,7 @@ GET /v1/sessions
     },
     "data": [
         {
-            "id": "1",
+            "id": "9",
             "type": "sessions",
             "relationships": {
                 "services": {
@@ -85,15 +88,18 @@ GET /v1/sessions
                 }
             },
             "attributes": {
-                "state": "Listener Session",
-                "connected": "Wed May 17 10:06:35 2017"
+                "state": "Session ready for routing",
+                "user": "maxuser",
+                "remote": "::ffff:127.0.0.1",
+                "connected": "Mon Jul 17 11:10:39 2017",
+                "idle": 62.899999999999999
             },
             "links": {
-                "self": "http://localhost:8989/v1/sessions/1"
+                "self": "http://localhost:8989/v1/sessions/9"
             }
         },
         {
-            "id": "2",
+            "id": "10",
             "type": "sessions",
             "relationships": {
                 "services": {
@@ -102,42 +108,21 @@ GET /v1/sessions
                     },
                     "data": [
                         {
-                            "id": "Read-Connection-Router",
+                            "id": "RW-Split-Router",
                             "type": "services"
                         }
                     ]
                 }
             },
             "attributes": {
-                "state": "Listener Session",
-                "connected": "Wed May 17 10:06:35 2017"
+                "state": "Session ready for routing",
+                "user": "skysql",
+                "remote": "::ffff:127.0.0.1",
+                "connected": "Mon Jul 17 11:11:37 2017",
+                "idle": 5.2000000000000002
             },
             "links": {
-                "self": "http://localhost:8989/v1/sessions/2"
-            }
-        },
-        {
-            "id": "3",
-            "type": "sessions",
-            "relationships": {
-                "services": {
-                    "links": {
-                        "self": "http://localhost:8989/v1/services/"
-                    },
-                    "data": [
-                        {
-                            "id": "CLI",
-                            "type": "services"
-                        }
-                    ]
-                }
-            },
-            "attributes": {
-                "state": "Listener Session",
-                "connected": "Wed May 17 10:06:35 2017"
-            },
-            "links": {
-                "self": "http://localhost:8989/v1/sessions/3"
+                "self": "http://localhost:8989/v1/sessions/10"
             }
         }
     ]
