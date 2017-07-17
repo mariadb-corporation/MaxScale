@@ -16,8 +16,6 @@ var program = require('yargs');
 
 const maxctrl_version = '1.0.0';
 
-require('./common.js')()
-
 program
     .version(maxctrl_version)
     .group(['u', 'p', 'h', 's', 't', 'q', 'tsv'], 'Global Options:')

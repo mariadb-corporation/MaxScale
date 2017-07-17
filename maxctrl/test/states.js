@@ -8,10 +8,8 @@ describe("Server states", function() {
             })
     })
 
-    var ctrl = require('../core.js')
-    var opts = {
-        extra_args: [ '--quiet']
-    }
+    var ctrl = require('maxctrl-core')
+    var opts = { extra_args: [ '--quiet'] }
 
     it('set correct state', function() {
         return ctrl.execute('set server server2 master'.split(' '), opts)

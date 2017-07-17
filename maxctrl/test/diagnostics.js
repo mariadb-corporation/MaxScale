@@ -3,7 +3,7 @@ require('../test_utils.js')()
 describe("Diagnostic commands", function() {
     before(startMaxScale)
 
-    var ctrl = require('../core.js')
+    var ctrl = require('maxctrl-core')
     var tests = [
         'list servers',
         'list services',

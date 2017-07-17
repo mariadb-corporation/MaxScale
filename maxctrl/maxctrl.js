@@ -13,7 +13,7 @@
 
 'use strict';
 
-var maxctrl = require('./core.js')
+var maxctrl = require('maxctrl-core')
 
 // Mangle the arguments if we are being called from the command line
 if (process.argv[0] == process.execPath) {
