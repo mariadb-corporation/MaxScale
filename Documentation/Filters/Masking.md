@@ -218,7 +218,7 @@ The `match` value must be a valid pcre2 regular expression.
 
 The obfuscate rule allows the obfuscation of the value
 by passing it through an obfuscation algorithm.
-Current solution uses a reversible obfuscation approach.
+Current solution uses a nonreversible obfuscation approach.
 
 The minimal configuration is:
 
@@ -234,11 +234,11 @@ Output example for Db field `name` = 'remo'
 ```
 SELECT name from db1.tbl1;`
 
-+-------+
-| name  |
-+-------+
-| znffv |
-+-------+
++------+
+| name |
++------+
+| $-~) |
++------+
 ```
 
 #### `with`
