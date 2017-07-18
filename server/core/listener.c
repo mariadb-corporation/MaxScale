@@ -299,7 +299,7 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         if (ssl_listener->ssl_cert && ssl_listener->ssl_key)
         {
             /** Load the server certificate */
-            if (SSL_CTX_use_certificate_file(ssl_listener->ctx, ssl_listener->ssl_cert, SSL_FILETYPE_PEM) <= 0)
+            if (SSL_CTX_use_certificate_chain_file(ssl_listener->ctx, ssl_listener->ssl_cert) <= 0)
             {
                 MXS_ERROR("Failed to set server SSL certificate.");
                 return -1;
