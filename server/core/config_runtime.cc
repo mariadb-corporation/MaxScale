@@ -1458,6 +1458,11 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                         rval = false;
                     }
                 }
+                else
+                {
+                    runtime_error("Parameter '%s' cannot be modified", key);
+                    rval = false;
+                }
             }
         }
     }
