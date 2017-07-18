@@ -1,6 +1,6 @@
 require('../test_utils.js')()
 
-describe("Server states", function() {
+describe("Service Commands", function() {
     before(startMaxScale)
 
     var ctrl = require('maxctrl-core')

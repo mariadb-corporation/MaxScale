@@ -95,7 +95,7 @@ exports.builder = function(yargs) {
 
             if (argv.servers) {
                 for (i = 0; i < argv.servers.length; i++) {
-                    _.set(server, 'data.relationships.servers.data[' + i + ']', {id: argv.monitors[i], type: 'servers'})
+                    _.set(monitor, 'data.relationships.servers.data[' + i + ']', {id: argv.servers[i], type: 'servers'})
                 }
             }
 
@@ -152,12 +152,6 @@ exports.builder = function(yargs) {
                             'ssl_cert_verify_depth': argv['tls-cert-verify-depth'],
                         }
                     }
-                }
-            }
-
-            if (argv.servers) {
-                for (i = 0; i < argv.servers.length; i++) {
-                    _.set(server, 'data.relationships.servers.data[' + i + ']', {id: argv.monitors[i], type: 'servers'})
                 }
             }
 

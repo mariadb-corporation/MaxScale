@@ -1,6 +1,6 @@
 require('../test_utils.js')()
 
-describe("Server states", function() {
+describe("Server Commands", function() {
     before(startMaxScale)
 
     var ctrl = require('maxctrl-core')
@@ -29,16 +29,6 @@ describe("Server states", function() {
             .should.be.fulfilled
     })
 
-    it('create server with options', function() {
-        return ctrl.execute('create server server5 127.0.0.1 3003 --authenticator GSSAPIBackendAuth'.split(' '), opts)
-            .then(function() {
-                return request.get(host + 'servers/server5', {json: true})
-            })
-            .then(function(res) {
-                res.data.attributes.parameters.authenticator.should.equal("GSSAPIBackendAuth")
-            })
-    })
-
     it('create server with bad parameters', function() {
         return ctrl.execute('create server server5 bad parameter'.split(' '), opts)
             .should.be.rejected
@@ -47,6 +37,16 @@ describe("Server states", function() {
     it('create server with bad options', function() {
         return ctrl.execute('create server server5 bad parameter --this-is-not-an-option'.split(' '), opts)
             .should.be.rejected
+    })
+
+    it('create server with options', function() {
+        return ctrl.execute('create server server5 127.0.0.1 3003 --authenticator GSSAPIBackendAuth'.split(' '), opts)
+            .then(function() {
+                return request.get(host + 'servers/server5', {json: true})
+            })
+            .then(function(res) {
+                res.data.attributes.parameters.authenticator.should.equal("GSSAPIBackendAuth")
+            })
     })
 
     it('alter server with bad parameters', function() {
