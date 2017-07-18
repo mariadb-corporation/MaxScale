@@ -174,6 +174,11 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
         MY_CHARSET_INFO cs_info;
         mysql_get_character_set_info(mysql, &cs_info);
         server->charset = cs_info.number;
+
+        if (mysql_query(mysql, "SET SQL_MODE=''"))
+        {
+            MXS_ERROR("Failed to change SQL_MODE: %s", mysql_error(mysql));
+        }
     }
 
     return mysql;

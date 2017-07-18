@@ -476,6 +476,10 @@ add_test_executable(mxs1045.cpp mxs1045 mxs1045 LABELS maxscale REPL_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1123
 add_test_executable(mxs1123.cpp mxs1123 mxs1123 LABELS maxscale REPL_BACKEND)
 
+# MXS-1319: Maxscale selecting extra whitespace while loading users
+# https://jira.mariadb.org/browse/MXS-1319
+add_test_executable(mxs1319.cpp mxs1319 replication LABELS MySQLAuth REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
