@@ -82,7 +82,15 @@ exports.builder = function(yargs) {
             describe: 'Link the created monitor to these servers',
             type: 'array'
         })
-        .command('monitor <name> <module>', 'Create a new server', {}, function(argv) {
+        .option('monitor-user', {
+            describe: 'Username for the monitor user',
+            type: 'string'
+        })
+        .option('monitor-password', {
+            describe: 'Password for the monitor user',
+            type: 'string'
+        })
+        .command('monitor <name> <module>', 'Create a new monitor', {}, function(argv) {
 
             var monitor = {
                 'data': {
@@ -97,6 +105,13 @@ exports.builder = function(yargs) {
                 for (i = 0; i < argv.servers.length; i++) {
                     _.set(monitor, 'data.relationships.servers.data[' + i + ']', {id: argv.servers[i], type: 'servers'})
                 }
+            }
+
+            if (argv.monitorUser) {
+                _.set(monitor, 'data.attributes.parameters.user', argv.monitorUser)
+            }
+            if (argv.monitorPassword) {
+                _.set(monitor, 'data.attributes.parameters.password', argv.monitorPassword)
             }
 
             maxctrl(argv, function(host) {
@@ -132,7 +147,7 @@ exports.builder = function(yargs) {
             describe: 'TLS certificate verification depth',
             type: 'string'
         })
-        .command('listener <service> <name> <port>', 'Create a new server', {}, function(argv) {
+        .command('listener <service> <name> <port>', 'Create a new listener', {}, function(argv) {
 
             var listener = {
                 'data': {
