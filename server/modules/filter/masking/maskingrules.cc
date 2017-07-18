@@ -1103,32 +1103,6 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
 }
 
 /**
- * Basic obfuscation routine
- *
- * @param c    The bye to obfuscate
- *
- * @return     The obfuscated byte
- */
-static inline char maxscale_basic_obfuscation(const char c)
-{
-    if (c >= 'a' && c <= 'z')
-    {
-        return (c - 'a' + 13) % 26 + 'a';
-    }
-    else if (c >= 'A' && c <= 'Z')
-    {
-        return (c - 'A' + 13) % 26 + 'A';
-    }
-    else
-    {
-        char d = c + 32;
-        d = d > 127 ? 127 : d;
-        return d;
-    }
-    return c;
-}
-
-/**
  * Fills a buffer with a fill string
  *
  * @param f_first    The iterator pointing to first fill byt
@@ -1217,11 +1191,18 @@ void MaskingRules::MatchRule::rewrite(LEncString& s) const
 
 void MaskingRules::ObfuscateRule::rewrite(LEncString& s) const
 {
-    // Basic Obfuscation routine
-    std::transform(s.begin(),
-                   s.end(),
-                   s.begin(),
-                   maxscale_basic_obfuscation);
+    size_t i_len = s.length();
+    LEncString::iterator i = s.begin();
+    size_t c = *i + i_len;
+
+    for (LEncString::iterator i = s.begin(); i <= s.end(); i++)
+    {
+      // ASCII 32 is first printable char
+      unsigned char d = abs((char)(*i ^ c)) + 32;
+      c += d << 3;
+      // ASCII 126 is last printable char
+      *i = d <= 126 ? d : 126;
+    }
 }
 
 void MaskingRules::ReplaceRule::rewrite(LEncString& s) const
