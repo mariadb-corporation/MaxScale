@@ -1,10 +1,10 @@
 require('../test_utils.js')()
 
+var ctrl = require('../lib/core.js')
+var opts = { extra_args: [ '--quiet'] }
+
 describe("Service Commands", function() {
     before(startMaxScale)
-
-    var ctrl = require('maxctrl-core')
-    var opts = { extra_args: [ '--quiet'] }
 
     it('link servers to a service', function() {
         return ctrl.execute('link service Read-Connection-Router server1 server2 server3 server4'.split(' '), opts)

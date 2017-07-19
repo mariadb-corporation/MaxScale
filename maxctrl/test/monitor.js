@@ -1,10 +1,10 @@
 require('../test_utils.js')()
 
+var ctrl = require('../lib/core.js')
+var opts = { extra_args: [ '--quiet'] }
+
 describe("Monitor Commands", function() {
     before(startMaxScale)
-
-    var ctrl = require('maxctrl-core')
-    var opts = { extra_args: [ '--quiet'] }
 
     it('create monitor', function() {
         return ctrl.execute('create monitor my-monitor mysqlmon'.split(' '), opts)

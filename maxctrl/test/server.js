@@ -1,10 +1,10 @@
 require('../test_utils.js')()
 
+var ctrl = require('../lib/core.js')
+var opts = { extra_args: [ '--quiet'] }
+
 describe("Server Commands", function() {
     before(startMaxScale)
-
-    var ctrl = require('maxctrl-core')
-    var opts = { extra_args: [ '--quiet'] }
 
     it('create server', function() {
         return ctrl.execute('create server server5 127.0.0.1 3003'.split(' '), opts)

@@ -10,21 +10,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('../common.js')()
+require('./common.js')()
 
-exports.command = 'rotate <command>'
-exports.desc = 'Rotate log files'
+exports.command = 'set <command>'
+exports.desc = 'Set object state'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('logs', 'Rotate log files by closing and reopening the files', {}, function(argv) {
-            maxctrl(argv, function(host){
-                return doRequest(host, 'maxscale/logs/flush/', null, {method: 'POST'})
+        .command('server <server> <state>', 'Set server state', {}, function(argv) {
+            var target = 'servers/' + argv.server + '/set?state=' + argv.state
+            maxctrl(argv, function(host) {
+                return doRequest(host, target, null, {method: 'PUT'})
             })
         })
-        .usage('Usage: rotate <command>')
+        .usage('Usage: set <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            logger.log('Unknown command. See output of `help rotate` for a list of commands.')
+            logger.log('Unknown command. See output of `help set` for a list of commands.')
         })
 }

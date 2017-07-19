@@ -10,15 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('../common.js')()
+require('./common.js')()
 
-function addServer(argv, path, targets) {
-    maxctrl(argv, function(host){
+function removeServer(argv, path, targets) {
+    maxctrl(argv, function(host) {
         return doRequest(host, path, function(res) {
             var servers =_.get(res, 'data.relationships.servers.data', [])
 
-            targets.forEach(function(i){
-                servers.push({id: i, type: 'servers'})
+            _.remove(servers, function(i) {
+                return targets.indexOf(i.id) != -1
             })
 
             // Update relationships and remove unnecessary parts
@@ -30,20 +30,20 @@ function addServer(argv, path, targets) {
     })
 }
 
-exports.command = 'link <command>'
-exports.desc = 'Link objects'
+exports.command = 'unlink <command>'
+exports.desc = 'Unlink objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('service <name> <server...>', 'Link servers to a service', {}, function(argv) {
-            addServer(argv, 'services/' + argv.name, argv.server)
+        .command('service <name> <server...>', 'Unlink servers from a service', {}, function(argv) {
+            removeServer(argv, 'services/' + argv.name, argv.server)
         })
-        .command('monitor <name> <server...>', 'Link servers to a monitor', {}, function(argv) {
-            addServer(argv, 'monitors/' + argv.name, argv.server)
+        .command('monitor <name> <server...>', 'Unlink servers from a monitor', {}, function(argv) {
+            removeServer(argv, 'monitors/' + argv.name, argv.server)
         })
-        .usage('Usage: link <command>')
+        .usage('Usage: unlink <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            logger.log('Unknown command. See output of `help link` for a list of commands.')
+            logger.log('Unknown command. See output of `help unlink` for a list of commands.')
         })
 }

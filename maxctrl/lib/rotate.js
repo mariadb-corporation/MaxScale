@@ -10,22 +10,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('../common.js')()
+require('./common.js')()
 
-exports.command = 'clear <command>'
-exports.desc = 'Clear object state'
+exports.command = 'rotate <command>'
+exports.desc = 'Rotate log files'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('server <server> <state>', 'Clear server state', {}, function(argv) {
-            var target = 'servers/' + argv.server + '/clear?state=' + argv.state
-            maxctrl(argv, function(host) {
-                return doRequest(host, target, null, {method: 'PUT'})
+        .command('logs', 'Rotate log files by closing and reopening the files', {}, function(argv) {
+            maxctrl(argv, function(host){
+                return doRequest(host, 'maxscale/logs/flush/', null, {method: 'POST'})
             })
         })
-        .usage('Usage: clear <command>')
+        .usage('Usage: rotate <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            logger.log('Unknown command. See output of `help clear` for a list of commands.')
+            logger.log('Unknown command. See output of `help rotate` for a list of commands.')
         })
 }

@@ -1,5 +1,8 @@
 require('../test_utils.js')()
 
+var ctrl = require('../lib/core.js')
+var opts = { extra_args: [ '--quiet'] }
+
 describe("Server states", function() {
     before(function() {
         return startMaxScale()
@@ -7,9 +10,6 @@ describe("Server states", function() {
                 return request.put(host + 'monitors/MySQL-Monitor/stop')
             })
     })
-
-    var ctrl = require('maxctrl-core')
-    var opts = { extra_args: [ '--quiet'] }
 
     it('set correct state', function() {
         return ctrl.execute('set server server2 master'.split(' '), opts)

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-require('../common.js')()
+require('./common.js')()
 
 exports.command = 'list <command>'
 exports.desc = 'List objects'

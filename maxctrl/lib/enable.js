@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('../common.js')()
+require('./common.js')()
 
 const log_levels = [
     'debug',
@@ -19,15 +19,15 @@ const log_levels = [
     'warning'
 ]
 
-exports.command = 'disable <command>'
-exports.desc = 'Disable functionality'
+exports.command = 'enable <command>'
+exports.desc = 'Enable functionality'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('log-priority <log>', 'Disable log priority [warning|notice|info|debug]', {}, function(argv) {
+        .command('log-priority <log>', 'Enable log priority [warning|notice|info|debug]', {}, function(argv) {
             if (log_levels.indexOf(argv.log) != -1) {
                 maxctrl(argv, function(host) {
-                    return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.log_' + argv.log, false)
+                    return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.log_' + argv.log, true)
                 })
             } else {
                 maxctrl(argv, function() {
@@ -36,24 +36,30 @@ exports.builder = function(yargs) {
                 })
             }
         })
-        .command('maxlog', 'Disable MaxScale logging', {}, function(argv) {
+        .command('maxlog', 'Enable MaxScale logging', {}, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.maxlog', false)
+                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.maxlog', true)
             })
         })
-        .command('syslog', 'Disable syslog logging', {}, function(argv) {
+        .command('syslog', 'Enable syslog logging', {}, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.syslog', false)
+                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.syslog', true)
             })
         })
-        .command('account <name>', 'Disable a Linux user account from administrative use', {}, function(argv) {
+        .command('account <name>', 'Activate a Linux user account for administrative use', {}, function(argv) {
+            var req_body = {
+                data: {
+                    id: argv.name,
+                    type: 'unix'
+                }
+            }
             maxctrl(argv, function(host) {
-                return doRequest(host, 'users/unix/' + argv.name, null, { method: 'DELETE'})
+                return doRequest(host, 'users/unix', null, { method: 'POST', body: req_body})
             })
         })
-        .usage('Usage: disable <command>')
+        .usage('Usage: enable <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            logger.log('Unknown command. See output of `help disable` for a list of commands.')
+            logger.log('Unknown command. See output of `help enable` for a list of commands.')
         })
 }

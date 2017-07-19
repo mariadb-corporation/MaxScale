@@ -10,22 +10,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('../common.js')()
+require('./common.js')()
 
-exports.command = 'set <command>'
-exports.desc = 'Set object state'
+exports.command = 'clear <command>'
+exports.desc = 'Clear object state'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('server <server> <state>', 'Set server state', {}, function(argv) {
-            var target = 'servers/' + argv.server + '/set?state=' + argv.state
+        .command('server <server> <state>', 'Clear server state', {}, function(argv) {
+            var target = 'servers/' + argv.server + '/clear?state=' + argv.state
             maxctrl(argv, function(host) {
                 return doRequest(host, target, null, {method: 'PUT'})
             })
         })
-        .usage('Usage: set <command>')
+        .usage('Usage: clear <command>')
         .help()
         .command('*', 'the default command', {}, () => {
-            logger.log('Unknown command. See output of `help set` for a list of commands.')
+            logger.log('Unknown command. See output of `help clear` for a list of commands.')
         })
 }
