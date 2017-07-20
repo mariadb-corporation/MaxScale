@@ -82,7 +82,7 @@ public:
              const std::string& database,
              const std::vector<SAccount>& applies_to,
              const std::vector<SAccount>& exempted);
-        ~Rule();
+        virtual ~Rule();
 
         std::string match() const;
 
