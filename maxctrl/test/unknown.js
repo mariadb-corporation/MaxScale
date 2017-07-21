@@ -6,6 +6,8 @@ describe("Unknown Commands", function() {
     var endpoints = [
         'list',
         'show',
+        'set',
+        'clear',
         'enable',
         'disable',
         'create',
@@ -24,6 +26,11 @@ describe("Unknown Commands", function() {
             return doCommand(i + ' something')
                 .should.be.rejected
         })
+    })
+
+    it('generic unknown command', function() {
+        return doCommand('something')
+            .should.be.rejected
     })
 
     after(stopMaxScale)

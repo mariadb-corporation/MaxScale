@@ -1,9 +1,6 @@
 require('../test_utils.js')()
 
-var ctrl = require('../lib/core.js')
-var opts = { extra_args: [ '--quiet'] }
-
-describe("Service Commands", function() {
+describe("Link/Unlink Commands", function() {
     before(startMaxScale)
 
     it('link servers to a service', function() {

@@ -1,8 +1,5 @@
 require('../test_utils.js')()
 
-var ctrl = require('../lib/core.js')
-var opts = { extra_args: [ '--quiet'] }
-
 var tests = [
     'list servers',
     'list services',
@@ -20,9 +17,11 @@ var tests = [
     'show filter Hint',
     'show module readwritesplit',
     'show maxscale',
+    'show logging',
+    'show commands readwritesplit',
 ]
 
-describe("Diagnostic commands", function() {
+describe("Diagnostic Commands", function() {
     before(startMaxScale)
 
     tests.forEach(function(i) {

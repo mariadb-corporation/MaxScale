@@ -1,8 +1,5 @@
 require('../test_utils.js')()
 
-var ctrl = require('../lib/core.js')
-var opts = { extra_args: [ '--quiet'] }
-
 describe("Alter Commands", function() {
     before(startMaxScale)
 

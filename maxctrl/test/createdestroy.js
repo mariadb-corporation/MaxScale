@@ -90,6 +90,17 @@ describe("Create/Destroy Commands", function() {
             })
     })
 
+    it('create server for service and monitor', function() {
+        return verifyCommand('create server server6 127.0.0.1 3005 --services RW-Split-Router --monitors MySQL-Monitor',
+                             'servers/server6')
+            .then(function(res) {
+                res.data.relationships.services.data[0].id.should.equal("RW-Split-Router")
+                res.data.relationships.services.data.length.should.equal(1)
+                res.data.relationships.monitors.data[0].id.should.equal("MySQL-Monitor")
+                res.data.relationships.monitors.data.length.should.equal(1)
+            })
+    })
+
     it('create already existing server', function() {
         return doCommand('create server server1 127.0.0.1 3000')
             .should.be.rejected
@@ -98,6 +109,28 @@ describe("Create/Destroy Commands", function() {
     it('destroy nonexistent server', function() {
         return doCommand('destroy server server123')
             .should.be.rejected
+    })
+
+    it('create listener', function() {
+        return verifyCommand('create listener RW-Split-Router my-listener 4567',
+                            'services/RW-Split-Router/listeners/my-listener')
+            .should.be.fulfilled
+    })
+
+    it('destroy listener', function() {
+        return doCommand('destroy listener RW-Split-Router my-listener')
+            .should.be.fulfilled
+    })
+
+    it('create user', function() {
+        return verifyCommand('create user testuser test',
+                             'users/inet/testuser')
+            .should.be.fulfilled
+    })
+
+    it('destroy user', function() {
+        return doCommand('destroy user testuser')
+            .should.be.fulfilled
     })
 
     after(stopMaxScale)

@@ -1,9 +1,6 @@
 require('../test_utils.js')()
 
-var ctrl = require('../lib/core.js')
-var opts = { extra_args: [ '--quiet'] }
-
-describe("Server states", function() {
+describe("Set/Clear Commands", function() {
     before(function() {
         return startMaxScale()
             .then(function() {

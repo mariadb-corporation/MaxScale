@@ -80,8 +80,10 @@ program
     .command(require('./call.js'))
     .help()
     .demandCommand(1, 'At least one command is required')
-    .command('*', 'the default command', {}, () => {
-        console.log('Unknown command. See output of `help` for a list of commands.')
+    .command('*', 'the default command', {}, function(argv) {
+        maxctrl(argv, function() {
+            return error('Unknown command. See output of `help` for a list of commands.')
+        })
     })
 
 module.exports.execute = function(argv, opts) {
