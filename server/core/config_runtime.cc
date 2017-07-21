@@ -705,7 +705,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else
     {
-        runtime_error("Unknown global parameter: %s", value);
+        runtime_error("Unknown global parameter: %s=%s", name, value);
     }
 
     if (rval)
