@@ -15,6 +15,7 @@ module.exports = function() {
     this.expect = chai.expect
     this.host = 'http://localhost:8989/v1/'
 
+    // Start MaxScale, this should be called in the `before` handler of each test unit
     this.startMaxScale = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./start_maxscale.sh", function(err, stdout, stderr) {
@@ -26,6 +27,8 @@ module.exports = function() {
             })
         })
     };
+
+    // Stop MaxScale, this should be called in the `after` handler of each test unit
     this.stopMaxScale = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./stop_maxscale.sh", function(err, stdout, stderr) {
@@ -36,5 +39,22 @@ module.exports = function() {
                 }
             })
         })
+    };
+
+    // Execute a single MaxCtrl command, returns a Promise
+    this.doCommand = function(command) {
+        var ctrl = require('./lib/core.js')
+        var opts = { extra_args: [ '--quiet'] }
+
+        return ctrl.execute(command.split(' '), opts)
+    }
+
+    // Execute a single MaxCtrl command and request a resource via the REST API,
+    // returns a Promise with the JSON format resource as an argument
+    this.verifyCommand = function(command, resource) {
+        return doCommand(command)
+            .then(function() {
+                return request.get(host + resource, {json: true})
+            })
     };
 }

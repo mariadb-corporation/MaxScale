@@ -12,32 +12,26 @@ describe("Server states", function() {
     })
 
     it('set correct state', function() {
-        return ctrl.execute('set server server2 master'.split(' '), opts)
-            .then(function() {
-                return request.get(host + 'servers/server2', {json: true})
-            })
+        return verifyCommand('set server server2 master', 'servers/server2')
             .then(function(res) {
                 res.data.attributes.state.should.match(/Master/)
             })
     })
 
     it('clear correct state', function() {
-        return ctrl.execute('clear server server2 master'.split(' '), opts)
-            .then(function() {
-                return request.get(host + 'servers/server2', {json: true})
-            })
+        return verifyCommand('clear server server2 master', 'servers/server2')
             .then(function(res) {
                 res.data.attributes.state.should.not.match(/Master/)
             })
     })
 
     it('set incorrect state', function() {
-        return ctrl.execute('set server server2 something'.split(' '), opts)
+        return doCommand('set server server2 something')
             .should.be.rejected
     })
 
     it('clear incorrect state', function() {
-        return ctrl.execute('clear server server2 something'.split(' '), opts)
+        return doCommand('clear server server2 something')
             .should.be.rejected
     })
 
