@@ -3037,6 +3037,7 @@ json_t* mxs_logs_to_json(const char* host)
 
     json_t* attr = json_object();
     json_object_set_new(attr, CN_PARAMETERS, param);
+    json_object_set_new(attr, "log_file", json_string(lm->lm_filewriter.fwr_file->sf_fname));
 
     json_t* data = json_object();
     json_object_set_new(data, CN_ATTRIBUTES, attr);

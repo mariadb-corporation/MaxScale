@@ -103,7 +103,16 @@ exports.builder = function(yargs) {
                     {'Version': 'attributes.version'},
                     {'Commit': 'attributes.commit'},
                     {'Started At': 'attributes.started_at'},
-                    {'Uptime': 'attributes.uptime'}
+                    {'Uptime': 'attributes.uptime'},
+                    {'Parameters': 'attributes.parameters'}
+                ])
+            })
+        })
+        .command('logging', 'Show MaxScale logging information', {}, function(argv) {
+            maxctrl(argv, function(host) {
+                return getResource(host, 'maxscale/logs', [
+                    {'Current Log File': 'attributes.log_file'},
+                    {'Parameters': 'attributes.parameters'}
                 ])
             })
         })
