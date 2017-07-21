@@ -36,16 +36,6 @@ exports.builder = function(yargs) {
                 })
             }
         })
-        .command('maxlog', 'Disable MaxScale logging', {}, function(argv) {
-            maxctrl(argv, function(host) {
-                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.maxlog', false)
-            })
-        })
-        .command('syslog', 'Disable syslog logging', {}, function(argv) {
-            maxctrl(argv, function(host) {
-                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.syslog', false)
-            })
-        })
         .command('account <name>', 'Disable a Linux user account from administrative use', {}, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'users/unix/' + argv.name, null, { method: 'DELETE'})
