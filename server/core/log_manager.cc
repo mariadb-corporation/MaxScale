@@ -3017,6 +3017,38 @@ const char* mxs_strerror(int error)
     return strerror_r(error, errbuf, sizeof(errbuf));
 }
 
+json_t* get_log_priorities()
+{
+    json_t* arr = json_array();
+
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR))
+    {
+        json_array_append_new(arr, json_string("error"));
+    }
+
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_WARNING))
+    {
+        json_array_append_new(arr, json_string("warning"));
+    }
+
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_NOTICE))
+    {
+        json_array_append_new(arr, json_string("notice"));
+    }
+
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+    {
+        json_array_append_new(arr, json_string("info"));
+    }
+
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_DEBUG))
+    {
+        json_array_append_new(arr, json_string("debug"));
+    }
+
+    return arr;
+}
+
 json_t* mxs_logs_to_json(const char* host)
 {
     json_t* param = json_object();
@@ -3038,6 +3070,7 @@ json_t* mxs_logs_to_json(const char* host)
     json_t* attr = json_object();
     json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "log_file", json_string(lm->lm_filewriter.fwr_file->sf_fname));
+    json_object_set_new(attr, "log_priorities", get_log_priorities());
 
     json_t* data = json_object();
     json_object_set_new(data, CN_ATTRIBUTES, attr);

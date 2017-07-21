@@ -112,6 +112,7 @@ exports.builder = function(yargs) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'maxscale/logs', [
                     {'Current Log File': 'attributes.log_file'},
+                    {'Enabled Log Levels': 'attributes.log_priorities'},
                     {'Parameters': 'attributes.parameters'}
                 ])
             })
