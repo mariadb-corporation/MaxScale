@@ -11,7 +11,16 @@
  * Public License.
  */
 
-#include "pam_auth.hh"
+/**
+ * Set values for constants shared between both PAMAuth and PAMBackendAuth
+ */
+#include "pam_auth_common.hh"
 
-#include <maxscale/alloc.h>
-#include <maxscale/log_manager.h>
+/* PAM client helper plugin name, TODO: add support for "mysql_clear_password" */
+const std::string DIALOG = "dialog";
+/* The total storage required */
+const int DIALOG_SIZE = DIALOG.length() + 1;
+/* First query from server */
+const std::string PASSWORD = "Password: ";
+const char GENERAL_ERRMSG[] = "Only simple password-based PAM authentication with one call "
+                              "to the conversation function is supported.";
