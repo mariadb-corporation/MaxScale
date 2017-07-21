@@ -128,7 +128,9 @@ exports.builder = function(yargs) {
         })
         .usage('Usage: show <command>')
         .help()
-        .command('*', 'the default command', {}, () => {
-            logger.log('Unknown command. See output of `help show` for a list of commands.')
+        .command('*', 'the default command', {}, function(argv) {
+            maxctrl(argv, function(host) {
+                return error('Unknown command. See output of `help show` for a list of commands.')
+            })
         })
 }

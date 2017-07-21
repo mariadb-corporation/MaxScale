@@ -31,8 +31,7 @@ exports.builder = function(yargs) {
                 })
             } else {
                 maxctrl(argv, function() {
-                    error('Invalid log priority: ' + argv.log)
-                    return Promise.reject()
+                    return error('Invalid log priority: ' + argv.log)
                 })
             }
         })
@@ -43,7 +42,9 @@ exports.builder = function(yargs) {
         })
         .usage('Usage: disable <command>')
         .help()
-        .command('*', 'the default command', {}, () => {
-            logger.log('Unknown command. See output of `help disable` for a list of commands.')
+        .command('*', 'the default command', {}, function(argv) {
+            maxctrl(argv, function(host) {
+                return error('Unknown command. See output of `help disable` for a list of commands.')
+            })
         })
 }

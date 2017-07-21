@@ -44,6 +44,9 @@ module.exports = function() {
                 })
 
                 return Promise.all(promises)
+                    .catch(function(err) {
+                        argv.reject()
+                    })
             }, function(err) {
                 // One of the HTTP request pings to the cluster failed, log the error
                 logError(JSON.stringify(err.error, null, 4))
@@ -209,7 +212,7 @@ module.exports = function() {
 
     this.error = function(err) {
         logger.log(colors.red('Error:'), err)
-        this.argv.reject()
+        return Promise.reject()
     }
 }
 
