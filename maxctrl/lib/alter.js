@@ -34,12 +34,12 @@ exports.builder = function(yargs) {
         })
         .command('logging <key> <value>', 'Alter logging parameters', {}, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'maxscale/logs', 'attributes.parameters.' + argv.key, argv.value)
+                return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
         .command('maxscale <key> <value>', 'Alter MaxScale parameters', {}, function(argv) {
             maxctrl(argv, function(host) {
-                return updateValue(host, 'maxscale', 'attributes.parameters.' + argv.key, argv.value)
+                return updateValue(host, 'maxscale', 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
         .usage('Usage: alter <command>')
