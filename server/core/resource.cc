@@ -410,10 +410,33 @@ HttpResponse cb_get_service(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
-HttpResponse cb_get_service_listeners(const HttpRequest& request)
+HttpResponse cb_get_all_service_listeners(const HttpRequest& request)
 {
     SERVICE* service = service_find(request.uri_part(1).c_str());
-    return HttpResponse(MHD_HTTP_OK, service_listeners_to_json(service, request.host()));
+    return HttpResponse(MHD_HTTP_OK, service_listener_list_to_json(service, request.host()));
+}
+
+HttpResponse cb_get_service_listener(const HttpRequest& request)
+{
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+
+    if (service)
+    {
+        std::string listener = request.uri_part(3);
+
+        if (!service_has_named_listener(service, listener.c_str()))
+        {
+            return HttpResponse(MHD_HTTP_NOT_FOUND);
+        }
+        else
+        {
+            return HttpResponse(MHD_HTTP_OK,
+                                service_listener_to_json(service, listener.c_str(),
+                                                         request.host()));
+        }
+    }
+
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
 }
 
 HttpResponse cb_all_filters(const HttpRequest& request)
@@ -717,8 +740,10 @@ public:
 
         m_get.push_back(SResource(new Resource(cb_all_services, 1, "services")));
         m_get.push_back(SResource(new Resource(cb_get_service, 2, "services", ":service")));
-        m_get.push_back(SResource(new Resource(cb_get_service_listeners, 3,
+        m_get.push_back(SResource(new Resource(cb_get_all_service_listeners, 3,
                                                "services", ":service", "listeners")));
+        m_get.push_back(SResource(new Resource(cb_get_service_listener, 4,
+                                               "services", ":service", "listeners", "?")));
 
         m_get.push_back(SResource(new Resource(cb_all_filters, 1, "filters")));
         m_get.push_back(SResource(new Resource(cb_get_filter, 2, "filters", ":filter")));

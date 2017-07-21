@@ -82,6 +82,7 @@ describe("Resource Self Links", function() {
         "/servers/server2",
         "/services/RW-Split-Router",
         "/services/RW-Split-Router/listeners",
+        "/services/RW-Split-Router/listeners/RW-Split-Listener",
         "/monitors/MySQL-Monitor",
         "/filters/Hint",
         "/sessions/1",

@@ -2498,7 +2498,7 @@ static inline bool have_active_servers(const SERVICE* service)
     return false;
 }
 
-json_t* service_listeners_json_data(const SERVICE* service)
+static json_t* service_all_listeners_json_data(const SERVICE* service)
 {
     json_t* arr = json_array();
     LISTENER_ITERATOR iter;
@@ -2513,6 +2513,22 @@ json_t* service_listeners_json_data(const SERVICE* service)
     }
 
     return arr;
+}
+
+static json_t* service_listener_json_data(const SERVICE* service, const char* name)
+{
+    LISTENER_ITERATOR iter;
+
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
+    {
+        if (listener_is_active(listener) && strcmp(listener->name, name) == 0)
+        {
+            return listener_to_json(listener);
+        }
+    }
+
+    return NULL;
 }
 
 json_t* service_attributes(const SERVICE* service)
@@ -2544,7 +2560,7 @@ json_t* service_attributes(const SERVICE* service)
 
     /** Add service parameters and listeners */
     json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));
-    json_object_set_new(attr, CN_LISTENERS, service_listeners_json_data(service));
+    json_object_set_new(attr, CN_LISTENERS, service_all_listeners_json_data(service));
 
     return attr;
 }
@@ -2608,7 +2624,7 @@ json_t* service_to_json(const SERVICE* service, const char* host)
     return mxs_json_resource(host, self.c_str(), service_json_data(service, host));
 }
 
-json_t* service_listeners_to_json(const SERVICE* service, const char* host)
+json_t* service_listener_list_to_json(const SERVICE* service, const char* host)
 {
     /** This needs to be done here as the listeners are sort of sub-resources
      * of the service. */
@@ -2616,7 +2632,19 @@ json_t* service_listeners_to_json(const SERVICE* service, const char* host)
     self += service->name;
     self += "/listeners";
 
-    return mxs_json_resource(host, self.c_str(), service_listeners_json_data(service));
+    return mxs_json_resource(host, self.c_str(), service_all_listeners_json_data(service));
+}
+
+json_t* service_listener_to_json(const SERVICE* service, const char* name, const char* host)
+{
+    /** This needs to be done here as the listeners are sort of sub-resources
+     * of the service. */
+    string self = MXS_JSON_API_SERVICES;
+    self += service->name;
+    self += "/listeners/";
+    self += name;
+
+    return mxs_json_resource(host, self.c_str(), service_listener_json_data(service, name));
 }
 
 json_t* service_list_to_json(const char* host)
