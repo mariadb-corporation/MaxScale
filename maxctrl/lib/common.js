@@ -35,6 +35,10 @@ module.exports = function() {
 
         this.argv = argv
 
+        if (!argv.hosts || argv.hosts.length < 1) {
+            argv.reject("No hosts defined")
+        }
+
         return pingCluster(argv.hosts)
             .then(function() {
                 var promises = []
@@ -45,11 +49,11 @@ module.exports = function() {
 
                 return Promise.all(promises)
                     .catch(function(err) {
-                        argv.reject()
+                        argv.reject(err)
                     })
             }, function(err) {
                 // One of the HTTP request pings to the cluster failed, log the error
-                logError(JSON.stringify(err.error, null, 4))
+                argv.reject(JSON.stringify(err.error, null, 4))
             })
     }
 
@@ -189,15 +193,14 @@ module.exports = function() {
                 }
             }, function(err) {
                 if (err.response && err.response.body) {
-                    logError(JSON.stringify(err.response.body, null, 4))
+                    return error(JSON.stringify(err.response.body, null, 4))
                 } else if (err.statusCode) {
-                    logError('Server responded with ' + err.statusCode)
+                    return error('Server responded with: ' + err.statusCode)
                 } else if (err.error) {
-                    logError(JSON.stringify(err.error, null, 4))
+                    return error(JSON.stringify(err.error, null, 4))
                 } else {
-                    logError('Undefined error: ' + JSON.stringify(err, null, 4))
+                    return error('Undefined error: ' + JSON.stringify(err, null, 4))
                 }
-                return Promise.reject()
             })
     }
 
@@ -206,13 +209,8 @@ module.exports = function() {
             .then(this.argv.resolve, this.argv.reject)
     }
 
-    this.logError = function(err) {
-        this.logger.error(colors.red('Error:'), err)
-    }
-
     this.error = function(err) {
-        logger.log(colors.red('Error:'), err)
-        return Promise.reject()
+        return Promise.reject(colors.red('Error: ') +  err)
     }
 }
 
@@ -270,7 +268,7 @@ function pingCluster(hosts) {
     var promises = []
 
     hosts.forEach(function(i) {
-        promises.push(request('http://' + i + '/v1'))
+        promises.push(request(getUri(i, false, '')))
     })
 
     return Promise.all(promises)
