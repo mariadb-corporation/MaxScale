@@ -1189,10 +1189,11 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
         switch (server->server_ssl->ssl_method_type)
         {
+#ifndef OPENSSL_1_1
         case SERVICE_TLS10:
             version = "TLSV10";
             break;
-
+#endif
 #ifdef OPENSSL_1_0
         case SERVICE_TLS11:
             version = "TLSV11";
