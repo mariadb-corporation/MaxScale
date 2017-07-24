@@ -309,7 +309,7 @@ add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit H
 add_test_script(mariadb_tests_hartmut mariadb_tests_hartmut.sh replication LABELS readwritesplit REPL_BACKEND)
 
 # A set of MariaDB server tests executed against Maxscale RWSplit (Galera backend)
-add_test_script(mariadb_tests_hartmut_galera mariadb_tests_hartmut.sh galera LABELS readwritesplit GALERA_BACKEND)
+add_test_script(mariadb_tests_hartmut_galera mariadb_tests_hartmut.sh galera_hartmut LABELS readwritesplit GALERA_BACKEND)
 
 # Creates a number of connections > max_connections setting
 add_test_executable(max_connections.cpp max_connections replication LABELS MySQLAuth MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
