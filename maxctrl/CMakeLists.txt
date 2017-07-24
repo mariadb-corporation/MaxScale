@@ -1,6 +1,7 @@
 find_package(NPM)
+find_package(NodeJS)
 
-if (NPM_FOUND)
+if (NPM_FOUND AND NODEJS_FOUND AND NODEJS_VERSION VERSION_GREATER "6.0.0")
   add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/maxctrl/maxctrl
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${CMAKE_SOURCE_DIR}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -15,5 +16,5 @@ if (NPM_FOUND)
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 else()
-  message(STATUS "Not building MaxCtrl: npm not found")
+  message(STATUS "Not building MaxCtrl: npm or Node.js >= 6.0.0 not found")
 endif()
