@@ -848,9 +848,9 @@ bool rule_get_value_fill(json_t* pRule,
     // Get value from 'with' object
     json_t* pTheValue = json_object_get(pWith, KEY_VALUE);
 
-    // Check values
-    if ((!pTheFill || !json_is_string(pTheFill)) ||
-        (!pTheValue || !json_is_string(pTheValue)))
+    // Check Json strings
+    if ((pTheFill && !json_is_string(pTheFill)) ||
+        (pTheValue && !json_is_string(pTheValue)))
     {
         MXS_ERROR("A masking '%s' rule has '%s' and/or '%s' "
                   "invalid Json strings.",
@@ -859,13 +859,18 @@ bool rule_get_value_fill(json_t* pRule,
                   KEY_FILL);
         return false;
     }
-    else
+
+    // Update the string values
+    if (pTheFill)
     {
-        // Update the string buffers
         pFill->assign(json_string_value(pTheFill));
-        pValue->assign(json_string_value(pTheValue));
-        return true;
     }
+    if (pTheValue)
+    {
+        pValue->assign(json_string_value(pTheValue));
+    }
+
+    return true;
 }
 
 //static
@@ -889,26 +894,14 @@ auto_ptr<MaskingRules::Rule> MaskingRules::ReplaceRule::create_from(json_t* pRul
                         KEY_REPLACE) &&
         rule_get_value_fill(pRule, &value, &fill)) // get value/fill
     {
-        if (!value.empty() && !fill.empty())
-        {
-            // Apply value/fill: instantiate the ReplaceRule class
-            sRule = auto_ptr<MaskingRules::ReplaceRule>(new MaskingRules::ReplaceRule(column,
-                                                                                      table,
-                                                                                      database,
-                                                                                      applies_to,
-                                                                                      exempted,
-                                                                                      value,
-                                                                                      fill));
-        }
-        else
-        {
-            MXS_ERROR("Key '%s' or '%s' of masking '%s' rule object '%s' "
-                      "has a non-string value or empty value.",
-                      KEY_VALUE,
-                      KEY_FILL,
-                      KEY_REPLACE,
-                      KEY_WITH);
-        }
+        // Apply value/fill: instantiate the ReplaceRule class
+        sRule = auto_ptr<MaskingRules::ReplaceRule>(new MaskingRules::ReplaceRule(column,
+                                                                                  table,
+                                                                                  database,
+                                                                                  applies_to,
+                                                                                  exempted,
+                                                                                  value,
+                                                                                  fill));
     }
 
     return sRule;
