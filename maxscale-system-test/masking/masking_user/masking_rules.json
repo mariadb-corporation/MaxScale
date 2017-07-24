@@ -71,6 +71,25 @@
             },
 	    "applies_to" : [ "'skysql'" ],
 	    "exempted" : [ "'maxskysql'" ]
+        },
+        {
+            "obfuscate": {
+                "column": "i",
+            },
+	    "applies_to" : [ "'skysql'" ],
+	    "exempted" : [ "'maxskysql'" ]
+        },
+        {
+            "replace": {
+                "column": "l",
+                "match": "(?<=aaa).*(?=-12)|(?<=-12).*"
+            },
+            "with": {
+                "value": "01234-BCD",
+                "fill": "X"
+            },
+	    "applies_to" : [ "'skysql'" ],
+	    "exempted" : [ "'maxskysql'" ]
         }
     ]
 }

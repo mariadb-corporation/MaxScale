@@ -24,6 +24,21 @@
                 "value": "012345-ABCD",
                 "fill": "Y"
             }
+        },
+        {
+            "obfuscate": {
+                "column": "d",
+            }
+        },
+        {
+            "replace": {
+                "column": "f",
+                "match": "(?<=aaa).*(?=-12)|(?<=-12).*"
+            },
+            "with": {
+                "value": "01234-BCD",
+                "fill": "X#@"
+            }
         }
     ]
 }
