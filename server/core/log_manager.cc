@@ -2147,7 +2147,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             skygw_file_close(fwr->fwr_file);
             fwr->fwr_file = NULL;
 
-            if (!logfile_open_file(fwr, lf, SKYGW_OPEN_TRUNCATE, log_config.do_maxlog))
+            if (!logfile_open_file(fwr, lf, SKYGW_OPEN_APPEND, log_config.do_maxlog))
             {
                 LOG_ERROR("MaxScale Log: Error, could not re-open log file %s.\n",
                           lf->lf_full_file_name);
