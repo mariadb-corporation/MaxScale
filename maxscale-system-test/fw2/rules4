@@ -1,4 +1,5 @@
 rule test1 deny function sum avg on_queries select
 rule test2 deny function my_function on_queries select
 rule test3 deny function = >= <= != <> on_queries select
-users %@% match any rules test1 test2 test3
+rule test4 deny function `function` `insert`
+users %@% match any rules test1 test2 test3 test4

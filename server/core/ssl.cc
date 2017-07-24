@@ -196,20 +196,20 @@ const char* ssl_method_type_to_string(ssl_method_type_t method_type)
 {
     switch (method_type)
     {
+#ifndef OPENSSL_1_1
     case SERVICE_TLS10:
-        return "TLS10";
+        return "TLSV10";
+#endif
 #ifdef OPENSSL_1_0
     case SERVICE_TLS11:
-        return "TLS11";
+        return "TLSV11";
     case SERVICE_TLS12:
-        return "TLS12";
+        return "TLSV12";
 #endif
     case SERVICE_SSL_MAX:
-        return "SSL_MAX";
     case SERVICE_TLS_MAX:
-        return "TLS_MAX";
     case SERVICE_SSL_TLS_MAX:
-        return "SSL_TLS_MAX";
+        return "MAX";
     default:
         return "Unknown";
     }

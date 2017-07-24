@@ -1149,13 +1149,18 @@ SSL enabled listeners.
 #### `ssl_version`
 
 This parameter controls the level of encryption used. Accepted values are:
+
  * TLSv10
  * TLSv11
  * TLSv12
  * MAX
 
-Not all backend servers will support TLSv11 or TLSv12. If available, TLSv12
-should be used.
+The default is to use the highest level of encryption available. For OpenSSL 1.0
+and newer this is TLSv1.2. Older versions use TLSv1.0 as the default transport
+layer encryption.
+
+**Note:** It is highly recommended to leave this parameter to the default value
+  of _MAX_. This will guarantee that the strongest available encryption is used.
 
 #### `ssl_cert_verification_depth`
 

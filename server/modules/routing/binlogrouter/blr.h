@@ -242,7 +242,7 @@ typedef enum
 #define BLR_MAX_BACKOFF         60
 
 /* max size for error message returned to client */
-#define BINLOG_ERROR_MSG_LEN    385
+#define BINLOG_ERROR_MSG_LEN    700
 
 /* network latency extra wait tme for heartbeat check */
 #define BLR_NET_LATENCY_WAIT_TIME       1

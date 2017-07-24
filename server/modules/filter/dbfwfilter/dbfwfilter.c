@@ -1151,7 +1151,7 @@ bool create_rule(void* scanner, const char* name)
 
         if (ruledef && (ruledef->name = MXS_STRDUP(name)))
         {
-            ruledef->type = RT_UNDEFINED;
+            ruledef->type = RT_PERMISSION;
             ruledef->on_queries = FW_OP_UNDEFINED;
             ruledef->next = rstack->rule;
             ruledef->active = NULL;

@@ -31,7 +31,9 @@ struct dcb;
 
 typedef enum ssl_method_type
 {
+#ifndef OPENSSL_1_1
     SERVICE_TLS10,
+#endif
 #ifdef OPENSSL_1_0
     SERVICE_TLS11,
     SERVICE_TLS12,

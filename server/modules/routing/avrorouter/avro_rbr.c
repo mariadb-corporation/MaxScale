@@ -164,7 +164,6 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
         }
         else
         {
-            ss_dassert(router->active_maps[old->id % MAX_MAPPED_TABLES] == old);
             router->active_maps[old->id % MAX_MAPPED_TABLES] = NULL;
             table_map_remap(ptr, ev_len, old);
             router->active_maps[old->id % MAX_MAPPED_TABLES] = old;

@@ -169,10 +169,17 @@ void listener_free(SERV_LISTENER* listener)
 int
 listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
 {
-    if (strcasecmp(version, "TLSV10") == 0)
+    if (strcasecmp(version, "MAX") == 0)
+    {
+        ssl_listener->ssl_method_type = SERVICE_SSL_TLS_MAX;
+    }
+#ifndef OPENSSL_1_1
+    else if (strcasecmp(version, "TLSV10") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS10;
     }
+#else
+#endif
 #ifdef OPENSSL_1_0
     else if (strcasecmp(version, "TLSV11") == 0)
     {
@@ -183,10 +190,6 @@ listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
         ssl_listener->ssl_method_type = SERVICE_TLS12;
     }
 #endif
-    else if (strcasecmp(version, "MAX") == 0)
-    {
-        ssl_listener->ssl_method_type = SERVICE_SSL_TLS_MAX;
-    }
     else
     {
         return -1;
@@ -215,6 +218,20 @@ listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, cha
     ssl_listener->ssl_ca_cert = ca_cert ? MXS_STRDUP_A(ca_cert) : NULL;
 }
 
+RSA* create_rsa(int bits)
+{
+#ifdef OPENSSL_1_1
+    BIGNUM* bn = BN_new();
+    BN_set_word(bn, RSA_F4);
+    RSA* rsa = RSA_new();
+    RSA_generate_key_ex(rsa, bits, NULL, NULL);
+    BN_free(bn);
+    return rsa;
+#else
+    return RSA_generate_key(bits, RSA_F4, NULL, NULL);
+#endif
+}
+
 /**
  * Initialize the listener's SSL context. This sets up the generated RSA
  * encryption keys, chooses the listener encryption level and configures the
@@ -232,9 +249,11 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
     {
         switch (ssl_listener->ssl_method_type)
         {
+#ifndef OPENSSL_1_1
         case SERVICE_TLS10:
             ssl_listener->method = (SSL_METHOD*)TLSv1_method();
             break;
+#endif
 #ifdef OPENSSL_1_0
         case SERVICE_TLS11:
             ssl_listener->method = (SSL_METHOD*)TLSv1_1_method();
@@ -273,34 +292,24 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         SSL_CTX_set_options(ssl_listener->ctx, SSL_OP_NO_SSLv3);
 
         /** Generate the 512-bit and 1024-bit RSA keys */
-        if (rsa_512 == NULL)
+        if (rsa_512 == NULL && (rsa_512 = create_rsa(512)) == NULL)
         {
-            rsa_512 = RSA_generate_key(512, RSA_F4, NULL, NULL);
-            if (rsa_512 == NULL)
-            {
-                MXS_ERROR("512-bit RSA key generation failed.");
-                return -1;
-            }
+            MXS_ERROR("512-bit RSA key generation failed.");
+            return -1;
         }
-        if (rsa_1024 == NULL)
+        if (rsa_1024 == NULL && (rsa_1024 = create_rsa(1024)) == NULL)
         {
-            rsa_1024 = RSA_generate_key(1024, RSA_F4, NULL, NULL);
-            if (rsa_1024 == NULL)
-            {
-                MXS_ERROR("1024-bit RSA key generation failed.");
-                return -1;
-            }
+            MXS_ERROR("1024-bit RSA key generation failed.");
+            return -1;
         }
 
-        if (rsa_512 != NULL && rsa_1024 != NULL)
-        {
-            SSL_CTX_set_tmp_rsa_callback(ssl_listener->ctx, tmp_rsa_callback);
-        }
+        ss_dassert(rsa_512 && rsa_1024);
+        SSL_CTX_set_tmp_rsa_callback(ssl_listener->ctx, tmp_rsa_callback);
 
         if (ssl_listener->ssl_cert && ssl_listener->ssl_key)
         {
             /** Load the server certificate */
-            if (SSL_CTX_use_certificate_file(ssl_listener->ctx, ssl_listener->ssl_cert, SSL_FILETYPE_PEM) <= 0)
+            if (SSL_CTX_use_certificate_chain_file(ssl_listener->ctx, ssl_listener->ssl_cert) <= 0)
             {
                 MXS_ERROR("Failed to set server SSL certificate.");
                 return -1;
@@ -363,7 +372,7 @@ tmp_rsa_callback(SSL *s, int is_export, int keylength)
         else
         {
             /* generate on the fly, should not happen in this example */
-            rsa_tmp = RSA_generate_key(keylength, RSA_F4, NULL, NULL);
+            rsa_tmp = create_rsa(keylength);
             rsa_512 = rsa_tmp; /* Remember for later reuse */
         }
         break;
@@ -446,10 +455,11 @@ static bool create_listener_config(const SERV_LISTENER *listener, const char *fi
 
         switch (listener->ssl->ssl_method_type)
         {
+#ifndef OPENSSL_1_1
         case SERVICE_TLS10:
             version = "TLSV10";
             break;
-
+#endif
 #ifdef OPENSSL_1_0
         case SERVICE_TLS11:
             version = "TLSV11";

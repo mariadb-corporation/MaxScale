@@ -8,3 +8,5 @@ select * from test.t1 where 1 >= 1;
 select * from test.t1 where 1 <= 1;
 select * from test.t1 where 1 != 1;
 select * from test.t1 where 1 <> 1;
+select function(*) from test.t1;
+select insert(*) from test.t1;
