@@ -43,7 +43,14 @@ will still go to the central database.
 [Here is a list of bugs fixed since the release of MaxScale 2.1.4.]
 (https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.5)
 
+* [MXS-1319](https://jira.mariadb.org/browse/MXS-1319) Maxscale selecting extra whitespace while loading users
+* [MXS-1318](https://jira.mariadb.org/browse/MXS-1318) Use SSL_CTX_use_certificate_chain_file in Maxscale to use CA signed certificates
+* [MXS-1316](https://jira.mariadb.org/browse/MXS-1316) error using Kafka with binlog router
+* [MXS-1313](https://jira.mariadb.org/browse/MXS-1313) Character set is not updated if servers are down
+* [MXS-1312](https://jira.mariadb.org/browse/MXS-1312) Rule with only on_queries do not work
+* [MXS-1311](https://jira.mariadb.org/browse/MXS-1311) Function type rule that blocks function results in syntax error
 * [MXS-1310](https://jira.mariadb.org/browse/MXS-1310) schemarouter ignores local copy of duplicate schemas on JOIN
+* [MXS-1309](https://jira.mariadb.org/browse/MXS-1309) ALTER TABLE detection is broken
 
 ## Known Issues and Limitations
 
