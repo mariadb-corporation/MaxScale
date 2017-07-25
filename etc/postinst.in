@@ -53,7 +53,7 @@ then
         systemctl daemon-reload
     fi
 else
-    if [ -d "/etc/init/" ]
+    if [ -d "/etc/init/" ] && [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf" ]
     then
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf /etc/init/
     fi
