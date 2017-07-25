@@ -14,6 +14,7 @@
 #include "sql_const.h"
 #include <climits>
 #include <string>
+#include <sstream>
 #include <vector>
 
 Mariadb_nodes::Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose):
@@ -916,6 +917,13 @@ int Mariadb_nodes::get_server_id(int index)
     }
 
     return id;
+}
+
+std::string Mariadb_nodes::get_server_id_str(int index)
+{
+    std::stringstream ss;
+    ss << get_server_id(index);
+    return ss.str();
 }
 
 void Mariadb_nodes::generate_ssh_cmd(char *cmd, int node, const char *ssh, bool sudo)

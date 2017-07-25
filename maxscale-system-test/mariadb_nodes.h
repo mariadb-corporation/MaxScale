@@ -16,6 +16,7 @@
 
 #include "mariadb_func.h"
 #include <errno.h>
+#include <string>
 
 /**
  * @brief A class to handle backend nodes
@@ -329,6 +330,7 @@ public:
      * @return Node id of the server or -1 on error
      */
     int get_server_id(int index);
+    std::string get_server_id_str(int index);
 
     /**
      * @brief Generate command line to execute command on the node via ssh

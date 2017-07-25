@@ -302,6 +302,10 @@ add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwr
 # Schemarouter implicit database detection
 add_test_executable(mxs1310_implicit_db.cpp mxs1310_implicit_db mxs1310_implicit_db LABELS schemarouter REPL_BACKEND)
 
+# Retry reads with persistent connections
+add_test_executable(mxs1323_retry_read.cpp mxs1323_retry_read mxs1323 LABELS readwritesplit LIGHT REPL_BACKEND)
+add_test_executable(mxs1323_stress.cpp mxs1323_stress mxs1323 LABELS readwritesplit REPL_BACKEND)
+
 # INSERT extremelly big number of rows
 add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit HEAVY GALERA_BACKEND)
 

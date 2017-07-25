@@ -1541,8 +1541,8 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      */
     if (BREF_IS_WAITING_RESULT(bref))
     {
-        GWBUF *stored;
-        const SERVER *target;
+        GWBUF *stored = NULL;
+        const SERVER *target = NULL;
 
         if (!session_take_stmt(backend_dcb->session, &stored, &target) ||
             target != bref->ref->server ||
@@ -1554,8 +1554,14 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
              */
             gwbuf_free(stored);
 
-            DCB *client_dcb = ses->client_dcb;
-            client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+            if (!sescmd_cursor_is_active(&bref->bref_sescmd_cur))
+            {
+                /** The client expects a response from this exact backend.
+                 * We need to route an error to the client to let it know
+                 * that the query failed. */
+                DCB *client_dcb = ses->client_dcb;
+                client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+            }
         }
     }
 
