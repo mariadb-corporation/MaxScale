@@ -574,7 +574,8 @@ static bool extract_insert_target(GWBUF *buffer, char* target, int len)
 {
     bool rval = false;
 
-    if (qc_get_operation(buffer) == QUERY_OP_INSERT &&
+    if (MYSQL_GET_COMMAND(GWBUF_DATA(buffer)) == MYSQL_COM_QUERY &&
+        qc_get_operation(buffer) == QUERY_OP_INSERT &&
         only_implicit_values(buffer))
     {
         int n_tables = 0;
