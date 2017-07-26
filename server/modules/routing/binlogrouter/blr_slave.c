@@ -1640,13 +1640,21 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     else
     {
         // MariaDB 10 GTID
-        sprintf(column, "%s", "Slave_pos");
+        // 1 - Add "Using_Gtid"
+        sprintf(column,
+                "%s",
+                router->mariadb10_master_gtid ?
+                "Slave_pos" :
+                "No");
         col_len = strlen(column);
         *ptr++ = col_len;                // Length of result string
         memcpy(ptr, column, col_len);    // Result string
         ptr += col_len;
 
-        sprintf(column, "%s", router->last_mariadb_gtid);
+        // 2 - Add "Gtid_IO_Pos"
+        sprintf(column,
+                "%s",
+                router->last_mariadb_gtid);
         col_len = strlen(column);
         *ptr++ = col_len;                // Length of result string
         memcpy(ptr, column, col_len);    // Result string
