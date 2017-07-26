@@ -278,6 +278,25 @@ The minimum set of router options that must be given in the configuration are
 `server_id` and `master_id` (unless the real master id should be used); default
 values may be used for all other options.
 
+### `mariadb10_slave_gtid`
+If enabled this option allows MariaDB 10.x slave servers to connect to binlog
+server using GTID value instead of binlog_file name and position.
+MaxScale saves all the incoming MariaDB GTIDs (DDLs and DMLs)
+in a sqlite3 database located in _$binlogdir_ (`gtid_maps.db`).
+When a slave server connects with a GTID request a lookup is made for
+the value match and following binlog events will be sent.
+Default option value is _off_.
+
+Example of a MariaDB 10.x slave connection:
+
+```
+MariaDB> SET @@global.gtid_slave_pos='0-10122-230';
+MariaDB> CHANGE MASTER TO
+         MASTER_HOST='127.0.0.1',
+         MASTER_PORT=10122,
+         MASTER_USE_GTID=Slave_pos
+```
+
 ## Examples
 
 The [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md) tutorial will

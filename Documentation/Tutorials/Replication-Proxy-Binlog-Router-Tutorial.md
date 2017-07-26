@@ -161,8 +161,12 @@ The default is 'aes_cbc'
 The specified key file must have this format:
 a line with `1;HEX(KEY)`
 
-Additional informatons about Binlog files encryption can be found here:
+Additional information about the encryption of the Binlog files can be found here:
 [Binlogrouter - The replication protocol proxy module for MariaDB MaxScale](../Routers/Binlogrouter.md).
+
+### `mariadb10_slave_gtid`
+If enabled this option allows MariaDB 10.x slave servers to connect to binlog
+server using GTID value instead of binlog_file name and position. Default option value is _off_.
 
 A complete example of a service entry for a binlog router service would be as follows.
 
@@ -173,7 +177,8 @@ A complete example of a service entry for a binlog router service would be as fo
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,ssl_cert_verification_depth=9,semisync=1,encrypt_binlog=1,encryption_algorithm=aes_ctr,encryption_key_file=/var/binlogs/enc_key.txt
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=On,ssl_cert_verification_depth=9,semisync=On,encrypt_binlog=On,encryption_algorithm=aes_ctr,encryption_key_file=/var/binlogs/enc_key.txt,
+mariadb10_slave_gtid=On
 ```
 
 The minimum set of router options that must be given in the configuration are are *server-id* and *master-id*, default values may be used for all other options.
@@ -208,6 +213,8 @@ Check the [Configuration-Guide](../Getting-Started/Configuration-Guide.md) for S
 #  MariaDB MaxScale replication diagnostics
 
 The binlog router module of MariaDB MaxScale produces diagnostic output that can be viewed via the `maxadmin` client application. Running the maxadmin command and issuing a show service command will produce a considerable amount of output that will show both the master connection status and statistics and also a block for each of the slaves currently connected.
+
+
 ```
 -bash-4.1$ maxadmin show service Replication
     Service 0x1567ef0
@@ -284,7 +291,9 @@ The binlog router module of MariaDB MaxScale produces diagnostic output that can
     	Total connections:				2
     	Currently connected:			2
 ```
+
 If a slave is connected to MaxScale with SSL, an entry will be present in the Slave report:
+
 ```
 	Slaves:
 		Server-id:                               106
@@ -294,7 +303,12 @@ If a slave is connected to MaxScale with SSL, an entry will be present in the Sl
 		Username:                                massi
 		Slave DCB:                               0x7fc01be3ba88
 		Slave connected with SSL:                Established
+```
 
+If option `mariadb10_slave_gtid=On` last seen GTID is showed:
+
+```
+Last seen MariaDB GTID:                      0-10124-282
 ```
 
 Another Binlog Server diagnostic output comes from SHOW SLAVE STATUS MySQL command
@@ -352,9 +366,13 @@ Binlog Router Plugin is compatible with MariaDB 5.5 and MySQL 5.6, the current d
 
 In order to use it with MySQL 5.6, the *GTID_MODE* setting must be OFF and connecting slaves must not use *MASTER_AUTO_POSITION = 1* option.
 
-It’s also works with a MariaDB 10.0 setup (master and slaves) but slave connection must not include any GTID feature.
+It also works with a MariaDB 10.X setup (master and slaves).
 
-Binlog Router currently does not work for MySQL 5.5 due to missing *@@global.binlog_checksum* variable.
+Starting from MaxScale 2.2 the slave connections could include GTID feature `MASTER_USE_GTID=Slave_pos` if option *mariadb10_slave_gtid* has been set.
+
+The default is that a slave connection must not include any GTID feature: `MASTER_USE_GTID=no`
+
+**Note:** Binlog Router currently does not work for MySQL 5.5 due to missing *@@global.binlog_checksum* variable.
 
 # Master server setup/change
 
@@ -381,11 +399,16 @@ Please note that is such condition the only user for MySQL protocol connection t
 
 Enabling replication from a master server requires:
 
-        CHANGE MASTER TO MASTER_HOST=‘$master_server’, MASTER_PORT=$master_port, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’, MASTER_LOG_FILE=‘repl-bin.000159', MASTER_LOG_POS=4
+	CHANGE MASTER TO MASTER_HOST=‘$master_server’,
+	MASTER_PORT=$master_port,
+	MASTER_USER='repl',
+	MASTER_PASSWORD=‘somepasswd’,
+	MASTER_LOG_FILE=‘repl-bin.000159',
+	MASTER_LOG_POS=4
 
 It's possible to specify the desired *MASTER_LOG_FILE* but position must be 4
 
-The initfile option is no longer available, filestem option too it's no longer available as the stem is automatically set by parsing *MASTER_LOG_FILE*.
+**Note:** Since MaxScale 1.3.0, the _initfile_ and _filestem_ options are no longer required, as the needed values are automatically set by parsing *MASTER_LOG_FILE* in CHANGE MASTER TO command.
 
 ### Stop/start the replication
 
@@ -397,7 +420,8 @@ When router is configured and it is properly working it is possible to stop/star
 	...
 	MariaDB> START SLAVE;
 
-Connected or new slave connections are not affected: this *STOP/START* only controls the the connection to the master and the binlog events receiving.
+**Note:**: Already connected slaves or new ones are not affected by *STOP/START SLAVE*.
+These commands only control the MaxScale connection to the master server.
 
 ### Change the Master server configuration
 
@@ -423,7 +447,8 @@ The supported options are:
 	MASTER_LOG_FILE
 	MASTER_LOG_POS
 
-	and SSL options as well:
+and SSL options as well:
+
 	MASTER_SSL (0|1)
 	MASTER_SSL_CERT (path to certificate file)
 	MASTER_SSL_KEY (path to key file)
@@ -440,14 +465,20 @@ Examples:
 
 1) Current binlog file is ‘mysql-bin.000003', position 88888
 
-	MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000003',MASTER_LOG_POS=8888
+```
+MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000003',
+         MASTER_LOG_POS=8888
+```
 
 This could be applied to current master_host/port or a new one.
 If there is a master server maintenance and a slave is being promoted as master it should be checked that binlog file and position are valid: in case of any error replication stops and errors are reported via *SHOW SLAVE STATUS* and in error logs.
 
 2) Current binlog file is ‘mysql-bin.000099', position 1234
 
-	MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000100',MASTER_LOG_POS=4
+```
+MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000100',
+         MASTER_LOG_POS=4
+```
 
 This could be applied with current master_host/port or a new one
 If transaction safety option is on and the current binlog file contains an incomplete transaction it will be truncated to the position where transaction started.
@@ -523,14 +554,24 @@ Examples:
 
 ### Slave servers setup
 
-Examples of *CHANGE MASTER TO* command issued on a slave server that wants to gets replication events from MariaDB MaxScale binlog router:
+Examples of *CHANGE MASTER TO* command issued on a slave server that wants
+to get replication events from MariaDB MaxScale binlog router:
+
 ```
-CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’,
+MASTER_PORT=5308,
+MASTER_USER='repl',
+MASTER_PASSWORD=‘somepasswd’,
 MASTER_LOG_FILE=‘mysql-bin.000001'
 
-CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
-MASTER_LOG_FILE=‘mysql-bin.000159', MASTER_LOG_POS=245
+CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’,
+MASTER_PORT=5308,
+MASTER_USER='repl',
+MASTER_PASSWORD=‘somepasswd’,
+MASTER_LOG_FILE=‘mysql-bin.000159',
+MASTER_LOG_POS=245
 ```
+
 The latter example specifies a *MASTER_LOG_POS* for the selected *MASTER_LOG_FILE*
 
 Note:
@@ -539,9 +580,11 @@ Note:
 
  - If *MASTER_LOG_POS* is not set with *CHANGE MASTER TO* it defaults to 4
 
- - Latest binlog file name and pos in MariaDB MaxScale could be find via maxadmin output or from mysql client connected to MariaDB MaxScale:
+ - Latest binlog file name and pos in MariaDB MaxScale could be found via maxadmin
+output or from mysql client connected to MariaDB MaxScale:
 
 Example:
+
 ```
 -bash-4.1$ mysql -h 127.0.0.1 -P 5308 -u$user -p$pass
 
@@ -550,23 +593,76 @@ Example:
    	         File: mysql-bin.000181
 	         Position: 2569
 ```
+
+##### MariaDB 10 GTID
+If connecting slaves are MariaDB 10.x it's also possible to connect with GTID,
+*mariadb10_slave_gtid=On* has to be set in configuration before starting MaxScale.
+
+```
+SET @@global.gtid_slave_pos='';
+```
+or using a know value:
+
+```
+SET @@global.gtid_slave_pos='0-10122-230';
+```
+
+**Note:** If empty GTID, MaxScale will send binlog events from the beginning of its current binlog file.
+
+In order to get the latest GTID from MaxScale *@@global.gtid_current_pos* variable is available:
+
+```
+MariaDB> SELECT @@global.gtid_current_pos;
++---------------------------+
+| @@global.gtid_current_pos |
++---------------------------+
+|               0-10124-282 |
++---------------------------+
+```
+Complete example of MariaDB 10 Slave connection to MaxScale with GTID:
+
+```
+MariaDB> SET @@global.gtid_slave_pos='0-10122-230';
+MariaDB> CHANGE MASTER TO
+         MASTER_HOST='127.0.0.1',
+         MASTER_PORT=10122,
+         MASTER_USE_GTID=Slave_pos, ...
+MariaDB> START SLAVE;
+```
+
+Additionally, if *mariadb10_slave_gtid=On*, it's also possible to retrieve the list of binlog files downloaded from the master with the new admin command _SHOW BINARY LOGS_:
+
+```
+MariaDB> SHOW BINARY LOGS;
++------------------+-----------+
+| Log_name         | File_size |
++------------------+-----------+
+| mysql-bin.000063 |      1543 |
+| mysql-bin.000064 |       621 |
+| mysql-bin.000065 |      1622 |
+| mysql-bin.000066 |       582 |
+| mysql-bin.000067 |       465 |
++------------------+-----------+
+```
+
 # Enabling MariaDB 10 compatibility
 
 MariaDB 10 has different slave registration phase so an option is required:
 
 ```
-router_options=...., mariadb10-compatibility=1
+router_options=...., mariadb10-compatibility=On
 ```
 
-version_string should be modified in order to present MariaDB 10 version when MariaDB MaxScale sends server handshake packet.
+*version_string* should be modified in order to present MariaDB 10 version when
+MariaDB MaxScale sends server handshake packet.
 
 ```
-version_string=10.0.17-log
+version_string=10.1.21-log
 ```
 
 # New MariaDB events in Diagnostics
 
-With a MariaDB 10 setups new events are displayed when master server is MariaDB 10.
+With a MariaDB 10 setup new events are displayed when master server is MariaDB 10.
 
 ```
 MariaDB 10 Annotate Rows Event 0
