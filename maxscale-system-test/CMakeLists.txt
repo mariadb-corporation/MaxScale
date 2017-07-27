@@ -546,7 +546,7 @@ add_test_executable(rwsplit_multi_stmt.cpp rwsplit_multi_stmt rwsplit_multi_stmt
 add_test_executable(rwsplit_read_only_trx.cpp rwsplit_read_only_trx rwsplit_read_only_trx LABELS readwritesplit REPL_BACKEND)
 
 # Test replication-manager with MaxScale
-add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
+#add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
 #add_test_executable_notest(replication_manager_2nodes.cpp replication_manager_2nodes replication_manager_2nodes LABELS maxscale REPL_BACKEND)
 #add_test_executable_notest(replication_manager_3nodes.cpp replication_manager_3nodes replication_manager_3nodes LABELS maxscale REPL_BACKEND)
 

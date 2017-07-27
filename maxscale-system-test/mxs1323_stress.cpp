@@ -16,7 +16,7 @@ void* async_query(void* data)
     {
         MYSQL* conn = test->open_rwsplit_connection();
 
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 50 && running && test->global_result == 0; i++)
         {
             const char* query = "SET @a = (SELECT SLEEP(1))";
             test->try_query(conn, query);
