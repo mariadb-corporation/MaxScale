@@ -305,7 +305,7 @@ If a slave is connected to MaxScale with SSL, an entry will be present in the Sl
 		Slave connected with SSL:                Established
 ```
 
-If option `mariadb10_slave_gtid=On` last seen GTID is showed:
+If option `mariadb10_slave_gtid=On` last seen GTID is shown:
 
 ```
 Last seen MariaDB GTID:                      0-10124-282
@@ -358,6 +358,13 @@ Master_SSL_Verify_Server_Cert: No
              Master_Server_Id: 1111
                   Master_UUID: 6aae714e-b975-11e3-bc33-0401152c3d01
              Master_Info_File: /home/maxscale/binlog/first/binlogs/master.ini
+```
+
+If the option `mariadb10_slave_gtid` is set to _On_, the last seen GTID is showed:
+
+```
+Using_Gtid: No
+Gtid_IO_Pos: 0-10116-196
 ```
 
 # Binlog router compatibility
