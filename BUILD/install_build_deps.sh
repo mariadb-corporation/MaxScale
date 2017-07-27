@@ -15,7 +15,8 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git gcc g++ ncurses-dev bison \
        build-essential libssl-dev libaio-dev perl make libtool libcurl4-openssl-dev \
        libpcre3-dev flex tcl libeditline-dev uuid-dev liblzma-dev libsqlite3-dev \
-       sqlite3 liblua5.1 liblua5.1-dev wget
+       sqlite3 liblua5.1 liblua5.1-dev wget zlib1g-dev
+
 else
   ## RPM-based distro
   install_libdir=/usr/lib64
