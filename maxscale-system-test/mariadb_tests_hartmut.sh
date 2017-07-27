@@ -4,7 +4,7 @@
 #
 # TODO: Don't test correctness of routing with mysqltest
 #
-./non_native_setup $1
+
 master_id=`echo "SELECT @@server_id" | mysql -u$node_user -p$node_password -h $node_000_network $ssl_options -P $node_000_port | tail -n1`
 echo "--disable_query_log" > Hartmut_tests/maxscale-mysqltest/testconf.inc
 echo "SET @TMASTER_ID=$master_id;" >> Hartmut_tests/maxscale-mysqltest/testconf.inc
