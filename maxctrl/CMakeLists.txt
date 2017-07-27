@@ -6,7 +6,7 @@ if (NPM_FOUND AND NODEJS_FOUND AND NODEJS_VERSION VERSION_GREATER "6.0.0")
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${CMAKE_SOURCE_DIR}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
   add_custom_target(maxctrl ALL DEPENDS ${CMAKE_BINARY_DIR}/maxctrl/maxctrl)
-  install_script(${CMAKE_BINARY_DIR}/maxctrl/maxctrl core)
+  install_script(${CMAKE_BINARY_DIR}/maxctrl/maxctrl client)
 
   add_custom_target(test_maxctrl
   COMMAND ${CMAKE_SOURCE_DIR}/test/run_npm_test.sh
