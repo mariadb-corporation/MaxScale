@@ -361,6 +361,16 @@ static const char* BUILTIN_FUNCTIONS[] =
     "weight_string",
 
     /*
+     * Regex functions
+     * https://mariadb.com/kb/en/mariadb/regular-expressions-functions/
+     */
+    "regexp",
+    "regexp_instr",
+    "regexp_replace",
+    "regexp_substr",
+    "rlike",
+
+    /*
      * http://dev.mysql.com/doc/refman/5.7/en/row-subqueries.html
      */
     "row"
