@@ -39,13 +39,13 @@ For more details, please refer to:
   as JSON objects (beta level functionality).
 
 For more details, please refer to:
-* [MariaDB MaxScale 2.0.6 Release Notes](Release-Notes/MaxScale-2.0.6-Release-Notes.md)
-* [MariaDB MaxScale 2.0.5 Release Notes](Release-Notes/MaxScale-2.0.5-Release-Notes.md)
-* [MariaDB MaxScale 2.0.4 Release Notes](Release-Notes/MaxScale-2.0.4-Release-Notes.md)
-* [MariaDB MaxScale 2.0.3 Release Notes](Release-Notes/MaxScale-2.0.3-Release-Notes.md)
-* [MariaDB MaxScale 2.0.2 Release Notes](Release-Notes/MaxScale-2.0.2-Release-Notes.md)
-* [MariaDB MaxScale 2.0.1 Release Notes](Release-Notes/MaxScale-2.0.1-Release-Notes.md)
-* [MariaDB MaxScale 2.0.0 Release Notes](Release-Notes/MaxScale-2.0.0-Release-Notes.md)
+* MariaDB MaxScale 2.0.6 Release Notes
+* MariaDB MaxScale 2.0.5 Release Notes
+* MariaDB MaxScale 2.0.4 Release Notes
+* MariaDB MaxScale 2.0.3 Release Notes
+* MariaDB MaxScale 2.0.2 Release Notes
+* MariaDB MaxScale 2.0.1 Release Notes
+* MariaDB MaxScale 2.0.0 Release Notes
 
 ## MariaDB MaxScale 1.4
 * Authentication now allows table level resolution of grants. MaxScale service
@@ -55,17 +55,17 @@ For more details, please refer to:
 * Client side SSL works.
 
 For more details, please refer to
-* [MariaDB MaxScale 1.4.3 Release Notes](Release-Notes/MaxScale-1.4.3-Release-Notes.md)
-* [MariaDB MaxScale 1.4.2 Release Notes](Release-Notes/MaxScale-1.4.2-Release-Notes.md)
-* [MariaDB MaxScale 1.4.1 Release Notes](Release-Notes/MaxScale-1.4.1-Release-Notes.md)
-* [MariaDB MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md).
+* MariaDB MaxScale 1.4.3 Release Notes
+* MariaDB MaxScale 1.4.2 Release Notes
+* MariaDB MaxScale 1.4.1 Release Notes
+* MariaDB MaxScale 1.4.0 Release Notes
 
 ## MariaDB MaxScale 1.3
 * Added support for persistent backend connections
 * The *binlog server* is now an integral component of MariaDB MaxScale.
 * The logging has been changed; instead of different log files there is one log file and different message priorities.
 
-For more details, please refer to [MariaDB MaxScale 1.3 Release Notes](Release-Notes/MaxScale-1.3.0-Release-Notes.md)
+For more details, please refer to MariaDB MaxScale 1.3 Release Notes
 
 ## MariaDB MaxScale 1.2
 * Logfiles have been renamed. The log names are now named error.log, messages.log, trace.log and debug.log.
