@@ -168,7 +168,20 @@ Additional information about the encryption of the Binlog files can be found her
 If enabled this option allows MariaDB 10.x slave servers to connect to binlog
 server using GTID value instead of binlog_file name and position. Default option value is _off_.
 
-A complete example of a service entry for a binlog router service would be as follows.
+### `mariadb10_master_gtid`
+
+This option allows MaxScale binlog router to register with MariaDB 10.X
+master using GTID instead of binlog_file name and position in CHANGE MASTER TO admin command.
+Default option value is _off_.
+
+### `binlog_structure`
+This option controls the way binlog files are saved in the binlogdir: there are two
+possible values, _flat_ or _tree_. The _tree_ structure easily allows the changing of
+the master server without caring about binlog filename and sequence.
+Default option value is _flat_.
+
+
+A **complete example** of a service entry for a binlog router service would be as follows.
 
 ```
     [Replication]
@@ -177,11 +190,31 @@ A complete example of a service entry for a binlog router service would be as fo
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=On,ssl_cert_verification_depth=9,semisync=On,encrypt_binlog=On,encryption_algorithm=aes_ctr,encryption_key_file=/var/binlogs/enc_key.txt,
-mariadb10_slave_gtid=On
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,
+                   server-id=3,
+                   user=repl,
+                   password=slavepass,
+                   master-id=1,
+                   heartbeat=30,
+                   binlogdir=/var/binlogs,
+                   transaction_safety=1,
+                   master_version=5.6.19-common,
+                   master_hostname=common_server,
+                   master_uuid=x-f-cc-common,
+                   master-id=999,
+                   mariadb10-compatibility=On,
+                   ssl_cert_verification_depth=9,
+                   semisync=On,
+                   encrypt_binlog=On,
+                   encryption_algorithm=aes_ctr,
+                   encryption_key_file=/var/binlogs/enc_key.txt,
+                   mariadb10_slave_gtid=On,
+                   mariadb10_master_gtid=Off,
+                   binlog_structure=flat
 ```
 
-The minimum set of router options that must be given in the configuration are are *server-id* and *master-id*, default values may be used for all other options.
+The minimum set of router options that must be given in the configuration
+are *server-id* and *master-id*, default values may be used for all other options.
 
 ## Listener Section
 
@@ -360,10 +393,18 @@ Master_SSL_Verify_Server_Cert: No
              Master_Info_File: /home/maxscale/binlog/first/binlogs/master.ini
 ```
 
-If the option `mariadb10_slave_gtid` is set to _On_, the last seen GTID is showed:
+If the option `mariadb10_slave_gtid` is set to _On_, the last seen GTID is shown:
 
 ```
 Using_Gtid: No
+Gtid_IO_Pos: 0-10116-196
+```
+
+If the option `mariadb10_master_gtid` is set to _On_, the _Using_Gtid_
+field has the _Slave_pos_ value:
+
+```
+Using_Gtid: Slave_pos
 Gtid_IO_Pos: 0-10116-196
 ```
 
@@ -371,15 +412,22 @@ Gtid_IO_Pos: 0-10116-196
 
 Binlog Router Plugin is compatible with MariaDB 5.5 and MySQL 5.6, the current default.
 
-In order to use it with MySQL 5.6, the *GTID_MODE* setting must be OFF and connecting slaves must not use *MASTER_AUTO_POSITION = 1* option.
+In order to use it with MySQL 5.6, the *GTID_MODE* setting must be OFF and connecting
+slaves must not use *MASTER_AUTO_POSITION = 1* option.
 
 It also works with a MariaDB 10.X setup (master and slaves).
 
-Starting from MaxScale 2.2 the slave connections could include GTID feature `MASTER_USE_GTID=Slave_pos` if option *mariadb10_slave_gtid* has been set.
+Starting from MaxScale 2.2 the slave connections may include GTID feature
+`MASTER_USE_GTID=Slave_pos` if option *mariadb10_slave_gtid* has been set.
 
-The default is that a slave connection must not include any GTID feature: `MASTER_USE_GTID=no`
+The default is that a slave connection must not include any GTID
+feature: `MASTER_USE_GTID=no`
 
-**Note:** Binlog Router currently does not work for MySQL 5.5 due to missing *@@global.binlog_checksum* variable.
+Starting from MaxScale 2.2 it's also possible to register to MariaDB 10.X master using
+GTID using the two new options *mariadb10_master_gtid* and *binlog_structure*.
+
+**Note:** Binlog Router currently does not work for MySQL 5.5 due to
+missing *@@global.binlog_checksum* variable.
 
 # Master server setup/change
 
