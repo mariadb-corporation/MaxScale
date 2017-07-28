@@ -282,20 +282,81 @@ values may be used for all other options.
 If enabled this option allows MariaDB 10.x slave servers to connect to binlog
 server using GTID value instead of binlog_file name and position.
 MaxScale saves all the incoming MariaDB GTIDs (DDLs and DMLs)
-in a sqlite3 database located in _$binlogdir_ (`gtid_maps.db`).
+in a sqlite3 database located in _binlogdir_ (`gtid_maps.db`).
 When a slave server connects with a GTID request a lookup is made for
 the value match and following binlog events will be sent.
 Default option value is _off_.
 
-Example of a MariaDB 10.x slave connection:
+Example of a MariaDB 10.x slave connection to MaxScale
 
 ```
 MariaDB> SET @@global.gtid_slave_pos='0-10122-230';
 MariaDB> CHANGE MASTER TO
-         MASTER_HOST='127.0.0.1',
-         MASTER_PORT=10122,
-         MASTER_USE_GTID=Slave_pos
+         MASTER_HOST='192.168.10.8',
+         MASTER_PORT=5306,
+         MASTER_USE_GTID=Slave_pos;
+MariaDB> START SLAVE;
 ```
+
+**Note:** Slave servers can connect either with _file_ and _pos_ or GTID.
+
+### `mariadb10_master_gtid`
+This option allows MaxScale binlog router to register
+with MariaDB 10.X master using GTID instead of _binlog_file_ name
+and _position_ in CHANGE MASTER TO admin command.
+
+The user can set a known GTID or an empty value
+(in this case the Master server will send events
+from it's first available binlog file).
+
+Example of MaxScale connection to a MariaDB 10.X Master
+
+```
+# mysql -h $MAXSCALE_HOST -P $MAXCALE_PORT
+MariaDB> SET @@global.gtid_slave_pos='0-198-123';
+MariaDB> CHANGE MASTER TO
+         MASTER_HOST='192.168.10.5',
+         MASTER_PORT=3306,
+         MASTER_USE_GTID=Slave_pos;
+MariaDB> START SLAVE;
+```
+
+If using GTID request then it's no longer possible to use
+MASTER_LOG_FILE and MASTER_LOG_POS in `CHANGE MASTER TO`
+command: an error will be reported.
+
+The default option value is _Off_, setting it to _On_
+automatically sets _mariadb10_slave_gtid_ to _On_
+(which enables GTID storage and GTID slave connections)
+
+**Note:**
+
+- When the option is _On_, **the connecting slaves can only use GTID request**:
+specifying _file_ and _pos_ will end up in an error sent by MaxScale and
+replication cannot start.
+- The GTID request could cause the writing of events
+in any position of the binlog file, whose name has been sent
+by the master server before any event.
+In order to avoid holes in the binlog files, MaxScale will fill all gaps
+in the binlog files with ignorable events.
+- It's not possible to specify the GTID _domain_id: the master one
+is being used for all operations. All slave servers must use the same replication domain as the master server.
+
+### `binlog_structure`
+
+This option controls the way binlog file are saved in the _binlogdir_:
+there are two possible values, `flat | tree`
+
+The `tree` mode can only be set with `mariadb10_master_gtid=On`
+
+- `flat` is the default value, files are saved as usual.
+- `tree` enables the saving of files using this hierarchy model:
+_binlogdir_/_domain_id_/_server_id_/_filename_
+
+The _tree_ structure easily allows the changing of the master server
+without caring about binlog filename and sequence:
+just change _host_ and _port_, the replication will
+resume from last GTID MaxScale has seen.
 
 ## Examples
 
