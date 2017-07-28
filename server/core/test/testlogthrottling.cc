@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iostream>
 #include <pthread.h>
+#include <sched.h>
 #include <semaphore.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/random_jkiss.h>
@@ -79,7 +80,7 @@ void log_messages(uint32_t id, size_t n_generate, int priority)
     {
         MXS_LOG_MESSAGE(priority, "[%u] Message %lu.", id, i);
 
-        pthread_yield();
+        sched_yield();
     }
 }
 

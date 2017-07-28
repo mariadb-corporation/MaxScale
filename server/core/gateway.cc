@@ -17,7 +17,9 @@
 
 #include <maxscale/cdefs.h>
 
+#ifdef HAVE_GLIBC
 #include <execinfo.h>
+#endif
 #include <ftw.h>
 #include <getopt.h>
 #include <stdlib.h>
@@ -100,6 +102,9 @@ static bool     daemon_mode = true;
 static const char* maxscale_commit = MAXSCALE_COMMIT;
 
 const char *progname = NULL;
+
+#ifdef HAVE_GLIBC
+// getopt_long is a GNU extension
 static struct option long_options[] =
 {
     {"config-check",     no_argument,       0, 'c'},
@@ -128,6 +133,7 @@ static struct option long_options[] =
     {"debug",            required_argument, 0, 'g'},
     {0, 0, 0, 0}
 };
+#endif
 
 static bool syslog_configured = false;
 static bool maxlog_configured = false;
@@ -419,6 +425,7 @@ sigfatal_handler(int i)
               "Release string: %s",
               maxscale_commit, cnf->sysname, cnf->release_string);
 
+#ifdef HAVE_GLIBC
     {
         void *addrs[128];
         int count = backtrace(addrs, 128);
@@ -438,6 +445,7 @@ sigfatal_handler(int i)
             backtrace_symbols_fd(addrs, count, fileno(stderr));
         }
     }
+#endif
 
     mxs_log_flush_sync();
 
@@ -1338,8 +1346,12 @@ int main(int argc, char **argv)
         }
     }
 
+#ifdef HAVE_GLIBC
     while ((opt = getopt_long(argc, argv, "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:",
                               long_options, &option_index)) != -1)
+#else
+    while ((opt = getopt(argc, argv, "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:")) != -1)
+#endif
     {
         bool succp = true;
 

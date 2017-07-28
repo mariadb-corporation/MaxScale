@@ -69,7 +69,6 @@ target_link_libraries(maxscale-common
   ssl
   pthread
   crypt
-  dl
   crypto
   inih
   z
@@ -80,6 +79,13 @@ target_link_libraries(maxscale-common
   gcrypt
   ${MICROHTTPD_LIBRARIES}
 )
+
+find_library(HAVE_LIBDL NAMES dl)
+if (HAVE_LIBDL)
+  # libdl just exposes libc functionality on most systems.  This means that if
+  # we can't find it, it's likely that libc already exposes the symbols.
+  target_link_libraries(maxscale-common dl)
+endif()
 
 add_dependencies(maxscale-common pcre2 connector-c)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")

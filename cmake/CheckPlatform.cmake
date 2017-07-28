@@ -3,6 +3,7 @@
 include(CheckFunctionExists)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
+include(CheckCXXSourceCompiles)
 
 check_include_files(arpa/inet.h HAVE_ARPA_INET)
 check_include_files(crypt.h HAVE_CRYPT)
@@ -69,11 +70,6 @@ if(NOT HAVE_LIBM)
   message(FATAL_ERROR "Could not find libm")
 endif()
 
-find_library(HAVE_LIBDL NAMES dl)
-if(NOT HAVE_LIBDL)
-  message(FATAL_ERROR "Could not find libdl")
-endif()
-
 find_library(HAVE_LIBRT NAMES rt)
 if(NOT HAVE_LIBRT)
   message(FATAL_ERROR "Could not find librt")
@@ -82,4 +78,18 @@ endif()
 find_library(HAVE_LIBPTHREAD NAMES pthread)
 if(NOT HAVE_LIBPTHREAD)
   message(FATAL_ERROR "Could not find libpthread")
+endif()
+
+# The XSI version of strerror_r return an int and the GNU version a char*
+check_cxx_source_compiles("
+  #define _GNU_SOURCE 1
+  #include <string.h>\n
+  int main(){\n
+      char errbuf[200];\n
+      return strerror_r(13, errbuf, sizeof(errbuf)) == errbuf;\n
+  }\n"
+  HAVE_GLIBC)
+
+if(HAVE_GLIBC)
+  add_definitions(-DHAVE_GLIBC=1)
 endif()

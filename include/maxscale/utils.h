@@ -21,6 +21,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <netinet/in.h>
+#include <sys/un.h>
 
 MXS_BEGIN_DECLS
 

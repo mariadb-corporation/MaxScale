@@ -37,7 +37,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/un.h>
 #include <netinet/tcp.h>
 #include <openssl/sha.h>
 
@@ -989,7 +988,6 @@ static void set_port(struct sockaddr_storage *addr, uint16_t port)
 int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr, const char *host, uint16_t port)
 {
     ss_dassert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
-#ifdef __USE_POSIX
     struct addrinfo *ai = NULL, hint = {};
     int so, rc;
     hint.ai_socktype = SOCK_STREAM;
@@ -1031,10 +1029,6 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
 
         freeaddrinfo(ai);
     }
-
-#else
-#error Only the POSIX networking interface is supported
-#endif
 
     return so;
 }

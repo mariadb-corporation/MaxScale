@@ -56,6 +56,7 @@ static void printVersion(const char *progname);
 static void printUsage(const char *progname);
 static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *aes_algo);
 
+#ifdef HAVE_GLIBC
 static struct option long_options[] =
 {
     {"debug",            no_argument, 0, 'd'},
@@ -70,7 +71,7 @@ static struct option long_options[] =
     {"help",             no_argument, 0, '?'},
     {0, 0, 0, 0}
 };
-
+#endif
 char *binlog_check_version = "2.2.1";
 
 int
@@ -90,7 +91,11 @@ int main(int argc, char **argv)
     char c;
     BINLOG_FILE_FIX binlog_file = {0, false, false};
 
+#ifdef HAVE_GLIBC
     while ((c = getopt_long(argc, argv, "dVfMHK:A:R:T:?", long_options, &option_index)) >= 0)
+#else
+    while ((c = getopt(argc, argv, "dVfMHK:A:R:T:?")) >= 0)
+#endif
     {
         switch (c)
         {

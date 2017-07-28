@@ -2251,7 +2251,7 @@ config_get_release_string(char* release)
     };
 
     bool have_distribution;
-    char distribution[_RELEASE_STR_LENGTH] = "";
+    char distribution[RELEASE_STR_LENGTH] = "";
     int fd;
 
     have_distribution = false;
@@ -2328,7 +2328,7 @@ config_get_release_string(char* release)
                   +5 and -8 below cut the file name part out of the
                   full pathname that corresponds to the mask as above.
                 */
-                new_to = strncpy(distribution, found.gl_pathv[0] + 5, _RELEASE_STR_LENGTH - 1);
+                new_to = strncpy(distribution, found.gl_pathv[0] + 5, RELEASE_STR_LENGTH - 1);
                 new_to += 8;
                 *new_to++ = ':';
                 *new_to++ = ' ';
@@ -2348,7 +2348,7 @@ config_get_release_string(char* release)
                     }
 
                     have_distribution = true;
-                    strncpy(release, new_to, _RELEASE_STR_LENGTH);
+                    strncpy(release, new_to, RELEASE_STR_LENGTH);
                 }
             }
         }

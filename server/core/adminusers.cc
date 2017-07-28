@@ -513,6 +513,24 @@ bool admin_linux_account_enabled(const char *uname)
     return rv;
 }
 
+#define MXS_CRYPT_SIZE 60
+
+void mxs_crypt(const char* password, const char* salt, char* output)
+{
+#if HAVE_GLIBC
+    thread_local struct crypt_data cdata;
+    cdata.initialized = 0;
+    char* pw = crypt_r(password, salt, &cdata);
+    snprintf(output, MXS_CRYPT_SIZE, "%s", pw);
+#else
+    static SPINLOCK mxs_crypt_lock = SPINLOCK_INIT;
+    spinlock_acquire(&mxs_crypt_lock);
+    char* pw = crypt(password, salt);
+    snprintf(output, MXS_CRYPT_SIZE, "%s", pw);
+    spinlock_release(&mxs_crypt_lock);
+#endif
+}
+
 /**
  * Add insecure remote (network) user.
  *
@@ -523,9 +541,8 @@ bool admin_linux_account_enabled(const char *uname)
  */
 const char *admin_add_inet_user(const char *uname, const char* password)
 {
-    struct crypt_data cdata;
-    cdata.initialized = 0;
-    char *cpassword = crypt_r(password, ADMIN_SALT, &cdata);
+    char cpassword[MXS_CRYPT_SIZE];
+    mxs_crypt(password, ADMIN_SALT, cpassword);
 
     return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, cpassword);
 }
@@ -581,9 +598,10 @@ admin_verify_inet_user(const char *username, const char *password)
 
         if (pw)
         {
-            struct crypt_data cdata;
-            cdata.initialized = 0;
-            if (strcmp(pw, crypt_r(password, ADMIN_SALT, &cdata)) == 0)
+            char cpassword[MXS_CRYPT_SIZE];
+            mxs_crypt(password, ADMIN_SALT, cpassword);
+
+            if (strcmp(pw, cpassword) == 0)
             {
                 rv = true;
             }

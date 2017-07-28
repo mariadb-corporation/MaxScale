@@ -33,7 +33,8 @@ MXS_BEGIN_DECLS
 #define DEFAULT_ADMIN_HTTP_PORT 8989
 #define DEFAULT_ADMIN_HOST      "::"
 
-#define _RELEASE_STR_LENGTH     256     /**< release len */
+#define RELEASE_STR_LENGTH      256
+#define SYSNAME_LEN             256
 #define MAX_ADMIN_USER_LEN      1024
 #define MAX_ADMIN_PW_LEN        1024
 #define MAX_ADMIN_HOST_LEN      1024
@@ -189,8 +190,8 @@ typedef struct
     bool          config_check;                        /**< Only check config */
     int           n_threads;                           /**< Number of polling threads */
     char          *version_string;                     /**< The version string of embedded db library */
-    char          release_string[_RELEASE_STR_LENGTH]; /**< The release name string of the system */
-    char          sysname[_UTSNAME_SYSNAME_LENGTH];    /**< The OS name of the system */
+    char          release_string[RELEASE_STR_LENGTH]; /**< The release name string of the system */
+    char          sysname[SYSNAME_LEN];    /**< The OS name of the system */
     uint8_t       mac_sha1[SHA_DIGEST_LENGTH];         /**< The SHA1 digest of an interface MAC address */
     unsigned long id;                                  /**< MaxScale ID */
     unsigned int  n_nbpoll;                            /**< Tune number of non-blocking polls */

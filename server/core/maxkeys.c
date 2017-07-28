@@ -31,6 +31,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/random_jkiss.h>
 
+#ifdef HAVE_GLIBC
 struct option options[] =
 {
     {
@@ -41,6 +42,7 @@ struct option options[] =
     },
     { NULL, 0, NULL, 0 }
 };
+#endif
 
 void print_usage(const char* executable, const char* directory)
 {
@@ -67,7 +69,11 @@ int main(int argc, char **argv)
     const char* directory = get_datadir();
 
     int c;
+#ifdef HAVE_GLIBC
     while ((c = getopt_long(argc, argv, "h", options, NULL)) != -1)
+#else
+    while ((c = getopt(argc, argv, "h")) != -1)
+#endif
     {
         switch (c)
         {

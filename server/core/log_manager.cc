@@ -23,6 +23,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
+#include <sched.h>
 
 #include <maxscale/atomic.h>
 #include <maxscale/config.h>
@@ -705,7 +706,7 @@ void mxs_log_finish(void)
         while (lm != NULL && lm->lm_nlinks != 0)
         {
             release_lock(&lmlock);
-            pthread_yield();
+            sched_yield();
             acquire_lock(&lmlock);
         }
 
@@ -1354,7 +1355,7 @@ static bool logmanager_register(bool writep)
         while (lm != NULL && !lm->lm_enabled)
         {
             release_lock(&lmlock);
-            pthread_yield();
+            sched_yield();
             acquire_lock(&lmlock);
         }
 
@@ -3013,8 +3014,12 @@ int mxs_log_message(int priority,
 const char* mxs_strerror(int error)
 {
     static thread_local char errbuf[MXS_STRERROR_BUFLEN];
-
+#ifdef HAVE_GLIBC
     return strerror_r(error, errbuf, sizeof(errbuf));
+#else
+    strerror_r(error, errbuf, sizeof(errbuf));
+    return errbuf;
+#endif
 }
 
 json_t* get_log_priorities()
