@@ -78,6 +78,7 @@ program
     .command(require('./alter.js'))
     .command(require('./rotate.js'))
     .command(require('./call.js'))
+    .command(require('./cluster.js'))
     .help()
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, function(argv) {
