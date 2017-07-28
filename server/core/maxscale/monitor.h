@@ -27,7 +27,7 @@ MXS_BEGIN_DECLS
 #define DEFAULT_WRITE_TIMEOUT 2
 #define DEFAULT_CONNECTION_ATTEMPTS 1
 
-#define MONITOR_DEFAULT_INTERVAL 10000 // in milliseconds
+#define MONITOR_DEFAULT_INTERVAL 2000 // in milliseconds
 
 /**
  * Monitor network timeout types

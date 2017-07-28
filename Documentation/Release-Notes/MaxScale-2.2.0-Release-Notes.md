@@ -32,6 +32,11 @@ string parameter and are removed before compiling the pattern. For backwards
 compatibility, the slashes are not yet mandatory. Omitting them is, however,
 deprecated and will be rejected in the next release of MaxScale.
 
+### `monitor_interval`
+
+The default value of `monitor_interval` was changed from 10000 milliseconds to
+2000 milliseconds.
+
 ### NamedServerFilter
 
 The filter now accepts multiple match-server pairs. Please see the
