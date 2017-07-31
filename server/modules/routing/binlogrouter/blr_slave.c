@@ -8399,7 +8399,9 @@ static int binary_logs_select_cb(void *data,
             /* Set last file name */
             data_set->last_file = MXS_STRDUP_A(values[0]);
             /* Write packet to client */
-            ret = MXS_SESSION_ROUTE_REPLY(dcb->session, pkt);
+            MXS_SESSION_ROUTE_REPLY(dcb->session, pkt);
+            /* Set success */
+            ret = 0;
         }
         return ret;    /* Return success or fallure */
     }
