@@ -8223,18 +8223,39 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
      * Check whether the last file is the current binlog file.
      * If not then add the new row.
      */
-    // TODO: check whether to FIX with prefix
     if (strcmp(current_file, result.last_file) != 0)
     {
-        char pos[40];
+        char pos[40]; // Buffer for a 64-bit integer.
         GWBUF *pkt;
         /* Free last file */
         MXS_FREE(result.last_file);
         /* Create the string value for pos */
         sprintf(pos, "%" PRIu64, current_pos);
 
+        char *filename;
+        char last_filename[BINLOG_FILE_EXTRA_INFO + strlen(current_file) + 1];
+        if (extra_info)
+        {
+            char t_prefix[BINLOG_FILE_EXTRA_INFO];
+            sprintf(t_prefix,
+                    "%" PRIu32 "/%" PRIu32 "/",
+                     router->mariadb10_gtid_domain,
+                     router->orig_masterid);
+
+            // Add prefix before filename
+            sprintf(last_filename,
+                    "%s%s",
+                    t_prefix,
+                    current_file);
+            filename = last_filename;
+        }
+        else
+        {
+            filename = current_file;
+        }
+
         /* Create & write the new row */
-        if ((pkt = blr_create_result_row(current_file,
+        if ((pkt = blr_create_result_row(filename,
                                          pos,
                                          seqno)) != NULL)
         {

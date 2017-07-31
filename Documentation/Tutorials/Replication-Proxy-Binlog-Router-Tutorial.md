@@ -393,14 +393,14 @@ Master_SSL_Verify_Server_Cert: No
              Master_Info_File: /home/maxscale/binlog/first/binlogs/master.ini
 ```
 
-If the option `mariadb10_slave_gtid` is set to _On_, the last seen GTID is shown:
+If the option `mariadb10_slave_gtid` is set to On, the last seen GTID is shown:
 
 ```
 Using_Gtid: No
 Gtid_IO_Pos: 0-10116-196
 ```
 
-If the option `mariadb10_master_gtid` is set to _On_, the _Using_Gtid_
+If the option `mariadb10_master_gtid` is set to On, the _Using_Gtid_
 field has the _Slave_pos_ value:
 
 ```
@@ -417,14 +417,22 @@ slaves must not use *MASTER_AUTO_POSITION = 1* option.
 
 It also works with a MariaDB 10.X setup (master and slaves).
 
-Starting from MaxScale 2.2 the slave connections may include GTID feature
+Starting from MaxScale 2.2 the slave connections may include **GTID** feature
 `MASTER_USE_GTID=Slave_pos` if option *mariadb10_slave_gtid* has been set.
 
 The default is that a slave connection must not include any GTID
 feature: `MASTER_USE_GTID=no`
 
 Starting from MaxScale 2.2 it's also possible to register to MariaDB 10.X master using
-GTID using the two new options *mariadb10_master_gtid* and *binlog_structure*.
+**GTID** using the two new options *mariadb10_master_gtid* and *binlog_structure*.
+
+Current GTID implementation limitations:
+
+- It's not possible to specify the GTID _domain_id: the master one is being used for
+all operations. All slave servers must use the same replication domain as the master server.
+- One GTID value in GTID_LIST event received from Master
+- One GTID value from connecting slave server.
+- One GTID value for Master registration.
 
 **Note:** Binlog Router currently does not work for MySQL 5.5 due to
 missing *@@global.binlog_checksum* variable.
@@ -463,7 +471,25 @@ Enabling replication from a master server requires:
 
 It's possible to specify the desired *MASTER_LOG_FILE* but position must be 4
 
-**Note:** Since MaxScale 1.3.0, the _initfile_ and _filestem_ options are no longer required, as the needed values are automatically set by parsing *MASTER_LOG_FILE* in CHANGE MASTER TO command.
+**Note:** Since MaxScale 1.3.0, the _initfile_ and _filestem_ options are no longer
+required, as the needed values are automatically set by parsing *MASTER_LOG_FILE* in CHANGE MASTER TO command.
+
+##### MariaDB 10 GTID
+
+Since MaxScale 2.2, if option _mariadb10_master_gtid_ is On, it's possible to use GTID
+instead of _file_ and _pos_.
+This also implies that MariaDB 10 slave servers can only connect with GTID mode to MaxScale.
+
+```
+MariaDB> SET @@global.gtid_slave_pos='0-198-123';
+MariaDB> CHANGE MASTER TO
+         MASTER_HOST=‘$master_server’,
+         MASTER_PORT=$master_port,
+         MASTER_USER='repl',
+         MASTER_PASSWORD=‘somepasswd’;
+```
+**Note**: the _log file name_ to write binlog events into is the one specified in
+the _Fake Rotate_ event received at registration time.
 
 ### Stop/start the replication
 
@@ -475,7 +501,7 @@ When router is configured and it is properly working it is possible to stop/star
 	...
 	MariaDB> START SLAVE;
 
-**Note:**: Already connected slaves or new ones are not affected by *STOP/START SLAVE*.
+**Note**: Already connected slaves or new ones are not affected by *STOP/START SLAVE*.
 These commands only control the MaxScale connection to the master server.
 
 ### Change the Master server configuration
@@ -510,15 +536,17 @@ and SSL options as well:
 	MASTER_SSL_CA (path to CA cerificate file)
 	MASTER_TLS_VERSION (allowed level of encryption used)
 
-Further details about level of encryption or certificates could be found here [Configuration Guuide](../Getting-Started/Configuration-Guide.md)
+Further details about level of encryption or certificates can be found here
+[Configuration Guuide](../Getting-Started/Configuration-Guide.md)
 
-There are some constraints related to *MASTER_LOG_FILE* and *MASTER_LOG_POS*:
+There are some **constraints** related to *MASTER_LOG_FILE* and *MASTER_LOG_POS*:
 
-*MASTER_LOG_FILE* could be changed to next binlog in sequence with *MASTER_LOG_POS=4* or to current one at current position.
+*MASTER_LOG_FILE* can be changed to next binlog in sequence with *MASTER_LOG_POS=4* or
+to current one at current position.
 
-Examples:
+Two example **scenarios** with _file_ and _pos_:
 
-1) Current binlog file is ‘mysql-bin.000003', position 88888
+(1) Current binlog file is ‘mysql-bin.000003', position 88888
 
 ```
 MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000003',
@@ -526,23 +554,30 @@ MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000003',
 ```
 
 This could be applied to current master_host/port or a new one.
-If there is a master server maintenance and a slave is being promoted as master it should be checked that binlog file and position are valid: in case of any error replication stops and errors are reported via *SHOW SLAVE STATUS* and in error logs.
+If there is a master server maintenance and a slave is being promoted as master it should
+be checked that binlog file and position are valid: in case of any error replication stops
+and errors are reported via *SHOW SLAVE STATUS* and in error logs.
 
-2) Current binlog file is ‘mysql-bin.000099', position 1234
+(2) Current binlog file is ‘mysql-bin.000099', position 1234
 
 ```
 MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000100',
          MASTER_LOG_POS=4
 ```
 
-This could be applied with current master_host/port or a new one
-If transaction safety option is on and the current binlog file contains an incomplete transaction it will be truncated to the position where transaction started.
-In such situation a proper message is reported in MySQL connection and with next START SLAVE binlog file truncation will occur and MariaDB MaxScale will request events from the master using the next binlog file at position 4.
+This could be applied with current master_host/port or a new one. If transaction safety option is on
+and the current binlog file contains an incomplete transaction it will be truncated to the position
+where transaction started.
+In such situation a proper message is reported in MySQL connection and with next START SLAVE binlog
+file truncation will occur and MariaDB MaxScale will request events from the master using the next
+binlog file at position 4.
 
 The above scenario might refer to a master crash/failure:
- the new server that has just been promoted as master doesn't have last transaction events but it should have the new binlog file (the next in sequence).
+the new server that has just been promoted as master, doesn't have last transaction events and
+should have the new binlog file, the next one in sequence (some `FLUSH LOGS` commands must be issued).
 Truncating the previous MariaDB MaxScale binlog is safe as that incomplete transaction is lost.
-It should be checked that current master or new one has the new binlog file, in case of any error replication stops and errors are reported via *SHOW SLAVE STATUS* and in error logs.
+It should be checked that current master or new one has the new binlog file, in case of any error
+replication stops and errors are reported via *SHOW SLAVE STATUS* and in error logs.
 
 	MariaDB> START SLAVE;
 
@@ -550,17 +585,113 @@ Check for any error in log files and with
 
 	MariaDB> SHOW SLAVE STATUS;
 
-In some situations replication state could be *STOPPED* and proper messages are displayed in error logs and in *SHOW SLAVE STATUS*,
+In some situations replication state could be *STOPPED* and proper messages are displayed in
+error logs and in *SHOW SLAVE STATUS*,
 
-In order to resolve any mistake done with *CHANGE MASTER TO MASTER_LOG_FILE / MASTER_LOG_POS*, another administrative command would be helpful.
+##### MariaDB 10 GTID
+
+If _mariadb10_master_gtid_ is On changing the master doesn't require the setting of a
+new _file_ and _pos_, just specify new host and port with CHANGE MASTER; depending on the _binlog_structure_ values some additional steps migth be required.
+
+If _binlog_structure=flat_, in order to keep previous binlog files untouched in MaxScale _binlogdir_ (no overwriting),
+the next in sequence file must exist in the Master server, as per above scenario _file and pos_ (2).
+
+It migth also happen that each server in the replication setup has its own binlog file name
+convention (server1_bin, server2_bin etc) or the user doesn't want to care at all about
+name and sequence. The _binlog_structure_ option set to _tree_ value simplifies the change
+master process: as the binlog files are saved using a hierarchy model
+(_binlogdir/domain_id/server_id/_filename_), MaxScale can work with any filename and any
+sequence and no binlog file will be overwritten by accident.
+
+
+**Scenario** example:
+
+Let's start saying it's a good practice to issue in the new Master `FLUSH TABLES` which
+causes a new GTID to be written in the master binlog file, incrementing the previous sequence:
+
+MaxScale has last GTID from former master `0-10124-282`:
+
+```
+MariaDB> SELECT @@global.gtid_current_pos;
++---------------------------+
+| @@global.gtid_current_pos |
++---------------------------+
+|               0-10124-282 |
++---------------------------+
+```
+and binlog name and pos are:
+
+```
+MySQL [(none)]> show master status\G
+*************************** 1. row ***************************
+     File: mysql-bin.000060
+     Position: 4434
+```
+
+The new Master, **server_id 10333**, has new GTID:
+
+```
+MariaDB> FLUSH TABLES;
+MariaDB> SELECT @@global.gtid_current_pos;
++---------------------------+
+| @@global.gtid_current_pos |
++---------------------------+
+|               0-10333-283 |
++---------------------------+
+```
+
+Starting the replication in MaxScale, `START SLAVE`,
+will result in new events being downloaded and stored.
+
+If _binlog_structure=flat_ (default), the binlog events are saved in the new file
+`mysql-bin.000061`, which should have been created in the Master before starting
+replication from MaxScale, see above scenario (2)
+
+If _binlog_structure=tree_, the binlog events are saved in the new file
+`0/10333/mysql-bin.000001` (which is the current file in the new master)
+
+The latter example clearly shows that the binlog file has a different sequence number
+(1 instead of 61) and possibly a new name.
+
+As usual, check for any error in log files and with
+
+	MariaDB> SHOW SLAVE STATUS;
+
+Issuing the admin command `SHOW FULL BINARY LOGS`
+it will be possible to follow the _master change_ history if option _binlog_structure=tree_
+
+```
+MariaDB > SHOW FULL BINARY LOGS;
++--------------------------+-----------+
+| Log_name                 | File_size |
++--------------------------+-----------+
+| 0/10122/binlog.000063    |      1543 |
+| 0/10122/binlog.000064    |       621 |
+...
+| 0/10116/mysql-bin.000060 |      4590 |
+...
+| 0/10116/mysql-bin.000112 |      9699 |
+...
+| 0/10124/log-bin.000016   |      2112 |
+```
+
+### Configuration reset
+In order to resolve any mistake done with *CHANGE MASTER TO MASTER_LOG_FILE / MASTER_LOG_POS*,
+another administrative command is helpful.
 
 	MariaDB> RESET SLAVE;
 
-This command removes *master.ini* file, blanks all master configuration in memory and sets binlog router in unconfigured state: a *CHANGE MASTER TO* command should be issued for the new configuration.
+This command removes *master.ini* file, blanks all master configuration in memory
+and sets binlog router in unconfigured state: a *CHANGE MASTER TO* command should
+be issued for the new configuration.
 
-Note: existing binlog files are not touched by this command.
+**Note**:
 
-Examples with SSL options:
+- Existing binlog files are not touched by this command.
+- Existing GTID is set to empty value.
+- Existing GTID database in binlogdir (gtid_maps.db) is not touched.
+
+###SSL options:
 
 	MySQL [(none)]> CHANGE MASTER TO MASTER_SSL = 1, MASTER_SSL_CERT='/home/maxscale/packages/certificates/client/client-cert.pem', MASTER_SSL_CA='/home/maxscale/packages/certificates/client/ca.pem', MASTER_SSL_KEY='/home/maxscale/packages/certificates/client/client-key.pem', MASTER_TLS_VERSION='TLSv12';
 
