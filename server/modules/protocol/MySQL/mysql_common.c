@@ -1498,23 +1498,18 @@ bool gw_read_backend_handshake(DCB *dcb, GWBUF *buffer)
     return rval;
 }
 
-/**
- * @brief Check if the buffer contains an OK packet
- *
- * @param buffer Buffer containing a complete MySQL packet
- * @return True if the buffer contains an OK packet
- */
 bool mxs_mysql_is_ok_packet(GWBUF *buffer)
 {
-    bool rval = false;
-    uint8_t cmd;
+    uint8_t cmd = 0xff; // Default should differ from the OK packet
+    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
+    return cmd == MYSQL_REPLY_OK;
+}
 
-    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd) &&  cmd == MYSQL_REPLY_OK)
-    {
-        rval = true;
-    }
-
-    return rval;
+bool mxs_mysql_is_err_packet(GWBUF *buffer)
+{
+    uint8_t cmd = 0x00; // Default should differ from the ERR packet
+    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
+    return cmd == MYSQL_REPLY_ERR;
 }
 
 bool mxs_mysql_is_result_set(GWBUF *buffer)

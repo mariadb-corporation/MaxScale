@@ -1076,6 +1076,40 @@ static json_t* diagnostics_json(const MXS_ROUTER *instance)
     return rval;
 }
 
+static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
+{
+    if (mxs_mysql_is_err_packet(buffer))
+    {
+        /** This should be the only valid case where the server sends a response
+         * without the client sending one first. MaxScale does not yet advertise
+         * the progress reporting flag so we don't need to handle it. */
+        uint8_t* data = GWBUF_DATA(buffer);
+        size_t len = MYSQL_GET_PAYLOAD_LEN(data);
+        uint16_t errcode = MYSQL_GET_ERRCODE(data);
+        std::string errstr((char*)data + 7, (char*)data + 7 + len - 3);
+
+        if (errcode == ER_CONNECTION_KILLED)
+        {
+            MXS_INFO("Connection from '%s'@'%s' to '%s' was killed",
+                     dcb->session->client_dcb->user,
+                     dcb->session->client_dcb->remote,
+                     dcb->server->unique_name);
+        }
+        else
+        {
+            MXS_WARNING("Server '%s' sent an unexpected error: %hu, %s",
+                        dcb->server->unique_name, errcode, errstr.c_str());
+        }
+    }
+    else
+    {
+        MXS_ERROR("Unexpected internal state: received response 0x%02hhx from "
+                  "server '%s' when no response was expected",
+                  mxs_mysql_get_command(buffer), dcb->server->unique_name);
+        ss_dassert(false);
+    }
+}
+
 /**
  * @brief Client Reply routine
  *
@@ -1102,9 +1136,18 @@ static void clientReply(MXS_ROUTER *instance,
 
     SRWBackend backend = get_backend_from_dcb(rses, backend_dcb);
 
+    if (backend->get_reply_state() == REPLY_STATE_DONE)
+    {
+        /** If we receive an unexpected response from the server, the internal
+         * logic cannot handle this situation. Routing the reply straight to
+         * the client should be the safest thing to do at this point. */
+        log_unexpected_response(backend_dcb, writebuf);
+        MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
+        return;
+    }
+
     /** Statement was successfully executed, free the stored statement */
     session_clear_stmt(backend_dcb->session);
-    ss_dassert(backend->get_reply_state() != REPLY_STATE_DONE);
 
     if (reply_is_complete(backend, writebuf))
     {
