@@ -230,6 +230,10 @@ static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char
 static void update_names_from_srclist(QC_SQLITE_INFO* info, const SrcList* pSrc);
 
 // Defined in parse.y
+
+extern "C"
+{
+
 extern void exposed_sqlite3ExprDelete(sqlite3 *db, Expr *pExpr);
 extern void exposed_sqlite3ExprListDelete(sqlite3 *db, ExprList *pList);
 extern void exposed_sqlite3IdListDelete(sqlite3 *db, IdList *pList);
@@ -259,9 +263,66 @@ extern void exposed_sqlite3StartTable(Parse *pParse,   /* Parser context */
                                       int isView,      /* True if this is a VIEW */
                                       int isVirtual,   /* True if this is a VIRTUAL table */
                                       int noErr);      /* Do nothing if table already exists */
+
+}
+
+extern "C"
+{
+
+extern void mxs_sqlite3AlterFinishAddColumn(Parse *, Token *);
+extern void mxs_sqlite3AlterBeginAddColumn(Parse *, SrcList *);
+extern void mxs_sqlite3Analyze(Parse *, SrcList *);
+extern void mxs_sqlite3BeginTransaction(Parse*, int token, int type);
+extern void mxs_sqlite3CommitTransaction(Parse*);
+extern void mxs_sqlite3CreateIndex(Parse*,Token*,Token*,SrcList*,ExprList*,int,Token*,
+                                   Expr*, int, int);
+extern void mxs_sqlite3BeginTrigger(Parse*, Token*,Token*,int,int,IdList*,SrcList*,
+                                    Expr*,int, int);
+extern void mxs_sqlite3FinishTrigger(Parse*, TriggerStep*, Token*);
+extern void mxs_sqlite3CreateView(Parse*,Token*,Token*,Token*,ExprList*,Select*,int,int);
+extern void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcList* pUsing);
+extern void mxs_sqlite3DropIndex(Parse*, SrcList*, SrcList*,int);
+extern void mxs_sqlite3DropTable(Parse*, SrcList*, int, int, int);
+extern void mxs_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*, SrcList*);
+extern void mxs_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int,ExprList*);
+extern void mxs_sqlite3RollbackTransaction(Parse*);
+extern void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName);
+extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
+extern void mxs_sqlite3StartTable(Parse*,Token*,Token*,int,int,int,int);
+extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
+
 extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
 
-extern void maxscale_update_function_info(const char* name, uint32_t usage);
+extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
+extern void maxscaleCall(Parse*, SrcList* pName, ExprList* pExprList);
+extern void maxscaleCheckTable(Parse*, SrcList* pTables);
+extern void maxscaleCreateSequence(Parse*, Token* pDatabase, Token* pTable);
+extern void maxscaleDeclare(Parse* pParse);
+extern void maxscaleDeallocate(Parse*, Token* pName);
+extern void maxscaleDo(Parse*, ExprList* pEList);
+extern void maxscaleDrop(Parse*, int what, Token* pDatabase, Token* pName);
+extern void maxscaleExecute(Parse*, Token* pName, int type_mask);
+extern void maxscaleExecuteImmediate(Parse*, Token* pName, ExprSpan* pExprSpan, int type_mask);
+extern void maxscaleExplain(Parse*, Token* pNext);
+extern void maxscaleFlush(Parse*, Token* pWhat);
+extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
+extern void maxscaleLoadData(Parse*, SrcList* pFullName);
+extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
+extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
+extern void maxscalePrivileges(Parse*, int kind);
+extern void maxscaleRenameTable(Parse*, SrcList* pTables);
+extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
+extern void maxscaleShow(Parse*, MxsShow* pShow);
+extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
+extern void maxscaleUse(Parse*, Token*);
+
+extern void maxscale_update_function_info(const char* name, unsigned usage);
+
+extern void maxscaleComment();
+extern int maxscaleKeyword(int token);
+extern int maxscaleTranslateKeyword(int token);
+
+}
 
 /**
  * Used for freeing a QC_SQLITE_INFO object added to a GWBUF.
@@ -328,7 +389,7 @@ static void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos)
 {
     if (infos)
     {
-        for (int i = 0; i < n_infos; ++i)
+        for (size_t i = 0; i < n_infos; ++i)
         {
             MXS_FREE(infos[i].database);
             MXS_FREE(infos[i].table);
@@ -343,7 +404,7 @@ static void free_function_infos(QC_FUNCTION_INFO* infos, size_t n_infos)
 {
     if (infos)
     {
-        for (int i = 0; i < n_infos; ++i)
+        for (size_t i = 0; i < n_infos; ++i)
         {
             MXS_FREE(infos[i].name);
         }
@@ -383,7 +444,7 @@ static QC_SQLITE_INFO* get_query_info(GWBUF* query, uint32_t collect)
 
 static QC_SQLITE_INFO* info_alloc(uint32_t collect)
 {
-    QC_SQLITE_INFO* info = MXS_MALLOC(sizeof(*info));
+    QC_SQLITE_INFO* info = (QC_SQLITE_INFO*)MXS_MALLOC(sizeof(*info));
     MXS_ABORT_IF_NULL(info);
 
     info_init(info, collect);
@@ -745,9 +806,9 @@ static void log_invalid_data(GWBUF* query, const char* message)
 
         if (modutil_extract_SQL(query, &sql, &length))
         {
-            if (length > GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1)
+            if (length > (int)GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1)
             {
-                length = GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1;
+                length = (int)GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1;
             }
 
             MXS_INFO("Parsing the query failed, %s: %*s", message, length, sql);
@@ -788,7 +849,7 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
     int i;
     for (i = 0; i < pExclude->nExpr; ++i)
     {
-        const struct ExprList_item* item = &pExclude->a[i];
+        const struct ExprList::ExprList_item* item = &pExclude->a[i];
 
         // zName will contain a possible alias name. If the alias name
         // is referred to in e.g. in a having, it need to be excluded
@@ -852,7 +913,7 @@ static void update_field_info(QC_SQLITE_INFO* info,
 
     QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column, usage };
 
-    int i;
+    size_t i;
     for (i = 0; i < info->field_infos_len; ++i)
     {
         QC_FIELD_INFO* field_info = info->field_infos + i;
@@ -897,7 +958,8 @@ static void update_field_info(QC_SQLITE_INFO* info,
             else
             {
                 size_t capacity = info->field_infos_capacity ? 2 * info->field_infos_capacity : 8;
-                field_infos = MXS_REALLOC(info->field_infos, capacity * sizeof(QC_FIELD_INFO));
+                field_infos = (QC_FIELD_INFO*)MXS_REALLOC(info->field_infos,
+                                                          capacity * sizeof(QC_FIELD_INFO));
 
                 if (field_infos)
                 {
@@ -946,7 +1008,7 @@ static void update_function_info(QC_SQLITE_INFO* info,
 
     QC_FUNCTION_INFO item = { (char*)name, usage };
 
-    int i;
+    size_t i;
     for (i = 0; i < info->function_infos_len; ++i)
     {
         QC_FUNCTION_INFO* function_info = info->function_infos + i;
@@ -968,7 +1030,8 @@ static void update_function_info(QC_SQLITE_INFO* info,
         else
         {
             size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
-            function_infos = MXS_REALLOC(info->function_infos, capacity * sizeof(QC_FUNCTION_INFO));
+            function_infos = (QC_FUNCTION_INFO*)MXS_REALLOC(info->function_infos,
+                                                            capacity * sizeof(QC_FUNCTION_INFO));
 
             if (function_infos)
             {
@@ -1011,7 +1074,7 @@ static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
 
     if (pExpr->op == TK_ASTERISK)
     {
-        item.column = "*";
+        item.column = (char*)"*";
     }
     else if (pExpr->op == TK_ID)
     {
@@ -1031,7 +1094,7 @@ static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
             }
             else
             {
-                item.column = "*";
+                item.column = (char*)"*";
             }
         }
         else if (pExpr->pLeft->op == TK_ID &&
@@ -1048,7 +1111,7 @@ static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
             }
             else
             {
-                item.column = "*";
+                item.column = (char*)"*";
             }
         }
     }
@@ -1077,7 +1140,7 @@ static void update_field_infos_from_with(QC_SQLITE_INFO* info,
 {
     for (int i = 0; i < pWith->nCte; ++i)
     {
-        const struct Cte* pCte = &pWith->a[i];
+        const struct With::Cte* pCte = &pWith->a[i];
 
         if (pCte->pSelect)
         {
@@ -1399,7 +1462,7 @@ static void update_field_infos_from_exprlist(QC_SQLITE_INFO* info,
 {
     for (int i = 0; i < pEList->nExpr; ++i)
     {
-        struct ExprList_item* pItem = &pEList->a[i];
+        struct ExprList::ExprList_item* pItem = &pEList->a[i];
 
         update_field_infos(info, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
     }
@@ -1412,7 +1475,7 @@ static void update_field_infos_from_idlist(QC_SQLITE_INFO* info,
 {
     for (int i = 0; i < pIds->nId; ++i)
     {
-        struct IdList_item* pItem = &pIds->a[i];
+        struct IdList::IdList_item* pItem = &pIds->a[i];
 
         update_field_info(info, NULL, NULL, pItem->zName, usage, pExclude);
     }
@@ -1523,7 +1586,7 @@ static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char
 
             if (zDatabase)
             {
-                zCopy = MXS_MALLOC(strlen(zDatabase) + 1 + strlen(zTable) + 1);
+                zCopy = (char*)MXS_MALLOC(strlen(zDatabase) + 1 + strlen(zTable) + 1);
                 MXS_ABORT_IF_NULL(zCopy);
 
                 strcpy(zCopy, zDatabase);
@@ -1650,9 +1713,9 @@ void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CRE
 
     if (pTableName)
     {
-        for (int i = 0; i < pTableName->nAlloc; ++i)
+        for (size_t i = 0; i < pTableName->nAlloc; ++i)
         {
-            struct SrcList_item* pItem = &pTableName->a[i];
+            const struct SrcList::SrcList_item* pItem = &pTableName->a[i];
 
             if (pItem->zName)
             {
@@ -1778,7 +1841,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
             // table and database names.
             for (int i = 0; i < pUsing->nSrc; ++i)
             {
-                struct SrcList_item* pItem = &pUsing->a[i];
+                const struct SrcList::SrcList_item* pItem = &pUsing->a[i];
 
                 update_names(info, pItem->zDatabase, pItem->zName);
             }
@@ -1787,14 +1850,14 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
             // names from the using declaration.
             for (int i = 0; i < pTabList->nSrc; ++i)
             {
-                const struct SrcList_item* pTable = &pTabList->a[i];
+                const struct SrcList::SrcList_item* pTable = &pTabList->a[i];
                 ss_dassert(pTable->zName);
                 int j = 0;
                 bool isSame = false;
 
                 do
                 {
-                    struct SrcList_item* pItem = &pUsing->a[j++];
+                    SrcList::SrcList_item* pItem = &pUsing->a[j++];
 
                     if (strcasecmp(pTable->zName, pItem->zName) == 0)
                     {
@@ -2093,7 +2156,7 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
         {
             for (int i = 0; i < pChanges->nExpr; ++i)
             {
-                struct ExprList_item* pItem = &pChanges->a[i];
+                ExprList::ExprList_item* pItem = &pChanges->a[i];
 
                 update_field_infos(info, 0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
             }
@@ -2281,7 +2344,7 @@ void maxscaleDeallocate(Parse* pParse, Token* pName)
     // this information already.
     if (!info->prepare_name)
     {
-        info->prepare_name = MXS_MALLOC(pName->n + 1);
+        info->prepare_name = (char*)MXS_MALLOC(pName->n + 1);
         if (info->prepare_name)
         {
             memcpy(info->prepare_name, pName->z, pName->n);
@@ -2355,7 +2418,7 @@ void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)
     // this information already.
     if (!info->prepare_name)
     {
-        info->prepare_name = MXS_MALLOC(pName->n + 1);
+        info->prepare_name = (char*)MXS_MALLOC(pName->n + 1);
         if (info->prepare_name)
         {
             memcpy(info->prepare_name, pName->z, pName->n);
@@ -2501,7 +2564,7 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
             info->type_mask = QUERY_TYPE_WRITE;
 
             ss_dassert(pFullName->nSrc == 1);
-            const struct SrcList_item* pItem = &pFullName->a[0];
+            const struct SrcList::SrcList_item* pItem = &pFullName->a[0];
 
             update_names(info, pItem->zDatabase, pItem->zName);
         }
@@ -2689,7 +2752,8 @@ int maxscaleKeyword(int token)
             break;
 
         case TK_HANDLER:
-            info->status = QUERY_TYPE_WRITE;
+            info->status = QC_QUERY_TOKENIZED;
+            info->type_mask = QUERY_TYPE_WRITE;
             break;
 
         case TK_INSERT:
@@ -2849,7 +2913,7 @@ void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
 
     for (int i = 0; i < pTables->nSrc; ++i)
     {
-        const struct SrcList_item* pItem = &pTables->a[i];
+        const struct SrcList::SrcList_item* pItem = &pTables->a[i];
 
         ss_dassert(pItem->zName);
         ss_dassert(pItem->zAlias);
@@ -2933,7 +2997,7 @@ void maxscalePrepare(Parse* pParse, Token* pName, Expr* pStmt)
     // this information already.
     if (!info->prepare_name)
     {
-        info->prepare_name = MXS_MALLOC(pName->n + 1);
+        info->prepare_name = (char*)MXS_MALLOC(pName->n + 1);
         if (info->prepare_name)
         {
             memcpy(info->prepare_name, pName->z, pName->n);
@@ -3052,7 +3116,7 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
         {
             for (int i = 0; i < pList->nExpr; ++i)
             {
-                const struct ExprList_item* pItem = &pList->a[i];
+                const struct ExprList::ExprList_item* pItem = &pList->a[i];
 
                 switch (pItem->pExpr->op)
                 {
@@ -3398,7 +3462,7 @@ static int32_t qc_sqlite_setup(qc_sql_mode_t sql_mode, const char* cargs)
 
                     if ((*end == 0) && (l >= QC_LOG_NOTHING) && (l <= QC_LOG_NON_TOKENIZED))
                     {
-                        log_level = l;
+                        log_level = static_cast<qc_log_level_t>(l);
                     }
                     else
                     {
@@ -4064,6 +4128,9 @@ int32_t qc_sqlite_set_sql_mode(qc_sql_mode_t sql_mode)
  * EXPORTS
  */
 
+extern "C"
+{
+
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     static QUERY_CLASSIFIER qc =
@@ -4112,3 +4179,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
+
+}
+
