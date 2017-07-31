@@ -3,7 +3,7 @@
 # The first argument is the number of packages left after
 # this one has been removed. If it is 0 then the package is being
 # removed from the system.
-if [ "$1" -eq 0 ]
+if [ "$1" = "0" ] || [ "$1" = "remove" ]
 then
     if [ -f /etc/init.d/maxscale ]
     then

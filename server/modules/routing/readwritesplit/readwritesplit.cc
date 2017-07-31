@@ -401,8 +401,7 @@ static bool handle_error_new_connection(RWSplit *inst,
          * to the client.
          */
         GWBUF *stored = NULL;
-        const SERVER *target;
-
+        const SERVER *target = NULL;
         if (!session_take_stmt(backend_dcb->session, &stored, &target) ||
             target != backend->backend()->server ||
             !reroute_stored_statement(*rses, backend, stored))

@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
         free(rows);
     }
 
+    test.stop_timeout();
     execute_query(test.repl->nodes[0], "DROP TABLE test.t1;RESET MASTER");
     test.repl->fix_replication();
 

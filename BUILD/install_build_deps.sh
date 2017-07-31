@@ -9,7 +9,7 @@ command -v apt-get
 if [ $? == 0 ]
 then
   # DEB-based distro
-
+  install_libdir=/usr/lib
   sudo apt-get update
 
   sudo apt-get install -y --force-yes dpkg-dev git wget \
@@ -35,6 +35,7 @@ then
   fi
 else
   ## RPM-based distro
+  install_libdir=/usr/lib64
   command -v yum
 
   if [ $? != 0 ]
@@ -142,7 +143,7 @@ fi
 
 mkdir -p jansson/build
 pushd jansson/build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DJANSSON_INSTALL_LIB_DIR=/usr/lib64
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DJANSSON_INSTALL_LIB_DIR=$install_libdir
 make
 sudo make install
 popd

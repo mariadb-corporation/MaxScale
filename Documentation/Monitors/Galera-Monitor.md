@@ -65,8 +65,9 @@ use_priority=true
 ### `root_node_as_master`
 
 This option controls whether the write master Galera node requires a
-_wsrep_local_index_ value of 0. This option is enabled by default and was
-introduced in MaxScale 2.1.0.
+_wsrep_local_index_ value of 0. This option was introduced in MaxScale 2.1.0 and
+it is disabled by default in versions 2.1.5 and newer. In versions 2.1.4 and
+older, the option was enabled by default.
 
 A Galera cluster will always have a node which has a _wsrep_local_index_ value
 of 0. Based on this information, multiple MaxScale instances can always pick the

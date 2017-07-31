@@ -85,7 +85,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"disable_master_failback", MXS_MODULE_PARAM_BOOL, "false"},
             {"available_when_donor", MXS_MODULE_PARAM_BOOL, "false"},
             {"disable_master_role_setting", MXS_MODULE_PARAM_BOOL, "false"},
-            {"root_node_as_master", MXS_MODULE_PARAM_BOOL, "true"},
+            {"root_node_as_master", MXS_MODULE_PARAM_BOOL, "false"},
             {"use_priority", MXS_MODULE_PARAM_BOOL, "false"},
             {
                 "script",

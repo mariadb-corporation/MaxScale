@@ -302,6 +302,10 @@ add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwr
 # Schemarouter implicit database detection
 add_test_executable(mxs1310_implicit_db.cpp mxs1310_implicit_db mxs1310_implicit_db LABELS schemarouter REPL_BACKEND)
 
+# Retry reads with persistent connections
+add_test_executable(mxs1323_retry_read.cpp mxs1323_retry_read mxs1323 LABELS readwritesplit LIGHT REPL_BACKEND)
+add_test_executable(mxs1323_stress.cpp mxs1323_stress mxs1323 LABELS readwritesplit REPL_BACKEND)
+
 # INSERT extremelly big number of rows
 add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit HEAVY GALERA_BACKEND)
 
@@ -309,7 +313,7 @@ add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit H
 add_test_script(mariadb_tests_hartmut mariadb_tests_hartmut.sh replication LABELS readwritesplit REPL_BACKEND)
 
 # A set of MariaDB server tests executed against Maxscale RWSplit (Galera backend)
-add_test_script(mariadb_tests_hartmut_galera mariadb_tests_hartmut.sh galera LABELS readwritesplit GALERA_BACKEND)
+add_test_script(mariadb_tests_hartmut_galera mariadb_tests_hartmut.sh galera_hartmut LABELS readwritesplit GALERA_BACKEND)
 
 # Creates a number of connections > max_connections setting
 add_test_executable(max_connections.cpp max_connections replication LABELS MySQLAuth MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
@@ -545,7 +549,7 @@ add_test_executable(rwsplit_multi_stmt.cpp rwsplit_multi_stmt rwsplit_multi_stmt
 add_test_executable(rwsplit_read_only_trx.cpp rwsplit_read_only_trx rwsplit_read_only_trx LABELS readwritesplit REPL_BACKEND)
 
 # Test replication-manager with MaxScale
-add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
+#add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
 #add_test_executable_notest(replication_manager_2nodes.cpp replication_manager_2nodes replication_manager_2nodes LABELS maxscale REPL_BACKEND)
 #add_test_executable_notest(replication_manager_3nodes.cpp replication_manager_3nodes replication_manager_3nodes LABELS maxscale REPL_BACKEND)
 

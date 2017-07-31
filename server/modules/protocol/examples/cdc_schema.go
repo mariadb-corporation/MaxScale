@@ -15,11 +15,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"regexp"
 	"strconv"
-	"fmt"
 )
 
 import _ "github.com/go-sql-driver/mysql"
@@ -45,8 +45,10 @@ The "user" and "password" flags are required.
 
 // Avro field
 type Field struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	RealType string `json:"real_type"`
+	Length   int    `json:"length"`
 }
 
 // Avro schema
@@ -68,13 +70,20 @@ func LogObject(obj interface{}) {
 }
 
 var field_re *regexp.Regexp
+var length_re *regexp.Regexp
 
 // Convert the SQL type to the appropriate Avro type
 func (f *Field) ToAvroType() {
+	orig := f.Type
 	f.Type = field_re.ReplaceAllString(f.Type, "")
+	f.Length = -1
+	f.RealType = f.Type
 	switch f.Type {
 	case "date", "datetime", "time", "timestamp", "year", "tinytext", "text",
-		"mediumtext", "longtext", "char", "varchar", "enum", "set":
+		"mediumtext", "longtext", "char", "varchar":
+		f.Type = "string"
+		f.Length, _ = strconv.Atoi(length_re.ReplaceAllString(orig, "$1"))
+	case "enum", "set":
 		f.Type = "string"
 	case "tinyblob", "blob", "mediumblob", "longblob", "binary", "varbinary":
 		f.Type = "bytes"
@@ -127,11 +136,18 @@ func StoreSchema(db *sql.DB, schema, table string) {
 func main() {
 	var err error
 	field_re, err = regexp.Compile("[(].*")
+
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
 
-	flag.Usage = PrintUsage;
+	length_re, err = regexp.Compile(".*[(](.*)[)].*")
+
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+
+	flag.Usage = PrintUsage
 	flag.Parse()
 
 	if len(*user) == 0 || len(*passwd) == 0 {
