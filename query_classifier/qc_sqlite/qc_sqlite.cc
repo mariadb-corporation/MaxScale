@@ -175,10 +175,43 @@ static void update_field_infos_from_with(QcSqliteInfo* info,
 static void update_function_info(QcSqliteInfo* info,
                                  const char* name,
                                  uint32_t usage);
-static void update_database_names(QcSqliteInfo* info, const char* name);
-static void update_names(QcSqliteInfo* info, const char* zDatabase, const char* zTable);
 static void update_names_from_srclist(QcSqliteInfo* info, const SrcList* pSrc);
 
+// Defined in parse.y
+extern "C"
+{
+
+extern void exposed_sqlite3ExprDelete(sqlite3 *db, Expr *pExpr);
+extern void exposed_sqlite3ExprListDelete(sqlite3 *db, ExprList *pList);
+extern void exposed_sqlite3IdListDelete(sqlite3 *db, IdList *pList);
+extern void exposed_sqlite3SrcListDelete(sqlite3 *db, SrcList *pList);
+extern void exposed_sqlite3SelectDelete(sqlite3 *db, Select *p);
+
+extern void exposed_sqlite3BeginTrigger(Parse *pParse,
+                                        Token *pName1,
+                                        Token *pName2,
+                                        int tr_tm,
+                                        int op,
+                                        IdList *pColumns,
+                                        SrcList *pTableName,
+                                        Expr *pWhen,
+                                        int isTemp,
+                                        int noErr);
+extern void exposed_sqlite3FinishTrigger(Parse *pParse,
+                                         TriggerStep *pStepList,
+                                         Token *pAll);
+extern int exposed_sqlite3Dequote(char *z);
+extern int exposed_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*);
+extern int exposed_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest);
+extern void exposed_sqlite3StartTable(Parse *pParse,   /* Parser context */
+                                      Token *pName1,   /* First part of the name of the table or view */
+                                      Token *pName2,   /* Second part of the name of the table or view */
+                                      int isTemp,      /* True if this is a TEMP table */
+                                      int isView,      /* True if this is a VIEW */
+                                      int isVirtual,   /* True if this is a VIRTUAL table */
+                                      int noErr);      /* Do nothing if table already exists */
+
+}
 
 /**
  * Contains information about a particular query.
@@ -404,6 +437,66 @@ public:
         return rv;
     }
 
+    // PUBLIC for now at least.
+    void update_names(const char* zDatabase, const char* zTable)
+    {
+        if ((collect & QC_COLLECT_TABLES) && !(collected & QC_COLLECT_TABLES))
+        {
+            if (strcasecmp(zTable, "DUAL") != 0)
+            {
+                char* zCopy = MXS_STRDUP(zTable);
+                MXS_ABORT_IF_NULL(zCopy);
+                // TODO: Is this call really needed. Check also sqlite3Dequote.
+                exposed_sqlite3Dequote(zCopy);
+
+                enlarge_string_array(1, table_names_len, &table_names, &table_names_capacity);
+                table_names[table_names_len++] = zCopy;
+                table_names[table_names_len] = NULL;
+
+                if (zDatabase)
+                {
+                    zCopy = (char*)MXS_MALLOC(strlen(zDatabase) + 1 + strlen(zTable) + 1);
+                    MXS_ABORT_IF_NULL(zCopy);
+
+                    strcpy(zCopy, zDatabase);
+                    strcat(zCopy, ".");
+                    strcat(zCopy, zTable);
+                    exposed_sqlite3Dequote(zCopy);
+                }
+                else
+                {
+                    zCopy = MXS_STRDUP(zCopy);
+                    MXS_ABORT_IF_NULL(zCopy);
+                }
+
+                enlarge_string_array(1, table_fullnames_len,
+                                     &table_fullnames, &table_fullnames_capacity);
+                table_fullnames[table_fullnames_len++] = zCopy;
+                table_fullnames[table_fullnames_len] = NULL;
+            }
+        }
+
+        if ((collect & QC_COLLECT_DATABASES) && !(collected & QC_COLLECT_DATABASES))
+        {
+            if (zDatabase)
+            {
+                update_database_names(zDatabase);
+            }
+        }
+    }
+
+    void update_database_names(const char* zDatabase)
+    {
+        char* zCopy = MXS_STRDUP(zDatabase);
+        MXS_ABORT_IF_NULL(zCopy);
+        exposed_sqlite3Dequote(zCopy);
+
+        enlarge_string_array(1, database_names_len,
+                             &database_names, &database_names_capacity);
+        database_names[database_names_len++] = zCopy;
+        database_names[database_names_len] = NULL;
+    }
+
 private:
     QcSqliteInfo(uint32_t cllct)
         : status(QC_QUERY_INVALID)
@@ -549,43 +642,6 @@ public:
     qc_sql_mode_t sql_mode;                  // The current sql_mode.
     QC_NAME_MAPPING* function_name_mappings; // How function names should be mapped.
 };
-
-// Defined in parse.y
-
-extern "C"
-{
-
-extern void exposed_sqlite3ExprDelete(sqlite3 *db, Expr *pExpr);
-extern void exposed_sqlite3ExprListDelete(sqlite3 *db, ExprList *pList);
-extern void exposed_sqlite3IdListDelete(sqlite3 *db, IdList *pList);
-extern void exposed_sqlite3SrcListDelete(sqlite3 *db, SrcList *pList);
-extern void exposed_sqlite3SelectDelete(sqlite3 *db, Select *p);
-
-extern void exposed_sqlite3BeginTrigger(Parse *pParse,
-                                        Token *pName1,
-                                        Token *pName2,
-                                        int tr_tm,
-                                        int op,
-                                        IdList *pColumns,
-                                        SrcList *pTableName,
-                                        Expr *pWhen,
-                                        int isTemp,
-                                        int noErr);
-extern void exposed_sqlite3FinishTrigger(Parse *pParse,
-                                         TriggerStep *pStepList,
-                                         Token *pAll);
-extern int exposed_sqlite3Dequote(char *z);
-extern int exposed_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*);
-extern int exposed_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest);
-extern void exposed_sqlite3StartTable(Parse *pParse,   /* Parser context */
-                                      Token *pName1,   /* First part of the name of the table or view */
-                                      Token *pName2,   /* Second part of the name of the table or view */
-                                      int isTemp,      /* True if this is a TEMP table */
-                                      int isView,      /* True if this is a VIEW */
-                                      int isVirtual,   /* True if this is a VIRTUAL table */
-                                      int noErr);      /* Do nothing if table already exists */
-
-}
 
 extern "C"
 {
@@ -1649,7 +1705,7 @@ static void update_field_infos_from_idlist(QcSqliteInfo* info,
     }
 }
 
-static void update_field_infos_from_select(QcSqliteInfo* info,
+static void update_field_infos_from_select(QcSqliteInfo* pInfo,
                                            const Select* pSelect,
                                            uint32_t usage,
                                            const ExprList* pExclude)
@@ -1662,7 +1718,7 @@ static void update_field_infos_from_select(QcSqliteInfo* info,
         {
             if (pSrc->a[i].zName)
             {
-                update_names(info, pSrc->a[i].zDatabase, pSrc->a[i].zName);
+                pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName);
             }
 
             if (pSrc->a[i].pSelect)
@@ -1672,7 +1728,7 @@ static void update_field_infos_from_select(QcSqliteInfo* info,
                 sub_usage &= ~QC_USED_IN_SELECT;
                 sub_usage |= QC_USED_IN_SUBSELECT;
 
-                update_field_infos_from_select(info, pSrc->a[i].pSelect, sub_usage, pExclude);
+                update_field_infos_from_select(pInfo, pSrc->a[i].pSelect, sub_usage, pExclude);
             }
 
 #ifdef QC_COLLECT_NAMES_FROM_USING
@@ -1682,7 +1738,7 @@ static void update_field_infos_from_select(QcSqliteInfo* info,
             // does not reveal its value, right?
             if (pSrc->a[i].pUsing)
             {
-                update_field_infos_from_idlist(info, pSrc->a[i].pUsing, 0, pSelect->pEList);
+                update_field_infos_from_idlist(pInfo, pSrc->a[i].pUsing, 0, pSelect->pEList);
             }
 #endif
         }
@@ -1690,112 +1746,53 @@ static void update_field_infos_from_select(QcSqliteInfo* info,
 
     if (pSelect->pEList)
     {
-        update_field_infos_from_exprlist(info, pSelect->pEList, usage, NULL);
+        update_field_infos_from_exprlist(pInfo, pSelect->pEList, usage, NULL);
     }
 
     if (pSelect->pWhere)
     {
-        info->has_clause = true;
-        update_field_infos(info, 0, pSelect->pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pSelect->pEList);
+        pInfo->has_clause = true;
+        update_field_infos(pInfo, 0, pSelect->pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pSelect->pEList);
     }
 
     if (pSelect->pGroupBy)
     {
-        update_field_infos_from_exprlist(info, pSelect->pGroupBy, QC_USED_IN_GROUP_BY, pSelect->pEList);
+        update_field_infos_from_exprlist(pInfo, pSelect->pGroupBy, QC_USED_IN_GROUP_BY, pSelect->pEList);
     }
 
     if (pSelect->pHaving)
     {
-        info->has_clause = true;
+        pInfo->has_clause = true;
 #if defined(COLLECT_HAVING_AS_WELL)
         // A HAVING clause can only refer to fields that already have been
         // mentioned. Consequently, they need not be collected.
-        update_field_infos(info, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
+        update_field_infos(pInfo, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
 #endif
     }
 
     if (pSelect->pWith)
     {
-        update_field_infos_from_with(info, pSelect->pWith);
+        update_field_infos_from_with(pInfo, pSelect->pWith);
     }
 
     if ((pSelect->op == TK_UNION) && pSelect->pPrior)
     {
-        update_field_infos_from_select(info, pSelect->pPrior, usage, pExclude);
+        update_field_infos_from_select(pInfo, pSelect->pPrior, usage, pExclude);
     }
 }
 
-static void update_database_names(QcSqliteInfo* info, const char* zDatabase)
-{
-    char* zCopy = MXS_STRDUP(zDatabase);
-    MXS_ABORT_IF_NULL(zCopy);
-    exposed_sqlite3Dequote(zCopy);
-
-    enlarge_string_array(1, info->database_names_len,
-                         &info->database_names, &info->database_names_capacity);
-    info->database_names[info->database_names_len++] = zCopy;
-    info->database_names[info->database_names_len] = NULL;
-}
-
-static void update_names(QcSqliteInfo* info, const char* zDatabase, const char* zTable)
-{
-    if ((info->collect & QC_COLLECT_TABLES) && !(info->collected & QC_COLLECT_TABLES))
-    {
-        if (strcasecmp(zTable, "DUAL") != 0)
-        {
-            char* zCopy = MXS_STRDUP(zTable);
-            MXS_ABORT_IF_NULL(zCopy);
-            // TODO: Is this call really needed. Check also sqlite3Dequote.
-            exposed_sqlite3Dequote(zCopy);
-
-            enlarge_string_array(1, info->table_names_len, &info->table_names, &info->table_names_capacity);
-            info->table_names[info->table_names_len++] = zCopy;
-            info->table_names[info->table_names_len] = NULL;
-
-            if (zDatabase)
-            {
-                zCopy = (char*)MXS_MALLOC(strlen(zDatabase) + 1 + strlen(zTable) + 1);
-                MXS_ABORT_IF_NULL(zCopy);
-
-                strcpy(zCopy, zDatabase);
-                strcat(zCopy, ".");
-                strcat(zCopy, zTable);
-                exposed_sqlite3Dequote(zCopy);
-            }
-            else
-            {
-                zCopy = MXS_STRDUP(zCopy);
-                MXS_ABORT_IF_NULL(zCopy);
-            }
-
-            enlarge_string_array(1, info->table_fullnames_len,
-                                 &info->table_fullnames, &info->table_fullnames_capacity);
-            info->table_fullnames[info->table_fullnames_len++] = zCopy;
-            info->table_fullnames[info->table_fullnames_len] = NULL;
-        }
-    }
-
-    if ((info->collect & QC_COLLECT_DATABASES) && !(info->collected & QC_COLLECT_DATABASES))
-    {
-        if (zDatabase)
-        {
-            update_database_names(info, zDatabase);
-        }
-    }
-}
-
-static void update_names_from_srclist(QcSqliteInfo* info, const SrcList* pSrc)
+static void update_names_from_srclist(QcSqliteInfo* pInfo, const SrcList* pSrc)
 {
     for (int i = 0; i < pSrc->nSrc; ++i)
     {
         if (pSrc->a[i].zName)
         {
-            update_names(info, pSrc->a[i].zDatabase, pSrc->a[i].zName);
+            pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName);
         }
 
         if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
         {
-            update_names_from_srclist(info, pSrc->a[i].pSelect->pSrc);
+            update_names_from_srclist(pInfo, pSrc->a[i].pSelect->pSrc);
         }
     }
 }
@@ -1887,7 +1884,7 @@ void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CRE
 
             if (pItem->zName)
             {
-                update_names(info, pItem->zDatabase, pItem->zName);
+                info->update_names(pItem->zDatabase, pItem->zName);
             }
         }
     }
@@ -1934,7 +1931,7 @@ void mxs_sqlite3CreateIndex(Parse *pParse,     /* All information about this par
     }
     else if (pParse->pNewTable)
     {
-        update_names(info, NULL, pParse->pNewTable->zName);
+        info->update_names(NULL, pParse->pNewTable->zName);
     }
 
     exposed_sqlite3ExprDelete(pParse->db, pPIWhere);
@@ -1972,11 +1969,11 @@ void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
         strncpy(database, pDatabase->z, pDatabase->n);
         database[pDatabase->n] = 0;
 
-        update_names(info, database, name);
+        info->update_names(database, name);
     }
     else
     {
-        update_names(info, NULL, name);
+        info->update_names(NULL, name);
     }
 
     if (pSelect)
@@ -2011,7 +2008,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
             {
                 const SrcList::SrcList_item* pItem = &pUsing->a[i];
 
-                update_names(info, pItem->zDatabase, pItem->zName);
+                info->update_names(pItem->zDatabase, pItem->zName);
             }
 
             // Walk through the tablenames while excluding alias
@@ -2041,7 +2038,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
                 if (!isSame)
                 {
                     // No alias name, update the table name.
-                    update_names(info, pTable->zDatabase, pTable->zName);
+                    info->update_names(pTable->zDatabase, pTable->zName);
                 }
             }
         }
@@ -2275,11 +2272,11 @@ void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
             strncpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
 
-            update_names(info, database, name);
+            info->update_names(database, name);
         }
         else
         {
-            update_names(info, NULL, name);
+            info->update_names(NULL, name);
         }
 
         if (info->collect & QC_COLLECT_TABLES)
@@ -2468,7 +2465,7 @@ void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
     strncpy(table, pTable->z, pTable->n);
     table[pTable->n] = 0;
 
-    update_names(info, zDatabase, table);
+    info->update_names(zDatabase, table);
 }
 
 void maxscaleComment()
@@ -2567,7 +2564,7 @@ void maxscaleDrop(Parse* pParse, int what, Token* pDatabase, Token* pName)
         strncpy(table, pName->z, pName->n);
         table[pName->n] = 0;
 
-        update_names(info, zDatabase, table);
+        info->update_names(zDatabase, table);
     }
 }
 
@@ -2734,7 +2731,7 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
             ss_dassert(pFullName->nSrc == 1);
             const SrcList::SrcList_item* pItem = &pFullName->a[0];
 
-            update_names(info, pItem->zDatabase, pItem->zName);
+            info->update_names(pItem->zDatabase, pItem->zName);
         }
         break;
 
@@ -2746,7 +2743,7 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
             strncpy(zName, pName->z, pName->n);
             zName[pName->n] = 0;
 
-            update_names(info, "*any*", zName);
+            info->update_names("*any*", zName);
         }
         break;
 
@@ -3086,8 +3083,8 @@ void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
         ss_dassert(pItem->zName);
         ss_dassert(pItem->zAlias);
 
-        update_names(info, pItem->zDatabase, pItem->zName);
-        update_names(info, NULL, pItem->zAlias); // The new name is passed in the alias field.
+        info->update_names(pItem->zDatabase, pItem->zName);
+        info->update_names(NULL, pItem->zAlias); // The new name is passed in the alias field.
     }
 
     exposed_sqlite3SrcListDelete(pParse->db, pTables);
@@ -3542,7 +3539,7 @@ void maxscaleTruncate(Parse* pParse, Token* pDatabase, Token* pName)
     strncpy(name, pName->z, pName->n);
     name[pName->n] = 0;
 
-    update_names(info, zDatabase, name);
+    info->update_names(zDatabase, name);
 }
 
 void maxscaleUse(Parse* pParse, Token* pToken)
