@@ -16,6 +16,7 @@
 
 #include <signal.h>
 #include <string.h>
+#include <new>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
@@ -92,10 +93,147 @@ static QC_NAME_MAPPING function_name_mappings_oracle[] =
 };
 
 /**
+ * The state of qc_sqlite.
+ */
+static struct
+{
+    bool initialized;
+    bool setup;
+    qc_log_level_t log_level;
+    qc_sql_mode_t sql_mode;
+    qc_parse_as_t parse_as;
+    QC_NAME_MAPPING* function_name_mappings;
+} this_unit;
+
+/**
+ * The qc_sqlite thread-specific state.
+ */
+class QcSqliteInfo;
+
+static thread_local struct
+{
+    bool initialized;                        // Whether the thread specific data has been initialized.
+    sqlite3* db;                             // Thread specific database handle.
+    qc_sql_mode_t sql_mode;                  // What sql_mode is used.
+    QcSqliteInfo* info;                    // The information for the current statement being classified.
+    uint32_t version_major;
+    uint32_t version_minor;
+    uint32_t version_patch;
+    QC_NAME_MAPPING* function_name_mappings; // How function names should be mapped.
+} this_thread;
+
+/**
  * Contains information about a particular query.
  */
-typedef struct qc_sqlite_info
+class QcSqliteInfo
 {
+    QcSqliteInfo(const QcSqliteInfo&);
+    QcSqliteInfo& operator = (const QcSqliteInfo&);
+
+public:
+    static QcSqliteInfo* create(uint32_t collect)
+    {
+        QcSqliteInfo* pInfo = new (std::nothrow) QcSqliteInfo(collect);
+        ss_dassert(pInfo);
+        return pInfo;
+    }
+
+    ~QcSqliteInfo()
+    {
+        free_string_array(table_names);
+        free_string_array(table_fullnames);
+        free(created_table_name);
+        free_string_array(database_names);
+        free(prepare_name);
+        gwbuf_free(preparable_stmt);
+        free_field_infos(field_infos, field_infos_len);
+        free_function_infos(function_infos, function_infos_len);
+    }
+
+private:
+    QcSqliteInfo(uint32_t cllct)
+        : status(QC_QUERY_INVALID)
+        , collect(cllct)
+        , collected(0)
+        , query(NULL)
+        , query_len(0)
+        , type_mask(QUERY_TYPE_UNKNOWN)
+        , operation(QUERY_OP_UNDEFINED)
+        , has_clause(false)
+        , table_names(NULL)
+        , table_names_len(0)
+        , table_names_capacity(0)
+        , table_fullnames(NULL)
+        , table_fullnames_len(0)
+        , table_fullnames_capacity(0)
+        , created_table_name(NULL)
+        , is_drop_table(false)
+        , database_names(NULL)
+        , database_names_len(0)
+        , database_names_capacity(0)
+        , keyword_1(0) // Sqlite3 starts numbering tokens from 1, so 0 means
+        , keyword_2(0) // that we have not seen a keyword.
+        , prepare_name(NULL)
+        , preparable_stmt(NULL)
+        , field_infos(NULL)
+        , field_infos_len(0)
+        , field_infos_capacity(0)
+        , function_infos(NULL)
+        , function_infos_len(0)
+        , function_infos_capacity(0)
+        , initializing(false)
+        , sql_mode(this_thread.sql_mode)
+        , function_name_mappings(this_thread.function_name_mappings)
+    {
+    }
+
+private:
+    static void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos)
+    {
+        if (infos)
+        {
+            for (size_t i = 0; i < n_infos; ++i)
+            {
+                MXS_FREE(infos[i].database);
+                MXS_FREE(infos[i].table);
+                MXS_FREE(infos[i].column);
+            }
+
+            MXS_FREE(infos);
+        }
+    }
+
+    static void free_function_infos(QC_FUNCTION_INFO* infos, size_t n_infos)
+    {
+        if (infos)
+        {
+            for (size_t i = 0; i < n_infos; ++i)
+            {
+                MXS_FREE(infos[i].name);
+            }
+
+            MXS_FREE(infos);
+        }
+    }
+
+    static void free_string_array(char** sa)
+    {
+        if (sa)
+        {
+            char** s = sa;
+
+            while (*s)
+            {
+                free(*s);
+                ++s;
+            }
+
+            free(sa);
+        }
+    }
+
+public:
+    // TODO: Make these private once everything's been updated.
     qc_parse_result_t status;                // The validity of the information in this structure.
     uint32_t collect;                        // What information should be collected.
     uint32_t collected;                      // What information has been collected.
@@ -129,35 +267,7 @@ typedef struct qc_sqlite_info
     bool initializing;                       // Whether we are initializing sqlite3.
     qc_sql_mode_t sql_mode;                  // The current sql_mode.
     QC_NAME_MAPPING* function_name_mappings; // How function names should be mapped.
-} QC_SQLITE_INFO;
-
-/**
- * The state of qc_sqlite.
- */
-static struct
-{
-    bool initialized;
-    bool setup;
-    qc_log_level_t log_level;
-    qc_sql_mode_t sql_mode;
-    qc_parse_as_t parse_as;
-    QC_NAME_MAPPING* function_name_mappings;
-} this_unit;
-
-/**
- * The qc_sqlite thread-specific state.
- */
-static thread_local struct
-{
-    bool initialized;                        // Whether the thread specific data has been initialized.
-    sqlite3* db;                             // Thread specific database handle.
-    qc_sql_mode_t sql_mode;                  // What sql_mode is used.
-    QC_SQLITE_INFO* info;                    // The information for the current statement being classified.
-    uint32_t version_major;
-    uint32_t version_minor;
-    uint32_t version_patch;
-    QC_NAME_MAPPING* function_name_mappings; // How function names should be mapped.
-} this_thread;
+};
 
 /**
  * HELPERS
@@ -174,60 +284,54 @@ static void buffer_object_free(void* data);
 static char** copy_string_array(char** strings, int* pn);
 static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
 static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect);
-static void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos);
-static void free_string_array(char** sa);
-static QC_SQLITE_INFO* get_query_info(GWBUF* query, uint32_t collect);
-static QC_SQLITE_INFO* info_alloc(uint32_t collect);
-static void info_finish(QC_SQLITE_INFO* info);
-static void info_free(QC_SQLITE_INFO* info);
-static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info, uint32_t collect);
-static bool is_sequence_related_field(QC_SQLITE_INFO* info,
+static QcSqliteInfo* get_query_info(GWBUF* query, uint32_t collect);
+static bool is_sequence_related_field(QcSqliteInfo* info,
                                       const char* database,
                                       const char* table,
                                       const char* column);
-static bool is_sequence_related_function(QC_SQLITE_INFO* info, const char* func_name);
+static bool is_sequence_related_function(QcSqliteInfo* info, const char* func_name);
 static void log_invalid_data(GWBUF* query, const char* message);
 static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
 static bool parse_query(GWBUF* query, uint32_t collect);
 static void parse_query_string(const char* query, size_t len);
 static bool query_is_parsed(GWBUF* query, uint32_t collect);
 static bool should_exclude(const char* zName, const ExprList* pExclude);
-static void update_field_info(QC_SQLITE_INFO* info,
+static void update_field_info(QcSqliteInfo* info,
                               const char* database,
                               const char* table,
                               const char* column,
                               uint32_t usage,
                               const ExprList* pExclude);
-static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
-                                         const struct Expr* pExpr,
+static void update_field_infos_from_expr(QcSqliteInfo* info,
+                                         const Expr* pExpr,
                                          uint32_t usage,
                                          const ExprList* pExclude);
-static void update_field_infos(QC_SQLITE_INFO* info,
+static void update_field_infos(QcSqliteInfo* info,
                                int prev_token,
                                const Expr* pExpr,
                                uint32_t usage,
                                qc_token_position_t pos,
                                const ExprList* pExclude);
-static void update_field_infos_from_exprlist(QC_SQLITE_INFO* info,
+static void update_field_infos_from_exprlist(QcSqliteInfo* info,
                                              const ExprList* pEList,
                                              uint32_t usage,
                                              const ExprList* pExclude);
-static void update_field_infos_from_idlist(QC_SQLITE_INFO* info,
+static void update_field_infos_from_idlist(QcSqliteInfo* info,
                                            const IdList* pIds,
                                            uint32_t usage,
                                            const ExprList* pExclude);
-static void update_field_infos_from_select(QC_SQLITE_INFO* info,
+static void update_field_infos_from_select(QcSqliteInfo* info,
                                            const Select* pSelect,
                                            uint32_t usage,
                                            const ExprList* pExclude);
-static void update_field_infos_from_with(QC_SQLITE_INFO* info,
+static void update_field_infos_from_with(QcSqliteInfo* info,
                                           const With* pWith);
-static void update_function_info(QC_SQLITE_INFO* info,
+static void update_function_info(QcSqliteInfo* info,
                                  const char* name,
                                  uint32_t usage);
-static void update_database_names(QC_SQLITE_INFO* info, const char* name);
-static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char* zTable);
-static void update_names_from_srclist(QC_SQLITE_INFO* info, const SrcList* pSrc);
+static void update_database_names(QcSqliteInfo* info, const char* name);
+static void update_names(QcSqliteInfo* info, const char* zDatabase, const char* zTable);
+static void update_names_from_srclist(QcSqliteInfo* info, const SrcList* pSrc);
 
 // Defined in parse.y
 
@@ -325,13 +429,14 @@ extern int maxscaleTranslateKeyword(int token);
 }
 
 /**
- * Used for freeing a QC_SQLITE_INFO object added to a GWBUF.
+ * Used for freeing a QcSqliteInfo object added to a GWBUF.
  *
- * @param object A pointer to a QC_SQLITE_INFO object.
+ * @param object A pointer to a QcSqliteInfo object.
  */
-static void buffer_object_free(void* data)
+static void buffer_object_free(void* pData)
 {
-    info_free((QC_SQLITE_INFO*) data);
+    QcSqliteInfo* pInfo = static_cast<QcSqliteInfo*>(pData);
+    delete pInfo;
 }
 
 static char** copy_string_array(char** strings, int* pn)
@@ -385,129 +490,15 @@ static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect)
     return parsed;
 }
 
-static void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos)
+static QcSqliteInfo* get_query_info(GWBUF* query, uint32_t collect)
 {
-    if (infos)
-    {
-        for (size_t i = 0; i < n_infos; ++i)
-        {
-            MXS_FREE(infos[i].database);
-            MXS_FREE(infos[i].table);
-            MXS_FREE(infos[i].column);
-        }
-
-        MXS_FREE(infos);
-    }
-}
-
-static void free_function_infos(QC_FUNCTION_INFO* infos, size_t n_infos)
-{
-    if (infos)
-    {
-        for (size_t i = 0; i < n_infos; ++i)
-        {
-            MXS_FREE(infos[i].name);
-        }
-
-        MXS_FREE(infos);
-    }
-}
-
-static void free_string_array(char** sa)
-{
-    if (sa)
-    {
-        char** s = sa;
-
-        while (*s)
-        {
-            free(*s);
-            ++s;
-        }
-
-        free(sa);
-    }
-}
-
-static QC_SQLITE_INFO* get_query_info(GWBUF* query, uint32_t collect)
-{
-    QC_SQLITE_INFO* info = NULL;
+    QcSqliteInfo* info = NULL;
 
     if (ensure_query_is_parsed(query, collect))
     {
-        info = (QC_SQLITE_INFO*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
+        info = (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
         ss_dassert(info);
     }
-
-    return info;
-}
-
-static QC_SQLITE_INFO* info_alloc(uint32_t collect)
-{
-    QC_SQLITE_INFO* info = (QC_SQLITE_INFO*)MXS_MALLOC(sizeof(*info));
-    MXS_ABORT_IF_NULL(info);
-
-    info_init(info, collect);
-
-    return info;
-}
-
-static void info_finish(QC_SQLITE_INFO* info)
-{
-    free_string_array(info->table_names);
-    free_string_array(info->table_fullnames);
-    free(info->created_table_name);
-    free_string_array(info->database_names);
-    free(info->prepare_name);
-    gwbuf_free(info->preparable_stmt);
-    free_field_infos(info->field_infos, info->field_infos_len);
-    free_function_infos(info->function_infos, info->function_infos_len);
-}
-
-static void info_free(QC_SQLITE_INFO* info)
-{
-    if (info)
-    {
-        info_finish(info);
-        free(info);
-    }
-}
-
-static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info, uint32_t collect)
-{
-    memset(info, 0, sizeof(*info));
-
-    info->status = QC_QUERY_INVALID;
-    info->collect = collect;
-    info->collected = 0;
-
-    info->type_mask = QUERY_TYPE_UNKNOWN;
-    info->operation = QUERY_OP_UNDEFINED;
-    info->has_clause = false;
-    info->table_names = NULL;
-    info->table_names_len = 0;
-    info->table_names_capacity = 0;
-    info->table_fullnames = NULL;
-    info->table_fullnames_len = 0;
-    info->table_fullnames_capacity = 0;
-    info->created_table_name = NULL;
-    info->is_drop_table = false;
-    info->database_names = NULL;
-    info->database_names_len = 0;
-    info->database_names_capacity = 0;
-    info->keyword_1 = 0; // Sqlite3 starts numbering tokens from 1, so 0 means
-    info->keyword_2 = 0; // that we have not seen a keyword.
-    info->prepare_name = NULL;
-    info->preparable_stmt = NULL;
-    info->field_infos = NULL;
-    info->field_infos_len = 0;
-    info->field_infos_capacity = 0;
-    info->function_infos = NULL;
-    info->function_infos_len = 0;
-    info->function_infos_capacity = 0;
-    info->initializing = false;
-    info->sql_mode = this_thread.sql_mode;
-    info->function_name_mappings = this_thread.function_name_mappings;
 
     return info;
 }
@@ -634,8 +625,8 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
             if ((command == MYSQL_COM_QUERY) || (command == MYSQL_COM_STMT_PREPARE))
             {
-                QC_SQLITE_INFO* info =
-                    (QC_SQLITE_INFO*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
+                QcSqliteInfo* info =
+                    (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
 
                 if (info)
                 {
@@ -655,7 +646,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                 }
                 else
                 {
-                    info = info_alloc(collect);
+                    info = QcSqliteInfo::create(collect);
 
                     if (info)
                     {
@@ -721,7 +712,7 @@ static bool query_is_parsed(GWBUF* query, uint32_t collect)
 
     if (rc)
     {
-        QC_SQLITE_INFO* info = (QC_SQLITE_INFO*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
+        QcSqliteInfo* info = (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
         ss_dassert(info);
 
         if ((~info->collected & collect) != 0)
@@ -745,7 +736,7 @@ static bool query_is_parsed(GWBUF* query, uint32_t collect)
  *
  * @return True, if the field is sequence related, false otherwise.
  */
-static bool is_sequence_related_field(QC_SQLITE_INFO* info,
+static bool is_sequence_related_field(QcSqliteInfo* info,
                                       const char* database,
                                       const char* table,
                                       const char* column)
@@ -761,7 +752,7 @@ static bool is_sequence_related_field(QC_SQLITE_INFO* info,
  *
  * @return True, if the function is sequence related, false otherwise.
  */
-static bool is_sequence_related_function(QC_SQLITE_INFO* info, const char* func_name)
+static bool is_sequence_related_function(QcSqliteInfo* info, const char* func_name)
 {
     bool rv = false;
 
@@ -849,7 +840,7 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
     int i;
     for (i = 0; i < pExclude->nExpr; ++i)
     {
-        const struct ExprList::ExprList_item* item = &pExclude->a[i];
+        const ExprList::ExprList_item* item = &pExclude->a[i];
 
         // zName will contain a possible alias name. If the alias name
         // is referred to in e.g. in a having, it need to be excluded
@@ -889,7 +880,7 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
     return i != pExclude->nExpr;
 }
 
-static void update_field_info(QC_SQLITE_INFO* info,
+static void update_field_info(QcSqliteInfo* info,
                               const char* database,
                               const char* table,
                               const char* column,
@@ -991,7 +982,7 @@ static void update_field_info(QC_SQLITE_INFO* info,
     }
 }
 
-static void update_function_info(QC_SQLITE_INFO* info,
+static void update_function_info(QcSqliteInfo* info,
                                  const char* name,
                                  uint32_t usage)
 {
@@ -1060,13 +1051,13 @@ static void update_function_info(QC_SQLITE_INFO* info,
 
 extern void maxscale_update_function_info(const char* name, uint32_t usage)
 {
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
 
     update_function_info(info, name, usage);
 }
 
-static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
-                                         const struct Expr* pExpr,
+static void update_field_infos_from_expr(QcSqliteInfo* info,
+                                         const Expr* pExpr,
                                          uint32_t usage,
                                          const ExprList* pExclude)
 {
@@ -1135,12 +1126,12 @@ static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
     }
 }
 
-static void update_field_infos_from_with(QC_SQLITE_INFO* info,
+static void update_field_infos_from_with(QcSqliteInfo* info,
                                          const With* pWith)
 {
     for (int i = 0; i < pWith->nCte; ++i)
     {
-        const struct With::Cte* pCte = &pWith->a[i];
+        const With::Cte* pCte = &pWith->a[i];
 
         if (pCte->pSelect)
         {
@@ -1217,7 +1208,7 @@ static const char* get_token_symbol(int token)
     }
 }
 
-static void update_field_infos(QC_SQLITE_INFO* info,
+static void update_field_infos(QcSqliteInfo* info,
                                int prev_token,
                                const Expr* pExpr,
                                uint32_t usage,
@@ -1455,33 +1446,33 @@ static void update_field_infos(QC_SQLITE_INFO* info,
     }
 }
 
-static void update_field_infos_from_exprlist(QC_SQLITE_INFO* info,
+static void update_field_infos_from_exprlist(QcSqliteInfo* info,
                                              const ExprList* pEList,
                                              uint32_t usage,
                                              const ExprList* pExclude)
 {
     for (int i = 0; i < pEList->nExpr; ++i)
     {
-        struct ExprList::ExprList_item* pItem = &pEList->a[i];
+        ExprList::ExprList_item* pItem = &pEList->a[i];
 
         update_field_infos(info, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
     }
 }
 
-static void update_field_infos_from_idlist(QC_SQLITE_INFO* info,
+static void update_field_infos_from_idlist(QcSqliteInfo* info,
                                            const IdList* pIds,
                                            uint32_t usage,
                                            const ExprList* pExclude)
 {
     for (int i = 0; i < pIds->nId; ++i)
     {
-        struct IdList::IdList_item* pItem = &pIds->a[i];
+        IdList::IdList_item* pItem = &pIds->a[i];
 
         update_field_info(info, NULL, NULL, pItem->zName, usage, pExclude);
     }
 }
 
-static void update_field_infos_from_select(QC_SQLITE_INFO* info,
+static void update_field_infos_from_select(QcSqliteInfo* info,
                                            const Select* pSelect,
                                            uint32_t usage,
                                            const ExprList* pExclude)
@@ -1557,7 +1548,7 @@ static void update_field_infos_from_select(QC_SQLITE_INFO* info,
     }
 }
 
-static void update_database_names(QC_SQLITE_INFO* info, const char* zDatabase)
+static void update_database_names(QcSqliteInfo* info, const char* zDatabase)
 {
     char* zCopy = MXS_STRDUP(zDatabase);
     MXS_ABORT_IF_NULL(zCopy);
@@ -1569,7 +1560,7 @@ static void update_database_names(QC_SQLITE_INFO* info, const char* zDatabase)
     info->database_names[info->database_names_len] = NULL;
 }
 
-static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char* zTable)
+static void update_names(QcSqliteInfo* info, const char* zDatabase, const char* zTable)
 {
     if ((info->collect & QC_COLLECT_TABLES) && !(info->collected & QC_COLLECT_TABLES))
     {
@@ -1616,7 +1607,7 @@ static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char
     }
 }
 
-static void update_names_from_srclist(QC_SQLITE_INFO* info, const SrcList* pSrc)
+static void update_names_from_srclist(QcSqliteInfo* info, const SrcList* pSrc)
 {
     for (int i = 0; i < pSrc->nSrc; ++i)
     {
@@ -1643,7 +1634,7 @@ void mxs_sqlite3AlterFinishAddColumn(Parse* pParse, Token* pToken)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1655,7 +1646,7 @@ void mxs_sqlite3AlterBeginAddColumn(Parse* pParse, SrcList* pSrcList)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     update_names_from_srclist(info, pSrcList);
@@ -1667,7 +1658,7 @@ void mxs_sqlite3Analyze(Parse* pParse, SrcList* pSrcList)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1682,7 +1673,7 @@ void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     if ((info->sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
@@ -1705,7 +1696,7 @@ void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CRE
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1715,7 +1706,7 @@ void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CRE
     {
         for (size_t i = 0; i < pTableName->nAlloc; ++i)
         {
-            const struct SrcList::SrcList_item* pItem = &pTableName->a[i];
+            const SrcList::SrcList_item* pItem = &pTableName->a[i];
 
             if (pItem->zName)
             {
@@ -1733,7 +1724,7 @@ void mxs_sqlite3CommitTransaction(Parse* pParse)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1753,7 +1744,7 @@ void mxs_sqlite3CreateIndex(Parse *pParse,     /* All information about this par
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1784,7 +1775,7 @@ void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
                            int noErr)         /* Suppress error messages if VIEW already exists */
 {
     QC_TRACE();
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1824,7 +1815,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1841,7 +1832,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
             // table and database names.
             for (int i = 0; i < pUsing->nSrc; ++i)
             {
-                const struct SrcList::SrcList_item* pItem = &pUsing->a[i];
+                const SrcList::SrcList_item* pItem = &pUsing->a[i];
 
                 update_names(info, pItem->zDatabase, pItem->zName);
             }
@@ -1850,7 +1841,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
             // names from the using declaration.
             for (int i = 0; i < pTabList->nSrc; ++i)
             {
-                const struct SrcList::SrcList_item* pTable = &pTabList->a[i];
+                const SrcList::SrcList_item* pTable = &pTabList->a[i];
                 ss_dassert(pTable->zName);
                 int j = 0;
                 bool isSame = false;
@@ -1897,7 +1888,7 @@ void mxs_sqlite3DropIndex(Parse* pParse, SrcList* pName, SrcList* pTable, int bi
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1914,7 +1905,7 @@ void mxs_sqlite3DropTable(Parse *pParse, SrcList *pName, int isView, int noErr, 
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -1942,7 +1933,7 @@ void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     if (!info->initializing)
@@ -1981,7 +1972,7 @@ void mxs_sqlite3Insert(Parse* pParse,
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2031,7 +2022,7 @@ void mxs_sqlite3RollbackTransaction(Parse* pParse)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2043,7 +2034,7 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     int rc = -1;
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     if (!info->initializing)
@@ -2076,7 +2067,7 @@ void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     if (!info->initializing)
@@ -2140,7 +2131,7 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2177,7 +2168,7 @@ void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2186,7 +2177,7 @@ void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName)
 
 void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect, int sub_select)
 {
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     if (pSelect->pInto)
@@ -2214,7 +2205,7 @@ void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2246,7 +2237,7 @@ void maxscaleCall(Parse* pParse, SrcList* pName, ExprList* pExprList)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2265,7 +2256,7 @@ void maxscaleCheckTable(Parse* pParse, SrcList* pTables)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2280,7 +2271,7 @@ void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2307,7 +2298,7 @@ void maxscaleComment()
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     if (info->status == QC_QUERY_INVALID)
@@ -2321,7 +2312,7 @@ void maxscaleDeclare(Parse* pParse)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     if (info->sql_mode != QC_SQL_MODE_ORACLE)
@@ -2334,7 +2325,7 @@ void maxscaleDeallocate(Parse* pParse, Token* pName)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2362,7 +2353,7 @@ void maxscaleDo(Parse* pParse, ExprList* pEList)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2375,7 +2366,7 @@ void maxscaleDrop(Parse* pParse, int what, Token* pDatabase, Token* pName)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2407,7 +2398,7 @@ void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2475,7 +2466,7 @@ void maxscaleExecuteImmediate(Parse* pParse, Token* pName, ExprSpan* pExprSpan, 
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     if (info->sql_mode == QC_SQL_MODE_ORACLE)
@@ -2508,7 +2499,7 @@ void maxscaleExplain(Parse* pParse, Token* pNext)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2541,7 +2532,7 @@ void maxscaleFlush(Parse* pParse, Token* pWhat)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2552,7 +2543,7 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2564,7 +2555,7 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
             info->type_mask = QUERY_TYPE_WRITE;
 
             ss_dassert(pFullName->nSrc == 1);
-            const struct SrcList::SrcList_item* pItem = &pFullName->a[0];
+            const SrcList::SrcList_item* pItem = &pFullName->a[0];
 
             update_names(info, pItem->zDatabase, pItem->zName);
         }
@@ -2593,7 +2584,7 @@ void maxscaleLoadData(Parse* pParse, SrcList* pFullName)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2612,7 +2603,7 @@ void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2628,7 +2619,7 @@ void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
 
 int maxscaleTranslateKeyword(int token)
 {
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     switch (token)
@@ -2667,7 +2658,7 @@ int maxscaleKeyword(int token)
 
     int rv = 0;
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     // This function is called for every keyword the sqlite3 parser encounters.
@@ -2905,7 +2896,7 @@ void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -2913,7 +2904,7 @@ void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
 
     for (int i = 0; i < pTables->nSrc; ++i)
     {
-        const struct SrcList::SrcList_item* pItem = &pTables->a[i];
+        const SrcList::SrcList_item* pItem = &pTables->a[i];
 
         ss_dassert(pItem->zName);
         ss_dassert(pItem->zAlias);
@@ -2959,7 +2950,7 @@ void maxscalePrepare(Parse* pParse, Token* pName, Expr* pStmt)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     // If the mode is MODE_ORACLE then if expression contains simply a string
@@ -3051,7 +3042,7 @@ void maxscalePrivileges(Parse* pParse, int kind)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -3092,7 +3083,7 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -3116,7 +3107,7 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
         {
             for (int i = 0; i < pList->nExpr; ++i)
             {
-                const struct ExprList::ExprList_item* pItem = &pList->a[i];
+                const ExprList::ExprList_item* pItem = &pList->a[i];
 
                 switch (pItem->pExpr->op)
                 {
@@ -3253,7 +3244,7 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -3349,7 +3340,7 @@ void maxscaleTruncate(Parse* pParse, Token* pDatabase, Token* pName)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -3381,7 +3372,7 @@ void maxscaleUse(Parse* pParse, Token* pToken)
 {
     QC_TRACE();
 
-    QC_SQLITE_INFO* info = this_thread.info;
+    QcSqliteInfo* info = this_thread.info;
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
@@ -3599,7 +3590,7 @@ static int32_t qc_sqlite_thread_init(void)
         MXS_INFO("In-memory sqlite database successfully opened for thread %lu.",
                  (unsigned long) pthread_self());
 
-        QC_SQLITE_INFO* info = info_alloc(QC_COLLECT_ALL);
+        QcSqliteInfo* info = QcSqliteInfo::create(QC_COLLECT_ALL);
 
         if (info)
         {
@@ -3618,7 +3609,7 @@ static int32_t qc_sqlite_thread_init(void)
             this_thread.info->query = NULL;
             this_thread.info->query_len = 0;
 
-            info_free(this_thread.info);
+            delete this_thread.info;
             this_thread.info = NULL;
 
             this_thread.initialized = true;
@@ -3666,7 +3657,7 @@ static int32_t qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result)
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    QC_SQLITE_INFO* info = get_query_info(query, collect);
+    QcSqliteInfo* info = get_query_info(query, collect);
 
     if (info)
     {
@@ -3688,7 +3679,7 @@ static int32_t qc_sqlite_get_type_mask(GWBUF* query, uint32_t* type_mask)
     ss_dassert(this_thread.initialized);
 
     *type_mask = QUERY_TYPE_UNKNOWN;
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
@@ -3718,7 +3709,7 @@ static int32_t qc_sqlite_get_operation(GWBUF* query, int32_t* op)
     ss_dassert(this_thread.initialized);
 
     *op = QUERY_OP_UNDEFINED;
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
@@ -3748,7 +3739,7 @@ static int32_t qc_sqlite_get_created_table_name(GWBUF* query, char** created_tab
     ss_dassert(this_thread.initialized);
 
     *created_table_name = NULL;
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_TABLES);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_TABLES);
 
     if (info)
     {
@@ -3782,7 +3773,7 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_tabl
     ss_dassert(this_thread.initialized);
 
     *is_drop_table = 0;
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
@@ -3816,7 +3807,7 @@ static int32_t qc_sqlite_get_table_names(GWBUF* query,
 
     *table_names = NULL;
     *tblsize = 0;
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_TABLES);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_TABLES);
 
     if (info)
     {
@@ -3877,7 +3868,7 @@ static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause)
     ss_dassert(this_thread.initialized);
 
     *has_clause = false;
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
@@ -3908,7 +3899,7 @@ static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** database_names
 
     *database_names = NULL;
     *sizep = 0;
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_DATABASES);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_DATABASES);
 
     if (info)
     {
@@ -3942,7 +3933,7 @@ static int32_t qc_sqlite_get_prepare_name(GWBUF* query, char** prepare_name)
     ss_dassert(this_thread.initialized);
 
     *prepare_name = NULL;
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
@@ -3978,7 +3969,7 @@ int32_t qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, uint
     *infos = NULL;
     *n_infos = 0;
 
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_FIELDS);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_FIELDS);
 
     if (info)
     {
@@ -4012,7 +4003,7 @@ int32_t qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos
     *infos = NULL;
     *n_infos = 0;
 
-    QC_SQLITE_INFO* info = get_query_info(query, QC_COLLECT_FUNCTIONS);
+    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_FUNCTIONS);
 
     if (info)
     {
@@ -4045,7 +4036,7 @@ int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
 
     *preparable_stmt = NULL;
 
-    QC_SQLITE_INFO* info = get_query_info(stmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = get_query_info(stmt, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
