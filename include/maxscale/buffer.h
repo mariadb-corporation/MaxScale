@@ -69,24 +69,13 @@ typedef enum
 #define GWBUF_IS_TYPE_RESPONSE_END(b)    (b->gwbuf_type & GWBUF_TYPE_RESPONSE_END)
 #define GWBUF_IS_TYPE_SESCMD(b)          (b->gwbuf_type & GWBUF_TYPE_SESCMD)
 
-/**
- * A structure to encapsulate the data in a form that the data itself can be
- * shared between multiple GWBUF's without the need to make multiple copies
- * but still maintain separate data pointers.
- */
-typedef struct
-{
-    unsigned char   *data;                  /*< Physical memory that was allocated */
-    int             refcount;               /*< Reference count on the buffer */
-} SHARED_BUF;
-
 typedef enum
 {
     GWBUF_INFO_NONE         = 0x0,
     GWBUF_INFO_PARSED       = 0x1
 } gwbuf_info_t;
 
-#define GWBUF_IS_PARSED(b)      (b->gwbuf_info & GWBUF_INFO_PARSED)
+#define GWBUF_IS_PARSED(b)      (b->sbuf->info & GWBUF_INFO_PARSED)
 
 /**
  * A structure for cleaning up memory allocations of structures which are
@@ -109,6 +98,18 @@ struct buffer_object_st
     buffer_object_t* bo_next;
 };
 
+/**
+ * A structure to encapsulate the data in a form that the data itself can be
+ * shared between multiple GWBUF's without the need to make multiple copies
+ * but still maintain separate data pointers.
+ */
+typedef struct
+{
+    unsigned char   *data;     /*< Physical memory that was allocated */
+    int              refcount; /*< Reference count on the buffer */
+    buffer_object_t *bufobj;   /*< List of objects referred to by GWBUF */
+    gwbuf_info_t     info;     /*< Info bits */
+} SHARED_BUF;
 
 /**
  * The buffer structure used by the descriptor control blocks.
@@ -126,8 +127,6 @@ typedef struct gwbuf
     void            *start; /*< Start of the valid data */
     void            *end;   /*< First byte after the valid data */
     SHARED_BUF      *sbuf;  /*< The shared buffer with the real data */
-    buffer_object_t *gwbuf_bufobj; /*< List of objects referred to by GWBUF */
-    gwbuf_info_t    gwbuf_info; /*< Info bits */
     gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
     HINT            *hint;  /*< Hint data for this buffer */
     BUF_PROPERTY    *properties; /*< Buffer properties */

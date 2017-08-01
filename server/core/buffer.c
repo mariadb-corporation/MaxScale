@@ -78,18 +78,19 @@ gwbuf_alloc(unsigned int size)
         rval = NULL;
         goto retblock;
     }
+    sbuf->refcount = 1;
+    sbuf->info = GWBUF_INFO_NONE;
+    sbuf->bufobj = NULL;
+
     spinlock_init(&rval->gwbuf_lock);
     rval->start = sbuf->data;
     rval->end = (void *)((char *)rval->start + size);
-    sbuf->refcount = 1;
     rval->sbuf = sbuf;
     rval->next = NULL;
     rval->tail = rval;
     rval->hint = NULL;
     rval->properties = NULL;
     rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
-    rval->gwbuf_info = GWBUF_INFO_NONE;
-    rval->gwbuf_bufobj = NULL;
     CHK_GWBUF(rval);
 retblock:
     if (rval == NULL)
@@ -258,7 +259,7 @@ gwbuf_free_one(GWBUF *buf)
     {
         MXS_FREE(buf->sbuf->data);
         MXS_FREE(buf->sbuf);
-        bo = buf->gwbuf_bufobj;
+        bo = buf->sbuf->bufobj;
 
         while (bo != NULL)
         {
@@ -312,8 +313,6 @@ gwbuf_clone_one(GWBUF *buf)
     rval->start = buf->start;
     rval->end = buf->end;
     rval->gwbuf_type = buf->gwbuf_type;
-    rval->gwbuf_info = buf->gwbuf_info;
-    rval->gwbuf_bufobj = buf->gwbuf_bufobj;
     rval->tail = rval;
     rval->next = NULL;
     CHK_GWBUF(rval);
@@ -376,8 +375,6 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
     clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */
     clonebuf->properties = NULL;
     clonebuf->hint = NULL;
-    clonebuf->gwbuf_info = buf->gwbuf_info;
-    clonebuf->gwbuf_bufobj = buf->gwbuf_bufobj;
     clonebuf->next = NULL;
     clonebuf->tail = clonebuf;
     CHK_GWBUF(clonebuf);
@@ -674,7 +671,7 @@ void gwbuf_add_buffer_object(GWBUF* buf,
     newb->bo_next = NULL;
     /** Lock */
     spinlock_acquire(&buf->gwbuf_lock);
-    p_b = &buf->gwbuf_bufobj;
+    p_b = &buf->sbuf->bufobj;
     /** Search the end of the list and add there */
     while (*p_b != NULL)
     {
@@ -682,7 +679,7 @@ void gwbuf_add_buffer_object(GWBUF* buf,
     }
     *p_b = newb;
     /** Set flag */
-    buf->gwbuf_info |= GWBUF_INFO_PARSED;
+    buf->sbuf->info |= GWBUF_INFO_PARSED;
     /** Unlock */
     spinlock_release(&buf->gwbuf_lock);
 }
@@ -694,7 +691,7 @@ void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
     CHK_GWBUF(buf);
     /** Lock */
     spinlock_acquire(&buf->gwbuf_lock);
-    bo = buf->gwbuf_bufobj;
+    bo = buf->sbuf->bufobj;
 
     while (bo != NULL && bo->bo_id != id)
     {
