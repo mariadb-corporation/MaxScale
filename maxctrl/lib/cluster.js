@@ -36,6 +36,13 @@ function getChangedObjects(a, b) {
     return _.differenceWith(ours, theirs, equalResources)
 }
 
+// Check if the diffs add or delete services
+function haveExtraServices(src, dest) {
+    var newObj = getDifference(src.services.data, dest.services.data)
+    var oldObj = getDifference(dest.services.data, src.services.data)
+    return newObj.length > 0 || oldObj.length > 0
+}
+
 // Resource collections
 const collections = [
     'servers',
@@ -80,13 +87,9 @@ function getDiffs(a, b) {
         })
 }
 
-// Check if the diffs add or delete services
-function haveExtraServices(src, dest) {
-    var newObj = getDifference(src.services.data, dest.services.data)
-    var oldObj = getDifference(dest.services.data, src.services.data)
-    return newObj.length > 0 || oldObj.length > 0
-}
-
+exports.haveExtraServices = haveExtraServices
+exports.getDifference = getDifference
+exports.getChangedObjects = getChangedObjects
 exports.command = 'cluster <command>'
 exports.desc = 'Cluster objects'
 exports.handler = function() {}
