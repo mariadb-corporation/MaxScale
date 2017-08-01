@@ -129,7 +129,6 @@ typedef enum qc_token_position
 } qc_token_position_t;
 
 static void buffer_object_free(void* data);
-static char** copy_string_array(char** strings, int* pn);
 static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
 static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect);
 static bool is_sequence_related_field(QcSqliteInfo* info,
@@ -443,48 +442,75 @@ private:
     }
 
 private:
-    static void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos)
+    static void free_field_infos(QC_FIELD_INFO* pInfos, size_t nInfos)
     {
-        if (infos)
+        if (pInfos)
         {
-            for (size_t i = 0; i < n_infos; ++i)
+            for (size_t i = 0; i < nInfos; ++i)
             {
-                MXS_FREE(infos[i].database);
-                MXS_FREE(infos[i].table);
-                MXS_FREE(infos[i].column);
+                MXS_FREE(pInfos[i].database);
+                MXS_FREE(pInfos[i].table);
+                MXS_FREE(pInfos[i].column);
             }
 
-            MXS_FREE(infos);
+            MXS_FREE(pInfos);
         }
     }
 
-    static void free_function_infos(QC_FUNCTION_INFO* infos, size_t n_infos)
+    static void free_function_infos(QC_FUNCTION_INFO* pInfos, size_t nInfos)
     {
-        if (infos)
+        if (pInfos)
         {
-            for (size_t i = 0; i < n_infos; ++i)
+            for (size_t i = 0; i < nInfos; ++i)
             {
-                MXS_FREE(infos[i].name);
+                MXS_FREE(pInfos[i].name);
             }
 
-            MXS_FREE(infos);
+            MXS_FREE(pInfos);
         }
     }
 
-    static void free_string_array(char** sa)
+    static void free_string_array(char** pzArray)
     {
-        if (sa)
+        if (pzArray)
         {
-            char** s = sa;
+            char** pz = pzArray;
 
-            while (*s)
+            while (*pz)
             {
-                free(*s);
-                ++s;
+                free(*pz);
+                ++pz;
             }
 
-            free(sa);
+            free(pzArray);
         }
+    }
+
+    static char** copy_string_array(char** pzStrings, int* pn)
+    {
+        size_t n = 0;
+
+        char** pz = pzStrings;
+        *pn = 0;
+
+        while (*pz)
+        {
+            ++pz;
+            ++(*pn);
+        }
+
+        pz = (char**) MXS_MALLOC((*pn + 1) * sizeof(char*));
+        MXS_ABORT_IF_NULL(pz);
+
+        pz[*pn] = 0;
+
+        for (int i = 0; i < *pn; ++i)
+        {
+            pz[i] = MXS_STRDUP(pzStrings[i]);
+            MXS_ABORT_IF_NULL(pz[i]);
+        }
+
+        return pz;
     }
 
 public:
@@ -628,33 +654,6 @@ static void buffer_object_free(void* pData)
 {
     QcSqliteInfo* pInfo = static_cast<QcSqliteInfo*>(pData);
     delete pInfo;
-}
-
-static char** copy_string_array(char** strings, int* pn)
-{
-    size_t n = 0;
-
-    char** ss = strings;
-    *pn = 0;
-
-    while (*ss)
-    {
-        ++ss;
-        ++(*pn);
-    }
-
-    ss = (char**) MXS_MALLOC((*pn + 1) * sizeof(char*));
-    MXS_ABORT_IF_NULL(ss);
-
-    ss[*pn] = 0;
-
-    for (int i = 0; i < *pn; ++i)
-    {
-        ss[i] = MXS_STRDUP(strings[i]);
-        MXS_ABORT_IF_NULL(ss[i]);
-    }
-
-    return ss;
 }
 
 static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity)
@@ -3768,11 +3767,11 @@ static int32_t qc_sqlite_thread_init(void)
         MXS_INFO("In-memory sqlite database successfully opened for thread %lu.",
                  (unsigned long) pthread_self());
 
-        QcSqliteInfo* info = QcSqliteInfo::create(QC_COLLECT_ALL);
+        QcSqliteInfo* pInfo = QcSqliteInfo::create(QC_COLLECT_ALL);
 
-        if (info)
+        if (pInfo)
         {
-            this_thread.info = info;
+            this_thread.info = pInfo;
 
             // With this statement we cause sqlite3 to initialize itself, so that it
             // is not done as part of the actual classification of data.
@@ -3829,45 +3828,45 @@ static void qc_sqlite_thread_end(void)
     this_thread.initialized = false;
 }
 
-static int32_t qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result)
+static int32_t qc_sqlite_parse(GWBUF* pStmt, uint32_t collect, int32_t* pResult)
 {
     QC_TRACE();
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    QcSqliteInfo* info = QcSqliteInfo::get(query, collect);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, collect);
 
-    if (info)
+    if (pInfo)
     {
-        *result = info->status;
+        *pResult = pInfo->status;
     }
     else
     {
-        *result = QC_QUERY_INVALID;
+        *pResult = QC_QUERY_INVALID;
     }
 
-    return info ? QC_RESULT_OK : QC_RESULT_ERROR;
+    return pInfo ? QC_RESULT_OK : QC_RESULT_ERROR;
 }
 
-static int32_t qc_sqlite_get_type_mask(GWBUF* query, uint32_t* type_mask)
+static int32_t qc_sqlite_get_type_mask(GWBUF* pStmt, uint32_t* pType_mask)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *type_mask = QUERY_TYPE_UNKNOWN;
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
+    *pType_mask = QUERY_TYPE_UNKNOWN;
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_type_mask(type_mask))
+        if (pInfo->get_type_mask(pType_mask))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report query type");
+            log_invalid_data(pStmt, "cannot report query type");
         }
     }
     else
@@ -3878,25 +3877,25 @@ static int32_t qc_sqlite_get_type_mask(GWBUF* query, uint32_t* type_mask)
     return rv;
 }
 
-static int32_t qc_sqlite_get_operation(GWBUF* query, int32_t* op)
+static int32_t qc_sqlite_get_operation(GWBUF* pStmt, int32_t* pOp)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *op = QUERY_OP_UNDEFINED;
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
+    *pOp = QUERY_OP_UNDEFINED;
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_operation(op))
+        if (pInfo->get_operation(pOp))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report query operation");
+            log_invalid_data(pStmt, "cannot report query operation");
         }
     }
     else
@@ -3907,25 +3906,25 @@ static int32_t qc_sqlite_get_operation(GWBUF* query, int32_t* op)
     return rv;
 }
 
-static int32_t qc_sqlite_get_created_table_name(GWBUF* query, char** created_table_name)
+static int32_t qc_sqlite_get_created_table_name(GWBUF* pStmt, char** pzCreated_table_name)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *created_table_name = NULL;
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_TABLES);
+    *pzCreated_table_name = NULL;
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_TABLES);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_created_table_name(created_table_name))
+        if (pInfo->get_created_table_name(pzCreated_table_name))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report created tables");
+            log_invalid_data(pStmt, "cannot report created tables");
         }
     }
     else
@@ -3936,25 +3935,25 @@ static int32_t qc_sqlite_get_created_table_name(GWBUF* query, char** created_tab
     return rv;
 }
 
-static int32_t qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table)
+static int32_t qc_sqlite_is_drop_table_query(GWBUF* pStmt, int32_t* pIs_drop_table)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *is_drop_table = 0;
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
+    *pIs_drop_table = 0;
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->is_drop_table_query(is_drop_table))
+        if (pInfo->is_drop_table_query(pIs_drop_table))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report whether query is drop table");
+            log_invalid_data(pStmt, "cannot report whether query is drop table");
         }
     }
     else
@@ -3965,72 +3964,72 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_tabl
     return rv;
 }
 
-static int32_t qc_sqlite_get_table_names(GWBUF* query,
+static int32_t qc_sqlite_get_table_names(GWBUF* pStmt,
                                          int32_t fullnames,
-                                         char*** table_names,
-                                         int32_t* tblsize)
+                                         char*** ppzTable_names,
+                                         int32_t* pnTable_names)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *table_names = NULL;
-    *tblsize = 0;
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_TABLES);
+    *ppzTable_names = NULL;
+    *pnTable_names = 0;
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_TABLES);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_table_names(fullnames, table_names, tblsize))
+        if (pInfo->get_table_names(fullnames, ppzTable_names, pnTable_names))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report what tables are accessed");
+            log_invalid_data(pStmt, "cannot report what tables are accessed");
         }
     }
     else
     {
-        MXS_ERROR("The query could not be parsed. Response not valid.");
+        MXS_ERROR("The pStmt could not be parsed. Response not valid.");
     }
 
     return rv;
 }
 
-static int32_t qc_sqlite_get_canonical(GWBUF* query, char** canonical)
+static int32_t qc_sqlite_get_canonical(GWBUF* pStmt, char** pzCanonical)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *canonical = NULL;
+    *pzCanonical = NULL;
 
     MXS_ERROR("qc_get_canonical not implemented yet.");
 
     return rv;
 }
 
-static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause)
+static int32_t qc_sqlite_query_has_clause(GWBUF* pStmt, int32_t* pHas_clause)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *has_clause = false;
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
+    *pHas_clause = 0;
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->query_has_clause(has_clause))
+        if (pInfo->query_has_clause(pHas_clause))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report whether the query has a where clause");
+            log_invalid_data(pStmt, "cannot report whether the query has a where clause");
         }
     }
     else
@@ -4041,26 +4040,26 @@ static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause)
     return rv;
 }
 
-static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** database_names, int* sizep)
+static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, char*** ppzDatabase_names, int* pnDatabase_names)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *database_names = NULL;
-    *sizep = 0;
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_DATABASES);
+    *ppzDatabase_names = NULL;
+    *pnDatabase_names = 0;
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_DATABASES);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_database_names(database_names, sizep))
+        if (pInfo->get_database_names(ppzDatabase_names, pnDatabase_names))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report what databases are accessed");
+            log_invalid_data(pStmt, "cannot report what databases are accessed");
         }
     }
     else
@@ -4071,25 +4070,25 @@ static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** database_names
     return rv;
 }
 
-static int32_t qc_sqlite_get_prepare_name(GWBUF* query, char** prepare_name)
+static int32_t qc_sqlite_get_prepare_name(GWBUF* pStmt, char** pzPrepare_name)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *prepare_name = NULL;
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
+    *pzPrepare_name = NULL;
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_prepare_name(prepare_name))
+        if (pInfo->get_prepare_name(pzPrepare_name))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report the name of a prepared statement");
+            log_invalid_data(pStmt, "cannot report the name of a prepared statement");
         }
     }
     else
@@ -4100,27 +4099,27 @@ static int32_t qc_sqlite_get_prepare_name(GWBUF* query, char** prepare_name)
     return rv;
 }
 
-int32_t qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, uint32_t* n_infos)
+int32_t qc_sqlite_get_field_info(GWBUF* pStmt, const QC_FIELD_INFO** ppInfos, uint32_t* pnInfos)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *infos = NULL;
-    *n_infos = 0;
+    *ppInfos = NULL;
+    *pnInfos = 0;
 
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_FIELDS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_FIELDS);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_field_info(infos, n_infos))
+        if (pInfo->get_field_info(ppInfos, pnInfos))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report field info");
+            log_invalid_data(pStmt, "cannot report field info");
         }
     }
     else
@@ -4131,27 +4130,27 @@ int32_t qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, uint
     return rv;
 }
 
-int32_t qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, uint32_t* n_infos)
+int32_t qc_sqlite_get_function_info(GWBUF* pStmt, const QC_FUNCTION_INFO** ppInfos, uint32_t* pnInfos)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *infos = NULL;
-    *n_infos = 0;
+    *ppInfos = NULL;
+    *pnInfos = 0;
 
-    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_FUNCTIONS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_FUNCTIONS);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_function_info(infos, n_infos))
+        if (pInfo->get_function_info(ppInfos, pnInfos))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report function info");
+            log_invalid_data(pStmt, "cannot report function info");
         }
     }
     else
@@ -4162,26 +4161,26 @@ int32_t qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos
     return rv;
 }
 
-int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
+int32_t qc_sqlite_get_preparable_stmt(GWBUF* pStmt, GWBUF** pzPreparable_stmt)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    *preparable_stmt = NULL;
+    *pzPreparable_stmt = NULL;
 
-    QcSqliteInfo* info = QcSqliteInfo::get(stmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_ESSENTIALS);
 
-    if (info)
+    if (pInfo)
     {
-        if (info->get_preparable_stmt(preparable_stmt))
+        if (pInfo->get_preparable_stmt(pzPreparable_stmt))
         {
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(stmt, "cannot report preperable statement");
+            log_invalid_data(pStmt, "cannot report preperable statement");
         }
     }
     else
@@ -4205,20 +4204,20 @@ static void qc_sqlite_set_server_version(uint64_t version)
     this_thread.version_patch = patch;
 }
 
-static void qc_sqlite_get_server_version(uint64_t* version)
+static void qc_sqlite_get_server_version(uint64_t* pVersion)
 {
     QC_TRACE();
 
-    *version =
+    *pVersion =
         this_thread.version_major * 10000 +
         this_thread.version_minor * 100 +
         this_thread.version_patch;
 }
 
 
-int32_t qc_sqlite_get_sql_mode(qc_sql_mode_t* sql_mode)
+int32_t qc_sqlite_get_sql_mode(qc_sql_mode_t* pSql_mode)
 {
-    *sql_mode = this_thread.sql_mode;
+    *pSql_mode = this_thread.sql_mode;
     return QC_RESULT_OK;
 }
 
