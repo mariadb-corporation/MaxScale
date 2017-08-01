@@ -14,7 +14,7 @@ require('./common.js')()
 var colors = require('colors/safe')
 
 function equalResources(oldVal, newVal) {
-    return _.isEqual(oldVal.attributes.parameters, newVal.attributes.parameters) &&
+    return _.isEqual(_.get(oldVal, 'attributes.parameters'), _.get(newVal, 'attributes.parameters')) &&
         _.isEqual(_.get(oldVal, 'relationships.servers.data'), _.get(newVal, 'relationships.servers.data')) &&
         _.isEqual(_.get(oldVal, 'relationships.services.data'), _.get(newVal, 'relationships.services.data')) &&
         _.isEqual(_.get(oldVal, 'relationships.monitors.data'), _.get(newVal, 'relationships.monitors.data'))
@@ -83,6 +83,15 @@ function getDiffs(a, b) {
 
     return Promise.all(promises)
         .then(function() {
+            // We can get the listeners only after we've requested the services
+            dest.services.data.forEach(function(i) {
+                dest['services/' + i.id + '/listeners'] = { data: i.attributes.listeners }
+            })
+            src.services.data.forEach(function(i) {
+                src['services/' + i.id + '/listeners'] = { data: i.attributes.listeners }
+            })
+        })
+        .then(function() {
             return Promise.resolve([src, dest])
         })
 }
@@ -104,7 +113,7 @@ exports.builder = function(yargs) {
                         var src = diffs[0]
                         var dest = diffs[1]
 
-                        collections.forEach(function(i) {
+                        _.uniq(_.concat(Object.keys(src), Object.keys(dest))).forEach(function(i) {
                             var newObj = getDifference(src[i].data, dest[i].data)
                             var oldObj = getDifference(dest[i].data, src[i].data)
                             var changed = getChangedObjects(src[i].data, dest[i].data)
