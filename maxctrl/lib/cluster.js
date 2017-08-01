@@ -107,45 +107,44 @@ exports.builder = function(yargs) {
         .command('diff <target>', 'Show difference between host servers and <target>. ' +
                  'Value must be in HOST:PORT format', {}, function(argv) {
 
-            maxctrl(argv, function(host) {
-                return getDiffs(host, argv.target)
-                    .then(function(diffs) {
-                        var src = diffs[0]
-                        var dest = diffs[1]
+                     maxctrl(argv, function(host) {
+                         return getDiffs(host, argv.target)
+                             .then(function(diffs) {
+                                 var src = diffs[0]
+                                 var dest = diffs[1]
 
-                        _.uniq(_.concat(Object.keys(src), Object.keys(dest))).forEach(function(i) {
-                            var newObj = getDifference(src[i].data, dest[i].data)
-                            var oldObj = getDifference(dest[i].data, src[i].data)
-                            var changed = getChangedObjects(src[i].data, dest[i].data)
+                                 _.uniq(_.concat(Object.keys(src), Object.keys(dest))).forEach(function(i) {
+                                     var newObj = getDifference(src[i].data, dest[i].data)
+                                     var oldObj = getDifference(dest[i].data, src[i].data)
+                                     var changed = getChangedObjects(src[i].data, dest[i].data)
 
-                            if (newObj.length) {
-                                logger.log("New:", i)
-                                logger.log(colors.green(JSON.stringify(newObj, null, 4)))
-                            }
-                            if (oldObj.length) {
-                                logger.log("Deleted:", i)
-                                logger.log(colors.red(JSON.stringify(oldObj, null, 4)))
-                            }
-                            if (changed.length) {
-                                logger.log("Changed:", i)
-                                logger.log(colors.yellow(JSON.stringify(changed, null, 4)))
-                            }
-                        })
-                        endpoints.forEach(function(i) {
-                            // Treating the resource endpoints as arrays allows the same functions to be used
-                            // to compare individual resources and resource collections
-                            var changed = getChangedObjects([src[i].data], [dest[i].data])
-                            if (changed.length) {
-                                logger.log("Changed:", i)
-                                logger.log(colors.yellow(JSON.stringify(changed, null, 4)))
-                            }
-                        })
-                    })
-            })
-        })
+                                     if (newObj.length) {
+                                         logger.log("New:", i)
+                                         logger.log(colors.green(JSON.stringify(newObj, null, 4)))
+                                     }
+                                     if (oldObj.length) {
+                                         logger.log("Deleted:", i)
+                                         logger.log(colors.red(JSON.stringify(oldObj, null, 4)))
+                                     }
+                                     if (changed.length) {
+                                         logger.log("Changed:", i)
+                                         logger.log(colors.yellow(JSON.stringify(changed, null, 4)))
+                                     }
+                                 })
+                                 endpoints.forEach(function(i) {
+                                     // Treating the resource endpoints as arrays allows the same functions to be used
+                                     // to compare individual resources and resource collections
+                                     var changed = getChangedObjects([src[i].data], [dest[i].data])
+                                     if (changed.length) {
+                                         logger.log("Changed:", i)
+                                         logger.log(colors.yellow(JSON.stringify(changed, null, 4)))
+                                     }
+                                 })
+                             })
+                     })
+                 })
         .command('sync <target>', 'Synchronize the cluster with target MaxScale server.', {}, function(argv) {
             maxctrl(argv, function(host) {
-                // TODO: Create new listeners
                 return getDiffs(argv.target, host)
                     .then(function(diffs) {
                         var promises = []
@@ -196,6 +195,24 @@ exports.builder = function(yargs) {
                                 getDifference(src.monitors.data, dest.monitors.data).forEach(function(i) {
                                     promises.push(doAsyncRequest(host, 'servers', null, {method: 'POST', body: {data: i}}))
                                 })
+                                return Promise.all(promises)
+                            })
+                            .then(function() {
+                                // Add new and delete old listeners
+                                var promises = []
+                                var all_keys = _.concat(Object.keys(src), Object.keys(dest))
+                                var unwanted_keys = _.concat(collections, endpoints)
+                                var relevant_keys = _.uniq(_.difference(all_keys, unwanted_keys))
+
+                                relevant_keys.forEach(function(i) {
+                                    getDifference(dest[i].data, src[i].data).forEach(function(j) {
+                                        promises.push(doAsyncRequest(host, i + '/' + j.id, null, {method: 'DELETE'}))
+                                    })
+                                    getDifference(src[i].data, dest[i].data).forEach(function(j) {
+                                        promises.push(doAsyncRequest(host, i, null, {method: 'POST', body: {data: j}}))
+                                    })
+                                })
+
                                 return Promise.all(promises)
                             })
                             .then(function() {
