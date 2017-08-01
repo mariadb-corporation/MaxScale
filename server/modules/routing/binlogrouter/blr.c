@@ -1060,7 +1060,7 @@ createInstance(SERVICE *service, char **options)
         /**
          *  Try loading last found GTID if the file size is <= 4 bytes
          */
-        if (inst->mariadb10_gtid &&
+        if (inst->mariadb10_master_gtid &&
             inst->current_pos <= 4)
         {
             MARIADB_GTID_INFO last_gtid = {};
