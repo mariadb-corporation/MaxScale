@@ -35,11 +35,6 @@
 #define QC_TRACE()
 #endif
 
-static inline bool qc_info_is_valid(qc_parse_result_t status)
-{
-    return status != QC_QUERY_INVALID;
-}
-
 static inline bool qc_info_was_tokenized(qc_parse_result_t status)
 {
     return status == QC_QUERY_TOKENIZED;
@@ -123,6 +118,70 @@ static thread_local struct
 } this_thread;
 
 /**
+ * HELPERS
+ */
+
+typedef enum qc_token_position
+{
+    QC_TOKEN_MIDDLE, // In the middle or irrelevant, e.g.: "=" in "a = b".
+    QC_TOKEN_LEFT,   // To the left, e.g.: "a" in "a = b".
+    QC_TOKEN_RIGHT,  // To the right, e.g: "b" in "a = b".
+} qc_token_position_t;
+
+static void buffer_object_free(void* data);
+static char** copy_string_array(char** strings, int* pn);
+static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
+static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect);
+static bool is_sequence_related_field(QcSqliteInfo* info,
+                                      const char* database,
+                                      const char* table,
+                                      const char* column);
+static bool is_sequence_related_function(QcSqliteInfo* info, const char* func_name);
+static void log_invalid_data(GWBUF* query, const char* message);
+static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
+static bool parse_query(GWBUF* query, uint32_t collect);
+static void parse_query_string(const char* query, size_t len);
+static bool query_is_parsed(GWBUF* query, uint32_t collect);
+static bool should_exclude(const char* zName, const ExprList* pExclude);
+static void update_field_info(QcSqliteInfo* info,
+                              const char* database,
+                              const char* table,
+                              const char* column,
+                              uint32_t usage,
+                              const ExprList* pExclude);
+static void update_field_infos_from_expr(QcSqliteInfo* info,
+                                         const Expr* pExpr,
+                                         uint32_t usage,
+                                         const ExprList* pExclude);
+static void update_field_infos(QcSqliteInfo* info,
+                               int prev_token,
+                               const Expr* pExpr,
+                               uint32_t usage,
+                               qc_token_position_t pos,
+                               const ExprList* pExclude);
+static void update_field_infos_from_exprlist(QcSqliteInfo* info,
+                                             const ExprList* pEList,
+                                             uint32_t usage,
+                                             const ExprList* pExclude);
+static void update_field_infos_from_idlist(QcSqliteInfo* info,
+                                           const IdList* pIds,
+                                           uint32_t usage,
+                                           const ExprList* pExclude);
+static void update_field_infos_from_select(QcSqliteInfo* info,
+                                           const Select* pSelect,
+                                           uint32_t usage,
+                                           const ExprList* pExclude);
+static void update_field_infos_from_with(QcSqliteInfo* info,
+                                          const With* pWith);
+static void update_function_info(QcSqliteInfo* info,
+                                 const char* name,
+                                 uint32_t usage);
+static void update_database_names(QcSqliteInfo* info, const char* name);
+static void update_names(QcSqliteInfo* info, const char* zDatabase, const char* zTable);
+static void update_names_from_srclist(QcSqliteInfo* info, const SrcList* pSrc);
+
+
+/**
  * Contains information about a particular query.
  */
 class QcSqliteInfo
@@ -138,6 +197,19 @@ public:
         return pInfo;
     }
 
+    static QcSqliteInfo* get(GWBUF* pStmt, uint32_t collect)
+    {
+        QcSqliteInfo* pInfo = NULL;
+
+        if (ensure_query_is_parsed(pStmt, collect))
+        {
+            pInfo = (QcSqliteInfo*) gwbuf_get_buffer_object_data(pStmt, GWBUF_PARSING_INFO);
+            ss_dassert(pInfo);
+        }
+
+        return pInfo;
+    }
+
     ~QcSqliteInfo()
     {
         free_string_array(table_names);
@@ -148,6 +220,189 @@ public:
         gwbuf_free(preparable_stmt);
         free_field_infos(field_infos, field_infos_len);
         free_function_infos(function_infos, function_infos_len);
+    }
+
+    bool is_valid() const
+    {
+        return status != QC_QUERY_INVALID;
+    }
+
+    bool get_type_mask(uint32_t* pType_mask) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *pType_mask = type_mask;
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool get_operation(int32_t* pOp) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *pOp = operation;
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool get_created_table_name(char** pzCreated_table_name) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            if (created_table_name)
+            {
+                *pzCreated_table_name = MXS_STRDUP(created_table_name);
+                MXS_ABORT_IF_NULL(*pzCreated_table_name);
+            }
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool is_drop_table_query(int32_t* pIs_drop_table)
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *pIs_drop_table = is_drop_table;
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool get_table_names(int32_t fullnames, char*** ppzTable_names, int32_t* pTable_size) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            if (fullnames)
+            {
+                *ppzTable_names = table_fullnames;
+            }
+            else
+            {
+                *ppzTable_names = table_names;
+            }
+
+            if (*ppzTable_names)
+            {
+                *ppzTable_names = copy_string_array(*ppzTable_names, pTable_size);
+            }
+            else
+            {
+                *pTable_size = 0;
+            }
+
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool query_has_clause(int32_t* pHas_clause) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *pHas_clause = has_clause;
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool get_database_names(char*** ppzDatabase_names, int* pnDatabase_names) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            if (database_names)
+            {
+                *ppzDatabase_names = copy_string_array(database_names, pnDatabase_names);
+            }
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool get_prepare_name(char** pzPrepare_name) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *pzPrepare_name = NULL;
+
+            if (prepare_name)
+            {
+                *pzPrepare_name = MXS_STRDUP(prepare_name);
+                MXS_ABORT_IF_NULL(*pzPrepare_name);
+            }
+
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool get_field_info(const QC_FIELD_INFO** ppInfos, uint32_t* pnInfos) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *ppInfos = field_infos;
+            *pnInfos = field_infos_len;
+
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool get_function_info(const QC_FUNCTION_INFO** ppInfos, uint32_t* pnInfos) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *ppInfos = function_infos;
+            *pnInfos = function_infos_len;
+
+            rv = true;
+        }
+
+        return rv;
+    }
+
+    bool get_preparable_stmt(GWBUF** ppPreparable_stmt) const
+    {
+        bool rv = false;
+
+        if (is_valid())
+        {
+            *ppPreparable_stmt = preparable_stmt;
+            rv = true;
+        }
+
+        return rv;
     }
 
 private:
@@ -268,70 +523,6 @@ public:
     qc_sql_mode_t sql_mode;                  // The current sql_mode.
     QC_NAME_MAPPING* function_name_mappings; // How function names should be mapped.
 };
-
-/**
- * HELPERS
- */
-
-typedef enum qc_token_position
-{
-    QC_TOKEN_MIDDLE, // In the middle or irrelevant, e.g.: "=" in "a = b".
-    QC_TOKEN_LEFT,   // To the left, e.g.: "a" in "a = b".
-    QC_TOKEN_RIGHT,  // To the right, e.g: "b" in "a = b".
-} qc_token_position_t;
-
-static void buffer_object_free(void* data);
-static char** copy_string_array(char** strings, int* pn);
-static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
-static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect);
-static QcSqliteInfo* get_query_info(GWBUF* query, uint32_t collect);
-static bool is_sequence_related_field(QcSqliteInfo* info,
-                                      const char* database,
-                                      const char* table,
-                                      const char* column);
-static bool is_sequence_related_function(QcSqliteInfo* info, const char* func_name);
-static void log_invalid_data(GWBUF* query, const char* message);
-static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
-static bool parse_query(GWBUF* query, uint32_t collect);
-static void parse_query_string(const char* query, size_t len);
-static bool query_is_parsed(GWBUF* query, uint32_t collect);
-static bool should_exclude(const char* zName, const ExprList* pExclude);
-static void update_field_info(QcSqliteInfo* info,
-                              const char* database,
-                              const char* table,
-                              const char* column,
-                              uint32_t usage,
-                              const ExprList* pExclude);
-static void update_field_infos_from_expr(QcSqliteInfo* info,
-                                         const Expr* pExpr,
-                                         uint32_t usage,
-                                         const ExprList* pExclude);
-static void update_field_infos(QcSqliteInfo* info,
-                               int prev_token,
-                               const Expr* pExpr,
-                               uint32_t usage,
-                               qc_token_position_t pos,
-                               const ExprList* pExclude);
-static void update_field_infos_from_exprlist(QcSqliteInfo* info,
-                                             const ExprList* pEList,
-                                             uint32_t usage,
-                                             const ExprList* pExclude);
-static void update_field_infos_from_idlist(QcSqliteInfo* info,
-                                           const IdList* pIds,
-                                           uint32_t usage,
-                                           const ExprList* pExclude);
-static void update_field_infos_from_select(QcSqliteInfo* info,
-                                           const Select* pSelect,
-                                           uint32_t usage,
-                                           const ExprList* pExclude);
-static void update_field_infos_from_with(QcSqliteInfo* info,
-                                          const With* pWith);
-static void update_function_info(QcSqliteInfo* info,
-                                 const char* name,
-                                 uint32_t usage);
-static void update_database_names(QcSqliteInfo* info, const char* name);
-static void update_names(QcSqliteInfo* info, const char* zDatabase, const char* zTable);
-static void update_names_from_srclist(QcSqliteInfo* info, const SrcList* pSrc);
 
 // Defined in parse.y
 
@@ -488,19 +679,6 @@ static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect)
     }
 
     return parsed;
-}
-
-static QcSqliteInfo* get_query_info(GWBUF* query, uint32_t collect)
-{
-    QcSqliteInfo* info = NULL;
-
-    if (ensure_query_is_parsed(query, collect))
-    {
-        info = (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
-        ss_dassert(info);
-    }
-
-    return info;
 }
 
 static void parse_query_string(const char* query, size_t len)
@@ -3657,7 +3835,7 @@ static int32_t qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result)
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    QcSqliteInfo* info = get_query_info(query, collect);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, collect);
 
     if (info)
     {
@@ -3679,13 +3857,12 @@ static int32_t qc_sqlite_get_type_mask(GWBUF* query, uint32_t* type_mask)
     ss_dassert(this_thread.initialized);
 
     *type_mask = QUERY_TYPE_UNKNOWN;
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_type_mask(type_mask))
         {
-            *type_mask = info->type_mask;
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -3709,13 +3886,12 @@ static int32_t qc_sqlite_get_operation(GWBUF* query, int32_t* op)
     ss_dassert(this_thread.initialized);
 
     *op = QUERY_OP_UNDEFINED;
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_operation(op))
         {
-            *op = info->operation;
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -3739,18 +3915,13 @@ static int32_t qc_sqlite_get_created_table_name(GWBUF* query, char** created_tab
     ss_dassert(this_thread.initialized);
 
     *created_table_name = NULL;
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_TABLES);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_TABLES);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_created_table_name(created_table_name))
         {
-            if (info->created_table_name)
-            {
-                *created_table_name = MXS_STRDUP(info->created_table_name);
-                MXS_ABORT_IF_NULL(created_table_name);
-                rv = QC_RESULT_OK;
-            }
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3773,13 +3944,12 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_tabl
     ss_dassert(this_thread.initialized);
 
     *is_drop_table = 0;
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->is_drop_table_query(is_drop_table))
         {
-            *is_drop_table = info->is_drop_table;
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -3807,30 +3977,12 @@ static int32_t qc_sqlite_get_table_names(GWBUF* query,
 
     *table_names = NULL;
     *tblsize = 0;
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_TABLES);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_TABLES);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_table_names(fullnames, table_names, tblsize))
         {
-            if (fullnames)
-            {
-                *table_names = info->table_fullnames;
-            }
-            else
-            {
-                *table_names = info->table_names;
-            }
-
-            if (*table_names)
-            {
-                *table_names = copy_string_array(*table_names, tblsize);
-            }
-            else
-            {
-                *tblsize = 0;
-            }
-
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -3868,13 +4020,12 @@ static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause)
     ss_dassert(this_thread.initialized);
 
     *has_clause = false;
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->query_has_clause(has_clause))
         {
-            *has_clause = info->has_clause;
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -3899,17 +4050,12 @@ static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** database_names
 
     *database_names = NULL;
     *sizep = 0;
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_DATABASES);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_DATABASES);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_database_names(database_names, sizep))
         {
-            if (info->database_names)
-            {
-                *database_names = copy_string_array(info->database_names, sizep);
-            }
-
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -3933,17 +4079,12 @@ static int32_t qc_sqlite_get_prepare_name(GWBUF* query, char** prepare_name)
     ss_dassert(this_thread.initialized);
 
     *prepare_name = NULL;
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_prepare_name(prepare_name))
         {
-            if (info->prepare_name)
-            {
-                *prepare_name = MXS_STRDUP(info->prepare_name);
-            }
-
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -3969,15 +4110,12 @@ int32_t qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, uint
     *infos = NULL;
     *n_infos = 0;
 
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_FIELDS);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_FIELDS);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_field_info(infos, n_infos))
         {
-            *infos = info->field_infos;
-            *n_infos = info->field_infos_len;
-
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -4003,20 +4141,17 @@ int32_t qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos
     *infos = NULL;
     *n_infos = 0;
 
-    QcSqliteInfo* info = get_query_info(query, QC_COLLECT_FUNCTIONS);
+    QcSqliteInfo* info = QcSqliteInfo::get(query, QC_COLLECT_FUNCTIONS);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_function_info(infos, n_infos))
         {
-            *infos = info->function_infos;
-            *n_infos = info->function_infos_len;
-
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(query, "cannot report field info");
+            log_invalid_data(query, "cannot report function info");
         }
     }
     else
@@ -4036,18 +4171,17 @@ int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
 
     *preparable_stmt = NULL;
 
-    QcSqliteInfo* info = get_query_info(stmt, QC_COLLECT_ESSENTIALS);
+    QcSqliteInfo* info = QcSqliteInfo::get(stmt, QC_COLLECT_ESSENTIALS);
 
     if (info)
     {
-        if (qc_info_is_valid(info->status))
+        if (info->get_preparable_stmt(preparable_stmt))
         {
-            *preparable_stmt = info->preparable_stmt;
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            log_invalid_data(stmt, "cannot report field info");
+            log_invalid_data(stmt, "cannot report preperable statement");
         }
     }
     else
@@ -4075,7 +4209,10 @@ static void qc_sqlite_get_server_version(uint64_t* version)
 {
     QC_TRACE();
 
-    *version = this_thread.version_major * 10000 + this_thread.version_minor * 100 + this_thread.version_patch;
+    *version =
+        this_thread.version_major * 10000 +
+        this_thread.version_minor * 100 +
+        this_thread.version_patch;
 }
 
 
