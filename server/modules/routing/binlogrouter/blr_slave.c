@@ -8144,7 +8144,8 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
     int seqno;
     char *errmsg = NULL;
     BINARY_LOG_DATA_RESULT result = {};
-    bool extra_info = !strcasecmp(extra_data, "FULL");
+    bool extra_info = !strcasecmp(extra_data, "FULL") &&
+                      router->storage_type == BLR_BINLOG_STORAGE_TREE;
 
     /* Get current binlog finename and position */
     spinlock_acquire(&router->binlog_lock);
@@ -8364,17 +8365,19 @@ static int binary_logs_select_cb(void *data,
          * Let's get the real size by calling blr_slave_get_file_size()
          */
 
-        //Get binlog filename full-path
+        // Get filename full-path, use prefix only if requested by the caller
         blr_get_file_fullpath(values[0],
                               data_set->binlogdir,
                               file_path,
-                              t_prefix);
+                              data_set->extra_info ?
+                              t_prefix :
+                              NULL);
         //Get the file size
         fsize = blr_slave_get_file_size(file_path);
 
         sprintf(file_size, "%" PRIu32 "", fsize);
 
-        // Include extra output
+        // Include prefix in the output
         if (data_set->extra_info)
         {
             sprintf(filename,
