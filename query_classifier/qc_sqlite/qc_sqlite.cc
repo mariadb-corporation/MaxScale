@@ -444,57 +444,52 @@ public:
         {
             if (strcasecmp(zTable, "DUAL") != 0)
             {
-                char* zCopy = MXS_STRDUP(zTable);
-                MXS_ABORT_IF_NULL(zCopy);
-                // TODO: Is this call really needed. Check also sqlite3Dequote.
-                exposed_sqlite3Dequote(zCopy);
+                size_t table_len = strlen(zTable);
+                char table[table_len + 1];
 
-                enlarge_string_array(1, table_names_len, &table_names, &table_names_capacity);
-                table_names[table_names_len++] = zCopy;
-                table_names[table_names_len] = NULL;
+                strcpy(table, zTable);
+                // TODO: Is this call really needed. Check also sqlite3Dequote.
+                exposed_sqlite3Dequote(table);
+
+                if (!table_name_collected(table))
+                {
+                    char* zCopy = MXS_STRDUP_A(table);
+
+                    enlarge_string_array(1, table_names_len, &table_names, &table_names_capacity);
+                    table_names[table_names_len++] = zCopy;
+                    table_names[table_names_len] = NULL;
+                }
+
+                size_t database_len = zDatabase ? strlen(zDatabase) : 0;
+                char fullname[database_len + 1 + table_len + 1];
 
                 if (zDatabase)
                 {
-                    zCopy = (char*)MXS_MALLOC(strlen(zDatabase) + 1 + strlen(zTable) + 1);
-                    MXS_ABORT_IF_NULL(zCopy);
-
-                    strcpy(zCopy, zDatabase);
-                    strcat(zCopy, ".");
-                    strcat(zCopy, zTable);
-                    exposed_sqlite3Dequote(zCopy);
+                    strcpy(fullname, zDatabase);
+                    // TODO: Is this call really needed. Check also sqlite3Dequote.
+                    exposed_sqlite3Dequote(fullname);
+                    strcat(fullname, ".");
                 }
                 else
                 {
-                    zCopy = MXS_STRDUP(zCopy);
-                    MXS_ABORT_IF_NULL(zCopy);
+                    fullname[0] = 0;
                 }
 
-                enlarge_string_array(1, table_fullnames_len,
-                                     &table_fullnames, &table_fullnames_capacity);
-                table_fullnames[table_fullnames_len++] = zCopy;
-                table_fullnames[table_fullnames_len] = NULL;
+                strcat(fullname, table);
+
+                if (!table_fullname_collected(fullname))
+                {
+                    char* zCopy = MXS_STRDUP_A(fullname);
+
+                    enlarge_string_array(1, table_fullnames_len,
+                                         &table_fullnames, &table_fullnames_capacity);
+                    table_fullnames[table_fullnames_len++] = zCopy;
+                    table_fullnames[table_fullnames_len] = NULL;
+                }
             }
         }
 
-        if ((collect & QC_COLLECT_DATABASES) && !(collected & QC_COLLECT_DATABASES))
-        {
-            if (zDatabase)
-            {
-                update_database_names(zDatabase);
-            }
-        }
-    }
-
-    void update_database_names(const char* zDatabase)
-    {
-        char* zCopy = MXS_STRDUP(zDatabase);
-        MXS_ABORT_IF_NULL(zCopy);
-        exposed_sqlite3Dequote(zCopy);
-
-        enlarge_string_array(1, database_names_len,
-                             &database_names, &database_names_capacity);
-        database_names[database_names_len++] = zCopy;
-        database_names[database_names_len] = NULL;
+        update_database_names(zDatabase);
     }
 
 private:
@@ -604,6 +599,65 @@ private:
         }
 
         return pz;
+    }
+
+    bool table_name_collected(const char* zTable)
+    {
+        size_t i = 0;
+
+        while ((i < table_names_len) && (strcmp(table_names[i], zTable) != 0))
+        {
+            ++i;
+        }
+
+        return i != table_names_len;
+    }
+
+    bool table_fullname_collected(const char* zTable)
+    {
+        size_t i = 0;
+
+        while ((i < table_fullnames_len) && (strcmp(table_fullnames[i], zTable) != 0))
+        {
+            ++i;
+        }
+
+        return i != table_fullnames_len;
+    }
+
+    bool database_name_collected(const char* zDatabase)
+    {
+        size_t i = 0;
+
+        while ((i < database_names_len) && (strcmp(database_names[i], zDatabase) != 0))
+        {
+            ++i;
+        }
+
+        return i != database_names_len;
+    }
+
+    void update_database_names(const char* zDatabase)
+    {
+        if ((collect & QC_COLLECT_DATABASES) && !(collected & QC_COLLECT_DATABASES))
+        {
+            if (zDatabase)
+            {
+                char database[strlen(zDatabase) + 1];
+                strcpy(database, zDatabase);
+                exposed_sqlite3Dequote(database);
+
+                if (!database_name_collected(database))
+                {
+                    char* zCopy = MXS_STRDUP_A(database);
+
+                    enlarge_string_array(1, database_names_len,
+                                         &database_names, &database_names_capacity);
+                    database_names[database_names_len++] = zCopy;
+                    database_names[database_names_len] = NULL;
+                }
+            }
+        }
     }
 
 public:

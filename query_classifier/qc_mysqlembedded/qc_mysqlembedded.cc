@@ -1552,16 +1552,31 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
                     }
                 }
 
-                if (catnm)
-                {
-                    tables[i++] = catnm;
-                }
-                else
+                if (!catnm)
                 {
                     // Sometimes the tablename is "*"; we exclude that.
                     if (strcmp(tbl->table_name, "*") != 0)
                     {
-                        tables[i++] = strdup(tbl->table_name);
+                        catnm = strdup(tbl->table_name);
+                    }
+                }
+
+                if (catnm)
+                {
+                    int j = 0;
+
+                    while ((j < i) && (strcmp(catnm, tables[j]) != 0))
+                    {
+                        ++j;
+                    }
+
+                    if (j == i) // Not found
+                    {
+                        tables[i++] = catnm;
+                    }
+                    else
+                    {
+                        free(catnm);
                     }
                 }
 
@@ -1854,7 +1869,17 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
                     currsz = currsz * 2 + 1;
                 }
 
-                databases[i++] = strdup(tbl->db);
+                int j = 0;
+
+                while ((j < i) && (strcmp(tbl->db, databases[j]) != 0))
+                {
+                    ++j;
+                }
+
+                if (j == i) // Not found
+                {
+                    databases[i++] = strdup(tbl->db);
+                }
             }
 
             tbl = tbl->next_local;
