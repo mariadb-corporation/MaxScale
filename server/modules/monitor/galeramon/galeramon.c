@@ -311,9 +311,17 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
                     }
                     mysql_free_result(result2);
                 }
+                else
+                {
+                    mon_report_query_error(database);
+                }
             }
         }
         mysql_free_result(result);
+    }
+    else
+    {
+        mon_report_query_error(database);
     }
 
     if (isjoined)
@@ -350,7 +358,10 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
             }
             mysql_free_result(result);
         }
-
+        else
+        {
+            mon_report_query_error(database);
+        }
         server_set_status_nolock(&temp_server, SERVER_JOINED);
     }
     else
@@ -786,9 +797,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
         }
         else
         {
-            MXS_ERROR("Error while selecting 'wsrep_node_name' from node %s: %s",
-                      ptr->server->unique_name,
-                      mysql_error(ptr->con));
+            mon_report_query_error(ptr);
         }
     }
 

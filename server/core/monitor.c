@@ -1430,6 +1430,14 @@ void mon_hangup_failed_servers(MXS_MONITOR *monitor)
         }
     }
 }
+
+void mon_report_query_error(MXS_MONITOR_SERVERS* db)
+{
+    MXS_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
+              db->server->unique_name, db->server->name,
+              db->server->port, mysql_error(db->con));
+}
+
 /**
   * Acquire locks on all servers monitored by this monitor. There should
   * only be max 1 monitor per server.

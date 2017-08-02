@@ -245,6 +245,10 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
         }
         mysql_free_result(result);
     }
+    else
+    {
+        mon_report_query_error(database);
+    }
 
     /* Check the the SQL node id in the MySQL cluster */
     if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_cluster_node_id'") == 0
@@ -271,6 +275,10 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
             database->server->node_id = cluster_node_id;
         }
         mysql_free_result(result);
+    }
+    else
+    {
+        mon_report_query_error(database);
     }
 
     if (isjoined)

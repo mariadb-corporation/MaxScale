@@ -283,7 +283,10 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
         }
         mysql_free_result(result);
     }
-
+    else
+    {
+        mon_report_query_error(database);
+    }
     /* Check if the Slave_SQL_Running and Slave_IO_Running status is
      * set to Yes
      */
@@ -348,6 +351,10 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
                 isslave = 0;
             }
         }
+        else
+        {
+            mon_report_query_error(database);
+        }
     }
     else
     {
@@ -409,6 +416,10 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 
             mysql_free_result(result);
         }
+        else
+        {
+            mon_report_query_error(database);
+        }
     }
 
     /* get variable 'read_only' set by an external component */
@@ -435,6 +446,10 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
             }
         }
         mysql_free_result(result);
+    }
+    else
+    {
+        mon_report_query_error(database);
     }
 
     /* Remove addition info */
