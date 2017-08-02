@@ -257,8 +257,6 @@ gwbuf_free_one(GWBUF *buf)
 
     if (atomic_add(&buf->sbuf->refcount, -1) == 1)
     {
-        MXS_FREE(buf->sbuf->data);
-        MXS_FREE(buf->sbuf);
         bo = buf->sbuf->bufobj;
 
         while (bo != NULL)
@@ -266,7 +264,10 @@ gwbuf_free_one(GWBUF *buf)
             bo = gwbuf_remove_buffer_object(buf, bo);
         }
 
+        MXS_FREE(buf->sbuf->data);
+        MXS_FREE(buf->sbuf);
     }
+
     while (buf->properties)
     {
         prop = buf->properties;
