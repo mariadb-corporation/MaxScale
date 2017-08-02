@@ -5,7 +5,7 @@
 # NODEJS_EXECUTABLE Path to the Node.js executable
 # NODEJS_VERSION    Node.js version
 
-find_program(NODEJS_EXECUTABLE node)
+find_program(NODEJS_EXECUTABLE NAMES node nodejs)
 
 if (${NODEJS_EXECUTABLE} MATCHES "NOTFOUND")
   message(STATUS "Could not find Node.js")
