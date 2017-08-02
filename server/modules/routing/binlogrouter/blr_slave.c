@@ -342,6 +342,7 @@ extern bool blr_compare_binlogs(ROUTER_INSTANCE *router,
                                 MARIADB_GTID_INFO *slave,
                                 const char *r_file,
                                 const char *s_file);
+
 /**
  * Process a request packet from the slave server.
  *
@@ -679,7 +680,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         {
             if (brkb && strlen(brkb) &&
                 blr_handle_complex_select(router,
-                                         slave,
+                                          slave,
                                           word,
                                           brkb))
             {
@@ -688,8 +689,8 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             }
 
             if (blr_handle_simple_select_stmt(router,
-                                       slave,
-                                       word))
+                                              slave,
+                                              word))
             {
                 MXS_FREE(query_text);
                 return 1;
@@ -8221,10 +8222,12 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
     seqno = result.seq_no;
 
     /**
-     * Check whether the last file is the current binlog file.
-     * If not then add the new row.
+     * Check whether the last file is the current binlog file,
+     * GTID repo might also contain no data at all.
+     *
+     * Add the new row if needed.
      */
-    if (strcmp(current_file, result.last_file) != 0)
+    if (!result.last_file || strcmp(current_file, result.last_file) != 0)
     {
         char pos[40]; // Buffer for a 64-bit integer.
         GWBUF *pkt;

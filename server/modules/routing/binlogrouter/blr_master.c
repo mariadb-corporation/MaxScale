@@ -147,6 +147,8 @@ static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
 
 static void worker_cb_start_master(int worker_id, void* data);
 static void blr_start_master_in_main(void* data);
+extern bool blr_file_exists(ROUTER_INSTANCE *router);
+extern void blr_file_update_gtid(ROUTER_INSTANCE *router);
 
 static int keepalive = 1;
 
@@ -1492,13 +1494,32 @@ blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
     int rotated = 1;
     int remove_encrytion_ctx = 0;
 
-    if (strncmp(router->binlog_name, file, slen) != 0)
+    /* Different file name in rotate event or missing binlog file */
+    if ((strncmp(router->binlog_name, file, slen) != 0) ||
+        !blr_file_exists(router))
     {
         remove_encrytion_ctx = 1;
         router->stats.n_rotates++;
         if (blr_file_rotate(router, file, pos) == 0)
         {
             rotated = 0;
+        }
+    }
+    else
+    {
+        /**
+         * ROTATE_EVENT reports a binlog file which is the same
+         * as router->binlog_name.
+         *
+         * If mariadb10_gtid is On, let's Add/Update into GTID repo:
+         * this allows SHOW BINARY LOGS to list all files
+         * including the ones without GTID events.
+         */
+
+        if (router->mariadb10_compat &&
+            router->mariadb10_gtid)
+        {
+            blr_file_update_gtid(router);
         }
     }
     spinlock_acquire(&router->binlog_lock);
@@ -3145,8 +3166,8 @@ static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
  *                  False otherwise.
  */
 static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
-                                         REP_HEADER *hdr,
-                                         uint8_t *ptr)
+                                   REP_HEADER *hdr,
+                                   uint8_t *ptr)
 {
     ss_dassert(hdr->event_type == ROTATE_EVENT);
 

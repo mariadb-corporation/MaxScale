@@ -238,6 +238,8 @@ bool blr_compare_binlogs(ROUTER_INSTANCE *router,
                          const char *r_file,
                          const char *s_file);
 
+void blr_file_update_gtid(ROUTER_INSTANCE *router);
+
 /**
  * MariaDB 10.1.7 Start Encryption event content
  *
@@ -573,21 +575,7 @@ blr_file_create(ROUTER_INSTANCE *router, char *orig_file)
             if (router->mariadb10_compat &&
                 router->mariadb10_gtid)
             {
-                MARIADB_GTID_ELEMS gtid_elms = {};
-                // Add GTID domain
-                gtid_elms.domain_id = router->mariadb10_gtid_domain;
-                // router->orig_masterid keeps the original ID
-                gtid_elms.server_id = router->orig_masterid;
-                // Pos 4 for start/end_pos
-                router->pending_transaction.end_pos = 4;
-                router->pending_transaction.start_pos = 4;
-                // Update all the gtid_elms
-                memcpy(&router->pending_transaction.gtid_elms,
-                       &gtid_elms,
-                       sizeof(MARIADB_GTID_ELEMS));
-
-                /* Save GTID into repo */
-                blr_save_mariadb_gtid(router);
+                blr_file_update_gtid(router);
             }
         }
         else
@@ -4486,4 +4474,93 @@ bool blr_is_current_binlog(ROUTER_INSTANCE *router,
                                &slave->f_info.gtid_elms,
                                router->binlog_name,
                                slave->binlogfile);
+}
+
+/**
+ * Check whether the current binlog file exists.
+ *
+ * The file could have been manually removed by mistake.
+ * The check is done when ROTATE event (real or fake) is seen by
+ * blr_rotate_event().
+ *
+ * @param router    The router instance
+ * @return          True if file exists, false otherwise.
+ *
+ */
+bool blr_file_exists(ROUTER_INSTANCE *router)
+{
+    bool ret = true;
+    char path[PATH_MAX + 1] = "";
+    strcpy(path, router->binlogdir);
+    strcat(path, "/");
+
+    /**
+     * Create file prefix using domain and server_id prefix
+     */
+    if (router->storage_type == BLR_BINLOG_STORAGE_TREE)
+    {
+        char prefix[BINLOG_FILE_EXTRA_INFO];
+        // Add prefix
+        sprintf(prefix,
+                "%" PRIu32 "/%" PRIu32 "/",
+                router->mariadb10_gtid_domain,
+                router->orig_masterid);
+                strcat(path, prefix);
+    }
+
+    // Set final file name full path
+    strcat(path, router->binlog_name);
+
+    // Check file
+    if (access(path, F_OK) == -1 && errno == ENOENT)
+    {
+        // No file found
+        MXS_WARNING("%s: ROTATE_EVENT, missing binlog file %s ",
+                    router->service->name,
+                    path);
+        ret = false;
+    }
+
+    return ret;
+}
+
+/**
+ * Add/Update binlog file details into GTID mapd db:
+ *
+ * binlog file name
+ * pos = 4
+ * server_id = router->orig_masterid
+ * sequence = 0
+ *
+ * @param router    The router instance
+ */
+void blr_file_update_gtid(ROUTER_INSTANCE *router)
+{
+    MARIADB_GTID_ELEMS gtid_elms;
+    // Add GTID domain
+    gtid_elms.domain_id = router->mariadb10_gtid_domain;
+    //router->orig_masterid keeps the original ID
+    gtid_elms.server_id = router->orig_masterid;
+    // Set GTID sequence to 0
+    gtid_elms.seq_no = 0;
+    // Pos 4 for start/end_pos
+    router->pending_transaction.end_pos = 4;
+    router->pending_transaction.start_pos = 4;
+    // Update all the gtid_elms
+    memcpy(&router->pending_transaction.gtid_elms,
+           &gtid_elms,
+           sizeof(MARIADB_GTID_ELEMS));
+
+    /**
+     * Save GTID into repo
+     *
+     * If router->orig_masterid is not set yet
+     * don't update the db
+     * This happens when mariadb10_master_gtid id Off
+     * and a new file has been created by blr_file_init()
+     */
+    if (gtid_elms.server_id > 0)
+    {
+        blr_save_mariadb_gtid(router);
+    }
 }
