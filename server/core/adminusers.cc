@@ -518,7 +518,7 @@ bool admin_linux_account_enabled(const char *uname)
 void mxs_crypt(const char* password, const char* salt, char* output)
 {
 #if HAVE_GLIBC
-    thread_local struct crypt_data cdata;
+    struct crypt_data cdata;
     cdata.initialized = 0;
     char* pw = crypt_r(password, salt, &cdata);
     snprintf(output, MXS_CRYPT_SIZE, "%s", pw);

@@ -139,7 +139,7 @@ static bool is_sequence_related_function(QcSqliteInfo* info, const char* func_na
 static void log_invalid_data(GWBUF* query, const char* message);
 static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
 static bool parse_query(GWBUF* query, uint32_t collect);
-static void parse_query_string(const char* query, size_t len);
+static void parse_query_string(const char* query, int len);
 static bool query_is_parsed(GWBUF* query, uint32_t collect);
 static bool should_exclude(const char* zName, const ExprList* pExclude);
 static void update_field_info(QcSqliteInfo* info,
@@ -736,7 +736,7 @@ static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect)
     return parsed;
 }
 
-static void parse_query_string(const char* query, size_t len)
+static void parse_query_string(const char* query, int len)
 {
     sqlite3_stmt* stmt = NULL;
     const char* tail = NULL;
