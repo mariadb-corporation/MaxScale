@@ -1073,23 +1073,36 @@ closed.
 For more information about persistent connections, please read the
 [Administration Tutorial](../Tutorials/Administration-Tutorial.md).
 
-#### `use_proxy_protocol`
+#### `proxy_protocol`
 
-If `use_proxy_protocol` is set to `yes`, MaxScale will send a proxy protocol
+If `proxy_protocol` is set to `on`, MaxScale will send a
+[PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
 header when connecting client sessions to the server. The header contains the
 original client IP address and port, as seen by MaxScale. The server will then
 read the header and perform authentication as if the connection originated from
-this address instead of the MaxScale IP address. With this feature, the user
+this address instead of MaxScale's IP address. With this feature, the user
 accounts on the backend server can be simplified to only contain the actual
 client hosts and not the MaxScale host.
 
-Currently, using this feature is unpractical due to the restrictiveness of the
-proxy protocol. The protocol requires that *all* connections from proxy enabled
-addresses must send a valid proxy header. MaxScale has other connections to the
-servers in addition to client sessions, e.g. monitors, and the server will
-refuse these due to the lack of the header. To bypass this restriction, the
-server monitor needs to be disabled and the service listener needs to be
+PROXY protocol will be supported by MariaDB 10.3, which this feature has been
+tested with. To use it, enable the PROXY protocol in MaxScale for every
+compatible server and configure the MariaDB servers themselves to accept the
+protocol headers from MaxScale's IP address. On the server side, the protocol
+should be enabled  only for trusted IPs, as it allows the sender to spoof the
+connection origin. If a proxy header is sent to a server not expecting it, the
+connection will fail. Usually PROXY protocol should be enabled for every
+server in a cluster, as they typically have similar grants.
+
+Other SQL-servers may support PROXY protocol as well, but the implementation may
+be highly restricting. Strict adherence to the protocol requires that the
+backend server does not allow mixing of un-proxied and proxied connections from
+a given IP. MaxScale requires normal connections to backends for monitoring and
+authentication data queries, which would be blocked. To bypass this restriction,
+the server monitor needs to be disabled and the service listener needs to be
 configured to disregard authentication errors (`skip_authentication=true`).
+Server states also need to be set manually in MaxAdmin. These steps are *not*
+required for MariaDB 10.3, since its implementation is more flexible and allows
+both PROXY-headered and headerless connections from a proxy-enabled IP.
 
 #### `authenticator`
 

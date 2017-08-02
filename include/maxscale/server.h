@@ -39,7 +39,7 @@ extern const char CN_MONITORPW[];
 extern const char CN_MONITORUSER[];
 extern const char CN_PERSISTMAXTIME[];
 extern const char CN_PERSISTPOOLMAX[];
-extern const char CN_USE_PROXY_PROTOCOL[];
+extern const char CN_PROXY_PROTOCOL[];
 
 /**
  * The server parameters used for weighting routing decissions
@@ -133,7 +133,7 @@ typedef struct server
     uint8_t        charset;        /**< Default server character set */
     bool           is_active;      /**< Server is active and has not been "destroyed" */
     bool           created_online; /**< Whether this server was created after startup */
-    bool           use_proxy_protocol; /**< Send proxy-protocol header when connecting client sessions. */
+    bool           proxy_protocol; /**< Send proxy-protocol header to backend when connecting client sessions. */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif

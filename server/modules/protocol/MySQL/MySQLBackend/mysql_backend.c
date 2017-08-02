@@ -198,7 +198,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
                   protocol->fd,
                   session->client_dcb->fd);
 
-        if (server->use_proxy_protocol)
+        if (server->proxy_protocol)
         {
             gw_send_proxy_protocol_header(backend_dcb);
         }
@@ -919,7 +919,7 @@ static int gw_write_backend_event(DCB *dcb)
         if (backend_protocol->protocol_auth_state == MXS_AUTH_STATE_PENDING_CONNECT)
         {
             backend_protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
-            if (dcb->server->use_proxy_protocol)
+            if (dcb->server->proxy_protocol)
             {
                 gw_send_proxy_protocol_header(dcb);
             }
@@ -1906,6 +1906,8 @@ static void gw_send_proxy_protocol_header(DCB *backend_dcb)
     GWBUF *headerbuf = gwbuf_alloc_and_load(strlen(proxy_header), proxy_header);
     if (headerbuf)
     {
+        MXS_INFO("Sending proxy-protocol header '%s' to backend %s.", proxy_header,
+                 backend_dcb->server->unique_name);
         if (!dcb_write(backend_dcb, headerbuf))
         {
             gwbuf_free(headerbuf);

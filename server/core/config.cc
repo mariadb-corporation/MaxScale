@@ -269,7 +269,7 @@ const char *server_params[] =
     CN_SSL_KEY,
     CN_SSL_VERSION,
     CN_SSL_CERT_VERIFY_DEPTH,
-    CN_USE_PROXY_PROTOCOL,
+    CN_PROXY_PROTOCOL,
     NULL
 };
 
@@ -2953,7 +2953,25 @@ int create_new_server(CONFIG_CONTEXT *obj)
             }
         }
 
-        server->use_proxy_protocol = config_get_bool(obj->parameters, CN_USE_PROXY_PROTOCOL);
+        const char* proxy_protocol = config_get_value_string(obj->parameters, CN_PROXY_PROTOCOL);
+        if (*proxy_protocol)
+        {
+            int truth_value = config_truth_value(proxy_protocol);
+            if (truth_value == 1)
+            {
+                server->proxy_protocol = true;
+            }
+            else if (truth_value == 0)
+            {
+                server->proxy_protocol = false;
+            }
+            else
+            {
+                MXS_ERROR("Invalid value for '%s' for server %s: %s",
+                          CN_PROXY_PROTOCOL, server->unique_name, proxy_protocol);
+                error_count++;
+            }
+        }
 
         MXS_CONFIG_PARAMETER *params = obj->parameters;
 

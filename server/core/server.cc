@@ -56,7 +56,7 @@ const char CN_MONITORPW[]          = "monitorpw";
 const char CN_MONITORUSER[]        = "monitoruser";
 const char CN_PERSISTMAXTIME[]     = "persistmaxtime";
 const char CN_PERSISTPOOLMAX[]     = "persistpoolmax";
-const char CN_USE_PROXY_PROTOCOL[] = "use_proxy_protocol";
+const char CN_PROXY_PROTOCOL[]     = "proxy_protocol";
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
@@ -141,7 +141,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->is_active = true;
     server->created_online = false;
     server->charset = SERVER_DEFAULT_CHARSET;
-    server->use_proxy_protocol = false;
+    server->proxy_protocol = false;
 
     spinlock_acquire(&server_spin);
     server->next = allServers;
@@ -570,9 +570,9 @@ dprintServer(DCB *dcb, const SERVER *server)
         dcb_printf(dcb, "\tSSL CA certificate:                  %s\n",
                    l->ssl_ca_cert ? l->ssl_ca_cert : "null");
     }
-    if (server->use_proxy_protocol)
+    if (server->proxy_protocol)
     {
-        dcb_printf(dcb, "\tProxy protocol enabled.\n");
+        dcb_printf(dcb, "\tPROXY protocol:                      on.\n");
     }
 }
 
@@ -1173,9 +1173,9 @@ static bool create_server_config(const SERVER *server, const char *filename)
         dprintf(file, "%s=%ld\n", CN_PERSISTMAXTIME, server->persistmaxtime);
     }
 
-    if (server->use_proxy_protocol)
+    if (server->proxy_protocol)
     {
-        dprintf(file, "%s=yes\n", CN_USE_PROXY_PROTOCOL);
+        dprintf(file, "%s=on\n", CN_PROXY_PROTOCOL);
     }
 
     for (SERVER_PARAM *p = server->parameters; p; p = p->next)
