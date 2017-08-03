@@ -18,6 +18,7 @@ const maxctrl_version = '1.0.0';
 
 program
     .version(maxctrl_version)
+    .strict()
     .group(['u', 'p', 'h', 's', 't', 'q', 'tsv'], 'Global Options:')
     .option('u', {
         alias:'user',

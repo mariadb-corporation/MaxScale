@@ -193,7 +193,7 @@ exports.builder = function(yargs) {
                                 var promises = []
                                 // Add new monitors
                                 getDifference(src.monitors.data, dest.monitors.data).forEach(function(i) {
-                                    promises.push(doAsyncRequest(host, 'servers', null, {method: 'POST', body: {data: i}}))
+                                    promises.push(doAsyncRequest(host, 'monitors', null, {method: 'POST', body: {data: i}}))
                                 })
                                 return Promise.all(promises)
                             })

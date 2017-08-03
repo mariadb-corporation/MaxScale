@@ -48,7 +48,9 @@ module.exports = function() {
                 })
 
                 return Promise.all(promises)
-                    .catch(function(err) {
+                    .then(function() {
+                        argv.resolve()
+                    }, function(err) {
                         argv.reject(err)
                     })
             }, function(err) {
@@ -193,9 +195,9 @@ module.exports = function() {
                 }
             }, function(err) {
                 if (err.response && err.response.body) {
-                    return error(JSON.stringify(err.response.body, null, 4))
+                    return error('Server responded with an error to resource request `' + resource + '`:' + JSON.stringify(err.response.body, null, 4))
                 } else if (err.statusCode) {
-                    return error('Server responded with: ' + err.statusCode)
+                    return error('Server responded with: ' + err.statusCode + 'to resource request `' + resource + '`')
                 } else if (err.error) {
                     return error(JSON.stringify(err.error, null, 4))
                 } else {
@@ -206,7 +208,6 @@ module.exports = function() {
 
     this.doRequest = function(host, resource, cb, obj) {
         return doAsyncRequest(host, resource, cb, obj)
-            .then(this.argv.resolve, this.argv.reject)
     }
 
     this.error = function(err) {
