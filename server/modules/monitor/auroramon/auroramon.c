@@ -80,10 +80,7 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *database)
             }
             else
             {
-                MXS_ERROR("Failed to query server %s ([%s]:%d): %d, %s",
-                          database->server->unique_name, database->server->name,
-                          database->server->port, mysql_errno(database->con),
-                          mysql_error(database->con));
+                mon_report_query_error(database);
             }
         }
         else

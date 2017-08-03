@@ -287,6 +287,13 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
 void mon_hangup_failed_servers(MXS_MONITOR *monitor);
 
 /**
+ * @brief Report query errors
+ *
+ * @param db Database where the query failed
+ */
+void mon_report_query_error(MXS_MONITOR_SERVERS* db);
+
+/**
  * @brief Convert monitor to JSON
  *
  * @param monitor Monitor to convert

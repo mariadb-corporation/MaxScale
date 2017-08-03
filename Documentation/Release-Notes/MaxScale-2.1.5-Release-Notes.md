@@ -60,8 +60,7 @@ will still go to the central database.
 
 ## Bug fixes
 
-[Here is a list of bugs fixed in MaxScale 2.1.5.]
-(https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.5)
+[Here is a list of bugs fixed in MaxScale 2.1.5.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.5)
 
 * [MXS-1335](https://jira.mariadb.org/browse/MXS-1335) root_node_as_master should not be enabled by default
 * [MXS-1330](https://jira.mariadb.org/browse/MXS-1330) insertstream attempts to parse all buffers

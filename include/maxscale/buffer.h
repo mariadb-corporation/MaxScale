@@ -67,24 +67,13 @@ typedef enum
 #define GWBUF_IS_IGNORABLE(b)            (b->gwbuf_type & GWBUF_TYPE_IGNORABLE)
 #define GWBUF_SHOULD_COLLECT_RESULT(b)   (b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
 
-/**
- * A structure to encapsulate the data in a form that the data itself can be
- * shared between multiple GWBUF's without the need to make multiple copies
- * but still maintain separate data pointers.
- */
-typedef struct
-{
-    unsigned char   *data;                  /*< Physical memory that was allocated */
-    int             refcount;               /*< Reference count on the buffer */
-} SHARED_BUF;
-
 typedef enum
 {
     GWBUF_INFO_NONE         = 0x0,
     GWBUF_INFO_PARSED       = 0x1
 } gwbuf_info_t;
 
-#define GWBUF_IS_PARSED(b)      (b->gwbuf_info & GWBUF_INFO_PARSED)
+#define GWBUF_IS_PARSED(b)      (b->sbuf->info & GWBUF_INFO_PARSED)
 
 /**
  * A structure for cleaning up memory allocations of structures which are
@@ -107,6 +96,18 @@ struct buffer_object_st
     buffer_object_t* bo_next;
 };
 
+/**
+ * A structure to encapsulate the data in a form that the data itself can be
+ * shared between multiple GWBUF's without the need to make multiple copies
+ * but still maintain separate data pointers.
+ */
+typedef struct
+{
+    unsigned char   *data;     /*< Physical memory that was allocated */
+    int              refcount; /*< Reference count on the buffer */
+    buffer_object_t *bufobj;   /*< List of objects referred to by GWBUF */
+    uint32_t         info;     /*< Info bits */
+} SHARED_BUF;
 
 /**
  * The buffer structure used by the descriptor control blocks.
@@ -124,9 +125,7 @@ typedef struct gwbuf
     void            *start; /*< Start of the valid data */
     void            *end;   /*< First byte after the valid data */
     SHARED_BUF      *sbuf;  /*< The shared buffer with the real data */
-    buffer_object_t *gwbuf_bufobj; /*< List of objects referred to by GWBUF */
-    uint32_t        gwbuf_info; /*< Info bits; mask of gwbuf_info_t values. */
-    uint32_t        gwbuf_type; /*< Type bits; mask of gwbuf_type_t values. */
+    uint32_t         gwbuf_type; /*< buffer's data type information */
     HINT            *hint;  /*< Hint data for this buffer */
     BUF_PROPERTY    *properties; /*< Buffer properties */
     struct server   *server; /*< The target server where the buffer is executed */

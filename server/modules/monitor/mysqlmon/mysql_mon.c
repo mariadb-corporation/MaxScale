@@ -543,6 +543,10 @@ static inline void monitor_mysql_db(MXS_MONITOR_SERVERS* database, MYSQL_SERVER_
 
         mysql_free_result(result);
     }
+    else
+    {
+        mon_report_query_error(database);
+    }
 }
 
 /**
@@ -595,7 +599,10 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
 
                 mysql_free_result(result);
             }
-
+            else
+            {
+                mon_report_query_error(database);
+            }
 
             /* Set the Slave Role */
             if (ismaster)
@@ -770,6 +777,10 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
             serv_info->read_only = (row[1] && strcmp(row[1], "1") == 0);
         }
         mysql_free_result(result);
+    }
+    else
+    {
+        mon_report_query_error(database);
     }
 
     /* Check first for MariaDB 10.x.x and get status for multi-master replication */
