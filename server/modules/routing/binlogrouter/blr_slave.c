@@ -105,6 +105,7 @@ typedef struct
    const char *binlogdir;   /* Binlog files cache dir */
    bool extra_info;         /* Add extra ouput info */
    DCB *client;             /* Connected client DCB */
+   bool use_tree;           /* Binlog structure type */
 } BINARY_LOG_DATA_RESULT;
 
 extern void poll_fake_write_event(DCB *dcb);
@@ -8140,7 +8141,9 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
                                            "rep_domain, "
                                            "server_id "
                                        "FROM gtid_maps "
-                                           "GROUP BY binlog_file "
+                                           "GROUP BY rep_domain, "
+                                                    "server_id, "
+                                                    "binlog_file "
                                            "ORDER BY id ASC;";
     int seqno;
     char *errmsg = NULL;
@@ -8190,6 +8193,7 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
     result.last_file = NULL;
     result.binlogdir = router->binlogdir;
     result.extra_info = extra_info;
+    result.use_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE;
 
     /**
      * Second part of result set:
@@ -8368,11 +8372,11 @@ static int binary_logs_select_cb(void *data,
          * Let's get the real size by calling blr_slave_get_file_size()
          */
 
-        // Get filename full-path, use prefix only if requested by the caller
+        // Get filename full-path, use prefix only if binlog_structure is TREE
         blr_get_file_fullpath(values[0],
                               data_set->binlogdir,
                               file_path,
-                              data_set->extra_info ?
+                              data_set->use_tree ?
                               t_prefix :
                               NULL);
         //Get the file size
