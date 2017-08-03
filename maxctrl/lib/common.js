@@ -195,9 +195,9 @@ module.exports = function() {
                 }
             }, function(err) {
                 if (err.response && err.response.body) {
-                    return error('Server responded with an error to resource request `' + resource + '`:' + JSON.stringify(err.response.body, null, 4))
+                    return error('Server responded with status code ' + err.statusCode + ' to `' + err.response.request.method +' ' + resource + '`:' + JSON.stringify(err.response.body, null, 4))
                 } else if (err.statusCode) {
-                    return error('Server responded with: ' + err.statusCode + 'to resource request `' + resource + '`')
+                    return error('Server responded with status code ' + err.statusCode + ' to `' + err.response.request.method +' ' + resource + '`')
                 } else if (err.error) {
                     return error(JSON.stringify(err.error, null, 4))
                 } else {

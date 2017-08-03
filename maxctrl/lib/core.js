@@ -19,6 +19,8 @@ const maxctrl_version = '1.0.0';
 program
     .version(maxctrl_version)
     .strict()
+    .exitProcess(false)
+    .showHelpOnFail(false)
     .group(['u', 'p', 'h', 's', 't', 'q', 'tsv'], 'Global Options:')
     .option('u', {
         alias:'user',
@@ -96,6 +98,10 @@ module.exports.execute = function(argv, opts) {
 
     return new Promise(function(resolve, reject) {
         program
-            .parse(argv, {resolve: resolve, reject: reject})
+            .parse(argv, {resolve: resolve, reject: reject}, function(err, argv, output) {
+                if (err) {
+                    reject(err)
+                }
+            })
     })
 }

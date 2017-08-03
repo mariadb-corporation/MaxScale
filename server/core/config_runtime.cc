@@ -847,15 +847,15 @@ bool runtime_create_monitor(const char *name, const char *module)
     if (monitor_find(name) == NULL)
     {
 
-        MXS_MONITOR *monitor = monitor_find_destroyed(name);
+        MXS_MONITOR *monitor = monitor_find_destroyed(name, module);
 
         if (monitor)
         {
             monitor->active = true;
         }
-        else
+        else if ((monitor = monitor_alloc(name, module)) == NULL)
         {
-            monitor = monitor_alloc(name, module);
+            runtime_error("Could not create monitor '%s' with module '%s'", name, module);
         }
 
         if (monitor)
@@ -866,6 +866,10 @@ bool runtime_create_monitor(const char *name, const char *module)
             {
                 MXS_NOTICE("Created monitor '%s'", name);
                 rval = true;
+            }
+            else
+            {
+                runtime_error("Failed to serialize monitor '%s'", name);
             }
         }
     }

@@ -7,16 +7,15 @@ describe("Create/Destroy Commands", function() {
     before(startMaxScale)
 
     it('create monitor', function() {
-        return doCommand('create monitor my-monitor mysqlmon')
-            .then(function() {
-                return request.get(host + 'monitors/my-monitor', {json: true})
-                    .should.be.fulfilled
-            })
+        return verifyCommand('create monitor my-monitor mysqlmon', 'monitors/my-monitor')
+            .should.be.fulfilled
     })
 
     it('destroy monitor', function() {
         return doCommand('destroy monitor my-monitor')
             .should.be.fulfilled
+            .then(() => doCommand('show monitor my-monitor'))
+            .should.be.rejected
     })
 
     it('destroy the same monitor again', function() {
@@ -40,15 +39,9 @@ describe("Create/Destroy Commands", function() {
     })
 
     it('create monitor with options', function() {
-        return stopMaxScale()
-            .then(startMaxScale)
-            .then(function() {
-                return doCommand('unlink monitor MySQL-Monitor server4')
-            })
-            .then(function() {
-                return verifyCommand('create monitor my-monitor mysqlmon --servers server4 --monitor-user maxuser --monitor-password maxpwd',
-                                    'monitors/my-monitor')
-            })
+        return doCommand('unlink monitor MySQL-Monitor server4')
+            .then(() => verifyCommand('create monitor my-monitor mysqlmon --servers server4 --monitor-user maxuser --monitor-password maxpwd',
+                                    'monitors/my-monitor'))
             .then(function(res) {
                 res.data.relationships.servers.data.length.should.equal(1)
                 res.data.relationships.servers.data[0].id.should.equal("server4")

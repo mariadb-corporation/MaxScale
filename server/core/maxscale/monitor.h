@@ -50,7 +50,7 @@ void monitorStopAll();
 void monitorStartAll();
 
 MXS_MONITOR *monitor_find(const char *);
-MXS_MONITOR* monitor_find_destroyed(const char *name);
+MXS_MONITOR* monitor_find_destroyed(const char* name, const char* module);
 
 void monitorShow(DCB *, MXS_MONITOR *);
 void monitorShowAll(DCB *);

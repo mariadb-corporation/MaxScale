@@ -574,7 +574,7 @@ monitor_find(const char *name)
  * @param name The name of the monitor
  * @return  Pointer to the destroyed monitor or NULL if monitor is not found
  */
-MXS_MONITOR* monitor_find_destroyed(const char *name)
+MXS_MONITOR* monitor_find_destroyed(const char* name, const char* module)
 {
     MXS_MONITOR* rval = NULL;
 
@@ -582,7 +582,7 @@ MXS_MONITOR* monitor_find_destroyed(const char *name)
 
     for (MXS_MONITOR *ptr = allMonitors; ptr; ptr = ptr->next)
     {
-        if (!strcmp(ptr->name, name))
+        if (strcmp(ptr->name, name) == 0 && strcmp(ptr->module_name, module) == 0)
         {
             rval = ptr;
         }
