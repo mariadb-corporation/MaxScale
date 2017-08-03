@@ -968,7 +968,7 @@ static bool extract_relations(json_t* json, set<string>& relations,
     return rval;
 }
 
-static inline const char* string_or_null(json_t* json, const char* path)
+static inline const char* get_string_or_null(json_t* json, const char* path)
 {
     const char* rval = NULL;
     json_t* value = mxs_json_pointer(json, path);
@@ -980,11 +980,68 @@ static inline const char* string_or_null(json_t* json, const char* path)
 
     return rval;
 }
+static inline bool is_string_or_null(json_t* json, const char* path)
+{
+    bool rval = true;
+    json_t* value = mxs_json_pointer(json, path);
+
+    if (value && !json_is_string(value))
+    {
+        runtime_error("Parameter '%s' is not a string", path);
+        rval = false;
+    }
+
+    return rval;
+}
+
+static inline bool is_bool_or_null(json_t* json, const char* path)
+{
+    bool rval = true;
+    json_t* value = mxs_json_pointer(json, path);
+
+    if (value && !json_is_boolean(value))
+    {
+        runtime_error("Parameter '%s' is not a boolean", path);
+        rval = false;
+    }
+
+    return rval;
+}
+
+static inline bool is_count_or_null(json_t* json, const char* path)
+{
+    bool rval = true;
+    json_t* value = mxs_json_pointer(json, path);
+
+    if (value)
+    {
+        if (!json_is_integer(value))
+        {
+            runtime_error("Parameter '%s' is not an integer", path);
+            rval = false;
+        }
+        else if (json_integer_value(value) <= 0)
+        {
+            runtime_error("Parameter '%s' is not a positive integer", path);
+            rval = false;
+        }
+    }
+
+    return rval;
+}
 
 /** Check that the body at least defies a data member */
 static bool is_valid_resource_body(json_t* json)
 {
-    return mxs_json_pointer(json, MXS_JSON_PTR_DATA);
+    bool rval = true;
+
+    if (mxs_json_pointer(json, MXS_JSON_PTR_DATA) == NULL)
+    {
+        runtime_error("No '%s' field defined", MXS_JSON_PTR_DATA);
+        rval = false;
+    }
+
+    return rval;
 }
 
 static bool server_contains_required_fields(json_t* json)
@@ -1093,9 +1150,9 @@ SERVER* runtime_create_server_from_json(json_t* json)
         string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
 
         /** Optional parameters */
-        const char* protocol = string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
-        const char* authenticator = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
-        const char* authenticator_options = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
+        const char* protocol = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
+        const char* authenticator = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
+        const char* authenticator_options = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
 
         set<string> relations;
 
@@ -1115,10 +1172,6 @@ SERVER* runtime_create_server_from_json(json_t* json)
         {
             runtime_error("Invalid relationships in request JSON");
         }
-    }
-    else
-    {
-        runtime_error("Missing or bad parameters in request JSON");
     }
 
     return rval;
@@ -1196,10 +1249,6 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
             }
         }
     }
-    else
-    {
-        runtime_error("Missing or bad parameters in request JSON");
-    }
 
     return rval;
 }
@@ -1227,14 +1276,31 @@ static bool validate_monitor_json(json_t* json)
     bool rval = false;
     json_t* value;
 
-    if (is_valid_resource_body(json) &&
-        (value = mxs_json_pointer(json, MXS_JSON_PTR_ID)) && json_is_string(value) &&
-        (value = mxs_json_pointer(json, MXS_JSON_PTR_MODULE)) && json_is_string(value))
+    if (is_valid_resource_body(json))
     {
-        set<string> relations;
-        if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
+        if (!(value = mxs_json_pointer(json, MXS_JSON_PTR_ID)))
         {
-            rval = true;
+            runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
+        }
+        else if (!json_is_string(value))
+        {
+            runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
+        }
+        else if (!(value = mxs_json_pointer(json, MXS_JSON_PTR_MODULE)))
+        {
+            runtime_error("Invalid value for '%s'", MXS_JSON_PTR_MODULE);
+        }
+        else if (!json_is_string(value))
+        {
+            runtime_error("Value '%s' is not a string", MXS_JSON_PTR_MODULE);
+        }
+        else
+        {
+            set<string> relations;
+            if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
+            {
+                rval = true;
+            }
         }
     }
 
@@ -1299,10 +1365,6 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
             }
         }
     }
-    else
-    {
-        runtime_error("Missing or bad parameters in request JSON");
-    }
 
     return rval;
 }
@@ -1338,6 +1400,10 @@ bool object_to_server_relations(const char* target, json_t* old_json, json_t* ne
         {
             rval = true;
         }
+    }
+    else
+    {
+        runtime_error("Invalid object relations for '%s'", target);
     }
 
     return rval;
@@ -1390,10 +1456,6 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
             monitorStop(monitor);
             monitorStart(monitor, monitor->parameters);
         }
-    }
-    else
-    {
-        runtime_error("Missing or bad parameters in request JSON");
     }
 
     return rval;
@@ -1468,46 +1530,6 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
             }
         }
     }
-    else
-    {
-        runtime_error("Missing or bad parameters in request JSON");
-    }
-
-    return rval;
-}
-
-static inline bool is_null_or_bool(json_t* params, const char* name)
-{
-    bool rval = true;
-    json_t* value = mxs_json_pointer(params, name);
-
-    if (value && !json_is_boolean(value))
-    {
-        runtime_error("Parameter '%s' is not a boolean", name);
-        rval = false;
-    }
-
-    return rval;
-}
-
-static inline bool is_null_or_count(json_t* params, const char* name)
-{
-    bool rval = true;
-    json_t* value = mxs_json_pointer(params, name);
-
-    if (value)
-    {
-        if (!json_is_integer(value))
-        {
-            runtime_error("Parameter '%s' is not an integer", name);
-            rval = false;
-        }
-        else if (json_integer_value(value) <= 0)
-        {
-            runtime_error("Parameter '%s' is not a positive integer", name);
-            rval = false;
-        }
-    }
 
     return rval;
 }
@@ -1519,16 +1541,16 @@ bool validate_logs_json(json_t* json)
 
     if (param && json_is_object(param))
     {
-        rval = is_null_or_bool(param, "highprecision") &&
-               is_null_or_bool(param, "maxlog") &&
-               is_null_or_bool(param, "syslog") &&
-               is_null_or_bool(param, "log_info") &&
-               is_null_or_bool(param, "log_warning") &&
-               is_null_or_bool(param, "log_notice") &&
-               is_null_or_bool(param, "log_debug") &&
-               is_null_or_count(param, "throttling/count") &&
-               is_null_or_count(param, "throttling/suppress_ms") &&
-               is_null_or_count(param, "throttling/window_ms");
+        rval = is_bool_or_null(param, "highprecision") &&
+               is_bool_or_null(param, "maxlog") &&
+               is_bool_or_null(param, "syslog") &&
+               is_bool_or_null(param, "log_info") &&
+               is_bool_or_null(param, "log_warning") &&
+               is_bool_or_null(param, "log_notice") &&
+               is_bool_or_null(param, "log_debug") &&
+               is_count_or_null(param, "throttling/count") &&
+               is_count_or_null(param, "throttling/suppress_ms") &&
+               is_count_or_null(param, "throttling/window_ms");
     }
 
     return rval;
@@ -1611,23 +1633,33 @@ static bool validate_listener_json(json_t* json)
     bool rval = false;
     json_t* param;
 
-    if ((param = mxs_json_pointer(json, MXS_JSON_PTR_ID)) && json_is_string(param) &&
-        (param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)) && json_is_object(param))
+    if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_ID)))
     {
-        json_t* value;
-
-        if ((value = mxs_json_pointer(param, CN_PORT)) && json_is_integer(value) &&
-            (!(value = mxs_json_pointer(param, CN_ADDRESS)) || json_is_string(value)) &&
-            (!(value = mxs_json_pointer(param, CN_AUTHENTICATOR)) || json_is_string(value)) &&
-            (!(value = mxs_json_pointer(param, CN_AUTHENTICATOR_OPTIONS)) || json_is_string(value)) &&
-            (!(value = mxs_json_pointer(param, CN_SSL_KEY)) || json_is_string(value)) &&
-            (!(value = mxs_json_pointer(param, CN_SSL_CERT)) || json_is_string(value)) &&
-            (!(value = mxs_json_pointer(param, CN_SSL_CA_CERT)) || json_is_string(value)) &&
-            (!(value = mxs_json_pointer(param, CN_SSL_VERSION)) || json_is_string(value)) &&
-            (!(value = mxs_json_pointer(param, CN_SSL_CERT_VERIFY_DEPTH)) || json_is_integer(value)))
-        {
-            rval = true;
-        }
+        runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
+    }
+    else if (!json_is_string(param))
+    {
+        runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
+    }
+    else if (!(param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)))
+    {
+        runtime_error("Value not found: '%s'", MXS_JSON_PTR_PARAMETERS);
+    }
+    else if (!json_is_object(param))
+    {
+        runtime_error("Value '%s' is not an object", MXS_JSON_PTR_PARAMETERS);
+    }
+    else if (is_count_or_null(param, CN_PORT) &&
+             is_string_or_null(param, CN_ADDRESS) &&
+             is_string_or_null(param, CN_AUTHENTICATOR) &&
+             is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS) &&
+             is_string_or_null(param, CN_SSL_KEY) &&
+             is_string_or_null(param, CN_SSL_CERT) &&
+             is_string_or_null(param, CN_SSL_CA_CERT) &&
+             is_string_or_null(param, CN_SSL_VERSION) &&
+             is_count_or_null(param, CN_SSL_CERT_VERIFY_DEPTH))
+    {
+        rval = true;
     }
 
     return rval;
@@ -1641,25 +1673,21 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
     {
         string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
 
-        const char* id = string_or_null(json, MXS_JSON_PTR_ID);
-        const char* address = string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
-        const char* protocol = string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
-        const char* authenticator = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
-        const char* authenticator_options = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
-        const char* ssl_key = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_KEY);
-        const char* ssl_cert = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT);
-        const char* ssl_ca_cert = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
-        const char* ssl_version = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
-        const char* ssl_cert_verify_depth = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
+        const char* id = get_string_or_null(json, MXS_JSON_PTR_ID);
+        const char* address = get_string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
+        const char* protocol = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
+        const char* authenticator = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
+        const char* authenticator_options = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
+        const char* ssl_key = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_KEY);
+        const char* ssl_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT);
+        const char* ssl_ca_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
+        const char* ssl_version = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
+        const char* ssl_cert_verify_depth = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
 
         rval = runtime_create_listener(service, id, address, port.c_str(), protocol,
                                        authenticator, authenticator_options,
                                        ssl_key, ssl_cert, ssl_ca_cert, ssl_version,
                                        ssl_cert_verify_depth);
-    }
-    else
-    {
-        runtime_error("Missing or bad parameters in request JSON");
     }
 
     return rval;
@@ -1790,10 +1818,10 @@ bool validate_maxscale_json(json_t* json)
 
     if (param)
     {
-        rval = is_null_or_count(param, CN_AUTH_CONNECT_TIMEOUT) &&
-               is_null_or_count(param, CN_AUTH_READ_TIMEOUT) &&
-               is_null_or_count(param, CN_AUTH_WRITE_TIMEOUT) &&
-               is_null_or_bool(param, CN_ADMIN_AUTH);
+        rval = is_count_or_null(param, CN_AUTH_CONNECT_TIMEOUT) &&
+               is_count_or_null(param, CN_AUTH_READ_TIMEOUT) &&
+               is_count_or_null(param, CN_AUTH_WRITE_TIMEOUT) &&
+               is_bool_or_null(param, CN_ADMIN_AUTH);
     }
 
     return rval;
@@ -1857,7 +1885,7 @@ bool runtime_alter_maxscale_from_json(json_t* new_json)
             else if (ignored_core_parameters(key))
             {
                 /** We can't change these at runtime */
-                MXS_DEBUG("Ignoring runtime change to '%s'", key);
+                MXS_INFO("Ignoring runtime change to '%s': Cannot be altered at runtime", key);
             }
             else if (!runtime_alter_maxscale(key, mxs::json_to_string(value).c_str()))
             {
