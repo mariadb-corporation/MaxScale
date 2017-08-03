@@ -3112,13 +3112,6 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             MXS_ERROR("Failed to create monitor '%s'.", obj->object);
             error_count++;
         }
-
-        if (obj->was_persisted)
-        {
-            /** Not the cleanest way of figuring out whether the configuration
-             * was stored but it should be OK for now */
-            ((MXS_MONITOR*)obj->element)->created_online = true;
-        }
     }
     else
     {

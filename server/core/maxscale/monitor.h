@@ -40,15 +40,17 @@ typedef enum
     MONITOR_CONNECT_ATTEMPTS = 3
 } monitor_timeouts_t;
 
-MXS_MONITOR *monitor_alloc(char *, char *);
+MXS_MONITOR *monitor_alloc(const char *, const char *);
 void monitor_free(MXS_MONITOR *);
 
 void monitorStart(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 void monitorStop(MXS_MONITOR *);
+void monitorDestroy(MXS_MONITOR* monitor);
 void monitorStopAll();
 void monitorStartAll();
 
 MXS_MONITOR *monitor_find(const char *);
+MXS_MONITOR* monitor_find_destroyed(const char *name);
 
 void monitorShow(DCB *, MXS_MONITOR *);
 void monitorShowAll(DCB *);

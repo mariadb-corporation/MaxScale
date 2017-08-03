@@ -198,10 +198,10 @@ struct mxs_monitor
     char *module_name;            /**< Name of the monitor module */
     void *handle;                 /**< Handle returned from startMonitor */
     size_t interval;              /**< The monitor interval */
-    bool created_online;          /**< Whether this monitor was created at runtime */
     volatile bool server_pending_changes;
     /**< Are there any pending changes to a server?
        * If yes, the next monitor loop starts early.  */
+    bool active; /**< True if monitor is active */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 

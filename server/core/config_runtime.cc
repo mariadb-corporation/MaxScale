@@ -503,8 +503,6 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
                 p.value = const_cast<char*>(value);
                 monitorAddParameters(monitor, &p);
             }
-
-            add_monitor_defaults(monitor);
         }
 
         monitorStart(monitor, monitor->parameters);
@@ -512,11 +510,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
 
     if (valid)
     {
-        if (monitor->created_online)
-        {
-            monitor_serialize(monitor);
-        }
-
+        monitor_serialize(monitor);
         MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
     }
     else
@@ -852,12 +846,20 @@ bool runtime_create_monitor(const char *name, const char *module)
 
     if (monitor_find(name) == NULL)
     {
-        MXS_MONITOR *monitor = monitor_alloc((char*)name, (char*)module);
+
+        MXS_MONITOR *monitor = monitor_find_destroyed(name);
 
         if (monitor)
         {
-            /** Mark that this monitor was created after MaxScale was started */
-            monitor->created_online = true;
+            monitor->active = true;
+        }
+        else
+        {
+            monitor = monitor_alloc(name, module);
+        }
+
+        if (monitor)
+        {
             add_monitor_defaults(monitor);
 
             if (monitor_serialize(monitor))
@@ -912,8 +914,8 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
         {
             monitorRemoveServer(monitor, monitor->databases->server);
         }
-        MXS_NOTICE("Destroyed monitor '%s'. The monitor will be removed "
-                   "after the next restart of MaxScale.", monitor->name);
+        monitorDestroy(monitor);
+        MXS_NOTICE("Destroyed monitor '%s'", monitor->name);
     }
 
     spinlock_release(&crt_lock);

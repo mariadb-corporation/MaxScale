@@ -1445,13 +1445,6 @@ static void alterMonitor(DCB *dcb, MXS_MONITOR *monitor, char *v1, char *v2, cha
             {
                 dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
-            else if (!monitor->created_online)
-            {
-                dcb_printf(dcb, "Warning: Altered monitor '%s' which is in the "
-                           "main\nconfiguration file. These changes will not be "
-                           "persisted and need\nto be manually added or set again"
-                           "after a restart.\n", monitor->name);
-            }
         }
         else
         {

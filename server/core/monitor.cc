@@ -72,17 +72,15 @@ static unsigned int all_server_bits = SERVER_RUNNING |  SERVER_MAINT |
  * @param module        The module to load
  * @return      The newly created monitor
  */
-MXS_MONITOR *
-monitor_alloc(char *name, char *module)
+MXS_MONITOR* monitor_alloc(const char *name, const char *module)
 {
-    name = MXS_STRDUP(name);
+    char* my_name = MXS_STRDUP(name);
     char *my_module = MXS_STRDUP(module);
-
     MXS_MONITOR *mon = (MXS_MONITOR *)MXS_MALLOC(sizeof(MXS_MONITOR));
 
-    if (!name || !mon || !my_module)
+    if (!my_name || !mon || !my_module)
     {
-        MXS_FREE(name);
+        MXS_FREE(my_name);
         MXS_FREE(mon);
         MXS_FREE(my_module);
         return NULL;
@@ -90,13 +88,14 @@ monitor_alloc(char *name, char *module)
 
     if ((mon->module = (MXS_MONITOR_OBJECT*)load_module(module, MODULE_MONITOR)) == NULL)
     {
-        MXS_ERROR("Unable to load monitor module '%s'.", name);
-        MXS_FREE(name);
+        MXS_ERROR("Unable to load monitor module '%s'.", my_name);
+        MXS_FREE(my_name);
         MXS_FREE(mon);
         return NULL;
     }
+    mon->active = true;
     mon->state = MONITOR_STATE_ALLOC;
-    mon->name = name;
+    mon->name = my_name;
     mon->module_name = my_module;
     mon->handle = NULL;
     mon->databases = NULL;
@@ -108,7 +107,6 @@ monitor_alloc(char *name, char *module)
     mon->connect_attempts = DEFAULT_CONNECTION_ATTEMPTS;
     mon->interval = MONITOR_DEFAULT_INTERVAL;
     mon->parameters = NULL;
-    mon->created_online = false;
     mon->server_pending_changes = false;
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
@@ -194,7 +192,10 @@ void monitorStartAll()
     ptr = allMonitors;
     while (ptr)
     {
-        monitorStart(ptr, ptr->parameters);
+        if (ptr->active)
+        {
+            monitorStart(ptr, ptr->parameters);
+        }
         ptr = ptr->next;
     }
     spinlock_release(&monLock);
@@ -233,6 +234,13 @@ monitorStop(MXS_MONITOR *monitor)
     }
 }
 
+void monitorDestroy(MXS_MONITOR* monitor)
+{
+    spinlock_acquire(&monitor->lock);
+    monitor->active = false;
+    spinlock_release(&monitor->lock);
+}
+
 /**
  * Shutdown all running monitors
  */
@@ -245,7 +253,10 @@ monitorStopAll()
     ptr = allMonitors;
     while (ptr)
     {
-        monitorStop(ptr);
+        if (ptr->active)
+        {
+            monitorStop(ptr);
+        }
         ptr = ptr->next;
     }
     spinlock_release(&monLock);
@@ -428,7 +439,10 @@ monitorShowAll(DCB *dcb)
     ptr = allMonitors;
     while (ptr)
     {
-        monitorShow(dcb, ptr);
+        if (ptr->active)
+        {
+            monitorShow(dcb, ptr);
+        }
         ptr = ptr->next;
     }
     spinlock_release(&monLock);
@@ -518,9 +532,12 @@ monitorList(DCB *dcb)
     dcb_printf(dcb, "---------------------+---------------------\n");
     while (ptr)
     {
-        dcb_printf(dcb, "%-20s | %s\n", ptr->name,
-                   ptr->state & MONITOR_STATE_RUNNING
-                   ? "Running" : "Stopped");
+        if (ptr->active)
+        {
+            dcb_printf(dcb, "%-20s | %s\n", ptr->name,
+                       ptr->state & MONITOR_STATE_RUNNING
+                       ? "Running" : "Stopped");
+        }
         ptr = ptr->next;
     }
     dcb_printf(dcb, "---------------------+---------------------\n");
@@ -542,7 +559,7 @@ monitor_find(const char *name)
     ptr = allMonitors;
     while (ptr)
     {
-        if (!strcmp(ptr->name, name))
+        if (!strcmp(ptr->name, name) && ptr->active)
         {
             break;
         }
@@ -550,6 +567,30 @@ monitor_find(const char *name)
     }
     spinlock_release(&monLock);
     return ptr;
+}
+/**
+ * Find a destroyed monitor by name
+ *
+ * @param name The name of the monitor
+ * @return  Pointer to the destroyed monitor or NULL if monitor is not found
+ */
+MXS_MONITOR* monitor_find_destroyed(const char *name)
+{
+    MXS_MONITOR* rval = NULL;
+
+    spinlock_acquire(&monLock);
+
+    for (MXS_MONITOR *ptr = allMonitors; ptr; ptr = ptr->next)
+    {
+        if (!strcmp(ptr->name, name))
+        {
+            rval = ptr;
+        }
+    }
+
+    spinlock_release(&monLock);
+
+    return rval;
 }
 
 /**
@@ -763,12 +804,20 @@ void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
 {
     while (params)
     {
-        MXS_CONFIG_PARAMETER* clone = config_clone_param(params);
-        if (clone)
+        MXS_CONFIG_PARAMETER* old = config_get_param(monitor->parameters, params->name);
+
+        if (old)
         {
+            MXS_FREE(old->value);
+            old->value = MXS_STRDUP_A(params->value);
+        }
+        else
+        {
+            MXS_CONFIG_PARAMETER* clone = config_clone_param(params);
             clone->next = monitor->parameters;
             monitor->parameters = clone;
         }
+
         params = params->next;
     }
 }
@@ -1265,11 +1314,14 @@ MXS_MONITOR* monitor_server_in_use(const SERVER *server)
     {
         spinlock_acquire(&mon->lock);
 
-        for (MXS_MONITOR_SERVERS *db = mon->databases; db && !rval; db = db->next)
+        if (mon->active)
         {
-            if (db->server == server)
+            for (MXS_MONITOR_SERVERS *db = mon->databases; db && !rval; db = db->next)
             {
-                rval = mon;
+                if (db->server == server)
+                {
+                    rval = mon;
+                }
             }
         }
 
@@ -1292,12 +1344,6 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
         return false;
     }
 
-    /**
-     * Only additional parameters are added to the configuration. This prevents
-     * duplication or addition of parameters that don't support it.
-     *
-     * TODO: Check for return values on all of the dprintf calls
-     */
     dprintf(file, "[%s]\n", monitor->name);
     dprintf(file, "%s=monitor\n", CN_TYPE);
     dprintf(file, "%s=%s\n", CN_MODULE, monitor->module_name);
@@ -1321,6 +1367,31 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
             dprintf(file, "%s", db->server->unique_name);
         }
         dprintf(file, "\n");
+    }
+
+    const char* params[] =
+    {
+        CN_TYPE,
+        CN_MODULE,
+        CN_USER,
+        CN_PASSWORD,
+        "passwd", // TODO: Remove this
+        CN_MONITOR_INTERVAL,
+        CN_BACKEND_CONNECT_TIMEOUT,
+        CN_BACKEND_WRITE_TIMEOUT,
+        CN_BACKEND_READ_TIMEOUT,
+        CN_BACKEND_CONNECT_ATTEMPTS,
+        CN_SERVERS
+    };
+
+    std::set<std::string> param_set(params, params + sizeof(params) / sizeof(params[0]));
+
+    for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
+    {
+        if (param_set.find(p->name) == param_set.end())
+        {
+            dprintf(file, "%s=%s\n", p->name, p->value);
+        }
     }
 
     close(file);
@@ -1572,11 +1643,14 @@ json_t* monitor_list_to_json(const char* host)
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
     {
-        json_t *json = monitor_json_data(mon, host);
-
-        if (json)
+        if (mon->active)
         {
-            json_array_append_new(rval, json);
+            json_t *json = monitor_json_data(mon, host);
+
+            if (json)
+            {
+                json_array_append_new(rval, json);
+            }
         }
     }
 
@@ -1595,12 +1669,15 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
     {
         spinlock_acquire(&mon->lock);
 
-        for (MXS_MONITOR_SERVERS* db = mon->databases; db; db = db->next)
+        if (mon->active)
         {
-            if (db->server == server)
+            for (MXS_MONITOR_SERVERS* db = mon->databases; db; db = db->next)
             {
-                mxs_json_add_relation(rel, mon->name, CN_MONITORS);
-                break;
+                if (db->server == server)
+                {
+                    mxs_json_add_relation(rel, mon->name, CN_MONITORS);
+                    break;
+                }
             }
         }
 
