@@ -11,6 +11,11 @@
  * Public License.
  */
 
+// NOTE: qc_sqlite used to be C. So as to be able to use STL collections,
+// NOTE: it has been ported to C++. However, the porting is only partial,
+// NOTE: which is the reason why there is a mix of C-style and C++-style
+// NOTE: approaches.
+
 #define MXS_MODULE_NAME "qc_sqlite"
 #include <sqliteInt.h>
 
@@ -153,11 +158,6 @@ typedef enum qc_token_position
 static void buffer_object_free(void* data);
 static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
 static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect);
-static bool is_sequence_related_field(QcSqliteInfo* info,
-                                      const char* database,
-                                      const char* table,
-                                      const char* column);
-static bool is_sequence_related_function(QcSqliteInfo* info, const char* func_name);
 static void log_invalid_data(GWBUF* query, const char* message);
 static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
 static bool parse_query(GWBUF* query, uint32_t collect);
@@ -454,15 +454,67 @@ public:
     }
 
     // PUBLIC for now at least.
-    void update_field_info(const char* database,
-                           const char* table,
-                           const char* column,
+
+    /**
+     * Returns whether a field is sequence related.
+     *
+     * @param zDatabase  The database/schema or NULL.
+     * @param zTable     The table or NULL.
+     * @param zColumn    The column.
+     *
+     * @return True, if the field is sequence related, false otherwise.
+     */
+    bool is_sequence_related_field(const char* zDatabase,
+                                   const char* zTable,
+                                   const char* zColumn) const
+    {
+        return is_sequence_related_function(zColumn);
+    }
+
+    /**
+     * Returns whether a function is sequence related.
+     *
+     * @param zFunc_name  A function name.
+     *
+     * @return True, if the function is sequence related, false otherwise.
+     */
+    bool is_sequence_related_function(const char* zFunc_name) const
+    {
+        bool rv = false;
+
+        if (m_sql_mode == QC_SQL_MODE_ORACLE)
+        {
+            // In Oracle mode we ignore the pseudocolumns "currval" and "nextval".
+            // We also exclude "lastval", the 10.3 equivalent of "currval".
+            if ((strcasecmp(zFunc_name, "currval") == 0) ||
+                (strcasecmp(zFunc_name, "nextval") == 0) ||
+                (strcasecmp(zFunc_name, "lastval") == 0))
+            {
+                rv = true;
+            }
+        }
+
+        if (!rv && (this_unit.parse_as == QC_PARSE_AS_103))
+        {
+            if ((strcasecmp(zFunc_name, "lastval") == 0) ||
+                (strcasecmp(zFunc_name, "nextval") == 0))
+            {
+                rv = true;
+            }
+        }
+
+        return rv;
+    }
+
+    void update_field_info(const char* zDatabase,
+                           const char* zTable,
+                           const char* zColumn,
                            uint32_t usage,
                            const ExprList* pExclude)
     {
-        ss_dassert(column);
+        ss_dassert(zColumn);
 
-        if (is_sequence_related_field(this, database, table, column))
+        if (is_sequence_related_field(zDatabase, zTable, zColumn))
         {
             m_type_mask |= QUERY_TYPE_WRITE;
             return;
@@ -475,29 +527,29 @@ public:
             return;
         }
 
-        QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column, usage };
+        QC_FIELD_INFO item = { (char*)zDatabase, (char*)zTable, (char*)zColumn, usage };
 
         size_t i;
         for (i = 0; i < m_field_infos_len; ++i)
         {
-            QC_FIELD_INFO* field_info = m_pField_infos + i;
+            QC_FIELD_INFO* pField_info = m_pField_infos + i;
 
-            if (strcasecmp(item.column, field_info->column) == 0)
+            if (strcasecmp(item.column, pField_info->column) == 0)
             {
-                if (!item.table && !field_info->table)
+                if (!item.table && !pField_info->table)
                 {
-                    ss_dassert(!item.database && !field_info->database);
+                    ss_dassert(!item.database && !pField_info->database);
                     break;
                 }
-                else if (item.table && field_info->table && (strcmp(item.table, field_info->table) == 0))
+                else if (item.table && pField_info->table && (strcmp(item.table, pField_info->table) == 0))
                 {
-                    if (!item.database && !field_info->database)
+                    if (!item.database && !pField_info->database)
                     {
                         break;
                     }
                     else if (item.database &&
-                             field_info->database &&
-                             (strcmp(item.database, field_info->database) == 0))
+                             pField_info->database &&
+                             (strcmp(item.database, pField_info->database) == 0))
                     {
                         break;
                     }
@@ -505,7 +557,7 @@ public:
             }
         }
 
-        QC_FIELD_INFO* field_infos = NULL;
+        QC_FIELD_INFO* pField_infos = NULL;
 
         if (i == m_field_infos_len) // If true, the field was not present already.
         {
@@ -513,21 +565,21 @@ public:
             // have a list of expressions that should be excluded, we check if the column
             // value is present in that list. This is in order to exclude the second "d" in
             // a statement like "select a as d from x where d = 2".
-            if (!(column && !table && !database && pExclude && should_exclude(column, pExclude)))
+            if (!(zColumn && !zTable && !zDatabase && pExclude && should_exclude(zColumn, pExclude)))
             {
                 if (m_field_infos_len < m_field_infos_capacity)
                 {
-                    field_infos = m_pField_infos;
+                    pField_infos = m_pField_infos;
                 }
                 else
                 {
                     size_t capacity = m_field_infos_capacity ? 2 * m_field_infos_capacity : 8;
-                    field_infos = (QC_FIELD_INFO*)MXS_REALLOC(m_pField_infos,
-                                                              capacity * sizeof(QC_FIELD_INFO));
+                    pField_infos = (QC_FIELD_INFO*)MXS_REALLOC(m_pField_infos,
+                                                               capacity * sizeof(QC_FIELD_INFO));
 
-                    if (field_infos)
+                    if (pField_infos)
                     {
-                        m_pField_infos = field_infos;
+                        m_pField_infos = pField_infos;
                         m_field_infos_capacity = capacity;
                     }
                 }
@@ -539,7 +591,7 @@ public:
         }
 
         // If field_infos is NULL, then the field was found and has already been noted.
-        if (field_infos)
+        if (pField_infos)
         {
             item.database = item.database ? MXS_STRDUP(item.database) : NULL;
             item.table = item.table ? MXS_STRDUP(item.table) : NULL;
@@ -550,7 +602,7 @@ public:
 
             if (item.column)
             {
-                field_infos[m_field_infos_len++] = item;
+                pField_infos[m_field_infos_len++] = item;
             }
         }
     }
@@ -1177,60 +1229,6 @@ static bool query_is_parsed(GWBUF* query, uint32_t collect)
 }
 
 /**
- * Returns whether a field is sequence related.
- *
- * @param info      Current info object
- * @param database  The database/schema or NULL.
- * @param table     The table or NULL.
- * @param column    The column.
- *
- * @return True, if the field is sequence related, false otherwise.
- */
-static bool is_sequence_related_field(QcSqliteInfo* info,
-                                      const char* database,
-                                      const char* table,
-                                      const char* column)
-{
-    return is_sequence_related_function(info, column);
-}
-
-/**
- * Returns whether a function is sequence related.
- *
- * @param info       Current info object
- * @param func_name  A function name.
- *
- * @return True, if the function is sequence related, false otherwise.
- */
-static bool is_sequence_related_function(QcSqliteInfo* info, const char* func_name)
-{
-    bool rv = false;
-
-    if (info->m_sql_mode == QC_SQL_MODE_ORACLE)
-    {
-        // In Oracle mode we ignore the pseudocolumns "currval" and "nextval".
-        // We also exclude "lastval", the 10.3 equivalent of "currval".
-        if ((strcasecmp(func_name, "currval") == 0) ||
-            (strcasecmp(func_name, "nextval") == 0) ||
-            (strcasecmp(func_name, "lastval") == 0))
-        {
-            rv = true;
-        }
-    }
-
-    if (!rv && (this_unit.parse_as == QC_PARSE_AS_103))
-    {
-        if ((strcasecmp(func_name, "lastval") == 0) ||
-            (strcasecmp(func_name, "nextval") == 0))
-        {
-            rv = true;
-        }
-    }
-
-    return rv;
-}
-
-/**
  * Logs information about invalid data.
  *
  * @param query   The query that could not be parsed.
@@ -1717,7 +1715,7 @@ static void update_field_infos(QcSqliteInfo* info,
                 {
                     info->m_type_mask |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
                 }
-                else if (is_sequence_related_function(info, zToken))
+                else if (info->is_sequence_related_function(zToken))
                 {
                     info->m_type_mask |= QUERY_TYPE_WRITE;
                     ignore_exprlist = true;
