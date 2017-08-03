@@ -164,12 +164,6 @@ static bool parse_query(GWBUF* query, uint32_t collect);
 static void parse_query_string(const char* query, int len);
 static bool query_is_parsed(GWBUF* query, uint32_t collect);
 static bool should_exclude(const char* zName, const ExprList* pExclude);
-static void update_field_info(QcSqliteInfo* info,
-                              const char* database,
-                              const char* table,
-                              const char* column,
-                              uint32_t usage,
-                              const ExprList* pExclude);
 static void update_field_infos_from_expr(QcSqliteInfo* info,
                                          const Expr* pExpr,
                                          uint32_t usage,
@@ -460,6 +454,107 @@ public:
     }
 
     // PUBLIC for now at least.
+    void update_field_info(const char* database,
+                           const char* table,
+                           const char* column,
+                           uint32_t usage,
+                           const ExprList* pExclude)
+    {
+        ss_dassert(column);
+
+        if (is_sequence_related_field(this, database, table, column))
+        {
+            m_type_mask |= QUERY_TYPE_WRITE;
+            return;
+        }
+
+        if (!(m_collect & QC_COLLECT_FIELDS) || (m_collected & QC_COLLECT_FIELDS))
+        {
+            // If field information should not be collected, or if field information
+            // has already been collected, we just return.
+            return;
+        }
+
+        QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column, usage };
+
+        size_t i;
+        for (i = 0; i < m_field_infos_len; ++i)
+        {
+            QC_FIELD_INFO* field_info = m_pField_infos + i;
+
+            if (strcasecmp(item.column, field_info->column) == 0)
+            {
+                if (!item.table && !field_info->table)
+                {
+                    ss_dassert(!item.database && !field_info->database);
+                    break;
+                }
+                else if (item.table && field_info->table && (strcmp(item.table, field_info->table) == 0))
+                {
+                    if (!item.database && !field_info->database)
+                    {
+                        break;
+                    }
+                    else if (item.database &&
+                             field_info->database &&
+                             (strcmp(item.database, field_info->database) == 0))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        QC_FIELD_INFO* field_infos = NULL;
+
+        if (i == m_field_infos_len) // If true, the field was not present already.
+        {
+            // If only a column is specified, but not a table or database and we
+            // have a list of expressions that should be excluded, we check if the column
+            // value is present in that list. This is in order to exclude the second "d" in
+            // a statement like "select a as d from x where d = 2".
+            if (!(column && !table && !database && pExclude && should_exclude(column, pExclude)))
+            {
+                if (m_field_infos_len < m_field_infos_capacity)
+                {
+                    field_infos = m_pField_infos;
+                }
+                else
+                {
+                    size_t capacity = m_field_infos_capacity ? 2 * m_field_infos_capacity : 8;
+                    field_infos = (QC_FIELD_INFO*)MXS_REALLOC(m_pField_infos,
+                                                              capacity * sizeof(QC_FIELD_INFO));
+
+                    if (field_infos)
+                    {
+                        m_pField_infos = field_infos;
+                        m_field_infos_capacity = capacity;
+                    }
+                }
+            }
+        }
+        else
+        {
+            m_pField_infos[i].usage |= usage;
+        }
+
+        // If field_infos is NULL, then the field was found and has already been noted.
+        if (field_infos)
+        {
+            item.database = item.database ? MXS_STRDUP(item.database) : NULL;
+            item.table = item.table ? MXS_STRDUP(item.table) : NULL;
+            ss_dassert(item.column);
+            item.column = MXS_STRDUP(item.column);
+
+            // We are happy if we at least could dup the column.
+
+            if (item.column)
+            {
+                field_infos[m_field_infos_len++] = item;
+            }
+        }
+    }
+
     void update_names(const char* zDatabase, const char* zTable, const char* zAlias)
     {
         ss_dassert(zTable);
@@ -1235,108 +1330,6 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
     return i != pExclude->nExpr;
 }
 
-static void update_field_info(QcSqliteInfo* info,
-                              const char* database,
-                              const char* table,
-                              const char* column,
-                              uint32_t usage,
-                              const ExprList* pExclude)
-{
-    ss_dassert(column);
-
-    if (is_sequence_related_field(info, database, table, column))
-    {
-        info->m_type_mask |= QUERY_TYPE_WRITE;
-        return;
-    }
-
-    if (!(info->m_collect & QC_COLLECT_FIELDS) || (info->m_collected & QC_COLLECT_FIELDS))
-    {
-        // If field information should not be collected, or if field information
-        // has already been collected, we just return.
-        return;
-    }
-
-    QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column, usage };
-
-    size_t i;
-    for (i = 0; i < info->m_field_infos_len; ++i)
-    {
-        QC_FIELD_INFO* field_info = info->m_pField_infos + i;
-
-        if (strcasecmp(item.column, field_info->column) == 0)
-        {
-            if (!item.table && !field_info->table)
-            {
-                ss_dassert(!item.database && !field_info->database);
-                break;
-            }
-            else if (item.table && field_info->table && (strcmp(item.table, field_info->table) == 0))
-            {
-                if (!item.database && !field_info->database)
-                {
-                    break;
-                }
-                else if (item.database &&
-                         field_info->database &&
-                         (strcmp(item.database, field_info->database) == 0))
-                {
-                    break;
-                }
-            }
-        }
-    }
-
-    QC_FIELD_INFO* field_infos = NULL;
-
-    if (i == info->m_field_infos_len) // If true, the field was not present already.
-    {
-        // If only a column is specified, but not a table or database and we
-        // have a list of expressions that should be excluded, we check if the column
-        // value is present in that list. This is in order to exclude the second "d" in
-        // a statement like "select a as d from x where d = 2".
-        if (!(column && !table && !database && pExclude && should_exclude(column, pExclude)))
-        {
-            if (info->m_field_infos_len < info->m_field_infos_capacity)
-            {
-                field_infos = info->m_pField_infos;
-            }
-            else
-            {
-                size_t capacity = info->m_field_infos_capacity ? 2 * info->m_field_infos_capacity : 8;
-                field_infos = (QC_FIELD_INFO*)MXS_REALLOC(info->m_pField_infos,
-                                                          capacity * sizeof(QC_FIELD_INFO));
-
-                if (field_infos)
-                {
-                    info->m_pField_infos = field_infos;
-                    info->m_field_infos_capacity = capacity;
-                }
-            }
-        }
-    }
-    else
-    {
-        info->m_pField_infos[i].usage |= usage;
-    }
-
-    // If field_infos is NULL, then the field was found and has already been noted.
-    if (field_infos)
-    {
-        item.database = item.database ? MXS_STRDUP(item.database) : NULL;
-        item.table = item.table ? MXS_STRDUP(item.table) : NULL;
-        ss_dassert(item.column);
-        item.column = MXS_STRDUP(item.column);
-
-        // We are happy if we at least could dup the column.
-
-        if (item.column)
-        {
-            field_infos[info->m_field_infos_len++] = item;
-        }
-    }
-}
-
 static void update_function_info(QcSqliteInfo* info,
                                  const char* name,
                                  uint32_t usage)
@@ -1476,7 +1469,7 @@ static void update_field_infos_from_expr(QcSqliteInfo* info,
 
         if (should_update)
         {
-            update_field_info(info, item.database, item.table, item.column, usage, pExclude);
+            info->update_field_info(item.database, item.table, item.column, usage, pExclude);
         }
     }
 }
@@ -1823,7 +1816,7 @@ static void update_field_infos_from_idlist(QcSqliteInfo* info,
     {
         IdList::IdList_item* pItem = &pIds->a[i];
 
-        update_field_info(info, NULL, NULL, pItem->zName, usage, pExclude);
+        info->update_field_info(NULL, NULL, pItem->zName, usage, pExclude);
     }
 }
 
