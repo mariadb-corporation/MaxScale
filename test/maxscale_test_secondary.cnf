@@ -1,12 +1,14 @@
 [maxscale]
 threads=4
+log_info=1
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
 logdir=@CMAKE_INSTALL_PREFIX@/log/maxscale/
 datadir=@CMAKE_INSTALL_PREFIX@/lib/maxscale
 cachedir=@CMAKE_INSTALL_PREFIX@/cache/maxscale
 language=@CMAKE_INSTALL_PREFIX@/lib/maxscale/
-piddir=@CMAKE_INSTALL_PREFIX@/run/maxscale/
+piddir=/tmp/
 admin_auth=false
+admin_port=8990
 
 [MySQL Monitor]
 type=monitor
@@ -76,31 +78,31 @@ router=cli
 type=listener
 service=Read Connection Router
 protocol=MySQLClient
-port=4008
+port=5008
 
 [RW Split Listener]
 type=listener
 service=RW Split Router
 protocol=MySQLClient
-port=4006
+port=5006
 
 [SchemaRouter Listener]
 type=listener
 service=SchemaRouter Router
 protocol=MySQLClient
-port=4010
+port=5010
 
 [RW Split Hint Listener]
 type=listener
 service=RW Split Hint Router
 protocol=MySQLClient
-port=4009
+port=5009
 
 [CLI Listener]
 type=listener
 service=CLI
 protocol=maxscaled
-socket=default
+socket=/tmp/maxadmin2.sock
 
 [server1]
 type=server

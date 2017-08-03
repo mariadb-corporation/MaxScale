@@ -1,7 +1,7 @@
 require('../test_utils.js')()
 var cluster = require('../lib/cluster.js')
 
-describe('Cluster Commands', function() {
+describe('Cluster Command Internals', function() {
     before(startMaxScale)
 
     it('detect added and removed objects', function() {
@@ -151,3 +151,79 @@ describe('Cluster Commands', function() {
 
     after(stopMaxScale)
 });
+
+
+describe('Cluster Commands', function() {
+    before(startDoubleMaxScale)
+
+    it('sync after server creation', function() {
+        return doCommand('create server server5 127.0.0.1 3003 --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'servers/server5'))
+            .should.be.resolved
+    })
+
+    it('sync after server alteration', function() {
+        return doCommand('alter server server2 port 3000 --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'servers/server2'))
+            .then(function(res) {
+                res.data.attributes.parameters.port.should.equal(3000)
+            })
+    })
+
+    it('sync after server deletion', function() {
+        return doCommand('destroy server server5 --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'servers/server5'))
+            .should.be.rejected
+    })
+
+    it('sync after monitor creation', function() {
+        return doCommand('create monitor my-monitor-2 mysqlmon --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'monitors/my-monitor2'))
+            .should.be.resolved
+    })
+
+    it('sync after monitor alteration', function() {
+        return doCommand('alter monitor MySQL-Monitor monitor_interval 12345 --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'monitors/MySQL-Monitor'))
+            .then(function(res) {
+                res.data.attributes.parameters.monitor_interval.should.equal(12345)
+            })
+    })
+
+    it('sync after monitor deletion', function() {
+        return doCommand('destroy monitor my-monitor-2 --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'monitors/my-monitor-2'))
+            .should.be.rejected
+    })
+
+    it('sync listener creation', function() {
+        return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'services/RW-Split-Router/listeners/my-listener-2'))
+            .should.be.resolved
+    })
+
+    it('sync after service alteration', function() {
+        return doCommand('alter service RW-Split-Router enable_root_user true --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'services/RW-Split-Router'))
+            .then(function(res) {
+                res.data.attributes.parameters.enable_root_user.should.be.true
+            })
+    })
+
+    it('sync after listener deletion', function() {
+        return doCommand('destroy listener RW-Split-Router my-listener-2 --hosts 127.0.0.1:8990')
+            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+                                      'services/RW-Split-Router/listeners/my-listener-2'))
+            .should.be.rejected
+    })
+
+    after(stopDoubleMaxScale)
+})

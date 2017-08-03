@@ -28,10 +28,36 @@ module.exports = function() {
         })
     };
 
+    // Start two MaxScales
+    this.startDoubleMaxScale = function() {
+        return new Promise(function(resolve, reject) {
+            child_process.execFile("./start_double_maxscale.sh", function(err, stdout, stderr) {
+                if (err) {
+                    reject()
+                } else {
+                    resolve()
+                }
+            })
+        })
+    };
+
     // Stop MaxScale, this should be called in the `after` handler of each test unit
     this.stopMaxScale = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./stop_maxscale.sh", function(err, stdout, stderr) {
+                if (err) {
+                    reject()
+                } else {
+                    resolve()
+                }
+            })
+        })
+    };
+
+    // Stop two MaxScales
+    this.stopDoubleMaxScale = function() {
+        return new Promise(function(resolve, reject) {
+            child_process.execFile("./stop_double_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
                     reject()
                 } else {
