@@ -17,6 +17,8 @@
 #include <signal.h>
 #include <string.h>
 #include <new>
+#include <string>
+#include <map>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
@@ -75,16 +77,36 @@ static QC_NAME_MAPPING function_name_mappings_default[] =
 
 static QC_NAME_MAPPING function_name_mappings_103[] =
 {
+    // NOTE: If something is added here, add it to function_name_mappings_oracle as well.
     { "now", "current_timestamp" },
     { NULL, NULL }
 };
 
-// NOTE: Duplicate the information from function_name_mappings_103 here.
 static QC_NAME_MAPPING function_name_mappings_oracle[] =
 {
     { "now", "current_timestamp" },
     { "nvl", "ifnull" },
     { NULL, NULL }
+};
+
+/**
+ * Stores alias information. The key in the mapping is the alias name,
+ * and an instance of this struct contains the actual table/database.
+ *
+ * zDatabase and zTable point to memory that belongs to QcSqliteInfo
+ * so they can be simply copied in all contexts.
+ */
+
+struct QcAliasValue
+{
+    QcAliasValue(const char* zD, const char* zT)
+        : zDatabase(zD)
+        , zTable(zT)
+    {
+    }
+
+    const char* zDatabase;
+    const char* zTable;
 };
 
 /**
@@ -438,58 +460,52 @@ public:
     }
 
     // PUBLIC for now at least.
-    void update_names(const char* zDatabase, const char* zTable)
+    void update_names(const char* zDatabase, const char* zTable, const char* zAlias)
     {
-        if ((m_collect & QC_COLLECT_TABLES) && !(m_collected & QC_COLLECT_TABLES))
+        ss_dassert(zTable);
+
+        bool should_collect_alias = zAlias && should_collect(QC_COLLECT_FIELDS);
+        bool should_collect_table = should_collect_alias || should_collect(QC_COLLECT_TABLES);
+        bool should_collect_database = zDatabase &&
+            (should_collect_alias || should_collect(QC_COLLECT_DATABASES));
+
+        const char* zCollected_database = NULL;
+        const char* zCollected_table = NULL;
+
+        size_t nDatabase = zDatabase ? strlen(zDatabase) : 0;
+        size_t nTable = zTable ? strlen(zTable) : 0;
+
+        char database[nDatabase + 1];
+        char table[nTable + 1];
+
+        if (should_collect_database)
+        {
+            strcpy(database, zDatabase);
+            exposed_sqlite3Dequote(database);
+        }
+
+        if (should_collect_table)
         {
             if (strcasecmp(zTable, "DUAL") != 0)
             {
-                size_t table_len = strlen(zTable);
-                char table[table_len + 1];
-
                 strcpy(table, zTable);
-                // TODO: Is this call really needed. Check also sqlite3Dequote.
                 exposed_sqlite3Dequote(table);
 
-                if (!table_name_collected(table))
-                {
-                    char* zCopy = MXS_STRDUP_A(table);
-
-                    enlarge_string_array(1, m_table_names_len, &m_pzTable_names, &m_table_names_capacity);
-                    m_pzTable_names[m_table_names_len++] = zCopy;
-                    m_pzTable_names[m_table_names_len] = NULL;
-                }
-
-                size_t database_len = zDatabase ? strlen(zDatabase) : 0;
-                char fullname[database_len + 1 + table_len + 1];
-
-                if (zDatabase)
-                {
-                    strcpy(fullname, zDatabase);
-                    // TODO: Is this call really needed. Check also sqlite3Dequote.
-                    exposed_sqlite3Dequote(fullname);
-                    strcat(fullname, ".");
-                }
-                else
-                {
-                    fullname[0] = 0;
-                }
-
-                strcat(fullname, table);
-
-                if (!table_fullname_collected(fullname))
-                {
-                    char* zCopy = MXS_STRDUP_A(fullname);
-
-                    enlarge_string_array(1, m_table_fullnames_len,
-                                         &m_pzTable_fullnames, &m_table_fullnames_capacity);
-                    m_pzTable_fullnames[m_table_fullnames_len++] = zCopy;
-                    m_pzTable_fullnames[m_table_fullnames_len] = NULL;
-                }
+                zCollected_table = update_table_names(database, nDatabase, table, nTable);
             }
         }
 
-        update_database_names(zDatabase);
+        if (should_collect_database)
+        {
+            zCollected_database = update_database_names(database);
+        }
+
+        if (zCollected_table && zAlias)
+        {
+            QcAliasValue value(zCollected_database, zCollected_table);
+
+            m_aliases.insert(Aliases::value_type(zAlias, value));
+        }
     }
 
 private:
@@ -530,6 +546,11 @@ private:
     }
 
 private:
+    bool should_collect(qc_collect_info_t collect) const
+    {
+        return ((m_collect & collect) && !(m_collected & collect));
+    }
+
     static void free_field_infos(QC_FIELD_INFO* pInfos, size_t nInfos)
     {
         if (pInfos)
@@ -601,7 +622,7 @@ private:
         return pz;
     }
 
-    bool table_name_collected(const char* zTable)
+    const char* table_name_collected(const char* zTable)
     {
         size_t i = 0;
 
@@ -610,10 +631,10 @@ private:
             ++i;
         }
 
-        return i != m_table_names_len;
+        return (i != m_table_names_len) ? m_pzTable_names[i] : NULL;
     }
 
-    bool table_fullname_collected(const char* zTable)
+    const char* table_fullname_collected(const char* zTable)
     {
         size_t i = 0;
 
@@ -622,10 +643,10 @@ private:
             ++i;
         }
 
-        return i != m_table_fullnames_len;
+        return (i != m_table_fullnames_len) ? m_pzTable_fullnames[i] : NULL;
     }
 
-    bool database_name_collected(const char* zDatabase)
+    const char* database_name_collected(const char* zDatabase)
     {
         size_t i = 0;
 
@@ -634,33 +655,79 @@ private:
             ++i;
         }
 
-        return i != m_database_names_len;
+        return (i != m_database_names_len) ? m_pzDatabase_names[i] : NULL;
     }
 
-    void update_database_names(const char* zDatabase)
+    const char* update_table_names(const char* zDatabase, size_t nDatabase,
+                                   const char* zTable, size_t nTable)
     {
-        if ((m_collect & QC_COLLECT_DATABASES) && !(m_collected & QC_COLLECT_DATABASES))
+        ss_dassert(zTable && nTable);
+
+        const char* zCollected_table = table_name_collected(zTable);
+
+        if (!zCollected_table)
         {
-            if (zDatabase)
-            {
-                char database[strlen(zDatabase) + 1];
-                strcpy(database, zDatabase);
-                exposed_sqlite3Dequote(database);
+            char* zCopy = MXS_STRDUP_A(zTable);
 
-                if (!database_name_collected(database))
-                {
-                    char* zCopy = MXS_STRDUP_A(database);
+            enlarge_string_array(1, m_table_names_len, &m_pzTable_names, &m_table_names_capacity);
+            m_pzTable_names[m_table_names_len++] = zCopy;
+            m_pzTable_names[m_table_names_len] = NULL;
 
-                    enlarge_string_array(1, m_database_names_len,
-                                         &m_pzDatabase_names, &m_database_names_capacity);
-                    m_pzDatabase_names[m_database_names_len++] = zCopy;
-                    m_pzDatabase_names[m_database_names_len] = NULL;
-                }
-            }
+            zCollected_table = zCopy;
         }
+
+        char fullname[nDatabase + 1 + nTable + 1];
+
+        if (nDatabase)
+        {
+            strcpy(fullname, zDatabase);
+            strcat(fullname, ".");
+        }
+        else
+        {
+            fullname[0] = 0;
+        }
+
+        strcat(fullname, zTable);
+
+        if (!table_fullname_collected(fullname))
+        {
+            char* zCopy = MXS_STRDUP_A(fullname);
+
+            enlarge_string_array(1, m_table_fullnames_len,
+                                 &m_pzTable_fullnames, &m_table_fullnames_capacity);
+            m_pzTable_fullnames[m_table_fullnames_len++] = zCopy;
+            m_pzTable_fullnames[m_table_fullnames_len] = NULL;
+        }
+
+        return zCollected_table;
+    }
+
+    const char* update_database_names(const char* zDatabase)
+    {
+        ss_dassert(zDatabase);
+        ss_dassert(strlen(zDatabase) != 0);
+
+        const char* zCollected_database = database_name_collected(zDatabase);
+
+        if (!zCollected_database)
+        {
+            char* zCopy = MXS_STRDUP_A(zDatabase);
+
+            enlarge_string_array(1, m_database_names_len,
+                                 &m_pzDatabase_names, &m_database_names_capacity);
+            m_pzDatabase_names[m_database_names_len++] = zCopy;
+            m_pzDatabase_names[m_database_names_len] = NULL;
+
+            zCollected_database = zCopy;
+        }
+
+        return zCollected_database;
     }
 
 public:
+    typedef std::map<std::string, QcAliasValue> Aliases;
+
     // TODO: Make these private once everything's been updated.
     qc_parse_result_t m_status;                 // The validity of the information in this structure.
     uint32_t m_collect;                         // What information should be collected.
@@ -695,6 +762,7 @@ public:
     bool m_initializing;                        // Whether we are initializing sqlite3.
     qc_sql_mode_t m_sql_mode;                   // The current sql_mode.
     QC_NAME_MAPPING* m_pFunction_name_mappings; // How function names should be mapped.
+    Aliases m_aliases;                          // Alias names for tables
 };
 
 extern "C"
@@ -1772,7 +1840,7 @@ static void update_field_infos_from_select(QcSqliteInfo* pInfo,
         {
             if (pSrc->a[i].zName)
             {
-                pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName);
+                pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias);
             }
 
             if (pSrc->a[i].pSelect)
@@ -1841,7 +1909,7 @@ static void update_names_from_srclist(QcSqliteInfo* pInfo, const SrcList* pSrc)
     {
         if (pSrc->a[i].zName)
         {
-            pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName);
+            pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias);
         }
 
         if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
@@ -1938,7 +2006,7 @@ void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CRE
 
             if (pItem->zName)
             {
-                info->update_names(pItem->zDatabase, pItem->zName);
+                info->update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
             }
         }
     }
@@ -1985,7 +2053,7 @@ void mxs_sqlite3CreateIndex(Parse *pParse,     /* All information about this par
     }
     else if (pParse->pNewTable)
     {
-        info->update_names(NULL, pParse->pNewTable->zName);
+        info->update_names(NULL, pParse->pNewTable->zName, NULL);
     }
 
     exposed_sqlite3ExprDelete(pParse->db, pPIWhere);
@@ -2023,11 +2091,11 @@ void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
         strncpy(database, pDatabase->z, pDatabase->n);
         database[pDatabase->n] = 0;
 
-        info->update_names(database, name);
+        info->update_names(database, name, NULL);
     }
     else
     {
-        info->update_names(NULL, name);
+        info->update_names(NULL, name, NULL);
     }
 
     if (pSelect)
@@ -2062,7 +2130,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
             {
                 const SrcList::SrcList_item* pItem = &pUsing->a[i];
 
-                info->update_names(pItem->zDatabase, pItem->zName);
+                info->update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
             }
 
             // Walk through the tablenames while excluding alias
@@ -2092,7 +2160,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
                 if (!isSame)
                 {
                     // No alias name, update the table name.
-                    info->update_names(pTable->zDatabase, pTable->zName);
+                    info->update_names(pTable->zDatabase, pTable->zName, NULL);
                 }
             }
         }
@@ -2326,11 +2394,11 @@ void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
             strncpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
 
-            info->update_names(database, name);
+            info->update_names(database, name, NULL);
         }
         else
         {
-            info->update_names(NULL, name);
+            info->update_names(NULL, name, NULL);
         }
 
         if (info->m_collect & QC_COLLECT_TABLES)
@@ -2519,7 +2587,7 @@ void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
     strncpy(table, pTable->z, pTable->n);
     table[pTable->n] = 0;
 
-    info->update_names(zDatabase, table);
+    info->update_names(zDatabase, table, NULL);
 }
 
 void maxscaleComment()
@@ -2618,7 +2686,7 @@ void maxscaleDrop(Parse* pParse, int what, Token* pDatabase, Token* pName)
         strncpy(table, pName->z, pName->n);
         table[pName->n] = 0;
 
-        info->update_names(zDatabase, table);
+        info->update_names(zDatabase, table, NULL);
     }
 }
 
@@ -2785,7 +2853,7 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
             ss_dassert(pFullName->nSrc == 1);
             const SrcList::SrcList_item* pItem = &pFullName->a[0];
 
-            info->update_names(pItem->zDatabase, pItem->zName);
+            info->update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
         }
         break;
 
@@ -2797,7 +2865,7 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
             strncpy(zName, pName->z, pName->n);
             zName[pName->n] = 0;
 
-            info->update_names("*any*", zName);
+            info->update_names("*any*", zName, NULL);
         }
         break;
 
@@ -3137,8 +3205,8 @@ void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
         ss_dassert(pItem->zName);
         ss_dassert(pItem->zAlias);
 
-        info->update_names(pItem->zDatabase, pItem->zName);
-        info->update_names(NULL, pItem->zAlias); // The new name is passed in the alias field.
+        info->update_names(pItem->zDatabase, pItem->zName, NULL);
+        info->update_names(NULL, pItem->zAlias, NULL); // The new name is passed in the alias field.
     }
 
     exposed_sqlite3SrcListDelete(pParse->db, pTables);
@@ -3593,7 +3661,7 @@ void maxscaleTruncate(Parse* pParse, Token* pDatabase, Token* pName)
     strncpy(name, pName->z, pName->n);
     name[pName->n] = 0;
 
-    info->update_names(zDatabase, name);
+    info->update_names(zDatabase, name, NULL);
 }
 
 void maxscaleUse(Parse* pParse, Token* pToken)
