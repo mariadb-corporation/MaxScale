@@ -75,11 +75,6 @@ if [ "$cmake_version" \< "3.7.1" ] ; then
     cd ..
 fi
 
-# Flex
-wget http://maxscale-jenkins.mariadb.com/x/flex-2.5.35-0.8.el5.rfb.x86_64.rpm
-sudo yum install flex-2.5.35-0.8.el5.rfb.x86_64.rpm -y --nogpgcheck
-rm flex-2.5.35-0.8.el5.rfb.x86_64*
-
 # RabbitMQ C client
 mkdir rabbit
 cd rabbit
