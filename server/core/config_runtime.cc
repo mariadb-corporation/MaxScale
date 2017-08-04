@@ -884,20 +884,10 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
 
     spinlock_acquire(&crt_lock);
 
-    if (unlink(filename) == -1)
+    if (unlink(filename) == -1 && errno != ENOENT)
     {
-        if (errno != ENOENT)
-        {
-            MXS_ERROR("Failed to remove persisted monitor configuration '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
-        }
-        else
-        {
-            rval = false;
-            MXS_WARNING("Monitor '%s' was not created at runtime. Remove the "
-                        "monitor manually from the correct configuration file.",
-                        monitor->name);
-        }
+        MXS_ERROR("Failed to remove persisted monitor configuration '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
     }
     else
     {

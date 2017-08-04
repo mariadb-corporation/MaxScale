@@ -332,6 +332,7 @@ HttpResponse cb_alter_logs(const HttpRequest& request)
 HttpResponse cb_delete_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    ss_dassert(server);
 
     if (server && runtime_destroy_server(server))
     {
@@ -344,6 +345,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
 HttpResponse cb_delete_monitor(const HttpRequest& request)
 {
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    ss_dassert(monitor);
 
     if (monitor && runtime_destroy_monitor(monitor))
     {
