@@ -103,7 +103,6 @@ typedef struct
    int seq_no;              /* Output sequence in result test */
    char *last_file;         /* Last binlog file found in GTID repo */
    const char *binlogdir;   /* Binlog files cache dir */
-   bool extra_info;         /* Add extra ouput info */
    DCB *client;             /* Connected client DCB */
    bool use_tree;           /* Binlog structure type */
 } BINARY_LOG_DATA_RESULT;
@@ -573,7 +572,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SHOW SLAVE HOSTS
  *  SHOW WARNINGS
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
- *  SHOW [FULL] BINARY LOGS
+ *  SHOW BINARY LOGS
  *
  * 12 set commands are supported:
  *  SET @master_binlog_checksum = @@global.binlog_checksum
@@ -7162,9 +7161,7 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
         blr_slave_show_warnings(router, slave);
         return true;
     }
-    else if (strcasecmp(word, "BINARY") == 0 ||
-             (strcasecmp(word, "FULL") == 0 &&
-              strcasecmp(word, "BINARY")))
+    else if (strcasecmp(word, "BINARY") == 0)
     {
         if (router->mariadb10_gtid)
         {
@@ -8141,15 +8138,20 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
                                            "rep_domain, "
                                            "server_id "
                                        "FROM gtid_maps "
-                                           "GROUP BY rep_domain, "
-                                                    "server_id, "
-                                                    "binlog_file "
-                                           "ORDER BY id ASC;";
+                                           "GROUP BY binlog_file "
+                                       "ORDER BY id ASC;";
+    static const char select_query_full[] = "SELECT binlog_file, "
+                                                "MAX(end_pos) AS size, "
+                                                "rep_domain, "
+                                                "server_id "
+                                            "FROM gtid_maps "
+                                                "GROUP BY rep_domain, "
+                                                         "server_id, "
+                                                         "binlog_file "
+                                            "ORDER BY id ASC;";
     int seqno;
     char *errmsg = NULL;
     BINARY_LOG_DATA_RESULT result = {};
-    bool extra_info = !strcasecmp(extra_data, "FULL") &&
-                      router->storage_type == BLR_BINLOG_STORAGE_TREE;
 
     /* Get current binlog finename and position */
     spinlock_acquire(&router->binlog_lock);
@@ -8192,7 +8194,6 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
     result.client = slave->dcb;
     result.last_file = NULL;
     result.binlogdir = router->binlogdir;
-    result.extra_info = extra_info;
     result.use_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE;
 
     /**
@@ -8205,7 +8206,9 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
      * - result.seq_no is increased
      */
     if (sqlite3_exec(router->gtid_maps,
-                     select_query,
+                     !result.use_tree ?
+                     select_query :
+                     select_query_full,
                      binary_logs_select_cb,
                      &result,
                      &errmsg) != SQLITE_OK)
@@ -8242,7 +8245,7 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
 
         char *filename;
         char last_filename[BINLOG_FILE_EXTRA_INFO + strlen(current_file) + 1];
-        if (extra_info)
+        if (result.use_tree)
         {
             char t_prefix[BINLOG_FILE_EXTRA_INFO];
             sprintf(t_prefix,
@@ -8385,7 +8388,7 @@ static int binary_logs_select_cb(void *data,
         sprintf(file_size, "%" PRIu32 "", fsize);
 
         // Include prefix in the output
-        if (data_set->extra_info)
+        if (data_set->use_tree)
         {
             sprintf(filename,
                     "%s%s",
