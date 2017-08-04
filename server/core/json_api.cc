@@ -59,7 +59,7 @@ void mxs_json_add_relation(json_t* rel, const char* id, const char* type)
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ID, json_string(id));
     json_object_set_new(obj, CN_TYPE, json_string(type));
-    json_array_append(data, obj);
+    json_array_append_new(data, obj);
 }
 
 static string grab_next_component(string* s)

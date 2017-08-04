@@ -187,6 +187,8 @@ bool do_auth(MHD_Connection *connection, const char* url)
             MXS_INFO("Accept authentication from '%s', %s. Request: %s", user ? user : "",
                      pw ? "using password" : "no password", url);
         }
+        MXS_FREE(user);
+        MXS_FREE(pw);
     }
 
     return rval;
