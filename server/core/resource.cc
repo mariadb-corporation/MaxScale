@@ -105,7 +105,8 @@ private:
 
 Resource::Resource(ResourceCallback cb, int components, ...) :
     m_cb(cb),
-    m_is_glob(false)
+    m_is_glob(false),
+    m_constraints(NONE)
 {
     va_list args;
     va_start(args, components);
@@ -201,6 +202,16 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
     return rval;
 }
 
+void Resource::add_constraint(resource_constraint type)
+{
+    m_constraints |= static_cast<uint32_t>(type);
+}
+
+bool Resource::requires_body() const
+{
+    return m_constraints & REQUIRE_BODY;
+}
+
 HttpResponse cb_stop_monitor(const HttpRequest& request)
 {
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
@@ -231,9 +242,9 @@ HttpResponse cb_start_service(const HttpRequest& request)
 
 HttpResponse cb_create_server(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
+    ss_dassert(request.get_json());
 
-    if (json && runtime_create_server_from_json(json))
+    if (runtime_create_server_from_json(request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -243,16 +254,12 @@ HttpResponse cb_create_server(const HttpRequest& request)
 
 HttpResponse cb_alter_server(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
+    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    ss_dassert(server && request.get_json());
 
-    if (json)
+    if (runtime_alter_server_from_json(server, request.get_json()))
     {
-        SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-
-        if (server && runtime_alter_server_from_json(server, json))
-        {
-            return HttpResponse(MHD_HTTP_NO_CONTENT);
-        }
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
@@ -260,9 +267,9 @@ HttpResponse cb_alter_server(const HttpRequest& request)
 
 HttpResponse cb_create_monitor(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
+    ss_dassert(request.get_json());
 
-    if (json && runtime_create_monitor_from_json(json))
+    if (runtime_create_monitor_from_json(request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -272,10 +279,10 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
 
 HttpResponse cb_create_service_listener(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
     SERVICE* service = service_find(request.uri_part(1).c_str());
+    ss_dassert(service && request.get_json());
 
-    if (service && json && runtime_create_listener_from_json(service, json))
+    if (runtime_create_listener_from_json(service, request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -285,16 +292,12 @@ HttpResponse cb_create_service_listener(const HttpRequest& request)
 
 HttpResponse cb_alter_monitor(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
+    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    ss_dassert(monitor && request.get_json());
 
-    if (json)
+    if (runtime_alter_monitor_from_json(monitor, request.get_json()))
     {
-        MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
-
-        if (monitor && runtime_alter_monitor_from_json(monitor, json))
-        {
-            return HttpResponse(MHD_HTTP_NO_CONTENT);
-        }
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
@@ -302,16 +305,12 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
 
 HttpResponse cb_alter_service(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+    ss_dassert(service && request.get_json());
 
-    if (json)
+    if (runtime_alter_service_from_json(service, request.get_json()))
     {
-        SERVICE* service = service_find(request.uri_part(1).c_str());
-
-        if (service && runtime_alter_service_from_json(service, json))
-        {
-            return HttpResponse(MHD_HTTP_NO_CONTENT);
-        }
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
@@ -319,9 +318,9 @@ HttpResponse cb_alter_service(const HttpRequest& request)
 
 HttpResponse cb_alter_logs(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
+    ss_dassert(request.get_json());
 
-    if (json && runtime_alter_logs_from_json(json))
+    if (runtime_alter_logs_from_json(request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -334,7 +333,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
     ss_dassert(server);
 
-    if (server && runtime_destroy_server(server))
+    if (runtime_destroy_server(server))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -347,7 +346,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
     ss_dassert(monitor);
 
-    if (monitor && runtime_destroy_monitor(monitor))
+    if (runtime_destroy_monitor(monitor))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -360,22 +359,18 @@ HttpResponse cb_delete_listener(const HttpRequest& request)
 
     SERVICE* service = service_find(request.uri_part(1).c_str());
     ss_dassert(service);
+    std::string listener = request.uri_part(3);
 
-    if (service)
+    if (!service_has_named_listener(service, listener.c_str()))
     {
-        std::string listener = request.uri_part(3);
-
-        if (!service_has_named_listener(service, listener.c_str()))
-        {
-            return HttpResponse(MHD_HTTP_NOT_FOUND);
-        }
-        else if (runtime_destroy_listener(service, listener.c_str()))
-        {
-            return HttpResponse(MHD_HTTP_NO_CONTENT);
-        }
+        return HttpResponse(MHD_HTTP_NOT_FOUND);
+    }
+    else if (!runtime_destroy_listener(service, listener.c_str()))
+    {
+        return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
     }
 
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
 }
 
 HttpResponse cb_all_servers(const HttpRequest& request)
@@ -386,13 +381,8 @@ HttpResponse cb_all_servers(const HttpRequest& request)
 HttpResponse cb_get_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-
-    if (server)
-    {
-        return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
-    }
-
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
+    ss_dassert(server);
+    return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
 }
 
 HttpResponse cb_all_services(const HttpRequest& request)
@@ -403,13 +393,8 @@ HttpResponse cb_all_services(const HttpRequest& request)
 HttpResponse cb_get_service(const HttpRequest& request)
 {
     SERVICE* service = service_find(request.uri_part(1).c_str());
-
-    if (service)
-    {
-        return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
-    }
-
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
+    ss_dassert(service);
+    return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
 }
 
 HttpResponse cb_get_all_service_listeners(const HttpRequest& request)
@@ -421,24 +406,17 @@ HttpResponse cb_get_all_service_listeners(const HttpRequest& request)
 HttpResponse cb_get_service_listener(const HttpRequest& request)
 {
     SERVICE* service = service_find(request.uri_part(1).c_str());
+    std::string listener = request.uri_part(3);
+    ss_dassert(service);
 
-    if (service)
+    if (!service_has_named_listener(service, listener.c_str()))
     {
-        std::string listener = request.uri_part(3);
-
-        if (!service_has_named_listener(service, listener.c_str()))
-        {
-            return HttpResponse(MHD_HTTP_NOT_FOUND);
-        }
-        else
-        {
-            return HttpResponse(MHD_HTTP_OK,
-                                service_listener_to_json(service, listener.c_str(),
-                                                         request.host()));
-        }
+        return HttpResponse(MHD_HTTP_NOT_FOUND);
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
+    return HttpResponse(MHD_HTTP_OK,
+                        service_listener_to_json(service, listener.c_str(),
+                                                 request.host()));
 }
 
 HttpResponse cb_all_filters(const HttpRequest& request)
@@ -449,13 +427,8 @@ HttpResponse cb_all_filters(const HttpRequest& request)
 HttpResponse cb_get_filter(const HttpRequest& request)
 {
     MXS_FILTER_DEF* filter = filter_def_find(request.uri_part(1).c_str());
-
-    if (filter)
-    {
-        return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
-    }
-
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
+    ss_dassert(filter);
+    return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
 }
 
 HttpResponse cb_all_monitors(const HttpRequest& request)
@@ -466,13 +439,8 @@ HttpResponse cb_all_monitors(const HttpRequest& request)
 HttpResponse cb_get_monitor(const HttpRequest& request)
 {
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
-
-    if (monitor)
-    {
-        return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
-    }
-
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, runtime_get_json_error());
+    ss_dassert(monitor);
+    return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
 }
 
 HttpResponse cb_all_sessions(const HttpRequest& request)
@@ -502,9 +470,9 @@ HttpResponse cb_maxscale(const HttpRequest& request)
 
 HttpResponse cb_alter_maxscale(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
+    ss_dassert(request.get_json());
 
-    if (json && runtime_alter_maxscale_from_json(json))
+    if (runtime_alter_maxscale_from_json(request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -586,9 +554,9 @@ HttpResponse cb_unix_user(const HttpRequest& request)
 
 HttpResponse cb_create_user(const HttpRequest& request)
 {
-    json_t* json = request.get_json();
+    ss_dassert(request.get_json());
 
-    if (runtime_create_user_from_json(json))
+    if (runtime_create_user_from_json(request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -774,7 +742,6 @@ public:
         m_get.push_back(SResource(new Resource(cb_unix_user, 3, "users", "unix", ":unixuser")));
 
         /** Create new resources */
-        m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
         m_post.push_back(SResource(new Resource(cb_create_service_listener, 3,
@@ -782,8 +749,16 @@ public:
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "inet")));
         m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "unix")));
 
+        /** All of the above require a request body */
+        for (ResourceList::iterator it = m_post.begin(); it != m_post.end(); it++)
+        {
+            SResource& r = *it;
+            r->add_constraint(Resource::REQUIRE_BODY);
+        }
+
         /** For all module commands that modify state/data */
         m_post.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
+        m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
 
         /** Update resources */
         m_patch.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
@@ -791,6 +766,13 @@ public:
         m_patch.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
         m_patch.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
         m_patch.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
+
+        /** All patch resources require a request body */
+        for (ResourceList::iterator it = m_patch.begin(); it != m_patch.end(); it++)
+        {
+            SResource& r = *it;
+            r->add_constraint(Resource::REQUIRE_BODY);
+        }
 
         /** Change resource states */
         m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));
@@ -838,6 +820,12 @@ public:
         if (it != list.end())
         {
             Resource& r = *(*it);
+
+            if (r.requires_body() && request.get_json() == NULL)
+            {
+                return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing request body"));
+            }
+
             return r.call(request);
         }
 

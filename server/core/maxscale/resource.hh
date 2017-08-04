@@ -37,6 +37,12 @@ class Resource
     Resource& operator = (const Resource&);
 public:
 
+    enum resource_constraint
+    {
+        NONE         = 0,
+        REQUIRE_BODY = (1 << 0)
+    };
+
     Resource(ResourceCallback cb, int components, ...);
     ~Resource();
 
@@ -58,13 +64,28 @@ public:
      */
     HttpResponse call(const HttpRequest& request) const;
 
+    /**
+     * Add a resource constraint
+     *
+     * @param type Constraint to add
+     */
+    void add_constraint(resource_constraint type);
+
+    /**
+     * Whether resource requires a request body
+     *
+     * @return True if resource requires a request body
+     */
+    bool requires_body() const;
+
 private:
 
     bool matching_variable_path(const std::string& path, const std::string& target) const;
 
-    ResourceCallback        m_cb;   /**< Resource handler callback */
-    std::deque<std::string> m_path; /**< Path components */
-    bool                    m_is_glob; /**< Does this path glob? */
+    ResourceCallback        m_cb;          /**< Resource handler callback */
+    std::deque<std::string> m_path;        /**< Path components */
+    bool                    m_is_glob;     /**< Does this path glob? */
+    uint32_t                m_constraints; /**< Resource constraints */
 };
 
 /**
