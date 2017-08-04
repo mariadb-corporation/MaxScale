@@ -739,45 +739,51 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
     }
 
     unsigned short u_port = atoi(port);
+    bool rval = false;
 
     spinlock_acquire(&crt_lock);
 
-    SSL_LISTENER *ssl = NULL;
-    bool rval = false;
-
     if (!serviceHasListener(service, proto, addr, u_port))
     {
-        rval = true;
+        SSL_LISTENER *ssl = NULL;
 
-        if (ssl_key && ssl_cert && ssl_ca)
+        if (ssl_key && ssl_cert && ssl_ca &&
+            (ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth)) == NULL)
         {
-            ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth);
-
-            if (ssl == NULL)
-            {
                 MXS_ERROR("SSL initialization for listener '%s' failed.", name);
-                rval = false;
-            }
+                runtime_error("SSL initialization for listener '%s' failed.", name);
         }
-
-        if (rval)
+        else
         {
             const char *print_addr = addr ? addr : "::";
             SERV_LISTENER *listener = serviceCreateListener(service, name, proto, addr,
                                                             u_port, auth, auth_opt, ssl);
 
-            if (listener && listener_serialize(listener) && serviceLaunchListener(service, listener))
+            if (listener && listener_serialize(listener))
             {
                 MXS_NOTICE("Created %slistener '%s' at %s:%s for service '%s'",
                            ssl ? "TLS encrypted " : "",
                            name, print_addr, port, service->name);
+                if (serviceLaunchListener(service, listener))
+                {
+                    rval = true;
+                }
+                else
+                {
+                    MXS_ERROR("Listener '%s' was created but failed to start it.", name);
+                    runtime_error("Listener '%s' was created but failed to start it.", name);
+                }
             }
             else
             {
-                MXS_ERROR("Failed to start listener '%s' at %s:%s.", name, print_addr, port);
-                rval = false;
+                MXS_ERROR("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
+                runtime_error("Failed to create listener '%s' at %s:%s.", name, print_addr, port);
             }
         }
+    }
+    else
+    {
+        runtime_error("Listener '%s' already exists", name);
     }
 
     spinlock_release(&crt_lock);
