@@ -657,11 +657,25 @@ As usual, check for any error in log files and with
 
 	MariaDB> SHOW SLAVE STATUS;
 
-Issuing the admin command `SHOW FULL BINARY LOGS`
-it will be possible to follow the _master change_ history if option _binlog_structure=tree_
+Issuing the admin command `SHOW BINARY LOGS` it's possible to see the list
+of log files which have been downloaded:
 
 ```
-MariaDB > SHOW FULL BINARY LOGS;
+MariaDB > SHOW BINARY LOGS;
++------------------+-----------+
+| Log_name         | File_size |
++------------------+-----------+
+| mysql-bin.000113 |      2214 |
+...
+| mysql-bin.000117 |       535 |
++------------------+-----------+
+```
+
+It's possible to follow the _master change_ history if option `binlog_structure=tree`:
+the displayed log file names have a prefix with replication domain_id and server_id.
+
+```
+MariaDB > SHOW BINARY LOGS;
 +--------------------------+-----------+
 | Log_name                 | File_size |
 +--------------------------+-----------+
