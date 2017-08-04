@@ -18,24 +18,27 @@ testdir=$3
 
 maxscaledir=$PWD/maxscale_test/
 
-# Create the test directory
-mkdir -p $testdir && cd $testdir
+# Create the test directories
+mkdir -p $maxscaledir $testdir
 
-# Copy the common test files (docker-compose.yml etc.)
+# Copy the common test files (start/stop scripts etc.)
 cp -t $testdir -r $srcdir/test/*
 
 # Copy test sources to test workspace
 cp -t $testdir -r $testsrc/*
 
-# Bring MariaDB servers up, this is an asynchronous process
+# Copy required docker-compose files to the MaxScale directory and bring MariaDB
+# servers up. This is an asynchronous process.
+cd $maxscaledir
+cp -t $maxscaledir -r $srcdir/test/*
 docker-compose up -d || exit 1
 
 # Install dependencies
+cd $testdir
 npm install
 
-mkdir -p $maxscaledir && cd $maxscaledir
-
 # Configure and install MaxScale
+cd $maxscaledir
 cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_INSTALL_PREFIX=$maxscaledir \
       -DBUILD_TESTS=Y \
@@ -64,13 +67,11 @@ chmod 0755 $maxscaledir/lib/maxscale
 chmod 0755 $maxscaledir/cache/maxscale
 chmod 0755 $maxscaledir/run/maxscale
 
-# Go to the test directory
-cd $testdir
-
 # This variable is used to start and stop MaxScale before each test
 export MAXSCALE_DIR=$maxscaledir
 
 # Wait until the servers are up
+cd $maxscaledir
 for node in server1 server2 server3 server4
 do
     printf "Waiting for $node to start... "
@@ -82,6 +83,9 @@ do
     echo "Done!"
 done
 
+# Go to the test directory
+cd $testdir
+
 # Make sure no stale processes of files are left from an earlier run
 ./stop_maxscale.sh
 
@@ -92,6 +96,7 @@ rval=$?
 # Stop MariaDB servers
 if [ -z  "$SKIP_SHUTDOWN" ]
 then
+    cd $maxscaledir
     docker-compose down -v
 fi
 
