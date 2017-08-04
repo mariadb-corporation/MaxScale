@@ -100,7 +100,9 @@ module.exports.execute = function(argv, opts) {
         program
             .parse(argv, {resolve: resolve, reject: reject}, function(err, argv, output) {
                 if (err) {
-                    reject(err)
+                    reject(err.message)
+                } else if (output) {
+                    logger.log(output)
                 }
             })
     })

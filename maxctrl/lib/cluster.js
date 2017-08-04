@@ -171,8 +171,16 @@ exports.builder = function(yargs) {
                         getDifference(src.servers.data, dest.servers.data).forEach(function(i) {
                             // Create the servers without relationships, those are generated when services and
                             // monitors are updated
-                            delete i.relationships
-                            promises.push(doAsyncRequest(host, 'servers', null, {method: 'POST', body: {data: i}}))
+                            var newserv = {
+                                data: {
+                                    id: i.id,
+                                    type: i.type,
+                                    attributes: {
+                                        parameters: i.attributes.parameters
+                                    }
+                                }
+                            }
+                            promises.push(doAsyncRequest(host, 'servers', null, {method: 'POST', body: newserv}))
                         })
                         return Promise.all(promises)
                             .then(function() {
