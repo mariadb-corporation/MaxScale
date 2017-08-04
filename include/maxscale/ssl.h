@@ -76,4 +76,16 @@ bool ssl_required_by_dcb(struct dcb *dcb);
 bool ssl_required_but_not_negotiated(struct dcb *dcb);
 const char* ssl_method_type_to_string(ssl_method_type_t method_type);
 
+/**
+ * Helper function for client ssl authentication. Authenticates and checks changes
+ * in ssl status.
+ *
+ * @param dcb Client dcb
+ *
+ * @return MXS_AUTH_FAILED_SSL or MXS_AUTH_FAILED on error. MXS_AUTH_SSL_INCOMPLETE
+ * if ssl authentication is in progress and should be retried, MXS_AUTH_SSL_COMPLETE
+ * if ssl authentication is complete or not required.
+ */
+int ssl_authenticate_check_status(struct dcb *dcb);
+
 MXS_END_DECLS

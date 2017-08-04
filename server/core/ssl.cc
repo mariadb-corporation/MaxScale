@@ -29,10 +29,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <maxscale/dcb.h>
-#include <maxscale/service.h>
-#include <maxscale/log_manager.h>
 #include <sys/ioctl.h>
+#include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/poll.h>
+#include <maxscale/service.h>
 
 /**
  * @brief Check client's SSL capability and start SSL if appropriate.
@@ -213,4 +214,36 @@ const char* ssl_method_type_to_string(ssl_method_type_t method_type)
     default:
         return "Unknown";
     }
+}
+
+int ssl_authenticate_check_status(DCB* dcb)
+{
+    int rval = MXS_AUTH_FAILED;
+    /**
+     * We record the SSL status before and after ssl authentication. This allows
+     * us to detect if the SSL handshake is immediately completed, which means more
+     * data needs to be read from the socket.
+     */
+    bool health_before = ssl_is_connection_healthy(dcb);
+    int ssl_ret = ssl_authenticate_client(dcb, dcb->authfunc.connectssl(dcb));
+    bool health_after = ssl_is_connection_healthy(dcb);
+
+    if (ssl_ret != 0)
+    {
+        rval = (ssl_ret == SSL_ERROR_CLIENT_NOT_SSL) ? MXS_AUTH_FAILED_SSL : MXS_AUTH_FAILED;
+    }
+    else if (!health_after)
+    {
+        rval = MXS_AUTH_SSL_INCOMPLETE;
+    }
+    else if (!health_before && health_after)
+    {
+        rval = MXS_AUTH_SSL_INCOMPLETE;
+        poll_add_epollin_event_to_dcb(dcb, NULL);
+    }
+    else if (health_before && health_after)
+    {
+        rval = MXS_AUTH_SSL_COMPLETE;
+    }
+    return rval;
 }

@@ -305,33 +305,11 @@ Buffer PamClientSession::create_auth_change_packet() const
 
 int PamClientSession::authenticate(DCB* dcb)
 {
-    int rval = MXS_AUTH_FAILED;
+    int rval = ssl_authenticate_check_status(dcb);
     MYSQL_session *ses = static_cast<MYSQL_session*>(dcb->data);
-    /**
-     * We record the SSL status before and after SSL-authentication. This allows
-     * us to detect if the SSL handshake is immediately completed which means more
-     * data needs to be read from the socket.
-     */
-    bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, dcb->authfunc.connectssl(dcb));
-    bool health_after = ssl_is_connection_healthy(dcb);
-
-    if (0 != ssl_ret)
+    if (rval == MXS_AUTH_SSL_COMPLETE && *ses->user)
     {
-        rval = (SSL_ERROR_CLIENT_NOT_SSL == ssl_ret) ? MXS_AUTH_FAILED_SSL : MXS_AUTH_FAILED;
-    }
-    else if (!health_after)
-    {
-        rval = MXS_AUTH_SSL_INCOMPLETE;
-    }
-    else if (!health_before && health_after)
-    {
-        rval = MXS_AUTH_SSL_INCOMPLETE;
-        poll_add_epollin_event_to_dcb(dcb, NULL);
-    }
-    else if (*ses->user)
-    {
-        // SSL-connection has been established (or was not required)
+        rval = MXS_AUTH_FAILED;
         if (m_state == PAM_AUTH_INIT)
         {
             /** We need to send the authentication switch packet to change the

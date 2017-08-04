@@ -285,11 +285,8 @@ static bool is_localhost_address(struct sockaddr_storage *addr)
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
  *
- * First call the SSL authentication function, passing the DCB and a boolean
- * indicating whether the client is SSL capable. If SSL authentication is
- * successful, check whether connection is complete. Fail if we do not have a
- * user name.  Call other functions to validate the user, reloading the user
- * data if the first attempt fails.
+ * First call the SSL authentication function. Call other functions to validate
+ * the user, reloading the user data if the first attempt fails.
  *
  * @param dcb Request handler DCB connected to the client
  * @return Authentication status
@@ -298,40 +295,15 @@ static bool is_localhost_address(struct sockaddr_storage *addr)
 static int
 mysql_auth_authenticate(DCB *dcb)
 {
-    MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+    int auth_ret = ssl_authenticate_check_status(dcb);
     MYSQL_session *client_data = (MYSQL_session *)dcb->data;
-    int auth_ret = MXS_AUTH_FAILED;
-
-    /**
-     * We record the SSL status before and after the authentication. This allows
-     * us to detect if the SSL handshake is immediately completed which means more
-     * data needs to be read from the socket.
-     */
-
-    bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, dcb->authfunc.connectssl(dcb));
-    bool health_after = ssl_is_connection_healthy(dcb);
-
-    if (0 != ssl_ret)
-    {
-        auth_ret = (SSL_ERROR_CLIENT_NOT_SSL == ssl_ret) ? MXS_AUTH_FAILED_SSL : MXS_AUTH_FAILED;
-    }
-    else if (!health_after)
-    {
-        auth_ret = MXS_AUTH_SSL_INCOMPLETE;
-    }
-    else if (!health_before && health_after)
-    {
-        auth_ret = MXS_AUTH_SSL_INCOMPLETE;
-        poll_add_epollin_event_to_dcb(dcb, NULL);
-    }
-    else if (*client_data->user)
+    if (auth_ret == MXS_AUTH_SSL_COMPLETE && *client_data->user)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
                   client_data->user, client_data->db);
 
         MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
-
+        MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         auth_ret = validate_mysql_user(instance->handle, dcb, client_data,
                                        protocol->scramble, sizeof(protocol->scramble));
 
