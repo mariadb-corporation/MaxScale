@@ -7,6 +7,10 @@ MaxScale.
 The constants described in this document are defined in the authenticator.h
 header unless otherwise mentioned.
 
+Authenticator modules compatible with MySQL protocol in MaxScale are
+[MySQL](MySQL-Authenticator.md), [GSSAPI](GSSAPI-Authenticator.md) and
+[PAM](PAM-Authenticator.md).
+
 ## Authenticator initialization
 
 When the authentication module is first loaded, the `initialize` entry point is
@@ -26,18 +30,16 @@ first parameter.
 
 # MySQL Authentication Modules
 
-The MySQL protocol authentication starts when the server sends the
-[handshake packet](https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake)
-to the client to which the client responds with a [handshake response packet](https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::HandshakeResponse).
-If the server is using the default _mysql_native_password_ authentication plugin, the server responds with either an
-[OK packet](https://dev.mysql.com/doc/internals/en/packet-OK_Packet.html) or an
-[ERR packet](https://dev.mysql.com/doc/internals/en/packet-ERR_Packet.html) and
-the authentication is complete.
+The MySQL protocol authentication starts when the server sends the handshake
+packet to the client to which the client responds with a handshake response
+packet. If the server is using the default *mysql_native_password*
+authentication plugin, the server responds with either an OK packet or an ERR
+packet and the authentication is complete.
 
-If a different authentication plugin is required to complete the authentication, instead of
-sending an OK or ERR packet, the server responds with an
-[AuthSwitchRequest packet](https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest).
-This is where the pluggable authentication in MaxScale starts.
+If a different authentication plugin is required to complete the authentication,
+instead of sending an OK or ERR packet, the server responds with an
+AuthSwitchRequest packet. This is where the pluggable authentication in MaxScale
+starts.
 
 ## Client authentication in MaxScale
 
@@ -46,12 +48,8 @@ client's handshake response packet.
 
 The client protocol module will call the `extract` entry point of the
 authenticator where the authenticator should extract client information. If the
-`extract` entry point returns one of the following constants, the `authenticate`
-entry point will be called.
-
-- MXS_AUTH_SUCCEEDED
-- MXS_AUTH_INCOMPLETE
-- MXS_AUTH_SSL_INCOMPLETE
+`extract` entry point returns MXS_AUTH_SUCCEEDED, the `authenticate` entry point
+will be called.
 
 The `authenticate` entry point is where the authenticator plugin should
 authenticate the client. If authentication is successful, the `authenticate`
@@ -59,7 +57,7 @@ entry point should return MXS_AUTH_SUCCEEDED. If authentication is not yet
 complete or if the authentication module should be changed, the `authenticate`
 entry point should return MXS_AUTH_INCOMPLETE.
 
-Authenticator plugins which do not use the default _mysql_native_password_
+Authenticator plugins which do not use the default *mysql_native_password*
 authentication plugin should send an AuthSwitchRequest packet to the client and
 return MXS_AUTH_INCOMPLETE. When more data is available, the `extract` and
 `authenticate` entry points will be called again.
@@ -86,7 +84,6 @@ point of the authenticator.
 
 - MXS_AUTH_SUCCEEDED
 - MXS_AUTH_INCOMPLETE
-- MXS_AUTH_SSL_INCOMPLETE
 
 If the `authenticate` entry point returns MXS_AUTH_SUCCEEDED, then
 authentication is complete and any queued queries from the clients will be sent
