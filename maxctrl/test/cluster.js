@@ -2,7 +2,6 @@ require('../test_utils.js')()
 var cluster = require('../lib/cluster.js')
 
 describe('Cluster Command Internals', function() {
-    before(startMaxScale)
 
     it('detect added and removed objects', function() {
         var a = [
@@ -149,7 +148,6 @@ describe('Cluster Command Internals', function() {
         cluster.haveExtraServices(b, b).should.be.false
     })
 
-    after(stopMaxScale)
 });
 
 
@@ -160,7 +158,6 @@ describe('Cluster Commands', function() {
         return doCommand('create server server5 127.0.0.1 3003 --hosts 127.0.0.1:8990')
             .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
                                       'servers/server5'))
-            .should.be.resolved
     })
 
     it('sync after server alteration', function() {
@@ -182,8 +179,7 @@ describe('Cluster Commands', function() {
     it('sync after monitor creation', function() {
         return doCommand('create monitor my-monitor-2 mysqlmon --hosts 127.0.0.1:8990')
             .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
-                                      'monitors/my-monitor2'))
-            .should.be.resolved
+                                      'monitors/my-monitor-2'))
     })
 
     it('sync after monitor alteration', function() {
@@ -197,16 +193,17 @@ describe('Cluster Commands', function() {
 
     it('sync after monitor deletion', function() {
         return doCommand('destroy monitor my-monitor-2 --hosts 127.0.0.1:8990')
-            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
-                                      'monitors/my-monitor-2'))
-            .should.be.rejected
+            .then(() => doCommand('show monitor my-monitor-2  --hosts 127.0.0.1:8989'))
+            .then(() => doCommand('show monitor my-monitor-2  --hosts 127.0.0.1:8990').should.be.rejected)
+            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+            .then(() => doCommand('show monitor my-monitor-2  --hosts 127.0.0.1:8989').should.be.rejected)
+            .then(() => doCommand('show monitor my-monitor-2  --hosts 127.0.0.1:8990').should.be.rejected)
     })
 
     it('sync listener creation', function() {
         return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts 127.0.0.1:8990')
             .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
                                       'services/RW-Split-Router/listeners/my-listener-2'))
-            .should.be.resolved
     })
 
     it('sync after service alteration', function() {

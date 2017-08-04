@@ -9,6 +9,15 @@ maxscaledir=$MAXSCALE_DIR
 
 test -z "$MAXSCALE_DIR" && exit 1
 
+rm -r $maxscaledir/secondary/lib/maxscale
+rm -r $maxscaledir/secondary/cache/maxscale
+rm -r $maxscaledir/secondary/run/maxscale
+test -f /tmp/maxadmin.sock && rm /tmp/maxadmin.sock
+
+mkdir -m 0755 -p $maxscaledir/secondary/lib/maxscale
+mkdir -m 0755 -p $maxscaledir/secondary/cache/maxscale
+mkdir -m 0755 -p $maxscaledir/secondary/run/maxscale
+
 # Start MaxScale
 $maxscaledir/bin/maxscale -lstdout -df $maxscaledir/maxscale.cnf >& $maxscaledir/maxscale1.output &
 
