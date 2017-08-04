@@ -42,6 +42,20 @@ using std::stringstream;
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
 
+static bool drop_path_part(std::string& path)
+{
+    size_t pos = path.find_last_of('/');
+    bool rval = false;
+
+    if (pos != std::string::npos)
+    {
+        path.erase(pos);
+        rval = true;
+    }
+
+    return rval && path.length();
+}
+
 /**
  * Class that keeps track of resource modification times
  */
@@ -54,21 +68,27 @@ public:
     {
     }
 
-    void modify(const string& path)
+    void modify(const std::string& orig_path)
     {
-        map<string, uint64_t>::iterator it = m_etag.find(path);
+        std::string path = orig_path;
 
-        if (it != m_etag.end())
+        do
         {
-            it->second++;
-        }
-        else
-        {
-            // First modification
-            m_etag[path] = 1;
-        }
+            map<std::string, uint64_t>::iterator it = m_etag.find(path);
 
-        m_last_modified[path] = time(NULL);
+            if (it != m_etag.end())
+            {
+                it->second++;
+            }
+            else
+            {
+                // First modification
+                m_etag[path] = 1;
+            }
+
+            m_last_modified[path] = time(NULL);
+        }
+        while (drop_path_part(path));
     }
 
     time_t last_modified(const string& path) const

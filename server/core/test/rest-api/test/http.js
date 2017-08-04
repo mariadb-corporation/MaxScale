@@ -18,6 +18,12 @@ describe("HTTP Headers", function() {
             .then(function(resp) {
                 resp.headers.etag.should.be.equal("\"1\"")
             })
+            .then(function() {
+                return request.get(base_url + "/servers", {resolveWithFullResponse: true})
+            })
+            .then(function(resp) {
+                resp.headers.etag.should.be.equal("\"1\"")
+            })
     });
 
     it("Last-Modified changes after modification", function(done) {
@@ -45,6 +51,13 @@ describe("HTTP Headers", function() {
                     request.patch(base_url + "/servers/server1", {json: srv})
                         .then(function() {
                             return request.get(base_url + "/servers/server1", {resolveWithFullResponse: true})
+                        })
+                        .then(function(resp) {
+                            resp.headers["last-modified"].should.not.be.null
+                            resp.headers["last-modified"].should.not.be.equal(date)
+                        })
+                        .then(function() {
+                            return request.get(base_url + "/servers", {resolveWithFullResponse: true})
                         })
                         .then(function(resp) {
                             resp.headers["last-modified"].should.not.be.null
