@@ -132,7 +132,6 @@ typedef struct server
     int            persistmax;     /**< Maximum pool size actually achieved since startup */
     uint8_t        charset;        /**< Default server character set */
     bool           is_active;      /**< Server is active and has not been "destroyed" */
-    bool           created_online; /**< Whether this server was created after startup */
     bool           proxy_protocol; /**< Send proxy-protocol header to backend when connecting client sessions. */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
@@ -254,16 +253,20 @@ extern SERVER* server_alloc(const char *name, const char *address, unsigned shor
  *
  * A server that has been destroyed will not be deleted but only deactivated.
  *
- * @param name Name of the server
- * @param protocol Protocol used by the server
+ * @param name          Name of the server
+ * @param protocol      Protocol used by the server
  * @param authenticator The authenticator module of the server
- * @param auth_options Options for the authenticator
- * @return Reusable SERVER or NULL if no servers matching the criteria were
+ * @param auth_options  Options for the authenticator
+ * @param address       The network address of the new server
+ * @param port          The port of the new server
+ *
+ * @return Repurposed SERVER or NULL if no servers matching the criteria were
  * found
  * @see runtime_create_server
  */
-SERVER* server_find_destroyed(const char *name, const char *protocol,
-                              const char *authenticator, const char *auth_options);
+SERVER* server_repurpose_destroyed(const char *name, const char *protocol,
+                                   const char *authenticator, const char *auth_options,
+                                   const char *address, const char *port);
 /**
  * @brief Serialize a server to a file
  *

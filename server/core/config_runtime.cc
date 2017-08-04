@@ -161,36 +161,30 @@ bool runtime_create_server(const char *name, const char *address, const char *po
         }
 
         /** First check if this service has been created before */
-        SERVER *server = server_find_destroyed(name, protocol, authenticator,
-                                               authenticator_options);
+        SERVER *server = server_repurpose_destroyed(name, protocol, authenticator,
+                                                    authenticator_options,
+                                                    address, port);
 
         if (server)
         {
-            /** Found old server, replace network details with new ones and
-             * reactivate it */
-            snprintf(server->name, sizeof(server->name), "%s", address);
-            server->port = atoi(port);
-            server->is_active = true;
-            rval = true;
+            MXS_DEBUG("Reusing server '%s'", name);
         }
         else
         {
-            /**
-             * server_alloc will add the server to the global list of
-             * servers so we don't need to manually add it.
-             */
+            MXS_DEBUG("Creating server '%s'", name);
             server = server_alloc(name, address, atoi(port), protocol,
                                   authenticator, authenticator_options);
         }
 
         if (server && server_serialize(server))
         {
-            /** Mark that the server was created after startup */
-            server->created_online = true;
-
+            rval = true;
             MXS_NOTICE("Created server '%s' at %s:%u", server->unique_name,
                        server->name, server->port);
-            rval = true;
+        }
+        else
+        {
+            runtime_error("Failed to create server '%s', see error log for more details", name);
         }
     }
     else
@@ -1160,16 +1154,18 @@ SERVER* runtime_create_server_from_json(json_t* json)
 
         set<string> relations;
 
-        if (extract_relations(json, relations, server_relation_types, server_relation_is_valid) &&
-            runtime_create_server(name, address, port.c_str(), protocol, authenticator, authenticator_options))
+        if (extract_relations(json, relations, server_relation_types, server_relation_is_valid))
         {
-            rval = server_find_by_unique_name(name);
-            ss_dassert(rval);
-
-            if (!link_server_to_objects(rval, relations))
+            if (runtime_create_server(name, address, port.c_str(), protocol, authenticator, authenticator_options))
             {
-                runtime_destroy_server(rval);
-                rval = NULL;
+                rval = server_find_by_unique_name(name);
+                ss_dassert(rval);
+
+                if (!link_server_to_objects(rval, relations))
+                {
+                    runtime_destroy_server(rval);
+                    rval = NULL;
+                }
             }
         }
         else

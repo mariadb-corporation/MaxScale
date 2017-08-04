@@ -139,7 +139,6 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->monuser[0] = '\0';
     server->monpw[0] = '\0';
     server->is_active = true;
-    server->created_online = false;
     server->charset = SERVER_DEFAULT_CHARSET;
     server->proxy_protocol = false;
 
@@ -1281,8 +1280,9 @@ bool server_serialize(const SERVER *server)
     return rval;
 }
 
-SERVER* server_find_destroyed(const char *name, const char *protocol,
-                              const char *authenticator, const char *auth_options)
+SERVER* server_repurpose_destroyed(const char *name, const char *protocol,
+                                   const char *authenticator, const char *auth_options,
+                                   const char *address, const char *port)
 {
     spinlock_acquire(&server_spin);
     SERVER *server = allServers;
@@ -1297,6 +1297,9 @@ SERVER* server_find_destroyed(const char *name, const char *protocol,
                 (auth_options && server->auth_options &&
                  strcmp(server->auth_options, auth_options) == 0))
             {
+                snprintf(server->name, sizeof(server->name), "%s", address);
+                server->port = atoi(port);
+                server->is_active = true;
                 break;
             }
         }
