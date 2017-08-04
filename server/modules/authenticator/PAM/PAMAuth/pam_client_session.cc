@@ -306,34 +306,60 @@ Buffer PamClientSession::create_auth_change_packet() const
 int PamClientSession::authenticate(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    if (m_state == PAM_AUTH_INIT)
-    {
-        /** We need to send the authentication switch packet to change the
-         * authentication to something other than the 'mysql_native_password'
-         * method */
-        Buffer authbuf = create_auth_change_packet();
-        if (authbuf.length() && dcb->func.write(dcb, authbuf.release()))
-        {
-            m_state = PAM_AUTH_DATA_SENT;
-            rval = MXS_AUTH_INCOMPLETE;
-        }
-    }
-    else if (m_state == PAM_AUTH_DATA_SENT)
-    {
-        /** We sent the authentication change packet + plugin name and the client
-         * responded with the password. Try to continue authentication without more
-         * messages to client. */
-        MYSQL_session *ses = (MYSQL_session*)dcb->data;
-        string password((char*)ses->auth_token, ses->auth_token_len);
-        StringVector services;
-        get_pam_user_services(dcb, ses, &services);
+    MYSQL_session *ses = static_cast<MYSQL_session*>(dcb->data);
+    /**
+     * We record the SSL status before and after SSL-authentication. This allows
+     * us to detect if the SSL handshake is immediately completed which means more
+     * data needs to be read from the socket.
+     */
+    bool health_before = ssl_is_connection_healthy(dcb);
+    int ssl_ret = ssl_authenticate_client(dcb, dcb->authfunc.connectssl(dcb));
+    bool health_after = ssl_is_connection_healthy(dcb);
 
-        for (StringVector::const_iterator i = services.begin(); i != services.end(); i++)
+    if (0 != ssl_ret)
+    {
+        rval = (SSL_ERROR_CLIENT_NOT_SSL == ssl_ret) ? MXS_AUTH_FAILED_SSL : MXS_AUTH_FAILED;
+    }
+    else if (!health_after)
+    {
+        rval = MXS_AUTH_SSL_INCOMPLETE;
+    }
+    else if (!health_before && health_after)
+    {
+        rval = MXS_AUTH_SSL_INCOMPLETE;
+        poll_add_epollin_event_to_dcb(dcb, NULL);
+    }
+    else if (*ses->user)
+    {
+        // SSL-connection has been established (or was not required)
+        if (m_state == PAM_AUTH_INIT)
         {
-            if (validate_pam_password(ses->user, password, *i, dcb))
+            /** We need to send the authentication switch packet to change the
+             * authentication to something other than the 'mysql_native_password'
+             * method */
+            Buffer authbuf = create_auth_change_packet();
+            if (authbuf.length() && dcb->func.write(dcb, authbuf.release()))
             {
-                rval = MXS_AUTH_SUCCEEDED;
-                break;
+                m_state = PAM_AUTH_DATA_SENT;
+                rval = MXS_AUTH_INCOMPLETE;
+            }
+        }
+        else if (m_state == PAM_AUTH_DATA_SENT)
+        {
+            /** We sent the authentication change packet + plugin name and the client
+             * responded with the password. Try to continue authentication without more
+             * messages to client. */
+            string password((char*)ses->auth_token, ses->auth_token_len);
+            StringVector services;
+            get_pam_user_services(dcb, ses, &services);
+
+            for (StringVector::const_iterator i = services.begin(); i != services.end(); i++)
+            {
+                if (validate_pam_password(ses->user, password, *i, dcb))
+                {
+                    rval = MXS_AUTH_SUCCEEDED;
+                    break;
+                }
             }
         }
     }
