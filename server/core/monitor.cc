@@ -236,9 +236,9 @@ monitorStop(MXS_MONITOR *monitor)
 
 void monitorDestroy(MXS_MONITOR* monitor)
 {
-    spinlock_acquire(&monitor->lock);
+    spinlock_acquire(&monLock);
     monitor->active = false;
-    spinlock_release(&monitor->lock);
+    spinlock_release(&monLock);
 }
 
 /**
@@ -574,7 +574,7 @@ monitor_find(const char *name)
  * @param name The name of the monitor
  * @return  Pointer to the destroyed monitor or NULL if monitor is not found
  */
-MXS_MONITOR* monitor_find_destroyed(const char* name, const char* module)
+MXS_MONITOR* monitor_repurpose_destroyed(const char* name, const char* module)
 {
     MXS_MONITOR* rval = NULL;
 
@@ -584,6 +584,8 @@ MXS_MONITOR* monitor_find_destroyed(const char* name, const char* module)
     {
         if (strcmp(ptr->name, name) == 0 && strcmp(ptr->module_name, module) == 0)
         {
+            ss_dassert(!ptr->active);
+            ptr->active = true;
             rval = ptr;
         }
     }

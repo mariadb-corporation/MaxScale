@@ -841,11 +841,11 @@ bool runtime_create_monitor(const char *name, const char *module)
     if (monitor_find(name) == NULL)
     {
 
-        MXS_MONITOR *monitor = monitor_find_destroyed(name, module);
+        MXS_MONITOR *monitor = monitor_repurpose_destroyed(name, module);
 
         if (monitor)
         {
-            monitor->active = true;
+            MXS_DEBUG("Repurposed monitor '%s'", name);
         }
         else if ((monitor = monitor_alloc(name, module)) == NULL)
         {
