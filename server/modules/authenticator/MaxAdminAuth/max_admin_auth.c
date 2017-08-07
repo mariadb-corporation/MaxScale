@@ -36,7 +36,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/users.h>
 
-static int max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
+static bool max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool max_admin_auth_is_client_ssl_capable(DCB *dcb);
 static int max_admin_auth_authenticate(DCB *dcb);
 static void max_admin_auth_free_client_data(DCB *dcb);
@@ -108,9 +108,9 @@ max_admin_auth_authenticate(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  * @param buffer Pointer to pointer to buffers containing data from client
- * @return Authentication status - 0 for success, 1 for failure
+ * @return Authentication status - true for success, false for failure
  */
-static int
+static bool
 max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 {
     ADMIN_session *session_data;
@@ -132,10 +132,10 @@ max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
         if (admin_linux_account_enabled(session_data->user))
         {
             session_data->validated = true;
-            return 0;
+            return true;
         }
     }
-    return 1;
+    return false;
 }
 
 /**

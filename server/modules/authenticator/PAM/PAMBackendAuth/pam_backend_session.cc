@@ -104,15 +104,15 @@ bool PamBackendSession::send_client_password(DCB *dcb)
     return dcb_write(dcb, gwbuf_alloc_and_load(buflen, bufferdata));
 }
 
-int PamBackendSession::extract(DCB *dcb, GWBUF *buffer)
+bool PamBackendSession::extract(DCB *dcb, GWBUF *buffer)
 {
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &m_sequence);
     m_sequence++;
-    int rval = MXS_AUTH_FAILED;
+    bool rval = false;
 
     if (m_state == PAM_AUTH_INIT && check_auth_switch_request(dcb, buffer))
     {
-        rval = MXS_AUTH_INCOMPLETE;
+        rval = true;
     }
     else if (m_state == PAM_AUTH_DATA_SENT)
     {
@@ -122,7 +122,7 @@ int PamBackendSession::extract(DCB *dcb, GWBUF *buffer)
             MXS_DEBUG("pam_backend_auth_extract received ok packet from '%s'.",
                       dcb->server->unique_name);
             m_state = PAM_AUTH_OK;
-            rval = MXS_AUTH_SUCCEEDED;
+            rval = true;
         }
         else
         {
@@ -131,7 +131,7 @@ int PamBackendSession::extract(DCB *dcb, GWBUF *buffer)
         }
     }
 
-    if (rval == MXS_AUTH_FAILED)
+    if (!rval)
     {
         MXS_DEBUG("pam_backend_auth_extract to backend '%s' failed for user '%s'.",
                   dcb->server->unique_name, dcb->user);

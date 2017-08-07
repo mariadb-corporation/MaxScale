@@ -46,8 +46,10 @@ struct servlistener;
  *                      `dcb->authenticator_data`. If a module does not implement
  *                      this entry point, `dcb->authenticator_data` will be set to NULL.
  *
- *      extract         Extract the data from a buffer and place in a structure
- *                      shared at the session level, stored in `dcb->data`
+ *      extract         Extract client or backend data from a buffer and place it
+ *                      in a structure shared at the session level, stored in
+ *                      `dcb->data`. Typically, this is called just before the
+ *                      authenticate-entrypoint.
  *
  *      connectSSL      Determine whether the connection can support SSL
  *
@@ -76,7 +78,7 @@ typedef struct mxs_authenticator
 {
     void* (*initialize)(char **options);
     void* (*create)(void* instance);
-    int   (*extract)(struct dcb *, GWBUF *);
+    bool  (*extract)(struct dcb *, GWBUF *);
     bool  (*connectssl)(struct dcb *);
     int   (*authenticate)(struct dcb *);
     void  (*free)(struct dcb *);
@@ -149,7 +151,7 @@ typedef enum
  * the MXS_AUTHENTICATOR structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define MXS_AUTHENTICATOR_VERSION      {1, 1, 0}
+#define MXS_AUTHENTICATOR_VERSION      {2, 1, 0}
 
 
 bool authenticator_init(void **instance, const char *authenticator, const char *options);

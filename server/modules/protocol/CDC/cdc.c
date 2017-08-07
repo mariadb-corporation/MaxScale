@@ -122,8 +122,9 @@ cdc_read_event(DCB* dcb)
 {
     MXS_SESSION *session = dcb->session;
     CDC_protocol *protocol = (CDC_protocol *) dcb->protocol;
-    int n, auth_val, rc = 0;
+    int n, rc = 0;
     GWBUF *head = NULL;
+    int auth_val = CDC_STATE_AUTH_FAILED;
     CDC_session *client_data = (CDC_session *) dcb->data;
 
     if ((n = dcb_read(dcb, &head, 0))  > 0)
@@ -131,9 +132,8 @@ cdc_read_event(DCB* dcb)
         switch (protocol->state)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
-            if (CDC_STATE_AUTH_OK == (
-                    /* Fill CDC_session from incoming packet */
-                    auth_val = dcb->authfunc.extract(dcb, head)))
+            /* Fill CDC_session from incoming packet */
+            if (dcb->authfunc.extract(dcb, head))
             {
                 /* Call protocol authentication */
                 auth_val = dcb->authfunc.authenticate(dcb);

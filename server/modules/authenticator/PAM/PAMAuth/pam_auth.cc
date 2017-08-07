@@ -59,10 +59,10 @@ static void pam_auth_free(void *data)
  * @param dcb Client DCB
  * @param read_buffer Buffer containing the client's response
  *
- * @return MXS_AUTH_SUCCEEDED if authentication can continue, MXS_AUTH_FAILED if
+ * @return True if authentication can continue, false if
  * authentication failed
  */
-static int pam_auth_extract(DCB *dcb, GWBUF *read_buffer)
+static bool pam_auth_extract(DCB *dcb, GWBUF *read_buffer)
 {
     PamClientSession *pses = static_cast<PamClientSession*>(dcb->authenticator_data);
     return pses->extract(dcb, read_buffer);

@@ -46,7 +46,7 @@
 
 const char CDC_USERS_FILENAME[] = "cdcusers";
 
-static int  cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
+static bool cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool cdc_auth_is_client_ssl_capable(DCB *dcb);
 static int  cdc_auth_authenticate(DCB *dcb);
 static void cdc_auth_free_client_data(DCB *dcb);
@@ -62,7 +62,7 @@ static int cdc_auth_check(
     unsigned int  *flags
 );
 
-static int cdc_auth_set_client_data(
+static bool cdc_auth_set_client_data(
     CDC_session *client_data,
     CDC_protocol *protocol,
     uint8_t *client_auth_packet,
@@ -284,10 +284,9 @@ cdc_auth_authenticate(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  * @param buffer Pointer to pointer to buffer containing data from client
- * @return Authentication status
- * @note Authentication status codes are defined in cdc.h
+ * @return True on success, false on error
  */
-static int
+static bool
 cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 {
     uint8_t *client_auth_packet = GWBUF_DATA(buf);
@@ -301,7 +300,7 @@ cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     {
         if (NULL == (client_data = (CDC_session *)MXS_CALLOC(1, sizeof(CDC_session))))
         {
-            return CDC_STATE_AUTH_ERR;
+            return false;
         }
         dcb->data = client_data;
     }
@@ -327,10 +326,9 @@ cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param protocol The protocol structure for this connection
  * @param client_auth_packet The data from the buffer received from client
  * @param client_auth_packet size An integer giving the size of the data
- * @return Authentication status
- * @note Authentication status codes are defined in cdc.h
+ * @return True on success, false on error
  */
-static int
+static bool
 cdc_auth_set_client_data(CDC_session *client_data,
                          CDC_protocol *protocol,
                          uint8_t *client_auth_packet,
@@ -342,7 +340,7 @@ cdc_auth_set_client_data(CDC_session *client_data,
         client_auth_packet_size--;
     }
 
-    int rval = CDC_STATE_AUTH_ERR;
+    bool rval = false;
     int decoded_size = client_auth_packet_size / 2;
     char decoded_buffer[decoded_size + 1]; // Extra for terminating null
 
@@ -364,7 +362,7 @@ cdc_auth_set_client_data(CDC_session *client_data,
             {
                 strcpy(client_data->user, decoded_buffer);
                 memcpy(client_data->auth_data, tmp_ptr, auth_len);
-                rval = CDC_STATE_AUTH_OK;
+                rval = true;
             }
         }
         else

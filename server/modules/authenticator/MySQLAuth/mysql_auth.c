@@ -36,7 +36,7 @@
 #include <maxscale/utils.h>
 
 static void* mysql_auth_init(char **options);
-static int mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
+static bool mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool mysql_auth_is_client_ssl_capable(DCB *dcb);
 static int mysql_auth_authenticate(DCB *dcb);
 static void mysql_auth_free_client_data(DCB *dcb);
@@ -53,7 +53,7 @@ static int combined_auth_check(
     uint8_t         *stage1_hash,
     char            *database
 );
-static int mysql_auth_set_client_data(
+static bool mysql_auth_set_client_data(
     MYSQL_session *client_data,
     MySQLProtocol *protocol,
     GWBUF         *buffer);
@@ -359,11 +359,9 @@ mysql_auth_authenticate(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  * @param buffer Pointer to pointer to buffer containing data from client
- * @return Authentication status
- * @note Authentication status codes are defined in maxscale/protocol/mysql.h
- * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
+ * @return True on success, false on error
  */
-static int
+static bool
 mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 {
     MySQLProtocol *protocol = NULL;
@@ -378,7 +376,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 
         if (!open_client_database(path, &auth_ses->handle))
         {
-            return MXS_AUTH_FAILED;
+            return false;
         }
     }
 
@@ -406,7 +404,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23))
     {
         /* Packet is not big enough */
-        return MXS_AUTH_FAILED;
+        return false;
     }
 
     return mysql_auth_set_client_data(client_data, protocol, buf);
@@ -423,11 +421,9 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param protocol The protocol structure for this connection
  * @param client_auth_packet The data from the buffer received from client
  * @param client_auth_packet size An integer giving the size of the data
- * @return Authentication status
- * @note Authentication status codes are defined in maxscale/protocol/mysql.h
- * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
+ * @return True on success, false on error
  */
-static int
+static bool
 mysql_auth_set_client_data(
     MYSQL_session *client_data,
     MySQLProtocol *protocol,
@@ -475,17 +471,17 @@ mysql_auth_set_client_data(
                 else
                 {
                     /* Failed to allocate space for authentication token string */
-                    return MXS_AUTH_FAILED;
+                    return false;
                 }
             }
             else
             {
                 /* Packet was too small to contain authentication token */
-                return MXS_AUTH_FAILED;
+                return false;
             }
         }
     }
-    return MXS_AUTH_SUCCEEDED;
+    return true;
 }
 
 /**

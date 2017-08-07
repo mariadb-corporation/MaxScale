@@ -199,17 +199,17 @@ bool extract_principal_name(DCB *dcb, GWBUF *buffer)
  * @brief Extract data from a MySQL packet
  * @param dcb Backend DCB
  * @param buffer Buffer containing a complete packet
- * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
- * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
+ * @return True if authentication is ongoing or complete,
+ * false if authentication failed.
  */
-static int gssapi_backend_auth_extract(DCB *dcb, GWBUF *buffer)
+static bool gssapi_backend_auth_extract(DCB *dcb, GWBUF *buffer)
 {
-    int rval = MXS_AUTH_FAILED;
+    bool rval = false;
     gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
 
     if (auth->state == GSSAPI_AUTH_INIT && extract_principal_name(dcb, buffer))
     {
-        rval = MXS_AUTH_INCOMPLETE;
+        rval = true;
     }
     else if (auth->state == GSSAPI_AUTH_DATA_SENT)
     {
@@ -217,7 +217,7 @@ static int gssapi_backend_auth_extract(DCB *dcb, GWBUF *buffer)
         if (mxs_mysql_is_ok_packet(buffer))
         {
             auth->state = GSSAPI_AUTH_OK;
-            rval = MXS_AUTH_SUCCEEDED;
+            rval = true;
         }
     }
 

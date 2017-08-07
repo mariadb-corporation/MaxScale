@@ -658,9 +658,8 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
      * data extraction succeeds, then a call is made to the actual
      * authenticate function to carry out the user checks.
      */
-    int auth_val = dcb->authfunc.extract(dcb, read_buffer);
-
-    if (MXS_AUTH_SUCCEEDED == auth_val)
+    int auth_val = MXS_AUTH_FAILED;
+    if (dcb->authfunc.extract(dcb, read_buffer))
     {
         auth_val = dcb->authfunc.authenticate(dcb);
     }

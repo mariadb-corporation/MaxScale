@@ -30,7 +30,7 @@ public:
     static PamClientSession* create(const PamInstance& inst);
     ~PamClientSession();
     int authenticate(DCB* client);
-    int extract(DCB *dcb, GWBUF *read_buffer);
+    bool extract(DCB *dcb, GWBUF *read_buffer);
 private:
     PamClientSession(sqlite3* dbhandle, const PamInstance& instance);
     void get_pam_user_services(const DCB* dcb, const MYSQL_session* session,

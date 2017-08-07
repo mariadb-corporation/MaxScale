@@ -36,7 +36,7 @@
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
 
-static int http_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
+static bool http_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool http_auth_is_client_ssl_capable(DCB *dcb);
 static int http_auth_authenticate(DCB *dcb);
 static void http_auth_free_client_data(DCB *dcb);
@@ -122,17 +122,17 @@ http_auth_authenticate(DCB *dcb)
  * @brief Transfer data from the authentication request to the DCB.
  *
  * Expects a buffer containing a Base64 encoded username and password
- * contatenated together by a semicolon as is specificed by HTTP Basic
+ * concatenated together by a semicolon as is specified by HTTP Basic
  * Access authentication.
  *
  * @param dcb Request handler DCB connected to the client
  * @param buffer Pointer to pointer to buffers containing data from client
- * @return Authentication status - 0 for success, 1 for failure
+ * @return Authentication status - true for success, false for failure
  */
-static int
+static bool
 http_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 {
-    int rval = 1;
+    bool rval = false;
     char* value = (char*)GWBUF_DATA(buf);
     char* tok = strstr(value, "Basic");
     tok = tok ? strchr(tok, ' ') : NULL;
@@ -162,7 +162,7 @@ http_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
                 ses->user = user;
                 ses->pw = pw;
                 dcb->data = ses;
-                rval = 0;
+                rval = true;
             }
             else
             {

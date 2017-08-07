@@ -343,9 +343,7 @@ mxs_auth_state_t handle_server_response(DCB *dcb, GWBUF *buffer)
     mxs_auth_state_t rval = proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED ?
                             MXS_AUTH_STATE_HANDSHAKE_FAILED : MXS_AUTH_STATE_FAILED;
 
-    int rc = dcb->authfunc.extract(dcb, buffer);
-
-    if (rc == MXS_AUTH_SUCCEEDED || rc == MXS_AUTH_INCOMPLETE)
+    if (dcb->authfunc.extract(dcb, buffer))
     {
         switch (dcb->authfunc.authenticate(dcb))
         {

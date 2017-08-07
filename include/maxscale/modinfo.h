@@ -55,7 +55,7 @@ typedef enum
  *
  * The rules for changing these values are:
  *
- * Any change that affects an inexisting call in the API in question,
+ * Any change that affects an existing call in the API,
  * making the new API no longer compatible with the old,
  * must increment the major version.
  *

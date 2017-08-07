@@ -35,7 +35,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/users.h>
 
-static int null_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
+static bool null_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool null_auth_is_client_ssl_capable(DCB *dcb);
 static int null_auth_authenticate(DCB *dcb);
 static void null_auth_free_client_data(DCB *dcb);
@@ -108,12 +108,12 @@ null_auth_authenticate(DCB *dcb)
  *
  * @param dcb Request handler DCB connected to the client
  * @param buffer Pointer to pointer to buffer containing data from client
- * @return Authentication status - always 0 to indicate success
+ * @return Always true
  */
-static int
+static bool
 null_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 {
-    return 0;
+    return true;
 }
 
 /**

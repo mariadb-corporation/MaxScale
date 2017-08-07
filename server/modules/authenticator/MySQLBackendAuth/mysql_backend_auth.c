@@ -82,13 +82,12 @@ void auth_backend_destroy(void *data)
  *
  * @param dcb Request handler DCB connected to the client
  * @param buffer Buffer containing data from client
- * @return Authentication status
+ * @return True on success, false on error
  * @see authenticator.h
- * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
  */
-static int auth_backend_extract(DCB *dcb, GWBUF *buf)
+static bool auth_backend_extract(DCB *dcb, GWBUF *buf)
 {
-    int rval = MXS_AUTH_FAILED;
+    bool rval = false;
     mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->authenticator_data;
 
     switch (mba->state)
@@ -96,7 +95,7 @@ static int auth_backend_extract(DCB *dcb, GWBUF *buf)
     case MBA_NEED_OK:
         if (mxs_mysql_is_ok_packet(buf))
         {
-            rval = MXS_AUTH_SUCCEEDED;
+            rval = true;
             mba->state = MBA_AUTH_OK;
         }
         else

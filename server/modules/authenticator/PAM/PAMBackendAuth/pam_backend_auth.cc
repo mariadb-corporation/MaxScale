@@ -38,7 +38,7 @@ static void pam_backend_auth_free(void *data)
  * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
  * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
  */
-static int pam_backend_auth_extract(DCB *dcb, GWBUF *buffer)
+static bool pam_backend_auth_extract(DCB *dcb, GWBUF *buffer)
 {
     PamBackendSession *pses = static_cast<PamBackendSession*>(dcb->authenticator_data);
     return pses->extract(dcb, buffer);

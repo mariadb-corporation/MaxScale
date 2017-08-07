@@ -25,7 +25,7 @@ class PamBackendSession
     PamBackendSession& operator=(const PamBackendSession&);
 public:
     PamBackendSession();
-    int extract(DCB *dcb, GWBUF *buffer);
+    bool extract(DCB *dcb, GWBUF *buffer);
     int authenticate(DCB *dcb);
 
 private:

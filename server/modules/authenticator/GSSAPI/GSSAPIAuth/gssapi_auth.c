@@ -272,24 +272,23 @@ static void copy_client_information(DCB *dcb, GWBUF *buffer)
  *
  * @param dcb Client DCB
  * @param read_buffer Buffer containing the client's response
- * @return MXS_AUTH_SUCCEEDED if authentication can continue, MXS_AUTH_FAILED if
- * authentication failed
+ * @return True if authentication can continue, false if not
  */
-static int gssapi_auth_extract(DCB *dcb, GWBUF *read_buffer)
+static bool gssapi_auth_extract(DCB *dcb, GWBUF *read_buffer)
 {
-    int rval = MXS_AUTH_FAILED;
+    int rval = false;
     gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
 
     switch (auth->state)
     {
     case GSSAPI_AUTH_INIT:
         copy_client_information(dcb, read_buffer);
-        rval = MXS_AUTH_SUCCEEDED;
+        rval = true;
         break;
 
     case GSSAPI_AUTH_DATA_SENT:
         store_client_token(dcb, read_buffer);
-        rval = MXS_AUTH_SUCCEEDED;
+        rval = true;
         break;
 
     default:

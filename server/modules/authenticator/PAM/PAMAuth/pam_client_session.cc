@@ -344,22 +344,22 @@ int PamClientSession::authenticate(DCB* dcb)
     return rval;
 }
 
-int PamClientSession::extract(DCB *dcb, GWBUF *buffer)
+bool PamClientSession::extract(DCB *dcb, GWBUF *buffer)
 {
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &m_sequence);
     m_sequence++;
-    int rval = MXS_AUTH_FAILED;
+    bool rval = false;
 
     switch (m_state)
     {
     case PAM_AUTH_INIT:
         // The buffer doesn't have any PAM-specific data yet
-        rval = MXS_AUTH_SUCCEEDED;
+        rval = true;
         break;
 
     case PAM_AUTH_DATA_SENT:
         store_client_password(dcb, buffer);
-        rval = MXS_AUTH_SUCCEEDED;
+        rval = true;
         break;
 
     default:
