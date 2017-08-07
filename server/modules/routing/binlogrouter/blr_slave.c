@@ -8192,7 +8192,6 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
                                                          "server_id, "
                                                          "binlog_file "
                                             "ORDER BY id ASC;";
-    static char sql_stmt[GTID_SQL_BUFFER_SIZE];
     int seqno;
     char *errmsg = NULL;
     BINARY_LOG_DATA_RESULT result = {};
@@ -8639,16 +8638,16 @@ static int binary_logs_purge_cb(void *data,
  *                         or NULL in case of parse errors.
  */
 static const char *blr_purge_getfile(char *purge_command,
-const char *last_file)
+                                     const char *last_file)
 {
     char *word;
     char *brkb;
-    char *sep = " \t";
+    const char *sep = " \t";
 
     word = strtok_r(purge_command, sep, &brkb);
 
     // Check BINARY
-    if (strcasecmp(word, "BINARY") != 0) 
+    if (strcasecmp(word, "BINARY") != 0)
     {
         MXS_ERROR("Invalid PURGE command: PURGE %s", word);
         return NULL;
@@ -8724,7 +8723,7 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
     char *errmsg = NULL;
     size_t n_delete = 0;
     // Select first ROWID of current binlog file
-    static const char last_file_tpl[] = "SELECT MIN(ROWID) AS min_id, "
+    static const char last_file_tpl[] = "SELECT MIN(id) AS min_id, "
                                             "(rep_domain || '/' || "
                                               "server_id || '/' || "
                                               "binlog_file) AS file "
@@ -8733,25 +8732,25 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
                                         "GROUP BY file "
                                         "ORDER BY id ASC;";
     // Select first ROWID of user specifed file
-    static const char find_file_tpl[] = "SELECT MIN(ROWID) AS min_id, "
+    static const char find_file_tpl[] = "SELECT MIN(id) AS min_id, "
                                             "(rep_domain || '/' || "
                                              "server_id || '/' || "
                                              "binlog_file) AS file "
                                         "FROM gtid_maps "
                                             "WHERE binlog_file = '%s' "
                                         "GROUP BY binlog_file "
-                                        "ORDER BY binlog_file ASC;";
+                                        "ORDER BY id ASC;";
     // SELECT files with ROWID < given one and DELETE
     static const char delete_list_tpl[] = "SELECT binlog_file, "
                                              "(rep_domain || '/' || "
                                                "server_id || '/' || "
                                                "binlog_file) AS file "
                                           "FROM gtid_maps "
-                                             "WHERE ROWID < %" PRIu64 " "
+                                             "WHERE id < %" PRIu64 " "
                                           "GROUP BY file "
                                           "ORDER BY id ASC; "
                                           "DELETE FROM gtid_maps "
-                                             "WHERE ROWID < %" PRIu64 ";";
+                                             "WHERE id < %" PRIu64 ";";
     static char sql_stmt[GTID_SQL_BUFFER_SIZE];
     BINARY_LOG_DATA_RESULT result;
     static const char *last_file;
@@ -8793,10 +8792,10 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
 
     /* Release lock */
     spinlock_release(&router->binlog_lock);
-    
+
     /**
-     *  Prepare SQL statement for last file ROWID o find_file ROWID
-     */ 
+     *  Prepare SQL statement for last file ROWID or find_file ROWID
+     */
     if (use_last)
     {
         /* Use current file, with prefix */
