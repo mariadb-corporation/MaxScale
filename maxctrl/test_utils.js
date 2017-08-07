@@ -70,9 +70,7 @@ module.exports = function() {
     // Execute a single MaxCtrl command, returns a Promise
     this.doCommand = function(command) {
         var ctrl = require('./lib/core.js')
-        var opts = { extra_args: [ '--quiet'] }
-
-        return ctrl.execute(command.split(' '), opts)
+        return ctrl.execute(command.split(' '))
     }
 
     // Execute a single MaxCtrl command and request a resource via the REST API,

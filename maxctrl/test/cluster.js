@@ -1,5 +1,6 @@
 require('../test_utils.js')()
 var cluster = require('../lib/cluster.js')
+var stripAnsi = require('strip-ansi')
 
 describe('Cluster Command Internals', function() {
 
@@ -143,15 +144,15 @@ describe('Cluster Command Internals', function() {
             }
         }
 
-        cluster.haveExtraServices(a, b).should.be.true
-        cluster.haveExtraServices(a, a).should.be.false
-        cluster.haveExtraServices(b, b).should.be.false
+        cluster.haveExtraServices(a, b, 'test1', 'test2').should.be.rejected
+        expect(cluster.haveExtraServices(a, a, 'test1', 'test2')).to.equal(undefined)
+        expect(cluster.haveExtraServices(b, b, 'test1', 'test2')).to.equal(undefined)
     })
 
 });
 
 
-describe('Cluster Commands', function() {
+describe('Cluster Sync', function() {
     before(startDoubleMaxScale)
 
     it('sync after server creation', function() {
@@ -217,6 +218,85 @@ describe('Cluster Commands', function() {
             .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989').should.be.rejected)
         // Create the listener on the second MaxScale to avoid it being synced later on
             .then(() => doCommand('create listener RW-Split-Router my-listener-2 5998 --hosts 127.0.0.1:8989'))
+    })
+
+    after(stopDoubleMaxScale)
+})
+
+function isJSON(line) {
+    return line.match(/['',\[\]{}:]/)
+}
+
+function getOperation(line) {
+    var op = null
+    line = line.trim()
+
+    if (line.match(/Deleted:/)) {
+        op = 'removed'
+    } else if (line.match(/New:/)){
+        op = 'added'
+    } else if (line.match(/Changed:/)) {
+        op = 'changed'
+    }
+
+    return op
+}
+
+// Convert a string format diff into a JSON object
+function parseDiff(str) {
+    var lines = stripAnsi(str).split(require('os').EOL)
+    var rval = {}
+
+    while (lines.length > 0) {
+        // Operation is first line, object type second
+        var op = getOperation(lines.shift())
+        var type = lines.shift()
+        var obj = ''
+
+        while (lines.length > 0 && isJSON(lines[0]) && getOperation(lines[0]) == null) {
+            obj += lines.shift().trim()
+        }
+
+        _.set(rval, op + '.' + type, JSON.parse(obj))
+    }
+
+    return rval
+}
+
+describe('Cluster Diff', function() {
+    before(startDoubleMaxScale)
+
+    it('diff after server creation', function() {
+        return doCommand('create server server5 127.0.0.1 3003 --hosts 127.0.0.1:8990')
+            .then(() => doCommand('cluster diff 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+            .then(function(res) {
+                var d = parseDiff(res)
+                d.removed.servers.length.should.equal(1)
+                d.removed.servers[0].id.should.equal('server5')
+            })
+            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+    })
+
+    it('diff after server alteration', function() {
+        return doCommand('alter server server2 port 3000 --hosts 127.0.0.1:8990')
+            .then(() => doCommand('cluster diff 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+            .then(function(res) {
+                var d = parseDiff(res)
+                d.changed.servers.length.should.equal(1)
+                d.changed.servers[0].id.should.equal('server2')
+            })
+            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+    })
+
+    it('diff after server deletion', function() {
+        return doCommand('destroy server server5 --hosts 127.0.0.1:8990')
+            .then(() => doCommand('cluster diff 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+            .then(function(res) {
+                var d = parseDiff(res)
+                d.added.servers.length.should.equal(1)
+                d.added.servers[0].id.should.equal('server5')
+            })
+            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
     })
 
     after(stopDoubleMaxScale)

@@ -27,7 +27,8 @@
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "mocha": "^3.3.0",
-    "nyc": "^11.0.3"
+    "nyc": "^11.0.3",
+    "strip-ansi": "^4.0.0"
   },
   "nyc": {
     "include": [
