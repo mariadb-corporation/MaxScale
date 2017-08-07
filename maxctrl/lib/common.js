@@ -15,23 +15,16 @@ var request = require('request-promise-native');
 var colors = require('colors/safe');
 var Table = require('cli-table');
 var consoleLib = require('console')
-var fs = require('fs')
+var os = require('os')
 
 module.exports = function() {
 
     this._ = require('lodash-getpath')
 
-    this.logger = console
-
     // The main entry point into the library. This function is used to do
     // cluster health checks and to propagate the commands to multiple
     // servers.
     this.maxctrl = function(argv, cb) {
-
-        if (argv.quiet) {
-            this.logger = new consoleLib.Console(fs.createWriteStream('/dev/null'),
-                                                 fs.createWriteStream('/dev/null'))
-        }
 
         this.argv = argv
 
@@ -42,14 +35,21 @@ module.exports = function() {
         return pingCluster(argv.hosts)
             .then(function() {
                 var promises = []
+                var rval = []
 
                 argv.hosts.forEach(function(i) {
-                    promises.push(cb(i))
+                    promises.push(cb(i)
+                                  .then(function(output) {
+                                      if (argv.hosts.length > 1) {
+                                          rval.push(colors.yellow(i))
+                                      }
+                                      rval.push(output)
+                                  }))
                 })
 
                 return Promise.all(promises)
                     .then(function() {
-                        argv.resolve()
+                        argv.resolve(argv.quiet ? undefined : rval.join(os.EOL))
                     }, function(err) {
                         argv.reject(err)
                     })
@@ -86,7 +86,7 @@ module.exports = function() {
                 table.push(row)
             })
 
-            logger.log(table.toString())
+            return table.toString()
         })
     }
 
@@ -119,7 +119,7 @@ module.exports = function() {
                 table.push(row)
             })
 
-            logger.log(table.toString())
+            return table.toString()
         })
     }
 
@@ -145,7 +145,7 @@ module.exports = function() {
                 table.push(o)
             })
 
-            logger.log(table.toString())
+            return table.toString()
         })
     }
 
@@ -190,8 +190,7 @@ module.exports = function() {
                     return cb(res)
                 } else {
                     // Request OK, no data or data is ignored
-                    logger.log(colors.green('OK'))
-                    return Promise.resolve()
+                    return Promise.resolve(colors.green('OK'))
                 }
             }, function(err) {
                 if (err.response && err.response.body) {

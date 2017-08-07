@@ -110,6 +110,7 @@ exports.builder = function(yargs) {
                      maxctrl(argv, function(host) {
                          return getDiffs(host, argv.target)
                              .then(function(diffs) {
+                                 var output = []
                                  var src = diffs[0]
                                  var dest = diffs[1]
 
@@ -119,16 +120,16 @@ exports.builder = function(yargs) {
                                      var changed = getChangedObjects(src[i].data, dest[i].data)
 
                                      if (newObj.length) {
-                                         logger.log("New:", i)
-                                         logger.log(colors.green(JSON.stringify(newObj, null, 4)))
+                                         output.push("New:", i)
+                                         output.push(colors.green(JSON.stringify(newObj, null, 4)))
                                      }
                                      if (oldObj.length) {
-                                         logger.log("Deleted:", i)
-                                         logger.log(colors.red(JSON.stringify(oldObj, null, 4)))
+                                         output.push("Deleted:", i)
+                                         output.push(colors.red(JSON.stringify(oldObj, null, 4)))
                                      }
                                      if (changed.length) {
-                                         logger.log("Changed:", i)
-                                         logger.log(colors.yellow(JSON.stringify(changed, null, 4)))
+                                         output.push("Changed:", i)
+                                         output.push(colors.yellow(JSON.stringify(changed, null, 4)))
                                      }
                                  })
                                  endpoints.forEach(function(i) {
@@ -136,10 +137,12 @@ exports.builder = function(yargs) {
                                      // to compare individual resources and resource collections
                                      var changed = getChangedObjects([src[i].data], [dest[i].data])
                                      if (changed.length) {
-                                         logger.log("Changed:", i)
-                                         logger.log(colors.yellow(JSON.stringify(changed, null, 4)))
+                                         output.push("Changed:", i)
+                                         output.push(colors.yellow(JSON.stringify(changed, null, 4)))
                                      }
                                  })
+
+                                 return output.join(require('os').EOL)
                              })
                      })
                  })

@@ -33,7 +33,7 @@ exports.builder = function(yargs) {
 
                     return doAsyncRequest(host, 'maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.parameters.join('&'),
                                           function(resp) {
-                                              logger.log(JSON.stringify(resp, null, 4))
+                                              return JSON.stringify(resp, null, 4)
                                           }, { method: verb })
                 })
             })
