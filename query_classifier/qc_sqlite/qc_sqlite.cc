@@ -42,6 +42,15 @@
 #define QC_TRACE()
 #endif
 
+#define QC_EXCEPTION_GUARD(statement)\
+    do { try { statement; }\
+    catch (const std::bad_alloc&) { \
+        MXS_OOM(); pInfo->m_status = QC_QUERY_INVALID; } \
+    catch (const std::exception& x) { \
+        MXS_ERROR("Caught standard exception: %s", x.what()); pInfo->m_status = QC_QUERY_INVALID; } \
+    catch (...) { \
+        MXS_ERROR("Caught unknown exception."); pInfo->m_status = QC_QUERY_INVALID; } } while (false)
+
 static inline bool qc_info_was_tokenized(qc_parse_result_t status)
 {
     return status == QC_QUERY_TOKENIZED;
@@ -3531,7 +3540,7 @@ void mxs_sqlite3AlterFinishAddColumn(Parse* pParse, Token* pToken)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3AlterFinishAddColumn(pParse, pToken);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3AlterFinishAddColumn(pParse, pToken));
 }
 
 void mxs_sqlite3AlterBeginAddColumn(Parse* pParse, SrcList* pSrcList)
@@ -3541,7 +3550,7 @@ void mxs_sqlite3AlterBeginAddColumn(Parse* pParse, SrcList* pSrcList)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3AlterBeginAddColumn(pParse, pSrcList);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3AlterBeginAddColumn(pParse, pSrcList));
 }
 
 void mxs_sqlite3Analyze(Parse* pParse, SrcList* pSrcList)
@@ -3551,7 +3560,7 @@ void mxs_sqlite3Analyze(Parse* pParse, SrcList* pSrcList)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3Analyze(pParse, pSrcList);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Analyze(pParse, pSrcList));
 }
 
 void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
@@ -3561,7 +3570,7 @@ void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3BeginTransaction(pParse, token, type);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3BeginTransaction(pParse, token, type));
 }
 
 void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CREATE TRIGGER statement */
@@ -3580,8 +3589,8 @@ void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CRE
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3BeginTrigger(pParse, pName1, pName2, tr_tm, op,
-                                   pColumns, pTableName, pWhen, isTemp, noErr);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3BeginTrigger(pParse, pName1, pName2, tr_tm, op,
+                                                      pColumns, pTableName, pWhen, isTemp, noErr));
 }
 
 void mxs_sqlite3CommitTransaction(Parse* pParse)
@@ -3591,7 +3600,7 @@ void mxs_sqlite3CommitTransaction(Parse* pParse)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3CommitTransaction(pParse);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3CommitTransaction(pParse));
 }
 
 void mxs_sqlite3CreateIndex(Parse *pParse,     /* All information about this parse */
@@ -3610,8 +3619,8 @@ void mxs_sqlite3CreateIndex(Parse *pParse,     /* All information about this par
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3CreateIndex(pParse, pName1, pName2, pTblName, pList,
-                                  onError, pStart, pPIWhere, sortOrder, ifNotExist);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3CreateIndex(pParse, pName1, pName2, pTblName, pList,
+                                                     onError, pStart, pPIWhere, sortOrder, ifNotExist));
 }
 
 void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
@@ -3627,7 +3636,8 @@ void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3CreateView(pParse, pBegin, pName1, pName2, pCNames, pSelect, isTemp, noErr);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3CreateView(pParse, pBegin, pName1, pName2,
+                                                    pCNames, pSelect, isTemp, noErr));
 }
 
 void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcList* pUsing)
@@ -3637,7 +3647,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3DeleteFrom(pParse, pTabList, pWhere, pUsing);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3DeleteFrom(pParse, pTabList, pWhere, pUsing));
 }
 
 void mxs_sqlite3DropIndex(Parse* pParse, SrcList* pName, SrcList* pTable, int bits)
@@ -3647,7 +3657,7 @@ void mxs_sqlite3DropIndex(Parse* pParse, SrcList* pName, SrcList* pTable, int bi
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3DropIndex(pParse, pName, pTable, bits);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3DropIndex(pParse, pName, pTable, bits));
 }
 
 void mxs_sqlite3DropTable(Parse *pParse, SrcList *pName, int isView, int noErr, int isTemp)
@@ -3657,7 +3667,7 @@ void mxs_sqlite3DropTable(Parse *pParse, SrcList *pName, int isView, int noErr, 
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3DropTable(pParse, pName, isView, noErr, isTemp);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3DropTable(pParse, pName, isView, noErr, isTemp));
 }
 
 void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
@@ -3674,7 +3684,7 @@ void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
         QcSqliteInfo* pInfo = this_thread.pInfo;
         ss_dassert(pInfo);
 
-        pInfo->mxs_sqlite3EndTable(pParse, pCons, pEnd, tabOpts, pSelect, pOldTable);
+        QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3EndTable(pParse, pCons, pEnd, tabOpts, pSelect, pOldTable));
     }
     else
     {
@@ -3703,7 +3713,7 @@ void mxs_sqlite3Insert(Parse* pParse,
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3Insert(pParse, pTabList, pSelect, pColumns, onError, pSet);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Insert(pParse, pTabList, pSelect, pColumns, onError, pSet));
 }
 
 void mxs_sqlite3RollbackTransaction(Parse* pParse)
@@ -3713,7 +3723,7 @@ void mxs_sqlite3RollbackTransaction(Parse* pParse)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3RollbackTransaction(pParse);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3RollbackTransaction(pParse));
 }
 
 int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
@@ -3726,7 +3736,7 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
         QcSqliteInfo* pInfo = this_thread.pInfo;
         ss_dassert(pInfo);
 
-        pInfo->mxs_sqlite3Select(pParse, p, pDest);
+        QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Select(pParse, p, pDest));
     }
     else
     {
@@ -3751,7 +3761,8 @@ void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
         QcSqliteInfo* pInfo = this_thread.pInfo;
         ss_dassert(pInfo);
 
-        pInfo->mxs_sqlite3StartTable(pParse, pName1, pName2, isTemp, isView, isVirtual, noErr);
+        QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3StartTable(pParse, pName1, pName2,
+                                                        isTemp, isView, isVirtual, noErr));
     }
     else
     {
@@ -3766,7 +3777,7 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3Update(pParse, pTabList, pChanges, pWhere, onError);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Update(pParse, pTabList, pChanges, pWhere, onError));
 }
 
 void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName)
@@ -3776,7 +3787,7 @@ void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->mxs_sqlite3Savepoint(pParse, op, pName);
+    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Savepoint(pParse, op, pName));
 }
 
 void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect, int sub_select)
@@ -3784,7 +3795,7 @@ void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect, int sub_selec
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleCollectInfoFromSelect(pParse, pSelect, sub_select);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleCollectInfoFromSelect(pParse, pSelect, sub_select));
 }
 
 void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
@@ -3797,7 +3808,7 @@ void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleAlterTable(pParse, command, pSrc, pName);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleAlterTable(pParse, command, pSrc, pName));
 }
 
 void maxscaleCall(Parse* pParse, SrcList* pName, ExprList* pExprList)
@@ -3807,7 +3818,7 @@ void maxscaleCall(Parse* pParse, SrcList* pName, ExprList* pExprList)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleCall(pParse, pName, pExprList);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleCall(pParse, pName, pExprList));
 }
 
 void maxscaleCheckTable(Parse* pParse, SrcList* pTables)
@@ -3817,7 +3828,7 @@ void maxscaleCheckTable(Parse* pParse, SrcList* pTables)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleCheckTable(pParse, pTables);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleCheckTable(pParse, pTables));
 }
 
 void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
@@ -3827,7 +3838,7 @@ void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleCreateSequence(pParse, pDatabase, pTable);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleCreateSequence(pParse, pDatabase, pTable));
 }
 
 void maxscaleComment()
@@ -3837,7 +3848,7 @@ void maxscaleComment()
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleComment();
+    QC_EXCEPTION_GUARD(pInfo->maxscaleComment());
 }
 
 void maxscaleDeclare(Parse* pParse)
@@ -3847,7 +3858,7 @@ void maxscaleDeclare(Parse* pParse)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleDeclare(pParse);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleDeclare(pParse));
 }
 
 void maxscaleDeallocate(Parse* pParse, Token* pName)
@@ -3857,7 +3868,7 @@ void maxscaleDeallocate(Parse* pParse, Token* pName)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleDeallocate(pParse, pName);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleDeallocate(pParse, pName));
 }
 
 void maxscaleDo(Parse* pParse, ExprList* pEList)
@@ -3867,7 +3878,7 @@ void maxscaleDo(Parse* pParse, ExprList* pEList)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleDo(pParse, pEList);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleDo(pParse, pEList));
 }
 
 void maxscaleDrop(Parse* pParse, int what, Token* pDatabase, Token* pName)
@@ -3877,7 +3888,7 @@ void maxscaleDrop(Parse* pParse, int what, Token* pDatabase, Token* pName)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleDrop(pParse, what, pDatabase, pName);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleDrop(pParse, what, pDatabase, pName));
 }
 
 void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)
@@ -3887,7 +3898,7 @@ void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleExecute(pParse, pName, type_mask);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleExecute(pParse, pName, type_mask));
 }
 
 void maxscaleExecuteImmediate(Parse* pParse, Token* pName, ExprSpan* pExprSpan, int type_mask)
@@ -3897,7 +3908,7 @@ void maxscaleExecuteImmediate(Parse* pParse, Token* pName, ExprSpan* pExprSpan, 
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleExecuteImmediate(pParse, pName, pExprSpan, type_mask);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleExecuteImmediate(pParse, pName, pExprSpan, type_mask));
 }
 
 void maxscaleExplain(Parse* pParse, Token* pNext)
@@ -3907,7 +3918,7 @@ void maxscaleExplain(Parse* pParse, Token* pNext)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleExplain(pParse, pNext);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleExplain(pParse, pNext));
 }
 
 void maxscaleFlush(Parse* pParse, Token* pWhat)
@@ -3917,7 +3928,7 @@ void maxscaleFlush(Parse* pParse, Token* pWhat)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleFlush(pParse, pWhat);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleFlush(pParse, pWhat));
 }
 
 void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Token* pName)
@@ -3927,7 +3938,7 @@ void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Toke
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleHandler(pParse, type, pFullName, pName);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleHandler(pParse, type, pFullName, pName));
 }
 
 void maxscaleLoadData(Parse* pParse, SrcList* pFullName)
@@ -3937,7 +3948,7 @@ void maxscaleLoadData(Parse* pParse, SrcList* pFullName)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleLoadData(pParse, pFullName);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleLoadData(pParse, pFullName));
 }
 
 void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
@@ -3947,7 +3958,7 @@ void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleLock(pParse, type, pTables);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleLock(pParse, type, pTables));
 }
 
 int maxscaleTranslateKeyword(int token)
@@ -3957,7 +3968,9 @@ int maxscaleTranslateKeyword(int token)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    return pInfo->maxscaleTranslateKeyword(token);
+    QC_EXCEPTION_GUARD(token = pInfo->maxscaleTranslateKeyword(token));
+
+    return token;
 }
 
 /**
@@ -3974,7 +3987,9 @@ int maxscaleKeyword(int token)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    return pInfo->maxscaleKeyword(token);
+    QC_EXCEPTION_GUARD(token = pInfo->maxscaleKeyword(token));
+
+    return token;
 }
 
 void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
@@ -3984,7 +3999,7 @@ void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleRenameTable(pParse, pTables);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleRenameTable(pParse, pTables));
 }
 
 void maxscalePrepare(Parse* pParse, Token* pName, Expr* pStmt)
@@ -3994,7 +4009,7 @@ void maxscalePrepare(Parse* pParse, Token* pName, Expr* pStmt)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscalePrepare(pParse, pName, pStmt);
+    QC_EXCEPTION_GUARD(pInfo->maxscalePrepare(pParse, pName, pStmt));
 }
 
 void maxscalePrivileges(Parse* pParse, int kind)
@@ -4004,7 +4019,7 @@ void maxscalePrivileges(Parse* pParse, int kind)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscalePrivileges(pParse, kind);
+    QC_EXCEPTION_GUARD(pInfo->maxscalePrivileges(pParse, kind));
 }
 
 void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
@@ -4014,7 +4029,7 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleSet(pParse, scope, kind, pList);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleSet(pParse, scope, kind, pList));
 }
 
 void maxscaleShow(Parse* pParse, MxsShow* pShow)
@@ -4024,7 +4039,7 @@ void maxscaleShow(Parse* pParse, MxsShow* pShow)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleShow(pParse, pShow);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleShow(pParse, pShow));
 }
 
 void maxscaleTruncate(Parse* pParse, Token* pDatabase, Token* pName)
@@ -4034,7 +4049,7 @@ void maxscaleTruncate(Parse* pParse, Token* pDatabase, Token* pName)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleTruncate(pParse, pDatabase, pName);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleTruncate(pParse, pDatabase, pName));
 }
 
 void maxscaleUse(Parse* pParse, Token* pToken)
@@ -4044,7 +4059,7 @@ void maxscaleUse(Parse* pParse, Token* pToken)
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->maxscaleUse(pParse, pToken);
+    QC_EXCEPTION_GUARD(pInfo->maxscaleUse(pParse, pToken));
 }
 
 /**
