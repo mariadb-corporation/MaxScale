@@ -64,6 +64,12 @@ describe("Library invocation", function() {
             .should.be.rejected
     })
 
+    it('command help', function() {
+        var opts = { extra_args: [ '--quitet'] }
+        return ctrl.execute('help list'.split(' '), opts)
+            .should.be.fulfilled
+    })
+
     it('connection failure', function() {
         stopMaxScale()
             .then(function() {

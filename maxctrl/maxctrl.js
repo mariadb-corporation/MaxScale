@@ -15,6 +15,12 @@
 
 var maxctrl = require('./lib/core.js')
 
+function print(out) {
+    if (out) {
+        console.log(out)
+    }
+}
+
 // Mangle the arguments if we are being called from the command line
 if (process.argv[0] == process.execPath) {
     process.argv.shift()
@@ -23,12 +29,4 @@ if (process.argv[0] == process.execPath) {
 }
 
 maxctrl.execute(process.argv)
-    .then(function(out) {
-        if (out) {
-            console.log(out)
-        }
-    }, function(out) {
-       if (out) {
-            console.log(out)
-        }
-    })
+    .then(print, print)

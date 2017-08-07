@@ -102,7 +102,7 @@ module.exports.execute = function(argv, opts) {
                 if (err) {
                     reject(err.message)
                 } else if (output) {
-                    logger.log(output)
+                    resolve(output)
                 }
             })
     })
