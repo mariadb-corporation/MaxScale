@@ -9,14 +9,17 @@ maxscaledir=$MAXSCALE_DIR
 
 test -z "$MAXSCALE_DIR" && exit 1
 
+# Create directories for the secondary MaxScale
 rm -r $maxscaledir/secondary/lib/maxscale
 rm -r $maxscaledir/secondary/cache/maxscale
 rm -r $maxscaledir/secondary/run/maxscale
-test -f /tmp/maxadmin.sock && rm /tmp/maxadmin.sock
+rm -r $maxscaledir/secondary/log/maxscale
+test -f /tmp/maxadmin2.sock && rm /tmp/maxadmin2.sock
 
 mkdir -m 0755 -p $maxscaledir/secondary/lib/maxscale
 mkdir -m 0755 -p $maxscaledir/secondary/cache/maxscale
 mkdir -m 0755 -p $maxscaledir/secondary/run/maxscale
+mkdir -m 0755 -p $maxscaledir/secondary/log/maxscale
 
 # Start MaxScale
 $maxscaledir/bin/maxscale -lstdout -df $maxscaledir/maxscale.cnf >& $maxscaledir/maxscale1.output &

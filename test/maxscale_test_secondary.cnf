@@ -2,12 +2,12 @@
 threads=4
 log_info=1
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
-logdir=@CMAKE_INSTALL_PREFIX@/secodary/log/maxscale/
-datadir=@CMAKE_INSTALL_PREFIX@/secodary/lib/maxscale
-cachedir=@CMAKE_INSTALL_PREFIX@/secodary/cache/maxscale
-language=@CMAKE_INSTALL_PREFIX@/secodary/lib/maxscale/
-piddir=@CMAKE_INSTALL_PREFIX@/secodary/run/maxscale
-config_persistdir=@CMAKE_INSTALL_PREFIX@/secodary/lib/maxscale/
+logdir=@CMAKE_INSTALL_PREFIX@/secondary/log/maxscale/
+datadir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale
+cachedir=@CMAKE_INSTALL_PREFIX@/secondary/cache/maxscale
+language=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/
+piddir=@CMAKE_INSTALL_PREFIX@/secondary/run/maxscale
+config_persistdir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/
 admin_auth=false
 admin_port=8990
 
