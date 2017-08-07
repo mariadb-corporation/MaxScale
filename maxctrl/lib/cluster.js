@@ -37,10 +37,31 @@ function getChangedObjects(a, b) {
 }
 
 // Check if the diffs add or delete services
-function haveExtraServices(src, dest) {
+function haveExtraServices(src, dest, srcHost, destHost) {
     var newObj = getDifference(src.services.data, dest.services.data)
     var oldObj = getDifference(dest.services.data, src.services.data)
-    return newObj.length > 0 || oldObj.length > 0
+
+    if (newObj.length > 0 || oldObj.length > 0) {
+        const EOL = require('os').EOL
+
+        var srcObj = _.transform(newObj, function(out, i) {
+            out.push(i.id)
+        })
+        var destObj = _.transform(oldObj, function(out, i) {
+            out.push(i.id)
+        })
+        err = ['Cannot diff host `' + srcHost + '` with target `' +
+               destHost + '`: New or deleted services on target host, ' +
+               'both hosts must have the same services.',
+               'Extra services on `' + srcHost + '`:',
+               JSON.stringify(srcObj, null, 4),
+               'Extra services on `' + destHost + '`:',
+               JSON.stringify(destObj, null, 4)
+              ]
+        return error(err.join(EOL))
+    }
+
+    return undefined
 }
 
 // Resource collections
@@ -114,6 +135,11 @@ exports.builder = function(yargs) {
                                  var src = diffs[0]
                                  var dest = diffs[1]
 
+                                 var err = haveExtraServices(src, dest, host, argv.target)
+                                 if (err) {
+                                     return err
+                                 }
+
                                  _.uniq(_.concat(Object.keys(src), Object.keys(dest))).forEach(function(i) {
                                      var newObj = getDifference(src[i].data, dest[i].data)
                                      var oldObj = getDifference(dest[i].data, src[i].data)
@@ -154,10 +180,9 @@ exports.builder = function(yargs) {
                         var src = diffs[0]
                         var dest = diffs[1]
 
-                        if (haveExtraServices(src, dest)) {
-                            return error('Cannot synchronize host `' + host + '` with target `' +
-                                         argv.target + '`: New or deleted services on target host, ' +
-                                         'both hosts must have the same services.')
+                        var err = haveExtraServices(src, dest, host, argv.target)
+                        if (err) {
+                            return err
                         }
 
                         // Delete old servers
