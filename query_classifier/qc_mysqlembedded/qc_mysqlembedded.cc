@@ -2180,6 +2180,7 @@ static bool should_exclude(const char* name, List<Item>* excludep)
 }
 
 static void add_field_info(parsing_info_t* info,
+                           st_select_lex* select,
                            const char* database,
                            const char* table,
                            const char* column,
@@ -2189,6 +2190,35 @@ static void add_field_info(parsing_info_t* info,
     ss_dassert(column);
 
     QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column, usage };
+
+    if (!database && table)
+    {
+        st_select_lex* s = select;
+
+        while ((item.table == table) && s)
+        {
+            TABLE_LIST* tbl = s->table_list.first;
+
+            while ((item.table == table) && tbl)
+            {
+                if (tbl->alias &&
+                    (strcmp(tbl->alias, table) == 0) &&
+                    (strcmp(tbl->table_name, "*") != 0))
+                {
+                    // The dummy default database "skygw_virtual" is not included.
+                    if (tbl->db && *tbl->db && (strcmp(tbl->db, "skygw_virtual") != 0))
+                    {
+                        item.database = (char*)tbl->db;
+                    }
+                    item.table = (char*)tbl->table_name;
+                }
+
+                tbl = tbl->next_local;
+            }
+
+            s = s->outer_select();
+        }
+    }
 
     size_t i;
     for (i = 0; i < info->field_infos_len; ++i)
@@ -2326,7 +2356,11 @@ static void add_function_info(parsing_info_t* info,
     }
 }
 
-static void add_field_info(parsing_info_t* pi, Item_field* item, uint32_t usage, List<Item>* excludep)
+static void add_field_info(parsing_info_t* pi,
+                           st_select_lex* select,
+                           Item_field* item,
+                           uint32_t usage,
+                           List<Item>* excludep)
 {
     const char* database = item->db_name;
     const char* table = item->table_name;
@@ -2417,10 +2451,14 @@ static void add_field_info(parsing_info_t* pi, Item_field* item, uint32_t usage,
         break;
     }
 
-    add_field_info(pi, database, table, column, usage, excludep);
+    add_field_info(pi, select, database, table, column, usage, excludep);
 }
 
-static void add_field_info(parsing_info_t* pi, Item* item, uint32_t usage, List<Item>* excludep)
+static void add_field_info(parsing_info_t* pi,
+                           st_select_lex* select,
+                           Item* item,
+                           uint32_t usage,
+                           List<Item>* excludep)
 {
     const char* database = NULL;
     const char* table = NULL;
@@ -2431,7 +2469,7 @@ static void add_field_info(parsing_info_t* pi, Item* item, uint32_t usage, List<
     strncpy(column, s, l);
     column[l] = 0;
 
-    add_field_info(pi, database, table, column, usage, excludep);
+    add_field_info(pi, select, database, table, column, usage, excludep);
 }
 
 typedef enum collect_source
@@ -2504,6 +2542,7 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
 }
 
 static void update_field_infos(parsing_info_t* pi,
+                               st_select_lex* select,
                                collect_source_t source,
                                Item* item,
                                uint32_t usage,
@@ -2518,13 +2557,13 @@ static void update_field_infos(parsing_info_t* pi,
 
             while (Item *i = ilist++)
             {
-                update_field_infos(pi, source, i, usage, excludep);
+                update_field_infos(pi, select, source, i, usage, excludep);
             }
         }
         break;
 
     case Item::FIELD_ITEM:
-        add_field_info(pi, static_cast<Item_field*>(item), usage, excludep);
+        add_field_info(pi, select, static_cast<Item_field*>(item), usage, excludep);
         break;
 
     case Item::REF_ITEM:
@@ -2533,7 +2572,7 @@ static void update_field_infos(parsing_info_t* pi,
             {
                 Item_ref* ref_item = static_cast<Item_ref*>(item);
 
-                add_field_info(pi, item, usage, excludep);
+                add_field_info(pi, select, item, usage, excludep);
 
                 size_t n_items = ref_item->cols();
 
@@ -2543,7 +2582,7 @@ static void update_field_infos(parsing_info_t* pi,
 
                     if (reffed_item != ref_item)
                     {
-                        update_field_infos(pi, source, ref_item->element_index(i), usage, excludep);
+                        update_field_infos(pi, select, source, ref_item->element_index(i), usage, excludep);
                     }
                 }
             }
@@ -2557,7 +2596,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             for (size_t i = 0; i < n_items; ++i)
             {
-                update_field_infos(pi, source, row_item->element_index(i), usage, excludep);
+                update_field_infos(pi, select, source, row_item->element_index(i), usage, excludep);
             }
         }
         break;
@@ -2665,7 +2704,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             for (size_t i = 0; i < n_items; ++i)
             {
-                update_field_infos(pi, source, items[i], usage, excludep);
+                update_field_infos(pi, select, source, items[i], usage, excludep);
             }
         }
         break;
@@ -2692,7 +2731,7 @@ static void update_field_infos(parsing_info_t* pi,
     )
                     if (in_subselect_item->left_expr_orig)
                     {
-                        update_field_infos(pi, source,
+                        update_field_infos(pi, select, source, // TODO: Might be wrong select.
                                            in_subselect_item->left_expr_orig, usage, excludep);
                     }
                     st_select_lex* ssl = in_subselect_item->get_select_lex();
@@ -2789,7 +2828,7 @@ static void update_field_infos(parsing_info_t* pi,
 
     while (Item *item = ilist++)
     {
-        update_field_infos(pi, COLLECT_SELECT, item, usage, NULL);
+        update_field_infos(pi, select, COLLECT_SELECT, item, usage, NULL);
     }
 
     if (select->group_list.first)
@@ -2799,7 +2838,7 @@ static void update_field_infos(parsing_info_t* pi,
         {
             Item* item = *order->item;
 
-            update_field_infos(pi, COLLECT_GROUP_BY, item, QC_USED_IN_GROUP_BY,
+            update_field_infos(pi, select, COLLECT_GROUP_BY, item, QC_USED_IN_GROUP_BY,
                                &select->item_list);
 
             order = order->next;
@@ -2808,7 +2847,7 @@ static void update_field_infos(parsing_info_t* pi,
 
     if (select->where)
     {
-        update_field_infos(pi, COLLECT_WHERE,
+        update_field_infos(pi, select, COLLECT_WHERE,
                            select->where,
                            QC_USED_IN_WHERE,
                            &select->item_list);
@@ -2927,7 +2966,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
         List_iterator<Item> ilist(lex->value_list);
         while (Item* item = ilist++)
         {
-            update_field_infos(pi, COLLECT_SELECT, item, 0, NULL);
+            update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, 0, NULL);
         }
 
         if ((lex->sql_command == SQLCOM_INSERT) ||
@@ -2938,7 +2977,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             List_iterator<Item> ilist(lex->field_list);
             while (Item *item = ilist++)
             {
-                update_field_infos(pi, COLLECT_SELECT, item, 0, NULL);
+                update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, 0, NULL);
             }
 
             if (lex->insert_list)
@@ -2946,7 +2985,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
                 List_iterator<Item> ilist(*lex->insert_list);
                 while (Item *item = ilist++)
                 {
-                    update_field_infos(pi, COLLECT_SELECT, item, 0, NULL);
+                    update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, 0, NULL);
                 }
             }
         }

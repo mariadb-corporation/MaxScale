@@ -57,3 +57,10 @@ SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));
 # warning: [qc_sqlite] Statement was classified only based on keywords
 # (Sqlite3 error: SQL logic error or missing database, near "0xC39F": syntax error):
 # "SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));"
+
+SELECT t.f FROM d.t;
+# qc_get_field_info        : ERR: d.t.f(QC_USED_IN_SELECT) != t.f(QC_USED_IN_SELECT)
+# Table names need to be collected in a more intelligent fashion to be able
+# to do that.
+select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
+with t as (select c from mysqltest.t2 where c < 2) select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;

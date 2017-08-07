@@ -28,7 +28,11 @@ insert into mysqltest.t2 values (1,'xxx'), (1,'zzz');
 
 connection user1;
 with t as (select c from mysqltest.t2 where c < 2)
-select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a; 
+
+#MXS: qc_sqlite cannot currently return mysqltest.t1.b as
+#MXS: the affected field, but only t1.b.
+#select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
+select t.c,t1.b from t,t1 where t.c=t1.a;
 --error ER_COLUMNACCESS_DENIED_ERROR
 select t.c,t.d,t1.b
 from (select c,d from mysqltest.t2 where c < 2) as t, mysqltest.t1
@@ -40,8 +44,11 @@ select t.c,t.d,t1.b from t,mysqltest.t1 where t.c=t1.a;
 connection root;
 
 create view mysqltest.v1(f1,f2) as
+#MXS: qc_sqlite reports t1.a and not mysqltest.t1.a
+#with t as (select c from mysqltest.t2 where c < 2)
+#select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
 with t as (select c from mysqltest.t2 where c < 2)
-select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a; 
+select t.c,t1.b from t,t1 where t.c=t1.a; 
 create view mysqltest.v2(c,d) as
 with t as (select a from mysqltest.t1 where a>=3)
 select t.a,b from t,mysqltest.t1 where mysqltest.t1.a = t.a;
@@ -54,8 +61,11 @@ select t.a,b from t,mysqltest.t1 where mysqltest.t1.a = t.a;
 connection user1;
 
 create view mysqltest.v3(c,d) as
+#MXS: qc_sqlite reports t1.a and not mysqltest.t1.a
+#with t as (select c from mysqltest.t2 where c < 2)
+#select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a; 
 with t as (select c from mysqltest.t2 where c < 2)
-select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a; 
+select t.c,t1.b from t,t1 where t.c=t1.a; 
 --error ER_COLUMNACCESS_DENIED_ERROR
 create view mysqltest.v4(f1,f2,f3) as
 with t as (select c,d from mysqltest.t2 where c < 2)

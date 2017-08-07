@@ -514,6 +514,8 @@ public:
     {
         ss_dassert(zColumn);
 
+        // NOTE: This must be first, so that the type mask is properly updated
+        // NOTE: in case zColumn is "currval" etc.
         if (is_sequence_related_field(zDatabase, zTable, zColumn))
         {
             m_type_mask |= QUERY_TYPE_WRITE;
@@ -525,6 +527,19 @@ public:
             // If field information should not be collected, or if field information
             // has already been collected, we just return.
             return;
+        }
+
+        if (!zDatabase && zTable)
+        {
+            Aliases::const_iterator i = m_aliases.find(zTable);
+
+            if (i != m_aliases.end())
+            {
+                const QcAliasValue& value = i->second;
+
+                zDatabase = value.zDatabase;
+                zTable = value.zTable;
+            }
         }
 
         QC_FIELD_INFO item = { (char*)zDatabase, (char*)zTable, (char*)zColumn, usage };
