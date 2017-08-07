@@ -1006,7 +1006,7 @@ public:
                              Select *pSelect,  /* Select from a "CREATE ... AS SELECT" */
                              SrcList* pOldTable) /* The old table in "CREATE ... LIKE OldTable" */
     {
-        if (!m_initializing)
+        if (this_thread.initialized)
         {
             if (pSelect)
             {
@@ -1093,7 +1093,7 @@ public:
     {
         int rc = -1;
 
-        if (!m_initializing)
+        if (this_thread.initialized)
         {
             m_status = QC_QUERY_PARSED;
 
@@ -1121,7 +1121,7 @@ public:
                                int isVirtual,   /* True if this is a VIRTUAL table */
                                int noErr)       /* Do nothing if table already exists */
     {
-        if (!m_initializing)
+        if (this_thread.initialized)
         {
             m_status = QC_QUERY_PARSED;
             m_operation = QUERY_OP_CREATE;
@@ -2241,7 +2241,6 @@ private:
         , m_pFunction_infos(NULL)
         , m_function_infos_len(0)
         , m_function_infos_capacity(0)
-        , m_initializing(false)
         , m_sql_mode(this_thread.sql_mode)
         , m_pFunction_name_mappings(this_thread.pFunction_name_mappings)
     {
@@ -2461,7 +2460,6 @@ public:
     QC_FUNCTION_INFO *m_pFunction_infos;        // Pointer to array of QC_FUNCTION_INFOs.
     size_t m_function_infos_len;                // The used entries in function_infos.
     size_t m_function_infos_capacity;           // The capacity of the function_infos array.
-    bool m_initializing;                        // Whether we are initializing sqlite3.
     qc_sql_mode_t m_sql_mode;                   // The current sql_mode.
     QC_NAME_MAPPING* m_pFunction_name_mappings; // How function names should be mapped.
     Aliases m_aliases;                          // Alias names for tables
@@ -2635,7 +2633,7 @@ static void parse_query_string(const char* query, int len)
             }
         }
     }
-    else if (!this_thread.pInfo->m_initializing) // If we are initializing, the query will not be classified.
+    else if (this_thread.initialized) // If we are initializing, the query will not be classified.
     {
         if (this_unit.log_level > QC_LOG_NOTHING)
         {
@@ -4182,7 +4180,6 @@ static int32_t qc_sqlite_thread_init(void)
     {
         this_thread.sql_mode = this_unit.sql_mode;
         this_thread.pFunction_name_mappings = this_unit.pFunction_name_mappings;
-        this_thread.initialized = true;
 
         MXS_INFO("In-memory sqlite database successfully opened for thread %lu.",
                  (unsigned long) pthread_self());
@@ -4200,9 +4197,7 @@ static int32_t qc_sqlite_thread_init(void)
 
             this_thread.pInfo->m_pQuery = s;
             this_thread.pInfo->m_nQuery = len;
-            this_thread.pInfo->m_initializing = true;
             parse_query_string(s, len);
-            this_thread.pInfo->m_initializing = false;
             this_thread.pInfo->m_pQuery = NULL;
             this_thread.pInfo->m_nQuery = 0;
 
