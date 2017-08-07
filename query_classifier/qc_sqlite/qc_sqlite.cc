@@ -670,6 +670,1546 @@ public:
         }
     }
 
+    static int32_t type_check_dynamic_string(const Expr* pExpr)
+    {
+        int32_t type_mask = 0;
+
+        if (pExpr)
+        {
+            switch (pExpr->op)
+            {
+            case TK_CONCAT:
+                type_mask |= type_check_dynamic_string(pExpr->pLeft);
+                type_mask |= type_check_dynamic_string(pExpr->pRight);
+                break;
+
+            case TK_VARIABLE:
+                ss_dassert(pExpr->u.zToken);
+                {
+                    const char* zToken = pExpr->u.zToken;
+                    if (zToken[0] == '@')
+                    {
+                        if (zToken[1] == '@')
+                        {
+                            type_mask |= QUERY_TYPE_SYSVAR_READ;
+                        }
+                        else
+                        {
+                            type_mask |= QUERY_TYPE_USERVAR_READ;
+                        }
+                    }
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+
+        return type_mask;
+    }
+
+    /**
+     * Returns some string from an expression.
+     *
+     * @param pExpr An expression.
+     *
+     * @return Some string referred to in pExpr.
+     */
+    static const char* find_one_string(Expr* pExpr)
+    {
+        const char* z = NULL;
+
+        if (pExpr->op == TK_STRING)
+        {
+            ss_dassert(pExpr->u.zToken);
+            z = pExpr->u.zToken;
+        }
+
+        if (!z && pExpr->pLeft)
+        {
+            z = find_one_string(pExpr->pLeft);
+        }
+
+        if (!z && pExpr->pRight)
+        {
+            z = find_one_string(pExpr->pRight);
+        }
+
+        return z;
+    }
+
+    static int string_to_truth(const char* s)
+    {
+        int truth = -1;
+
+        if ((strcasecmp(s, "true") == 0) || (strcasecmp(s, "on") == 0))
+        {
+            truth = 1;
+        }
+        else if ((strcasecmp(s, "false") == 0) || (strcasecmp(s, "off") == 0))
+        {
+            truth = 0;
+        }
+
+        return truth;
+    }
+
+    //
+    // sqlite3 callbacks
+    //
+
+    void mxs_sqlite3AlterFinishAddColumn(Parse* pParse, Token* pToken)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_operation = QUERY_OP_ALTER;
+    }
+
+    void mxs_sqlite3AlterBeginAddColumn(Parse* pParse, SrcList* pSrcList)
+    {
+        update_names_from_srclist(this, pSrcList);
+
+        exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
+    }
+
+    void mxs_sqlite3Analyze(Parse* pParse, SrcList* pSrcList)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+
+        update_names_from_srclist(this, pSrcList);
+
+        exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
+    }
+
+    void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
+    {
+        if ((m_sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
+        {
+            m_status = QC_QUERY_PARSED;
+            m_type_mask = QUERY_TYPE_BEGIN_TRX | type;
+        }
+    }
+
+    void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CREATE TRIGGER statement */
+                                 Token *pName1,      /* The name of the trigger */
+                                 Token *pName2,      /* The name of the trigger */
+                                 int tr_tm,          /* One of TK_BEFORE, TK_AFTER, TK_INSTEAD */
+                                 int op,             /* One of TK_INSERT, TK_UPDATE, TK_DELETE */
+                                 IdList *pColumns,   /* column list if this is an UPDATE OF trigger */
+                                 SrcList *pTableName,/* The name of the table/view the trigger applies to */
+                                 Expr *pWhen,        /* WHEN clause */
+                                 int isTemp,         /* True if the TEMPORARY keyword is present */
+                                 int noErr)          /* Suppress errors if the trigger already exists */
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+
+        if (pTableName)
+        {
+            for (size_t i = 0; i < pTableName->nAlloc; ++i)
+            {
+                const SrcList::SrcList_item* pItem = &pTableName->a[i];
+
+                if (pItem->zName)
+                {
+                    update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
+                }
+            }
+        }
+
+        // We need to call this, otherwise finish trigger will not be called.
+        exposed_sqlite3BeginTrigger(pParse, pName1, pName2, tr_tm, op, pColumns,
+                                    pTableName, pWhen, isTemp, noErr);
+    }
+
+    void mxs_sqlite3CommitTransaction(Parse* pParse)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_COMMIT;
+    }
+
+    void mxs_sqlite3CreateIndex(Parse *pParse,     /* All information about this parse */
+                                Token *pName1,     /* First part of index name. May be NULL */
+                                Token *pName2,     /* Second part of index name. May be NULL */
+                                SrcList *pTblName, /* Table to index. Use pParse->pNewTable if 0 */
+                                ExprList *pList,   /* A list of columns to be indexed */
+                                int onError,       /* OE_Abort, OE_Ignore, OE_Replace, or OE_None */
+                                Token *pStart,     /* The CREATE token that begins this statement */
+                                Expr *pPIWhere,    /* WHERE clause for partial indices */
+                                int sortOrder,     /* Sort order of primary key when pList==NULL */
+                                int ifNotExist)    /* Omit error if index already exists */
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_operation = QUERY_OP_CREATE;
+
+        if (pTblName)
+        {
+            update_names_from_srclist(this, pTblName);
+        }
+        else if (pParse->pNewTable)
+        {
+            update_names(NULL, pParse->pNewTable->zName, NULL);
+        }
+
+        exposed_sqlite3ExprDelete(pParse->db, pPIWhere);
+        exposed_sqlite3ExprListDelete(pParse->db, pList);
+        exposed_sqlite3SrcListDelete(pParse->db, pTblName);
+    }
+
+    void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
+                               Token *pBegin,     /* The CREATE token that begins the statement */
+                               Token *pName1,     /* The token that holds the name of the view */
+                               Token *pName2,     /* The token that holds the name of the view */
+                               ExprList *pCNames, /* Optional list of view column names */
+                               Select *pSelect,   /* A SELECT statement that will become the new view */
+                               int isTemp,        /* TRUE for a TEMPORARY view */
+                               int noErr)         /* Suppress error messages if VIEW already exists */
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_operation = QUERY_OP_CREATE;
+
+        const Token* pName = pName2->z ? pName2 : pName1;
+        const Token* pDatabase = pName2->z ? pName1 : NULL;
+
+        char name[pName->n + 1];
+        strncpy(name, pName->z, pName->n);
+        name[pName->n] = 0;
+
+        if (pDatabase)
+        {
+            char database[pDatabase->n + 1];
+            strncpy(database, pDatabase->z, pDatabase->n);
+            database[pDatabase->n] = 0;
+
+            update_names(database, name, NULL);
+        }
+        else
+        {
+            update_names(NULL, name, NULL);
+        }
+
+        if (pSelect)
+        {
+            update_field_infos_from_select(this, pSelect, QC_USED_IN_SELECT, NULL);
+        }
+
+        exposed_sqlite3ExprListDelete(pParse->db, pCNames);
+        // pSelect is deleted in parse.y
+    }
+
+    void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcList* pUsing)
+    {
+        m_status = QC_QUERY_PARSED;
+
+        if (m_operation != QUERY_OP_EXPLAIN)
+        {
+            m_type_mask = QUERY_TYPE_WRITE;
+            m_operation = QUERY_OP_DELETE;
+            m_has_clause = pWhere ? true : false;
+
+            if (pUsing)
+            {
+                // Walk through the using declaration and update
+                // table and database names.
+                for (int i = 0; i < pUsing->nSrc; ++i)
+                {
+                    const SrcList::SrcList_item* pItem = &pUsing->a[i];
+
+                    update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
+                }
+
+                // Walk through the tablenames while excluding alias
+                // names from the using declaration.
+                for (int i = 0; i < pTabList->nSrc; ++i)
+                {
+                    const SrcList::SrcList_item* pTable = &pTabList->a[i];
+                    ss_dassert(pTable->zName);
+                    int j = 0;
+                    bool isSame = false;
+
+                    do
+                    {
+                        SrcList::SrcList_item* pItem = &pUsing->a[j++];
+
+                        if (strcasecmp(pTable->zName, pItem->zName) == 0)
+                        {
+                            isSame = true;
+                        }
+                        else if (pItem->zAlias && (strcasecmp(pTable->zName, pItem->zAlias) == 0))
+                        {
+                            isSame = true;
+                        }
+                    }
+                    while (!isSame && (j < pUsing->nSrc));
+
+                    if (!isSame)
+                    {
+                        // No alias name, update the table name.
+                        update_names(pTable->zDatabase, pTable->zName, NULL);
+                    }
+                }
+            }
+            else
+            {
+                update_names_from_srclist(this, pTabList);
+            }
+
+            if (pWhere)
+            {
+                update_field_infos(this, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
+            }
+        }
+
+        exposed_sqlite3ExprDelete(pParse->db, pWhere);
+        exposed_sqlite3SrcListDelete(pParse->db, pTabList);
+        exposed_sqlite3SrcListDelete(pParse->db, pUsing);
+    }
+
+    void mxs_sqlite3DropIndex(Parse* pParse, SrcList* pName, SrcList* pTable, int bits)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_operation = QUERY_OP_DROP;
+
+        update_names_from_srclist(this, pTable);
+
+        exposed_sqlite3SrcListDelete(pParse->db, pName);
+        exposed_sqlite3SrcListDelete(pParse->db, pTable);
+    }
+
+    void mxs_sqlite3DropTable(Parse *pParse, SrcList *pName, int isView, int noErr, int isTemp)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_WRITE;
+        if (!isTemp)
+        {
+            m_type_mask |= QUERY_TYPE_COMMIT;
+        }
+        m_operation = QUERY_OP_DROP;
+        if (!isView)
+        {
+            m_is_drop_table = true;
+        }
+        update_names_from_srclist(this, pName);
+
+        exposed_sqlite3SrcListDelete(pParse->db, pName);
+    }
+
+    void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
+                             Token *pCons,     /* The ',' token after the last column defn. */
+                             Token *pEnd,      /* The ')' before options in the CREATE TABLE */
+                             u8 tabOpts,       /* Extra table options. Usually 0. */
+                             Select *pSelect,  /* Select from a "CREATE ... AS SELECT" */
+                             SrcList* pOldTable) /* The old table in "CREATE ... LIKE OldTable" */
+    {
+        if (!m_initializing)
+        {
+            if (pSelect)
+            {
+                update_field_infos_from_select(this, pSelect, QC_USED_IN_SELECT, NULL);
+            }
+            else if (pOldTable)
+            {
+                update_names_from_srclist(this, pOldTable);
+                exposed_sqlite3SrcListDelete(pParse->db, pOldTable);
+            }
+
+            // pSelect is deleted in parse.y
+        }
+        else
+        {
+            exposed_sqlite3EndTable(pParse, pCons, pEnd, tabOpts, pSelect);
+        }
+    }
+
+    void mxs_sqlite3FinishTrigger(Parse *pParse,          /* Parser context */
+                                  TriggerStep *pStepList, /* The triggered program */
+                                  Token *pAll)         /* Token that describes the complete CREATE TRIGGER */
+    {
+        exposed_sqlite3FinishTrigger(pParse, pStepList, pAll);
+    }
+
+    void mxs_sqlite3Insert(Parse* pParse,
+                           SrcList* pTabList,
+                           Select* pSelect,
+                           IdList* pColumns,
+                           int onError,
+                           ExprList* pSet)
+    {
+        m_status = QC_QUERY_PARSED;
+
+        if (m_operation != QUERY_OP_EXPLAIN)
+        {
+            m_type_mask = QUERY_TYPE_WRITE;
+            m_operation = QUERY_OP_INSERT;
+            ss_dassert(pTabList);
+            ss_dassert(pTabList->nSrc >= 1);
+            update_names_from_srclist(this, pTabList);
+
+            if (pColumns)
+            {
+                update_field_infos_from_idlist(this, pColumns, 0, NULL);
+            }
+
+            if (pSelect)
+            {
+                uint32_t usage;
+
+                if (pSelect->selFlags & SF_Values) // Synthesized from VALUES clause
+                {
+                    usage = 0;
+                }
+                else
+                {
+                    usage = QC_USED_IN_SELECT;
+                }
+
+                update_field_infos_from_select(this, pSelect, usage, NULL);
+            }
+
+            if (pSet)
+            {
+                update_field_infos_from_exprlist(this, pSet, 0, NULL);
+            }
+        }
+
+        exposed_sqlite3SrcListDelete(pParse->db, pTabList);
+        exposed_sqlite3IdListDelete(pParse->db, pColumns);
+        exposed_sqlite3ExprListDelete(pParse->db, pSet);
+        // pSelect is deleted in parse.y
+    }
+
+    void mxs_sqlite3RollbackTransaction(Parse* pParse)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_ROLLBACK;
+    }
+
+    int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
+    {
+        int rc = -1;
+
+        if (!m_initializing)
+        {
+            m_status = QC_QUERY_PARSED;
+
+            if (m_operation != QUERY_OP_EXPLAIN)
+            {
+                m_operation = QUERY_OP_SELECT;
+
+                maxscaleCollectInfoFromSelect(pParse, p, 0);
+            }
+            // NOTE: By convention, the select is deleted in parse.y.
+        }
+        else
+        {
+            rc = exposed_sqlite3Select(pParse, p, pDest);
+        }
+
+        return rc;
+    }
+
+    void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
+                               Token *pName1,   /* First part of the name of the table or view */
+                               Token *pName2,   /* Second part of the name of the table or view */
+                               int isTemp,      /* True if this is a TEMP table */
+                               int isView,      /* True if this is a VIEW */
+                               int isVirtual,   /* True if this is a VIRTUAL table */
+                               int noErr)       /* Do nothing if table already exists */
+    {
+        if (!m_initializing)
+        {
+            m_status = QC_QUERY_PARSED;
+            m_operation = QUERY_OP_CREATE;
+            m_type_mask = QUERY_TYPE_WRITE;
+
+            if (isTemp)
+            {
+                m_type_mask |= QUERY_TYPE_CREATE_TMP_TABLE;
+            }
+            else
+            {
+                m_type_mask |= QUERY_TYPE_COMMIT;
+            }
+
+            const Token* pName = pName2->z ? pName2 : pName1;
+            const Token* pDatabase = pName2->z ? pName1 : NULL;
+
+            char name[pName->n + 1];
+            strncpy(name, pName->z, pName->n);
+            name[pName->n] = 0;
+
+            if (pDatabase)
+            {
+                char database[pDatabase->n + 1];
+                strncpy(database, pDatabase->z, pDatabase->n);
+                database[pDatabase->n] = 0;
+
+                update_names(database, name, NULL);
+            }
+            else
+            {
+                update_names(NULL, name, NULL);
+            }
+
+            if (m_collect & QC_COLLECT_TABLES)
+            {
+                // If information is collected in several passes, then we may
+                // this information already.
+                if (!m_zCreated_table_name)
+                {
+                    m_zCreated_table_name = MXS_STRDUP(m_pzTable_names[0]);
+                    MXS_ABORT_IF_NULL(m_zCreated_table_name);
+                }
+                else
+                {
+                    ss_dassert(m_collect != m_collected);
+                    ss_dassert(strcmp(m_zCreated_table_name, m_pzTable_names[0]) == 0);
+                }
+            }
+        }
+        else
+        {
+            exposed_sqlite3StartTable(pParse, pName1, pName2, isTemp, isView, isVirtual, noErr);
+        }
+    }
+
+    void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Expr* pWhere, int onError)
+    {
+        m_status = QC_QUERY_PARSED;
+
+        if (m_operation != QUERY_OP_EXPLAIN)
+        {
+            m_type_mask = QUERY_TYPE_WRITE;
+            m_operation = QUERY_OP_UPDATE;
+            update_names_from_srclist(this, pTabList);
+            m_has_clause = (pWhere ? true : false);
+
+            if (pChanges)
+            {
+                for (int i = 0; i < pChanges->nExpr; ++i)
+                {
+                    ExprList::ExprList_item* pItem = &pChanges->a[i];
+
+                    update_field_infos(this, 0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
+                }
+            }
+
+            if (pWhere)
+            {
+                update_field_infos(this, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
+            }
+        }
+
+        exposed_sqlite3SrcListDelete(pParse->db, pTabList);
+        exposed_sqlite3ExprListDelete(pParse->db, pChanges);
+        exposed_sqlite3ExprDelete(pParse->db, pWhere);
+    }
+
+    void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_WRITE;
+    }
+
+    void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect, int sub_select)
+    {
+        if (pSelect->pInto)
+        {
+            // If there's a single variable, then it's a write.
+            // mysql embedded considers it a system var write.
+            m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+
+            // Also INTO {OUTFILE|DUMPFILE} will be typed as QUERY_TYPE_GSYSVAR_WRITE.
+        }
+        else
+        {
+            m_type_mask = QUERY_TYPE_READ;
+        }
+
+        uint32_t usage = sub_select ? QC_USED_IN_SUBSELECT : QC_USED_IN_SELECT;
+
+        update_field_infos_from_select(this, pSelect, usage, NULL);
+    }
+
+    void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
+                            mxs_alter_t command,
+                            SrcList *pSrc,            /* The table to rename. */
+                            Token *pName)             /* The new table name (RENAME). */
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_operation = QUERY_OP_ALTER;
+
+        switch (command)
+        {
+        case MXS_ALTER_DISABLE_KEYS:
+            update_names_from_srclist(this, pSrc);
+            break;
+
+        case MXS_ALTER_ENABLE_KEYS:
+            update_names_from_srclist(this, pSrc);
+            break;
+
+        case MXS_ALTER_RENAME:
+            update_names_from_srclist(this, pSrc);
+            break;
+
+        default:
+            ;
+        }
+
+        exposed_sqlite3SrcListDelete(pParse->db, pSrc);
+    }
+
+    void maxscaleCall(Parse* pParse, SrcList* pName, ExprList* pExprList)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_WRITE;
+
+        if (pExprList)
+        {
+            update_field_infos_from_exprlist(this, pExprList, 0, NULL);
+        }
+
+        exposed_sqlite3SrcListDelete(pParse->db, pName);
+        exposed_sqlite3ExprListDelete(pParse->db, pExprList);
+    }
+
+    void maxscaleCheckTable(Parse* pParse, SrcList* pTables)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+
+        update_names_from_srclist(this, pTables);
+
+        exposed_sqlite3SrcListDelete(pParse->db, pTables);
+    }
+
+    void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
+    {
+        m_status = QC_QUERY_PARSED;
+
+        const char* zDatabase = NULL;
+        char database[pDatabase ? pDatabase->n + 1 : 1];
+
+        if (pDatabase)
+        {
+            strncpy(database, pDatabase->z, pDatabase->n);
+            database[pDatabase->n] = 0;
+
+            zDatabase = database;
+        }
+
+        char table[pTable->n + 1];
+        strncpy(table, pTable->z, pTable->n);
+        table[pTable->n] = 0;
+
+        update_names(zDatabase, table, NULL);
+    }
+
+    void maxscaleComment()
+    {
+        if (m_status == QC_QUERY_INVALID)
+        {
+            m_status = QC_QUERY_PARSED;
+            m_type_mask = QUERY_TYPE_READ;
+        }
+    }
+
+    void maxscaleDeclare(Parse* pParse)
+    {
+        if (m_sql_mode != QC_SQL_MODE_ORACLE)
+        {
+            m_status = QC_QUERY_INVALID;
+        }
+    }
+
+    void maxscaleDeallocate(Parse* pParse, Token* pName)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_WRITE;
+
+        // If information is collected in several passes, then we may
+        // this information already.
+        if (!m_zPrepare_name)
+        {
+            m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
+            if (m_zPrepare_name)
+            {
+                memcpy(m_zPrepare_name, pName->z, pName->n);
+                m_zPrepare_name[pName->n] = 0;
+            }
+        }
+        else
+        {
+            ss_dassert(m_collect != m_collected);
+            ss_dassert(strncmp(m_zPrepare_name, pName->z, pName->n) == 0);
+        }
+    }
+
+    void maxscaleDo(Parse* pParse, ExprList* pEList)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_READ | QUERY_TYPE_WRITE);
+
+        exposed_sqlite3ExprListDelete(pParse->db, pEList);
+    }
+
+    void maxscaleDrop(Parse* pParse, int what, Token* pDatabase, Token* pName)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_operation = QUERY_OP_DROP;
+
+        if (what == MXS_DROP_SEQUENCE)
+        {
+            const char* zDatabase = NULL;
+            char database[pDatabase ? pDatabase->n + 1 : 1];
+
+            if (pDatabase)
+            {
+                strncpy(database, pDatabase->z, pDatabase->n);
+                database[pDatabase->n] = 0;
+
+                zDatabase = database;
+            }
+
+            char table[pName->n + 1];
+            strncpy(table, pName->z, pName->n);
+            table[pName->n] = 0;
+
+            update_names(zDatabase, table, NULL);
+        }
+    }
+
+    void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | type_mask);
+        m_operation = QUERY_OP_EXECUTE;
+
+        // If information is collected in several passes, then we may
+        // this information already.
+        if (!m_zPrepare_name)
+        {
+            m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
+            if (m_zPrepare_name)
+            {
+                memcpy(m_zPrepare_name, pName->z, pName->n);
+                m_zPrepare_name[pName->n] = 0;
+            }
+        }
+        else
+        {
+            ss_dassert(m_collect != m_collected);
+            ss_dassert(strncmp(m_zPrepare_name, pName->z, pName->n) == 0);
+        }
+    }
+
+    void maxscaleExecuteImmediate(Parse* pParse, Token* pName, ExprSpan* pExprSpan, int type_mask)
+    {
+        if (m_sql_mode == QC_SQL_MODE_ORACLE)
+        {
+            // This should be "EXECUTE IMMEDIATE ...", but as "IMMEDIATE" is not
+            // checked by the parser we do it here.
+
+            static const char IMMEDIATE[] = "IMMEDIATE";
+
+            if ((pName->n == sizeof(IMMEDIATE) - 1) && (strncasecmp(pName->z, IMMEDIATE, pName->n)) == 0)
+            {
+                m_status = QC_QUERY_PARSED;
+                m_type_mask = (QUERY_TYPE_WRITE | type_mask);
+                m_type_mask |= type_check_dynamic_string(pExprSpan->pExpr);
+            }
+            else
+            {
+                m_status = QC_QUERY_INVALID;
+            }
+        }
+        else
+        {
+            m_status = QC_QUERY_INVALID;
+        }
+
+        exposed_sqlite3ExprDelete(pParse->db, pExprSpan->pExpr);
+    }
+
+    void maxscaleExplain(Parse* pParse, Token* pNext)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_READ;
+        m_operation = QUERY_OP_SHOW;
+
+        if (pNext)
+        {
+            if (pNext->z)
+            {
+                const char EXTENDED[]   = "EXTENDED";
+                const char PARTITIONS[] = "PARTITIONS";
+                const char FORMAT[]     = "FORMAT";
+                const char FOR[]        = "FOR";
+
+#define MATCHES_KEYWORD(t, k)  ((t->n == sizeof(k) - 1) && (strncasecmp(t->z, k, t->n) == 0))
+
+                if (MATCHES_KEYWORD(pNext, EXTENDED) ||
+                    MATCHES_KEYWORD(pNext, PARTITIONS) ||
+                    MATCHES_KEYWORD(pNext, FORMAT) ||
+                    MATCHES_KEYWORD(pNext, FOR))
+                {
+                    m_operation = QUERY_OP_EXPLAIN;
+                }
+            }
+        }
+    }
+
+    void maxscaleFlush(Parse* pParse, Token* pWhat)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+    }
+
+    void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Token* pName)
+    {
+        m_status = QC_QUERY_PARSED;
+
+        switch (type)
+        {
+        case MXS_HANDLER_OPEN:
+            {
+                m_type_mask = QUERY_TYPE_WRITE;
+
+                ss_dassert(pFullName->nSrc == 1);
+                const SrcList::SrcList_item* pItem = &pFullName->a[0];
+
+                update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
+            }
+            break;
+
+        case MXS_HANDLER_CLOSE:
+            {
+                m_type_mask = QUERY_TYPE_WRITE;
+
+                char zName[pName->n + 1];
+                strncpy(zName, pName->z, pName->n);
+                zName[pName->n] = 0;
+
+                update_names("*any*", zName, NULL);
+            }
+            break;
+
+        default:
+            ss_dassert(!true);
+        }
+
+        exposed_sqlite3SrcListDelete(pParse->db, pFullName);
+    }
+
+    void maxscaleLoadData(Parse* pParse, SrcList* pFullName)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_WRITE;
+        m_operation = QUERY_OP_LOAD;
+
+        if (pFullName)
+        {
+            update_names_from_srclist(this, pFullName);
+
+            exposed_sqlite3SrcListDelete(pParse->db, pFullName);
+        }
+    }
+
+    void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_WRITE;
+
+        if (pTables)
+        {
+            update_names_from_srclist(this, pTables);
+
+            exposed_sqlite3SrcListDelete(pParse->db, pTables);
+        }
+    }
+
+    int maxscaleTranslateKeyword(int token)
+    {
+        switch (token)
+        {
+        case TK_CHARSET:
+        case TK_DO:
+        case TK_HANDLER:
+            if (m_sql_mode == QC_SQL_MODE_ORACLE)
+            {
+                // The keyword is translated, but only if it not used
+                // as the first keyword. Matters for DO and HANDLER.
+                if (m_keyword_1)
+                {
+                    token = TK_ID;
+                }
+            }
+            break;
+
+        default:
+            break;
+        }
+
+        return token;
+    }
+
+    /**
+     * Register the tokenization of a keyword.
+     *
+     * @param token A keyword code (check generated parse.h)
+     *
+     * @return Non-zero if all input should be consumed, 0 otherwise.
+     */
+    int maxscaleKeyword(int token)
+    {
+        int rv = 0;
+
+        // This function is called for every keyword the sqlite3 parser encounters.
+        // We will store in m_keyword_{1|2} the first and second keyword that
+        // are encountered, and when they _are_ encountered, we make an educated
+        // deduction about the statement. We can make that deduction only the first
+        // (and second) time we see a keyword, so that we don't get confused by a
+        // statement like "CREATE TABLE ... AS SELECT ...".
+        // Since m_keyword_{1|2} is initialized with 0, well, if it is 0 then
+        // we have not seen the {1st|2nd} keyword yet.
+
+        if (!m_keyword_1)
+        {
+            m_keyword_1 = token;
+
+            switch (m_keyword_1)
+            {
+            case TK_ALTER:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_operation = QUERY_OP_ALTER;
+                break;
+
+            case TK_BEGIN:
+            case TK_DECLARE:
+            case TK_FOR:
+                if (m_sql_mode == QC_SQL_MODE_ORACLE)
+                {
+                    // The beginning of a BLOCK. We'll assume it is in a single
+                    // COM_QUERY packet and hence one GWBUF.
+                    m_status = QC_QUERY_TOKENIZED;
+                    m_type_mask = QUERY_TYPE_WRITE;
+                    // Return non-0 to cause the entire input to be consumed.
+                    rv = 1;
+                }
+                break;
+
+            case TK_CALL:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                break;
+
+            case TK_CREATE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_operation = QUERY_OP_CREATE;
+                break;
+
+            case TK_DELETE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                m_operation = QUERY_OP_DELETE;
+                break;
+
+            case TK_DESC:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_READ;
+                m_operation = QUERY_OP_EXPLAIN;
+                break;
+
+            case TK_DROP:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_operation = QUERY_OP_DROP;
+                break;
+
+            case TK_EXECUTE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                break;
+
+            case TK_EXPLAIN:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_READ;
+                m_operation = QUERY_OP_EXPLAIN;
+                break;
+
+            case TK_GRANT:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_operation = QUERY_OP_GRANT;
+                break;
+
+            case TK_HANDLER:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                break;
+
+            case TK_INSERT:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                m_operation = QUERY_OP_INSERT;
+                break;
+
+            case TK_LOCK:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                break;
+
+            case TK_PREPARE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
+                break;
+
+            case TK_REPLACE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                m_operation = QUERY_OP_INSERT;
+                break;
+
+            case TK_REVOKE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                m_operation = QUERY_OP_REVOKE;
+                break;
+
+            case TK_SELECT:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_READ;
+                m_operation = QUERY_OP_SELECT;
+                break;
+
+            case TK_SET:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+                break;
+
+            case TK_SHOW:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_READ;
+                m_operation = QUERY_OP_SHOW;
+                break;
+
+            case TK_START:
+                // Will produce the right info for START SLAVE.
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                break;
+
+            case TK_UNLOCK:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                break;
+
+            case TK_UPDATE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = QUERY_TYPE_WRITE;
+                m_operation = QUERY_OP_UPDATE;
+                break;
+
+            case TK_TRUNCATE:
+                m_status = QC_QUERY_TOKENIZED;
+                m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                break;
+
+            default:
+                ;
+            }
+        }
+        else if (!m_keyword_2)
+        {
+            m_keyword_2 = token;
+
+            switch (m_keyword_1)
+            {
+            case TK_CHECK:
+                if (m_keyword_2 == TK_TABLE)
+                {
+                    m_status = QC_QUERY_TOKENIZED;
+                    m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                }
+                break;
+
+            case TK_DEALLOCATE:
+                if (m_keyword_2 == TK_PREPARE)
+                {
+                    m_status = QC_QUERY_TOKENIZED;
+                    m_type_mask = QUERY_TYPE_SESSION_WRITE;
+                }
+                break;
+
+            case TK_LOAD:
+                if (m_keyword_2 == TK_DATA)
+                {
+                    m_status = QC_QUERY_TOKENIZED;
+                    m_type_mask = QUERY_TYPE_WRITE;
+                    m_operation = QUERY_OP_LOAD;
+                }
+                break;
+
+            case TK_RENAME:
+                if (m_keyword_2 == TK_TABLE)
+                {
+                    m_status = QC_QUERY_TOKENIZED;
+                    m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+                }
+                break;
+
+            case TK_START:
+                switch (m_keyword_2)
+                {
+                case TK_TRANSACTION:
+                    m_status = QC_QUERY_TOKENIZED;
+                    m_type_mask = QUERY_TYPE_BEGIN_TRX;
+                    break;
+
+                default:
+                    break;
+                }
+                break;
+
+            case TK_SHOW:
+                switch (m_keyword_2)
+                {
+                case TK_DATABASES_KW:
+                    m_status = QC_QUERY_TOKENIZED;
+                    m_type_mask = QUERY_TYPE_SHOW_DATABASES;
+                    break;
+
+                case TK_TABLES:
+                    m_status = QC_QUERY_TOKENIZED;
+                    m_type_mask = QUERY_TYPE_SHOW_TABLES;
+                    break;
+
+                default:
+                    break;
+                }
+            }
+        }
+
+        return rv;
+    }
+
+    void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT;
+
+        for (int i = 0; i < pTables->nSrc; ++i)
+        {
+            const SrcList::SrcList_item* pItem = &pTables->a[i];
+
+            ss_dassert(pItem->zName);
+            ss_dassert(pItem->zAlias);
+
+            update_names(pItem->zDatabase, pItem->zName, NULL);
+            update_names(NULL, pItem->zAlias, NULL); // The new name is passed in the alias field.
+        }
+
+        exposed_sqlite3SrcListDelete(pParse->db, pTables);
+    }
+
+    void maxscalePrepare(Parse* pParse, Token* pName, Expr* pStmt)
+    {
+        // If the mode is MODE_ORACLE then if expression contains simply a string
+        // we can conclude that the statement has been fully parsed, because it will
+        // be sensible to parse the preparable statement. Otherwise we mark the
+        // statement as having been partially parsed, since the preparable statement
+        // will not contain the full statement.
+        if (m_sql_mode == QC_SQL_MODE_ORACLE)
+        {
+            if (pStmt->op == TK_STRING)
+            {
+                m_status = QC_QUERY_PARSED;
+            }
+            else
+            {
+                m_status = QC_QUERY_PARTIALLY_PARSED;
+            }
+        }
+        else
+        {
+            // If the mode is not MODE_ORACLE, then only a string is acceptable.
+            if (pStmt->op == TK_STRING)
+            {
+                m_status = QC_QUERY_PARSED;
+            }
+            else
+            {
+                m_status = QC_QUERY_INVALID;
+            }
+        }
+
+        m_type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
+
+        // If information is collected in several passes, then we may
+        // this information already.
+        if (!m_zPrepare_name)
+        {
+            m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
+            if (m_zPrepare_name)
+            {
+                memcpy(m_zPrepare_name, pName->z, pName->n);
+                m_zPrepare_name[pName->n] = 0;
+            }
+
+            // If the expression just contains a string, then zStmt will
+            // be that string. Otherwise it will be _some_ string from the
+            // expression. In the latter case we've already marked the result
+            // to have been partially parsed.
+            const char* zStmt = find_one_string(pStmt);
+
+            if (zStmt)
+            {
+                size_t preparable_stmt_len = zStmt ? strlen(zStmt) : 0;
+                size_t payload_len = 1 + preparable_stmt_len;
+                size_t packet_len = MYSQL_HEADER_LEN + payload_len;
+
+                m_pPreparable_stmt = gwbuf_alloc(packet_len);
+
+                if (m_pPreparable_stmt)
+                {
+                    uint8_t* ptr = GWBUF_DATA(m_pPreparable_stmt);
+                    // Payload length
+                    *ptr++ = payload_len;
+                    *ptr++ = (payload_len >> 8);
+                    *ptr++ = (payload_len >> 16);
+                    // Sequence id
+                    *ptr++ = 0x00;
+                    // Command
+                    *ptr++ = MYSQL_COM_QUERY;
+
+                    memcpy(ptr, zStmt, preparable_stmt_len);
+                }
+            }
+            else
+            {
+                m_status = QC_QUERY_INVALID;
+            }
+        }
+        else
+        {
+            ss_dassert(m_collect != m_collected);
+            ss_dassert(strncmp(m_zPrepare_name, pName->z, pName->n) == 0);
+        }
+
+        exposed_sqlite3ExprDelete(pParse->db, pStmt);
+    }
+
+    void maxscalePrivileges(Parse* pParse, int kind)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+
+        switch (kind)
+        {
+        case TK_GRANT:
+            m_operation = QUERY_OP_GRANT;
+            break;
+
+        case TK_REVOKE:
+            m_operation = QUERY_OP_REVOKE;
+            break;
+
+        default:
+            ss_dassert(!true);
+        }
+    }
+
+    void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = 0; // Reset what was set in maxscaleKeyword
+
+        switch (kind)
+        {
+        case MXS_SET_TRANSACTION:
+            if ((scope == TK_GLOBAL) || (scope == TK_SESSION))
+            {
+                m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+            }
+            else
+            {
+                ss_dassert(scope == 0);
+                m_type_mask = QUERY_TYPE_WRITE;
+            }
+            break;
+
+        case MXS_SET_VARIABLES:
+            {
+                for (int i = 0; i < pList->nExpr; ++i)
+                {
+                    const ExprList::ExprList_item* pItem = &pList->a[i];
+
+                    switch (pItem->pExpr->op)
+                    {
+                    case TK_CHARACTER:
+                    case TK_NAMES:
+                        m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+                        break;
+
+                    case TK_EQ:
+                        {
+                            const Expr* pEq = pItem->pExpr;
+                            const Expr* pVariable;
+                            const Expr* pValue = pEq->pRight;
+
+                            // pEq->pLeft is either TK_DOT, TK_VARIABLE or TK_ID. If it's TK_DOT,
+                            // then pEq->pLeft->pLeft is either TK_VARIABLE or TK_ID and pEq->pLeft->pRight
+                            // is either TK_DOT, TK_VARIABLE or TK_ID.
+
+                            // Find the left-most part.
+                            pVariable = pEq->pLeft;
+                            while (pVariable->op == TK_DOT)
+                            {
+                                pVariable = pVariable->pLeft;
+                                ss_dassert(pVariable);
+                            }
+
+                            // Check what kind of variable it is.
+                            size_t n_at = 0;
+                            const char* zName = pVariable->u.zToken;
+
+                            while (*zName == '@')
+                            {
+                                ++n_at;
+                                ++zName;
+                            }
+
+                            if (n_at == 1)
+                            {
+                                m_type_mask |= QUERY_TYPE_USERVAR_WRITE;
+                            }
+                            else
+                            {
+                                m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+                            }
+
+                            // Set pVariable to point to the rightmost part of the name.
+                            pVariable = pEq->pLeft;
+                            while (pVariable->op == TK_DOT)
+                            {
+                                pVariable = pVariable->pRight;
+                            }
+
+                            ss_dassert((pVariable->op == TK_VARIABLE) || (pVariable->op == TK_ID));
+
+                            if (n_at != 1)
+                            {
+                                // If it's not a user-variable we need to check whether it might
+                                // be 'autocommit'.
+                                const char* zName = pVariable->u.zToken;
+
+                                while (*zName == '@')
+                                {
+                                    ++zName;
+                                }
+
+                                // As pVariable points to the rightmost part, we'll catch both
+                                // "autocommit" and "@@global.autocommit".
+                                if (strcasecmp(zName, "autocommit") == 0)
+                                {
+                                    int enable = -1;
+
+                                    switch (pValue->op)
+                                    {
+                                    case TK_INTEGER:
+                                        if (pValue->u.iValue == 1)
+                                        {
+                                            enable = 1;
+                                        }
+                                        else if (pValue->u.iValue == 0)
+                                        {
+                                            enable = 0;
+                                        }
+                                        break;
+
+                                    case TK_ID:
+                                        enable = string_to_truth(pValue->u.zToken);
+                                        break;
+
+                                    default:
+                                        break;
+                                    }
+
+                                    switch (enable)
+                                    {
+                                    case 0:
+                                        m_type_mask |= QUERY_TYPE_BEGIN_TRX;
+                                        m_type_mask |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
+                                        break;
+
+                                    case 1:
+                                        m_type_mask |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
+                                        m_type_mask |= QUERY_TYPE_COMMIT;
+                                        break;
+
+                                    default:
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (pValue->op == TK_SELECT)
+                            {
+                                update_field_infos_from_select(this, pValue->x.pSelect,
+                                                               QC_USED_IN_SUBSELECT, NULL);
+                            }
+                        }
+                        break;
+
+                    default:
+                        ss_dassert(!true);
+                    }
+                }
+            }
+            break;
+
+        default:
+            ss_dassert(!true);
+        }
+
+        exposed_sqlite3ExprListDelete(pParse->db, pList);
+    }
+
+    void maxscaleShow(Parse* pParse, MxsShow* pShow)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_operation = QUERY_OP_SHOW;
+
+        uint32_t u = QC_USED_IN_SELECT;
+
+        switch (pShow->what)
+        {
+        case MXS_SHOW_COLUMNS:
+            m_type_mask = QUERY_TYPE_READ;
+            break;
+
+        case MXS_SHOW_CREATE_SEQUENCE:
+            m_type_mask = QUERY_TYPE_READ;
+            break;
+
+        case MXS_SHOW_CREATE_VIEW:
+            m_type_mask = QUERY_TYPE_READ;
+            break;
+
+        case MXS_SHOW_CREATE_TABLE:
+            m_type_mask = QUERY_TYPE_READ;
+            break;
+
+        case MXS_SHOW_DATABASES:
+            m_type_mask = QUERY_TYPE_SHOW_DATABASES;
+            break;
+
+        case MXS_SHOW_INDEX:
+        case MXS_SHOW_INDEXES:
+        case MXS_SHOW_KEYS:
+            m_type_mask = QUERY_TYPE_WRITE;
+            break;
+
+        case MXS_SHOW_TABLE_STATUS:
+            m_type_mask = QUERY_TYPE_WRITE;
+            break;
+
+        case MXS_SHOW_STATUS:
+            switch (pShow->data)
+            {
+            case MXS_SHOW_VARIABLES_GLOBAL:
+            case MXS_SHOW_VARIABLES_SESSION:
+            case MXS_SHOW_VARIABLES_UNSPECIFIED:
+                m_type_mask = QUERY_TYPE_READ;
+                break;
+
+            case MXS_SHOW_STATUS_MASTER:
+                m_type_mask = QUERY_TYPE_WRITE;
+                break;
+
+            case MXS_SHOW_STATUS_SLAVE:
+                m_type_mask = QUERY_TYPE_READ;
+                break;
+
+            case MXS_SHOW_STATUS_ALL_SLAVES:
+                m_type_mask = QUERY_TYPE_READ;
+                break;
+
+            default:
+                m_type_mask = QUERY_TYPE_READ;
+                break;
+            }
+            break;
+
+        case MXS_SHOW_TABLES:
+            m_type_mask = QUERY_TYPE_SHOW_TABLES;
+            break;
+
+        case MXS_SHOW_VARIABLES:
+            if (pShow->data == MXS_SHOW_VARIABLES_GLOBAL)
+            {
+                m_type_mask = QUERY_TYPE_GSYSVAR_READ;
+            }
+            else
+            {
+                m_type_mask = QUERY_TYPE_SYSVAR_READ;
+            }
+            break;
+
+        case MXS_SHOW_WARNINGS:
+            // qc_mysqliembedded claims this.
+            m_type_mask = QUERY_TYPE_WRITE;
+            break;
+
+        default:
+            ss_dassert(!true);
+        }
+    }
+
+    void maxscaleTruncate(Parse* pParse, Token* pDatabase, Token* pName)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+        m_operation = QUERY_OP_TRUNCATE;
+
+        char* zDatabase;
+
+        char database[pDatabase ? pDatabase->n + 1 : 0];
+        if (pDatabase)
+        {
+            strncpy(database, pDatabase->z, pDatabase->n);
+            database[pDatabase->n] = 0;
+            zDatabase = database;
+        }
+        else
+        {
+            zDatabase = NULL;
+        }
+
+        char name[pName->n + 1];
+        strncpy(name, pName->z, pName->n);
+        name[pName->n] = 0;
+
+        update_names(zDatabase, name, NULL);
+    }
+
+    void maxscaleUse(Parse* pParse, Token* pToken)
+    {
+        m_status = QC_QUERY_PARSED;
+        m_type_mask = QUERY_TYPE_SESSION_WRITE;
+        m_operation = QUERY_OP_CHANGE_DB;
+    }
+
 private:
     QcSqliteInfo(uint32_t cllct)
         : m_status(QC_QUERY_INVALID)
@@ -1142,39 +2682,39 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
             if ((command == MYSQL_COM_QUERY) || (command == MYSQL_COM_STMT_PREPARE))
             {
-                QcSqliteInfo* info =
+                QcSqliteInfo* pInfo =
                     (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
 
-                if (info)
+                if (pInfo)
                 {
-                    ss_dassert((~info->m_collect & collect) != 0);
-                    ss_dassert((~info->m_collected & collect) != 0);
+                    ss_dassert((~pInfo->m_collect & collect) != 0);
+                    ss_dassert((~pInfo->m_collected & collect) != 0);
 
                     // If we get here, then the statement has been parsed once, but
                     // not all needed was collected. Now we turn on all blinkenlichts to
                     // ensure that a statement is parsed at most twice.
-                    info->m_collect = QC_COLLECT_ALL;
+                    pInfo->m_collect = QC_COLLECT_ALL;
 
                     // We also reset the collected keywords, so that code that behaves
                     // differently depending on whether keywords have been seem or not
                     // acts the same way on this second round.
-                    info->m_keyword_1 = 0;
-                    info->m_keyword_2 = 0;
+                    pInfo->m_keyword_1 = 0;
+                    pInfo->m_keyword_2 = 0;
                 }
                 else
                 {
-                    info = QcSqliteInfo::create(collect);
+                    pInfo = QcSqliteInfo::create(collect);
 
-                    if (info)
+                    if (pInfo)
                     {
                         // TODO: Add return value to gwbuf_add_buffer_object.
-                        gwbuf_add_buffer_object(query, GWBUF_PARSING_INFO, info, buffer_object_free);
+                        gwbuf_add_buffer_object(query, GWBUF_PARSING_INFO, pInfo, buffer_object_free);
                     }
                 }
 
-                if (info)
+                if (pInfo)
                 {
-                    this_thread.pInfo = info;
+                    this_thread.pInfo = pInfo;
 
                     size_t len = MYSQL_GET_PAYLOAD_LEN(data) - 1; // Subtract 1 for packet type byte.
 
@@ -1188,10 +2728,10 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
                     if (command == MYSQL_COM_STMT_PREPARE)
                     {
-                        info->m_type_mask |= QUERY_TYPE_PREPARE_STMT;
+                        pInfo->m_type_mask |= QUERY_TYPE_PREPARE_STMT;
                     }
 
-                    info->m_collected = info->m_collect;
+                    pInfo->m_collected = pInfo->m_collect;
 
                     parsed = true;
 
@@ -1229,10 +2769,10 @@ static bool query_is_parsed(GWBUF* query, uint32_t collect)
 
     if (rc)
     {
-        QcSqliteInfo* info = (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
-        ss_dassert(info);
+        QcSqliteInfo* pInfo = (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
+        ss_dassert(pInfo);
 
-        if ((~info->m_collected & collect) != 0)
+        if ((~pInfo->m_collected & collect) != 0)
         {
             // The statement has been parsed once, but the needed information
             // was not collected at that time.
@@ -1936,53 +3476,40 @@ void mxs_sqlite3AlterFinishAddColumn(Parse* pParse, Token* pToken)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-    info->m_operation = QUERY_OP_ALTER;
+    pInfo->mxs_sqlite3AlterFinishAddColumn(pParse, pToken);
 }
 
 void mxs_sqlite3AlterBeginAddColumn(Parse* pParse, SrcList* pSrcList)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    update_names_from_srclist(info, pSrcList);
-
-    exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
+    pInfo->mxs_sqlite3AlterBeginAddColumn(pParse, pSrcList);
 }
 
 void mxs_sqlite3Analyze(Parse* pParse, SrcList* pSrcList)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-
-    update_names_from_srclist(info, pSrcList);
-
-    exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
+    pInfo->mxs_sqlite3Analyze(pParse, pSrcList);
 }
 
 void mxs_sqlite3BeginTransaction(Parse* pParse, int token, int type)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    if ((info->m_sql_mode != QC_SQL_MODE_ORACLE) || (token == TK_START))
-    {
-        info->m_status = QC_QUERY_PARSED;
-        info->m_type_mask = QUERY_TYPE_BEGIN_TRX | type;
-    }
+    pInfo->mxs_sqlite3BeginTransaction(pParse, token, type);
 }
 
 void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CREATE TRIGGER statement */
@@ -1998,39 +3525,21 @@ void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CRE
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-
-    if (pTableName)
-    {
-        for (size_t i = 0; i < pTableName->nAlloc; ++i)
-        {
-            const SrcList::SrcList_item* pItem = &pTableName->a[i];
-
-            if (pItem->zName)
-            {
-                info->update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
-            }
-        }
-    }
-
-    // We need to call this, otherwise finish trigger will not be called.
-    exposed_sqlite3BeginTrigger(pParse, pName1, pName2, tr_tm, op, pColumns,
-                                pTableName, pWhen, isTemp, noErr);
+    pInfo->mxs_sqlite3BeginTrigger(pParse, pName1, pName2, tr_tm, op,
+                                   pColumns, pTableName, pWhen, isTemp, noErr);
 }
 
 void mxs_sqlite3CommitTransaction(Parse* pParse)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_COMMIT;
+    pInfo->mxs_sqlite3CommitTransaction(pParse);
 }
 
 void mxs_sqlite3CreateIndex(Parse *pParse,     /* All information about this parse */
@@ -2046,25 +3555,11 @@ void mxs_sqlite3CreateIndex(Parse *pParse,     /* All information about this par
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-    info->m_operation = QUERY_OP_CREATE;
-
-    if (pTblName)
-    {
-        update_names_from_srclist(info, pTblName);
-    }
-    else if (pParse->pNewTable)
-    {
-        info->update_names(NULL, pParse->pNewTable->zName, NULL);
-    }
-
-    exposed_sqlite3ExprDelete(pParse->db, pPIWhere);
-    exposed_sqlite3ExprListDelete(pParse->db, pList);
-    exposed_sqlite3SrcListDelete(pParse->db, pTblName);
+    pInfo->mxs_sqlite3CreateIndex(pParse, pName1, pName2, pTblName, pList,
+                                  onError, pStart, pPIWhere, sortOrder, ifNotExist);
 }
 
 void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
@@ -2077,153 +3572,40 @@ void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
                            int noErr)         /* Suppress error messages if VIEW already exists */
 {
     QC_TRACE();
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-    info->m_operation = QUERY_OP_CREATE;
-
-    const Token* pName = pName2->z ? pName2 : pName1;
-    const Token* pDatabase = pName2->z ? pName1 : NULL;
-
-    char name[pName->n + 1];
-    strncpy(name, pName->z, pName->n);
-    name[pName->n] = 0;
-
-    if (pDatabase)
-    {
-        char database[pDatabase->n + 1];
-        strncpy(database, pDatabase->z, pDatabase->n);
-        database[pDatabase->n] = 0;
-
-        info->update_names(database, name, NULL);
-    }
-    else
-    {
-        info->update_names(NULL, name, NULL);
-    }
-
-    if (pSelect)
-    {
-        update_field_infos_from_select(info, pSelect, QC_USED_IN_SELECT, NULL);
-    }
-
-    exposed_sqlite3ExprListDelete(pParse->db, pCNames);
-    // pSelect is deleted in parse.y
+    pInfo->mxs_sqlite3CreateView(pParse, pBegin, pName1, pName2, pCNames, pSelect, isTemp, noErr);
 }
 
 void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcList* pUsing)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-
-    if (info->m_operation != QUERY_OP_EXPLAIN)
-    {
-        info->m_type_mask = QUERY_TYPE_WRITE;
-        info->m_operation = QUERY_OP_DELETE;
-        info->m_has_clause = pWhere ? true : false;
-
-        if (pUsing)
-        {
-            // Walk through the using declaration and update
-            // table and database names.
-            for (int i = 0; i < pUsing->nSrc; ++i)
-            {
-                const SrcList::SrcList_item* pItem = &pUsing->a[i];
-
-                info->update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
-            }
-
-            // Walk through the tablenames while excluding alias
-            // names from the using declaration.
-            for (int i = 0; i < pTabList->nSrc; ++i)
-            {
-                const SrcList::SrcList_item* pTable = &pTabList->a[i];
-                ss_dassert(pTable->zName);
-                int j = 0;
-                bool isSame = false;
-
-                do
-                {
-                    SrcList::SrcList_item* pItem = &pUsing->a[j++];
-
-                    if (strcasecmp(pTable->zName, pItem->zName) == 0)
-                    {
-                        isSame = true;
-                    }
-                    else if (pItem->zAlias && (strcasecmp(pTable->zName, pItem->zAlias) == 0))
-                    {
-                        isSame = true;
-                    }
-                }
-                while (!isSame && (j < pUsing->nSrc));
-
-                if (!isSame)
-                {
-                    // No alias name, update the table name.
-                    info->update_names(pTable->zDatabase, pTable->zName, NULL);
-                }
-            }
-        }
-        else
-        {
-            update_names_from_srclist(info, pTabList);
-        }
-
-        if (pWhere)
-        {
-            update_field_infos(info, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
-        }
-    }
-
-    exposed_sqlite3ExprDelete(pParse->db, pWhere);
-    exposed_sqlite3SrcListDelete(pParse->db, pTabList);
-    exposed_sqlite3SrcListDelete(pParse->db, pUsing);
+    pInfo->mxs_sqlite3DeleteFrom(pParse, pTabList, pWhere, pUsing);
 }
 
 void mxs_sqlite3DropIndex(Parse* pParse, SrcList* pName, SrcList* pTable, int bits)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-    info->m_operation = QUERY_OP_DROP;
-
-    update_names_from_srclist(info, pTable);
-
-    exposed_sqlite3SrcListDelete(pParse->db, pName);
-    exposed_sqlite3SrcListDelete(pParse->db, pTable);
+    pInfo->mxs_sqlite3DropIndex(pParse, pName, pTable, bits);
 }
 
 void mxs_sqlite3DropTable(Parse *pParse, SrcList *pName, int isView, int noErr, int isTemp)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_WRITE;
-    if (!isTemp)
-    {
-        info->m_type_mask |= QUERY_TYPE_COMMIT;
-    }
-    info->m_operation = QUERY_OP_DROP;
-    if (!isView)
-    {
-        info->m_is_drop_table = true;
-    }
-    update_names_from_srclist(info, pName);
-
-    exposed_sqlite3SrcListDelete(pParse->db, pName);
+    pInfo->mxs_sqlite3DropTable(pParse, pName, isView, noErr, isTemp);
 }
 
 void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
@@ -2235,34 +3617,22 @@ void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    if (!info->m_initializing)
-    {
-        if (pSelect)
-        {
-            update_field_infos_from_select(info, pSelect, QC_USED_IN_SELECT, NULL);
-        }
-        else if (pOldTable)
-        {
-            update_names_from_srclist(info, pOldTable);
-            exposed_sqlite3SrcListDelete(pParse->db, pOldTable);
-        }
-
-        // pSelect is deleted in parse.y
-    }
-    else
-    {
-        exposed_sqlite3EndTable(pParse, pCons, pEnd, tabOpts, pSelect);
-    }
+    pInfo->mxs_sqlite3EndTable(pParse, pCons, pEnd, tabOpts, pSelect, pOldTable);
 }
 
 void mxs_sqlite3FinishTrigger(Parse *pParse,          /* Parser context */
                               TriggerStep *pStepList, /* The triggered program */
                               Token *pAll)            /* Token that describes the complete CREATE TRIGGER */
 {
-    exposed_sqlite3FinishTrigger(pParse, pStepList, pAll);
+    QC_TRACE();
+
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
+
+    pInfo->mxs_sqlite3FinishTrigger(pParse, pStepList, pAll);
 }
 
 void mxs_sqlite3Insert(Parse* pParse,
@@ -2274,61 +3644,20 @@ void mxs_sqlite3Insert(Parse* pParse,
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-
-    if (info->m_operation != QUERY_OP_EXPLAIN)
-    {
-        info->m_type_mask = QUERY_TYPE_WRITE;
-        info->m_operation = QUERY_OP_INSERT;
-        ss_dassert(pTabList);
-        ss_dassert(pTabList->nSrc >= 1);
-        update_names_from_srclist(info, pTabList);
-
-        if (pColumns)
-        {
-            update_field_infos_from_idlist(info, pColumns, 0, NULL);
-        }
-
-        if (pSelect)
-        {
-            uint32_t usage;
-
-            if (pSelect->selFlags & SF_Values) // Synthesized from VALUES clause
-            {
-                usage = 0;
-            }
-            else
-            {
-                usage = QC_USED_IN_SELECT;
-            }
-
-            update_field_infos_from_select(info, pSelect, usage, NULL);
-        }
-
-        if (pSet)
-        {
-            update_field_infos_from_exprlist(info, pSet, 0, NULL);
-        }
-    }
-
-    exposed_sqlite3SrcListDelete(pParse->db, pTabList);
-    exposed_sqlite3IdListDelete(pParse->db, pColumns);
-    exposed_sqlite3ExprListDelete(pParse->db, pSet);
-    // pSelect is deleted in parse.y
+    pInfo->mxs_sqlite3Insert(pParse, pTabList, pSelect, pColumns, onError, pSet);
 }
 
 void mxs_sqlite3RollbackTransaction(Parse* pParse)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_ROLLBACK;
+    pInfo->mxs_sqlite3RollbackTransaction(pParse);
 }
 
 int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
@@ -2336,25 +3665,10 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     int rc = -1;
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    if (!info->m_initializing)
-    {
-        info->m_status = QC_QUERY_PARSED;
-
-        if (info->m_operation != QUERY_OP_EXPLAIN)
-        {
-            info->m_operation = QUERY_OP_SELECT;
-
-            maxscaleCollectInfoFromSelect(pParse, p, 0);
-        }
-        // NOTE: By convention, the select is deleted in parse.y.
-    }
-    else
-    {
-        rc = exposed_sqlite3Select(pParse, p, pDest);
-    }
+    rc = pInfo->mxs_sqlite3Select(pParse, p, pDest);
 
     return rc;
 }
@@ -2369,135 +3683,38 @@ void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    if (!info->m_initializing)
-    {
-        info->m_status = QC_QUERY_PARSED;
-        info->m_operation = QUERY_OP_CREATE;
-        info->m_type_mask = QUERY_TYPE_WRITE;
-
-        if (isTemp)
-        {
-            info->m_type_mask |= QUERY_TYPE_CREATE_TMP_TABLE;
-        }
-        else
-        {
-            info->m_type_mask |= QUERY_TYPE_COMMIT;
-        }
-
-        const Token* pName = pName2->z ? pName2 : pName1;
-        const Token* pDatabase = pName2->z ? pName1 : NULL;
-
-        char name[pName->n + 1];
-        strncpy(name, pName->z, pName->n);
-        name[pName->n] = 0;
-
-        if (pDatabase)
-        {
-            char database[pDatabase->n + 1];
-            strncpy(database, pDatabase->z, pDatabase->n);
-            database[pDatabase->n] = 0;
-
-            info->update_names(database, name, NULL);
-        }
-        else
-        {
-            info->update_names(NULL, name, NULL);
-        }
-
-        if (info->m_collect & QC_COLLECT_TABLES)
-        {
-            // If information is collected in several passes, then we may
-            // this information already.
-            if (!info->m_zCreated_table_name)
-            {
-                info->m_zCreated_table_name = MXS_STRDUP(info->m_pzTable_names[0]);
-                MXS_ABORT_IF_NULL(info->m_zCreated_table_name);
-            }
-            else
-            {
-                ss_dassert(info->m_collect != info->m_collected);
-                ss_dassert(strcmp(info->m_zCreated_table_name, info->m_pzTable_names[0]) == 0);
-            }
-        }
-    }
-    else
-    {
-        exposed_sqlite3StartTable(pParse, pName1, pName2, isTemp, isView, isVirtual, noErr);
-    }
+    pInfo->mxs_sqlite3StartTable(pParse, pName1, pName2, isTemp, isView, isVirtual, noErr);
 }
 
 void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Expr* pWhere, int onError)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-
-    if (info->m_operation != QUERY_OP_EXPLAIN)
-    {
-        info->m_type_mask = QUERY_TYPE_WRITE;
-        info->m_operation = QUERY_OP_UPDATE;
-        update_names_from_srclist(info, pTabList);
-        info->m_has_clause = (pWhere ? true : false);
-
-        if (pChanges)
-        {
-            for (int i = 0; i < pChanges->nExpr; ++i)
-            {
-                ExprList::ExprList_item* pItem = &pChanges->a[i];
-
-                update_field_infos(info, 0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
-            }
-        }
-
-        if (pWhere)
-        {
-            update_field_infos(info, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
-        }
-    }
-
-    exposed_sqlite3SrcListDelete(pParse->db, pTabList);
-    exposed_sqlite3ExprListDelete(pParse->db, pChanges);
-    exposed_sqlite3ExprDelete(pParse->db, pWhere);
+    pInfo->mxs_sqlite3Update(pParse, pTabList, pChanges, pWhere, onError);
 }
 
 void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_WRITE;
+    pInfo->mxs_sqlite3Savepoint(pParse, op, pName);
 }
 
 void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect, int sub_select)
 {
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    if (pSelect->pInto)
-    {
-        // If there's a single variable, then it's a write.
-        // mysql embedded considers it a system var write.
-        info->m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
-
-        // Also INTO {OUTFILE|DUMPFILE} will be typed as QUERY_TYPE_GSYSVAR_WRITE.
-    }
-    else
-    {
-        info->m_type_mask = QUERY_TYPE_READ;
-    }
-
-    uint32_t usage = sub_select ? QC_USED_IN_SUBSELECT : QC_USED_IN_SELECT;
-
-    update_field_infos_from_select(info, pSelect, usage, NULL);
+    pInfo->maxscaleCollectInfoFromSelect(pParse, pSelect, sub_select);
 }
 
 void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
@@ -2507,444 +3724,170 @@ void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-    info->m_operation = QUERY_OP_ALTER;
-
-    switch (command)
-    {
-    case MXS_ALTER_DISABLE_KEYS:
-        update_names_from_srclist(info, pSrc);
-        break;
-
-    case MXS_ALTER_ENABLE_KEYS:
-        update_names_from_srclist(info, pSrc);
-        break;
-
-    case MXS_ALTER_RENAME:
-        update_names_from_srclist(info, pSrc);
-        break;
-
-    default:
-        ;
-    }
-
-    exposed_sqlite3SrcListDelete(pParse->db, pSrc);
+    pInfo->maxscaleAlterTable(pParse, command, pSrc, pName);
 }
 
 void maxscaleCall(Parse* pParse, SrcList* pName, ExprList* pExprList)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_WRITE;
-
-    if (pExprList)
-    {
-        update_field_infos_from_exprlist(info, pExprList, 0, NULL);
-    }
-
-    exposed_sqlite3SrcListDelete(pParse->db, pName);
-    exposed_sqlite3ExprListDelete(pParse->db, pExprList);
+    pInfo->maxscaleCall(pParse, pName, pExprList);
 }
 
 void maxscaleCheckTable(Parse* pParse, SrcList* pTables)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-
-    update_names_from_srclist(info, pTables);
-
-    exposed_sqlite3SrcListDelete(pParse->db, pTables);
+    pInfo->maxscaleCheckTable(pParse, pTables);
 }
 
 void maxscaleCreateSequence(Parse* pParse, Token* pDatabase, Token* pTable)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-
-    const char* zDatabase = NULL;
-    char database[pDatabase ? pDatabase->n + 1 : 1];
-
-    if (pDatabase)
-    {
-        strncpy(database, pDatabase->z, pDatabase->n);
-        database[pDatabase->n] = 0;
-
-        zDatabase = database;
-    }
-
-    char table[pTable->n + 1];
-    strncpy(table, pTable->z, pTable->n);
-    table[pTable->n] = 0;
-
-    info->update_names(zDatabase, table, NULL);
+    pInfo->maxscaleCreateSequence(pParse, pDatabase, pTable);
 }
 
 void maxscaleComment()
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    if (info->m_status == QC_QUERY_INVALID)
-    {
-        info->m_status = QC_QUERY_PARSED;
-        info->m_type_mask = QUERY_TYPE_READ;
-    }
+    pInfo->maxscaleComment();
 }
 
 void maxscaleDeclare(Parse* pParse)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    if (info->m_sql_mode != QC_SQL_MODE_ORACLE)
-    {
-        info->m_status = QC_QUERY_INVALID;
-    }
+    pInfo->maxscaleDeclare(pParse);
 }
 
 void maxscaleDeallocate(Parse* pParse, Token* pName)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_WRITE;
-
-    // If information is collected in several passes, then we may
-    // this information already.
-    if (!info->m_zPrepare_name)
-    {
-        info->m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
-        if (info->m_zPrepare_name)
-        {
-            memcpy(info->m_zPrepare_name, pName->z, pName->n);
-            info->m_zPrepare_name[pName->n] = 0;
-        }
-    }
-    else
-    {
-        ss_dassert(info->m_collect != info->m_collected);
-        ss_dassert(strncmp(info->m_zPrepare_name, pName->z, pName->n) == 0);
-    }
+    pInfo->maxscaleDeallocate(pParse, pName);
 }
 
 void maxscaleDo(Parse* pParse, ExprList* pEList)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_READ | QUERY_TYPE_WRITE);
-
-    exposed_sqlite3ExprListDelete(pParse->db, pEList);
+    pInfo->maxscaleDo(pParse, pEList);
 }
 
 void maxscaleDrop(Parse* pParse, int what, Token* pDatabase, Token* pName)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-    info->m_operation = QUERY_OP_DROP;
-
-    if (what == MXS_DROP_SEQUENCE)
-    {
-        const char* zDatabase = NULL;
-        char database[pDatabase ? pDatabase->n + 1 : 1];
-
-        if (pDatabase)
-        {
-            strncpy(database, pDatabase->z, pDatabase->n);
-            database[pDatabase->n] = 0;
-
-            zDatabase = database;
-        }
-
-        char table[pName->n + 1];
-        strncpy(table, pName->z, pName->n);
-        table[pName->n] = 0;
-
-        info->update_names(zDatabase, table, NULL);
-    }
+    pInfo->maxscaleDrop(pParse, what, pDatabase, pName);
 }
 
 void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | type_mask);
-    info->m_operation = QUERY_OP_EXECUTE;
-
-    // If information is collected in several passes, then we may
-    // this information already.
-    if (!info->m_zPrepare_name)
-    {
-        info->m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
-        if (info->m_zPrepare_name)
-        {
-            memcpy(info->m_zPrepare_name, pName->z, pName->n);
-            info->m_zPrepare_name[pName->n] = 0;
-        }
-    }
-    else
-    {
-        ss_dassert(info->m_collect != info->m_collected);
-        ss_dassert(strncmp(info->m_zPrepare_name, pName->z, pName->n) == 0);
-    }
-}
-
-static int32_t type_check_dynamic_string(const Expr* pExpr)
-{
-    int32_t type_mask = 0;
-
-    if (pExpr)
-    {
-        switch (pExpr->op)
-        {
-        case TK_CONCAT:
-            type_mask |= type_check_dynamic_string(pExpr->pLeft);
-            type_mask |= type_check_dynamic_string(pExpr->pRight);
-            break;
-
-        case TK_VARIABLE:
-            ss_dassert(pExpr->u.zToken);
-            {
-                const char* zToken = pExpr->u.zToken;
-                if (zToken[0] == '@')
-                {
-                    if (zToken[1] == '@')
-                    {
-                        type_mask |= QUERY_TYPE_SYSVAR_READ;
-                    }
-                    else
-                    {
-                        type_mask |= QUERY_TYPE_USERVAR_READ;
-                    }
-                }
-            }
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    return type_mask;
+    pInfo->maxscaleExecute(pParse, pName, type_mask);
 }
 
 void maxscaleExecuteImmediate(Parse* pParse, Token* pName, ExprSpan* pExprSpan, int type_mask)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    if (info->m_sql_mode == QC_SQL_MODE_ORACLE)
-    {
-        // This should be "EXECUTE IMMEDIATE ...", but as "IMMEDIATE" is not
-        // checked by the parser we do it here.
-
-        static const char IMMEDIATE[] = "IMMEDIATE";
-
-        if ((pName->n == sizeof(IMMEDIATE) - 1) && (strncasecmp(pName->z, IMMEDIATE, pName->n)) == 0)
-        {
-            info->m_status = QC_QUERY_PARSED;
-            info->m_type_mask = (QUERY_TYPE_WRITE | type_mask);
-            info->m_type_mask |= type_check_dynamic_string(pExprSpan->pExpr);
-        }
-        else
-        {
-            info->m_status = QC_QUERY_INVALID;
-        }
-    }
-    else
-    {
-        info->m_status = QC_QUERY_INVALID;
-    }
-
-    exposed_sqlite3ExprDelete(pParse->db, pExprSpan->pExpr);
+    pInfo->maxscaleExecuteImmediate(pParse, pName, pExprSpan, type_mask);
 }
 
 void maxscaleExplain(Parse* pParse, Token* pNext)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_READ;
-    info->m_operation = QUERY_OP_SHOW;
-
-    if (pNext)
-    {
-        if (pNext->z)
-        {
-            const char EXTENDED[]   = "EXTENDED";
-            const char PARTITIONS[] = "PARTITIONS";
-            const char FORMAT[]     = "FORMAT";
-            const char FOR[]        = "FOR";
-
-#define MATCHES_KEYWORD(t, k)  ((t->n == sizeof(k) - 1) && (strncasecmp(t->z, k, t->n) == 0))
-
-            if (MATCHES_KEYWORD(pNext, EXTENDED) ||
-                MATCHES_KEYWORD(pNext, PARTITIONS) ||
-                MATCHES_KEYWORD(pNext, FORMAT) ||
-                MATCHES_KEYWORD(pNext, FOR))
-            {
-                info->m_operation = QUERY_OP_EXPLAIN;
-            }
-        }
-    }
+    pInfo->maxscaleExplain(pParse, pNext);
 }
 
 void maxscaleFlush(Parse* pParse, Token* pWhat)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
+    pInfo->maxscaleFlush(pParse, pWhat);
 }
 
 void maxscaleHandler(Parse* pParse, mxs_handler_t type, SrcList* pFullName, Token* pName)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-
-    switch (type)
-    {
-    case MXS_HANDLER_OPEN:
-        {
-            info->m_type_mask = QUERY_TYPE_WRITE;
-
-            ss_dassert(pFullName->nSrc == 1);
-            const SrcList::SrcList_item* pItem = &pFullName->a[0];
-
-            info->update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
-        }
-        break;
-
-    case MXS_HANDLER_CLOSE:
-        {
-            info->m_type_mask = QUERY_TYPE_WRITE;
-
-            char zName[pName->n + 1];
-            strncpy(zName, pName->z, pName->n);
-            zName[pName->n] = 0;
-
-            info->update_names("*any*", zName, NULL);
-        }
-        break;
-
-    default:
-        ss_dassert(!true);
-    }
-
-    exposed_sqlite3SrcListDelete(pParse->db, pFullName);
+    pInfo->maxscaleHandler(pParse, type, pFullName, pName);
 }
 
 void maxscaleLoadData(Parse* pParse, SrcList* pFullName)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_WRITE;
-    info->m_operation = QUERY_OP_LOAD;
-
-    if (pFullName)
-    {
-        update_names_from_srclist(info, pFullName);
-
-        exposed_sqlite3SrcListDelete(pParse->db, pFullName);
-    }
+    pInfo->maxscaleLoadData(pParse, pFullName);
 }
 
 void maxscaleLock(Parse* pParse, mxs_lock_t type, SrcList* pTables)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_WRITE;
-
-    if (pTables)
-    {
-        update_names_from_srclist(info, pTables);
-
-        exposed_sqlite3SrcListDelete(pParse->db, pTables);
-    }
+    pInfo->maxscaleLock(pParse, type, pTables);
 }
 
 int maxscaleTranslateKeyword(int token)
 {
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QC_TRACE();
 
-    switch (token)
-    {
-    case TK_CHARSET:
-    case TK_DO:
-    case TK_HANDLER:
-        if (info->m_sql_mode == QC_SQL_MODE_ORACLE)
-        {
-            // The keyword is translated, but only if it not used
-            // as the first keyword. Matters for DO and HANDLER.
-            if (info->m_keyword_1)
-            {
-                token = TK_ID;
-            }
-        }
-        break;
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    default:
-        break;
-    }
-
-    return token;
+    return pInfo->maxscaleTranslateKeyword(token);
 }
 
 /**
@@ -2958,728 +3901,80 @@ int maxscaleKeyword(int token)
 {
     QC_TRACE();
 
-    int rv = 0;
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
-
-    // This function is called for every keyword the sqlite3 parser encounters.
-    // We will store in info->m_keyword_{1|2} the first and second keyword that
-    // are encountered, and when they _are_ encountered, we make an educated
-    // deduction about the statement. We can make that deduction only the first
-    // (and second) time we see a keyword, so that we don't get confused by a
-    // statement like "CREATE TABLE ... AS SELECT ...".
-    // Since info->m_keyword_{1|2} is initialized with 0, well, if it is 0 then
-    // we have not seen the {1st|2nd} keyword yet.
-
-    if (!info->m_keyword_1)
-    {
-        info->m_keyword_1 = token;
-
-        switch (info->m_keyword_1)
-        {
-        case TK_ALTER:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            info->m_operation = QUERY_OP_ALTER;
-            break;
-
-        case TK_BEGIN:
-        case TK_DECLARE:
-        case TK_FOR:
-            if (info->m_sql_mode == QC_SQL_MODE_ORACLE)
-            {
-                // The beginning of a BLOCK. We'll assume it is in a single
-                // COM_QUERY packet and hence one GWBUF.
-                info->m_status = QC_QUERY_TOKENIZED;
-                info->m_type_mask = QUERY_TYPE_WRITE;
-                // Return non-0 to cause the entire input to be consumed.
-                rv = 1;
-            }
-            break;
-
-        case TK_CALL:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            break;
-
-        case TK_CREATE:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            info->m_operation = QUERY_OP_CREATE;
-            break;
-
-        case TK_DELETE:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            info->m_operation = QUERY_OP_DELETE;
-            break;
-
-        case TK_DESC:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_READ;
-            info->m_operation = QUERY_OP_EXPLAIN;
-            break;
-
-        case TK_DROP:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            info->m_operation = QUERY_OP_DROP;
-            break;
-
-        case TK_EXECUTE:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            break;
-
-        case TK_EXPLAIN:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_READ;
-            info->m_operation = QUERY_OP_EXPLAIN;
-            break;
-
-        case TK_GRANT:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            info->m_operation = QUERY_OP_GRANT;
-            break;
-
-        case TK_HANDLER:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            break;
-
-        case TK_INSERT:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            info->m_operation = QUERY_OP_INSERT;
-            break;
-
-        case TK_LOCK:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            break;
-
-        case TK_PREPARE:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
-            break;
-
-        case TK_REPLACE:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            info->m_operation = QUERY_OP_INSERT;
-            break;
-
-        case TK_REVOKE:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            info->m_operation = QUERY_OP_REVOKE;
-            break;
-
-        case TK_SELECT:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_READ;
-            info->m_operation = QUERY_OP_SELECT;
-            break;
-
-        case TK_SET:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
-            break;
-
-        case TK_SHOW:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_READ;
-            info->m_operation = QUERY_OP_SHOW;
-            break;
-
-        case TK_START:
-            // Will produce the right info for START SLAVE.
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            break;
-
-        case TK_UNLOCK:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            break;
-
-        case TK_UPDATE:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            info->m_operation = QUERY_OP_UPDATE;
-            break;
-
-        case TK_TRUNCATE:
-            info->m_status = QC_QUERY_TOKENIZED;
-            info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            break;
-
-        default:
-            ;
-        }
-    }
-    else if (!info->m_keyword_2)
-    {
-        info->m_keyword_2 = token;
-
-        switch (info->m_keyword_1)
-        {
-        case TK_CHECK:
-            if (info->m_keyword_2 == TK_TABLE)
-            {
-                info->m_status = QC_QUERY_TOKENIZED;
-                info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            }
-            break;
-
-        case TK_DEALLOCATE:
-            if (info->m_keyword_2 == TK_PREPARE)
-            {
-                info->m_status = QC_QUERY_TOKENIZED;
-                info->m_type_mask = QUERY_TYPE_SESSION_WRITE;
-            }
-            break;
-
-        case TK_LOAD:
-            if (info->m_keyword_2 == TK_DATA)
-            {
-                info->m_status = QC_QUERY_TOKENIZED;
-                info->m_type_mask = QUERY_TYPE_WRITE;
-                info->m_operation = QUERY_OP_LOAD;
-            }
-            break;
-
-        case TK_RENAME:
-            if (info->m_keyword_2 == TK_TABLE)
-            {
-                info->m_status = QC_QUERY_TOKENIZED;
-                info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            }
-            break;
-
-        case TK_START:
-            switch (info->m_keyword_2)
-            {
-            case TK_TRANSACTION:
-                info->m_status = QC_QUERY_TOKENIZED;
-                info->m_type_mask = QUERY_TYPE_BEGIN_TRX;
-                break;
-
-            default:
-                break;
-            }
-            break;
-
-        case TK_SHOW:
-            switch (info->m_keyword_2)
-            {
-            case TK_DATABASES_KW:
-                info->m_status = QC_QUERY_TOKENIZED;
-                info->m_type_mask = QUERY_TYPE_SHOW_DATABASES;
-                break;
-
-            case TK_TABLES:
-                info->m_status = QC_QUERY_TOKENIZED;
-                info->m_type_mask = QUERY_TYPE_SHOW_TABLES;
-                break;
-
-            default:
-                break;
-            }
-        }
-    }
-
-    return rv;
+    return pInfo->maxscaleKeyword(token);
 }
 
 void maxscaleRenameTable(Parse* pParse, SrcList* pTables)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT;
-
-    for (int i = 0; i < pTables->nSrc; ++i)
-    {
-        const SrcList::SrcList_item* pItem = &pTables->a[i];
-
-        ss_dassert(pItem->zName);
-        ss_dassert(pItem->zAlias);
-
-        info->update_names(pItem->zDatabase, pItem->zName, NULL);
-        info->update_names(NULL, pItem->zAlias, NULL); // The new name is passed in the alias field.
-    }
-
-    exposed_sqlite3SrcListDelete(pParse->db, pTables);
-}
-
-/**
- * Returns some string from an expression.
- *
- * @param pExpr An expression.
- *
- * @return Some string referred to in pExpr.
- */
-static const char* find_one_string(Expr* pExpr)
-{
-    const char* z = NULL;
-
-    if (pExpr->op == TK_STRING)
-    {
-        ss_dassert(pExpr->u.zToken);
-        z = pExpr->u.zToken;
-    }
-
-    if (!z && pExpr->pLeft)
-    {
-        z = find_one_string(pExpr->pLeft);
-    }
-
-    if (!z && pExpr->pRight)
-    {
-        z = find_one_string(pExpr->pRight);
-    }
-
-    return z;
+    pInfo->maxscaleRenameTable(pParse, pTables);
 }
 
 void maxscalePrepare(Parse* pParse, Token* pName, Expr* pStmt)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    // If the mode is MODE_ORACLE then if expression contains simply a string
-    // we can conclude that the statement has been fully parsed, because it will
-    // be sensible to parse the preparable statement. Otherwise we mark the
-    // statement as having been partially parsed, since the preparable statement
-    // will not contain the full statement.
-    if (info->m_sql_mode == QC_SQL_MODE_ORACLE)
-    {
-        if (pStmt->op == TK_STRING)
-        {
-            info->m_status = QC_QUERY_PARSED;
-        }
-        else
-        {
-            info->m_status = QC_QUERY_PARTIALLY_PARSED;
-        }
-    }
-    else
-    {
-        // If the mode is not MODE_ORACLE, then only a string is acceptable.
-        if (pStmt->op == TK_STRING)
-        {
-            info->m_status = QC_QUERY_PARSED;
-        }
-        else
-        {
-            info->m_status = QC_QUERY_INVALID;
-        }
-    }
-
-    info->m_type_mask = QUERY_TYPE_PREPARE_NAMED_STMT;
-
-    // If information is collected in several passes, then we may
-    // this information already.
-    if (!info->m_zPrepare_name)
-    {
-        info->m_zPrepare_name = (char*)MXS_MALLOC(pName->n + 1);
-        if (info->m_zPrepare_name)
-        {
-            memcpy(info->m_zPrepare_name, pName->z, pName->n);
-            info->m_zPrepare_name[pName->n] = 0;
-        }
-
-        // If the expression just contains a string, then zStmt will
-        // be that string. Otherwise it will be _some_ string from the
-        // expression. In the latter case we've already marked the result
-        // to have been partially parsed.
-        const char* zStmt = find_one_string(pStmt);
-
-        if (zStmt)
-        {
-            size_t preparable_stmt_len = zStmt ? strlen(zStmt) : 0;
-            size_t payload_len = 1 + preparable_stmt_len;
-            size_t packet_len = MYSQL_HEADER_LEN + payload_len;
-
-            info->m_pPreparable_stmt = gwbuf_alloc(packet_len);
-
-            if (info->m_pPreparable_stmt)
-            {
-                uint8_t* ptr = GWBUF_DATA(info->m_pPreparable_stmt);
-                // Payload length
-                *ptr++ = payload_len;
-                *ptr++ = (payload_len >> 8);
-                *ptr++ = (payload_len >> 16);
-                // Sequence id
-                *ptr++ = 0x00;
-                // Command
-                *ptr++ = MYSQL_COM_QUERY;
-
-                memcpy(ptr, zStmt, preparable_stmt_len);
-            }
-        }
-        else
-        {
-            info->m_status = QC_QUERY_INVALID;
-        }
-    }
-    else
-    {
-        ss_dassert(info->m_collect != info->m_collected);
-        ss_dassert(strncmp(info->m_zPrepare_name, pName->z, pName->n) == 0);
-    }
-
-    exposed_sqlite3ExprDelete(pParse->db, pStmt);
+    pInfo->maxscalePrepare(pParse, pName, pStmt);
 }
 
 void maxscalePrivileges(Parse* pParse, int kind)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-
-    switch (kind)
-    {
-    case TK_GRANT:
-        info->m_operation = QUERY_OP_GRANT;
-        break;
-
-    case TK_REVOKE:
-        info->m_operation = QUERY_OP_REVOKE;
-        break;
-
-    default:
-        ss_dassert(!true);
-    }
-}
-
-static int string_to_truth(const char* s)
-{
-    int truth = -1;
-
-    if ((strcasecmp(s, "true") == 0) || (strcasecmp(s, "on") == 0))
-    {
-        truth = 1;
-    }
-    else if ((strcasecmp(s, "false") == 0) || (strcasecmp(s, "off") == 0))
-    {
-        truth = 0;
-    }
-
-    return truth;
+    pInfo->maxscalePrivileges(pParse, kind);
 }
 
 void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = 0; // Reset what was set in maxscaleKeyword
-
-    switch (kind)
-    {
-    case MXS_SET_TRANSACTION:
-        if ((scope == TK_GLOBAL) || (scope == TK_SESSION))
-        {
-            info->m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
-        }
-        else
-        {
-            ss_dassert(scope == 0);
-            info->m_type_mask = QUERY_TYPE_WRITE;
-        }
-        break;
-
-    case MXS_SET_VARIABLES:
-        {
-            for (int i = 0; i < pList->nExpr; ++i)
-            {
-                const ExprList::ExprList_item* pItem = &pList->a[i];
-
-                switch (pItem->pExpr->op)
-                {
-                case TK_CHARACTER:
-                case TK_NAMES:
-                    info->m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
-                    break;
-
-                case TK_EQ:
-                    {
-                        const Expr* pEq = pItem->pExpr;
-                        const Expr* pVariable;
-                        const Expr* pValue = pEq->pRight;
-
-                        // pEq->pLeft is either TK_DOT, TK_VARIABLE or TK_ID. If it's TK_DOT,
-                        // then pEq->pLeft->pLeft is either TK_VARIABLE or TK_ID and pEq->pLeft->pRight
-                        // is either TK_DOT, TK_VARIABLE or TK_ID.
-
-                        // Find the left-most part.
-                        pVariable = pEq->pLeft;
-                        while (pVariable->op == TK_DOT)
-                        {
-                            pVariable = pVariable->pLeft;
-                            ss_dassert(pVariable);
-                        }
-
-                        // Check what kind of variable it is.
-                        size_t n_at = 0;
-                        const char* zName = pVariable->u.zToken;
-
-                        while (*zName == '@')
-                        {
-                            ++n_at;
-                            ++zName;
-                        }
-
-                        if (n_at == 1)
-                        {
-                            info->m_type_mask |= QUERY_TYPE_USERVAR_WRITE;
-                        }
-                        else
-                        {
-                            info->m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
-                        }
-
-                        // Set pVariable to point to the rightmost part of the name.
-                        pVariable = pEq->pLeft;
-                        while (pVariable->op == TK_DOT)
-                        {
-                            pVariable = pVariable->pRight;
-                        }
-
-                        ss_dassert((pVariable->op == TK_VARIABLE) || (pVariable->op == TK_ID));
-
-                        if (n_at != 1)
-                        {
-                            // If it's not a user-variable we need to check whether it might
-                            // be 'autocommit'.
-                            const char* zName = pVariable->u.zToken;
-
-                            while (*zName == '@')
-                            {
-                                ++zName;
-                            }
-
-                            // As pVariable points to the rightmost part, we'll catch both
-                            // "autocommit" and "@@global.autocommit".
-                            if (strcasecmp(zName, "autocommit") == 0)
-                            {
-                                int enable = -1;
-
-                                switch (pValue->op)
-                                {
-                                case TK_INTEGER:
-                                    if (pValue->u.iValue == 1)
-                                    {
-                                        enable = 1;
-                                    }
-                                    else if (pValue->u.iValue == 0)
-                                    {
-                                        enable = 0;
-                                    }
-                                    break;
-
-                                case TK_ID:
-                                    enable = string_to_truth(pValue->u.zToken);
-                                    break;
-
-                                default:
-                                    break;
-                                }
-
-                                switch (enable)
-                                {
-                                case 0:
-                                    info->m_type_mask |= QUERY_TYPE_BEGIN_TRX;
-                                    info->m_type_mask |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
-                                    break;
-
-                                case 1:
-                                    info->m_type_mask |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
-                                    info->m_type_mask |= QUERY_TYPE_COMMIT;
-                                    break;
-
-                                default:
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (pValue->op == TK_SELECT)
-                        {
-                            update_field_infos_from_select(info, pValue->x.pSelect,
-                                                           QC_USED_IN_SUBSELECT, NULL);
-                        }
-                    }
-                    break;
-
-                default:
-                    ss_dassert(!true);
-                }
-            }
-        }
-        break;
-
-    default:
-        ss_dassert(!true);
-    }
-
-    exposed_sqlite3ExprListDelete(pParse->db, pList);
+    pInfo->maxscaleSet(pParse, scope, kind, pList);
 }
 
-extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
+void maxscaleShow(Parse* pParse, MxsShow* pShow)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_operation = QUERY_OP_SHOW;
-
-    uint32_t u = QC_USED_IN_SELECT;
-
-    switch (pShow->what)
-    {
-    case MXS_SHOW_COLUMNS:
-        info->m_type_mask = QUERY_TYPE_READ;
-        break;
-
-    case MXS_SHOW_CREATE_SEQUENCE:
-        info->m_type_mask = QUERY_TYPE_READ;
-        break;
-
-    case MXS_SHOW_CREATE_VIEW:
-        info->m_type_mask = QUERY_TYPE_READ;
-        break;
-
-    case MXS_SHOW_CREATE_TABLE:
-        info->m_type_mask = QUERY_TYPE_READ;
-        break;
-
-    case MXS_SHOW_DATABASES:
-        info->m_type_mask = QUERY_TYPE_SHOW_DATABASES;
-        break;
-
-    case MXS_SHOW_INDEX:
-    case MXS_SHOW_INDEXES:
-    case MXS_SHOW_KEYS:
-        info->m_type_mask = QUERY_TYPE_WRITE;
-        break;
-
-    case MXS_SHOW_TABLE_STATUS:
-        info->m_type_mask = QUERY_TYPE_WRITE;
-        break;
-
-    case MXS_SHOW_STATUS:
-        switch (pShow->data)
-        {
-        case MXS_SHOW_VARIABLES_GLOBAL:
-        case MXS_SHOW_VARIABLES_SESSION:
-        case MXS_SHOW_VARIABLES_UNSPECIFIED:
-            info->m_type_mask = QUERY_TYPE_READ;
-            break;
-
-        case MXS_SHOW_STATUS_MASTER:
-            info->m_type_mask = QUERY_TYPE_WRITE;
-            break;
-
-        case MXS_SHOW_STATUS_SLAVE:
-            info->m_type_mask = QUERY_TYPE_READ;
-            break;
-
-        case MXS_SHOW_STATUS_ALL_SLAVES:
-            info->m_type_mask = QUERY_TYPE_READ;
-            break;
-
-        default:
-            info->m_type_mask = QUERY_TYPE_READ;
-            break;
-        }
-        break;
-
-    case MXS_SHOW_TABLES:
-        info->m_type_mask = QUERY_TYPE_SHOW_TABLES;
-        break;
-
-    case MXS_SHOW_VARIABLES:
-        if (pShow->data == MXS_SHOW_VARIABLES_GLOBAL)
-        {
-            info->m_type_mask = QUERY_TYPE_GSYSVAR_READ;
-        }
-        else
-        {
-            info->m_type_mask = QUERY_TYPE_SYSVAR_READ;
-        }
-        break;
-
-    case MXS_SHOW_WARNINGS:
-        // qc_mysqliembedded claims this.
-        info->m_type_mask = QUERY_TYPE_WRITE;
-        break;
-
-    default:
-        ss_dassert(!true);
-    }
+    pInfo->maxscaleShow(pParse, pShow);
 }
 
 void maxscaleTruncate(Parse* pParse, Token* pDatabase, Token* pName)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-    info->m_operation = QUERY_OP_TRUNCATE;
-
-    char* zDatabase;
-
-    char database[pDatabase ? pDatabase->n + 1 : 0];
-    if (pDatabase)
-    {
-        strncpy(database, pDatabase->z, pDatabase->n);
-        database[pDatabase->n] = 0;
-        zDatabase = database;
-    }
-    else
-    {
-        zDatabase = NULL;
-    }
-
-    char name[pName->n + 1];
-    strncpy(name, pName->z, pName->n);
-    name[pName->n] = 0;
-
-    info->update_names(zDatabase, name, NULL);
+    pInfo->maxscaleTruncate(pParse, pDatabase, pName);
 }
 
 void maxscaleUse(Parse* pParse, Token* pToken)
 {
     QC_TRACE();
 
-    QcSqliteInfo* info = this_thread.pInfo;
-    ss_dassert(info);
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    info->m_status = QC_QUERY_PARSED;
-    info->m_type_mask = QUERY_TYPE_SESSION_WRITE;
-    info->m_operation = QUERY_OP_CHANGE_DB;
+    pInfo->maxscaleUse(pParse, pToken);
 }
 
 /**
