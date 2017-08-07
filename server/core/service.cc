@@ -776,7 +776,7 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const c
  * @param port          The port to listen on
  * @return      True if the protocol/port is already part of the service
  */
-bool serviceHasListener(SERVICE *service, const char *protocol,
+bool serviceHasListener(SERVICE* service, const char* name, const char* protocol,
                         const char* address, unsigned short port)
 {
     LISTENER_ITERATOR iter;
@@ -785,9 +785,12 @@ bool serviceHasListener(SERVICE *service, const char *protocol,
          listener; listener = listener_iterator_next(&iter))
     {
         if (listener_is_active(listener) &&
-            strcmp(listener->protocol, protocol) == 0 && listener->port == port &&
+            // Listener with same name exists
+            (strcmp(listener->name, name) == 0 ||
+             // Listener listening on the same interface and port exists
+            ((strcmp(listener->protocol, protocol) == 0 && listener->port == port &&
             ((address && listener->address && strcmp(listener->address, address) == 0) ||
-             (address == NULL && listener->address == NULL)))
+             (address == NULL && listener->address == NULL))))))
         {
             return true;
         }

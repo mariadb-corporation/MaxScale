@@ -743,7 +743,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
 
     spinlock_acquire(&crt_lock);
 
-    if (!serviceHasListener(service, proto, addr, u_port))
+    if (!serviceHasListener(service, name, proto, addr, u_port))
     {
         SSL_LISTENER *ssl = NULL;
 
@@ -807,10 +807,8 @@ bool runtime_destroy_listener(SERVICE *service, const char *name)
         }
         else
         {
-            rval = false;
-            MXS_WARNING("Listener '%s' was not created at runtime. Remove the "
-                        "listener manually from the correct configuration file.",
-                        name);
+            runtime_error("Listener '%s' was not created at runtime. Remove the listener "
+                          "manually from the correct configuration file.", name);
         }
     }
     else

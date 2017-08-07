@@ -63,27 +63,47 @@ describe("Service", function() {
             })
     });
 
-    it("create a listener", function() {
-        var listener = {
-            "links": {
-                "self": "http://localhost:8989/v1/services/RW-Split-Router/listeners"
+    const listener = {
+        "links": {
+            "self": "http://localhost:8989/v1/services/RW-Split-Router/listeners"
+        },
+        "data": {
+            "attributes": {
+                "parameters": {
+                    "port": 4012,
+                    "protocol": "MySQLClient",
+                    "authenticator": "MySQLAuth",
+                    "address": "127.0.0.1"
+                }
             },
-            "data": {
-                "attributes": {
-                    "parameters": {
-                        "port": 4012,
-                        "protocol": "MySQLClient",
-                        "authenticator": "MySQLAuth",
-                        "address": "127.0.0.1"
-                    }
-                },
-                "id": "RW-Split-Listener-2",
-                "type": "listeners"
-            }
+            "id": "RW-Split-Listener-2",
+            "type": "listeners"
         }
+    }
 
+    it("create a listener", function() {
         return request.post(base_url + "/services/RW-Split-Router/listeners", {json: listener})
             .should.be.fulfilled
+    });
+
+    it("create an already existing listener", function() {
+        return request.post(base_url + "/services/RW-Split-Router/listeners", {json: listener})
+            .should.be.rejected
+    });
+
+    it("destroy a listener", function() {
+        return request.delete(base_url + "/services/RW-Split-Router/listeners/RW-Split-Listener-2")
+            .should.be.fulfilled
+    });
+
+    it("destroy a nonexistent listener", function() {
+        return request.delete(base_url + "/services/RW-Split-Router/listeners/I-bet-this-listener-exists")
+            .should.be.rejected
+    });
+
+    it("destroy a static listener", function() {
+        return request.delete(base_url + "/services/RW-Split-Router/listeners/RW-Split-Listener")
+            .should.be.rejected
     });
 
     after(stopMaxScale)

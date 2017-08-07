@@ -73,7 +73,7 @@ test1()
     ss_info_dassert(serviceCreateListener(service, "TestProtocol", "testprotocol",
                                           "localhost", 9876, "MySQLAuth", NULL, NULL),
                     "Add Protocol should succeed");
-    ss_info_dassert(0 != serviceHasListener(service, "testprotocol", "localhost", 9876),
+    ss_info_dassert(0 != serviceHasListener(service, "TestProtocol", "testprotocol", "localhost", 9876),
                     "Service should have new protocol as requested");
 
     return 0;

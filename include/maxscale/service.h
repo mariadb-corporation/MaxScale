@@ -247,7 +247,7 @@ bool serviceHasBackend(SERVICE *service, SERVER *server);
  * @param port Listener port
  * @return True if service has the listener
  */
-bool serviceHasListener(SERVICE *service, const char *protocol,
+bool serviceHasListener(SERVICE* service, const char* name, const char* protocol,
                         const char* address, unsigned short port);
 
 /**

@@ -110,9 +110,24 @@ describe("Create/Destroy Commands", function() {
             .should.be.fulfilled
     })
 
+    it('create already existing listener', function() {
+        return doCommand('create listener RW-Split-Router my-listener 7890')
+            .should.be.rejected
+    })
+
+    it('create listener with already used port', function() {
+        return doCommand('create listener RW-Split-Router my-listener2 4567')
+            .should.be.rejected
+    })
+
     it('destroy listener', function() {
         return doCommand('destroy listener RW-Split-Router my-listener')
             .should.be.fulfilled
+    })
+
+    it('destroy static listener', function() {
+        return doCommand('destroy listener RW-Split-Router RW-Split-Listener')
+            .should.be.rejected
     })
 
     it('create user', function() {

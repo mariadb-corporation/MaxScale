@@ -145,6 +145,7 @@ describe('Cluster Command Internals', function() {
         }
 
         cluster.haveExtraServices(a, b, 'test1', 'test2').should.be.rejected
+        cluster.haveExtraServices(b, a, 'test2', 'test1').should.be.rejected
         expect(cluster.haveExtraServices(a, a, 'test1', 'test2')).to.equal(undefined)
         expect(cluster.haveExtraServices(b, b, 'test1', 'test2')).to.equal(undefined)
     })
@@ -212,12 +213,17 @@ describe('Cluster Sync', function() {
 
     // As the listeners cannot be truly deleted, since there's no code for actually closing a socket at runtime,
     // we do the listener tests last
-    it('sync listener creation', function() {
+    it('sync listener creation/deletion', function() {
         return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts 127.0.0.1:8990')
         // As both MaxScales are on the same machine, both can't listen on the same port. The sync should fail due to this
             .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989').should.be.rejected)
         // Create the listener on the second MaxScale to avoid it being synced later on
             .then(() => doCommand('create listener RW-Split-Router my-listener-2 5998 --hosts 127.0.0.1:8989'))
+        // Sync after creation should succeed
+            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+        // Destroy the created server, should succeed
+            .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
+            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
     })
 
     after(stopDoubleMaxScale)
