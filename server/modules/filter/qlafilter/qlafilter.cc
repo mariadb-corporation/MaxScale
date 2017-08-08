@@ -31,6 +31,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
+#include <fstream>
+
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/filter.h>
@@ -40,6 +42,8 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/service.h>
 #include <maxscale/utils.h>
+#include <maxscale/modulecmd.h>
+#include <maxscale/json_api.h>
 
 /* Date string buffer size */
 #define QLA_DATE_BUFFER_SIZE 20
@@ -96,6 +100,7 @@ typedef struct
     uint32_t log_file_data_flags; /* What data is saved to the files */
     FILE *unified_fp; /* Unified log file. The pointer needs to be shared here
                        * to avoid garbled printing. */
+    char *unified_filename; /* Filename of the unified log file */
     bool flush_writes; /* Flush log file after every write? */
     bool append;    /* Open files in append-mode? */
 
@@ -120,6 +125,7 @@ typedef struct
 static FILE* open_log_file(uint32_t, QLA_INSTANCE *, const char *);
 static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const char*,
                            const char*, size_t);
+static bool cb_log(const MODULECMD_ARG *argv, json_t** output);
 
 static const MXS_ENUM_VALUE option_values[] =
 {
@@ -166,6 +172,26 @@ MXS_BEGIN_DECLS
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
+    modulecmd_arg_type_t args[] =
+    {
+        {
+            MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            "Filter to read logs from"
+        },
+        {
+            MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
+            "Start reading from this line"
+        },
+        {
+            MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
+            "Stop reading at this line (exclusive)"
+        }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "log",
+                               MODULECMD_TYPE_PASSIVE, cb_log, 3, args,
+                               "Show unified log file as a JSON array");
+
     static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
@@ -278,6 +304,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         my_instance->sessions = 0;
         my_instance->ovec_size = 0;
         my_instance->unified_fp = NULL;
+        my_instance->unified_filename = NULL;
         my_instance->write_warning_given = false;
 
         my_instance->source = config_copy_string(params, PARAM_SOURCE);
@@ -321,11 +348,15 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 
                 if (my_instance->unified_fp == NULL)
                 {
+                    MXS_FREE(filename);
                     MXS_ERROR("Opening output file for qla-filter failed due to %d, %s",
                               errno, mxs_strerror(errno));
                     error = true;
                 }
-                MXS_FREE(filename);
+                else
+                {
+                    my_instance->unified_filename = filename;
+                }
             }
             else
             {
@@ -902,4 +933,56 @@ static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *ins
         }
         return rval;
     }
+}
+
+static bool cb_log(const MODULECMD_ARG *argv, json_t** output)
+{
+    ss_dassert(argv->argc > 0);
+    ss_dassert(argv->argv[0].type.type == MODULECMD_ARG_FILTER);
+
+    MXS_FILTER_DEF* filter = argv[0].argv->value.filter;
+    QLA_INSTANCE* instance = reinterpret_cast<QLA_INSTANCE*>(filter_def_get_instance(filter));
+    bool rval = false;
+
+    if (instance->log_mode_flags & CONFIG_FILE_UNIFIED)
+    {
+        ss_dassert(instance->unified_fp && instance->unified_filename);
+        std::ifstream file(instance->unified_filename);
+
+        if (file)
+        {
+            json_t* arr = json_array();
+            // TODO: Add integer type to modulecmd
+            int start = argv->argc > 1 ? atoi(argv->argv[1].value.string) : 0;
+            int end = argv->argc > 2 ? atoi(argv->argv[2].value.string) : 0;
+            int current = 0;
+
+            /** Skip lines we don't want */
+            for (std::string line; current < start && std::getline(file, line); current++)
+            {
+                ;
+            }
+
+            /** Read lines until either EOF or line count is reached */
+            for (std::string line; std::getline(file, line) && (current < end || end == 0); current++)
+            {
+                json_array_append_new(arr, json_string(line.c_str()));
+            }
+
+            *output = arr;
+            rval = true;
+        }
+        else
+        {
+            *output = mxs_json_error("Failed to open file '%s'",
+                                     instance->unified_filename);
+        }
+    }
+    else
+    {
+        *output = mxs_json_error("Filter '%s' does not have unified log file enabled",
+                                 filter_def_get_name(filter));
+    }
+
+    return rval;
 }
