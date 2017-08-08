@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(1000);
     char str[1024];
+    char str1[1024];
 
     int i;
 
@@ -32,23 +33,27 @@ int main(int argc, char *argv[])
     sprintf(str, "%s/krb5.conf", test_dir);
     for (i = 0; i < Test->repl->N; i++)
     {
+        Test->repl->ssh_node(i, true, "yum clean all");
         Test->repl->ssh_node(i, true, "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-workstation pam_krb5");
-        Test->repl->copy_to_node(str, (char *) "~/", i);
-        Test->repl->ssh_node(i, true, "cp ~/krb5.conf /etc/");
+        Test->repl->copy_to_node(str, Test->repl->access_homedir[i], i);
+        sprintf(str1, "cp %s/krb5.conf /etc/", Test->repl->access_homedir[i]);
+        Test->repl->ssh_node(i, true, str1);
 
         Test->repl->copy_to_node((char *) "hosts", (char *) "~/", i);
-        Test->repl->ssh_node(i, true, "cp ~/hosts /etc/");
+        sprintf(str1, "cp %s/hosts /etc/", Test->repl->access_homedir[i]);
+        Test->repl->ssh_node(i, true, str1);
     }
 
     Test->tprintf("Copying 'hosts' and krb5.conf files to Maxscale node\n");
 
-    Test->copy_to_maxscale((char *) "hosts", (char *) "~/");
-    Test->ssh_maxscale(true,  (char *) "cp ~/hosts /etc/");
+    Test->copy_to_maxscale((char *) "hosts", Test->maxscale_access_homedir);
+    Test->ssh_maxscale(true,  (char *) "cp %s/hosts /etc/", Test->maxscale_access_homedir);
 
-    Test->copy_to_maxscale(str, (char *) "~/");
-    Test->ssh_maxscale(true,  (char *) "cp ~/krb5.conf /etc/");
+    Test->copy_to_maxscale(str, Test->maxscale_access_homedir);
+    Test->ssh_maxscale(true,  (char *) "cp %s/krb5.conf /etc/", Test->maxscale_access_homedir);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
+    Test->ssh_maxscale(true, (char *) "yum clean all");
     Test->ssh_maxscale(true, (char *) "yum install rng-tools -y");
     Test->ssh_maxscale(true, (char *) "rngd -r /dev/urandom -o /dev/random");
 
@@ -84,6 +89,7 @@ int main(int argc, char *argv[])
     Test->ssh_maxscale(true, (char *) "chmod a+r /etc/krb5.keytab;");
 
     Test->ssh_maxscale(false, (char *) "kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab");
+    Test->ssh_maxscale(true, (char *) "mkdir -p /home/maxscale");
     Test->ssh_maxscale(true, (char *)
                        "su maxscale --login -s /bin/sh -c \"kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab\"");
 
@@ -94,11 +100,13 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         sprintf(str, "%s/kerb.cnf", test_dir);
-        Test->repl->copy_to_node(str, (char *) "~/", i);
-        Test->repl->ssh_node(i, true, "cp ~/kerb.cnf /etc/my.cnf.d/");
+        Test->repl->copy_to_node(str, Test->repl->access_homedir[i], i);
+        sprintf(str, "cp %s/kerb.cnf /etc/my.cnf.d/", Test->repl->access_homedir[i]);
+        Test->repl->ssh_node(i, true, str);
 
-        Test->repl->copy_to_node((char *) "krb5.keytab", (char *) "~/", i);
-        Test->repl->ssh_node(i, true, "cp ~/krb5.keytab /etc/");
+        Test->repl->copy_to_node((char *) "krb5.keytab", Test->repl->access_homedir[i], i);
+        sprintf(str, "cp %s/krb5.keytab /etc/", Test->repl->access_homedir[i]);
+        Test->repl->ssh_node(i, true, str);
 
         Test->repl->ssh_node(i, false, "kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab");
     }
@@ -130,6 +138,11 @@ int main(int argc, char *argv[])
         Test->repl->ssh_node(1, false,
                              "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4009"),
         "Error executing query against Read Connection Slave\n");
+
+    for (int i = 0; i < Test->repl->N; i++)
+    {
+        Test->repl->ssh_node(i, true, "sudo rm -f /etc/my.cnf.d/kerb.cnf");
+    }
 
     int rval = Test->global_result;
     delete Test;
