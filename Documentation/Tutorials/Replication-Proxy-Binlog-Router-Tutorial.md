@@ -661,7 +661,7 @@ Issuing the admin command `SHOW BINARY LOGS` it's possible to see the list
 of log files which have been downloaded:
 
 ```
-MariaDB > SHOW BINARY LOGS;
+MariaDB> SHOW BINARY LOGS;
 +------------------+-----------+
 | Log_name         | File_size |
 +------------------+-----------+
@@ -675,7 +675,7 @@ It's possible to follow the _master change_ history if option `binlog_structure=
 the displayed log file names have a prefix with replication domain_id and server_id.
 
 ```
-MariaDB > SHOW BINARY LOGS;
+MariaDB> SHOW BINARY LOGS;
 +--------------------------+-----------+
 | Log_name                 | File_size |
 +--------------------------+-----------+
@@ -705,13 +705,33 @@ be issued for the new configuration.
 - Existing GTID is set to empty value.
 - Existing GTID database in binlogdir (gtid_maps.db) is not touched.
 
+### Removing binary logs from binlogdir
+
+Since version 2.2, if `mariadb10_slave_gtid` or `mariadb10_master_gtid`
+are set to On, it's possible to remove the binlog files from _binlogdir_
+and delete related entries in GTID repository using the admin
+command `PURGE BINARY LOGS TO 'file'`
+
+Example:
+
+Remove all binlog files up to 'file.0001'.
+
+```
+MariaDB> PURGE BINARY LOGS TO 'file.0001';
+```
+
+**Note**: the current binlog file cannot be removed.
+
+If needed, after purging all the files issue `RESET SLAVE` and manually
+remove last binlog file and the GTID database (`gtid_maps.db`) in _binlog_dir_.
+
 ###SSL options:
 
-	MySQL [(none)]> CHANGE MASTER TO MASTER_SSL = 1, MASTER_SSL_CERT='/home/maxscale/packages/certificates/client/client-cert.pem', MASTER_SSL_CA='/home/maxscale/packages/certificates/client/ca.pem', MASTER_SSL_KEY='/home/maxscale/packages/certificates/client/client-key.pem', MASTER_TLS_VERSION='TLSv12';
+	MariaDB> CHANGE MASTER TO MASTER_SSL = 1, MASTER_SSL_CERT='/home/maxscale/packages/certificates/client/client-cert.pem', MASTER_SSL_CA='/home/maxscale/packages/certificates/client/ca.pem', MASTER_SSL_KEY='/home/maxscale/packages/certificates/client/client-key.pem', MASTER_TLS_VERSION='TLSv12';
 
-	MySQL [(none)]> CHANGE MASTER TO MASTER_TLS_VERSION='TLSv12';
+	MariaDB> CHANGE MASTER TO MASTER_TLS_VERSION='TLSv12';
 
-	MySQL [(none)]> CHANGE MASTER TO MASTER_SSL = 0;
+	MariaDB> CHANGE MASTER TO MASTER_SSL = 0;
 
 
 #### Some constraints:
@@ -727,7 +747,7 @@ Note:
 Examples:
   mysql client
 
-	MySQL> SHOW SLAVE STATUS\G
+	MariaDB> SHOW SLAVE STATUS\G
 
            Master_SSL_Allowed: Yes
            Master_SSL_CA_File: /home/mpinto/packages/certificates/client/ca.pem
