@@ -909,6 +909,43 @@ public:
         return rv;
     }
 
+    bool has_same_name(const QcFieldInfo& o) const
+    {
+        return
+            m_database == o.m_database &&
+            m_table == o.m_table &&
+            m_column == o.m_column;
+    }
+
+    static bool at_most_usage_differs(const std::set<QcFieldInfo>& l,
+                                      const std::set<QcFieldInfo>& r)
+    {
+        bool rv = false;
+
+        if (l.size() == r.size())
+        {
+            rv = true;
+
+            std::set<QcFieldInfo>::iterator i = l.begin();
+            std::set<QcFieldInfo>::iterator j = r.begin();
+
+            while (rv && (i != l.end()))
+            {
+                if (!i->has_same_name(*j))
+                {
+                    rv = false;
+                }
+                else
+                {
+                    ++i;
+                    ++j;
+                }
+            }
+        }
+
+        return rv;
+    }
+
     void print(ostream& out) const
     {
         if (!m_database.empty())
@@ -972,41 +1009,6 @@ bool operator == (const QcFieldInfo& lhs, const QcFieldInfo& rhs)
     return lhs.eq(rhs);
 }
 
-bool are_equal(const QC_FIELD_INFO* fields1, size_t n_fields1,
-               const QC_FIELD_INFO* fields2, size_t n_fields2)
-{
-    bool rv = (n_fields1 == n_fields2);
-
-    if (rv)
-    {
-
-        size_t i = 0;
-        while (rv && (i < n_fields1))
-        {
-            rv = *fields1 == *fields2;
-            ++i;
-        }
-    }
-
-    return rv;
-}
-
-ostream& print(ostream& out, const QC_FIELD_INFO* fields, size_t n_fields)
-{
-    size_t i = 0;
-    while (i < n_fields)
-    {
-        out << fields[i++];
-
-        if (i != n_fields)
-        {
-            out << " ";
-        }
-    }
-
-    return out;
-}
-
 bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
                             QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
 {
@@ -1036,6 +1038,11 @@ bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     {
         ss << "Ok : ";
         ss << f1;
+        success = true;
+    }
+    else if (QcFieldInfo::at_most_usage_differs(f1, f2))
+    {
+        ss << "WRN: " << f1 << " != " << f2;
         success = true;
     }
     else
