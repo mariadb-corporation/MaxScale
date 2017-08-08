@@ -8629,16 +8629,13 @@ static int binary_logs_purge_cb(void *data,
 }
 
 /**
- * Parse the PURGE BINARY LOGS [TO 'file'] SQL statement
- * and return last_file or the one found in the command.
+ * Parse the PURGE BINARY LOGS TO 'file' SQL statement.
  *
  * @param purge_command    The SQL command to parse
- * @param last_file        Current binlog file name
- * @return                 A pointer to the file
+ * @return                 The file found in the command.
  *                         or NULL in case of parse errors.
  */
-static const char *blr_purge_getfile(char *purge_command,
-                                     const char *last_file)
+static const char *blr_purge_getfile(char *purge_command)
 {
     char *word;
     char *brkb;
@@ -8665,10 +8662,11 @@ static const char *blr_purge_getfile(char *purge_command,
 
     word = strtok_r(NULL, sep, &brkb);
 
-    // Nothing else, return last file
+    // Nothing else, return error
     if (!word)
     {
-        return last_file;
+        MXS_ERROR("Invalid PURGE command: PURGE BINARY LOGS");
+        return NULL;
     }
     else
     // Check for TO 'file'
@@ -8695,7 +8693,7 @@ static const char *blr_purge_getfile(char *purge_command,
         }
         else
         {
-            MXS_ERROR("Invalid PURGE command: PURGE BINARY LOGS TO %s", word);
+            MXS_ERROR("Invalid PURGE command: PURGE BINARY LOGS TO");
             return NULL;
         }
     }
@@ -8722,15 +8720,6 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
 {
     char *errmsg = NULL;
     size_t n_delete = 0;
-    // Select first ROWID of current binlog file
-    static const char last_file_tpl[] = "SELECT MIN(id) AS min_id, "
-                                            "(rep_domain || '/' || "
-                                              "server_id || '/' || "
-                                              "binlog_file) AS file "
-                                        "FROM gtid_maps "
-                                            "WHERE file = '%s' "
-                                        "GROUP BY file "
-                                        "ORDER BY id ASC;";
     // Select first ROWID of user specifed file
     static const char find_file_tpl[] = "SELECT MIN(id) AS min_id, "
                                             "(rep_domain || '/' || "
@@ -8753,19 +8742,16 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
                                              "WHERE id < %" PRIu64 ";";
     static char sql_stmt[GTID_SQL_BUFFER_SIZE];
     BINARY_LOG_DATA_RESULT result;
-    static const char *last_file;
-    static char current_file[BINLOG_FILE_EXTRA_INFO + BINLOG_FNAMELEN + 1];
+    static const char *selected_file;
 
     /**
-     * Parse PURGE BINARY LOGS [TO 'file'] statement:
-     * If file is not set then router->binlog_name is returned.
+     * Parse PURGE BINARY LOGS TO 'file' statement
      */
-    if ((last_file = blr_purge_getfile(purge_opts,
-                                       router->binlog_name)) == NULL)
+    if ((selected_file = blr_purge_getfile(purge_opts)) == NULL)
     {
         // Abort on parsing failure
         blr_slave_send_error_packet(slave,
-                                    "Malformed PURGE BINARY LOGS [TO 'file'] detected.",
+                                    "Malformed PURGE BINARY LOGS TO 'file' detected.",
                                     1064,
                                     "42000");
         return false;
@@ -8777,39 +8763,10 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
     result.binlogdir = router->binlogdir;
     result.use_tree = router->storage_type == BLR_BINLOG_STORAGE_TREE;
 
-    /* Acquire lock accessing router structure fields */
-    spinlock_acquire(&router->binlog_lock);
-
-    /* Compare last file with router current file */
-    bool use_last = strcmp(last_file, router->binlog_name) == 0;
-
-    /* Set current file */
-    sprintf(current_file,
-            "%" PRIu32 "/%" PRIu32 "/%s",
-            router->mariadb10_gtid_domain,
-            router->orig_masterid,
-            router->binlog_name);
-
-    /* Release lock */
-    spinlock_release(&router->binlog_lock);
-
-    /**
-     *  Prepare SQL statement for last file ROWID or find_file ROWID
-     */
-    if (use_last)
-    {
-        /* Use current file, with prefix */
-        sprintf(sql_stmt,
-                last_file_tpl,
-                current_file);
-    }
-    else
-    {
-        /* Use the provided name, no prefix: find the first row */
-        sprintf(sql_stmt,
-                find_file_tpl,
-                last_file);
-    }
+    /* Use the provided name, no prefix: find the first row */
+    sprintf(sql_stmt,
+            find_file_tpl,
+            selected_file);
 
     /* Get file rowid */
     if (sqlite3_exec(router->gtid_maps,
