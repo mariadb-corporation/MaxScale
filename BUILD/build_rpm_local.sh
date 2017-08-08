@@ -39,8 +39,6 @@ if [ "$build_experimental" == "yes" ]
 then
     for component in experimental devel client
     do
-        sudo rm -rf _build
-        mkdir _build
         cd _build
         cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
         sudo make package

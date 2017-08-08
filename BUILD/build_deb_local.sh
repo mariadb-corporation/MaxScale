@@ -44,8 +44,6 @@ if [ "$build_experimental" == "yes" ]
 then
     for component in experimental devel client
     do
-        rm -rf _bild
-	    mkdir _build
 	    cd _build
 	    export LD_LIBRARY_PATH=""
 	    cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
