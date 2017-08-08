@@ -159,3 +159,7 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fP
 make
 sudo make install
 popd
+
+wget --quiet https://nodejs.org/dist/v6.11.2/node-v6.11.2-linux-x64.tar.xz
+tar -axf node-v6.11.2-linux-x64.tar.xz
+sudo cp -t /usr -r node-v6.11.2-linux-x64/*

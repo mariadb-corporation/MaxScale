@@ -40,32 +40,23 @@ cp *.deb ..
 cp _build/*.gz .
 
 set -x
-if [ "$build_experimental" == "yes" ] ; then
+if [ "$build_experimental" == "yes" ]
+then
+    for component in experimental devel client
+    do
         rm -rf _bild
-	mkdir _build
-	cd _build
-	export LD_LIBRARY_PATH=""
-	cmake ..  $cmake_flags -DTARGET_COMPONENT=experimental
-	export LD_LIBRARY_PATH=$(for i in `find $PWD/ -name '*.so*'`; do echo $(dirname $i); done|sort|uniq|xargs|sed -e 's/[[:space:]]/:/g')
-	make package
-	cp _CPack_Packages/Linux/DEB/*.deb ../
+	    mkdir _build
+	    cd _build
+	    export LD_LIBRARY_PATH=""
+	    cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
+	    export LD_LIBRARY_PATH=$(for i in `find $PWD/ -name '*.so*'`; do echo $(dirname $i); done|sort|uniq|xargs|sed -e 's/[[:space:]]/:/g')
+	    make package
+	    cp _CPack_Packages/Linux/DEB/*.deb ../
         cd ..
         cp _build/*.deb .
         cp *.deb ..
-	cp _build/*.gz .
-
-        rm -rf _bild
-        mkdir _build
-        cd _build
-        export LD_LIBRARY_PATH=""
-        cmake ..  $cmake_flags -DTARGET_COMPONENT=devel
-        export LD_LIBRARY_PATH=$(for i in `find $PWD/ -name '*.so*'`; do echo $(dirname $i); done|sort|uniq|xargs|sed -e 's/[[:space:]]/:/g')
-        make package
-	cp _CPack_Packages/Linux/DEB/*.deb ../
-        cd ..
-        cp _build/*.deb .
-        cp *.deb ..
-	cp _build/*.gz .
+	    cp _build/*.gz .
+    done
 fi
 
 if [ "$BUILD_RABBITMQ" == "yes" ] ; then

@@ -35,24 +35,19 @@ cd ..
 cp _build/*.rpm .
 cp _build/*.gz .
 
-if [ "$build_experimental" == "yes" ] ; then
+if [ "$build_experimental" == "yes" ]
+then
+    for component in experimental devel client
+    do
         sudo rm -rf _build
         mkdir _build
         cd _build
-        cmake ..  $cmake_flags -DTARGET_COMPONENT=experimental
+        cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
         sudo make package
         cd ..
         cp _build/*.rpm .
-	cp _build/*.gz .
-
-        sudo rm -rf _build
-        mkdir _build
-        cd _build
-        cmake ..  $cmake_flags -DTARGET_COMPONENT=devel
-        sudo make package
-        cd ..
-        cp _build/*.rpm .
-	cp _build/*.gz .
+	    cp _build/*.gz .
+    done
 fi
 
 if [ "$BUILD_RABBITMQ" == "yes" ] ; then
