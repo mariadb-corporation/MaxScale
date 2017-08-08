@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(1000);
     char str[1024];
+    char str1[1024];
 
     int i;
 
@@ -35,19 +36,21 @@ int main(int argc, char *argv[])
         Test->repl->ssh_node(i, (char *)
                              "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-workstation pam_krb5", true);
         Test->repl->copy_to_node(str, (char *) "~/", i);
-        Test->repl->ssh_node(i, (char *) "cp ~/krb5.conf /etc/", true);
+        sprintf(str1, "cp %s/krb5.conf /etc/", Test->repl->access_homedir[i]);
+        Test->repl->ssh_node(i, str1, true);
 
         Test->repl->copy_to_node((char *) "hosts", (char *) "~/", i);
-        Test->repl->ssh_node(i, (char *) "cp ~/hosts /etc/", true);
+        sprintf(str1, "cp %s/hosts /etc/", Test->repl->access_homedir[i]);
+        Test->repl->ssh_node(i, str1, true);
     }
 
     Test->tprintf("Copying 'hosts' and krb5.conf files to Maxscale node\n");
 
     Test->copy_to_maxscale((char *) "hosts", (char *) "~/");
-    Test->ssh_maxscale(true,  (char *) "cp ~/hosts /etc/");
+    Test->ssh_maxscale(true,  (char *) "cp %s/hosts /etc/", Test->maxscale_access_homedir);
 
     Test->copy_to_maxscale(str, (char *) "~/");
-    Test->ssh_maxscale(true,  (char *) "cp ~/krb5.conf /etc/");
+    Test->ssh_maxscale(true,  (char *) "cp %s/krb5.conf /etc/", Test->maxscale_access_homedir);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
     Test->ssh_maxscale(true, (char *) "yum install rng-tools -y");
