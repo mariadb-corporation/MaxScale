@@ -186,6 +186,15 @@ int exposed_sqlite3Dequote(char *z)
   return sqlite3Dequote(z);
 }
 
+void exposed_sqlite3Insert(Parse* pParse,
+                           SrcList* pTabList,
+                           Select* pSelect,
+                           IdList* pColumns,
+                           int onError)
+{
+  sqlite3Insert(pParse, pTabList, pSelect, pColumns, onError);
+}
+
 void exposed_sqlite3EndTable(Parse* pParse, Token* pCons, Token* pEnd, u8 tabOpts, Select* pSelect)
 {
   sqlite3EndTable(pParse, pCons, pEnd, tabOpts, pSelect);
@@ -205,6 +214,11 @@ void exposed_sqlite3StartTable(Parse *pParse,   /* Parser context */
                                int noErr)       /* Do nothing if table already exists */
 {
   sqlite3StartTable(pParse, pName1, pName2, isTemp, isView, isVirtual, noErr);
+}
+
+void exposed_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Expr* pWhere, int onError)
+{
+    sqlite3Update(pParse, pTabList, pChanges, pWhere, onError);
 }
 
 /*
@@ -1631,7 +1645,6 @@ cmd ::= with(W) insert_cmd(R) INTO fullname(X) idlist_opt(F) select(S). {
 #else
   sqlite3Insert(pParse, X, S, F, R);
 #endif
-  sqlite3SelectDelete(pParse->db, S);
 }
 cmd ::= with(W) insert_cmd(R) INTO fullname(X) idlist_opt(F) DEFAULT VALUES.
 {
@@ -1653,7 +1666,6 @@ cmd ::= with(W) insert_cmd(R) fullname(X) idlist_opt(F) DEFAULT VALUES.
 cmd ::= with(W) insert_cmd(R) fullname(X) idlist_opt(F) select(S). {
   sqlite3WithPush(pParse, W, 1);
   mxs_sqlite3Insert(pParse, X, S, F, R, 0);
-  sqlite3SelectDelete(pParse->db, S);
 }
 
 %type col_name {ExprSpan}

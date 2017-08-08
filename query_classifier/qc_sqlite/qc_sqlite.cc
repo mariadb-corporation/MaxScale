@@ -170,7 +170,7 @@ static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect);
 static void log_invalid_data(GWBUF* query, const char* message);
 static const char* map_function_name(QC_NAME_MAPPING* function_name_mappings, const char* name);
 static bool parse_query(GWBUF* query, uint32_t collect);
-static void parse_query_string(const char* query, int len);
+static void parse_query_string(const char* query, int len, bool suppress_logging);
 static bool query_is_parsed(GWBUF* query, uint32_t collect);
 static bool should_exclude(const char* zName, const ExprList* pExclude);
 static void update_field_infos_from_expr(QcSqliteInfo* info,
@@ -227,6 +227,11 @@ extern void exposed_sqlite3FinishTrigger(Parse *pParse,
                                          Token *pAll);
 extern int exposed_sqlite3Dequote(char *z);
 extern int exposed_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*);
+extern void exposed_sqlite3Insert(Parse* pParse,
+                                  SrcList* pTabList,
+                                  Select* pSelect,
+                                  IdList* pColumns,
+                                  int onError);
 extern int exposed_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest);
 extern void exposed_sqlite3StartTable(Parse *pParse,   /* Parser context */
                                       Token *pName1,   /* First part of the name of the table or view */
@@ -235,6 +240,11 @@ extern void exposed_sqlite3StartTable(Parse *pParse,   /* Parser context */
                                       int isView,      /* True if this is a VIEW */
                                       int isVirtual,   /* True if this is a VIRTUAL table */
                                       int noErr);      /* Do nothing if table already exists */
+extern void exposed_sqlite3Update(Parse* pParse,
+                                  SrcList* pTabList,
+                                  ExprList* pChanges,
+                                  Expr* pWhere,
+                                  int onError);
 
 }
 
@@ -1099,7 +1109,7 @@ public:
         exposed_sqlite3SrcListDelete(pParse->db, pTabList);
         exposed_sqlite3IdListDelete(pParse->db, pColumns);
         exposed_sqlite3ExprListDelete(pParse->db, pSet);
-        // pSelect is deleted in parse.y
+        exposed_sqlite3SelectDelete(pParse->db, pSelect);
     }
 
     void mxs_sqlite3RollbackTransaction(Parse* pParse)
@@ -1583,8 +1593,6 @@ public:
 
     int maxscaleTranslateKeyword(int token)
     {
-        ss_dassert(this_thread.initialized);
-
         switch (token)
         {
         case TK_CHARSET:
@@ -1617,8 +1625,6 @@ public:
      */
     int maxscaleKeyword(int token)
     {
-        ss_dassert(this_thread.initialized);
-
         int rv = 0;
 
         // This function is called for every keyword the sqlite3 parser encounters.
@@ -2621,7 +2627,7 @@ static bool ensure_query_is_parsed(GWBUF* query, uint32_t collect)
     return parsed;
 }
 
-static void parse_query_string(const char* query, int len)
+static void parse_query_string(const char* query, int len, bool suppress_logging)
 {
     sqlite3_stmt* stmt = NULL;
     const char* tail = NULL;
@@ -2667,38 +2673,42 @@ static void parse_query_string(const char* query, int len)
             }
         }
 
-        if (this_unit.log_level > QC_LOG_NOTHING)
+        if (!suppress_logging)
         {
-            bool log_warning = false;
-
-            switch (this_unit.log_level)
+            if (this_unit.log_level > QC_LOG_NOTHING)
             {
-            case QC_LOG_NON_PARSED:
-                log_warning = this_thread.pInfo->m_status < QC_QUERY_PARSED;
-                break;
+                bool log_warning = false;
 
-            case QC_LOG_NON_PARTIALLY_PARSED:
-                log_warning = this_thread.pInfo->m_status < QC_QUERY_PARTIALLY_PARSED;
-                break;
+                switch (this_unit.log_level)
+                {
+                case QC_LOG_NON_PARSED:
+                    log_warning = this_thread.pInfo->m_status < QC_QUERY_PARSED;
+                    break;
 
-            case QC_LOG_NON_TOKENIZED:
-                log_warning = this_thread.pInfo->m_status < QC_QUERY_TOKENIZED;
-                break;
+                case QC_LOG_NON_PARTIALLY_PARSED:
+                    log_warning = this_thread.pInfo->m_status < QC_QUERY_PARTIALLY_PARSED;
+                    break;
 
-            default:
-                ss_dassert(!true);
-                break;
-            }
+                case QC_LOG_NON_TOKENIZED:
+                    log_warning = this_thread.pInfo->m_status < QC_QUERY_TOKENIZED;
+                    break;
 
-            if (log_warning)
-            {
-                MXS_WARNING(format, sqlite3_errstr(rc), sqlite3_errmsg(this_thread.pDb), l, query, suffix);
+                default:
+                    ss_dassert(!true);
+                    break;
+                }
+
+                if (log_warning)
+                {
+                    MXS_WARNING(format, sqlite3_errstr(rc),
+                                sqlite3_errmsg(this_thread.pDb), l, query, suffix);
+                }
             }
         }
     }
     else if (this_thread.initialized) // If we are initializing, the query will not be classified.
     {
-        if (this_unit.log_level > QC_LOG_NOTHING)
+        if (!suppress_logging && (this_unit.log_level > QC_LOG_NOTHING))
         {
             if (qc_info_was_tokenized(this_thread.pInfo->m_status))
             {
@@ -2743,6 +2753,8 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
             if ((command == MYSQL_COM_QUERY) || (command == MYSQL_COM_STMT_PREPARE))
             {
+                bool suppress_logging = false;
+
                 QcSqliteInfo* pInfo =
                     (QcSqliteInfo*) gwbuf_get_buffer_object_data(query, GWBUF_PARSING_INFO);
 
@@ -2761,6 +2773,9 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                     // acts the same way on this second round.
                     pInfo->m_keyword_1 = 0;
                     pInfo->m_keyword_2 = 0;
+
+                    // And turn off logging. Any parsing issues were logged on the first round.
+                    suppress_logging = true;
                 }
                 else
                 {
@@ -2783,7 +2798,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
                     this_thread.pInfo->m_pQuery = s;
                     this_thread.pInfo->m_nQuery = len;
-                    parse_query_string(s, len);
+                    parse_query_string(s, len, suppress_logging);
                     this_thread.pInfo->m_pQuery = NULL;
                     this_thread.pInfo->m_nQuery = 0;
 
@@ -3710,10 +3725,18 @@ void mxs_sqlite3Insert(Parse* pParse,
 {
     QC_TRACE();
 
-    QcSqliteInfo* pInfo = this_thread.pInfo;
-    ss_dassert(pInfo);
+    if (this_thread.initialized)
+    {
+        QcSqliteInfo* pInfo = this_thread.pInfo;
+        ss_dassert(pInfo);
 
-    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Insert(pParse, pTabList, pSelect, pColumns, onError, pSet));
+        QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Insert(pParse, pTabList, pSelect, pColumns, onError, pSet));
+    }
+    else
+    {
+        exposed_sqlite3ExprListDelete(pParse->db, pSet);
+        exposed_sqlite3Insert(pParse, pTabList, pSelect, pColumns, onError);
+    }
 }
 
 void mxs_sqlite3RollbackTransaction(Parse* pParse)
@@ -3774,10 +3797,27 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
 {
     QC_TRACE();
 
-    QcSqliteInfo* pInfo = this_thread.pInfo;
-    ss_dassert(pInfo);
+    if (this_thread.initialized)
+    {
+        QcSqliteInfo* pInfo = this_thread.pInfo;
+        ss_dassert(pInfo);
 
-    QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Update(pParse, pTabList, pChanges, pWhere, onError));
+        QC_EXCEPTION_GUARD(pInfo->mxs_sqlite3Update(pParse, pTabList, pChanges, pWhere, onError));
+    }
+    else
+    {
+        // NOTE: Basically we should call
+        // NOTE:
+        // NOTE: exposed_sqlite3Update(pParse, pTabList, pChanges, pWhere, onError);
+        // NOTE:
+        // NOTE: However, for whatever reason sqlite3 thinks there is some problem.
+        // NOTE: As this final update is not needed, we simply ignore it. That's
+        // NOTE: what always has been done but now it is explicit.
+
+        exposed_sqlite3SrcListDelete(pParse->db, pTabList);
+        exposed_sqlite3ExprListDelete(pParse->db, pChanges);
+        exposed_sqlite3ExprDelete(pParse->db, pWhere);
+    }
 }
 
 void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName)
@@ -4282,9 +4322,11 @@ static int32_t qc_sqlite_thread_init(void)
             const char* s = "CREATE TABLE __maxscale__internal__ (field int UNIQUE)";
             size_t len = strlen(s);
 
+            bool suppress_logging = false;
+
             this_thread.pInfo->m_pQuery = s;
             this_thread.pInfo->m_nQuery = len;
-            parse_query_string(s, len);
+            parse_query_string(s, len, suppress_logging);
             this_thread.pInfo->m_pQuery = NULL;
             this_thread.pInfo->m_nQuery = 0;
 
