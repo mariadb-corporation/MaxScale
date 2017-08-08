@@ -27,7 +27,7 @@
         },
         {
             "obfuscate": {
-                "column": "d",
+                "column": "d"
             }
         },
         {

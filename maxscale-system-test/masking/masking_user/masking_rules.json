@@ -74,7 +74,7 @@
         },
         {
             "obfuscate": {
-                "column": "i",
+                "column": "i"
             },
 	    "applies_to" : [ "'skysql'" ],
 	    "exempted" : [ "'maxskysql'" ]
