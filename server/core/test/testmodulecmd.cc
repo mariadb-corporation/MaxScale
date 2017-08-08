@@ -206,6 +206,7 @@ int test_optional_arguments()
 
     arg = modulecmd_arg_parse(cmd, 1, params2);
     TEST(arg, "Parsing arguments should succeed");
+    TEST(arg->argc == 1, "Only one argument should be given");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
@@ -213,6 +214,7 @@ int test_optional_arguments()
 
     arg = modulecmd_arg_parse(cmd, 0, params1);
     TEST(arg, "Parsing arguments should succeed");
+    TEST(arg->argc == 0, "No arguments should be given");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");

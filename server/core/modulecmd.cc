@@ -519,6 +519,10 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **
                 modulecmd_arg_free(arg);
                 arg = NULL;
             }
+            else
+            {
+                arg->argc = argc;
+            }
         }
     }
     else
