@@ -35,6 +35,10 @@
 #include <my_global.h>
 #include <my_dbug.h>
 #include <my_base.h>
+// We need to get access to Item::str_value, which is protected. So we cheat.
+#define protected public
+#include <item.h>
+#undef protected
 #include <sql_list.h>
 #include <mysqld_error.h>
 #include <sql_class.h>
@@ -2086,8 +2090,8 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                     const char* preparable_stmt;
                     size_t preparable_stmt_len;
 #if MYSQL_VERSION_MINOR >= 3
-                    preparable_stmt = lex->prepared_stmt_code->name.str;
-                    preparable_stmt_len = lex->prepared_stmt_code->name.length;
+                    preparable_stmt = lex->prepared_stmt_code->str_value.ptr();
+                    preparable_stmt_len = lex->prepared_stmt_code->str_value.length();
 #else
                     preparable_stmt = lex->prepared_stmt_code.str;
                     preparable_stmt_len = lex->prepared_stmt_code.length;
