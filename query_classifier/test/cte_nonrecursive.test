@@ -351,8 +351,7 @@ drop view v1;
 --echo # prepare of a query containing a definition of a with table t
 prepare stmt1 from "
 with t as (select a from t1 where b >= 'c') 
-  select * from t2,t where t2.c=t.a;
-";
+  select * from t2,t where t2.c=t.a;";
 execute stmt1;
 execute stmt1;
 deallocate prepare stmt1;
@@ -360,8 +359,7 @@ deallocate prepare stmt1;
 --echo # prepare of a query containing a definition of a materialized t
 prepare stmt1 from "
 with t as (select a, count(*) from t1 where b >= 'c' group by a) 
- select * from t2,t where t2.c=t.a;
-";
+ select * from t2,t where t2.c=t.a;";
 execute stmt1;
 execute stmt1;
 deallocate prepare stmt1;
@@ -369,8 +367,7 @@ deallocate prepare stmt1;
 --echo # prepare of a query containing two references to with table t
 prepare stmt1 from "
 with t as (select * from t1 where b >= 'c')
-  select * from t as r1, t as r2 where r1.a=r2.a;
-";
+  select * from t as r1, t as r2 where r1.a=r2.a;";
 execute stmt1;
 execute stmt1;
 deallocate prepare stmt1;

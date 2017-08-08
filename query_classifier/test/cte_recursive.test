@@ -674,8 +674,7 @@ as
     from folks as p, ancestors AS a
       where p.id = a.father or p.id = a.mother
 )
-select * from ancestors;
-";
+select * from ancestors;";
 
 execute stmt1;
 execute stmt1;
@@ -1218,8 +1217,7 @@ as
   union
   select mother from folks, ancestor_ids a  where folks.id = a.id
 )
-select p.* from folks as p, ancestor_ids as a where p.id = a.id;
-";
+select p.* from folks as p, ancestor_ids as a where p.id = a.id;";
 execute stmt;
 deallocate prepare stmt;
 
@@ -1242,8 +1240,7 @@ as
   union
   select mother from folks, ancestor_ids a  where folks.id = a.id
 )
-select p.* from folks as p, ancestor_ids as a where p.id = a.id;
-";
+select p.* from folks as p, ancestor_ids as a where p.id = a.id;";
 execute stmt;
 deallocate prepare stmt;
 select * from my_ancestors;
@@ -1264,8 +1261,7 @@ as
   union
   select mother from folks, ancestor_ids a  where folks.id = a.id
 )
-select p.* from folks as p, ancestor_ids as a where p.id = a.id;
-";
+select p.* from folks as p, ancestor_ids as a where p.id = a.id;";
 execute stmt;
 deallocate prepare stmt;
 select * from my_ancestors;
@@ -1718,8 +1714,7 @@ reachables(p) as
                          select p from reachables where p > 'p5') and
                  t1.lp = reachables.p
 )
-select * from reachables;
-";
+select * from reachables;";
 
 execute stmt;
 execute stmt;
@@ -1821,8 +1816,7 @@ applied_modules as
                           module_arguments.v not in 
                           (select v from reached_objects))
 )
-select * from reached_objects;
-";
+select * from reached_objects;";
 
 execute stmt;
 execute stmt;
