@@ -22,12 +22,12 @@ describe("Set/Clear Commands", function() {
             })
     })
 
-    it('set incorrect state', function() {
+    it('reject set incorrect state', function() {
         return doCommand('set server server2 something')
             .should.be.rejected
     })
 
-    it('clear incorrect state', function() {
+    it('reject clear incorrect state', function() {
         return doCommand('clear server server2 something')
             .should.be.rejected
     })

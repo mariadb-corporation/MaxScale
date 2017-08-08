@@ -58,7 +58,7 @@ describe("Library invocation", function() {
             .should.be.fulfilled
     })
 
-    it('bad user credentials', function() {
+    it('reject on bad user credentials', function() {
         var opts = { extra_args: [ '--quiet', '--user', 'not-a-user', '--password', 'not-a-password'] }
         return ctrl.execute('list servers'.split(' '), opts)
             .should.be.rejected
@@ -70,7 +70,7 @@ describe("Library invocation", function() {
             .should.be.fulfilled
     })
 
-    it('connection failure', function() {
+    it('reject on connection failure', function() {
         stopMaxScale()
             .then(function() {
                 return ctrl.execute('list servers'.split(' '))

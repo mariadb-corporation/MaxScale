@@ -10,12 +10,12 @@ describe("Alter Commands", function() {
             })
     })
 
-    it('alter server with bad parameters', function() {
+    it('will not alter server with bad parameters', function() {
         return doCommand('alter server server1 port not-a-port')
             .should.be.rejected
     })
 
-    it('alter nonexistent server', function() {
+    it('will not alter nonexistent server', function() {
         return doCommand('alter server server123 port 3000')
             .should.be.rejected
     })
@@ -27,12 +27,12 @@ describe("Alter Commands", function() {
             })
     })
 
-    it('alter monitor with bad parameters', function() {
+    it('will not alter monitor with bad parameters', function() {
         return doCommand('alter monitor MySQL-Monitor monitor_interval not-a-number')
             .should.be.rejected
     })
 
-    it('alter nonexistent monitor', function() {
+    it('will not alter nonexistent monitor', function() {
         return doCommand('alter monitor monitor123 monitor_interval 3000')
             .should.be.rejected
     })
@@ -44,12 +44,12 @@ describe("Alter Commands", function() {
             })
     })
 
-    it('alter non-existent service parameter', function() {
+    it('will not alter non-existent service parameter', function() {
         return doCommand('alter service Read-Connection-Router turbocharge yes-please')
             .should.be.rejected
     })
 
-    it('alter non-existent service', function() {
+    it('will not alter non-existent service', function() {
         return doCommand('alter service not-a-service user maxuser')
             .should.be.rejected
     })
@@ -65,7 +65,7 @@ describe("Alter Commands", function() {
             })
     })
 
-    it('alter logging with bad parameter', function() {
+    it('will not alter logging with bad parameter', function() {
         doCommand('alter logging some-parameter maybe')
             .should.be.rejectted
     })
@@ -77,7 +77,7 @@ describe("Alter Commands", function() {
             })
     })
 
-    it('alter maxscale with bad parameter', function() {
+    it('will not alter maxscale with bad parameter', function() {
         return doCommand('alter maxscale some_timeout 123')
             .should.be.rejected
     })

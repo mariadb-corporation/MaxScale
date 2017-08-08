@@ -18,22 +18,22 @@ describe("Create/Destroy Commands", function() {
             .should.be.rejected
     })
 
-    it('destroy the same monitor again', function() {
+    it('will not destroy the same monitor again', function() {
         return doCommand('destroy monitor my-monitor')
             .should.be.rejected
     })
 
-    it('destroy nonexistent monitor', function() {
+    it('will not destroy nonexistent monitor', function() {
         return doCommand('destroy monitor monitor123')
             .should.be.rejected
     })
 
-    it('create monitor with bad parameters', function() {
+    it('will not create monitor with bad parameters', function() {
         return doCommand('create monitor my-monitor some-module')
             .should.be.rejected
     })
 
-    it('create monitor with bad options', function() {
+    it('will not create monitor with bad options', function() {
         return doCommand('create monitor my-monitor mysqlmon --this-is-not-an-option')
             .should.be.rejected
     })
@@ -50,7 +50,7 @@ describe("Create/Destroy Commands", function() {
             })
     })
 
-    it('create already existing monitor', function() {
+    it('will not create already existing monitor', function() {
         return doCommand('create monitor my-monitor mysqlmon')
             .should.be.rejected
     })
@@ -65,12 +65,12 @@ describe("Create/Destroy Commands", function() {
             .should.be.fulfilled
     })
 
-    it('create server with bad parameters', function() {
+    it('will not create server with bad parameters', function() {
         return doCommand('create server server5 bad parameter')
             .should.be.rejected
     })
 
-    it('create server with bad options', function() {
+    it('will not create server with bad options', function() {
         return doCommand('create server server5 bad parameter --this-is-not-an-option')
             .should.be.rejected
     })
@@ -94,12 +94,12 @@ describe("Create/Destroy Commands", function() {
             })
     })
 
-    it('create already existing server', function() {
+    it('will not create already existing server', function() {
         return doCommand('create server server1 127.0.0.1 3000')
             .should.be.rejected
     })
 
-    it('destroy nonexistent server', function() {
+    it('will not destroy nonexistent server', function() {
         return doCommand('destroy server server123')
             .should.be.rejected
     })
@@ -110,12 +110,12 @@ describe("Create/Destroy Commands", function() {
             .should.be.fulfilled
     })
 
-    it('create already existing listener', function() {
+    it('will not create already existing listener', function() {
         return doCommand('create listener RW-Split-Router my-listener 7890')
             .should.be.rejected
     })
 
-    it('create listener with already used port', function() {
+    it('will not create listener with already used port', function() {
         return doCommand('create listener RW-Split-Router my-listener2 4567')
             .should.be.rejected
     })
@@ -125,7 +125,7 @@ describe("Create/Destroy Commands", function() {
             .should.be.fulfilled
     })
 
-    it('destroy static listener', function() {
+    it('will not destroy static listener', function() {
         return doCommand('destroy listener RW-Split-Router RW-Split-Listener')
             .should.be.rejected
     })

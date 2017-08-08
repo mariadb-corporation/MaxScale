@@ -45,22 +45,22 @@ describe("Link/Unlink Commands", function() {
             })
     })
 
-    it('link non-existent service to servers', function() {
+    it('will not link non-existent service to servers', function() {
         return doCommand('link service not-a-service server1 server2 server3 server4')
             .should.be.rejected
     })
 
-    it('link non-existent monitor to servers', function() {
+    it('will not link non-existent monitor to servers', function() {
         return doCommand('link monitor not-a-monitor server1 server2 server3 server4')
             .should.be.rejected
     })
 
-    it('unlink non-existent service to servers', function() {
+    it('will not unlink non-existent service to servers', function() {
         return doCommand('unlink service not-a-service server1 server2 server3 server4')
             .should.be.rejected
     })
 
-    it('unlink non-existent monitor to servers', function() {
+    it('will not unlink non-existent monitor to servers', function() {
         return doCommand('unlink monitor not-a-monitor server1 server2 server3 server4')
             .should.be.rejected
     })

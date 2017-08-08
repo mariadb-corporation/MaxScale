@@ -10,12 +10,12 @@ describe("Module Commands", function() {
             })
     })
 
-    it('call command with missing parameters', function() {
+    it('will not call command with missing parameters', function() {
         return doCommand('call command qlafilter log')
             .should.be.rejected
     })
 
-    it('call command with too many parameters', function() {
+    it('will not call command with too many parameters', function() {
         return doCommand('call command qlafilter log QLA too many arguments for this command')
             .should.be.rejected
     })

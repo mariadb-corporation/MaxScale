@@ -17,12 +17,12 @@ describe("Enable/Disable Commands", function() {
             })
     })
 
-    it('enable log-priority with bad parameter', function() {
+    it('will not enable log-priority with bad parameter', function() {
         return doCommand('enable log-priority bad-stuff')
             .should.be.rejected
     })
 
-    it('disable log-priority with bad parameter', function() {
+    it('will not disable log-priority with bad parameter', function() {
         return doCommand('disable log-priority bad-stuff')
             .should.be.rejected
     })
