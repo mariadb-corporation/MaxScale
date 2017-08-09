@@ -188,12 +188,6 @@ this option for better performance.
 For more information, read the
 [ReadWriteSplit](../Routers/ReadWriteSplit.md) router documentation.
 
-#### Parsing limitations
-
-Galera Cluster variables, such as `@@wsrep_node_name`, are not resolved by the
-embedded MariaDB parser. This usually means that the query will be routed to the
-master.
-
 #### Limitations in client session handling
 
 Some of the queries that a client sends are routed to all backends instead of
