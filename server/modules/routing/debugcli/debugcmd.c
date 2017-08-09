@@ -1669,7 +1669,7 @@ static struct
 static unsigned long
 convert_arg(char *arg, int arg_type)
 {
-    unsigned long rval;
+    unsigned long rval = 0;
 
     switch (arg_type)
     {

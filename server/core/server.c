@@ -941,9 +941,9 @@ serverRowCallback(RESULTSET *set, void *data)
 {
     int *rowno = (int *)data;
     int i = 0;
-    char *stat, buf[20];
-    RESULT_ROW *row;
-    SERVER *server;
+    char *stat = NULL, buf[20];
+    RESULT_ROW *row = NULL;
+    SERVER *server = NULL;
 
     spinlock_acquire(&server_spin);
     server = allServers;

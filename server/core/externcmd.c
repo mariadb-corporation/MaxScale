@@ -37,7 +37,7 @@ int tokenize_arguments(char* argstr, char** argv)
     bool escaped = false;
     char *ptr, *start;
     char args[strlen(argstr) + 1];
-    char qc;
+    char qc = 0;
 
     strcpy(args, argstr);
     start = args;

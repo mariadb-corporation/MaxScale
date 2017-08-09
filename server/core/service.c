@@ -1210,8 +1210,8 @@ void serviceSetRetryOnFailure(SERVICE *service, char* value)
 bool
 serviceSetFilters(SERVICE *service, char *filters)
 {
-    MXS_FILTER_DEF **flist;
-    char *ptr, *brkt;
+    MXS_FILTER_DEF **flist = NULL;
+    char *ptr = NULL, *brkt = NULL;
     int n = 0;
     bool rval = true;
     uint64_t capabilities = 0;

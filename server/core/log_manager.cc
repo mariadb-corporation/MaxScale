@@ -751,11 +751,11 @@ static int logmanager_write_log(int            priority,
                                 size_t         str_len,
                                 const char*    str)
 {
-    logfile_t*   lf;
-    char*        wp;
+    logfile_t*   lf = NULL;
+    char*        wp = NULL;
     int          err = 0;
-    blockbuf_t*  bb;
-    blockbuf_t*  bb_c;
+    blockbuf_t*  bb = NULL;
+    blockbuf_t*  bb_c = NULL;
     size_t       timestamp_len;
     int          i;
 
