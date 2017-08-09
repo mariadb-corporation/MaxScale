@@ -10,10 +10,10 @@ find_library(PAM_LIBRARIES NAMES pam)
 message(STATUS "Found PAM include dirs: ${PAM_INCLUDE_DIR}")
 if (PAM_INCLUDE_DIR AND PAM_LIBRARIES)
   message(STATUS "Found PAM: ${PAM_LIBRARIES}")
-  set(PAM_FOUND TRUE BOOL)
+  set(PAM_FOUND TRUE CACHE INTERNAL "")
 else()
   message(STATUS "PAM libraries not found")
-  set(PAM_FOUND FALSE BOOL)
+  set(PAM_FOUND FALSE CACHE INTERNAL "")
 endif()
 
 
