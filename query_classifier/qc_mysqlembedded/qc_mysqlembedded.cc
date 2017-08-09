@@ -2851,9 +2851,15 @@ static void update_field_infos(parsing_info_t* pi,
 
     if (select->where)
     {
+        uint32_t sub_usage = QC_USED_IN_WHERE;
+        // TODO: The usage bits should get an overhaul. The following would make sense
+        // TODO: but breaks things overall. So for another time.
+        // TODO: sub_usage &= ~QC_USED_IN_SELECT;
+        // TODO: sub_usage |= QC_USED_IN_WHERE;
+
         update_field_infos(pi, select, COLLECT_WHERE,
                            select->where,
-                           QC_USED_IN_WHERE,
+                           sub_usage,
                            &select->item_list);
     }
 
@@ -2995,8 +3001,9 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
         }
 
 #ifdef CTE_SUPPORTED
-        if ((lex->sql_command == SQLCOM_SET_OPTION) ||
-            (lex->with_clauses_list))
+        // TODO: Check whether this if can be removed altogether also
+        // TODO: when CTE are not supported.
+        if (true)
 #else
         if (lex->sql_command == SQLCOM_SET_OPTION)
 #endif
@@ -3022,6 +3029,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             }
 
             usage &= ~QC_USED_IN_SELECT;
+            usage &= ~QC_USED_IN_SET;
             usage |= QC_USED_IN_SUBSELECT;
 
             st_select_lex* select = lex->all_selects_list;
