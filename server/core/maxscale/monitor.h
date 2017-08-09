@@ -27,7 +27,10 @@ MXS_BEGIN_DECLS
 #define DEFAULT_WRITE_TIMEOUT 2
 #define DEFAULT_CONNECTION_ATTEMPTS 1
 
-#define MONITOR_DEFAULT_INTERVAL 2000 // in milliseconds
+#define DEFAULT_MONITOR_INTERVAL 2000 // in milliseconds
+
+/** Default maximum journal age in seconds */
+#define DEFAULT_JOURNAL_MAX_AGE 28800
 
 /**
  * Monitor network timeout types
@@ -66,6 +69,7 @@ bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
 
 void monitorSetInterval (MXS_MONITOR *, unsigned long);
 bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
+void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value);
 
 /**
  * @brief Serialize a monitor to a file

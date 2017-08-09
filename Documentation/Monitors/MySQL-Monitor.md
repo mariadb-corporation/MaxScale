@@ -214,32 +214,6 @@ assigned the _Slave_ status which allows them to be used like normal slave
 servers. When the option is disabled, the servers will only receive the _Slave
 of External Server_ status and they will not be used.
 
-### `journal_max_age`
-
-The maximum journal file age in seconds. The default value is 28800 seconds.
-
-When the MySQL monitor starts, it reads any stored journal files. If the journal
-file is older than the value of _journal_max_age_, it will be removed and the
-monitor starts with no prior knowledge of the servers.
-
-## MySQL Monitor Crash Safety
-
-Starting with MaxScale 2.2.0, the mysqlmon module keeps an on-disk journal of
-the latest server states. This change makes the monitor crash-safe when options
-that introduce states are used. It also allows the monitor to retain stateful
-information when MaxScale is restarted.
-
-Options that introduce states into the monitoring process are the
-`detect_stale_master` and `detect_stale_slave` options, both of which are
-enabled by default.
-
-The default location for the server state journal is in
-`/var/lib/maxscale/<monitor name>/mysqlmon.dat` where `<monitor name>` is the
-name of the monitor section in the configuration file. If MaxScale crashes or is
-shut down in an uncontrolled fashion, the journal will be read when MaxScale is
-started. To skip the recovery process, manually delete the journal file before
-starting MaxScale.
-
 ## Example 1 - Monitor script
 
 Here is an example shell script which sends an email to an admin@my.org

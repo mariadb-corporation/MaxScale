@@ -115,3 +115,30 @@ lost_ndb    |A MySQL Cluster node lost node membership
 new_master  |A new Master was detected
 new_slave   |A new Slave was detected
 new_ndb     |A new MySQL Cluster node was found
+
+### `journal_max_age`
+
+The maximum journal file age in seconds. The default value is 28800 seconds.
+
+When the monitor starts, it reads any stored journal files. If the journal file
+is older than the value of _journal_max_age_, it will be removed and the monitor
+starts with no prior knowledge of the servers.
+
+## Monitor Crash Safety
+
+Starting with MaxScale 2.2.0, the monitor modules keep an on-disk journal of the
+latest server states. This change makes the monitors crash-safe when options
+that introduce states are used. It also allows the monitors to retain stateful
+information when MaxScale is restarted.
+
+For MySQL monitor, options that introduce states into the monitoring process are
+the `detect_stale_master` and `detect_stale_slave` options, both of which are
+enabled by default. Galeramon has the `disable_master_failback` parameter which
+introduces a state.
+
+The default location for the server state journal is in
+`/var/lib/maxscale/<monitor name>/monitor.dat` where `<monitor name>` is the
+name of the monitor section in the configuration file. If MaxScale crashes or is
+shut down in an uncontrolled fashion, the journal will be read when MaxScale is
+started. To skip the recovery process, manually delete the journal file before
+starting MaxScale.

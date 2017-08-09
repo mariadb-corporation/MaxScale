@@ -237,6 +237,7 @@ const char *config_monitor_params[] =
     CN_SCRIPT,
     CN_EVENTS,
     CN_MONITOR_INTERVAL,
+    CN_JOURNAL_MAX_AGE,
     CN_BACKEND_CONNECT_TIMEOUT,
     CN_BACKEND_READ_TIMEOUT,
     CN_BACKEND_WRITE_TIMEOUT,
@@ -3152,14 +3153,39 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             {
                 MXS_NOTICE("Invalid '%s' parameter for monitor '%s', "
                            "using default value of %d milliseconds.",
-                           CN_MONITOR_INTERVAL, obj->object, MONITOR_DEFAULT_INTERVAL);
+                           CN_MONITOR_INTERVAL, obj->object, DEFAULT_MONITOR_INTERVAL);
             }
         }
         else
         {
             MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
                        "using default value of %d milliseconds.",
-                       CN_MONITOR_INTERVAL, obj->object, MONITOR_DEFAULT_INTERVAL);
+                       CN_MONITOR_INTERVAL, obj->object, DEFAULT_MONITOR_INTERVAL);
+        }
+
+        char *journal_age = config_get_value(obj->parameters, CN_JOURNAL_MAX_AGE);
+        if (journal_age)
+        {
+            char *endptr;
+            long interval = strtol(journal_age, &endptr, 0);
+            /* The interval must be >0 because it is used as a divisor.
+                Perhaps a greater minimum value should be added? */
+            if (*endptr == '\0' && interval > 0)
+            {
+                monitorSetJournalMaxAge(monitor, (time_t)interval);
+            }
+            else
+            {
+                error_count++;
+                MXS_NOTICE("Invalid '%s' parameter for monitor '%s'",
+                           CN_JOURNAL_MAX_AGE, obj->object);
+            }
+        }
+        else
+        {
+            MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
+                       "using default value of %d milliseconds.",
+                       CN_JOURNAL_MAX_AGE, obj->object, DEFAULT_JOURNAL_MAX_AGE);
         }
 
         char *connect_timeout = config_get_value(obj->parameters, CN_BACKEND_CONNECT_TIMEOUT);

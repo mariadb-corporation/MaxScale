@@ -24,8 +24,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
 
-#define DEFAULT_JOURNAL_MAX_AGE "28800"
-
 /** Column positions for SHOW SLAVE STATUS */
 #define MYSQL55_STATUS_BINLOG_POS 5
 #define MYSQL55_STATUS_BINLOG_NAME 6
@@ -105,7 +103,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
             {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
             {"allow_external_slaves", MXS_MODULE_PARAM_BOOL, "true"},
-            {"journal_max_age", MXS_MODULE_PARAM_COUNT, DEFAULT_JOURNAL_MAX_AGE},
             {
                 "script",
                 MXS_MODULE_PARAM_PATH,
@@ -264,10 +261,9 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-    handle->journal_max_age = config_get_integer(params, "journal_max_age");
     handle->allow_external_slaves = config_get_bool(params, "allow_external_slaves");
 
-    if (journal_is_stale(monitor, handle->journal_max_age))
+    if (journal_is_stale(monitor, monitor->journal_max_age))
     {
         MXS_WARNING("Removing stale journal file.");
         remove_server_journal(monitor);
@@ -375,7 +371,6 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     json_object_set_new(rval, "failcount", json_integer(handle->failcount));
     json_object_set_new(rval, "allow_cluster_recovery", json_boolean(handle->allow_cluster_recovery));
     json_object_set_new(rval, "mysql51_replication", json_boolean(handle->mysql51_replication));
-    json_object_set_new(rval, "journal_max_age", json_integer(handle->journal_max_age));
 
     if (handle->script)
     {

@@ -67,6 +67,7 @@ const char CN_BACKEND_READ_TIMEOUT[]     = "backend_read_timeout";
 const char CN_BACKEND_WRITE_TIMEOUT[]    = "backend_write_timeout";
 const char CN_BACKEND_CONNECT_TIMEOUT[]  = "backend_connect_timeout";
 const char CN_MONITOR_INTERVAL[]         = "monitor_interval";
+const char CN_JOURNAL_MAX_AGE[]          = "journal_max_age";
 const char CN_SCRIPT[]                   = "script";
 const char CN_EVENTS[]                   = "events";
 
@@ -125,7 +126,8 @@ MXS_MONITOR* monitor_alloc(const char *name, const char *module)
     mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
     mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
     mon->connect_attempts = DEFAULT_CONNECTION_ATTEMPTS;
-    mon->interval = MONITOR_DEFAULT_INTERVAL;
+    mon->interval = DEFAULT_MONITOR_INTERVAL;
+    mon->journal_max_age = DEFAULT_JOURNAL_MAX_AGE;
     mon->parameters = NULL;
     mon->server_pending_changes = false;
     spinlock_init(&mon->lock);
@@ -625,6 +627,17 @@ void
 monitorSetInterval(MXS_MONITOR *mon, unsigned long interval)
 {
     mon->interval = interval;
+}
+
+/**
+ * Set the maximum age of the monitor journal
+ *
+ * @param mon           The monitor instance
+ * @param interval      The journal age in seconds
+ */
+void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value)
+{
+    mon->journal_max_age = value;
 }
 
 /**
@@ -1585,6 +1598,7 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
     json_object_set_new(rval, CN_BACKEND_READ_TIMEOUT, json_integer(monitor->read_timeout));
     json_object_set_new(rval, CN_BACKEND_WRITE_TIMEOUT, json_integer(monitor->write_timeout));
     json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
+    json_object_set_new(rval, CN_JOURNAL_MAX_AGE, json_integer(monitor->journal_max_age));
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
