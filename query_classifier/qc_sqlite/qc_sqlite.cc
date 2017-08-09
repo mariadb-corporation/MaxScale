@@ -123,6 +123,8 @@ struct QcAliasValue
     const char* zTable;
 };
 
+typedef std::map<std::string, QcAliasValue> QcAliases;
+
 /**
  * The state of qc_sqlite.
  */
@@ -174,33 +176,44 @@ static void parse_query_string(const char* query, int len, bool suppress_logging
 static bool query_is_parsed(GWBUF* query, uint32_t collect);
 static bool should_exclude(const char* zName, const ExprList* pExclude);
 static void update_field_infos_from_expr(QcSqliteInfo* info,
+                                         QcAliases* pAliases,
                                          const Expr* pExpr,
                                          uint32_t usage,
                                          const ExprList* pExclude);
 static void update_field_infos(QcSqliteInfo* info,
+                               QcAliases* pAliases,
                                int prev_token,
                                const Expr* pExpr,
                                uint32_t usage,
                                qc_token_position_t pos,
                                const ExprList* pExclude);
 static void update_field_infos_from_exprlist(QcSqliteInfo* info,
+                                             QcAliases* pAliases,
                                              const ExprList* pEList,
                                              uint32_t usage,
                                              const ExprList* pExclude);
 static void update_field_infos_from_idlist(QcSqliteInfo* info,
+                                           QcAliases* pAliases,
                                            const IdList* pIds,
                                            uint32_t usage,
                                            const ExprList* pExclude);
 static void update_field_infos_from_select(QcSqliteInfo* info,
+                                           QcAliases& aliases,
                                            const Select* pSelect,
                                            uint32_t usage,
                                            const ExprList* pExclude);
+static void update_field_infos_from_subselect(QcSqliteInfo* info,
+                                              QcAliases* pAliases,
+                                              const Select* pSelect,
+                                              uint32_t usage,
+                                              const ExprList* pExclude);
 static void update_field_infos_from_with(QcSqliteInfo* info,
-                                          const With* pWith);
+                                         QcAliases* pAliases,
+                                         const With* pWith);
 static void update_function_info(QcSqliteInfo* info,
                                  const char* name,
                                  uint32_t usage);
-static void update_names_from_srclist(QcSqliteInfo* info, const SrcList* pSrc);
+static void update_names_from_srclist(QcSqliteInfo* info, QcAliases* pAliases, const SrcList* pSrc);
 
 // Defined in parse.y
 extern "C"
@@ -525,7 +538,8 @@ public:
         return rv;
     }
 
-    void update_field_info(const char* zDatabase,
+    void update_field_info(const QcAliases* pAliases,
+                           const char* zDatabase,
                            const char* zTable,
                            const char* zColumn,
                            uint32_t usage,
@@ -548,11 +562,11 @@ public:
             return;
         }
 
-        if (!zDatabase && zTable)
+        if (!zDatabase && zTable && pAliases)
         {
-            Aliases::const_iterator i = m_aliases.find(zTable);
+            QcAliases::const_iterator i = pAliases->find(zTable);
 
-            if (i != m_aliases.end())
+            if (i != pAliases->end())
             {
                 const QcAliasValue& value = i->second;
 
@@ -641,11 +655,11 @@ public:
         }
     }
 
-    void update_names(const char* zDatabase, const char* zTable, const char* zAlias)
+    void update_names(const char* zDatabase, const char* zTable, const char* zAlias, QcAliases* pAliases)
     {
         ss_dassert(zTable);
 
-        bool should_collect_alias = zAlias && should_collect(QC_COLLECT_FIELDS);
+        bool should_collect_alias = pAliases && zAlias && should_collect(QC_COLLECT_FIELDS);
         bool should_collect_table = should_collect_alias || should_collect(QC_COLLECT_TABLES);
         bool should_collect_database = zDatabase &&
             (should_collect_alias || should_collect(QC_COLLECT_DATABASES));
@@ -681,11 +695,11 @@ public:
             zCollected_database = update_database_names(database);
         }
 
-        if (zCollected_table && zAlias)
+        if (pAliases && zCollected_table && zAlias)
         {
             QcAliasValue value(zCollected_database, zCollected_table);
 
-            m_aliases.insert(Aliases::value_type(zAlias, value));
+            pAliases->insert(QcAliases::value_type(zAlias, value));
         }
     }
 
@@ -791,7 +805,7 @@ public:
     {
         ss_dassert(this_thread.initialized);
 
-        update_names_from_srclist(this, pSrcList);
+        update_names_from_srclist(this, NULL, pSrcList);
 
         exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
     }
@@ -803,7 +817,7 @@ public:
         m_status = QC_QUERY_PARSED;
         m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
 
-        update_names_from_srclist(this, pSrcList);
+        update_names_from_srclist(this, NULL, pSrcList);
 
         exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
     }
@@ -843,7 +857,7 @@ public:
 
                 if (pItem->zName)
                 {
-                    update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
+                    update_names(pItem->zDatabase, pItem->zName, pItem->zAlias, NULL);
                 }
             }
         }
@@ -880,11 +894,11 @@ public:
 
         if (pTblName)
         {
-            update_names_from_srclist(this, pTblName);
+            update_names_from_srclist(this, NULL, pTblName);
         }
         else if (pParse->pNewTable)
         {
-            update_names(NULL, pParse->pNewTable->zName, NULL);
+            update_names(NULL, pParse->pNewTable->zName, NULL, NULL);
         }
 
         exposed_sqlite3ExprDelete(pParse->db, pPIWhere);
@@ -914,22 +928,24 @@ public:
         strncpy(name, pName->z, pName->n);
         name[pName->n] = 0;
 
+        QcAliases aliases;
+
         if (pDatabase)
         {
             char database[pDatabase->n + 1];
             strncpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
 
-            update_names(database, name, NULL);
+            update_names(database, name, NULL, &aliases);
         }
         else
         {
-            update_names(NULL, name, NULL);
+            update_names(NULL, name, NULL, &aliases);
         }
 
         if (pSelect)
         {
-            update_field_infos_from_select(this, pSelect, QC_USED_IN_SELECT, NULL);
+            update_field_infos_from_select(this, aliases, pSelect, QC_USED_IN_SELECT, NULL);
         }
 
         exposed_sqlite3ExprListDelete(pParse->db, pCNames);
@@ -948,6 +964,8 @@ public:
             m_operation = QUERY_OP_DELETE;
             m_has_clause = pWhere ? true : false;
 
+            QcAliases aliases;
+
             if (pUsing)
             {
                 // Walk through the using declaration and update
@@ -956,7 +974,7 @@ public:
                 {
                     const SrcList::SrcList_item* pItem = &pUsing->a[i];
 
-                    update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
+                    update_names(pItem->zDatabase, pItem->zName, pItem->zAlias, &aliases);
                 }
 
                 // Walk through the tablenames while excluding alias
@@ -986,18 +1004,18 @@ public:
                     if (!isSame)
                     {
                         // No alias name, update the table name.
-                        update_names(pTable->zDatabase, pTable->zName, NULL);
+                        update_names(pTable->zDatabase, pTable->zName, NULL, &aliases);
                     }
                 }
             }
             else
             {
-                update_names_from_srclist(this, pTabList);
+                update_names_from_srclist(this, &aliases, pTabList);
             }
 
             if (pWhere)
             {
-                update_field_infos(this, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
+                update_field_infos(this, &aliases, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
             }
         }
 
@@ -1014,7 +1032,7 @@ public:
         m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
         m_operation = QUERY_OP_DROP;
 
-        update_names_from_srclist(this, pTable);
+        update_names_from_srclist(this, NULL, pTable);
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);
         exposed_sqlite3SrcListDelete(pParse->db, pTable);
@@ -1035,7 +1053,7 @@ public:
         {
             m_is_drop_table = true;
         }
-        update_names_from_srclist(this, pName);
+        update_names_from_srclist(this, NULL, pName);
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);
     }
@@ -1051,11 +1069,12 @@ public:
 
         if (pSelect)
         {
-            update_field_infos_from_select(this, pSelect, QC_USED_IN_SELECT, NULL);
+            QcAliases aliases;
+            update_field_infos_from_select(this, aliases, pSelect, QC_USED_IN_SELECT, NULL);
         }
         else if (pOldTable)
         {
-            update_names_from_srclist(this, pOldTable);
+            update_names_from_srclist(this, NULL, pOldTable);
             exposed_sqlite3SrcListDelete(pParse->db, pOldTable);
         }
     }
@@ -1077,11 +1096,14 @@ public:
             m_operation = QUERY_OP_INSERT;
             ss_dassert(pTabList);
             ss_dassert(pTabList->nSrc >= 1);
-            update_names_from_srclist(this, pTabList);
+
+            QcAliases aliases;
+
+            update_names_from_srclist(this, &aliases, pTabList);
 
             if (pColumns)
             {
-                update_field_infos_from_idlist(this, pColumns, 0, NULL);
+                update_field_infos_from_idlist(this, &aliases, pColumns, 0, NULL);
             }
 
             if (pSelect)
@@ -1097,12 +1119,12 @@ public:
                     usage = QC_USED_IN_SELECT;
                 }
 
-                update_field_infos_from_select(this, pSelect, usage, NULL);
+                update_field_infos_from_select(this, aliases, pSelect, usage, NULL);
             }
 
             if (pSet)
             {
-                update_field_infos_from_exprlist(this, pSet, 0, NULL);
+                update_field_infos_from_exprlist(this, &aliases, pSet, 0, NULL);
             }
         }
 
@@ -1171,11 +1193,11 @@ public:
             strncpy(database, pDatabase->z, pDatabase->n);
             database[pDatabase->n] = 0;
 
-            update_names(database, name, NULL);
+            update_names(database, name, NULL, NULL);
         }
         else
         {
-            update_names(NULL, name, NULL);
+            update_names(NULL, name, NULL, NULL);
         }
 
         if (m_collect & QC_COLLECT_TABLES)
@@ -1203,9 +1225,11 @@ public:
 
         if (m_operation != QUERY_OP_EXPLAIN)
         {
+            QcAliases aliases;
+
             m_type_mask = QUERY_TYPE_WRITE;
             m_operation = QUERY_OP_UPDATE;
-            update_names_from_srclist(this, pTabList);
+            update_names_from_srclist(this, &aliases, pTabList);
             m_has_clause = (pWhere ? true : false);
 
             if (pChanges)
@@ -1214,13 +1238,14 @@ public:
                 {
                     ExprList::ExprList_item* pItem = &pChanges->a[i];
 
-                    update_field_infos(this, 0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
+                    update_field_infos(this, &aliases,
+                                       0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
                 }
             }
 
             if (pWhere)
             {
-                update_field_infos(this, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
+                update_field_infos(this, &aliases, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
             }
         }
 
@@ -1256,7 +1281,8 @@ public:
 
         uint32_t usage = sub_select ? QC_USED_IN_SUBSELECT : QC_USED_IN_SELECT;
 
-        update_field_infos_from_select(this, pSelect, usage, NULL);
+        QcAliases aliases;
+        update_field_infos_from_select(this, aliases, pSelect, usage, NULL);
     }
 
     void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
@@ -1273,15 +1299,15 @@ public:
         switch (command)
         {
         case MXS_ALTER_DISABLE_KEYS:
-            update_names_from_srclist(this, pSrc);
+            update_names_from_srclist(this, NULL, pSrc);
             break;
 
         case MXS_ALTER_ENABLE_KEYS:
-            update_names_from_srclist(this, pSrc);
+            update_names_from_srclist(this, NULL, pSrc);
             break;
 
         case MXS_ALTER_RENAME:
-            update_names_from_srclist(this, pSrc);
+            update_names_from_srclist(this, NULL, pSrc);
             break;
 
         default:
@@ -1300,7 +1326,7 @@ public:
 
         if (pExprList)
         {
-            update_field_infos_from_exprlist(this, pExprList, 0, NULL);
+            update_field_infos_from_exprlist(this, NULL, pExprList, 0, NULL);
         }
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);
@@ -1314,7 +1340,7 @@ public:
         m_status = QC_QUERY_PARSED;
         m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
 
-        update_names_from_srclist(this, pTables);
+        update_names_from_srclist(this, NULL, pTables);
 
         exposed_sqlite3SrcListDelete(pParse->db, pTables);
     }
@@ -1340,7 +1366,7 @@ public:
         strncpy(table, pTable->z, pTable->n);
         table[pTable->n] = 0;
 
-        update_names(zDatabase, table, NULL);
+        update_names(zDatabase, table, NULL, NULL);
     }
 
     void maxscaleComment()
@@ -1424,7 +1450,7 @@ public:
             strncpy(table, pName->z, pName->n);
             table[pName->n] = 0;
 
-            update_names(zDatabase, table, NULL);
+            update_names(zDatabase, table, NULL, NULL);
         }
     }
 
@@ -1537,7 +1563,7 @@ public:
                 ss_dassert(pFullName->nSrc == 1);
                 const SrcList::SrcList_item* pItem = &pFullName->a[0];
 
-                update_names(pItem->zDatabase, pItem->zName, pItem->zAlias);
+                update_names(pItem->zDatabase, pItem->zName, pItem->zAlias, NULL);
             }
             break;
 
@@ -1549,7 +1575,7 @@ public:
                 strncpy(zName, pName->z, pName->n);
                 zName[pName->n] = 0;
 
-                update_names("*any*", zName, NULL);
+                update_names("*any*", zName, NULL, NULL);
             }
             break;
 
@@ -1570,7 +1596,7 @@ public:
 
         if (pFullName)
         {
-            update_names_from_srclist(this, pFullName);
+            update_names_from_srclist(this, NULL, pFullName);
 
             exposed_sqlite3SrcListDelete(pParse->db, pFullName);
         }
@@ -1585,7 +1611,7 @@ public:
 
         if (pTables)
         {
-            update_names_from_srclist(this, pTables);
+            update_names_from_srclist(this, NULL, pTables);
 
             exposed_sqlite3SrcListDelete(pParse->db, pTables);
         }
@@ -1872,8 +1898,8 @@ public:
             ss_dassert(pItem->zName);
             ss_dassert(pItem->zAlias);
 
-            update_names(pItem->zDatabase, pItem->zName, NULL);
-            update_names(NULL, pItem->zAlias, NULL); // The new name is passed in the alias field.
+            update_names(pItem->zDatabase, pItem->zName, NULL, NULL);
+            update_names(NULL, pItem->zAlias, NULL, NULL); // The new name is passed in the alias field.
         }
 
         exposed_sqlite3SrcListDelete(pParse->db, pTables);
@@ -2128,7 +2154,8 @@ public:
 
                             if (pValue->op == TK_SELECT)
                             {
-                                update_field_infos_from_select(this, pValue->x.pSelect,
+                                QcAliases aliases;
+                                update_field_infos_from_select(this, aliases, pValue->x.pSelect,
                                                                QC_USED_IN_SUBSELECT, NULL);
                             }
                         }
@@ -2267,7 +2294,7 @@ public:
         strncpy(name, pName->z, pName->n);
         name[pName->n] = 0;
 
-        update_names(zDatabase, name, NULL);
+        update_names(zDatabase, name, NULL, NULL);
     }
 
     void maxscaleUse(Parse* pParse, Token* pToken)
@@ -2496,8 +2523,6 @@ private:
     }
 
 public:
-    typedef std::map<std::string, QcAliasValue> Aliases;
-
     // TODO: Make these private once everything's been updated.
     qc_parse_result_t m_status;                 // The validity of the information in this structure.
     uint32_t m_collect;                         // What information should be collected.
@@ -2531,7 +2556,6 @@ public:
     size_t m_function_infos_capacity;           // The capacity of the function_infos array.
     qc_sql_mode_t m_sql_mode;                   // The current sql_mode.
     QC_NAME_MAPPING* m_pFunction_name_mappings; // How function names should be mapped.
-    Aliases m_aliases;                          // Alias names for tables
 };
 
 extern "C"
@@ -3034,6 +3058,7 @@ extern void maxscale_update_function_info(const char* name, uint32_t usage)
 }
 
 static void update_field_infos_from_expr(QcSqliteInfo* info,
+                                         QcAliases* pAliases,
                                          const Expr* pExpr,
                                          uint32_t usage,
                                          const ExprList* pExclude)
@@ -3098,12 +3123,13 @@ static void update_field_infos_from_expr(QcSqliteInfo* info,
 
         if (should_update)
         {
-            info->update_field_info(item.database, item.table, item.column, usage, pExclude);
+            info->update_field_info(pAliases, item.database, item.table, item.column, usage, pExclude);
         }
     }
 }
 
-static void update_field_infos_from_with(QcSqliteInfo* info,
+static void update_field_infos_from_with(QcSqliteInfo* pInfo,
+                                         QcAliases* pAliases,
                                          const With* pWith)
 {
     for (int i = 0; i < pWith->nCte; ++i)
@@ -3112,7 +3138,7 @@ static void update_field_infos_from_with(QcSqliteInfo* info,
 
         if (pCte->pSelect)
         {
-            update_field_infos_from_select(info, pCte->pSelect, QC_USED_IN_SUBSELECT, NULL);
+            update_field_infos_from_subselect(pInfo, pAliases, pCte->pSelect, QC_USED_IN_SUBSELECT, NULL);
         }
     }
 }
@@ -3186,6 +3212,7 @@ static const char* get_token_symbol(int token)
 }
 
 static void update_field_infos(QcSqliteInfo* info,
+                               QcAliases* pAliases,
                                int prev_token,
                                const Expr* pExpr,
                                uint32_t usage,
@@ -3201,15 +3228,15 @@ static void update_field_infos(QcSqliteInfo* info,
     switch (pExpr->op)
     {
     case TK_ASTERISK: // select *
-        update_field_infos_from_expr(info, pExpr, usage, pExclude);
+        update_field_infos_from_expr(info, pAliases, pExpr, usage, pExclude);
         break;
 
     case TK_DOT: // select a.b ... select a.b.c
-        update_field_infos_from_expr(info, pExpr, usage, pExclude);
+        update_field_infos_from_expr(info, pAliases, pExpr, usage, pExclude);
         break;
 
     case TK_ID: // select a
-        update_field_infos_from_expr(info, pExpr, usage, pExclude);
+        update_field_infos_from_expr(info, pAliases, pExpr, usage, pExclude);
         break;
 
     case TK_VARIABLE:
@@ -3375,7 +3402,7 @@ static void update_field_infos(QcSqliteInfo* info,
 
         if (pLeft)
         {
-            update_field_infos(info, pExpr->op, pExpr->pLeft, usage, QC_TOKEN_LEFT, pExclude);
+            update_field_infos(info, pAliases, pExpr->op, pExpr->pLeft, usage, QC_TOKEN_LEFT, pExclude);
         }
 
         if (pRight)
@@ -3385,7 +3412,7 @@ static void update_field_infos(QcSqliteInfo* info,
                 usage &= ~QC_USED_IN_SET;
             }
 
-            update_field_infos(info, pExpr->op, pExpr->pRight, usage, QC_TOKEN_RIGHT, pExclude);
+            update_field_infos(info, pAliases, pExpr->op, pExpr->pRight, usage, QC_TOKEN_RIGHT, pExclude);
         }
 
         if (pExpr->x.pList)
@@ -3397,7 +3424,7 @@ static void update_field_infos(QcSqliteInfo* info,
             case TK_FUNCTION:
                 if (!ignore_exprlist)
                 {
-                    update_field_infos_from_exprlist(info, pExpr->x.pList, usage, pExclude);
+                    update_field_infos_from_exprlist(info, pAliases, pExpr->x.pList, usage, pExclude);
                 }
                 break;
 
@@ -3410,11 +3437,11 @@ static void update_field_infos(QcSqliteInfo* info,
 
                     sub_usage &= ~QC_USED_IN_SELECT;
                     sub_usage |= QC_USED_IN_SUBSELECT;
-                    update_field_infos_from_select(info, pExpr->x.pSelect, sub_usage, pExclude);
+                    update_field_infos_from_subselect(info, pAliases, pExpr->x.pSelect, sub_usage, pExclude);
                 }
                 else
                 {
-                    update_field_infos_from_exprlist(info, pExpr->x.pList, usage, pExclude);
+                    update_field_infos_from_exprlist(info, pAliases, pExpr->x.pList, usage, pExclude);
                 }
                 break;
             }
@@ -3424,6 +3451,7 @@ static void update_field_infos(QcSqliteInfo* info,
 }
 
 static void update_field_infos_from_exprlist(QcSqliteInfo* info,
+                                             QcAliases* pAliases,
                                              const ExprList* pEList,
                                              uint32_t usage,
                                              const ExprList* pExclude)
@@ -3432,11 +3460,12 @@ static void update_field_infos_from_exprlist(QcSqliteInfo* info,
     {
         ExprList::ExprList_item* pItem = &pEList->a[i];
 
-        update_field_infos(info, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
+        update_field_infos(info, pAliases, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
     }
 }
 
 static void update_field_infos_from_idlist(QcSqliteInfo* info,
+                                           QcAliases* pAliases,
                                            const IdList* pIds,
                                            uint32_t usage,
                                            const ExprList* pExclude)
@@ -3445,11 +3474,12 @@ static void update_field_infos_from_idlist(QcSqliteInfo* info,
     {
         IdList::IdList_item* pItem = &pIds->a[i];
 
-        info->update_field_info(NULL, NULL, pItem->zName, usage, pExclude);
+        info->update_field_info(pAliases, NULL, NULL, pItem->zName, usage, pExclude);
     }
 }
 
 static void update_field_infos_from_select(QcSqliteInfo* pInfo,
+                                           QcAliases& aliases,
                                            const Select* pSelect,
                                            uint32_t usage,
                                            const ExprList* pExclude)
@@ -3462,7 +3492,7 @@ static void update_field_infos_from_select(QcSqliteInfo* pInfo,
         {
             if (pSrc->a[i].zName)
             {
-                pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias);
+                pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, &aliases);
             }
 
             if (pSrc->a[i].pSelect)
@@ -3472,7 +3502,7 @@ static void update_field_infos_from_select(QcSqliteInfo* pInfo,
                 sub_usage &= ~QC_USED_IN_SELECT;
                 sub_usage |= QC_USED_IN_SUBSELECT;
 
-                update_field_infos_from_select(pInfo, pSrc->a[i].pSelect, sub_usage, pExclude);
+                update_field_infos_from_select(pInfo, aliases, pSrc->a[i].pSelect, sub_usage, pExclude);
             }
 
 #ifdef QC_COLLECT_NAMES_FROM_USING
@@ -3482,7 +3512,7 @@ static void update_field_infos_from_select(QcSqliteInfo* pInfo,
             // does not reveal its value, right?
             if (pSrc->a[i].pUsing)
             {
-                update_field_infos_from_idlist(pInfo, pSrc->a[i].pUsing, 0, pSelect->pEList);
+                update_field_infos_from_idlist(pInfo, aliases, pSrc->a[i].pUsing, 0, pSelect->pEList);
             }
 #endif
         }
@@ -3490,18 +3520,20 @@ static void update_field_infos_from_select(QcSqliteInfo* pInfo,
 
     if (pSelect->pEList)
     {
-        update_field_infos_from_exprlist(pInfo, pSelect->pEList, usage, NULL);
+        update_field_infos_from_exprlist(pInfo, &aliases, pSelect->pEList, usage, NULL);
     }
 
     if (pSelect->pWhere)
     {
         pInfo->m_has_clause = true;
-        update_field_infos(pInfo, 0, pSelect->pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pSelect->pEList);
+        update_field_infos(pInfo, &aliases,
+                           0, pSelect->pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pSelect->pEList);
     }
 
     if (pSelect->pGroupBy)
     {
-        update_field_infos_from_exprlist(pInfo, pSelect->pGroupBy, QC_USED_IN_GROUP_BY, pSelect->pEList);
+        update_field_infos_from_exprlist(pInfo, &aliases,
+                                         pSelect->pGroupBy, QC_USED_IN_GROUP_BY, pSelect->pEList);
     }
 
     if (pSelect->pHaving)
@@ -3510,33 +3542,46 @@ static void update_field_infos_from_select(QcSqliteInfo* pInfo,
 #if defined(COLLECT_HAVING_AS_WELL)
         // A HAVING clause can only refer to fields that already have been
         // mentioned. Consequently, they need not be collected.
-        update_field_infos(pInfo, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
+        update_field_infos(pInfo, aliases, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
 #endif
     }
 
     if (pSelect->pWith)
     {
-        update_field_infos_from_with(pInfo, pSelect->pWith);
+        update_field_infos_from_with(pInfo, &aliases, pSelect->pWith);
     }
 
     if ((pSelect->op == TK_UNION) && pSelect->pPrior)
     {
-        update_field_infos_from_select(pInfo, pSelect->pPrior, usage, pExclude);
+        update_field_infos_from_subselect(pInfo, &aliases, pSelect->pPrior, usage, pExclude);
     }
 }
 
-static void update_names_from_srclist(QcSqliteInfo* pInfo, const SrcList* pSrc)
+static void update_field_infos_from_subselect(QcSqliteInfo* pInfo,
+                                              QcAliases* pAliases,
+                                              const Select* pSelect,
+                                              uint32_t usage,
+                                              const ExprList* pExclude)
+{
+    QcAliases aliases(*pAliases);
+
+    update_field_infos_from_select(pInfo, aliases, pSelect, usage, pExclude);
+}
+
+static void update_names_from_srclist(QcSqliteInfo* pInfo,
+                                      QcAliases* pAliases,
+                                      const SrcList* pSrc)
 {
     for (int i = 0; i < pSrc->nSrc; ++i)
     {
         if (pSrc->a[i].zName)
         {
-            pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias);
+            pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, pAliases);
         }
 
         if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
         {
-            update_names_from_srclist(pInfo, pSrc->a[i].pSelect->pSrc);
+            update_names_from_srclist(pInfo, pAliases, pSrc->a[i].pSelect->pSrc);
         }
     }
 }
