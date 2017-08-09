@@ -165,6 +165,12 @@ matched. The symbolic comparison operators (`<`, `>`, `>=` etc.) are also
 considered functions whereas the text versions (`NOT`, `IS`, `IS NOT` etc.) are
 not considered functions.
 
+If the rule is given no values then the rule will match any query which does not
+use functions. By combining this with the `action=allow` parameter, it is
+possible to enable whitelisting of all queries which do not use functions. One
+such use case is preventing functions from being used to circumvent masking done
+by the masking filter.
+
 When the filter is in whitelist mode (`action=allow`) the function rule
 will match any query that does not use a function. This means that queries
 that do not use functions will be allowed through a function type rule.

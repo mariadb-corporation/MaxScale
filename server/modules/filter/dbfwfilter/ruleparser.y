@@ -114,6 +114,7 @@ mandatory:
     | FWTOK_REGEX FWTOK_QUOTEDSTR {if (!define_regex_rule(scanner, $2)){YYERROR;}}
     | FWTOK_COLUMNS columnlist
     | FWTOK_FUNCTION functionlist
+    | FWTOK_FUNCTION {if (!define_function_rule(scanner, "")){YYERROR;}}
     ;
 
 columnlist:
