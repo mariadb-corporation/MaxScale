@@ -592,6 +592,7 @@ typedef struct router_instance
     int               master_semi_sync;     /*< Semi-Sync replication status of master server */
     BINLOG_ENCRYPTION_SETUP encryption;     /*< Binlog encryption setup */
     void              *encryption_ctx;      /*< Encryption context */
+    char              *set_slave_hostname;  /*< Send custom Hostname to Master */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 

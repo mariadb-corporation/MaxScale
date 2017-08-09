@@ -184,6 +184,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"master_uuid", MXS_MODULE_PARAM_STRING},
             {"master_version", MXS_MODULE_PARAM_STRING},
             {"master_hostname", MXS_MODULE_PARAM_STRING},
+            {"slave_hostname", MXS_MODULE_PARAM_STRING},
             {"mariadb10-compatibility", MXS_MODULE_PARAM_BOOL, "false"},
             {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
             {"file", MXS_MODULE_PARAM_COUNT, "1"},
@@ -334,6 +335,7 @@ createInstance(SERVICE *service, char **options)
     inst->trx_safe = config_get_bool(params, "transaction_safety");
     inst->set_master_version = config_copy_string(params, "master_version");
     inst->set_master_hostname = config_copy_string(params, "master_hostname");
+    inst->set_slave_hostname = config_copy_string(params, "slave_hostname");
     inst->fileroot = config_copy_string(params, "filestem");
 
     inst->serverid = config_get_integer(params, "server_id");
@@ -344,8 +346,6 @@ createInstance(SERVICE *service, char **options)
     inst->master_uuid = config_copy_string(params, "master_uuid");
     inst->set_master_uuid = inst->master_uuid != NULL;
 
-    inst->set_master_version = NULL;
-    inst->set_master_hostname = NULL;
     inst->send_slave_heartbeat = config_get_bool(params, "send_slave_heartbeat");
 
     /* Semi-Sync support */
@@ -481,6 +481,11 @@ createInstance(SERVICE *service, char **options)
                 {
                     MXS_FREE(inst->set_master_hostname);
                     inst->set_master_hostname = MXS_STRDUP_A(value);
+                }
+                else if (strcmp(options[i], "slave_hostname") == 0)
+                {
+                    MXS_FREE(inst->set_slave_hostname);
+                    inst->set_slave_hostname = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "mariadb10-compatibility") == 0)
                 {
@@ -938,6 +943,7 @@ free_instance(ROUTER_INSTANCE *instance)
     MXS_FREE(instance->password);
     MXS_FREE(instance->set_master_version);
     MXS_FREE(instance->set_master_hostname);
+    MXS_FREE(instance->set_slave_hostname);
     MXS_FREE(instance->fileroot);
     MXS_FREE(instance->binlogdir);
     /* SSL options */
