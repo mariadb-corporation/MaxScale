@@ -21,6 +21,35 @@ collect columns, functions and tables used in the `SELECT` defining the
 Consequently, the database firewall will **not** block `WITH` statements
 where the `SELECT` of the `WITH` clause refers to forbidden columns.
 
+## Query Classification
+
+Follow the [MXS-1350](https://jira.mariadb.org/browse/MXS-1350) Jira issue
+to track the progress on this limitation.
+
+XA transactions are not detected as transactions by MaxScale. This means
+that all XA commands will be treated as unknown commands and will be
+treated as operations that potentially modify the database (in the case of
+readwritesplit, the statements are routed to the master).
+
+MaxScale **will not** track the XA transaction state which means that any
+SELECT queries done inside an XA transaction can be routed to servers that
+are not part of the XA transaction.
+
+This limitation can be avoided on the client side by disabling autocommit
+before any XA transactions are done. The following example shows how a
+simple XA transaction is done via MaxScale by disabling autocommit for the
+duration of the XA transaction.
+
+```
+SET autocommit=0;
+XA START 'MyXA';
+INSERT INTO test.t1 VALUES(1);
+XA END 'MyXA';
+XA PREPARE 'MyXA';
+XA COMMIT 'MyXA';
+SET autocommit=1;
+```
+
 ## Prepared Statements
 
 For its proper functioning, MaxScale needs in general to be aware of the
