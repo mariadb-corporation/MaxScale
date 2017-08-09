@@ -648,7 +648,7 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
         }
         if (SERVER_IS_SLAVE(database->server) &&
             (database->server->master_id <= 0 ||
-            database->server->master_id != handle->master->server->node_id))
+             database->server->master_id != handle->master->server->node_id))
         {
             if (handle->allow_external_slaves)
             {
@@ -1177,7 +1177,7 @@ monitorMain(void *arg)
         if (handle->load_journal)
         {
             handle->load_journal = false;
-            load_server_journal(mon);
+            load_server_journal(mon, &handle->master);
         }
 
         /* start from the first server in the list */
@@ -1457,7 +1457,7 @@ monitorMain(void *arg)
 
         mon_hangup_failed_servers(mon);
         servers_status_current_to_pending(mon);
-        store_server_journal(mon);
+        store_server_journal(mon, handle->master);
         release_monitor_servers(mon);
     } /*< while (1) */
 }

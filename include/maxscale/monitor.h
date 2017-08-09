@@ -322,4 +322,36 @@ json_t* monitor_list_to_json(const char* host);
  */
 json_t* monitor_relations_to_server(const SERVER* server, const char* host);
 
+/**
+ * @brief Store a journal of server states
+ *
+ * @param monitor Monitor to journal
+ * @param master  The current master server or NULL if no master exists
+ */
+void store_server_journal(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master);
+
+/**
+ * @brief Load a journal of server states
+ *
+ * @param monitor Monitor where journal is loaded
+ * @param master  Set to point to the current master
+ */
+void load_server_journal(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS **master);
+
+/**
+ * @brief Remove stored journal file
+ *
+ * @param monitor Monitor whose journal is removed
+ */
+void remove_server_journal(MXS_MONITOR *monitor);
+
+/**
+ * @brief Check whether the journal is too old
+ *
+ * @param monitor Monitor to check
+ * @return True if journal is stale or an error occurred while reading the file.
+ * False if the file is still valid.
+ */
+bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age);
+
 MXS_END_DECLS

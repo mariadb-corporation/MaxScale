@@ -1,4 +1,4 @@
-add_library(mysqlmon SHARED mysql_mon.c mysql_mon_journal.c)
+add_library(mysqlmon SHARED mysql_mon.c)
 target_link_libraries(mysqlmon maxscale-common)
 add_dependencies(mysqlmon pcre2)
 set_target_properties(mysqlmon PROPERTIES VERSION "1.4.0")
