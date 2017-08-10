@@ -187,19 +187,6 @@ static void update_field_infos(QcSqliteInfo* info,
                                uint32_t usage,
                                qc_token_position_t pos,
                                const ExprList* pExclude);
-static void update_field_infos_from_exprlist(QcSqliteInfo* info,
-                                             QcAliases* pAliases,
-                                             const ExprList* pEList,
-                                             uint32_t usage,
-                                             const ExprList* pExclude);
-static void update_field_infos_from_idlist(QcSqliteInfo* info,
-                                           QcAliases* pAliases,
-                                           const IdList* pIds,
-                                           uint32_t usage,
-                                           const ExprList* pExclude);
-static void update_field_infos_from_with(QcSqliteInfo* info,
-                                         QcAliases* pAliases,
-                                         const With* pWith);
 static void update_function_info(QcSqliteInfo* info,
                                  const char* name,
                                  uint32_t usage);
@@ -778,6 +765,32 @@ public:
         return truth;
     }
 
+    void update_field_infos_from_exprlist(QcAliases* pAliases,
+                                          const ExprList* pEList,
+                                          uint32_t usage,
+                                          const ExprList* pExclude)
+    {
+        for (int i = 0; i < pEList->nExpr; ++i)
+        {
+            ExprList::ExprList_item* pItem = &pEList->a[i];
+
+            update_field_infos(this, pAliases, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
+        }
+    }
+
+    void update_field_infos_from_idlist(QcAliases* pAliases,
+                                        const IdList* pIds,
+                                        uint32_t usage,
+                                        const ExprList* pExclude)
+    {
+        for (int i = 0; i < pIds->nId; ++i)
+        {
+            IdList::IdList_item* pItem = &pIds->a[i];
+
+            update_field_info(pAliases, NULL, NULL, pItem->zName, usage, pExclude);
+        }
+    }
+
     void update_field_infos_from_select(QcAliases& aliases,
                                         const Select* pSelect,
                                         uint32_t usage,
@@ -819,7 +832,7 @@ public:
 
         if (pSelect->pEList)
         {
-            update_field_infos_from_exprlist(this, &aliases, pSelect->pEList, usage, NULL);
+            update_field_infos_from_exprlist(&aliases, pSelect->pEList, usage, NULL);
         }
 
         if (pSelect->pWhere)
@@ -831,7 +844,7 @@ public:
 
         if (pSelect->pGroupBy)
         {
-            update_field_infos_from_exprlist(this, &aliases,
+            update_field_infos_from_exprlist(&aliases,
                                              pSelect->pGroupBy, QC_USED_IN_GROUP_BY, pSelect->pEList);
         }
 
@@ -847,7 +860,7 @@ public:
 
         if (pSelect->pWith)
         {
-            update_field_infos_from_with(this, &aliases, pSelect->pWith);
+            update_field_infos_from_with(&aliases, pSelect->pWith);
         }
 
         if (((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior)
@@ -864,6 +877,36 @@ public:
         QcAliases aliases(*pAliases);
 
         update_field_infos_from_select(aliases, pSelect, usage, pExclude);
+    }
+
+    void update_field_infos_from_with(QcAliases* pAliases, const With* pWith)
+    {
+        for (int i = 0; i < pWith->nCte; ++i)
+        {
+            const With::Cte* pCte = &pWith->a[i];
+
+            if (pCte->pSelect)
+            {
+                update_field_infos_from_subselect(pAliases, pCte->pSelect, QC_USED_IN_SUBSELECT, NULL);
+            }
+        }
+    }
+
+    void update_names_from_srclist(QcAliases* pAliases,
+                                   const SrcList* pSrc)
+    {
+        for (int i = 0; i < pSrc->nSrc; ++i)
+        {
+            if (pSrc->a[i].zName)
+            {
+                update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, pAliases);
+            }
+
+            if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
+            {
+                update_names_from_srclist(pAliases, pSrc->a[i].pSelect->pSrc);
+            }
+        }
     }
 
     //
@@ -883,7 +926,7 @@ public:
     {
         ss_dassert(this_thread.initialized);
 
-        update_names_from_srclist(this, NULL, pSrcList);
+        update_names_from_srclist(NULL, pSrcList);
 
         exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
     }
@@ -895,7 +938,7 @@ public:
         m_status = QC_QUERY_PARSED;
         m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
 
-        update_names_from_srclist(this, NULL, pSrcList);
+        update_names_from_srclist(NULL, pSrcList);
 
         exposed_sqlite3SrcListDelete(pParse->db, pSrcList);
     }
@@ -972,7 +1015,7 @@ public:
 
         if (pTblName)
         {
-            update_names_from_srclist(this, NULL, pTblName);
+            update_names_from_srclist(NULL, pTblName);
         }
         else if (pParse->pNewTable)
         {
@@ -1088,7 +1131,7 @@ public:
             }
             else
             {
-                update_names_from_srclist(this, &aliases, pTabList);
+                update_names_from_srclist(&aliases, pTabList);
             }
 
             if (pWhere)
@@ -1110,7 +1153,7 @@ public:
         m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
         m_operation = QUERY_OP_DROP;
 
-        update_names_from_srclist(this, NULL, pTable);
+        update_names_from_srclist(NULL, pTable);
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);
         exposed_sqlite3SrcListDelete(pParse->db, pTable);
@@ -1131,7 +1174,7 @@ public:
         {
             m_is_drop_table = true;
         }
-        update_names_from_srclist(this, NULL, pName);
+        update_names_from_srclist(NULL, pName);
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);
     }
@@ -1152,7 +1195,7 @@ public:
         }
         else if (pOldTable)
         {
-            update_names_from_srclist(this, NULL, pOldTable);
+            update_names_from_srclist(NULL, pOldTable);
             exposed_sqlite3SrcListDelete(pParse->db, pOldTable);
         }
     }
@@ -1177,11 +1220,11 @@ public:
 
             QcAliases aliases;
 
-            update_names_from_srclist(this, &aliases, pTabList);
+            update_names_from_srclist(&aliases, pTabList);
 
             if (pColumns)
             {
-                update_field_infos_from_idlist(this, &aliases, pColumns, 0, NULL);
+                update_field_infos_from_idlist(&aliases, pColumns, 0, NULL);
             }
 
             if (pSelect)
@@ -1202,7 +1245,7 @@ public:
 
             if (pSet)
             {
-                update_field_infos_from_exprlist(this, &aliases, pSet, 0, NULL);
+                update_field_infos_from_exprlist(&aliases, pSet, 0, NULL);
             }
         }
 
@@ -1307,7 +1350,7 @@ public:
 
             m_type_mask = QUERY_TYPE_WRITE;
             m_operation = QUERY_OP_UPDATE;
-            update_names_from_srclist(this, &aliases, pTabList);
+            update_names_from_srclist(&aliases, pTabList);
             m_has_clause = (pWhere ? true : false);
 
             if (pChanges)
@@ -1377,15 +1420,15 @@ public:
         switch (command)
         {
         case MXS_ALTER_DISABLE_KEYS:
-            update_names_from_srclist(this, NULL, pSrc);
+            update_names_from_srclist(NULL, pSrc);
             break;
 
         case MXS_ALTER_ENABLE_KEYS:
-            update_names_from_srclist(this, NULL, pSrc);
+            update_names_from_srclist(NULL, pSrc);
             break;
 
         case MXS_ALTER_RENAME:
-            update_names_from_srclist(this, NULL, pSrc);
+            update_names_from_srclist(NULL, pSrc);
             break;
 
         default:
@@ -1404,7 +1447,7 @@ public:
 
         if (pExprList)
         {
-            update_field_infos_from_exprlist(this, NULL, pExprList, 0, NULL);
+            update_field_infos_from_exprlist(NULL, pExprList, 0, NULL);
         }
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);
@@ -1418,7 +1461,7 @@ public:
         m_status = QC_QUERY_PARSED;
         m_type_mask = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
 
-        update_names_from_srclist(this, NULL, pTables);
+        update_names_from_srclist(NULL, pTables);
 
         exposed_sqlite3SrcListDelete(pParse->db, pTables);
     }
@@ -1674,7 +1717,7 @@ public:
 
         if (pFullName)
         {
-            update_names_from_srclist(this, NULL, pFullName);
+            update_names_from_srclist(NULL, pFullName);
 
             exposed_sqlite3SrcListDelete(pParse->db, pFullName);
         }
@@ -1689,7 +1732,7 @@ public:
 
         if (pTables)
         {
-            update_names_from_srclist(this, NULL, pTables);
+            update_names_from_srclist(NULL, pTables);
 
             exposed_sqlite3SrcListDelete(pParse->db, pTables);
         }
@@ -3206,21 +3249,6 @@ static void update_field_infos_from_expr(QcSqliteInfo* info,
     }
 }
 
-static void update_field_infos_from_with(QcSqliteInfo* pInfo,
-                                         QcAliases* pAliases,
-                                         const With* pWith)
-{
-    for (int i = 0; i < pWith->nCte; ++i)
-    {
-        const With::Cte* pCte = &pWith->a[i];
-
-        if (pCte->pSelect)
-        {
-            pInfo->update_field_infos_from_subselect(pAliases, pCte->pSelect, QC_USED_IN_SUBSELECT, NULL);
-        }
-    }
-}
-
 static const char* get_token_symbol(int token)
 {
     switch (token)
@@ -3502,7 +3530,7 @@ static void update_field_infos(QcSqliteInfo* info,
             case TK_FUNCTION:
                 if (!ignore_exprlist)
                 {
-                    update_field_infos_from_exprlist(info, pAliases, pExpr->x.pList, usage, pExclude);
+                    info->update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
                 }
                 break;
 
@@ -3519,58 +3547,12 @@ static void update_field_infos(QcSqliteInfo* info,
                 }
                 else
                 {
-                    update_field_infos_from_exprlist(info, pAliases, pExpr->x.pList, usage, pExclude);
+                    info->update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
                 }
                 break;
             }
         }
         break;
-    }
-}
-
-static void update_field_infos_from_exprlist(QcSqliteInfo* info,
-                                             QcAliases* pAliases,
-                                             const ExprList* pEList,
-                                             uint32_t usage,
-                                             const ExprList* pExclude)
-{
-    for (int i = 0; i < pEList->nExpr; ++i)
-    {
-        ExprList::ExprList_item* pItem = &pEList->a[i];
-
-        update_field_infos(info, pAliases, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
-    }
-}
-
-static void update_field_infos_from_idlist(QcSqliteInfo* info,
-                                           QcAliases* pAliases,
-                                           const IdList* pIds,
-                                           uint32_t usage,
-                                           const ExprList* pExclude)
-{
-    for (int i = 0; i < pIds->nId; ++i)
-    {
-        IdList::IdList_item* pItem = &pIds->a[i];
-
-        info->update_field_info(pAliases, NULL, NULL, pItem->zName, usage, pExclude);
-    }
-}
-
-static void update_names_from_srclist(QcSqliteInfo* pInfo,
-                                      QcAliases* pAliases,
-                                      const SrcList* pSrc)
-{
-    for (int i = 0; i < pSrc->nSrc; ++i)
-    {
-        if (pSrc->a[i].zName)
-        {
-            pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, pAliases);
-        }
-
-        if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
-        {
-            update_names_from_srclist(pInfo, pAliases, pSrc->a[i].pSelect->pSrc);
-        }
     }
 }
 
