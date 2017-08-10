@@ -672,8 +672,11 @@ add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd 
 # Regression case for crash if long host name is used for binlog router (in 'change master to ...')
 add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog LABELS binlogrouter BREAKS_REPL)
 
-# configure binlog rouer setup, execute queries and transactions, check data;
+# configure binlog rouetr setup, execute queries and transactions, check data;
 add_test_executable(setup_binlog.cpp setup_binlog setup_binlog LABELS binlogrouter BREAKS_REPL)
+
+# configure binlog rouetr setup, execute queries and transactions, check data;
+add_test_executable(setup_binlog_gtid.cpp setup_binlog_gtid setup_binlog_gtid LABELS binlogrouter BREAKS_REPL)
 
 # configure binlog rouer setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=CRC32 option
 # disabled because it is included into setup_binlog test, separate test was created for debugging

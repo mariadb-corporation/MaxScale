@@ -253,9 +253,27 @@ public:
     bool backend_ssl;
 
     /**
+     * @brief binlog_master_gtid If true start_binlog() function configures Maxscale
+     * binlog router to use GTID to connect to Master
+     */
+    bool binlog_master_gtid;
+
+    /**
+     * @brief binlog_slave_gtid If true start_binlog() function configures slaves
+     * to use GTID to connect to Maxscale binlog router
+     */
+    bool binlog_slave_gtid;
+
+    /**
      * @brief no_galera Do not check, restart and use Galera setup; all Galera tests will fail
      */
     bool no_galera;
+
+    /**
+     * @brief no_vm_revert If true tests do not revert VMs after the test even if test failed
+     * (use it for debugging)
+     */
+    bool no_vm_revert;
 
     /**
     * @brief ssl_options string with ssl configuration for command line client

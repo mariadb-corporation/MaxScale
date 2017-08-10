@@ -192,6 +192,7 @@ void test_binlog(TestConnections* Test)
     Test->stop_timeout();
 
     // test SLAVE STOP/START
+    Test->tprintf("test SLAVE STOP/START");
     for (int j = 0; j < 3; j++)
     {
         Test->set_timeout(100);

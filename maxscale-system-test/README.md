@@ -65,3 +65,4 @@ System level tests for MaxScale
 |no_nodes_check|if yes backend checks are not executed (needed in case of RDS or similar backend)|
 |no_backend_log_copy|if yes logs from backend nodes are not copied (needed in case of RDS or similar backend)|
 |no_maxscale_start|Do not start Maxscale automatically|
+|no_vm_revert|If true tests do not revert VMs after the test even if test failed|
