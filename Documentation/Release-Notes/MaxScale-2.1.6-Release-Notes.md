@@ -25,6 +25,11 @@ report at [Jira](https://jira.mariadb.org).
 * [MXS-1351](https://jira.mariadb.org/browse/MXS-1351) Partially authenticated connections are put into the connection pool
 * [MXS-1338](https://jira.mariadb.org/browse/MXS-1338) Buffer objects are bound to indiviudual buffers
 
+## New Features
+
+* It is now possible to configure the binlog router to identify itself
+to the master using a custom hostname: [MXS-1343](https://jira.mariadb.org/browse/MXS-1343)
+
 ## Known Issues and Limitations
 
 There are some limitations and known issues within this version of MaxScale.
