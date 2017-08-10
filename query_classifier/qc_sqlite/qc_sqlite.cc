@@ -197,16 +197,6 @@ static void update_field_infos_from_idlist(QcSqliteInfo* info,
                                            const IdList* pIds,
                                            uint32_t usage,
                                            const ExprList* pExclude);
-static void update_field_infos_from_select(QcSqliteInfo* info,
-                                           QcAliases& aliases,
-                                           const Select* pSelect,
-                                           uint32_t usage,
-                                           const ExprList* pExclude);
-static void update_field_infos_from_subselect(QcSqliteInfo* info,
-                                              QcAliases* pAliases,
-                                              const Select* pSelect,
-                                              uint32_t usage,
-                                              const ExprList* pExclude);
 static void update_field_infos_from_with(QcSqliteInfo* info,
                                          QcAliases* pAliases,
                                          const With* pWith);
@@ -788,6 +778,94 @@ public:
         return truth;
     }
 
+    void update_field_infos_from_select(QcAliases& aliases,
+                                        const Select* pSelect,
+                                        uint32_t usage,
+                                        const ExprList* pExclude)
+    {
+        if (pSelect->pSrc)
+        {
+            const SrcList* pSrc = pSelect->pSrc;
+
+            for (int i = 0; i < pSrc->nSrc; ++i)
+            {
+                if (pSrc->a[i].zName)
+                {
+                    update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, &aliases);
+                }
+
+                if (pSrc->a[i].pSelect)
+                {
+                    uint32_t sub_usage = usage;
+
+                    sub_usage &= ~QC_USED_IN_SELECT;
+                    sub_usage |= QC_USED_IN_SUBSELECT;
+
+                    update_field_infos_from_select(aliases, pSrc->a[i].pSelect, sub_usage, pExclude);
+                }
+
+#ifdef QC_COLLECT_NAMES_FROM_USING
+                // With this enabled, the affected fields of
+                //    select * from (t1 as t2 left join t1 as t3 using (a)), t1;
+                // will be "* a", otherwise "*". However, that "a" is used in the join
+                // does not reveal its value, right?
+                if (pSrc->a[i].pUsing)
+                {
+                    update_field_infos_from_idlist(this, aliases, pSrc->a[i].pUsing, 0, pSelect->pEList);
+                }
+#endif
+            }
+        }
+
+        if (pSelect->pEList)
+        {
+            update_field_infos_from_exprlist(this, &aliases, pSelect->pEList, usage, NULL);
+        }
+
+        if (pSelect->pWhere)
+        {
+            m_has_clause = true;
+            update_field_infos(this, &aliases,
+                               0, pSelect->pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pSelect->pEList);
+        }
+
+        if (pSelect->pGroupBy)
+        {
+            update_field_infos_from_exprlist(this, &aliases,
+                                             pSelect->pGroupBy, QC_USED_IN_GROUP_BY, pSelect->pEList);
+        }
+
+        if (pSelect->pHaving)
+        {
+            m_has_clause = true;
+#if defined(COLLECT_HAVING_AS_WELL)
+            // A HAVING clause can only refer to fields that already have been
+            // mentioned. Consequently, they need not be collected.
+            update_field_infos(this, aliases, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
+#endif
+        }
+
+        if (pSelect->pWith)
+        {
+            update_field_infos_from_with(this, &aliases, pSelect->pWith);
+        }
+
+        if (((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior)
+        {
+            update_field_infos_from_subselect(&aliases, pSelect->pPrior, usage, pExclude);
+        }
+    }
+
+    void update_field_infos_from_subselect(QcAliases* pAliases,
+                                           const Select* pSelect,
+                                           uint32_t usage,
+                                           const ExprList* pExclude)
+    {
+        QcAliases aliases(*pAliases);
+
+        update_field_infos_from_select(aliases, pSelect, usage, pExclude);
+    }
+
     //
     // sqlite3 callbacks
     //
@@ -945,7 +1023,7 @@ public:
 
         if (pSelect)
         {
-            update_field_infos_from_select(this, aliases, pSelect, QC_USED_IN_SELECT, NULL);
+            update_field_infos_from_select(aliases, pSelect, QC_USED_IN_SELECT, NULL);
         }
 
         exposed_sqlite3ExprListDelete(pParse->db, pCNames);
@@ -1070,7 +1148,7 @@ public:
         if (pSelect)
         {
             QcAliases aliases;
-            update_field_infos_from_select(this, aliases, pSelect, QC_USED_IN_SELECT, NULL);
+            update_field_infos_from_select(aliases, pSelect, QC_USED_IN_SELECT, NULL);
         }
         else if (pOldTable)
         {
@@ -1119,7 +1197,7 @@ public:
                     usage = QC_USED_IN_SELECT;
                 }
 
-                update_field_infos_from_select(this, aliases, pSelect, usage, NULL);
+                update_field_infos_from_select(aliases, pSelect, usage, NULL);
             }
 
             if (pSet)
@@ -1282,7 +1360,7 @@ public:
         uint32_t usage = sub_select ? QC_USED_IN_SUBSELECT : QC_USED_IN_SELECT;
 
         QcAliases aliases;
-        update_field_infos_from_select(this, aliases, pSelect, usage, NULL);
+        update_field_infos_from_select(aliases, pSelect, usage, NULL);
     }
 
     void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
@@ -2155,7 +2233,7 @@ public:
                             if (pValue->op == TK_SELECT)
                             {
                                 QcAliases aliases;
-                                update_field_infos_from_select(this, aliases, pValue->x.pSelect,
+                                update_field_infos_from_select(aliases, pValue->x.pSelect,
                                                                QC_USED_IN_SUBSELECT, NULL);
                             }
                         }
@@ -3138,7 +3216,7 @@ static void update_field_infos_from_with(QcSqliteInfo* pInfo,
 
         if (pCte->pSelect)
         {
-            update_field_infos_from_subselect(pInfo, pAliases, pCte->pSelect, QC_USED_IN_SUBSELECT, NULL);
+            pInfo->update_field_infos_from_subselect(pAliases, pCte->pSelect, QC_USED_IN_SUBSELECT, NULL);
         }
     }
 }
@@ -3437,7 +3515,7 @@ static void update_field_infos(QcSqliteInfo* info,
 
                     sub_usage &= ~QC_USED_IN_SELECT;
                     sub_usage |= QC_USED_IN_SUBSELECT;
-                    update_field_infos_from_subselect(info, pAliases, pExpr->x.pSelect, sub_usage, pExclude);
+                    info->update_field_infos_from_subselect(pAliases, pExpr->x.pSelect, sub_usage, pExclude);
                 }
                 else
                 {
@@ -3476,96 +3554,6 @@ static void update_field_infos_from_idlist(QcSqliteInfo* info,
 
         info->update_field_info(pAliases, NULL, NULL, pItem->zName, usage, pExclude);
     }
-}
-
-static void update_field_infos_from_select(QcSqliteInfo* pInfo,
-                                           QcAliases& aliases,
-                                           const Select* pSelect,
-                                           uint32_t usage,
-                                           const ExprList* pExclude)
-{
-    if (pSelect->pSrc)
-    {
-        const SrcList* pSrc = pSelect->pSrc;
-
-        for (int i = 0; i < pSrc->nSrc; ++i)
-        {
-            if (pSrc->a[i].zName)
-            {
-                pInfo->update_names(pSrc->a[i].zDatabase, pSrc->a[i].zName, pSrc->a[i].zAlias, &aliases);
-            }
-
-            if (pSrc->a[i].pSelect)
-            {
-                uint32_t sub_usage = usage;
-
-                sub_usage &= ~QC_USED_IN_SELECT;
-                sub_usage |= QC_USED_IN_SUBSELECT;
-
-                update_field_infos_from_select(pInfo, aliases, pSrc->a[i].pSelect, sub_usage, pExclude);
-            }
-
-#ifdef QC_COLLECT_NAMES_FROM_USING
-            // With this enabled, the affected fields of
-            //    select * from (t1 as t2 left join t1 as t3 using (a)), t1;
-            // will be "* a", otherwise "*". However, that "a" is used in the join
-            // does not reveal its value, right?
-            if (pSrc->a[i].pUsing)
-            {
-                update_field_infos_from_idlist(pInfo, aliases, pSrc->a[i].pUsing, 0, pSelect->pEList);
-            }
-#endif
-        }
-    }
-
-    if (pSelect->pEList)
-    {
-        update_field_infos_from_exprlist(pInfo, &aliases, pSelect->pEList, usage, NULL);
-    }
-
-    if (pSelect->pWhere)
-    {
-        pInfo->m_has_clause = true;
-        update_field_infos(pInfo, &aliases,
-                           0, pSelect->pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pSelect->pEList);
-    }
-
-    if (pSelect->pGroupBy)
-    {
-        update_field_infos_from_exprlist(pInfo, &aliases,
-                                         pSelect->pGroupBy, QC_USED_IN_GROUP_BY, pSelect->pEList);
-    }
-
-    if (pSelect->pHaving)
-    {
-        pInfo->m_has_clause = true;
-#if defined(COLLECT_HAVING_AS_WELL)
-        // A HAVING clause can only refer to fields that already have been
-        // mentioned. Consequently, they need not be collected.
-        update_field_infos(pInfo, aliases, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
-#endif
-    }
-
-    if (pSelect->pWith)
-    {
-        update_field_infos_from_with(pInfo, &aliases, pSelect->pWith);
-    }
-
-    if (((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior)
-    {
-        update_field_infos_from_subselect(pInfo, &aliases, pSelect->pPrior, usage, pExclude);
-    }
-}
-
-static void update_field_infos_from_subselect(QcSqliteInfo* pInfo,
-                                              QcAliases* pAliases,
-                                              const Select* pSelect,
-                                              uint32_t usage,
-                                              const ExprList* pExclude)
-{
-    QcAliases aliases(*pAliases);
-
-    update_field_infos_from_select(pInfo, aliases, pSelect, usage, pExclude);
 }
 
 static void update_names_from_srclist(QcSqliteInfo* pInfo,
