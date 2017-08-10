@@ -276,6 +276,7 @@ typedef struct avro_instance
     pcre2_code              *alter_table_re;
     uint8_t event_types;
     uint8_t event_type_hdr_lens[MAX_EVENT_TYPE_END];
+    uint8_t binlog_checksum;
     gtid_pos_t              gtid;
     TABLE_MAP     *active_maps[MAX_MAPPED_TABLES];
     HASHTABLE     *table_maps;
