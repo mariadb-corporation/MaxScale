@@ -1094,6 +1094,35 @@ public:
         return rv;
     }
 
+    static bool at_most_usage_differs(const std::set<QcFunctionInfo>& l,
+                                      const std::set<QcFunctionInfo>& r)
+    {
+        bool rv = false;
+
+        if (l.size() == r.size())
+        {
+            rv = true;
+
+            std::set<QcFunctionInfo>::iterator i = l.begin();
+            std::set<QcFunctionInfo>::iterator j = r.begin();
+
+            while (rv && (i != l.end()))
+            {
+                if (i->m_name != j->m_name)
+                {
+                    rv = false;
+                }
+                else
+                {
+                    ++i;
+                    ++j;
+                }
+            }
+        }
+
+        return rv;
+    }
+
     void print(ostream& out) const
     {
         out << m_name;
@@ -1172,6 +1201,11 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     {
         ss << "Ok : ";
         ss << f1;
+        success = true;
+    }
+    else if (QcFunctionInfo::at_most_usage_differs(f1, f2))
+    {
+        ss << "WRN: " << f1 << " != " << f2;
         success = true;
     }
     else
