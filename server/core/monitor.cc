@@ -75,6 +75,8 @@ static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 
 static void monitor_server_free_all(MXS_MONITOR_SERVERS *servers);
+static void remove_server_journal(MXS_MONITOR *monitor);
+static bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age);
 
 /** Server type specific bits */
 static unsigned int server_type_bits = SERVER_MASTER | SERVER_SLAVE |
@@ -189,6 +191,12 @@ monitorStart(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     if (monitor)
     {
         spinlock_acquire(&monitor->lock);
+
+        if (journal_is_stale(monitor, monitor->journal_max_age))
+        {
+            MXS_WARNING("Removing stale journal file for monitor '%s'.", monitor->name);
+            remove_server_journal(monitor);
+        }
 
         if ((monitor->handle = (*monitor->module->startMonitor)(monitor, params)))
         {
@@ -1901,6 +1909,8 @@ static const char* process_server(MXS_MONITOR *monitor, const char *data, const 
             sptr++;
 
             uint32_t state = sptr[0] | (sptr[1] << 8) | (sptr[2] << 16) | (sptr[3] << 24);
+            db->mon_prev_status = state;
+            db->server->status_pending = state;
             server_set_status_nolock(db->server, state);
             monitor_set_pending_status(db, state);
             break;
@@ -1918,12 +1928,15 @@ static const char* process_server(MXS_MONITOR *monitor, const char *data, const 
 static const char* process_master(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS **master, const char *data,
                                   const char *end)
 {
-    for (MXS_MONITOR_SERVERS* db = monitor->databases; db; db = db->next)
+    if (master)
     {
-        if (strcmp(db->server->unique_name, data) == 0)
+        for (MXS_MONITOR_SERVERS* db = monitor->databases; db; db = db->next)
         {
-            *master = db;
-            break;
+            if (strcmp(db->server->unique_name, data) == 0)
+            {
+                *master = db;
+                break;
+            }
         }
     }
 
@@ -2114,7 +2127,7 @@ void load_server_journal(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS **master)
     }
 }
 
-void remove_server_journal(MXS_MONITOR *monitor)
+static void remove_server_journal(MXS_MONITOR *monitor)
 {
     char path[PATH_MAX];
 
@@ -2128,7 +2141,7 @@ void remove_server_journal(MXS_MONITOR *monitor)
     }
 }
 
-bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age)
+static bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age)
 {
     bool is_stale = true;
     char path[PATH_MAX];

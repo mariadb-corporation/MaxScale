@@ -118,6 +118,8 @@ monitorMain(void *arg)
         return;
     }
 
+    load_server_journal(monitor, NULL);
+
     while (!handle->shutdown)
     {
         lock_monitor_servers(monitor);
@@ -141,6 +143,7 @@ monitorMain(void *arg)
         mon_process_state_changes(monitor, handle->script, handle->events);
 
         servers_status_current_to_pending(monitor);
+        store_server_journal(monitor, NULL);
         release_monitor_servers(monitor);
 
         /** Sleep until the next monitoring interval */

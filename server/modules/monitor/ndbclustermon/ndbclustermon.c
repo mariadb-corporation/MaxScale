@@ -316,7 +316,9 @@ monitorMain(void *arg)
         MXS_ERROR("Fatal : mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
+
     handle->status = MXS_MONITOR_RUNNING;
+    load_server_journal(mon, NULL);
 
     while (1)
     {
@@ -374,6 +376,7 @@ monitorMain(void *arg)
 
         mon_hangup_failed_servers(mon);
         servers_status_current_to_pending(mon);
+        store_server_journal(mon, NULL);
         release_monitor_servers(mon);
     }
 }

@@ -497,6 +497,7 @@ monitorMain(void *arg)
         return;
     }
     handle->status = MXS_MONITOR_RUNNING;
+    load_server_journal(mon, NULL);
 
     while (1)
     {
@@ -651,6 +652,7 @@ monitorMain(void *arg)
             update_sst_donor_nodes(mon, is_cluster);
         }
 
+        store_server_journal(mon, NULL);
         release_monitor_servers(mon);
     }
 }

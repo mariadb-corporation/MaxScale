@@ -244,7 +244,6 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->shutdown = 0;
         handle->id = config_get_global_options()->id;
         handle->warn_failover = true;
-        handle->load_journal = true;
         handle->monitor = monitor;
     }
 
@@ -262,12 +261,6 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     handle->allow_external_slaves = config_get_bool(params, "allow_external_slaves");
-
-    if (journal_is_stale(monitor, monitor->journal_max_age))
-    {
-        MXS_WARNING("Removing stale journal file.");
-        remove_server_journal(monitor);
-    }
 
     bool error = false;
 
@@ -1129,7 +1122,9 @@ monitorMain(void *arg)
         MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
+
     handle->status = MXS_MONITOR_RUNNING;
+    load_server_journal(mon, &handle->master);
 
     while (1)
     {
@@ -1168,12 +1163,6 @@ monitorMain(void *arg)
 
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
-
-        if (handle->load_journal)
-        {
-            handle->load_journal = false;
-            load_server_journal(mon, &handle->master);
-        }
 
         /* start from the first server in the list */
         ptr = mon->databases;

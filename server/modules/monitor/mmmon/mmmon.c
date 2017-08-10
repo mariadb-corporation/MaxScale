@@ -514,6 +514,8 @@ monitorMain(void *arg)
     }
 
     handle->status = MXS_MONITOR_RUNNING;
+    load_server_journal(mon, &handle->master);
+
     while (1)
     {
         if (handle->shutdown)
@@ -616,6 +618,7 @@ monitorMain(void *arg)
 
         mon_hangup_failed_servers(mon);
         servers_status_current_to_pending(mon);
+        store_server_journal(mon, handle->master);
         release_monitor_servers(mon);
     }
 }
