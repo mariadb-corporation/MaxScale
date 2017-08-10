@@ -93,7 +93,6 @@ version of the real master. This option allows the router to use a custom versio
 By default, the router will identify itself to the slaves using the
 hostname of the real master. This option allows the router to use a custom hostname.
 
-
 ### `slave_hostname`
 
 Since MaxScale 2.1.6 the router can optionally identify itself

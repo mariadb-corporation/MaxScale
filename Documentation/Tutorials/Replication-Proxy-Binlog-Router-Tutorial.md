@@ -37,6 +37,34 @@ The minimum set of router options that must be given in the configuration are ar
 
 All configuration prameters can be found in the [Binlog Router Documentation](../Routers/Binlogrouter.md).
 
+A complete example of a service entry for a binlog router service would be as follows.
+
+```
+    [Replication]
+    type=service
+    router=binlogrouter
+    version_string=5.6.17-log
+    user=maxscale
+    passwd=Mhu87p2D
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,
+                   user=repl,
+                   password=slavepass,
+                   master-id=1,
+                   heartbeat=30,
+                   binlogdir=/var/binlogs,
+                   transaction_safety=1,
+                   master_version=5.6.19-common,
+                   master_hostname=common_server,
+                   master_uuid=xxx-fff-cccc-common,
+                   master-id=999,
+                   mariadb10-compatibility=1,
+                   ssl_cert_verification_depth=9,
+                   semisync=1,
+                   encrypt_binlog=1,
+                   encryption_algorithm=aes_ctr,
+                   encryption_key_file=/var/binlogs/enc_key.txt,
+                   slave_hostname=maxscale-blr-1
+```
 
 ## Listener Section
 
