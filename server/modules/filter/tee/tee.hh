@@ -67,6 +67,16 @@ public:
         return m_exclude_code;
     }
 
+    void set_enabled(bool value)
+    {
+        m_enabled = value;
+    }
+
+    bool is_enabled() const
+    {
+        return m_enabled;
+    }
+
 private:
     Tee(SERVICE* service, std::string user, std::string remote,
         pcre2_code* match, std::string match_string,
@@ -79,4 +89,5 @@ private:
     pcre2_code* m_exclude_code; /* Compiled exclude pattern*/
     std::string m_match;        /* Pattern for matching queries */
     std::string m_exclude;      /* Pattern for excluding queries */
+    bool        m_enabled;
 };

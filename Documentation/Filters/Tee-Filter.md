@@ -99,6 +99,23 @@ sessions that are connected using this username are replicated.
 user=john
 ```
 
+## Module commands
+
+Read [Module Commands](../Reference/Module-Commands.md) documentation for
+details about module commands.
+
+The tee filter supports the following module commands.
+
+### `tee disable [FILTER]`
+
+This commmad disables a tee filter instance. A disabled tee filter will not send
+any queries to the target service.
+
+### `tee enable [FILTER]`
+
+Enable a disabled tee filter. This resumes the sending of queries to the target
+service.
+
 ## Examples
 
 ### Example 1 - Replicate all inserts into the orders table

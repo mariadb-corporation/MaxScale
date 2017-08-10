@@ -88,7 +88,8 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
     pcre2_match_data* md_match = NULL;
     pcre2_match_data* md_exclude = NULL;
 
-    if (my_instance->user_matches(session_get_user(session)) &&
+    if (my_instance->is_enabled() &&
+        my_instance->user_matches(session_get_user(session)) &&
         my_instance->remote_matches(session_get_remote(session)))
     {
         match = my_instance->get_match();

@@ -22,6 +22,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/modulecmd.h>
 
 #include "tee.hh"
 #include "local_client.hh"
@@ -44,7 +45,8 @@ Tee::Tee(SERVICE* service, std::string user, std::string remote,
     m_match_code(match),
     m_exclude_code(exclude),
     m_match(match_string),
-    m_exclude(exclude_string)
+    m_exclude(exclude_string),
+    m_enabled(true)
 {
 }
 
@@ -121,6 +123,7 @@ void Tee::diagnostics(DCB *dcb)
         dcb_printf(dcb, "\t\tExclude queries that match		%s\n",
                    m_exclude.c_str());
     }
+    dcb_printf(dcb, "\t\tFilter enabled: %s\n", m_enabled ? "yes" : "no");
 }
 
 /**
@@ -159,7 +162,23 @@ json_t* Tee::diagnostics_json() const
         json_object_set_new(rval, "exclude", json_string(m_exclude.c_str()));
     }
 
+    json_object_set_new(rval, "enabled", json_boolean(m_enabled));
+
     return rval;
+}
+
+static bool enable_tee(const MODULECMD_ARG *argv, json_t** output)
+{
+    Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv->argv[0].value.filter));
+    instance->set_enabled(true);
+    return true;
+}
+
+static bool disable_tee(const MODULECMD_ARG *argv, json_t** output)
+{
+    Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv->argv[0].value.filter));
+    instance->set_enabled(false);
+    return true;
 }
 
 MXS_BEGIN_DECLS
@@ -174,6 +193,18 @@ MXS_BEGIN_DECLS
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
+    modulecmd_arg_type_t argv[] =
+    {
+        {
+            MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            "Filter to modify"
+        }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "enable", MODULECMD_TYPE_ACTIVE,
+                               enable_tee, 1, argv, "Enable a tee filter instance");
+    modulecmd_register_command(MXS_MODULE_NAME, "disable", MODULECMD_TYPE_ACTIVE,
+                               disable_tee, 1, argv, "Disable a tee filter instance");
 
     static MXS_MODULE info =
     {

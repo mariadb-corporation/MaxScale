@@ -59,6 +59,13 @@ The `match` and `exclude` parameters were changed to use PCRE2 syntax for the
 regular expressions. The regular expression should be enclosed by slashes
 e.g. `match=/select.*from.*test/`.
 
+A tee filter instance can be disabled with the new `tee disable [FILTER]` and
+`tee enable [FILTER]` module commands. Refer to the
+[module command documentation](../Reference/Module-Commands.md) for more
+details on module commands and the
+[Tee Filter documentation](../Filters/Tee-Filter.md) for details on the tee
+filter specific commands.
+
 ### Dbfwfilter
 
 The `function` type rule will now match a query that does not use a function
