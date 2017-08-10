@@ -64,3 +64,65 @@ SELECT t.f FROM d.t;
 # to do that.
 select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
 with t as (select c from mysqltest.t2 where c < 2) select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
+
+#MXS qc_mysqlembedded and qc_sqlite disagree in the used fields.
+#MXS Both return correctly the folks fields (i.e. the real ones),
+#MXS but disagree on the fields of the CTR tables.
+#
+with recursive
+ancestor_couples(h_id, h_name, h_dob, h_father, h_mother,
+                 w_id, w_name, w_dob, w_father, w_mother)
+as
+(
+  select h.*, w.*
+    from folks h, folks w,  coupled_ancestors a
+      where a.father = h.id AND a.mother = w.id
+  union 
+  select h.*, w.*
+    from folks v, folks h, folks w
+      where v.name = 'Me' and
+            (v.father = h.id AND v.mother= w.id)
+),
+coupled_ancestors (id, name, dob, father, mother)
+as
+(
+  select h_id, h_name, h_dob, h_father, h_mother
+    from ancestor_couples
+  union all
+  select w_id, w_name, w_dob, w_father, w_mother
+    from ancestor_couples
+)
+select h_name, h_dob, w_name, w_dob
+  from ancestor_couples;
+
+#MXS qc_sqlite cannot parse this
+#MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_TOKENIZED
+set statement standard_compliant_cte=0 for select 1;
+
+#MXS qc_sqlite cannot parse this
+#MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_PARTIALLY_PARSED
+create table my_ancestors
+(
+with recursive
+ancestor_ids (id)
+as
+(
+  select father from folks where name = 'Me'
+  union
+  select mother from folks where name = 'Me'
+  union
+  select father from folks, ancestor_ids a  where folks.id = a.id
+  union
+  select mother from folks, ancestor_ids a  where folks.id = a.id
+)
+select p.* from folks as p, ancestor_ids as a where p.id = a.id
+);
+
+#MXS qc_sqlite cannot parse this
+#MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_INVALID
+analyze format=json 
+with recursive src(counter) as 
+(select 1 
+ union 
+ select counter+1 from src where counter<10
+) select * from src;

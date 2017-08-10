@@ -8,3 +8,12 @@ insert into t1 values
   (if(1, 9223372036854775808, 1)),
   (case when 1 then 9223372036854775808 else 1 end),
   (coalesce(9223372036854775808, 1));
+
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: <(QC_USED_IN_WHERE) != <(QC_USED_IN_WHERE) >(QC_USED_IN_WHERE)
+#
+create view v1 as
+  select a from t2 where a < 3
+  union
+  select a from t2 where a > 4;
+
