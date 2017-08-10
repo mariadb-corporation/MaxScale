@@ -3551,7 +3551,7 @@ static void update_field_infos_from_select(QcSqliteInfo* pInfo,
         update_field_infos_from_with(pInfo, &aliases, pSelect->pWith);
     }
 
-    if ((pSelect->op == TK_UNION) && pSelect->pPrior)
+    if (((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior)
     {
         update_field_infos_from_subselect(pInfo, &aliases, pSelect->pPrior, usage, pExclude);
     }
