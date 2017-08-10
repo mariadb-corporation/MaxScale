@@ -93,6 +93,15 @@ version of the real master. This option allows the router to use a custom versio
 By default, the router will identify itself to the slaves using the
 hostname of the real master. This option allows the router to use a custom hostname.
 
+
+### `slave_hostname`
+
+Since MaxScale 2.1.6 the router can optionally identify itself
+to the master using a custom hostname.
+The specified hostname can be seen in the master via
+`SHOW SLAVE HOSTS` command.
+The default is not to send any hostname string during registration.
+
 ### `user`
 
 This is the user name that MariaDB MaxScale uses when it connects to the
@@ -271,7 +280,25 @@ follows.
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server_id=3,user=repl,password=slavepass,master_id=32,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,mariadb10-compatibility=1,send_slave_heartbeat=1,ssl_cert_verification_depth=9,semisync=1,encrypt_binlog=1,encryption_algorithm=aes_ctr,encryption_key_file=/var/binlogs/enc_key.txt
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,
+                   server_id=3,
+                   user=repl,
+                   password=slavepass,
+                   master_id=32,
+                   heartbeat=30,
+                   binlogdir=/var/binlogs,
+                   transaction_safety=1,
+                   master_version=5.6.19-common,
+                   master_hostname=common_server,
+                   master_uuid=xxx-fff-cccc-common,
+                   mariadb10-compatibility=1,
+                   send_slave_heartbeat=1,
+                   ssl_cert_verification_depth=9,
+                   semisync=1,
+                   encrypt_binlog=1,
+                   encryption_algorithm=aes_ctr,
+                   encryption_key_file=/var/binlogs/enc_key.txt,
+                   slave_hostname=maxscale-blr-1
 ```
 
 The minimum set of router options that must be given in the configuration are
