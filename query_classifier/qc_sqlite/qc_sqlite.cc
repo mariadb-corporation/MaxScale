@@ -175,22 +175,7 @@ static bool parse_query(GWBUF* query, uint32_t collect);
 static void parse_query_string(const char* query, int len, bool suppress_logging);
 static bool query_is_parsed(GWBUF* query, uint32_t collect);
 static bool should_exclude(const char* zName, const ExprList* pExclude);
-static void update_field_infos_from_expr(QcSqliteInfo* info,
-                                         QcAliases* pAliases,
-                                         const Expr* pExpr,
-                                         uint32_t usage,
-                                         const ExprList* pExclude);
-static void update_field_infos(QcSqliteInfo* info,
-                               QcAliases* pAliases,
-                               int prev_token,
-                               const Expr* pExpr,
-                               uint32_t usage,
-                               qc_token_position_t pos,
-                               const ExprList* pExclude);
-static void update_function_info(QcSqliteInfo* info,
-                                 const char* name,
-                                 uint32_t usage);
-static void update_names_from_srclist(QcSqliteInfo* info, QcAliases* pAliases, const SrcList* pSrc);
+static const char* get_token_symbol(int token);
 
 // Defined in parse.y
 extern "C"
@@ -765,6 +750,314 @@ public:
         return truth;
     }
 
+    void update_field_infos(QcAliases* pAliases,
+                            int prev_token,
+                            const Expr* pExpr,
+                            uint32_t usage,
+                            qc_token_position_t pos,
+                            const ExprList* pExclude)
+    {
+        const Expr* pLeft = pExpr->pLeft;
+        const Expr* pRight = pExpr->pRight;
+        const char* zToken = pExpr->u.zToken;
+
+        bool ignore_exprlist = false;
+
+        switch (pExpr->op)
+        {
+        case TK_ASTERISK: // select *
+            update_field_infos_from_expr(pAliases, pExpr, usage, pExclude);
+            break;
+
+        case TK_DOT: // select a.b ... select a.b.c
+            update_field_infos_from_expr(pAliases, pExpr, usage, pExclude);
+            break;
+
+        case TK_ID: // select a
+            update_field_infos_from_expr(pAliases, pExpr, usage, pExclude);
+            break;
+
+        case TK_VARIABLE:
+            {
+                if (zToken[0] == '@')
+                {
+                    if (zToken[1] == '@')
+                    {
+                        if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
+                        {
+                            m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+                        }
+                        else
+                        {
+                            if ((strcasecmp(&zToken[2], "identity") == 0) ||
+                                (strcasecmp(&zToken[2], "last_insert_id") == 0))
+                            {
+                                m_type_mask |= QUERY_TYPE_MASTER_READ;
+                            }
+                            else
+                            {
+                                m_type_mask |= QUERY_TYPE_SYSVAR_READ;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
+                        {
+                            m_type_mask |= QUERY_TYPE_USERVAR_WRITE;
+                        }
+                        else
+                        {
+                            m_type_mask |= QUERY_TYPE_USERVAR_READ;
+                        }
+                    }
+                }
+                else if (zToken[0] != '?')
+                {
+                    MXS_WARNING("%s reported as VARIABLE.", zToken);
+                }
+            }
+            break;
+
+        default:
+            MXS_DEBUG("Token %d not handled explicitly.", pExpr->op);
+            // Fallthrough intended.
+        case TK_BETWEEN:
+        case TK_CASE:
+        case TK_EXISTS:
+        case TK_FUNCTION:
+        case TK_IN:
+        case TK_SELECT:
+            switch (pExpr->op)
+            {
+            case TK_EQ:
+                // We don't report "=" if it's not used in a specific context (SELECT, WHERE)
+                // and if it is used in SET. We also exclude it it in a context where a
+                // variable is set.
+                if (((usage != 0) && (usage != QC_USED_IN_SET)) &&
+                    (!pExpr->pLeft || (pExpr->pLeft->op != TK_VARIABLE)))
+                {
+                    update_function_info(get_token_symbol(pExpr->op), usage);
+                }
+                break;
+
+            case TK_GE:
+            case TK_GT:
+            case TK_LE:
+            case TK_LT:
+            case TK_NE:
+
+            case TK_BETWEEN:
+            case TK_BITAND:
+            case TK_BITOR:
+            case TK_CASE:
+            case TK_IN:
+            case TK_ISNULL:
+            case TK_MINUS:
+            case TK_NOTNULL:
+            case TK_PLUS:
+            case TK_SLASH:
+            case TK_STAR:
+                update_function_info(get_token_symbol(pExpr->op), usage);
+                break;
+
+            case TK_REM:
+                if (m_sql_mode == QC_SQL_MODE_ORACLE)
+                {
+                    if ((pLeft && (pLeft->op == TK_ID)) &&
+                        (pRight && (pRight->op == TK_ID)) &&
+                        (strcasecmp(pLeft->u.zToken, "sql") == 0) &&
+                        (strcasecmp(pRight->u.zToken, "rowcount") == 0))
+                    {
+                        char sqlrowcount[13]; // strlen("sql") + strlen("%") + strlen("rowcount") + 1
+                        sprintf(sqlrowcount, "%s%%%s", pLeft->u.zToken, pRight->u.zToken);
+
+                        update_function_info(sqlrowcount, usage);
+
+                        pLeft = NULL;
+                        pRight = NULL;
+                    }
+                    else
+                    {
+                        update_function_info(get_token_symbol(pExpr->op), usage);
+                    }
+                }
+                else
+                {
+                    update_function_info(get_token_symbol(pExpr->op), usage);
+                }
+                break;
+
+            case TK_UMINUS:
+                switch (this_unit.parse_as)
+                {
+                case QC_PARSE_AS_DEFAULT:
+                    update_function_info(get_token_symbol(pExpr->op), usage);
+                    break;
+
+                case QC_PARSE_AS_103:
+                    // In MariaDB 10.3 a unary minus is not considered a function.
+                    break;
+
+                default:
+                    ss_dassert(!true);
+                }
+                break;
+
+            case TK_FUNCTION:
+                if (zToken)
+                {
+                    if (strcasecmp(zToken, "last_insert_id") == 0)
+                    {
+                        m_type_mask |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
+                    }
+                    else if (is_sequence_related_function(zToken))
+                    {
+                        m_type_mask |= QUERY_TYPE_WRITE;
+                        ignore_exprlist = true;
+                    }
+                    else if (!is_builtin_readonly_function(zToken,
+                                                           this_thread.version_major,
+                                                           this_thread.version_minor,
+                                                           this_thread.version_patch,
+                                                           m_sql_mode == QC_SQL_MODE_ORACLE))
+                    {
+                        m_type_mask |= QUERY_TYPE_WRITE;
+                    }
+
+                    // We exclude "row", because we cannot detect all rows the same
+                    // way qc_mysqlembedded does.
+                    if (!ignore_exprlist && (strcasecmp(zToken, "row") != 0))
+                    {
+                        update_function_info(zToken, usage);
+                    }
+                }
+                break;
+
+            default:
+                break;
+            }
+
+            if (pLeft)
+            {
+                update_field_infos(pAliases, pExpr->op, pExpr->pLeft, usage, QC_TOKEN_LEFT, pExclude);
+            }
+
+            if (pRight)
+            {
+                if (usage & QC_USED_IN_SET)
+                {
+                    usage &= ~QC_USED_IN_SET;
+                }
+
+                update_field_infos(pAliases, pExpr->op, pExpr->pRight, usage, QC_TOKEN_RIGHT, pExclude);
+            }
+
+            if (pExpr->x.pList)
+            {
+                switch (pExpr->op)
+                {
+                case TK_BETWEEN:
+                case TK_CASE:
+                case TK_FUNCTION:
+                    if (!ignore_exprlist)
+                    {
+                        update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
+                    }
+                    break;
+
+                case TK_EXISTS:
+                case TK_IN:
+                case TK_SELECT:
+                    if (pExpr->flags & EP_xIsSelect)
+                    {
+                        uint32_t sub_usage = usage;
+
+                        sub_usage &= ~QC_USED_IN_SELECT;
+                        sub_usage |= QC_USED_IN_SUBSELECT;
+                        update_field_infos_from_subselect(pAliases, pExpr->x.pSelect, sub_usage, pExclude);
+                    }
+                    else
+                    {
+                        update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
+                    }
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+    void update_field_infos_from_expr(QcAliases* pAliases,
+                                      const Expr* pExpr,
+                                      uint32_t usage,
+                                      const ExprList* pExclude)
+    {
+        QC_FIELD_INFO item = {};
+
+        if (pExpr->op == TK_ASTERISK)
+        {
+            item.column = (char*)"*";
+        }
+        else if (pExpr->op == TK_ID)
+        {
+            // select a from...
+            item.column = pExpr->u.zToken;
+        }
+        else if (pExpr->op == TK_DOT)
+        {
+            if (pExpr->pLeft->op == TK_ID &&
+                (pExpr->pRight->op == TK_ID || pExpr->pRight->op == TK_ASTERISK))
+            {
+                // select a.b from...
+                item.table = pExpr->pLeft->u.zToken;
+                if (pExpr->pRight->op == TK_ID)
+                {
+                    item.column = pExpr->pRight->u.zToken;
+                }
+                else
+                {
+                    item.column = (char*)"*";
+                }
+            }
+            else if (pExpr->pLeft->op == TK_ID &&
+                     pExpr->pRight->op == TK_DOT &&
+                     pExpr->pRight->pLeft->op == TK_ID &&
+                     (pExpr->pRight->pRight->op == TK_ID || pExpr->pRight->pRight->op == TK_ASTERISK))
+            {
+                // select a.b.c from...
+                item.database = pExpr->pLeft->u.zToken;
+                item.table = pExpr->pRight->pLeft->u.zToken;
+                if (pExpr->pRight->pRight->op == TK_ID)
+                {
+                    item.column = pExpr->pRight->pRight->u.zToken;
+                }
+                else
+                {
+                    item.column = (char*)"*";
+                }
+            }
+        }
+
+        if (item.column)
+        {
+            bool should_update = true;
+
+            if ((pExpr->flags & EP_DblQuoted) == 0)
+            {
+                if ((strcasecmp(item.column, "true") == 0) || (strcasecmp(item.column, "false") == 0))
+                {
+                    should_update = false;
+                }
+            }
+
+            if (should_update)
+            {
+                update_field_info(pAliases, item.database, item.table, item.column, usage, pExclude);
+            }
+        }
+    }
+
     void update_field_infos_from_exprlist(QcAliases* pAliases,
                                           const ExprList* pEList,
                                           uint32_t usage,
@@ -774,7 +1067,7 @@ public:
         {
             ExprList::ExprList_item* pItem = &pEList->a[i];
 
-            update_field_infos(this, pAliases, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
+            update_field_infos(pAliases, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
         }
     }
 
@@ -838,7 +1131,7 @@ public:
         if (pSelect->pWhere)
         {
             m_has_clause = true;
-            update_field_infos(this, &aliases,
+            update_field_infos(&aliases,
                                0, pSelect->pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pSelect->pEList);
         }
 
@@ -854,7 +1147,7 @@ public:
 #if defined(COLLECT_HAVING_AS_WELL)
             // A HAVING clause can only refer to fields that already have been
             // mentioned. Consequently, they need not be collected.
-            update_field_infos(this, aliases, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
+            update_field_infos(aliases, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
 #endif
         }
 
@@ -905,6 +1198,71 @@ public:
             if (pSrc->a[i].pSelect && pSrc->a[i].pSelect->pSrc)
             {
                 update_names_from_srclist(pAliases, pSrc->a[i].pSelect->pSrc);
+            }
+        }
+    }
+
+    void update_function_info(const char* name, uint32_t usage)
+    {
+        ss_dassert(name);
+
+        if (!(m_collect & QC_COLLECT_FUNCTIONS) || (m_collected & QC_COLLECT_FUNCTIONS))
+        {
+            // If function information should not be collected, or if function information
+            // has already been collected, we just return.
+            return;
+        }
+
+        name = map_function_name(m_pFunction_name_mappings, name);
+
+        QC_FUNCTION_INFO item = { (char*)name, usage };
+
+        size_t i;
+        for (i = 0; i < m_function_infos_len; ++i)
+        {
+            QC_FUNCTION_INFO* function_info = m_pFunction_infos + i;
+
+            if (strcasecmp(item.name, function_info->name) == 0)
+            {
+                break;
+            }
+        }
+
+        QC_FUNCTION_INFO* function_infos = NULL;
+
+        if (i == m_function_infos_len) // If true, the function was not present already.
+        {
+            if (m_function_infos_len < m_function_infos_capacity)
+            {
+                function_infos = m_pFunction_infos;
+            }
+            else
+            {
+                size_t capacity = m_function_infos_capacity ? 2 * m_function_infos_capacity : 8;
+                function_infos = (QC_FUNCTION_INFO*)MXS_REALLOC(m_pFunction_infos,
+                                                                capacity * sizeof(QC_FUNCTION_INFO));
+
+                if (function_infos)
+                {
+                    m_pFunction_infos = function_infos;
+                    m_function_infos_capacity = capacity;
+                }
+            }
+        }
+        else
+        {
+            m_pFunction_infos[i].usage |= usage;
+        }
+
+        // If function_infos is NULL, then the function was found and has already been noted.
+        if (function_infos)
+        {
+            ss_dassert(item.name);
+            item.name = MXS_STRDUP(item.name);
+
+            if (item.name)
+            {
+                function_infos[m_function_infos_len++] = item;
             }
         }
     }
@@ -1136,7 +1494,7 @@ public:
 
             if (pWhere)
             {
-                update_field_infos(this, &aliases, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
+                update_field_infos(&aliases, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
             }
         }
 
@@ -1359,14 +1717,14 @@ public:
                 {
                     ExprList::ExprList_item* pItem = &pChanges->a[i];
 
-                    update_field_infos(this, &aliases,
+                    update_field_infos(&aliases,
                                        0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
                 }
             }
 
             if (pWhere)
             {
-                update_field_infos(this, &aliases, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
+                update_field_infos(&aliases, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
             }
         }
 
@@ -3104,149 +3462,12 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
     return i != pExclude->nExpr;
 }
 
-static void update_function_info(QcSqliteInfo* info,
-                                 const char* name,
-                                 uint32_t usage)
-{
-    ss_dassert(name);
-
-    if (!(info->m_collect & QC_COLLECT_FUNCTIONS) || (info->m_collected & QC_COLLECT_FUNCTIONS))
-    {
-        // If function information should not be collected, or if function information
-        // has already been collected, we just return.
-        return;
-    }
-
-    name = map_function_name(info->m_pFunction_name_mappings, name);
-
-    QC_FUNCTION_INFO item = { (char*)name, usage };
-
-    size_t i;
-    for (i = 0; i < info->m_function_infos_len; ++i)
-    {
-        QC_FUNCTION_INFO* function_info = info->m_pFunction_infos + i;
-
-        if (strcasecmp(item.name, function_info->name) == 0)
-        {
-            break;
-        }
-    }
-
-    QC_FUNCTION_INFO* function_infos = NULL;
-
-    if (i == info->m_function_infos_len) // If true, the function was not present already.
-    {
-        if (info->m_function_infos_len < info->m_function_infos_capacity)
-        {
-            function_infos = info->m_pFunction_infos;
-        }
-        else
-        {
-            size_t capacity = info->m_function_infos_capacity ? 2 * info->m_function_infos_capacity : 8;
-            function_infos = (QC_FUNCTION_INFO*)MXS_REALLOC(info->m_pFunction_infos,
-                                                            capacity * sizeof(QC_FUNCTION_INFO));
-
-            if (function_infos)
-            {
-                info->m_pFunction_infos = function_infos;
-                info->m_function_infos_capacity = capacity;
-            }
-        }
-    }
-    else
-    {
-        info->m_pFunction_infos[i].usage |= usage;
-    }
-
-    // If function_infos is NULL, then the function was found and has already been noted.
-    if (function_infos)
-    {
-        ss_dassert(item.name);
-        item.name = MXS_STRDUP(item.name);
-
-        if (item.name)
-        {
-            function_infos[info->m_function_infos_len++] = item;
-        }
-    }
-}
-
 extern void maxscale_update_function_info(const char* name, uint32_t usage)
 {
-    QcSqliteInfo* info = this_thread.pInfo;
+    QcSqliteInfo* pInfo = this_thread.pInfo;
+    ss_dassert(pInfo);
 
-    update_function_info(info, name, usage);
-}
-
-static void update_field_infos_from_expr(QcSqliteInfo* info,
-                                         QcAliases* pAliases,
-                                         const Expr* pExpr,
-                                         uint32_t usage,
-                                         const ExprList* pExclude)
-{
-    QC_FIELD_INFO item = {};
-
-    if (pExpr->op == TK_ASTERISK)
-    {
-        item.column = (char*)"*";
-    }
-    else if (pExpr->op == TK_ID)
-    {
-        // select a from...
-        item.column = pExpr->u.zToken;
-    }
-    else if (pExpr->op == TK_DOT)
-    {
-        if (pExpr->pLeft->op == TK_ID &&
-            (pExpr->pRight->op == TK_ID || pExpr->pRight->op == TK_ASTERISK))
-        {
-            // select a.b from...
-            item.table = pExpr->pLeft->u.zToken;
-            if (pExpr->pRight->op == TK_ID)
-            {
-                item.column = pExpr->pRight->u.zToken;
-            }
-            else
-            {
-                item.column = (char*)"*";
-            }
-        }
-        else if (pExpr->pLeft->op == TK_ID &&
-                 pExpr->pRight->op == TK_DOT &&
-                 pExpr->pRight->pLeft->op == TK_ID &&
-                 (pExpr->pRight->pRight->op == TK_ID || pExpr->pRight->pRight->op == TK_ASTERISK))
-        {
-            // select a.b.c from...
-            item.database = pExpr->pLeft->u.zToken;
-            item.table = pExpr->pRight->pLeft->u.zToken;
-            if (pExpr->pRight->pRight->op == TK_ID)
-            {
-                item.column = pExpr->pRight->pRight->u.zToken;
-            }
-            else
-            {
-                item.column = (char*)"*";
-            }
-        }
-    }
-
-    if (item.column)
-    {
-        bool should_update = true;
-
-        if ((pExpr->flags & EP_DblQuoted) == 0)
-        {
-            if ((strcasecmp(item.column, "true") == 0) || (strcasecmp(item.column, "false") == 0))
-            {
-                should_update = false;
-            }
-        }
-
-        if (should_update)
-        {
-            info->update_field_info(pAliases, item.database, item.table, item.column, usage, pExclude);
-        }
-    }
+    pInfo->update_function_info(name, usage);
 }
 
 static const char* get_token_symbol(int token)
@@ -3314,245 +3535,6 @@ static const char* get_token_symbol(int token)
     default:
         ss_dassert(!true);
         return "";
-    }
-}
-
-static void update_field_infos(QcSqliteInfo* info,
-                               QcAliases* pAliases,
-                               int prev_token,
-                               const Expr* pExpr,
-                               uint32_t usage,
-                               qc_token_position_t pos,
-                               const ExprList* pExclude)
-{
-    const Expr* pLeft = pExpr->pLeft;
-    const Expr* pRight = pExpr->pRight;
-    const char* zToken = pExpr->u.zToken;
-
-    bool ignore_exprlist = false;
-
-    switch (pExpr->op)
-    {
-    case TK_ASTERISK: // select *
-        update_field_infos_from_expr(info, pAliases, pExpr, usage, pExclude);
-        break;
-
-    case TK_DOT: // select a.b ... select a.b.c
-        update_field_infos_from_expr(info, pAliases, pExpr, usage, pExclude);
-        break;
-
-    case TK_ID: // select a
-        update_field_infos_from_expr(info, pAliases, pExpr, usage, pExclude);
-        break;
-
-    case TK_VARIABLE:
-        {
-            if (zToken[0] == '@')
-            {
-                if (zToken[1] == '@')
-                {
-                    if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
-                    {
-                        info->m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
-                    }
-                    else
-                    {
-                        if ((strcasecmp(&zToken[2], "identity") == 0) ||
-                            (strcasecmp(&zToken[2], "last_insert_id") == 0))
-                        {
-                            info->m_type_mask |= QUERY_TYPE_MASTER_READ;
-                        }
-                        else
-                        {
-                            info->m_type_mask |= QUERY_TYPE_SYSVAR_READ;
-                        }
-                    }
-                }
-                else
-                {
-                    if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
-                    {
-                        info->m_type_mask |= QUERY_TYPE_USERVAR_WRITE;
-                    }
-                    else
-                    {
-                        info->m_type_mask |= QUERY_TYPE_USERVAR_READ;
-                    }
-                }
-            }
-            else if (zToken[0] != '?')
-            {
-                MXS_WARNING("%s reported as VARIABLE.", zToken);
-            }
-        }
-        break;
-
-    default:
-        MXS_DEBUG("Token %d not handled explicitly.", pExpr->op);
-    // Fallthrough intended.
-    case TK_BETWEEN:
-    case TK_CASE:
-    case TK_EXISTS:
-    case TK_FUNCTION:
-    case TK_IN:
-    case TK_SELECT:
-        switch (pExpr->op)
-        {
-        case TK_EQ:
-            // We don't report "=" if it's not used in a specific context (SELECT, WHERE)
-            // and if it is used in SET. We also exclude it it in a context where a
-            // variable is set.
-            if (((usage != 0) && (usage != QC_USED_IN_SET)) &&
-                (!pExpr->pLeft || (pExpr->pLeft->op != TK_VARIABLE)))
-            {
-                update_function_info(info, get_token_symbol(pExpr->op), usage);
-            }
-            break;
-
-        case TK_GE:
-        case TK_GT:
-        case TK_LE:
-        case TK_LT:
-        case TK_NE:
-
-        case TK_BETWEEN:
-        case TK_BITAND:
-        case TK_BITOR:
-        case TK_CASE:
-        case TK_IN:
-        case TK_ISNULL:
-        case TK_MINUS:
-        case TK_NOTNULL:
-        case TK_PLUS:
-        case TK_SLASH:
-        case TK_STAR:
-            update_function_info(info, get_token_symbol(pExpr->op), usage);
-            break;
-
-        case TK_REM:
-            if (info->m_sql_mode == QC_SQL_MODE_ORACLE)
-            {
-                if ((pLeft && (pLeft->op == TK_ID)) &&
-                    (pRight && (pRight->op == TK_ID)) &&
-                    (strcasecmp(pLeft->u.zToken, "sql") == 0) &&
-                    (strcasecmp(pRight->u.zToken, "rowcount") == 0))
-                {
-                    char sqlrowcount[13]; // strlen("sql") + strlen("%") + strlen("rowcount") + 1
-                    sprintf(sqlrowcount, "%s%%%s", pLeft->u.zToken, pRight->u.zToken);
-
-                    update_function_info(info, sqlrowcount, usage);
-
-                    pLeft = NULL;
-                    pRight = NULL;
-                }
-                else
-                {
-                    update_function_info(info, get_token_symbol(pExpr->op), usage);
-                }
-            }
-            else
-            {
-                update_function_info(info, get_token_symbol(pExpr->op), usage);
-            }
-            break;
-
-        case TK_UMINUS:
-            switch (this_unit.parse_as)
-            {
-            case QC_PARSE_AS_DEFAULT:
-                update_function_info(info, get_token_symbol(pExpr->op), usage);
-                break;
-
-            case QC_PARSE_AS_103:
-                // In MariaDB 10.3 a unary minus is not considered a function.
-                break;
-
-            default:
-                ss_dassert(!true);
-            }
-            break;
-
-        case TK_FUNCTION:
-            if (zToken)
-            {
-                if (strcasecmp(zToken, "last_insert_id") == 0)
-                {
-                    info->m_type_mask |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
-                }
-                else if (info->is_sequence_related_function(zToken))
-                {
-                    info->m_type_mask |= QUERY_TYPE_WRITE;
-                    ignore_exprlist = true;
-                }
-                else if (!is_builtin_readonly_function(zToken,
-                                                       this_thread.version_major,
-                                                       this_thread.version_minor,
-                                                       this_thread.version_patch,
-                                                       info->m_sql_mode == QC_SQL_MODE_ORACLE))
-                {
-                    info->m_type_mask |= QUERY_TYPE_WRITE;
-                }
-
-                // We exclude "row", because we cannot detect all rows the same
-                // way qc_mysqlembedded does.
-                if (!ignore_exprlist && (strcasecmp(zToken, "row") != 0))
-                {
-                    update_function_info(info, zToken, usage);
-                }
-            }
-            break;
-
-        default:
-            break;
-        }
-
-        if (pLeft)
-        {
-            update_field_infos(info, pAliases, pExpr->op, pExpr->pLeft, usage, QC_TOKEN_LEFT, pExclude);
-        }
-
-        if (pRight)
-        {
-            if (usage & QC_USED_IN_SET)
-            {
-                usage &= ~QC_USED_IN_SET;
-            }
-
-            update_field_infos(info, pAliases, pExpr->op, pExpr->pRight, usage, QC_TOKEN_RIGHT, pExclude);
-        }
-
-        if (pExpr->x.pList)
-        {
-            switch (pExpr->op)
-            {
-            case TK_BETWEEN:
-            case TK_CASE:
-            case TK_FUNCTION:
-                if (!ignore_exprlist)
-                {
-                    info->update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
-                }
-                break;
-
-            case TK_EXISTS:
-            case TK_IN:
-            case TK_SELECT:
-                if (pExpr->flags & EP_xIsSelect)
-                {
-                    uint32_t sub_usage = usage;
-
-                    sub_usage &= ~QC_USED_IN_SELECT;
-                    sub_usage |= QC_USED_IN_SUBSELECT;
-                    info->update_field_infos_from_subselect(pAliases, pExpr->x.pSelect, sub_usage, pExclude);
-                }
-                else
-                {
-                    info->update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
-                }
-                break;
-            }
-        }
-        break;
     }
 }
 
