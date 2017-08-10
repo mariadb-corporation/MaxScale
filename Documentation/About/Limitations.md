@@ -130,6 +130,14 @@ The avrorouter does not support the following data types and conversions:
 The avrorouter does not do any crash recovery. This means that the avro files
 need to be truncated to valid block lengths before starting the avrorouter.
 
+#### Binlog Checksums
+
+The avrorouter does not support binlog checksums. They must must not be used in
+any of the binlogs that the avrorouter will process.
+
+Follow [MXS-1341](https://jira.mariadb.org/browse/MXS-1341) for progress
+on this issue.
+
 ### Limitations in the connection router (readconnroute)
 
 If Master changes (ie. new Master promotion) during current connection, the
