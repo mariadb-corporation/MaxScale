@@ -10,155 +10,173 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <maxscale/users.h>
-#include <maxscale/alloc.h>
-#include <maxscale/atomic.h>
-#include <maxscale/log_manager.h>
 
-/**
- * @file users.c User table maintenance routines
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 23/06/2013   Mark Riddoch            Initial implementation
- * 08/01/2014   Massimiliano Pinto      In user_alloc now we can pass function pointers for
- *                                      copying/freeing keys and values independently via
- *                                      hashtable_memory_fns() routine
- *
- * @endverbatim
- */
+#include <maxscale/cppdefs.hh>
+
+#include <new>
+#include <tr1/unordered_map>
+#include <string>
+
+#include <maxscale/users.h>
+#include <maxscale/authenticator.h>
+
+class Users
+{
+    Users(const Users&);
+    Users& operator=(const Users&);
+
+public:
+    typedef std::tr1::unordered_map<std::string, std::string> UserMap;
+
+    Users()
+    {
+    }
+
+    ~Users()
+    {
+    }
+
+    bool add(std::string user, std::string password)
+    {
+        return m_data.insert(std::make_pair(user, password)).second;
+    }
+
+    bool remove(std::string user)
+    {
+        bool rval = false;
+
+        if (get(user))
+        {
+            m_data.erase(user);
+            rval = true;
+        }
+
+        return rval;
+    }
+
+    bool get(std::string user, std::string* output = NULL) const
+    {
+        UserMap::const_iterator it = m_data.find(user);
+        bool rval = false;
+
+        if (it != m_data.end())
+        {
+            rval = true;
+
+            if (output)
+            {
+                *output = it->second;
+            }
+        }
+
+        return rval;
+    }
+
+    json_t* diagnostic_json() const
+    {
+        json_t* rval = json_array();
+
+        for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
+        {
+            json_array_append_new(rval, json_string(it->first.c_str()));
+        }
+
+        return rval;
+    }
+
+    void diagnostic(DCB* dcb) const
+    {
+        if (m_data.size())
+        {
+
+            dcb_printf(dcb, "User names: ");
+            const char *sep = "";
+
+            for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
+            {
+                dcb_printf(dcb, "%s%s", sep, it->first.c_str());
+                sep = ", ";
+            }
+            dcb_printf(dcb, "\n");
+        }
+        else
+        {
+            dcb_printf(dcb, "Users table is empty\n");
+        }
+    }
+
+private:
+    UserMap m_data;
+};
 
 USERS *users_alloc()
 {
-    USERS *rval;
-
-    if ((rval = (USERS*)MXS_CALLOC(1, sizeof(USERS))) == NULL)
-    {
-        return NULL;
-    }
-
-    if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE,
-                                      hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
-    {
-        MXS_ERROR("[%s:%d]: Memory allocation failed.", __FUNCTION__, __LINE__);
-        MXS_FREE(rval);
-        return NULL;
-    }
-
-    hashtable_memory_fns(rval->data,
-                         hashtable_item_strdup, hashtable_item_strdup,
-                         hashtable_item_free, hashtable_item_free);
-
-    return rval;
+    Users* rval = new (std::nothrow) Users();
+    MXS_OOM_IFNULL(rval);
+    return reinterpret_cast<USERS*>(rval);
 }
 
 void users_free(USERS *users)
 {
-    if (users)
+    Users* u = reinterpret_cast<Users*>(users);
+    delete u;
+}
+
+bool users_add(USERS *users, const char *user, const char *password)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    return u->add(user, password);
+}
+
+bool users_delete(USERS *users, const char *user)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    return u->remove(user);
+}
+
+bool users_find(USERS* users, const char* user)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    return u->get(user);
+}
+
+bool users_auth(USERS* users, const char* user, const char* password)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    bool rval = false;
+    std::string str;
+
+    if (u->get(user, &str))
     {
-        hashtable_free(users->data);
-        MXS_FREE(users);
+        rval = strcmp(password, str.c_str()) == 0;
     }
+
+    return rval;
 }
 
-int users_add(USERS *users, const char *user, const char *auth)
+void users_diagnostic(DCB* dcb, USERS* users)
 {
-    int add;
-
-    atomic_add(&users->stats.n_adds, 1);
-    add = hashtable_add(users->data, (char*)user, (char*)auth);
-    atomic_add(&users->stats.n_entries, add);
-    return add;
+    Users* u = reinterpret_cast<Users*>(users);
+    u->diagnostic(dcb);
 }
 
-int users_delete(USERS *users, const char *user)
+json_t* users_diagnostic_json(USERS* users)
 {
-    int del;
-
-    atomic_add(&users->stats.n_deletes, 1);
-    del = hashtable_delete(users->data, (char*)user);
-    atomic_add(&users->stats.n_entries, -del);
-    return del;
+    Users* u = reinterpret_cast<Users*>(users);
+    return u->diagnostic_json();
 }
 
-const char *users_fetch(USERS *users, const char *user)
+void users_default_diagnostic(DCB* dcb, SERV_LISTENER* port)
 {
-    atomic_add(&users->stats.n_fetches, 1);
-    // TODO: Returning data from the hashtable is not threadsafe.
-    return (const char*)hashtable_fetch(users->data, (char*)user);
-}
-
-int users_update(USERS *users, const char *user, const char *auth)
-{
-    if (hashtable_delete(users->data, (char*)user) == 0)
+    if (port->users)
     {
-        return 0;
-    }
-    return hashtable_add(users->data, (char*)user, (char*)auth);
-}
-
-
-void usersPrint(const USERS *users)
-{
-    printf("Users table data\n");
-    hashtable_stats(users->data);
-}
-
-void users_default_diagnostic(DCB *dcb, SERV_LISTENER *port)
-{
-    if (port->users && port->users->data)
-    {
-        HASHITERATOR *iter = hashtable_iterator(port->users->data);
-
-        if (iter)
-        {
-            dcb_printf(dcb, "User names: ");
-            const char *sep = "";
-            void *user;
-
-            while ((user = hashtable_next(iter)) != NULL)
-            {
-                dcb_printf(dcb, "%s%s", sep, (char *)user);
-                sep = ", ";
-            }
-
-            dcb_printf(dcb, "\n");
-            hashtable_iterator_free(iter);
-        }
-    }
-    else
-    {
-        dcb_printf(dcb, "Users table is empty\n");
+        users_diagnostic(dcb, port->users);
     }
 }
 
 json_t* users_default_diagnostic_json(const SERV_LISTENER *port)
 {
-    json_t* rval = json_array();
-
-    if (port->users && port->users->data)
-    {
-        HASHITERATOR *iter = hashtable_iterator(port->users->data);
-
-        if (iter)
-        {
-            char* user;
-
-            while ((user = (char*)hashtable_next(iter)))
-            {
-                json_array_append_new(rval, json_string(user));
-            }
-
-            hashtable_iterator_free(iter);
-        }
-    }
-
-    return rval;
+    return port->users ? users_diagnostic_json(port->users) : json_array();
 }
 
 int users_default_loadusers(SERV_LISTENER *port)

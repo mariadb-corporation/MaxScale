@@ -13,8 +13,7 @@
  */
 
 /**
- * @file users.h The functions to manipulate the table of users maintained
- * for each service
+ * @file users.h The functions to manipulate a set of administrative users
  */
 
 #include <maxscale/cdefs.h>
@@ -26,81 +25,68 @@
 
 MXS_BEGIN_DECLS
 
-#define USERS_HASHTABLE_DEFAULT_SIZE 52
-
 /**
- * The users table statistics structure
- */
-typedef struct
-{
-    int n_entries;              /**< The number of entries */
-    int n_adds;                 /**< The number of inserts */
-    int n_deletes;              /**< The number of deletes */
-    int n_fetches;              /**< The number of fetchs */
-} USERS_STATS;
-
-/**
- * A generic user table containing the username and authentication data
+ * An opaque users object
  */
 typedef struct users
 {
-    HASHTABLE *data;                        /**< The hashtable containing the actual data */
-    USERS_STATS stats;                      /**< The statistics for the users table */
 } USERS;
-
 
 /**
  * Allocate a new users table
  *
- * @return The users table
+ * @return The users table or NULL if memory allocation failed
  */
-USERS *users_alloc();
+USERS* users_alloc();
 
 /**
- * Remove the users table
+ * Free a users table
  *
- * @param users The users table to remove
+ * @param users Users table to free
  */
-void users_free(USERS *);
+void users_free(USERS* users);
 
 /**
  * Add a new user to the user table. The user name must be unique
  *
- * @param users         The users table
- * @param user          The user name
- * @param auth          The authentication data
- * @return      The number of users added to the table
+ * @param users    The users table
+ * @param user     The user name
+ * @param password The password for the user
+ *
+ * @return True if user was added
  */
-int users_add(USERS *, const char *, const char *);
+bool users_add(USERS *users, const char *user, const char *password);
 
 /**
  * Delete a user from the user table.
  *
  * @param users         The users table
  * @param user          The user name
- * @return      The number of users deleted from the table
+ *
+ * @return True if user was deleted
  */
-int users_delete(USERS *, const char *);
+bool users_delete(USERS *users, const char *user);
 
 /**
- * Fetch the authentication data for a particular user from the users table
+ * Authenticate a user
  *
- * @param users         The users table
- * @param user          The user name
- * @return      The authentication data or NULL on error
+ * @param users The users table
+ * @param user  The user name
+ * @param pw    The password sent by the user
+ *
+ * @return True if authentication data matched the stored value
  */
-const char *users_fetch(USERS *, const char *);
+bool users_auth(USERS* users, const char* user, const char* password);
 
 /**
- * Change the password data associated with a user in the users
- * table.
+ * Check if a user exists
  *
- * @param users         The users table
- * @param user          The user name
- * @param auth          The new authentication details
- * @return Number of users updated
+ * @param users The users table
+ * @param user  User to find
+ *
+ * @return True if user exists
  */
-int users_update(USERS *, const char *, const char *);
+bool users_find(USERS* users, const char* user);
 
 /**
  * @brief Default user loading function
@@ -128,10 +114,20 @@ void users_default_diagnostic(DCB *dcb, SERV_LISTENER *port);
 json_t* users_default_diagnostic_json(const SERV_LISTENER *port);
 
 /**
- * Print details of the users storage mechanism
+ * Print users to a DCB
  *
- * @param users         The users table
+ * @param dcb   DCB where users are printed
+ * @param users Users to print
  */
-void usersPrint(const USERS *);
+void users_diagnostic(DCB* dcb, USERS* users);
+
+/**
+ * Convert users to JSON
+ *
+ * @param users Users to convert
+ *
+ * @return JSON version of users
+ */
+json_t* users_diagnostic_json(USERS* users);
 
 MXS_END_DECLS
