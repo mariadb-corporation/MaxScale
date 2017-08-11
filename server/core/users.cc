@@ -88,8 +88,6 @@ public:
     {
         if (m_data.size())
         {
-
-            dcb_printf(dcb, "User names: ");
             const char *sep = "";
 
             for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
@@ -99,10 +97,11 @@ public:
             }
             dcb_printf(dcb, "\n");
         }
-        else
-        {
-            dcb_printf(dcb, "Users table is empty\n");
-        }
+    }
+
+    bool empty() const
+    {
+        return m_data.size() > 0;
     }
 
 private:
@@ -170,7 +169,17 @@ void users_default_diagnostic(DCB* dcb, SERV_LISTENER* port)
 {
     if (port->users)
     {
-        users_diagnostic(dcb, port->users);
+        Users* u = reinterpret_cast<Users*>(port->users);
+
+        if (u->empty())
+        {
+            dcb_printf(dcb, "Users table is empty\n");
+        }
+        else
+        {
+            dcb_printf(dcb, "User names: ");
+            users_diagnostic(dcb, port->users);
+        }
     }
 }
 

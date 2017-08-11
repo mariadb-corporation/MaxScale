@@ -579,17 +579,25 @@ admin_verify_inet_user(const char *username, const char *password)
  */
 void dcb_PrintAdminUsers(DCB *dcb)
 {
-    dcb_printf(dcb, "Enabled Linux accounts (secure):\n");
+    dcb_printf(dcb, "Enabled Linux accounts (secure)    : ");
 
     if (linux_users)
     {
         users_diagnostic(dcb, linux_users);
     }
+    else
+    {
+        dcb_printf(dcb, "\n");
+    }
 
-    dcb_printf(dcb, "Created network accounts (insecure):\n");
+    dcb_printf(dcb, "Created network accounts (insecure): ");
 
     if (inet_users)
     {
         users_diagnostic(dcb, inet_users);
+    }
+    else
+    {
+        dcb_printf(dcb, "\n");
     }
 }
