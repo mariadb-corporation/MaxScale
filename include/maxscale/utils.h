@@ -123,4 +123,35 @@ bool mxs_mkdir_all(const char *path, int mask);
 
 long get_processor_count();
 
+/**
+ * Store a 4 byte integer
+ *
+ * @param ptr   Pointer where value is stored
+ * @param value Value to store
+ *
+ * @return The next byte after the stored value
+ */
+static inline uint8_t* mxs_set_byte4(uint8_t* ptr, uint32_t value)
+{
+    *ptr++ = value;
+    *ptr++ = (value >> 8);
+    *ptr++ = (value >> 16);
+    *ptr++ = (value >> 24);
+    return ptr;
+}
+
+/**
+ * Read a 4 byte integer
+ *
+ * @param ptr   Pointer where value is stored
+ * @param value Value to store
+ *
+ * @return The next byte after the stored value
+ */
+static inline uint32_t mxs_get_byte4(const uint8_t* ptr)
+{
+    return ((uint32_t) ptr[0]) | ((uint32_t) ptr[1] << 8) |
+        ((uint32_t) ptr[2] << 16) | ((uint32_t) ptr[3] << 24);
+}
+
 MXS_END_DECLS

@@ -1734,7 +1734,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 }
 
 static const char journal_name[]  = "monitor.dat";
-static const char path_template[] = "%s/%s/";
+static const char journal_template[] = "%s/%s/%s";
 
 /**
  * @brief Remove .tmp suffix and rename file
@@ -1742,16 +1742,11 @@ static const char path_template[] = "%s/%s/";
  * @param src File to rename
  * @return True if file was successfully renamed
  */
-static bool rename_tmp_file(const char *src)
+static bool rename_tmp_file(MXS_MONITOR* monitor, const char *src)
 {
-    char dest[strlen(src) + 1];
-    strcpy(dest, src);
-
-    char *tail = strrchr(dest, '.');
-    ss_dassert(tail && strcmp(tail, ".tmp") == 0);
-    *tail = '\0';
-
     bool rval = true;
+    char dest[PATH_MAX + 1];
+    snprintf(dest, sizeof(dest), journal_template, get_datadir(), monitor->name, journal_name);
 
     if (rename(src, dest) == -1)
     {
@@ -1772,19 +1767,29 @@ static bool rename_tmp_file(const char *src)
  */
 static FILE* open_tmp_file(MXS_MONITOR *monitor, char *path)
 {
-    int nbytes = snprintf(path, PATH_MAX, path_template, get_datadir(), monitor->name);
-
+    int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name, "");
+    int max_bytes = PATH_MAX - (int)sizeof(journal_name);
     FILE *rval = NULL;
 
-    if ((size_t)nbytes < PATH_MAX - sizeof(journal_name) && mxs_mkdir_all(path, 0744))
+    if (nbytes < max_bytes && mxs_mkdir_all(path, 0744))
     {
         strcat(path, journal_name);
-        strcat(path, ".tmp");
+        strcat(path, "XXXXXX");
+        int fd = mkstemp(path);
 
-        if ((rval = fopen(path, "wb")) == NULL)
+        if (fd == -1)
         {
             MXS_ERROR("Failed to open file '%s': %d, %s", path, errno, mxs_strerror(errno));
         }
+        else
+        {
+            rval = fdopen(fd, "w");
+        }
+    }
+    else
+    {
+        MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
+                  "length of %d bytes", nbytes, max_bytes);
     }
 
     return rval;
@@ -1798,16 +1803,13 @@ static FILE* open_tmp_file(MXS_MONITOR *monitor, char *path)
  *             PATH_MAX bytes long
  * @param size Size of @c data
  */
-static void store_data(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master, char *data, uint32_t size)
+static void store_data(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master, uint8_t *data, uint32_t size)
 {
-    char *ptr = data;
+    uint8_t* ptr = data;
 
     /** Store the data length */
     ss_dassert(sizeof(size) == MMB_LEN_BYTES);
-    *ptr++ = size;
-    *ptr++ = (size >> 8);
-    *ptr++ = (size >> 16);
-    *ptr++ = (size >> 24);
+    ptr = mxs_set_byte4(ptr, size);
 
     /** Then the schema version */
     *ptr++ = MMB_SCHEMA_VERSION;
@@ -1816,23 +1818,22 @@ static void store_data(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master, char *
     for (MXS_MONITOR_SERVERS* db = monitor->databases; db; db = db->next)
     {
         *ptr++ = (char)SVT_SERVER; // Value type
-        strcpy(ptr, db->server->unique_name); // Name of the server
-        ptr += strlen(db->server->unique_name) + 1;
+        memcpy(ptr, db->server->unique_name, strlen(db->server->unique_name)); // Name of the server
+        ptr += strlen(db->server->unique_name);
+        *ptr++ = '\0'; // Null-terminate the string
 
         uint32_t status = db->server->status; // Server status as 4 byte integer
         ss_dassert(sizeof(status) == MMB_LEN_SERVER_STATUS);
-        *ptr++ = status;
-        *ptr++ = (status >> 8);
-        *ptr++ = (status >> 16);
-        *ptr++ = (status >> 24);
+        ptr = mxs_set_byte4(ptr, status);
     }
 
     /** Store the current root master if we have one */
     if (master)
     {
         *ptr++ = (char)SVT_MASTER;
-        strcpy(ptr, master->server->unique_name);
-        ptr += strlen(master->server->unique_name) + 1;
+        memcpy(ptr, master->server->unique_name, strlen(master->server->unique_name));
+        ptr += strlen(master->server->unique_name);
+        *ptr++ = '\0'; // Null-terminate the string
     }
 
     /** Calculate the CRC32 for the complete payload minus the CRC32 bytes */
@@ -1840,19 +1841,14 @@ static void store_data(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master, char *
     crc = crc32(crc, (uint8_t*)data + MMB_LEN_BYTES, size - MMB_LEN_CRC32);
     ss_dassert(sizeof(crc) == MMB_LEN_CRC32);
 
-    *ptr++ = crc;
-    *ptr++ = (crc >> 8);
-    *ptr++ = (crc >> 16);
-    *ptr++ = (crc >> 24);
-
+    ptr = mxs_set_byte4(ptr, crc);
     ss_dassert(ptr - data == size + MMB_LEN_BYTES);
 }
 
 static int get_data_file_path(MXS_MONITOR *monitor, char *path)
 {
-    int rv = snprintf(path, PATH_MAX, path_template, get_datadir(), monitor->name);
-    strcat(path, journal_name);
-    return rv + sizeof(journal_name) - 1;
+    int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name, journal_name);
+    return rv;
 }
 
 /**
@@ -1873,6 +1869,11 @@ static FILE* open_data_file(MXS_MONITOR *monitor, char *path)
         {
             MXS_ERROR("Failed to open journal file: %d, %s", errno, mxs_strerror(errno));
         }
+    }
+    else
+    {
+        MXS_ERROR("Path is too long: %d characters exceeds the maximum path "
+                  "length of %d bytes", nbytes, PATH_MAX);
     }
 
     return rval;
@@ -1908,7 +1909,7 @@ static const char* process_server(MXS_MONITOR *monitor, const char *data, const 
             ss_dassert(sptr);
             sptr++;
 
-            uint32_t state = sptr[0] | (sptr[1] << 8) | (sptr[2] << 16) | (sptr[3] << 24);
+            uint32_t state = mxs_get_byte4(sptr);
             db->mon_prev_status = state;
             db->server->status_pending = state;
             server_set_status_nolock(db->server, state);
@@ -1950,7 +1951,7 @@ static const char* process_master(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS **ma
  */
 static bool check_crc32(const uint8_t *data, uint32_t size, const uint8_t *crc_ptr)
 {
-    uint32_t crc = crc_ptr[0] | (crc_ptr[1] << 8) | (crc_ptr[2] << 16) | (crc_ptr[3] << 24);
+    uint32_t crc = mxs_get_byte4(crc_ptr);
     uint32_t calculated_crc = crc32(0L, NULL, 0);
     calculated_crc = crc32(calculated_crc, data, size);
     return calculated_crc == crc;
@@ -2019,7 +2020,7 @@ void store_server_journal(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master)
 
     /** 4 bytes for file length, 1 byte for schema version and 4 bytes for CRC32 */
     uint32_t buffer_size = size + MMB_LEN_BYTES;
-    char *data = (char*)MXS_MALLOC(buffer_size);
+    uint8_t *data = (uint8_t*)MXS_MALLOC(buffer_size);
     char path[PATH_MAX + 1];
 
     if (data)
@@ -2034,7 +2035,7 @@ void store_server_journal(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master)
             /** Write the data to a temp file and rename it to the final name */
             if (fwrite(data, 1, buffer_size, file) == buffer_size && fflush(file) == 0)
             {
-                if (!rename_tmp_file(path))
+                if (!rename_tmp_file(monitor, path))
                 {
                     unlink(path);
                 }
