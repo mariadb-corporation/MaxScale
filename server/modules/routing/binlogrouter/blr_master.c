@@ -2142,18 +2142,22 @@ bool blr_send_event(blr_thread_role_t role,
  *
  * @param router Router instance
  * @param ptr Pointer to the start of the packet
- * @param len Length of the packet
+ * @param len Length of the packet payload
  */
 static void blr_terminate_master_replication(ROUTER_INSTANCE* router,
                                              uint8_t* ptr,
                                              int len)
 {
+    // Point to errno: begin + 4 bytes header + 1 byte flag
     unsigned long mysql_errno = extract_field(ptr + 5, 16);
-    int msg_len = len - 7 - 6; // msg len is decreased by 7 and 6
+    // Error message starts at begin + 4 header + 1 flag + 2 bytes errno + 6 bytes status msg
+    int err_msg_offset = 4 + 1 + 2 + 6;
+    // Error message size is: len - (err_msg_offset - 4 bytes header)
+    int msg_len = len - (err_msg_offset - 4);
     char *msg_err = (char *)MXS_MALLOC(msg_len + 1);
     MXS_ABORT_IF_NULL(msg_err);
 
-    memcpy(msg_err, (char *)ptr + 7 + 6, msg_len);
+    memcpy(msg_err, (char *)ptr + err_msg_offset, msg_len);
     *(msg_err + msg_len) = '\0';
 
     spinlock_acquire(&router->lock);
