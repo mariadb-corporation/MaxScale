@@ -202,28 +202,27 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return Authentication status
  * @note Authentication status codes are defined in cdc.h
  */
-static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username, uint8_t *auth_data,
-                          unsigned int *flags)
+static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username,
+                          uint8_t *auth_data, unsigned int *flags)
 {
+    int rval = CDC_STATE_AUTH_FAILED;
+
     if (dcb->listener->users)
     {
-        const char *user_password = users_fetch(dcb->listener->users, username);
+        /* compute SHA1 of auth_data */
+        uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
+        char hex_step1[2 * SHA_DIGEST_LENGTH + 1] = "";
 
-        if (user_password)
+        gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
+        gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
+
+        if (users_auth(dcb->listener->users, username, hex_step1))
         {
-            /* compute SHA1 of auth_data */
-            uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
-            char hex_step1[2 * SHA_DIGEST_LENGTH + 1] = "";
-
-            gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
-            gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
-
-            return memcmp(user_password, hex_step1, SHA_DIGEST_LENGTH) == 0 ?
-                   CDC_STATE_AUTH_OK : CDC_STATE_AUTH_FAILED;
+            rval = CDC_STATE_AUTH_OK;
         }
     }
 
-    return CDC_STATE_AUTH_FAILED;
+    return rval;
 }
 
 /**

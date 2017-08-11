@@ -38,7 +38,6 @@ static const char *admin_add_user(USERS** pusers, const char* fname,
                                   const char* uname, const char* password);
 static const char* admin_remove_user(USERS *users, const char* fname,
                                      const char *uname, const char *passwd);
-static bool admin_search_user(USERS *users, const char *uname);
 
 
 
@@ -89,11 +88,12 @@ static const char *admin_add_user(USERS** pusers, const char* fname,
         }
         fclose(fp);
     }
-    if (users_fetch(*pusers, (char*)uname) != NULL) // TODO: Make users const correct.
+
+    if (!users_add(*pusers, uname, password ? password : ""))
     {
         return ADMIN_ERR_DUPLICATE;
     }
-    users_add(*pusers, (char*)uname, password ? (char*)password : ""); // TODO: Make users const correct.
+
     if ((fp = fopen(path, "a")) == NULL)
     {
         MXS_ERROR("Unable to append to password file %s.", path);
@@ -130,7 +130,7 @@ static const char* admin_remove_user(USERS *users, const char* fname,
         return ADMIN_ERR_DELROOT;
     }
 
-    if (!admin_search_user(users, uname))
+    if (!users_find(users, uname))
     {
         MXS_ERROR("Couldn't find user %s. Removing user failed.", uname);
         return ADMIN_ERR_USERNOTFOUND;
@@ -147,7 +147,7 @@ static const char* admin_remove_user(USERS *users, const char* fname,
     }
 
     /** Remove user from in-memory structure */
-    users_delete(users, (char*)uname); // TODO: Make users const correct.
+    users_delete(users, uname);
 
     /**
      * Open passwd file and remove user from the file.
@@ -273,45 +273,6 @@ static const char* admin_remove_user(USERS *users, const char* fname,
     return ADMIN_SUCCESS;
 }
 
-/**
- * Check for existance of the user
- *
- * @param uname The user name to test
- * @return      True if the user exists
- */
-static bool admin_search_user(USERS *users, const char *uname)
-{
-    return (users_fetch(users, (char*)uname) != NULL); // TODO: Make users const correct.
-}
-
-/**
- */
-void dcb_print_users(DCB *dcb, const char* heading, USERS *users)
-{
-    dcb_printf(dcb, "%s", heading);
-
-    if (users)
-    {
-        HASHITERATOR *iter = hashtable_iterator(users->data);
-
-        if (iter)
-        {
-            const char *sep = "";
-            const char *user;
-
-            while ((user = (const char*)hashtable_next(iter)) != NULL)
-            {
-                dcb_printf(dcb, "%s%s", sep, user);
-                sep = ", ";
-            }
-
-            hashtable_iterator_free(iter);
-        }
-    }
-
-    dcb_printf(dcb, "%s", "\n");
-}
-
 static json_t* admin_user_json_data(const char* host, const char* user, enum user_type user_type)
 {
     ss_dassert(user_type != USER_TYPE_ALL);
@@ -330,15 +291,16 @@ static json_t* admin_user_json_data(const char* host, const char* user, enum use
 
 static void user_types_to_json(USERS* users, json_t* arr, const char* host, enum user_type type)
 {
-    const char* user;
-    HASHITERATOR *iter = hashtable_iterator(users->data);
+    json_t* json = users_diagnostic_json(users);
+    size_t index;
+    json_t* value;
 
-    while ((user = (const char*)hashtable_next(iter)))
+    json_array_foreach(json, index, value)
     {
-        json_array_append_new(arr, admin_user_json_data(host, user, type));
+        json_array_append_new(arr, admin_user_json_data(host, json_string_value(value), type));
     }
 
-    hashtable_iterator_free(iter);
+    json_decref(json);
 }
 
 static std::string path_from_type(enum user_type type)
@@ -507,7 +469,7 @@ bool admin_linux_account_enabled(const char *uname)
     }
     else if (linux_users)
     {
-        rv = admin_search_user(linux_users, uname);
+        rv = users_find(linux_users, uname);
     }
 
     return rv;
@@ -573,7 +535,7 @@ bool admin_inet_user_exists(const char *uname)
 
     if (inet_users)
     {
-        rv = admin_search_user(inet_users, uname);
+        rv = users_find(inet_users, uname);
     }
 
     return rv;
@@ -594,18 +556,9 @@ admin_verify_inet_user(const char *username, const char *password)
 
     if (inet_users)
     {
-        const char* pw = users_fetch(inet_users, (char*)username); // TODO: Make users const-correct.
-
-        if (pw)
-        {
-            char cpassword[MXS_CRYPT_SIZE];
-            mxs_crypt(password, ADMIN_SALT, cpassword);
-
-            if (strcmp(pw, cpassword) == 0)
-            {
-                rv = true;
-            }
-        }
+        char cpassword[MXS_CRYPT_SIZE];
+        mxs_crypt(password, ADMIN_SALT, cpassword);
+        rv = users_auth(inet_users, username, cpassword);
     }
     else
     {
@@ -626,6 +579,17 @@ admin_verify_inet_user(const char *username, const char *password)
  */
 void dcb_PrintAdminUsers(DCB *dcb)
 {
-    dcb_print_users(dcb, "Enabled Linux accounts (secure)    : ", linux_users);
-    dcb_print_users(dcb, "Created network accounts (insecure): ", inet_users);
+    dcb_printf(dcb, "Enabled Linux accounts (secure):\n");
+
+    if (linux_users)
+    {
+        users_diagnostic(dcb, linux_users);
+    }
+
+    dcb_printf(dcb, "Created network accounts (insecure):\n");
+
+    if (inet_users)
+    {
+        users_diagnostic(dcb, inet_users);
+    }
 }
