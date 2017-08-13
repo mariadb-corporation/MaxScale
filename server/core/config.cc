@@ -3150,8 +3150,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         else
         {
             MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
-                       "using default value of %d milliseconds.",
-                       CN_JOURNAL_MAX_AGE, obj->object, DEFAULT_JOURNAL_MAX_AGE);
+                       "using default value of %d seconds.",
+                       obj->object, CN_JOURNAL_MAX_AGE, DEFAULT_JOURNAL_MAX_AGE);
         }
 
         char *connect_timeout = config_get_value(obj->parameters, CN_BACKEND_CONNECT_TIMEOUT);
