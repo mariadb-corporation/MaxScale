@@ -55,6 +55,7 @@ void test_routing(TestConnections& test)
 
 
     // Test reads inside transactions are routed to master
+    strcpy(buf, "-1");
     test.try_query(test.conn_rwsplit, "BEGIN");
     test.add_result(find_field(test.conn_rwsplit, "EXECUTE ps1", "@@server_id", buf),
                     "Execute should succeed");
@@ -63,6 +64,7 @@ void test_routing(TestConnections& test)
     test.try_query(test.conn_rwsplit, "COMMIT");
 
     // Test reads inside read-only transactions are routed slaves
+    strcpy(buf, "-1");
     test.try_query(test.conn_rwsplit, "START TRANSACTION READ ONLY");
     test.add_result(find_field(test.conn_rwsplit, "EXECUTE ps1", "@@server_id", buf),
                     "Execute should succeed");
@@ -71,10 +73,12 @@ void test_routing(TestConnections& test)
     test.try_query(test.conn_rwsplit, "COMMIT");
 
     // Test prepared statements that modify data
+    strcpy(buf, "-1");
     test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1 (id INT)");
     test.try_query(test.conn_rwsplit, "PREPARE ps2 FROM 'INSERT INTO test.t1 VALUES (?)'");
     test.try_query(test.conn_rwsplit, "SET @a = 1");
     test.try_query(test.conn_rwsplit, "EXECUTE ps2 USING @a");
+    test.repl->sync_slaves();
     test.add_result(find_field(test.conn_rwsplit, "SELECT id FROM test.t1", "id", buf),
                     "Read should succeed");
     res = atoi(buf);
