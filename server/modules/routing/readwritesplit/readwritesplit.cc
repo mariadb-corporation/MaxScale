@@ -391,6 +391,7 @@ static bool handle_error_new_connection(RWSplit *inst,
     SRWBackend backend = get_backend_from_dcb(myrses, backend_dcb);
 
     MXS_SESSION* ses = backend_dcb->session;
+    bool route_stored = false;
     CHK_SESSION(ses);
 
     if (backend->is_waiting_result())
@@ -427,17 +428,23 @@ static bool handle_error_new_connection(RWSplit *inst,
 
             if (myrses->expected_responses == 0)
             {
-                /**
-                 * The response from this server was the last one, try to
-                 * route any stored queries
-                 */
-                route_stored_query(myrses);
+                /** The response from this server was the last one, try to
+                 * route all queued queries */
+                route_stored = true;
             }
         }
     }
 
-    /** Close the current connection */
+    /** Close the current connection. This needs to be done before routing any
+     * of the stored queries. If we route a stored query before the connection
+     * is closed, it's possible that the routing logic will pick the failed
+     * server as the target. */
     backend->close();
+
+    if (route_stored)
+    {
+        route_stored_query(myrses);
+    }
 
     int max_nslaves = rses_get_max_slavecount(myrses);
     bool succp;
@@ -1194,7 +1201,7 @@ static void clientReply(MXS_ROUTER *instance,
         for (SRWBackendList::iterator it = rses->backends.begin();
              it != rses->backends.end(); it++)
         {
-            ss_dassert((*it)->get_reply_state() == REPLY_STATE_DONE);
+            ss_dassert((*it)->get_reply_state() == REPLY_STATE_DONE || (*it)->is_closed());
         }
 
         queue_routed = rses->query_queue != NULL;
