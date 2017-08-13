@@ -415,7 +415,7 @@ static bool handle_error_new_connection(RWSplit *inst,
             gwbuf_free(stored);
             myrses->expected_responses--;
 
-            if (backend->session_command_count())
+            if (backend->session_command_count() == 0)
             {
                 /**
                  * The backend was executing a command that requires a reply.
