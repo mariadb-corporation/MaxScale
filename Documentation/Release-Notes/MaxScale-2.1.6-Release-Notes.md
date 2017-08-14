@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.1.6 Release Notes
+# MariaDB MaxScale 2.1.6 Release Notes -- 2017-08-14
 
 Release 2.1.6 is a GA release.
 
@@ -23,6 +23,7 @@ report at [Jira](https://jira.mariadb.org).
 
 * [MXS-1352](https://jira.mariadb.org/browse/MXS-1352) Not all query failures in monitors are reported
 * [MXS-1351](https://jira.mariadb.org/browse/MXS-1351) Partially authenticated connections are put into the connection pool
+* (MXS-1343)[https://jira.mariadb.org/browse/MXS-1343] MaxScale's binlogrouter does not send hostname to its master
 * [MXS-1338](https://jira.mariadb.org/browse/MXS-1338) Buffer objects are bound to indiviudual buffers
 
 ## New Features
