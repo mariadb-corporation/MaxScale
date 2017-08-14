@@ -616,28 +616,55 @@ blr_make_registration(ROUTER_INSTANCE *router)
 {
     GWBUF *buf;
     unsigned char *data;
-    int len = 18;
+    int len = 18;    // Min size of COM_REGISTER_SLAVE payload
     int port = 3306;
+    int hostname_len = 0;
+
+    // Send router->set_slave_hostname
+    if (router->set_slave_hostname && router->set_slave_hostname[0])
+    {
+        hostname_len = strlen(router->set_slave_hostname);
+    }
+
+    // Add hostname len
+    len += hostname_len;
 
     if ((buf = gwbuf_alloc(len + MYSQL_HEADER_LEN)) == NULL)
     {
         return NULL;
     }
+
     data = GWBUF_DATA(buf);
     encode_value(&data[0], len, 24); // Payload length
     data[3] = 0;                     // Sequence ID
     data[4] = COM_REGISTER_SLAVE;    // Command
     encode_value(&data[5], router->serverid, 32);   // Slave Server ID
-    data[9] = 0;                     // Slave hostname length
-    data[10] = 0;                    // Slave username length
-    data[11] = 0;                    // Slave password length
+
+    // Point to hostname len offset
+    data += 9;
+
+    *data++ = hostname_len;               // Slave hostname length
+
+    // Copy hostname
+    if (hostname_len)
+    {
+        memcpy(data, router->set_slave_hostname, hostname_len);
+    }
+
+    // Point to user
+    data += hostname_len;
+    // Set empty user
+    *data++ = 0;           // Slave username length
+    // Set empty password
+    *data++ = 0;           // Slave password length
+    // Add port
     if (router->service->ports)
     {
         port = router->service->ports->port;
     }
-    encode_value(&data[12], port, 16);  // Slave master port
-    encode_value(&data[14], 0, 32);         // Replication rank
-    encode_value(&data[18], router->masterid, 32);  // Master server-id
+    encode_value(&data[0], port, 16);               // Slave master port, 2 bytes
+    encode_value(&data[2], 0, 32);                  // Replication rank, 4 bytes
+    encode_value(&data[6], router->masterid, 32);   // Master server-id, 4 bytes
 
     // This is hack to get the result set processing in order for binlogrouter
     MySQLProtocol *proto = (MySQLProtocol*)router->master->protocol;
@@ -1891,10 +1918,15 @@ static void blr_log_identity(ROUTER_INSTANCE *router)
 
     /* Seen by the master */
     MXS_NOTICE("%s: identity seen by the master: "
-               "server_id: %d, uuid: %s",
+               "Server_id: %d, Slave_UUID: %s, Host: %s",
                router->service->name,
                router->serverid,
-               (router->uuid == NULL ? "not available" : router->uuid));
+               router->uuid == NULL ?
+               "not available" :
+               router->uuid,
+               (router->set_slave_hostname && router->set_slave_hostname[0]) ?
+               router->set_slave_hostname :
+               "not set");
 
     /* Seen by the slaves */
 

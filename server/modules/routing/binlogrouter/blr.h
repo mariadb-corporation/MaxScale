@@ -731,6 +731,7 @@ typedef struct router_instance
     uint32_t          mariadb10_gtid_domain;/*< MariaDB 10 GTID Domain ID */
     sqlite3           *gtid_maps;           /*< MariaDB 10 GTID storage */
     enum binlog_storage_type   storage_type;/*< Enables hierachical binlog file storage */
+    char              *set_slave_hostname;  /*< Send custom Hostname to Master */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 

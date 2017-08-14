@@ -21,6 +21,35 @@ collect columns, functions and tables used in the `SELECT` defining the
 Consequently, the database firewall will **not** block `WITH` statements
 where the `SELECT` of the `WITH` clause refers to forbidden columns.
 
+## Query Classification
+
+Follow the [MXS-1350](https://jira.mariadb.org/browse/MXS-1350) Jira issue
+to track the progress on this limitation.
+
+XA transactions are not detected as transactions by MaxScale. This means
+that all XA commands will be treated as unknown commands and will be
+treated as operations that potentially modify the database (in the case of
+readwritesplit, the statements are routed to the master).
+
+MaxScale **will not** track the XA transaction state which means that any
+SELECT queries done inside an XA transaction can be routed to servers that
+are not part of the XA transaction.
+
+This limitation can be avoided on the client side by disabling autocommit
+before any XA transactions are done. The following example shows how a
+simple XA transaction is done via MaxScale by disabling autocommit for the
+duration of the XA transaction.
+
+```
+SET autocommit=0;
+XA START 'MyXA';
+INSERT INTO test.t1 VALUES(1);
+XA END 'MyXA';
+XA PREPARE 'MyXA';
+XA COMMIT 'MyXA';
+SET autocommit=1;
+```
+
 ## Prepared Statements
 
 For its proper functioning, MaxScale needs in general to be aware of the
@@ -112,6 +141,14 @@ The avrorouter does not support the following data types and conversions:
 The avrorouter does not do any crash recovery. This means that the avro files
 need to be truncated to valid block lengths before starting the avrorouter.
 
+#### Binlog Checksums
+
+The avrorouter does not support binlog checksums. They must must not be used in
+any of the binlogs that the avrorouter will process.
+
+Follow [MXS-1341](https://jira.mariadb.org/browse/MXS-1341) for progress
+on this issue.
+
 ### Limitations in the connection router (readconnroute)
 
 If Master changes (ie. new Master promotion) during current connection, the
@@ -163,12 +200,6 @@ this option for better performance.
 
 For more information, read the
 [ReadWriteSplit](../Routers/ReadWriteSplit.md) router documentation.
-
-#### Parsing limitations
-
-Galera Cluster variables, such as `@@wsrep_node_name`, are not resolved by the
-embedded MariaDB parser. This usually means that the query will be routed to the
-master.
 
 #### Limitations in client session handling
 
