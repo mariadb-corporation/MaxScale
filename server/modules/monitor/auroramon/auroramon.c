@@ -217,7 +217,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
-    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
         auroramon_free(handle);

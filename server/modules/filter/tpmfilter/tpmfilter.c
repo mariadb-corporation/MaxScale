@@ -268,7 +268,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
          * Launch a thread that checks the named pipe.
          */
         THREAD thread;
-        if (!error && thread_start(&thread, checkNamedPipe, (void*)my_instance) == NULL)
+        if (!error && thread_start(&thread, checkNamedPipe, (void*)my_instance, 0) == NULL)
         {
             MXS_ERROR("Couldn't create a thread to check the named pipe: %s", strerror(errno));
             error = true;

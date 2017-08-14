@@ -115,7 +115,7 @@ test2()
     acquire_time = 0;
     spinlock_init(&lck);
     spinlock_acquire(&lck);
-    thread_start(&handle, test2_helper, (void *)&lck);
+    thread_start(&handle, test2_helper, (void *)&lck, 0);
     nanosleep(&sleeptime, NULL);
     spinlock_release(&lck);
     thread_wait(handle);
@@ -222,7 +222,7 @@ test3()
     {
         threadrun[i] = 0;
         tnum[i] = i;
-        thread_start(&handle[i], test3_helper, &tnum[i]);
+        thread_start(&handle[i], test3_helper, &tnum[i], 0);
     }
     for (i = 0; i < THREADS; i++)
     {

@@ -82,7 +82,7 @@ int run_test(void(*func)(void*))
 
     for (size_t i = 0; i < NTHR; i++)
     {
-        if (thread_start(&threads[i], func, (void*)(i + 1)) == NULL)
+        if (thread_start(&threads[i], func, (void*)(i + 1), 0) == NULL)
         {
             ss_dassert(false);
         }

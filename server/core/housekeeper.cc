@@ -56,7 +56,7 @@ bool hkinit()
 {
     bool inited = false;
 
-    if (thread_start(&hk_thr_handle, hkthread, NULL) != NULL)
+    if (thread_start(&hk_thr_handle, hkthread, NULL, 0) != NULL)
     {
         inited = true;
     }

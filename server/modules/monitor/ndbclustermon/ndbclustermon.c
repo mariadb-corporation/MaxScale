@@ -135,7 +135,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         return NULL;
     }
 
-    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
         MXS_FREE(handle->script);

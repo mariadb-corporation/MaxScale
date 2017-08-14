@@ -29,11 +29,44 @@ MXS_BEGIN_DECLS
  * Thread type and thread identifier function macros
  */
 #include <pthread.h>
-#define THREAD         pthread_t
-#define thread_self()  pthread_self()
 
-extern THREAD *thread_start(THREAD *thd, void (*entry)(void *), void *arg);
+typedef pthread_t THREAD;
+
+/**
+ * Obtain a handle to the calling thread
+ *
+ * @return The thread handle of the calling thread.
+ */
+static inline THREAD thread_self()
+{
+    return pthread_self();
+}
+
+/**
+ * Start a secondary thread
+ *
+ * @param thd         Pointer to the THREAD object
+ * @param entry       The entry point to call
+ * @param arg         The argument to pass the thread entry point
+ * @param stack_size  The stack size of the thread. If 0, the default
+ *                    size will be used.
+ *
+ * @return            The thread handle or NULL if an error occurred
+ */
+extern THREAD *thread_start(THREAD *thd, void (*entry)(void *), void *arg, size_t stack_size);
+
+/**
+ * Wait for a running thread to complete.
+ *
+ * @param thd   The thread handle
+ */
 extern void thread_wait(THREAD thd);
+
+/**
+ * Put the calling thread to sleep for a number of milliseconds
+ *
+ * @param ms  Number of milliseconds to sleep
+ */
 extern void thread_millisleep(int ms);
 
 MXS_END_DECLS

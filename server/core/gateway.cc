@@ -2004,7 +2004,7 @@ int main(int argc, char **argv)
      */
     log_flush_timeout_ms = 1000;
 
-    if (thread_start(&log_flush_thr, log_flush_cb, (void *) &log_flush_timeout_ms) == NULL)
+    if (thread_start(&log_flush_thr, log_flush_cb, (void *) &log_flush_timeout_ms, 0) == NULL)
     {
         const char* logerr = "Failed to start log flushing thread.";
         print_log_n_stderr(true, true, logerr, logerr, 0);

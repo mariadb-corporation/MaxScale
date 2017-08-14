@@ -847,7 +847,7 @@ bool Worker::start()
 {
     m_started = true;
 
-    if (!thread_start(&m_thread, &Worker::thread_main, this))
+    if (!thread_start(&m_thread, &Worker::thread_main, this, 0))
     {
         m_started = false;
     }

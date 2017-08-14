@@ -282,7 +282,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         MXS_FREE(handle);
         handle = NULL;
     }
-    else if (thread_start(&handle->thread, monitorMain, handle) == NULL)
+    else if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
         hashtable_free(handle->server_info);

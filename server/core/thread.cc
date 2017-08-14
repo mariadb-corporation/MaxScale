@@ -10,58 +10,58 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
 #include <maxscale/thread.h>
+#include <maxscale/log_manager.h>
 
-/**
- * @file thread.c  - Implementation of thread related operations
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 25/06/13     Mark Riddoch    Initial implementation
- *
- * @endverbatim
- */
-
-
-/**
- * Start a polling thread
- *
- * @param thd       Pointer to the THREAD object
- * @param entry     The entry point to call
- * @param arg       The argument to pass the thread entry point
- * @return          The thread handle or NULL if an error occurred
- */
-THREAD *thread_start(THREAD *thd, void (*entry)(void *), void *arg)
+THREAD *thread_start(THREAD *thd, void (*entry)(void *), void *arg, size_t stack_size)
 {
-    if (pthread_create(thd, NULL, (void *(*)(void *))entry, arg) != 0)
+    THREAD* rv = NULL;
+
+    pthread_attr_t attr;
+    int error = pthread_attr_init(&attr);
+
+    if (error == 0)
     {
-        return NULL;
+        if (stack_size != 0)
+        {
+            error = pthread_attr_setstacksize(&attr, stack_size);
+        }
+
+        if (error == 0)
+        {
+            error = pthread_create(thd, &attr, (void *(*)(void *))entry, arg);
+
+            if (error == 0)
+            {
+                rv = thd;
+            }
+            else
+            {
+                MXS_ERROR("Could not start thread: %s", mxs_strerror(error));
+            }
+        }
+        else
+        {
+            MXS_ERROR("Could not set thread stack size to %lu: %s", stack_size, mxs_strerror(error));
+        }
     }
-    return thd;
+    else
+    {
+        MXS_ERROR("Could not initialize thread attributes: %s", mxs_strerror(error));
+    }
+
+    return rv;
 }
 
-/**
- * Wait for a running threads to complete.
- *
- * @param thd   The thread handle
- */
-void
-thread_wait(THREAD thd)
+void thread_wait(THREAD thd)
 {
     void *rval;
 
     pthread_join((pthread_t)thd, &rval);
 }
 
-/**
- * Put the thread to sleep for a number of milliseconds
- *
- * @param ms    Number of milliseconds to sleep
- */
-void
-thread_millisleep(int ms)
+void thread_millisleep(int ms)
 {
     struct timespec req;
     req.tv_sec = ms / 1000;
