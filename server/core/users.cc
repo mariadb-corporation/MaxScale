@@ -20,6 +20,8 @@
 #include <maxscale/users.h>
 #include <maxscale/authenticator.h>
 
+namespace
+{
 class Users
 {
     Users(const Users&);
@@ -107,6 +109,8 @@ public:
 private:
     UserMap m_data;
 };
+
+}
 
 USERS *users_alloc()
 {
