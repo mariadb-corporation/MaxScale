@@ -89,6 +89,36 @@ bool users_auth(USERS* users, const char* user, const char* password);
 bool users_find(USERS* users, const char* user);
 
 /**
+ * Check if  user is an administrator
+ *
+ * @param users The users table
+ * @param user  User to check
+ *
+ * @return True if user is an administrator
+ */
+bool users_is_admin(USERS* users, const char* user);
+
+/**
+ * Promote a user to an administrator
+ *
+ * @param users The users table
+ * @param user  User to promote
+ *
+ * @return True if user was found and promoted
+ */
+bool users_promote(USERS* users, const char* user);
+
+/**
+ * Demote an administrative user to a normal user
+ *
+ * @param users The users table
+ * @param user  User to demote
+ *
+ * @return True if user was found and demoted
+ */
+bool users_demote(USERS* users, const char* user);
+
+/**
  * @brief Default user loading function
  *
  * A generic key-value user table is allocated for the service.

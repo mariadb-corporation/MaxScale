@@ -22,13 +22,33 @@
 
 namespace
 {
+
+enum permission_type
+{
+    PERM_READ,
+    PERM_WRITE
+};
+
+struct UserInfo
+{
+    UserInfo(std::string pw = "", permission_type perm = PERM_WRITE): // TODO: Change default to PERM_READ
+        password(pw),
+        permissions(perm)
+    {
+    }
+
+    std::string     password;
+    permission_type permissions;
+};
+
+
 class Users
 {
     Users(const Users&);
     Users& operator=(const Users&);
 
 public:
-    typedef std::tr1::unordered_map<std::string, std::string> UserMap;
+    typedef std::tr1::unordered_map<std::string, UserInfo> UserMap;
 
     Users()
     {
@@ -40,7 +60,7 @@ public:
 
     bool add(std::string user, std::string password)
     {
-        return m_data.insert(std::make_pair(user, password)).second;
+        return m_data.insert(std::make_pair(user, UserInfo(password))).second;
     }
 
     bool remove(std::string user)
@@ -56,7 +76,7 @@ public:
         return rval;
     }
 
-    bool get(std::string user, std::string* output = NULL) const
+    bool get(std::string user, UserInfo* output = NULL) const
     {
         UserMap::const_iterator it = m_data.find(user);
         bool rval = false;
@@ -69,6 +89,33 @@ public:
             {
                 *output = it->second;
             }
+        }
+
+        return rval;
+    }
+
+    bool check_permissions(std::string user, permission_type perm) const
+    {
+        UserMap::const_iterator it = m_data.find(user);
+        bool rval = false;
+
+        if (it != m_data.end() && it->second.permissions == perm)
+        {
+            rval = true;
+        }
+
+        return rval;
+    }
+
+    bool set_permissions(std::string user, permission_type perm)
+    {
+        UserMap::iterator it = m_data.find(user);
+        bool rval = false;
+
+        if (it != m_data.end())
+        {
+            rval = true;
+            it->second.permissions = perm;
         }
 
         return rval;
@@ -147,14 +194,32 @@ bool users_auth(USERS* users, const char* user, const char* password)
 {
     Users* u = reinterpret_cast<Users*>(users);
     bool rval = false;
-    std::string str;
+    UserInfo info;
 
-    if (u->get(user, &str))
+    if (u->get(user, &info))
     {
-        rval = strcmp(password, str.c_str()) == 0;
+        rval = strcmp(password, info.password.c_str()) == 0;
     }
 
     return rval;
+}
+
+bool users_is_admin(USERS* users, const char* user)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    return u->check_permissions(user, PERM_WRITE);
+}
+
+bool users_promote(USERS* users, const char* user)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    return u->set_permissions(user, PERM_WRITE);
+}
+
+bool users_demote(USERS* users, const char* user)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    return u->set_permissions(user, PERM_READ);
 }
 
 void users_diagnostic(DCB* dcb, USERS* users)
