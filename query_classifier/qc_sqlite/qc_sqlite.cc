@@ -1084,10 +1084,17 @@ public:
         }
     }
 
+    enum compound_approach_t
+    {
+        ANALYZE_COMPOUND_SELECTS,
+        IGNORE_COMPOUND_SELECTS
+    };
+
     void update_field_infos_from_select(QcAliases& aliases,
                                         const Select* pSelect,
                                         uint32_t usage,
-                                        const ExprList* pExclude)
+                                        const ExprList* pExclude,
+                                        compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
     {
         if (pSelect->pSrc)
         {
@@ -1156,20 +1163,31 @@ public:
             update_field_infos_from_with(&aliases, pSelect->pWith);
         }
 
-        if (((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior)
+        if (compound_approach == ANALYZE_COMPOUND_SELECTS)
         {
-            update_field_infos_from_subselect(&aliases, pSelect->pPrior, usage, pExclude);
+            if (((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior)
+            {
+                const Select* pPrior = pSelect->pPrior;
+
+                while (pPrior)
+                {
+                    update_field_infos_from_subselect(&aliases, pPrior, usage, pExclude,
+                                                      IGNORE_COMPOUND_SELECTS);
+                    pPrior = pPrior->pPrior;
+                }
+            }
         }
     }
 
     void update_field_infos_from_subselect(QcAliases* pAliases,
                                            const Select* pSelect,
                                            uint32_t usage,
-                                           const ExprList* pExclude)
+                                           const ExprList* pExclude,
+                                           compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
     {
         QcAliases aliases(*pAliases);
 
-        update_field_infos_from_select(aliases, pSelect, usage, pExclude);
+        update_field_infos_from_select(aliases, pSelect, usage, pExclude, compound_approach);
     }
 
     void update_field_infos_from_with(QcAliases* pAliases, const With* pWith)
