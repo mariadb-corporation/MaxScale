@@ -80,6 +80,7 @@ extern const char CN_ARG_MAX[];
 extern const char CN_ARG_MIN[];
 extern const char CN_ADMIN_AUTH[];
 extern const char CN_ADMIN_ENABLED[];
+extern const char CN_ADMIN_LOG_AUTH_FAILURES[];
 extern const char CN_ADMIN_HOST[];
 extern const char CN_ADMIN_PORT[];
 extern const char CN_ADMIN_SSL_KEY[];
@@ -212,6 +213,7 @@ typedef struct
     uint16_t      admin_port;                          /**< Admin interface port */
     bool          admin_auth;                          /**< Admin interface authentication */
     bool          admin_enabled;                       /**< Admin interface is enabled */
+    bool          admin_log_auth_failures;             /**< Log admin interface authentication failures */
     char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
     char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
     char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */

@@ -59,6 +59,7 @@ const char CN_ARG_MAX[]                       = "arg_max";
 const char CN_ARG_MIN[]                       = "arg_min";
 const char CN_ADMIN_AUTH[]                    = "admin_auth";
 const char CN_ADMIN_ENABLED[]                 = "admin_enabled";
+const char CN_ADMIN_LOG_AUTH_FAILURES[]       = "admin_log_auth_failures";
 const char CN_ADMIN_HOST[]                    = "admin_host";
 const char CN_ADMIN_PORT[]                    = "admin_port";
 const char CN_ADMIN_SSL_KEY[]                 = "admin_ssl_key";
@@ -1564,6 +1565,10 @@ handle_global_item(const char *name, const char *value)
     {
         gateway.admin_enabled = config_truth_value(value);
     }
+    else if (strcmp(name, CN_ADMIN_LOG_AUTH_FAILURES) == 0)
+    {
+        gateway.admin_log_auth_failures = config_truth_value(value);
+    }
     else
     {
         for (i = 0; lognames[i].name; i++)
@@ -1748,6 +1753,7 @@ global_defaults()
     gateway.skip_permission_checks = false;
     gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
     gateway.admin_auth = true;
+    gateway.admin_log_auth_failures = true;
     gateway.admin_enabled = true;
     strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
     gateway.admin_ssl_key[0] = '\0';
@@ -3866,6 +3872,7 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
     json_object_set_new(param, CN_ADMIN_AUTH, json_boolean(cnf->admin_auth));
     json_object_set_new(param, CN_ADMIN_ENABLED, json_boolean(cnf->admin_enabled));
+    json_object_set_new(param, CN_ADMIN_LOG_AUTH_FAILURES, json_boolean(cnf->admin_log_auth_failures));
     json_object_set_new(param, CN_ADMIN_HOST, json_string(cnf->admin_host));
     json_object_set_new(param, CN_ADMIN_PORT, json_integer(cnf->admin_port));
     json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));

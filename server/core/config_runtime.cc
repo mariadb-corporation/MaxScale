@@ -691,6 +691,23 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_AUTH, value);
         }
     }
+    else if (key == CN_ADMIN_LOG_AUTH_FAILURES)
+    {
+        int boolval = config_truth_value(value);
+
+        if (boolval != -1)
+        {
+            MXS_NOTICE("Updated '%s' from '%s' to '%s'", CN_ADMIN_LOG_AUTH_FAILURES,
+                       cnf.admin_log_auth_failures ? "true" : "false",
+                       boolval ? "true" : "false");
+            cnf.admin_log_auth_failures = boolval;
+            rval = true;
+        }
+        else
+        {
+            runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_LOG_AUTH_FAILURES, value);
+        }
+    }
     else
     {
         runtime_error("Unknown global parameter: %s=%s", name, value);
@@ -1815,7 +1832,8 @@ bool validate_maxscale_json(json_t* json)
         rval = is_count_or_null(param, CN_AUTH_CONNECT_TIMEOUT) &&
                is_count_or_null(param, CN_AUTH_READ_TIMEOUT) &&
                is_count_or_null(param, CN_AUTH_WRITE_TIMEOUT) &&
-               is_bool_or_null(param, CN_ADMIN_AUTH);
+               is_bool_or_null(param, CN_ADMIN_AUTH) &&
+               is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES);
     }
 
     return rval;

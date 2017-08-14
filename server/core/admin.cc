@@ -171,8 +171,11 @@ bool do_auth(MHD_Connection *connection, const char* url)
 
         if (!user || !pw || !admin_verify_inet_user(user, pw))
         {
-            MXS_WARNING("Authentication failed for '%s', %s. Request: %s", user ? user : "",
-                        pw ? "using password" : "no password", url);
+            if (config_get_global_options()->admin_log_auth_failures)
+            {
+                MXS_WARNING("Authentication failed for '%s', %s. Request: %s", user ? user : "",
+                            pw ? "using password" : "no password", url);
+            }
             rval = false;
             static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
             MHD_Response *resp =
