@@ -572,6 +572,18 @@ admin_verify_inet_user(const char *username, const char *password)
     return rv;
 }
 
+bool admin_is_admin_user(const char* username)
+{
+    bool rval = true; // The default `admin:mariadb` user has all permissions
+
+    if (inet_users)
+    {
+        rval = users_is_admin(inet_users, username);
+    }
+
+    return rval;
+}
+
 /**
  * Print Linux and and inet users
  *

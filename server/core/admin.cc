@@ -79,6 +79,17 @@ static bool modifies_data(MHD_Connection *connection, string method)
            request_data_length(connection);
 }
 
+static void send_auth_error(MHD_Connection *connection)
+{
+    static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
+    MHD_Response *resp =
+        MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
+                                        MHD_RESPMEM_PERSISTENT);
+
+    MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
+    MHD_destroy_response(resp);
+}
+
 int Client::process(string url, string method, const char* upload_data, size_t *upload_size)
 {
     json_t* json = NULL;
@@ -160,7 +171,7 @@ void close_client(void *cls,
     delete client;
 }
 
-bool do_auth(MHD_Connection *connection, const char* url)
+bool do_auth(MHD_Connection* connection, const char* url, const char* method)
 {
     bool rval = true;
 
@@ -173,17 +184,23 @@ bool do_auth(MHD_Connection *connection, const char* url)
         {
             if (config_get_global_options()->admin_log_auth_failures)
             {
-                MXS_WARNING("Authentication failed for '%s', %s. Request: %s", user ? user : "",
-                            pw ? "using password" : "no password", url);
+                MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
+                            user ? user : "", pw ? "using password" : "no password",
+                            method, url);
             }
+            send_auth_error(connection);
             rval = false;
-            static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
-            MHD_Response *resp =
-                MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
-                                                MHD_RESPMEM_PERSISTENT);
-
-            MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
-            MHD_destroy_response(resp);
+        }
+        else if (!admin_is_admin_user(user) && modifies_data(connection, method))
+        {
+            if (config_get_global_options()->admin_log_auth_failures)
+            {
+                MXS_WARNING("Authorization failed for '%s', request requires "
+                            "administrative privileges. Request: %s %s",
+                            user, method, url);
+            }
+            send_auth_error(connection);
+            rval = false;
         }
         else
         {
@@ -207,7 +224,7 @@ int handle_client(void *cls,
                   void **con_cls)
 
 {
-    if (!do_auth(connection, url))
+    if (!do_auth(connection, url, method))
     {
         return MHD_YES;
     }
