@@ -1293,6 +1293,7 @@ int main(int argc, char **argv)
     int      ini_rval;
     intptr_t thread_id;
     int      n_threads; /*< number of epoll listener threads */
+    size_t   thread_stack_size;
     int      n_services;
     int      eno = 0;   /*< local variable for errno */
     int      opt;
@@ -2032,12 +2033,13 @@ int main(int argc, char **argv)
     /*<
      * Start workers. We start from 1, worker 0 will be running in the main thread.
      */
+    thread_stack_size = config_thread_stack_size();
     for (i = 1; i < n_threads; i++)
     {
         worker = Worker::get(i);
         ss_dassert(worker);
 
-        if (!worker->start())
+        if (!worker->start(thread_stack_size))
         {
             const char* logerr = "Failed to start worker thread.";
             print_log_n_stderr(true, true, logerr, logerr, 0);
@@ -2061,7 +2063,10 @@ int main(int argc, char **argv)
         }
     }
 
-    MXS_NOTICE("MaxScale started with %d server threads.", config_threadcount());
+
+    MXS_NOTICE("MaxScale started with %d worker threads, each with a stack size of %lu bytes.",
+               n_threads, thread_stack_size);
+
     /**
      * Successful start, notify the parent process that it can exit.
      */

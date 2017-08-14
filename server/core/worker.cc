@@ -843,11 +843,11 @@ void Worker::run()
     MXS_NOTICE("Worker %d has shut down.", m_id);
 }
 
-bool Worker::start()
+bool Worker::start(size_t stack_size)
 {
     m_started = true;
 
-    if (!thread_start(&m_thread, &Worker::thread_main, this, 0))
+    if (!thread_start(&m_thread, &Worker::thread_main, this, stack_size))
     {
         m_started = false;
     }

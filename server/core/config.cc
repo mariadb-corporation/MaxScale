@@ -132,6 +132,7 @@ const char CN_SSL_KEY[]                       = "ssl_key";
 const char CN_SSL_VERSION[]                   = "ssl_version";
 const char CN_STRIP_DB_ESC[]                  = "strip_db_esc";
 const char CN_THREADS[]                       = "threads";
+const char CN_THREAD_STACK_SIZE[]             = "thread_stack_size";
 const char CN_TYPE[]                          = "type";
 const char CN_UNIX[]                          = "unix";
 const char CN_USER[]                          = "user";
@@ -163,6 +164,7 @@ static void remove_first_last_char(char* value);
 static bool test_regex_string_validity(const char* regex_string, const char* key);
 static pcre2_code* compile_regex_string(const char* regex_string, bool jit_enabled,
                                         uint32_t options, uint32_t* output_ovector_size);
+static uint64_t get_suffixed_size(const char* value);
 
 int config_get_ifaddr(unsigned char *output);
 static int config_get_release_string(char* release);
@@ -1068,64 +1070,8 @@ int config_get_integer(const MXS_CONFIG_PARAMETER *params, const char *key)
 uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
-    char *end;
-    uint64_t size = strtoll(value, &end, 10);
 
-    switch (*end)
-    {
-    case 'T':
-    case 't':
-        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
-        {
-            size *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
-        }
-        else
-        {
-            size *= 1000ULL * 1000ULL * 1000ULL * 1000ULL;
-        }
-        break;
-
-    case 'G':
-    case 'g':
-        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
-        {
-            size *= 1024ULL * 1024ULL * 1024ULL;
-        }
-        else
-        {
-            size *= 1000ULL * 1000ULL * 1000ULL;
-        }
-        break;
-
-    case 'M':
-    case 'm':
-        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
-        {
-            size *= 1024ULL * 1024ULL;
-        }
-        else
-        {
-            size *= 1000ULL * 1000ULL;
-        }
-        break;
-
-    case 'K':
-    case 'k':
-        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
-        {
-            size *= 1024ULL;
-        }
-        else
-        {
-            size *= 1000ULL;
-        }
-        break;
-
-    default:
-        break;
-    }
-
-    return size;
+    return get_suffixed_size(value);
 }
 
 const char* config_get_string(const MXS_CONFIG_PARAMETER *params, const char *key)
@@ -1334,6 +1280,11 @@ config_threadcount()
     return gateway.n_threads;
 }
 
+size_t config_thread_stack_size()
+{
+    return gateway.thread_stack_size;
+}
+
 /**
  * Return the number of non-blocking polls to be done before a blocking poll
  * is issued.
@@ -1423,6 +1374,10 @@ handle_global_item(const char *name, const char *value)
                         "accordingly.", gateway.n_threads, MXS_MAX_THREADS);
             gateway.n_threads = MXS_MAX_THREADS;
         }
+    }
+    else if (strcmp(name, CN_THREAD_STACK_SIZE) == 0)
+    {
+        gateway.thread_stack_size = get_suffixed_size(value);
     }
     else if (strcmp(name, CN_NON_BLOCKING_POLLS) == 0)
     {
@@ -1798,6 +1753,17 @@ global_defaults()
     gateway.admin_ssl_key[0] = '\0';
     gateway.admin_ssl_cert[0] = '\0';
     gateway.admin_ssl_ca_cert[0] = '\0';
+
+    gateway.thread_stack_size = 0;
+    pthread_attr_t attr;
+    if (pthread_attr_init(&attr) == 0)
+    {
+        size_t thread_stack_size;
+        if (pthread_attr_getstacksize(&attr, &thread_stack_size) == 0)
+        {
+            gateway.thread_stack_size = thread_stack_size;
+        }
+    }
 
     if (version_string != NULL)
     {
@@ -3890,6 +3856,7 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, "execdir", json_string(get_execdir()));
     json_object_set_new(param, "connector_plugindir", json_string(get_connector_plugindir()));
     json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
+    json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
 
     MXS_CONFIG* cnf = config_get_global_options();
 
@@ -4116,4 +4083,75 @@ static bool test_regex_string_validity(const char* regex_string, const char* key
     bool rval = (code != NULL);
     pcre2_code_free(code);
     return rval;
+}
+
+/**
+ * Converts a string into the corresponding value, interpreting
+ * IEC or SI prefixes used as suffixes appropriately.
+ *
+ * @param value A numerical string, possibly suffixed by a IEC
+ *              binary prefix or SI prefix.
+ *
+ * @return The corresponding size.
+ */
+static uint64_t get_suffixed_size(const char* value)
+{
+    char *end;
+    uint64_t size = strtoll(value, &end, 10);
+
+    switch (*end)
+    {
+    case 'T':
+    case 't':
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
+        {
+            size *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL * 1000ULL * 1000ULL;
+        }
+        break;
+
+    case 'G':
+    case 'g':
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
+        {
+            size *= 1024ULL * 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL * 1000ULL;
+        }
+        break;
+
+    case 'M':
+    case 'm':
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
+        {
+            size *= 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL;
+        }
+        break;
+
+    case 'K':
+    case 'k':
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
+        {
+            size *= 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return size;
 }

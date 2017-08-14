@@ -150,6 +150,16 @@ Additional threads will be created to execute other internal services within
 MariaDB MaxScale. This setting is used to configure the number of threads that
 will be used to manage the user connections.
 
+#### `thread_stack_size`
+
+This parameter controls the stack size of the worker threads. The default value
+is 0, which means that the pthread default will be used. The size can be specified
+as explained in detail [here](#sizes).
+
+```
+thread_stack_size=5Mi
+```
+
 #### `auth_connect_timeout`
 
 The connection timeout in seconds for the MySQL connections to the backend

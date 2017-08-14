@@ -241,9 +241,12 @@ public:
      * This function will start a new thread, in which the `run`
      * function will be executed.
      *
+     * @param stack_size The stack size of the new thread. A value of 0 means
+     *                   that the pthread default should be used.
+     *
      * @return True if the thread could be started, false otherwise.
      */
-    bool start();
+    bool start(size_t stack_size = 0);
 
     /**
      * Waits for the worker to finish.

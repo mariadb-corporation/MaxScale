@@ -152,6 +152,7 @@ extern const char CN_SSL_KEY[];
 extern const char CN_SSL_VERSION[];
 extern const char CN_STRIP_DB_ESC[];
 extern const char CN_THREADS[];
+extern const char CN_THREAD_STACK_SIZE[];
 extern const char CN_TYPE[];
 extern const char CN_UNIX[];
 extern const char CN_USER[];
@@ -189,6 +190,7 @@ typedef struct
 {
     bool          config_check;                        /**< Only check config */
     int           n_threads;                           /**< Number of polling threads */
+    size_t        thread_stack_size;                   /**< The stack size of each worker thread */
     char          *version_string;                     /**< The version string of embedded db library */
     char          release_string[RELEASE_STR_LENGTH]; /**< The release name string of the system */
     char          sysname[SYSNAME_LEN];    /**< The OS name of the system */
@@ -445,6 +447,14 @@ int config_truth_value(const char *value);
  * @return Number of worker threads
  */
 int config_threadcount(void);
+
+/**
+ * @brief Get thread stack size
+ *
+ * @return The configured worker thread stack size.
+ */
+size_t config_thread_stack_size(void);
+
 
 /**
  * @brief Get number of non-blocking polls
