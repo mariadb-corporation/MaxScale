@@ -1036,7 +1036,7 @@ char* get_regex_string(char** saved)
 {
     char *start = NULL, *ptr = *saved;
     bool escaped = false, quoted = false;
-    char delimiter;
+    char delimiter = 0;
     while (*ptr != '\0')
     {
         if (!escaped)

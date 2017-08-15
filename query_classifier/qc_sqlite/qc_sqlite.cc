@@ -4259,7 +4259,7 @@ static int32_t qc_sqlite_process_init(void)
         {
             if (this_unit.log_level != QC_LOG_NOTHING)
             {
-                const char* message;
+                const char* message = NULL;
 
                 switch (this_unit.log_level)
                 {

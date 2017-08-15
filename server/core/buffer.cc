@@ -546,8 +546,8 @@ int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
 
             while ((rv == 0) && (i < llen))
             {
-                uint8_t lc;
-                uint8_t rc;
+                uint8_t lc = 0;
+                uint8_t rc = 0;
 
                 ss_debug(bool rv1 = ) gwbuf_get_byte(&lhs, &loffset, &lc);
                 ss_debug(bool rv2 = ) gwbuf_get_byte(&rhs, &roffset, &rc);

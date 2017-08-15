@@ -220,7 +220,7 @@ public:
     static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession)
     {
         FilterType* pFilter = static_cast<FilterType*>(pInstance);
-        FilterSessionType* pFilterSession;
+        FilterSessionType* pFilterSession = NULL;
 
         MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession));
 

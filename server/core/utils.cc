@@ -989,7 +989,7 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
 {
     ss_dassert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
     struct addrinfo *ai = NULL, hint = {};
-    int so, rc;
+    int so = 0, rc = 0;
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_family = AF_UNSPEC;
     hint.ai_flags = AI_ALL;
