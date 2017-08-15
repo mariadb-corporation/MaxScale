@@ -21,6 +21,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
 #include <maxscale/service.h>
+#include <maxscale/jansson.h>
 #include <openssl/sha.h>
 
 MXS_BEGIN_DECLS
@@ -28,6 +29,7 @@ MXS_BEGIN_DECLS
 /** User account types */
 enum account_type
 {
+    ACCOUNT_UNKNOWN,
     ACCOUNT_BASIC, /**< Allows read-only access */
     ACCOUNT_ADMIN  /**< Allows complete access */
 };
@@ -125,6 +127,26 @@ bool users_promote(USERS* users, const char* user);
  * @return True if user was found and demoted
  */
 bool users_demote(USERS* users, const char* user);
+
+/**
+ * Dump users as JSON
+ *
+ * The resulting JSON can be loaded later to restore the users.
+ *
+ * @param users Users to dump
+ *
+ * @return JSON form of the users that can be used for serialization
+ */
+json_t* users_to_json(USERS *users);
+
+/**
+ * Load users from JSON
+ *
+ * @param json JSON to load
+ *
+ * @return The loaded users
+ */
+USERS* users_from_json(json_t* json);
 
 /**
  * @brief Default user loading function

@@ -20,10 +20,48 @@
 #include <maxscale/users.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/spinlock.hh>
+#include <maxscale/log_manager.h>
+#include <maxscale/jansson.hh>
 
 namespace
 {
 
+static const char STR_BASIC[] = "basic";
+static const char STR_ADMIN[] = "admin";
+
+static const char* account_type_to_str(account_type type)
+{
+    switch (type)
+    {
+    case ACCOUNT_BASIC:
+        return STR_BASIC;
+
+    case ACCOUNT_ADMIN:
+        return STR_ADMIN;
+
+    default:
+        MXS_ERROR("Unknown enum account_type value: %d", (int)type);
+        ss_dassert(!true);
+        return "unknown";
+    }
+}
+static account_type json_to_account_type(json_t* json)
+{
+    std::string str = json_string_value(json);
+
+    if (str == STR_BASIC)
+    {
+        return ACCOUNT_BASIC;
+    }
+    else if (str == STR_ADMIN)
+    {
+        return ACCOUNT_ADMIN;
+    }
+
+    MXS_ERROR("Unknown account type string: %s", str.c_str());
+    ss_dassert(!true);
+    return ACCOUNT_UNKNOWN;
+}
 struct UserInfo
 {
     UserInfo():
@@ -68,10 +106,11 @@ public:
     {
         mxs::SpinLockGuard guard(m_lock);
         bool rval = false;
+        UserMap::iterator it = m_data.find(user);
 
-        if (get(user))
+        if (it != m_data.end())
         {
-            m_data.erase(user);
+            m_data.erase(it);
             rval = true;
         }
 
@@ -161,9 +200,61 @@ public:
         return m_data.size() > 0;
     }
 
+    json_t* to_json() const
+    {
+        json_t* arr = json_array();
+        mxs::SpinLockGuard guard(m_lock);
+
+        for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
+        {
+            json_t* obj = json_object();
+            json_object_set_new(obj, CN_NAME, json_string(it->first.c_str()));
+            json_object_set_new(obj, CN_TYPE, json_string(account_type_to_str(it->second.permissions)));
+            json_object_set_new(obj, CN_PASSWORD, json_string(it->second.password.c_str()));
+            json_array_append_new(arr, obj);
+        }
+
+        return arr;
+    }
+
+    static Users* from_json(json_t* json)
+    {
+        Users* u = reinterpret_cast<Users*>(users_alloc());
+        u->load_json(json);
+        return u;
+    }
+
 private:
+    void load_json(json_t* json)
+    {
+        // This function is always called in a single-threaded context
+        size_t i;
+        json_t* value;
+
+        json_array_foreach(json, i, value)
+        {
+            json_t* name = json_object_get(value, CN_NAME);
+            json_t* type = json_object_get(value, CN_TYPE);
+            json_t* password = json_object_get(value, CN_PASSWORD);
+
+            if (name && json_is_string(name) &&
+                type && json_is_string(type) &&
+                password && json_is_string(password) &&
+                json_to_account_type(type) != ACCOUNT_UNKNOWN)
+            {
+                add(json_string_value(name), json_string_value(password),
+                    json_to_account_type(type));
+            }
+            else
+            {
+                MXS_ERROR("Corrupt JSON value in users file: %s", mxs::json_dump(value).c_str());
+            }
+        }
+    }
+
     mxs::SpinLock m_lock;
     UserMap       m_data;
+
 };
 
 }
@@ -191,6 +282,17 @@ bool users_delete(USERS *users, const char *user)
 {
     Users* u = reinterpret_cast<Users*>(users);
     return u->remove(user);
+}
+
+json_t* users_to_json(USERS *users)
+{
+    Users* u = reinterpret_cast<Users*>(users);
+    return u->to_json();
+}
+
+USERS* users_from_json(json_t* json)
+{
+    return reinterpret_cast<USERS*>(Users::from_json(json));
 }
 
 bool users_find(USERS* users, const char* user)
