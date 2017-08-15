@@ -62,7 +62,7 @@ static const char *admin_add_user(USERS** pusers, const char* fname,
                                   const char* uname, const char* password)
 {
     FILE *fp;
-    char path[PATH_MAX], *home;
+    char path[PATH_MAX];
 
     if (access(get_datadir(), F_OK) != 0)
     {
@@ -83,20 +83,22 @@ static const char *admin_add_user(USERS** pusers, const char* fname,
         }
         if ((fp = fopen(path, "w")) == NULL)
         {
-            MXS_ERROR("Unable to create password file %s.", path);
+            MXS_ERROR("Unable to create password file %s: %d, %s", path,
+                      errno, mxs_strerror(errno));
             return ADMIN_ERR_PWDFILEOPEN;
         }
         fclose(fp);
     }
 
-    if (!users_add(*pusers, uname, password ? password : ""))
+    if (!users_add(*pusers, uname, password ? password : "", ACCOUNT_ADMIN))
     {
         return ADMIN_ERR_DUPLICATE;
     }
 
     if ((fp = fopen(path, "a")) == NULL)
     {
-        MXS_ERROR("Unable to append to password file %s.", path);
+        MXS_ERROR("Unable to append to password file %s: %d, %s", path,
+                      errno, mxs_strerror(errno));
         return ADMIN_ERR_FILEAPPEND;
     }
     if (password)
@@ -401,7 +403,7 @@ loadUsers(const char *fname)
             password = "";
         }
 
-        if (users_add(rval, uname, password))
+        if (users_add(rval, uname, password, ACCOUNT_ADMIN))
         {
             added_users++;
         }

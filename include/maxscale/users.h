@@ -25,6 +25,13 @@
 
 MXS_BEGIN_DECLS
 
+/** User account types */
+enum account_type
+{
+    ACCOUNT_BASIC, /**< Allows read-only access */
+    ACCOUNT_ADMIN  /**< Allows complete access */
+};
+
 /**
  * An opaque users object
  */
@@ -52,10 +59,11 @@ void users_free(USERS* users);
  * @param users    The users table
  * @param user     The user name
  * @param password The password for the user
+ * @param type     The type of account to create
  *
  * @return True if user was added
  */
-bool users_add(USERS *users, const char *user, const char *password);
+bool users_add(USERS *users, const char *user, const char *password, enum account_type type);
 
 /**
  * Delete a user from the user table.

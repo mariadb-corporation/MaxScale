@@ -24,22 +24,21 @@
 namespace
 {
 
-enum permission_type
-{
-    PERM_BASIC,
-    PERM_ADMIN
-};
-
 struct UserInfo
 {
-    UserInfo(std::string pw = "", permission_type perm = PERM_ADMIN): // TODO: Change default to PERM_BASIC
+    UserInfo():
+        permissions(ACCOUNT_BASIC)
+    {
+    }
+
+    UserInfo(std::string pw, account_type perm):
         password(pw),
         permissions(perm)
     {
     }
 
-    std::string     password;
-    permission_type permissions;
+    std::string  password;
+    account_type permissions;
 };
 
 
@@ -59,10 +58,10 @@ public:
     {
     }
 
-    bool add(std::string user, std::string password)
+    bool add(std::string user, std::string password, account_type perm)
     {
         mxs::SpinLockGuard guard(m_lock);
-        return m_data.insert(std::make_pair(user, UserInfo(password))).second;
+        return m_data.insert(std::make_pair(user, UserInfo(password, perm))).second;
     }
 
     bool remove(std::string user)
@@ -98,7 +97,7 @@ public:
         return rval;
     }
 
-    bool check_permissions(std::string user, permission_type perm) const
+    bool check_permissions(std::string user, account_type perm) const
     {
         mxs::SpinLockGuard guard(m_lock);
         UserMap::const_iterator it = m_data.find(user);
@@ -112,7 +111,7 @@ public:
         return rval;
     }
 
-    bool set_permissions(std::string user, permission_type perm)
+    bool set_permissions(std::string user, account_type perm)
     {
         mxs::SpinLockGuard guard(m_lock);
         UserMap::iterator it = m_data.find(user);
@@ -182,10 +181,10 @@ void users_free(USERS *users)
     delete u;
 }
 
-bool users_add(USERS *users, const char *user, const char *password)
+bool users_add(USERS *users, const char *user, const char *password, enum account_type type)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->add(user, password);
+    return u->add(user, password, type);
 }
 
 bool users_delete(USERS *users, const char *user)
@@ -217,19 +216,19 @@ bool users_auth(USERS* users, const char* user, const char* password)
 bool users_is_admin(USERS* users, const char* user)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->check_permissions(user, PERM_ADMIN);
+    return u->check_permissions(user, ACCOUNT_ADMIN);
 }
 
 bool users_promote(USERS* users, const char* user)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->set_permissions(user, PERM_ADMIN);
+    return u->set_permissions(user, ACCOUNT_ADMIN);
 }
 
 bool users_demote(USERS* users, const char* user)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->set_permissions(user, PERM_BASIC);
+    return u->set_permissions(user, ACCOUNT_BASIC);
 }
 
 void users_diagnostic(DCB* dcb, USERS* users)
