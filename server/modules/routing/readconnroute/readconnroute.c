@@ -310,7 +310,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
      */
     for (SERVER_REF *ref = inst->service->dbref; ref; ref = ref->next)
     {
-        if (!SERVER_REF_IS_ACTIVE(ref) || SERVER_IN_MAINT(ref->server) || ref->weight == 0)
+        if (!SERVER_REF_IS_ACTIVE(ref) || SERVER_IN_MAINT(ref->server))
         {
             continue;
         }
@@ -367,6 +367,10 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
             if (candidate == NULL)
             {
                 candidate = ref;
+            }
+            else if (ref->weight == 0 || candidate->weight == 0)
+            {
+                candidate = ref->weight ? ref : candidate;
             }
             else if (((ref->connections + 1) * 1000) / ref->weight <
                      ((candidate->connections + 1) * 1000) / candidate->weight)
