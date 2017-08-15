@@ -99,7 +99,7 @@ bool users_auth(USERS* users, const char* user, const char* password);
 bool users_find(USERS* users, const char* user);
 
 /**
- * Check if  user is an administrator
+ * Check if user is an administrator
  *
  * @param users The users table
  * @param user  User to check
@@ -109,24 +109,13 @@ bool users_find(USERS* users, const char* user);
 bool users_is_admin(USERS* users, const char* user);
 
 /**
- * Promote a user to an administrator
+ * Check if at least one admin account exists
  *
- * @param users The users table
- * @param user  User to promote
+ * @param users Users to check
  *
- * @return True if user was found and promoted
+ * @return True if at least one admin account exists
  */
-bool users_promote(USERS* users, const char* user);
-
-/**
- * Demote an administrative user to a normal user
- *
- * @param users The users table
- * @param user  User to demote
- *
- * @return True if user was found and demoted
- */
-bool users_demote(USERS* users, const char* user);
+bool users_have_admin(USERS* users);
 
 /**
  * Dump users as JSON

@@ -16,6 +16,7 @@
 #include <new>
 #include <tr1/unordered_map>
 #include <string>
+#include <algorithm>
 
 #include <maxscale/users.h>
 #include <maxscale/authenticator.h>
@@ -45,6 +46,7 @@ static const char* account_type_to_str(account_type type)
         return "unknown";
     }
 }
+
 static account_type json_to_account_type(json_t* json)
 {
     std::string str = json_string_value(json);
@@ -62,6 +64,7 @@ static account_type json_to_account_type(json_t* json)
     ss_dassert(!true);
     return ACCOUNT_UNKNOWN;
 }
+
 struct UserInfo
 {
     UserInfo():
@@ -134,6 +137,11 @@ public:
         }
 
         return rval;
+    }
+
+    bool have_admin() const
+    {
+        return std::find_if(m_data.begin(), m_data.end(), is_admin) != m_data.end();
     }
 
     bool check_permissions(std::string user, account_type perm) const
@@ -225,6 +233,12 @@ public:
     }
 
 private:
+
+    static bool is_admin(const UserMap::value_type& value)
+    {
+        return value.second.permissions == ACCOUNT_ADMIN;
+    }
+
     void load_json(json_t* json)
     {
         // This function is always called in a single-threaded context
@@ -254,7 +268,6 @@ private:
 
     mxs::SpinLock m_lock;
     UserMap       m_data;
-
 };
 
 }
@@ -321,16 +334,10 @@ bool users_is_admin(USERS* users, const char* user)
     return u->check_permissions(user, ACCOUNT_ADMIN);
 }
 
-bool users_promote(USERS* users, const char* user)
+bool users_have_admin(USERS* users)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->set_permissions(user, ACCOUNT_ADMIN);
-}
-
-bool users_demote(USERS* users, const char* user)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->set_permissions(user, ACCOUNT_BASIC);
+    return u->have_admin();
 }
 
 void users_diagnostic(DCB* dcb, USERS* users)
