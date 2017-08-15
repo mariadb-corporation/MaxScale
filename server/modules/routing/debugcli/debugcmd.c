@@ -701,6 +701,7 @@ static void disable_syslog();
 static void enable_maxlog();
 static void disable_maxlog();
 static void enable_account(DCB *, char *user);
+static void enable_admin_account(DCB *, char *user);
 static void disable_account(DCB *, char *user);
 
 /**
@@ -762,7 +763,20 @@ struct subcommand enableoptions[] =
         "account",
         1, 1,
         enable_account,
-        "Activate a Linux user account for MaxAdmin use",
+        "Activate a Linux user account for read-only MaxAdmin use",
+        "Usage: enable account USER\n"
+        "\n"
+        "Parameters:\n"
+        "USER The user account to enable\n"
+        "\n"
+        "Example: enable account alice",
+        {ARG_TYPE_STRING}
+    },
+    {
+        "admin-account",
+        1, 1,
+        enable_admin_account,
+        "Activate a Linux user account for administrative MaxAdmin use",
         "Usage: enable account USER\n"
         "\n"
         "Parameters:\n"
@@ -851,7 +865,8 @@ struct subcommand disableoptions[] =
     }
 };
 
-static void telnetdAddUser(DCB *, char *user, char *password);
+static void inet_add_user(DCB *, char *user, char *password);
+static void inet_add_admin_user(DCB *, char *user, char *password);
 
 static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
                           char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
@@ -913,8 +928,8 @@ struct subcommand pingoptions[] =
 struct subcommand addoptions[] =
 {
     {
-        "user", 2, 2, telnetdAddUser,
-        "Add insecure account for using maxadmin over the network",
+        "user", 2, 2, inet_add_user,
+        "Add a read-only account for using maxadmin over the network",
         "Usage: add user USER PASSWORD\n"
         "\n"
         "Parameters:\n"
@@ -922,6 +937,18 @@ struct subcommand addoptions[] =
         "PASSWORD Password for the user\n"
         "\n"
         "Example: add user bob somepass",
+        {ARG_TYPE_STRING, ARG_TYPE_STRING}
+    },
+    {
+        "admin", 2, 2, inet_add_admin_user,
+        "Add an administrative account for using maxadmin over the network",
+        "Usage: add user USER PASSWORD\n"
+        "\n"
+        "Parameters:\n"
+        "USER     User to add\n"
+        "PASSWORD Password for the user\n"
+        "\n"
+        "Example: add user admin-bob somepass",
         {ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
@@ -1482,8 +1509,8 @@ static void alterService(DCB *dcb, SERVICE *service, char *v1, char *v2, char *v
 }
 
 static void alterMaxScale(DCB *dcb, char *v1, char *v2, char *v3,
-                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                         char *v10, char *v11)
+                          char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                          char *v10, char *v11)
 {
     char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
@@ -1601,7 +1628,7 @@ struct subcommand alteroptions[] =
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
         }
     },
-        {
+    {
         "maxscale", 1, 11, alterMaxScale,
         "Alter maxscale parameters",
         "Usage: alter maxscale KEY=VALUE ...\n"
@@ -2231,8 +2258,7 @@ reload_config(DCB *dcb)
  * @param user The user name
  * @param user The user password
  */
-static void
-telnetdAddUser(DCB *dcb, char *user, char *password)
+static void do_inet_add_user(DCB *dcb, char *user, char *password, enum account_type type)
 {
     const char *err;
 
@@ -2242,7 +2268,10 @@ telnetdAddUser(DCB *dcb, char *user, char *password)
         return;
     }
 
-    if ((err = admin_add_inet_user(user, password)) == NULL)
+    const char* (*f)(const char*, const char*) = type == ACCOUNT_ADMIN ?
+                                                 admin_add_inet_admin_user : admin_add_inet_user;
+
+    if ((err = f(user, password)) == NULL)
     {
         dcb_printf(dcb, "Account %s for remote (network) usage has been successfully added.\n", user);
     }
@@ -2250,6 +2279,24 @@ telnetdAddUser(DCB *dcb, char *user, char *password)
     {
         dcb_printf(dcb, "Failed to add new remote account %s: %s.\n", user, err);
     }
+}
+
+static void inet_add_user(DCB *dcb, char *user, char *password)
+{
+    if (admin_have_admin())
+    {
+        do_inet_add_user(dcb, user, password, ACCOUNT_BASIC);
+    }
+    else
+    {
+        dcb_printf(dcb, "No admin user created, create an admin account first\n"
+                   "by executing `add admin USER PASSWORD`\n");
+    }
+}
+
+static void inet_add_admin_user(DCB *dcb, char *user, char *password)
+{
+    do_inet_add_user(dcb, user, password, ACCOUNT_ADMIN);
 }
 
 /**
@@ -2539,8 +2586,7 @@ disable_maxlog()
  * @param dcb  The DCB for messages
  * @param user The Linux user name
  */
-static void
-enable_account(DCB *dcb, char *user)
+static void do_enable_account(DCB *dcb, char *user, enum account_type type)
 {
     const char *err;
 
@@ -2550,7 +2596,10 @@ enable_account(DCB *dcb, char *user)
         return;
     }
 
-    if ((err = admin_enable_linux_account(user)) == NULL)
+    const char* (*f)(const char*) = type == ACCOUNT_ADMIN ?
+                                    admin_enable_linux_admin_account : admin_enable_linux_account;
+
+    if ((err = f(user)) == NULL)
     {
         dcb_printf(dcb, "The Linux user %s has successfully been enabled.\n", user);
     }
@@ -2558,6 +2607,30 @@ enable_account(DCB *dcb, char *user)
     {
         dcb_printf(dcb, "Failed to enable the Linux user %s: %s\n", user, err);
     }
+}
+
+static void enable_account(DCB *dcb, char *user)
+{
+    if (admin_have_admin())
+    {
+        do_enable_account(dcb, user, ACCOUNT_BASIC);
+    }
+    else
+    {
+        dcb_printf(dcb, "No admin user created, create an admin account first\n"
+                   "by executing `enable admin-account USER PASSWORD`\n");
+    }
+}
+
+/**
+ * Enable a Linux account
+ *
+ * @param dcb  The DCB for messages
+ * @param user The Linux user name
+ */
+static void enable_admin_account(DCB *dcb, char *user)
+{
+    do_enable_account(dcb, user, ACCOUNT_ADMIN);
 }
 
 /**

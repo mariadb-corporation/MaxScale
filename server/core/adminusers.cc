@@ -34,12 +34,6 @@
 static USERS *load_linux_users();
 static USERS *load_inet_users();
 
-static const char *admin_add_user(USERS** pusers, const char* fname,
-                                  const char* uname, const char* password);
-static const char* admin_remove_user(USERS *users, const char* fname, const char *uname);
-
-
-
 static USERS *linux_users = NULL;
 static USERS *inet_users = NULL;
 
@@ -85,14 +79,15 @@ static bool admin_dump_users(USERS* users, const char* fname)
 }
 
 static const char *admin_add_user(USERS** pusers, const char* fname,
-                                  const char* uname, const char* password)
+                                  const char* uname, const char* password,
+                                  account_type type)
 {
     if (*pusers == NULL)
     {
         *pusers = users_alloc();
     }
 
-    if (!users_add(*pusers, uname, password ? password : "", ACCOUNT_ADMIN))
+    if (!users_add(*pusers, uname, password ? password : "", type))
     {
         return ADMIN_ERR_DUPLICATE;
     }
@@ -340,7 +335,19 @@ static USERS *load_inet_users()
  */
 const char *admin_enable_linux_account(const char *uname)
 {
-    return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL);
+    return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL, ACCOUNT_BASIC);
+}
+
+/**
+ * Enable Linux account
+ *
+ * @param uname Name of Linux user
+ *
+ * @return NULL on success or an error string on failure.
+ */
+const char *admin_enable_linux_admin_account(const char *uname)
+{
+    return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL, ACCOUNT_ADMIN);
 }
 
 /**
@@ -396,8 +403,15 @@ void mxs_crypt(const char* password, const char* salt, char* output)
 #endif
 }
 
+static const char* add_inet_user(const char *uname, const char* password, account_type type)
+{
+    char cpassword[MXS_CRYPT_SIZE];
+    mxs_crypt(password, ADMIN_SALT, cpassword);
+    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, cpassword, type);
+}
+
 /**
- * Add insecure remote (network) user.
+ * Add insecure remote (network) basic user.
  *
  * @param uname    Name of the new user.
  * @param password Password of the new user.
@@ -406,10 +420,20 @@ void mxs_crypt(const char* password, const char* salt, char* output)
  */
 const char *admin_add_inet_user(const char *uname, const char* password)
 {
-    char cpassword[MXS_CRYPT_SIZE];
-    mxs_crypt(password, ADMIN_SALT, cpassword);
+    return add_inet_user(uname, password, ACCOUNT_BASIC);
+}
 
-    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, cpassword);
+/**
+ * Add insecure remote (network) admin user.
+ *
+ * @param uname    Name of the new user.
+ * @param password Password of the new user.
+ *
+ * @return NULL on success or an error string on failure.
+ */
+const char *admin_add_inet_admin_user(const char *uname, const char* password)
+{
+    return add_inet_user(uname, password, ACCOUNT_ADMIN);
 }
 
 /**
@@ -485,6 +509,12 @@ bool admin_is_admin_user(const char* username)
     }
 
     return rval;
+}
+
+bool admin_have_admin()
+{
+    return (inet_users && users_have_admin(inet_users)) ||
+           (linux_users && users_have_admin(linux_users));
 }
 
 /**
