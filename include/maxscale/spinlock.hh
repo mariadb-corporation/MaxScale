@@ -46,7 +46,7 @@ public:
     /**
      * Acquires the spinlock.
      */
-    void acquire()
+    void acquire() const
     {
         spinlock_acquire(&m_lock);
     }
@@ -54,7 +54,7 @@ public:
     /**
      * Releases the spinlock.
      */
-    void release()
+    void release() const
     {
         spinlock_release(&m_lock);
     }
@@ -64,7 +64,7 @@ private:
     SpinLock& operator = (const SpinLock&) /* = delete */;
 
 private:
-    SPINLOCK m_lock;
+    mutable SPINLOCK m_lock;
 };
 
 /**
@@ -85,7 +85,7 @@ public:
      *
      * @param lock  The spinlock to lock.
      */
-    SpinLockGuard(SPINLOCK& lock)
+    SpinLockGuard(const SPINLOCK& lock)
         : m_lock(lock)
     {
         spinlock_acquire(&m_lock);
@@ -96,7 +96,7 @@ public:
      *
      * @param lock  The spinlock to lock.
      */
-    SpinLockGuard(SpinLock& lock)
+    SpinLockGuard(const SpinLock& lock)
         : m_lock(lock.m_lock)
     {
         spinlock_acquire(&m_lock);
@@ -115,7 +115,7 @@ private:
     SpinLockGuard(const SpinLockGuard&) /* = delete */;
     SpinLockGuard& operator = (const SpinLockGuard&) /* = delete */;
 
-    SPINLOCK& m_lock;
+    const SPINLOCK& m_lock;
 };
 
 }

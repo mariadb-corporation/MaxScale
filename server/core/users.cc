@@ -19,6 +19,7 @@
 
 #include <maxscale/users.h>
 #include <maxscale/authenticator.h>
+#include <maxscale/spinlock.hh>
 
 namespace
 {
@@ -60,11 +61,13 @@ public:
 
     bool add(std::string user, std::string password)
     {
+        mxs::SpinLockGuard guard(m_lock);
         return m_data.insert(std::make_pair(user, UserInfo(password))).second;
     }
 
     bool remove(std::string user)
     {
+        mxs::SpinLockGuard guard(m_lock);
         bool rval = false;
 
         if (get(user))
@@ -78,6 +81,7 @@ public:
 
     bool get(std::string user, UserInfo* output = NULL) const
     {
+        mxs::SpinLockGuard guard(m_lock);
         UserMap::const_iterator it = m_data.find(user);
         bool rval = false;
 
@@ -96,6 +100,7 @@ public:
 
     bool check_permissions(std::string user, permission_type perm) const
     {
+        mxs::SpinLockGuard guard(m_lock);
         UserMap::const_iterator it = m_data.find(user);
         bool rval = false;
 
@@ -109,6 +114,7 @@ public:
 
     bool set_permissions(std::string user, permission_type perm)
     {
+        mxs::SpinLockGuard guard(m_lock);
         UserMap::iterator it = m_data.find(user);
         bool rval = false;
 
@@ -123,6 +129,7 @@ public:
 
     json_t* diagnostic_json() const
     {
+        mxs::SpinLockGuard guard(m_lock);
         json_t* rval = json_array();
 
         for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
@@ -135,6 +142,7 @@ public:
 
     void diagnostic(DCB* dcb) const
     {
+        mxs::SpinLockGuard guard(m_lock);
         if (m_data.size())
         {
             const char *sep = "";
@@ -150,11 +158,13 @@ public:
 
     bool empty() const
     {
+        mxs::SpinLockGuard guard(m_lock);
         return m_data.size() > 0;
     }
 
 private:
-    UserMap m_data;
+    mxs::SpinLock m_lock;
+    UserMap       m_data;
 };
 
 }
