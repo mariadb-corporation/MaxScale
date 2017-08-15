@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -10,10 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-#ifndef PAMBACKENDSESSION_HH
-#define PAMBACKENDSESSION_HH
-
 #include "pam_backend_auth.hh"
 
 #include <stdint.h>
@@ -34,6 +31,3 @@ private:
     pam_auth_state m_state; /**< Authentication state*/
     uint8_t m_sequence; /**< The next packet seqence number */
 };
-
-#endif /* PAMBACKENDSESSION_HH */
-

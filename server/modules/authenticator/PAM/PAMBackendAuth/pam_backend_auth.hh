@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,9 +15,6 @@
 /**
  * Common definitions and includes for PAMBackendAuth
  */
-#ifndef PAM_BACKEND_AUTH_HH
-#define PAM_BACKEND_AUTH_HH
-
 #define MXS_MODULE_NAME "PAMBackendAuth"
 
 #include <maxscale/cppdefs.hh>
@@ -24,6 +22,3 @@
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
 #include <maxscale/protocol/mysql.h>
-
-#endif /* PAM_BACKEND_AUTH_HH */
-

@@ -358,8 +358,10 @@ bool PamClientSession::extract(DCB *dcb, GWBUF *buffer)
         break;
 
     case PAM_AUTH_DATA_SENT:
-        store_client_password(dcb, buffer);
-        rval = true;
+        if (store_client_password(dcb, buffer))
+        {
+            rval = true;
+        }
         break;
 
     default:

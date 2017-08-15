@@ -7,8 +7,8 @@
 
 find_path(PAM_INCLUDE_DIR pam_appl.h PATH_SUFFIXES security)
 find_library(PAM_LIBRARIES NAMES pam)
-message(STATUS "Found PAM include dirs: ${PAM_INCLUDE_DIR}")
 if (PAM_INCLUDE_DIR AND PAM_LIBRARIES)
+  message(STATUS "Found PAM headers: ${PAM_INCLUDE_DIR}")
   message(STATUS "Found PAM: ${PAM_LIBRARIES}")
   set(PAM_FOUND TRUE CACHE INTERNAL "")
 else()
