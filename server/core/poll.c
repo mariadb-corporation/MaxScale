@@ -1256,7 +1256,7 @@ void
 dShowThreads(DCB *dcb)
 {
     int i, j, n;
-    char *state;
+    char *state = NULL;
     double avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
     double qavg1 = 0.0, qavg5 = 0.0, qavg15 = 0.0;
 

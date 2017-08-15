@@ -596,10 +596,10 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
                                                  const char            *cvalue,
                                                  uint32_t               debug)
 {
+    CACHE_RULE *rule = NULL;
+
     ss_dassert(attribute == CACHE_ATTRIBUTE_USER);
     ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
-
-    CACHE_RULE *rule = NULL;
 
     bool error = false;
     size_t len = strlen(cvalue);
@@ -911,7 +911,7 @@ static CACHE_RULE *cache_rule_create_simple(cache_rule_attribute_t attribute,
 {
     ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CACHE_RULE *rule;
+    CACHE_RULE *rule = NULL;
 
     switch (attribute)
     {
@@ -1526,7 +1526,7 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE *self,
     bool matches = false;
 
     int n;
-    char **names;
+    char **names = NULL;
     bool fullnames;
 
     fullnames = true;
@@ -1612,7 +1612,7 @@ static bool cache_rule_matches_table_simple(CACHE_RULE *self, const char *defaul
     }
 
     int n;
-    char **names;
+    char **names = NULL;
 
     names = qc_get_table_names((GWBUF*)query, &n, fullnames);
 

@@ -797,7 +797,7 @@ char* strnchr_esc(char* ptr, char c, int len)
     char* p = (char*)ptr;
     char* start = p;
     bool quoted = false, escaped = false;
-    char qc;
+    char qc = 0;
 
     while (p < start + len)
     {
@@ -843,7 +843,7 @@ char* strnchr_esc_mysql(char* ptr, char c, int len)
     char* p = (char*) ptr;
     char* start = p, *end = start + len;
     bool quoted = false, escaped = false, backtick = false, comment = false;
-    char qc;
+    char qc = 0;
 
     while (p < end)
     {
