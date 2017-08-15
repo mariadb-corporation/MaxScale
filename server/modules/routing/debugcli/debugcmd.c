@@ -946,7 +946,7 @@ struct subcommand addoptions[] =
 };
 
 
-static void telnetdRemoveUser(DCB *, char *user, char *password);
+static void telnetdRemoveUser(DCB *, char *user);
 
 static void cmd_RemoveServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
                              char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
@@ -975,16 +975,15 @@ struct subcommand removeoptions[] =
 {
     {
         "user",
-        2, 2,
+        1, 1,
         telnetdRemoveUser,
         "Remove account for using maxadmin over the network",
-        "Usage: remove user USER PASSWORD\n"
+        "Usage: remove user USER\n"
         "\n"
         "Parameters:\n"
         "USER     User to remove\n"
-        "PASSWORD Password of the user\n"
         "\n"
-        "Example: remove user bob somepass",
+        "Example: remove user bob",
         {ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
@@ -2260,7 +2259,7 @@ telnetdAddUser(DCB *dcb, char *user, char *password)
  * @param user The user name
  * @param user The user password
  */
-static void telnetdRemoveUser(DCB *dcb, char *user, char *password)
+static void telnetdRemoveUser(DCB *dcb, char *user)
 {
     const char* err;
 
@@ -2270,7 +2269,7 @@ static void telnetdRemoveUser(DCB *dcb, char *user, char *password)
         return;
     }
 
-    if ((err = admin_remove_inet_user(user, password)) == NULL)
+    if ((err = admin_remove_inet_user(user)) == NULL)
     {
         dcb_printf(dcb, "Account %s for remote (network) usage has been successfully removed.\n", user);
     }

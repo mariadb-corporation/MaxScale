@@ -185,10 +185,10 @@ an explicitly created user.
 ## Delete A User
 
 To remove a user the command _remove user_ is used and it is invoked with the
-username and password.
+username.
 
 ```
-MaxScale> remove user maxscale-admin secretpwd
+MaxScale> remove user maxscale-admin
 User maxscale-admin has been successfully removed.
 MaxScale>
 ```

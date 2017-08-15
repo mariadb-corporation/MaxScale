@@ -17,6 +17,10 @@ Significant whitespace in object names is now deprecated. All object names
 squeezing repeating whitespace and replacing it with hyphens. If any
 object name conversions take place, a warning will be logged.
 
+### MaxAdmin
+
+The `remove user` command now only expects one parameter, the username.
+
 ### Regular Expression Parameters
 
 Modules may now use a built-in regular expression (regex) string parameter type

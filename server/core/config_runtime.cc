@@ -1805,7 +1805,7 @@ bool runtime_remove_user(const char* id, enum user_type type)
 {
     bool rval = false;
     const char* err = type == USER_TYPE_INET ?
-                      admin_remove_inet_user(id, NULL) :
+                      admin_remove_inet_user(id) :
                       admin_disable_linux_account(id);
 
     if (err == ADMIN_SUCCESS)

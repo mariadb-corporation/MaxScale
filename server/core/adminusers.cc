@@ -31,13 +31,12 @@
  * @file adminusers.c - Administration user account management
  */
 
-static USERS *loadLinuxUsers();
-static USERS *loadInetUsers();
+static USERS *load_linux_users();
+static USERS *load_inet_users();
 
 static const char *admin_add_user(USERS** pusers, const char* fname,
                                   const char* uname, const char* password);
-static const char* admin_remove_user(USERS *users, const char* fname,
-                                     const char *uname, const char *passwd);
+static const char* admin_remove_user(USERS *users, const char* fname, const char *uname);
 
 
 
@@ -54,40 +53,43 @@ static const char INET_USERS_FILE_NAME[]  = "passwd";
  */
 void admin_users_init()
 {
-    linux_users = loadLinuxUsers();
-    inet_users = loadInetUsers();
+    linux_users = load_linux_users();
+    inet_users = load_inet_users();
 }
 
-static const char *admin_add_user(USERS** pusers, const char* fname,
-                                  const char* uname, const char* password)
+static bool admin_dump_users(USERS* users, const char* fname)
 {
-    FILE *fp;
     char path[PATH_MAX];
 
     if (access(get_datadir(), F_OK) != 0)
     {
         if (mkdir(get_datadir(), S_IRWXU) != 0 && errno != EEXIST)
         {
-            return ADMIN_ERR_PWDFILEOPEN;
+            MXS_ERROR("Failed to create directory '%s': %d, %s",
+                      get_datadir(), errno, mxs_strerror(errno));
+            return false;
         }
     }
 
     snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
+    json_t* json = users_to_json(users);
+    bool rval = true;
+
+    if (json_dump_file(json, path, 0) == -1)
+    {
+        MXS_ERROR("Failed to dump admin users to file");
+        rval = false;
+    }
+
+    return rval;
+}
+
+static const char *admin_add_user(USERS** pusers, const char* fname,
+                                  const char* uname, const char* password)
+{
     if (*pusers == NULL)
     {
-        MXS_NOTICE("Create initial password file.");
-
-        if ((*pusers = users_alloc()) == NULL)
-        {
-            return ADMIN_ERR_NOMEM;
-        }
-        if ((fp = fopen(path, "w")) == NULL)
-        {
-            MXS_ERROR("Unable to create password file %s: %d, %s", path,
-                      errno, mxs_strerror(errno));
-            return ADMIN_ERR_PWDFILEOPEN;
-        }
-        fclose(fp);
+        *pusers = users_alloc();
     }
 
     if (!users_add(*pusers, uname, password ? password : "", ACCOUNT_ADMIN))
@@ -95,183 +97,33 @@ static const char *admin_add_user(USERS** pusers, const char* fname,
         return ADMIN_ERR_DUPLICATE;
     }
 
-    if ((fp = fopen(path, "a")) == NULL)
+    if (!admin_dump_users(*pusers, fname))
     {
-        MXS_ERROR("Unable to append to password file %s: %d, %s", path,
-                      errno, mxs_strerror(errno));
-        return ADMIN_ERR_FILEAPPEND;
+        return ADMIN_ERR_FILEOPEN;
     }
-    if (password)
-    {
-        fprintf(fp, "%s:%s\n", uname, password);
-    }
-    else
-    {
-        fprintf(fp, "%s\n", uname);
-    }
-    fclose(fp);
+
     return ADMIN_SUCCESS;
 }
 
-static const char* admin_remove_user(USERS *users, const char* fname,
-                                     const char *uname, const char *passwd)
+static const char* admin_remove_user(USERS *users, const char* fname, const char *uname)
 {
-    FILE*  fp;
-    FILE*  fp_tmp;
-    char   path[PATH_MAX];
-    char   path_tmp[PATH_MAX];
-    char*  home;
-    char   fusr[LINELEN];
-    char   fpwd[LINELEN];
-    char   line[LINELEN];
-    fpos_t rpos;
-
     if (strcmp(uname, DEFAULT_ADMIN_USER) == 0)
     {
         MXS_WARNING("Attempt to delete the default admin user '%s'.", uname);
         return ADMIN_ERR_DELROOT;
     }
 
-    if (!users_find(users, uname))
+    if (!users_delete(users, uname))
     {
         MXS_ERROR("Couldn't find user %s. Removing user failed.", uname);
         return ADMIN_ERR_USERNOTFOUND;
     }
 
-    if (passwd)
+    if (!admin_dump_users(users, fname))
     {
-        if (admin_verify_inet_user(uname, passwd) == 0)
-        {
-            MXS_ERROR("Authentication failed, wrong user/password "
-                      "combination. Removing user failed.");
-            return ADMIN_ERR_AUTHENTICATION;
-        }
+        return ADMIN_ERR_FILEOPEN;
     }
 
-    /** Remove user from in-memory structure */
-    users_delete(users, uname);
-
-    /**
-     * Open passwd file and remove user from the file.
-     */
-    snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
-    snprintf(path_tmp, sizeof(path_tmp), "%s/%s_tmp", get_datadir(), fname);
-    /**
-     * Rewrite passwd file from memory.
-     */
-    if ((fp = fopen(path, "r")) == NULL)
-    {
-        int err = errno;
-        MXS_ERROR("Unable to open password file %s : errno %d.\n"
-                  "Removing user from file failed; it must be done "
-                  "manually.",
-                  path,
-                  err);
-        return ADMIN_ERR_PWDFILEOPEN;
-    }
-    /**
-     * Open temporary passwd file.
-     */
-    if ((fp_tmp = fopen(path_tmp, "w")) == NULL)
-    {
-        int err = errno;
-        MXS_ERROR("Unable to open tmp file %s : errno %d.\n"
-                  "Removing user from passwd file failed; it must be done "
-                  "manually.",
-                  path_tmp,
-                  err);
-        fclose(fp);
-        return ADMIN_ERR_TMPFILEOPEN;
-    }
-
-    /**
-     * Scan passwd and copy all but matching lines to temp file.
-     */
-    if (fgetpos(fp, &rpos) != 0)
-    {
-        int err = errno;
-        MXS_ERROR("Unable to process passwd file %s : errno %d.\n"
-                  "Removing user from file failed, and must be done "
-                  "manually.",
-                  path,
-                  err);
-        fclose(fp);
-        fclose(fp_tmp);
-        unlink(path_tmp);
-        return ADMIN_ERR_PWDFILEACCESS;
-    }
-
-    while (fgets(fusr, sizeof(fusr), fp))
-    {
-        char *nl = strchr(fusr, '\n');
-
-        if (nl)
-        {
-            *nl = '\0';
-        }
-        else if (!feof(fp))
-        {
-            MXS_ERROR("Line length exceeds %d characters, possible corrupted "
-                      "'passwd' file in: %s", LINELEN, path);
-            fclose(fp);
-            fclose(fp_tmp);
-            return ADMIN_ERR_PWDFILEACCESS;
-        }
-
-        /**
-         * Compare username what was found from passwd file.
-         * Unmatching lines are copied to tmp file.
-         */
-        if (strncmp(uname, fusr, strlen(uname) + 1) != 0)
-        {
-            if (fsetpos(fp, &rpos) != 0)
-            {
-                /** one step back */
-                MXS_ERROR("Unable to set stream position. ");
-            }
-            if (fgets(line, LINELEN, fp))
-            {
-                fputs(line, fp_tmp);
-            }
-            else
-            {
-                MXS_ERROR("Failed to read line from admin users file");
-            }
-        }
-
-        if (fgetpos(fp, &rpos) != 0)
-        {
-            int err = errno;
-            MXS_ERROR("Unable to process passwd file %s : "
-                      "errno %d.\n"
-                      "Removing user from file failed, and must be "
-                      "done manually.",
-                      path,
-                      err);
-            fclose(fp);
-            fclose(fp_tmp);
-            unlink(path_tmp);
-            return ADMIN_ERR_PWDFILEACCESS;
-        }
-    }
-    fclose(fp);
-    /**
-     * Replace original passwd file with new.
-     */
-    if (rename(path_tmp, path))
-    {
-        int err = errno;
-        MXS_ERROR("Unable to rename new passwd file %s : errno "
-                  "%d.\n"
-                  "Rename it to %s manually.",
-                  path_tmp,
-                  err,
-                  path);
-        unlink(path_tmp);
-        fclose(fp_tmp);
-        return ADMIN_ERR_PWDFILEACCESS;
-    }
-    fclose(fp_tmp);
     return ADMIN_SUCCESS;
 }
 
@@ -348,28 +200,15 @@ json_t* admin_all_users_to_json(const char* host, enum user_type type)
     return mxs_json_resource(host, path.c_str(), arr);
 }
 
-/**
- * Load the admin users
- *
- * @return Table of users
- */
-static USERS *
-loadUsers(const char *fname)
+USERS* load_legacy_users(FILE* fp)
 {
     USERS *rval;
-    FILE  *fp;
-    char  path[PATH_MAX], *home;
+    char  path[PATH_MAX];
     char  uname[80];
     int added_users = 0;
 
-    snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
-    if ((fp = fopen(path, "r")) == NULL)
-    {
-        return NULL;
-    }
     if ((rval = users_alloc()) == NULL)
     {
-        fclose(fp);
         return NULL;
     }
     while (fgets(uname, sizeof(uname), fp))
@@ -408,7 +247,6 @@ loadUsers(const char *fname)
             added_users++;
         }
     }
-    fclose(fp);
 
     if (!added_users)
     {
@@ -419,15 +257,78 @@ loadUsers(const char *fname)
     return rval;
 }
 
-
-static USERS *loadLinuxUsers()
+/**
+ * Load the admin users
+ *
+ * @param fname Name of the file in the datadir to load
+ *
+ * @return Table of users
+ */
+static USERS* load_users(const char *fname)
 {
-    return loadUsers(LINUX_USERS_FILE_NAME);
+    USERS *rval = NULL;
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
+    FILE* fp = fopen(path, "r");
+
+    if (fp)
+    {
+        json_error_t err;
+        json_t* json = json_loadf(fp, 0, &err);
+
+        if (json)
+        {
+            /** New format users */
+            rval = users_from_json(json);
+        }
+        else
+        {
+            /** Old style users file */
+            rval = load_legacy_users(fp);
+
+            if (rval)
+            {
+                /** Users loaded successfully, back up the original file and
+                 * replace it with the new one */
+                const char backup_suffix[] = ".backup";
+                char newpath[strlen(path) + sizeof(backup_suffix)];
+                sprintf(newpath, "%s%s", path, backup_suffix);
+
+                if (rename(path, newpath) != 0)
+                {
+                    MXS_ERROR("Failed to rename old users file: %d, %s",
+                              errno, mxs_strerror(errno));
+                }
+                else if (!admin_dump_users(rval, fname))
+                {
+                    MXS_ERROR("Failed to dump new users. Please rename the file "
+                              "'%s' manually to '%s' and restart MaxScale to "
+                              "attempt again.", newpath, path);
+                }
+                else
+                {
+                    MXS_NOTICE("Upgraded users file at '%s' to new format, "
+                               "backup of the old file is stored in '%s'.",
+                               newpath, path);
+                }
+            }
+        }
+
+        fclose(fp);
+    }
+
+    return rval;
 }
 
-static USERS *loadInetUsers()
+
+static USERS *load_linux_users()
 {
-    return loadUsers(INET_USERS_FILE_NAME);
+    return load_users(LINUX_USERS_FILE_NAME);
+}
+
+static USERS *load_inet_users()
+{
+    return load_users(INET_USERS_FILE_NAME);
 }
 
 /**
@@ -451,7 +352,7 @@ const char *admin_enable_linux_account(const char *uname)
  */
 const char* admin_disable_linux_account(const char* uname)
 {
-    return admin_remove_user(linux_users, LINUX_USERS_FILE_NAME, uname, NULL);
+    return admin_remove_user(linux_users, LINUX_USERS_FILE_NAME, uname);
 }
 
 /**
@@ -519,9 +420,9 @@ const char *admin_add_inet_user(const char *uname, const char* password)
  *
  * @return NULL on success or an error string on failure.
  */
-const char* admin_remove_inet_user(const char* uname, const char *password)
+const char* admin_remove_inet_user(const char* uname)
 {
-    return admin_remove_user(inet_users, INET_USERS_FILE_NAME, uname, password);
+    return admin_remove_user(inet_users, INET_USERS_FILE_NAME, uname);
 }
 
 /**
