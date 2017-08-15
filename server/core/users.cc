@@ -26,13 +26,13 @@ namespace
 
 enum permission_type
 {
-    PERM_READ,
-    PERM_WRITE
+    PERM_BASIC,
+    PERM_ADMIN
 };
 
 struct UserInfo
 {
-    UserInfo(std::string pw = "", permission_type perm = PERM_WRITE): // TODO: Change default to PERM_READ
+    UserInfo(std::string pw = "", permission_type perm = PERM_ADMIN): // TODO: Change default to PERM_BASIC
         password(pw),
         permissions(perm)
     {
@@ -217,19 +217,19 @@ bool users_auth(USERS* users, const char* user, const char* password)
 bool users_is_admin(USERS* users, const char* user)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->check_permissions(user, PERM_WRITE);
+    return u->check_permissions(user, PERM_ADMIN);
 }
 
 bool users_promote(USERS* users, const char* user)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->set_permissions(user, PERM_WRITE);
+    return u->set_permissions(user, PERM_ADMIN);
 }
 
 bool users_demote(USERS* users, const char* user)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->set_permissions(user, PERM_READ);
+    return u->set_permissions(user, PERM_BASIC);
 }
 
 void users_diagnostic(DCB* dcb, USERS* users)
