@@ -25,7 +25,7 @@ TestConnections * Test ;
 int exit_flag;
 int master = 0;
 int i_trans = 0;
-const int trans_max = 100;
+const int trans_max = 300;
 int failed_transaction_num = 0;
 
 /** The amount of rows each transaction inserts */
@@ -78,6 +78,13 @@ int main(int argc, char *argv[])
     Test = new TestConnections(argc, argv);
     Test->set_timeout(3000);
 
+    if (strcmp(Test->test_name, "binlog_change_master_gtid") == 0)
+    {
+        Test->binlog_master_gtid = true;
+        Test->binlog_slave_gtid = true;
+        Test->tprintf("Using GTID\n");
+    }
+
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1;");
     Test->repl->close_connections();
@@ -119,7 +126,7 @@ int main(int argc, char *argv[])
     Test->repl->block_node(0);
     Test->stop_timeout();
 
-    sleep(30);
+    sleep(130);
 
     Test->tprintf("Done! Waiting for thread\n");
     exit_flag = 1;
@@ -160,6 +167,10 @@ int main(int argc, char *argv[])
     }
     Test->repl->close_connections();
 
+    if (Test->no_vm_revert)
+    {
+        Test->tprintf("No_VM_revert!");
+    }
 
     int rval = Test->global_result;
     delete Test;
@@ -174,6 +185,12 @@ const char * setup_slave1 =
                  MASTER_LOG_FILE='%s',\
                  MASTER_LOG_POS=%s,\
                  MASTER_PORT=%d";
+const char * setup_slave_gtid =
+        "change master to MASTER_HOST='%s',\
+                     MASTER_USER='repl',\
+                     MASTER_PASSWORD='repl',\
+                     MASTER_PORT=%d, \
+                     MASTER_USE_GTID=Slave_pos";
 
 
 int select_new_master(TestConnections * test)
@@ -248,11 +265,20 @@ int select_new_master(TestConnections * test)
     test->add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
     char str[1024];
-    //sprintf(str, setup_slave1, test->repl->IP[2], log_file_new, test->repl->port[2]);
-    sprintf(str, setup_slave1, test->repl->IP[2], maxscale_log_file_new, "4", test->repl->port[2]);
+
+    if (test->binlog_master_gtid)
+    {
+        test->tprintf("Configuring new master with GTID\n");
+        sprintf(str, setup_slave_gtid, test->repl->IP[2], test->repl->port[2]);
+    }
+    else
+    {
+        test->tprintf("Configuring new master with FILE and POS\n");
+        //sprintf(str, setup_slave1, test->repl->IP[2], log_file_new, test->repl->port[2]);
+        sprintf(str, setup_slave1, test->repl->IP[2], maxscale_log_file_new, "4", test->repl->port[2]);
+    }
     test->tprintf("change master query: %s\n", str);
     test->try_query(binlog, str);
-
     test->try_query(binlog, "start slave");
 
     test->repl->close_connections();

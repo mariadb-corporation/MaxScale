@@ -272,8 +272,15 @@ TestConnections::~TestConnections()
 
     if (global_result != 0 )
     {
-        tprintf("Reverting snapshot\n");
-        revert_snapshot((char*) "clean");
+        if (no_vm_revert)
+        {
+            tprintf("no_vm_revert flag is set, not reverting VMs\n");
+        }
+        else
+        {
+            tprintf("Reverting snapshot\n");
+            revert_snapshot((char*) "clean");
+        }
     }
 
     delete repl;
@@ -900,12 +907,12 @@ int TestConnections::start_binlog()
     {
         // GTID to connect real Master
         tprintf("GTID for connection 1st slave to master!\n");
-        try_query(repl->nodes[1], (char *) "stop slave;");
-        try_query(repl->nodes[1], (char *) "SET @@global.gtid_slave_pos='';");
+        try_query(repl->nodes[1], (char *) "stop slave");
+        try_query(repl->nodes[1], (char *) "SET @@global.gtid_slave_pos=''");
         sprintf(sys1, "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
                 repl->IP[0], repl->port[0]);
         try_query(repl->nodes[1], sys1);
-        try_query(repl->nodes[1], (char *) "start slave;");
+        try_query(repl->nodes[1], (char *) "start slave");
     }
     else
     {
@@ -935,9 +942,9 @@ int TestConnections::start_binlog()
     {
         // GTID to connect real Master
         tprintf("GTID for connection binlog router to master!\n");
-        //try_query(binlog, (char *) "stop slave;");
-        //try_query(binlog, (char *) "SET @@global.gtid_slave_pos='';");
-        sprintf(sys1, "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos;",
+        try_query(binlog, (char *) "stop slave");
+        try_query(binlog, (char *) "SET @@global.gtid_slave_pos=''");
+        sprintf(sys1, "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
                 repl->IP[0], repl->port[0]);
         try_query(binlog, sys1);
     }
@@ -968,12 +975,12 @@ int TestConnections::start_binlog()
         fflush(stdout);
         for (i = 2; i < repl->N; i++)
         {
-            try_query(repl->nodes[i], (char *) "stop slave;");
-            try_query(repl->nodes[i], (char *) "SET @@global.gtid_slave_pos='';");
-            sprintf(sys1, "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos;",
+            try_query(repl->nodes[i], (char *) "stop slave");
+            try_query(repl->nodes[i], (char *) "SET @@global.gtid_slave_pos=''");
+            sprintf(sys1, "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
                     maxscale_IP, binlog_port);
             try_query(repl->nodes[i], sys1);
-            try_query(repl->nodes[i], (char *) "start slave;");
+            try_query(repl->nodes[i], (char *) "start slave");
         }
     }
     else
@@ -995,7 +1002,7 @@ int TestConnections::start_binlog()
         fflush(stdout);
         for (i = 2; i < repl->N; i++)
         {
-            try_query(repl->nodes[i], (char *) "stop slave;");
+            try_query(repl->nodes[i], (char *) "stop slave");
             repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
         }
     }

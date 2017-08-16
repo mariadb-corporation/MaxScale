@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     //{
   //      Test->binlog_cmd_option = option;
         Test->start_binlog();
-        //test_binlog(Test);
+        test_binlog(Test);
     //}
 
     Test->check_log_err("SET NAMES utf8mb4", false);
