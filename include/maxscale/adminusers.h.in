@@ -18,6 +18,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
+#include <maxscale/users.h>
 
 MXS_BEGIN_DECLS
 
@@ -73,13 +74,11 @@ typedef struct admin_session
 
 void admin_users_init();
 
-const char* admin_enable_linux_account(const char *uname);
-const char *admin_enable_linux_admin_account(const char *uname);
+const char* admin_enable_linux_account(const char *uname, enum account_type type);
 const char* admin_disable_linux_account(const char *uname);
 bool admin_linux_account_enabled(const char *uname);
 
-const char* admin_add_inet_user(const char *uname, const char *password);
-const char *admin_add_inet_admin_user(const char *uname, const char* password);
+const char* admin_add_inet_user(const char *uname, const char *password, enum account_type type);
 const char* admin_remove_inet_user(const char* uname);
 bool admin_inet_user_exists(const char *uname);
 bool admin_verify_inet_user(const char *uname, const char *password);

@@ -11,20 +11,7 @@
  * Public License.
  */
 
-/**
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                 Description
- * 20-08-2014   Mark Riddoch        Initial implementation
- * 23-05-2016   Massimiliano Pinto  admin_add_user and admin_remove_user
- *                                  no longer accept password parameter
- *
- * @endverbatim
- */
-
-// To ensure that ss_info_assert asserts also when builing in non-debug mode.
+// To ensure that ss_info_assert asserts also when building in non-debug mode.
 #if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
@@ -38,6 +25,7 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
+#include <maxscale/users.h>
 
 /**
  * test1    default user
@@ -76,13 +64,13 @@ test2()
 {
     const char *err;
 
-    if ((err = admin_enable_linux_account("user0")) != NULL)
+    if ((err = admin_enable_linux_account("user0", ACCOUNT_ADMIN)) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.1 (add user) failed, %s.\n", err);
 
         return 1;
     }
-    if (admin_enable_linux_account("user0") == NULL)
+    if (admin_enable_linux_account("user0", ACCOUNT_ADMIN) == NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.2 (add user) failed, duplicate.\n");
 
@@ -98,7 +86,7 @@ test2()
     }
 
     /* Add the user back, for test5. */
-    if ((err = admin_enable_linux_account("user0")) != NULL)
+    if ((err = admin_enable_linux_account("user0", ACCOUNT_ADMIN)) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.4 (add user) failed, %s.\n", err);
 
@@ -122,7 +110,7 @@ test3()
 {
     const char *err;
 
-    if ((err = admin_enable_linux_account("user1")) != NULL)
+    if ((err = admin_enable_linux_account("user1", ACCOUNT_ADMIN)) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 3.1 (add user) failed, %s.\n", err);
 
@@ -180,7 +168,7 @@ test4()
     for (i = 1; i < n_users; i++)
     {
         sprintf(user, "user%d", i);
-        if ((err = admin_enable_linux_account(user)) != NULL)
+        if ((err = admin_enable_linux_account(user, ACCOUNT_ADMIN)) != NULL)
         {
             fprintf(stderr, "admin_add_user: test 4.1 (add user) failed, %s.\n", err);
 
@@ -224,7 +212,7 @@ test5()
 {
     const char *err;
 
-    if ((err = admin_enable_linux_account("user")) != NULL)
+    if ((err = admin_enable_linux_account("user", ACCOUNT_ADMIN)) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 5.1 (add user) failed, %s.\n", err);
 
@@ -259,11 +247,7 @@ main(int argc, char **argv)
 
     unlink(buf);
 
-    // admin_verify() should be removed, since the maxadmin authentication has
-    // been changed completely. However, telnetd still uses that admin_verify()
-    // so I'll leave the function there for now. But telnetd should be dropped,
-    // since it cannot use the same user file as maxadmin does.
-    // result += test1();
+    result += test1();
     result += test2();
     result += test3();
     result += test4();

@@ -179,4 +179,22 @@ void users_diagnostic(DCB* dcb, USERS* users);
  */
 json_t* users_diagnostic_json(USERS* users);
 
+/**
+ * Convert account_type to a string
+ *
+ * @param type Enum value
+ *
+ * @return String representation of @c type
+ */
+const char* account_type_to_str(enum account_type type);
+
+/**
+ * Convert JSON value to account_type value
+ *
+ * @param json JSON value to convert
+ *
+ * @return Enum value of @c json
+ */
+enum account_type json_to_account_type(json_t* json);
+
 MXS_END_DECLS

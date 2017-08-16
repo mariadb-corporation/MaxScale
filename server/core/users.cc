@@ -30,41 +30,6 @@ namespace
 static const char STR_BASIC[] = "basic";
 static const char STR_ADMIN[] = "admin";
 
-static const char* account_type_to_str(account_type type)
-{
-    switch (type)
-    {
-    case ACCOUNT_BASIC:
-        return STR_BASIC;
-
-    case ACCOUNT_ADMIN:
-        return STR_ADMIN;
-
-    default:
-        MXS_ERROR("Unknown enum account_type value: %d", (int)type);
-        ss_dassert(!true);
-        return "unknown";
-    }
-}
-
-static account_type json_to_account_type(json_t* json)
-{
-    std::string str = json_string_value(json);
-
-    if (str == STR_BASIC)
-    {
-        return ACCOUNT_BASIC;
-    }
-    else if (str == STR_ADMIN)
-    {
-        return ACCOUNT_ADMIN;
-    }
-
-    MXS_ERROR("Unknown account type string: %s", str.c_str());
-    ss_dassert(!true);
-    return ACCOUNT_UNKNOWN;
-}
-
 struct UserInfo
 {
     UserInfo():
@@ -180,7 +145,10 @@ public:
 
         for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
         {
-            json_array_append_new(rval, json_string(it->first.c_str()));
+            json_t* obj = json_object();
+            json_object_set_new(obj, CN_NAME, json_string(it->first.c_str()));
+            json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(it->second.permissions)));
+            json_array_append_new(rval, obj);
         }
 
         return rval;
@@ -217,7 +185,7 @@ public:
         {
             json_t* obj = json_object();
             json_object_set_new(obj, CN_NAME, json_string(it->first.c_str()));
-            json_object_set_new(obj, CN_TYPE, json_string(account_type_to_str(it->second.permissions)));
+            json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(it->second.permissions)));
             json_object_set_new(obj, CN_PASSWORD, json_string(it->second.password.c_str()));
             json_array_append_new(arr, obj);
         }
@@ -248,7 +216,7 @@ private:
         json_array_foreach(json, i, value)
         {
             json_t* name = json_object_get(value, CN_NAME);
-            json_t* type = json_object_get(value, CN_TYPE);
+            json_t* type = json_object_get(value, CN_ACCOUNT);
             json_t* password = json_object_get(value, CN_PASSWORD);
 
             if (name && json_is_string(name) &&
@@ -380,4 +348,35 @@ int users_default_loadusers(SERV_LISTENER *port)
     users_free(port->users);
     port->users = users_alloc();
     return MXS_AUTH_LOADUSERS_OK;
+}
+
+const char* account_type_to_str(enum account_type type)
+{
+    switch (type)
+    {
+    case ACCOUNT_BASIC:
+        return STR_BASIC;
+
+    case ACCOUNT_ADMIN:
+        return STR_ADMIN;
+
+    default:
+        return "unknown";
+    }
+}
+
+enum account_type json_to_account_type(json_t* json)
+{
+    std::string str = json_string_value(json);
+
+    if (str == STR_BASIC)
+    {
+        return ACCOUNT_BASIC;
+    }
+    else if (str == STR_ADMIN)
+    {
+        return ACCOUNT_ADMIN;
+    }
+
+    return ACCOUNT_UNKNOWN;
 }

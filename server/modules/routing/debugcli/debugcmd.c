@@ -2268,10 +2268,7 @@ static void do_inet_add_user(DCB *dcb, char *user, char *password, enum account_
         return;
     }
 
-    const char* (*f)(const char*, const char*) = type == ACCOUNT_ADMIN ?
-                                                 admin_add_inet_admin_user : admin_add_inet_user;
-
-    if ((err = f(user, password)) == NULL)
+    if ((err = admin_add_inet_user(user, password, type)) == NULL)
     {
         dcb_printf(dcb, "Account %s for remote (network) usage has been successfully added.\n", user);
     }
@@ -2596,10 +2593,7 @@ static void do_enable_account(DCB *dcb, char *user, enum account_type type)
         return;
     }
 
-    const char* (*f)(const char*) = type == ACCOUNT_ADMIN ?
-                                    admin_enable_linux_admin_account : admin_enable_linux_account;
-
-    if ((err = f(user)) == NULL)
+    if ((err = admin_enable_linux_account(user, type)) == NULL)
     {
         dcb_printf(dcb, "The Linux user %s has successfully been enabled.\n", user);
     }

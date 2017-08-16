@@ -65,8 +65,9 @@ MXS_BEGIN_DECLS
 #define MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH MXS_JSON_PTR_PARAMETERS "/ssl_cert_verify_depth"
 
 /** Non-parameter JSON pointers */
-#define MXS_JSON_PTR_MODULE  "/data/attributes/module"
+#define MXS_JSON_PTR_MODULE   "/data/attributes/module"
 #define MXS_JSON_PTR_PASSWORD "/data/attributes/password"
+#define MXS_JSON_PTR_ACCOUNT  "/data/attributes/account"
 
 /**
  * Common configuration parameters names
@@ -75,6 +76,7 @@ MXS_BEGIN_DECLS
  * For example CN_PASSWORD resolves to the static string "password". This means
  * that the sizeof(CN_<name>) returns the actual size of that string.
  */
+extern const char CN_ACCOUNT[];
 extern const char CN_ADDRESS[];
 extern const char CN_ARG_MAX[];
 extern const char CN_ARG_MIN[];

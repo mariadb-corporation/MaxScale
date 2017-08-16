@@ -54,6 +54,7 @@
 using std::set;
 using std::string;
 
+const char CN_ACCOUNT[]                       = "account";
 const char CN_ADDRESS[]                       = "address";
 const char CN_ARG_MAX[]                       = "arg_max";
 const char CN_ARG_MIN[]                       = "arg_min";

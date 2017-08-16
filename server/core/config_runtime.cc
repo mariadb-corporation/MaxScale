@@ -23,11 +23,12 @@
 #include <algorithm>
 
 #include <maxscale/atomic.h>
+#include <maxscale/jansson.hh>
+#include <maxscale/json_api.h>
 #include <maxscale/paths.h>
 #include <maxscale/platform.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/jansson.hh>
-#include <maxscale/json_api.h>
+#include <maxscale/users.h>
 
 #include "maxscale/config.h"
 #include "maxscale/monitor.h"
@@ -1723,6 +1724,7 @@ bool validate_user_json(json_t* json)
     json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
     json_t* type = mxs_json_pointer(json, MXS_JSON_PTR_TYPE);
     json_t* password = mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD);
+    json_t* account = mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT);
 
     if (!id)
     {
@@ -1739,6 +1741,18 @@ bool validate_user_json(json_t* json)
     else if (!json_is_string(type))
     {
         runtime_error("The '%s' field is not a string", MXS_JSON_PTR_TYPE);
+    }
+    else if (!account)
+    {
+        runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ACCOUNT);
+    }
+    else if (!json_is_string(account))
+    {
+        runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ACCOUNT);
+    }
+    else if (json_to_account_type(account) == ACCOUNT_UNKNOWN)
+    {
+        runtime_error("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
     }
     else
     {
@@ -1780,14 +1794,15 @@ bool runtime_create_user_from_json(json_t* json)
         const char* user = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
         string strtype = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
+        account_type type = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
         const char* err = NULL;
 
-        if (strtype == CN_INET && (err = admin_add_inet_user(user, password)) == ADMIN_SUCCESS)
+        if (strtype == CN_INET && (err = admin_add_inet_user(user, password, type)) == ADMIN_SUCCESS)
         {
             MXS_NOTICE("Create network user '%s'", user);
             rval = true;
         }
-        else if (strtype == CN_UNIX && (err = admin_enable_linux_account(user)) == ADMIN_SUCCESS)
+        else if (strtype == CN_UNIX && (err = admin_enable_linux_account(user, type)) == ADMIN_SUCCESS)
         {
             MXS_NOTICE("Enabled account '%s'", user);
             rval = true;

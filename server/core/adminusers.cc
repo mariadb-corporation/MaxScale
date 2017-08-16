@@ -122,7 +122,7 @@ static const char* admin_remove_user(USERS *users, const char* fname, const char
     return ADMIN_SUCCESS;
 }
 
-static json_t* admin_user_json_data(const char* host, const char* user, enum user_type user_type)
+static json_t* admin_user_json_data(const char* host, const char* user, enum user_type user_type, enum account_type account)
 {
     ss_dassert(user_type != USER_TYPE_ALL);
     const char* type = user_type == USER_TYPE_INET ? CN_INET : CN_UNIX;
@@ -130,6 +130,10 @@ static json_t* admin_user_json_data(const char* host, const char* user, enum use
     json_t* entry = json_object();
     json_object_set_new(entry, CN_ID, json_string(user));
     json_object_set_new(entry, CN_TYPE, json_string(type));
+
+    json_t* param = json_object();
+    json_object_set_new(param, CN_ACCOUNT, json_string(account_type_to_str(account)));
+    json_object_set_new(entry, CN_ATTRIBUTES, param);
 
     std::string self = MXS_JSON_API_USERS;
     self += type;
@@ -146,7 +150,9 @@ static void user_types_to_json(USERS* users, json_t* arr, const char* host, enum
 
     json_array_foreach(json, index, value)
     {
-        json_array_append_new(arr, admin_user_json_data(host, json_string_value(value), type));
+        const char* user = json_string_value(json_object_get(value, CN_NAME));
+        enum account_type account = json_to_account_type(json_object_get(value, CN_ACCOUNT));
+        json_array_append_new(arr, admin_user_json_data(host, user, type, account));
     }
 
     json_decref(json);
@@ -170,11 +176,12 @@ static std::string path_from_type(enum user_type type)
 
 json_t* admin_user_to_json(const char* host, const char* user, enum user_type type)
 {
+    account_type account = admin_is_admin_user(user) ? ACCOUNT_ADMIN : ACCOUNT_BASIC;
     std::string path = path_from_type(type);
     path += "/";
     path += user;
 
-    return mxs_json_resource(host, path.c_str(), admin_user_json_data(host, user, type));
+    return mxs_json_resource(host, path.c_str(), admin_user_json_data(host, user, type, account));
 }
 
 json_t* admin_all_users_to_json(const char* host, enum user_type type)
@@ -333,21 +340,9 @@ static USERS *load_inet_users()
  *
  * @return NULL on success or an error string on failure.
  */
-const char *admin_enable_linux_account(const char *uname)
+const char *admin_enable_linux_account(const char *uname, enum account_type type)
 {
-    return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL, ACCOUNT_BASIC);
-}
-
-/**
- * Enable Linux account
- *
- * @param uname Name of Linux user
- *
- * @return NULL on success or an error string on failure.
- */
-const char *admin_enable_linux_admin_account(const char *uname)
-{
-    return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL, ACCOUNT_ADMIN);
+    return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL, type);
 }
 
 /**
@@ -403,13 +398,6 @@ void mxs_crypt(const char* password, const char* salt, char* output)
 #endif
 }
 
-static const char* add_inet_user(const char *uname, const char* password, account_type type)
-{
-    char cpassword[MXS_CRYPT_SIZE];
-    mxs_crypt(password, ADMIN_SALT, cpassword);
-    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, cpassword, type);
-}
-
 /**
  * Add insecure remote (network) basic user.
  *
@@ -418,22 +406,11 @@ static const char* add_inet_user(const char *uname, const char* password, accoun
  *
  * @return NULL on success or an error string on failure.
  */
-const char *admin_add_inet_user(const char *uname, const char* password)
+const char *admin_add_inet_user(const char *uname, const char* password, enum account_type type)
 {
-    return add_inet_user(uname, password, ACCOUNT_BASIC);
-}
-
-/**
- * Add insecure remote (network) admin user.
- *
- * @param uname    Name of the new user.
- * @param password Password of the new user.
- *
- * @return NULL on success or an error string on failure.
- */
-const char *admin_add_inet_admin_user(const char *uname, const char* password)
-{
-    return add_inet_user(uname, password, ACCOUNT_ADMIN);
+    char cpassword[MXS_CRYPT_SIZE];
+    mxs_crypt(password, ADMIN_SALT, cpassword);
+    return admin_add_user(&inet_users, INET_USERS_FILE_NAME, uname, cpassword, type);
 }
 
 /**
