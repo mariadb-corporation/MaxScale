@@ -21,9 +21,11 @@
 
 #include <signal.h>
 #include <string.h>
+#include <algorithm>
 #include <new>
 #include <string>
 #include <map>
+#include <vector>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
@@ -32,6 +34,8 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 #include "builtin_functions.h"
+
+using std::vector;
 
 //#define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
@@ -252,16 +256,28 @@ public:
         return pInfo;
     }
 
+    static void free_field_info(QC_FIELD_INFO& info)
+    {
+        MXS_FREE(info.database);
+        MXS_FREE(info.table);
+        MXS_FREE(info.column);
+    }
+
+    static void free_function_info(QC_FUNCTION_INFO& info)
+    {
+        MXS_FREE(info.name);
+    }
+
     ~QcSqliteInfo()
     {
-        free_string_array(m_pzTable_names);
-        free_string_array(m_pzTable_fullnames);
+        std::for_each(m_table_names.begin(), m_table_names.end(), mxs_free);
+        std::for_each(m_table_fullnames.begin(), m_table_fullnames.end(), mxs_free);
         free(m_zCreated_table_name);
-        free_string_array(m_pzDatabase_names);
+        std::for_each(m_database_names.begin(), m_database_names.end(), mxs_free);
         free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
-        free_field_infos(m_pField_infos, m_field_infos_len);
-        free_function_infos(m_pFunction_infos, m_function_infos_len);
+        std::for_each(m_field_infos.begin(), m_field_infos.end(), free_field_info);
+        std::for_each(m_function_infos.begin(), m_function_infos.end(), free_function_info);
     }
 
     bool is_valid() const
@@ -325,28 +341,32 @@ public:
         return rv;
     }
 
-    bool get_table_names(int32_t fullnames, char*** ppzTable_names, int32_t* pTable_size) const
+    bool get_table_names(int32_t fullnames, char*** ppzTable_names, int32_t* pnTable_names) const
     {
         bool rv = false;
 
         if (is_valid())
         {
+            const vector<char*>* pNames;
+
             if (fullnames)
             {
-                *ppzTable_names = m_pzTable_fullnames;
+                pNames = &m_table_fullnames;
             }
             else
             {
-                *ppzTable_names = m_pzTable_names;
+                pNames = &m_table_names;
             }
 
-            if (*ppzTable_names)
+            *pnTable_names = pNames->size();
+
+            if (*pnTable_names)
             {
-                *ppzTable_names = copy_string_array(*ppzTable_names, pTable_size);
+                *ppzTable_names = copy_string_array(*pNames);
             }
             else
             {
-                *pTable_size = 0;
+                *ppzTable_names = NULL;
             }
 
             rv = true;
@@ -374,10 +394,17 @@ public:
 
         if (is_valid())
         {
-            if (m_pzDatabase_names)
+            *pnDatabase_names = m_database_names.size();
+
+            if (*pnDatabase_names)
             {
-                *ppzDatabase_names = copy_string_array(m_pzDatabase_names, pnDatabase_names);
+                *ppzDatabase_names = copy_string_array(m_database_names);
             }
+            else
+            {
+                *ppzDatabase_names = NULL;
+            }
+
             rv = true;
         }
 
@@ -410,8 +437,8 @@ public:
 
         if (is_valid())
         {
-            *ppInfos = m_pField_infos;
-            *pnInfos = m_field_infos_len;
+            *ppInfos = m_field_infos.size() ? &m_field_infos[0] : NULL;
+            *pnInfos = m_field_infos.size();
 
             rv = true;
         }
@@ -425,8 +452,8 @@ public:
 
         if (is_valid())
         {
-            *ppInfos = m_pFunction_infos;
-            *pnInfos = m_function_infos_len;
+            *ppInfos = m_function_infos.size() ? &m_function_infos[0] : NULL;
+            *pnInfos = m_function_infos.size();
 
             rv = true;
         }
@@ -540,26 +567,26 @@ public:
         QC_FIELD_INFO item = { (char*)zDatabase, (char*)zTable, (char*)zColumn, usage };
 
         size_t i;
-        for (i = 0; i < m_field_infos_len; ++i)
+        for (i = 0; i < m_field_infos.size(); ++i)
         {
-            QC_FIELD_INFO* pField_info = m_pField_infos + i;
+            const QC_FIELD_INFO& field_info = m_field_infos[i];
 
-            if (strcasecmp(item.column, pField_info->column) == 0)
+            if (strcasecmp(item.column, field_info.column) == 0)
             {
-                if (!item.table && !pField_info->table)
+                if (!item.table && !field_info.table)
                 {
-                    ss_dassert(!item.database && !pField_info->database);
+                    ss_dassert(!item.database && !field_info.database);
                     break;
                 }
-                else if (item.table && pField_info->table && (strcmp(item.table, pField_info->table) == 0))
+                else if (item.table && field_info.table && (strcmp(item.table, field_info.table) == 0))
                 {
-                    if (!item.database && !pField_info->database)
+                    if (!item.database && !field_info.database)
                     {
                         break;
                     }
                     else if (item.database &&
-                             pField_info->database &&
-                             (strcmp(item.database, pField_info->database) == 0))
+                             field_info.database &&
+                             (strcmp(item.database, field_info.database) == 0))
                     {
                         break;
                     }
@@ -567,9 +594,7 @@ public:
             }
         }
 
-        QC_FIELD_INFO* pField_infos = NULL;
-
-        if (i == m_field_infos_len) // If true, the field was not present already.
+        if (i == m_field_infos.size()) // If true, the field was not present already.
         {
             // If only a column is specified, but not a table or database and we
             // have a list of expressions that should be excluded, we check if the column
@@ -577,43 +602,24 @@ public:
             // a statement like "select a as d from x where d = 2".
             if (!(zColumn && !zTable && !zDatabase && pExclude && should_exclude(zColumn, pExclude)))
             {
-                if (m_field_infos_len < m_field_infos_capacity)
-                {
-                    pField_infos = m_pField_infos;
-                }
-                else
-                {
-                    size_t capacity = m_field_infos_capacity ? 2 * m_field_infos_capacity : 8;
-                    pField_infos = (QC_FIELD_INFO*)MXS_REALLOC(m_pField_infos,
-                                                               capacity * sizeof(QC_FIELD_INFO));
 
-                    if (pField_infos)
-                    {
-                        m_pField_infos = pField_infos;
-                        m_field_infos_capacity = capacity;
-                    }
+                // If field_infos is NULL, then the field was found and has already been noted.
+                item.database = item.database ? MXS_STRDUP(item.database) : NULL;
+                item.table = item.table ? MXS_STRDUP(item.table) : NULL;
+                ss_dassert(item.column);
+                item.column = MXS_STRDUP(item.column);
+
+                // We are happy if we at least could dup the column.
+
+                if (item.column)
+                {
+                    m_field_infos.push_back(item);
                 }
             }
         }
         else
         {
-            m_pField_infos[i].usage |= usage;
-        }
-
-        // If field_infos is NULL, then the field was found and has already been noted.
-        if (pField_infos)
-        {
-            item.database = item.database ? MXS_STRDUP(item.database) : NULL;
-            item.table = item.table ? MXS_STRDUP(item.table) : NULL;
-            ss_dassert(item.column);
-            item.column = MXS_STRDUP(item.column);
-
-            // We are happy if we at least could dup the column.
-
-            if (item.column)
-            {
-                pField_infos[m_field_infos_len++] = item;
-            }
+            m_field_infos[i].usage |= usage;
         }
     }
 
@@ -1236,53 +1242,31 @@ public:
         QC_FUNCTION_INFO item = { (char*)name, usage };
 
         size_t i;
-        for (i = 0; i < m_function_infos_len; ++i)
+        for (i = 0; i < m_function_infos.size(); ++i)
         {
-            QC_FUNCTION_INFO* function_info = m_pFunction_infos + i;
+            QC_FUNCTION_INFO& function_info = m_function_infos[i];
 
-            if (strcasecmp(item.name, function_info->name) == 0)
+            if (strcasecmp(item.name, function_info.name) == 0)
             {
                 break;
             }
         }
 
-        QC_FUNCTION_INFO* function_infos = NULL;
-
-        if (i == m_function_infos_len) // If true, the function was not present already.
-        {
-            if (m_function_infos_len < m_function_infos_capacity)
-            {
-                function_infos = m_pFunction_infos;
-            }
-            else
-            {
-                size_t capacity = m_function_infos_capacity ? 2 * m_function_infos_capacity : 8;
-                function_infos = (QC_FUNCTION_INFO*)MXS_REALLOC(m_pFunction_infos,
-                                                                capacity * sizeof(QC_FUNCTION_INFO));
-
-                if (function_infos)
-                {
-                    m_pFunction_infos = function_infos;
-                    m_function_infos_capacity = capacity;
-                }
-            }
-        }
-        else
-        {
-            m_pFunction_infos[i].usage |= usage;
-        }
-
-        // If function_infos is NULL, then the function was found and has already been noted.
-        if (function_infos)
+        if (i == m_function_infos.size()) // If true, the function was not present already.
         {
             ss_dassert(item.name);
             item.name = MXS_STRDUP(item.name);
 
             if (item.name)
             {
-                function_infos[m_function_infos_len++] = item;
+                m_function_infos.push_back(item);
             }
         }
+        else
+        {
+            m_function_infos[i].usage |= usage;
+        }
+
     }
 
     //
@@ -1703,13 +1687,13 @@ public:
             // this information already.
             if (!m_zCreated_table_name)
             {
-                m_zCreated_table_name = MXS_STRDUP(m_pzTable_names[0]);
+                m_zCreated_table_name = MXS_STRDUP(m_table_names[0]);
                 MXS_ABORT_IF_NULL(m_zCreated_table_name);
             }
             else
             {
                 ss_dassert(m_collect != m_collected);
-                ss_dassert(strcmp(m_zCreated_table_name, m_pzTable_names[0]) == 0);
+                ss_dassert(strcmp(m_zCreated_table_name, m_table_names[0]) == 0);
             }
         }
     }
@@ -2813,27 +2797,12 @@ private:
         , m_type_mask(QUERY_TYPE_UNKNOWN)
         , m_operation(QUERY_OP_UNDEFINED)
         , m_has_clause(false)
-        , m_pzTable_names(NULL)
-        , m_table_names_len(0)
-        , m_table_names_capacity(0)
-        , m_pzTable_fullnames(NULL)
-        , m_table_fullnames_len(0)
-        , m_table_fullnames_capacity(0)
         , m_zCreated_table_name(NULL)
         , m_is_drop_table(false)
-        , m_pzDatabase_names(NULL)
-        , m_database_names_len(0)
-        , m_database_names_capacity(0)
         , m_keyword_1(0) // Sqlite3 starts numbering tokens from 1, so 0 means
         , m_keyword_2(0) // that we have not seen a keyword.
         , m_zPrepare_name(NULL)
         , m_pPreparable_stmt(NULL)
-        , m_pField_infos(NULL)
-        , m_field_infos_len(0)
-        , m_field_infos_capacity(0)
-        , m_pFunction_infos(NULL)
-        , m_function_infos_len(0)
-        , m_function_infos_capacity(0)
         , m_sql_mode(this_thread.sql_mode)
         , m_pFunction_name_mappings(this_thread.pFunction_name_mappings)
     {
@@ -2889,27 +2858,18 @@ private:
         }
     }
 
-    static char** copy_string_array(char** pzStrings, int* pn)
+    static char** copy_string_array(const vector<char*>& strings)
     {
-        size_t n = 0;
+        size_t n = strings.size();
 
-        char** pz = pzStrings;
-        *pn = 0;
-
-        while (*pz)
-        {
-            ++pz;
-            ++(*pn);
-        }
-
-        pz = (char**) MXS_MALLOC((*pn + 1) * sizeof(char*));
+        char** pz = (char**) MXS_MALLOC((n + 1) * sizeof(char*));
         MXS_ABORT_IF_NULL(pz);
 
-        pz[*pn] = 0;
+        pz[n] = 0;
 
-        for (int i = 0; i < *pn; ++i)
+        for (size_t i = 0; i < n; ++i)
         {
-            pz[i] = MXS_STRDUP(pzStrings[i]);
+            pz[i] = MXS_STRDUP(strings[i]);
             MXS_ABORT_IF_NULL(pz[i]);
         }
 
@@ -2920,36 +2880,36 @@ private:
     {
         size_t i = 0;
 
-        while ((i < m_table_names_len) && (strcmp(m_pzTable_names[i], zTable) != 0))
+        while ((i < m_table_names.size()) && (strcmp(m_table_names[i], zTable) != 0))
         {
             ++i;
         }
 
-        return (i != m_table_names_len) ? m_pzTable_names[i] : NULL;
+        return (i != m_table_names.size()) ? m_table_names[i] : NULL;
     }
 
     const char* table_fullname_collected(const char* zTable)
     {
         size_t i = 0;
 
-        while ((i < m_table_fullnames_len) && (strcmp(m_pzTable_fullnames[i], zTable) != 0))
+        while ((i < m_table_fullnames.size()) && (strcmp(m_table_fullnames[i], zTable) != 0))
         {
             ++i;
         }
 
-        return (i != m_table_fullnames_len) ? m_pzTable_fullnames[i] : NULL;
+        return (i != m_table_fullnames.size()) ? m_table_fullnames[i] : NULL;
     }
 
     const char* database_name_collected(const char* zDatabase)
     {
         size_t i = 0;
 
-        while ((i < m_database_names_len) && (strcmp(m_pzDatabase_names[i], zDatabase) != 0))
+        while ((i < m_database_names.size()) && (strcmp(m_database_names[i], zDatabase) != 0))
         {
             ++i;
         }
 
-        return (i != m_database_names_len) ? m_pzDatabase_names[i] : NULL;
+        return (i != m_database_names.size()) ? m_database_names[i] : NULL;
     }
 
     const char* update_table_names(const char* zDatabase, size_t nDatabase,
@@ -2963,9 +2923,7 @@ private:
         {
             char* zCopy = MXS_STRDUP_A(zTable);
 
-            enlarge_string_array(1, m_table_names_len, &m_pzTable_names, &m_table_names_capacity);
-            m_pzTable_names[m_table_names_len++] = zCopy;
-            m_pzTable_names[m_table_names_len] = NULL;
+            m_table_names.push_back(zCopy);
 
             zCollected_table = zCopy;
         }
@@ -2988,10 +2946,7 @@ private:
         {
             char* zCopy = MXS_STRDUP_A(fullname);
 
-            enlarge_string_array(1, m_table_fullnames_len,
-                                 &m_pzTable_fullnames, &m_table_fullnames_capacity);
-            m_pzTable_fullnames[m_table_fullnames_len++] = zCopy;
-            m_pzTable_fullnames[m_table_fullnames_len] = NULL;
+            m_table_fullnames.push_back(zCopy);
         }
 
         return zCollected_table;
@@ -3008,10 +2963,7 @@ private:
         {
             char* zCopy = MXS_STRDUP_A(zDatabase);
 
-            enlarge_string_array(1, m_database_names_len,
-                                 &m_pzDatabase_names, &m_database_names_capacity);
-            m_pzDatabase_names[m_database_names_len++] = zCopy;
-            m_pzDatabase_names[m_database_names_len] = NULL;
+            m_database_names.push_back(zCopy);
 
             zCollected_database = zCopy;
         }
@@ -3030,25 +2982,17 @@ public:
     uint32_t m_type_mask;                       // The type mask of the query.
     qc_query_op_t m_operation;                  // The operation in question.
     bool m_has_clause;                          // Has WHERE or HAVING.
-    char** m_pzTable_names;                     // Array of table names used in the query.
-    size_t m_table_names_len;                   // The used entries in m_pzTable_names.
-    size_t m_table_names_capacity;              // The capacity of m_pzTable_names.
-    char** m_pzTable_fullnames;                 // Array of qualified table names used in the query.
-    size_t m_table_fullnames_len;               // The used entries in m_pzTable_fullnames.
-    size_t m_table_fullnames_capacity;          // The capacity of m_table_fullnames.
+    vector<char*> m_table_names;                // Vector of table names used in the query.
+    vector<char*> m_table_fullnames;            // Vector of qualified table names used in the query.
     char* m_zCreated_table_name;                // The name of a created table.
     bool m_is_drop_table;                       // Is the query a DROP TABLE.
-    char** m_pzDatabase_names;                  // Array of database names used in the query.
-    size_t m_database_names_len;                // The used entries in m_database_names.
-    size_t m_database_names_capacity;           // The capacity of m_database_names.
+    vector<char*> m_database_names;             // Vector of database names used in the query.
     int m_keyword_1;                            // The first encountered keyword.
     int m_keyword_2;                            // The second encountered keyword.
     char* m_zPrepare_name;                      // The name of a prepared statement.
     GWBUF* m_pPreparable_stmt;                  // The preparable statement.
-    QC_FIELD_INFO *m_pField_infos;              // Pointer to array of QC_FIELD_INFOs.
-    size_t m_field_infos_len;                   // The used entries in field_infos.
-    size_t m_field_infos_capacity;              // The capacity of the field_infos array.
-    QC_FUNCTION_INFO *m_pFunction_infos;        // Pointer to array of QC_FUNCTION_INFOs.
+    vector<QC_FIELD_INFO> m_field_infos;        // Vector of QC_FIELD_INFOs.
+    vector<QC_FUNCTION_INFO> m_function_infos;  // Vector of QC_FUNCTION_INFOs.
     size_t m_function_infos_len;                // The used entries in function_infos.
     size_t m_function_infos_capacity;           // The capacity of the function_infos array.
     qc_sql_mode_t m_sql_mode;                   // The current sql_mode.
