@@ -126,3 +126,11 @@ with recursive src(counter) as
  union 
  select counter+1 from src where counter<10
 ) select * from src;
+
+#MXS qc_sqlite
+#MXS Statement was classified only based on keywords (Sqlite3 error: SQL logic
+#MXS error or missing database, near "(": syntax error): "create view win_view
+#MXS as (select a, min(a) over () from t1 where a = 1);"
+create view win_view
+as (select a, min(a) over () from t1 where a = 1);
+select * from win_view;

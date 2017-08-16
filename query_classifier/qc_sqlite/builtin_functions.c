@@ -424,6 +424,11 @@ static const char* BUILTIN_10_2_3_FUNCTIONS[] =
     //
     "cume_dist",
     "dense_rank",
+    "first_value",
+    "lag",
+    "last_value",
+    "lead",
+    "nth_value",
     "ntile",
     "percent_rank",
     "rank",
