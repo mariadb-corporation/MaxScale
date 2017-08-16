@@ -177,7 +177,7 @@ static std::string path_from_type(enum user_type type)
 
 json_t* admin_user_to_json(const char* host, const char* user, enum user_type type)
 {
-    user_account_type account = admin_is_admin_user(user) ? USER_ACCOUNT_ADMIN : USER_ACCOUNT_BASIC;
+    user_account_type account = admin_user_is_inet_admin(user) ? USER_ACCOUNT_ADMIN : USER_ACCOUNT_BASIC;
     std::string path = path_from_type(type);
     path += "/";
     path += user;
@@ -477,13 +477,33 @@ admin_verify_inet_user(const char *username, const char *password)
     return rv;
 }
 
-bool admin_is_admin_user(const char* username)
+bool admin_user_is_inet_admin(const char* username)
 {
-    bool rval = true; // The default `admin:mariadb` user has all permissions
+    bool rval = false;
 
     if (inet_users)
     {
         rval = users_is_admin(inet_users, username);
+    }
+    else if (strcmp(INET_DEFAULT_USERNAME, username) == 0)
+    {
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool admin_user_is_unix_admin(const char* username)
+{
+    bool rval = false;
+
+    if (linux_users)
+    {
+        rval = users_is_admin(linux_users, username);
+    }
+    else if (strcmp(DEFAULT_ADMIN_USER, username) == 0)
+    {
+        rval = true;
     }
 
     return rval;

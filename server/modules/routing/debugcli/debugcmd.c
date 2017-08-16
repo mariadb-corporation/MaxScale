@@ -1774,6 +1774,11 @@ static struct
     { NULL,         NULL    }
 };
 
+static bool command_requires_admin_privileges(const char* cmd)
+{
+    return strcmp(cmd, "list") != 0 && strcmp(cmd, "show") != 0;
+}
+
 /**
  * Convert a string argument to a numeric, observing prefixes
  * for number bases, e.g. 0x for hex, 0 for octal
@@ -1844,6 +1849,28 @@ static void free_arg(int arg_type, void *value)
     default:
         break;
     }
+}
+
+static bool user_is_authorized(DCB* dcb)
+{
+    bool rval = true;
+
+    if (strcmp(dcb->remote, "localhost") == 0)
+    {
+        if (!admin_user_is_unix_admin(dcb->user))
+        {
+            rval = false;
+        }
+    }
+    else
+    {
+        if (!admin_user_is_inet_admin(dcb->user))
+        {
+            rval = false;
+        }
+    }
+
+    return rval;
 }
 
 static SPINLOCK debugcmd_lock = SPINLOCK_INIT;
@@ -2005,6 +2032,13 @@ execute_cmd(CLI_SESSION *cli)
                     if (strcasecmp(args[1], cmds[i].options[j].arg1) == 0)
                     {
                         found = 1; /**< command and sub-command match */
+
+                        if (command_requires_admin_privileges(cmds[i].cmd) &&
+                            !user_is_authorized(dcb))
+                        {
+                            dcb_printf(dcb, "Access denied, administrative privileges required.\n");
+                            break;
+                        }
 
                         if (cmds[i].options[j].argc_min == cmds[i].options[j].argc_max &&
                             argc != cmds[i].options[j].argc_min)

@@ -241,7 +241,12 @@ static int maxscaled_read_event(DCB* dcb)
                 {
                 case MAXSCALED_STATE_LOGIN:
                     {
-                        maxscaled->username = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
+                        size_t len = GWBUF_LENGTH(head);
+                        char user[len + 1];
+                        memcpy(user, GWBUF_DATA(head), len);
+                        user[len] = '\0';
+                        maxscaled->username = MXS_STRDUP_A(user);
+                        dcb->user = MXS_STRDUP_A(user);
                         maxscaled->state = MAXSCALED_STATE_PASSWD;
                         dcb_printf(dcb, MAXADMIN_AUTH_PASSWORD_PROMPT);
                         gwbuf_free(head);
