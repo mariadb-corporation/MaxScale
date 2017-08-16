@@ -226,6 +226,8 @@ public:
     SERVICE* service() const;
     const Config&  config() const;
     Stats&   stats();
+    int max_slave_count() const;
+    bool have_enough_servers() const;
 
 private:
     SERVICE* m_service; /**< Service where the router belongs*/

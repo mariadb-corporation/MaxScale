@@ -61,7 +61,6 @@ bool send_readonly_error(DCB *dcb);
  */
 int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data);
 SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb);
-int rses_get_max_slavecount(RWSplitSession *rses);
 int rses_get_max_replication_lag(RWSplitSession *rses);
 
 /*

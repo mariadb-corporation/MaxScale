@@ -73,7 +73,7 @@ class RWSplitSession
     RWSplitSession& operator=(const RWSplitSession&);
 
 public:
-    RWSplitSession(const Config& config);
+    RWSplitSession(RWSplit* instance, MXS_SESSION* session);
 
     // TODO: Make member variables private
     skygw_chk_t             rses_chk_top;

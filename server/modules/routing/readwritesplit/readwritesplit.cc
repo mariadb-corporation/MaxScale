@@ -60,42 +60,11 @@ static void handle_error_reply_client(MXS_SESSION *ses, RWSplitSession *rses,
 static bool handle_error_new_connection(RWSplit *inst,
                                         RWSplitSession **rses,
                                         DCB *backend_dcb, GWBUF *errmsg);
-static bool have_enough_servers(RWSplitSession *rses, const int min_nsrv,
-                                int router_nsrv, RWSplit *router);
 static bool route_stored_query(RWSplitSession *rses);
 
 /**
  * Internal functions
  */
-
-/**
- * @brief Get count of backend servers that are slaves.
- *
- * Find out the number of read backend servers.
- * Depending on the configuration value type, either copy direct count
- * of slave connections or calculate the count from percentage value.
- *
- * @param   rses Router client session
- * @param   router_nservers The number of backend servers in total
- */
-int rses_get_max_slavecount(RWSplitSession *rses)
-{
-    int conf_max_nslaves;
-    int router_nservers = rses->rses_nbackends;
-
-    CHK_CLIENT_RSES(rses);
-
-    if (rses->rses_config.max_slave_connections > 0)
-    {
-        conf_max_nslaves = rses->rses_config.max_slave_connections;
-    }
-    else
-    {
-        conf_max_nslaves = (router_nservers * rses->rses_config.rw_max_slave_conn_percent) / 100;
-    }
-
-    return MXS_MIN(router_nservers - 1, MXS_MAX(1, conf_max_nslaves));
-}
 
 /*
  * @brief Get the maximum replication lag for this router
@@ -448,7 +417,7 @@ static bool handle_error_new_connection(RWSplit *inst,
         route_stored_query(myrses);
     }
 
-    int max_nslaves = rses_get_max_slavecount(myrses);
+    int max_nslaves = inst->max_slave_count();
     bool succp;
     /**
      * Try to get replacement slave or at least the minimum
@@ -456,7 +425,7 @@ static bool handle_error_new_connection(RWSplit *inst,
      */
     if (inst->config().disable_sescmd_history)
     {
-        succp = have_enough_servers(myrses, 1, myrses->rses_nbackends, inst) ? true : false;
+        succp = inst->have_enough_servers();
     }
     else
     {
@@ -464,64 +433,6 @@ static bool handle_error_new_connection(RWSplit *inst,
                                                myrses->rses_config.slave_selection_criteria,
                                                ses, inst, myrses,
                                                connection_type::SLAVE);
-    }
-
-    return succp;
-}
-
-/**
- * @brief Calculate whether we have enough servers to route a query
- *
- * @param p_rses        Router session
- * @param min_nsrv      Minimum number of servers that is sufficient
- * @param nsrv          Actual number of servers
- * @param router        Router instance
- *
- * @return bool - whether enough, side effect is error logging
- */
-static bool have_enough_servers(RWSplitSession *rses, const int min_nsrv,
-                                int router_nsrv, RWSplit *router)
-{
-    bool succp = true;
-
-    /** With too few servers session is not created */
-    if (router_nsrv < min_nsrv ||
-        MXS_MAX((rses)->rses_config.max_slave_connections,
-                (router_nsrv * (rses)->rses_config.rw_max_slave_conn_percent) /
-                100) < min_nsrv)
-    {
-        if (router_nsrv < min_nsrv)
-        {
-            MXS_ERROR("Unable to start %s service. There are "
-                      "too few backend servers available. Found %d "
-                      "when %d is required.",
-                      router->service()->name, router_nsrv, min_nsrv);
-        }
-        else
-        {
-            int pct = (rses)->rses_config.rw_max_slave_conn_percent / 100;
-            int nservers = router_nsrv * pct;
-
-            if ((rses)->rses_config.max_slave_connections < min_nsrv)
-            {
-                MXS_ERROR("Unable to start %s service. There are "
-                          "too few backend servers configured in "
-                          "MaxScale.cnf. Found %d when %d is required.",
-                          router->service()->name,
-                          (rses)->rses_config.max_slave_connections, min_nsrv);
-            }
-            if (nservers < min_nsrv)
-            {
-                double dbgpct = ((double)min_nsrv / (double)router_nsrv) * 100.0;
-                MXS_ERROR("Unable to start %s service. There are "
-                          "too few backend servers configured in "
-                          "MaxScale.cnf. Found %d%% when at least %.0f%% "
-                          "would be required.",
-                          router->service()->name,
-                          (rses)->rses_config.rw_max_slave_conn_percent, dbgpct);
-            }
-        }
-        succp = false;
     }
 
     return succp;
@@ -708,9 +619,85 @@ Stats& RWSplit::stats()
     return m_stats;
 }
 
-RWSplitSession::RWSplitSession(const Config& config):
-    rses_config(config)
+int RWSplit::max_slave_count() const
 {
+    int router_nservers = m_service->n_dbref;
+    int conf_max_nslaves = m_config.max_slave_connections > 0 ?
+                           m_config.max_slave_connections :
+                           (router_nservers * m_config.rw_max_slave_conn_percent) / 100;
+    return MXS_MIN(router_nservers - 1, MXS_MAX(1, conf_max_nslaves));
+}
+
+bool RWSplit::have_enough_servers() const
+{
+    bool succp = true;
+    const int min_nsrv = 1;
+    const int router_nsrv = m_service->n_dbref;
+
+    int n_serv = MXS_MAX(m_config.max_slave_connections,
+                         (router_nsrv * m_config.rw_max_slave_conn_percent) / 100);
+
+    /** With too few servers session is not created */
+    if (router_nsrv < min_nsrv || n_serv < min_nsrv)
+    {
+        if (router_nsrv < min_nsrv)
+        {
+            MXS_ERROR("Unable to start %s service. There are "
+                      "too few backend servers available. Found %d "
+                      "when %d is required.", m_service->name, router_nsrv, min_nsrv);
+        }
+        else
+        {
+            int pct = m_config.rw_max_slave_conn_percent / 100;
+            int nservers = router_nsrv * pct;
+
+            if (m_config.max_slave_connections < min_nsrv)
+            {
+                MXS_ERROR("Unable to start %s service. There are "
+                          "too few backend servers configured in "
+                          "MaxScale.cnf. Found %d when %d is required.",
+                          m_service->name, m_config.max_slave_connections, min_nsrv);
+            }
+            if (nservers < min_nsrv)
+            {
+                double dbgpct = ((double)min_nsrv / (double)router_nsrv) * 100.0;
+                MXS_ERROR("Unable to start %s service. There are "
+                          "too few backend servers configured in "
+                          "MaxScale.cnf. Found %d%% when at least %.0f%% "
+                          "would be required.", m_service->name,
+                          m_config.rw_max_slave_conn_percent, dbgpct);
+            }
+        }
+        succp = false;
+    }
+
+    return succp;
+}
+
+RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session):
+    rses_chk_top(CHK_NUM_ROUTER_SES),
+    rses_closed(false),
+    rses_config(instance->config()),
+    rses_nbackends(instance->service()->n_dbref),
+    load_data_state(LOAD_DATA_INACTIVE),
+    have_tmp_tables(false),
+    rses_load_data_sent(0),
+    client_dcb(session->client_dcb),
+    sescmd_count(1), // Needs to be a positive number to work
+    expected_responses(0),
+    query_queue(NULL),
+    router(instance),
+    sent_sescmd(0),
+    recv_sescmd(0),
+    rses_chk_tail(CHK_NUM_ROUTER_SES)
+{
+    if (rses_config.rw_max_slave_conn_percent)
+    {
+        int n_conn = 0;
+        double pct = (double)rses_config.rw_max_slave_conn_percent / 100.0;
+        n_conn = MXS_MAX(floor((double)rses_nbackends * pct), 1);
+        rses_config.max_slave_connections = n_conn;
+    }
 }
 
 /**
@@ -769,33 +756,17 @@ static MXS_ROUTER* createInstance(SERVICE *service, char **options)
  */
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
 {
-    RWSplit* router = (RWSplit*)router_inst;
-    RWSplitSession* client_rses = new (std::nothrow) RWSplitSession(router->config());
+    RWSplit* router = reinterpret_cast<RWSplit*>(router_inst);
 
-    if (client_rses == NULL)
+    if (!router->have_enough_servers())
     {
         return NULL;
     }
 
-    client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
-    client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
-    client_rses->rses_closed = false;
-    client_rses->router = router;
-    client_rses->client_dcb = session->client_dcb;
-    client_rses->have_tmp_tables = false;
-    client_rses->expected_responses = 0;
-    client_rses->query_queue = NULL;
-    client_rses->load_data_state = LOAD_DATA_INACTIVE;
-    client_rses->sent_sescmd = 0;
-    client_rses->recv_sescmd = 0;
-    client_rses->sescmd_count = 1; // Needs to be a positive number to work
+    RWSplitSession* client_rses = new (std::nothrow) RWSplitSession(router, session);
 
-    int router_nservers = router->service()->n_dbref;
-    const int min_nservers = 1;
-
-    if (!have_enough_servers(client_rses, min_nservers, router_nservers, router))
+    if (client_rses == NULL)
     {
-        delete client_rses;
         return NULL;
     }
 
@@ -807,12 +778,8 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
         }
     }
 
-    client_rses->rses_nbackends = router_nservers;
-
-    int max_nslaves = rses_get_max_slavecount(client_rses);
-
-    if (!select_connect_backend_servers(router_nservers, max_nslaves,
-                                        client_rses->rses_config.slave_selection_criteria,
+    if (!select_connect_backend_servers(router->service()->n_dbref, router->max_slave_count(),
+                                        router->config().slave_selection_criteria,
                                         session, router, client_rses,
                                         connection_type::ALL))
     {
@@ -824,17 +791,9 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
         return NULL;
     }
 
-    if (client_rses->rses_config.rw_max_slave_conn_percent)
-    {
-        int n_conn = 0;
-        double pct = (double)client_rses->rses_config.rw_max_slave_conn_percent / 100.0;
-        n_conn = MXS_MAX(floor((double)client_rses->rses_nbackends * pct), 1);
-        client_rses->rses_config.max_slave_connections = n_conn;
-    }
-
     router->stats().n_sessions += 1;
 
-    return (MXS_ROUTER_SESSION*)client_rses;
+    return reinterpret_cast<MXS_ROUTER_SESSION*>(client_rses);
 }
 
 /**
