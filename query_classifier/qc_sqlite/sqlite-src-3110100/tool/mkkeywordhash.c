@@ -208,6 +208,9 @@ static Keyword aKeywordTable[] = {
   { "CONSTRAINT",       "TK_CONSTRAINT",   ALWAYS                 },
   { "CREATE",           "TK_CREATE",       ALWAYS                 },
   { "CROSS",            "TK_JOIN_KW",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "CURRENT",          "TK_CURRENT",      ALWAYS                 },
+#endif
   { "CURRENT_DATE",     "TK_CTIME_KW",     ALWAYS                 },
   { "CURRENT_TIME",     "TK_CTIME_KW",     ALWAYS                 },
   { "CURRENT_TIMESTAMP","TK_CTIME_KW",     ALWAYS                 },
@@ -254,6 +257,7 @@ static Keyword aKeywordTable[] = {
   { "EXCLUSIVE",        "TK_EXCLUSIVE",    ALWAYS                 },
 #ifdef MAXSCALE
   { "EXECUTE",          "TK_EXECUTE",      ALWAYS                 },
+  { "EXCLUDE",          "TK_EXCLUDE",      ALWAYS                 },
 #endif
   { "EXISTS",           "TK_EXISTS",       ALWAYS                 },
   { "EXPLAIN",          "TK_EXPLAIN",      EXPLAIN                },
@@ -263,6 +267,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "FIRST",            "TK_FIRST",        ALWAYS                 },
   { "FLUSH",            "TK_FLUSH",        ALWAYS                 },
+  { "FOLLOWING",        "TK_FOLLOWING",    ALWAYS                 },
 #endif
   { "FOR",              "TK_FOR",          TRIGGER                },
 #ifdef MAXSCALE
@@ -352,11 +357,16 @@ static Keyword aKeywordTable[] = {
 #endif
   { "OR",               "TK_OR",           ALWAYS                 },
   { "ORDER",            "TK_ORDER",        ALWAYS                 },
+#ifdef MAXSCALE
+  { "OTHERS",           "TK_OTHERS",       ALWAYS                 },
+#endif
   { "OUTER",            "TK_JOIN_KW",      ALWAYS                 },
 #ifdef MAXSCALE
   { "OUTFILE",          "TK_OUTFILE",      ALWAYS                 },
+  { "OVER",             "TK_OVER",         ALWAYS                 },
 #endif
 #ifdef MAXSCALE
+  { "PARTITION",        "TK_PARTITION",    ALWAYS                 },
   { "PERSISTENT",       "TK_PERSISTENT",   ALWAYS                 },
 #endif
 #ifndef MAXSCALE
@@ -364,6 +374,7 @@ static Keyword aKeywordTable[] = {
 #endif
   { "PRAGMA",           "TK_PRAGMA",       PRAGMA                 },
 #ifdef MAXSCALE
+  { "PRECEDING",        "TK_PRECEDING",    ALWAYS                 },
   { "PREPARE",          "TK_PREPARE",      ALWAYS                 },
 #endif
   { "PRIMARY",          "TK_PRIMARY",      ALWAYS                 },
@@ -378,6 +389,7 @@ static Keyword aKeywordTable[] = {
 #endif
   { "RAISE",            "TK_RAISE",        TRIGGER                },
 #ifdef MAXSCALE
+  { "RANGE",            "TK_RANGE",        ALWAYS                 },
   { "READ",             "TK_READ",         ALWAYS                 },
 #endif
   { "RECURSIVE",        "TK_RECURSIVE",    CTE                    },
@@ -397,6 +409,9 @@ static Keyword aKeywordTable[] = {
   { "ROLLUP",           "TK_ROLLUP",       ALWAYS                 },
 #endif
   { "ROW",              "TK_ROW",          TRIGGER                },
+#ifdef MAXSCALE
+  { "ROWS",             "TK_ROWS",         ALWAYS                 },
+#endif
   { "SAVEPOINT",        "TK_SAVEPOINT",    ALWAYS                 },
 #ifdef MAXSCALE
   { "SCHEMAS",          "TK_DATABASES_KW", ALWAYS                 },
@@ -432,11 +447,15 @@ static Keyword aKeywordTable[] = {
   { "TEMPTABLE",        "TK_TEMPTABLE",    ANALYZE                },
 #endif
   { "THEN",             "TK_THEN",         ALWAYS                 },
+#ifdef MAXSCALE
+  { "TIES",             "TK_TIES",         ANALYZE                },
+#endif
   { "TO",               "TK_TO",           ALWAYS                 },
   { "TRANSACTION",      "TK_TRANSACTION",  ALWAYS                 },
   { "TRIGGER",          "TK_TRIGGER",      TRIGGER                },
 #ifdef MAXSCALE
   { "TRUNCATE",         "TK_TRUNCATE",     ALWAYS                 },
+  { "UNBOUNDED",        "TK_UNBOUNDED",    ALWAYS                 },
 #endif
   { "UNION",            "TK_UNION",        COMPOUND               },
   { "UNSIGNED",         "TK_UNSIGNED",     ALWAYS                 },
@@ -459,6 +478,7 @@ static Keyword aKeywordTable[] = {
   { "VIRTUAL",          "TK_VIRTUAL",      VTAB                   },
 #ifdef MAXSCALE
   { "WARNINGS",         "TK_WARNINGS",     ALWAYS                 },
+  { "WINDOW",           "TK_WINDOW",       ALWAYS                 },
 #endif
   { "WITH",             "TK_WITH",         CTE                    },
 #ifndef MAXSCALE

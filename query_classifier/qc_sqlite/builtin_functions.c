@@ -387,11 +387,11 @@ static const char* BUILTIN_FUNCTIONS[] =
 
 const size_t N_BUILTIN_FUNCTIONS = sizeof(BUILTIN_FUNCTIONS) / sizeof(BUILTIN_FUNCTIONS[0]);
 
-// The functions have been taken from:
-// https://mariadb.com/kb/en/mariadb/json-functions
-
 static const char* BUILTIN_10_2_3_FUNCTIONS[] =
 {
+    //
+    // JSON functions: https://mariadb.com/kb/en/mariadb/json-functions
+    //
     "json_array",
     "json_array_append",
     "json_array_insert",
@@ -417,7 +417,17 @@ static const char* BUILTIN_10_2_3_FUNCTIONS[] =
     "json_type",
     "json_unquote",
     "json_valid",
-    "json_value"
+    "json_value",
+
+    //
+    // Window functions: https://mariadb.com/kb/en/mariadb/window-functions/
+    //
+    "cume_dist",
+    "dense_rank",
+    "ntile",
+    "percent_rank",
+    "rank",
+    "row_number",
 };
 
 const size_t N_BUILTIN_10_2_3_FUNCTIONS =

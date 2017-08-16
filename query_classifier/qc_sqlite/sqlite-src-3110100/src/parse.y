@@ -1028,8 +1028,28 @@ multiselect_op(A) ::= UNION ALL.             {A = TK_ALL;}
 multiselect_op(A) ::= EXCEPT|INTERSECT(OP).  {A = @OP;}
 %endif SQLITE_OMIT_COMPOUND_SELECT
 %ifdef MAXSCALE
+
+wf_window_name ::= id.
+
+wf_window_ref_opt ::= .
+wf_window_ref_opt ::= id.
+
+wf_window_spec ::= LP wf_window_ref_opt wf_partition_by_opt wf_order_by_opt wf_frame_opt RP.
+
+wf_window_def ::= wf_window_name AS wf_window_spec.
+
+wf_window_def_list ::= wf_window_def_list COMMA wf_window_def.
+wf_window_def_list ::= wf_window_def.
+
+wf_window ::= WINDOW wf_window_def_list.
+wf_window ::= WINDOW LP RP.
+
+wf_window_opt ::= .
+wf_window_opt ::= wf_window.
+
 oneselect(A) ::= SELECT select_options(D) selcollist(W) select_into_opt(I1) from(X) where_opt(Y)
-                 groupby_opt(P) having_opt(Q) orderby_opt(Z) limit_opt(L) select_into_opt(I2). {
+                 groupby_opt(P) having_opt(Q) wf_window_opt orderby_opt(Z) limit_opt(L)
+                 select_into_opt(I2). {
   if (!I1) {
     I1=I2;
   }
@@ -1881,6 +1901,62 @@ convert_tail ::= USING id.
 func_arg_tail_opt ::= .
 func_arg_tail_opt ::= group_concat_tail.
 func_arg_tail_opt ::= convert_tail.
+
+wf_partition_by ::= PARTITION BY nexprlist(X). {
+  sqlite3ExprListDelete(pParse->db, X);
+}
+
+wf_partition_by_opt ::= .
+wf_partition_by_opt ::= wf_partition_by.
+
+wf_order_by ::= ORDER BY nexprlist(X) sortorder. {
+  sqlite3ExprListDelete(pParse->db, X);
+}
+
+wf_order_by_opt ::= .
+wf_order_by_opt ::= wf_order_by.
+
+wf_frame_units ::= RANGE.
+wf_frame_units ::= ROWS.
+
+wf_frame_start ::= UNBOUNDED PRECEDING.
+wf_frame_start ::= CURRENT ROW.
+wf_frame_start ::= term PRECEDING.
+
+wf_frame_bound ::= wf_frame_start.
+wf_frame_bound ::= UNBOUNDED FOLLOWING.
+wf_frame_bound ::= term FOLLOWING.
+
+wf_frame_extent ::= wf_frame_start.
+wf_frame_extent ::= BETWEEN wf_frame_bound AND wf_frame_bound.
+
+wf_frame_exclusion_opt ::= .
+wf_frame_exclusion_opt ::= EXCLUDE CURRENT ROW.
+wf_frame_exclusion_opt ::= EXCLUDE GROUP.
+wf_frame_exclusion_opt ::= EXCLUDE TIES.
+wf_frame_exclusion_opt ::= EXCLUDE NO OTHERS.
+
+wf_frame_opt ::= .
+wf_frame_opt ::= wf_frame_units wf_frame_extent wf_frame_exclusion_opt .
+
+wf ::= OVER LP wf_window_ref_opt wf_partition_by_opt wf_order_by_opt wf_frame_opt RP.
+wf ::= OVER id.
+
+expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt RP(E) wf. {
+  if( Y && Y->nExpr>pParse->db->aLimit[SQLITE_LIMIT_FUNCTION_ARG] ){
+    sqlite3ErrorMsg(pParse, "too many arguments on function %T", &X);
+  }
+  A.pExpr = sqlite3ExprFunction(pParse, Y, &X);
+  spanSet(&A,&X,&E);
+  if( D==SF_Distinct && A.pExpr ){
+    A.pExpr->flags |= EP_Distinct;
+  }
+}
+
+expr(A) ::= id(X) LP STAR RP(E) wf. {
+  A.pExpr = sqlite3ExprFunction(pParse, 0, &X);
+  spanSet(&A,&X,&E);
+}
 
 expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt RP(E). {
 %endif

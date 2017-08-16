@@ -80,6 +80,7 @@
 
 #if MYSQL_VERSION_MAJOR >= 10 && MYSQL_VERSION_MINOR >= 2
 #define CTE_SUPPORTED
+#define WF_SUPPORTED
 #endif
 
 #if defined(CTE_SUPPORTED)
@@ -2542,6 +2543,16 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
     }
 #endif
 
+#ifdef WF_SUPPORTED
+    if (!rv)
+    {
+        if (strcasecmp(func_name, "WF") == 0)
+        {
+            rv = true;
+        }
+    }
+#endif
+
     return rv;
 }
 
@@ -2607,8 +2618,11 @@ static void update_field_infos(parsing_info_t* pi,
 
     case Item::FUNC_ITEM:
     case Item::SUM_FUNC_ITEM:
+#ifdef WF_SUPPORTED
+    case Item::WINDOW_FUNC_ITEM:
+#endif
         {
-            Item_func* func_item = static_cast<Item_func*>(item);
+            Item_func_or_sum* func_item = static_cast<Item_func_or_sum*>(item);
             Item** items = func_item->arguments();
             size_t n_items = func_item->argument_count();
 
