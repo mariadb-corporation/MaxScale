@@ -20,8 +20,7 @@
 # during code generation, we need to generate corresponding opcodes like
 # OP_Add and OP_Divide.  By making TK_ADD==OP_Add and TK_DIVIDE==OP_Divide,
 # code to translate from one to the other is avoided.  This makes the
-# code generator run (infinitesimally) faster and more importantly it makes
-# the library footprint smaller.
+# code generator smaller and faster.
 #
 # This script also scans for lines of the form:
 #
@@ -159,7 +158,29 @@ for {set i 0} {$i<$nOp} {incr i} {
   }
 }
 
-# Generate the numeric values for remaining opcodes
+# Assign the next group of values to JUMP opcodes
+#
+for {set i 0} {$i<$nOp} {incr i} {
+  set name $order($i)
+  if {$op($name)>=0} continue
+  if {!$jump($name)} continue
+  incr cnt
+  while {[info exists used($cnt)]} {incr cnt}
+  set op($name) $cnt
+  set used($cnt) 1
+  set def($cnt) $name
+}
+
+# Find the numeric value for the largest JUMP opcode
+#
+set mxJump -1
+for {set i 0} {$i<$nOp} {incr i} {
+  set name $order($i)
+  if {$jump($name) && $op($name)>$mxJump} {set mxJump $op($name)}
+}
+
+
+# Generate the numeric values for all remaining opcodes
 #
 for {set i 0} {$i<$nOp} {incr i} {
   set name $order($i)
@@ -171,11 +192,13 @@ for {set i 0} {$i<$nOp} {incr i} {
     set def($cnt) $name
   }
 }
-set max $cnt
-for {set i 0} {$i<$nOp} {incr i} {
+
+set max [lindex [lsort -decr -integer [array names used]] 0]
+for {set i 0} {$i<=$max} {incr i} {
   if {![info exists used($i)]} {
     set def($i) "OP_NotUsed_$i"
   }
+  if {$i>$max} {set max $i}
   set name $def($i)
   puts -nonewline [format {#define %-16s %3d} $name $i]
   set com {}
@@ -196,18 +219,24 @@ for {set i 0} {$i<$nOp} {incr i} {
   puts ""
 }
 
+if {$max>255} {
+  error "More than 255 opcodes - VdbeOp.opcode is of type u8!"
+}
+
 # Generate the bitvectors:
 #
 set bv(0) 0
 for {set i 0} {$i<=$max} {incr i} {
-  set name $def($i)
   set x 0
-  if {$jump($name)}  {incr x 1}
-  if {$in1($name)}   {incr x 2}
-  if {$in2($name)}   {incr x 4}
-  if {$in3($name)}   {incr x 8}
-  if {$out2($name)}  {incr x 16}
-  if {$out3($name)}  {incr x 32}
+  set name $def($i)
+  if {[string match OP_NotUsed* $name]==0} {
+    if {$jump($name)}  {incr x 1}
+    if {$in1($name)}   {incr x 2}
+    if {$in2($name)}   {incr x 4}
+    if {$in3($name)}   {incr x 8}
+    if {$out2($name)}  {incr x 16}
+    if {$out3($name)}  {incr x 32}
+  }
   set bv($i) $x
 }
 puts ""
@@ -232,3 +261,11 @@ for {set i 0} {$i<=$max} {incr i} {
   }
 }
 puts "\175"
+puts ""
+puts "/* The sqlite3P2Values() routine is able to run faster if it knows"
+puts "** the value of the largest JUMP opcode.  The smaller the maximum"
+puts "** JUMP opcode the better, so the mkopcodeh.tcl script that"
+puts "** generated this include file strives to group all JUMP opcodes"
+puts "** together near the beginning of the list."
+puts "*/"
+puts "#define SQLITE_MX_JUMP_OPCODE  $mxJump  /* Maximum JUMP opcode */"
