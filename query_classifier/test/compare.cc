@@ -1406,10 +1406,13 @@ int main(int argc, char* argv[])
     const char* zClassifier1 = "qc_mysqlembedded";
     const char* zClassifier2 = "qc_sqlite";
     string classifier1Args;
+    uint64_t version;
 #if defined(USING_MARIADB_103)
     string classifier2Args("parse_as=10.3,log_unrecognized_statements=1");
+    version = 10 * 1000 * 3 * 100;
 #else
     string classifier2Args("log_unrecognized_statements=1");
+    version = 10 * 1000 * 2 * 100;
 #endif
     const char* zStatement = NULL;
     qc_sql_mode_t sql_mode = QC_SQL_MODE_DEFAULT;
@@ -1515,6 +1518,9 @@ int main(int argc, char* argv[])
                 {
                     size_t round = 0;
                     bool terminate = false;
+
+                    pClassifier1->qc_set_server_version(version);
+                    pClassifier2->qc_set_server_version(version);
 
                     do
                     {
