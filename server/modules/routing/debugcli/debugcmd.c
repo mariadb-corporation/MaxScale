@@ -2258,7 +2258,7 @@ reload_config(DCB *dcb)
  * @param user The user name
  * @param user The user password
  */
-static void do_inet_add_user(DCB *dcb, char *user, char *password, enum account_type type)
+static void do_inet_add_user(DCB *dcb, char *user, char *password, enum user_account_type type)
 {
     const char *err;
 
@@ -2282,7 +2282,7 @@ static void inet_add_user(DCB *dcb, char *user, char *password)
 {
     if (admin_have_admin())
     {
-        do_inet_add_user(dcb, user, password, ACCOUNT_BASIC);
+        do_inet_add_user(dcb, user, password, USER_ACCOUNT_BASIC);
     }
     else
     {
@@ -2293,7 +2293,7 @@ static void inet_add_user(DCB *dcb, char *user, char *password)
 
 static void inet_add_admin_user(DCB *dcb, char *user, char *password)
 {
-    do_inet_add_user(dcb, user, password, ACCOUNT_ADMIN);
+    do_inet_add_user(dcb, user, password, USER_ACCOUNT_ADMIN);
 }
 
 /**
@@ -2583,7 +2583,7 @@ disable_maxlog()
  * @param dcb  The DCB for messages
  * @param user The Linux user name
  */
-static void do_enable_account(DCB *dcb, char *user, enum account_type type)
+static void do_enable_account(DCB *dcb, char *user, enum user_account_type type)
 {
     const char *err;
 
@@ -2607,7 +2607,7 @@ static void enable_account(DCB *dcb, char *user)
 {
     if (admin_have_admin())
     {
-        do_enable_account(dcb, user, ACCOUNT_BASIC);
+        do_enable_account(dcb, user, USER_ACCOUNT_BASIC);
     }
     else
     {
@@ -2624,7 +2624,7 @@ static void enable_account(DCB *dcb, char *user)
  */
 static void enable_admin_account(DCB *dcb, char *user)
 {
-    do_enable_account(dcb, user, ACCOUNT_ADMIN);
+    do_enable_account(dcb, user, USER_ACCOUNT_ADMIN);
 }
 
 /**

@@ -27,11 +27,11 @@
 MXS_BEGIN_DECLS
 
 /** User account types */
-enum account_type
+enum user_account_type
 {
-    ACCOUNT_UNKNOWN,
-    ACCOUNT_BASIC, /**< Allows read-only access */
-    ACCOUNT_ADMIN  /**< Allows complete access */
+    USER_ACCOUNT_UNKNOWN,
+    USER_ACCOUNT_BASIC, /**< Allows read-only access */
+    USER_ACCOUNT_ADMIN  /**< Allows complete access */
 };
 
 /**
@@ -65,7 +65,7 @@ void users_free(USERS* users);
  *
  * @return True if user was added
  */
-bool users_add(USERS *users, const char *user, const char *password, enum account_type type);
+bool users_add(USERS *users, const char *user, const char *password, enum user_account_type type);
 
 /**
  * Delete a user from the user table.
@@ -186,7 +186,7 @@ json_t* users_diagnostic_json(USERS* users);
  *
  * @return String representation of @c type
  */
-const char* account_type_to_str(enum account_type type);
+const char* account_type_to_str(enum user_account_type type);
 
 /**
  * Convert JSON value to account_type value
@@ -195,6 +195,6 @@ const char* account_type_to_str(enum account_type type);
  *
  * @return Enum value of @c json
  */
-enum account_type json_to_account_type(json_t* json);
+enum user_account_type json_to_account_type(json_t* json);
 
 MXS_END_DECLS

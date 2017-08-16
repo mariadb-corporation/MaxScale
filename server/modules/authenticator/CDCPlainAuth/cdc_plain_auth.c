@@ -460,7 +460,7 @@ cdc_set_service_user(SERV_LISTENER *listener)
     }
 
     /* add service user */
-    (void)users_add(listener->users, service->credentials.name, newpasswd, ACCOUNT_ADMIN);
+    (void)users_add(listener->users, service->credentials.name, newpasswd, USER_ACCOUNT_ADMIN);
 
     MXS_FREE(newpasswd);
     MXS_FREE(dpwd);
@@ -510,7 +510,7 @@ cdc_read_users(USERS *users, char *usersfile)
                 }
 
                 /* add user */
-                users_add(users, avro_user, user_passwd, ACCOUNT_ADMIN);
+                users_add(users, avro_user, user_passwd, USER_ACCOUNT_ADMIN);
 
                 loaded++;
             }

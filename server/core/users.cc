@@ -33,18 +33,18 @@ static const char STR_ADMIN[] = "admin";
 struct UserInfo
 {
     UserInfo():
-        permissions(ACCOUNT_BASIC)
+        permissions(USER_ACCOUNT_BASIC)
     {
     }
 
-    UserInfo(std::string pw, account_type perm):
+    UserInfo(std::string pw, user_account_type perm):
         password(pw),
         permissions(perm)
     {
     }
 
-    std::string  password;
-    account_type permissions;
+    std::string       password;
+    user_account_type permissions;
 };
 
 
@@ -64,7 +64,7 @@ public:
     {
     }
 
-    bool add(std::string user, std::string password, account_type perm)
+    bool add(std::string user, std::string password, user_account_type perm)
     {
         mxs::SpinLockGuard guard(m_lock);
         return m_data.insert(std::make_pair(user, UserInfo(password, perm))).second;
@@ -109,7 +109,7 @@ public:
         return std::find_if(m_data.begin(), m_data.end(), is_admin) != m_data.end();
     }
 
-    bool check_permissions(std::string user, account_type perm) const
+    bool check_permissions(std::string user, user_account_type perm) const
     {
         mxs::SpinLockGuard guard(m_lock);
         UserMap::const_iterator it = m_data.find(user);
@@ -123,7 +123,7 @@ public:
         return rval;
     }
 
-    bool set_permissions(std::string user, account_type perm)
+    bool set_permissions(std::string user, user_account_type perm)
     {
         mxs::SpinLockGuard guard(m_lock);
         UserMap::iterator it = m_data.find(user);
@@ -204,7 +204,7 @@ private:
 
     static bool is_admin(const UserMap::value_type& value)
     {
-        return value.second.permissions == ACCOUNT_ADMIN;
+        return value.second.permissions == USER_ACCOUNT_ADMIN;
     }
 
     void load_json(json_t* json)
@@ -222,7 +222,7 @@ private:
             if (name && json_is_string(name) &&
                 type && json_is_string(type) &&
                 password && json_is_string(password) &&
-                json_to_account_type(type) != ACCOUNT_UNKNOWN)
+                json_to_account_type(type) != USER_ACCOUNT_UNKNOWN)
             {
                 add(json_string_value(name), json_string_value(password),
                     json_to_account_type(type));
@@ -253,7 +253,7 @@ void users_free(USERS *users)
     delete u;
 }
 
-bool users_add(USERS *users, const char *user, const char *password, enum account_type type)
+bool users_add(USERS *users, const char *user, const char *password, enum user_account_type type)
 {
     Users* u = reinterpret_cast<Users*>(users);
     return u->add(user, password, type);
@@ -299,7 +299,7 @@ bool users_auth(USERS* users, const char* user, const char* password)
 bool users_is_admin(USERS* users, const char* user)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->check_permissions(user, ACCOUNT_ADMIN);
+    return u->check_permissions(user, USER_ACCOUNT_ADMIN);
 }
 
 bool users_have_admin(USERS* users)
@@ -350,14 +350,14 @@ int users_default_loadusers(SERV_LISTENER *port)
     return MXS_AUTH_LOADUSERS_OK;
 }
 
-const char* account_type_to_str(enum account_type type)
+const char* account_type_to_str(enum user_account_type type)
 {
     switch (type)
     {
-    case ACCOUNT_BASIC:
+    case USER_ACCOUNT_BASIC:
         return STR_BASIC;
 
-    case ACCOUNT_ADMIN:
+    case USER_ACCOUNT_ADMIN:
         return STR_ADMIN;
 
     default:
@@ -365,18 +365,18 @@ const char* account_type_to_str(enum account_type type)
     }
 }
 
-enum account_type json_to_account_type(json_t* json)
+enum user_account_type json_to_account_type(json_t* json)
 {
     std::string str = json_string_value(json);
 
     if (str == STR_BASIC)
     {
-        return ACCOUNT_BASIC;
+        return USER_ACCOUNT_BASIC;
     }
     else if (str == STR_ADMIN)
     {
-        return ACCOUNT_ADMIN;
+        return USER_ACCOUNT_ADMIN;
     }
 
-    return ACCOUNT_UNKNOWN;
+    return USER_ACCOUNT_UNKNOWN;
 }

@@ -80,7 +80,7 @@ static bool admin_dump_users(USERS* users, const char* fname)
 
 static const char *admin_add_user(USERS** pusers, const char* fname,
                                   const char* uname, const char* password,
-                                  account_type type)
+                                  user_account_type type)
 {
     if (*pusers == NULL)
     {
@@ -122,7 +122,8 @@ static const char* admin_remove_user(USERS *users, const char* fname, const char
     return ADMIN_SUCCESS;
 }
 
-static json_t* admin_user_json_data(const char* host, const char* user, enum user_type user_type, enum account_type account)
+static json_t* admin_user_json_data(const char* host, const char* user, enum user_type user_type,
+                                    enum user_account_type account)
 {
     ss_dassert(user_type != USER_TYPE_ALL);
     const char* type = user_type == USER_TYPE_INET ? CN_INET : CN_UNIX;
@@ -151,7 +152,7 @@ static void user_types_to_json(USERS* users, json_t* arr, const char* host, enum
     json_array_foreach(json, index, value)
     {
         const char* user = json_string_value(json_object_get(value, CN_NAME));
-        enum account_type account = json_to_account_type(json_object_get(value, CN_ACCOUNT));
+        enum user_account_type account = json_to_account_type(json_object_get(value, CN_ACCOUNT));
         json_array_append_new(arr, admin_user_json_data(host, user, type, account));
     }
 
@@ -176,7 +177,7 @@ static std::string path_from_type(enum user_type type)
 
 json_t* admin_user_to_json(const char* host, const char* user, enum user_type type)
 {
-    account_type account = admin_is_admin_user(user) ? ACCOUNT_ADMIN : ACCOUNT_BASIC;
+    user_account_type account = admin_is_admin_user(user) ? USER_ACCOUNT_ADMIN : USER_ACCOUNT_BASIC;
     std::string path = path_from_type(type);
     path += "/";
     path += user;
@@ -244,7 +245,7 @@ USERS* load_legacy_users(FILE* fp)
             password = "";
         }
 
-        if (users_add(rval, uname, password, ACCOUNT_ADMIN))
+        if (users_add(rval, uname, password, USER_ACCOUNT_ADMIN))
         {
             added_users++;
         }
@@ -340,7 +341,7 @@ static USERS *load_inet_users()
  *
  * @return NULL on success or an error string on failure.
  */
-const char *admin_enable_linux_account(const char *uname, enum account_type type)
+const char *admin_enable_linux_account(const char *uname, enum user_account_type type)
 {
     return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL, type);
 }
@@ -406,7 +407,7 @@ void mxs_crypt(const char* password, const char* salt, char* output)
  *
  * @return NULL on success or an error string on failure.
  */
-const char *admin_add_inet_user(const char *uname, const char* password, enum account_type type)
+const char *admin_add_inet_user(const char *uname, const char* password, enum user_account_type type)
 {
     char cpassword[MXS_CRYPT_SIZE];
     mxs_crypt(password, ADMIN_SALT, cpassword);

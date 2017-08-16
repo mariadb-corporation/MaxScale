@@ -1750,7 +1750,7 @@ bool validate_user_json(json_t* json)
     {
         runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ACCOUNT);
     }
-    else if (json_to_account_type(account) == ACCOUNT_UNKNOWN)
+    else if (json_to_account_type(account) == USER_ACCOUNT_UNKNOWN)
     {
         runtime_error("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
     }
@@ -1794,7 +1794,7 @@ bool runtime_create_user_from_json(json_t* json)
         const char* user = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
         string strtype = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
-        account_type type = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
+        user_account_type type = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
         const char* err = NULL;
 
         if (strtype == CN_INET && (err = admin_add_inet_user(user, password, type)) == ADMIN_SUCCESS)

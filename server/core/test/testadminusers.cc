@@ -64,13 +64,13 @@ test2()
 {
     const char *err;
 
-    if ((err = admin_enable_linux_account("user0", ACCOUNT_ADMIN)) != NULL)
+    if ((err = admin_enable_linux_account("user0", USER_ACCOUNT_ADMIN)) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.1 (add user) failed, %s.\n", err);
 
         return 1;
     }
-    if (admin_enable_linux_account("user0", ACCOUNT_ADMIN) == NULL)
+    if (admin_enable_linux_account("user0", USER_ACCOUNT_ADMIN) == NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.2 (add user) failed, duplicate.\n");
 
@@ -86,7 +86,7 @@ test2()
     }
 
     /* Add the user back, for test5. */
-    if ((err = admin_enable_linux_account("user0", ACCOUNT_ADMIN)) != NULL)
+    if ((err = admin_enable_linux_account("user0", USER_ACCOUNT_ADMIN)) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.4 (add user) failed, %s.\n", err);
 
@@ -110,7 +110,7 @@ test3()
 {
     const char *err;
 
-    if ((err = admin_enable_linux_account("user1", ACCOUNT_ADMIN)) != NULL)
+    if ((err = admin_enable_linux_account("user1", USER_ACCOUNT_ADMIN)) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 3.1 (add user) failed, %s.\n", err);
 
@@ -168,7 +168,7 @@ test4()
     for (i = 1; i < n_users; i++)
     {
         sprintf(user, "user%d", i);
-        if ((err = admin_enable_linux_account(user, ACCOUNT_ADMIN)) != NULL)
+        if ((err = admin_enable_linux_account(user, USER_ACCOUNT_ADMIN)) != NULL)
         {
             fprintf(stderr, "admin_add_user: test 4.1 (add user) failed, %s.\n", err);
 
@@ -212,7 +212,7 @@ test5()
 {
     const char *err;
 
-    if ((err = admin_enable_linux_account("user", ACCOUNT_ADMIN)) != NULL)
+    if ((err = admin_enable_linux_account("user", USER_ACCOUNT_ADMIN)) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 5.1 (add user) failed, %s.\n", err);
 
