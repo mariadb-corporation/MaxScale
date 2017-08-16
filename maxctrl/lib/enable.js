@@ -35,11 +35,21 @@ exports.builder = function(yargs) {
                 })
             }
         })
+        .group(['type'], 'Enable account options:')
+        .option('type', {
+            describe: 'Type of user to create',
+            type: 'string',
+            default: 'basic',
+            choices: ['admin', 'basic']
+        })
         .command('account <name>', 'Activate a Linux user account for administrative use', {}, function(argv) {
             var req_body = {
                 data: {
                     id: argv.name,
-                    type: 'unix'
+                    type: 'unix',
+                    attributes: {
+                        'account': argv.type
+                    }
                 }
             }
             maxctrl(argv, function(host) {

@@ -226,7 +226,7 @@ int handle_client(void *cls,
 {
     if (!do_auth(connection, url, method))
     {
-        return MHD_YES;
+        return MHD_NO;
     }
 
     if (*con_cls == NULL)

@@ -131,14 +131,38 @@ describe("Create/Destroy Commands", function() {
     })
 
     it('create user', function() {
-        return verifyCommand('create user testuser test',
-                             'users/inet/testuser')
-            .should.be.fulfilled
+        return verifyCommand('create user testuser test', 'users/inet/testuser')
     })
 
     it('destroy user', function() {
         return doCommand('destroy user testuser')
-            .should.be.fulfilled
+    })
+
+    it('create admin user', function() {
+        return verifyCommand('create user testadmin test --type=admin', 'users/inet/testadmin')
+            .then((res) => {
+                res.data.attributes.account.should.equal('admin')
+            })
+    })
+
+    it('destroy admin user', function() {
+        return doCommand('destroy user testadmin')
+    })
+
+    it('create basic user', function() {
+        return verifyCommand('create user testbasic test --type=basic', 'users/inet/testbasic')
+            .then((res) => {
+                res.data.attributes.account.should.equal('basic')
+            })
+    })
+
+    it('destroy basic user', function() {
+        return doCommand('destroy user testbasic')
+    })
+
+    it('create user with bad type', function() {
+        return doCommand('create user testadmin test --type=superuser')
+            .should.be.rejected
     })
 
     after(stopMaxScale)

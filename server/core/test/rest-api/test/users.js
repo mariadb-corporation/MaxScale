@@ -9,6 +9,7 @@ describe("Users", function() {
             id: "user1",
             type: "inet",
             attributes: {
+                account: "admin"
             }
         }
     }

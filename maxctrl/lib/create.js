@@ -174,6 +174,13 @@ exports.builder = function(yargs) {
                 return doRequest(host, 'services/' + argv.service + '/listeners', null, {method: 'POST', body: listener})
             })
         })
+        .group(['type'], 'Create user options:')
+        .option('type', {
+            describe: 'Type of user to create',
+            type: 'string',
+            default: 'basic',
+            choices: ['admin', 'basic']
+        })
         .command('user <name> <password>', 'Create a new network user', {}, function(argv) {
 
             var user = {
@@ -181,7 +188,8 @@ exports.builder = function(yargs) {
                     'id': argv.name,
                     'type': 'inet',
                     'attributes': {
-                        'password': argv.password
+                        'password': argv.password,
+                        'account': argv.type
                     }
                 }
             }

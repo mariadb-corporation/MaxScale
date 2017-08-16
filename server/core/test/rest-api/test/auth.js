@@ -25,7 +25,8 @@ describe("Authentication", function() {
             id: "user1",
             type: "inet",
             attributes: {
-                password: "pw1"
+                password: "pw1",
+                account: "admin"
             }
         }
     }
@@ -35,13 +36,26 @@ describe("Authentication", function() {
             id: "user2",
             type: "inet",
             attributes: {
-                password: "pw2"
+                password: "pw2",
+                account: "admin"
+            }
+        }
+    }
+
+    var user3 = {
+        data: {
+            id: "user3",
+            type: "inet",
+            attributes: {
+                password: "pw3",
+                account: "basic"
             }
         }
     }
 
     var auth1 = "http://" + user1.data.id + ":" + user1.data.attributes.password + "@"
     var auth2 = "http://" + user2.data.id + ":" + user2.data.attributes.password + "@"
+    var auth3 = "http://" + user3.data.id + ":" + user3.data.attributes.password + "@"
 
     it("unauthorized request without authentication", function() {
         return request.get(base_url + "/maxscale")
@@ -86,6 +100,25 @@ describe("Authentication", function() {
                 return request.delete(auth1 + host + "/users/inet/" + user1.data.id)
             })
             .should.be.fulfilled
+    })
+
+    it("create basic user", function() {
+        return request.post(auth2 + host + "/users/inet", { json: user3 })
+            .should.be.fulfilled
+    })
+
+    it("accept read request with basic user", function() {
+        return request.get(auth3 + host + "/servers/server1/")
+            .should.be.fulfilled
+    })
+
+    it("reject write request with basic user", function() {
+        return request.get(auth3 + host + "/servers/server1/")
+            .then(function(res) {
+                var obj = JSON.parse(res)
+                return request.patch(auth3 + host + "/servers/server1/", {json: obj})
+                    .should.be.rejected
+            })
     })
 
     it("request with wrong user", function() {
