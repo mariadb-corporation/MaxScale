@@ -27,21 +27,10 @@ insert into t1 values (2, 2) on duplicate key update data= data + 10;
 #          key update data= data + 10;"
 
 SET @`a b`='hello';
-set @`test`=1;
-set @"tEST"=3;
-set @`TeST`=4;
 # warning: qc_sqlite: Statement was classified only based on keywords
 # (Sqlite3 error: SQL logic error or missing database, unrecognized token: "@"): "set @=4"
 #
 # sqlite3GetToken needs to be modified to accept a quoted variable name.
-
-SAVEPOINT sa_savepoint_1
-#warning: [qc_sqlite] Statement was neither parsed nor recognized from keywords
-# (Sqlite3 error: SQL logic error or missing database, near "SNAPSHOT": syntax error): "SNAPSHOT s"
-
-RELEASE SAVEPOINT sa_savepoint_1
-# warning: [qc_sqlite] Statement was neither parsed nor recognized from keywords
-# (Sqlite3 error: SQL logic error or missing database, near "RELEASE": syntax error): "RELEASE SNAPSHOT s"
 
 INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a);
 # warning: [qc_sqlite] Statement was only partially parsed
@@ -64,36 +53,6 @@ SELECT t.f FROM d.t;
 # to do that.
 select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
 with t as (select c from mysqltest.t2 where c < 2) select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;
-
-#MXS qc_mysqlembedded and qc_sqlite disagree in the used fields.
-#MXS Both return correctly the folks fields (i.e. the real ones),
-#MXS but disagree on the fields of the CTR tables.
-#
-with recursive
-ancestor_couples(h_id, h_name, h_dob, h_father, h_mother,
-                 w_id, w_name, w_dob, w_father, w_mother)
-as
-(
-  select h.*, w.*
-    from folks h, folks w,  coupled_ancestors a
-      where a.father = h.id AND a.mother = w.id
-  union 
-  select h.*, w.*
-    from folks v, folks h, folks w
-      where v.name = 'Me' and
-            (v.father = h.id AND v.mother= w.id)
-),
-coupled_ancestors (id, name, dob, father, mother)
-as
-(
-  select h_id, h_name, h_dob, h_father, h_mother
-    from ancestor_couples
-  union all
-  select w_id, w_name, w_dob, w_father, w_mother
-    from ancestor_couples
-)
-select h_name, h_dob, w_name, w_dob
-  from ancestor_couples;
 
 #MXS qc_sqlite cannot parse this
 #MXS qc_parse                 : INF: QC_QUERY_PARSED != QC_QUERY_TOKENIZED
@@ -133,4 +92,3 @@ with recursive src(counter) as
 #MXS as (select a, min(a) over () from t1 where a = 1);"
 create view win_view
 as (select a, min(a) over () from t1 where a = 1);
-select * from win_view;
