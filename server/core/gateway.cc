@@ -140,6 +140,7 @@ static bool maxlog_configured = false;
 static bool log_to_shm_configured = false;
 static volatile sig_atomic_t  last_signal = 0;
 static bool unload_modules_at_exit = true;
+static std::string redirect_output_to;
 
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static void log_flush_shutdown(void);
@@ -182,14 +183,15 @@ static bool daemonize();
 static bool sniff_configuration(const char* filepath);
 static bool modules_process_init();
 static void modules_process_finish();
-static void disable_module_unloading();
-static void enable_module_unloading();
+static void disable_module_unloading(const char* arg);
+static void enable_module_unloading(const char* arg);
+static void redirect_output_to_file(const char* arg);
 
 struct DEBUG_ARGUMENT
 {
-    const char* name;        /**< The name of the debug argument */
-    void (*action)();        /**< The function implementing the argument */
-    const char* description; /**< Help text */
+    const char* name;                /**< The name of the debug argument */
+    void (*action)(const char* arg); /**< The function implementing the argument */
+    const char* description;         /**< Help text */
 };
 
 #define SPACER "                              "
@@ -205,6 +207,10 @@ const DEBUG_ARGUMENT debug_arguments[] =
     {
         "enable-module-unloading", enable_module_unloading,
         "cancels disable-module-unloading"
+    },
+    {
+        "redirect-output-to-file", redirect_output_to_file,
+            "redirect stdout and stderr to the file given as an argument"
     },
     {NULL, NULL, NULL}
 };
@@ -1936,6 +1942,12 @@ int main(int argc, char **argv)
         }
     }
 
+    if (redirect_output_to.length())
+    {
+        freopen(redirect_output_to.c_str(), "a", stderr);
+        freopen(redirect_output_to.c_str(), "a", stdout);
+    }
+
     /** Initialize statistics */
     ts_stats_init();
 
@@ -2967,14 +2979,22 @@ static void modules_process_finish()
     }
 }
 
-static void enable_module_unloading()
+static void enable_module_unloading(const char* arg)
 {
     unload_modules_at_exit = true;
 }
 
-static void disable_module_unloading()
+static void disable_module_unloading(const char* arg)
 {
     unload_modules_at_exit = false;
+}
+
+static void redirect_output_to_file(const char* arg)
+{
+    if (arg)
+    {
+        redirect_output_to = arg;
+    }
 }
 
 /**
@@ -2991,15 +3011,23 @@ static bool handle_debug_args(char* args)
     char* token = strtok_r(args, ",", &endptr);
     while (token)
     {
+        char* value = strchr(token, '=');
+
+        if (value)
+        {
+            *value++ = '\0';
+        }
+
         bool found = false;
         for (int i = 0; debug_arguments[i].action != NULL; i++)
         {
+
             // Debug features are activated by running functions in the struct-array.
             if (strcmp(token, debug_arguments[i].name) == 0)
             {
                 found = true;
                 args_found++;
-                debug_arguments[i].action();
+                debug_arguments[i].action(value);
                 break;
             }
         }
