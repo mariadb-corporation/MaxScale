@@ -530,7 +530,7 @@ gw_read_backend_event(DCB *dcb)
 
 static void do_handle_error(DCB *dcb, mxs_error_action_t action, const char *errmsg)
 {
-    bool succp = false;
+    bool succp = true;
     MXS_SESSION *session = dcb->session;
 
     if (!dcb->dcb_errhandle_called)
