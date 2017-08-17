@@ -396,6 +396,9 @@ static bool handle_error_new_connection(RWSplit *inst,
 
     if (backend->is_waiting_result())
     {
+        ss_dassert(myrses->expected_responses > 0);
+        myrses->expected_responses--;
+
         /**
          * A query was sent through the backend and it is waiting for a reply.
          * Try to reroute the statement to a working server or send an error
@@ -413,7 +416,6 @@ static bool handle_error_new_connection(RWSplit *inst,
              * and decrement the expected response count.
              */
             gwbuf_free(stored);
-            myrses->expected_responses--;
 
             if (backend->session_command_count() == 0)
             {
