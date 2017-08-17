@@ -1753,7 +1753,7 @@ execute_cmd(CLI_SESSION *cli)
 {
     DCB           *dcb = cli->session->client_dcb;
     int            argc, i, j, found = 0;
-    char          *args[MAXARGS + 1];
+    char          *args[MAXARGS + 4];
     int            in_quotes = 0, escape_next = 0;
     char          *ptr, *lptr;
     bool           in_space = false;
