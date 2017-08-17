@@ -662,9 +662,8 @@ static bool rule_run_common_checks(json_t* pRule,
     }
 
     // Set the account rules
-    if (pApplies_to && pExempted &&
-        (!get_accounts(KEY_APPLIES_TO, pApplies_to, *applies_to) ||
-         !get_accounts(KEY_EXEMPTED, pExempted, *exempted)))
+    if ((pApplies_to && !get_accounts(KEY_APPLIES_TO, pApplies_to, *applies_to)) ||
+        (pExempted && !get_accounts(KEY_EXEMPTED, pExempted, *exempted)))
     {
         return false;
     }
