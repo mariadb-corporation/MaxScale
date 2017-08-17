@@ -109,7 +109,7 @@ add_test_executable(bug507.cpp bug507 replication LABELS readwritesplit LIGHT RE
 add_test_executable(bug509.cpp bug509 galera LABELS readwritesplit GALERA_BACKEND)
 
 # Checks "SELECT * INTO OUTFILE" and "LOAD DATA LOCAL INFILE"
-add_test_executable(bug519.cpp bug519 replication LABELS readwritesplit HEAVY REPL_BACKEND)
+add_test_executable(bug519.cpp bug519 replication LABELS readwritesplit REPL_BACKEND)
 
 # Regression case for the bug "'Current no. of conns' not going down"
 add_test_executable(bug529.cpp bug529 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
