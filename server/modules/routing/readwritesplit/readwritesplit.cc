@@ -430,8 +430,9 @@ static bool handle_error_new_connection(RWSplit *inst,
     else
     {
         succp = select_connect_backend_servers(myrses->rses_nbackends, max_nslaves,
-                                               myrses->rses_config.slave_selection_criteria,
-                                               ses, inst, myrses,
+                                               ses, inst->config(), myrses->backends,
+                                               myrses->current_master, &myrses->sescmd_list,
+                                               &myrses->expected_responses,
                                                connection_type::SLAVE);
     }
 
@@ -557,10 +558,9 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
     return backend->get_reply_state() == REPLY_STATE_DONE;
 }
 
-void close_all_connections(RWSplitSession* rses)
+void close_all_connections(SRWBackendList& backends)
 {
-    for (SRWBackendList::iterator it = rses->backends.begin();
-         it != rses->backends.end(); it++)
+    for (SRWBackendList::iterator it = backends.begin(); it != backends.end(); it++)
     {
         SRWBackend& backend = *it;
 
@@ -674,9 +674,13 @@ bool RWSplit::have_enough_servers() const
     return succp;
 }
 
-RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session):
+RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
+                               const SRWBackendList& backends,
+                               const SRWBackend& master):
     rses_chk_top(CHK_NUM_ROUTER_SES),
     rses_closed(false),
+    backends(backends),
+    current_master(master),
     rses_config(instance->config()),
     rses_nbackends(instance->service()->n_dbref),
     load_data_state(LOAD_DATA_INACTIVE),
@@ -698,6 +702,43 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session):
         n_conn = MXS_MAX(floor((double)rses_nbackends * pct), 1);
         rses_config.max_slave_connections = n_conn;
     }
+}
+
+RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
+{
+    RWSplitSession* rses = NULL;
+
+    if (router->have_enough_servers())
+    {
+        SRWBackendList backends;
+
+        for (SERVER_REF *sref = router->service()->dbref; sref; sref = sref->next)
+        {
+            if (sref->active)
+            {
+                backends.push_back(SRWBackend(new RWBackend(sref)));
+            }
+        }
+
+        /**
+         * At least the master must be found if the router is in the strict mode.
+         * If sessions without master are allowed, only a slave must be found.
+         */
+
+        SRWBackend master;
+
+        if (select_connect_backend_servers(router->service()->n_dbref, router->max_slave_count(),
+                                           session, router->config(), backends, master,
+                                           NULL, NULL, connection_type::ALL))
+        {
+            if ((rses = new RWSplitSession(router, session, backends, master)))
+            {
+                router->stats().n_sessions += 1;
+            }
+        }
+    }
+
+    return rses;
 }
 
 /**
@@ -757,43 +798,9 @@ static MXS_ROUTER* createInstance(SERVICE *service, char **options)
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
 {
     RWSplit* router = reinterpret_cast<RWSplit*>(router_inst);
-
-    if (!router->have_enough_servers())
-    {
-        return NULL;
-    }
-
-    RWSplitSession* client_rses = new (std::nothrow) RWSplitSession(router, session);
-
-    if (client_rses == NULL)
-    {
-        return NULL;
-    }
-
-    for (SERVER_REF *sref = router->service()->dbref; sref; sref = sref->next)
-    {
-        if (sref->active)
-        {
-            client_rses->backends.push_back(SRWBackend(new RWBackend(sref)));
-        }
-    }
-
-    if (!select_connect_backend_servers(router->service()->n_dbref, router->max_slave_count(),
-                                        router->config().slave_selection_criteria,
-                                        session, router, client_rses,
-                                        connection_type::ALL))
-    {
-        /**
-         * At least the master must be found if the router is in the strict mode.
-         * If sessions without master are allowed, only a slave must be found.
-         */
-        delete client_rses;
-        return NULL;
-    }
-
-    router->stats().n_sessions += 1;
-
-    return reinterpret_cast<MXS_ROUTER_SESSION*>(client_rses);
+    RWSplitSession* rses = NULL;
+    MXS_EXCEPTION_GUARD(rses = RWSplitSession::create(router, session));
+    return reinterpret_cast<MXS_ROUTER_SESSION*>(rses);
 }
 
 /**
@@ -815,7 +822,7 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
     if (!router_cli_ses->rses_closed)
     {
         router_cli_ses->rses_closed = true;
-        close_all_connections(router_cli_ses);
+        close_all_connections(router_cli_ses->backends);
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
             router_cli_ses->sescmd_list.size())
@@ -1147,10 +1154,9 @@ static void clientReply(MXS_ROUTER *instance,
             select_connect_backend_servers(
                 rses->rses_nbackends,
                 rses->rses_config.max_slave_connections,
-                rses->rses_config.slave_selection_criteria,
                 rses->client_dcb->session,
-                rses->router,
-                rses,
+                rses->router->config(), rses->backends, rses->current_master,
+                &rses->sescmd_list, &rses->expected_responses,
                 connection_type::SLAVE);
         }
     }

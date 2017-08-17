@@ -73,7 +73,16 @@ class RWSplitSession
     RWSplitSession& operator=(const RWSplitSession&);
 
 public:
-    RWSplitSession(RWSplit* instance, MXS_SESSION* session);
+
+    /**
+     * Create a new router session
+     *
+     * @param instance Router instance
+     * @param session  The session object
+     *
+     * @return New router session
+     */
+    static RWSplitSession* create(RWSplit* router, MXS_SESSION* session);
 
     // TODO: Make member variables private
     skygw_chk_t             rses_chk_top;
@@ -100,6 +109,10 @@ public:
     ClientHandleMap         ps_handles;  /**< Client PS handle to internal ID mapping */
     ExecMap                 exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
     skygw_chk_t             rses_chk_tail;
+
+private:
+    RWSplitSession(RWSplit* instance, MXS_SESSION* session,
+                   const SRWBackendList& backends, const SRWBackend& master);
 };
 
 /** Struct for holding routing related information */

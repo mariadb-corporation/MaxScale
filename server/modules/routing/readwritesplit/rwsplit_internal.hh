@@ -101,12 +101,13 @@ enum connection_type
 
 bool select_connect_backend_servers(int router_nservers,
                                     int max_nslaves,
-                                    select_criteria_t select_criteria,
                                     MXS_SESSION *session,
-                                    RWSplit *router,
-                                    RWSplitSession *rses,
+                                    const Config& config,
+                                    SRWBackendList& backends,
+                                    SRWBackend& current_master,
+                                    mxs::SessionCommandList* sescmd,
+                                    int* expected_responses,
                                     connection_type type);
-
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
@@ -118,7 +119,7 @@ void check_create_tmp_table(RWSplitSession *router_cli_ses,
                             GWBUF *querybuf, uint32_t type);
 bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type);
 
-void close_all_connections(RWSplitSession* rses);
+void close_all_connections(SRWBackendList& backends);
 
 uint32_t determine_query_type(GWBUF *querybuf, int command);
 
