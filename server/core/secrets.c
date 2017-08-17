@@ -426,7 +426,7 @@ encrypt_password(const char* path, const char *password)
     AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
     AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, keys->initvector, AES_ENCRYPT);
-    hex_output = (char *) MXS_MALLOC(padded_len * 2);
+    hex_output = (char *) MXS_MALLOC(padded_len * 2 + 1);
     if (hex_output)
     {
         gw_bin2hex(hex_output, encrypted, padded_len);
