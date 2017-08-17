@@ -62,3 +62,6 @@ set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
 
 # Which component to build (core, experimental, devel)
 set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel, all)")
+
+# Enable AddressSanitizer: https://github.com/google/sanitizers/wiki/AddressSanitizer
+set(WITH_ASAN FALSE CACHE BOOL "Enable AddressSanitizer")

@@ -43,6 +43,7 @@ find_package(LibUUID)
 find_package(Avro)
 find_package(GSSAPI)
 find_package(SQLite)
+find_package(ASAN)
 
 # Build PCRE2 so we always know the version
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
@@ -161,6 +162,11 @@ if(USE_C99)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_GNU_SOURCE=1 ${FLAGS}")
 else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${FLAGS}")
+endif()
+
+if (WITH_ASAN AND ASAN_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
