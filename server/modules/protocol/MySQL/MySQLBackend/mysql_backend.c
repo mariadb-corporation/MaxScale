@@ -386,7 +386,7 @@ static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
 
     if (GWBUF_IS_TYPE_SESCMD(buffer))
     {
-        mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(GWBUF_DATA(buffer));
+        mysql_server_cmd_t cmd = mxs_mysql_get_command(buffer);
         protocol_add_srv_command(proto, cmd);
     }
     if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
@@ -1015,7 +1015,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
     case MXS_AUTH_STATE_COMPLETE:
         {
             uint8_t* ptr = GWBUF_DATA(queue);
-            mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(ptr);
+            mysql_server_cmd_t cmd = mxs_mysql_get_command(queue);
 
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
                       dcb, dcb->fd, STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));

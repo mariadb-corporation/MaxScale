@@ -1443,7 +1443,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             CHK_GWBUF(packetbuf);
 
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
-            proto->current_command = (mysql_server_cmd_t)GWBUF_DATA(packetbuf)[4];
+            proto->current_command = (mysql_server_cmd_t)mxs_mysql_get_command(packetbuf);
 
             /**
              * This means that buffer includes exactly one MySQL
@@ -1480,14 +1480,12 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
                 if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING))
                 {
-                    uint8_t *data = GWBUF_DATA(packetbuf);
-
                     if (session_trx_is_ending(session))
                     {
                         session_set_trx_state(session, SESSION_TRX_INACTIVE);
                     }
 
-                    if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
+                    if (mxs_mysql_get_command(packetbuf) == MYSQL_COM_QUERY)
                     {
                         uint32_t type = qc_get_trx_type_mask(packetbuf);
 
