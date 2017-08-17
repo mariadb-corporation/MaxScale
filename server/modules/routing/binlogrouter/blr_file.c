@@ -555,7 +555,9 @@ blr_file_create(ROUTER_INSTANCE *router, char *orig_file)
         {
             close(router->binlog_fd);
             spinlock_acquire(&router->binlog_lock);
-            strcpy(router->binlog_name, file);
+            int len = strlen(file);
+            memmove(router->binlog_name, file, len);
+            router->binlog_name[len] = '\0';
             router->binlog_fd = fd;
             /* Initial position after the magic number */
             router->current_pos = BINLOG_MAGIC_SIZE;

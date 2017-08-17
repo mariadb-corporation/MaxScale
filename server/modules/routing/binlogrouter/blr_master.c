@@ -340,6 +340,7 @@ static void
 blr_restart_master(ROUTER_INSTANCE *router)
 {
     dcb_close(router->client);
+    router->client = NULL;
 
     /* Now it is safe to unleash other threads on this router instance */
     spinlock_acquire(&router->lock);
