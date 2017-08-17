@@ -2404,6 +2404,10 @@ errorReply(MXS_ROUTER *instance,
         MXS_FREE(errmsg);
     }
     *succp = true;
+    if (backend_dcb == router->master)
+    {
+        router->master = NULL;
+    }
     dcb_close(backend_dcb);
     MXS_NOTICE("%s: Master %s disconnected after %ld seconds. "
                "%lu events read.",

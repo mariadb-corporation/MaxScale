@@ -425,6 +425,7 @@ void
 blr_master_close(ROUTER_INSTANCE *router)
 {
     dcb_close(router->master);
+    router->master = NULL;
     router->master_state = BLRM_UNCONNECTED;
     router->master_event_state = BLR_EVENT_DONE;
     gwbuf_free(router->stored_event);
