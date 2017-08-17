@@ -26,26 +26,36 @@ void* query_thread(void *data)
         sleep(1);
     }
 
-    while (running)
+    while (running && Test->global_result == 0)
     {
-        MYSQL* mysql = iter % 200 == 0 ?
-                       Test->open_readconn_master_connection() :
-                       Test->open_readconn_slave_connection();
+        MYSQL* mysql;
+        const char* type;
+
+        if (iter % 2 == 0)
+        {
+            mysql = Test->open_readconn_slave_connection();
+            type = "master_failure_mode=error_on_write";
+        }
+        else
+        {
+            mysql = Test->open_readconn_master_connection();
+            type = "master_failure_mode=fail_on_write";
+        }
 
         if (!mysql)
         {
             Test->tprintf("Failed to connect to MaxScale.\n");
         }
 
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 100 && Test->global_result == 0; i++)
         {
             if (execute_query_silent(mysql, "select repeat('a', 1000)"))
             {
-                Test->add_result(1, "Query number %d failed: %s\n", iter + i, mysql_error(mysql));
+                Test->add_result(1, "Query number %d, iteration %d for '%s' failed: %s\n", i, iter, type, mysql_error(mysql));
             }
         }
         mysql_close(mysql);
-        iter += 100;
+        iter++;
     }
 
     return NULL;
@@ -57,10 +67,6 @@ int main(int argc, char *argv[])
     TestConnections *Test = new TestConnections(argc, argv);
     pthread_t threads[THREADS];
 
-    Test->stop_timeout();
-    Test->log_copy_interval = 300;
-    Test->execute_maxadmin_command((char *) "disable log-priority info");
-
     for (int i = 0; i < THREADS; i++)
     {
         pthread_create(&threads[i], NULL, query_thread, Test);
@@ -70,12 +76,24 @@ int main(int argc, char *argv[])
 
     int iterations = (Test->smoke ? 5 : 25);
 
-    for (int i = 0; i < iterations; i++)
+    for (int i = 0; i < iterations && Test->global_result == 0; i++)
     {
+
+        Test->tprintf("Blocking master");
         Test->repl->block_node(0);
-        sleep(10);
+
+        if (Test->global_result == 0)
+        {
+            sleep(10);
+        }
+
+        Test->tprintf("Unblocking master");
         Test->repl->unblock_node(0);
-        sleep(10);
+
+        if (Test->global_result == 0)
+        {
+            sleep(10);
+        }
     }
 
     Test->tprintf("Waiting for all threads to finish\n");
