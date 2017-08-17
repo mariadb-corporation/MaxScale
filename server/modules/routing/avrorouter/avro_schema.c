@@ -1175,9 +1175,9 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 {
                     tok = get_tok(tok + len, &len, end);
 
-                    create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * create->columns + 1);
-                    create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * create->columns + 1);
-                    create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * create->columns + 1);
+                    create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * (create->columns + 1));
+                    create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * (create->columns + 1));
+                    create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * (create->columns + 1));
 
                     char avro_token[len + 1];
                     make_avro_token(avro_token, tok, len);
@@ -1208,9 +1208,9 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                             create->column_lengths[i] = create->column_lengths[i + 1];
                         }
 
-                        create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * create->columns - 1);
-                        create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * create->columns - 1);
-                        create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * create->columns - 1);
+                        create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * (create->columns - 1));
+                        create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * (create->columns - 1));
+                        create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * (create->columns - 1));
                         create->columns--;
                         updates++;
                     }
