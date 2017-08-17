@@ -109,13 +109,13 @@ bool users_find(USERS* users, const char* user);
 bool users_is_admin(USERS* users, const char* user);
 
 /**
- * Check if at least one admin account exists
+ * Check how many admin account exists
  *
  * @param users Users to check
  *
- * @return True if at least one admin account exists
+ * @return Number of admin accounts
  */
-bool users_have_admin(USERS* users);
+int users_admin_count(USERS* users);
 
 /**
  * Dump users as JSON

@@ -104,9 +104,9 @@ public:
         return rval;
     }
 
-    bool have_admin() const
+    int admin_count() const
     {
-        return std::find_if(m_data.begin(), m_data.end(), is_admin) != m_data.end();
+        return std::count_if(m_data.begin(), m_data.end(), is_admin);
     }
 
     bool check_permissions(std::string user, user_account_type perm) const
@@ -302,10 +302,10 @@ bool users_is_admin(USERS* users, const char* user)
     return u->check_permissions(user, USER_ACCOUNT_ADMIN);
 }
 
-bool users_have_admin(USERS* users)
+int users_admin_count(USERS* users)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->have_admin();
+    return u->admin_count();
 }
 
 void users_diagnostic(DCB* dcb, USERS* users)

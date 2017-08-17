@@ -2343,17 +2343,19 @@ static void telnetdRemoveUser(DCB *dcb, char *user)
 
     if (!admin_inet_user_exists(user))
     {
-        dcb_printf(dcb, "Account %s for remote (network) usage does not exist.\n", user);
-        return;
+        dcb_printf(dcb, "Account '%s' for remote usage does not exist.\n", user);
     }
-
-    if ((err = admin_remove_inet_user(user)) == NULL)
+    else if (admin_is_last_admin(user))
     {
-        dcb_printf(dcb, "Account %s for remote (network) usage has been successfully removed.\n", user);
+        dcb_printf(dcb, "Cannot remove the last admin account '%s'.\n", user);
+    }
+    else if ((err = admin_remove_inet_user(user)))
+    {
+        dcb_printf(dcb, "Failed to remove remote account '%s': %s\n", user, err);
     }
     else
     {
-        dcb_printf(dcb, "Failed to remove remote account %s: %s\n", user, err);
+        dcb_printf(dcb, "Account '%s' for remote usage has been successfully removed.\n", user);
     }
 }
 
@@ -2674,16 +2676,19 @@ disable_account(DCB *dcb, char *user)
 
     if (!admin_linux_account_enabled(user))
     {
-        dcb_printf(dcb, "The Linux user %s has not been enabled.\n", user);
+        dcb_printf(dcb, "The Linux user '%s' has not been enabled.\n", user);
         return;
     }
-
-    if ((err = admin_disable_linux_account(user)) == NULL)
+    else if (admin_is_last_admin(user))
     {
-        dcb_printf(dcb, "The Linux user %s has successfully been disabled.\n", user);
+        dcb_printf(dcb, "Cannot remove the last admin account '%s'.\n", user);
+    }
+    else if ((err = admin_disable_linux_account(user)))
+    {
+        dcb_printf(dcb, "Failed to disable the Linux user '%s': %s\n", user, err);
     }
     else
     {
-        dcb_printf(dcb, "Failed to disable the Linux user %s: %s\n", user, err);
+        dcb_printf(dcb, "The Linux user '%s' has successfully been disabled.\n", user);
     }
 }

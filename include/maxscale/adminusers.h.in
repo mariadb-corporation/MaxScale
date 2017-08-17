@@ -85,6 +85,7 @@ bool admin_verify_inet_user(const char *uname, const char *password);
 bool admin_user_is_inet_admin(const char* username);
 bool admin_user_is_unix_admin(const char* username);
 bool admin_have_admin();
+bool admin_is_last_admin(const char* user);
 
 /**
  * @brief Convert all admin users to JSON

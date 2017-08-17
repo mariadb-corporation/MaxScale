@@ -102,12 +102,6 @@ static const char *admin_add_user(USERS** pusers, const char* fname,
 
 static const char* admin_remove_user(USERS *users, const char* fname, const char *uname)
 {
-    if (strcmp(uname, DEFAULT_ADMIN_USER) == 0)
-    {
-        MXS_WARNING("Attempt to delete the default admin user '%s'.", uname);
-        return ADMIN_ERR_DELROOT;
-    }
-
     if (!users_delete(users, uname))
     {
         MXS_ERROR("Couldn't find user %s. Removing user failed.", uname);
@@ -369,7 +363,7 @@ bool admin_linux_account_enabled(const char *uname)
 {
     bool rv = false;
 
-    if (strcmp(uname, DEFAULT_ADMIN_USER) == 0)
+    if (!linux_users && strcmp(uname, DEFAULT_ADMIN_USER) == 0)
     {
         rv = true;
     }
@@ -511,8 +505,15 @@ bool admin_user_is_unix_admin(const char* username)
 
 bool admin_have_admin()
 {
-    return (inet_users && users_have_admin(inet_users)) ||
-           (linux_users && users_have_admin(linux_users));
+    return (inet_users && users_admin_count(inet_users) > 0) ||
+           (linux_users && users_admin_count(linux_users) > 0);
+}
+
+bool admin_is_last_admin(const char* user)
+{
+    return (admin_user_is_inet_admin(user) || admin_user_is_unix_admin(user)) &&
+           ((inet_users ? users_admin_count(inet_users) : 1) +
+            (linux_users ? users_admin_count(linux_users) : 1)) == 1;
 }
 
 /**
