@@ -145,6 +145,16 @@ typedef enum qc_field_usage
 } qc_field_usage_t;
 
 /**
+ * QC_FIELD_NAME contains information about the name of a field used in a statement.
+ */
+typedef struct qc_field_name
+{
+    char* database; /** Present if the field is of the form "a.b.c", NULL otherwise. */
+    char* table;    /** Present if the field is of the form "a.b", NULL otherwise. */
+    char* column;   /** Always present. */
+} QC_FIELD_NAME;
+
+/**
  * QC_FIELD_INFO contains information about a field used in a statement.
  */
 typedef struct qc_field_info
@@ -160,8 +170,10 @@ typedef struct qc_field_info
  */
 typedef struct qc_function_info
 {
-    char* name;     /** Name of function. */
-    uint32_t usage; /** Bitfield denoting where the column appears. */
+    char* name;            /** Name of function. */
+    uint32_t usage;        /** Bitfield denoting where the column appears. */
+    QC_FIELD_NAME* fields; /** What fields the function accesses. */
+    uint32_t n_fields;     /** The number of fields in @c fields. */
 } QC_FUNCTION_INFO;
 
 /**
@@ -603,6 +615,13 @@ void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos
  * @note The returned array belongs to the GWBUF and remains valid for as
  *       long as the GWBUF is valid. If the data is needed for longer than
  *       that, it must be copied.
+ *
+ * @note For each function, only the fields that any invocation of it directly
+ *       accesses will be returned. For instance:
+ *
+ *           select length(a), length(concat(b, length(a))) from t
+ *
+ *       will for @length return the field @a and for @c concat the field @b.
  */
 void qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n_infos);
 
