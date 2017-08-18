@@ -118,6 +118,31 @@ passing commands on the MaxAdmin command line itself.
 
 # Working With Administration Interface Users
 
+Both MaxAdmin and the newly added REST API use the administrative users of
+MaxScale. The network type administrative users are used by the REST API as well
+as MaxAdmin when it is configured to use a network listener. Linux account type
+users are only used by MaxAdmin when the UNIX Domain Socket interface is
+activated.
+
+## Administrative and Read-only Users
+
+Administrative users can perform all operations that MaxScale offers. This
+includes both read-only operations as well as operations that modify the
+internal state of MaxScale or its modules.
+
+The default user for both the network and the UNIX domain socket
+interfaces is an administrative user. This user will be removed once the
+first administrative user of that type is created. The default user for
+the network interface is `admin` with the password `mariadb`. The default
+user for the UNIX domain socket interface is `root`.
+
+Users that can only perform read-only operations are created with `add
+readonly-user` command. These users can only perform operations that fetch data
+and do not modify the state of MaxScale.
+
+To convert administrative users to read-only users, delete the old
+administrative user and create it as a read-only user.
+
 ## What Users Have Been Defined?
 
 In order to see the Linux users for whom MaxAdmin usage has been enabled and any
@@ -179,9 +204,6 @@ User maxscale-admin has been successfully added.
 MaxScale>
 ```
 
-Note that there is no difference in rights between an enabled Linux account and
-an explicitly created user.
-
 ## Delete A User
 
 To remove a user the command _remove user_ is used and it is invoked with the
@@ -194,7 +216,18 @@ MaxScale>
 ```
 
 Note that it is possible to remove the current user, but that will only affect
-the next attempt to use MaxAdmin.
+the next attempt to use MaxAdmin. The last administrative account cannot be
+removed.
+
+## Creating Read-only Users
+
+Currently, the `list` and `show` type commands are the only operations that
+read-only users can perform.
+
+To create a read-only network user, use the `add readonly-user` command. To
+enable a local Linux account as a read-only user, use the `enable
+readonly-account` command. Both administrative and read-only users can be
+deleted with the `remove user` and `disable account` commands.
 
 # Command Line Switches
 

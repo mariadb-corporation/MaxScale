@@ -17,6 +17,19 @@ Significant whitespace in object names is now deprecated. All object names
 squeezing repeating whitespace and replacing it with hyphens. If any
 object name conversions take place, a warning will be logged.
 
+### Read-only Administrative Users
+
+Users that can only perform read-only operations can be created with `add
+readonly-user` and `enable readonly-account` commands.  To convert
+administrative users to read-only users, delete the old administrative user and
+create it as a read-only user.
+
+For more information about administrative interface users, refer to the
+[MaxAdmin](../Reference/MaxAdmin.md) documentation.
+
+**Note:** Old users from pre-2.2 MaxScale versions will be converted to
+administrative users that have full access to all commands.
+
 ### MaxAdmin
 
 The `remove user` command now only expects one parameter, the username.

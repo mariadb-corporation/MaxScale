@@ -565,8 +565,8 @@ The port where the HTTP admin interface listens on. The default value is port
 #### `admin_auth`
 
 Enable HTTP admin interface authentication using HTTP Basic Access
-authentication. This is not a secure method of authentication but it does add a
-small layer of security. This option is enabled by default.
+authentication. This is not a secure method of authentication without HTTPS but
+it does add a small layer of security. This option is enabled by default.
 
 The admin interface authentication uses the same user as MaxAdmin network
 interface. This means that new users can be added with both MaxAdmin and the

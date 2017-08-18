@@ -762,8 +762,8 @@ struct subcommand enableoptions[] =
     {
         "account",
         1, 1,
-        enable_account,
-        "Activate a Linux user account for read-only MaxAdmin use",
+        enable_admin_account,
+        "Activate a Linux user account for administrative MaxAdmin use",
         "Usage: enable account USER\n"
         "\n"
         "Parameters:\n"
@@ -773,10 +773,10 @@ struct subcommand enableoptions[] =
         {ARG_TYPE_STRING}
     },
     {
-        "admin-account",
+        "readonly-account",
         1, 1,
-        enable_admin_account,
-        "Activate a Linux user account for administrative MaxAdmin use",
+        enable_account,
+        "Activate a Linux user account for read-only MaxAdmin use",
         "Usage: enable account USER\n"
         "\n"
         "Parameters:\n"
@@ -928,8 +928,8 @@ struct subcommand pingoptions[] =
 struct subcommand addoptions[] =
 {
     {
-        "user", 2, 2, inet_add_user,
-        "Add a read-only account for using maxadmin over the network",
+        "user", 2, 2, inet_add_admin_user,
+         "Add an administrative account for using maxadmin over the network",
         "Usage: add user USER PASSWORD\n"
         "\n"
         "Parameters:\n"
@@ -940,15 +940,15 @@ struct subcommand addoptions[] =
         {ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
-        "admin", 2, 2, inet_add_admin_user,
-        "Add an administrative account for using maxadmin over the network",
+        "readonly-user", 2, 2, inet_add_user,
+        "Add a read-only account for using maxadmin over the network",
         "Usage: add user USER PASSWORD\n"
         "\n"
         "Parameters:\n"
         "USER     User to add\n"
         "PASSWORD Password for the user\n"
         "\n"
-        "Example: add user admin-bob somepass",
+        "Example: add user bob somepass",
         {ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {

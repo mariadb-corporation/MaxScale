@@ -21,6 +21,22 @@ Although JSON does not define a syntax for comments, some of the JSON examples
 have C-style inline comments in them. These comments use `//` to mark the start
 of the comment and extend to the end of the current line.
 
+## Authentication
+
+The MaxScale REST API uses [HTTP Basic Access](https://tools.ietf.org/html/rfc2617#section-2)
+authentication with the MaxScale administrative interface users. The default
+user is `admin:mariadb`, the same as the MaxAdmin network user.
+
+It is highly recommended to enable HTTPS on the MaxScale REST API to make the
+communication between the client and MaxScale secure. Without it, the passwords
+can be intercepted from the network traffic. Refer to the
+[Configuration Guide](../Getting-Started/Configuration-Guide.md#admin_ssl_key) for more
+details on how to enable HTTPS for the MaxScale REST API.
+
+For more details on how administrative interface users are created and managed,
+refer to the [MaxAdmin](../Reference/MaxAdmin.md) documentation as well as the
+documentation of the [users](Resources-User.md) resource.
+
 ## Resources
 
 The MaxScale REST API provides the following resources. All resources conform to
@@ -106,7 +122,12 @@ Acceptable character sets.
 
 #### Authorization
 
-Credentials for authentication.
+Credentials for authentication. This header should consist of a HTTP Basic
+Access authentication type payload which is the base64 encoded value of the
+username and password joined by a colon e.g. `Base64("maxuser:maxpwd")`. The
+REST API uses the same users as the MaxAdmin interface. For more details about
+MaxScale administrative users, refer to the [MaxAdmin](../Reference/MaxAdmin.md)
+documentation.
 
 #### Content-Type
 

@@ -12,6 +12,12 @@ For a complete list of changes in MaxScale 2.2.0, refer to the
 Before starting the upgrade, we recommend you back up your current configuration
 file.
 
+### Administrative Users
+
+The file format for the administrative users used by MaxScale has been
+changed. Old style files are automatically upgraded and a backup of the old file is
+stored in `/var/lib/maxscale/passwd.backup`.
+
 ### Regular Expression Parameters
 
 Modules may now use a built-in regular expression string parameter type instead
