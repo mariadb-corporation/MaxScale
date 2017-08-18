@@ -994,21 +994,27 @@ public:
         }
     }
 
-    void update_field_infos_from_expr(QcAliases* pAliases,
-                                      const Expr* pExpr,
-                                      uint32_t usage,
-                                      const ExprList* pExclude)
+    static bool get_field_name(const Expr* pExpr,
+                               const char** pzDatabase,
+                               const char** pzTable,
+                               const char** pzColumn)
     {
-        QC_FIELD_INFO item = {};
+        const char*& zDatabase = *pzDatabase;
+        const char*& zTable = *pzTable;
+        const char*& zColumn = *pzColumn;
+
+        zDatabase = NULL;
+        zTable = NULL;
+        zColumn = NULL;
 
         if (pExpr->op == TK_ASTERISK)
         {
-            item.column = (char*)"*";
+            zColumn = (char*)"*";
         }
         else if (pExpr->op == TK_ID)
         {
             // select a from...
-            item.column = pExpr->u.zToken;
+            zColumn = pExpr->u.zToken;
         }
         else if (pExpr->op == TK_DOT)
         {
@@ -1016,14 +1022,14 @@ public:
                 (pExpr->pRight->op == TK_ID || pExpr->pRight->op == TK_ASTERISK))
             {
                 // select a.b from...
-                item.table = pExpr->pLeft->u.zToken;
+                zTable = pExpr->pLeft->u.zToken;
                 if (pExpr->pRight->op == TK_ID)
                 {
-                    item.column = pExpr->pRight->u.zToken;
+                    zColumn = pExpr->pRight->u.zToken;
                 }
                 else
                 {
-                    item.column = (char*)"*";
+                    zColumn = (char*)"*";
                 }
             }
             else if (pExpr->pLeft->op == TK_ID &&
@@ -1032,35 +1038,51 @@ public:
                      (pExpr->pRight->pRight->op == TK_ID || pExpr->pRight->pRight->op == TK_ASTERISK))
             {
                 // select a.b.c from...
-                item.database = pExpr->pLeft->u.zToken;
-                item.table = pExpr->pRight->pLeft->u.zToken;
+                zDatabase = pExpr->pLeft->u.zToken;
+                zTable = pExpr->pRight->pLeft->u.zToken;
                 if (pExpr->pRight->pRight->op == TK_ID)
                 {
-                    item.column = pExpr->pRight->pRight->u.zToken;
+                    zColumn = pExpr->pRight->pRight->u.zToken;
                 }
                 else
                 {
-                    item.column = (char*)"*";
+                    zColumn = (char*)"*";
+                }
+            }
+        }
+        else
+        {
+            ss_dassert(!true);
+        }
+
+        if (zColumn)
+        {
+            if ((pExpr->flags & EP_DblQuoted) == 0)
+            {
+                if ((strcasecmp(zColumn, "true") == 0) || (strcasecmp(zColumn, "false") == 0))
+                {
+                    zDatabase = NULL;
+                    zTable = NULL;
+                    zColumn = NULL;
                 }
             }
         }
 
-        if (item.column)
+        return zColumn != NULL;
+    }
+
+    void update_field_infos_from_expr(QcAliases* pAliases,
+                                      const Expr* pExpr,
+                                      uint32_t usage,
+                                      const ExprList* pExclude)
+    {
+        const char* zDatabase;
+        const char* zTable;
+        const char* zColumn;
+
+        if (get_field_name(pExpr, &zDatabase, &zTable, &zColumn))
         {
-            bool should_update = true;
-
-            if ((pExpr->flags & EP_DblQuoted) == 0)
-            {
-                if ((strcasecmp(item.column, "true") == 0) || (strcasecmp(item.column, "false") == 0))
-                {
-                    should_update = false;
-                }
-            }
-
-            if (should_update)
-            {
-                update_field_info(pAliases, item.database, item.table, item.column, usage, pExclude);
-            }
+            update_field_info(pAliases, zDatabase, zTable, zColumn, usage, pExclude);
         }
     }
 
