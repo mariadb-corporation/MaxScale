@@ -1098,6 +1098,8 @@ createInstance(SERVICE *service, char **options)
 
                 /* Force STOPPED state */
                 inst->master_state = BLRM_SLAVE_STOPPED;
+                /* Set current binlog file to empy value */
+                *inst->binlog_name = 0;
                 /* Set mysql_errno and error message */
                 inst->m_errno = BINLOG_FATAL_ERROR_READING;
                 inst->m_errmsg = MXS_STRDUP_A("HY000 Cannot find any GTID"

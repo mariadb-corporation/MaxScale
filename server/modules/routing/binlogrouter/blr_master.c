@@ -3370,7 +3370,26 @@ static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
     {
         return false;
     }
+    if (router->fileroot)
+    {
+        MXS_FREE(router->fileroot);
+    }
+    /* set filestem */
+    router->fileroot = MXS_STRNDUP_A(new_file, fptr - new_file);
+
     new_fseqno = atol(fptr + 1);
+
+    if (!*router->binlog_name)
+    {
+        MXS_INFO("Fake ROTATE_EVENT comes with %s log file."
+                 " Current router binlog file has not been set yet."
+                 " Skipping creation of empty files"
+                 " before sequence %" PRIu32 "",
+                 new_file,
+                 new_fseqno);
+        return true;
+    }
+
     if (*router->binlog_name &&
         (fptr = strrchr(router->binlog_name, '.')) == NULL)
     {
