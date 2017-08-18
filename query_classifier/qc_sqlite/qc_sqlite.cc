@@ -256,16 +256,19 @@ public:
         return pInfo;
     }
 
-    static void free_field_info(QC_FIELD_INFO& info)
+    template<class T> // QC_FIELD_INFO, QC_FIELD_NAME
+    static void finish(T& t)
     {
-        MXS_FREE(info.database);
-        MXS_FREE(info.table);
-        MXS_FREE(info.column);
+        MXS_FREE(t.database);
+        MXS_FREE(t.table);
+        MXS_FREE(t.column);
     }
 
-    static void free_function_info(QC_FUNCTION_INFO& info)
+    static void finish_function_info(QC_FUNCTION_INFO& info)
     {
         MXS_FREE(info.name);
+
+        std::for_each(info.fields, info.fields + info.n_fields, finish<QC_FIELD_NAME>);
     }
 
     ~QcSqliteInfo()
@@ -276,8 +279,10 @@ public:
         std::for_each(m_database_names.begin(), m_database_names.end(), mxs_free);
         free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
-        std::for_each(m_field_infos.begin(), m_field_infos.end(), free_field_info);
-        std::for_each(m_function_infos.begin(), m_function_infos.end(), free_function_info);
+        std::for_each(m_field_infos.begin(), m_field_infos.end(), finish<QC_FIELD_INFO>);
+        std::for_each(m_function_infos.begin(), m_function_infos.end(), finish_function_info);
+
+        // Data in m_function_field_usage is freed in finish_function_info().
     }
 
     bool is_valid() const
@@ -527,6 +532,76 @@ public:
         return rv;
     }
 
+    static void honour_aliases(const QcAliases* pAliases,
+                               const char** pzDatabase,
+                               const char** pzTable)
+    {
+        const char*& zDatabase = *pzDatabase;
+        const char*& zTable = *pzTable;
+
+        if (!zDatabase && zTable && pAliases)
+        {
+            QcAliases::const_iterator i = pAliases->find(zTable);
+
+            if (i != pAliases->end())
+            {
+                const QcAliasValue& value = i->second;
+
+                zDatabase = value.zDatabase;
+                zTable = value.zTable;
+            }
+        }
+    }
+
+    template<class T> // QC_FIELD_NAME or QC_FIELD_INFO
+    class MatchFieldName : public std::unary_function<T, bool>
+    {
+    public:
+        MatchFieldName(const char* zDatabase,
+                       const char* zTable,
+                       const char* zColumn)
+            : m_zDatabase(zDatabase)
+            , m_zTable(zTable)
+            , m_zColumn(zColumn)
+        {
+            ss_dassert(zColumn);
+        }
+
+        bool operator()(const T& t)
+        {
+            bool rv = false;
+
+            if (strcasecmp(m_zColumn, t.column) == 0)
+            {
+                if (!m_zTable && !t.table)
+                {
+                    ss_dassert(!m_zDatabase && !t.database);
+                    rv = true;
+                }
+                else if (m_zTable && t.table && (strcasecmp(m_zTable, t.table) == 0))
+                {
+                    if (!m_zDatabase && !t.database)
+                    {
+                        rv = true;
+                    }
+                    else if (m_zDatabase &&
+                             t.database &&
+                             (strcasecmp(m_zDatabase, t.database) == 0))
+                    {
+                        rv = true;
+                    }
+                }
+            }
+
+            return rv;
+        }
+
+    private:
+        const char* m_zDatabase;
+        const char* m_zTable;
+        const char* m_zColumn;
+    };
+
     void update_field_info(const QcAliases* pAliases,
                            const char* zDatabase,
                            const char* zTable,
@@ -551,50 +626,15 @@ public:
             return;
         }
 
-        if (!zDatabase && zTable && pAliases)
-        {
-            QcAliases::const_iterator i = pAliases->find(zTable);
+        honour_aliases(pAliases, &zDatabase, &zTable);
 
-            if (i != pAliases->end())
-            {
-                const QcAliasValue& value = i->second;
+        MatchFieldName<QC_FIELD_INFO> predicate(zDatabase, zTable, zColumn);
 
-                zDatabase = value.zDatabase;
-                zTable = value.zTable;
-            }
-        }
+        vector<QC_FIELD_INFO>::iterator i = find_if(m_field_infos.begin(),
+                                                    m_field_infos.end(),
+                                                    predicate);
 
-        QC_FIELD_INFO item = { (char*)zDatabase, (char*)zTable, (char*)zColumn, usage };
-
-        size_t i;
-        for (i = 0; i < m_field_infos.size(); ++i)
-        {
-            const QC_FIELD_INFO& field_info = m_field_infos[i];
-
-            if (strcasecmp(item.column, field_info.column) == 0)
-            {
-                if (!item.table && !field_info.table)
-                {
-                    ss_dassert(!item.database && !field_info.database);
-                    break;
-                }
-                else if (item.table && field_info.table && (strcmp(item.table, field_info.table) == 0))
-                {
-                    if (!item.database && !field_info.database)
-                    {
-                        break;
-                    }
-                    else if (item.database &&
-                             field_info.database &&
-                             (strcmp(item.database, field_info.database) == 0))
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (i == m_field_infos.size()) // If true, the field was not present already.
+        if (i == m_field_infos.end()) // If true, the field was not present already.
         {
             // If only a column is specified, but not a table or database and we
             // have a list of expressions that should be excluded, we check if the column
@@ -602,12 +642,13 @@ public:
             // a statement like "select a as d from x where d = 2".
             if (!(zColumn && !zTable && !zDatabase && pExclude && should_exclude(zColumn, pExclude)))
             {
+                QC_FIELD_INFO item;
 
-                // If field_infos is NULL, then the field was found and has already been noted.
-                item.database = item.database ? MXS_STRDUP(item.database) : NULL;
-                item.table = item.table ? MXS_STRDUP(item.table) : NULL;
-                ss_dassert(item.column);
-                item.column = MXS_STRDUP(item.column);
+                item.database = zDatabase ? MXS_STRDUP(zDatabase) : NULL;
+                item.table = zTable ? MXS_STRDUP(zTable) : NULL;
+                ss_dassert(zColumn);
+                item.column = MXS_STRDUP(zColumn);
+                item.usage = usage;
 
                 // We are happy if we at least could dup the column.
 
@@ -619,7 +660,7 @@ public:
         }
         else
         {
-            m_field_infos[i].usage |= usage;
+            i->usage |= usage;
         }
     }
 
@@ -843,7 +884,7 @@ public:
                 if (((usage != 0) && (usage != QC_USED_IN_SET)) &&
                     (!pExpr->pLeft || (pExpr->pLeft->op != TK_VARIABLE)))
                 {
-                    update_function_info(get_token_symbol(pExpr->op), usage);
+                    update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage);
                 }
                 break;
 
@@ -864,7 +905,7 @@ public:
             case TK_PLUS:
             case TK_SLASH:
             case TK_STAR:
-                update_function_info(get_token_symbol(pExpr->op), usage);
+                update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage);
                 break;
 
             case TK_REM:
@@ -878,19 +919,19 @@ public:
                         char sqlrowcount[13]; // strlen("sql") + strlen("%") + strlen("rowcount") + 1
                         sprintf(sqlrowcount, "%s%%%s", pLeft->u.zToken, pRight->u.zToken);
 
-                        update_function_info(sqlrowcount, usage);
+                        update_function_info(pAliases, sqlrowcount, NULL, usage);
 
                         pLeft = NULL;
                         pRight = NULL;
                     }
                     else
                     {
-                        update_function_info(get_token_symbol(pExpr->op), usage);
+                        update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage);
                     }
                 }
                 else
                 {
-                    update_function_info(get_token_symbol(pExpr->op), usage);
+                    update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage);
                 }
                 break;
 
@@ -898,7 +939,7 @@ public:
                 switch (this_unit.parse_as)
                 {
                 case QC_PARSE_AS_DEFAULT:
-                    update_function_info(get_token_symbol(pExpr->op), usage);
+                    update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage);
                     break;
 
                 case QC_PARSE_AS_103:
@@ -935,7 +976,7 @@ public:
                     // way qc_mysqlembedded does.
                     if (!ignore_exprlist && (strcasecmp(zToken, "row") != 0))
                     {
-                        update_function_info(zToken, usage);
+                        update_function_info(pAliases, zToken, pExpr->x.pList, usage);
                     }
                 }
                 break;
@@ -1248,7 +1289,66 @@ public:
         }
     }
 
-    void update_function_info(const char* name, uint32_t usage)
+    static void update_function_fields(const QcAliases* pAliases,
+                                       const char* zDatabase,
+                                       const char* zTable,
+                                       const char* zColumn,
+                                       vector<QC_FIELD_NAME>& fields)
+    {
+        ss_dassert(zColumn);
+
+        honour_aliases(pAliases, &zDatabase, &zTable);
+
+        MatchFieldName<QC_FIELD_NAME> predicate(zDatabase, zTable, zColumn);
+
+        vector<QC_FIELD_NAME>::iterator i = find_if(fields.begin(), fields.end(), predicate);
+
+        if (i == fields.end()) // Not present
+        {
+            //TODO: Add exclusion?
+            QC_FIELD_NAME item;
+
+            item.database = zDatabase ? MXS_STRDUP(zDatabase) : NULL;
+            item.table = zTable ? MXS_STRDUP(zTable) : NULL;
+            item.column = MXS_STRDUP(zColumn);
+
+            if (item.column)
+            {
+                fields.push_back(item);
+            }
+        }
+    }
+
+    static void update_function_fields(const QcAliases* pAliases,
+                                       const Expr* pExpr,
+                                       vector<QC_FIELD_NAME>& fields)
+    {
+        const char* zDatabase;
+        const char* zTable;
+        const char* zColumn;
+
+        if (get_field_name(pExpr, &zDatabase, &zTable, &zColumn))
+        {
+            update_function_fields(pAliases, zDatabase, zTable, zColumn, fields);
+        }
+    }
+
+    static void update_function_fields(const QcAliases* pAliases,
+                                       const ExprList* pEList,
+                                       vector<QC_FIELD_NAME>& fields)
+    {
+        for (int i = 0; i < pEList->nExpr; ++i)
+        {
+            ExprList::ExprList_item* pItem = &pEList->a[i];
+
+            update_function_fields(pAliases, pItem->pExpr, fields);
+        }
+    }
+
+    void update_function_info(const QcAliases* pAliases,
+                              const char* name,
+                              const ExprList* pEList,
+                              uint32_t usage)
     {
         ss_dassert(name);
 
@@ -1281,7 +1381,11 @@ public:
 
             if (item.name)
             {
+                m_function_infos.reserve(m_function_infos.size() + 1);
+                m_function_field_usage.reserve(m_function_field_usage.size() + 1);
+
                 m_function_infos.push_back(item);
+                m_function_field_usage.resize(m_function_field_usage.size() + 1);
             }
         }
         else
@@ -1289,6 +1393,20 @@ public:
             m_function_infos[i].usage |= usage;
         }
 
+        if (pEList)
+        {
+            vector<QC_FIELD_NAME>& fields = m_function_field_usage[i];
+
+            update_function_fields(pAliases, pEList, fields);
+
+            QC_FUNCTION_INFO& info = m_function_infos[i];
+
+            if (fields.size() != 0)
+            {
+                info.fields = &fields[0];
+                info.n_fields  = fields.size();
+            }
+        }
     }
 
     //
@@ -3013,8 +3131,11 @@ public:
     int m_keyword_2;                            // The second encountered keyword.
     char* m_zPrepare_name;                      // The name of a prepared statement.
     GWBUF* m_pPreparable_stmt;                  // The preparable statement.
-    vector<QC_FIELD_INFO> m_field_infos;        // Vector of QC_FIELD_INFOs.
-    vector<QC_FUNCTION_INFO> m_function_infos;  // Vector of QC_FUNCTION_INFOs.
+    vector<QC_FIELD_INFO> m_field_infos;        // Vector of fields used by the statement.
+    vector<QC_FUNCTION_INFO> m_function_infos;  // Vector of functions used by the statement.
+    vector<vector<QC_FIELD_NAME> > m_function_field_usage; // Vector of vector fields used by functions
+                                                           // of the statement. Data referred to from
+                                                           // m_function_infos
     size_t m_function_infos_len;                // The used entries in function_infos.
     size_t m_function_infos_capacity;           // The capacity of the function_infos array.
     qc_sql_mode_t m_sql_mode;                   // The current sql_mode.
@@ -3071,7 +3192,7 @@ extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
 
-extern void maxscale_update_function_info(const char* name, unsigned usage);
+extern void maxscale_update_function_info(const char* name, const Expr* pExpr, unsigned usage);
 
 extern void maxscaleComment();
 extern int maxscaleKeyword(int token);
@@ -3446,12 +3567,12 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
     return i != pExclude->nExpr;
 }
 
-extern void maxscale_update_function_info(const char* name, uint32_t usage)
+extern void maxscale_update_function_info(const char* name, const Expr* pExpr, uint32_t usage)
 {
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->update_function_info(name, usage);
+    pInfo->update_function_info(NULL, name, pExpr->x.pList, usage);
 }
 
 static const char* get_token_symbol(int token)

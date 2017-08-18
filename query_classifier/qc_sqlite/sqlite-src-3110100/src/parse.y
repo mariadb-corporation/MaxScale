@@ -130,7 +130,7 @@ extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
 
-extern void maxscale_update_function_info(const char* name, unsigned usage);
+extern void maxscale_update_function_info(const char* name, const Expr* pExpr, unsigned usage);
 
 // Exposed utility functions
 void exposed_sqlite3ExprDelete(sqlite3 *db, Expr *pExpr)
@@ -1203,9 +1203,9 @@ selcollist(A) ::= sclp(P) DEFAULT LP nm RP as. {
 }
 selcollist(A) ::= sclp(P) MATCH LP id(X) RP AGAINST LP expr(Y) RP. {
   // Could be a subselect as well, but we just don't know it at this point.
-  maxscale_update_function_info("match", QC_USED_IN_SELECT);
   sqlite3ExprDelete(pParse->db, Y.pExpr);
   Expr *p = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
+  maxscale_update_function_info("match", p, QC_USED_IN_SELECT);
   A = sqlite3ExprListAppend(pParse, P, p);
 }
 %endif
