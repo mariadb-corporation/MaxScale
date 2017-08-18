@@ -213,6 +213,9 @@ void test_binlog(TestConnections* Test)
         {
             Test->tprintf("FLUSH LOGS on master\n");
             execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
         }
         Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "INSERT into t1 failed\n");
 
@@ -231,7 +234,7 @@ void test_binlog(TestConnections* Test)
         }
 
         Test->set_timeout(100);
-        //Test->add_result(check_sha1(Test), "sha1 check failed\n");
+        Test->add_result(check_sha1(Test), "sha1 check failed\n");
         Test->repl->close_connections();
         Test->stop_timeout();
     }
