@@ -636,6 +636,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
             dcb->persistentstart = 0;
             dcb->was_persistent = true;
             dcb->last_read = hkheartbeat;
+            atomic_add_uint64(&server->stats.n_from_pool, 1);
             return dcb;
         }
         else
