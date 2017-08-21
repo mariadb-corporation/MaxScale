@@ -905,7 +905,36 @@ public:
             case TK_PLUS:
             case TK_SLASH:
             case TK_STAR:
-                update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage, pExclude);
+                {
+                    int i = update_function_info(pAliases,
+                                                 get_token_symbol(pExpr->op),
+                                                 NULL,
+                                                 usage,
+                                                 pExclude);
+
+                    if (i != -1)
+                    {
+                        vector<QC_FIELD_NAME>& fields = m_function_field_usage[i];
+
+                        if (pExpr->pLeft)
+                        {
+                            update_function_fields(pAliases, pExpr->pLeft, pExclude, fields);
+                        }
+
+                        if (pExpr->pRight)
+                        {
+                            update_function_fields(pAliases, pExpr->pRight, pExclude, fields);
+                        }
+
+                        if (fields.size() != 0)
+                        {
+                            QC_FUNCTION_INFO& info = m_function_infos[i];
+
+                            info.fields = &fields[0];
+                            info.n_fields  = fields.size();
+                        }
+                    }
+                }
                 break;
 
             case TK_REM:
@@ -1364,11 +1393,11 @@ public:
         }
     }
 
-    void update_function_info(const QcAliases* pAliases,
-                              const char* name,
-                              const ExprList* pEList,
-                              uint32_t usage,
-                              const ExprList* pExclude)
+    int update_function_info(const QcAliases* pAliases,
+                             const char* name,
+                             const ExprList* pEList,
+                             uint32_t usage,
+                             const ExprList* pExclude)
 
     {
         ss_dassert(name);
@@ -1377,7 +1406,7 @@ public:
         {
             // If function information should not be collected, or if function information
             // has already been collected, we just return.
-            return;
+            return -1;
         }
 
         name = map_function_name(m_pFunction_name_mappings, name);
@@ -1428,6 +1457,8 @@ public:
                 info.n_fields  = fields.size();
             }
         }
+
+        return i;
     }
 
     //
