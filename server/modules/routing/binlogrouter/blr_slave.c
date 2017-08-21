@@ -3494,6 +3494,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         if (router->client->fd != -1 &&
             router->client->state == DCB_STATE_POLLING)
         {
+            // Is this dead code? dcb->fd for internal DCBs is always -1
             dcb_close(router->client);
             router->client = NULL;
         }
@@ -3712,7 +3713,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     }
 
     /** Start replication from master */
-    blr_start_master(router);
+    blr_start_master_in_main(router);
 
     MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master [%s]:%d, "
                "binlog %s, pos %lu, transaction safe pos %lu",

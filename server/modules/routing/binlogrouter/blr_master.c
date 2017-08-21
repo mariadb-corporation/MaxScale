@@ -146,7 +146,6 @@ static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
                                      char *new_file);
 
 static void worker_cb_start_master(int worker_id, void* data);
-static void blr_start_master_in_main(void* data);
 extern bool blr_file_exists(ROUTER_INSTANCE *router);
 extern void blr_file_update_gtid(ROUTER_INSTANCE *router);
 
@@ -174,11 +173,16 @@ typedef enum
  *
  * @param   router      The router instance
  */
-void
-blr_start_master(void* data)
+static void blr_start_master(void* data)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE*)data;
-    DCB *client;
+    ss_dassert(mxs_worker_get_current_id() == 0);
+
+    if (router->client)
+    {
+        dcb_close(router->client);
+        router->client = NULL;
+    }
 
     router->stats.n_binlogs_ses = 0;
     spinlock_acquire(&router->lock);
@@ -203,8 +207,10 @@ blr_start_master(void* data)
 
     spinlock_release(&router->lock);
 
+    DCB* client = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
+
     /* Create fake 'client' DCB */
-    if ((client = dcb_alloc(DCB_ROLE_INTERNAL, NULL)) == NULL)
+    if (client == NULL)
     {
         MXS_ERROR("failed to create DCB for dummy client");
         return;
@@ -311,7 +317,7 @@ static void worker_cb_start_master(int worker_id, void* data)
  *
  * @param data  Data intended for `blr_start_master`.
  */
-static void blr_start_master_in_main(void* data)
+void blr_start_master_in_main(void* data)
 {
     // The master should be connected to in the main worker, so we post it a
     // message and call `blr_start_master` there.
@@ -339,9 +345,6 @@ static void blr_start_master_in_main(void* data)
 static void
 blr_restart_master(ROUTER_INSTANCE *router)
 {
-    dcb_close(router->client);
-    router->client = NULL;
-
     /* Now it is safe to unleash other threads on this router instance */
     spinlock_acquire(&router->lock);
     router->reconnect_pending = 0;
@@ -1776,6 +1779,7 @@ blr_stop_start_master(ROUTER_INSTANCE *router)
         if (router->client->fd != -1 &&
             router->client->state == DCB_STATE_POLLING)
         {
+            // Is this dead code? dcb->fd for internal DCBs is always -1
             dcb_close(router->client);
             router->client = NULL;
         }

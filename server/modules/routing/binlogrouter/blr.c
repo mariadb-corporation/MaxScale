@@ -1137,7 +1137,7 @@ createInstance(SERVICE *service, char **options)
         }
 
         /* Start replication from master server */
-        blr_start_master(inst);
+        blr_start_master_in_main(inst);
     }
 
     return (MXS_ROUTER *)inst;
