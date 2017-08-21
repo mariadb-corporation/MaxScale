@@ -1786,7 +1786,18 @@ static void parsing_info_done(void* ptr)
 
         for (size_t i = 0; i < pi->function_infos_len; ++i)
         {
-            free(pi->function_infos[i].name);
+            QC_FUNCTION_INFO& fi = pi->function_infos[i];
+
+            free(fi.name);
+
+            for (size_t j = 0; j < fi.n_fields; ++j)
+            {
+                QC_FIELD_NAME& field = fi.fields[j];
+
+                free(field.database);
+                free(field.table);
+                free(field.column);
+            }
         }
         free(pi->function_infos);
 
@@ -2184,6 +2195,45 @@ static bool should_exclude(const char* name, List<Item>* excludep)
     return exclude;
 }
 
+static void unalias_names(st_select_lex* select,
+                          const char* from_database,
+                          const char* from_table,
+                          const char** to_database,
+                          const char** to_table)
+{
+    *to_database = from_database;
+    *to_table = from_table;
+
+    if (!from_database && from_table)
+    {
+        st_select_lex* s = select;
+
+        while ((*to_table == from_table) && s)
+        {
+            TABLE_LIST* tbl = s->table_list.first;
+
+            while ((*to_table == from_table) && tbl)
+            {
+                if (tbl->alias &&
+                    (strcasecmp(tbl->alias, from_table) == 0) &&
+                    (strcasecmp(tbl->table_name, "*") != 0))
+                {
+                    // The dummy default database "skygw_virtual" is not included.
+                    if (tbl->db && *tbl->db && (strcmp(tbl->db, "skygw_virtual") != 0))
+                    {
+                        *to_database = (char*)tbl->db;
+                    }
+                    *to_table = (char*)tbl->table_name;
+                }
+
+                tbl = tbl->next_local;
+            }
+
+            s = s->outer_select();
+        }
+    }
+}
+
 static void add_field_info(parsing_info_t* info,
                            st_select_lex* select,
                            const char* database,
@@ -2194,36 +2244,9 @@ static void add_field_info(parsing_info_t* info,
 {
     ss_dassert(column);
 
+    unalias_names(select, database, table, &database, &table);
+
     QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column, usage };
-
-    if (!database && table)
-    {
-        st_select_lex* s = select;
-
-        while ((item.table == table) && s)
-        {
-            TABLE_LIST* tbl = s->table_list.first;
-
-            while ((item.table == table) && tbl)
-            {
-                if (tbl->alias &&
-                    (strcmp(tbl->alias, table) == 0) &&
-                    (strcmp(tbl->table_name, "*") != 0))
-                {
-                    // The dummy default database "skygw_virtual" is not included.
-                    if (tbl->db && *tbl->db && (strcmp(tbl->db, "skygw_virtual") != 0))
-                    {
-                        item.database = (char*)tbl->db;
-                    }
-                    item.table = (char*)tbl->table_name;
-                }
-
-                tbl = tbl->next_local;
-            }
-
-            s = s->outer_select();
-        }
-    }
 
     size_t i;
     for (i = 0; i < info->field_infos_len; ++i)
@@ -2302,9 +2325,183 @@ static void add_field_info(parsing_info_t* info,
     }
 }
 
+static void add_function_field_usage(const char* database,
+                                     const char* table,
+                                     const char* column,
+                                     QC_FUNCTION_INFO* fi)
+{
+    bool found = false;
+    uint32_t i = 0;
+
+    while (!found && (i < fi->n_fields))
+    {
+        QC_FIELD_NAME& field = fi->fields[i];
+
+        if (strcasecmp(field.column, column) == 0)
+        {
+            if (!field.table && !table)
+            {
+                found = true;
+            }
+            else if (field.table && table && (strcasecmp(field.table, table) == 0))
+            {
+                if (!field.database && !database)
+                {
+                    found = true;
+                }
+                else if (field.database && database && (strcasecmp(field.database, database) == 0))
+                {
+                    found = true;
+                }
+            }
+        }
+
+        ++i;
+    }
+
+    if (!found)
+    {
+        QC_FIELD_NAME* fields = (QC_FIELD_NAME*)realloc(fi->fields,
+                                                        (fi->n_fields + 1) * sizeof(QC_FIELD_NAME));
+        ss_dassert(fields);
+
+        if (fields)
+        {
+            // Ignore potential alloc failures
+            QC_FIELD_NAME& field = fields[fi->n_fields];
+            field.database = database ? strdup(database) : NULL;
+            field.table = table ? strdup(table) : NULL;
+            field.column = strdup(column);
+
+            fi->fields = fields;
+            ++fi->n_fields;
+        }
+    }
+}
+
+static void add_function_field_usage(st_select_lex* select,
+                                     Item_field* item,
+                                     QC_FUNCTION_INFO* fi)
+{
+    const char* database = item->db_name;
+    const char* table = item->table_name;
+
+    unalias_names(select, item->db_name, item->table_name, &database, &table);
+
+    const char* s1;
+    size_t l1;
+    get_string_and_length(item->field_name, &s1, &l1);
+    char* column = NULL;
+
+    if (!database && !table)
+    {
+        List_iterator<Item> ilist(select->item_list);
+        Item* item2;
+
+        while (!column && (item2 = ilist++))
+        {
+            if (item2->type() == Item::FIELD_ITEM)
+            {
+                Item_field* field = (Item_field*)item2;
+
+                const char* s2;
+                size_t l2;
+                get_string_and_length(field->name, &s2, &l2);
+
+                if (l1 == l2)
+                {
+                    if (strncasecmp(s1, s2, l1) == 0)
+                    {
+                        get_string_and_length(field->orig_field_name, &s1, &l1);
+                        column = strndup(s1, l1);
+
+                        table = field->orig_table_name;
+                        database = field->orig_db_name;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!column)
+    {
+        get_string_and_length(item->field_name, &s1, &l1);
+        column = strndup(s1, l1);
+    }
+
+    add_function_field_usage(database, table, column, fi);
+
+    free(column);
+}
+
+static void add_function_field_usage(st_select_lex* select,
+                                     Item** items,
+                                     int n_items,
+                                     QC_FUNCTION_INFO* fi)
+{
+    for (int i = 0; i < n_items; ++i)
+    {
+        Item* item = items[i];
+
+        switch (item->type())
+        {
+        case Item::FIELD_ITEM:
+            add_function_field_usage(select, static_cast<Item_field*>(item), fi);
+            break;
+
+        default:
+            //ss_dassert(!true);
+            ;
+        }
+    }
+}
+
+static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* name)
+{
+    QC_FUNCTION_INFO* function_info = NULL;
+
+    size_t i;
+    for (i = 0; i < info->function_infos_len; ++i)
+    {
+        function_info = info->function_infos + i;
+
+        if (strcasecmp(name, function_info->name) == 0)
+        {
+            break;
+        }
+    }
+
+    if (i == info->function_infos_len)
+    {
+        // Not found
+
+        if (info->function_infos_len == info->function_infos_capacity)
+        {
+            size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
+            QC_FUNCTION_INFO* function_infos =
+                (QC_FUNCTION_INFO*)realloc(info->function_infos,
+                                           capacity * sizeof(QC_FUNCTION_INFO));
+            assert(function_infos);
+
+            info->function_infos = function_infos;
+            info->function_infos_capacity = capacity;
+        }
+
+        function_info = &info->function_infos[info->function_infos_len++];
+
+        function_info->name = strdup(name);
+        function_info->usage = 0;
+    }
+
+    return function_info;
+}
+
 static void add_function_info(parsing_info_t* info,
+                              st_select_lex* select,
                               const char* name,
-                              uint32_t usage)
+                              uint32_t usage,
+                              Item** items,
+                              int n_items)
 {
     ss_dassert(name);
 
@@ -2347,6 +2544,11 @@ static void add_function_info(parsing_info_t* info,
     else
     {
         info->function_infos[i].usage |= usage;
+
+        if (strcmp(name, "=") != 0)
+        {
+            add_function_field_usage(select, items, n_items, &info->function_infos[i]);
+        }
     }
 
     // If function_infos is NULL, then the function was found and has already been noted.
@@ -2356,7 +2558,13 @@ static void add_function_info(parsing_info_t* info,
 
         if (item.name)
         {
-            function_infos[info->function_infos_len++] = item;
+            int i = info->function_infos_len++;
+            function_infos[i] = item;
+
+            if (strcmp(name, "=") != 0)
+            {
+                add_function_field_usage(select, items, n_items, &info->function_infos[i]);
+            }
         }
     }
 }
@@ -2717,7 +2925,7 @@ static void update_field_infos(parsing_info_t* pi,
                     strcpy(func_name, "addtime");
                 }
 
-                add_function_info(pi, func_name, usage);
+                add_function_info(pi, select, func_name, usage, items, n_items);
             }
 
             for (size_t i = 0; i < n_items; ++i)
@@ -2734,7 +2942,7 @@ static void update_field_infos(parsing_info_t* pi,
             switch (subselect_item->substype())
             {
             case Item_subselect::IN_SUBS:
-                add_function_info(pi, "in", usage);
+                add_function_info(pi, select, "in", usage, 0, 0);
             case Item_subselect::ALL_SUBS:
             case Item_subselect::ANY_SUBS:
                 {
