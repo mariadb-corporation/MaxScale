@@ -110,7 +110,7 @@ void different_packet_size(TestConnections* Test, bool binlog)
     {
         for (j = range_min[i]; j < range_max[i]; j++)
         {
-            Test->set_timeout(120);
+            Test->set_timeout(240);
             event = create_event_size(j);
             Test->tprintf("Trying event app. %d bytes\t", j);
             fflush(stdout);
