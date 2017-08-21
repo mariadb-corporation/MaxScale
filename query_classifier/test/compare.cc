@@ -962,11 +962,11 @@ public:
 
         out << m_column;
 
-        out << "(";
+        out << "[";
         char* s = qc_field_usage_mask_to_string(m_usage);
         out << s;
         free(s);
-        out << ")";
+        out << "]";
     }
 
 private:
@@ -1062,6 +1062,8 @@ public:
     QcFunctionInfo(const QC_FUNCTION_INFO& info)
         : m_name(info.name)
         , m_usage(info.usage)
+        , m_pFields(info.fields)
+        , m_nFields(info.n_fields)
     {
         // We want case-insensitive comparisons.
         std::transform(m_name.begin(), m_name.end(), m_name.begin(), tolower);
@@ -1071,7 +1073,8 @@ public:
     {
         return
             m_name == rhs.m_name &&
-            m_usage == rhs.m_usage;
+            m_usage == rhs.m_usage &&
+            have_same_fields(*this, rhs);
     }
 
     bool lt(const QcFunctionInfo& rhs) const
@@ -1086,9 +1089,23 @@ public:
         {
             rv = false;
         }
+        else if (m_usage < rhs.m_usage)
+        {
+            rv = true;
+        }
+        else if (m_usage > rhs.m_usage)
+        {
+            rv = false;
+        }
         else
         {
-            rv = (m_usage < rhs.m_usage);
+            std::set<string> lfs;
+            std::set<string> rfs;
+
+            get_fields(&lfs);
+            rhs.get_fields(&rfs);
+
+            rv = lfs < rfs;
         }
 
         return rv;
@@ -1112,11 +1129,13 @@ public:
                 {
                     rv = false;
                 }
-                else
+                else if (!have_same_fields(*i, *j))
                 {
-                    ++i;
-                    ++j;
+                    rv = false;
                 }
+
+                ++i;
+                ++j;
             }
         }
 
@@ -1128,15 +1147,93 @@ public:
         out << m_name;
 
         out << "(";
+
+        for (uint32_t i = 0; i < m_nFields; ++i)
+        {
+            const QC_FIELD_NAME& name = m_pFields[i];
+
+            if (name.database)
+            {
+                out << name.database << ".";
+            }
+
+            if (name.table)
+            {
+                out << name.table << ".";
+            }
+
+            ss_dassert(name.column);
+
+            out << name.column;
+
+            if (i < m_nFields - 1)
+            {
+                out << ", ";
+            }
+        }
+
+        out << ")";
+
+        out << "[";
         char* s = qc_field_usage_mask_to_string(m_usage);
         out << s;
         free(s);
-        out << ")";
+        out << "]";
     }
 
 private:
-    std::string m_name;
-    uint32_t    m_usage;
+    void get_fields(std::set<string>* pS) const
+    {
+        for (size_t i = 0; i < m_nFields; ++i)
+        {
+            pS->insert(get_field_name(m_pFields[i]));
+        }
+    }
+
+    static bool have_same_fields(const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
+    {
+        bool rv = false;
+
+        if (lhs.m_nFields == rhs.m_nFields)
+        {
+            std::set<string> lfs;
+            lhs.get_fields(&lfs);
+
+            std::set<string> rfs;
+            rhs.get_fields(&rfs);
+
+            rv = (lfs == rfs);
+        }
+
+        return rv;
+    }
+
+    static std::string get_field_name(const QC_FIELD_NAME& field)
+    {
+        string s;
+
+        if (field.database)
+        {
+            s += field.database;
+            s += ".";
+        }
+
+        if (field.table)
+        {
+            s += field.table;
+            s += ".";
+        }
+
+        s += field.column;
+
+        return s;
+    }
+
+private:
+    std::string          m_name;
+    uint32_t             m_usage;
+    const QC_FIELD_NAME* m_pFields;
+    uint32_t             m_nFields;
 };
 
 ostream& operator << (ostream& out, const QcFunctionInfo& x)
