@@ -112,6 +112,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     session->stats.connect = time(0);
     session->stmt.buffer = NULL;
     session->stmt.target = NULL;
+    session->qualifies_for_pooling = false;
     /*<
      * Associate the session to the client DCB and set the reference count on
      * the session to indicate that there is a single reference to the
@@ -946,4 +947,15 @@ void session_clear_stmt(MXS_SESSION *session)
     gwbuf_free(session->stmt.buffer);
     session->stmt.buffer = NULL;
     session->stmt.target = NULL;
+}
+
+void session_qualify_for_pool(MXS_SESSION* session)
+{
+    session->qualifies_for_pooling = true;
+}
+
+bool session_valid_for_pool(const MXS_SESSION* session)
+{
+    ss_dassert(session->state != SESSION_STATE_DUMMY);
+    return session->qualifies_for_pooling;
 }

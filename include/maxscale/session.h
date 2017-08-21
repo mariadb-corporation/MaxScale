@@ -145,6 +145,7 @@ typedef struct session
         GWBUF *buffer; /**< Buffer containing the statement */
         const struct server *target; /**< Where the statement was sent */
     } stmt;  /**< Current statement being executed */
+    bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
     skygw_chk_t     ses_chk_tail;
 } MXS_SESSION;
 
@@ -364,5 +365,19 @@ bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const struct server
  * @param session Session to clear
  */
 void session_clear_stmt(MXS_SESSION *session);
+
+/**
+ * Qualify the session for connection pooling
+ *
+ * @param session Session to qualify
+ */
+void session_qualify_for_pool(MXS_SESSION* session);
+
+/**
+ * Check if the session qualifies for connection pooling
+ *
+ * @param session
+ */
+bool session_valid_for_pool(const MXS_SESSION* session);
 
 MXS_END_DECLS

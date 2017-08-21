@@ -1662,6 +1662,8 @@ dcb_maybe_add_persistent(DCB *dcb)
         && (dcb->func.established == NULL || dcb->func.established(dcb))
         && strlen(dcb->user)
         && dcb->server
+        && dcb->session
+        && session_valid_for_pool(dcb->session)
         && dcb->server->persistpoolmax
         && (dcb->server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
