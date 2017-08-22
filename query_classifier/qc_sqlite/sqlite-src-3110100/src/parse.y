@@ -1869,18 +1869,46 @@ expr(A) ::= CAST(X) LP expr(E) AS typetoken(T) RP(Y). {
 }
 %endif  SQLITE_OMIT_CAST
 %ifdef MAXSCALE
-group_concat_colname ::= nm.
-group_concat_colname ::= nm DOT nm.
 
-group_concat_colnames ::= group_concat_colname.
-group_concat_colnames ::= group_concat_colnames COMMA group_concat_colname.
+%type group_concat_colname {ExprSpan}
+%destructor group_concat_colname {sqlite3ExprDelete(pParse->db, $$.pExpr);}
 
-group_concat_colnames_opt ::= .
-group_concat_colnames_opt ::= COMMA group_concat_colnames.
+group_concat_colname(A) ::= nm(X). {
+  spanExpr(&A, pParse, TK_ID, &X);
+}
 
-group_concat_order_by ::= ORDER BY INTEGER sortorder group_concat_colnames_opt.
-group_concat_order_by ::= ORDER BY col_name(X) sortorder group_concat_colnames_opt. {
-  sqlite3ExprDelete(pParse->db, X.pExpr);
+group_concat_colname(A) ::= nm(X) DOT nm(Y). {
+  Expr *temp1 = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
+  Expr *temp2 = sqlite3PExpr(pParse, TK_ID, 0, 0, &Y);
+  A.pExpr = sqlite3PExpr(pParse, TK_DOT, temp1, temp2, 0);
+  spanSet(&A,&X,&Y);
+}
+
+%type group_concat_colnames {ExprList*}
+%destructor group_concat_colnames {sqlite3ExprListDelete(pParse->db, $$);}
+
+group_concat_colnames(A) ::= group_concat_colname(Y). {
+  A = sqlite3ExprListAppend(pParse, 0, Y.pExpr);
+}
+
+group_concat_colnames(A) ::= group_concat_colnames(X) COMMA group_concat_colname(Y). {
+  A = sqlite3ExprListAppend(pParse, X, Y.pExpr);
+}
+
+%type group_concat_colnames_opt {ExprList*}
+%destructor group_concat_colnames_opt {sqlite3ExprListDelete(pParse->db, $$);}
+
+group_concat_colnames_opt(A) ::= . { A = NULL; }
+group_concat_colnames_opt(A) ::= COMMA group_concat_colnames(X). { A = X; }
+
+%type group_concat_order_by {ExprList*}
+%destructor group_concat_order_by {sqlite3ExprListDelete(pParse->db, $$);}
+
+group_concat_order_by(A) ::= ORDER BY INTEGER sortorder group_concat_colnames_opt(X). {
+  A = X;
+}
+group_concat_order_by(A) ::= ORDER BY col_name(X) sortorder group_concat_colnames_opt(Y). {
+  A = sqlite3ExprListAppend(pParse, Y, X.pExpr);
 }
 // TODO: The following causes conflicts.
 //group_concat_order_by ::= ORDER BY expr(X) sortorder group_concat_colnames_opt. {
@@ -1889,18 +1917,25 @@ group_concat_order_by ::= ORDER BY col_name(X) sortorder group_concat_colnames_o
 
 group_concat_separator ::= SEPARATOR STRING.
 
-group_concat_tail ::= group_concat_order_by.
-group_concat_tail ::= group_concat_separator.
-group_concat_tail ::= group_concat_order_by group_concat_separator.
+%type group_concat_tail {ExprList*}
+%destructor group_concat_tail {sqlite3ExprListDelete(pParse->db, $$);}
+
+group_concat_tail(A) ::= group_concat_order_by(X). { A = X; }
+group_concat_tail(A) ::= group_concat_separator. { A = NULL; }
+group_concat_tail(A) ::= group_concat_order_by(X) group_concat_separator. { A = X; }
 
 convert_tail ::= USING id.
 
 // Since we don't use the arguments for anything, any function can have these
 // as trailing arguments. It's ok because if used incorrectly, the server will
 // reject the statement
-func_arg_tail_opt ::= .
-func_arg_tail_opt ::= group_concat_tail.
-func_arg_tail_opt ::= convert_tail.
+
+%type func_arg_tail_opt {ExprList*}
+%destructor func_arg_tail_opt {sqlite3ExprListDelete(pParse->db, $$);}
+
+func_arg_tail_opt(A) ::= . { A = NULL; }
+func_arg_tail_opt(A) ::= group_concat_tail(X). { A = X; }
+func_arg_tail_opt(A) ::= convert_tail. { A = NULL; }
 
 wf_partition_by ::= PARTITION BY nexprlist(X). {
   sqlite3ExprListDelete(pParse->db, X);
@@ -1942,7 +1977,10 @@ wf_frame_opt ::= wf_frame_units wf_frame_extent wf_frame_exclusion_opt .
 wf ::= OVER LP wf_window_ref_opt wf_partition_by_opt wf_order_by_opt wf_frame_opt RP.
 wf ::= OVER id.
 
-expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt RP(E) wf. {
+expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt(Z) RP(E) wf. {
+  // We just append Z on Y as we are only interested in what columns
+  // the function used.
+  Y = sqlite3ExprListAppendList(pParse, Y, Z);
   if( Y && Y->nExpr>pParse->db->aLimit[SQLITE_LIMIT_FUNCTION_ARG] ){
     sqlite3ErrorMsg(pParse, "too many arguments on function %T", &X);
   }
@@ -1958,7 +1996,10 @@ expr(A) ::= id(X) LP STAR RP(E) wf. {
   spanSet(&A,&X,&E);
 }
 
-expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt RP(E). {
+expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt(Z) RP(E). {
+  // We just append Z on Y as we are only interested in what columns
+  // the function used.
+  Y = sqlite3ExprListAppendList(pParse, Y, Z);
 %endif
 %ifndef MAXSCALE
 expr(A) ::= id(X) LP distinct(D) exprlist(Y) RP(E). {
@@ -1973,7 +2014,10 @@ expr(A) ::= id(X) LP distinct(D) exprlist(Y) RP(E). {
   }
 }
 %ifdef MAXSCALE
-expr(A) ::= nm DOT nm(X) LP distinct(D) exprlist(Y) func_arg_tail_opt RP(E). {
+expr(A) ::= nm DOT nm(X) LP distinct(D) exprlist(Y) func_arg_tail_opt(Z) RP(E). {
+  // We just append Z on Y as we are only interested in what columns
+  // the function used.
+  Y = sqlite3ExprListAppendList(pParse, Y, Z);
   if( Y && Y->nExpr>pParse->db->aLimit[SQLITE_LIMIT_FUNCTION_ARG] ){
     sqlite3ErrorMsg(pParse, "too many arguments on function %T", &X);
   }
