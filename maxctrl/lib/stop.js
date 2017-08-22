@@ -27,6 +27,20 @@ exports.builder = function(yargs) {
                 return doRequest(host, 'monitors/' + argv.name + '/stop', null, {method: 'PUT'})
             })
         })
+        .command('maxscale', 'Stop MaxScale by stopping all services', {}, function(argv) {
+            maxctrl(argv, function(host) {
+                return doRequest(host, 'services/', function(res) {
+                    var promises = []
+
+                    res.data.forEach(function(i) {
+                        promises.push(doRequest(host, 'services/' + i.id + '/stop', null, {method: 'PUT'}))
+                    })
+
+                    return Promise.all(promises)
+                        .then(() => OK())
+                })
+            })
+        })
         .usage('Usage: stop <command>')
         .help()
         .command('*', 'the default command', {}, function(argv) {

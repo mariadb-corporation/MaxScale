@@ -174,6 +174,10 @@ module.exports = function() {
         return base + argv.user + ':' + argv.password + '@' + host + '/v1/' + endpoint
     }
 
+    this.OK = function() {
+        return Promise.resolve(colors.green('OK'))
+    }
+
     // Helper for executing requests and handling their responses, returns a
     // promise that is fulfilled when all requests successfully complete. The
     // promise is rejected if any of the requests fails.
@@ -190,7 +194,7 @@ module.exports = function() {
                     return cb(res)
                 } else {
                     // Request OK, no data or data is ignored
-                    return Promise.resolve(colors.green('OK'))
+                    return OK()
                 }
             }, function(err) {
                 if (err.response && err.response.body) {
