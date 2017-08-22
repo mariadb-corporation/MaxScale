@@ -104,11 +104,15 @@ The following commands have been deprecated:
 
 * `enable sessionlog-priority <session-id> [debug|info|notice|warning]`
 * `disable sessionlog-priority <session-id> [debug|info|notice|warning]`
+* `reload config`
 
-The commands can be issued, but have no effect.
+The `{ enable | disable } sessionlog-priority` commands can be issued, but they
+have no effect.
+
+#### Filenames as MaxAdmin Arguments
 
 MaxAdmin no longer attempts to interpret additional command line parameters as a
-file name to load commands from  (e.g. `maxadmin mycommands.txt`). The shell
+file name to load commands from (e.g. `maxadmin mycommands.txt`). The shell
 indirection operator `<` should be used to achieve the same effect (`maxadmin <
 mycommands.txt`).
 

@@ -672,7 +672,7 @@ struct subcommand reloadoptions[] =
 {
     {
         "config", 0, 0, reload_config,
-        "Reload the configuration",
+        "[Deprecated] Reload the configuration",
         "Usage: reload config",
         {0}
     },
@@ -2281,7 +2281,10 @@ reload_dbusers(DCB *dcb, SERVICE *service)
 static void
 reload_config(DCB *dcb)
 {
-    dcb_printf(dcb, "Reloading configuration from file.\n");
+    dcb_printf(dcb, "Reloading configuration from file.\n\n"
+               "Warning! This command has been deprecated, please use the `alter`\n"
+               "commands or use the MaxScale REST API to change the configuration\n"
+               "at runtime.\n");
     config_reload();
 }
 

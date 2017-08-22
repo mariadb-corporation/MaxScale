@@ -1336,6 +1336,9 @@ of the values to 0, disables the throttling.
 
 ## Reloading The Configuration
 
+**Note:** This command has been deprecated. Use the MaxScale REST API or the
+  MaxAdmin `alter` commands to change configuration values at runtime.
+
 A command, _reload config_, is available that will cause MariaDB MaxScale to
 reload the maxscale.cnf configuration file. Note that not all configuration
 changes are taken into effect when the configuration is reloaded. Refer to

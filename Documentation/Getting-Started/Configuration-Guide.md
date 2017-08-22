@@ -1491,6 +1491,9 @@ can add a filter to a service and combine multiple filters in one service.
 
 ## Reloading Configuration
 
+**Note:** This functionality has been deprecated. Use the MaxScale REST API or the
+  MaxAdmin `alter` commands to change configuration values at runtime.
+
 The current MariaDB MaxScale configuration may be updated by editing the
 configuration file and then forcing MariaDB MaxScale to reread the configuration
 file. To force MariaDB MaxScale to reread the configuration file, send a SIGHUP
