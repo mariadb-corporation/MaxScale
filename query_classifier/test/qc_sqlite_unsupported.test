@@ -98,3 +98,7 @@ select t2.fld3 from t2 where companynr = 58 and fld3 like "%imaginable%";
 # qc_sqlite is not capable of amending a field name with the table name, in cases
 # where there is only table. However, neither is qc_mysqlembedded always either.
 # E.g. "select a from t where length(a) = 5" results in just a.
+
+#MXS qc_sqlite
+#MXS qc_get_function_info     : ERR: >(a, b)[QC_USED_IN_WHERE] avg(a)[QC_USED_IN_SUBSELECT|QC_USED_IN_WHERE] != >(a)[QC_USED_IN_WHERE] avg(a)[QC_USED_IN_SUBSELECT|QC_USED_IN_WHERE]
+CREATE VIEW v1 AS SELECT a,1 as b FROM t1 WHERE a>(SELECT AVG(a) FROM t1) AND b>(SELECT 1);

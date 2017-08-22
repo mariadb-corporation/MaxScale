@@ -153,15 +153,19 @@ with t(c) as (select a from t1 where b >= 'c')
   select * from t r1, t r2 where r1.c=r2.c;
 
 --echo # t two references of t used in different parts of a union
-with t as (select a from t1 where b >= 'c')
-  select * from t where a < 2
-  union
-  select * from t where a >= 4;
-select * from (select a from t1 where b >= 'c') as t
-  where t.a < 2
-union
-select * from (select a from t1 where b >= 'c') as t
-  where t.a >= 4;
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: <(a)[QC_USED_IN_WHERE] >=(b)[QC_USED_IN_WHERE] != <(a)[QC_USED_IN_WHERE] #MXS with t as (select a from t1 where b >= 'c')
+#MXS   select * from t where a < 2
+#MXS   union
+#MXS   select * from t where a >= 4;
+
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: <(t.a)[QC_USED_IN_WHERE] >=(b)[QC_USED_IN_WHERE] != <(t.a)[QC_USED_IN_WHERE] >=(b, t.a)[QC_USED_IN_WHERE]
+#MXS select * from (select a from t1 where b >= 'c') as t
+#MXS   where t.a < 2
+#MXS union
+#MXS select * from (select a from t1 where b >= 'c') as t
+#MXS   where t.a >= 4;
 explain
 with t as (select a from t1 where b >= 'c')
   select * from t where a < 2

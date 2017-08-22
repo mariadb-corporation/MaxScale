@@ -17,3 +17,17 @@ create view v1 as
   union
   select a from t2 where a > 4;
 
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: <(a)[QC_USED_IN_WHERE] >=(b)[QC_USED_IN_WHERE] != <(a)[QC_USED_IN_WHERE] >=(a, b)[QC_USED_IN_WHERE]
+with t as (select a from t1 where b >= 'c')
+  select * from t where a < 2
+  union
+  select * from t where a >= 4;
+
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: <(t.a)[QC_USED_IN_WHERE] >=(b)[QC_USED_IN_WHERE] != <(t.a)[QC_USED_IN_WHERE] >=(b, t.a)[QC_USED_IN_WHERE]
+select * from (select a from t1 where b >= 'c') as t
+  where t.a < 2
+union
+select * from (select a from t1 where b >= 'c') as t
+  where t.a >= 4;
