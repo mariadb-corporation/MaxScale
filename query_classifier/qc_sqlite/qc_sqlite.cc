@@ -1045,17 +1045,33 @@ public:
                 case TK_EXISTS:
                 case TK_IN:
                 case TK_SELECT:
-                    if (pExpr->flags & EP_xIsSelect)
                     {
                         uint32_t sub_usage = usage;
 
                         sub_usage &= ~QC_USED_IN_SELECT;
                         sub_usage |= QC_USED_IN_SUBSELECT;
-                        update_field_infos_from_subselect(pAliases, pExpr->x.pSelect, sub_usage, pExclude);
-                    }
-                    else
-                    {
-                        update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
+
+                        if (pExpr->flags & EP_xIsSelect)
+                        {
+                            update_field_infos_from_subselect(pAliases, pExpr->x.pSelect,
+                                                              sub_usage, pExclude);
+
+                            if (pExpr->op == TK_IN)
+                            {
+                                update_function_info(pAliases, "in",
+                                                     pExpr->x.pSelect->pEList, sub_usage, pExclude);
+                            }
+                        }
+                        else
+                        {
+                            update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
+
+                            if (pExpr->op == TK_IN)
+                            {
+                                update_function_info(pAliases, "in",
+                                                     pExpr->x.pList, sub_usage, pExclude);
+                            }
+                        }
                     }
                     break;
                 }

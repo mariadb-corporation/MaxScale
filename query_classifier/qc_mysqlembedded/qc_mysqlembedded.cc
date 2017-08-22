@@ -2456,6 +2456,21 @@ static void add_function_field_usage(st_select_lex* select,
     }
 }
 
+static void add_function_field_usage(st_select_lex* select,
+                                     st_select_lex* sub_select,
+                                     QC_FUNCTION_INFO* fi)
+{
+    List_iterator<Item> ilist(sub_select->item_list);
+
+    while (Item *item = ilist++)
+    {
+        if (item->type() == Item::FIELD_ITEM)
+        {
+            add_function_field_usage(select, static_cast<Item_field*>(item), fi);
+        }
+    }
+}
+
 static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* name)
 {
     QC_FUNCTION_INFO* function_info = NULL;
@@ -2496,14 +2511,16 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
     return function_info;
 }
 
-static void add_function_info(parsing_info_t* info,
-                              st_select_lex* select,
-                              const char* name,
-                              uint32_t usage,
-                              Item** items,
-                              int n_items)
+static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
+                                           st_select_lex* select,
+                                           const char* name,
+                                           uint32_t usage,
+                                           Item** items,
+                                           int n_items)
 {
     ss_dassert(name);
+
+    QC_FUNCTION_INFO* function_info = NULL;
 
     name = map_function_name(info->function_name_mappings, name);
 
@@ -2512,17 +2529,16 @@ static void add_function_info(parsing_info_t* info,
     size_t i;
     for (i = 0; i < info->function_infos_len; ++i)
     {
-        QC_FUNCTION_INFO* function_info = info->function_infos + i;
-
-        if (strcasecmp(item.name, function_info->name) == 0)
+        if (strcasecmp(name, info->function_infos[i].name) == 0)
         {
+            function_info = &info->function_infos[i];
             break;
         }
     }
 
     QC_FUNCTION_INFO* function_infos = NULL;
 
-    if (i == info->function_infos_len) // If true, the function was not present already.
+    if (!function_info)
     {
         if (info->function_infos_len < info->function_infos_capacity)
         {
@@ -2533,40 +2549,28 @@ static void add_function_info(parsing_info_t* info,
             size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
             function_infos = (QC_FUNCTION_INFO*)realloc(info->function_infos,
                                                         capacity * sizeof(QC_FUNCTION_INFO));
+            assert(function_infos);
 
-            if (function_infos)
-            {
-                info->function_infos = function_infos;
-                info->function_infos_capacity = capacity;
-            }
+            info->function_infos = function_infos;
+            info->function_infos_capacity = capacity;
         }
+
+        function_info = &info->function_infos[info->function_infos_len++];
+
+        function_info->name = strdup(name);
+        function_info->usage = 0;
+        function_info->fields = NULL;
+        function_info->n_fields = 0;
     }
-    else
+
+    function_info->usage |= usage;
+
+    if (strcmp(name, "=") != 0)
     {
-        info->function_infos[i].usage |= usage;
-
-        if (strcmp(name, "=") != 0)
-        {
-            add_function_field_usage(select, items, n_items, &info->function_infos[i]);
-        }
+        add_function_field_usage(select, items, n_items, function_info);
     }
 
-    // If function_infos is NULL, then the function was found and has already been noted.
-    if (function_infos)
-    {
-        item.name = strdup(item.name);
-
-        if (item.name)
-        {
-            int i = info->function_infos_len++;
-            function_infos[i] = item;
-
-            if (strcmp(name, "=") != 0)
-            {
-                add_function_field_usage(select, items, n_items, &info->function_infos[i]);
-            }
-        }
-    }
+    return function_info;
 }
 
 static void add_field_info(parsing_info_t* pi,
@@ -2938,11 +2942,11 @@ static void update_field_infos(parsing_info_t* pi,
     case Item::SUBSELECT_ITEM:
         {
             Item_subselect* subselect_item = static_cast<Item_subselect*>(item);
-
+            QC_FUNCTION_INFO* fi = NULL;
             switch (subselect_item->substype())
             {
             case Item_subselect::IN_SUBS:
-                add_function_info(pi, select, "in", usage, 0, 0);
+                fi = add_function_info(pi, select, "in", usage, 0, 0);
             case Item_subselect::ALL_SUBS:
             case Item_subselect::ANY_SUBS:
                 {
@@ -2959,6 +2963,16 @@ static void update_field_infos(parsing_info_t* pi,
                     {
                         update_field_infos(pi, select, source, // TODO: Might be wrong select.
                                            in_subselect_item->left_expr_orig, usage, excludep);
+
+                        if (subselect_item->substype() == Item_subselect::IN_SUBS)
+                        {
+                            Item* item = in_subselect_item->left_expr_orig;
+
+                            if (item->type() == Item::FIELD_ITEM)
+                            {
+                                add_function_field_usage(select, static_cast<Item_field*>(item), fi);
+                            }
+                        }
                     }
                     st_select_lex* ssl = in_subselect_item->get_select_lex();
                     if (ssl)
@@ -2973,6 +2987,12 @@ static void update_field_infos(parsing_info_t* pi,
                                            ssl,
                                            sub_usage,
                                            excludep);
+
+                        if (subselect_item->substype() == Item_subselect::IN_SUBS)
+                        {
+                            assert(fi);
+                            add_function_field_usage(select, ssl, fi);
+                        }
                     }
 #else
 #pragma message "Figure out what to do with versions < 5.5.48."
