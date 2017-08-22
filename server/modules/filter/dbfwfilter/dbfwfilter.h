@@ -44,6 +44,7 @@ void define_where_clause_rule(void* scanner);
 bool define_regex_rule(void* scanner, char* pattern);
 bool define_columns_rule(void* scanner, char* columns);
 bool define_function_rule(void* scanner, char* columns);
+bool define_function_usage_rule(void* scanner, char* columns);
 bool define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdoff);
 bool add_at_times_rule(void* scanner, const char* range);
 void add_on_queries_rule(void* scanner, const char* sql);

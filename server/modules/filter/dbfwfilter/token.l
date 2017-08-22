@@ -41,6 +41,7 @@ CMP         [=<>!]+
 deny|allow      return FWTOK_DENY; /** This should be removed at some point */
 rule            return FWTOK_RULE;
 function        return FWTOK_FUNCTION;
+uses_function   return FWTOK_USES_FUNCTION;
 no_where_clause return FWTOK_WHERE_CLAUSE;
 wildcard        return FWTOK_WILDCARD;
 columns         return FWTOK_COLUMNS;
