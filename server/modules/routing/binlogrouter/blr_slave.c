@@ -583,7 +583,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
  *  SHOW BINARY LOGS
  *
- * 12 set commands are supported:
+ * 13 set commands are supported:
  *  SET @master_binlog_checksum = @@global.binlog_checksum
  *  SET @master_heartbeat_period=...
  *  SET @slave_slave_uuid=...
@@ -596,6 +596,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SET @slave_connect_state=
  *  SET @slave_gtid_strict_mode=
  *  SET @slave_gtid_ignore_duplicates=
+ *  SET SQL_MODE=''
  *
  * 4 administrative commands are supported:
  *  STOP SLAVE
@@ -7644,6 +7645,11 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
             blr_slave_send_ok(router, slave);
             return true;
         }
+    }
+    else if (strcasecmp(word, "SQL_MODE") == 0)
+    {
+        blr_slave_send_ok(router, slave);
+        return true;
     }
 
     return false;
