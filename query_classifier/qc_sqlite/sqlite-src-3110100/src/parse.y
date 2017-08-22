@@ -1977,26 +1977,10 @@ wf_frame_opt ::= wf_frame_units wf_frame_extent wf_frame_exclusion_opt .
 wf ::= OVER LP wf_window_ref_opt wf_partition_by_opt wf_order_by_opt wf_frame_opt RP.
 wf ::= OVER id.
 
-expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt(Z) RP(E) wf. {
-  // We just append Z on Y as we are only interested in what columns
-  // the function used.
-  Y = sqlite3ExprListAppendList(pParse, Y, Z);
-  if( Y && Y->nExpr>pParse->db->aLimit[SQLITE_LIMIT_FUNCTION_ARG] ){
-    sqlite3ErrorMsg(pParse, "too many arguments on function %T", &X);
-  }
-  A.pExpr = sqlite3ExprFunction(pParse, Y, &X);
-  spanSet(&A,&X,&E);
-  if( D==SF_Distinct && A.pExpr ){
-    A.pExpr->flags |= EP_Distinct;
-  }
-}
+wf_opt ::= .
+wf_opt ::= wf.
 
-expr(A) ::= id(X) LP STAR RP(E) wf. {
-  A.pExpr = sqlite3ExprFunction(pParse, 0, &X);
-  spanSet(&A,&X,&E);
-}
-
-expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt(Z) RP(E). {
+expr(A) ::= id(X) LP distinct(D) exprlist(Y) func_arg_tail_opt(Z) RP(E) wf_opt. {
   // We just append Z on Y as we are only interested in what columns
   // the function used.
   Y = sqlite3ExprListAppendList(pParse, Y, Z);
@@ -2014,7 +1998,7 @@ expr(A) ::= id(X) LP distinct(D) exprlist(Y) RP(E). {
   }
 }
 %ifdef MAXSCALE
-expr(A) ::= nm DOT nm(X) LP distinct(D) exprlist(Y) func_arg_tail_opt(Z) RP(E). {
+expr(A) ::= nm DOT nm(X) LP distinct(D) exprlist(Y) func_arg_tail_opt(Z) RP(E) wf_opt. {
   // We just append Z on Y as we are only interested in what columns
   // the function used.
   Y = sqlite3ExprListAppendList(pParse, Y, Z);
@@ -2043,7 +2027,7 @@ expr(A) ::= keyword_as_function(X) LP distinct(D) exprlist(Y) RP(E). {
   }
 }
 %endif
-expr(A) ::= id(X) LP STAR RP(E). {
+expr(A) ::= id(X) LP STAR RP(E) wf_opt. {
   A.pExpr = sqlite3ExprFunction(pParse, 0, &X);
   spanSet(&A,&X,&E);
 }
