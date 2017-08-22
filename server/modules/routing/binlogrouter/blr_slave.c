@@ -1572,7 +1572,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     *ptr++ = 0;
 
     /* Master_Server_Id */
-    sprintf(column, "%d", router->masterid);
+    sprintf(column, "%d", router->orig_masterid);
     col_len = strlen(column);
     *ptr++ = col_len;                        // Length of result string
     memcpy((char *)ptr, column, col_len);    // Result string
@@ -6496,14 +6496,6 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
         sprintf(server_id, "%d", router->masterid);
         strcpy(heading, word);
 
-
-        if (strcasecmp(brkb, "@@read_only") == 0 ||
-            strcasecmp(brkb, "@@global.read_only") == 0)
-        {
-            blr_slave_send_id_ro(router, slave);
-            return true;
-        }
-
         blr_slave_send_var_value(router,
                                  slave,
                                  heading,
@@ -8510,7 +8502,13 @@ static int blr_slave_send_id_ro(ROUTER_INSTANCE *router,
 
     /* Create the MySQL Result Set row */
     char server_id[40] = "";
-    sprintf(server_id, "%d", router->serverid);
+    /* Set identy for MySQL replication monitor */
+    sprintf(server_id,
+            "%d",
+            router->set_master_server_id ?
+            router->masterid :
+            router->serverid);
+
     if ((pkt = blr_create_result_row(server_id, // File name
                                      "0",       // o = OFF
                                      seqno++)) != NULL)
