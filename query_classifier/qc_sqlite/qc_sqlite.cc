@@ -884,7 +884,7 @@ public:
                 if (((usage != 0) && (usage != QC_USED_IN_SET)) &&
                     (!pExpr->pLeft || (pExpr->pLeft->op != TK_VARIABLE)))
                 {
-                    update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage, pExclude);
+                    update_function_info(pAliases, get_token_symbol(pExpr->op), usage, pExclude);
                 }
                 break;
 
@@ -908,7 +908,6 @@ public:
                 {
                     int i = update_function_info(pAliases,
                                                  get_token_symbol(pExpr->op),
-                                                 NULL,
                                                  usage,
                                                  pExclude);
 
@@ -948,19 +947,19 @@ public:
                         char sqlrowcount[13]; // strlen("sql") + strlen("%") + strlen("rowcount") + 1
                         sprintf(sqlrowcount, "%s%%%s", pLeft->u.zToken, pRight->u.zToken);
 
-                        update_function_info(pAliases, sqlrowcount, NULL, usage, pExclude);
+                        update_function_info(pAliases, sqlrowcount, usage, pExclude);
 
                         pLeft = NULL;
                         pRight = NULL;
                     }
                     else
                     {
-                        update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage, pExclude);
+                        update_function_info(pAliases, get_token_symbol(pExpr->op), usage, pExclude);
                     }
                 }
                 else
                 {
-                    update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage, pExclude);
+                    update_function_info(pAliases, get_token_symbol(pExpr->op), usage, pExclude);
                 }
                 break;
 
@@ -968,7 +967,7 @@ public:
                 switch (this_unit.parse_as)
                 {
                 case QC_PARSE_AS_DEFAULT:
-                    update_function_info(pAliases, get_token_symbol(pExpr->op), NULL, usage, pExclude);
+                    update_function_info(pAliases, get_token_symbol(pExpr->op), usage, pExclude);
                     break;
 
                 case QC_PARSE_AS_103:
@@ -1033,8 +1032,6 @@ public:
             {
                 switch (pExpr->op)
                 {
-                case TK_BETWEEN:
-                case TK_CASE:
                 case TK_FUNCTION:
                     if (!ignore_exprlist)
                     {
@@ -1042,6 +1039,8 @@ public:
                     }
                     break;
 
+                case TK_BETWEEN:
+                case TK_CASE:
                 case TK_EXISTS:
                 case TK_IN:
                 case TK_SELECT:
@@ -1051,14 +1050,26 @@ public:
                         sub_usage &= ~QC_USED_IN_SELECT;
                         sub_usage |= QC_USED_IN_SUBSELECT;
 
+                        const char* zName = NULL;
+
+                        switch (pExpr->op)
+                        {
+                        case TK_BETWEEN:
+                        case TK_CASE:
+                        case TK_IN:
+                            zName = get_token_symbol(pExpr->op);
+                            break;
+                        }
+
                         if (pExpr->flags & EP_xIsSelect)
                         {
                             update_field_infos_from_subselect(pAliases, pExpr->x.pSelect,
                                                               sub_usage, pExclude);
 
-                            if (pExpr->op == TK_IN)
+
+                            if (zName)
                             {
-                                update_function_info(pAliases, "in",
+                                update_function_info(pAliases, zName,
                                                      pExpr->x.pSelect->pEList, sub_usage, pExclude);
                             }
                         }
@@ -1066,9 +1077,9 @@ public:
                         {
                             update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
 
-                            if (pExpr->op == TK_IN)
+                            if (zName)
                             {
-                                update_function_info(pAliases, "in",
+                                update_function_info(pAliases, zName,
                                                      pExpr->x.pList, sub_usage, pExclude);
                             }
                         }
@@ -1411,12 +1422,14 @@ public:
 
     int update_function_info(const QcAliases* pAliases,
                              const char* name,
+                             const Expr* pExpr,
                              const ExprList* pEList,
                              uint32_t usage,
                              const ExprList* pExclude)
 
     {
         ss_dassert(name);
+        ss_dassert((!pExpr && !pEList) || (pExpr && !pEList) || (!pExpr && pEList));
 
         if (!(m_collect & QC_COLLECT_FUNCTIONS) || (m_collected & QC_COLLECT_FUNCTIONS))
         {
@@ -1459,11 +1472,18 @@ public:
             m_function_infos[i].usage |= usage;
         }
 
-        if (pEList)
+        if (pExpr || pEList)
         {
             vector<QC_FIELD_NAME>& fields = m_function_field_usage[i];
 
-            update_function_fields(pAliases, pEList, pExclude, fields);
+            if (pExpr)
+            {
+                update_function_fields(pAliases, pExpr, pExclude, fields);
+            }
+            else
+            {
+                update_function_fields(pAliases, pEList, pExclude, fields);
+            }
 
             QC_FUNCTION_INFO& info = m_function_infos[i];
 
@@ -1475,6 +1495,33 @@ public:
         }
 
         return i;
+    }
+
+    int update_function_info(const QcAliases* pAliases,
+                             const char* name,
+                             const Expr* pExpr,
+                             uint32_t usage,
+                             const ExprList* pExclude)
+
+    {
+        return update_function_info(pAliases, name, pExpr, NULL, usage, pExclude);
+    }
+
+    int update_function_info(const QcAliases* pAliases,
+                             const char* name,
+                             const ExprList* pEList,
+                             uint32_t usage,
+                             const ExprList* pExclude)
+    {
+        return update_function_info(pAliases, name, NULL, pEList, usage, pExclude);
+    }
+
+    int update_function_info(const QcAliases* pAliases,
+                             const char* name,
+                             uint32_t usage,
+                             const ExprList* pExclude)
+    {
+        return update_function_info(pAliases, name, NULL, NULL, usage, pExclude);
     }
 
     //
@@ -3640,7 +3687,7 @@ extern void maxscale_update_function_info(const char* name, const Expr* pExpr, u
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->update_function_info(NULL, name, pExpr->x.pList, usage, NULL);
+    pInfo->update_function_info(NULL, name, pExpr, usage, NULL);
 }
 
 static const char* get_token_symbol(int token)

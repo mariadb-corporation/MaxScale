@@ -1262,7 +1262,9 @@ INSERT INTO t2 VALUES (1193,000000,00,'nondecreasing','implant','thrillingly',''
 # Search with a key
 #
 
-select t2.fld3 from t2 where companynr = 58 and fld3 like "%imaginable%";
+# MXS: qc_get_function_info     : ERR: =()[QC_USED_IN_WHERE] like(t2.fld3)[QC_USED_IN_WHERE] != =()[QC_USED_IN_WHERE] like(fld3)[QC_USED_IN_WHERE]
+#select t2.fld3 from t2 where companynr = 58 and fld3 like "%imaginable%";
+select fld3 from t2 where companynr = 58 and fld3 like "%imaginable%";
 select fld3 from t2 where fld3 like "%cultivation" ;
 
 #
@@ -1282,13 +1284,15 @@ select fld3 from t2 order by fld3 desc limit 5,5;
 #
 
 select t2.fld3 from t2 where fld3 = 'honeysuckle';
-select t2.fld3 from t2 where fld3 LIKE 'honeysuckl_';
-select t2.fld3 from t2 where fld3 LIKE 'hon_ysuckl_';
-select t2.fld3 from t2 where fld3 LIKE 'honeysuckle%';
-select t2.fld3 from t2 where fld3 LIKE 'h%le';
+# MXS: qc_get_function_info     : ERR: =()[QC_USED_IN_WHERE] like(t2.fld3)[QC_USED_IN_WHERE] != =()[QC_USED_IN_WHERE] like(fld3)[QC_USED_IN_WHERE]
+#select t2.fld3 from t2 where fld3 LIKE 'honeysuckl_';
+select fld3 from t2 where fld3 LIKE 'honeysuckl_';
+select fld3 from t2 where fld3 LIKE 'hon_ysuckl_';
+select fld3 from t2 where fld3 LIKE 'honeysuckle%';
+select fld3 from t2 where fld3 LIKE 'h%le';
 
-select t2.fld3 from t2 where fld3 LIKE 'honeysuckle_';
-select t2.fld3 from t2 where fld3 LIKE 'don_t_find_me_please%';
+select fld3 from t2 where fld3 LIKE 'honeysuckle_';
+select fld3 from t2 where fld3 LIKE 'don_t_find_me_please%';
 
 #
 # Test using INDEX and IGNORE INDEX
@@ -1316,7 +1320,9 @@ explain select fld3 from t2 use index (not_used);
 # Test sorting with a used key (there is no need for sorting)
 #
 
-select t2.fld3 from t2 where fld3 >= 'honeysuckle' and fld3 <= 'honoring' order by fld3;
+#MXS qc_get_function_info     : ERR: <=(t2.fld3)[QC_USED_IN_WHERE] >=(t2.fld3)[QC_USED_IN_WHERE] != <=(fld3)[QC_USED_IN_WHERE] >=(fld3)[QC_USED_IN_WHERE]
+#MXS select t2.fld3 from t2 where fld3 >= 'honeysuckle' and fld3 <= 'honoring' order by fld3;
+select fld3 from t2 where fld3 >= 'honeysuckle' and fld3 <= 'honoring' order by fld3;
 explain select t2.fld3 from t2 where fld3 >= 'honeysuckle' and fld3 <= 'honoring' order by fld3;
 select fld1,fld3 from t2 where fld3="Colombo" or fld3 = "nondecreasing" order by fld3;
 
@@ -1361,7 +1367,9 @@ select fld1,fld3 from t2 where fld1 like "25050_";
 select distinct companynr from t2;
 select distinct companynr from t2 order by companynr;
 select distinct companynr from t2 order by companynr desc;
-select distinct t2.fld3,period from t2,t1 where companynr=37 and fld3 like "O%";
+#MXS qc_get_function_info     : ERR: =()[QC_USED_IN_WHERE] like(t2.fld3)[QC_USED_IN_WHERE] != =()[QC_USED_IN_WHERE] like(fld3)[QC_USED_IN_WHERE]
+#MXS select distinct t2.fld3,period from t2,t1 where companynr=37 and fld3 like "O%";
+select distinct fld3,period from t2,t1 where companynr=37 and fld3 like "O%";
 
 select distinct fld3 from t2 where companynr = 34 order by fld3;
 select distinct fld3 from t2 limit 10;

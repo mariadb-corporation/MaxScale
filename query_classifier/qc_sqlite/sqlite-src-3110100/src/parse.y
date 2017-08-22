@@ -1869,14 +1869,14 @@ expr(A) ::= CAST(X) LP expr(E) AS typetoken(T) RP(Y). {
 }
 %endif  SQLITE_OMIT_CAST
 %ifdef MAXSCALE
-group_concat_colname ::= COMMA nm.
-group_concat_colname ::= COMMA nm DOT nm.
+group_concat_colname ::= nm.
+group_concat_colname ::= nm DOT nm.
 
 group_concat_colnames ::= group_concat_colname.
-group_concat_colnames ::= group_concat_colnames group_concat_colname.
+group_concat_colnames ::= group_concat_colnames COMMA group_concat_colname.
 
 group_concat_colnames_opt ::= .
-group_concat_colnames_opt ::= group_concat_colnames.
+group_concat_colnames_opt ::= COMMA group_concat_colnames.
 
 group_concat_order_by ::= ORDER BY INTEGER sortorder group_concat_colnames_opt.
 group_concat_order_by ::= ORDER BY col_name(X) sortorder group_concat_colnames_opt. {

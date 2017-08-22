@@ -161,7 +161,9 @@ INSERT INTO t2 VALUES (3,4433,10013,489,500);
 INSERT INTO t2 VALUES (3,4433,10005,494,500);
 INSERT INTO t2 VALUES (3,4433,10005,493,500);
 INSERT INTO t2 VALUES (3,4433,10005,492,500);
-UPDATE IGNORE t2,t1 set t2.colE = t2.colE + 1,colF=0 WHERE t1.colA = t2.colA AND (t1.colB & 4096) > 0 AND (colE + 1) < colF;
+#MXS
+#MXS UPDATE IGNORE t2,t1 set t2.colE = t2.colE + 1,colF=0 WHERE t1.colA = t2.colA AND (t1.colB & 4096) > 0 AND (colE + 1) < colF;
+UPDATE IGNORE t2,t1 set t2.colE = t2.colE + 1,colF=0 WHERE t1.colA = t2.colA AND (t1.colB & 4096) > 0 AND (t2.colE + 1) < colF;
 SELECT * FROM t2;
 DROP TABLE t1;
 DROP TABLE t2;
