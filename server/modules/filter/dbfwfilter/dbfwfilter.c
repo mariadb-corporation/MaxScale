@@ -2166,17 +2166,20 @@ void match_function_usage(RULE *rule, GWBUF *queue, enum fw_actions mode,
 
     for (size_t i = 0; i < n_infos; ++i)
     {
-        const char* tok = "TODO: Use the actual function values";
-
-        for (STRLINK* s = (STRLINK*)rule->data; s; s = s->next)
+        for (size_t j = 0; j < infos[i].n_fields; j++)
         {
-            if (strcasecmp(tok, s->value) == 0)
+            const char* tok = infos[i].fields[j].column;
+
+            for (STRLINK* s = (STRLINK*)rule->data; s; s = s->next)
             {
-                MXS_NOTICE("rule '%s': query uses a function with forbidden column: %s",
-                           rule->name, s->value);
-                *msg = create_error("Permission denied to column '%s' with function.", s->value);
-                *matches = true;
-                return;
+                if (strcasecmp(tok, s->value) == 0)
+                {
+                    MXS_NOTICE("rule '%s': query uses a function with forbidden column: %s",
+                               rule->name, s->value);
+                    *msg = create_error("Permission denied to column '%s' with function.", s->value);
+                    *matches = true;
+                    return;
+                }
             }
         }
     }
