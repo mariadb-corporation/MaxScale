@@ -90,6 +90,8 @@ public:
     SRWBackendList          backends; /**< List of backend servers */
     SRWBackend              current_master; /**< Current master server */
     SRWBackend              target_node; /**< The currently locked target node */
+    SRWBackend              prev_target; /**< The previous target where a query was sent */
+    bool                    large_query; /**< Set to true when processing payloads >= 2^24 bytes */
     Config                  rses_config; /**< copied config info from router instance */
     int                     rses_nbackends;
     enum ld_state           load_data_state; /**< Current load data state */

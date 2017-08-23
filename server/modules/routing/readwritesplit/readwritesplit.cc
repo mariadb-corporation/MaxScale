@@ -681,6 +681,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     rses_closed(false),
     backends(backends),
     current_master(master),
+    large_query(false),
     rses_config(instance->config()),
     rses_nbackends(instance->service()->n_dbref),
     load_data_state(LOAD_DATA_INACTIVE),
@@ -892,7 +893,8 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
         if (rses->query_queue == NULL &&
             (rses->expected_responses == 0 ||
              info.command == MYSQL_COM_STMT_FETCH ||
-             rses->load_data_state == LOAD_DATA_ACTIVE))
+             rses->load_data_state == LOAD_DATA_ACTIVE ||
+             rses->large_query))
         {
             /** No active or pending queries */
             if (route_single_stmt(inst, rses, querybuf, info))
