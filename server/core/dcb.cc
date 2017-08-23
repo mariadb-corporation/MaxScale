@@ -70,11 +70,9 @@ using maxscale::Semaphore;
 static DCB dcb_initialized;
 
 static  DCB           **all_dcbs;
-static  SPINLOCK       *all_dcbs_lock;
 static  DCB           **zombies;
 static  int            *nzombies;
 static  int             maxzombies = 0;
-static  SPINLOCK        zombiespin = SPINLOCK_INIT;
 
 /** Variables for session timeout checks */
 bool check_timeouts = false;
@@ -92,16 +90,10 @@ void dcb_global_init()
 
     if ((zombies = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
         (all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
-        (all_dcbs_lock = (SPINLOCK*)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
         (nzombies = (int*)MXS_CALLOC(nthreads, sizeof(int))) == NULL)
     {
         MXS_OOM();
         raise(SIGABRT);
-    }
-
-    for (int i = 0; i < nthreads; i++)
-    {
-        spinlock_init(&all_dcbs_lock[i]);
     }
 }
 
