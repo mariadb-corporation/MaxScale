@@ -37,33 +37,6 @@ struct servlistener;
 
 struct dcb;
 
-/**
- * The event queue structure used in the polling loop to maintain a queue
- * of events that need to be processed for the DCB.
- *
- *      next                    The next DCB in the event queue
- *      prev                    The previous DCB in the event queue
- *      pending_events          The events that are pending processing
- *      processing_events       The evets currently being processed
- *      processing              Flag to indicate the processing status of the DCB
- *      eventqlock              Spinlock to protect this structure
- *      inserted                Insertion time for logging purposes
- *      started                 Time that the processign started
- */
-typedef struct
-{
-    struct  dcb     *next;
-    struct  dcb     *prev;
-    uint32_t        pending_events;
-    uint32_t        processing_events;
-    int             processing;
-    SPINLOCK        eventqlock;
-    unsigned long   inserted;
-    unsigned long   started;
-} DCBEVENTQ;
-
-#define DCBEVENTQ_INIT {NULL, NULL, 0, 0, 0, SPINLOCK_INIT, 0, 0}
-
 #define DCBFD_CLOSED -1
 
 /**
@@ -190,7 +163,6 @@ typedef struct dcb
     bool            dcb_errhandle_called; /*< this can be called only once */
     bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
     dcb_role_t      dcb_role;
-    DCBEVENTQ       evq;            /**< The event queue for this DCB */
     int             fd;             /**< The descriptor */
     dcb_state_t     state;          /**< Current descriptor state */
     SSL_STATE       ssl_state;      /**< Current state of SSL if in use */
@@ -258,8 +230,6 @@ typedef enum
 #define DCB_SET_HIGH_WATER(x, hi)       (x)->low_water = (hi);
 #define DCB_BELOW_LOW_WATER(x)          ((x)->low_water && (x)->writeqlen < (x)->low_water)
 #define DCB_ABOVE_HIGH_WATER(x)         ((x)->high_water && (x)->writeqlen > (x)->high_water)
-
-#define DCB_POLL_BUSY(x)                ((x)->evq.next != NULL)
 
 /**
  * @brief DCB system initialization function

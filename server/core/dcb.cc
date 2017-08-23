@@ -219,12 +219,6 @@ dcb_final_free(DCB *dcb)
                     dcb->state == DCB_STATE_ALLOC,
                     "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
-    if (DCB_POLL_BUSY(dcb))
-    {
-        /* Check if DCB has outstanding poll events */
-        MXS_ERROR("DCB %p has outstanding events.", dcb);
-    }
-
     if (dcb->session)
     {
         /*<
@@ -1615,11 +1609,6 @@ dprintDCB(DCB *pdcb, DCB *dcb)
                dcb->stats.n_high_water);
     dcb_printf(pdcb, "\t\tNo. of Low Water Events:  %d\n",
                dcb->stats.n_low_water);
-    if (DCB_POLL_BUSY(dcb))
-    {
-        dcb_printf(pdcb, "\t\tPending events in the queue:      %x %s\n",
-                   dcb->evq.pending_events, dcb->evq.processing ? "(processing)" : "");
-    }
 
     if (dcb->persistentstart)
     {
