@@ -1792,7 +1792,7 @@ static void parsing_info_done(void* ptr)
 
             for (size_t j = 0; j < fi.n_fields; ++j)
             {
-                QC_FIELD_NAME& field = fi.fields[j];
+                QC_FIELD_INFO& field = fi.fields[j];
 
                 free(field.database);
                 free(field.table);
@@ -2239,14 +2239,13 @@ static void add_field_info(parsing_info_t* info,
                            const char* database,
                            const char* table,
                            const char* column,
-                           uint32_t usage,
                            List<Item>* excludep)
 {
     ss_dassert(column);
 
     unalias_names(select, database, table, &database, &table);
 
-    QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column, usage };
+    QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column };
 
     size_t i;
     for (i = 0; i < info->field_infos_len; ++i)
@@ -2303,10 +2302,6 @@ static void add_field_info(parsing_info_t* info,
             }
         }
     }
-    else
-    {
-        info->field_infos[i].usage |= usage;
-    }
 
     // If field_infos is NULL, then the field was found and has already been noted.
     if (field_infos)
@@ -2335,7 +2330,7 @@ static void add_function_field_usage(const char* database,
 
     while (!found && (i < fi->n_fields))
     {
-        QC_FIELD_NAME& field = fi->fields[i];
+        QC_FIELD_INFO& field = fi->fields[i];
 
         if (strcasecmp(field.column, column) == 0)
         {
@@ -2361,14 +2356,14 @@ static void add_function_field_usage(const char* database,
 
     if (!found)
     {
-        QC_FIELD_NAME* fields = (QC_FIELD_NAME*)realloc(fi->fields,
-                                                        (fi->n_fields + 1) * sizeof(QC_FIELD_NAME));
+        QC_FIELD_INFO* fields = (QC_FIELD_INFO*)realloc(fi->fields,
+                                                        (fi->n_fields + 1) * sizeof(QC_FIELD_INFO));
         ss_dassert(fields);
 
         if (fields)
         {
             // Ignore potential alloc failures
-            QC_FIELD_NAME& field = fields[fi->n_fields];
+            QC_FIELD_INFO& field = fields[fi->n_fields];
             field.database = database ? strdup(database) : NULL;
             field.table = table ? strdup(table) : NULL;
             field.column = strdup(column);
@@ -2505,7 +2500,8 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
         function_info = &info->function_infos[info->function_infos_len++];
 
         function_info->name = strdup(name);
-        function_info->usage = 0;
+        function_info->fields = NULL;
+        function_info->n_fields = 0;
     }
 
     return function_info;
@@ -2514,7 +2510,6 @@ static QC_FUNCTION_INFO* get_function_info(parsing_info_t* info, const char* nam
 static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
                                            st_select_lex* select,
                                            const char* name,
-                                           uint32_t usage,
                                            Item** items,
                                            int n_items)
 {
@@ -2524,7 +2519,7 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
 
     name = map_function_name(info->function_name_mappings, name);
 
-    QC_FUNCTION_INFO item = { (char*)name, usage };
+    QC_FUNCTION_INFO item = { (char*)name };
 
     size_t i;
     for (i = 0; i < info->function_infos_len; ++i)
@@ -2558,17 +2553,11 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
         function_info = &info->function_infos[info->function_infos_len++];
 
         function_info->name = strdup(name);
-        function_info->usage = 0;
         function_info->fields = NULL;
         function_info->n_fields = 0;
     }
 
-    function_info->usage |= usage;
-
-    if (strcmp(name, "=") != 0)
-    {
-        add_function_field_usage(select, items, n_items, function_info);
-    }
+    add_function_field_usage(select, items, n_items, function_info);
 
     return function_info;
 }
@@ -2576,7 +2565,6 @@ static QC_FUNCTION_INFO* add_function_info(parsing_info_t* info,
 static void add_field_info(parsing_info_t* pi,
                            st_select_lex* select,
                            Item_field* item,
-                           uint32_t usage,
                            List<Item>* excludep)
 {
     const char* database = item->db_name;
@@ -2668,13 +2656,12 @@ static void add_field_info(parsing_info_t* pi,
         break;
     }
 
-    add_field_info(pi, select, database, table, column, usage, excludep);
+    add_field_info(pi, select, database, table, column, excludep);
 }
 
 static void add_field_info(parsing_info_t* pi,
                            st_select_lex* select,
                            Item* item,
-                           uint32_t usage,
                            List<Item>* excludep)
 {
     const char* database = NULL;
@@ -2686,7 +2673,7 @@ static void add_field_info(parsing_info_t* pi,
     strncpy(column, s, l);
     column[l] = 0;
 
-    add_field_info(pi, select, database, table, column, usage, excludep);
+    add_field_info(pi, select, database, table, column, excludep);
 }
 
 typedef enum collect_source
@@ -2700,7 +2687,6 @@ typedef enum collect_source
 static void update_field_infos(parsing_info_t* pi,
                                LEX* lex,
                                st_select_lex* select,
-                               uint32_t usage,
                                List<Item>* excludep);
 
 static void remove_surrounding_back_ticks(char* s)
@@ -2772,7 +2758,6 @@ static void update_field_infos(parsing_info_t* pi,
                                st_select_lex* select,
                                collect_source_t source,
                                Item* item,
-                               uint32_t usage,
                                List<Item>* excludep)
 {
     switch (item->type())
@@ -2784,13 +2769,13 @@ static void update_field_infos(parsing_info_t* pi,
 
             while (Item *i = ilist++)
             {
-                update_field_infos(pi, select, source, i, usage, excludep);
+                update_field_infos(pi, select, source, i, excludep);
             }
         }
         break;
 
     case Item::FIELD_ITEM:
-        add_field_info(pi, select, static_cast<Item_field*>(item), usage, excludep);
+        add_field_info(pi, select, static_cast<Item_field*>(item), excludep);
         break;
 
     case Item::REF_ITEM:
@@ -2799,7 +2784,7 @@ static void update_field_infos(parsing_info_t* pi,
             {
                 Item_ref* ref_item = static_cast<Item_ref*>(item);
 
-                add_field_info(pi, select, item, usage, excludep);
+                add_field_info(pi, select, item, excludep);
 
                 size_t n_items = ref_item->cols();
 
@@ -2809,7 +2794,7 @@ static void update_field_infos(parsing_info_t* pi,
 
                     if (reffed_item != ref_item)
                     {
-                        update_field_infos(pi, select, source, ref_item->element_index(i), usage, excludep);
+                        update_field_infos(pi, select, source, ref_item->element_index(i), excludep);
                     }
                 }
             }
@@ -2823,7 +2808,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             for (size_t i = 0; i < n_items; ++i)
             {
-                update_field_infos(pi, select, source, row_item->element_index(i), usage, excludep);
+                update_field_infos(pi, select, source, row_item->element_index(i), excludep);
             }
         }
         break;
@@ -2929,12 +2914,12 @@ static void update_field_infos(parsing_info_t* pi,
                     strcpy(func_name, "addtime");
                 }
 
-                add_function_info(pi, select, func_name, usage, items, n_items);
+                add_function_info(pi, select, func_name, items, n_items);
             }
 
             for (size_t i = 0; i < n_items; ++i)
             {
-                update_field_infos(pi, select, source, items[i], usage, excludep);
+                update_field_infos(pi, select, source, items[i], excludep);
             }
         }
         break;
@@ -2946,7 +2931,7 @@ static void update_field_infos(parsing_info_t* pi,
             switch (subselect_item->substype())
             {
             case Item_subselect::IN_SUBS:
-                fi = add_function_info(pi, select, "in", usage, 0, 0);
+                fi = add_function_info(pi, select, "in", 0, 0);
             case Item_subselect::ALL_SUBS:
             case Item_subselect::ANY_SUBS:
                 {
@@ -2962,7 +2947,7 @@ static void update_field_infos(parsing_info_t* pi,
                     if (in_subselect_item->left_expr_orig)
                     {
                         update_field_infos(pi, select, source, // TODO: Might be wrong select.
-                                           in_subselect_item->left_expr_orig, usage, excludep);
+                                           in_subselect_item->left_expr_orig, excludep);
 
                         if (subselect_item->substype() == Item_subselect::IN_SUBS)
                         {
@@ -2977,15 +2962,9 @@ static void update_field_infos(parsing_info_t* pi,
                     st_select_lex* ssl = in_subselect_item->get_select_lex();
                     if (ssl)
                     {
-                        uint32_t sub_usage = usage;
-
-                        sub_usage &= ~QC_USED_IN_SELECT;
-                        sub_usage |= QC_USED_IN_SUBSELECT;
-
                         update_field_infos(pi,
                                            get_lex(pi),
                                            ssl,
-                                           sub_usage,
                                            excludep);
 
                         if (subselect_item->substype() == Item_subselect::IN_SUBS)
@@ -3009,15 +2988,9 @@ static void update_field_infos(parsing_info_t* pi,
                     st_select_lex* ssl = exists_subselect_item->get_select_lex();
                     if (ssl)
                     {
-                        uint32_t sub_usage = usage;
-
-                        sub_usage &= ~QC_USED_IN_SELECT;
-                        sub_usage |= QC_USED_IN_SUBSELECT;
-
                         update_field_infos(pi,
                                            get_lex(pi),
                                            ssl,
-                                           sub_usage,
                                            excludep);
                     }
                 }
@@ -3028,10 +3001,7 @@ static void update_field_infos(parsing_info_t* pi,
                     Item_singlerow_subselect* ss_item = static_cast<Item_singlerow_subselect*>(item);
                     st_select_lex *ssl = ss_item->get_select_lex();
 
-                    usage &= ~QC_USED_IN_SELECT;
-                    usage |= QC_USED_IN_SUBSELECT;
-
-                    update_field_infos(pi, get_lex(pi), ssl, usage, excludep);
+                    update_field_infos(pi, get_lex(pi), ssl, excludep);
                 }
                 break;
 
@@ -3052,14 +3022,13 @@ static void update_field_infos(parsing_info_t* pi,
 static void update_field_infos(parsing_info_t* pi,
                                LEX* lex,
                                st_select_lex_unit* select,
-                               uint32_t usage,
                                List<Item>* excludep)
 {
     st_select_lex* s = select->first_select();
 
     if (s)
     {
-        update_field_infos(pi, lex, s, usage, excludep);
+        update_field_infos(pi, lex, s, excludep);
     }
 }
 #endif
@@ -3067,14 +3036,13 @@ static void update_field_infos(parsing_info_t* pi,
 static void update_field_infos(parsing_info_t* pi,
                                LEX* lex,
                                st_select_lex* select,
-                               uint32_t usage,
                                List<Item>* excludep)
 {
     List_iterator<Item> ilist(select->item_list);
 
     while (Item *item = ilist++)
     {
-        update_field_infos(pi, select, COLLECT_SELECT, item, usage, NULL);
+        update_field_infos(pi, select, COLLECT_SELECT, item, NULL);
     }
 
     if (select->group_list.first)
@@ -3084,8 +3052,7 @@ static void update_field_infos(parsing_info_t* pi,
         {
             Item* item = *order->item;
 
-            update_field_infos(pi, select, COLLECT_GROUP_BY, item, QC_USED_IN_GROUP_BY,
-                               &select->item_list);
+            update_field_infos(pi, select, COLLECT_GROUP_BY, item, &select->item_list);
 
             order = order->next;
         }
@@ -3093,15 +3060,8 @@ static void update_field_infos(parsing_info_t* pi,
 
     if (select->where)
     {
-        uint32_t sub_usage = QC_USED_IN_WHERE;
-        // TODO: The usage bits should get an overhaul. The following would make sense
-        // TODO: but breaks things overall. So for another time.
-        // TODO: sub_usage &= ~QC_USED_IN_SELECT;
-        // TODO: sub_usage |= QC_USED_IN_WHERE;
-
         update_field_infos(pi, select, COLLECT_WHERE,
                            select->where,
-                           sub_usage,
                            &select->item_list);
     }
 
@@ -3126,9 +3086,7 @@ static void update_field_infos(parsing_info_t* pi,
         if (sl)
         {
             // This is for "SELECT 1 FROM (SELECT ...)"
-            usage &= ~QC_USED_IN_SELECT;
-            usage |= QC_USED_IN_SUBSELECT;
-            update_field_infos(pi, get_lex(pi), sl, usage, excludep);
+            update_field_infos(pi, get_lex(pi), sl, excludep);
         }
     }
 }
@@ -3168,29 +3126,35 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             return QC_RESULT_OK;
         }
 
-        uint32_t usage = 0;
-
-        switch (lex->sql_command)
-        {
-        case SQLCOM_UPDATE:
-        case SQLCOM_UPDATE_MULTI:
-            usage |= QC_USED_IN_SET;
-            break;
-
-        default:
-            usage |= QC_USED_IN_SELECT;
-        }
-
         lex->current_select = &lex->select_lex;
 
-        update_field_infos(pi, lex, &lex->select_lex, usage, NULL);
+        update_field_infos(pi, lex, &lex->select_lex, NULL);
+
+        QC_FUNCTION_INFO* fi = NULL;
+
+        if ((lex->sql_command == SQLCOM_UPDATE) || (lex->sql_command == SQLCOM_UPDATE_MULTI))
+        {
+            List_iterator<Item> ilist(lex->current_select->item_list);
+            Item *item = ilist++;
+
+            fi = get_function_info(pi, "=");
+
+            while (item)
+            {
+                update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, NULL);
+
+                if (item->type() == Item::FIELD_ITEM)
+                {
+                    add_function_field_usage(lex->current_select, static_cast<Item_field*>(item), fi);
+                }
+
+                item = ilist++;
+            }
+        }
 
 #ifdef CTE_SUPPORTED
         if (lex->with_clauses_list)
         {
-            usage &= ~QC_USED_IN_SELECT;
-            usage |= QC_USED_IN_SUBSELECT;
-
             With_clause* with_clause = lex->with_clauses_list;
 
             while (with_clause)
@@ -3200,11 +3164,11 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 
                 while (element)
                 {
-                    update_field_infos(pi, lex, element->spec, usage, NULL);
+                    update_field_infos(pi, lex, element->spec, NULL);
 
                     if (element->is_recursive && element->first_recursive)
                     {
-                        update_field_infos(pi, lex, element->first_recursive, usage, NULL);
+                        update_field_infos(pi, lex, element->first_recursive, NULL);
                     }
 
                     element = element->next;
@@ -3218,7 +3182,15 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
         List_iterator<Item> ilist(lex->value_list);
         while (Item* item = ilist++)
         {
-            update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, 0, NULL);
+            update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, NULL);
+
+            if (fi)
+            {
+                if (item->type() == Item::FIELD_ITEM)
+                {
+                    add_function_field_usage(lex->current_select, static_cast<Item_field*>(item), fi);
+                }
+            }
         }
 
         if ((lex->sql_command == SQLCOM_INSERT) ||
@@ -3227,9 +3199,24 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
             (lex->sql_command == SQLCOM_REPLACE_SELECT))
         {
             List_iterator<Item> ilist(lex->field_list);
-            while (Item *item = ilist++)
+            Item* item = ilist++;
+
+            if (item)
             {
-                update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, 0, NULL);
+                // We get here in case of "insert into t set a = 0".
+                QC_FUNCTION_INFO* fi = get_function_info(pi, "=");
+
+                while (item)
+                {
+                    update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, NULL);
+
+                    if (item->type() == Item::FIELD_ITEM)
+                    {
+                        add_function_field_usage(lex->current_select, static_cast<Item_field*>(item), fi);
+                    }
+
+                    item = ilist++;
+                }
             }
 
             if (lex->insert_list)
@@ -3237,7 +3224,7 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
                 List_iterator<Item> ilist(*lex->insert_list);
                 while (Item *item = ilist++)
                 {
-                    update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, 0, NULL);
+                    update_field_infos(pi, lex->current_select, COLLECT_SELECT, item, NULL);
                 }
             }
         }
@@ -3270,17 +3257,13 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
                 // code after the closing }.
             }
 
-            usage &= ~QC_USED_IN_SELECT;
-            usage &= ~QC_USED_IN_SET;
-            usage |= QC_USED_IN_SUBSELECT;
-
             st_select_lex* select = lex->all_selects_list;
 
             while (select)
             {
                 if (select->nest_level != 0) // Not the top-level select.
                 {
-                    update_field_infos(pi, lex, select, usage, NULL);
+                    update_field_infos(pi, lex, select, NULL);
                 }
 
                 select = select->next_select_in_list();

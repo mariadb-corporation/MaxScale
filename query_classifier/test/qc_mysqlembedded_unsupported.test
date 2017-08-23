@@ -31,3 +31,16 @@ select * from (select a from t1 where b >= 'c') as t
 union
 select * from (select a from t1 where b >= 'c') as t
   where t.a >= 4;
+
+#MXS qc_myselembedded
+#MXS qc_get_function_info     : ERR:  != =(f1)
+delete from t1 where (@a:= f1) order by f1 limit 1;
+
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: *(t1.a) +(t1.a) != *(t1.a) +(t1.a) =()
+insert into t2
+  select @a:= A.a + 10*(B.a + 10*C.a), @a, 'filler' from t1 A, t1 B, t1 C;
+
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: *(t1.a) +(t1.a) != *(t1.a) +(t1.a) =()
+insert into t2 select @v:=A.a+10*B.a, @v  from t1 A, t1 B;

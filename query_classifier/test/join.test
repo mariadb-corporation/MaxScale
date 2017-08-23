@@ -677,8 +677,10 @@ insert into t1 values (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);
 create table t2 (a int, b int, filler char(100), key(a), key(b));
 create table t3 (a int, b int, filler char(100), key(a), key(b));
 
-insert into t2 
-  select @a:= A.a + 10*(B.a + 10*C.a), @a, 'filler' from t1 A, t1 B, t1 C;
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: *(t1.a) +(t1.a) != *(t1.a) +(t1.a) =()
+#MXS insert into t2
+#MXS   select @a:= A.a + 10*(B.a + 10*C.a), @a, 'filler' from t1 A, t1 B, t1 C;
 insert into t3 select * from t2 where a < 800;
 
 # The order of tables must be t2,t3:
@@ -692,7 +694,9 @@ create table t1 (a int);
 insert into t1 values (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);
 
 create table t2 (a int, b int, primary key(a));
-insert into t2 select @v:=A.a+10*B.a, @v  from t1 A, t1 B;
+#MXS qc_mysqlembedded
+#MXS qc_get_function_info     : ERR: *(t1.a) +(t1.a) != *(t1.a) +(t1.a) =()
+#MXS insert into t2 select @v:=A.a+10*B.a, @v  from t1 A, t1 B;
 
 explain select * from t1;
 show status like '%cost%';

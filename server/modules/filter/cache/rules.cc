@@ -1144,55 +1144,52 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE *self,
     {
         const QC_FIELD_INFO *info = (infos + i);
 
-        if (info->usage & QC_USED_IN_SELECT)
+        size_t database_len;
+        const char *database;
+
+        if (info->database)
         {
-            size_t database_len;
-            const char *database;
-
-            if (info->database)
-            {
-                database = info->database;
-                database_len = strlen(info->database);
-            }
-            else
-            {
-                database = default_database;
-                database_len = default_database_len;
-            }
-
-            size_t table_len;
-            const char *table;
-
-            if (info->table)
-            {
-                table = info->table;
-                table_len = strlen(info->table);
-            }
-            else
-            {
-                table = default_table;
-                table_len = default_table_len;
-            }
-
-            char buffer[database_len + 1 + table_len + strlen(info->column) + 1];
-            buffer[0] = 0;
-
-            if (database)
-            {
-                strcat(buffer, database);
-                strcat(buffer, ".");
-            }
-
-            if (table)
-            {
-                strcat(buffer, table);
-                strcat(buffer, ".");
-            }
-
-            strcat(buffer, info->column);
-
-            matches = cache_rule_compare(self, thread_id, buffer);
+            database = info->database;
+            database_len = strlen(info->database);
         }
+        else
+        {
+            database = default_database;
+            database_len = default_database_len;
+        }
+
+        size_t table_len;
+        const char *table;
+
+        if (info->table)
+        {
+            table = info->table;
+            table_len = strlen(info->table);
+        }
+        else
+        {
+            table = default_table;
+            table_len = default_table_len;
+        }
+
+        char buffer[database_len + 1 + table_len + strlen(info->column) + 1];
+        buffer[0] = 0;
+
+        if (database)
+        {
+            strcat(buffer, database);
+            strcat(buffer, ".");
+        }
+
+        if (table)
+        {
+            strcat(buffer, table);
+            strcat(buffer, ".");
+        }
+
+        strcat(buffer, info->column);
+
+        matches = cache_rule_compare(self, thread_id, buffer);
 
         ++i;
     }
@@ -1280,83 +1277,80 @@ static bool cache_rule_matches_column_simple(CACHE_RULE *self, const char *defau
     {
         const QC_FIELD_INFO *info = (infos + i);
 
-        if (info->usage & QC_USED_IN_SELECT)
+        if ((strcasecmp(info->column, rule_column) == 0) || strcmp(rule_column, "*") == 0)
         {
-            if ((strcasecmp(info->column, rule_column) == 0) || strcmp(rule_column, "*") == 0)
+            if (rule_table)
             {
-                if (rule_table)
+                const char* check_table = info->table ? info->table : default_table;
+
+                if (check_table)
                 {
-                    const char* check_table = info->table ? info->table : default_table;
-
-                    if (check_table)
+                    if (strcasecmp(check_table, rule_table) == 0)
                     {
-                        if (strcasecmp(check_table, rule_table) == 0)
+                        if (rule_database)
                         {
-                            if (rule_database)
-                            {
-                                const char *check_database =
-                                    info->database ? info->database : default_database;
+                            const char *check_database =
+                                info->database ? info->database : default_database;
 
-                                if (check_database)
+                            if (check_database)
+                            {
+                                if (strcasecmp(check_database, rule_database) == 0)
                                 {
-                                    if (strcasecmp(check_database, rule_database) == 0)
-                                    {
-                                        // The column, table and database matched.
-                                        matches = true;
-                                    }
-                                    else
-                                    {
-                                        // The column, table matched but the database did not.
-                                        matches = false;
-                                    }
+                                    // The column, table and database matched.
+                                    matches = true;
                                 }
                                 else
                                 {
-                                    // If the rules specify a database but we do not know the database,
-                                    // we consider the databases not to match.
+                                    // The column, table matched but the database did not.
                                     matches = false;
                                 }
                             }
                             else
                             {
-                                // If the rule specifies no database, then if the column and the table
-                                // matches, the rule matches.
-                                matches = true;
+                                // If the rules specify a database but we do not know the database,
+                                // we consider the databases not to match.
+                                matches = false;
                             }
                         }
                         else
                         {
-                            // The column matched, but the table did not.
-                            matches = false;
+                            // If the rule specifies no database, then if the column and the table
+                            // matches, the rule matches.
+                            matches = true;
                         }
                     }
                     else
                     {
-                        // If the rules specify a table but we do not know the table, we
-                        // consider the tables not to match.
+                        // The column matched, but the table did not.
                         matches = false;
                     }
                 }
                 else
                 {
-                    // The column matched and there is no table rule.
-                    matches = true;
+                    // If the rules specify a table but we do not know the table, we
+                    // consider the tables not to match.
+                    matches = false;
                 }
             }
             else
             {
-                // The column did not match.
-                matches = false;
-            }
-
-            if (self->op == CACHE_OP_NEQ)
-            {
-                matches = !matches;
+                // The column matched and there is no table rule.
+                matches = true;
             }
         }
+        else
+        {
+            // The column did not match.
+            matches = false;
+        }
 
-        ++i;
+        if (self->op == CACHE_OP_NEQ)
+        {
+            matches = !matches;
+        }
     }
+
+    ++i;
 
     if (tables)
     {

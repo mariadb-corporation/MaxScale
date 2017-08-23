@@ -855,7 +855,6 @@ public:
         : m_database(info.database ? info.database : "")
         , m_table(info.table ? info.table : "")
         , m_column(info.column ? info.column : "")
-        , m_usage(info.usage)
     {}
 
     bool eq(const QcFieldInfo& rhs) const
@@ -863,8 +862,7 @@ public:
         return
             m_database == rhs.m_database &&
             m_table == rhs.m_table &&
-            m_column == rhs.m_column &&
-            m_usage == rhs.m_usage;
+            m_column == rhs.m_column;
     }
 
     bool lt(const QcFieldInfo& rhs) const
@@ -891,18 +889,7 @@ public:
             }
             else
             {
-                if (m_column < rhs.m_column)
-                {
-                    rv = true;
-                }
-                else if (m_column > rhs.m_column)
-                {
-                    rv = false;
-                }
-                else
-                {
-                    rv = (m_usage < rhs.m_usage);
-                }
+                rv = m_column < rhs.m_column;
             }
         }
 
@@ -915,35 +902,6 @@ public:
             m_database == o.m_database &&
             m_table == o.m_table &&
             m_column == o.m_column;
-    }
-
-    static bool at_most_usage_differs(const std::set<QcFieldInfo>& l,
-                                      const std::set<QcFieldInfo>& r)
-    {
-        bool rv = false;
-
-        if (l.size() == r.size())
-        {
-            rv = true;
-
-            std::set<QcFieldInfo>::iterator i = l.begin();
-            std::set<QcFieldInfo>::iterator j = r.begin();
-
-            while (rv && (i != l.end()))
-            {
-                if (!i->has_same_name(*j))
-                {
-                    rv = false;
-                }
-                else
-                {
-                    ++i;
-                    ++j;
-                }
-            }
-        }
-
-        return rv;
     }
 
     void print(ostream& out) const
@@ -961,19 +919,12 @@ public:
         }
 
         out << m_column;
-
-        out << "[";
-        char* s = qc_field_usage_mask_to_string(m_usage);
-        out << s;
-        free(s);
-        out << "]";
     }
 
 private:
     std::string m_database;
     std::string m_table;
     std::string m_column;
-    uint32_t    m_usage;
 };
 
 ostream& operator << (ostream& out, const QcFieldInfo& x)
@@ -1040,11 +991,6 @@ bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
         ss << f1;
         success = true;
     }
-    else if (QcFieldInfo::at_most_usage_differs(f1, f2))
-    {
-        ss << "WRN: " << f1 << " != " << f2;
-        success = true;
-    }
     else
     {
         ss << "ERR: " << f1 << " != " << f2;
@@ -1061,7 +1007,6 @@ class QcFunctionInfo
 public:
     QcFunctionInfo(const QC_FUNCTION_INFO& info)
         : m_name(info.name)
-        , m_usage(info.usage)
         , m_pFields(info.fields)
         , m_nFields(info.n_fields)
     {
@@ -1073,7 +1018,6 @@ public:
     {
         return
             m_name == rhs.m_name &&
-            m_usage == rhs.m_usage &&
             have_same_fields(*this, rhs);
     }
 
@@ -1086,14 +1030,6 @@ public:
             rv = true;
         }
         else if (m_name > rhs.m_name)
-        {
-            rv = false;
-        }
-        else if (m_usage < rhs.m_usage)
-        {
-            rv = true;
-        }
-        else if (m_usage > rhs.m_usage)
         {
             rv = false;
         }
@@ -1111,37 +1047,6 @@ public:
         return rv;
     }
 
-    static bool at_most_usage_differs(const std::set<QcFunctionInfo>& l,
-                                      const std::set<QcFunctionInfo>& r)
-    {
-        bool rv = false;
-
-        if (l.size() == r.size())
-        {
-            rv = true;
-
-            std::set<QcFunctionInfo>::iterator i = l.begin();
-            std::set<QcFunctionInfo>::iterator j = r.begin();
-
-            while (rv && (i != l.end()))
-            {
-                if (i->m_name != j->m_name)
-                {
-                    rv = false;
-                }
-                else if (!have_same_fields(*i, *j))
-                {
-                    rv = false;
-                }
-
-                ++i;
-                ++j;
-            }
-        }
-
-        return rv;
-    }
-
     void print(ostream& out) const
     {
         out << m_name;
@@ -1150,7 +1055,7 @@ public:
 
         for (uint32_t i = 0; i < m_nFields; ++i)
         {
-            const QC_FIELD_NAME& name = m_pFields[i];
+            const QC_FIELD_INFO& name = m_pFields[i];
 
             if (name.database)
             {
@@ -1173,12 +1078,6 @@ public:
         }
 
         out << ")";
-
-        out << "[";
-        char* s = qc_field_usage_mask_to_string(m_usage);
-        out << s;
-        free(s);
-        out << "]";
     }
 
 private:
@@ -1208,7 +1107,7 @@ private:
         return rv;
     }
 
-    static std::string get_field_name(const QC_FIELD_NAME& field)
+    static std::string get_field_name(const QC_FIELD_INFO& field)
     {
         string s;
 
@@ -1226,13 +1125,14 @@ private:
 
         s += field.column;
 
+        std::transform(s.begin(), s.end(), s.begin(), tolower);
+
         return s;
     }
 
 private:
     std::string          m_name;
-    uint32_t             m_usage;
-    const QC_FIELD_NAME* m_pFields;
+    const QC_FIELD_INFO* m_pFields;
     uint32_t             m_nFields;
 };
 
@@ -1298,11 +1198,6 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     {
         ss << "Ok : ";
         ss << f1;
-        success = true;
-    }
-    else if (QcFunctionInfo::at_most_usage_differs(f1, f2))
-    {
-        ss << "WRN: " << f1 << " != " << f2;
         success = true;
     }
     else

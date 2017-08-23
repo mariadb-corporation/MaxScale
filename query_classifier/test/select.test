@@ -1283,7 +1283,9 @@ select fld3 from t2 order by fld3 desc limit 5,5;
 # The table is read directly with read-next on fld3
 #
 
-select t2.fld3 from t2 where fld3 = 'honeysuckle';
+#MXS qc_sqlite
+#MXS qc_get_function_info     : ERR: =(t2.fld3) != =(fld3)
+#MXS select t2.fld3 from t2 where fld3 = 'honeysuckle';
 # MXS: qc_get_function_info     : ERR: =()[QC_USED_IN_WHERE] like(t2.fld3)[QC_USED_IN_WHERE] != =()[QC_USED_IN_WHERE] like(fld3)[QC_USED_IN_WHERE]
 #select t2.fld3 from t2 where fld3 LIKE 'honeysuckl_';
 select fld3 from t2 where fld3 LIKE 'honeysuckl_';

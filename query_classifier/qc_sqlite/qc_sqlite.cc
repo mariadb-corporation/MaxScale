@@ -256,19 +256,18 @@ public:
         return pInfo;
     }
 
-    template<class T> // QC_FIELD_INFO, QC_FIELD_NAME
-    static void finish(T& t)
+    static void finish_field_info(QC_FIELD_INFO& info)
     {
-        MXS_FREE(t.database);
-        MXS_FREE(t.table);
-        MXS_FREE(t.column);
+        MXS_FREE(info.database);
+        MXS_FREE(info.table);
+        MXS_FREE(info.column);
     }
 
     static void finish_function_info(QC_FUNCTION_INFO& info)
     {
         MXS_FREE(info.name);
 
-        std::for_each(info.fields, info.fields + info.n_fields, finish<QC_FIELD_NAME>);
+        std::for_each(info.fields, info.fields + info.n_fields, finish_field_info);
     }
 
     ~QcSqliteInfo()
@@ -279,7 +278,7 @@ public:
         std::for_each(m_database_names.begin(), m_database_names.end(), mxs_free);
         free(m_zPrepare_name);
         gwbuf_free(m_pPreparable_stmt);
-        std::for_each(m_field_infos.begin(), m_field_infos.end(), finish<QC_FIELD_INFO>);
+        std::for_each(m_field_infos.begin(), m_field_infos.end(), finish_field_info);
         std::for_each(m_function_infos.begin(), m_function_infos.end(), finish_function_info);
 
         // Data in m_function_field_usage is freed in finish_function_info().
@@ -606,7 +605,6 @@ public:
                            const char* zDatabase,
                            const char* zTable,
                            const char* zColumn,
-                           uint32_t usage,
                            const ExprList* pExclude)
     {
         ss_dassert(zColumn);
@@ -648,7 +646,6 @@ public:
                 item.table = zTable ? MXS_STRDUP(zTable) : NULL;
                 ss_dassert(zColumn);
                 item.column = MXS_STRDUP(zColumn);
-                item.usage = usage;
 
                 // We are happy if we at least could dup the column.
 
@@ -657,10 +654,6 @@ public:
                     m_field_infos.push_back(item);
                 }
             }
-        }
-        else
-        {
-            i->usage |= usage;
         }
     }
 
@@ -800,7 +793,6 @@ public:
     void update_field_infos(QcAliases* pAliases,
                             int prev_token,
                             const Expr* pExpr,
-                            uint32_t usage,
                             qc_token_position_t pos,
                             const ExprList* pExclude)
     {
@@ -813,15 +805,15 @@ public:
         switch (pExpr->op)
         {
         case TK_ASTERISK: // select *
-            update_field_infos_from_expr(pAliases, pExpr, usage, pExclude);
+            update_field_infos_from_expr(pAliases, pExpr, pExclude);
             break;
 
         case TK_DOT: // select a.b ... select a.b.c
-            update_field_infos_from_expr(pAliases, pExpr, usage, pExclude);
+            update_field_infos_from_expr(pAliases, pExpr, pExclude);
             break;
 
         case TK_ID: // select a
-            update_field_infos_from_expr(pAliases, pExpr, usage, pExclude);
+            update_field_infos_from_expr(pAliases, pExpr, pExclude);
             break;
 
         case TK_VARIABLE:
@@ -878,16 +870,6 @@ public:
             switch (pExpr->op)
             {
             case TK_EQ:
-                // We don't report "=" if it's not used in a specific context (SELECT, WHERE)
-                // and if it is used in SET. We also exclude it it in a context where a
-                // variable is set.
-                if (((usage != 0) && (usage != QC_USED_IN_SET)) &&
-                    (!pExpr->pLeft || (pExpr->pLeft->op != TK_VARIABLE)))
-                {
-                    update_function_info(pAliases, get_token_symbol(pExpr->op), usage, pExclude);
-                }
-                break;
-
             case TK_GE:
             case TK_GT:
             case TK_LE:
@@ -908,12 +890,11 @@ public:
                 {
                     int i = update_function_info(pAliases,
                                                  get_token_symbol(pExpr->op),
-                                                 usage,
                                                  pExclude);
 
                     if (i != -1)
                     {
-                        vector<QC_FIELD_NAME>& fields = m_function_field_usage[i];
+                        vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
 
                         if (pExpr->pLeft)
                         {
@@ -947,19 +928,19 @@ public:
                         char sqlrowcount[13]; // strlen("sql") + strlen("%") + strlen("rowcount") + 1
                         sprintf(sqlrowcount, "%s%%%s", pLeft->u.zToken, pRight->u.zToken);
 
-                        update_function_info(pAliases, sqlrowcount, usage, pExclude);
+                        update_function_info(pAliases, sqlrowcount, pExclude);
 
                         pLeft = NULL;
                         pRight = NULL;
                     }
                     else
                     {
-                        update_function_info(pAliases, get_token_symbol(pExpr->op), usage, pExclude);
+                        update_function_info(pAliases, get_token_symbol(pExpr->op), pExclude);
                     }
                 }
                 else
                 {
-                    update_function_info(pAliases, get_token_symbol(pExpr->op), usage, pExclude);
+                    update_function_info(pAliases, get_token_symbol(pExpr->op), pExclude);
                 }
                 break;
 
@@ -967,7 +948,7 @@ public:
                 switch (this_unit.parse_as)
                 {
                 case QC_PARSE_AS_DEFAULT:
-                    update_function_info(pAliases, get_token_symbol(pExpr->op), usage, pExclude);
+                    update_function_info(pAliases, get_token_symbol(pExpr->op), pExclude);
                     break;
 
                 case QC_PARSE_AS_103:
@@ -1004,7 +985,7 @@ public:
                     // way qc_mysqlembedded does.
                     if (!ignore_exprlist && (strcasecmp(zToken, "row") != 0))
                     {
-                        update_function_info(pAliases, zToken, pExpr->x.pList, usage, pExclude);
+                        update_function_info(pAliases, zToken, pExpr->x.pList, pExclude);
                     }
                 }
                 break;
@@ -1015,17 +996,12 @@ public:
 
             if (pLeft)
             {
-                update_field_infos(pAliases, pExpr->op, pExpr->pLeft, usage, QC_TOKEN_LEFT, pExclude);
+                update_field_infos(pAliases, pExpr->op, pExpr->pLeft, QC_TOKEN_LEFT, pExclude);
             }
 
             if (pRight)
             {
-                if (usage & QC_USED_IN_SET)
-                {
-                    usage &= ~QC_USED_IN_SET;
-                }
-
-                update_field_infos(pAliases, pExpr->op, pExpr->pRight, usage, QC_TOKEN_RIGHT, pExclude);
+                update_field_infos(pAliases, pExpr->op, pExpr->pRight, QC_TOKEN_RIGHT, pExclude);
             }
 
             if (pExpr->x.pList)
@@ -1035,7 +1011,7 @@ public:
                 case TK_FUNCTION:
                     if (!ignore_exprlist)
                     {
-                        update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
+                        update_field_infos_from_exprlist(pAliases, pExpr->x.pList, pExclude);
                     }
                     break;
 
@@ -1045,11 +1021,6 @@ public:
                 case TK_IN:
                 case TK_SELECT:
                     {
-                        uint32_t sub_usage = usage;
-
-                        sub_usage &= ~QC_USED_IN_SELECT;
-                        sub_usage |= QC_USED_IN_SUBSELECT;
-
                         const char* zName = NULL;
 
                         switch (pExpr->op)
@@ -1063,24 +1034,23 @@ public:
 
                         if (pExpr->flags & EP_xIsSelect)
                         {
-                            update_field_infos_from_subselect(pAliases, pExpr->x.pSelect,
-                                                              sub_usage, pExclude);
+                            update_field_infos_from_subselect(pAliases, pExpr->x.pSelect, pExclude);
 
 
                             if (zName)
                             {
                                 update_function_info(pAliases, zName,
-                                                     pExpr->x.pSelect->pEList, sub_usage, pExclude);
+                                                     pExpr->x.pSelect->pEList, pExclude);
                             }
                         }
                         else
                         {
-                            update_field_infos_from_exprlist(pAliases, pExpr->x.pList, usage, pExclude);
+                            update_field_infos_from_exprlist(pAliases, pExpr->x.pList, pExclude);
 
                             if (zName)
                             {
                                 update_function_info(pAliases, zName,
-                                                     pExpr->x.pList, sub_usage, pExclude);
+                                                     pExpr->x.pList, pExclude);
                             }
                         }
                     }
@@ -1170,7 +1140,6 @@ public:
 
     void update_field_infos_from_expr(QcAliases* pAliases,
                                       const Expr* pExpr,
-                                      uint32_t usage,
                                       const ExprList* pExclude)
     {
         const char* zDatabase;
@@ -1179,33 +1148,31 @@ public:
 
         if (get_field_name(pExpr, &zDatabase, &zTable, &zColumn))
         {
-            update_field_info(pAliases, zDatabase, zTable, zColumn, usage, pExclude);
+            update_field_info(pAliases, zDatabase, zTable, zColumn, pExclude);
         }
     }
 
     void update_field_infos_from_exprlist(QcAliases* pAliases,
                                           const ExprList* pEList,
-                                          uint32_t usage,
                                           const ExprList* pExclude)
     {
         for (int i = 0; i < pEList->nExpr; ++i)
         {
             ExprList::ExprList_item* pItem = &pEList->a[i];
 
-            update_field_infos(pAliases, 0, pItem->pExpr, usage, QC_TOKEN_MIDDLE, pExclude);
+            update_field_infos(pAliases, 0, pItem->pExpr, QC_TOKEN_MIDDLE, pExclude);
         }
     }
 
     void update_field_infos_from_idlist(QcAliases* pAliases,
                                         const IdList* pIds,
-                                        uint32_t usage,
                                         const ExprList* pExclude)
     {
         for (int i = 0; i < pIds->nId; ++i)
         {
             IdList::IdList_item* pItem = &pIds->a[i];
 
-            update_field_info(pAliases, NULL, NULL, pItem->zName, usage, pExclude);
+            update_field_info(pAliases, NULL, NULL, pItem->zName, pExclude);
         }
     }
 
@@ -1217,7 +1184,6 @@ public:
 
     void update_field_infos_from_select(QcAliases& aliases,
                                         const Select* pSelect,
-                                        uint32_t usage,
                                         const ExprList* pExclude,
                                         compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
     {
@@ -1234,12 +1200,7 @@ public:
 
                 if (pSrc->a[i].pSelect)
                 {
-                    uint32_t sub_usage = usage;
-
-                    sub_usage &= ~QC_USED_IN_SELECT;
-                    sub_usage |= QC_USED_IN_SUBSELECT;
-
-                    update_field_infos_from_select(aliases, pSrc->a[i].pSelect, sub_usage, pExclude);
+                    update_field_infos_from_select(aliases, pSrc->a[i].pSelect, pExclude);
                 }
 
 #ifdef QC_COLLECT_NAMES_FROM_USING
@@ -1257,20 +1218,20 @@ public:
 
         if (pSelect->pEList)
         {
-            update_field_infos_from_exprlist(&aliases, pSelect->pEList, usage, NULL);
+            update_field_infos_from_exprlist(&aliases, pSelect->pEList, NULL);
         }
 
         if (pSelect->pWhere)
         {
             m_has_clause = true;
             update_field_infos(&aliases,
-                               0, pSelect->pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pSelect->pEList);
+                               0, pSelect->pWhere, QC_TOKEN_MIDDLE, pSelect->pEList);
         }
 
         if (pSelect->pGroupBy)
         {
             update_field_infos_from_exprlist(&aliases,
-                                             pSelect->pGroupBy, QC_USED_IN_GROUP_BY, pSelect->pEList);
+                                             pSelect->pGroupBy, pSelect->pEList);
         }
 
         if (pSelect->pHaving)
@@ -1296,7 +1257,7 @@ public:
 
                 while (pPrior)
                 {
-                    update_field_infos_from_subselect(&aliases, pPrior, usage, pExclude,
+                    update_field_infos_from_subselect(&aliases, pPrior, pExclude,
                                                       IGNORE_COMPOUND_SELECTS);
                     pPrior = pPrior->pPrior;
                 }
@@ -1306,13 +1267,12 @@ public:
 
     void update_field_infos_from_subselect(QcAliases* pAliases,
                                            const Select* pSelect,
-                                           uint32_t usage,
                                            const ExprList* pExclude,
                                            compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
     {
         QcAliases aliases(*pAliases);
 
-        update_field_infos_from_select(aliases, pSelect, usage, pExclude, compound_approach);
+        update_field_infos_from_select(aliases, pSelect, pExclude, compound_approach);
     }
 
     void update_field_infos_from_with(QcAliases* pAliases, const With* pWith)
@@ -1323,7 +1283,7 @@ public:
 
             if (pCte->pSelect)
             {
-                update_field_infos_from_subselect(pAliases, pCte->pSelect, QC_USED_IN_SUBSELECT, NULL);
+                update_field_infos_from_subselect(pAliases, pCte->pSelect, NULL);
             }
         }
     }
@@ -1349,20 +1309,20 @@ public:
                                        const char* zDatabase,
                                        const char* zTable,
                                        const char* zColumn,
-                                       vector<QC_FIELD_NAME>& fields)
+                                       vector<QC_FIELD_INFO>& fields)
     {
         ss_dassert(zColumn);
 
         honour_aliases(pAliases, &zDatabase, &zTable);
 
-        MatchFieldName<QC_FIELD_NAME> predicate(zDatabase, zTable, zColumn);
+        MatchFieldName<QC_FIELD_INFO> predicate(zDatabase, zTable, zColumn);
 
-        vector<QC_FIELD_NAME>::iterator i = find_if(fields.begin(), fields.end(), predicate);
+        vector<QC_FIELD_INFO>::iterator i = find_if(fields.begin(), fields.end(), predicate);
 
         if (i == fields.end()) // Not present
         {
             //TODO: Add exclusion?
-            QC_FIELD_NAME item;
+            QC_FIELD_INFO item;
 
             item.database = zDatabase ? MXS_STRDUP(zDatabase) : NULL;
             item.table = zTable ? MXS_STRDUP(zTable) : NULL;
@@ -1378,7 +1338,7 @@ public:
     static void update_function_fields(const QcAliases* pAliases,
                                        const Expr* pExpr,
                                        const ExprList* pExclude,
-                                       vector<QC_FIELD_NAME>& fields)
+                                       vector<QC_FIELD_INFO>& fields)
     {
         const char* zDatabase;
         const char* zTable;
@@ -1410,7 +1370,7 @@ public:
     static void update_function_fields(const QcAliases* pAliases,
                                        const ExprList* pEList,
                                        const ExprList* pExclude,
-                                       vector<QC_FIELD_NAME>& fields)
+                                       vector<QC_FIELD_INFO>& fields)
     {
         for (int i = 0; i < pEList->nExpr; ++i)
         {
@@ -1424,7 +1384,6 @@ public:
                              const char* name,
                              const Expr* pExpr,
                              const ExprList* pEList,
-                             uint32_t usage,
                              const ExprList* pExclude)
 
     {
@@ -1440,7 +1399,7 @@ public:
 
         name = map_function_name(m_pFunction_name_mappings, name);
 
-        QC_FUNCTION_INFO item = { (char*)name, usage };
+        QC_FUNCTION_INFO item = { (char*)name };
 
         size_t i;
         for (i = 0; i < m_function_infos.size(); ++i)
@@ -1467,14 +1426,10 @@ public:
                 m_function_field_usage.resize(m_function_field_usage.size() + 1);
             }
         }
-        else
-        {
-            m_function_infos[i].usage |= usage;
-        }
 
         if (pExpr || pEList)
         {
-            vector<QC_FIELD_NAME>& fields = m_function_field_usage[i];
+            vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
 
             if (pExpr)
             {
@@ -1500,28 +1455,25 @@ public:
     int update_function_info(const QcAliases* pAliases,
                              const char* name,
                              const Expr* pExpr,
-                             uint32_t usage,
                              const ExprList* pExclude)
 
     {
-        return update_function_info(pAliases, name, pExpr, NULL, usage, pExclude);
+        return update_function_info(pAliases, name, pExpr, NULL, pExclude);
     }
 
     int update_function_info(const QcAliases* pAliases,
                              const char* name,
                              const ExprList* pEList,
-                             uint32_t usage,
                              const ExprList* pExclude)
     {
-        return update_function_info(pAliases, name, NULL, pEList, usage, pExclude);
+        return update_function_info(pAliases, name, NULL, pEList, pExclude);
     }
 
     int update_function_info(const QcAliases* pAliases,
                              const char* name,
-                             uint32_t usage,
                              const ExprList* pExclude)
     {
-        return update_function_info(pAliases, name, NULL, NULL, usage, pExclude);
+        return update_function_info(pAliases, name, NULL, NULL, pExclude);
     }
 
     //
@@ -1681,7 +1633,7 @@ public:
 
         if (pSelect)
         {
-            update_field_infos_from_select(aliases, pSelect, QC_USED_IN_SELECT, NULL);
+            update_field_infos_from_select(aliases, pSelect, NULL);
         }
 
         exposed_sqlite3ExprListDelete(pParse->db, pCNames);
@@ -1751,7 +1703,7 @@ public:
 
             if (pWhere)
             {
-                update_field_infos(&aliases, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, 0);
+                update_field_infos(&aliases, 0, pWhere, QC_TOKEN_MIDDLE, 0);
             }
         }
 
@@ -1806,7 +1758,7 @@ public:
         if (pSelect)
         {
             QcAliases aliases;
-            update_field_infos_from_select(aliases, pSelect, QC_USED_IN_SELECT, NULL);
+            update_field_infos_from_select(aliases, pSelect, NULL);
         }
         else if (pOldTable)
         {
@@ -1839,28 +1791,37 @@ public:
 
             if (pColumns)
             {
-                update_field_infos_from_idlist(&aliases, pColumns, 0, NULL);
+                update_field_infos_from_idlist(&aliases, pColumns, NULL);
+
+                int i = update_function_info(&aliases, "=", NULL);
+
+                if (i != -1)
+                {
+                    vector<QC_FIELD_INFO>& fields = m_function_field_usage[i];
+
+                    for (int j = 0; j < pColumns->nId; ++j)
+                    {
+                        update_function_fields(&aliases, NULL, NULL, pColumns->a[j].zName, fields);
+                    }
+
+                    if (fields.size() != 0)
+                    {
+                        QC_FUNCTION_INFO& info = m_function_infos[i];
+
+                        info.fields = &fields[0];
+                        info.n_fields  = fields.size();
+                    }
+                }
             }
 
             if (pSelect)
             {
-                uint32_t usage;
-
-                if (pSelect->selFlags & SF_Values) // Synthesized from VALUES clause
-                {
-                    usage = 0;
-                }
-                else
-                {
-                    usage = QC_USED_IN_SELECT;
-                }
-
-                update_field_infos_from_select(aliases, pSelect, usage, NULL);
+                update_field_infos_from_select(aliases, pSelect, NULL);
             }
 
             if (pSet)
             {
-                update_field_infos_from_exprlist(&aliases, pSet, 0, NULL);
+                update_field_infos_from_exprlist(&aliases, pSet, NULL);
             }
         }
 
@@ -1975,13 +1936,13 @@ public:
                     ExprList::ExprList_item* pItem = &pChanges->a[i];
 
                     update_field_infos(&aliases,
-                                       0, pItem->pExpr, QC_USED_IN_SET, QC_TOKEN_MIDDLE, NULL);
+                                       0, pItem->pExpr, QC_TOKEN_MIDDLE, NULL);
                 }
             }
 
             if (pWhere)
             {
-                update_field_infos(&aliases, 0, pWhere, QC_USED_IN_WHERE, QC_TOKEN_MIDDLE, pChanges);
+                update_field_infos(&aliases, 0, pWhere, QC_TOKEN_MIDDLE, pChanges);
             }
         }
 
@@ -2015,10 +1976,8 @@ public:
             m_type_mask = QUERY_TYPE_READ;
         }
 
-        uint32_t usage = sub_select ? QC_USED_IN_SUBSELECT : QC_USED_IN_SELECT;
-
         QcAliases aliases;
-        update_field_infos_from_select(aliases, pSelect, usage, NULL);
+        update_field_infos_from_select(aliases, pSelect, NULL);
     }
 
     void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
@@ -2062,7 +2021,7 @@ public:
 
         if (pExprList)
         {
-            update_field_infos_from_exprlist(NULL, pExprList, 0, NULL);
+            update_field_infos_from_exprlist(NULL, pExprList, NULL);
         }
 
         exposed_sqlite3SrcListDelete(pParse->db, pName);
@@ -2891,8 +2850,7 @@ public:
                             if (pValue->op == TK_SELECT)
                             {
                                 QcAliases aliases;
-                                update_field_infos_from_select(aliases, pValue->x.pSelect,
-                                                               QC_USED_IN_SUBSELECT, NULL);
+                                update_field_infos_from_select(aliases, pValue->x.pSelect, NULL);
                             }
                         }
                         break;
@@ -2917,8 +2875,6 @@ public:
 
         m_status = QC_QUERY_PARSED;
         m_operation = QUERY_OP_SHOW;
-
-        uint32_t u = QC_USED_IN_SELECT;
 
         switch (pShow->what)
         {
@@ -3248,7 +3204,7 @@ public:
     GWBUF* m_pPreparable_stmt;                  // The preparable statement.
     vector<QC_FIELD_INFO> m_field_infos;        // Vector of fields used by the statement.
     vector<QC_FUNCTION_INFO> m_function_infos;  // Vector of functions used by the statement.
-    vector<vector<QC_FIELD_NAME> > m_function_field_usage; // Vector of vector fields used by functions
+    vector<vector<QC_FIELD_INFO> > m_function_field_usage; // Vector of vector fields used by functions
                                                            // of the statement. Data referred to from
                                                            // m_function_infos
     size_t m_function_infos_len;                // The used entries in function_infos.
@@ -3307,7 +3263,7 @@ extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
 
-extern void maxscale_update_function_info(const char* name, const Expr* pExpr, unsigned usage);
+extern void maxscale_update_function_info(const char* name, const Expr* pExpr);
 
 extern void maxscaleComment();
 extern int maxscaleKeyword(int token);
@@ -3682,12 +3638,12 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
     return i != pExclude->nExpr;
 }
 
-extern void maxscale_update_function_info(const char* name, const Expr* pExpr, uint32_t usage)
+extern void maxscale_update_function_info(const char* name, const Expr* pExpr)
 {
     QcSqliteInfo* pInfo = this_thread.pInfo;
     ss_dassert(pInfo);
 
-    pInfo->update_function_info(NULL, name, pExpr, usage, NULL);
+    pInfo->update_function_info(NULL, name, pExpr, NULL);
 }
 
 static const char* get_token_symbol(int token)

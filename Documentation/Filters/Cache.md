@@ -360,6 +360,19 @@ select * from tbl where b = 3 and a = 2;
 as well. Although they conceptually are identical, there will be two
 cache entries.
 
+Note that if a column has been specified in a rule, then a statement
+will match _irrespective_ of where that particular column appears.
+For instance, if a rule specifies that the result of statements referring
+to the the column _a_ should be cached, then the following statement will
+match
+```
+select a from tbl;
+```
+and so will
+```
+select b from tbl where a > 5;
+```
+
 ### Qualified Names
 
 When using `=` or `!=` in the rule object in conjunction with `database`,

@@ -169,7 +169,9 @@ drop table t1;
 #
 create table t1(f1 int primary key);
 insert into t1 values (4),(3),(1),(2);
-delete from t1 where (@a:= f1) order by f1 limit 1;
+#MXS qc_myselembedded
+#MXS qc_get_function_info     : ERR:  != =(f1)
+#MXS delete from t1 where (@a:= f1) order by f1 limit 1;
 select @a;
 drop table t1;
 
