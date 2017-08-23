@@ -145,6 +145,12 @@ query forms) and kills the MaxScale session with the given id. This feature has
 some limitations, see [Limitations](../About/Limitations.md) for more
 information.
 
+### New `uses_function` rule for dbfwfilter
+
+The `uses_function` type rule prevents certain columns from being used
+with functions. For more information about this new rule, read the
+[dbfwfilter](../Filters/Database-Firewall-Filter.md) documentation.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed since the release of MaxScale 2.1.X.]()

@@ -183,6 +183,20 @@ Deny SUM and COUNT functions:
 rule examplerule deny function sum count
 ```
 
+#### `uses_function`
+
+This rule expects a list of column names after the keyword. If any of the
+columns are used with a function, the rule will match. This rule can be
+used to prevent the use of a column with a function.
+
+##### Example
+
+Deny function usage with _name_ and _address_ columns:
+
+```
+rule examplerule deny uses_function name address
+```
+
 #### `regex`
 
 This rule blocks all queries matching a regex enclosed in single or double
