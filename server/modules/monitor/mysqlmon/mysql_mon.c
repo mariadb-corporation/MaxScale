@@ -138,6 +138,7 @@ typedef struct mysql_server_info
     bool             slave_sql; /**< If Slave SQL thread is running */
     uint64_t         binlog_pos; /**< Binlog position from SHOW SLAVE STATUS */
     char            *binlog_name; /**< Binlog name from SHOW SLAVE STATUS */
+    bool             binlog_relay; /** Server is a Binlog Relay */
 } MYSQL_SERVER_INFO;
 
 /** Other values are implicitly zero initialized */
@@ -737,6 +738,18 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
     MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, database->server->unique_name);
     ss_dassert(serv_info);
 
+    /* Check whether current server is MaxScale Binlog Server */
+    if (mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
+        (result = mysql_store_result(database->con)) != NULL)
+    {
+        serv_info->binlog_relay = true;
+        mysql_free_result(result);
+    }
+    else
+    {
+        serv_info->binlog_relay = false;
+    }
+
     /* Get server_id and read_only from current node */
     if (mysql_query(database->con, "SELECT @@server_id, @@read_only") == 0
         && (result = mysql_store_result(database->con)) != NULL)
@@ -1251,7 +1264,6 @@ monitorMain(void *arg)
             {
                 root_master = get_replication_tree(mon, num_servers);
             }
-
         }
 
         if (handle->multimaster && num_servers > 0)
@@ -1277,6 +1289,13 @@ monitorMain(void *arg)
                 monitor_set_pending_status(ptr, SERVER_RELAY_MASTER);
                 monitor_clear_pending_status(ptr, SERVER_MASTER);
             }
+
+            /* Remove SLAVE status if this server is a Binlog Server relay */
+            if (serv_info->binlog_relay)
+            {
+                monitor_clear_pending_status(ptr, SERVER_SLAVE);
+            }
+
             ptr = ptr->next;
         }
 
@@ -1426,11 +1445,17 @@ monitorMain(void *arg)
 
             while (ptr)
             {
+                MYSQL_SERVER_INFO *serv_info;
+                serv_info = hashtable_fetch(handle->server_info,
+                                            ptr->server->unique_name);
+                ss_dassert(serv_info);
+
                 if ((!SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
                 {
                     if (ptr->server->node_id != root_master->server->node_id &&
                         (SERVER_IS_SLAVE(ptr->server) ||
-                         SERVER_IS_RELAY_SERVER(ptr->server)))
+                         SERVER_IS_RELAY_SERVER(ptr->server)) &&
+                        !serv_info->binlog_relay)  // No select lag for Binlog Server
                     {
                         set_slave_heartbeat(mon, ptr);
                     }
