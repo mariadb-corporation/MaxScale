@@ -214,6 +214,16 @@ assigned the _Slave_ status which allows them to be used like normal slave
 servers. When the option is disabled, the servers will only receive the _Slave
 of External Server_ status and they will not be used.
 
+## Using the MySQL Monitor With Binlogrouter
+
+Since MaxScale 2.2 it's possible to detect a replication setup
+which includes Binlog Server: the required action is to add the
+binlog server to the list of servers only if _master_id_ identity is set.
+
+For addition information read the
+[Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
+tutorial.
+
 ## Example 1 - Monitor script
 
 Here is an example shell script which sends an email to an admin@my.org

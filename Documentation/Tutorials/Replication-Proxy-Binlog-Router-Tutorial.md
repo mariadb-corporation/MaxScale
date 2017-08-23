@@ -764,3 +764,93 @@ MariaDB 10 Binlog Checkpoint Event 0
 MariaDB 10 GTID Event 0
 MariaDB 10 GTID List Event 0
 ```
+
+# How to include a Binlog server setup with MaxScale SQL routers
+
+Since MaxScale 2.2 it's possible to use a replication setup
+which includes Binlog Server, MaxScale MySQL monitor and SQL routers
+such as ReadConnection and ReadWriteSplit.
+
+The required action is to add the binlog server to the MySQL
+monitor server list only if _master_id_ identity is set.
+
+Example for binlog server setup with master_id=2222
+
+```
+[BinlogServer]
+type=service
+router=binlogrouter
+router_options=server-id=93,,,,master_id=2222
+```
+
+MaxScale configuration with SQL routers:
+
+```
+[binlog_server]
+type=server
+address=192.168.100.100
+port=8808
+
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+servers=server5,server2,server1,binlog_server
+```
+
+Binlog Server is then seen as a Relay Master without the Slave status:
+
+```
+MaxScale> show servers
+Server 0x65c920 (binlog_server)
+	Server:                              192.168.100.100
+	Status:                              Relay Master, Running
+	Protocol:                            MySQLBackend
+	Port:                                8808
+	Server Version:                      10.1.17-log
+	Node Id:                             2222
+	Master Id:                           10124
+	Slave Ids:                           1, 104
+	Repl Depth:                          1
+
+Server 0x65b690 (server5)
+	Server:                              127.0.0.1
+	Status:                              Master, Running
+	Protocol:                            MySQLBackend
+	Port:                                10124
+	Server Version:                      10.1.24-MariaDB
+	Node Id:                             10124
+	Master Id:                           -1
+	Slave Ids:                           2222
+	Repl Depth:                          0
+```
+
+If Binlog Server is monitored and no explicit identity is made by using _master_id_,
+then it's not shown as a Relay Master but just as Running server and its slaves
+are listed in the Master details (including binlog server id):
+
+```
+Server 0x65c910 (binlog_server)
+	Server:                              192.168.100.100
+	Status:                              Running
+	Protocol:                            MySQLBackend
+	Port:                                8808
+	Server Version:                      10.1.17-log
+	Node Id:                             93
+	Master Id:                           10124
+	Slave Ids:
+	Repl Depth:                          1
+
+Server 0x65b680 (server5)
+	Server:                              127.0.0.1
+	Status:                              Master, Running
+	Protocol:                            MySQLBackend
+	Port:                                10124
+	Server Version:                      10.1.24-MariaDB
+	Node Id:                             10124
+	Master Id:                           -1
+	Slave Ids:                           1, 104 , 93
+	Repl Depth:                          0
+```
+
+**Note**: even without the _master_id_ router option, it's always worth monitoring
+the Binlog Server in order to show all servers included in the replication setup.
