@@ -2062,7 +2062,17 @@ int main(int argc, char **argv)
 
     if (cnf->admin_enabled)
     {
-        if (mxs_admin_init())
+        bool success = mxs_admin_init();
+
+        if (!success && strcmp(cnf->admin_host, "::") == 0)
+        {
+            MXS_WARNING("Failed to bind on address '::', attempting to "
+                        "bind on IPv4 address '0.0.0.0'.");
+            strcpy(cnf->admin_host, "0.0.0.0");
+            success = mxs_admin_init();
+        }
+
+        if (success)
         {
             MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
         }
@@ -2074,7 +2084,6 @@ int main(int argc, char **argv)
             goto return_main;
         }
     }
-
 
     MXS_NOTICE("MaxScale started with %d worker threads, each with a stack size of %lu bytes.",
                n_threads, thread_stack_size);
