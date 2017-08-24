@@ -27,12 +27,15 @@ int main(int argc, char *argv[])
         fprintf(f, "%s node_%03d.maxscale.test\n", Test->repl->IP[i], i);
     }
     fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscale_IP);
+    fprintf(f, "%s maxscale\n", Test->maxscale_IP);
     fclose(f);
 
     Test->tprintf("Copying 'hosts' and krb5.conf files to all nodes, installing kerberos client and MariaDB plugins\n");
     sprintf(str, "%s/krb5.conf", test_dir);
     for (i = 0; i < Test->repl->N; i++)
     {
+        Test->repl->ssh_node(i, (char *)
+                             "yum clean all", true);
         Test->repl->ssh_node(i, (char *)
                              "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-workstation pam_krb5", true);
         Test->repl->copy_to_node(str, (char *) "~/", i);
@@ -53,17 +56,16 @@ int main(int argc, char *argv[])
     Test->ssh_maxscale(true,  (char *) "cp %s/krb5.conf /etc/", Test->maxscale_access_homedir);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
+    Test->ssh_maxscale(true, (char *) "yum clean all");
     Test->ssh_maxscale(true, (char *) "yum install rng-tools -y");
     Test->ssh_maxscale(true, (char *) "rngd -r /dev/urandom -o /dev/random");
 
     Test->ssh_maxscale(true, (char *)
                        "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-server krb5-workstation pam_krb5");
 
-
     Test->tprintf("Configuring Kerberos server\n");
     Test->ssh_maxscale(true, (char *) "sed -i \"s/EXAMPLE.COM/MAXSCALE.TEST/\" /var/kerberos/krb5kdc/kdc.conf");
     Test->ssh_maxscale(true, (char *) "sed -i \"s/EXAMPLE.COM/MAXSCALE.TEST/\" /var/kerberos/krb5kdc/kadm5.acl");
-
     Test->tprintf("Creating Kerberos DB and admin principal\n");
     Test->ssh_maxscale(true, (char *) "kdb5_util create -P skysql -r MAXSCALE.TEST -s");
     Test->ssh_maxscale(true, (char *) "kadmin.local -q \"addprinc -pw skysql admin/admin@MAXSCALE.TEST\"");
