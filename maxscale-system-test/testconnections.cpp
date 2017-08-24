@@ -43,7 +43,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
     readconn_master_port(4008), readconn_slave_port(4009), binlog_port(5306),
     global_result(0), binlog_cmd_option(0), enable_timeouts(true), use_ipv6(false),
     no_galera(false), binlog_master_gtid(false), binlog_slave_gtid(false),
-    no_vm_revert(false)
+    no_vm_revert(true)
 {
     chdir(test_dir);
     gettimeofday(&start_time, NULL);
@@ -529,9 +529,9 @@ int TestConnections::read_env()
     }
 
     env = getenv("no_vm_revert");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if ((env != NULL) && ((strcasecmp(env, "no") == 0) || (strcasecmp(env, "false") == 0) ))
     {
-        no_vm_revert = true;
+        no_vm_revert = false;
     }
 }
 

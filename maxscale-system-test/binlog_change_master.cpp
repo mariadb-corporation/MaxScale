@@ -166,11 +166,6 @@ int main(int argc, char *argv[])
     }
     Test->repl->close_connections();
 
-    if (Test->no_vm_revert)
-    {
-        Test->tprintf("No_VM_revert!");
-    }
-
     int rval = Test->global_result;
     delete Test;
     return rval;
