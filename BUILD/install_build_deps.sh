@@ -15,9 +15,9 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git wget \
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
-       uuid-dev libsqlite3-dev
+       uuid-dev libsqlite3-dev liblzma-dev
   ## separatelibgnutls installation process for Ubuntu Trusty
-  cat /etc/*release | grep "Trusty"
+  cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
   then
      sudo apt-get install -y --force-yes libgnutls-dev libgcrypt11-dev
