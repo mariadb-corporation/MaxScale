@@ -2642,9 +2642,54 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
         char next_file[BINLOG_FNAMELEN + 1] = "";
         if (slave->binlog_pos >= blr_file_size(file) &&
             router->rotating == 0 &&
-            (!blr_is_current_binlog(router, slave) &&
-             blr_file_next_exists(router, slave, next_file)))
+            (!blr_is_current_binlog(router, slave)))
         {
+            if (!blr_file_next_exists(router, slave, next_file))
+            {
+                spinlock_acquire(&slave->catch_lock);
+                if (slave->stats.n_failed_read < MISSING_FILE_READ_RETRIES)
+                {
+                    slave->cstate |= CS_EXPECTCB;
+                    slave->cstate &= ~CS_BUSY;
+                    spinlock_release(&slave->catch_lock);
+
+                    /* Force slave to read via catchup routine */
+                    poll_fake_write_event(slave->dcb);
+
+                    return rval;
+                }
+
+                slave->state = BLRS_ERRORED;
+
+                spinlock_release(&slave->catch_lock);
+
+                MXS_ERROR("%s: Slave [%s]:%d, server-id %d reached "
+                          "end of file for '%s' and next file to read '%s' "
+                          "doesn't exist. Force replication abort after %d retries.",
+                          router->service->name,
+                          slave->dcb->remote,
+                          dcb_get_port(slave->dcb),
+                          slave->serverid,
+                          slave->binlogfile,
+                          next_file,
+                          MISSING_FILE_READ_RETRIES);
+
+                /* Send error that stops slave replication */
+                blr_send_custom_error(slave->dcb,
+                                      slave->seqno++,
+                                      0,
+                                      "next binlog file to read doesn't exist",
+                                      "HY000",
+                                      BINLOG_FATAL_ERROR_READING);
+
+#ifndef BLFILE_IN_SLAVE
+                blr_close_binlog(router, file);
+#endif
+                dcb_close(slave->dcb);
+
+                return 0;
+            }
+
             /* We may have reached the end of file of a non-current
              * binlog file.
              *
@@ -2815,6 +2860,8 @@ blr_slave_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint8_t *ptr)
  * the slave to move beyond a binlog file
  * that is missisng the rotate event at the end.
  *
+ * The curret binlog file is only closed on success.
+ *
  * @param router    The router instance
  * @param slave     The slave to rotate
  * @return          Non-zero if the rotate took place
@@ -2836,7 +2883,6 @@ blr_slave_fake_rotate(ROUTER_INSTANCE *router,
     {
         return 0;
     }
-    blr_close_binlog(router, *filep);
 
     /* Set Pos = 4 */
     slave->binlog_pos = 4;
@@ -2856,7 +2902,15 @@ blr_slave_fake_rotate(ROUTER_INSTANCE *router,
                                           new_file,
                                           router->masterid);
 
-    return r_event ? MXS_SESSION_ROUTE_REPLY(slave->dcb->session, r_event) : 0;
+    int ret = r_event ? MXS_SESSION_ROUTE_REPLY(slave->dcb->session, r_event) : 0;
+
+    /* Close binlog file on success */
+    if (ret)
+    {
+        blr_close_binlog(router, *filep);
+    }
+
+    return ret;
 }
 
 /**

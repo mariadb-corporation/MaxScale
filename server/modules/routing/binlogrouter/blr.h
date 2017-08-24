@@ -99,6 +99,8 @@ MXS_BEGIN_DECLS
 /* GTID slite3 database name */
 #define GTID_MAPS_DB "gtid_maps.db"
 
+/* Number of reties for a missing binlog file */
+#define MISSING_FILE_READ_RETRIES 20
 /**
  * Add GTID components domain and serverid as name prefix
  * in SHOW FULL BINARY LOGS
