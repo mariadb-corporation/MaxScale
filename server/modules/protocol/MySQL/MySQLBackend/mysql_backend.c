@@ -728,10 +728,12 @@ gw_read_and_write(DCB *dcb)
 
         /** The reply to a COM_CHANGE_USER is in packet */
         GWBUF *query = proto->stored_query;
-        uint8_t result = *((uint8_t*)GWBUF_DATA(read_buffer) + 4);
         proto->stored_query = NULL;
         proto->ignore_reply = false;
-        gwbuf_free(read_buffer);
+        GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
+        ss_dassert(reply);
+        ss_dassert(read_buffer == NULL);
+        uint8_t result = GWBUF_DATA(reply)[4];
 
         int rval = 0;
 
@@ -739,14 +741,23 @@ gw_read_and_write(DCB *dcb)
         {
             rval = query ? dcb->func.write(dcb, query) : 1;
         }
-        else if (query)
+        else
         {
-            /** The COM_CHANGE USER failed, generate a fake hangup event to
-             * close the DCB and send an error to the client. */
+             if (result == MYSQL_REPLY_ERR)
+             {
+                 /** The COM_CHANGE USER failed, generate a fake hangup event to
+                  * close the DCB and send an error to the client. */
+                 log_error_response(dcb, reply);
+             }
+             else
+             {
+                 MXS_ERROR("Unknown response to COM_CHANGE_USER: 0x%02hhx", result);
+             }
             gwbuf_free(query);
             poll_fake_hangup_event(dcb);
         }
 
+        gwbuf_free(reply);
         return rval;
     }
 
@@ -889,6 +900,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         backend_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
         ss_dassert(dcb->persistentstart == 0);
+        ss_dassert(!MYSQL_IS_COM_QUIT(GWBUF_DATA(queue)));
         /**
          * This is a DCB that was just taken out of the persistent connection pool.
          * We need to sent a COM_CHANGE_USER query to the backend to reset the
@@ -1956,5 +1968,6 @@ gw_send_change_user_to_backend(char          *dbname,
 static bool gw_connection_established(DCB* dcb)
 {
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-    return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE;
+    return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE &&
+        !proto->ignore_reply && !proto->stored_query;
 }
