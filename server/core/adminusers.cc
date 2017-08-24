@@ -47,8 +47,15 @@ static const char INET_USERS_FILE_NAME[]  = "passwd";
  */
 void admin_users_init()
 {
-    linux_users = load_linux_users();
-    inet_users = load_inet_users();
+    if ((linux_users = load_linux_users()) == NULL)
+    {
+        admin_enable_linux_account(DEFAULT_ADMIN_USER, USER_ACCOUNT_ADMIN);
+    }
+
+    if ((inet_users = load_inet_users()) == NULL)
+    {
+        admin_add_inet_user(INET_DEFAULT_USERNAME, INET_DEFAULT_PASSWORD, USER_ACCOUNT_ADMIN);
+    }
 }
 
 static bool admin_dump_users(USERS* users, const char* fname)
@@ -363,11 +370,7 @@ bool admin_linux_account_enabled(const char *uname)
 {
     bool rv = false;
 
-    if (!linux_users && strcmp(uname, DEFAULT_ADMIN_USER) == 0)
-    {
-        rv = true;
-    }
-    else if (linux_users)
+    if (linux_users)
     {
         rv = users_find(linux_users, uname);
     }
@@ -459,14 +462,6 @@ admin_verify_inet_user(const char *username, const char *password)
         mxs_crypt(password, ADMIN_SALT, cpassword);
         rv = users_auth(inet_users, username, cpassword);
     }
-    else
-    {
-        if (strcmp(username, INET_DEFAULT_USERNAME) == 0
-            && strcmp(password, INET_DEFAULT_PASSWORD) == 0)
-        {
-            rv = true;
-        }
-    }
 
     return rv;
 }
@@ -478,10 +473,6 @@ bool admin_user_is_inet_admin(const char* username)
     if (inet_users)
     {
         rval = users_is_admin(inet_users, username);
-    }
-    else if (strcmp(INET_DEFAULT_USERNAME, username) == 0)
-    {
-        rval = true;
     }
 
     return rval;
@@ -495,25 +486,19 @@ bool admin_user_is_unix_admin(const char* username)
     {
         rval = users_is_admin(linux_users, username);
     }
-    else if (strcmp(DEFAULT_ADMIN_USER, username) == 0)
-    {
-        rval = true;
-    }
 
     return rval;
 }
 
 bool admin_have_admin()
 {
-    return (inet_users && users_admin_count(inet_users) > 0) ||
-           (linux_users && users_admin_count(linux_users) > 0);
+    return users_admin_count(inet_users) > 0 || users_admin_count(linux_users) > 0;
 }
 
 bool admin_is_last_admin(const char* user)
 {
     return (admin_user_is_inet_admin(user) || admin_user_is_unix_admin(user)) &&
-           ((inet_users ? users_admin_count(inet_users) : 1) +
-            (linux_users ? users_admin_count(linux_users) : 1)) == 1;
+           (users_admin_count(inet_users) + users_admin_count(linux_users)) == 1;
 }
 
 /**
