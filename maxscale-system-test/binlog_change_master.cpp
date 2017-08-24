@@ -126,13 +126,12 @@ int main(int argc, char *argv[])
     Test->repl->block_node(0);
     Test->stop_timeout();
 
-    sleep(130);
+    sleep(180);
 
     Test->tprintf("Done! Waiting for thread\n");
     exit_flag = 1;
     pthread_join(transaction_thread_t, NULL );
     Test->tprintf("Done!\n");
-
     Test->tprintf("Checking data on the node3 (slave)\n");
     char sql[256];
     char rep[256];
@@ -246,7 +245,6 @@ int select_new_master(TestConnections * test)
     test->tprintf("log file name %s\n", maxscale_log_file);
     sprintf(maxscale_log_file_new, "%s%06d", maxscale_log_file, pd + 1);
 
-    test->try_query(test->repl->nodes[2], (char *) "reset master");
     test->tprintf("Flush logs %d times\n", pd + 1);
     for (int k = 0; k < pd + 1; k++)
     {
@@ -279,7 +277,11 @@ int select_new_master(TestConnections * test)
     }
     test->tprintf("change master query: %s\n", str);
     test->try_query(binlog, str);
+    test->tprintf("start slave\n");
     test->try_query(binlog, "start slave");
+    test->tprintf("start slave one more\n");
+    test->try_query(binlog, "start slave");
+    test->tprintf("slave started!\n");
 
     test->repl->close_connections();
 
@@ -331,6 +333,8 @@ void *transaction_thread( void *ptr )
             failed_transaction_num = i_trans;
             Test->tprintf("Closing connection\n");
             mysql_close(conn);
+            Test->tprintf("Waiting for repication\n");
+            sleep(15);
             Test->tprintf("Calling select_new_master()\n");
             select_new_master(Test);
             master = 2;
