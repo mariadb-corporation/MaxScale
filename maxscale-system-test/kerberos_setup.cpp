@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         fprintf(f, "%s node_%03d.maxscale.test\n", Test->repl->IP[i], i);
+        fprintf(f, "%s node_%03d\n", Test->repl->IP[i], i);
     }
     fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscale_IP);
     fprintf(f, "%s maxscale\n", Test->maxscale_IP);
