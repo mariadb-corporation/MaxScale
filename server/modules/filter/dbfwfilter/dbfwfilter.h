@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _DBFWFILTER_H
-#define _DBFWFILTER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -56,5 +54,3 @@ void set_matching_mode(void* scanner, enum match_type mode);
 bool create_user_templates(void* scanner);
 
 MXS_END_DECLS
-
-#endif

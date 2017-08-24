@@ -61,7 +61,7 @@
  */
 
 #define MXS_MODULE_NAME "dbfwfilter"
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 
 #include <stdio.h>
 #include <string.h>
@@ -84,6 +84,8 @@
 #include <maxscale/alloc.h>
 
 #include "dbfwfilter.h"
+
+MXS_BEGIN_DECLS
 #include "ruleparser.yy.h"
 #include "lex.yy.h"
 
@@ -91,6 +93,7 @@
 #ifndef dbfw_yyparse
 int dbfw_yyparse(void*);
 #endif
+MXS_END_DECLS
 
 /*
  * The filter entry points
@@ -404,7 +407,7 @@ static json_t* rules_to_json(RULE *rules)
  */
 static STRLINK* strlink_push(STRLINK* head, const char* value)
 {
-    STRLINK* link = MXS_MALLOC(sizeof(STRLINK));
+    STRLINK* link = (STRLINK*)MXS_MALLOC(sizeof(STRLINK));
 
     if (link && (link->value = MXS_STRDUP(value)))
     {
@@ -484,7 +487,7 @@ static STRLINK* strlink_reverse_clone(STRLINK* head)
  */
 static RULE_BOOK* rulebook_push(RULE_BOOK *head, RULE *rule)
 {
-    RULE_BOOK *rval = MXS_MALLOC(sizeof(RULE_BOOK));
+    RULE_BOOK *rval = (RULE_BOOK*)MXS_MALLOC(sizeof(RULE_BOOK));
 
     if (rval)
     {
@@ -910,6 +913,8 @@ static const MXS_ENUM_VALUE action_values[] =
     {NULL}
 };
 
+MXS_BEGIN_DECLS
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -1008,6 +1013,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
+
+MXS_END_DECLS
 
 /**
  * Free a TIMERANGE struct
@@ -1143,12 +1150,12 @@ static RULE* find_rule_by_name(RULE* rules, const char* name)
 bool create_rule(void* scanner, const char* name)
 {
     bool rval = false;
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t)scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t)scanner);
     ss_dassert(rstack);
 
     if (find_rule_by_name(rstack->rule, name) == NULL)
     {
-        RULE *ruledef = MXS_MALLOC(sizeof(RULE));
+        RULE *ruledef = (RULE*)MXS_MALLOC(sizeof(RULE));
 
         if (ruledef && (ruledef->name = MXS_STRDUP(name)))
         {
@@ -1221,7 +1228,7 @@ static void rule_free_all(RULE* rule)
  */
 bool add_active_user(void* scanner, const char* name)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     STRLINK *tmp = strlink_push(rstack->user, name);
 
@@ -1240,7 +1247,7 @@ bool add_active_user(void* scanner, const char* name)
  */
 bool add_active_rule(void* scanner, const char* name)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     STRLINK *tmp = strlink_push(rstack->active_rules, name);
 
@@ -1259,7 +1266,7 @@ bool add_active_rule(void* scanner, const char* name)
  */
 bool add_at_times_rule(void* scanner, const char* range)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     TIMERANGE* timerange = parse_time(range);
     ss_dassert(timerange);
@@ -1280,7 +1287,7 @@ bool add_at_times_rule(void* scanner, const char* range)
  */
 void add_on_queries_rule(void* scanner, const char* sql)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     parse_querytypes(sql, rstack->rule);
 }
@@ -1291,14 +1298,14 @@ void add_on_queries_rule(void* scanner, const char* sql)
  */
 bool create_user_templates(void* scanner)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     user_template_t* templates = NULL;
     STRLINK* user = rstack->user;
 
     while (user)
     {
-        user_template_t* newtemp = MXS_MALLOC(sizeof(user_template_t));
+        user_template_t* newtemp = (user_template_t*)MXS_MALLOC(sizeof(user_template_t));
         STRLINK* tmp;
         if (newtemp && (newtemp->name = MXS_STRDUP(user->value)) &&
             (newtemp->rulenames = strlink_reverse_clone(rstack->active_rules)))
@@ -1346,7 +1353,7 @@ void free_user_templates(user_template_t *templates)
 
 void set_matching_mode(void* scanner, enum match_type mode)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     rstack->active_mode = mode;
 }
@@ -1357,7 +1364,7 @@ void set_matching_mode(void* scanner, enum match_type mode)
  */
 void define_wildcard_rule(void* scanner)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     rstack->rule->type = RT_WILDCARD;
 }
@@ -1387,11 +1394,11 @@ static char* strip_backticks(char* string)
  */
 bool define_columns_rule(void* scanner, char* columns)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     STRLINK* list = NULL;
 
-    if ((list = strlink_push(rstack->rule->data, strip_backticks(columns))))
+    if ((list = strlink_push((STRLINK*)rstack->rule->data, strip_backticks(columns))))
     {
         rstack->rule->type = RT_COLUMN;
         rstack->rule->data = list;
@@ -1407,11 +1414,11 @@ bool define_columns_rule(void* scanner, char* columns)
  */
 bool define_function_rule(void* scanner, char* columns)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     STRLINK* list = NULL;
 
-    if ((list = strlink_push(rstack->rule->data, strip_backticks(columns))))
+    if ((list = strlink_push((STRLINK*)rstack->rule->data, strip_backticks(columns))))
     {
         rstack->rule->type = RT_FUNCTION;
         rstack->rule->data = list;
@@ -1430,11 +1437,11 @@ bool define_function_rule(void* scanner, char* columns)
  */
 bool define_function_usage_rule(void* scanner, char* columns)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     STRLINK* list = NULL;
 
-    if ((list = strlink_push(rstack->rule->data, strip_backticks(columns))))
+    if ((list = strlink_push((STRLINK*)rstack->rule->data, strip_backticks(columns))))
     {
         rstack->rule->type = RT_USES_FUNCTION;
         rstack->rule->data = list;
@@ -1449,7 +1456,7 @@ bool define_function_usage_rule(void* scanner, char* columns)
  */
 void define_where_clause_rule(void* scanner)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     rstack->rule->type = RT_CLAUSE;
 }
@@ -1460,9 +1467,9 @@ void define_where_clause_rule(void* scanner)
  */
 bool define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdoff)
 {
-    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    QUERYSPEED* qs = MXS_MALLOC(sizeof(QUERYSPEED));
+    QUERYSPEED* qs = (QUERYSPEED*)MXS_MALLOC(sizeof(QUERYSPEED));
 
     if (qs)
     {
@@ -1492,7 +1499,7 @@ bool define_regex_rule(void* scanner, char* pattern)
     if ((re = pcre2_compile(start, PCRE2_ZERO_TERMINATED,
                             0, &err, &offset, NULL)))
     {
-        struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+        struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
         ss_dassert(rstack);
         rstack->rule->type = RT_REGEX;
         rstack->rule->data = (void*) re;
@@ -1529,11 +1536,11 @@ static bool process_user_templates(HASHTABLE *users, user_template_t *templates,
 
     while (templates)
     {
-        DBFW_USER *user = hashtable_fetch(users, templates->name);
+        DBFW_USER *user = (DBFW_USER*)hashtable_fetch(users, templates->name);
 
         if (user == NULL)
         {
-            if ((user = MXS_MALLOC(sizeof(DBFW_USER))) && (user->name = MXS_STRDUP(templates->name)))
+            if ((user = (DBFW_USER*)MXS_MALLOC(sizeof(DBFW_USER))) && (user->name = MXS_STRDUP(templates->name)))
             {
                 user->rules_and = NULL;
                 user->rules_or = NULL;
@@ -1717,7 +1724,7 @@ bool replace_rules(FW_INSTANCE* instance)
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    FW_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(FW_INSTANCE));
+    FW_INSTANCE *my_instance = (FW_INSTANCE*)MXS_CALLOC(1, sizeof(FW_INSTANCE));
 
     if (my_instance == NULL)
     {
@@ -1726,7 +1733,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
     }
 
     spinlock_init(&my_instance->lock);
-    my_instance->action = config_get_enum(params, "action", action_values);
+    my_instance->action = (enum fw_actions)config_get_enum(params, "action", action_values);
     my_instance->log_match = FW_LOG_NONE;
 
     if (config_get_bool(params, "log_match"))
@@ -1771,7 +1778,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     FW_SESSION *my_session;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(FW_SESSION))) == NULL)
+    if ((my_session = (FW_SESSION*)MXS_CALLOC(1, sizeof(FW_SESSION))) == NULL)
     {
         return NULL;
     }
@@ -1955,7 +1962,7 @@ static char* create_error(const char* format, ...)
     int message_len = vsnprintf(NULL, 0, format, valist);
     va_end(valist);
 
-    char* rval = MXS_MALLOC(message_len + 1);
+    char* rval = (char*)MXS_MALLOC(message_len + 1);
     MXS_ABORT_IF_NULL(rval);
 
     va_start(valist, format);
@@ -2077,7 +2084,7 @@ bool match_throttle(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
 void match_regex(RULE_BOOK *rulebook, const char *query, bool *matches, char **msg)
 {
 
-    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(rulebook->rule->data, NULL);
+    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern((pcre2_code*)rulebook->rule->data, NULL);
 
     if (mdata)
     {
@@ -2415,7 +2422,7 @@ void append_string(char** dest, size_t* size, const char* src)
         if (*size < strlen(*dest) + strlen(src) + 3)
         {
             size_t newsize = strlen(*dest) + strlen(src) + 3;
-            char* tmp = MXS_REALLOC(*dest, newsize);
+            char* tmp = (char*)MXS_REALLOC(*dest, newsize);
             if (tmp)
             {
                 *size = newsize;
@@ -2586,7 +2593,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
     if (modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
     {
-        GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
+        GWBUF* err = gen_dummy_error(my_session, (char*)"This filter does not support "
                                      "multi-statements.");
         gwbuf_free(queue);
         MXS_FREE(my_session->errmsg);

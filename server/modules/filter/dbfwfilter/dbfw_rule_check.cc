@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "dbfwfilter.c"
+#include "dbfwfilter.cc"
 
 int main(int argc, char **argv)
 {
