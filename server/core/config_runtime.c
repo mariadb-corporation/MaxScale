@@ -267,6 +267,12 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
     return rval;
 }
 
+static inline bool is_valid_integer(const char* value)
+{
+    char* endptr;
+    return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
+}
+
 bool runtime_alter_server(SERVER *server, char *key, char *value)
 {
     spinlock_acquire(&crt_lock);
@@ -297,6 +303,28 @@ bool runtime_alter_server(SERVER *server, char *key, char *value)
         }
 
         server_update_credentials(server, server->monuser, value);
+    }
+    else if (strcmp(key, "persistpoolmax") == 0)
+    {
+        if (is_valid_integer(value))
+        {
+            server->persistpoolmax = atoi(value);
+        }
+        else
+        {
+            valid = false;
+        }
+    }
+    else if (strcmp(key, "persistmaxtime") == 0 && is_valid_integer(value))
+    {
+        if (is_valid_integer(value))
+        {
+            server->persistmaxtime = atoi(value);
+        }
+        else
+        {
+            valid = false;
+        }
     }
     else
     {
