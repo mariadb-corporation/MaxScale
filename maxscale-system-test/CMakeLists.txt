@@ -632,6 +632,9 @@ add_test_executable(avro_alter.cpp avro_alter avro LABELS avrorouter binlogroute
 # In the binlog router setup stop Master and promote one of the Slaves to be new Master
 add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe LABELS binlogrouter BREAKS_REPL)
 
+# In the binlog router setup stop Master and promote one of the Slaves to be new Master (use GTID)
+add_test_executable(binlog_change_master.cpp binlog_change_master_gtid setup_binlog_tx_safe_gtid LABELS binlogrouter BREAKS_REPL)
+
 # trying to start binlog setup with incomplete Maxscale.cnf
 add_test_executable(binlog_incompl.cpp binlog_incompl binlog_incompl LABELS binlogrouter BREAKS_REPL)
 
@@ -672,14 +675,17 @@ add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd 
 # Regression case for crash if long host name is used for binlog router (in 'change master to ...')
 add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog LABELS binlogrouter BREAKS_REPL)
 
-# configure binlog rouer setup, execute queries and transactions, check data;
+# configure binlog router setup, execute queries and transactions, check data;
 add_test_executable(setup_binlog.cpp setup_binlog setup_binlog LABELS binlogrouter BREAKS_REPL)
 
-# configure binlog rouer setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=CRC32 option
+# configure binlog router setup, execute queries and transactions, check data;
+add_test_executable(setup_binlog_gtid.cpp setup_binlog_gtid setup_binlog_gtid LABELS binlogrouter BREAKS_REPL)
+
+# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=CRC32 option
 # disabled because it is included into setup_binlog test, separate test was created for debugging
 # add_test_executable(setup_binlog_crc_32.cpp setup_binlog_crc_32 setup_binlog LABELS binlogrouter BREAKS_REPL)
 
-# configure binlog rouer setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=NONE option
+# configure binlog router setup, execute queries and transactions, check data; install semysync plugin, backends started with --binlog-checksum=NONE option
 # disabled because it is included into setup_binlog test, separate test was created for debugging
 # add_test_executable(setup_binlog_crc_none.cpp setup_binlog_crc_none setup_binlog LABELS binlogrouter LIGHT BREAKS_REPL)
 

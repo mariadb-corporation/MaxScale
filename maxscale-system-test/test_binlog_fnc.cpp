@@ -192,7 +192,8 @@ void test_binlog(TestConnections* Test)
     Test->stop_timeout();
 
     // test SLAVE STOP/START
-    for (int j = 0; j < 3; j++)
+    Test->tprintf("test SLAVE STOP/START");
+    for (int j = 1; j < 2; j++)
     {
         Test->set_timeout(100);
         Test->repl->connect();
@@ -211,6 +212,9 @@ void test_binlog(TestConnections* Test)
         if (j == 1)
         {
             Test->tprintf("FLUSH LOGS on master\n");
+            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
             execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
         }
         Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "INSERT into t1 failed\n");
