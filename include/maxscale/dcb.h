@@ -186,7 +186,10 @@ typedef struct dcb
 
     DCBSTATS        stats;          /**< DCB related statistics */
     struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
-    time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
+    time_t          persistentstart;   /**<    0: Not in the persistent pool.
+                                              -1: Evicted from the persistent pool and being closed.
+                                           non-0: Time when placed in the persistent pool.
+                                       */
     struct service  *service;       /**< The related service */
     void            *data;          /**< Specific client data, shared between DCBs of this session */
     void            *authenticator_data; /**< The authenticator data for this DCB */
