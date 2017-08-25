@@ -54,31 +54,6 @@ typedef struct dcbstats
 
 #define DCBSTATS_INIT {0}
 
-/**
- * The data structure that is embedded witin a DCB and manages the complex memory
- * management issues of a DCB.
- *
- * The DCB structures are used as the user data within the polling loop. This means that
- * polling threads may aschronously wake up and access these structures. It is not possible
- * to simple remove the DCB from the epoll system and then free the data, as every thread
- * that is currently running an epoll call must wake up and re-issue the epoll_wait system
- * call, the is the only way we can be sure that no polling thread is pending a wakeup or
- * processing an event that will access the DCB.
- *
- * We solve this issue by making the dcb_free routine merely mark a DCB as a zombie and
- * place it on a special zombie list. Before placing the DCB on the zombie list we create
- * a bitmask with a bit set in it for each active polling thread. Each thread will call
- * a routine to process the zombie list at the end of the polling loop. This routine
- * will clear the bit value that corresponds to the calling thread. Once the bitmask
- * is completely cleared the DCB can finally be freed and removed from the zombie list.
- */
-typedef struct
-{
-    struct dcb      *next;          /*< Next pointer for the zombie list */
-} DCBMM;
-
-#define DCBMM_INIT { NULL }
-
 /* DCB states */
 typedef enum
 {
@@ -191,7 +166,6 @@ typedef struct dcb
     struct service  *service;       /**< The related service */
     void            *data;          /**< Specific client data, shared between DCBs of this session */
     void            *authenticator_data; /**< The authenticator data for this DCB */
-    DCBMM           memdata;        /**< The data related to DCB memory management */
     DCB_CALLBACK    *callbacks;     /**< The list of callbacks for the DCB */
     int64_t         last_read;      /*< Last time the DCB received data */
     struct server   *server;        /**< The associated backend server */
