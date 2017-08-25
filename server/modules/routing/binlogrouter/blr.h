@@ -252,6 +252,9 @@ typedef enum
 /* default heartbeat interval in seconds */
 #define BLR_HEARTBEAT_DEFAULT_INTERVAL  "300"
 
+/* Max heartbeat interval in seconds */
+#define BLR_HEARTBEAT_MAX_INTERVAL    4294967
+
 /* strings and numbers in SQL replies */
 #define BLR_TYPE_STRING                 0xf
 #define BLR_TYPE_INT                    0x03
@@ -367,8 +370,8 @@ typedef struct master_server_config
     char *ssl_ca;
     int ssl_enabled;
     char *ssl_version;
-    /* MariaDB 10 GTID */
-    char *use_mariadb10_gtid;
+    /* Connect options */
+    int  heartbeat;
 } MASTER_SERVER_CFG;
 
 /* Config struct for CHANGE MASTER TO options */
@@ -388,6 +391,9 @@ typedef struct change_master_options
     char *ssl_version;
     /* MariaDB 10 GTID */
     char *use_mariadb10_gtid;
+    /* Connection options */
+    char *heartbeat_period;
+    char *connect_retry;
 } CHANGE_MASTER_OPTIONS;
 
 /**

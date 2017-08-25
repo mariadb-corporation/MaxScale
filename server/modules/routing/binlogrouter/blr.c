@@ -647,11 +647,14 @@ createInstance(SERVICE *service, char **options)
                 {
                     int h_val = (int)strtol(value, NULL, 10);
 
-                    if (h_val <= 0 || (errno == ERANGE))
+                    if (h_val <= 0 ||
+                        (errno == ERANGE) ||
+                        h_val > BLR_HEARTBEAT_MAX_INTERVAL)
                     {
                         MXS_WARNING("Invalid heartbeat period %s."
                                     " Setting it to default value %ld.",
-                                    value, inst->heartbeat);
+                                    value,
+                                    inst->heartbeat);
                     }
                     else
                     {

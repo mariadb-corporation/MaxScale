@@ -351,6 +351,9 @@ static int binary_logs_find_file_cb(void *data,
                                     int cols,
                                     char** values,
                                     char** names);
+static void blr_log_config_changes(ROUTER_INSTANCE *router,
+                                   MASTER_SERVER_CFG *current_master,
+                                   CHANGE_MASTER_OPTIONS *change_master);
 
 /**
  * Process a request packet from the slave server.
@@ -3938,6 +3941,42 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
      * Change filename and position in the router structure
      */
 
+    /**
+     * Handle connection options
+     */
+    char *master_heartbeat = change_master.heartbeat_period;
+    if (master_heartbeat)
+    {
+        int h_val = (int)strtol(master_heartbeat, NULL, 10);
+
+        if (h_val <= 0 ||
+            (errno == ERANGE) ||
+            h_val > BLR_HEARTBEAT_MAX_INTERVAL)
+        {
+            snprintf(error,
+                         BINLOG_ERROR_MSG_LEN,
+                         "The requested value for the heartbeat period is "
+                         "either negative or exceeds the maximum allowed "
+                         "(%d seconds).",
+                         BLR_HEARTBEAT_MAX_INTERVAL);
+
+            MXS_ERROR("%s: %s", router->service->name, error);
+
+            /* restore previous master_host and master_port */
+            blr_master_restore_config(router, current_master);
+
+            blr_master_free_parsed_options(&change_master);
+
+            spinlock_release(&router->lock);
+
+            return -1;
+        }
+        else
+        {
+            router->heartbeat = h_val;
+        }
+    }
+
     /* Set new binlog position from parsed SQL command */
     master_log_pos = change_master.binlog_pos;
     if (master_log_pos == NULL)
@@ -4292,25 +4331,9 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     }
 
     /* Log config changes (without passwords) */
-    MXS_NOTICE("%s: 'CHANGE MASTER TO executed'. Previous state "
-               "MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', "
-               "MASTER_LOG_POS=%lu, MASTER_USER='%s'. New state is MASTER_HOST='%s', "
-               "MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'%s",
-               router->service->name,
-               current_master->host,
-               current_master->port,
-               current_master->logfile,
-               current_master->pos,
-               current_master->user,
-               router->service->dbref->server->name,
-               router->service->dbref->server->port,
-               router->binlog_name,
-               router->current_pos,
-               router->user,
-               change_master.use_mariadb10_gtid ?
-               ", MASTER_USE_GTID=Slave_pos" :
-               "");
+    blr_log_config_changes(router, current_master, &change_master);
 
+    /* Free data struct */
     blr_master_free_config(current_master);
 
     blr_master_free_parsed_options(&change_master);
@@ -4579,6 +4602,8 @@ blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master)
             curr_master->ssl_ca = MXS_STRDUP_A(server_ssl->ssl_ca_cert);
         }
     }
+    /* Connect options */
+    curr_master->heartbeat = router->heartbeat;
 }
 
 /**
@@ -4598,8 +4623,6 @@ blr_master_free_config(MASTER_SERVER_CFG *master_cfg)
     MXS_FREE(master_cfg->ssl_cert);
     MXS_FREE(master_cfg->ssl_ca);
     MXS_FREE(master_cfg->ssl_version);
-    /* MariaDB 10 GTID */
-    MXS_FREE(master_cfg->use_mariadb10_gtid);
 
     MXS_FREE(master_cfg);
 }
@@ -4623,6 +4646,8 @@ blr_master_restore_config(ROUTER_INSTANCE *router,
         MXS_FREE(router->ssl_version);
         router->ssl_version  = MXS_STRDUP_A(prev_master->ssl_version);
     }
+
+    router->heartbeat = prev_master->heartbeat;
 
     blr_master_free_config(prev_master);
 }
@@ -5118,6 +5143,14 @@ static char
     {
         return &config->use_mariadb10_gtid;
     }
+    else if (strcasecmp(option, "master_heartbeat_period") == 0)
+    {
+        return &config->heartbeat_period;
+    }
+    else if (strcasecmp(option, "master_connect_retry") == 0)
+    {
+        return &config->connect_retry;
+    }
     else
     {
         return NULL;
@@ -5165,6 +5198,15 @@ blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options)
 
     MXS_FREE(options->ssl_version);
     options->ssl_version = NULL;
+
+    MXS_FREE(options->use_mariadb10_gtid);
+    options->use_mariadb10_gtid = NULL;
+
+    MXS_FREE(options->heartbeat_period);
+    options->heartbeat_period = NULL;
+
+    MXS_FREE(options->connect_retry);
+    options->connect_retry = NULL;
 }
 
 /**
@@ -8892,4 +8934,60 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
     blr_slave_send_ok(router, slave);
 
     return true;
+}
+
+/**
+ * Log previus master details configuration and new added options.
+ *
+ * @param router            The current router instance
+ * @param current_master    The current master server details
+ * @param change_master     The options in CHANGE MASTER TO command
+ */
+static void blr_log_config_changes(ROUTER_INSTANCE *router,
+                                   MASTER_SERVER_CFG *current_master,
+                                   CHANGE_MASTER_OPTIONS *change_master)
+{
+    /* Prepare heartbeat msg */
+    int len = change_master->heartbeat_period ?
+              strlen(change_master->heartbeat_period) :
+              0;
+    char heartbeat_msg[strlen("MASTER_HEARTBEAT_PERIOD=") + len + 1];
+
+    if (len)
+    {
+        sprintf(heartbeat_msg,
+                "MASTER_HEARTBEAT_PERIOD=%lu",
+                router->heartbeat); // Display the current "long" value
+    }
+    else
+    {
+        heartbeat_msg[0] = 0;
+    }
+
+    /* Prepare GTID msg */
+    char *gtid_msg = change_master->use_mariadb10_gtid ?
+                     ", MASTER_USE_GTID=Slave_pos" :
+                     "";
+
+    /* Log previous state and new changes */
+    MXS_NOTICE("%s: 'CHANGE MASTER TO executed'. Previous state "
+               "MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', "
+               "MASTER_LOG_POS=%lu, MASTER_USER='%s'. "
+               "New state is MASTER_HOST='%s', MASTER_PORT=%i, "
+               "MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, "
+               "MASTER_USER='%s'"
+               "%s, %s",
+               router->service->name,
+               current_master->host,
+               current_master->port,
+               current_master->logfile,
+               current_master->pos,
+               current_master->user,
+               router->service->dbref->server->name,
+               router->service->dbref->server->port,
+               router->binlog_name,
+               router->current_pos,
+               router->user,
+               gtid_msg,
+               heartbeat_msg);
 }
