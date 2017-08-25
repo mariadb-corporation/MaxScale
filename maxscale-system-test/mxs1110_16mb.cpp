@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
     Test->start_maxscale();
 
     Test->repl->execute_query_all_nodes( (char *) "set global max_allowed_packet=100000000");
+    Test->galera->execute_query_all_nodes( (char *) "set global max_allowed_packet=100000000");
 
     Test->connect_maxscale();
     Test->repl->connect();

@@ -148,7 +148,7 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
     */
     if (mysql_stmt_bind_result(stmt, result) != 0)
     {
-        printf("Could not bind results\n");
+        printf("Could not bind results: %s\n", mysql_stmt_error(stmt));
         return 1;
     }
 
@@ -159,7 +159,7 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
 
     if (mysql_stmt_store_result(stmt) != 0)
     {
-        printf("Could not buffer result set\n");
+        printf("Could not buffer result set: %s\n", mysql_stmt_error(stmt));
         return 1;
     }
 
