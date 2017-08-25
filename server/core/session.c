@@ -426,7 +426,8 @@ printAllSessions()
 /** Callback for dprintAllSessions */
 bool dprintAllSessions_cb(DCB *dcb, void *data)
 {
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER &&
+        dcb->session->state != SESSION_STATE_DUMMY)
     {
         DCB *out_dcb = (DCB*)data;
         dprintSession(out_dcb, dcb->session);
