@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections * Test = new TestConnections(argc, argv);
+    Test->stop_maxscale();
     Test->set_timeout(60);
     int chunk_size = 2500000;
     int chunk_num = 5;
@@ -35,6 +36,7 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
     Test->close_maxscale_connections();
 
+    Test->repl->sync_slaves();
     Test->connect_maxscale();
     Test->tprintf("Checking data via RWSplit\n");
     check_longblob_data(Test, Test->conn_rwsplit, chunk_size, chunk_num, 2);

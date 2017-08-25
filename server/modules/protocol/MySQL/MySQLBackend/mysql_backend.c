@@ -645,7 +645,7 @@ static inline bool complete_ps_response(GWBUF *buffer)
         }
 
         bool more;
-        int n_eof = modutil_count_signal_packets(buffer, 0, &more);
+        int n_eof = modutil_count_signal_packets(buffer, 0, &more, NULL);
 
         MXS_DEBUG("Expecting %u EOF, have %u", n_eof, expected_eof);
 
@@ -740,7 +740,7 @@ gw_read_and_write(DCB *dcb)
                     mxs_mysql_is_result_set(read_buffer))
                 {
                     bool more = false;
-                    if (modutil_count_signal_packets(read_buffer, 0, &more) != 2)
+                    if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
                     {
                         dcb->dcb_readqueue = gwbuf_append(read_buffer, dcb->dcb_readqueue);
                         return 0;

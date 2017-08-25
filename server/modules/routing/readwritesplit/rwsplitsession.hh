@@ -50,9 +50,15 @@ public:
     bool execute_session_command();
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
 
+    void set_skip_packet(bool state);
+    bool get_skip_packet() const;
+
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
+    bool             m_skip;       /**< Used to store the state of the EOF packet
+                                    * calculation for result sets when the result
+                                    * contains very large rows */
 };
 
 typedef std::tr1::shared_ptr<RWBackend> SRWBackend;

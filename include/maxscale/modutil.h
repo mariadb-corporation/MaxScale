@@ -59,13 +59,19 @@ GWBUF*          modutil_create_mysql_err_msg(int             packet_number,
  * whole packets. If partial packets are in the buffer, they are ignored.
  * The caller must handle the detection of partial packets in buffers.
  *
+ * On the first invocation, the value pointed by @c skip should be set to false.
+ * On all subsequent calls, for partial result sets, the function uses it to
+ * store the internal state. When the value pointed by @c skip is set to true,
+ * the next call must be done with only unprocessed packets in @c reply.
+ *
  * @param reply      Buffer to use
  * @param n_found    Number of previous found packets
  * @param more       Set to true of more results exist
+ * @param skip       Internal state of the function used for handling large payloads.
  *
  * @return Total number of EOF and ERR packets including the ones already found
  */
-int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more);
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, bool* skip);
 
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
 

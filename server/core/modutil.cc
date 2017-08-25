@@ -636,12 +636,13 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
     return complete;
 }
 
-int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more)
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, bool* skip)
 {
     unsigned int len = gwbuf_length(reply);
     int eof = 0;
     int err = 0;
     size_t offset = 0;
+    bool skip_next = skip ? *skip : false;
 
     while (offset < len)
     {
@@ -649,16 +650,29 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more)
 
         gwbuf_copy_data(reply, offset, MYSQL_HEADER_LEN + 1, header);
 
-        unsigned int pktlen = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
+        unsigned int payloadlen = MYSQL_GET_PAYLOAD_LEN(header);
+        unsigned int pktlen = payloadlen + MYSQL_HEADER_LEN;
 
-        if (MYSQL_GET_COMMAND(header) == MYSQL_REPLY_ERR)
+        if (payloadlen == GW_MYSQL_MAX_PACKET_LEN)
         {
-            err++;
+            skip_next = true;
         }
-        else if (MYSQL_GET_COMMAND(header) == MYSQL_REPLY_EOF &&
-                 pktlen == 5 + MYSQL_HEADER_LEN)
+        else if (skip_next)
         {
-            eof++;
+            skip_next = false;
+        }
+        else
+        {
+            uint8_t command = MYSQL_GET_COMMAND(header);
+
+            if (command == MYSQL_REPLY_ERR)
+            {
+                err++;
+            }
+            else if (command == MYSQL_REPLY_EOF && pktlen == MYSQL_EOF_PACKET_LEN)
+            {
+                eof++;
+            }
         }
 
         if (offset + pktlen >= len || (eof + err + n_found) >= 2)
@@ -674,6 +688,11 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more)
     }
 
     int total = err + eof + n_found;
+
+    if (skip)
+    {
+        *skip = skip_next;
+    }
 
     return total;
 }
