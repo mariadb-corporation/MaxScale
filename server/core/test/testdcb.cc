@@ -59,8 +59,6 @@ test1()
     dcb_close(dcb);
     ss_dfprintf(stderr, "Freed original dcb");
     ss_info_dassert(!dcb_isvalid(dcb), "Closed DCB must not be valid");
-    ss_dfprintf(stderr, "\t..done\nProcess the zombies list");
-    dcb_process_zombies(0);
     ss_dfprintf(stderr, "\t..done\n");
 
     return 0;

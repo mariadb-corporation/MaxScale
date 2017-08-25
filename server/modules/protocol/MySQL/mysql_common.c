@@ -196,7 +196,7 @@ int mysql_send_com_quit(DCB*   dcb,
     CHK_DCB(dcb);
     ss_dassert(packet_number <= 255);
 
-    if (dcb == NULL || dcb->state == DCB_STATE_ZOMBIE)
+    if (dcb == NULL)
     {
         return 0;
     }

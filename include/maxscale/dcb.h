@@ -89,7 +89,6 @@ typedef enum
     DCB_STATE_LISTENING,    /*< The DCB is for a listening socket */
     DCB_STATE_DISCONNECTED, /*< The socket is now closed */
     DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
-    DCB_STATE_ZOMBIE,       /*< DCB is no longer active, waiting to free it */
 } dcb_state_t;
 
 typedef enum
@@ -161,7 +160,6 @@ typedef struct dcb
     MXS_POLL_DATA   poll;
     skygw_chk_t     dcb_chk_top;
     bool            dcb_errhandle_called; /*< this can be called only once */
-    bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
     dcb_role_t      dcb_role;
     int             fd;             /**< The descriptor */
     dcb_state_t     state;          /**< Current descriptor state */
@@ -220,14 +218,12 @@ typedef enum
     DCB_USAGE_LISTENER,
     DCB_USAGE_BACKEND,
     DCB_USAGE_INTERNAL,
-    DCB_USAGE_ZOMBIE,
     DCB_USAGE_ALL
 } DCB_USAGE;
 
 /* A few useful macros */
 #define DCB_SESSION(x)                  (x)->session
 #define DCB_PROTOCOL(x, type)           (type *)((x)->protocol)
-#define DCB_ISZOMBIE(x)                 ((x)->state == DCB_STATE_ZOMBIE)
 #define DCB_WRITEQLEN(x)                (x)->writeqlen
 #define DCB_SET_LOW_WATER(x, lo)        (x)->low_water = (lo);
 #define DCB_SET_HIGH_WATER(x, hi)       (x)->low_water = (hi);
@@ -250,16 +246,6 @@ DCB *dcb_connect(struct server *, struct session *, const char *);
 int dcb_read(DCB *, GWBUF **, int);
 int dcb_drain_writeq(DCB *);
 void dcb_close(DCB *);
-
-/**
- * @brief Process zombie DCBs
- *
- * This should only be called from a polling thread in poll.c when no events
- * are being processed.
- *
- * @param threadid Thread ID of the poll thread
- */
-void dcb_process_zombies(int threadid);
 
 /**
  * Add a DCB to the owner's list

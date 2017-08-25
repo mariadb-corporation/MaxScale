@@ -69,10 +69,7 @@ using maxscale::Semaphore;
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized;
 
-static  DCB           **all_dcbs;
-static  DCB           **zombies;
-static  int            *nzombies;
-static  int             maxzombies = 0;
+static DCB **all_dcbs;
 
 /** Variables for session timeout checks */
 bool check_timeouts = false;
@@ -88,9 +85,7 @@ void dcb_global_init()
 
     int nthreads = config_threadcount();
 
-    if ((zombies = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
-        (all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
-        (nzombies = (int*)MXS_CALLOC(nthreads, sizeof(int))) == NULL)
+    if ((all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL)
     {
         MXS_OOM();
         raise(SIGABRT);
@@ -206,9 +201,6 @@ dcb_free(DCB *dcb)
 /**
  * Free a DCB and remove it from the chain of all DCBs
  *
- * NB This is called with the caller holding the zombie queue
- * spinlock
- *
  * @param dcb The DCB to free
  */
 static void
@@ -323,144 +315,6 @@ dcb_free_all_memory(DCB *dcb)
     /* We never free the actual DCB, it is available for reuse*/
     MXS_FREE(dcb);
 
-}
-
-/**
- * Process the DCB zombie queue
- *
- * This routine is called by each of the polling threads with
- * the thread id of the polling thread. It must clear the bit in
- * the memdata bitmask for the polling thread that calls it. If the
- * operation of clearing this bit means that no bits are set in
- * the memdata.bitmask then the DCB is no longer able to be
- * referenced and it can be finally removed.
- *
- * @param       threadid        The thread ID of the caller
- */
-void dcb_process_zombies(int threadid)
-{
-    if (zombies[threadid])
-    {
-        dcb_process_victim_queue(threadid);
-    }
-}
-
-/**
- * Process the victim queue, selected from the list of zombies
- *
- * These are the DCBs that are not in use by any thread.  The corresponding
- * file descriptor is closed, the DCB marked as disconnected and the DCB
- * itself is finally freed.
- *
- * @param       listofdcb       The first victim DCB
- */
-static inline void
-dcb_process_victim_queue(int threadid)
-{
-    /** Grab the zombie queue to a local queue. This allows us to add back DCBs
-     * that should not yet be closed. */
-    DCB *dcblist = zombies[threadid];
-    zombies[threadid] = NULL;
-
-    while (dcblist)
-    {
-        DCB *dcb = dcblist;
-
-        if (dcb->state == DCB_STATE_POLLING  || dcb->state == DCB_STATE_LISTENING)
-        {
-            if (dcb->state == DCB_STATE_LISTENING)
-            {
-                MXS_ERROR("Removing DCB %p but was in state %s which is not expected"
-                          " for a call to dcb_close, although it should be processed"
-                          " correctly. ", dcb, STRDCBSTATE(dcb->state));
-            }
-            else
-            {
-                if (0 == dcb->persistentstart && dcb_maybe_add_persistent(dcb))
-                {
-                    /* Have taken DCB into persistent pool, no further killing */
-                    dcblist = dcblist->memdata.next;
-                }
-                else
-                {
-                    /** The DCB is still polling. Shut it down and process it later. */
-                    dcb_stop_polling_and_shutdown(dcb);
-                    DCB *newzombie = dcblist;
-                    dcblist = dcblist->memdata.next;
-                    newzombie->memdata.next = zombies[threadid];
-                    zombies[threadid] = newzombie;
-                }
-
-                /** Nothing to do here but to process the next DCB */
-                continue;
-            }
-        }
-
-        nzombies[threadid]--;
-
-        /*
-         * Into the final close logic, so if DCB is for backend server, we
-         * must decrement the number of current connections.
-         */
-        if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
-        {
-            if (dcb->service)
-            {
-                if (dcb->protocol)
-                {
-                    QUEUE_ENTRY conn_waiting;
-                    if (mxs_dequeue(dcb->service->queued_connections, &conn_waiting))
-                    {
-                        DCB *waiting_dcb = (DCB *)conn_waiting.queued_object;
-                        waiting_dcb->state = DCB_STATE_WAITING;
-                        poll_fake_read_event(waiting_dcb);
-                    }
-                    else
-                    {
-                        atomic_add(&dcb->service->client_count, -1);
-                    }
-                }
-            }
-            else
-            {
-                MXS_ERROR("Closing client handler DCB, but it has no related service");
-            }
-        }
-        if (dcb->server && 0 == dcb->persistentstart)
-        {
-            atomic_add(&dcb->server->stats.n_current, -1);
-        }
-
-        if (dcb->fd > 0)
-        {
-            /*<
-             * Close file descriptor and move to clean-up phase.
-             */
-            if (close(dcb->fd) < 0)
-            {
-                int eno = errno;
-                errno = 0;
-                MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
-                          dcb->fd, dcb, eno, mxs_strerror(eno));
-            }
-            else
-            {
-                dcb->fd = DCBFD_CLOSED;
-
-                MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
-            }
-        }
-
-        /** Move to the next DCB before freeing the previous one */
-        dcblist = dcblist->memdata.next;
-
-        /** After these calls, the DCB should be treated as if it were freed.
-         * Whether it is actually freed depends on the type of the DCB and how
-         * many DCBs are linked to it via the MXS_SESSION object. */
-        dcb->state = DCB_STATE_DISCONNECTED;
-        dcb_remove_from_list(dcb);
-        dcb_final_free(dcb);
-    }
 }
 
 /**
@@ -1165,23 +1019,16 @@ static void log_illegal_dcb(DCB *dcb)
 }
 
 /**
- * Removes dcb from poll set, and adds it to zombies list. As a consequence,
- * dcb first moves to DCB_STATE_NOPOLLING, and then to DCB_STATE_ZOMBIE state.
- * At the end of the function state may not be DCB_STATE_ZOMBIE because once
- * dcb_initlock is released parallel threads may change the state.
+ * Closes a client/backend dcb, which in the former case always means that
+ * the corrsponding socket fd is closed and the dcb itself is freed, and in
+ * latter case either the same as in the former or that the dcb is put into
+ * the persistent pool.
  *
- * Parameters:
  * @param dcb The DCB to close
- *
- *
  */
 void dcb_close(DCB *dcb)
 {
     CHK_DCB(dcb);
-
-    // With one thread manipulating each client and backend DCB, dcb_close() should
-    // be called at most once per DCB.
-    ss_dassert(!dcb->dcb_is_zombie);
 
     if ((DCB_STATE_UNDEFINED == dcb->state) || (DCB_STATE_DISCONNECTED == dcb->state))
     {
@@ -1315,7 +1162,6 @@ dcb_maybe_add_persistent(DCB *dcb)
         DCB_CALLBACK *loopcallback;
         MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->user);
         dcb->was_persistent = false;
-        dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
         if (dcb->session)
             /*<
@@ -1698,8 +1544,6 @@ gw_dcb_state2string(dcb_state_t state)
         return "DCB for listening socket";
     case DCB_STATE_DISCONNECTED:
         return "DCB socket closed";
-    case DCB_STATE_ZOMBIE:
-        return "DCB Zombie";
     case DCB_STATE_UNDEFINED:
         return "DCB undefined state";
     default:
@@ -2031,7 +1875,7 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
 int
 dcb_isvalid(DCB *dcb)
 {
-    return dcb && !dcb->dcb_is_zombie;
+    return !!dcb;
 }
 
 static void dcb_hangup_foreach_worker(int thread_id, struct server* server)
@@ -2165,12 +2009,6 @@ bool count_by_usage_cb(DCB *dcb, void *data)
     case DCB_USAGE_INTERNAL:
         if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
             dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
-        {
-            d->count++;
-        }
-        break;
-    case DCB_USAGE_ZOMBIE:
-        if (DCB_ISZOMBIE(dcb))
         {
             d->count++;
         }
@@ -2823,8 +2661,7 @@ void dcb_add_to_list(DCB *dcb)
     {
         /**
          * This is a DCB which is either not a listener or it is a listener which
-         * is not in the list. Stopped listeners are not removed from the list
-         * as that part is done in the final zombie processing.
+         * is not in the list. Stopped listeners are not removed from the list.
          */
 
         int worker_id = Worker::get_current_id();
@@ -3354,7 +3191,6 @@ int poll_add_dcb(DCB *dcb)
      * Check DCB current state seems sensible
      */
     if (DCB_STATE_DISCONNECTED == dcb->state
-        || DCB_STATE_ZOMBIE == dcb->state
         || DCB_STATE_UNDEFINED == dcb->state)
     {
         MXS_ERROR("%lu [poll_add_dcb] Error : existing state of dcb %p "
@@ -3424,8 +3260,7 @@ int poll_remove_dcb(DCB *dcb)
     CHK_DCB(dcb);
 
     /*< It is possible that dcb has already been removed from the set */
-    if (dcb->state == DCB_STATE_NOPOLLING ||
-        dcb->state == DCB_STATE_ZOMBIE)
+    if (dcb->state == DCB_STATE_NOPOLLING)
     {
         return 0;
     }

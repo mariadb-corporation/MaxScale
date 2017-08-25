@@ -434,7 +434,7 @@ gw_read_backend_event(DCB *dcb)
         return 0;
     }
 
-    if (dcb->dcb_is_zombie || dcb->session == NULL ||
+    if (dcb->session == NULL ||
         dcb->session->state == SESSION_STATE_DUMMY)
     {
         return 0;

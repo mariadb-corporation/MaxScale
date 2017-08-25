@@ -1204,9 +1204,6 @@ void Worker::poll_waitevents()
 
         m_state = ZPROCESSING;
 
-        /** Process closed DCBs */
-        dcb_process_zombies(m_id);
-
         m_state = IDLE;
     } /*< while(1) */
 

@@ -1211,8 +1211,7 @@ int gw_write_client_event(DCB *dcb)
 return_1:
 #if defined(SS_DEBUG)
     if (dcb->state == DCB_STATE_POLLING ||
-        dcb->state == DCB_STATE_NOPOLLING ||
-        dcb->state == DCB_STATE_ZOMBIE)
+        dcb->state == DCB_STATE_NOPOLLING)
     {
         CHK_PROTOCOL(protocol);
     }

@@ -988,15 +988,6 @@ maxinfo_internal_dcbs()
 }
 
 /**
- * Interface to dcb_count_by_usage for zombie dcbs
- */
-static int
-maxinfo_zombie_dcbs()
-{
-    return dcb_count_by_usage(DCB_USAGE_ZOMBIE);
-}
-
-/**
  * Interface to poll stats for reads
  */
 static int64_t
@@ -1097,7 +1088,6 @@ static struct
     { "Client_connections", VT_INT, (STATSFUNC)maxinfo_client_dcbs },
     { "Backend_connections", VT_INT, (STATSFUNC)maxinfo_backend_dcbs },
     { "Listeners", VT_INT, (STATSFUNC)maxinfo_listener_dcbs },
-    { "Zombie_connections", VT_INT, (STATSFUNC)maxinfo_zombie_dcbs },
     { "Internal_descriptors", VT_INT, (STATSFUNC)maxinfo_internal_dcbs },
     { "Read_events", VT_INT, (STATSFUNC)maxinfo_read_events },
     { "Write_events", VT_INT, (STATSFUNC)maxinfo_write_events },
