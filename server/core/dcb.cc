@@ -1175,13 +1175,15 @@ static void log_illegal_dcb(DCB *dcb)
  *
  *
  */
-void
-dcb_close(DCB *dcb)
+void dcb_close(DCB *dcb)
 {
     CHK_DCB(dcb);
 
-    if (DCB_STATE_UNDEFINED == dcb->state
-        || DCB_STATE_DISCONNECTED == dcb->state)
+    // With one thread manipulating each client and backend DCB, dcb_close() should
+    // be called at most once per DCB.
+    ss_dassert(!dcb->dcb_is_zombie);
+
+    if ((DCB_STATE_UNDEFINED == dcb->state) || (DCB_STATE_DISCONNECTED == dcb->state))
     {
         log_illegal_dcb(dcb);
         raise(SIGABRT);
@@ -1193,6 +1195,7 @@ dcb_close(DCB *dcb)
      */
     if (dcb->state == DCB_STATE_ALLOC && dcb->fd == DCBFD_CLOSED)
     {
+        // A freshly created dcb that was closed before it was taken into use.
         dcb_final_free(dcb);
     }
     /*
@@ -1200,12 +1203,24 @@ dcb_close(DCB *dcb)
      */
     else if (dcb->persistentstart > 0)
     {
+        // A DCB in the persistent pool.
+
+        // TODO: This dcb will now actually be closed when dcb_persistent_clean_count() is
+        // TODO: called by either dcb_maybe_add_persistent() - another dcb is added to the
+        // TODO: persistent pool - or server_get_persistent() - get a dcb from the persistent
+        // TODO: pool - is called. There is no reason not to just remove this dcb from the
+        // TODO: persistent pool here and now, and then close it immediately.
         dcb->dcb_errhandle_called = true;
     }
-    else if (!dcb->dcb_is_zombie)
+    else
     {
-        if (DCB_ROLE_BACKEND_HANDLER == dcb->dcb_role && 0 == dcb->persistentstart
-            && dcb->server && DCB_STATE_POLLING == dcb->state)
+        bool should_close = true;
+
+        if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&  // Backend DCB
+            dcb->state == DCB_STATE_POLLING &&            // Being polled
+            dcb->persistentstart == 0 &&                  // Not already in (> 0) or being evicted from (-1)
+                                                          // the persistent pool.
+            dcb->server)                                  // And has a server
         {
             /* May be a candidate for persistence, so save user name */
             const char *user;
@@ -1214,24 +1229,65 @@ dcb_close(DCB *dcb)
             {
                 dcb->user = MXS_STRDUP_A(user);
             }
+
+            if (dcb_maybe_add_persistent(dcb))
+            {
+                should_close = false;
+            }
         }
-        /*<
-         * Add closing dcb to the top of the list, setting zombie marker
-         */
-        int owner = dcb->poll.thread.id;
-        dcb->dcb_is_zombie = true;
-        dcb->memdata.next = zombies[owner];
-        zombies[owner] = dcb;
-        nzombies[owner]++;
-        if (nzombies[owner] > maxzombies)
+
+        if (should_close)
         {
-            maxzombies = nzombies[owner];
+            if (dcb->state == DCB_STATE_POLLING)
+            {
+                dcb_stop_polling_and_shutdown(dcb);
+            }
+
+            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+            {
+                // TODO: If the role of the dcb is that of a client handler,
+                // TODO: then dcb->service should be non-NULL, so there should
+                // TODO: be no need for an if. Let's add an assert to see if
+                // TODO: such a situation exists.
+                ss_dassert(dcb->service);
+
+                if (dcb->service)
+                {
+                    atomic_add(&dcb->service->client_count, -1);
+                }
+            }
+
+            if (dcb->server)
+            {
+                // This is now a DCB_ROLE_BACKEND_HANDLER.
+                // TODO: Make decisions according to the role and assert
+                // TODO: that what the role implies is preset.
+                atomic_add(&dcb->server->stats.n_current, -1);
+            }
+
+            if (dcb->fd > 0)
+            {
+                // TODO: How could we get this far with a dcb->fd <= 0?
+
+                if (close(dcb->fd) < 0)
+                {
+                    int eno = errno;
+                    errno = 0;
+                    MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
+                              dcb->fd, dcb, eno, mxs_strerror(eno));
+                }
+                else
+                {
+                    dcb->fd = DCBFD_CLOSED;
+
+                    MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
+                }
+            }
+
+            dcb->state = DCB_STATE_DISCONNECTED;
+            dcb_remove_from_list(dcb);
+            dcb_final_free(dcb);
         }
-    }
-    else
-    {
-        /** DCBs in the zombie queue can still receive events which means that
-         * a DCB can be closed multiple times while it's in the zombie queue. */
     }
 }
 
