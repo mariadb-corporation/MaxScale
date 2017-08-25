@@ -103,7 +103,7 @@ void blr_notify_all_slaves(ROUTER_INSTANCE *router);
 extern bool blr_notify_waiting_slave(ROUTER_SLAVE *slave);
 extern bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
 static void blr_register_serverid(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf);
+static bool blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_handle_checksum(ROUTER_INSTANCE *router, GWBUF *buf);
@@ -2328,11 +2328,15 @@ void blr_notify_all_slaves(ROUTER_INSTANCE *router)
  * Handles previous reply from Master and sends
  * SET @master_heartbeat_period to master
  *
+ * The statement is sent only if router->heartbeat > 0
+ *
  * @param router    Current router instance
  * @param buf       GWBUF with server reply to previous
  *                  registration command
+ * @return          True if hearbeat request has been sent
+ *                  false otherwise (router->heartbeat = 0)
  */
-static void blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf)
+static bool blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf)
 {
     char query[BLRM_SET_HEARTBEAT_QUERY_LEN];
     char *val = blr_extract_column(buf, 2);
@@ -2359,11 +2363,17 @@ static void blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf)
     }
     MXS_FREE(val);
 
-    // Prepare new registration message
-    sprintf(query,
-            "SET @master_heartbeat_period = %lu000000000",
-            router->heartbeat);
-    blr_register_send_command(router, query, BLRM_HBPERIOD);
+    /* Send Heartbeat request ony if router->heartbeat is set */
+    if (router->heartbeat > 0)
+    {
+        // Prepare new registration message
+        sprintf(query,
+                "SET @master_heartbeat_period = %lu000000000",
+                router->heartbeat);
+        blr_register_send_command(router, query, BLRM_HBPERIOD);
+    }
+
+    return router->heartbeat != 0;
 }
 
 /**
@@ -2378,11 +2388,18 @@ static void blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf)
  */
 static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
 {
-    // Response from master should be stored
-    blr_register_cache_response(router,
-                                &router->saved_master.heartbeat,
-                                "heartbeat",
-                                buf);
+    /**
+     * Response from master (set heartbeat reply) should be stored
+     * only if router->heartbeat is set
+     */
+    if (router->heartbeat > 0)
+    {
+        blr_register_cache_response(router,
+                                    &router->saved_master.heartbeat,
+                                    "heartbeat",
+                                    buf);
+    }
+
     // New registration message
     blr_register_send_command(router,
                               "SET @master_binlog_checksum ="
@@ -2858,8 +2875,11 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
         router->retry_backoff = 1;
         break;
     case BLRM_SERVERID:
-        blr_register_heartbeat(router, buf);
-        break;
+        // If set heartbeat is not being sent, next state is BLRM_HBPERIOD
+        if (blr_register_heartbeat(router, buf))
+        {
+            break;
+        }
     case BLRM_HBPERIOD:
         blr_register_setchecksum(router, buf);
         break;
@@ -3146,14 +3166,17 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
         /**
          * Set heartbeat check task
          */
-        snprintf(task_name,
-                 BLRM_TASK_NAME_LEN,
-                 "%s heartbeat",
-                 router->service->name);
-        hktask_add(task_name,
-                   blr_check_last_master_event,
-                   router,
-                   router->heartbeat);
+        if (router->heartbeat > 0)
+        {
+            snprintf(task_name,
+                     BLRM_TASK_NAME_LEN,
+                     "%s heartbeat",
+                     router->service->name);
+            hktask_add(task_name,
+                       blr_check_last_master_event,
+                       router,
+                       router->heartbeat);
+        }
 
         break;
     }

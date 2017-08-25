@@ -647,7 +647,7 @@ createInstance(SERVICE *service, char **options)
                 {
                     int h_val = (int)strtol(value, NULL, 10);
 
-                    if (h_val <= 0 ||
+                    if (h_val < 0 ||
                         (errno == ERANGE) ||
                         h_val > BLR_HEARTBEAT_MAX_INTERVAL)
                     {
@@ -658,6 +658,13 @@ createInstance(SERVICE *service, char **options)
                     }
                     else
                     {
+                        if (h_val == 0)
+                        {
+                            MXS_WARNING("%s: %s",
+                                        inst->service->name,
+                                        "MASTER_HEARTBEAT_PERIOD has been set to 0 (disabled): "
+                                        "a master network inactivity will not be handled.");
+                        }
                         inst->heartbeat = h_val;
                     }
                 }
@@ -1570,8 +1577,9 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
 
     dcb_printf(dcb, "\tBinlog directory:                            %s\n",
                router_inst->binlogdir);
-    dcb_printf(dcb, "\tHeartbeat period (seconds):                  %lu\n",
-               router_inst->heartbeat);
+    dcb_printf(dcb, "\tHeartbeat period (seconds):                  %lu%s\n",
+               router_inst->heartbeat,
+               router_inst->heartbeat ? "" : "(disabled)");
     dcb_printf(dcb, "\tNumber of master connects:                   %d\n",
                router_inst->stats.n_masterstarts);
     dcb_printf(dcb, "\tNumber of delayed reconnects:                %d\n",

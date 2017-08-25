@@ -3949,7 +3949,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     {
         int h_val = (int)strtol(master_heartbeat, NULL, 10);
 
-        if (h_val <= 0 ||
+        if (h_val < 0 ||
             (errno == ERANGE) ||
             h_val > BLR_HEARTBEAT_MAX_INTERVAL)
         {
@@ -3973,6 +3973,13 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         }
         else
         {
+            if (h_val == 0)
+            {
+                MXS_WARNING("%s: %s",
+                            router->service->name,
+                           "MASTER_HEARTBEAT_PERIOD has been set to 0 (disabled): "
+                           "a master network inactivity will not be handled.");
+            }
             router->heartbeat = h_val;
         }
     }
