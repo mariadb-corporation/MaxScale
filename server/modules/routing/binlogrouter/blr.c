@@ -1579,7 +1579,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
                router_inst->binlogdir);
     dcb_printf(dcb, "\tHeartbeat period (seconds):                  %lu%s\n",
                router_inst->heartbeat,
-               router_inst->heartbeat ? "" : "(disabled)");
+               router_inst->heartbeat ? "" : " (disabled)");
     dcb_printf(dcb, "\tNumber of master connects:                   %d\n",
                router_inst->stats.n_masterstarts);
     dcb_printf(dcb, "\tNumber of delayed reconnects:                %d\n",
@@ -2816,6 +2816,11 @@ blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *ins
                 inst->ssl_version = MXS_STRDUP_A(value);
             }
         }
+    }
+    /* Connect options */
+    else if (strcmp(name, "master_heartbeat_period") == 0)
+    {
+        inst->heartbeat = atol((char*)value);
     }
     else
     {

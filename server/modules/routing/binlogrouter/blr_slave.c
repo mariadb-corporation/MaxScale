@@ -4711,6 +4711,8 @@ blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master)
         MXS_FREE(router->fileroot);
         router->fileroot = MXS_STRDUP_A(prev_master->filestem);
     }
+
+    router->heartbeat = prev_master->heartbeat;
 }
 
 /**

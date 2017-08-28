@@ -3167,6 +3167,9 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
         fprintf(config_file, "master_tls_version=%s\n", ssl_version);
     }
 
+    /* Connect options */
+    fprintf(config_file, "master_heartbeat_period=%lu\n", router->heartbeat);
+
     fclose(config_file);
 
     /* rename tmp file to right filename */
