@@ -523,10 +523,10 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
     else
     {
         bool more = false;
-        bool skip = backend->get_skip_packet();
+        modutil_state state = backend->get_modutil_state();
         int old_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
-        int n_eof = modutil_count_signal_packets(buffer, old_eof, &more, &skip);
-        backend->set_skip_packet(skip);
+        int n_eof = modutil_count_signal_packets(buffer, old_eof, &more, &state);
+        backend->set_modutil_state(state);
 
         if (n_eof == 0)
         {

@@ -636,13 +636,13 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
     return complete;
 }
 
-int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, bool* skip)
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_state* state)
 {
     unsigned int len = gwbuf_length(reply);
     int eof = 0;
     int err = 0;
     size_t offset = 0;
-    bool skip_next = skip ? *skip : false;
+    bool skip_next = state ? state->state : false;
 
     while (offset < len)
     {
@@ -689,9 +689,9 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, bool* sk
 
     int total = err + eof + n_found;
 
-    if (skip)
+    if (state)
     {
-        *skip = skip_next;
+        state->state = skip_next;
     }
 
     return total;

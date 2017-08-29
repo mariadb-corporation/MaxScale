@@ -17,7 +17,7 @@
 RWBackend::RWBackend(SERVER_REF* ref):
     mxs::Backend(ref),
     m_reply_state(REPLY_STATE_DONE),
-    m_skip(false)
+    m_modutil_state(MODUTIL_STATE_INIT)
 {
 }
 
@@ -35,14 +35,14 @@ void RWBackend::set_reply_state(reply_state_t state)
     m_reply_state = state;
 }
 
-void RWBackend::set_skip_packet(bool state)
+void RWBackend::set_modutil_state(const modutil_state& state)
 {
-    m_skip = state;
+    m_modutil_state = state;
 }
 
-bool RWBackend::get_skip_packet() const
+modutil_state RWBackend::get_modutil_state() const
 {
-    return m_skip;
+    return m_modutil_state;
 }
 
 bool RWBackend::execute_session_command()
