@@ -180,6 +180,7 @@ typedef struct dcb
         struct dcb *next; /**< Next DCB in owning thread's list */
         struct dcb *tail; /**< Last DCB in owning thread's list */
     } thread;
+    uint32_t        n_close;         /** How many times dcb_close has been called. */
     skygw_chk_t     dcb_chk_tail;
 } DCB;
 

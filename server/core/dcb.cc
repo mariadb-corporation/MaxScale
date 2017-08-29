@@ -99,11 +99,11 @@ void dcb_finish()
 
 static void dcb_initialize(DCB *dcb);
 static void dcb_final_free(DCB *dcb);
+static void dcb_final_close(DCB *dcb);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
 static int  dcb_null_auth(DCB *dcb, SERVER *server, MXS_SESSION *session, GWBUF *buf);
 static inline DCB * dcb_find_in_list(DCB *dcb);
-static inline void dcb_process_victim_queue(int threadid);
 static void dcb_stop_polling_and_shutdown (DCB *dcb);
 static bool dcb_maybe_add_persistent(DCB *);
 static inline bool dcb_write_parameter_check(DCB *dcb, GWBUF *queue);
@@ -1059,82 +1059,93 @@ void dcb_close(DCB *dcb)
         // TODO: persistent pool here and now, and then close it immediately.
         dcb->dcb_errhandle_called = true;
     }
+    else if (dcb->n_close == 0)
+    {
+        dcb->n_close = 1;
+    }
     else
     {
-        bool should_close = true;
+        ++dcb->n_close;
+        // TODO: Will this happen on a regular basis?
+        MXS_WARNING("dcb_close(%p) called %u times.", dcb, dcb->n_close);
+    }
+}
 
-        if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&  // Backend DCB
-            dcb->state == DCB_STATE_POLLING &&            // Being polled
-            dcb->persistentstart == 0 &&                  // Not already in (> 0) or being evicted from (-1)
-                                                          // the persistent pool.
-            dcb->server)                                  // And has a server
+static void dcb_final_close(DCB* dcb)
+{
+    ss_dassert(dcb->n_close != 0);
+
+    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&  // Backend DCB
+        dcb->state == DCB_STATE_POLLING &&            // Being polled
+        dcb->persistentstart == 0 &&                  // Not already in (> 0) or being evicted from (-1)
+                                                      // the persistent pool.
+        dcb->server)                                  // And has a server
+    {
+        /* May be a candidate for persistence, so save user name */
+        const char *user;
+        user = session_get_user(dcb->session);
+        if (user && strlen(user) && !dcb->user)
         {
-            /* May be a candidate for persistence, so save user name */
-            const char *user;
-            user = session_get_user(dcb->session);
-            if (user && strlen(user) && !dcb->user)
-            {
-                dcb->user = MXS_STRDUP_A(user);
-            }
+            dcb->user = MXS_STRDUP_A(user);
+        }
 
-            if (dcb_maybe_add_persistent(dcb))
+        if (dcb_maybe_add_persistent(dcb))
+        {
+            dcb->n_close = 0;
+        }
+    }
+
+    if (dcb->n_close != 0)
+    {
+        if (dcb->state == DCB_STATE_POLLING)
+        {
+            dcb_stop_polling_and_shutdown(dcb);
+        }
+
+        if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+        {
+            // TODO: If the role of the dcb is that of a client handler,
+            // TODO: then dcb->service should be non-NULL, so there should
+            // TODO: be no need for an if. Let's add an assert to see if
+            // TODO: such a situation exists.
+            ss_dassert(dcb->service);
+
+            if (dcb->service)
             {
-                should_close = false;
+                atomic_add(&dcb->service->client_count, -1);
             }
         }
 
-        if (should_close)
+        if (dcb->server)
         {
-            if (dcb->state == DCB_STATE_POLLING)
-            {
-                dcb_stop_polling_and_shutdown(dcb);
-            }
-
-            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
-            {
-                // TODO: If the role of the dcb is that of a client handler,
-                // TODO: then dcb->service should be non-NULL, so there should
-                // TODO: be no need for an if. Let's add an assert to see if
-                // TODO: such a situation exists.
-                ss_dassert(dcb->service);
-
-                if (dcb->service)
-                {
-                    atomic_add(&dcb->service->client_count, -1);
-                }
-            }
-
-            if (dcb->server)
-            {
-                // This is now a DCB_ROLE_BACKEND_HANDLER.
-                // TODO: Make decisions according to the role and assert
-                // TODO: that what the role implies is preset.
-                atomic_add(&dcb->server->stats.n_current, -1);
-            }
-
-            if (dcb->fd > 0)
-            {
-                // TODO: How could we get this far with a dcb->fd <= 0?
-
-                if (close(dcb->fd) < 0)
-                {
-                    int eno = errno;
-                    errno = 0;
-                    MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
-                              dcb->fd, dcb, eno, mxs_strerror(eno));
-                }
-                else
-                {
-                    dcb->fd = DCBFD_CLOSED;
-
-                    MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
-                }
-            }
-
-            dcb->state = DCB_STATE_DISCONNECTED;
-            dcb_remove_from_list(dcb);
-            dcb_final_free(dcb);
+            // This is now a DCB_ROLE_BACKEND_HANDLER.
+            // TODO: Make decisions according to the role and assert
+            // TODO: that what the role implies is preset.
+            atomic_add(&dcb->server->stats.n_current, -1);
         }
+
+        if (dcb->fd > 0)
+        {
+            // TODO: How could we get this far with a dcb->fd <= 0?
+
+            if (close(dcb->fd) < 0)
+            {
+                int eno = errno;
+                errno = 0;
+                MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
+                          dcb->fd, dcb, eno, mxs_strerror(eno));
+            }
+            else
+            {
+                dcb->fd = DCBFD_CLOSED;
+
+                MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
+            }
+        }
+
+        dcb->state = DCB_STATE_DISCONNECTED;
+        dcb_remove_from_list(dcb);
+        dcb_final_free(dcb);
     }
 }
 
@@ -3052,6 +3063,12 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
         }
     }
 #endif
+
+    if (dcb->n_close != 0)
+    {
+        dcb_final_close(dcb);
+    }
+
     return rc;
 }
 
