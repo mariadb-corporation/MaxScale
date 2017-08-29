@@ -676,8 +676,9 @@ gw_read_and_write(DCB *dcb)
 
     /** Ask what type of output the router/filter chain expects */
     uint64_t capabilities = service_get_capabilities(session->service);
+    MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT) || proto->ignore_reply)
     {
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
@@ -692,7 +693,7 @@ gw_read_and_write(DCB *dcb)
 
         read_buffer = tmp;
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT))
+        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) || proto->ignore_reply)
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
             {
@@ -705,8 +706,6 @@ gw_read_and_write(DCB *dcb)
                 poll_fake_hangup_event(dcb);
                 return 0;
             }
-
-            MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
 
             if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) &&
                 expecting_resultset(proto) && mxs_mysql_is_result_set(read_buffer))
@@ -721,11 +720,8 @@ gw_read_and_write(DCB *dcb)
         }
     }
 
-    MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
-
     if (proto->ignore_reply)
     {
-
         /** The reply to a COM_CHANGE_USER is in packet */
         GWBUF *query = proto->stored_query;
         proto->stored_query = NULL;
