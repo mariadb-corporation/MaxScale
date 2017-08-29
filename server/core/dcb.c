@@ -1698,6 +1698,16 @@ dcb_maybe_add_persistent(DCB *dcb)
             MXS_FREE(loopcallback);
         }
 
+        /** Free all buffered data */
+        gwbuf_free(dcb->dcb_fakequeue);
+        gwbuf_free(dcb->dcb_readqueue);
+        gwbuf_free(dcb->delayq);
+        gwbuf_free(dcb->writeq);
+        dcb->dcb_fakequeue = NULL;
+        dcb->dcb_readqueue = NULL;
+        dcb->delayq = NULL;
+        dcb->writeq = NULL;
+
         dcb->nextpersistent = dcb->server->persistent[dcb->thread.id];
         dcb->server->persistent[dcb->thread.id] = dcb;
         atomic_add(&dcb->server->stats.n_persistent, 1);

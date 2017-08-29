@@ -752,6 +752,7 @@ gw_read_and_write(DCB *dcb)
              else
              {
                  MXS_ERROR("Unknown response to COM_CHANGE_USER: 0x%02hhx", result);
+                 ss_dassert(false);
              }
             gwbuf_free(query);
             poll_fake_hangup_event(dcb);
@@ -899,8 +900,13 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
     if (dcb->was_persistent && dcb->state == DCB_STATE_POLLING &&
         backend_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
+        ss_dassert(!dcb->dcb_fakequeue);
+        ss_dassert(!dcb->dcb_readqueue);
+        ss_dassert(!dcb->delayq);
+        ss_dassert(!dcb->writeq);
         ss_dassert(dcb->persistentstart == 0);
-        ss_dassert(!MYSQL_IS_COM_QUIT(GWBUF_DATA(queue)));
+        dcb->was_persistent = false;
+
         /**
          * This is a DCB that was just taken out of the persistent connection pool.
          * We need to sent a COM_CHANGE_USER query to the backend to reset the
@@ -912,7 +918,16 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
              * response is received. */
             gwbuf_free(backend_protocol->stored_query);
         }
-        dcb->was_persistent = false;
+
+        if (MYSQL_IS_COM_QUIT(GWBUF_DATA(queue)))
+        {
+            /** The connection is being closed before the first write to this
+             * backend was done. The COM_QUIT is ignored and the DCB is put
+             * into the pool once iẗ́'s closed. */
+            gwbuf_free(queue);
+            return 1;
+        }
+
         backend_protocol->ignore_reply = true;
         backend_protocol->stored_query = queue;
 
@@ -1314,6 +1329,8 @@ static void backend_set_delayqueue(DCB *dcb, GWBUF *queue)
 static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
 {
     ss_dassert(buffer);
+    ss_dassert(dcb->persistentstart == 0);
+    ss_dassert(!dcb->was_persistent);
 
     if (MYSQL_IS_CHANGE_USER(((uint8_t *)GWBUF_DATA(buffer))))
     {
