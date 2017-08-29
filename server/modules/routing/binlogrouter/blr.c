@@ -326,7 +326,7 @@ createInstance(SERVICE *service, char **options)
 
     inst->user = MXS_STRDUP_A(service->credentials.name);
     inst->password = MXS_STRDUP_A(service->credentials.authdata);
-    inst->retry_backoff = 1;
+    inst->retry_backoff = 0;
     inst->m_errno = 0;
     inst->m_errmsg = NULL;
 
@@ -1584,6 +1584,8 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
                router_inst->stats.n_masterstarts);
     dcb_printf(dcb, "\tNumber of delayed reconnects:                %d\n",
                router_inst->stats.n_delayedreconnects);
+    dcb_printf(dcb, "\tNumber of connect retries:                   %d\n",
+               router_inst->retry_backoff);
     dcb_printf(dcb, "\tCurrent binlog file:                         %s\n",
                router_inst->binlog_name);
     dcb_printf(dcb, "\tCurrent binlog position:                     %lu\n",

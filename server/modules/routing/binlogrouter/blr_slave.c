@@ -3620,7 +3620,8 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     /* if running return an error */
     if (router->master_state != BLRM_UNCONNECTED &&
-        router->master_state != BLRM_SLAVE_STOPPED)
+        router->master_state != BLRM_SLAVE_STOPPED &&
+        router->master_state != BLRM_CONNECTING)
     {
         blr_slave_send_warning_message(router,
                                        slave,
@@ -3631,6 +3632,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     spinlock_acquire(&router->lock);
     router->master_state = BLRM_UNCONNECTED;
+    router->retry_backoff = 0;
     spinlock_release(&router->lock);
 
     /**

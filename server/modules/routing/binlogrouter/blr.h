@@ -238,10 +238,12 @@ typedef enum
 /**
  * master reconnect backoff constants
  * BLR_MASTER_BACKOFF_TIME      The increments of the back off time (seconds)
- * BLR_MAX_BACKOFF              Maximum number of increments to backoff to
+ * BLR_MASTER_CONNECT_RETRY     The connect retry interval
+ * BLR_BLR_MASTER_RETRY_COUNT   Maximum value of retries
  */
-#define BLR_MASTER_BACKOFF_TIME 10
-#define BLR_MAX_BACKOFF         60
+#define BLR_MASTER_BACKOFF_TIME      10
+#define BLR_MASTER_CONNECT_RETRY     60
+#define BLR_MASTER_RETRY_COUNT     1000
 
 /* max size for error message returned to client */
 #define BINLOG_ERROR_MSG_LEN    700
