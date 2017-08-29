@@ -347,7 +347,8 @@ static inline bool MYSQL_IS_ERROR_PACKET(const uint8_t* header)
 
 static inline bool MYSQL_IS_COM_QUIT(const uint8_t* header)
 {
-    return MYSQL_GET_COMMAND(header) == MYSQL_COM_QUIT;
+    return MYSQL_GET_COMMAND(header) == MYSQL_COM_QUIT &&
+        MYSQL_GET_PAYLOAD_LEN(header) == 1;
 }
 
 static inline bool MYSQL_IS_COM_INIT_DB(const uint8_t* header)
