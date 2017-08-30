@@ -34,15 +34,19 @@
 %lex-param {void* scanner}
 
 /** Terminal symbols */
-%token FWTOK_RULE <strval>FWTOK_RULENAME FWTOK_USERS <strval>FWTOK_USER FWTOK_RULES FWTOK_MATCH FWTOK_ANY FWTOK_ALL FWTOK_STRICT_ALL FWTOK_DENY
-%token FWTOK_WILDCARD FWTOK_COLUMNS FWTOK_REGEX FWTOK_LIMIT_QUERIES FWTOK_WHERE_CLAUSE FWTOK_AT_TIMES FWTOK_ON_QUERIES
-%token <strval>FWTOK_SQLOP FWTOK_COMMENT <intval>FWTOK_INT <floatval>FWTOK_FLOAT FWTOK_PIPE <strval>FWTOK_TIME
-%token <strval>FWTOK_BTSTR <strval>FWTOK_QUOTEDSTR <strval>FWTOK_STR FWTOK_FUNCTION FWTOK_USES_FUNCTION <strval>FWTOK_CMP
+%token FWTOK_RULE FWTOK_USERS FWTOK_RULES FWTOK_MATCH FWTOK_ANY FWTOK_ALL
+%token FWTOK_STRICT_ALL FWTOK_DENY FWTOK_WILDCARD FWTOK_COLUMNS FWTOK_REGEX
+%token FWTOK_LIMIT_QUERIES FWTOK_WHERE_CLAUSE FWTOK_AT_TIMES FWTOK_ON_QUERIES
+%token FWTOK_FUNCTION FWTOK_USES_FUNCTION FWTOK_COMMENT FWTOK_PIPE
+
+/** Terminal typed symbols */
+%token <floatval>FWTOK_FLOAT <strval>FWTOK_TIME <strval>FWTOK_BTSTR
+%token <strval>FWTOK_QUOTEDSTR <strval>FWTOK_STR <strval>FWTOK_USER
+%token <strval>FWTOK_CMP <strval>FWTOK_SQLOP <intval>FWTOK_INT <strval>FWTOK_RULENAME
 
 /** Non-terminal symbols */
 %type <strval>rulename
 %type <strval>cond
-%type <strval>columnlist
 %type <strval>orlist
 
 %%
@@ -118,22 +122,25 @@ mandatory:
     | FWTOK_USES_FUNCTION functionusagelist
     ;
 
-columnlist:
+columnvalue:
     FWTOK_BTSTR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
     | FWTOK_STR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
-    | columnlist FWTOK_BTSTR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
-    | columnlist FWTOK_STR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
     ;
 
-functionlist:
-    functionvalue
-    | functionlist functionvalue
+columnlist:
+    columnvalue
+    | columnlist columnvalue
     ;
 
 functionvalue:
     FWTOK_CMP {if (!define_function_rule(scanner, $1)){YYERROR;}}
     | FWTOK_STR {if (!define_function_rule(scanner, $1)){YYERROR;}}
     | FWTOK_BTSTR  {if (!define_function_rule(scanner, $1)){YYERROR;}}
+    ;
+
+functionlist:
+    functionvalue
+    | functionlist functionvalue
     ;
 
 functionusagevalue:
@@ -145,7 +152,7 @@ functionusagelist:
     | functionusagelist functionusagevalue
     ;
 
-
+/** Optional parts of a rule */
 optional:
     FWTOK_AT_TIMES timelist
     | FWTOK_ON_QUERIES orlist
