@@ -89,6 +89,11 @@ The `function` type rule will now match a query that does not use a function
 when the filter is in whitelist mode (`action=allow`). This means that queries
 that don't use functions are allowed though in whitelist mode.
 
+#### Rule Names
+
+Rule names can no longer use punctuation in them and can consist only of
+alphanumeric characters, underscores and hyphens.
+
 ### Logging
 
 When known, the session id will be included in all logged messages. This allows

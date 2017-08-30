@@ -19,7 +19,7 @@
 %option reentrant noyywrap bison-bridge prefix="dbfw_yy"
 %option yylineno
 
-RULENAME    [-_[:alnum:][:punct:]]+
+RULENAME    [-_[:alnum:]]+
 STR         [_[:alnum:]]+
 TIME        [0-9]{2}:[0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}
 QSTR        (\"[^\"]*\")|('[^']*')
@@ -29,7 +29,6 @@ INT         [0-9]+
 FLOAT       [0-9]+[.][0-9]+
 SQL         select|insert|update|delete|grant|revoke|drop|create|alter|use|load
 PIPE        [|]
-USER        [^[:space:]]*[@]
 IP          [0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}
 BTSTR       `[^`]*`
 USTR        [%-_[:alnum:][:punct:]]+
