@@ -142,6 +142,8 @@ GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router,
 extern bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
                                        MARIADB_GTID_INFO *result);
 
+void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
+
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
 
@@ -375,19 +377,21 @@ createInstance(SERVICE *service, char **options)
     inst->mariadb10_compat = config_get_bool(params, "mariadb10-compatibility");
     inst->maxwell_compat = config_get_bool(params, "maxwell-compatibility");
     inst->trx_safe = config_get_bool(params, "transaction_safety");
+    inst->fileroot = config_copy_string(params, "filestem");
+
+    /* Server id */
+    inst->serverid = config_get_integer(params, "server_id");
+
+    /* Identity options */
     inst->set_master_version = config_copy_string(params, "master_version");
     inst->set_master_hostname = config_copy_string(params, "master_hostname");
     inst->set_slave_hostname = config_copy_string(params, "slave_hostname");
-    inst->fileroot = config_copy_string(params, "filestem");
-
-    inst->serverid = config_get_integer(params, "server_id");
-    inst->set_master_server_id = inst->serverid != 0;
-
     inst->masterid = config_get_integer(params, "master_id");
-
+    inst->set_master_server_id = inst->masterid != 0;
     inst->master_uuid = config_copy_string(params, "master_uuid");
     inst->set_master_uuid = inst->master_uuid != NULL;
 
+    /* Slave Heartbeat */
     inst->send_slave_heartbeat = config_get_bool(params, "send_slave_heartbeat");
 
     /* Semi-Sync support */
@@ -662,15 +666,16 @@ createInstance(SERVICE *service, char **options)
                     }
                     else
                     {
-                        if (h_val == 0)
-                        {
-                            MXS_WARNING("%s: %s",
-                                        inst->service->name,
-                                        "MASTER_HEARTBEAT_PERIOD has been set to 0 (disabled): "
-                                        "a master network inactivity will not be handled.");
-                        }
                         inst->heartbeat = h_val;
                     }
+                }
+                else if (strcmp(options[i], "connect_retry") == 0)
+                {
+                    inst->retry_interval = atoi(value);
+                }
+                else if (strcmp(options[i], "master_retry_count") == 0)
+                {
+                    inst->retry_limit = atoi(value);
                 }
                 else if (strcmp(options[i], "send_slave_heartbeat") == 0)
                 {
@@ -683,21 +688,12 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "ssl_cert_verification_depth") == 0)
                 {
-                    int new_depth =  atoi(value);
-                    if (new_depth > 0)
-                    {
-                        inst->ssl_cert_verification_depth = new_depth;
-                    }
-                    else
-                    {
-                        MXS_WARNING("Invalid Master ssl_cert_verification_depth %s."
-                                    " Setting it to default value %i.",
-                                    value, inst->ssl_cert_verification_depth);
-                    }
+                    inst->ssl_cert_verification_depth = atoi(value);
                 }
                 else
                 {
-                    MXS_WARNING("Unsupported router option %s for binlog router.",
+                    MXS_WARNING("%s: unsupported router option %s for binlog router.",
+                                service->name,
                                 options[i]);
                 }
             }
@@ -718,6 +714,49 @@ createInstance(SERVICE *service, char **options)
         inst->set_master_server_id = true;
     }
 
+    /* Check ssl_cert_verification_depth option */
+    if (inst->ssl_cert_verification_depth < 0)
+    {
+        MXS_ERROR("%s: invalid Master ssl_cert_verification_depth %s."
+                  " Setting it to default value %i.",
+                  service->name,
+                  value,
+                  inst->ssl_cert_verification_depth);
+        free_instance(inst);
+        return NULL;
+    }
+
+    /* Check master connect options */
+    if (inst->heartbeat < 0)
+    {
+        MXS_ERROR("%s: invalid 'heartbeat' value.",
+                  service->name);
+        free_instance(inst);
+        return NULL;
+    }
+
+    if (inst->heartbeat == 0)
+    {
+        blr_log_disabled_heartbeat(inst);
+    }
+
+    if (inst->retry_interval <= 0)
+    {
+        MXS_ERROR("%s: invalid 'connect_retry' value.",
+                  service->name);
+        free_instance(inst);
+        return NULL;
+    }
+
+    if (inst->retry_limit <= 0)
+    {
+        MXS_ERROR("%s: invalid 'master_retry_count' value.",
+                  service->name);
+        free_instance(inst);
+        return NULL;
+    }
+
+    /* Check BinlogDir option */
     if ((inst->binlogdir == NULL) ||
         (inst->binlogdir != NULL &&
          !strlen(inst->binlogdir)))
@@ -730,7 +769,7 @@ createInstance(SERVICE *service, char **options)
 
     if (inst->serverid <= 0)
     {
-        MXS_ERROR("Service %s, server-id is not configured. "
+        MXS_ERROR("Service %s, server_id is not configured. "
                   "Please configure it with a unique positive "
                   "integer value (1..2^32-1)",
                   service->name);
@@ -2010,6 +2049,9 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
 
     json_object_set_new(rval, "binlogdir", json_string(router_inst->binlogdir));
     json_object_set_new(rval, "heartbeat", json_integer(router_inst->heartbeat));
+    json_object_set_new(rval, "master_retry_interval", json_integer(router_inst->retry_interval));
+    json_object_set_new(rval, "master_retry_limit", json_integer(router_inst->retry_limit));
+    json_object_set_new(rval, "master_retries", json_integer(router_inst->retry_count));
     json_object_set_new(rval, "master_starts", json_integer(router_inst->stats.n_masterstarts));
     json_object_set_new(rval, "master_reconnects", json_integer(router_inst->stats.n_delayedreconnects));
     json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name));
@@ -2067,9 +2109,11 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
 
         if (!router_inst->mariadb10_compat)
         {
-            json_object_set_new(rval, "latest_event_type", json_string(
-                                                                       (router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
-                                                                       event_names[router_inst->lastEventReceived] : "unknown"));
+            json_object_set_new(rval,
+                                "latest_event_type",
+                                json_string((router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
+                                            event_names[router_inst->lastEventReceived] :
+                                            "unknown"));
         }
         else
         {
@@ -2816,8 +2860,8 @@ blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *ins
         {
             if (listener_set_ssl_version(backend_server->server_ssl, (char *)value) != 0)
             {
-                MXS_ERROR("Unknown parameter value for 'ssl_version' for"
-                          " service '%s': %s",
+                MXS_ERROR("Found unknown optional parameter value for 'ssl_version' for"
+                          " service '%s': %s, ignoring it.",
                           inst->service->name,
                           value);
             }
@@ -2830,7 +2874,37 @@ blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *ins
     /* Connect options */
     else if (strcmp(name, "master_heartbeat_period") == 0)
     {
-        inst->heartbeat = atol((char*)value);
+        int new_val = atol((char *)value);
+        if (new_val < 0)
+        {
+            MXS_WARNING("Found invalid 'master_heartbeat_period' value"
+                      " for service '%s': %s, ignoring it.",
+                      inst->service->name,
+                      value);
+        }
+        else
+        {
+            if (inst->heartbeat > 0 && new_val == 0)
+            {
+                blr_log_disabled_heartbeat(inst);
+            }
+            inst->heartbeat = new_val;
+        }
+    }
+    else if (strcmp(name, "master_connect_retry") == 0)
+    {
+        int new_val = atol((char *)value);
+        if (new_val <= 0)
+        {
+            MXS_WARNING("Found invalid 'master_connect_retry' value"
+                      " for service '%s': %s, ignoring it.",
+                      inst->service->name,
+                      value);
+        }
+        else
+        {
+            inst->retry_interval = new_val;
+        }
     }
     else
     {
@@ -3327,4 +3401,12 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst)
                inst->service->name);
 
     return true;
+}
+
+void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst)
+{
+    MXS_WARNING("%s: %s",
+                inst->service->name,
+                "MASTER_HEARTBEAT_PERIOD has been set to 0 (disabled): "
+                "a master network inactivity will not be handled.");
 }

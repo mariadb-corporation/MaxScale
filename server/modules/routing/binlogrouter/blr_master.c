@@ -2923,8 +2923,6 @@ static void blr_register_cache_response(ROUTER_INSTANCE *router,
  */
 static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
 {
-    char task_name[BLRM_TASK_NAME_LEN + 1] = "";
-
     switch (router->master_state)
     {
     case BLRM_TIMESTAMP:
@@ -3232,6 +3230,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
          */
         if (router->heartbeat > 0)
         {
+            char task_name[BLRM_TASK_NAME_LEN + 1] = "";
             snprintf(task_name,
                      BLRM_TASK_NAME_LEN,
                      "%s heartbeat",

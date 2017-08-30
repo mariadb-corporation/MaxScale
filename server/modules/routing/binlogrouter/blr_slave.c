@@ -354,7 +354,7 @@ static int binary_logs_find_file_cb(void *data,
 static void blr_log_config_changes(ROUTER_INSTANCE *router,
                                    MASTER_SERVER_CFG *current_master,
                                    CHANGE_MASTER_OPTIONS *change_master);
-
+extern void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
 /**
  * Process a request packet from the slave server.
  *
@@ -3977,12 +3977,39 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         {
             if (h_val == 0)
             {
-                MXS_WARNING("%s: %s",
-                            router->service->name,
-                           "MASTER_HEARTBEAT_PERIOD has been set to 0 (disabled): "
-                           "a master network inactivity will not be handled.");
+                blr_log_disabled_heartbeat(router);
             }
             router->heartbeat = h_val;
+        }
+    }
+
+    char *master_connect_retry = change_master.connect_retry;
+    if (master_connect_retry)
+    {
+        int h_val = (int)strtol(master_connect_retry, NULL, 10);
+        if (h_val <= 0 ||
+            (errno == ERANGE))
+        {
+            snprintf(error,
+                     BINLOG_ERROR_MSG_LEN,
+                     "The requested value for MASTER_CONNECT_RETRY "
+                     "interval is not valid: %s.",
+                     master_connect_retry);
+
+            MXS_ERROR("%s: %s", router->service->name, error);
+
+            /* restore previous master_host and master_port */
+            blr_master_restore_config(router, current_master);
+
+            blr_master_free_parsed_options(&change_master);
+
+            spinlock_release(&router->lock);
+
+            return -1;
+        }
+        else
+        {
+            router->retry_interval = h_val;
         }
     }
 
@@ -8958,21 +8985,34 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                                    MASTER_SERVER_CFG *current_master,
                                    CHANGE_MASTER_OPTIONS *change_master)
 {
-    /* Prepare heartbeat msg */
-    int len = change_master->heartbeat_period ?
-              strlen(change_master->heartbeat_period) :
-              0;
-    char heartbeat_msg[strlen("MASTER_HEARTBEAT_PERIOD=") + len + 1];
+    /* Prepare heartbeat and retry msgs */
+    static const char heartbeat[] = ", MASTER_HEARTBEAT_PERIOD=";
+    static const char retry[] = ", MASTER_CONNECT_RETRY=";
+    int h_len = change_master->heartbeat_period ?
+                strlen(change_master->heartbeat_period) :
+                0;
+    int r_len = change_master->connect_retry ?
+                strlen(change_master->connect_retry) :
+                0;
+    char heartbeat_msg[sizeof(heartbeat) + h_len];
+    char retry_msg[sizeof(retry) + r_len];
+    heartbeat_msg[0] = 0;
+    retry_msg[0] = 0;
 
-    if (len)
+    if (h_len)
     {
         sprintf(heartbeat_msg,
-                "MASTER_HEARTBEAT_PERIOD=%lu",
+                "%s%lu",
+                heartbeat,
                 router->heartbeat); // Display the current "long" value
     }
-    else
+
+    if (r_len)
     {
-        heartbeat_msg[0] = 0;
+        sprintf(retry_msg,
+                "%s%d",
+                retry,
+                router->retry_interval); // Display the current "long" value
     }
 
     /* Prepare GTID msg */
@@ -8987,7 +9027,7 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                "New state is MASTER_HOST='%s', MASTER_PORT=%i, "
                "MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, "
                "MASTER_USER='%s'"
-               "%s, %s",
+               "%s%s%s",
                router->service->name,
                current_master->host,
                current_master->port,
@@ -9000,5 +9040,6 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                router->current_pos,
                router->user,
                gtid_msg,
-               heartbeat_msg);
+               heartbeat_msg,
+               retry_msg);
 }

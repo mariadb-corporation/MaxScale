@@ -3169,6 +3169,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 
     /* Connect options */
     fprintf(config_file, "master_heartbeat_period=%lu\n", router->heartbeat);
+    fprintf(config_file, "master_connect_retry=%d\n", router->retry_interval);
 
     fclose(config_file);
 
