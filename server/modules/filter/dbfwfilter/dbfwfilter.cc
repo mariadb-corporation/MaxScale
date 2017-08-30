@@ -70,6 +70,7 @@
 #include <regex.h>
 #include <stdlib.h>
 #include <string>
+#include <list>
 
 #include <maxscale/filter.h>
 #include <maxscale/atomic.h>
@@ -1096,6 +1097,8 @@ char* get_regex_string(char** saved)
     return NULL;
 }
 
+typedef std::list<std::string> ValueList;
+
 /**
  * Structure used to hold rules and users that are being parsed
  */
@@ -1106,6 +1109,7 @@ struct parser_stack
     STRLINK* active_rules;
     enum match_type active_mode;
     user_template_t* templates;
+    ValueList values;
     std::string name;
 };
 
@@ -1149,38 +1153,63 @@ static RULE* find_rule_by_name(RULE* rules, const char* name)
  * @param scanner Current scanner
  * @param name Name of the rule
  */
-bool create_rule(void* scanner, const char* name)
+static RULE* create_rule(const std::string& name)
 {
-    bool rval = false;
+    RULE *ruledef = new RULE;
+
+    ruledef->type = RT_PERMISSION;
+    ruledef->on_queries = FW_OP_UNDEFINED;
+    ruledef->next = NULL;
+    ruledef->active = NULL;
+    ruledef->times_matched = 0;
+    ruledef->data = NULL;
+    ruledef->name = name;
+
+    return ruledef;
+}
+
+bool set_rule_name(void* scanner, char* name)
+{
+    bool rval = true;
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t)scanner);
     ss_dassert(rstack);
 
-    if (find_rule_by_name(rstack->rule, name) == NULL)
+    if (find_rule_by_name(rstack->rule, name))
     {
-        RULE *ruledef = (RULE*)MXS_MALLOC(sizeof(RULE));
-
-        if (ruledef && (ruledef->name = MXS_STRDUP(name)))
-        {
-            ruledef->type = RT_PERMISSION;
-            ruledef->on_queries = FW_OP_UNDEFINED;
-            ruledef->next = rstack->rule;
-            ruledef->active = NULL;
-            ruledef->times_matched = 0;
-            ruledef->data = NULL;
-            rstack->rule = ruledef;
-            rval = true;
-        }
-        else
-        {
-            MXS_FREE(ruledef);
-        }
+        MXS_ERROR("Redefinition of rule '%s' on line %d.", name, dbfw_yyget_lineno(scanner));
+        rval = false;
     }
     else
     {
-        MXS_ERROR("Redefinition of rule '%s' on line %d.", name, dbfw_yyget_lineno(scanner));
+        rstack->name = name;
     }
 
     return rval;
+}
+
+/**
+ * Remove backticks from a string
+ * @param string String to parse
+ * @return String without backticks
+ */
+static std::string strip_backticks(std::string str)
+{
+    size_t start = str.find_first_of('`');
+    size_t end = str.find_last_of('`');
+
+    if (end != std::string::npos && start != std::string::npos)
+    {
+        str = str.substr(start + 1, (end - 1) - (start + 1));
+    }
+
+    return str;
+}
+
+void push_value(void* scanner, char* value)
+{
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t)scanner);
+    ss_dassert(rstack);
+    rstack->values.push_back(strip_backticks(value));
 }
 
 /**
@@ -1206,8 +1235,11 @@ static void rule_free_all(RULE* rule)
             break;
 
         case RT_THROTTLE:
-            MXS_FREE(rule->data);
-            break;
+        {
+            QUERYSPEED* qs = (QUERYSPEED*)rule->data;
+            delete qs;
+        }
+        break;
 
         case RT_REGEX:
             pcre2_code_free((pcre2_code*) rule->data);
@@ -1217,8 +1249,7 @@ static void rule_free_all(RULE* rule)
             break;
         }
 
-        MXS_FREE(rule->name);
-        MXS_FREE(rule);
+        delete rule;
         rule = tmp;
     }
 }
@@ -1360,6 +1391,21 @@ void set_matching_mode(void* scanner, enum match_type mode)
     rstack->active_mode = mode;
 }
 
+STRLINK* valuelist_to_strlink(ValueList* arr)
+{
+
+    STRLINK* list = NULL;
+
+    for (ValueList::const_iterator it = arr->begin(); it != arr->end(); it++)
+    {
+        list = strlink_push(list, it->c_str());
+    }
+
+    arr->clear();
+
+    return list;
+}
+
 /**
  * Define the topmost rule as a wildcard rule
  * @param scanner Current scanner
@@ -1368,25 +1414,10 @@ void define_wildcard_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule->type = RT_WILDCARD;
-}
-
-/**
- * Remove backticks from a string
- * @param string String to parse
- * @return String without backticks
- */
-static char* strip_backticks(char* string)
-{
-    char* ptr = strchr(string, '`');
-    if (ptr)
-    {
-        char *end = strrchr(string, '`');
-        ss_dassert(end);
-        *end = '\0';
-        return ptr + 1;
-    }
-    return string;
+    RULE* rule = create_rule(rstack->name);
+    rule->type = RT_WILDCARD;
+    rule->next = rstack->rule;
+    rstack->rule = rule;
 }
 
 /**
@@ -1394,19 +1425,16 @@ static char* strip_backticks(char* string)
  * @param scanner Current scanner
  * @param columns List of column names
  */
-bool define_columns_rule(void* scanner, char* columns)
+void define_columns_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    STRLINK* list = NULL;
+    RULE* rule = create_rule(rstack->name);
 
-    if ((list = strlink_push((STRLINK*)rstack->rule->data, strip_backticks(columns))))
-    {
-        rstack->rule->type = RT_COLUMN;
-        rstack->rule->data = list;
-    }
-
-    return list != NULL;
+    rule->type = RT_COLUMN;
+    rule->data = valuelist_to_strlink(&rstack->values);
+    rule->next = rstack->rule;
+    rstack->rule = rule;
 }
 
 /**
@@ -1414,19 +1442,16 @@ bool define_columns_rule(void* scanner, char* columns)
  * @param scanner Current scanner
  * @param columns List of function names
  */
-bool define_function_rule(void* scanner, char* columns)
+void define_function_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    STRLINK* list = NULL;
+    RULE* rule = create_rule(rstack->name);
 
-    if ((list = strlink_push((STRLINK*)rstack->rule->data, strip_backticks(columns))))
-    {
-        rstack->rule->type = RT_FUNCTION;
-        rstack->rule->data = list;
-    }
-
-    return list != NULL;
+    rule->type = RT_FUNCTION;
+    rule->data = valuelist_to_strlink(&rstack->values);
+    rule->next = rstack->rule;
+    rstack->rule = rule;
 }
 
 /**
@@ -1437,19 +1462,16 @@ bool define_function_rule(void* scanner, char* columns)
  *
  * @return True if rule creation was successful
  */
-bool define_function_usage_rule(void* scanner, char* columns)
+void define_function_usage_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    STRLINK* list = NULL;
+    RULE* rule = create_rule(rstack->name);
 
-    if ((list = strlink_push((STRLINK*)rstack->rule->data, strip_backticks(columns))))
-    {
-        rstack->rule->type = RT_USES_FUNCTION;
-        rstack->rule->data = list;
-    }
-
-    return list != NULL;
+    rule->type = RT_USES_FUNCTION;
+    rule->data = valuelist_to_strlink(&rstack->values);
+    rule->next = rstack->rule;
+    rstack->rule = rule;
 }
 
 /**
@@ -1460,29 +1482,31 @@ void define_where_clause_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule->type = RT_CLAUSE;
+    RULE* rule = create_rule(rstack->name);
+
+    rule->type = RT_CLAUSE;
+    rule->next = rstack->rule;
+    rstack->rule = rule;
 }
 
 /**
  * Define the topmost rule as a no_where_clause rule
  * @param scanner Current scanner
  */
-bool define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdoff)
+void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdoff)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    QUERYSPEED* qs = (QUERYSPEED*)MXS_MALLOC(sizeof(QUERYSPEED));
+    QUERYSPEED* qs = new QUERYSPEED;
+    RULE* rule = create_rule(rstack->name);
 
-    if (qs)
-    {
-        qs->limit = max;
-        qs->period = timeperiod;
-        qs->cooldown = holdoff;
-        rstack->rule->type = RT_THROTTLE;
-        rstack->rule->data = qs;
-    }
-
-    return qs != NULL;
+    qs->limit = max;
+    qs->period = timeperiod;
+    qs->cooldown = holdoff;
+    rule->type = RT_THROTTLE;
+    rule->data = qs;
+    rule->next = rstack->rule;
+    rstack->rule = rule;
 }
 
 /**
@@ -1503,8 +1527,11 @@ bool define_regex_rule(void* scanner, char* pattern)
     {
         struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
         ss_dassert(rstack);
-        rstack->rule->type = RT_REGEX;
-        rstack->rule->data = (void*) re;
+        RULE* rule = create_rule(rstack->name);
+        rule->type = RT_REGEX;
+        rule->data = re;
+        rule->next = rstack->rule;
+        rstack->rule = rule;
     }
     else
     {
@@ -1635,7 +1662,7 @@ static bool process_rule_file(const char* filename, RULE** rules, HASHTABLE **us
         dbfw_yy_switch_to_buffer(buf, scanner);
 
         /** Parse the rule file */
-        rc = dbfw_yyparse(scanner);
+        MXS_EXCEPTION_GUARD(rc = dbfw_yyparse(scanner));
 
         dbfw_yy_delete_buffer(buf, scanner);
         dbfw_yylex_destroy(scanner);
@@ -2028,8 +2055,7 @@ bool match_throttle(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
     if (queryspeed == NULL)
     {
         /**No match found*/
-        queryspeed = (QUERYSPEED*)MXS_CALLOC(1, sizeof(QUERYSPEED));
-        MXS_ABORT_IF_NULL(queryspeed);
+        queryspeed = new QUERYSPEED;
         queryspeed->period = rule_qs->period;
         queryspeed->cooldown = rule_qs->cooldown;
         queryspeed->limit = rule_qs->limit;

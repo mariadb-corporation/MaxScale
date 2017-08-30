@@ -72,9 +72,8 @@ command
     | FWTOK_COMMENT
     ;
 
-
 rule
-    : FWTOK_RULE rulename {if (!create_rule(scanner, $2)){YYERROR;}} FWTOK_DENY ruleparams
+    : FWTOK_RULE rulename {if (!set_rule_name(scanner, $2)){YYERROR;}} FWTOK_DENY ruleparams
     ;
 
 ruleparams
@@ -114,17 +113,17 @@ mandatory
     : FWTOK_WILDCARD {define_wildcard_rule(scanner);}
     | FWTOK_WHERE_CLAUSE {define_where_clause_rule(scanner);}
     | FWTOK_LIMIT_QUERIES FWTOK_INT FWTOK_INT FWTOK_INT
-        {if (!define_limit_queries_rule(scanner, $2, $3, $4)){YYERROR;}}
-    | FWTOK_REGEX FWTOK_QUOTEDSTR {if (!define_regex_rule(scanner, $2)){YYERROR;}}
-    | FWTOK_COLUMNS columnlist
-    | FWTOK_FUNCTION functionlist
-    | FWTOK_FUNCTION {if (!define_function_rule(scanner, "")){YYERROR;}}
-    | FWTOK_USES_FUNCTION functionusagelist
+        {define_limit_queries_rule(scanner, $2, $3, $4);}
+    | FWTOK_REGEX FWTOK_QUOTEDSTR {define_regex_rule(scanner, $2);}
+    | FWTOK_COLUMNS columnlist {define_columns_rule(scanner);}
+    | FWTOK_FUNCTION functionlist {define_function_rule(scanner);}
+    | FWTOK_FUNCTION {define_function_rule(scanner);}
+    | FWTOK_USES_FUNCTION functionusagelist {define_function_usage_rule(scanner);}
     ;
 
 columnvalue
-    : FWTOK_BTSTR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
-    | FWTOK_STR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
+    : FWTOK_BTSTR {push_value(scanner, $1);}
+    | FWTOK_STR {push_value(scanner, $1);}
     ;
 
 columnlist
@@ -133,9 +132,9 @@ columnlist
     ;
 
 functionvalue
-    : FWTOK_CMP {if (!define_function_rule(scanner, $1)){YYERROR;}}
-    | FWTOK_STR {if (!define_function_rule(scanner, $1)){YYERROR;}}
-    | FWTOK_BTSTR  {if (!define_function_rule(scanner, $1)){YYERROR;}}
+    : FWTOK_CMP {push_value(scanner, $1);}
+    | FWTOK_STR {push_value(scanner, $1);}
+    | FWTOK_BTSTR  {push_value(scanner, $1);}
     ;
 
 functionlist
@@ -144,8 +143,8 @@ functionlist
     ;
 
 functionusagevalue
-    : FWTOK_BTSTR {if (!define_function_usage_rule(scanner, $1)){YYERROR;}}
-    | FWTOK_STR {if (!define_function_usage_rule(scanner, $1)){YYERROR;}}
+    : FWTOK_BTSTR {push_value(scanner, $1);}
+    | FWTOK_STR {push_value(scanner, $1);}
 
 functionusagelist
     : functionusagevalue
