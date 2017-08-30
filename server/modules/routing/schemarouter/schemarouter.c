@@ -496,6 +496,8 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
 
     if (sz > 0)
     {
+        bool conflict = false;
+
         for (i = 0; i < sz; i++)
         {
             char* name;
@@ -510,9 +512,11 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
                     /** Warn about improper usage of the router */
                     if (rval && strcmp(name, rval) != 0)
                     {
-                        MXS_ERROR("Query targets databases on servers '%s' and '%s'. "
-                                  "Cross database queries across servers are not supported.",
-                                  rval, name);
+                        MXS_WARNING("Query targets databases on servers '%s' and '%s'. "
+                                    "Cross database queries across servers are not supported. "
+                                    "Routing query to server with the current active database.",
+                                    rval, name);
+                        conflict = true;
                     }
                     else if (rval == NULL)
                     {
@@ -525,6 +529,11 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
             MXS_FREE(dbnms[i]);
         }
         MXS_FREE(dbnms);
+
+        if (conflict)
+        {
+            return (char*)hashtable_fetch(ht, client->current_db);
+        }
     }
 
     /* Check if the query is a show tables query with a specific database */
