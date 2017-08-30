@@ -1177,3 +1177,17 @@ json_t* session_list_to_json(const char* host)
     dcb_foreach(seslist_cb, &data);
     return mxs_json_resource(host, MXS_JSON_API_SESSIONS, data.json);
 }
+
+MXS_SESSION* session_get_current()
+{
+    DCB* dcb = dcb_get_current();
+
+    return dcb ? dcb->session : NULL;
+}
+
+uint64_t session_get_current_id()
+{
+    MXS_SESSION* session = session_get_current();
+
+    return session ? session->ses_id : 0;
+}

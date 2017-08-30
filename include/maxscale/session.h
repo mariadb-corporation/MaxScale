@@ -441,4 +441,21 @@ json_t* session_to_json(const MXS_SESSION *session, const char* host);
  */
 json_t* session_list_to_json(const char* host);
 
+/**
+ * @brief Return the session of the dcb currently being processed
+ *        by the calling thread.
+ *
+ * @return A session, or NULL if the calling thread is not currently handling
+ *         a dcb or if the calling thread is not a polling/worker thread.
+ **/
+MXS_SESSION* session_get_current();
+
+/**
+ * @brief Return the id of the session of the dcb currently being processed
+ *        by the calling thread.
+ *
+ * @return The id of the current session or 0 if there is no current session.
+ **/
+uint64_t session_get_current_id();
+
 MXS_END_DECLS
