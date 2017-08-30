@@ -51,67 +51,67 @@
 
 %%
 
-input:
-    line_input
+input
+    : line_input
     | line_input command { MXS_WARNING("Firewall rules file lacks a trailing newline."); }
     ;
 
-line_input:
-
+line_input
+    :
     | line_input line
     ;
 
-line:
-    '\n'
+line
+    : '\n'
     | command '\n'
     ;
 
-command:
-    rule
+command
+    : rule
     | user
     | FWTOK_COMMENT
     ;
 
 
-rule:
-    FWTOK_RULE rulename {if (!create_rule(scanner, $2)){YYERROR;}} FWTOK_DENY ruleparams
+rule
+    : FWTOK_RULE rulename {if (!create_rule(scanner, $2)){YYERROR;}} FWTOK_DENY ruleparams
     ;
 
-ruleparams:
-    mandatory optional optional
+ruleparams
+    : mandatory optional optional
     | mandatory optional
     | mandatory
     | optional
     ;
 
-rulename:
-    FWTOK_RULENAME
+rulename
+    : FWTOK_RULENAME
     | FWTOK_STR
     ;
 
-user:
-    FWTOK_USERS userlist FWTOK_MATCH cond FWTOK_RULES namelist
+user
+    : FWTOK_USERS userlist FWTOK_MATCH cond FWTOK_RULES namelist
         {if (!create_user_templates(scanner)){YYERROR;}}
     ;
 
-userlist:
-    FWTOK_USER {if (!add_active_user(scanner, $1)){YYERROR;}}
+userlist
+    : FWTOK_USER {if (!add_active_user(scanner, $1)){YYERROR;}}
     | userlist FWTOK_USER {if (!add_active_user(scanner, $2)){YYERROR;}}
     ;
 
-namelist:
-    rulename {if (!add_active_rule(scanner, $1)){YYERROR;}}
+namelist
+    : rulename {if (!add_active_rule(scanner, $1)){YYERROR;}}
     | namelist rulename {if (!add_active_rule(scanner, $2)){YYERROR;}}
     ;
 
-cond:
-    FWTOK_ANY {set_matching_mode(scanner, FWTOK_MATCH_ANY);}
+cond
+    : FWTOK_ANY {set_matching_mode(scanner, FWTOK_MATCH_ANY);}
     | FWTOK_ALL {set_matching_mode(scanner, FWTOK_MATCH_ALL);}
     | FWTOK_STRICT_ALL {set_matching_mode(scanner, FWTOK_MATCH_STRICT_ALL);}
     ;
 
-mandatory:
-    FWTOK_WILDCARD {define_wildcard_rule(scanner);}
+mandatory
+    : FWTOK_WILDCARD {define_wildcard_rule(scanner);}
     | FWTOK_WHERE_CLAUSE {define_where_clause_rule(scanner);}
     | FWTOK_LIMIT_QUERIES FWTOK_INT FWTOK_INT FWTOK_INT
         {if (!define_limit_queries_rule(scanner, $2, $3, $4)){YYERROR;}}
@@ -122,48 +122,48 @@ mandatory:
     | FWTOK_USES_FUNCTION functionusagelist
     ;
 
-columnvalue:
-    FWTOK_BTSTR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
+columnvalue
+    : FWTOK_BTSTR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
     | FWTOK_STR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
     ;
 
-columnlist:
-    columnvalue
+columnlist
+    : columnvalue
     | columnlist columnvalue
     ;
 
-functionvalue:
-    FWTOK_CMP {if (!define_function_rule(scanner, $1)){YYERROR;}}
+functionvalue
+    : FWTOK_CMP {if (!define_function_rule(scanner, $1)){YYERROR;}}
     | FWTOK_STR {if (!define_function_rule(scanner, $1)){YYERROR;}}
     | FWTOK_BTSTR  {if (!define_function_rule(scanner, $1)){YYERROR;}}
     ;
 
-functionlist:
-    functionvalue
+functionlist
+    : functionvalue
     | functionlist functionvalue
     ;
 
-functionusagevalue:
-    FWTOK_BTSTR {if (!define_function_usage_rule(scanner, $1)){YYERROR;}}
+functionusagevalue
+    : FWTOK_BTSTR {if (!define_function_usage_rule(scanner, $1)){YYERROR;}}
     | FWTOK_STR {if (!define_function_usage_rule(scanner, $1)){YYERROR;}}
 
-functionusagelist:
-    functionusagevalue
+functionusagelist
+    : functionusagevalue
     | functionusagelist functionusagevalue
     ;
 
 /** Optional parts of a rule */
-optional:
-    FWTOK_AT_TIMES timelist
+optional
+    : FWTOK_AT_TIMES timelist
     | FWTOK_ON_QUERIES orlist
     ;
 
-timelist:
-    FWTOK_TIME {if (!add_at_times_rule(scanner, $1)){YYERROR;}}
+timelist
+    : FWTOK_TIME {if (!add_at_times_rule(scanner, $1)){YYERROR;}}
     | timelist FWTOK_TIME {if (!add_at_times_rule(scanner, $2)){YYERROR;}}
     ;
 
-orlist:
-    FWTOK_SQLOP {add_on_queries_rule(scanner, $1);}
+orlist
+    : FWTOK_SQLOP {add_on_queries_rule(scanner, $1);}
     | orlist FWTOK_PIPE FWTOK_SQLOP {add_on_queries_rule(scanner, $3);}
     ;
