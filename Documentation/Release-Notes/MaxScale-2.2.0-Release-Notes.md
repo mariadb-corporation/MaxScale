@@ -89,6 +89,21 @@ The `function` type rule will now match a query that does not use a function
 when the filter is in whitelist mode (`action=allow`). This means that queries
 that don't use functions are allowed though in whitelist mode.
 
+### Logging
+
+When known, the session id will be included in all logged messages. This allows
+a range of logged messages related to a particular session (that is, client) to
+be bound together, and makes it easier to investigate problems. In practice this
+is visible so that if a logged message earlier looked like
+```
+2017-08-30 12:20:49   warning: [masking] The rule ...
+```
+it will now look like
+```
+2017-08-30 12:20:49   warning: (4711) [masking] The rule ...
+```
+where `4711` is the session id.
+
 ## Dropped Features
 
 ### MaxAdmin

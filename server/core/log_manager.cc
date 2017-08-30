@@ -12,29 +12,30 @@
  */
 #include <maxscale/log_manager.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <stdio.h>
+#include <inttypes.h>
+#include <sched.h>
+#include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <syslog.h>
-#include <sched.h>
+#include <unistd.h>
 
+#include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/config.h>
-#include <maxscale/platform.h>
+#include <maxscale/debug.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/json_api.h>
+#include <maxscale/platform.h>
+#include <maxscale/session.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/debug.h>
-#include <maxscale/alloc.h>
 #include <maxscale/utils.h>
-
 #include "maxscale/mlist.h"
 
 #define MAX_PREFIXLEN 250
@@ -2893,6 +2894,21 @@ int mxs_log_message(int priority,
         {
             va_list valist;
 
+            uint64_t session_id = session_get_current_id();
+            int session_len = 0;
+
+            char session[20]; // Enough to fit "9223372036854775807"
+
+            if (session_id != 0)
+            {
+                sprintf(session, "%" PRIu64, session_id);
+                session_len = strlen(session) + 3; // +3 due to "() "
+            }
+            else
+            {
+                session_len = 0;
+            }
+
             int modname_len = modname ? strlen(modname) + 3 : 0; // +3 due to "[...] "
 
             static const char SUPPRESSION[] =
@@ -2938,6 +2954,7 @@ int mxs_log_message(int priority,
 
                 int buffer_len = 0;
                 buffer_len += prefix.len;
+                buffer_len += session_len;
                 buffer_len += modname_len;
                 buffer_len += augmentation_len;
                 buffer_len += message_len;
@@ -2956,12 +2973,20 @@ int mxs_log_message(int priority,
                 char buffer[buffer_len];
 
                 char *prefix_text = buffer;
-                char *modname_text = prefix_text + prefix.len;
+                char *session_text = prefix_text + prefix.len;
+                char *modname_text = session_text + session_len;
                 char *augmentation_text = modname_text + modname_len;
                 char *message_text = augmentation_text + augmentation_len;
                 char *suppression_text = message_text + message_len;
 
                 strcpy(prefix_text, prefix.text);
+
+                if (session_len)
+                {
+                    strcpy(session_text, "(");
+                    strcat(session_text, session);
+                    strcat(session_text, ") ");
+                }
 
                 if (modname_len)
                 {
