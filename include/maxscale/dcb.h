@@ -294,6 +294,14 @@ void dcb_foreach_parallel(bool (*func)(DCB *dcb, void *data), void **data);
 int dcb_get_port(const DCB *dcb);
 
 /**
+ * @brief Return the DCB currently being handled by the calling thread.
+ *
+ * @return A DCB, or NULL if the calling thread is not currently handling
+ *         a DCB or if the calling thread is not a polling/worker thread.
+ */
+DCB* dcb_get_current();
+
+/**
  * DCB flags values
  */
 #define DCBF_HUNG               0x0002  /*< Hangup has been dispatched */
