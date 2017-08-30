@@ -283,8 +283,7 @@ struct Rule
         type(RT_PERMISSION),
         on_queries(FW_OP_UNDEFINED),
         times_matched(0),
-        active(NULL),
-        next(NULL)
+        active(NULL)
     {
     }
 
@@ -298,7 +297,6 @@ struct Rule
     uint32_t       on_queries;  /*< Types of queries to inspect */
     int            times_matched; /*< Number of times this rule has been matched */
     TIMERANGE*     active;      /*< List of times when this rule is active */
-    Rule*          next;
 };
 
 typedef std::tr1::shared_ptr<Rule> SRule;
@@ -316,7 +314,7 @@ typedef struct rulebook_t
 thread_local struct
 {
     int        rule_version;
-    Rule      *rules;
+    RuleList   rules;
     HASHTABLE *users;
 } this_thread = {};
 
@@ -379,7 +377,7 @@ typedef struct
 bool parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
 bool parse_limit_queries(FW_INSTANCE* instance, Rule* ruledef, const char* rule, char** saveptr);
 static void rule_free_all(Rule* rule);
-static bool process_rule_file(const char* filename, Rule** rules, HASHTABLE **users);
+static bool process_rule_file(const char* filename, RuleList* rules, HASHTABLE **users);
 bool replace_rules(FW_INSTANCE* instance);
 
 static void print_rule(Rule *rules, char *dest)
@@ -397,7 +395,7 @@ static void print_rule(Rule *rules, char *dest)
             rules->times_matched);
 }
 
-static json_t* rule_to_json(Rule *rule)
+static json_t* rule_to_json(const SRule& rule)
 {
     int type = 0;
 
@@ -415,12 +413,13 @@ static json_t* rule_to_json(Rule *rule)
     return rval;
 }
 
-static json_t* rules_to_json(Rule *rules)
+static json_t* rules_to_json(const RuleList& rules)
 {
     json_t* rval = json_array();
 
-    for (Rule *rule = rules; rule; rule = rule->next)
+    for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
     {
+        const SRule& rule = *it;
         json_array_append_new(rval, rule_to_json(rule));
     }
 
@@ -634,7 +633,7 @@ char* next_ip_class(char* str)
  * @param rule Pointer to a rule
  * @return True if the string was parses successfully, false if an error occurred
  */
-bool parse_querytypes(const char* str, Rule* rule)
+bool parse_querytypes(const char* str, SRule rule)
 {
     char buffer[512];
     bool done = false;
@@ -853,7 +852,7 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
     strcpy(filename, inst->rulefile);
     spinlock_release(&inst->lock);
 
-    Rule *rules = NULL;
+    RuleList rules;
     HASHTABLE *users = NULL;
 
     if (rval && access(filename, R_OK) == 0)
@@ -877,7 +876,6 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
         rval = false;
     }
 
-    rule_free_all(rules);
     hashtable_free(users);
 
     return rval;
@@ -891,7 +889,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
 
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
-    if (!this_thread.rules || !this_thread.users)
+    if (this_thread.rules.empty() || !this_thread.users)
     {
         if (!replace_rules(inst))
         {
@@ -899,10 +897,11 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
         }
     }
 
-    for (Rule *rule = this_thread.rules; rule; rule = rule->next)
+    for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
     {
+        const SRule& rule = *it;
         char buf[rule->name.length() + 200]; // Some extra space
-        print_rule(rule, buf);
+        print_rule(rule.get(), buf);
         dcb_printf(dcb, "%s\n", buf);
     }
 
@@ -916,7 +915,7 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
 
     json_t* arr = json_array();
 
-    if (!this_thread.rules || !this_thread.users)
+    if (this_thread.rules.empty() || !this_thread.users)
     {
         if (!replace_rules(inst))
         {
@@ -924,8 +923,9 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
         }
     }
 
-    for (Rule *rule = this_thread.rules; rule; rule = rule->next)
+    for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
     {
+        const SRule& rule = *it;
         json_array_append_new(arr, rule_to_json(rule));
     }
 
@@ -1128,7 +1128,7 @@ char* get_regex_string(char** saved)
  */
 struct parser_stack
 {
-    Rule* rule;
+    RuleList rule;
     ValueList user;
     ValueList active_rules;
     enum match_type active_mode;
@@ -1155,18 +1155,19 @@ void dbfw_yyerror(void* scanner, const char* error)
  * @param name Name of the rule
  * @return Pointer to the rule or NULL if rule was not found
  */
-static Rule* find_rule_by_name(Rule* rules, const char* name)
+static SRule find_rule_by_name(const RuleList& rules, std::string name)
 {
-    while (rules)
+    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
-        if (strcmp(rules->name.c_str(), name) == 0)
+        const SRule& rule = *it;
+
+        if (rule->name == name)
         {
-            return rules;
+            return rule;
         }
-        rules = rules->next;
     }
 
-    return NULL;
+    return SRule();
 }
 
 /**
@@ -1227,48 +1228,6 @@ void push_value(void* scanner, char* value)
 }
 
 /**
- * Free a list of rules
- * @param rule Rules to free
- */
-static void rule_free_all(Rule* rule)
-{
-    while (rule)
-    {
-        Rule *tmp = rule->next;
-        if (rule->active)
-        {
-            timerange_free(rule->active);
-        }
-
-        switch (rule->type)
-        {
-        case RT_COLUMN:
-        case RT_FUNCTION:
-        case RT_USES_FUNCTION:
-            strlink_free((STRLINK*) rule->data);
-            break;
-
-        case RT_THROTTLE:
-        {
-            QUERYSPEED* qs = (QUERYSPEED*)rule->data;
-            delete qs;
-        }
-        break;
-
-        case RT_REGEX:
-            pcre2_code_free((pcre2_code*) rule->data);
-            break;
-
-        default:
-            break;
-        }
-
-        delete rule;
-        rule = tmp;
-    }
-}
-
-/**
  * Add a user to the current rule linking expression
  * @param scanner Current scanner
  * @param name Name of the user
@@ -1306,8 +1265,8 @@ bool add_at_times_rule(void* scanner, const char* range)
 
     if (timerange)
     {
-        timerange->next = rstack->rule->active;
-        rstack->rule->active = timerange;
+        timerange->next = rstack->rule.front()->active;
+        rstack->rule.front()->active = timerange;
     }
 
     return timerange != NULL;
@@ -1322,7 +1281,7 @@ void add_on_queries_rule(void* scanner, const char* sql)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    parse_querytypes(sql, rstack->rule);
+    parse_querytypes(sql, rstack->rule.front());
 }
 
 /**
@@ -1381,8 +1340,7 @@ void define_wildcard_rule(void* scanner)
     ss_dassert(rstack);
     Rule* rule = create_rule(rstack->name);
     rule->type = RT_WILDCARD;
-    rule->next = rstack->rule;
-    rstack->rule = rule;
+    rstack->rule.push_front(SRule(rule));
 }
 
 /**
@@ -1398,8 +1356,7 @@ void define_columns_rule(void* scanner)
 
     rule->type = RT_COLUMN;
     rule->data = valuelist_to_strlink(&rstack->values);
-    rule->next = rstack->rule;
-    rstack->rule = rule;
+    rstack->rule.push_front(SRule(rule));
 }
 
 /**
@@ -1415,8 +1372,7 @@ void define_function_rule(void* scanner)
 
     rule->type = RT_FUNCTION;
     rule->data = valuelist_to_strlink(&rstack->values);
-    rule->next = rstack->rule;
-    rstack->rule = rule;
+    rstack->rule.push_front(SRule(rule));
 }
 
 /**
@@ -1435,8 +1391,7 @@ void define_function_usage_rule(void* scanner)
 
     rule->type = RT_USES_FUNCTION;
     rule->data = valuelist_to_strlink(&rstack->values);
-    rule->next = rstack->rule;
-    rstack->rule = rule;
+    rstack->rule.push_front(SRule(rule));
 }
 
 /**
@@ -1450,8 +1405,7 @@ void define_where_clause_rule(void* scanner)
     Rule* rule = create_rule(rstack->name);
 
     rule->type = RT_CLAUSE;
-    rule->next = rstack->rule;
-    rstack->rule = rule;
+    rstack->rule.push_front(SRule(rule));
 }
 
 /**
@@ -1470,8 +1424,7 @@ void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdo
     qs->cooldown = holdoff;
     rule->type = RT_THROTTLE;
     rule->data = qs;
-    rule->next = rstack->rule;
-    rstack->rule = rule;
+    rstack->rule.push_front(SRule(rule));
 }
 
 /**
@@ -1495,8 +1448,7 @@ bool define_regex_rule(void* scanner, char* pattern)
         Rule* rule = create_rule(rstack->name);
         rule->type = RT_REGEX;
         rule->data = re;
-        rule->next = rstack->rule;
-        rstack->rule = rule;
+        rstack->rule.push_front(SRule(rule));
     }
     else
     {
@@ -1518,7 +1470,7 @@ bool define_regex_rule(void* scanner, char* pattern)
  * @return True on success, false on error.
  */
 static bool process_user_templates(HASHTABLE *users, const TemplateList& templates,
-                                   Rule* rules)
+                                   RuleList& rules)
 {
     bool rval = true;
 
@@ -1557,11 +1509,11 @@ static bool process_user_templates(HASHTABLE *users, const TemplateList& templat
         for (ValueList::const_iterator r_it = ut->rulenames.begin();
              r_it != ut->rulenames.end(); r_it++)
         {
-            Rule* rule = find_rule_by_name(rules, r_it->c_str());
+            SRule rule = find_rule_by_name(rules, r_it->c_str());
 
             if (rule)
             {
-                foundrules = rulebook_push(foundrules, rule);
+                foundrules = rulebook_push(foundrules, rule.get());
             }
             else
             {
@@ -1608,7 +1560,7 @@ static bool process_user_templates(HASHTABLE *users, const TemplateList& templat
  * @param instance Filter instance
  * @return True on success, false on error.
  */
-static bool process_rule_file(const char* filename, Rule** rules, HASHTABLE **users)
+static bool process_rule_file(const char* filename, RuleList* rules, HASHTABLE **users)
 {
     int rc = 1;
     FILE *file = fopen(filename, "r");
@@ -1617,8 +1569,6 @@ static bool process_rule_file(const char* filename, Rule** rules, HASHTABLE **us
     {
         yyscan_t scanner;
         struct parser_stack pstack;
-
-        pstack.rule = NULL;
 
         dbfw_yylex_init(&scanner);
         YY_BUFFER_STATE buf = dbfw_yy_create_buffer(file, YY_BUF_SIZE, scanner);
@@ -1635,13 +1585,12 @@ static bool process_rule_file(const char* filename, Rule** rules, HASHTABLE **us
 
         if (rc == 0 && new_users && process_user_templates(new_users, pstack.templates, pstack.rule))
         {
-            *rules = pstack.rule;
+            rules->swap(pstack.rule);
             *users = new_users;
         }
         else
         {
             rc = 1;
-            rule_free_all(pstack.rule);
             hashtable_free(new_users);
             MXS_ERROR("Failed to process rule file '%s'.", filename);
         }
@@ -1675,18 +1624,17 @@ bool replace_rules(FW_INSTANCE* instance)
 
     spinlock_release(&instance->lock);
 
-    Rule *rules;
+    RuleList rules;
     HASHTABLE *users;
 
     if (process_rule_file(filename, &rules, &users))
     {
-        rule_free_all(this_thread.rules);
         hashtable_free(this_thread.users);
-        this_thread.rules = rules;
+        this_thread.rules.swap(rules);
         this_thread.users = users;
         rval = true;
     }
-    else if (this_thread.rules && this_thread.users)
+    else if (!this_thread.rules.empty() && this_thread.users)
     {
         MXS_ERROR("Failed to parse rules at '%s'. Old rules are still used.", filename);
     }
@@ -1735,7 +1683,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         my_instance->log_match |= FW_LOG_NO_MATCH;
     }
 
-    Rule *rules = NULL;
+    RuleList rules;
     HASHTABLE *users = NULL;
     my_instance->rulefile = MXS_STRDUP(config_get_string(params, "rules"));
 
@@ -1749,7 +1697,6 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         atomic_add(&my_instance->rule_version, 1);
     }
 
-    rule_free_all(rules);
     hashtable_free(users);
 
     return (MXS_FILTER *) my_instance;
@@ -2713,10 +2660,11 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
     dcb_printf(dcb, "Firewall Filter\n");
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
-    for (Rule *rule = this_thread.rules; rule; rule = rule->next)
+    for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
     {
+        const SRule& rule = *it;
         char buf[rule->name.length() + 200];
-        print_rule(rule, buf);
+        print_rule(rule.get(), buf);
         dcb_printf(dcb, "%s\n", buf);
     }
 }

@@ -29,7 +29,7 @@ int main(int argc, char **argv)
         {
             MXS_NOTICE("Parsing rule file: %s", argv[1]);
 
-            Rule* rules;
+            RuleList  rules;
             HASHTABLE *users;
 
             if (process_rule_file(argv[1], &rules, &users))
