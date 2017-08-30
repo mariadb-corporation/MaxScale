@@ -333,21 +333,41 @@ struct UserTemplate
 };
 
 typedef std::tr1::shared_ptr<UserTemplate> SUserTemplate;
-typedef std::list<SUserTemplate>      TemplateList;
+typedef std::list<SUserTemplate>           TemplateList;
+
+static void* rulebook_free(void* fval);
 
 /**
  * A user definition
  */
-typedef struct user_t
+struct User
 {
-    char*       name;           /*< Name of the user */
+    User(std::string name):
+        name(name),
+        lock(SPINLOCK_INIT),
+        qs_limit(NULL),
+        rules_or(NULL),
+        rules_and(NULL),
+        rules_strict_and(NULL)
+    {
+    }
+
+    ~User()
+    {
+        rulebook_free(rules_and);
+        rulebook_free(rules_or);
+        rulebook_free(rules_strict_and);
+        MXS_FREE(qs_limit);
+    }
+
+    std::string name;           /*< Name of the user */
     SPINLOCK    lock;           /*< User spinlock */
     QUERYSPEED* qs_limit;       /*< The query speed structure unique to this user */
     RULE_BOOK*  rules_or;       /*< If any of these rules match the action is triggered */
     RULE_BOOK*  rules_and;      /*< All of these rules must match for the action to trigger */
     RULE_BOOK*  rules_strict_and; /*< rules that skip the rest of the rules if one of them
                                    * fails. This is only for rules paired with 'match strict_all'. */
-} DBFW_USER;
+};
 
 /**
  * The Firewall filter instance.
@@ -558,14 +578,8 @@ static void* rulebook_free(void* fval)
 
 static void dbfw_user_free(void* fval)
 {
-    DBFW_USER* value = (DBFW_USER*) fval;
-
-    rulebook_free(value->rules_and);
-    rulebook_free(value->rules_or);
-    rulebook_free(value->rules_strict_and);
-    MXS_FREE(value->qs_limit);
-    MXS_FREE(value->name);
-    MXS_FREE(value);
+    User* value = (User*) fval;
+    delete value;
 }
 
 HASHTABLE *dbfw_userlist_create()
@@ -1483,25 +1497,12 @@ static bool process_user_templates(HASHTABLE *users, const TemplateList& templat
     for (TemplateList::const_iterator it = templates.begin(); it != templates.end(); it++)
     {
         const SUserTemplate& ut = *it;
-        DBFW_USER *user = (DBFW_USER*)hashtable_fetch(users, (void*)ut->name.c_str());
+        User *user = (User*)hashtable_fetch(users, (void*)ut->name.c_str());
 
         if (user == NULL)
         {
-            if ((user = (DBFW_USER*)MXS_MALLOC(sizeof(DBFW_USER))) && (user->name = MXS_STRDUP(ut->name.c_str())))
-            {
-                user->rules_and = NULL;
-                user->rules_or = NULL;
-                user->rules_strict_and = NULL;
-                user->qs_limit = NULL;
-                spinlock_init(&user->lock);
-                hashtable_add(users, user->name, user);
-            }
-            else
-            {
-                MXS_FREE(user);
-                rval = false;
-                break;
-            }
+            user = new User(ut->name);
+            hashtable_add(users, (void*)user->name.c_str(), user);
         }
 
         RULE_BOOK *foundrules = NULL;
@@ -2156,7 +2157,6 @@ void match_wildcard(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg
 bool rule_matches(FW_INSTANCE* my_instance,
                   FW_SESSION* my_session,
                   GWBUF *queue,
-                  DBFW_USER* user,
                   RULE_BOOK *rulebook,
                   char* query)
 {
@@ -2303,7 +2303,7 @@ queryresolved:
  * @return True if the query matches at least one of the rules otherwise false
  */
 bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
-                     GWBUF *queue, DBFW_USER* user, char** rulename)
+                     GWBUF *queue, User* user, char** rulename)
 {
     RULE_BOOK* rulebook;
     bool rval = false;
@@ -2323,7 +2323,7 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
                     rulebook = rulebook->next;
                     continue;
                 }
-                if (rule_matches(my_instance, my_session, queue, user, rulebook, fullquery))
+                if (rule_matches(my_instance, my_session, queue, rulebook, fullquery))
                 {
                     *rulename = MXS_STRDUP_A(rulebook->rule->name.c_str());
                     rval = true;
@@ -2382,7 +2382,7 @@ void append_string(char** dest, size_t* size, const char* src)
  * @return True if the query matches all of the rules otherwise false
  */
 bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
-                     GWBUF *queue, DBFW_USER* user, bool strict_all, char** rulename)
+                     GWBUF *queue, User* user, bool strict_all, char** rulename)
 {
     bool rval = false;
     bool have_active_rule = false;
@@ -2407,7 +2407,7 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
 
                 have_active_rule = true;
 
-                if (rule_matches(my_instance, my_session, queue, user, rulebook, fullquery))
+                if (rule_matches(my_instance, my_session, queue, rulebook, fullquery))
                 {
                     append_string(&matched_rules, &size, rulebook->rule->name.c_str());
                 }
@@ -2446,17 +2446,17 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
  * @param remote Remove network address
  * @return The user data or NULL if it was not found
  */
-DBFW_USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
+User* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
 {
     char nameaddr[strlen(name) + strlen(remote) + 2];
     snprintf(nameaddr, sizeof(nameaddr), "%s@%s", name, remote);
-    DBFW_USER* user = (DBFW_USER*) hashtable_fetch(hash, nameaddr);
+    User* user = (User*) hashtable_fetch(hash, nameaddr);
     if (user == NULL)
     {
         char *ip_start = strchr(nameaddr, '@') + 1;
         while (user == NULL && next_ip_class(ip_start))
         {
-            user = (DBFW_USER*) hashtable_fetch(hash, nameaddr);
+            user = (User*) hashtable_fetch(hash, nameaddr);
         }
 
         if (user == NULL)
@@ -2465,7 +2465,7 @@ DBFW_USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
             ip_start = strchr(nameaddr, '@') + 1;
             while (user == NULL && next_ip_class(ip_start))
             {
-                user = (DBFW_USER*) hashtable_fetch(hash, nameaddr);
+                user = (User*) hashtable_fetch(hash, nameaddr);
             }
         }
     }
@@ -2551,7 +2551,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             ss_dassert(analyzed_queue);
         }
 
-        DBFW_USER *user = find_user_data(this_thread.users, dcb->user, dcb->remote);
+        User *user = find_user_data(this_thread.users, dcb->user, dcb->remote);
         bool query_ok = command_is_mandatory(queue);
 
         if (user)
@@ -2603,13 +2603,13 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     {
                         ss_dassert(rname);
                         MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %.*s",
-                                   dcb->service->name, rname, user->name,
+                                   dcb->service->name, rname, user->name.c_str(),
                                    dcb->user, dcb->remote, len, sql);
                     }
                     else if (!match && my_instance->log_match & FW_LOG_NO_MATCH)
                     {
                         MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %.*s",
-                                   dcb->service->name, user->name, dcb->user,
+                                   dcb->service->name, user->name.c_str(), dcb->user,
                                    dcb->remote, len, sql);
                     }
                 }
