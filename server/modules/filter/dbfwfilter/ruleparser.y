@@ -123,40 +123,21 @@ mandatory
     | FWTOK_LIMIT_QUERIES FWTOK_INT FWTOK_INT FWTOK_INT
         {define_limit_queries_rule(scanner, $2, $3, $4);}
     | FWTOK_REGEX FWTOK_QUOTEDSTR {define_regex_rule(scanner, $2);}
-    | FWTOK_COLUMNS columnlist {define_columns_rule(scanner);}
-    | FWTOK_FUNCTION functionlist {define_function_rule(scanner);}
+    | FWTOK_COLUMNS valuelist {define_columns_rule(scanner);}
+    | FWTOK_FUNCTION valuelist {define_function_rule(scanner);}
     | FWTOK_FUNCTION {define_function_rule(scanner);}
-    | FWTOK_USES_FUNCTION functionusagelist {define_function_usage_rule(scanner);}
+    | FWTOK_USES_FUNCTION valuelist {define_function_usage_rule(scanner);}
     ;
 
-columnvalue
-    : FWTOK_BTSTR {push_value(scanner, $1);}
-    | FWTOK_STR {push_value(scanner, $1);}
-    ;
-
-columnlist
-    : columnvalue
-    | columnlist columnvalue
-    ;
-
-functionvalue
+value
     : FWTOK_CMP {push_value(scanner, $1);}
     | FWTOK_STR {push_value(scanner, $1);}
     | FWTOK_BTSTR  {push_value(scanner, $1);}
     ;
 
-functionlist
-    : functionvalue
-    | functionlist functionvalue
-    ;
-
-functionusagevalue
-    : FWTOK_BTSTR {push_value(scanner, $1);}
-    | FWTOK_STR {push_value(scanner, $1);}
-
-functionusagelist
-    : functionusagevalue
-    | functionusagelist functionusagevalue
+valuelist
+    : value
+    | valuelist value
     ;
 
 /** Optional parts of a rule */
