@@ -290,6 +290,49 @@ struct Rule
     {
     }
 
+    virtual bool matches_query(GWBUF* buffer, char** msg)
+    {
+        return false;
+    }
+
+    virtual bool need_full_parsing(GWBUF* buffer) const
+    {
+        bool rval = false;
+        qc_query_op_t optype = qc_get_operation(buffer);
+
+        if (type == RT_COLUMN ||
+            type == RT_FUNCTION ||
+            type == RT_USES_FUNCTION ||
+            type == RT_WILDCARD ||
+            type == RT_CLAUSE)
+        {
+            switch (optype)
+            {
+            case QUERY_OP_SELECT:
+            case QUERY_OP_UPDATE:
+            case QUERY_OP_INSERT:
+            case QUERY_OP_DELETE:
+                rval = true;
+                break;
+
+            default:
+                break;
+            }
+        }
+
+        return rval;
+    }
+
+    bool matches_query_type(GWBUF* buffer)
+    {
+        qc_query_op_t optype = qc_get_operation(buffer);
+
+        return on_queries == FW_OP_UNDEFINED ||
+               (on_queries & qc_op_to_fw_op(optype)) ||
+               (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer)) &&
+                (on_queries & FW_OP_CHANGE_DB));
+    }
+
     void*          data;        /*< Actual implementation of the rule */
     std::string    name;        /*< Name of the rule */
     ruletype_t     type;        /*< Type of the rule */
@@ -2069,8 +2112,8 @@ bool rule_matches(FW_INSTANCE* my_instance,
                   SRule rule,
                   char* query)
 {
+    ss_dassert(GWBUF_IS_CONTIGUOUS(queue));
     char *msg = NULL;
-    qc_query_op_t optype = QUERY_OP_UNDEFINED;
     bool matches = false;
     bool is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
 
@@ -2083,42 +2126,23 @@ bool rule_matches(FW_INSTANCE* my_instance,
             msg = create_parse_error(my_instance, "tokenized", query, &matches);
             goto queryresolved;
         }
-        else
+        else if (parse_result != QC_QUERY_PARSED && rule->need_full_parsing(queue))
         {
-            optype = qc_get_operation(queue);
-
-            if (parse_result != QC_QUERY_PARSED)
-            {
-                if ((rule->type == RT_COLUMN) ||
-                    (rule->type == RT_FUNCTION) ||
-                    (rule->type == RT_USES_FUNCTION) ||
-                    (rule->type == RT_WILDCARD) ||
-                    (rule->type == RT_CLAUSE))
-                {
-                    switch (optype)
-                    {
-                    case QUERY_OP_SELECT:
-                    case QUERY_OP_UPDATE:
-                    case QUERY_OP_INSERT:
-                    case QUERY_OP_DELETE:
-                        // In these cases, we have to be able to trust what qc_get_field_info
-                        // returns. Unless the query was parsed completely, we cannot do that.
-                        msg = create_parse_error(my_instance, "parsed completely", query, &matches);
-                        goto queryresolved;
-
-                    default:
-                        break;
-                    }
-                }
-            }
+            msg = create_parse_error(my_instance, "parsed completely", query, &matches);
+            goto queryresolved;
         }
     }
 
-    if (rule->on_queries == FW_OP_UNDEFINED ||
-        rule->on_queries & qc_op_to_fw_op(optype) ||
-        (MYSQL_IS_COM_INIT_DB((uint8_t*)GWBUF_DATA(queue)) &&
-         rule->on_queries & FW_OP_CHANGE_DB))
+    if (rule->matches_query_type(queue))
     {
+        if (rule->matches_query(queue, &msg))
+        {
+            /** New style rule matched */
+            matches = true;
+            goto queryresolved;
+        }
+
+        /** No match, try old the style rule */
         switch (rule->type)
         {
         case RT_UNDEFINED:
