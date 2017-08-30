@@ -16,13 +16,13 @@
 
 using namespace std;
 
-const char * only_root = "Enabled Linux accounts (secure)    : \n";
+const char * only_root = "Enabled Linux accounts (secure)    : root\n";
 const char * user_added = "The Linux user %s has successfully been enabled.\n";
 const char * user_removed = "The Linux user %s has successfully been disabled.\n";
 const char * remove_last_admin = "Cannot remove the last admin account";
 const char * root_added = "User root has been successfully added.\n";
 const char * user_and_root = "Enabled Linux accounts (secure)    : %s\n";
-const char * user_only = "Enabled Linux accounts (secure)    : %s\n";
+const char * user_only = "Enabled Linux accounts (secure)    : root, %s\n";
 
 void add_remove_maxadmin_user(TestConnections* Test)
 {
@@ -56,9 +56,9 @@ void add_remove_maxadmin_user(TestConnections* Test)
 
     Test->tprintf("trying maxadmin with 'root':\n");
     int st5 = Test->ssh_maxscale(true, "maxadmin show users");
-    if (st5 == 0)
+    if (st5 != 0)
     {
-        Test->add_result(1, "User added and access to MaxAdmin as 'root' is still possible\n");
+        Test->add_result(1, "User added and access to MaxAdmin as 'root' is not possible\n");
     }
     else
     {
@@ -84,7 +84,7 @@ void add_remove_maxadmin_user(TestConnections* Test)
     Test->tprintf("trying to remove user '%s'\n", Test->maxscale_access_user);
     char * st8 = Test->ssh_maxscale_output(false, "maxadmin disable account %s", Test->maxscale_access_user);
 
-    if (strstr(st8, remove_last_admin) == NULL)
+    if (strstr(st8, remove_last_admin))
     {
         Test->add_result(1, "Wrong output of disable command: %s", st8);
     }
@@ -95,9 +95,9 @@ void add_remove_maxadmin_user(TestConnections* Test)
 
     Test->tprintf("Trying with removed user '%s'\n", Test->maxscale_access_user);
     int st9 = Test->ssh_maxscale(false, "maxadmin show users");
-    if (st9 != 0)
+    if (st9 == 0)
     {
-        Test->add_result(1, "Last user '%s' should not be removed", Test->maxscale_access_user);
+        Test->add_result(1, "User '%s' should be removed", Test->maxscale_access_user);
     }
     else
     {
