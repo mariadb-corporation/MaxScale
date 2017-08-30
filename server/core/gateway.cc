@@ -1942,10 +1942,26 @@ int main(int argc, char **argv)
         }
     }
 
-    if (redirect_output_to.length())
+    if (!redirect_output_to.empty())
     {
-        freopen(redirect_output_to.c_str(), "a", stderr);
-        freopen(redirect_output_to.c_str(), "a", stdout);
+        if (freopen(redirect_output_to.c_str(), "a", stdout))
+        {
+            if (!freopen(redirect_output_to.c_str(), "a", stderr))
+            {
+                const char* logstr = "Failed to redirect stderr to file.";
+                // No point logging to stderr as its state is now not known.
+                print_log_n_stderr(true, false, logstr, logstr, errno);
+                rc = MAXSCALE_INTERNALERROR;
+                goto return_main;
+            }
+        }
+        else
+        {
+            const char* logstr = "Failed to redirect stdout to file.";
+            print_log_n_stderr(true, true, logstr, logstr, errno);
+            rc = MAXSCALE_INTERNALERROR;
+            goto return_main;
+        }
     }
 
     /** Initialize statistics */
