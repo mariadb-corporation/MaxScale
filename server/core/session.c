@@ -960,3 +960,17 @@ bool session_valid_for_pool(const MXS_SESSION* session)
     ss_dassert(session->state != SESSION_STATE_DUMMY);
     return session->qualifies_for_pooling;
 }
+
+MXS_SESSION* session_get_current()
+{
+    DCB* dcb = dcb_get_current();
+
+    return dcb ? dcb->session : NULL;
+}
+
+uint64_t session_get_current_id()
+{
+    MXS_SESSION* session = session_get_current();
+
+    return session ? session->ses_id : 0;
+}
