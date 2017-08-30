@@ -242,8 +242,8 @@ typedef enum
  * BLR_BLR_MASTER_RETRY_COUNT   Maximum value of retries
  */
 #define BLR_MASTER_BACKOFF_TIME      10
-#define BLR_MASTER_CONNECT_RETRY     60
-#define BLR_MASTER_RETRY_COUNT     1000
+#define BLR_MASTER_CONNECT_RETRY    "60"
+#define BLR_MASTER_RETRY_COUNT     "1000"
 
 /* max size for error message returned to client */
 #define BINLOG_ERROR_MSG_LEN    700
@@ -706,7 +706,9 @@ typedef struct router_instance
     ROUTER_STATS      stats;                /*< Statistics for this router */
     int               active_logs;
     int               reconnect_pending;
-    int               retry_backoff;
+    int               retry_interval;       /*< Connect retry interval */
+    int               retry_count;          /*< Connect retry counter */
+    int               retry_limit;          /*< Retry limit */
     time_t            connect_time;
     int               handling_threads;
     unsigned long     m_errno;              /*< master response mysql errno */

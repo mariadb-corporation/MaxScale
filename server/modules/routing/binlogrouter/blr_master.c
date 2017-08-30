@@ -224,15 +224,19 @@ static void blr_start_master(void* data)
                   "Replication is stopped.",
                   router->service->name,
                   router->service->dbref->server->unique_name,
-                  BLR_MASTER_RETRY_COUNT);
+                  router->retry_limit);
         return;
+    }
+
+    /* Increment retry counter */
+    if (router->master_state != BLRM_CONNECTING)
+    {
+        router->retry_count++;
     }
 
     /* Force connecting state */
     router->master_state = BLRM_CONNECTING;
 
-    /* Increment retry counter */
-    router->retry_backoff++;
     spinlock_release(&router->lock);
 
     DCB* client = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
@@ -272,7 +276,7 @@ static void blr_start_master(void* data)
     {
         /* Set reconnection task */
         static const char master[] = "Master";
-        char *name = MXS_MALLOC(strlen(router->service->name) + sizeof(master));
+        char *name = (char *)MXS_MALLOC(strlen(router->service->name) + sizeof(master));
         if (name)
         {
             sprintf(name, "%s %s", router->service->name, master);
@@ -393,7 +397,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
                       "Replication is stopped.",
                       router->service->name,
                       router->service->dbref->server->unique_name,
-                      BLR_MASTER_RETRY_COUNT);
+                      router->retry_limit);
             return;
         }
 
@@ -403,7 +407,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
 
         /* Set reconnection task */
         static const char master[] = "Master";
-        char *name = MXS_MALLOC(strlen(router->service->name) + sizeof(master));
+        char *name = (char *)MXS_MALLOC(strlen(router->service->name) + sizeof(master));
 
         if (name)
         {
@@ -423,8 +427,8 @@ blr_restart_master(ROUTER_INSTANCE *router)
     }
     else
     {
-        /* Force unconnected state */
-        router->master_state = BLRM_UNCONNECTED;
+        /* Force connecting state */
+        router->master_state = BLRM_CONNECTING;
         spinlock_release(&router->lock);
 
         blr_start_master_in_main(router);
@@ -494,7 +498,7 @@ blr_master_close(ROUTER_INSTANCE *router)
 
 /**
  * Mark this master connection for a delayed reconnect, used during
- * error recovery to cause a reconnect after 60 seconds.
+ * error recovery to cause a reconnect after router->retry_interval seconds.
  *
  * @param router    The router instance
  */
@@ -502,7 +506,7 @@ void
 blr_master_delayed_connect(ROUTER_INSTANCE *router)
 {
     static const char master[] = "Master Recovery";
-    char *name = (char*)MXS_MALLOC(strlen(router->service->name) + sizeof(master))
+    char *name = (char *)MXS_MALLOC(strlen(router->service->name) + sizeof(master));
 
     if (name)
     {
@@ -510,7 +514,7 @@ blr_master_delayed_connect(ROUTER_INSTANCE *router)
         hktask_oneshot(name,
                        blr_start_master_in_main,
                        router,
-                       BLR_MASTER_CONNECT_RETRY);
+                       router->retry_interval);
         MXS_FREE(name);
     }
 }
@@ -2932,7 +2936,7 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
         blr_register_send_command(router,
                                   "SHOW VARIABLES LIKE 'SERVER_ID'",
                                   BLRM_SERVERID);
-        router->retry_backoff = 0;
+        router->retry_count = 0;
         break;
     case BLRM_SERVERID:
         // If set heartbeat is not being sent, next state is BLRM_HBPERIOD
@@ -3535,18 +3539,18 @@ static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
 static int blr_check_connect_retry(ROUTER_INSTANCE *router)
 {
     /* Stop reconnection to master */
-    if (router->retry_backoff >= BLR_MASTER_RETRY_COUNT)
+    if (router->retry_count >= router->retry_limit)
     {
         return 0;
     }
 
     /* Return the interval for next reconnect */
-    if (router->retry_backoff >= BLR_MASTER_CONNECT_RETRY / BLR_MASTER_BACKOFF_TIME)
+    if (router->retry_count >= router->retry_interval / BLR_MASTER_BACKOFF_TIME)
     {
-        return BLR_MASTER_CONNECT_RETRY;
+        return router->retry_interval;
     }
     else
     {
-        return BLR_MASTER_BACKOFF_TIME * (1 + router->retry_backoff);
+        return BLR_MASTER_BACKOFF_TIME * (1 + router->retry_count);
     }
 }

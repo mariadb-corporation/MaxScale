@@ -1343,7 +1343,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
-    sprintf(column, "%d", 60);                 // Connect retry
+    sprintf(column, "%d", router->retry_interval); // Connect retry
     col_len = strlen(column);
     *ptr++ = col_len;                          // Length of result string
     memcpy((char *)ptr, column, col_len);      // Result string
@@ -1632,7 +1632,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     ptr += col_len;
 
     /* Master_Retry_Count */
-    sprintf(column, "%d", 1000);
+    sprintf(column, "%d", router->retry_limit);
     col_len = strlen(column);
     *ptr++ = col_len;                        // Length of result string
     memcpy((char *)ptr, column, col_len);    // Result string
@@ -3632,7 +3632,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     spinlock_acquire(&router->lock);
     router->master_state = BLRM_UNCONNECTED;
-    router->retry_backoff = 0;
+    router->retry_count = 0;
     spinlock_release(&router->lock);
 
     /**

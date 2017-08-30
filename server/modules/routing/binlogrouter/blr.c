@@ -230,6 +230,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
             {"heartbeat", MXS_MODULE_PARAM_COUNT, BLR_HEARTBEAT_DEFAULT_INTERVAL},
+            {"connect_retry", MXS_MODULE_PARAM_COUNT, BLR_MASTER_CONNECT_RETRY},
+            {"master_retry_count", MXS_MODULE_PARAM_COUNT, BLR_MASTER_RETRY_COUNT},
             {"send_slave_heartbeat", MXS_MODULE_PARAM_BOOL, "false"},
             {
                 "binlogdir",
@@ -326,7 +328,7 @@ createInstance(SERVICE *service, char **options)
 
     inst->user = MXS_STRDUP_A(service->credentials.name);
     inst->password = MXS_STRDUP_A(service->credentials.authdata);
-    inst->retry_backoff = 0;
+    inst->retry_count = 0;
     inst->m_errno = 0;
     inst->m_errmsg = NULL;
 
@@ -367,6 +369,8 @@ createInstance(SERVICE *service, char **options)
     inst->burst_size = config_get_size(params, "burstsize");
     inst->binlogdir = config_copy_string(params, "binlogdir");
     inst->heartbeat = config_get_integer(params, "heartbeat");
+    inst->retry_interval = config_get_integer(params, "connect_retry");
+    inst->retry_limit = config_get_integer(params, "master_retry_count");
     inst->ssl_cert_verification_depth = config_get_integer(params, "ssl_cert_verification_depth");
     inst->mariadb10_compat = config_get_bool(params, "mariadb10-compatibility");
     inst->maxwell_compat = config_get_bool(params, "maxwell-compatibility");
@@ -1585,7 +1589,11 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
     dcb_printf(dcb, "\tNumber of delayed reconnects:                %d\n",
                router_inst->stats.n_delayedreconnects);
     dcb_printf(dcb, "\tNumber of connect retries:                   %d\n",
-               router_inst->retry_backoff);
+               router_inst->retry_count);
+    dcb_printf(dcb, "\tConnect retry interval:                      %d\n",
+               router_inst->retry_interval);
+    dcb_printf(dcb, "\tConnect retry count limit:                   %d\n",
+               router_inst->retry_limit);
     dcb_printf(dcb, "\tCurrent binlog file:                         %s\n",
                router_inst->binlog_name);
     dcb_printf(dcb, "\tCurrent binlog position:                     %lu\n",
