@@ -69,6 +69,7 @@
 #include <assert.h>
 #include <regex.h>
 #include <stdlib.h>
+#include <string>
 
 #include <maxscale/filter.h>
 #include <maxscale/atomic.h>
@@ -275,7 +276,7 @@ typedef struct queryspeed_t
 typedef struct rule_t
 {
     void*          data;        /*< Actual implementation of the rule */
-    char*          name;        /*< Name of the rule */
+    std::string    name;        /*< Name of the rule */
     ruletype_t     type;        /*< Type of the rule */
     uint32_t       on_queries;  /*< Types of queries to inspect */
     int            times_matched; /*< Number of times this rule has been matched */
@@ -364,7 +365,7 @@ static void print_rule(RULE *rules, char *dest)
     }
 
     sprintf(dest, "%s, %s, %d",
-            rules->name,
+            rules->name.c_str(),
             rule_names[type],
             rules->times_matched);
 }
@@ -380,7 +381,7 @@ static json_t* rule_to_json(RULE *rule)
 
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "name", json_string(rule->name));
+    json_object_set_new(rval, "name", json_string(rule->name.c_str()));
     json_object_set_new(rval, "type", json_string(rule_names[type]));
     json_object_set_new(rval, "times_matched", json_integer(rule->times_matched));
 
@@ -873,7 +874,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
 
     for (RULE *rule = thr_rules; rule; rule = rule->next)
     {
-        char buf[strlen(rule->name) + 200]; // Some extra space
+        char buf[rule->name.length() + 200]; // Some extra space
         print_rule(rule, buf);
         dcb_printf(dcb, "%s\n", buf);
     }
@@ -1105,6 +1106,7 @@ struct parser_stack
     STRLINK* active_rules;
     enum match_type active_mode;
     user_template_t* templates;
+    std::string name;
 };
 
 /**
@@ -1129,7 +1131,7 @@ static RULE* find_rule_by_name(RULE* rules, const char* name)
 {
     while (rules)
     {
-        if (strcmp(rules->name, name) == 0)
+        if (strcmp(rules->name.c_str(), name) == 0)
         {
             return rules;
         }
@@ -2043,7 +2045,7 @@ bool match_throttle(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
             matches = true;
 
             MXS_INFO("rule '%s': user denied for %f seconds",
-                     rulebook->rule->name, blocked_for);
+                     rulebook->rule->name.c_str(), blocked_for);
         }
         else
         {
@@ -2056,7 +2058,7 @@ bool match_throttle(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
         if (queryspeed->count >= queryspeed->limit)
         {
             MXS_INFO("rule '%s': query limit triggered (%d queries in %d seconds), "
-                     "denying queries from user for %d seconds.", rulebook->rule->name,
+                     "denying queries from user for %d seconds.", rulebook->rule->name.c_str(),
                      queryspeed->limit, queryspeed->period, queryspeed->cooldown);
 
             queryspeed->triggered = time_now;
@@ -2092,7 +2094,7 @@ void match_regex(RULE_BOOK *rulebook, const char *query, bool *matches, char **m
                         (PCRE2_SPTR)query, PCRE2_ZERO_TERMINATED,
                         0, 0, mdata, NULL) > 0)
         {
-            MXS_NOTICE("rule '%s': regex matched on query", rulebook->rule->name);
+            MXS_NOTICE("rule '%s': regex matched on query", rulebook->rule->name.c_str());
             *matches = true;
             *msg = create_error("Permission denied, query matched regular expression.");
         }
@@ -2122,7 +2124,7 @@ void match_column(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg)
             if (strcasecmp(tok, strln->value) == 0)
             {
                 MXS_NOTICE("rule '%s': query targets forbidden column: %s",
-                           rulebook->rule->name, strln->value);
+                           rulebook->rule->name.c_str(), strln->value);
                 *msg = create_error("Permission denied to column '%s'.", strln->value);
                 *matches = true;
                 break;
@@ -2154,7 +2156,7 @@ void match_function(RULE_BOOK *rulebook, GWBUF *queue, enum fw_actions mode,
             if (strcasecmp(tok, strln->value) == 0)
             {
                 MXS_NOTICE("rule '%s': query uses forbidden function: %s",
-                           rulebook->rule->name, strln->value);
+                           rulebook->rule->name.c_str(), strln->value);
                 *msg = create_error("Permission denied to function '%s'.", strln->value);
                 *matches = true;
                 break;
@@ -2182,7 +2184,7 @@ void match_function_usage(RULE *rule, GWBUF *queue, enum fw_actions mode,
                 if (strcasecmp(tok, s->value) == 0)
                 {
                     MXS_NOTICE("rule '%s': query uses a function with forbidden column: %s",
-                               rule->name, s->value);
+                               rule->name.c_str(), s->value);
                     *msg = create_error("Permission denied to column '%s' with function.", s->value);
                     *matches = true;
                     return;
@@ -2202,7 +2204,7 @@ void match_wildcard(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg
     {
         if (strcmp(infos[i].column, "*") == 0)
         {
-            MXS_NOTICE("rule '%s': query contains a wildcard.", rulebook->rule->name);
+            MXS_NOTICE("rule '%s': query contains a wildcard.", rulebook->rule->name.c_str());
             *matches = true;
             *msg = create_error("Usage of wildcard denied.");
         }
@@ -2289,7 +2291,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
         case RT_PERMISSION:
             matches = true;
             msg = create_error("Permission denied at this time.");
-            MXS_NOTICE("rule '%s': query denied at this time.", rulebook->rule->name);
+            MXS_NOTICE("rule '%s': query denied at this time.", rulebook->rule->name.c_str());
             break;
 
         case RT_COLUMN:
@@ -2330,7 +2332,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 matches = true;
                 msg = create_error("Required WHERE/HAVING clause is missing.");
                 MXS_NOTICE("rule '%s': query has no where/having "
-                           "clause, query is denied.", rulebook->rule->name);
+                           "clause, query is denied.", rulebook->rule->name.c_str());
             }
             break;
 
@@ -2390,7 +2392,7 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
                 }
                 if (rule_matches(my_instance, my_session, queue, user, rulebook, fullquery))
                 {
-                    *rulename = MXS_STRDUP_A(rulebook->rule->name);
+                    *rulename = MXS_STRDUP_A(rulebook->rule->name.c_str());
                     rval = true;
                     break;
                 }
@@ -2474,7 +2476,7 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
 
                 if (rule_matches(my_instance, my_session, queue, user, rulebook, fullquery))
                 {
-                    append_string(&matched_rules, &size, rulebook->rule->name);
+                    append_string(&matched_rules, &size, rulebook->rule->name.c_str());
                 }
                 else
                 {
@@ -2727,7 +2729,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 
     for (RULE *rule = thr_rules; rule; rule = rule->next)
     {
-        char buf[strlen(rule->name) + 200];
+        char buf[rule->name.length() + 200];
         print_rule(rule, buf);
         dcb_printf(dcb, "%s\n", buf);
     }
