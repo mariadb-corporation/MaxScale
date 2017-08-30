@@ -71,6 +71,7 @@
 #include <stdlib.h>
 #include <string>
 #include <list>
+#include <tr1/memory>
 
 #include <maxscale/filter.h>
 #include <maxscale/atomic.h>
@@ -298,18 +299,22 @@ thread_local int        thr_rule_version = 0;
 thread_local RULE      *thr_rules = NULL;
 thread_local HASHTABLE *thr_users = NULL;
 
+typedef std::list<std::string>      ValueList;
+
 /**
  * A temporary template structure used in the creation of actual users.
  * This is also used to link the user definitions with the rules.
  * @see struct user_t
  */
-typedef struct user_template
+struct UserTemplate
 {
-    char                 *name;
-    enum match_type       type; /** Matching type */
-    STRLINK              *rulenames; /** names of the rules */
-    struct user_template *next;
-} user_template_t;
+    std::string     name;      /** Name of the user */
+    enum match_type type;      /** Matching type */
+    ValueList       rulenames; /** Names of the rules */
+};
+
+typedef std::tr1::shared_ptr<UserTemplate> SUserTemplate;
+typedef std::list<SUserTemplate>      TemplateList;
 
 /**
  * A user definition
@@ -1097,18 +1102,16 @@ char* get_regex_string(char** saved)
     return NULL;
 }
 
-typedef std::list<std::string> ValueList;
-
 /**
  * Structure used to hold rules and users that are being parsed
  */
 struct parser_stack
 {
     RULE* rule;
-    STRLINK* user;
-    STRLINK* active_rules;
+    ValueList user;
+    ValueList active_rules;
     enum match_type active_mode;
-    user_template_t* templates;
+    TemplateList templates;
     ValueList values;
     std::string name;
 };
@@ -1259,18 +1262,11 @@ static void rule_free_all(RULE* rule)
  * @param scanner Current scanner
  * @param name Name of the user
  */
-bool add_active_user(void* scanner, const char* name)
+void add_active_user(void* scanner, const char* name)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    STRLINK *tmp = strlink_push(rstack->user, name);
-
-    if (tmp)
-    {
-        rstack->user = tmp;
-    }
-
-    return tmp != NULL;
+    rstack->user.push_back(name);
 }
 
 /**
@@ -1278,18 +1274,11 @@ bool add_active_user(void* scanner, const char* name)
  * @param scanner Current scanner
  * @param name Name of the rule
  */
-bool add_active_rule(void* scanner, const char* name)
+void add_active_rule(void* scanner, const char* name)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    STRLINK *tmp = strlink_push(rstack->active_rules, name);
-
-    if (tmp)
-    {
-        rstack->active_rules = tmp;
-    }
-
-    return tmp != NULL;
+    rstack->active_rules.push_back(name);
 }
 
 /**
@@ -1333,55 +1322,20 @@ bool create_user_templates(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    user_template_t* templates = NULL;
-    STRLINK* user = rstack->user;
 
-    while (user)
+    for (ValueList::const_iterator it = rstack->user.begin(); it != rstack->user.end(); it++)
     {
-        user_template_t* newtemp = (user_template_t*)MXS_MALLOC(sizeof(user_template_t));
-        STRLINK* tmp;
-        if (newtemp && (newtemp->name = MXS_STRDUP(user->value)) &&
-            (newtemp->rulenames = strlink_reverse_clone(rstack->active_rules)))
-        {
-            newtemp->type = rstack->active_mode;
-            newtemp->next = templates;
-            templates = newtemp;
-        }
-        else
-        {
-            if (newtemp)
-            {
-                MXS_FREE(newtemp->name);
-                MXS_FREE(newtemp);
-            }
-            MXS_FREE(templates->name);
-            strlink_free(templates->rulenames);
-            MXS_FREE(templates);
-            return false;
-        }
-        user = user->next;
+        SUserTemplate newtemp = SUserTemplate(new UserTemplate);
+        newtemp->name = *it;
+        newtemp->rulenames = rstack->active_rules;
+        newtemp->type = rstack->active_mode;
+        rstack->templates.push_back(newtemp);
     }
 
-    templates->next = rstack->templates;
-    rstack->templates = templates;
+    rstack->user.clear();
+    rstack->active_rules.clear();
 
-    strlink_free(rstack->user);
-    strlink_free(rstack->active_rules);
-    rstack->user = NULL;
-    rstack->active_rules = NULL;
     return true;
-}
-
-void free_user_templates(user_template_t *templates)
-{
-    while (templates)
-    {
-        user_template_t *tmp = templates;
-        templates = templates->next;
-        strlink_free(tmp->rulenames);
-        MXS_FREE(tmp->name);
-        MXS_FREE(tmp);
-    }
 }
 
 void set_matching_mode(void* scanner, enum match_type mode)
@@ -1552,24 +1506,25 @@ bool define_regex_rule(void* scanner, char* pattern)
  * @param rules List of all rules
  * @return True on success, false on error.
  */
-static bool process_user_templates(HASHTABLE *users, user_template_t *templates,
+static bool process_user_templates(HASHTABLE *users, const TemplateList& templates,
                                    RULE* rules)
 {
     bool rval = true;
 
-    if (templates == NULL)
+    if (templates.size() == 0)
     {
         MXS_ERROR("No user definitions found in the rule file.");
         rval = false;
     }
 
-    while (templates)
+    for (TemplateList::const_iterator it = templates.begin(); it != templates.end(); it++)
     {
-        DBFW_USER *user = (DBFW_USER*)hashtable_fetch(users, templates->name);
+        const SUserTemplate& ut = *it;
+        DBFW_USER *user = (DBFW_USER*)hashtable_fetch(users, (void*)ut->name.c_str());
 
         if (user == NULL)
         {
-            if ((user = (DBFW_USER*)MXS_MALLOC(sizeof(DBFW_USER))) && (user->name = MXS_STRDUP(templates->name)))
+            if ((user = (DBFW_USER*)MXS_MALLOC(sizeof(DBFW_USER))) && (user->name = MXS_STRDUP(ut->name.c_str())))
             {
                 user->rules_and = NULL;
                 user->rules_or = NULL;
@@ -1587,13 +1542,21 @@ static bool process_user_templates(HASHTABLE *users, user_template_t *templates,
         }
 
         RULE_BOOK *foundrules = NULL;
-        RULE *rule;
-        STRLINK *names = templates->rulenames;
 
-        while (names && (rule = find_rule_by_name(rules, names->value)))
+        for (ValueList::const_iterator r_it = ut->rulenames.begin();
+             r_it != ut->rulenames.end(); r_it++)
         {
-            foundrules = rulebook_push(foundrules, rule);
-            names = names->next;
+            RULE* rule = find_rule_by_name(rules, r_it->c_str());
+
+            if (rule)
+            {
+                foundrules = rulebook_push(foundrules, rule);
+            }
+            else
+            {
+                MXS_ERROR("Could not find definition for rule '%s'.", r_it->c_str());
+                rval = false;
+            }
         }
 
         if (foundrules)
@@ -1605,7 +1568,7 @@ static bool process_user_templates(HASHTABLE *users, user_template_t *templates,
                 tail = tail->next;
             }
 
-            switch (templates->type)
+            switch (ut->type)
             {
             case FWTOK_MATCH_ANY:
                 tail->next = user->rules_or;
@@ -1623,13 +1586,6 @@ static bool process_user_templates(HASHTABLE *users, user_template_t *templates,
                 break;
             }
         }
-        else
-        {
-            MXS_ERROR("Could not find definition for rule '%s'.", names->value);
-            rval = false;
-            break;
-        }
-        templates = templates->next;
     }
 
     return rval;
@@ -1652,9 +1608,6 @@ static bool process_rule_file(const char* filename, RULE** rules, HASHTABLE **us
         struct parser_stack pstack;
 
         pstack.rule = NULL;
-        pstack.user = NULL;
-        pstack.active_rules = NULL;
-        pstack.templates = NULL;
 
         dbfw_yylex_init(&scanner);
         YY_BUFFER_STATE buf = dbfw_yy_create_buffer(file, YY_BUF_SIZE, scanner);
@@ -1681,10 +1634,6 @@ static bool process_rule_file(const char* filename, RULE** rules, HASHTABLE **us
             hashtable_free(new_users);
             MXS_ERROR("Failed to process rule file '%s'.", filename);
         }
-
-        free_user_templates(pstack.templates);
-        strlink_free(pstack.active_rules);
-        strlink_free(pstack.user);
     }
     else
     {

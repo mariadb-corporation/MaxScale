@@ -49,8 +49,8 @@ bool add_at_times_rule(void* scanner, const char* range);
 void add_on_queries_rule(void* scanner, const char* sql);
 
 /** User creation functions */
-bool add_active_user(void* scanner, const char* name);
-bool add_active_rule(void* scanner, const char* name);
+void add_active_user(void* scanner, const char* name);
+void add_active_rule(void* scanner, const char* name);
 void set_matching_mode(void* scanner, enum match_type mode);
 bool create_user_templates(void* scanner);
 

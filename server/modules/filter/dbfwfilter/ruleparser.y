@@ -93,14 +93,22 @@ user
         {if (!create_user_templates(scanner)){YYERROR;}}
     ;
 
+uservalue
+    : FWTOK_USER {add_active_user(scanner, $1);}
+    ;
+
 userlist
-    : FWTOK_USER {if (!add_active_user(scanner, $1)){YYERROR;}}
-    | userlist FWTOK_USER {if (!add_active_user(scanner, $2)){YYERROR;}}
+    : uservalue
+    | userlist uservalue
+    ;
+
+namevalue
+    : rulename {add_active_rule(scanner, $1);}
     ;
 
 namelist
-    : rulename {if (!add_active_rule(scanner, $1)){YYERROR;}}
-    | namelist rulename {if (!add_active_rule(scanner, $2)){YYERROR;}}
+    : namevalue
+    | namelist namevalue
     ;
 
 cond
