@@ -26,6 +26,21 @@ The output of `show servers` now shows the number of times a connection was
 taken from a server's pool as well as the ratio of connections taken from the
 pool versus newly created connections.
 
+### Logging
+
+When known, the session id will be included in all logged messages. This allows
+a range of logged messages related to a particular session (that is, client) to
+be bound together, and makes it easier to investigate problems. In practice this
+is visible so that if a logged message earlier looked like
+```
+2017-08-30 12:20:49   warning: [masking] The rule ...
+```
+it will now look like
+```
+2017-08-30 12:20:49   warning: (4711) [masking] The rule ...
+```
+where `4711` is the session id.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.1.7.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.7)
