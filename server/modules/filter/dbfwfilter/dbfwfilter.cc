@@ -130,11 +130,6 @@ static void rule_free_all(Rule* rule);
 static bool process_rule_file(const char* filename, RuleList* rules, UserMap* users);
 bool replace_rules(FW_INSTANCE* instance);
 
-static inline bool query_is_sql(GWBUF* query)
-{
-    return modutil_is_SQL(query) || modutil_is_SQL_prepare(query);
-}
-
 static void print_rule(Rule *rules, char *dest)
 {
     int type = 0;
@@ -1017,9 +1012,7 @@ void define_wildcard_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    Rule* rule = create_rule(rstack->name);
-    rule->type = RT_WILDCARD;
-    rstack->rule.push_front(SRule(rule));
+    rstack->rule.push_front(SRule(new WildCardRule(rstack->name)));
 }
 
 /**
@@ -1081,10 +1074,7 @@ void define_where_clause_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    Rule* rule = create_rule(rstack->name);
-
-    rule->type = RT_CLAUSE;
-    rstack->rule.push_front(SRule(rule));
+    rstack->rule.push_front(SRule(new NoWhereClauseRule(rstack->name)));
 }
 
 /**
@@ -1124,10 +1114,7 @@ bool define_regex_rule(void* scanner, char* pattern)
     {
         struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
         ss_dassert(rstack);
-        Rule* rule = create_rule(rstack->name);
-        rule->type = RT_REGEX;
-        rule->data = re;
-        rstack->rule.push_front(SRule(rule));
+        rstack->rule.push_front(SRule(new RegexRule(rstack->name, re)));
     }
     else
     {
@@ -1661,31 +1648,6 @@ bool match_throttle(FW_SESSION* my_session, SRule rule, char **msg)
     return matches;
 }
 
-void match_regex(SRule rule, const char *query, bool *matches, char **msg)
-{
-
-    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern((pcre2_code*)rule->data, NULL);
-
-    if (mdata)
-    {
-        if (pcre2_match((pcre2_code*)rule->data,
-                        (PCRE2_SPTR)query, PCRE2_ZERO_TERMINATED,
-                        0, 0, mdata, NULL) > 0)
-        {
-            MXS_NOTICE("rule '%s': regex matched on query", rule->name.c_str());
-            *matches = true;
-            *msg = create_error("Permission denied, query matched regular expression.");
-        }
-
-        pcre2_match_data_free(mdata);
-    }
-    else
-    {
-        MXS_ERROR("Allocation of matching data for PCRE2 failed."
-                  " This is most likely caused by a lack of memory");
-    }
-}
-
 void match_column(SRule rule, GWBUF *queue, bool *matches, char **msg)
 {
     const QC_FIELD_INFO* infos;
@@ -1772,23 +1734,6 @@ void match_function_usage(SRule rule, GWBUF *queue, enum fw_actions mode,
     }
 }
 
-void match_wildcard(SRule rule, GWBUF *queue, bool *matches, char **msg)
-{
-    const QC_FIELD_INFO* infos;
-    size_t n_infos;
-    qc_get_field_info(queue, &infos, &n_infos);
-
-    for (size_t i = 0; i < n_infos; ++i)
-    {
-        if (strcmp(infos[i].column, "*") == 0)
-        {
-            MXS_NOTICE("rule '%s': query contains a wildcard.", rule->name.c_str());
-            *matches = true;
-            *msg = create_error("Usage of wildcard denied.");
-        }
-    }
-}
-
 /**
  * Check if a query matches a single rule
  * @param my_instance Fwfilter instance
@@ -1843,7 +1788,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
             break;
 
         case RT_REGEX:
-            match_regex(rule, query, &matches, &msg);
+            /** Handled in RegexRule::query_matches */
             break;
 
         case RT_PERMISSION:
@@ -1872,10 +1817,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
             break;
 
         case RT_WILDCARD:
-            if (is_sql)
-            {
-                match_wildcard(rule, queue, &matches, &msg);
-            }
+            /** Handled in WildCardRule::query_matches */
             break;
 
         case RT_THROTTLE:
@@ -1883,13 +1825,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
             break;
 
         case RT_CLAUSE:
-            if (is_sql && !qc_query_has_clause(queue))
-            {
-                matches = true;
-                msg = create_error("Required WHERE/HAVING clause is missing.");
-                MXS_NOTICE("rule '%s': query has no where/having "
-                           "clause, query is denied.", rule->name.c_str());
-            }
+            /** Handled in WhereClauseRule::query_matches */
             break;
 
         default:

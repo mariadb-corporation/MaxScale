@@ -71,18 +71,18 @@ public:
 /**
  * Matches if a query has no WHERE clause
  */
-class WhereClauseRule: public Rule
+class NoWhereClauseRule: public Rule
 {
-    WhereClauseRule(const WhereClauseRule&);
-    WhereClauseRule& operator=(const WhereClauseRule&);
+    NoWhereClauseRule(const NoWhereClauseRule&);
+    NoWhereClauseRule& operator=(const NoWhereClauseRule&);
 
 public:
-    WhereClauseRule(std::string name):
+    NoWhereClauseRule(std::string name):
         Rule(name)
     {
     }
 
-    ~WhereClauseRule()
+    ~NoWhereClauseRule()
     {
     }
 
