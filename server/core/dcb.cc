@@ -69,14 +69,14 @@ using maxscale::Semaphore;
 namespace
 {
 
-struct
+static struct
 {
     DCB dcb_initialized; /** A DCB with null values, used for initialization. */
     DCB** all_dcbs;      /** #workers sized array of pointers to DCBs where dcbs are listed. */
     bool check_timeouts; /** Should session timeouts be checked. */
 } this_unit;
 
-thread_local struct
+static thread_local struct
 {
     long next_timeout_check; /** When to next check for idle sessions. */
     DCB* current_dcb;        /** The DCB currently being handled by event handlers. */
