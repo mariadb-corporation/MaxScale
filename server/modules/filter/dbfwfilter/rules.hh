@@ -20,8 +20,12 @@
  * Each type of rule has different requirements that are expressed as void pointers.
  * This allows to match an arbitrary set of rules against a user.
  */
-struct Rule
+class Rule
 {
+    Rule(const Rule&);
+    Rule& operator=(const Rule&);
+
+public:
     Rule(std::string name);
     virtual ~Rule();
     virtual bool matches_query(GWBUF* buffer, char** msg);

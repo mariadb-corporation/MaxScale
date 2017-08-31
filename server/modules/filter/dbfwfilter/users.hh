@@ -33,8 +33,12 @@ typedef std::list<SUserTemplate>           TemplateList;
 /**
  * A user definition
  */
-struct User
+class User
 {
+    User(const User&);
+    User& operator=(const User&);
+
+public:
     User(std::string name):
         name(name),
         lock(SPINLOCK_INIT),
