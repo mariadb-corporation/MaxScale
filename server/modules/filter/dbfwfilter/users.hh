@@ -39,25 +39,31 @@ class User
     User& operator=(const User&);
 
 public:
-    User(std::string name):
-        name(name),
-        lock(SPINLOCK_INIT),
-        qs_limit(NULL)
-    {
-    }
+    User(std::string name);
+    ~User();
 
-    ~User()
-    {
-        delete qs_limit;
-    }
+    /**
+     * Get the name of this user
+     *
+     * @return Name of the user
+     */
+    const char* name() const;
 
-    std::string name;             /*< Name of the user */
-    SPINLOCK    lock;             /*< User spinlock */
-    QUERYSPEED* qs_limit;         /*< The query speed structure unique to this user */
+    /**
+     * Append new rules to existing rules
+     *
+     * @param mode  Matching mode for the rule
+     * @param rules Rules to append
+     */
+    void append_rules(match_type mode, const RuleList& rules);
+
     RuleList    rules_or;         /*< If any of these rules match the action is triggered */
     RuleList    rules_and;        /*< All of these rules must match for the action to trigger */
     RuleList    rules_strict_and; /*< rules that skip the rest of the rules if one of them
                                    * fails. This is only for rules paired with 'match strict_all'. */
+
+private:
+    std::string m_name; /*< Name of the user */
 };
 
 typedef std::tr1::shared_ptr<User>                  SUser;

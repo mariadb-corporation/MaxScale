@@ -1189,20 +1189,7 @@ static bool process_user_templates(UserMap& users, const TemplateList& templates
 
         if (newrules.size() > 0)
         {
-            switch (ut->type)
-            {
-            case FWTOK_MATCH_ANY:
-                user->rules_or.insert(user->rules_or.end(), newrules.begin(), newrules.end());
-                break;
-
-            case FWTOK_MATCH_ALL:
-                user->rules_and.insert(user->rules_and.end(), newrules.begin(), newrules.end());
-                break;
-
-            case FWTOK_MATCH_STRICT_ALL:
-                user->rules_strict_and.insert(user->rules_strict_and.end(), newrules.begin(), newrules.end());
-                break;
-            }
+            user->append_rules(ut->type, newrules);
         }
     }
 
@@ -2238,13 +2225,13 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     {
                         ss_dassert(rname);
                         MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %.*s",
-                                   dcb->service->name, rname, user->name.c_str(),
+                                   dcb->service->name, rname, user->name(),
                                    dcb->user, dcb->remote, len, sql);
                     }
                     else if (!match && my_instance->log_match & FW_LOG_NO_MATCH)
                     {
                         MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %.*s",
-                                   dcb->service->name, user->name.c_str(), dcb->user,
+                                   dcb->service->name, user->name(), dcb->user,
                                    dcb->remote, len, sql);
                     }
                 }
