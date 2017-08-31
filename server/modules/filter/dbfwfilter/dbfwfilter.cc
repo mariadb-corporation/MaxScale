@@ -60,32 +60,24 @@
  *@endcode
  */
 
-#define MXS_MODULE_NAME "dbfwfilter"
-#include <maxscale/cppdefs.hh>
+#include "dbfwfilter.hh"
 
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <stdlib.h>
-#include <string>
-#include <list>
-#include <tr1/memory>
-#include <tr1/unordered_map>
 
-#include <maxscale/filter.h>
 #include <maxscale/atomic.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/platform.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/thread.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/alloc.h>
 
-#include "dbfwfilter.h"
+#include "rules.hh"
+#include "users.hh"
 
 MXS_BEGIN_DECLS
 #include "ruleparser.yy.h"
@@ -110,117 +102,7 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
 static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
-/**
- * Rule types
- */
-typedef enum
-{
-    RT_UNDEFINED = 0x00, /*< Undefined rule */
-    RT_COLUMN, /*<  Column name rule*/
-    RT_FUNCTION, /*<  Function name rule*/
-    RT_USES_FUNCTION, /*<  Function usage rule*/
-    RT_THROTTLE, /*< Query speed rule */
-    RT_PERMISSION, /*< Simple denying rule */
-    RT_WILDCARD, /*< Wildcard denial rule */
-    RT_REGEX, /*< Regex matching rule */
-    RT_CLAUSE /*< WHERE-clause requirement rule */
-} ruletype_t;
-
-/**
- * What operator a rule should apply to.
- *
- * Note that each operator is represented by a unique bit, so that they
- * can be combined as a bitmask, while query_op_t enumeration of the query
- * classifier consists of a sequence of unique numbers.
- */
-typedef enum fw_op
-{
-    FW_OP_UNDEFINED = 0,
-
-    // NOTE: If you add something here, check the 'qc_op_to_fw_op' function below.
-    FW_OP_ALTER     = (1 << 0),
-    FW_OP_CHANGE_DB = (1 << 1),
-    FW_OP_CREATE    = (1 << 2),
-    FW_OP_DELETE    = (1 << 3),
-    FW_OP_DROP      = (1 << 4),
-    FW_OP_GRANT     = (1 << 5),
-    FW_OP_INSERT    = (1 << 6),
-    FW_OP_LOAD      = (1 << 7),
-    FW_OP_REVOKE    = (1 << 8),
-    FW_OP_SELECT    = (1 << 9),
-    FW_OP_UPDATE    = (1 << 10),
-} fw_op_t;
-
-/**
- * Convert a qc_query_op_t to the equivalent fw_op_t.
- *
- * @param op A query classifier operator.
- *
- * @return The corresponding bit value.
- */
-static inline fw_op_t qc_op_to_fw_op(qc_query_op_t op)
-{
-    switch (op)
-    {
-    case QUERY_OP_ALTER:
-        return FW_OP_ALTER;
-
-    case QUERY_OP_CHANGE_DB:
-        return FW_OP_CHANGE_DB;
-
-    case QUERY_OP_CREATE:
-        return FW_OP_CREATE;
-
-    case QUERY_OP_DELETE:
-        return FW_OP_DELETE;
-
-    case QUERY_OP_DROP:
-        return FW_OP_DROP;
-
-    case QUERY_OP_GRANT:
-        return FW_OP_GRANT;
-
-    case QUERY_OP_INSERT:
-        return FW_OP_INSERT;
-
-    case QUERY_OP_LOAD:
-        return FW_OP_LOAD;
-
-    case QUERY_OP_REVOKE:
-        return FW_OP_REVOKE;
-
-    case QUERY_OP_SELECT:
-        return FW_OP_SELECT;
-
-    case QUERY_OP_UPDATE:
-        return FW_OP_UPDATE;
-
-    default:
-        return FW_OP_UNDEFINED;
-    };
-}
-
-/**
- * Possible actions to take when the query matches a rule
- */
-enum fw_actions
-{
-    FW_ACTION_ALLOW,
-    FW_ACTION_BLOCK,
-    FW_ACTION_IGNORE
-};
-
-/**
- * Logging options for matched queries
- */
-#define FW_LOG_NONE         0x00
-#define FW_LOG_MATCH        0x01
-#define FW_LOG_NO_MATCH     0x02
-
-/** Maximum length of the match/nomatch messages */
-#define FW_MAX_SQL_LEN      400
-
-const char* rule_names[] =
+static const char* rule_names[] =
 {
     "UNDEFINED",
     "COLUMN",
@@ -233,190 +115,6 @@ const char* rule_names[] =
 };
 
 const int rule_names_len = sizeof(rule_names) / sizeof(char**);
-
-/**
- * Linked list of strings.
- */
-typedef struct strlink_t
-{
-    struct strlink_t *next;     /*< Next node in the list */
-    char*             value;    /*< Value of the current node */
-} STRLINK;
-
-/**
- * A structure defining a range of time
- */
-typedef struct timerange_t
-{
-    struct timerange_t* next;   /*< Next node in the list */
-    struct tm           start;  /*< Start of the time range */
-    struct tm           end;    /*< End of the time range */
-} TIMERANGE;
-
-/**
- * Query speed measurement and limitation structure
- */
-typedef struct queryspeed_t
-{
-    time_t               first_query; /*< Time when the first query occurred */
-    time_t               triggered; /*< Time when the limit was exceeded */
-    int                  period; /*< Measurement interval in seconds */
-    int                  cooldown; /*< Time the user is denied access for */
-    int                  count; /*< Number of queries done */
-    int                  limit; /*< Maximum number of queries */
-    long                 id;    /*< Unique id of the rule */
-    bool                 active; /*< If the rule has been triggered */
-} QUERYSPEED;
-
-/**
- * A structure used to identify individual rules and to store their contents
- *
- * Each type of rule has different requirements that are expressed as void pointers.
- * This allows to match an arbitrary set of rules against a user.
- */
-struct Rule
-{
-    Rule(std::string name):
-        data(NULL),
-        name(name),
-        type(RT_PERMISSION),
-        on_queries(FW_OP_UNDEFINED),
-        times_matched(0),
-        active(NULL)
-    {
-    }
-
-    virtual ~Rule()
-    {
-    }
-
-    virtual bool matches_query(GWBUF* buffer, char** msg)
-    {
-        *msg = create_error("Permission denied at this time.");
-        MXS_NOTICE("rule '%s': query denied at this time.", rule->name.c_str());
-        return true;
-    }
-
-    virtual bool need_full_parsing(GWBUF* buffer) const
-    {
-        bool rval = false;
-        qc_query_op_t optype = qc_get_operation(buffer);
-
-        if (type == RT_COLUMN ||
-            type == RT_FUNCTION ||
-            type == RT_USES_FUNCTION ||
-            type == RT_WILDCARD ||
-            type == RT_CLAUSE)
-        {
-            switch (optype)
-            {
-            case QUERY_OP_SELECT:
-            case QUERY_OP_UPDATE:
-            case QUERY_OP_INSERT:
-            case QUERY_OP_DELETE:
-                rval = true;
-                break;
-
-            default:
-                break;
-            }
-        }
-
-        return rval;
-    }
-
-    bool matches_query_type(GWBUF* buffer)
-    {
-        qc_query_op_t optype = qc_get_operation(buffer);
-
-        return on_queries == FW_OP_UNDEFINED ||
-               (on_queries & qc_op_to_fw_op(optype)) ||
-               (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer)) &&
-                (on_queries & FW_OP_CHANGE_DB));
-    }
-
-    void*          data;        /*< Actual implementation of the rule */
-    std::string    name;        /*< Name of the rule */
-    ruletype_t     type;        /*< Type of the rule */
-    uint32_t       on_queries;  /*< Types of queries to inspect */
-    int            times_matched; /*< Number of times this rule has been matched */
-    TIMERANGE*     active;      /*< List of times when this rule is active */
-};
-
-typedef std::tr1::shared_ptr<Rule> SRule;
-typedef std::list<SRule>           RuleList;
-
-/** Typedef for a list of strings */
-typedef std::list<std::string> ValueList;
-
-/**
- * A temporary template structure used in the creation of actual users.
- * This is also used to link the user definitions with the rules.
- * @see struct user_t
- */
-struct UserTemplate
-{
-    std::string     name;      /** Name of the user */
-    enum match_type type;      /** Matching type */
-    ValueList       rulenames; /** Names of the rules */
-};
-
-typedef std::tr1::shared_ptr<UserTemplate> SUserTemplate;
-typedef std::list<SUserTemplate>           TemplateList;
-
-/**
- * A user definition
- */
-struct User
-{
-    User(std::string name):
-        name(name),
-        lock(SPINLOCK_INIT),
-        qs_limit(NULL)
-    {
-    }
-
-    ~User()
-    {
-        MXS_FREE(qs_limit);
-    }
-
-    std::string name;             /*< Name of the user */
-    SPINLOCK    lock;             /*< User spinlock */
-    QUERYSPEED* qs_limit;         /*< The query speed structure unique to this user */
-    RuleList    rules_or;         /*< If any of these rules match the action is triggered */
-    RuleList    rules_and;        /*< All of these rules must match for the action to trigger */
-    RuleList    rules_strict_and; /*< rules that skip the rest of the rules if one of them
-                                   * fails. This is only for rules paired with 'match strict_all'. */
-};
-
-typedef std::tr1::shared_ptr<User>                  SUser;
-typedef std::tr1::unordered_map<std::string, SUser> UserMap;
-
-/**
- * The Firewall filter instance.
- */
-typedef struct
-{
-    enum fw_actions action;     /*< Default operation mode, defaults to deny */
-    int             log_match;  /*< Log matching and/or non-matching queries */
-    SPINLOCK        lock;       /*< Instance spinlock */
-    int             idgen;      /*< UID generator */
-    char           *rulefile;   /*< Path to the rule file */
-    int             rule_version; /*< Latest rule file version, incremented on reload */
-} FW_INSTANCE;
-
-/**
- * The session structure for Firewall filter.
- */
-typedef struct
-{
-    MXS_SESSION   *session;      /*< Client session structure */
-    char          *errmsg;       /*< Rule specific error message */
-    QUERYSPEED    *query_speed;  /*< How fast the user has executed queries */
-    MXS_DOWNSTREAM down;         /*< Next object in the downstream chain */
-    MXS_UPSTREAM   up;           /*< Next object in the upstream chain */
-} FW_SESSION;
 
 /** The rules and users for each thread */
 thread_local struct
@@ -431,6 +129,11 @@ bool parse_limit_queries(FW_INSTANCE* instance, Rule* ruledef, const char* rule,
 static void rule_free_all(Rule* rule);
 static bool process_rule_file(const char* filename, RuleList* rules, UserMap* users);
 bool replace_rules(FW_INSTANCE* instance);
+
+static inline bool query_is_sql(GWBUF* query)
+{
+    return modutil_is_SQL(query) || modutil_is_SQL_prepare(query);
+}
 
 static void print_rule(Rule *rules, char *dest)
 {
@@ -1846,7 +1549,7 @@ bool rule_is_active(SRule rule)
  *
  * @return Pointer to newly allocated and formatted string
  */
-static char* create_error(const char* format, ...)
+char* create_error(const char* format, ...)
 {
     va_list valist;
     va_start(valist, format);

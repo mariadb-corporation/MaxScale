@@ -20,7 +20,6 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <stdbool.h>
 
 MXS_BEGIN_DECLS
 
