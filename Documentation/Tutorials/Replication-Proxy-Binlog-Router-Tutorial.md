@@ -38,22 +38,6 @@ The minimum set of router options that must be given in the configuration are ar
 Additional information about the encryption of the Binlog files can be found here:
 [Binlogrouter - The replication protocol proxy module for MariaDB MaxScale](../Routers/Binlogrouter.md).
 
-### `mariadb10_slave_gtid`
-If enabled this option allows MariaDB 10.x slave servers to connect to binlog
-server using GTID value instead of binlog_file name and position. Default option value is _off_.
-
-### `mariadb10_master_gtid`
-
-This option allows MaxScale binlog router to register with MariaDB 10.X
-master using GTID instead of binlog_file name and position in CHANGE MASTER TO admin command.
-Default option value is _off_.
-
-### `binlog_structure`
-This option controls the way binlog files are saved in the binlogdir: there are two
-possible values, _flat_ or _tree_. The _tree_ structure easily allows the changing of
-the master server without caring about binlog filename and sequence.
-Default option value is _flat_.
-
 
 A **complete example** of a service entry for a binlog router service would be as follows.
 
@@ -84,7 +68,10 @@ A **complete example** of a service entry for a binlog router service would be a
                    encryption_key_file=/var/binlogs/enc_key.txt,
                    mariadb10_slave_gtid=On,
                    mariadb10_master_gtid=Off,
-                   binlog_structure=flat
+                   binlog_structure=flat,
+                   slave_hostname=maxscale-blr-1,
+                   master_retry_count=1000,
+                   connect_retry=60
 ```
 
 The minimum set of router options that must be given in the configuration
@@ -333,6 +320,8 @@ Please note that is such condition the only user for MySQL protocol connection t
 	master_ssl_cert=/home/mpinto/packages/certificates/client/client-cert.pem
 	master_ssl_ca=/home/mpinto/packages/certificates/client/ca.pem
 	#master_tls_version=TLSv12
+	#master_heartbeat_period=300
+	#master_connect_retry=60
 
 Enabling replication from a master server requires:
 
@@ -341,7 +330,7 @@ Enabling replication from a master server requires:
 	MASTER_USER='repl',
 	MASTER_PASSWORD=‘somepasswd’,
 	MASTER_LOG_FILE=‘repl-bin.000159',
-	MASTER_LOG_POS=4
+	MASTER_LOG_POS=4;
 
 It's possible to specify the desired *MASTER_LOG_FILE* but position must be 4
 
@@ -350,7 +339,7 @@ required, as the needed values are automatically set by parsing *MASTER_LOG_FILE
 
 ##### MariaDB 10 GTID
 
-Since MaxScale 2.2, if option _mariadb10_master_gtid_ is On, it's possible to use GTID
+Since MaxScale 2.2, if option _mariadb10_master_gtid_ is On, it's possible to use GTID (MASTER_USE_GTID=Slave_pos),
 instead of _file_ and _pos_.
 This also implies that MariaDB 10 slave servers can only connect with GTID mode to MaxScale.
 
@@ -360,7 +349,8 @@ MariaDB> CHANGE MASTER TO
          MASTER_HOST=‘$master_server’,
          MASTER_PORT=$master_port,
          MASTER_USER='repl',
-         MASTER_PASSWORD=‘somepasswd’;
+         MASTER_PASSWORD=‘somepasswd’,
+         MASTER_USE_GTID=Slave_pos;
 ```
 **Note**: the _log file name_ to write binlog events into is the one specified in
 the _Fake Rotate_ event received at registration time.
@@ -401,6 +391,9 @@ The supported options are:
 	MASTER_PASSWORD
 	MASTER_LOG_FILE
 	MASTER_LOG_POS
+	MASTER_CONNECT_RETRY
+	MASTER_HEARTBEAT_PERIOD
+	MASTER_USE_GTID
 
 and SSL options as well:
 

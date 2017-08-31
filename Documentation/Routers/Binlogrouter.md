@@ -269,40 +269,6 @@ Example:
 3;bbbbbbbbbaaaaaaabbbbbccccceeeddddd3333333ddddaaaaffffffeeeeecccd
 ```
 
-A complete example of a service entry for a binlog router service would be as
-follows.
-```
-    [Replication]
-    type=service
-    router=binlogrouter
-    servers=masterdb
-    version_string=5.6.17-log
-    user=maxscale
-    passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,
-                   server_id=3,
-                   user=repl,
-                   password=slavepass,
-                   master_id=32,
-                   heartbeat=30,
-                   binlogdir=/var/binlogs,
-                   transaction_safety=1,
-                   master_version=5.6.19-common,
-                   master_hostname=common_server,
-                   master_uuid=xxx-fff-cccc-common,
-                   mariadb10-compatibility=1,
-                   send_slave_heartbeat=1,
-                   ssl_cert_verification_depth=9,
-                   semisync=1,
-                   encrypt_binlog=1,
-                   encryption_algorithm=aes_ctr,
-                   encryption_key_file=/var/binlogs/enc_key.txt,
-                   slave_hostname=maxscale-blr-1
-```
-
-The minimum set of router options that must be given in the configuration are
-`server_id` and `master_id` (unless the real master id should be used); default
-values may be used for all other options.
 
 ### `mariadb10_slave_gtid`
 If enabled this option allows MariaDB 10.x slave servers to connect to binlog
@@ -383,6 +349,57 @@ The _tree_ structure easily allows the changing of the master server
 without caring about binlog filename and sequence:
 just change _host_ and _port_, the replication will
 resume from last GTID MaxScale has seen.
+
+### `master_retry_count`
+
+This option sets the maximum number of connection retries when the master server is disconnected or not reachable.
+Default value is 1000.
+
+### `connect_retry`
+The option sets the time interval for a new connection retry to master server, default value is 60 seconds.
+
+
+**A complete example** of a service entry for a binlog router service would be as
+follows.
+
+```
+    [Replication]
+    type=service
+    router=binlogrouter
+    servers=masterdb
+    version_string=5.6.17-log
+    user=maxscale
+    passwd=Mhu87p2D
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,
+                   server_id=3,
+                   user=repl,
+                   password=slavepass,
+                   master_id=32,
+                   heartbeat=30,
+                   binlogdir=/var/binlogs,
+                   transaction_safety=1,
+                   master_version=5.6.19-common,
+                   master_hostname=common_server,
+                   master_uuid=xxx-fff-cccc-common,
+                   mariadb10-compatibility=1,
+                   send_slave_heartbeat=1,
+                   ssl_cert_verification_depth=9,
+                   semisync=1,
+                   encrypt_binlog=1,
+                   encryption_algorithm=aes_ctr,
+                   encryption_key_file=/var/binlogs/enc_key.txt,
+                   mariadb10_slave_gtid=On,
+                   mariadb10_master_gtid=Off,
+                   binlog_structure=flat,
+                   slave_hostname=maxscale-blr-1,
+                   master_retry_count=1000,
+                   connect_retry=60
+```
+
+The minimum set of router options that must be given in the configuration are
+`server_id` and `master_id` (unless the real master id should be used); default
+values may be used for all other options.
+
 
 ## Examples
 
