@@ -167,10 +167,18 @@ static void update_field_infos_from_idlist(QC_SQLITE_INFO* info,
                                            const IdList* pIds,
                                            uint32_t usage,
                                            const ExprList* pExclude);
-static void update_field_infos_from_select(QC_SQLITE_INFO* info,
-                                           const Select* pSelect,
-                                           uint32_t usage,
-                                           const ExprList* pExclude);
+typedef enum compound_approach
+{
+    ANALYZE_COMPOUND_SELECTS,
+    IGNORE_COMPOUND_SELECTS
+} compound_approach_t;
+static void update_field_infos_from_select_compound(QC_SQLITE_INFO* info,
+                                                    const Select* pSelect,
+                                                    uint32_t usage,
+                                                    const ExprList* pExclude,
+                                                    compound_approach_t compound_approach);
+#define update_field_infos_from_select(i, s, u, e)\
+    update_field_infos_from_select_compound(i, s, u, e, ANALYZE_COMPOUND_SELECTS)
 static void update_function_info(QC_SQLITE_INFO* info,
                                  const char* name,
                                  uint32_t usage);
@@ -1193,10 +1201,11 @@ static void update_field_infos_from_idlist(QC_SQLITE_INFO* info,
     }
 }
 
-static void update_field_infos_from_select(QC_SQLITE_INFO* info,
-                                           const Select* pSelect,
-                                           uint32_t usage,
-                                           const ExprList* pExclude)
+static void update_field_infos_from_select_compound(QC_SQLITE_INFO* info,
+                                                    const Select* pSelect,
+                                                    uint32_t usage,
+                                                    const ExprList* pExclude,
+                                                    compound_approach_t compound_approach)
 {
     if (pSelect->pSrc)
     {
@@ -1256,6 +1265,21 @@ static void update_field_infos_from_select(QC_SQLITE_INFO* info,
         // mentioned. Consequently, they need not be collected.
         update_field_infos(info, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
 #endif
+    }
+
+    if (compound_approach == ANALYZE_COMPOUND_SELECTS)
+    {
+        if (((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior)
+        {
+            const Select* pPrior = pSelect->pPrior;
+
+            while (pPrior)
+            {
+                update_field_infos_from_select_compound(info, pPrior, usage, pExclude,
+                                                        IGNORE_COMPOUND_SELECTS);
+                pPrior = pPrior->pPrior;
+            }
+        }
     }
 }
 

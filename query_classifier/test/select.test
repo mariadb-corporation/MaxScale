@@ -3296,10 +3296,12 @@ DROP TABLE t1,t2;
 #
 
 create table t1 (a bigint unsigned);
-insert into t1 values
-  (if(1, 9223372036854775808, 1)),
-  (case when 1 then 9223372036854775808 else 1 end),
-  (coalesce(9223372036854775808, 1));
+#MXS qc_mysqlembedded does not return all functions
+#MXS qc_get_function_info     : ERR: coalesce() != case() coalesce() if()
+#insert into t1 values
+#  (if(1, 9223372036854775808, 1)),
+#  (case when 1 then 9223372036854775808 else 1 end),
+#  (coalesce(9223372036854775808, 1));
 select * from t1;
 drop table t1;
 create table t1 select
