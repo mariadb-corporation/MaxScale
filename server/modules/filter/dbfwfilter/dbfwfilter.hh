@@ -199,5 +199,16 @@ typedef struct
 /** Typedef for a list of strings */
 typedef std::list<std::string> ValueList;
 
+/** Temporary typedef for SRule */
+class Rule;
+typedef std::tr1::shared_ptr<Rule> SRule;
+
 /** Helper function for strdup'ing in printf style */
 char* create_error(const char* format, ...);
+
+/**
+ * Check if a rule matches
+ */
+bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+                  GWBUF *queue, SRule rule, char* query);
+bool rule_is_active(SRule rule);

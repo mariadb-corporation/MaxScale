@@ -57,13 +57,39 @@ public:
      */
     void append_rules(match_type mode, const RuleList& rules);
 
+    /**
+     * Check if a query matches some rule
+     *
+     * @param instance Filter instance
+     * @param session  Filter session
+     * @param buffer   Buffer containing the query
+     * @param rulename Names of rules that this query matched
+     *
+     * @return True if query matches
+     */
+    bool match(FW_INSTANCE* instance, FW_SESSION* session, GWBUF* buffer, char** rulename);
+
+private:
+
+    enum match_mode
+    {
+        ALL,
+        STRICT
+    };
+
     RuleList    rules_or;         /*< If any of these rules match the action is triggered */
     RuleList    rules_and;        /*< All of these rules must match for the action to trigger */
     RuleList    rules_strict_and; /*< rules that skip the rest of the rules if one of them
                                    * fails. This is only for rules paired with 'match strict_all'. */
+    std::string m_name;           /*< Name of the user */
 
-private:
-    std::string m_name; /*< Name of the user */
+    /**
+     * Functions for matching rules
+     */
+    bool match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+                   GWBUF *queue, char** rulename);
+    bool do_match(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+                  GWBUF *queue, match_mode mode, char** rulename);
 };
 
 typedef std::tr1::shared_ptr<User>                  SUser;
