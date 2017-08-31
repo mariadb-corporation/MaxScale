@@ -14,6 +14,8 @@
 
 #include "dbfwfilter.hh"
 
+#include <maxscale/pcre2.hh>
+
 /**
  * A structure used to identify individual rules and to store their contents
  *
@@ -38,6 +40,213 @@ public:
     uint32_t       on_queries;    /*< Types of queries to inspect */
     int            times_matched; /*< Number of times this rule has been matched */
     TIMERANGE*     active;        /*< List of times when this rule is active */
+};
+
+/**
+ * Matches if a query uses the wildcard character, `*`.
+ */
+class WildCardRule: public Rule
+{
+    WildCardRule(const WildCardRule&);
+    WildCardRule& operator=(const WildCardRule&);
+
+public:
+    WildCardRule(std::string name):
+        Rule(name)
+    {
+    }
+
+    ~WildCardRule()
+    {
+    }
+
+    bool need_full_parsing(GWBUF* buffer) const
+    {
+        return true;
+    }
+
+    bool matches_query(GWBUF* buffer, char** msg);
+};
+
+/**
+ * Matches if a query has no WHERE clause
+ */
+class WhereClauseRule: public Rule
+{
+    WhereClauseRule(const WhereClauseRule&);
+    WhereClauseRule& operator=(const WhereClauseRule&);
+
+public:
+    WhereClauseRule(std::string name):
+        Rule(name)
+    {
+    }
+
+    ~WhereClauseRule()
+    {
+    }
+
+    bool need_full_parsing(GWBUF* buffer) const
+    {
+        return true;
+    }
+
+    bool matches_query(GWBUF* buffer, char** msg);
+
+};
+
+/**
+ * Matches if a query uses one of the columns
+ */
+class ColumnsRule: public Rule
+{
+    ColumnsRule(const ColumnsRule&);
+    ColumnsRule& operator=(const ColumnsRule&);
+
+public:
+    ColumnsRule(std::string name, const ValueList& values):
+        Rule(name),
+        m_values(values)
+    {
+    }
+
+    ~ColumnsRule()
+    {
+    }
+
+    bool need_full_parsing(GWBUF* buffer) const
+    {
+        return true;
+    }
+
+    bool matches_query(GWBUF* buffer, char** msg);
+
+private:
+    ValueList m_values;
+};
+
+/**
+ * Matches if a query uses one of the functions
+ */
+class FunctionRule: public Rule
+{
+    FunctionRule(const FunctionRule&);
+    FunctionRule& operator=(const FunctionRule&);
+
+public:
+    FunctionRule(std::string name, const ValueList& values):
+        Rule(name),
+        m_values(values)
+    {
+    }
+
+    ~FunctionRule()
+    {
+    }
+
+    bool need_full_parsing(GWBUF* buffer) const
+    {
+        return true;
+    }
+
+    bool matches_query(GWBUF* buffer, char** msg);
+
+private:
+    ValueList m_values;
+};
+
+/**
+ * Matches if a query uses any functions
+ */
+class FunctionUsageRule: public Rule
+{
+    FunctionUsageRule(const FunctionUsageRule&);
+    FunctionUsageRule& operator=(const FunctionUsageRule&);
+
+public:
+    FunctionUsageRule(std::string name, const ValueList& values):
+        Rule(name),
+        m_values(values)
+    {
+    }
+
+    ~FunctionUsageRule()
+    {
+    }
+
+    bool need_full_parsing(GWBUF* buffer) const
+    {
+        return true;
+    }
+
+    bool matches_query(GWBUF* buffer, char** msg);
+
+private:
+    ValueList m_values;
+};
+
+/**
+ * Matches if a queries are executed too quickly
+ */
+class LimitQueriesRule: public Rule
+{
+    LimitQueriesRule(const LimitQueriesRule&);
+    LimitQueriesRule& operator=(const LimitQueriesRule&);
+
+public:
+    LimitQueriesRule(std::string name, int max, int timeperiod, int holdoff):
+        Rule(name),
+        m_max(max),
+        m_timeperiod(timeperiod),
+        m_holdoff(holdoff)
+    {
+    }
+
+    ~LimitQueriesRule()
+    {
+    }
+
+    bool need_full_parsing(GWBUF* buffer) const
+    {
+        return true;
+    }
+
+    bool matches_query(GWBUF* buffer, char** msg);
+
+private:
+    int m_max;
+    int m_timeperiod;
+    int m_holdoff;
+};
+
+/**
+ * Matches if a queries matches a pattern
+ */
+class RegexRule: public Rule
+{
+    RegexRule(const RegexRule&);
+    RegexRule& operator=(const RegexRule&);
+
+public:
+    RegexRule(std::string name, pcre2_code* re):
+        Rule(name),
+        m_re(re)
+    {
+    }
+
+    ~RegexRule()
+    {
+    }
+
+    bool need_full_parsing(GWBUF* buffer) const
+    {
+        return false;
+    }
+
+    bool matches_query(GWBUF* buffer, char** msg);
+
+private:
+    mxs::Closer<pcre2_code*> m_re;
 };
 
 typedef std::tr1::shared_ptr<Rule> SRule;
