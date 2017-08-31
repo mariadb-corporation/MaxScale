@@ -2848,8 +2848,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 /* Update Last Seen MariaDB GTID */
                 strcpy(router->last_mariadb_gtid,
                        router->pending_transaction.gtid);
-                /* Save MariaDB 10 GTID */
-                blr_save_mariadb_gtid(router);
             }
 
             total_events += transaction_events;
