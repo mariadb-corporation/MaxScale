@@ -292,7 +292,9 @@ struct Rule
 
     virtual bool matches_query(GWBUF* buffer, char** msg)
     {
-        return false;
+        *msg = create_error("Permission denied at this time.");
+        MXS_NOTICE("rule '%s': query denied at this time.", rule->name.c_str());
+        return true;
     }
 
     virtual bool need_full_parsing(GWBUF* buffer) const
@@ -2155,9 +2157,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
             break;
 
         case RT_PERMISSION:
-            matches = true;
-            msg = create_error("Permission denied at this time.");
-            MXS_NOTICE("rule '%s': query denied at this time.", rule->name.c_str());
+            /** Handled in Rule::matches_query */
             break;
 
         case RT_COLUMN:
