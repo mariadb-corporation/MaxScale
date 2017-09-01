@@ -1039,6 +1039,15 @@ void dcb_close(DCB *dcb)
 {
     CHK_DCB(dcb);
 
+#if defined(SS_DEBUG)
+    if (dcb->poll.thread.id != Worker::get_current_id())
+    {
+        MXS_ALERT("dcb_close(%p) called by %d, owned by %d.",
+                  dcb, Worker::get_current_id(), dcb->poll.thread.id);
+        ss_dassert(dcb->poll.thread.id == Worker::get_current_id());
+    }
+#endif
+
     if ((DCB_STATE_UNDEFINED == dcb->state) || (DCB_STATE_DISCONNECTED == dcb->state))
     {
         log_illegal_dcb(dcb);
@@ -1071,6 +1080,15 @@ void dcb_close(DCB *dcb)
     else if (dcb->n_close == 0)
     {
         dcb->n_close = 1;
+
+        if (dcb != dcb_get_current())
+        {
+            // If the dcb to be closed is *not* the dcb for which event callbacks are being
+            // called, we close it immediately. Otherwise it will be closed once all callbacks
+            // have been called, in the end of dcb_process_poll_events(), which currently is
+            // above us in the call stack.
+            dcb_final_close(dcb);
+        }
     }
     else
     {
@@ -1082,6 +1100,14 @@ void dcb_close(DCB *dcb)
 
 static void dcb_final_close(DCB* dcb)
 {
+#if defined(SS_DEBUG)
+    if (dcb->poll.thread.id != Worker::get_current_id())
+    {
+        MXS_ALERT("dcb_close(%p) called by %d, owned by %d.",
+                  dcb, Worker::get_current_id(), dcb->poll.thread.id);
+        ss_dassert(dcb->poll.thread.id == Worker::get_current_id());
+    }
+#endif
     ss_dassert(dcb->n_close != 0);
 
     if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&  // Backend DCB
