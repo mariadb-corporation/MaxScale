@@ -1503,6 +1503,8 @@ struct subcommand alteroptions[] =
         "ssl_ca_cert           Path to SSL CA certificate\n"
         "ssl_version           SSL version\n"
         "ssl_cert_verify_depth Certificate verification depth\n"
+        "persistpoolmax        Persisted connection pool size\n"
+        "persistmaxtime        Persisted connection maximum idle time\n"
         "\n"
         "To configure SSL for a newly created server, the 'ssl', 'ssl_cert',\n"
         "'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.\n"
