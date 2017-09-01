@@ -228,12 +228,6 @@ static void blr_start_master(void* data)
         return;
     }
 
-    /* Increment retry counter */
-    if (router->master_state != BLRM_CONNECTING)
-    {
-        router->retry_count++;
-    }
-
     /* Force connecting state */
     router->master_state = BLRM_CONNECTING;
 
@@ -274,6 +268,9 @@ static void blr_start_master(void* data)
                                       router->session,
                                       BLR_PROTOCOL)) == NULL)
     {
+        spinlock_acquire(&router->lock);
+        router->retry_count++;
+        spinlock_release(&router->lock);
         /* Set reconnection task */
         static const char master[] = "Master";
         char *name = (char *)MXS_MALLOC(strlen(router->service->name) + sizeof(master));
@@ -439,6 +436,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
 
         /* Force unconnected state */
         router->master_state = BLRM_UNCONNECTED;
+        router->retry_count++;
         spinlock_release(&router->lock);
 
         /* Set reconnection task */
