@@ -26,13 +26,12 @@ static inline bool query_is_sql(GWBUF* query)
     return modutil_is_SQL(query) || modutil_is_SQL_prepare(query);
 }
 
-Rule::Rule(std::string name):
-    data(NULL),
-    name(name),
-    type(RT_PERMISSION),
+Rule::Rule(std::string name, std::string type):
     on_queries(FW_OP_UNDEFINED),
     times_matched(0),
-    active(NULL)
+    active(NULL),
+    m_name(name),
+    m_type(type)
 {
 }
 
@@ -43,35 +42,8 @@ Rule::~Rule()
 bool Rule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
 {
     *msg = create_error("Permission denied at this time.");
-    MXS_NOTICE("rule '%s': query denied at this time.", name.c_str());
+    MXS_NOTICE("rule '%s': query denied at this time.", name().c_str());
     return true;
-}
-
-bool Rule::need_full_parsing(GWBUF* buffer) const
-{
-    bool rval = false;
-
-    if (type == RT_COLUMN ||
-        type == RT_FUNCTION ||
-        type == RT_USES_FUNCTION ||
-        type == RT_WILDCARD ||
-        type == RT_CLAUSE)
-    {
-        switch (qc_get_operation(buffer))
-        {
-        case QUERY_OP_SELECT:
-        case QUERY_OP_UPDATE:
-        case QUERY_OP_INSERT:
-        case QUERY_OP_DELETE:
-            rval = true;
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    return rval;
 }
 
 bool Rule::matches_query_type(GWBUF* buffer)
@@ -82,6 +54,16 @@ bool Rule::matches_query_type(GWBUF* buffer)
            (on_queries & qc_op_to_fw_op(optype)) ||
            (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer)) &&
             (on_queries & FW_OP_CHANGE_DB));
+}
+
+const std::string& Rule::name() const
+{
+    return m_name;
+}
+
+const std::string& Rule::type() const
+{
+    return m_type;
 }
 
 bool WildCardRule::matches_query(FW_SESSION* session, GWBUF *queue, char **msg)
@@ -98,7 +80,7 @@ bool WildCardRule::matches_query(FW_SESSION* session, GWBUF *queue, char **msg)
         {
             if (strcmp(infos[i].column, "*") == 0)
             {
-                MXS_NOTICE("rule '%s': query contains a wildcard.", name.c_str());
+                MXS_NOTICE("rule '%s': query contains a wildcard.", name().c_str());
                 rval = true;
                 *msg = create_error("Usage of wildcard denied.");
             }
@@ -117,7 +99,7 @@ bool NoWhereClauseRule::matches_query(FW_SESSION* session, GWBUF* buffer, char**
         rval = true;
         *msg = create_error("Required WHERE/HAVING clause is missing.");
         MXS_NOTICE("rule '%s': query has no where/having "
-                   "clause, query is denied.", name.c_str());
+                   "clause, query is denied.", name().c_str());
     }
 
     return rval;
@@ -139,7 +121,7 @@ bool RegexRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
 
         if (pcre2_match(re, (PCRE2_SPTR)sql, (size_t)len, 0, 0, mdata, NULL) > 0)
         {
-            MXS_NOTICE("rule '%s': regex matched on query", name.c_str());
+            MXS_NOTICE("rule '%s': regex matched on query", name().c_str());
             rval = true;
             *msg = create_error("Permission denied, query matched regular expression.");
         }
@@ -168,7 +150,7 @@ bool ColumnsRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
             if (it != m_values.end())
             {
                 MXS_NOTICE("rule '%s': query targets forbidden column: %s",
-                           name.c_str(), tok.c_str());
+                           name().c_str(), tok.c_str());
                 *msg = create_error("Permission denied to column '%s'.", tok.c_str());
                 rval = true;
                 break;
@@ -204,7 +186,7 @@ bool FunctionRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
                 if (it != m_values.end())
                 {
                     MXS_NOTICE("rule '%s': query uses forbidden function: %s",
-                               name.c_str(), tok.c_str());
+                               name().c_str(), tok.c_str());
                     *msg = create_error("Permission denied to function '%s'.", tok.c_str());
                     rval = true;
                     break;
@@ -235,7 +217,7 @@ bool FunctionUsageRule::matches_query(FW_SESSION* session, GWBUF* buffer, char**
                 if (it != m_values.end())
                 {
                     MXS_NOTICE("rule '%s': query uses a function with forbidden column: %s",
-                               name.c_str(), tok.c_str());
+                               name().c_str(), tok.c_str());
                     *msg = create_error("Permission denied to column '%s' with function.", tok.c_str());
                     return true;
                 }
@@ -266,7 +248,7 @@ bool LimitQueriesRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** 
             matches = true;
 
             MXS_INFO("rule '%s': user denied for %f seconds",
-                     name.c_str(), blocked_for);
+                     name().c_str(), blocked_for);
         }
         else
         {
@@ -279,7 +261,7 @@ bool LimitQueriesRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** 
         if (queryspeed->count >= queryspeed->limit)
         {
             MXS_INFO("rule '%s': query limit triggered (%d queries in %d seconds), "
-                     "denying queries from user for %d seconds.", name.c_str(),
+                     "denying queries from user for %d seconds.", name().c_str(),
                      queryspeed->limit, queryspeed->period, queryspeed->cooldown);
 
             queryspeed->triggered = time_now;

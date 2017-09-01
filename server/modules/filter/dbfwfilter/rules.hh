@@ -28,18 +28,26 @@ class Rule
     Rule& operator=(const Rule&);
 
 public:
-    Rule(std::string name);
+    Rule(std::string name, std::string type = "PERMISSION");
     virtual ~Rule();
     virtual bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
-    virtual bool need_full_parsing(GWBUF* buffer) const;
-    bool matches_query_type(GWBUF* buffer);
 
-    void*          data;          /*< Actual implementation of the rule */
-    std::string    name;          /*< Name of the rule */
-    ruletype_t     type;          /*< Type of the rule */
+    virtual bool need_full_parsing(GWBUF* buffer) const
+    {
+        return false;
+    }
+
+    bool matches_query_type(GWBUF* buffer);
+    const std::string& name() const;
+    const std::string& type() const;
+
     uint32_t       on_queries;    /*< Types of queries to inspect */
     int            times_matched; /*< Number of times this rule has been matched */
     TIMERANGE*     active;        /*< List of times when this rule is active */
+
+private:
+    std::string    m_name;          /*< Name of the rule */
+    std::string    m_type;          /*< Name of the rule */
 };
 
 /**
@@ -52,7 +60,7 @@ class WildCardRule: public Rule
 
 public:
     WildCardRule(std::string name):
-        Rule(name)
+        Rule(name, "WILDCARD")
     {
     }
 
@@ -78,7 +86,7 @@ class NoWhereClauseRule: public Rule
 
 public:
     NoWhereClauseRule(std::string name):
-        Rule(name)
+        Rule(name, "CLAUSE")
     {
     }
 
@@ -107,8 +115,8 @@ public:
     }
 
 protected:
-    ValueListRule(std::string name, const ValueList& values):
-        Rule(name),
+    ValueListRule(std::string name, std::string type, const ValueList& values):
+        Rule(name, type),
         m_values(values)
     {
     }
@@ -126,7 +134,7 @@ class ColumnsRule: public ValueListRule
 
 public:
     ColumnsRule(std::string name, const ValueList& values):
-        ValueListRule(name, values)
+        ValueListRule(name, "COLUMN", values)
     {
     }
 
@@ -143,7 +151,7 @@ class FunctionRule: public ValueListRule
 
 public:
     FunctionRule(std::string name, const ValueList& values):
-        ValueListRule(name, values)
+        ValueListRule(name, "FUNCTION", values)
     {
     }
 
@@ -161,7 +169,7 @@ class FunctionUsageRule: public ValueListRule
 
 public:
     FunctionUsageRule(std::string name, const ValueList& values):
-        ValueListRule(name, values)
+        ValueListRule(name, "FUNCTION_USAGE", values)
     {
     }
 
@@ -179,7 +187,7 @@ class LimitQueriesRule: public Rule
 
 public:
     LimitQueriesRule(std::string name, int max, int timeperiod, int holdoff):
-        Rule(name),
+        Rule(name, "THROTTLE"),
         m_max(max),
         m_timeperiod(timeperiod),
         m_holdoff(holdoff)
@@ -213,7 +221,7 @@ class RegexRule: public Rule
 
 public:
     RegexRule(std::string name, pcre2_code* re):
-        Rule(name),
+        Rule(name, "REGEX"),
         m_re(re)
     {
     }

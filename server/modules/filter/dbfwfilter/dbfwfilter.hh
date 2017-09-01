@@ -28,22 +28,6 @@
 #include "dbfwfilter.h"
 
 /**
- * Rule types
- */
-typedef enum
-{
-    RT_UNDEFINED = 0x00, /*< Undefined rule */
-    RT_COLUMN, /*<  Column name rule*/
-    RT_FUNCTION, /*<  Function name rule*/
-    RT_USES_FUNCTION, /*<  Function usage rule*/
-    RT_THROTTLE, /*< Query speed rule */
-    RT_PERMISSION, /*< Simple denying rule */
-    RT_WILDCARD, /*< Wildcard denial rule */
-    RT_REGEX, /*< Regex matching rule */
-    RT_CLAUSE /*< WHERE-clause requirement rule */
-} ruletype_t;
-
-/**
  * What operator a rule should apply to.
  *
  * Note that each operator is represented by a unique bit, so that they
@@ -136,15 +120,6 @@ enum fw_actions
 
 /** Maximum length of the match/nomatch messages */
 #define FW_MAX_SQL_LEN      400
-
-/**
- * Linked list of strings.
- */
-typedef struct strlink_t
-{
-    struct strlink_t *next;     /*< Next node in the list */
-    char*             value;    /*< Value of the current node */
-} STRLINK;
 
 /**
  * A structure defining a range of time

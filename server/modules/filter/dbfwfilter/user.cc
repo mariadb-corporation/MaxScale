@@ -85,7 +85,7 @@ bool User::match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
                 {
                     if (rule_matches(my_instance, my_session, queue, *it, fullquery))
                     {
-                        *rulename = MXS_STRDUP_A((*it)->name.c_str());
+                        *rulename = MXS_STRDUP_A((*it)->name().c_str());
                         rval = true;
                         break;
                     }
@@ -133,7 +133,7 @@ bool User::do_match(FW_INSTANCE* my_instance, FW_SESSION* my_session,
 
                     if (rule_matches(my_instance, my_session, queue, *it, fullquery))
                     {
-                        matching_rules += (*it)->name;
+                        matching_rules += (*it)->name();
                         matching_rules += " ";
                     }
                     else

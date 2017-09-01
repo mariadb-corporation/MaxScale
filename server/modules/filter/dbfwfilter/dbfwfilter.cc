@@ -102,20 +102,6 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
 static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
-static const char* rule_names[] =
-{
-    "UNDEFINED",
-    "COLUMN",
-    "FUNCTION",
-    "THROTTLE",
-    "PERMISSION",
-    "WILDCARD",
-    "REGEX",
-    "CLAUSE"
-};
-
-const int rule_names_len = sizeof(rule_names) / sizeof(char**);
-
 /** The rules and users for each thread */
 thread_local struct
 {
@@ -132,32 +118,16 @@ bool replace_rules(FW_INSTANCE* instance);
 
 static void print_rule(Rule *rules, char *dest)
 {
-    int type = 0;
-
-    if ((int)rules->type > 0 && (int)rules->type < rule_names_len)
-    {
-        type = (int)rules->type;
-    }
-
-    sprintf(dest, "%s, %s, %d",
-            rules->name.c_str(),
-            rule_names[type],
-            rules->times_matched);
+    sprintf(dest, "%s, %s, %d", rules->name().c_str(),
+            rules->type().c_str(), rules->times_matched);
 }
 
 static json_t* rule_to_json(const SRule& rule)
 {
-    int type = 0;
-
-    if ((int)rule->type > 0 && (int)rule->type < rule_names_len)
-    {
-        type = (int)rule->type;
-    }
-
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "name", json_string(rule->name.c_str()));
-    json_object_set_new(rval, "type", json_string(rule_names[type]));
+    json_object_set_new(rval, "name", json_string(rule->name().c_str()));
+    json_object_set_new(rval, "type", json_string(rule->type().c_str()));
     json_object_set_new(rval, "times_matched", json_integer(rule->times_matched));
 
     return rval;
@@ -174,86 +144,6 @@ static json_t* rules_to_json(const RuleList& rules)
     }
 
     return rval;
-}
-
-/**
- * Push a string onto a string stack
- * @param head Head of the stack
- * @param value value to add
- * @return New top of the stack or NULL if memory allocation fails
- */
-static STRLINK* strlink_push(STRLINK* head, const char* value)
-{
-    STRLINK* link = (STRLINK*)MXS_MALLOC(sizeof(STRLINK));
-
-    if (link && (link->value = MXS_STRDUP(value)))
-    {
-        link->next = head;
-    }
-    else
-    {
-        MXS_FREE(link);
-        link = NULL;
-    }
-    return link;
-}
-
-/**
- * Pop a string off of a string stack
- * @param head Head of the stack
- * @return New head of the stack or NULL if stack is empty
- */
-static STRLINK* strlink_pop(STRLINK* head)
-{
-    if (head)
-    {
-        STRLINK* next = head->next;
-        MXS_FREE(head->value);
-        MXS_FREE(head);
-        return next;
-    }
-    return NULL;
-}
-
-/**
- * Free a string stack
- * @param head Head of the stack
- */
-static void strlink_free(STRLINK* head)
-{
-    while (head)
-    {
-        STRLINK* tmp = head;
-        head = head->next;
-        MXS_FREE(tmp->value);
-        MXS_FREE(tmp);
-    }
-}
-
-/**
- * Clone a string stack. This function reverses the order of the stack.
- * @param head Head of the stack to be cloned
- * @return Clone of the head or NULL if memory allocation failed
- */
-static STRLINK* strlink_reverse_clone(STRLINK* head)
-{
-    STRLINK* clone = NULL;
-    while (head)
-    {
-        STRLINK *tmp = strlink_push(clone, head->value);
-        if (tmp)
-        {
-            clone = tmp;
-        }
-        else
-        {
-            strlink_free(clone);
-            clone = NULL;
-            break;
-        }
-        head = head->next;
-    }
-    return clone;
 }
 
 /**
@@ -574,7 +464,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
     for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
     {
         const SRule& rule = *it;
-        char buf[rule->name.length() + 200]; // Some extra space
+        char buf[rule->name().length() + 200]; // Some extra space
         print_rule(rule.get(), buf);
         dcb_printf(dcb, "%s\n", buf);
     }
@@ -835,7 +725,7 @@ static SRule find_rule_by_name(const RuleList& rules, std::string name)
     {
         const SRule& rule = *it;
 
-        if (rule->name == name)
+        if (rule->name() == name)
         {
             return rule;
         }
@@ -987,21 +877,6 @@ void set_matching_mode(void* scanner, enum match_type mode)
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     rstack->active_mode = mode;
-}
-
-STRLINK* valuelist_to_strlink(ValueList* arr)
-{
-
-    STRLINK* list = NULL;
-
-    for (ValueList::const_iterator it = arr->begin(); it != arr->end(); it++)
-    {
-        list = strlink_push(list, it->c_str());
-    }
-
-    arr->clear();
-
-    return list;
 }
 
 /**
@@ -1851,7 +1726,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
     for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
     {
         const SRule& rule = *it;
-        char buf[rule->name.length() + 200];
+        char buf[rule->name().length() + 200];
         print_rule(rule.get(), buf);
         dcb_printf(dcb, "%s\n", buf);
     }
