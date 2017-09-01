@@ -13,6 +13,8 @@
 
 #include "rules.hh"
 
+#include <algorithm>
+
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
 #include <maxscale/log_manager.h>
@@ -38,7 +40,7 @@ Rule::~Rule()
 {
 }
 
-bool Rule::matches_query(GWBUF* buffer, char** msg)
+bool Rule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
 {
     *msg = create_error("Permission denied at this time.");
     MXS_NOTICE("rule '%s': query denied at this time.", name.c_str());
@@ -82,7 +84,7 @@ bool Rule::matches_query_type(GWBUF* buffer)
             (on_queries & FW_OP_CHANGE_DB));
 }
 
-bool WildCardRule::matches_query(GWBUF *queue, char **msg)
+bool WildCardRule::matches_query(FW_SESSION* session, GWBUF *queue, char **msg)
 {
     bool rval = false;
 
@@ -106,7 +108,7 @@ bool WildCardRule::matches_query(GWBUF *queue, char **msg)
     return rval;
 }
 
-bool NoWhereClauseRule::matches_query(GWBUF* buffer, char** msg)
+bool NoWhereClauseRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
 {
     bool rval = false;
 
@@ -121,7 +123,7 @@ bool NoWhereClauseRule::matches_query(GWBUF* buffer, char** msg)
     return rval;
 }
 
-bool RegexRule::matches_query(GWBUF* buffer, char** msg)
+bool RegexRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
 {
     bool rval = false;
 
@@ -146,4 +148,100 @@ bool RegexRule::matches_query(GWBUF* buffer, char** msg)
     }
 
     return rval;
+}
+
+bool ColumnsRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
+{
+    bool rval = false;
+
+    if (query_is_sql(buffer))
+    {
+        const QC_FIELD_INFO* infos;
+        size_t n_infos;
+        qc_get_field_info(buffer, &infos, &n_infos);
+
+        for (size_t i = 0; !rval && i < n_infos; ++i)
+        {
+            std::string tok = infos[i].column;
+            ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
+
+            if (it != m_values.end())
+            {
+                MXS_NOTICE("rule '%s': query targets forbidden column: %s",
+                           name.c_str(), tok.c_str());
+                *msg = create_error("Permission denied to column '%s'.", tok.c_str());
+                rval = true;
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
+
+bool FunctionRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
+{
+    bool rval = false;
+
+    if (query_is_sql(buffer))
+    {
+        const QC_FUNCTION_INFO* infos;
+        size_t n_infos;
+        qc_get_function_info(buffer, &infos, &n_infos);
+
+        if (n_infos == 0 && session->instance->action == FW_ACTION_ALLOW)
+        {
+            rval = true;
+        }
+        else
+        {
+            for (size_t i = 0; i < n_infos; ++i)
+            {
+                std::string tok = infos[i].name;
+                ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
+
+                if (it != m_values.end())
+                {
+                    MXS_NOTICE("rule '%s': query uses forbidden function: %s",
+                               name.c_str(), tok.c_str());
+                    *msg = create_error("Permission denied to function '%s'.", tok.c_str());
+                    rval = true;
+                    break;
+                }
+
+            }
+        }
+    }
+
+    return rval;
+}
+
+bool FunctionUsageRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
+{
+    if (query_is_sql(buffer))
+    {
+        const QC_FUNCTION_INFO* infos;
+        size_t n_infos;
+        qc_get_function_info(buffer, &infos, &n_infos);
+
+        for (size_t i = 0; i < n_infos; ++i)
+        {
+            for (size_t j = 0; j < infos[i].n_fields; j++)
+            {
+                std::string tok = infos[i].fields[j].column;
+                ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
+
+                if (it != m_values.end())
+                {
+                    MXS_NOTICE("rule '%s': query uses a function with forbidden column: %s",
+                               name.c_str(), tok.c_str());
+                    *msg = create_error("Permission denied to column '%s' with function.", tok.c_str());
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }

@@ -1024,11 +1024,7 @@ void define_columns_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    Rule* rule = create_rule(rstack->name);
-
-    rule->type = RT_COLUMN;
-    rule->data = valuelist_to_strlink(&rstack->values);
-    rstack->rule.push_front(SRule(rule));
+    rstack->rule.push_front(SRule(new ColumnsRule(rstack->name, rstack->values)));
 }
 
 /**
@@ -1040,11 +1036,7 @@ void define_function_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    Rule* rule = create_rule(rstack->name);
-
-    rule->type = RT_FUNCTION;
-    rule->data = valuelist_to_strlink(&rstack->values);
-    rstack->rule.push_front(SRule(rule));
+    rstack->rule.push_front(SRule(new FunctionRule(rstack->name, rstack->values)));
 }
 
 /**
@@ -1059,11 +1051,7 @@ void define_function_usage_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    Rule* rule = create_rule(rstack->name);
-
-    rule->type = RT_USES_FUNCTION;
-    rule->data = valuelist_to_strlink(&rstack->values);
-    rstack->rule.push_front(SRule(rule));
+    rstack->rule.push_front(SRule(new FunctionUsageRule(rstack->name, rstack->values)));
 }
 
 /**
@@ -1341,16 +1329,17 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, MXS_SESSION *session)
+static MXS_FILTER_SESSION* newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
-    FW_SESSION *my_session;
+    FW_INSTANCE *my_instance = (FW_INSTANCE*)instance;
+    FW_SESSION *my_session = (FW_SESSION*)MXS_CALLOC(1, sizeof(FW_SESSION));
 
-    if ((my_session = (FW_SESSION*)MXS_CALLOC(1, sizeof(FW_SESSION))) == NULL)
+    if (my_session)
     {
-        return NULL;
+        my_session->session = session;
+        my_session->instance = my_instance;
     }
-    my_session->session = session;
+
     return (MXS_FILTER_SESSION*)my_session;
 }
 
@@ -1648,92 +1637,6 @@ bool match_throttle(FW_SESSION* my_session, SRule rule, char **msg)
     return matches;
 }
 
-void match_column(SRule rule, GWBUF *queue, bool *matches, char **msg)
-{
-    const QC_FIELD_INFO* infos;
-    size_t n_infos;
-    qc_get_field_info(queue, &infos, &n_infos);
-
-    for (size_t i = 0; i < n_infos; ++i)
-    {
-        const char* tok = infos[i].column;
-
-        STRLINK* strln = (STRLINK*)rule->data;
-        while (strln)
-        {
-            if (strcasecmp(tok, strln->value) == 0)
-            {
-                MXS_NOTICE("rule '%s': query targets forbidden column: %s",
-                           rule->name.c_str(), strln->value);
-                *msg = create_error("Permission denied to column '%s'.", strln->value);
-                *matches = true;
-                break;
-            }
-            strln = strln->next;
-        }
-    }
-}
-
-void match_function(SRule rule, GWBUF *queue, enum fw_actions mode,
-                    bool *matches, char **msg)
-{
-    const QC_FUNCTION_INFO* infos;
-    size_t n_infos;
-    qc_get_function_info(queue, &infos, &n_infos);
-
-    if (n_infos == 0 && mode == FW_ACTION_ALLOW)
-    {
-        *matches = true;
-    }
-
-    for (size_t i = 0; i < n_infos; ++i)
-    {
-        const char* tok = infos[i].name;
-
-        STRLINK* strln = (STRLINK*)rule->data;
-        while (strln)
-        {
-            if (strcasecmp(tok, strln->value) == 0)
-            {
-                MXS_NOTICE("rule '%s': query uses forbidden function: %s",
-                           rule->name.c_str(), strln->value);
-                *msg = create_error("Permission denied to function '%s'.", strln->value);
-                *matches = true;
-                break;
-            }
-            strln = strln->next;
-        }
-    }
-}
-
-void match_function_usage(SRule rule, GWBUF *queue, enum fw_actions mode,
-                          bool *matches, char **msg)
-{
-    const QC_FUNCTION_INFO* infos;
-    size_t n_infos;
-    qc_get_function_info(queue, &infos, &n_infos);
-
-    for (size_t i = 0; i < n_infos; ++i)
-    {
-        for (size_t j = 0; j < infos[i].n_fields; j++)
-        {
-            const char* tok = infos[i].fields[j].column;
-
-            for (STRLINK* s = (STRLINK*)rule->data; s; s = s->next)
-            {
-                if (strcasecmp(tok, s->value) == 0)
-                {
-                    MXS_NOTICE("rule '%s': query uses a function with forbidden column: %s",
-                               rule->name.c_str(), s->value);
-                    *msg = create_error("Permission denied to column '%s' with function.", s->value);
-                    *matches = true;
-                    return;
-                }
-            }
-        }
-    }
-}
-
 /**
  * Check if a query matches a single rule
  * @param my_instance Fwfilter instance
@@ -1772,7 +1675,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
     if (rule->matches_query_type(queue))
     {
-        if (rule->matches_query(queue, &msg))
+        if (rule->matches_query(my_session, queue, &msg))
         {
             /** New style rule matched */
             matches = true;
@@ -1796,24 +1699,15 @@ bool rule_matches(FW_INSTANCE* my_instance,
             break;
 
         case RT_COLUMN:
-            if (is_sql)
-            {
-                match_column(rule, queue, &matches, &msg);
-            }
+            /** Handled in ColumnsRule::matches_query */
             break;
 
         case RT_FUNCTION:
-            if (is_sql)
-            {
-                match_function(rule, queue, my_instance->action, &matches, &msg);
-            }
+            /** Handled in FunctionRule::matches_query */
             break;
 
         case RT_USES_FUNCTION:
-            if (is_sql)
-            {
-                match_function_usage(rule, queue, my_instance->action, &matches, &msg);
-            }
+            /** Handled in FunctionUsageRule::matches_query */
             break;
 
         case RT_WILDCARD:

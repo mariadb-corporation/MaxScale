@@ -194,6 +194,7 @@ typedef struct
     QUERYSPEED    *query_speed;  /*< How fast the user has executed queries */
     MXS_DOWNSTREAM down;         /*< Next object in the downstream chain */
     MXS_UPSTREAM   up;           /*< Next object in the upstream chain */
+    FW_INSTANCE   *instance;     /*< Router instance */
 } FW_SESSION;
 
 /** Typedef for a list of strings */

@@ -30,7 +30,7 @@ class Rule
 public:
     Rule(std::string name);
     virtual ~Rule();
-    virtual bool matches_query(GWBUF* buffer, char** msg);
+    virtual bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
     virtual bool need_full_parsing(GWBUF* buffer) const;
     bool matches_query_type(GWBUF* buffer);
 
@@ -65,7 +65,7 @@ public:
         return true;
     }
 
-    bool matches_query(GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
 };
 
 /**
@@ -91,99 +91,83 @@ public:
         return true;
     }
 
-    bool matches_query(GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
 
+};
+
+class ValueListRule: public Rule
+{
+    ValueListRule(const ValueListRule&);
+    ValueListRule& operator=(const ValueListRule&);
+
+public:
+    bool need_full_parsing(GWBUF* buffer) const
+    {
+        return true;
+    }
+
+protected:
+    ValueListRule(std::string name, const ValueList& values):
+        Rule(name),
+        m_values(values)
+    {
+    }
+
+    ValueList m_values;
 };
 
 /**
  * Matches if a query uses one of the columns
  */
-class ColumnsRule: public Rule
+class ColumnsRule: public ValueListRule
 {
     ColumnsRule(const ColumnsRule&);
     ColumnsRule& operator=(const ColumnsRule&);
 
 public:
     ColumnsRule(std::string name, const ValueList& values):
-        Rule(name),
-        m_values(values)
+        ValueListRule(name, values)
     {
     }
 
-    ~ColumnsRule()
-    {
-    }
-
-    bool need_full_parsing(GWBUF* buffer) const
-    {
-        return true;
-    }
-
-    bool matches_query(GWBUF* buffer, char** msg);
-
-private:
-    ValueList m_values;
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
 };
 
 /**
  * Matches if a query uses one of the functions
  */
-class FunctionRule: public Rule
+class FunctionRule: public ValueListRule
 {
     FunctionRule(const FunctionRule&);
     FunctionRule& operator=(const FunctionRule&);
 
 public:
     FunctionRule(std::string name, const ValueList& values):
-        Rule(name),
-        m_values(values)
+        ValueListRule(name, values)
     {
     }
 
-    ~FunctionRule()
-    {
-    }
-
-    bool need_full_parsing(GWBUF* buffer) const
-    {
-        return true;
-    }
-
-    bool matches_query(GWBUF* buffer, char** msg);
-
-private:
-    ValueList m_values;
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
 };
+
 
 /**
  * Matches if a query uses any functions
  */
-class FunctionUsageRule: public Rule
+class FunctionUsageRule: public ValueListRule
 {
     FunctionUsageRule(const FunctionUsageRule&);
     FunctionUsageRule& operator=(const FunctionUsageRule&);
 
 public:
     FunctionUsageRule(std::string name, const ValueList& values):
-        Rule(name),
-        m_values(values)
+        ValueListRule(name, values)
     {
     }
 
-    ~FunctionUsageRule()
-    {
-    }
-
-    bool need_full_parsing(GWBUF* buffer) const
-    {
-        return true;
-    }
-
-    bool matches_query(GWBUF* buffer, char** msg);
-
-private:
-    ValueList m_values;
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
 };
+
 
 /**
  * Matches if a queries are executed too quickly
@@ -211,7 +195,7 @@ public:
         return true;
     }
 
-    bool matches_query(GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
 
 private:
     int m_max;
@@ -243,7 +227,7 @@ public:
         return false;
     }
 
-    bool matches_query(GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
 
 private:
     mxs::Closer<pcre2_code*> m_re;
