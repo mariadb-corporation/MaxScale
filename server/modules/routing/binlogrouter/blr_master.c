@@ -332,7 +332,7 @@ static void blr_start_master(void* data)
 }
 
 /**
- * Callback function to be called in the context of the main worker.
+ * Callback start function to be called in the context of the main worker.
  *
  * @param worker_id  The id of the worker in whose context the function is called.
  * @param data       The data to be passed to `blr_start_master`
@@ -363,7 +363,43 @@ void blr_start_master_in_main(void* data)
 
     if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
     {
-        MXS_ERROR("Could not post message to main worker.");
+        MXS_ERROR("Could not post 'blr_start_master' message to main worker.");
+    }
+}
+
+/**
+ * Callback close function to be called in the context of the main worker.
+ *
+ * @param worker_id  The id of the worker in whose context the function is called.
+ * @param data       The data to be passed to `blr_start_master`
+ */
+static void worker_cb_close_master(int worker_id, void* data)
+{
+    // This is itended to be called only in the main worker.
+    ss_dassert(worker_id == 0);
+
+    blr_master_close(data);
+}
+
+/**
+ * Close master connection in the main Worker.
+ *
+ * @param data  Data intended for `blr_master_close`.
+ */
+void blr_close_master_in_main(void* data)
+{
+    // The master should be connected to in the main worker, so we post it a
+    // message and call `blr_master_close` there.
+
+    MXS_WORKER* worker = mxs_worker_get(0); // The worker running in the main thread.
+    ss_dassert(worker);
+
+    intptr_t arg1 = (intptr_t)worker_cb_close_master;
+    intptr_t arg2 = (intptr_t)data;
+
+    if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+    {
+        MXS_ERROR("Could not post 'blr_master_close' message to main worker.");
     }
 }
 
@@ -490,8 +526,15 @@ blr_master_close(ROUTER_INSTANCE *router)
 {
     dcb_close(router->master);
     router->master = NULL;
-    router->master_state = BLRM_UNCONNECTED;
+
+    spinlock_acquire(&router->lock);
+    if (router->master_state != BLRM_SLAVE_STOPPED)
+    {
+        router->master_state = BLRM_UNCONNECTED;
+    }
     router->master_event_state = BLR_EVENT_DONE;
+    spinlock_release(&router->lock);
+
     gwbuf_free(router->stored_event);
     router->stored_event = NULL;
 }
@@ -1817,7 +1860,7 @@ blr_stop_start_master(ROUTER_INSTANCE *router)
         if (router->master->fd != -1 &&
             router->master->state == DCB_STATE_POLLING)
         {
-            blr_master_close(router);
+            blr_close_master_in_main(router);
         }
     }
 

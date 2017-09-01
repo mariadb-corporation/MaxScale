@@ -355,6 +355,8 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                                    MASTER_SERVER_CFG *current_master,
                                    CHANGE_MASTER_OPTIONS *change_master);
 extern void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
+extern void blr_close_master_in_main(void* data);
+
 /**
  * Process a request packet from the slave server.
  *
@@ -3525,7 +3527,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         if (router->master->fd != -1 &&
             router->master->state == DCB_STATE_POLLING)
         {
-            blr_master_close(router);
+            blr_close_master_in_main(router);
         }
     }
 
