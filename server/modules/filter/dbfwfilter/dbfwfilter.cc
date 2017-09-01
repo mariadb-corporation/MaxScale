@@ -1073,15 +1073,7 @@ void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdo
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    QUERYSPEED* qs = new QUERYSPEED;
-    Rule* rule = create_rule(rstack->name);
-
-    qs->limit = max;
-    qs->period = timeperiod;
-    qs->cooldown = holdoff;
-    rule->type = RT_THROTTLE;
-    rule->data = qs;
-    rstack->rule.push_front(SRule(rule));
+    rstack->rule.push_front(SRule(new LimitQueriesRule(rstack->name, max, timeperiod, holdoff)));
 }
 
 /**
@@ -1366,7 +1358,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     FW_SESSION *my_session = (FW_SESSION *) session;
     MXS_FREE(my_session->errmsg);
-    MXS_FREE(my_session->query_speed);
+    delete my_session->query_speed;
     MXS_FREE(my_session);
 }
 
@@ -1573,70 +1565,6 @@ static char* create_parse_error(FW_INSTANCE* my_instance,
     return msg;
 }
 
-bool match_throttle(FW_SESSION* my_session, SRule rule, char **msg)
-{
-    bool matches = false;
-    QUERYSPEED* rule_qs = (QUERYSPEED*)rule->data;
-    QUERYSPEED* queryspeed = my_session->query_speed;
-    time_t time_now = time(NULL);
-
-    if (queryspeed == NULL)
-    {
-        /**No match found*/
-        queryspeed = new QUERYSPEED;
-        queryspeed->period = rule_qs->period;
-        queryspeed->cooldown = rule_qs->cooldown;
-        queryspeed->limit = rule_qs->limit;
-        my_session->query_speed = queryspeed;
-    }
-
-    if (queryspeed->active)
-    {
-        if (difftime(time_now, queryspeed->triggered) < queryspeed->cooldown)
-        {
-            double blocked_for = queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
-            *msg = create_error("Queries denied for %f seconds", blocked_for);
-            matches = true;
-
-            MXS_INFO("rule '%s': user denied for %f seconds",
-                     rule->name.c_str(), blocked_for);
-        }
-        else
-        {
-            queryspeed->active = false;
-            queryspeed->count = 0;
-        }
-    }
-    else
-    {
-        if (queryspeed->count >= queryspeed->limit)
-        {
-            MXS_INFO("rule '%s': query limit triggered (%d queries in %d seconds), "
-                     "denying queries from user for %d seconds.", rule->name.c_str(),
-                     queryspeed->limit, queryspeed->period, queryspeed->cooldown);
-
-            queryspeed->triggered = time_now;
-            queryspeed->active = true;
-            matches = true;
-
-            double blocked_for = queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
-            *msg = create_error("Queries denied for %f seconds", blocked_for);
-        }
-        else if (queryspeed->count > 0 &&
-                 difftime(time_now, queryspeed->first_query) <= queryspeed->period)
-        {
-            queryspeed->count++;
-        }
-        else
-        {
-            queryspeed->first_query = time_now;
-            queryspeed->count = 1;
-        }
-    }
-
-    return matches;
-}
-
 /**
  * Check if a query matches a single rule
  * @param my_instance Fwfilter instance
@@ -1680,51 +1608,6 @@ bool rule_matches(FW_INSTANCE* my_instance,
             /** New style rule matched */
             matches = true;
             goto queryresolved;
-        }
-
-        /** No match, try old the style rule */
-        switch (rule->type)
-        {
-        case RT_UNDEFINED:
-            ss_dassert(false);
-            MXS_ERROR("Undefined rule type found.");
-            break;
-
-        case RT_REGEX:
-            /** Handled in RegexRule::query_matches */
-            break;
-
-        case RT_PERMISSION:
-            /** Handled in Rule::matches_query */
-            break;
-
-        case RT_COLUMN:
-            /** Handled in ColumnsRule::matches_query */
-            break;
-
-        case RT_FUNCTION:
-            /** Handled in FunctionRule::matches_query */
-            break;
-
-        case RT_USES_FUNCTION:
-            /** Handled in FunctionUsageRule::matches_query */
-            break;
-
-        case RT_WILDCARD:
-            /** Handled in WildCardRule::query_matches */
-            break;
-
-        case RT_THROTTLE:
-            matches = match_throttle(my_session, rule, &msg);
-            break;
-
-        case RT_CLAUSE:
-            /** Handled in WhereClauseRule::query_matches */
-            break;
-
-        default:
-            break;
-
         }
     }
 

@@ -245,3 +245,61 @@ bool FunctionUsageRule::matches_query(FW_SESSION* session, GWBUF* buffer, char**
 
     return false;
 }
+
+bool LimitQueriesRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
+{
+    if (session->query_speed == NULL)
+    {
+        session->query_speed = new QuerySpeed(m_timeperiod, m_holdoff, m_max);
+    }
+
+    QuerySpeed* queryspeed = session->query_speed;
+    time_t time_now = time(NULL);
+    bool matches = false;
+
+    if (queryspeed->active)
+    {
+        if (difftime(time_now, queryspeed->triggered) < queryspeed->cooldown)
+        {
+            double blocked_for = queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
+            *msg = create_error("Queries denied for %f seconds", blocked_for);
+            matches = true;
+
+            MXS_INFO("rule '%s': user denied for %f seconds",
+                     name.c_str(), blocked_for);
+        }
+        else
+        {
+            queryspeed->active = false;
+            queryspeed->count = 0;
+        }
+    }
+    else
+    {
+        if (queryspeed->count >= queryspeed->limit)
+        {
+            MXS_INFO("rule '%s': query limit triggered (%d queries in %d seconds), "
+                     "denying queries from user for %d seconds.", name.c_str(),
+                     queryspeed->limit, queryspeed->period, queryspeed->cooldown);
+
+            queryspeed->triggered = time_now;
+            queryspeed->active = true;
+            matches = true;
+
+            double blocked_for = queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
+            *msg = create_error("Queries denied for %f seconds", blocked_for);
+        }
+        else if (queryspeed->count > 0 &&
+                 difftime(time_now, queryspeed->first_query) <= queryspeed->period)
+        {
+            queryspeed->count++;
+        }
+        else
+        {
+            queryspeed->first_query = time_now;
+            queryspeed->count = 1;
+        }
+    }
+
+    return matches;
+}

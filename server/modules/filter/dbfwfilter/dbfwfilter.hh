@@ -159,8 +159,20 @@ typedef struct timerange_t
 /**
  * Query speed measurement and limitation structure
  */
-typedef struct queryspeed_t
+struct QuerySpeed
 {
+    QuerySpeed(int period = 0, int cooldown = 0, int limit = 0):
+        first_query(0),
+        triggered(0),
+        period(period),
+        cooldown(cooldown),
+        count(0),
+        limit(limit),
+        id(0),
+        active(false)
+    {
+    }
+
     time_t               first_query; /*< Time when the first query occurred */
     time_t               triggered; /*< Time when the limit was exceeded */
     int                  period; /*< Measurement interval in seconds */
@@ -169,7 +181,7 @@ typedef struct queryspeed_t
     int                  limit; /*< Maximum number of queries */
     long                 id;    /*< Unique id of the rule */
     bool                 active; /*< If the rule has been triggered */
-} QUERYSPEED;
+};
 
 /**
  * The Firewall filter instance.
@@ -191,7 +203,7 @@ typedef struct
 {
     MXS_SESSION   *session;      /*< Client session structure */
     char          *errmsg;       /*< Rule specific error message */
-    QUERYSPEED    *query_speed;  /*< How fast the user has executed queries */
+    QuerySpeed    *query_speed;  /*< How fast the user has executed queries */
     MXS_DOWNSTREAM down;         /*< Next object in the downstream chain */
     MXS_UPSTREAM   up;           /*< Next object in the upstream chain */
     FW_INSTANCE   *instance;     /*< Router instance */
