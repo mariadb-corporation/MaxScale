@@ -2382,10 +2382,10 @@ errorReply(MXS_ROUTER *instance,
 
     if (action == ERRACT_REPLY_CLIENT)
     {
-        /** Check router state and set errno an message */
-        if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
+        /** Check router state and set errno and message */
+        if (router->master_state != BLRM_SLAVE_STOPPED)
         {
-            /* Authentication failed */
+            /* Authentication failed: stop replication */
             if (router->master_state == BLRM_TIMESTAMP)
             {
                 spinlock_acquire(&router->lock);
@@ -2406,7 +2406,7 @@ errorReply(MXS_ROUTER *instance,
                 dcb_close(backend_dcb);
 
                 MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                          "%s while connecting to master [%s]:%d",
+                          "%s while connecting to master [%s]:%d. Replication is stopped.",
                           router->service->name, router->m_errno, router->m_errmsg,
                           blrm_states[BLRM_TIMESTAMP], msg,
                           router->service->dbref->server->name,
@@ -2427,14 +2427,15 @@ errorReply(MXS_ROUTER *instance,
         getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 &&
         error != 0)
     {
-        sprintf(msg, "%s ", mxs_strerror(error));
+        sprintf(msg, "%s, ", mxs_strerror(error));
     }
     else
     {
         strcpy(msg, "");
     }
 
-    if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
+    /** Check router state and set errno and message */
+    if (router->master_state != BLRM_SLAVE_STOPPED)
     {
         spinlock_acquire(&router->lock);
         /* set mysql_errno */
@@ -2449,7 +2450,7 @@ errorReply(MXS_ROUTER *instance,
         spinlock_release(&router->lock);
 
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%s attempting reconnect to master [%s]:%d",
+                  "%sattempting reconnect to master [%s]:%d",
                   router->service->name, mysql_errno, errmsg,
                   blrm_states[router->master_state], msg,
                   router->service->dbref->server->name,
@@ -2457,10 +2458,10 @@ errorReply(MXS_ROUTER *instance,
     }
     else
     {
-        MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%s attempting reconnect to master [%s]:%d",
-                  router->service->name, router->m_errno,
-                  router->m_errmsg ? router->m_errmsg : "(memory failure)",
+        /* Stopped state, no reconnection */
+        MXS_INFO("%s: Master connection has been closed. State is '%s', "
+                  "%snot retrying a new connection to master [%s]:%d",
+                  router->service->name,
                   blrm_states[router->master_state], msg,
                   router->service->dbref->server->name,
                   router->service->dbref->server->port);
