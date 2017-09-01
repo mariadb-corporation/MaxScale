@@ -27,14 +27,6 @@ MXS_BEGIN_DECLS
 #define DEFAULT_NTHREADS        1       /**< Default number of polling threads */
 
 /**
- * Maximum length for configuration parameter value.
- */
-enum
-{
-    MAX_PARAM_LEN = 256
-};
-
-/**
  * @brief Generate default module parameters
  *
  * Adds any default parameters to @c ctx that aren't already in it.
