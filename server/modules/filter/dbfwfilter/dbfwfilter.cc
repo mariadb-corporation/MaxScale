@@ -77,7 +77,7 @@
 #include <maxscale/alloc.h>
 
 #include "rules.hh"
-#include "users.hh"
+#include "user.hh"
 
 MXS_BEGIN_DECLS
 #include "ruleparser.yy.h"

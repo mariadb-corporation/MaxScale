@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "users.hh"
+#include "user.hh"
 
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.h>
