@@ -1704,7 +1704,7 @@ int main(int argc, char **argv)
                 exit(MAXSCALE_INTERNALERROR);
             }
 
-            exit(child_status);
+            _exit(child_status);
         }
 
         /** This is the child process and we can close the read end of
