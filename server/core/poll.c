@@ -49,6 +49,7 @@ extern unsigned long hkheartbeat;
 
 int number_poll_spins;
 int max_poll_sleep;
+static thread_local DCB* current_dcb;
 
 /**
  * @file poll.c  - Abstraction of the epoll functionality
@@ -894,6 +895,7 @@ process_pollq(int thread_id, struct epoll_event *event)
     uint32_t ev = event->events;
     DCB *dcb = event->data.ptr;
     ss_dassert(dcb->thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
+    current_dcb = dcb; // thread local
 
     /** Calculate event queue statistics */
     uint64_t started = hkheartbeat;
@@ -1085,6 +1087,8 @@ process_pollq(int thread_id, struct epoll_event *event)
     }
 
     ts_stats_set_max(queueStats.maxexectime, qtime, thread_id);
+
+    current_dcb = NULL; // thread local
 
     return 1;
 }
@@ -1660,4 +1664,9 @@ static void poll_check_message()
         atomic_synchronize();
         poll_msg[thread_id] &= ~POLL_MSG_CLEAN_PERSISTENT;
     }
+}
+
+DCB* dcb_get_current()
+{
+    return current_dcb;
 }
