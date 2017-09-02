@@ -748,24 +748,16 @@ gw_read_and_write(DCB *dcb)
         proto->stored_query = NULL;
         proto->ignore_reply = false;
         GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
-        ss_dassert(reply);
-        ss_dassert(read_buffer == NULL);
-        int n_unknown = 0;
 
-        while (reply && not_ok_packet(reply) && not_err_packet(reply))
+        while (read_buffer)
         {
+            /** Skip to the last packet if we get more than one */
             gwbuf_free(reply);
             reply = modutil_get_next_MySQL_packet(&read_buffer);
-            n_unknown++;
         }
 
-        if (reply == NULL)
-        {
-            ss_dassert(n_unknown > 0);
-            MXS_WARNING("Ignored %d unknown responses to COM_CHANGE_USER but no OK packet was found.", n_unknown);
-            return 1;
-        }
-
+        ss_dassert(reply);
+        ss_dassert(!read_buffer);
         uint8_t result = MYSQL_GET_COMMAND(GWBUF_DATA(reply));
         int rval = 0;
 
@@ -785,8 +777,12 @@ gw_read_and_write(DCB *dcb)
             else
             {
                 /** This should never happen */
-                MXS_ERROR("Unknown response to COM_CHANGE_USER: 0x%02hhx", result);
-                ss_dassert(false);
+                MXS_ERROR("Unknown response to COM_CHANGE_USER (0x%02hhx), "
+                          "ignoring and waiting for correct result", result);
+                gwbuf_free(reply);
+                proto->stored_query = query;
+                proto->ignore_reply = true;
+                return 1;
             }
             gwbuf_free(query);
             poll_fake_hangup_event(dcb);
