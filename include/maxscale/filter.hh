@@ -170,7 +170,7 @@ protected:
  * An instantiation of the Filter template is used for creating a filter.
  * Filter is an example of the "Curiously recurring template pattern"
  * https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
- * that is used for compile time polymorfism.
+ * that is used for compile time polymorphism.
  *
  * The typical way for using the template is as follows:
  *
@@ -183,11 +183,19 @@ protected:
  * class MyFilter : public maxscale::Filter<MyFilter, MyFilterSession>
  * {
  * public:
+ *      // This creates a new filter instance
  *      static MyFilter* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
  *
+ *      // This creates a new session for a filter instance
  *      MyFilterSession* newSession(MXS_SESSION* pSession);
  *
- *      void diagnostics(DCB* pDcb);
+ *      // Diagnostic function that prints to a DCB
+ *      void diagnostics(DCB* pDcb) const;
+ *
+ *      // Diagnostic function that returns a JSON object
+ *      json_t* diagnostics_json() const;
+ *
+ *      // Get filter capabilities
  *      uint64_t getCapabilities();
  * };
  * @endcode

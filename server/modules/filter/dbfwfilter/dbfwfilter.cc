@@ -92,19 +92,6 @@ int dbfw_yyparse(void*);
 #endif
 MXS_END_DECLS
 
-/*
- * The filter entry points
- */
-static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
-static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
-static uint64_t getCapabilities(MXS_FILTER* instance);
-
 /** The rules and users for each thread */
 thread_local struct
 {
@@ -504,22 +491,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
                                dbfw_show_rules_json, 1, args_rules_show_json,
                                "Show dbfwfilter rule statistics as JSON");
 
-    static MXS_FILTER_OBJECT MyObject =
-    {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        setDownstream,
-        NULL, // No setUpStream
-        routeQuery,
-        NULL, // No clientReply
-        diagnostic,
-        diagnostic_json,
-        getCapabilities,
-        NULL, // No destroyInstance
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
@@ -528,7 +499,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Firewall Filter",
         "V1.2.0",
         RCAP_TYPE_STMT_INPUT,
-        &MyObject,
+        &Dbfw::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
@@ -1103,19 +1074,24 @@ Dbfw::~Dbfw()
 
 }
 
-Dbfw* Dbfw::create(MXS_CONFIG_PARAMETER* params)
+Dbfw* Dbfw::create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* pParams)
 {
     Dbfw* rval = NULL;
     RuleList rules;
     UserMap  users;
-    std::string file = config_get_string(params, "rules");
+    std::string file = config_get_string(pParams, "rules");
 
-    if (!process_rule_file(file, &rules, &users))
+    if (process_rule_file(file, &rules, &users))
     {
-        rval = new (std::nothrow) Dbfw(params);
+        rval = new (std::nothrow) Dbfw(pParams);
     }
 
     return rval;
+}
+
+DbfwSession* Dbfw::newSession(MXS_SESSION* session)
+{
+    return new (std::nothrow) DbfwSession(this, session);
 }
 
 fw_actions Dbfw::get_action() const
@@ -1179,75 +1155,6 @@ bool Dbfw::reload_rules()
 {
     mxs::SpinLockGuard guard(m_lock);
     return do_reload_rules(m_filename);
-}
-
-/**
- * Create an instance of the filter for a particular service
- * within MaxScale.
- *
- * @param name     The name of the instance (as defined in the config file).
- * @param options  The options for this filter
- * @param params   The array of name/value pair parameters for the filter
- *
- * @return The instance data for this new instance
- */
-static MXS_FILTER *
-createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
-{
-    return (MXS_FILTER *) Dbfw::create(params);
-}
-
-/**
- * Associate a new session with this instance of the filter.
- *
- * @param instance  The filter instance data
- * @param session   The session itself
- * @return Session specific data for this session
- */
-static MXS_FILTER_SESSION* newSession(MXS_FILTER *instance, MXS_SESSION *session)
-{
-    Dbfw *my_instance = (Dbfw*)instance;
-    return (MXS_FILTER_SESSION*)new (std::nothrow) DbfwSession(my_instance, session);
-}
-
-/**
- * Close a session with the filter, this is the mechanism
- * by which a filter may cleanup data structure etc.
- *
- * @param instance  The filter instance data
- * @param session   The session being closed
- */
-static void
-closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
-{
-}
-
-/**
- * Free the memory associated with the session
- *
- * @param instance  The filter instance
- * @param session   The filter session
- */
-static void
-freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
-{
-    DbfwSession *my_session = (DbfwSession*)session;
-    delete my_session;
-}
-
-/**
- * Set the downstream filter or router to which queries will be
- * passed from this filter.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param downstream    The downstream filter or router.
- */
-static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
-{
-    DbfwSession *my_session = (DbfwSession *) session;
-    my_session->down = *downstream;
 }
 
 /**
@@ -1315,6 +1222,7 @@ static std::string get_sql(GWBUF* buffer)
 }
 
 DbfwSession::DbfwSession(Dbfw* instance, MXS_SESSION* session):
+    mxs::FilterSession::FilterSession(session),
     m_instance(instance),
     m_session(session)
 {
@@ -1469,7 +1377,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
 
         if (query_ok)
         {
-            rval = down.routeQuery(down.instance, down.session, buffer);
+            rval = mxs::FilterSession::routeQuery(buffer);
         }
         else
         {
@@ -1678,30 +1586,6 @@ static bool update_rules(Dbfw* my_instance)
 }
 
 /**
- * The routeQuery entry point. This is passed the query buffer
- * to which the filter should be applied. Once processed the
- * query is passed to the downstream component
- * (filter or router) in the filter chain.
- *
- * @param instance  The filter instance data
- * @param session   The filter session
- * @param queue     The query data
- */
-static int
-routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
-{
-    Dbfw *my_instance = (Dbfw *) instance;
-
-    if (!update_rules(my_instance))
-    {
-        return 0;
-    }
-
-    DbfwSession *my_session = (DbfwSession *) session;
-    return my_session->routeQuery(queue);
-}
-
-/**
  * Diagnostics routine
  *
  * Prints the connection details and the names of the exchange,
@@ -1711,11 +1595,8 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-static void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+void Dbfw::diagnostics(DCB *dcb) const
 {
-    Dbfw *my_instance = (Dbfw *) instance;
-
     dcb_printf(dcb, "Firewall Filter\n");
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
@@ -1738,17 +1619,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+json_t* Dbfw::diagnostics_json() const
 {
     return rules_to_json(this_thread.rules);
-}
-
-/**
- * Capability routine.
- *
- * @return The capabilities of the filter.
- */
-static uint64_t getCapabilities(MXS_FILTER* instance)
-{
-    return RCAP_TYPE_NONE;
 }

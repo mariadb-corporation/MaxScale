@@ -21,7 +21,7 @@
 #include <tr1/memory>
 #include <tr1/unordered_map>
 
-#include <maxscale/filter.h>
+#include <maxscale/filter.hh>
 #include <maxscale/query_classifier.h>
 #include <maxscale/spinlock.h>
 
@@ -158,10 +158,45 @@ struct QuerySpeed
     bool                 active; /*< If the rule has been triggered */
 };
 
+class Dbfw;
+class User;
+typedef std::tr1::shared_ptr<User> SUser;
+
+/**
+ * The session structure for Firewall filter.
+ */
+class DbfwSession: public mxs::FilterSession
+{
+    DbfwSession(const DbfwSession&);
+    DbfwSession& operator=(const DbfwSession&);
+
+public:
+    DbfwSession(Dbfw* instance, MXS_SESSION* session);
+    ~DbfwSession();
+
+    void set_error(std::string error);
+    std::string get_error() const;
+    void clear_error();
+    int send_error();
+
+    std::string user() const;
+    std::string remote() const;
+
+    int routeQuery(GWBUF* query);
+    QuerySpeed* query_speed(); // TODO: Remove this, it exposes internals to a Rule
+    fw_actions get_action() const;
+
+private:
+    Dbfw          *m_instance; /*< Router instance */
+    MXS_SESSION   *m_session;  /*< Client session structure */
+    std::string    m_error;    /*< Rule specific error message */
+    QuerySpeed     m_qs;       /*< How fast the user has executed queries */
+};
+
 /**
  * The Firewall filter instance.
  */
-class Dbfw
+class Dbfw: public mxs::Filter<Dbfw, DbfwSession>
 {
     Dbfw(const Dbfw&);
     Dbfw& operator=(const Dbfw&);
@@ -176,7 +211,16 @@ public:
      *
      * @return New instance or NULL on error
      */
-    static Dbfw* create(MXS_CONFIG_PARAMETER* params);
+    static Dbfw* create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams);
+
+    /**
+     * Create a new filter session
+     *
+     * @param session Session object
+     *
+     * @return New session or NULL on error
+     */
+    DbfwSession* newSession(MXS_SESSION* session);
 
     /**
      * Get the action mode of this instance
@@ -217,6 +261,15 @@ public:
     bool reload_rules(std::string filename);
     bool reload_rules();
 
+    /** Diagnostic routines */
+    void diagnostics(DCB *dcb) const;
+    json_t* diagnostics_json() const;
+
+    uint64_t getCapabilities() const
+    {
+        return RCAP_TYPE_NONE;
+    }
+
 private:
     fw_actions  m_action;    /*< Default operation mode, defaults to deny */
     int         m_log_match; /*< Log matching and/or non-matching queries */
@@ -226,43 +279,6 @@ private:
 
     Dbfw(MXS_CONFIG_PARAMETER* param);
     bool do_reload_rules(std::string filename);
-};
-
-class User;
-typedef std::tr1::shared_ptr<User> SUser;
-
-/**
- * The session structure for Firewall filter.
- */
-class DbfwSession
-{
-    DbfwSession(const DbfwSession&);
-    DbfwSession& operator=(const DbfwSession&);
-
-public:
-    DbfwSession(Dbfw* instance, MXS_SESSION* session);
-    ~DbfwSession();
-
-    void set_error(std::string error);
-    std::string get_error() const;
-    void clear_error();
-    int send_error();
-
-    std::string user() const;
-    std::string remote() const;
-
-    int routeQuery(GWBUF* query);
-    QuerySpeed* query_speed(); // TODO: Remove this, it exposes internals to a Rule
-    fw_actions get_action() const;
-
-    MXS_DOWNSTREAM down; /*< Next object in the downstream chain */
-    MXS_UPSTREAM   up;   /*< Next object in the upstream chain */
-
-private:
-    Dbfw          *m_instance; /*< Router instance */
-    MXS_SESSION   *m_session;  /*< Client session structure */
-    std::string    m_error;    /*< Rule specific error message */
-    QuerySpeed     m_qs;       /*< How fast the user has executed queries */
 };
 
 /** Typedef for a list of strings */
