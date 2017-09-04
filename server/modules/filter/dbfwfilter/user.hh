@@ -22,9 +22,16 @@
  */
 struct UserTemplate
 {
-    std::string     name;      /** Name of the user */
-    enum match_type type;      /** Matching type */
-    ValueList       rulenames; /** Names of the rules */
+    UserTemplate(std::string name, const ValueList& rules, match_type mode):
+        name(name),
+        type(mode),
+        rulenames(rules)
+    {
+    }
+
+    std::string name;      /** Name of the user */
+    match_type  type;      /** Matching type */
+    ValueList   rulenames; /** Names of the rules */
 };
 
 typedef std::tr1::shared_ptr<UserTemplate> SUserTemplate;
