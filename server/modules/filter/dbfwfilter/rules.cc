@@ -48,12 +48,23 @@ bool Rule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 
 bool Rule::matches_query_type(GWBUF* buffer) const
 {
-    qc_query_op_t optype = qc_get_operation(buffer);
+    bool rval = true;
 
-    return on_queries == FW_OP_UNDEFINED ||
-           (on_queries & qc_op_to_fw_op(optype)) ||
-           (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer)) &&
-            (on_queries & FW_OP_CHANGE_DB));
+    if (on_queries != FW_OP_UNDEFINED)
+    {
+        rval = false;
+
+        if (query_is_sql(buffer))
+        {
+            qc_query_op_t optype = qc_get_operation(buffer);
+
+            rval = (on_queries & qc_op_to_fw_op(optype)) ||
+                   (MYSQL_IS_COM_INIT_DB(GWBUF_DATA(buffer)) &&
+                    (on_queries & FW_OP_CHANGE_DB));
+        }
+    }
+
+    return rval;
 }
 
 const std::string& Rule::name() const

@@ -1232,11 +1232,17 @@ static bool command_is_mandatory(const GWBUF *buffer)
 
 static std::string get_sql(GWBUF* buffer)
 {
+    std::string rval;
     char *sql;
     int len;
-    modutil_extract_SQL(buffer, &sql, &len);
-    len = MXS_MIN(len, FW_MAX_SQL_LEN);
-    return std::string(sql, len);
+
+    if (modutil_extract_SQL(buffer, &sql, &len))
+    {
+        len = MXS_MIN(len, FW_MAX_SQL_LEN);
+        rval.assign(sql, len);
+    }
+
+    return rval;
 }
 
 DbfwSession::DbfwSession(Dbfw* instance, MXS_SESSION* session):
@@ -1250,9 +1256,12 @@ DbfwSession::~DbfwSession()
 {
 }
 
-void DbfwSession::set_error(std::string error)
+void DbfwSession::set_error(const char* error)
 {
-    m_error = error;
+    if (error)
+    {
+        m_error = error;
+    }
 }
 
 std::string DbfwSession::get_error()const

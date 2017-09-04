@@ -174,7 +174,7 @@ public:
     DbfwSession(Dbfw* instance, MXS_SESSION* session);
     ~DbfwSession();
 
-    void set_error(std::string error);
+    void set_error(const char* error);
     std::string get_error() const;
     void clear_error();
     int send_error();
