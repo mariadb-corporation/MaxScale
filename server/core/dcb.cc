@@ -1106,6 +1106,34 @@ void dcb_close(DCB *dcb)
     }
 }
 
+static void cb_dcb_close_in_owning_thread(int worker_id, void* data)
+{
+    DCB* dcb = static_cast<DCB*>(data);
+    ss_dassert(dcb);
+
+    dcb_close(dcb);
+}
+
+void dcb_close_in_owning_thread(DCB* dcb)
+{
+    // TODO: If someone now calls dcb_close(dcb) from the owning thread while
+    // TODO: the dcb is being delivered to the owning thread, there will be a
+    // TODO: crash when dcb_close(dcb) is called anew. Also dcbs should be
+    // TODO: reference counted, so that we could addref before posting, thus
+    // TODO: preventing too early a deletion.
+
+    MXS_WORKER* worker = mxs_worker_get(dcb->poll.thread.id); // The owning worker
+    ss_dassert(worker);
+
+    intptr_t arg1 = (intptr_t)cb_dcb_close_in_owning_thread;
+    intptr_t arg2 = (intptr_t)dcb;
+
+    if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+    {
+        MXS_ERROR("Could not post dcb for closing to the owning thread..");
+    }
+}
+
 static void dcb_final_close(DCB* dcb)
 {
 #if defined(SS_DEBUG)
