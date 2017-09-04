@@ -169,20 +169,42 @@ typedef struct
     int             idgen;      /*< UID generator */
     char           *rulefile;   /*< Path to the rule file */
     int             rule_version; /*< Latest rule file version, incremented on reload */
-} FW_INSTANCE;
+} Dbfw;
+
+class User;
+typedef std::tr1::shared_ptr<User> SUser;
 
 /**
  * The session structure for Firewall filter.
  */
-typedef struct
+class DbfwSession
 {
-    MXS_SESSION   *session;      /*< Client session structure */
-    char          *errmsg;       /*< Rule specific error message */
+    DbfwSession(const DbfwSession&);
+    DbfwSession& operator=(const DbfwSession&);
+
+public:
+    DbfwSession(Dbfw* instance, MXS_SESSION* session);
+    ~DbfwSession();
+
+    void set_error(std::string error);
+    std::string get_error() const;
+    void clear_error();
+    int send_error();
+
+    std::string user() const;
+    std::string remote() const;
+
+    int routeQuery(GWBUF* query);
+
     QuerySpeed    *query_speed;  /*< How fast the user has executed queries */
     MXS_DOWNSTREAM down;         /*< Next object in the downstream chain */
     MXS_UPSTREAM   up;           /*< Next object in the upstream chain */
-    FW_INSTANCE   *instance;     /*< Router instance */
-} FW_SESSION;
+    Dbfw          *instance;     /*< Router instance */
+
+private:
+    MXS_SESSION   *session;      /*< Client session structure */
+    std::string    m_error;       /*< Rule specific error message */
+};
 
 /** Typedef for a list of strings */
 typedef std::list<std::string> ValueList;
@@ -197,6 +219,6 @@ char* create_error(const char* format, ...);
 /**
  * Check if a rule matches
  */
-bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+bool rule_matches(Dbfw* my_instance, DbfwSession* my_session,
                   GWBUF *queue, SRule rule, char* query);
 bool rule_is_active(SRule rule);

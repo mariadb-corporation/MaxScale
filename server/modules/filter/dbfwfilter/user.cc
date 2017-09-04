@@ -67,7 +67,7 @@ static bool should_match(GWBUF* buffer)
  * @param user The user whose rules are checked
  * @return True if the query matches at least one of the rules otherwise false
  */
-bool User::match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+bool User::match_any(Dbfw* my_instance, DbfwSession* my_session,
                      GWBUF *queue, char** rulename)
 {
 
@@ -110,7 +110,7 @@ bool User::match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
  *
  * @return True if the query matches all of the rules otherwise false
  */
-bool User::do_match(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+bool User::do_match(Dbfw* my_instance, DbfwSession* my_session,
                     GWBUF *queue, match_mode mode, char** rulename)
 {
     bool rval = false;
@@ -166,7 +166,7 @@ bool User::do_match(FW_INSTANCE* my_instance, FW_SESSION* my_session,
     return rval;
 }
 
-bool User::match(FW_INSTANCE* instance, FW_SESSION* session, GWBUF* buffer, char** rulename)
+bool User::match(Dbfw* instance, DbfwSession* session, GWBUF* buffer, char** rulename)
 {
     return match_any(instance, session, buffer, rulename) ||
            do_match(instance, session, buffer, User::ALL, rulename) ||

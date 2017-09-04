@@ -113,10 +113,10 @@ thread_local struct
 } this_thread;
 
 bool parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
-bool parse_limit_queries(FW_INSTANCE* instance, Rule* ruledef, const char* rule, char** saveptr);
+bool parse_limit_queries(Dbfw* instance, Rule* ruledef, const char* rule, char** saveptr);
 static void rule_free_all(Rule* rule);
 static bool process_rule_file(const char* filename, RuleList* rules, UserMap* users);
-bool replace_rules(FW_INSTANCE* instance);
+bool replace_rules(Dbfw* instance);
 
 static void print_rule(Rule *rules, char *dest)
 {
@@ -390,7 +390,7 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
 {
     bool rval = true;
     MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
-    FW_INSTANCE *inst = (FW_INSTANCE*)filter_def_get_instance(filter);
+    Dbfw *inst = (Dbfw*)filter_def_get_instance(filter);
 
     if (modulecmd_arg_is_present(argv, 1))
     {
@@ -451,7 +451,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
 {
     DCB *dcb = argv->argv[0].value.dcb;
     MXS_FILTER_DEF *filter = argv->argv[1].value.filter;
-    FW_INSTANCE *inst = (FW_INSTANCE*)filter_def_get_instance(filter);
+    Dbfw *inst = (Dbfw*)filter_def_get_instance(filter);
 
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
@@ -477,7 +477,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
 bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
 {
     MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
-    FW_INSTANCE *inst = (FW_INSTANCE*)filter_def_get_instance(filter);
+    Dbfw *inst = (Dbfw*)filter_def_get_instance(filter);
 
     json_t* arr = json_array();
 
@@ -1096,7 +1096,7 @@ static bool process_rule_file(const char* filename, RuleList* rules, UserMap* us
  * @param instance Filter instance
  * @return True if the session can continue, false on fatal error.
  */
-bool replace_rules(FW_INSTANCE* instance)
+bool replace_rules(Dbfw* instance)
 {
     bool rval = true;
     spinlock_acquire(&instance->lock);
@@ -1143,7 +1143,7 @@ bool replace_rules(FW_INSTANCE* instance)
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    FW_INSTANCE *my_instance = (FW_INSTANCE*)MXS_CALLOC(1, sizeof(FW_INSTANCE));
+    Dbfw *my_instance = (Dbfw*)MXS_CALLOC(1, sizeof(Dbfw));
 
     if (my_instance == NULL)
     {
@@ -1191,17 +1191,8 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
-    FW_INSTANCE *my_instance = (FW_INSTANCE*)instance;
-    FW_SESSION *my_session = (FW_SESSION*)MXS_CALLOC(1, sizeof(FW_SESSION));
-
-    if (my_session)
-    {
-        my_session->session = session;
-        my_session->instance = my_instance;
-        my_session->errmsg = NULL;
-    }
-
-    return (MXS_FILTER_SESSION*)my_session;
+    Dbfw *my_instance = (Dbfw*)instance;
+    return (MXS_FILTER_SESSION*)new (std::nothrow) DbfwSession(my_instance, session);
 }
 
 /**
@@ -1225,10 +1216,8 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 static void
 freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
-    FW_SESSION *my_session = (FW_SESSION *) session;
-    MXS_FREE(my_session->errmsg);
-    delete my_session->query_speed;
-    MXS_FREE(my_session);
+    DbfwSession *my_session = (DbfwSession*)session;
+    delete my_session;
 }
 
 /**
@@ -1242,7 +1231,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 static void
 setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
-    FW_SESSION *my_session = (FW_SESSION *) session;
+    DbfwSession *my_session = (DbfwSession *) session;
     my_session->down = *downstream;
 }
 
@@ -1371,7 +1360,7 @@ char* create_error(const char* format, ...)
  * i.e., whether it is in whitelist or blacklist mode. The point is that
  * irrespective of the mode, the query must be rejected.
  */
-static char* create_parse_error(FW_INSTANCE* my_instance,
+static char* create_parse_error(Dbfw* my_instance,
                                 const char* reason,
                                 const char* query,
                                 bool* matchesp)
@@ -1412,8 +1401,8 @@ static char* create_parse_error(FW_INSTANCE* my_instance,
  * @param query Pointer to the null-terminated query string
  * @return true if the query matches the rule
  */
-bool rule_matches(FW_INSTANCE* my_instance,
-                  FW_SESSION* my_session,
+bool rule_matches(Dbfw* my_instance,
+                  DbfwSession* my_session,
                   GWBUF *queue,
                   SRule rule,
                   char* query)
@@ -1677,7 +1666,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 static void
 diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
-    FW_INSTANCE *my_instance = (FW_INSTANCE *) instance;
+    Dbfw *my_instance = (Dbfw *) instance;
 
     dcb_printf(dcb, "Firewall Filter\n");
     dcb_printf(dcb, "Rule, Type, Times Matched\n");

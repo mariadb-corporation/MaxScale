@@ -74,7 +74,7 @@ public:
      *
      * @return True if query matches
      */
-    bool match(FW_INSTANCE* instance, FW_SESSION* session, GWBUF* buffer, char** rulename);
+    bool match(Dbfw* instance, DbfwSession* session, GWBUF* buffer, char** rulename);
 
 private:
 
@@ -93,9 +93,9 @@ private:
     /**
      * Functions for matching rules
      */
-    bool match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+    bool match_any(Dbfw* my_instance, DbfwSession* my_session,
                    GWBUF *queue, char** rulename);
-    bool do_match(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+    bool do_match(Dbfw* my_instance, DbfwSession* my_session,
                   GWBUF *queue, match_mode mode, char** rulename);
 };
 

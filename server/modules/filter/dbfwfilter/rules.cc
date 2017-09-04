@@ -39,7 +39,7 @@ Rule::~Rule()
 {
 }
 
-bool Rule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const
+bool Rule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     *msg = create_error("Permission denied at this time.");
     MXS_NOTICE("rule '%s': query denied at this time.", name().c_str());
@@ -66,7 +66,7 @@ const std::string& Rule::type() const
     return m_type;
 }
 
-bool WildCardRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const
+bool WildCardRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     bool rval = false;
 
@@ -90,7 +90,7 @@ bool WildCardRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
     return rval;
 }
 
-bool NoWhereClauseRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const
+bool NoWhereClauseRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     bool rval = false;
 
@@ -105,7 +105,7 @@ bool NoWhereClauseRule::matches_query(FW_SESSION* session, GWBUF* buffer, char**
     return rval;
 }
 
-bool RegexRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const
+bool RegexRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     bool rval = false;
 
@@ -132,7 +132,7 @@ bool RegexRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) co
     return rval;
 }
 
-bool ColumnsRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const
+bool ColumnsRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     bool rval = false;
 
@@ -162,7 +162,7 @@ bool ColumnsRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) 
 }
 
 
-bool FunctionRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const
+bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     bool rval = false;
 
@@ -199,7 +199,7 @@ bool FunctionRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg)
     return rval;
 }
 
-bool FunctionUsageRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const
+bool FunctionUsageRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     if (query_is_sql(buffer))
     {
@@ -228,7 +228,7 @@ bool FunctionUsageRule::matches_query(FW_SESSION* session, GWBUF* buffer, char**
     return false;
 }
 
-bool LimitQueriesRule::matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const
+bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     if (session->query_speed == NULL)
     {
