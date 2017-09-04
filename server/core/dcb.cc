@@ -1048,10 +1048,11 @@ void dcb_close(DCB *dcb)
     CHK_DCB(dcb);
 
 #if defined(SS_DEBUG)
-    if (dcb->poll.thread.id != Worker::get_current_id())
+    int wid = Worker::get_current_id();
+    if ((wid != -1) && (dcb->poll.thread.id != wid))
     {
         MXS_ALERT("dcb_close(%p) called by %d, owned by %d.",
-                  dcb, Worker::get_current_id(), dcb->poll.thread.id);
+                  dcb, wid, dcb->poll.thread.id);
         ss_dassert(dcb->poll.thread.id == Worker::get_current_id());
     }
 #endif
@@ -1137,10 +1138,11 @@ void dcb_close_in_owning_thread(DCB* dcb)
 static void dcb_final_close(DCB* dcb)
 {
 #if defined(SS_DEBUG)
-    if (dcb->poll.thread.id != Worker::get_current_id())
+    int wid = Worker::get_current_id();
+    if ((wid != -1) && (dcb->poll.thread.id != wid))
     {
         MXS_ALERT("dcb_final_close(%p) called by %d, owned by %d.",
-                  dcb, Worker::get_current_id(), dcb->poll.thread.id);
+                  dcb, wid, dcb->poll.thread.id);
         ss_dassert(dcb->poll.thread.id == Worker::get_current_id());
     }
 #endif
@@ -2784,8 +2786,6 @@ void dcb_add_to_list(DCB *dcb)
  */
 static void dcb_remove_from_list(DCB *dcb)
 {
-    ss_dassert(Worker::get_current_id() == dcb->poll.thread.id);
-
     if (dcb == this_unit.all_dcbs[dcb->poll.thread.id])
     {
         DCB *tail = this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail;
