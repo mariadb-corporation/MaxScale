@@ -1236,30 +1236,226 @@ setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM 
 }
 
 /**
- * Generates a dummy error packet for the client with a custom message.
- * @param session The FW_SESSION object
- * @param msg Custom error message for the packet.
- * @return The dummy packet or NULL if an error occurred
+ * Retrieve the user specific data for this session
+ *
+ * @param users Map containing the user data
+ * @param name Username
+ * @param remote Remove network address
+ * @return The user data or NULL if it was not found
  */
-GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
+static SUser find_user_data(const UserMap& users, std::string name, std::string remote)
 {
-    ss_dassert(session && session->session && session->session->client_dcb);
-    DCB* dcb = session->session->client_dcb;
-    const char* db = mxs_mysql_get_current_db(session->session);
+    char nameaddr[name.length() + remote.length() + 2];
+    snprintf(nameaddr, sizeof(nameaddr), "%s@%s", name.c_str(), remote.c_str());
+    UserMap::const_iterator it = users.find(nameaddr);
+
+    if (it == users.end())
+    {
+        char *ip_start = strchr(nameaddr, '@') + 1;
+        while (it == users.end() && next_ip_class(ip_start))
+        {
+            it = users.find(nameaddr);
+        }
+
+        if (it == users.end())
+        {
+            snprintf(nameaddr, sizeof(nameaddr), "%%@%s", remote.c_str());
+            ip_start = strchr(nameaddr, '@') + 1;
+
+            while (it == users.end() && next_ip_class(ip_start))
+            {
+                it = users.find(nameaddr);
+            }
+        }
+    }
+
+    return it != users.end() ? it->second : SUser();
+}
+
+static bool command_is_mandatory(const GWBUF *buffer)
+{
+    switch (MYSQL_GET_COMMAND((uint8_t*)GWBUF_DATA(buffer)))
+    {
+    case MYSQL_COM_QUIT:
+    case MYSQL_COM_PING:
+    case MYSQL_COM_CHANGE_USER:
+    case MYSQL_COM_SET_OPTION:
+    case MYSQL_COM_FIELD_LIST:
+    case MYSQL_COM_PROCESS_KILL:
+    case MYSQL_COM_PROCESS_INFO:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+static std::string get_sql(GWBUF* buffer)
+{
+    char *sql;
+    int len;
+    modutil_extract_SQL(buffer, &sql, &len);
+    len = MXS_MIN(len, FW_MAX_SQL_LEN);
+    return std::string(sql, len);
+}
+
+DbfwSession::DbfwSession(Dbfw* instance, MXS_SESSION* session):
+    query_speed(NULL),
+    instance(instance),
+    session(session)
+{
+}
+
+DbfwSession::~DbfwSession()
+{
+    delete query_speed;
+}
+
+void DbfwSession::set_error(std::string error)
+{
+    m_error = error;
+}
+
+std::string DbfwSession::get_error()const
+{
+    return m_error;
+}
+
+void DbfwSession::clear_error()
+{
+    m_error.clear();
+}
+
+std::string DbfwSession::user() const
+{
+    return session->client_dcb->user;
+}
+
+std::string DbfwSession::remote() const
+{
+    return session->client_dcb->remote;
+}
+
+int DbfwSession::send_error()
+{
+    ss_dassert(session && session->client_dcb);
+    DCB* dcb = session->client_dcb;
+    const char* db = mxs_mysql_get_current_db(session);
     std::stringstream ss;
-    ss << "Access denied for user '" << dcb->user << "'@'" << dcb->remote << "'";
+    ss << "Access denied for user '" << user() << "'@'" << remote() << "'";
 
     if (db[0])
     {
         ss << " to database '" << db << "'";
     }
 
-    if (msg)
+    if (m_error.length())
     {
-        ss <<  ": " << msg;
+        ss << ": " << m_error;
+        clear_error();
     }
 
-    return modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
+    return dcb->func.write(dcb, modutil_create_mysql_err_msg(1, 0, 1141,
+                                                             "HY000", ss.str().c_str()));
+}
+
+int DbfwSession::routeQuery(GWBUF* buffer)
+{
+    int rval = 0;
+    uint32_t type = 0;
+
+    if (modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer))
+    {
+        type = qc_get_type_mask(buffer);
+    }
+
+    if (modutil_is_SQL(buffer) && modutil_count_statements(buffer) > 1)
+    {
+        set_error("This filter does not support multi-statements.");
+        rval = send_error();
+        gwbuf_free(buffer);
+    }
+    else
+    {
+        GWBUF* analyzed_queue = buffer;
+
+        // QUERY_TYPE_PREPARE_STMT need not be handled separately as the
+        // information about statements in COM_STMT_PREPARE packets is
+        // accessed exactly like the information of COM_QUERY packets. However,
+        // with named prepared statements in COM_QUERY packets, we need to take
+        // out the preparable statement and base our decisions on that.
+
+        if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT))
+        {
+            analyzed_queue = qc_get_preparable_stmt(buffer);
+            ss_dassert(analyzed_queue);
+        }
+
+        SUser suser = find_user_data(this_thread.users, user(), remote());
+        bool query_ok = command_is_mandatory(buffer);
+
+        if (suser)
+        {
+            char* rname = NULL;
+            bool match = suser->match(instance, this, analyzed_queue, &rname);
+
+            switch (instance->action)
+            {
+            case FW_ACTION_ALLOW:
+                query_ok = match;
+                break;
+
+            case FW_ACTION_BLOCK:
+                query_ok = !match;
+                break;
+
+            case FW_ACTION_IGNORE:
+                query_ok = true;
+                break;
+
+            default:
+                MXS_ERROR("Unknown dbfwfilter action: %d", instance->action);
+                ss_dassert(false);
+                break;
+            }
+
+            if (instance->log_match != FW_LOG_NONE)
+            {
+                if (match && instance->log_match & FW_LOG_MATCH)
+                {
+                    MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %s",
+                               session->service->name, rname, suser->name(),
+                               user().c_str(), remote().c_str(), get_sql(buffer).c_str());
+                }
+                else if (!match && instance->log_match & FW_LOG_NO_MATCH)
+                {
+                    MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %s",
+                               session->service->name, suser->name(), user().c_str(),
+                               remote().c_str(), get_sql(buffer).c_str());
+                }
+            }
+
+            MXS_FREE(rname);
+        }
+        /** If the instance is in whitelist mode, only users that have a rule
+         * defined for them are allowed */
+        else if (instance->action != FW_ACTION_ALLOW)
+        {
+            query_ok = true;
+        }
+
+        if (query_ok)
+        {
+            rval = down.routeQuery(down.instance, down.session, buffer);
+        }
+        else
+        {
+            rval = send_error();
+            gwbuf_free(buffer);
+        }
+    }
+
+    return rval;
 }
 
 /**
@@ -1434,68 +1630,13 @@ bool rule_matches(Dbfw* my_instance,
         }
     }
 
-    MXS_FREE(my_session->errmsg);
-    my_session->errmsg = msg;
+    my_session->set_error(msg);
+    MXS_FREE(msg);
 
     return matches;
 }
 
-/**
- * Retrieve the user specific data for this session
- *
- * @param users Map containing the user data
- * @param name Username
- * @param remote Remove network address
- * @return The user data or NULL if it was not found
- */
-SUser find_user_data(const UserMap& users, const char *name, const char *remote)
-{
-    char nameaddr[strlen(name) + strlen(remote) + 2];
-    snprintf(nameaddr, sizeof(nameaddr), "%s@%s", name, remote);
-    UserMap::const_iterator it = users.find(nameaddr);
-
-    if (it == users.end())
-    {
-        char *ip_start = strchr(nameaddr, '@') + 1;
-        while (it == users.end() && next_ip_class(ip_start))
-        {
-            it = users.find(nameaddr);
-        }
-
-        if (it == users.end())
-        {
-            snprintf(nameaddr, sizeof(nameaddr), "%%@%s", remote);
-            ip_start = strchr(nameaddr, '@') + 1;
-
-            while (it == users.end() && next_ip_class(ip_start))
-            {
-                it = users.find(nameaddr);
-            }
-        }
-    }
-
-    return it != users.end() ? it->second : SUser();
-}
-
-static bool command_is_mandatory(const GWBUF *buffer)
-{
-    switch (MYSQL_GET_COMMAND((uint8_t*)GWBUF_DATA(buffer)))
-    {
-    case MYSQL_COM_QUIT:
-    case MYSQL_COM_PING:
-    case MYSQL_COM_CHANGE_USER:
-    case MYSQL_COM_SET_OPTION:
-    case MYSQL_COM_FIELD_LIST:
-    case MYSQL_COM_PROCESS_KILL:
-    case MYSQL_COM_PROCESS_INFO:
-        return true;
-
-    default:
-        return false;
-    }
-}
-
-static bool update_rules(FW_INSTANCE* my_instance)
+static bool update_rules(Dbfw* my_instance)
 {
     bool rval = true;
     int rule_version = my_instance->rule_version;
@@ -1526,131 +1667,15 @@ static bool update_rules(FW_INSTANCE* my_instance)
 static int
 routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
-    FW_INSTANCE *my_instance = (FW_INSTANCE *) instance;
+    Dbfw *my_instance = (Dbfw *) instance;
 
     if (!update_rules(my_instance))
     {
         return 0;
     }
 
-    FW_SESSION *my_session = (FW_SESSION *) session;
-    DCB *dcb = my_session->session->client_dcb;
-    int rval = 0;
-    ss_dassert(dcb && dcb->session);
-    uint32_t type = 0;
-
-    if (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue))
-    {
-        type = qc_get_type_mask(queue);
-    }
-
-    if (modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
-    {
-        GWBUF* err = gen_dummy_error(my_session, (char*)"This filter does not support "
-                                     "multi-statements.");
-        gwbuf_free(queue);
-        MXS_FREE(my_session->errmsg);
-        my_session->errmsg = NULL;
-        rval = dcb->func.write(dcb, err);
-    }
-    else
-    {
-        GWBUF* analyzed_queue = queue;
-
-        // QUERY_TYPE_PREPARE_STMT need not be handled separately as the
-        // information about statements in COM_STMT_PREPARE packets is
-        // accessed exactly like the information of COM_QUERY packets. However,
-        // with named prepared statements in COM_QUERY packets, we need to take
-        // out the preparable statement and base our decisions on that.
-
-        if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT))
-        {
-            analyzed_queue = qc_get_preparable_stmt(queue);
-            ss_dassert(analyzed_queue);
-        }
-
-        SUser user = find_user_data(this_thread.users, dcb->user, dcb->remote);
-        bool query_ok = command_is_mandatory(queue);
-
-        if (user)
-        {
-            char* rname = NULL;
-            bool match = user->match(my_instance, my_session, analyzed_queue, &rname);
-
-            switch (my_instance->action)
-            {
-            case FW_ACTION_ALLOW:
-                if (match)
-                {
-                    query_ok = true;
-                }
-                break;
-
-            case FW_ACTION_BLOCK:
-                if (!match)
-                {
-                    query_ok = true;
-                }
-                break;
-
-            case FW_ACTION_IGNORE:
-                query_ok = true;
-                break;
-
-            default:
-                MXS_ERROR("Unknown dbfwfilter action: %d", my_instance->action);
-                ss_dassert(false);
-                break;
-            }
-
-            if (my_instance->log_match != FW_LOG_NONE)
-            {
-                char *sql;
-                int len;
-                if (modutil_extract_SQL(analyzed_queue, &sql, &len))
-                {
-                    len = MXS_MIN(len, FW_MAX_SQL_LEN);
-                    if (match && my_instance->log_match & FW_LOG_MATCH)
-                    {
-                        ss_dassert(rname);
-                        MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %.*s",
-                                   dcb->service->name, rname, user->name(),
-                                   dcb->user, dcb->remote, len, sql);
-                    }
-                    else if (!match && my_instance->log_match & FW_LOG_NO_MATCH)
-                    {
-                        MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %.*s",
-                                   dcb->service->name, user->name(), dcb->user,
-                                   dcb->remote, len, sql);
-                    }
-                }
-            }
-
-            MXS_FREE(rname);
-        }
-        /** If the instance is in whitelist mode, only users that have a rule
-         * defined for them are allowed */
-        else if (my_instance->action != FW_ACTION_ALLOW)
-        {
-            query_ok = true;
-        }
-
-        if (query_ok)
-        {
-            rval = my_session->down.routeQuery(my_session->down.instance,
-                                               my_session->down.session, queue);
-        }
-        else
-        {
-            GWBUF* forward = gen_dummy_error(my_session, my_session->errmsg);
-            gwbuf_free(queue);
-            MXS_FREE(my_session->errmsg);
-            my_session->errmsg = NULL;
-            rval = dcb->func.write(dcb, forward);
-        }
-    }
-
-    return rval;
+    DbfwSession *my_session = (DbfwSession *) session;
+    return my_session->routeQuery(queue);
 }
 
 /**
