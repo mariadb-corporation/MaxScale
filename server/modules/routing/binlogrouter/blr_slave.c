@@ -3274,7 +3274,7 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router,
                                                    1);
 
             sptr->state = BLRS_UNREGISTERED;
-            dcb_close(sptr->dcb);
+            dcb_close_in_owning_thread(sptr->dcb);
 
             break;
         }
@@ -3396,8 +3396,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
             MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
 
             sptr->state = BLRS_UNREGISTERED;
-            dcb_close(sptr->dcb);
-
+            dcb_close_in_owning_thread(sptr->dcb);
         }
         sptr = sptr->next;
     }
