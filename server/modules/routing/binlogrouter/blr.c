@@ -2405,6 +2405,13 @@ errorReply(MXS_ROUTER *instance,
                 /* Force backend DCB close */
                 dcb_close(backend_dcb);
 
+                /* Force Fake Client DCB close */
+                if (router->client)
+                {
+                    dcb_close(router->client);
+                    router->client = NULL;
+                }
+
                 MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
                           "%s while connecting to master [%s]:%d. Replication is stopped.",
                           router->service->name, router->m_errno, router->m_errmsg,
@@ -2472,11 +2479,21 @@ errorReply(MXS_ROUTER *instance,
         MXS_FREE(errmsg);
     }
     *succp = true;
+
+    /* Force Backend DCB close */
     if (backend_dcb == router->master)
     {
         router->master = NULL;
     }
     dcb_close(backend_dcb);
+
+    /* Force Fake Client DCB close */
+    if (router->client)
+    {
+        dcb_close(router->client);
+        router->client = NULL;
+    }
+
     MXS_NOTICE("%s: Master %s disconnected after %ld seconds. "
                "%lu events read.",
                router->service->name, router->service->dbref->server->name,
