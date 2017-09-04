@@ -321,7 +321,8 @@ dcb_free_all_memory(DCB *dcb)
         SSL_free(dcb->ssl);
     }
 
-    /* We never free the actual DCB, it is available for reuse*/
+    // Ensure that id is immediately the wrong one.
+    dcb->poll.thread.id = 0xdeadbeef;
     MXS_FREE(dcb);
 
 }
@@ -1103,7 +1104,7 @@ static void dcb_final_close(DCB* dcb)
 #if defined(SS_DEBUG)
     if (dcb->poll.thread.id != Worker::get_current_id())
     {
-        MXS_ALERT("dcb_close(%p) called by %d, owned by %d.",
+        MXS_ALERT("dcb_final_close(%p) called by %d, owned by %d.",
                   dcb, Worker::get_current_id(), dcb->poll.thread.id);
         ss_dassert(dcb->poll.thread.id == Worker::get_current_id());
     }
