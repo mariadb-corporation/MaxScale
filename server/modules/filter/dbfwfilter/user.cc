@@ -127,7 +127,7 @@ bool User::do_match(Dbfw* my_instance, DbfwSession* my_session,
             rval = true;
             for (RuleList::iterator it = rules.begin(); it != rules.end(); it++)
             {
-                if (!rule_is_active(*it))
+                if (rule_is_active(*it))
                 {
                     have_active_rule = true;
 

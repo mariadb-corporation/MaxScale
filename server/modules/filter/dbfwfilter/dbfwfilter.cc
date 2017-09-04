@@ -1051,6 +1051,24 @@ bool replace_rules(Dbfw* instance)
     return rval;
 }
 
+static bool update_rules(Dbfw* my_instance)
+{
+    bool rval = true;
+    int rule_version = my_instance->get_rule_version();
+
+    if (this_thread.rule_version < rule_version)
+    {
+        if (!replace_rules(my_instance))
+        {
+            rval = false;
+        }
+
+        this_thread.rule_version = rule_version;
+    }
+
+    return rval;
+}
+
 Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params):
     m_action((enum fw_actions)config_get_enum(params, "action", action_values)),
     m_log_match(0),
@@ -1294,6 +1312,11 @@ int DbfwSession::routeQuery(GWBUF* buffer)
 {
     int rval = 0;
     uint32_t type = 0;
+
+    if (!update_rules(m_instance))
+    {
+        return rval;
+    }
 
     if (modutil_is_SQL(buffer) || modutil_is_SQL_prepare(buffer))
     {
@@ -1565,24 +1588,6 @@ bool rule_matches(Dbfw* my_instance,
     MXS_FREE(msg);
 
     return matches;
-}
-
-static bool update_rules(Dbfw* my_instance)
-{
-    bool rval = true;
-    int rule_version = my_instance->get_rule_version();
-
-    if (this_thread.rule_version < rule_version)
-    {
-        if (!replace_rules(my_instance))
-        {
-            rval = false;
-        }
-
-        this_thread.rule_version = rule_version;
-    }
-
-    return rval;
 }
 
 /**
