@@ -1315,15 +1315,13 @@ static std::string get_sql(GWBUF* buffer)
 }
 
 DbfwSession::DbfwSession(Dbfw* instance, MXS_SESSION* session):
-    query_speed(NULL),
-    instance(instance),
-    session(session)
+    m_instance(instance),
+    m_session(session)
 {
 }
 
 DbfwSession::~DbfwSession()
 {
-    delete query_speed;
 }
 
 void DbfwSession::set_error(std::string error)
@@ -1343,19 +1341,29 @@ void DbfwSession::clear_error()
 
 std::string DbfwSession::user() const
 {
-    return session->client_dcb->user;
+    return m_session->client_dcb->user;
 }
 
 std::string DbfwSession::remote() const
 {
-    return session->client_dcb->remote;
+    return m_session->client_dcb->remote;
+}
+
+QuerySpeed* DbfwSession::query_speed()
+{
+    return &m_qs;
+}
+
+fw_actions DbfwSession::get_action() const
+{
+    return m_instance->get_action();
 }
 
 int DbfwSession::send_error()
 {
-    ss_dassert(session && session->client_dcb);
-    DCB* dcb = session->client_dcb;
-    const char* db = mxs_mysql_get_current_db(session);
+    ss_dassert(m_session && m_session->client_dcb);
+    DCB* dcb = m_session->client_dcb;
+    const char* db = mxs_mysql_get_current_db(m_session);
     std::stringstream ss;
     ss << "Access denied for user '" << user() << "'@'" << remote() << "'";
 
@@ -1412,9 +1420,9 @@ int DbfwSession::routeQuery(GWBUF* buffer)
         if (suser)
         {
             char* rname = NULL;
-            bool match = suser->match(instance, this, analyzed_queue, &rname);
+            bool match = suser->match(m_instance, this, analyzed_queue, &rname);
 
-            switch (instance->get_action())
+            switch (m_instance->get_action())
             {
             case FW_ACTION_ALLOW:
                 query_ok = match;
@@ -1429,23 +1437,23 @@ int DbfwSession::routeQuery(GWBUF* buffer)
                 break;
 
             default:
-                MXS_ERROR("Unknown dbfwfilter action: %d", instance->get_action());
+                MXS_ERROR("Unknown dbfwfilter action: %d", m_instance->get_action());
                 ss_dassert(false);
                 break;
             }
 
-            if (instance->get_log_bitmask() != FW_LOG_NONE)
+            if (m_instance->get_log_bitmask() != FW_LOG_NONE)
             {
-                if (match && instance->get_log_bitmask() & FW_LOG_MATCH)
+                if (match && m_instance->get_log_bitmask() & FW_LOG_MATCH)
                 {
                     MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %s",
-                               session->service->name, rname, suser->name(),
+                               m_session->service->name, rname, suser->name(),
                                user().c_str(), remote().c_str(), get_sql(buffer).c_str());
                 }
-                else if (!match && instance->get_log_bitmask() & FW_LOG_NO_MATCH)
+                else if (!match && m_instance->get_log_bitmask() & FW_LOG_NO_MATCH)
                 {
                     MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %s",
-                               session->service->name, suser->name(), user().c_str(),
+                               m_session->service->name, suser->name(), user().c_str(),
                                remote().c_str(), get_sql(buffer).c_str());
                 }
             }
@@ -1454,7 +1462,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
         }
         /** If the instance is in whitelist mode, only users that have a rule
          * defined for them are allowed */
-        else if (instance->get_action() != FW_ACTION_ALLOW)
+        else if (m_instance->get_action() != FW_ACTION_ALLOW)
         {
             query_ok = true;
         }

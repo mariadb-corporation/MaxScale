@@ -252,15 +252,17 @@ public:
     std::string remote() const;
 
     int routeQuery(GWBUF* query);
+    QuerySpeed* query_speed(); // TODO: Remove this, it exposes internals to a Rule
+    fw_actions get_action() const;
 
-    QuerySpeed    *query_speed;  /*< How fast the user has executed queries */
-    MXS_DOWNSTREAM down;         /*< Next object in the downstream chain */
-    MXS_UPSTREAM   up;           /*< Next object in the upstream chain */
-    Dbfw          *instance;     /*< Router instance */
+    MXS_DOWNSTREAM down; /*< Next object in the downstream chain */
+    MXS_UPSTREAM   up;   /*< Next object in the upstream chain */
 
 private:
-    MXS_SESSION   *session;      /*< Client session structure */
-    std::string    m_error;       /*< Rule specific error message */
+    Dbfw          *m_instance; /*< Router instance */
+    MXS_SESSION   *m_session;  /*< Client session structure */
+    std::string    m_error;    /*< Rule specific error message */
+    QuerySpeed     m_qs;       /*< How fast the user has executed queries */
 };
 
 /** Typedef for a list of strings */

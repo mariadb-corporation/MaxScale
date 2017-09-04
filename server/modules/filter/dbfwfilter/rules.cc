@@ -172,7 +172,7 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
         size_t n_infos;
         qc_get_function_info(buffer, &infos, &n_infos);
 
-        if (n_infos == 0 && session->instance->get_action() == FW_ACTION_ALLOW)
+        if (n_infos == 0 && session->get_action() == FW_ACTION_ALLOW)
         {
             rval = true;
         }
@@ -230,12 +230,7 @@ bool FunctionUsageRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
 
 bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
-    if (session->query_speed == NULL)
-    {
-        session->query_speed = new QuerySpeed(m_timeperiod, m_holdoff, m_max);
-    }
-
-    QuerySpeed* queryspeed = session->query_speed;
+    QuerySpeed* queryspeed = session->query_speed();
     time_t time_now = time(NULL);
     bool matches = false;
 
