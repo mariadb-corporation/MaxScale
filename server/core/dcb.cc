@@ -66,6 +66,13 @@ using maxscale::Worker;
 using maxscale::WorkerTask;
 using maxscale::Semaphore;
 
+//#define DCB_LOG_EVENT_HANDLING
+#if defined(DCB_LOG_EVENT_HANDLING)
+#define DCB_EH_NOTICE(s, p) MXS_NOTICE(s, p)
+#else
+#define DCB_EH_NOTICE(s, p)
+#endif
+
 namespace
 {
 
@@ -2971,6 +2978,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 
             if (dcb_session_check(dcb, "write_ready"))
             {
+                DCB_EH_NOTICE("Calling dcb->func.write_ready(%p)", dcb);
                 dcb->func.write_ready(dcb);
             }
         }
@@ -2999,6 +3007,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 
             if (dcb_session_check(dcb, "accept"))
             {
+                DCB_EH_NOTICE("Calling dcb->func.accept(%p)", dcb);
                 dcb->func.accept(dcb);
             }
         }
@@ -3024,6 +3033,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
                 }
                 if (1 == return_code)
                 {
+                    DCB_EH_NOTICE("Calling dcb->func.read(%p)", dcb);
                     dcb->func.read(dcb);
                 }
             }
@@ -3045,6 +3055,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 
         if (dcb_session_check(dcb, "error"))
         {
+            DCB_EH_NOTICE("Calling dcb->func.error(%p)", dcb);
             dcb->func.error(dcb);
         }
     }
@@ -3068,6 +3079,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 
             if (dcb_session_check(dcb, "hangup EPOLLHUP"))
             {
+                DCB_EH_NOTICE("Calling dcb->func.hangup(%p)", dcb);
                 dcb->func.hangup(dcb);
             }
         }
@@ -3094,6 +3106,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
 
             if (dcb_session_check(dcb, "hangup EPOLLRDHUP"))
             {
+                DCB_EH_NOTICE("Calling dcb->func.hangup(%p)", dcb);
                 dcb->func.hangup(dcb);
             }
         }
