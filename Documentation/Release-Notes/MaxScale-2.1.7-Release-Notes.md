@@ -45,6 +45,7 @@ where `4711` is the session id.
 
 [Here is a list of bugs fixed in MaxScale 2.1.7.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.7)
 
+* (MXS-1380)[https://jira.mariadb.org/browse/MXS-1379] UNION is partially parsed
 * (MXS-1379)[https://jira.mariadb.org/browse/MXS-1379] Undefined outcome on schemarouter query conflict
 * (MXS-1375)[https://jira.mariadb.org/browse/MXS-1375] Reused connections get multiple replies to COM_CHANGE_USER
 * (MXS-1374)[https://jira.mariadb.org/browse/MXS-1374] Persistent connections can't be altered at runtime
