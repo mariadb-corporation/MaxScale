@@ -30,14 +30,14 @@ class Rule
 public:
     Rule(std::string name, std::string type = "PERMISSION");
     virtual ~Rule();
-    virtual bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
+    virtual bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const;
 
     virtual bool need_full_parsing(GWBUF* buffer) const
     {
         return false;
     }
 
-    bool matches_query_type(GWBUF* buffer);
+    bool matches_query_type(GWBUF* buffer) const;
     const std::string& name() const;
     const std::string& type() const;
 
@@ -73,7 +73,7 @@ public:
         return true;
     }
 
-    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const;
 };
 
 /**
@@ -99,7 +99,7 @@ public:
         return true;
     }
 
-    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const;
 
 };
 
@@ -138,7 +138,7 @@ public:
     {
     }
 
-    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const;
 };
 
 /**
@@ -155,7 +155,7 @@ public:
     {
     }
 
-    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const;
 };
 
 
@@ -173,7 +173,7 @@ public:
     {
     }
 
-    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const;
 };
 
 
@@ -203,7 +203,7 @@ public:
         return true;
     }
 
-    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const;
 
 private:
     int m_max;
@@ -235,7 +235,7 @@ public:
         return false;
     }
 
-    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg);
+    bool matches_query(FW_SESSION* session, GWBUF* buffer, char** msg) const;
 
 private:
     mxs::Closer<pcre2_code*> m_re;
