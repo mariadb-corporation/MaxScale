@@ -77,6 +77,7 @@
 #include <maxscale/thread.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/alloc.h>
+#include <maxscale/spinlock.hh>
 
 #include "rules.hh"
 #include "user.hh"
@@ -115,7 +116,7 @@ thread_local struct
 bool parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
 bool parse_limit_queries(Dbfw* instance, Rule* ruledef, const char* rule, char** saveptr);
 static void rule_free_all(Rule* rule);
-static bool process_rule_file(const char* filename, RuleList* rules, UserMap* users);
+static bool process_rule_file(std::string filename, RuleList* rules, UserMap* users);
 bool replace_rules(Dbfw* instance);
 
 static void print_rule(Rule *rules, char *dest)
@@ -391,60 +392,15 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
     bool rval = true;
     MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
     Dbfw *inst = (Dbfw*)filter_def_get_instance(filter);
+    std::string filename;
 
     if (modulecmd_arg_is_present(argv, 1))
     {
         /** We need to change the rule file */
-        char *newname = MXS_STRDUP(argv->argv[1].value.string);
-
-        if (newname)
-        {
-            spinlock_acquire(&inst->lock);
-
-            char *oldname = inst->rulefile;
-            inst->rulefile = newname;
-
-            spinlock_release(&inst->lock);
-
-            MXS_FREE(oldname);
-        }
-        else
-        {
-            modulecmd_set_error("Memory allocation failed");
-            rval = false;
-        }
+        filename = argv->argv[1].value.string;
     }
 
-    spinlock_acquire(&inst->lock);
-    char filename[strlen(inst->rulefile) + 1];
-    strcpy(filename, inst->rulefile);
-    spinlock_release(&inst->lock);
-
-    RuleList rules;
-    UserMap  users;
-
-    if (rval && access(filename, R_OK) == 0)
-    {
-        if (process_rule_file(filename, &rules, &users))
-        {
-            atomic_add(&inst->rule_version, 1);
-            MXS_NOTICE("Reloaded rules from: %s", filename);
-        }
-        else
-        {
-            modulecmd_set_error("Failed to process rule file '%s'. See log "
-                                "file for more details.", filename);
-            rval = false;
-        }
-    }
-    else
-    {
-        modulecmd_set_error("Failed to read rules at '%s': %d, %s", filename,
-                            errno, mxs_strerror(errno));
-        rval = false;
-    }
-
-    return rval;
+    return inst->reload_rules(filename);
 }
 
 bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
@@ -1081,10 +1037,10 @@ static bool do_process_rule_file(const char* filename, RuleList* rules, UserMap*
     return rc == 0;
 }
 
-static bool process_rule_file(const char* filename, RuleList* rules, UserMap* users)
+static bool process_rule_file(std::string filename, RuleList* rules, UserMap* users)
 {
     bool rval = false;
-    MXS_EXCEPTION_GUARD(rval = do_process_rule_file(filename, rules, users));
+    MXS_EXCEPTION_GUARD(rval = do_process_rule_file(filename.c_str(), rules, users));
     return rval;
 }
 
@@ -1099,14 +1055,7 @@ static bool process_rule_file(const char* filename, RuleList* rules, UserMap* us
 bool replace_rules(Dbfw* instance)
 {
     bool rval = true;
-    spinlock_acquire(&instance->lock);
-
-    size_t len = strlen(instance->rulefile);
-    char filename[len + 1];
-    strcpy(filename, instance->rulefile);
-
-    spinlock_release(&instance->lock);
-
+    std::string filename = instance->get_rule_file();
     RuleList rules;
     UserMap  users;
 
@@ -1118,16 +1067,118 @@ bool replace_rules(Dbfw* instance)
     }
     else if (!this_thread.rules.empty() && !this_thread.users.empty())
     {
-        MXS_ERROR("Failed to parse rules at '%s'. Old rules are still used.", filename);
+        MXS_ERROR("Failed to parse rules at '%s'. Old rules are still used.",
+                  filename.c_str());
     }
     else
     {
         MXS_ERROR("Failed to parse rules at '%s'. No previous rules available, "
-                  "closing session.", filename);
+                  "closing session.", filename.c_str());
         rval = false;
     }
 
     return rval;
+}
+
+Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params):
+    m_action((enum fw_actions)config_get_enum(params, "action", action_values)),
+    m_log_match(0),
+    m_lock(SPINLOCK_INIT),
+    m_filename(config_get_string(params, "rules")),
+    m_version(1)
+{
+    if (config_get_bool(params, "log_match"))
+    {
+        m_log_match |= FW_LOG_MATCH;
+    }
+
+    if (config_get_bool(params, "log_no_match"))
+    {
+        m_log_match |= FW_LOG_NO_MATCH;
+    }
+}
+
+Dbfw::~Dbfw()
+{
+
+}
+
+Dbfw* Dbfw::create(MXS_CONFIG_PARAMETER* params)
+{
+    Dbfw* rval = NULL;
+    RuleList rules;
+    UserMap  users;
+    std::string file = config_get_string(params, "rules");
+
+    if (!process_rule_file(file, &rules, &users))
+    {
+        rval = new (std::nothrow) Dbfw(params);
+    }
+
+    return rval;
+}
+
+fw_actions Dbfw::get_action() const
+{
+    return m_action;
+}
+
+int Dbfw::get_log_bitmask() const
+{
+    return m_log_match;
+}
+
+std::string Dbfw::get_rule_file() const
+{
+    mxs::SpinLockGuard guard(m_lock);
+    return m_filename;
+}
+
+int Dbfw::get_rule_version() const
+{
+    return m_version;
+}
+
+bool Dbfw::do_reload_rules(std::string filename)
+{
+    RuleList rules;
+    UserMap  users;
+    bool rval = false;
+
+    if (access(filename.c_str(), R_OK) == 0)
+    {
+        if (process_rule_file(filename, &rules, &users))
+        {
+            rval = true;
+            m_filename = filename;
+            m_version++;
+            MXS_NOTICE("Reloaded rules from: %s", filename.c_str());
+        }
+        else
+        {
+            modulecmd_set_error("Failed to process rule file '%s'. See log "
+                                "file for more details.", filename.c_str());
+        }
+    }
+    else
+    {
+        modulecmd_set_error("Failed to read rules at '%s': %d, %s", filename.c_str(),
+                            errno, mxs_strerror(errno));
+    }
+
+    return rval;
+}
+
+bool Dbfw::reload_rules(std::string filename)
+{
+    mxs::SpinLockGuard guard(m_lock);
+    return do_reload_rules(filename);
+}
+
+bool Dbfw::reload_rules()
+{
+    mxs::SpinLockGuard guard(m_lock);
+    return do_reload_rules(m_filename);
 }
 
 /**
@@ -1143,43 +1194,7 @@ bool replace_rules(Dbfw* instance)
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    Dbfw *my_instance = (Dbfw*)MXS_CALLOC(1, sizeof(Dbfw));
-
-    if (my_instance == NULL)
-    {
-        MXS_FREE(my_instance);
-        return NULL;
-    }
-
-    spinlock_init(&my_instance->lock);
-    my_instance->action = (enum fw_actions)config_get_enum(params, "action", action_values);
-    my_instance->log_match = FW_LOG_NONE;
-
-    if (config_get_bool(params, "log_match"))
-    {
-        my_instance->log_match |= FW_LOG_MATCH;
-    }
-
-    if (config_get_bool(params, "log_no_match"))
-    {
-        my_instance->log_match |= FW_LOG_NO_MATCH;
-    }
-
-    RuleList rules;
-    UserMap  users;
-    my_instance->rulefile = MXS_STRDUP(config_get_string(params, "rules"));
-
-    if (!my_instance->rulefile || !process_rule_file(my_instance->rulefile, &rules, &users))
-    {
-        MXS_FREE(my_instance);
-        my_instance = NULL;
-    }
-    else
-    {
-        atomic_add(&my_instance->rule_version, 1);
-    }
-
-    return (MXS_FILTER *) my_instance;
+    return (MXS_FILTER *) Dbfw::create(params);
 }
 
 /**
@@ -1399,7 +1414,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
             char* rname = NULL;
             bool match = suser->match(instance, this, analyzed_queue, &rname);
 
-            switch (instance->action)
+            switch (instance->get_action())
             {
             case FW_ACTION_ALLOW:
                 query_ok = match;
@@ -1414,20 +1429,20 @@ int DbfwSession::routeQuery(GWBUF* buffer)
                 break;
 
             default:
-                MXS_ERROR("Unknown dbfwfilter action: %d", instance->action);
+                MXS_ERROR("Unknown dbfwfilter action: %d", instance->get_action());
                 ss_dassert(false);
                 break;
             }
 
-            if (instance->log_match != FW_LOG_NONE)
+            if (instance->get_log_bitmask() != FW_LOG_NONE)
             {
-                if (match && instance->log_match & FW_LOG_MATCH)
+                if (match && instance->get_log_bitmask() & FW_LOG_MATCH)
                 {
                     MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %s",
                                session->service->name, rname, suser->name(),
                                user().c_str(), remote().c_str(), get_sql(buffer).c_str());
                 }
-                else if (!match && instance->log_match & FW_LOG_NO_MATCH)
+                else if (!match && instance->get_log_bitmask() & FW_LOG_NO_MATCH)
                 {
                     MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %s",
                                session->service->name, suser->name(), user().c_str(),
@@ -1439,7 +1454,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
         }
         /** If the instance is in whitelist mode, only users that have a rule
          * defined for them are allowed */
-        else if (instance->action != FW_ACTION_ALLOW)
+        else if (instance->get_action() != FW_ACTION_ALLOW)
         {
             query_ok = true;
         }
@@ -1571,11 +1586,11 @@ static char* create_parse_error(Dbfw* my_instance,
     sprintf(message, format, reason);
     MXS_WARNING("%s: %s", message, query);
 
-    if ((my_instance->action == FW_ACTION_ALLOW) || (my_instance->action == FW_ACTION_BLOCK))
+    if ((my_instance->get_action() == FW_ACTION_ALLOW) || (my_instance->get_action() == FW_ACTION_BLOCK))
     {
         msg = create_error("%s.", message);
 
-        if (my_instance->action == FW_ACTION_ALLOW)
+        if (my_instance->get_action() == FW_ACTION_ALLOW)
         {
             *matchesp = false;
         }
@@ -1639,7 +1654,7 @@ bool rule_matches(Dbfw* my_instance,
 static bool update_rules(Dbfw* my_instance)
 {
     bool rval = true;
-    int rule_version = my_instance->rule_version;
+    int rule_version = my_instance->get_rule_version();
 
     if (this_thread.rule_version < rule_version)
     {

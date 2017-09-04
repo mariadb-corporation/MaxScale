@@ -161,15 +161,72 @@ struct QuerySpeed
 /**
  * The Firewall filter instance.
  */
-typedef struct
+class Dbfw
 {
-    enum fw_actions action;     /*< Default operation mode, defaults to deny */
-    int             log_match;  /*< Log matching and/or non-matching queries */
-    SPINLOCK        lock;       /*< Instance spinlock */
-    int             idgen;      /*< UID generator */
-    char           *rulefile;   /*< Path to the rule file */
-    int             rule_version; /*< Latest rule file version, incremented on reload */
-} Dbfw;
+    Dbfw(const Dbfw&);
+    Dbfw& operator=(const Dbfw&);
+
+public:
+    ~Dbfw();
+
+    /**
+     * Create a new Dbfw instance
+     *
+     * @param params Configuration parameters for this instance
+     *
+     * @return New instance or NULL on error
+     */
+    static Dbfw* create(MXS_CONFIG_PARAMETER* params);
+
+    /**
+     * Get the action mode of this instance
+     *
+     * @return The action mode
+     */
+    fw_actions get_action() const;
+
+    /**
+     * Get logging option bitmask
+     *
+     * @return the logging option bitmask
+     */
+    int get_log_bitmask() const;
+
+    /**
+     * Get the current rule file
+     *
+     * @return The current rule file
+     */
+    std::string get_rule_file() const;
+
+    /**
+     * Get current rule version number
+     *
+     * @return The current rule version number
+     */
+    int get_rule_version() const;
+
+    /**
+     * Reload rules from a file
+     *
+     * @param filename File to reload rules from
+     *
+     * @return True if rules were reloaded successfully, false on error. If an
+     *         error occurs, it is stored in the modulecmd error system.
+     */
+    bool reload_rules(std::string filename);
+    bool reload_rules();
+
+private:
+    fw_actions  m_action;    /*< Default operation mode, defaults to deny */
+    int         m_log_match; /*< Log matching and/or non-matching queries */
+    SPINLOCK    m_lock;      /*< Instance spinlock */
+    std::string m_filename;  /*< Path to the rule file */
+    int         m_version;   /*< Latest rule file version, incremented on reload */
+
+    Dbfw(MXS_CONFIG_PARAMETER* param);
+    bool do_reload_rules(std::string filename);
+};
 
 class User;
 typedef std::tr1::shared_ptr<User> SUser;

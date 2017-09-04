@@ -172,7 +172,7 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
         size_t n_infos;
         qc_get_function_info(buffer, &infos, &n_infos);
 
-        if (n_infos == 0 && session->instance->action == FW_ACTION_ALLOW)
+        if (n_infos == 0 && session->instance->get_action() == FW_ACTION_ALLOW)
         {
             rval = true;
         }
