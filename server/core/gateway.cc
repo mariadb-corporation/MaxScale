@@ -2139,13 +2139,13 @@ int main(int argc, char **argv)
         worker->join();
     }
 
-    Worker::finish();
-    MessageQueue::finish();
-
     /*<
      * Destroy the router and filter instances of all services.
      */
     service_destroy_instances();
+
+    Worker::finish();
+    MessageQueue::finish();
 
     /*<
      * Wait the flush thread.
