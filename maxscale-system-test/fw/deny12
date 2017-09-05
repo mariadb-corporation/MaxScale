@@ -1,0 +1,10 @@
+SELECT SUM(name), address FROM t1;
+SELECT name, SUM(address) FROM t1;
+SELECT address, SUM(name) FROM t1;
+SELECT SUM(address), name FROM t1;
+SELECT AVG(name), address FROM t1;
+SELECT name, AVG(address) FROM t1;
+SELECT address, AVG(name) FROM t1;
+SELECT AVG(address), name FROM t1;
+SELECT AVG(name), SUM(address) FROM t1;
+SELECT SUM(name), AVG(address) FROM t1;
