@@ -13,7 +13,7 @@
 
 %{
 #include <ruleparser.yy.h>
-
+#include <maxscale/log_manager.h>
 %}
 
 %option reentrant noyywrap bison-bridge prefix="dbfw_yy"
@@ -37,7 +37,7 @@ CMP         [=<>!]+
 %%
 "\n"+           return '\n';
 {COMMENT}       return FWTOK_COMMENT;
-deny|allow      return FWTOK_DENY; /** This should be removed at some point */
+deny|allow      MXS_WARNING("Use of '%s' is deprecated, use 'match' instead", yytext);return FWTOK_MATCH;
 rule            return FWTOK_RULE;
 function        return FWTOK_FUNCTION;
 uses_function   return FWTOK_USES_FUNCTION;

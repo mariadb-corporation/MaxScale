@@ -104,7 +104,7 @@ logged. The log messages are logged at the notice level.
 The rules are defined by using the following syntax:
 
 ```
-rule NAME deny RULE [at_times VALUE...] [on_queries {select|update|insert|delete|grant|revoke|drop|create|alter|use|load}]
+rule NAME match RULE [at_times VALUE...] [on_queries {select|update|insert|delete|grant|revoke|drop|create|alter|use|load}]
 ```
 
 Where _NAME_ is the identifier for this rule and _RULE_ is the mandatory rule definition.
@@ -115,16 +115,11 @@ the beginning of the line. Trailing comments are not supported.
 
 The first step of defining a rule is to start with the keyword `rule` which
 identifies this line of text as a rule. The second token is identified as
-the name of the rule. After that the mandatory action token `deny` is required
+the name of the rule. After that the mandatory token `match` is required
 to mark the start of the actual rule definition.
 
 The rule definition must contain exactly one mandatory rule parameter. It can
 also contain one of each type of optional rule parameter.
-
-**NOTE**
-Even though the rules use the `deny` token, the action taken by the filter when
-a query matches a rule is controlled _solely_ by the value of the `action`
-parameter (_allow_,  _block_ or _ignore_).
 
 ### Mandatory rule parameters
 
@@ -141,7 +136,7 @@ This rule blocks all queries that use the wildcard character `*`.
 Use of the wildcard is not allowed:
 
 ```
-rule examplerule deny wildcard
+rule examplerule match wildcard
 ```
 
 #### `columns`
@@ -154,7 +149,7 @@ interpreted as column names and if a query targets any of these, it is matched.
 Deny name and salary columns:
 
 ```
-rule examplerule deny columns name salary
+rule examplerule match columns name salary
 ```
 
 #### `function`
@@ -180,7 +175,7 @@ that do not use functions will be allowed through a function type rule.
 Deny SUM and COUNT functions:
 
 ```
-rule examplerule deny function sum count
+rule examplerule match function sum count
 ```
 
 #### `uses_function`
@@ -194,7 +189,7 @@ used to prevent the use of a column with a function.
 Deny function usage with _name_ and _address_ columns:
 
 ```
-rule examplerule deny uses_function name address
+rule examplerule match uses_function name address
 ```
 
 #### `function` and `columns`
@@ -208,7 +203,7 @@ the `function` and `columns` keywords both followed by a list of values.
 Deny use of the _sum_ function with _name_ or _address_ columns:
 
 ```
-rule examplerule deny function sum columns name address
+rule examplerule match function sum columns name address
 ```
 
 #### `regex`
@@ -223,7 +218,7 @@ documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
 Block selects to accounts:
 
 ```
-rule examplerule deny regex '.*select.*from.*accounts.*'
+rule examplerule match regex '.*select.*from.*accounts.*'
 ```
 
 #### `limit_queries`
@@ -240,7 +235,7 @@ considered active and blocking.
 Over 50 queries within a window of 5 seconds will block for 100 seconds:
 
 ```
-rule examplerule deny limit_queries 50 5 100
+rule examplerule match limit_queries 50 5 100
 ```
 
 #### `no_where_clause`
@@ -255,7 +250,7 @@ FROM ... WHERE 1=1`.
 Queries must have a where clause:
 
 ```
-rule examplerule deny no_where_clause
+rule examplerule match no_where_clause
 ```
 
 ### Optional rule parameters
@@ -355,8 +350,8 @@ this, any further queries that match the regular expression are blocked for 60
 seconds.
 
 ```
-rule limit_rate_of_queries deny limit_queries 10 5 60
-rule query_regex deny regex '.*select.*from.*user_data.*'
+rule limit_rate_of_queries match limit_queries 10 5 60
+rule query_regex match regex '.*select.*from.*user_data.*'
 ```
 
 To apply these rules we combine them into a single rule by adding a `users` line
@@ -380,8 +375,8 @@ a second one. The second rule blocks all queries that match a regular
 expression.
 
 ```
-rule safe_delete deny no_where_clause on_queries delete
-rule managers_table deny regex '.*from.*managers.*'
+rule safe_delete match no_where_clause on_queries delete
+rule managers_table match regex '.*from.*managers.*'
 ```
 
 When we combine these two rules we get the result we want. To combine these two

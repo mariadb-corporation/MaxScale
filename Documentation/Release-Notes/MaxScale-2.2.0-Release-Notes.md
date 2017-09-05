@@ -94,6 +94,12 @@ that don't use functions are allowed though in whitelist mode.
 Rule names can no longer use punctuation in them and can consist only of
 alphanumeric characters, underscores and hyphens.
 
+#### Keywords `deny` and `allow`
+
+The `deny` and `allow` keywords are deprecated in favor of the more descriptive
+`match` keyword. All instances of `deny` and `allow` can be replaced with
+`match` with no functional changes.
+
 ### Logging
 
 When known, the session id will be included in all logged messages. This allows
