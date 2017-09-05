@@ -2995,7 +2995,13 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
               dcb,
               STRDCBROLE(dcb->dcb_role));
 
-    if (events & EPOLLOUT)
+    if (dcb->n_close != 0)
+    {
+        MXS_WARNING("Events reported for dcb(%p), owned by %d, that has been closed %" PRIu32 " times.",
+                    dcb, dcb->poll.thread.id, dcb->n_close);
+    }
+
+    if ((events & EPOLLOUT) && (dcb->n_close == 0))
     {
         int eno = 0;
         eno = gw_getsockerrno(dcb->fd);
@@ -3023,7 +3029,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
                       dcb->fd);
         }
     }
-    if (events & EPOLLIN)
+    if ((events & EPOLLIN) && (dcb->n_close == 0))
     {
         if (dcb->state == DCB_STATE_LISTENING || dcb->state == DCB_STATE_WAITING)
         {
@@ -3067,7 +3073,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
             }
         }
     }
-    if (events & EPOLLERR)
+    if ((events & EPOLLERR)  && (dcb->n_close == 0))
     {
         int eno = gw_getsockerrno(dcb->fd);
         if (eno != 0)
@@ -3088,7 +3094,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
         }
     }
 
-    if (events & EPOLLHUP)
+    if ((events & EPOLLHUP) && (dcb->n_close == 0))
     {
         ss_debug(int eno = gw_getsockerrno(dcb->fd));
         ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
@@ -3114,7 +3120,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
     }
 
 #ifdef EPOLLRDHUP
-    if (events & EPOLLRDHUP)
+    if ((events & EPOLLRDHUP) && (dcb->n_close == 0))
     {
         ss_debug(int eno = gw_getsockerrno(dcb->fd));
         ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
