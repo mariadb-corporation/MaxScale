@@ -629,6 +629,14 @@ struct parser_stack
     ValueList values;
     ValueList auxiliary_values;
     std::string name;
+
+    /** Helper function for adding rules */
+    void add(Rule* value)
+    {
+        rule.push_front(SRule(value));
+        values.clear();
+        auxiliary_values.clear();
+    }
 };
 
 /**
@@ -815,7 +823,7 @@ void define_wildcard_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule.push_front(SRule(new WildCardRule(rstack->name)));
+    rstack->add(new WildCardRule(rstack->name));
 }
 
 /**
@@ -827,7 +835,7 @@ void define_columns_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule.push_front(SRule(new ColumnsRule(rstack->name, rstack->values)));
+    rstack->add(new ColumnsRule(rstack->name, rstack->values));
 }
 
 /**
@@ -839,7 +847,7 @@ void define_function_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule.push_front(SRule(new FunctionRule(rstack->name, rstack->values)));
+    rstack->add(new FunctionRule(rstack->name, rstack->values));
 }
 
 /**
@@ -854,7 +862,7 @@ void define_function_usage_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule.push_front(SRule(new FunctionUsageRule(rstack->name, rstack->values)));
+    rstack->add(new FunctionUsageRule(rstack->name, rstack->values));
 }
 
 /**
@@ -866,8 +874,7 @@ void define_column_function_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule.push_front(SRule(new ColumnFunctionRule(rstack->name, rstack->values,
-                                                         rstack->auxiliary_values)));
+    rstack->add(new ColumnFunctionRule(rstack->name, rstack->values, rstack->auxiliary_values));
 }
 
 /**
@@ -878,7 +885,7 @@ void define_where_clause_rule(void* scanner)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule.push_front(SRule(new NoWhereClauseRule(rstack->name)));
+    rstack->add(new NoWhereClauseRule(rstack->name));
 }
 
 /**
@@ -889,7 +896,7 @@ void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdo
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->rule.push_front(SRule(new LimitQueriesRule(rstack->name, max, timeperiod, holdoff)));
+    rstack->add(new LimitQueriesRule(rstack->name, max, timeperiod, holdoff));
 }
 
 /**
@@ -910,7 +917,7 @@ bool define_regex_rule(void* scanner, char* pattern)
     {
         struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
         ss_dassert(rstack);
-        rstack->rule.push_front(SRule(new RegexRule(rstack->name, re)));
+        rstack->add(new RegexRule(rstack->name, re));
     }
     else
     {
