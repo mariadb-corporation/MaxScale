@@ -288,9 +288,9 @@ bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char**
 
     if (queryspeed->active)
     {
-        if (difftime(time_now, queryspeed->triggered) < queryspeed->cooldown)
+        if (difftime(time_now, queryspeed->triggered) < m_holdoff)
         {
-            double blocked_for = queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
+            double blocked_for = m_holdoff - difftime(time_now, queryspeed->triggered);
             *msg = create_error("Queries denied for %f seconds", blocked_for);
             matches = true;
 
@@ -305,28 +305,32 @@ bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char**
     }
     else
     {
-        if (queryspeed->count >= queryspeed->limit)
+        if (queryspeed->count >= m_max)
         {
             MXS_INFO("rule '%s': query limit triggered (%d queries in %d seconds), "
                      "denying queries from user for %d seconds.", name().c_str(),
-                     queryspeed->limit, queryspeed->period, queryspeed->cooldown);
+                     m_max, m_timeperiod, m_holdoff);
 
             queryspeed->triggered = time_now;
             queryspeed->active = true;
             matches = true;
 
-            double blocked_for = queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
+            double blocked_for = m_holdoff - difftime(time_now, queryspeed->triggered);
             *msg = create_error("Queries denied for %f seconds", blocked_for);
         }
-        else if (queryspeed->count > 0 &&
-                 difftime(time_now, queryspeed->first_query) <= queryspeed->period)
+        else if (queryspeed->count == 0)
+        {
+            queryspeed->first_query = time_now;
+            queryspeed->count = 1;
+        }
+        else if (difftime(time_now, queryspeed->first_query) <= m_timeperiod)
         {
             queryspeed->count++;
         }
         else
         {
-            queryspeed->first_query = time_now;
-            queryspeed->count = 1;
+            /** The time period was exceeded, reset the query count */
+            queryspeed->count = 0;
         }
     }
 

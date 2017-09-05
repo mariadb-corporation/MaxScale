@@ -136,25 +136,17 @@ typedef struct timerange_t
  */
 struct QuerySpeed
 {
-    QuerySpeed(int period = 0, int cooldown = 0, int limit = 0):
+    QuerySpeed():
         first_query(0),
         triggered(0),
-        period(period),
-        cooldown(cooldown),
         count(0),
-        limit(limit),
-        id(0),
         active(false)
     {
     }
 
     time_t               first_query; /*< Time when the first query occurred */
     time_t               triggered; /*< Time when the limit was exceeded */
-    int                  period; /*< Measurement interval in seconds */
-    int                  cooldown; /*< Time the user is denied access for */
     int                  count; /*< Number of queries done */
-    int                  limit; /*< Maximum number of queries */
-    long                 id;    /*< Unique id of the rule */
     bool                 active; /*< If the rule has been triggered */
 };
 
