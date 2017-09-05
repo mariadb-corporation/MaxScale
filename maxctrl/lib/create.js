@@ -77,7 +77,7 @@ exports.builder = function(yargs) {
         })
 
     // Create monitor
-        .group(['servers'], 'Create monitor options:')
+        .group(['servers', 'monitor-user', 'monitor-password'], 'Create monitor options:')
         .option('servers', {
             describe: 'Link the created monitor to these servers',
             type: 'array'
