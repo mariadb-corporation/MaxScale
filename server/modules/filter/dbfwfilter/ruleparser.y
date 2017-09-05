@@ -126,6 +126,7 @@ mandatory
     | FWTOK_COLUMNS valuelist {define_columns_rule(scanner);}
     | FWTOK_FUNCTION valuelist {define_function_rule(scanner);}
     | FWTOK_FUNCTION {define_function_rule(scanner);}
+    | FWTOK_FUNCTION valuelist FWTOK_COLUMNS auxiliaryvaluelist {define_column_function_rule(scanner);}
     | FWTOK_USES_FUNCTION valuelist {define_function_usage_rule(scanner);}
     ;
 
@@ -138,6 +139,17 @@ value
 valuelist
     : value
     | valuelist value
+    ;
+
+auxiliaryvalue
+    : FWTOK_CMP {push_auxiliary_value(scanner, $1);}
+    | FWTOK_STR {push_auxiliary_value(scanner, $1);}
+    | FWTOK_BTSTR  {push_auxiliary_value(scanner, $1);}
+    ;
+
+auxiliaryvaluelist
+    : auxiliaryvalue
+    | auxiliaryvaluelist auxiliaryvalue
     ;
 
 /** Optional parts of a rule */

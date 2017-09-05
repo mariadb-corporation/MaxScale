@@ -627,6 +627,7 @@ struct parser_stack
     enum match_type active_mode;
     TemplateList templates;
     ValueList values;
+    ValueList auxiliary_values;
     std::string name;
 };
 
@@ -712,6 +713,13 @@ void push_value(void* scanner, char* value)
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t)scanner);
     ss_dassert(rstack);
     rstack->values.push_back(strip_backticks(value));
+}
+
+void push_auxiliary_value(void* scanner, char* value)
+{
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t)scanner);
+    ss_dassert(rstack);
+    rstack->auxiliary_values.push_back(strip_backticks(value));
 }
 
 /**
@@ -847,6 +855,19 @@ void define_function_usage_rule(void* scanner)
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
     rstack->rule.push_front(SRule(new FunctionUsageRule(rstack->name, rstack->values)));
+}
+
+/**
+ * Define the current rule as a function rule
+ * @param scanner Current scanner
+ * @param columns List of function names
+ */
+void define_column_function_rule(void* scanner)
+{
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
+    ss_dassert(rstack);
+    rstack->rule.push_front(SRule(new ColumnFunctionRule(rstack->name, rstack->values,
+                                                         rstack->auxiliary_values)));
 }
 
 /**

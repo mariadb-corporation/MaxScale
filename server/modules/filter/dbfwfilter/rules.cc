@@ -239,6 +239,47 @@ bool FunctionUsageRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
     return false;
 }
 
+bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
+{
+    if (query_is_sql(buffer))
+    {
+        const QC_FUNCTION_INFO* infos;
+        size_t n_infos;
+        qc_get_function_info(buffer, &infos, &n_infos);
+
+        for (size_t i = 0; i < n_infos; ++i)
+        {
+            ValueList::const_iterator func_it = std::find(m_values.begin(),
+                                                          m_values.end(),
+                                                          infos[i].name);
+
+            if (func_it != m_values.end())
+            {
+                /** The function matches, now check if the column matches */
+
+                for (size_t j = 0; j < infos[i].n_fields; j++)
+                {
+                    ValueList::const_iterator col_it = std::find(m_columns.begin(),
+                                                                 m_columns.end(),
+                                                                 infos[i].fields[j].column);
+
+                    if (col_it != m_columns.end())
+                    {
+                        MXS_NOTICE("rule '%s': query uses function '%s' with forbidden column: %s",
+                                   name().c_str(), func_it->c_str(), col_it->c_str());
+                        *msg = create_error("Permission denied to column '%s' with function '%s'.",
+                                            col_it->c_str(), func_it->c_str());
+                        return true;
+                    }
+                }
+
+            }
+        }
+    }
+
+    return false;
+}
+
 bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     QuerySpeed* queryspeed = session->query_speed();

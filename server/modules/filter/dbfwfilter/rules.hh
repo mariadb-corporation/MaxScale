@@ -158,7 +158,6 @@ public:
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 };
 
-
 /**
  * Matches if a query uses any functions
  */
@@ -176,6 +175,26 @@ public:
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 };
 
+/**
+ * Matches if a query uses a function with a specific column
+ */
+class ColumnFunctionRule: public ValueListRule
+{
+    ColumnFunctionRule(const ColumnFunctionRule&);
+    ColumnFunctionRule& operator=(const ColumnFunctionRule&);
+
+public:
+    ColumnFunctionRule(std::string name, const ValueList& values, const ValueList& columns):
+        ValueListRule(name, "COLUMN_FUNCTION", values),
+        m_columns(columns)
+    {
+    }
+
+    bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+
+private:
+    ValueList m_columns; /*< List of columns to match */
+};
 
 /**
  * Matches if a queries are executed too quickly

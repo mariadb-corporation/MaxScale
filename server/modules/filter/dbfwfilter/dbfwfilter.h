@@ -37,12 +37,14 @@ void dbfw_yyerror(void* scanner, const char* error);
 /** Rule creation and definition functions */
 bool set_rule_name(void* scanner, char* name);
 void push_value(void* scanner, char* value);
+void push_auxiliary_value(void* scanner, char* value);
 void define_wildcard_rule(void* scanner);
 void define_where_clause_rule(void* scanner);
 bool define_regex_rule(void* scanner, char* pattern);
 void define_columns_rule(void* scanner);
 void define_function_rule(void* scanner);
 void define_function_usage_rule(void* scanner);
+void define_column_function_rule(void* scanner);
 void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdoff);
 bool add_at_times_rule(void* scanner, const char* range);
 void add_on_queries_rule(void* scanner, const char* sql);

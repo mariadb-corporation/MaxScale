@@ -104,10 +104,10 @@ logged. The log messages are logged at the notice level.
 The rules are defined by using the following syntax:
 
 ```
-rule NAME deny { wildcard | columns VALUE... |
-     regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF |
-      no_where_clause} [at_times VALUE...] [on_queries [select|update|insert|delete|grant|revoke|drop|create|alter|use|load]]
+rule NAME deny RULE [at_times VALUE...] [on_queries {select|update|insert|delete|grant|revoke|drop|create|alter|use|load}]
 ```
+
+Where _NAME_ is the identifier for this rule and _RULE_ is the mandatory rule definition.
 
 Rules are identified by their name and have mandatory parts and optional parts.
 You can add comments to the rule files by adding the `#` character at
@@ -195,6 +195,20 @@ Deny function usage with _name_ and _address_ columns:
 
 ```
 rule examplerule deny uses_function name address
+```
+
+#### `function` and `columns`
+
+This rule combines the `function` and `columns` type rules to match if one
+of the listed columns uses one of the listed functions. The rule expects
+the `function` and `columns` keywords both followed by a list of values.
+
+##### Example
+
+Deny use of the _sum_ function with _name_ or _address_ columns:
+
+```
+rule examplerule deny function sum columns name address
 ```
 
 #### `regex`
