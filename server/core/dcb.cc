@@ -3155,15 +3155,20 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
     return rc;
 }
 
-static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events)
+static uint32_t dcb_handler(DCB* dcb, uint32_t events)
 {
-    DCB *dcb = (DCB*)data;
-
     this_thread.current_dcb = dcb;
     uint32_t rv = dcb_process_poll_events(dcb, events);
     this_thread.current_dcb = NULL;
 
     return rv;
+}
+
+static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events)
+{
+    DCB *dcb = (DCB*)data;
+
+    return dcb_handler(dcb, events);
 }
 
 class FakeEventTask: public mxs::WorkerDisposableTask
@@ -3182,7 +3187,7 @@ public:
     void execute(Worker& worker)
     {
         m_dcb->dcb_fakequeue = m_buffer;
-        dcb_process_poll_events(m_dcb, m_ev);
+        dcb_handler(m_dcb, m_ev);
     }
 
 private:
