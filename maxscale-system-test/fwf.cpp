@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     FILE* file;
 
     sprintf(rules_dir, "%s/fw/", test_dir);
-    int N = 10;
+    int N = 11;
     int i;
 
     for (i = 1; i < N + 1; i++)
