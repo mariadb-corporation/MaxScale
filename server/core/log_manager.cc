@@ -2971,7 +2971,7 @@ int mxs_log_message(int priority,
                     message_len -= (buffer_len - MAX_LOGSTRLEN);
                     buffer_len = MAX_LOGSTRLEN;
 
-                    ss_dassert(prefix.len + modname_len +
+                    ss_dassert(prefix.len + session_len + modname_len +
                                augmentation_len + message_len + suppression_len + 1 == buffer_len);
                 }
 
