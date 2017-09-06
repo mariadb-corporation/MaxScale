@@ -9,12 +9,32 @@ done)
 
 COMMANDS=$(for i in $ITEMS
 do
-    echo "### \`$i\`"
+    echo "## $i"
     echo
     echo "\`\`\`"
     node maxctrl.js help $i|awk 'BEGIN{p=1} /Global Options:/{p=0}{if(p){print $0}}'
     echo "\`\`\`"
     echo
+
+    CMD=`node maxctrl.js help $i|awk '/^$/{p=0} {if(p){print $1}}/Commands:/{p=1}'`
+
+    for j in $CMD
+    do
+        echo "### $i $j"
+        echo
+        USAGE=`node maxctrl.js help $i $j|head -n 1`
+        echo "Usage: \`$USAGE\`"
+        echo ""
+
+        # Print the detailed command explanation if it has one
+        DESC=`node maxctrl.js help $i $j|sed 's/[\`]/\\\`/'|awk 'BEGIN{p=2} /Options:/{p=0}{if(p==1){print $0}}/^$/{if(!p){p=1}}'`
+        if [ ! -z "$DESC" ]
+        then
+            echo "$DESC"
+            echo
+        fi
+
+    done
 done)
 
 GLOBALOPTS=$(node maxctrl.js help $i|awk '{if(p){print $0}} /Global Options:/{p=1}')
@@ -40,7 +60,7 @@ For more information about the MaxScale REST API, refer to the
 
 $TOC
 
-# Options
+## Options
 
 All command accept the following global options.
 
