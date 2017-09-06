@@ -156,6 +156,7 @@ typedef struct dcb
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
     GWBUF           *readq;         /**< Read queue for storing incomplete reads */
     GWBUF           *fakeq;         /**< Fake event queue for generated events */
+    uint32_t        fake_event;     /**< Fake event to be delivered to handler */
 
     DCBSTATS        stats;          /**< DCB related statistics */
     struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
