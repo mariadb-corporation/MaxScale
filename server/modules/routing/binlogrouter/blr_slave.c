@@ -356,6 +356,8 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                                    CHANGE_MASTER_OPTIONS *change_master);
 extern void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
 extern void blr_close_master_in_main(void* data);
+static int blr_check_mariadb10_slave_gtid(ROUTER_INSTANCE *router,
+                                          ROUTER_SLAVE *slave);
 
 /**
  * Process a request packet from the slave server.
@@ -435,32 +437,6 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             dcb_close(slave->dcb);
             rv = 1;
         }
-        else if (router->mariadb10_master_gtid && !slave->mariadb_gtid)
-        {
-            /**
-             * If GTID master replication is set
-             * only GTID slaves can continue the registration.
-             */
-            const char *err_msg = "MariaDB 10 Slave GTID is required"
-                            " for Slave registration.";
-            slave->state = BLRS_ERRORED;
-            /* Send error that stops slave replication */
-            blr_send_custom_error(slave->dcb,
-                                  ++slave->seqno,
-                                  0,
-                                  err_msg,
-                                  "HY000",
-                                  1597);
-
-            MXS_ERROR("%s: Slave %s: %s"
-                      " Please use: CHANGE MASTER TO master_use_gtid=slave_pos.",
-                      router->service->name,
-                      slave->dcb->remote,
-                      err_msg);
-
-            dcb_close(slave->dcb);
-            rv = 1;
-        }
         else
         {
             /* Master and Slave version OK: continue with slave registration */
@@ -468,6 +444,17 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         break;
     case COM_BINLOG_DUMP:
+        /**
+         * If GTID master replication is set
+         * only GTID slaves can continue the registration.
+         */
+        if (!blr_check_mariadb10_slave_gtid(router, slave))
+        {
+            dcb_close(slave->dcb);
+            return 1;
+        }
+
+        /* Request now the binlog records */
         rv = blr_slave_binlog_dump(router, slave, queue);
 
         if (rv && router->send_slave_heartbeat && slave->heartbeat > 0)
@@ -9043,4 +9030,50 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                gtid_msg,
                heartbeat_msg,
                retry_msg);
+}
+
+/**
+ * Check whether a MariaDB 10 slave
+ * can continue MySQL Slave protocol registration to binlog server.
+ *
+ * If Binlog Server has mariadb10_master_gtid option se to On,
+ * a slave without GTID Request will be rejected.
+ *
+ * @param router    The router instance
+ * @param slave     The registering slave
+ *
+ * @return          1 on succes, 0 otherwise
+ */
+static int blr_check_mariadb10_slave_gtid(ROUTER_INSTANCE *router,
+                                          ROUTER_SLAVE *slave)
+{
+    /**
+     * Check for mariadb10_master_gtid option set to On and
+     * connecting slave with GTID request.
+     */
+    if (router->mariadb10_master_gtid && !slave->mariadb_gtid)
+    {
+        const char *err_msg = "MariaDB 10 Slave GTID is required"
+                              " for Slave registration.";
+        spinlock_acquire(&slave->catch_lock);
+        slave->state = BLRS_ERRORED;
+        spinlock_release(&slave->catch_lock);
+
+        /* Send error that stops slave replication */
+        blr_send_custom_error(slave->dcb,
+                              ++slave->seqno,
+                              0,
+                              err_msg,
+                              "HY000",
+                              BINLOG_FATAL_ERROR_READING);
+
+        MXS_ERROR("%s: Slave %s: %s"
+                  " Please use: CHANGE MASTER TO master_use_gtid=slave_pos.",
+                  router->service->name,
+                  slave->dcb->remote,
+                  err_msg);
+        return 0;
+    }
+
+    return 1;
 }
