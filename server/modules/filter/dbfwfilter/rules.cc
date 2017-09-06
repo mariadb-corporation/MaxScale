@@ -323,7 +323,7 @@ bool LimitQueriesRule::matches_query(DbfwSession* session, GWBUF* buffer, char**
             queryspeed->first_query = time_now;
             queryspeed->count = 1;
         }
-        else if (difftime(time_now, queryspeed->first_query) <= m_timeperiod)
+        else if (difftime(time_now, queryspeed->first_query) < m_timeperiod)
         {
             queryspeed->count++;
         }
