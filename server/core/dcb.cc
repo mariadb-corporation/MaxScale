@@ -306,15 +306,15 @@ dcb_free_all_memory(DCB *dcb)
         gwbuf_free(dcb->writeq);
         dcb->writeq = NULL;
     }
-    if (dcb->dcb_readqueue)
+    if (dcb->readq)
     {
-        gwbuf_free(dcb->dcb_readqueue);
-        dcb->dcb_readqueue = NULL;
+        gwbuf_free(dcb->readq);
+        dcb->readq = NULL;
     }
-    if (dcb->dcb_fakequeue)
+    if (dcb->fakeq)
     {
-        gwbuf_free(dcb->dcb_fakequeue);
-        dcb->dcb_fakequeue = NULL;
+        gwbuf_free(dcb->fakeq);
+        dcb->fakeq = NULL;
     }
 
     while ((cb_dcb = dcb->callbacks) != NULL)
@@ -523,16 +523,16 @@ int dcb_read(DCB   *dcb,
     int     nsingleread = 0;
     int     nreadtotal = 0;
 
-    if (dcb->dcb_readqueue)
+    if (dcb->readq)
     {
-        *head = gwbuf_append(*head, dcb->dcb_readqueue);
-        dcb->dcb_readqueue = NULL;
+        *head = gwbuf_append(*head, dcb->readq);
+        dcb->readq = NULL;
         nreadtotal = gwbuf_length(*head);
     }
-    else if (dcb->dcb_fakequeue)
+    else if (dcb->fakeq)
     {
-        *head = gwbuf_append(*head, dcb->dcb_fakequeue);
-        dcb->dcb_fakequeue = NULL;
+        *head = gwbuf_append(*head, dcb->fakeq);
+        dcb->fakeq = NULL;
         nreadtotal = gwbuf_length(*head);
     }
 
@@ -3171,7 +3171,7 @@ public:
 
     void execute(Worker& worker)
     {
-        m_dcb->dcb_fakequeue = m_buffer;
+        m_dcb->fakeq = m_buffer;
         dcb_handler(m_dcb, m_ev);
     }
 

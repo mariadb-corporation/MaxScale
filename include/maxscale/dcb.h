@@ -154,8 +154,8 @@ typedef struct dcb
     int             writeqlen;      /**< Current number of byes in the write queue */
     GWBUF           *writeq;        /**< Write Data Queue */
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
-    GWBUF           *dcb_readqueue; /**< Read queue for storing incomplete reads */
-    GWBUF           *dcb_fakequeue; /**< Fake event queue for generated events */
+    GWBUF           *readq;         /**< Read queue for storing incomplete reads */
+    GWBUF           *fakeq;         /**< Fake event queue for generated events */
 
     DCBSTATS        stats;          /**< DCB related statistics */
     struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
@@ -275,7 +275,7 @@ void dcb_process_idle_sessions(int thr);
  */
 static inline void dcb_readq_append(DCB *dcb, GWBUF *buffer)
 {
-    dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, buffer);
+    dcb->readq = gwbuf_append(dcb->readq, buffer);
 }
 
 /**
@@ -287,7 +287,7 @@ static inline void dcb_readq_append(DCB *dcb, GWBUF *buffer)
  */
 static GWBUF* dcb_readq_get(DCB* dcb)
 {
-    return dcb->dcb_readqueue;
+    return dcb->readq;
 }
 
 /**
@@ -297,7 +297,7 @@ static GWBUF* dcb_readq_get(DCB* dcb)
  */
 static inline bool dcb_readq_has(DCB* dcb)
 {
-    return dcb->dcb_readqueue != NULL;
+    return dcb->readq != NULL;
 }
 
 /**
@@ -307,7 +307,7 @@ static inline bool dcb_readq_has(DCB* dcb)
  */
 static unsigned int dcb_readq_length(DCB* dcb)
 {
-    return dcb->dcb_readqueue ? gwbuf_length(dcb->dcb_readqueue) : 0;
+    return dcb->readq ? gwbuf_length(dcb->readq) : 0;
 }
 
 /**
@@ -318,7 +318,7 @@ static unsigned int dcb_readq_length(DCB* dcb)
  */
 static inline void dcb_readq_prepend(DCB *dcb, GWBUF *buffer)
 {
-    dcb->dcb_readqueue = gwbuf_append(buffer, dcb->dcb_readqueue);
+    dcb->readq = gwbuf_append(buffer, dcb->readq);
 }
 
 /**
@@ -330,9 +330,9 @@ static inline void dcb_readq_prepend(DCB *dcb, GWBUF *buffer)
  */
 static GWBUF* dcb_readq_release(DCB* dcb)
 {
-    GWBUF* dcb_readqueue = dcb->dcb_readqueue;
-    dcb->dcb_readqueue = NULL;
-    return dcb_readqueue;
+    GWBUF* readq = dcb->readq;
+    dcb->readq = NULL;
+    return readq;
 }
 
 /**
@@ -346,17 +346,17 @@ static GWBUF* dcb_readq_release(DCB* dcb)
  */
 static inline void dcb_readq_set(DCB *dcb, GWBUF *buffer)
 {
-    if (dcb->dcb_readqueue)
+    if (dcb->readq)
     {
         MXS_ERROR("Read-queue set when there already is a read-queue.");
         // TODO: Conceptually this should be freed here. However, currently
         // TODO: the code just assigns without checking, so we do the same
         // TODO: for now. If this is not set to NULL when it has been consumed,
         // TODO: we would get a double free.
-        // TODO: gwbuf_free(dcb->dcb_readqueue);
-        dcb->dcb_readqueue = NULL;
+        // TODO: gwbuf_free(dcb->readq);
+        dcb->readq = NULL;
     }
-    dcb->dcb_readqueue = buffer;
+    dcb->readq = buffer;
 }
 
 /**
