@@ -707,7 +707,7 @@ gw_read_and_write(DCB *dcb)
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
 
-        dcb->dcb_readqueue = read_buffer;
+        dcb_readq_set(dcb, read_buffer);
 
         if (tmp == NULL)
         {
@@ -742,7 +742,7 @@ gw_read_and_write(DCB *dcb)
                     bool more = false;
                     if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
                     {
-                        dcb->dcb_readqueue = gwbuf_append(read_buffer, dcb->dcb_readqueue);
+                        dcb_readq_prepend(dcb, read_buffer);
                         return 0;
                     }
 
@@ -755,7 +755,7 @@ gw_read_and_write(DCB *dcb)
                 {
                     if (!complete_ps_response(read_buffer))
                     {
-                        dcb->dcb_readqueue = gwbuf_append(read_buffer, dcb->dcb_readqueue);
+                        dcb_readq_prepend(dcb, read_buffer);
                         return 0;
                     }
 
@@ -829,7 +829,7 @@ gw_read_and_write(DCB *dcb)
                 if (!sescmd_response_complete(dcb))
                 {
                     stmt = gwbuf_append(stmt, read_buffer);
-                    dcb->dcb_readqueue = gwbuf_append(stmt, dcb->dcb_readqueue);
+                    dcb_readq_prepend(dcb, stmt);
                     return 0;
                 }
             }
@@ -1586,7 +1586,7 @@ static GWBUF* process_response_data(DCB* dcb,
                     /** Store the already read data into the readqueue of the DCB
                      * and restore the response status to the initial number of packets */
 
-                    dcb->dcb_readqueue = gwbuf_append(outbuf, dcb->dcb_readqueue);
+                    dcb_readq_prepend(dcb, outbuf);
 
                     protocol_set_response_status(p, initial_packets, initial_bytes);
                     return NULL;

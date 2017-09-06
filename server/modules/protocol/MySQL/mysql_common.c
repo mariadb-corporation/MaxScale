@@ -981,8 +981,7 @@ bool read_complete_packet(DCB *dcb, GWBUF **readbuf)
         {
             /** Store any extra data in the DCB's readqueue */
 
-            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, localbuf);
-
+            dcb_readq_append(dcb, localbuf);
         }
     }
 

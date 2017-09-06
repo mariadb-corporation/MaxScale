@@ -499,7 +499,7 @@ int gw_read_client_event(DCB* dcb)
             (0 != max_bytes && nbytes_read < max_bytes))
         {
 
-            dcb->dcb_readqueue = read_buffer;
+            dcb_readq_set(dcb, read_buffer);
 
             return 0;
         }
@@ -747,7 +747,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 static GWBUF* split_and_store(DCB *client_dcb, GWBUF* queue, int offset)
 {
     GWBUF* newbuf = gwbuf_split(&queue, offset);
-    dcb_append_readqueue(client_dcb, queue);
+    dcb_readq_append(client_dcb, queue);
     return newbuf;
 }
 
@@ -794,7 +794,7 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
     /** Make sure we have enough data if the client is sending a new command */
     if (protocol_is_idle(dcb) && bytes_available < MYSQL_HEADER_LEN)
     {
-        dcb_append_readqueue(dcb, queue);
+        dcb_readq_append(dcb, queue);
         return false;
     }
 
@@ -982,7 +982,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         if (nbytes_read < 3 || nbytes_read <
             (int)(MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4))
         {
-            dcb->dcb_readqueue = read_buffer;
+            dcb_readq_set(dcb, read_buffer);
             return 0;
         }
 
@@ -998,7 +998,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     switch (res)
     {
     case RES_MORE_DATA:
-        dcb->dcb_readqueue = read_buffer;
+        dcb_readq_set(dcb, read_buffer);
         rval = 0;
         break;
 
@@ -1052,7 +1052,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
             /* Must have been data left over */
             /* Add incomplete mysql packet to read queue */
 
-            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+            dcb_readq_append(dcb, read_buffer);
 
         }
     }
@@ -1557,11 +1557,11 @@ return_rc:
  */
 static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read)
 {
-    if (dcb->dcb_readqueue)
+    if (dcb_readq_has(dcb))
     {
-        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, *read_buffer);
-        nbytes_read = gwbuf_length(dcb->dcb_readqueue);
-        int plen = MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(dcb->dcb_readqueue));
+        dcb_readq_append(dcb, *read_buffer);
+        nbytes_read = dcb_readq_length(dcb);
+        int plen = MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(dcb_readq_get(dcb)));
 
         if (nbytes_read < 3 || nbytes_read < plen + 4)
         {
@@ -1573,8 +1573,7 @@ static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_rea
              * There is at least one complete mysql packet in
              * read_buffer.
              */
-            *read_buffer = dcb->dcb_readqueue;
-            dcb->dcb_readqueue = NULL;
+            *read_buffer = dcb_readq_release(dcb);
         }
     }
     else
@@ -1583,7 +1582,7 @@ static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_rea
 
         if (nbytes_read < 3 || nbytes_read < (int)MYSQL_GET_PAYLOAD_LEN(data) + 4)
         {
-            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, *read_buffer);
+            dcb_readq_append(dcb, *read_buffer);
             return false;
         }
     }
