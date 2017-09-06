@@ -194,8 +194,8 @@ exports.builder = function(yargs) {
         .command('user <name> <password>', 'Create a new network user', function(yargs) {
             return yargs.epilog('The created user can be used with the MaxScale REST API as ' +
                                 'well as the MaxAdmin network interface. By default the created ' +
-                                'user will have administrative privileges. To limit the user to ' +
-                                'read-only operations, use the `--type=basic` option.');
+                                'user will have read-only privileges. To make the user an ' +
+                                'administrative user, use the `--type=admin` option.');
         }, function(argv) {
 
             var user = {
