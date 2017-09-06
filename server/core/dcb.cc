@@ -266,6 +266,12 @@ dcb_final_free(DCB *dcb)
 void
 dcb_free_all_memory(DCB *dcb)
 {
+    // This needs to be done here because session_free() calls this directly.
+    if (this_thread.current_dcb == dcb)
+    {
+        this_thread.current_dcb = NULL;
+    }
+
     DCB_CALLBACK *cb_dcb;
 
     if (dcb->protocol)
