@@ -39,24 +39,58 @@ GET /v1/maxscale
                 "execdir": "/usr/bin",
                 "connector_plugindir": "/var/lib/plugin",
                 "threads": 4,
+                "thread_stack_size": 8388608,
                 "auth_connect_timeout": 3,
                 "auth_read_timeout": 1,
                 "auth_write_timeout": 2,
                 "skip_permission_checks": false,
-                "syslog": true,
-                "maxlog": true,
-                "log_to_shm": false,
+                "admin_auth": false,
+                "admin_enabled": true,
+                "admin_log_auth_failures": true,
+                "admin_host": "::",
+                "admin_port": 8989,
+                "admin_ssl_key": "",
+                "admin_ssl_cert": "",
+                "admin_ssl_ca_cert": "",
                 "query_classifier": ""
             },
-            "version": "2.1.3",
-            "commit": "a32aa6c16236d2d8830e1286ea3aa4dba19174ec",
-            "started_at": "Wed, 17 May 2017 05:33:46 GMT",
-            "uptime": 19
+            "version": "2.2.0",
+            "commit": "aa1a413cd961d467083d1974c2a027f612201845",
+            "started_at": "Wed, 06 Sep 2017 06:51:54 GMT",
+            "uptime": 1227
         },
         "id": "maxscale",
         "type": "maxscale"
     }
 }
+```
+
+## Update MaxScale parameters
+
+Update MaxScale parameters. The request body must define updated values for the
+`data.attributes.parameters` object. The following parameters can be altered:
+
+- [admin_auth](../Getting-Started/Configuration-Guide.md#admin_auth)
+- [auth_connect_timeout](../Getting-Started/Configuration-Guide.md#auth_connect_timeout)
+- [auth_read_timeout](../Getting-Started/Configuration-Guide.md#auth_read_timeout)
+- [auth_write_timeout](../Getting-Started/Configuration-Guide.md#auth_write_timeout)
+
+```
+PATCH /v1/maxscale
+```
+
+#### Response
+
+Parameters modified:
+
+```
+Status: 204 No Content
+```
+
+Invalid JSON body:
+
+```
+Status: 403 Forbidden
 ```
 
 ## Get thread information
@@ -239,14 +273,46 @@ GET /v1/maxscale/logs
                 },
                 "log_warning": true,
                 "log_notice": true,
-                "log_info": false,
-                "log_debug": false
-            }
+                "log_info": true,
+                "log_debug": false,
+                "log_to_shm": false
+            },
+            "log_file": "/home/markusjm/build/log/maxscale/maxscale.log",
+            "log_priorities": [
+                "error",
+                "warning",
+                "notice",
+                "info"
+            ]
         },
         "id": "logs",
         "type": "logs"
     }
 }
+```
+
+## Update logging parameters
+
+Update logging parameters. The request body must define updated values for the
+`data.attributes.parameters` object. All logging parameters apart from
+`log_to_shm` can be altered at runtime.
+
+```
+PATCH /v1/maxscale/logs
+```
+
+#### Response
+
+Parameters modified:
+
+```
+Status: 204 No Content
+```
+
+Invalid JSON body:
+
+```
+Status: 403 Forbidden
 ```
 
 ## Flush and rotate log files
