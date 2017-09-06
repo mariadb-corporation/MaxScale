@@ -162,6 +162,8 @@ Worker::Worker(int id,
     , m_shutdown_initiated(false)
 {
     MXS_POLL_DATA::handler = &Worker::epoll_instance_handler;
+    MXS_POLL_DATA::free = NULL;
+    MXS_POLL_DATA::refcount = 0;
     MXS_POLL_DATA::thread.id = id;
 }
 
@@ -1141,6 +1143,15 @@ void Worker::poll_waitevents()
 
         for (int i = 0; i < nfds; i++)
         {
+            MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
+            if (data->free)
+            {
+                poll_inc_ref(data);
+            }
+        }
+
+        for (int i = 0; i < nfds; i++)
+        {
             /** Calculate event queue statistics */
             int64_t started = hkheartbeat;
             int64_t qtime = started - cycle_start;
@@ -1198,6 +1209,18 @@ void Worker::poll_waitevents()
             }
 
             m_statistics.maxexectime = MXS_MAX(m_statistics.maxexectime, qtime);
+        }
+
+        for (int i = 0; i < nfds; i++)
+        {
+            MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
+            if (data->free)
+            {
+                if (poll_dec_ref(data) == 1)
+                {
+                    data->free(data);
+                }
+            }
         }
 
         dcb_process_idle_sessions(m_id);

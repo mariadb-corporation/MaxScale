@@ -91,28 +91,6 @@ static thread_local struct
 
 }
 
-void dcb_global_init()
-{
-    this_unit.dcb_initialized.dcb_chk_top = CHK_NUM_DCB;
-    this_unit.dcb_initialized.fd = DCBFD_CLOSED;
-    this_unit.dcb_initialized.state = DCB_STATE_ALLOC;
-    this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
-    this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
-
-    int nthreads = config_threadcount();
-
-    if ((this_unit.all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL)
-    {
-        MXS_OOM();
-        raise(SIGABRT);
-    }
-}
-
-void dcb_finish()
-{
-    // TODO: Free all resources.
-}
-
 static void dcb_initialize(DCB *dcb);
 static void dcb_final_free(DCB *dcb);
 static void dcb_final_close(DCB *dcb);
@@ -145,6 +123,30 @@ static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t ev
 static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t ev);
 static bool dcb_session_check(DCB *dcb, const char *);
 
+void dcb_global_init()
+{
+    this_unit.dcb_initialized.dcb_chk_top = CHK_NUM_DCB;
+    this_unit.dcb_initialized.fd = DCBFD_CLOSED;
+    this_unit.dcb_initialized.state = DCB_STATE_ALLOC;
+    this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
+    this_unit.dcb_initialized.poll.handler = dcb_poll_handler;
+    this_unit.dcb_initialized.poll.free = NULL;
+    this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
+
+    int nthreads = config_threadcount();
+
+    if ((this_unit.all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL)
+    {
+        MXS_OOM();
+        raise(SIGABRT);
+    }
+}
+
+void dcb_finish()
+{
+    // TODO: Free all resources.
+}
+
 uint64_t dcb_get_session_id(DCB *dcb)
 {
     return (dcb && dcb->session) ? dcb->session->ses_id : 0;
@@ -165,8 +167,6 @@ static void
 dcb_initialize(DCB *dcb)
 {
     *dcb = this_unit.dcb_initialized;
-
-    dcb->poll.handler = dcb_poll_handler;
 }
 
 /**
