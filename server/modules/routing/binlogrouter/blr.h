@@ -116,6 +116,14 @@ enum binlog_storage_type
     BLR_BINLOG_STORAGE_TREE
 };
 
+/** Conecting slave checks */
+enum blr_slave_check
+{
+    BLR_SLAVE_CONNECTING,          /*< The slave starts the registration */
+    BLR_SLAVE_IS_MARIADB10,        /*< The slave is a MariaDB10 one */
+    BLR_SLAVE_HAS_MARIADB10_GTID,  /*< The MariaDB10 Slave has GTID request */
+};
+
 /**
  * Supported Encryption algorithms
  *

@@ -356,9 +356,9 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                                    CHANGE_MASTER_OPTIONS *change_master);
 extern void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
 extern void blr_close_master_in_main(void* data);
-static int blr_check_mariadb10_slave_gtid(ROUTER_INSTANCE *router,
-                                          ROUTER_SLAVE *slave);
-
+static bool blr_check_connecting_slave(ROUTER_INSTANCE *router,
+                                      ROUTER_SLAVE *slave,
+                                      enum blr_slave_check check);
 /**
  * Process a request packet from the slave server.
  *
@@ -395,60 +395,25 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         rv = blr_slave_query(router, slave, queue);
         break;
     case COM_REGISTER_SLAVE:
-        if (router->master_state == BLRM_UNCONFIGURED)
-        {
-            char *err_msg = "Binlog router is not yet configured"
-                            " for replication.";
-            slave->state = BLRS_ERRORED;
-            blr_slave_send_error_packet(slave,
-                                        err_msg,
-                                        1597,
-                                        NULL);
-
-            MXS_ERROR("%s: Slave %s: %s",
-                      router->service->name,
-                      slave->dcb->remote,
-                      err_msg);
-            dcb_close(slave->dcb);
-            rv = 1;
-        }
-        else if (router->mariadb10_compat && !slave->mariadb10_compat)
-        {
-            char *err_msg = "MariaDB 10 Slave is required"
-                            " for Slave registration.";
-            /**
-             * If Master is MariaDB10 don't allow registration from
-             * MariaDB/Mysql 5 Slaves
-             */
-            slave->state = BLRS_ERRORED;
-            /* Send error that stops slave replication */
-            blr_send_custom_error(slave->dcb,
-                                  ++slave->seqno,
-                                  0,
-                                  err_msg,
-                                  "42000",
-                                  1064);
-
-            MXS_ERROR("%s: Slave %s: %s",
-                      router->service->name,
-                      slave->dcb->remote,
-                      err_msg);
-
-            dcb_close(slave->dcb);
-            rv = 1;
-        }
-        else
-        {
-            /* Master and Slave version OK: continue with slave registration */
-            rv = blr_slave_register(router, slave, queue);
-        }
+        /* Continue with slave registration */
+        rv = blr_slave_register(router, slave, queue);
         break;
     case COM_BINLOG_DUMP:
-        /**
-         * If GTID master replication is set
-         * only GTID slaves can continue the registration.
-         */
-        if (!blr_check_mariadb10_slave_gtid(router, slave))
+        /* Check whether binlog server can accept slave requests */
+        if (!blr_check_connecting_slave(router,
+                                        slave,
+                                        BLR_SLAVE_CONNECTING) ||
+            /* Check whether connecting slaves can be only MariaDB 10 ones */
+            !blr_check_connecting_slave(router,
+                                        slave,
+                                        BLR_SLAVE_IS_MARIADB10) ||
+            /**
+             * If MariaDB 10 GTID master replication is set
+             * only MariaDB 10 GTID slaves can continue the registration.
+             */
+            !blr_check_connecting_slave(router,
+                                        slave,
+                                        BLR_SLAVE_HAS_MARIADB10_GTID))
         {
             dcb_close(slave->dcb);
             return 1;
@@ -1881,6 +1846,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
             char req_file[binlognamelen + 1];
             char errmsg[BINLOG_ERROR_MSG_LEN + 1];
             memcpy(req_file, (char *)ptr, binlognamelen);
+            req_file[binlognamelen] = 0;
 
             MXS_ERROR("Slave %lu requests COM_BINLOG_DUMP with a filename %s"
                       " longer than max %d chars. Aborting.",
@@ -6467,7 +6433,18 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
     }
     else if (strcasecmp(word, "@@GLOBAL.GTID_MODE") == 0)
     {
-        blr_slave_replay(router, slave, router->saved_master.gtid_mode);
+        if (router->saved_master.gtid_mode)
+        {
+            blr_slave_replay(router, slave, router->saved_master.gtid_mode);
+        }
+        else
+        {
+            blr_slave_send_var_value(router,
+                                     slave,
+                                     "@@GLOBAL.GTID_MODE",
+                                     "OFF",
+                                     BLR_TYPE_STRING);
+        }
         return true;
     }
     else if (strcasecmp(word, "1") == 0)
@@ -9033,28 +9010,81 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
 }
 
 /**
- * Check whether a MariaDB 10 slave
- * can continue MySQL Slave protocol registration to binlog server.
+ * Check whether connecting slave server can continue
+ * the MySQL Slave protocol registration to binlog server.
  *
- * If Binlog Server has mariadb10_master_gtid option se to On,
- * a slave without GTID Request will be rejected.
+ * (1) Binlog Server should be configured.
+ *
+ * (2) Connecting Slave must be MariaDB 10 one,
+ *   if master->mariadb10_compat is set
+ *
+ * (3) If mariadb10_master_gtid option is set,
+ *   a slave without GTID Request will be rejected.
  *
  * @param router    The router instance
  * @param slave     The registering slave
  *
- * @return          1 on succes, 0 otherwise
+ * @return          true on succes, false otherwise
  */
-static int blr_check_mariadb10_slave_gtid(ROUTER_INSTANCE *router,
-                                          ROUTER_SLAVE *slave)
+static bool blr_check_connecting_slave(ROUTER_INSTANCE *router,
+                                      ROUTER_SLAVE *slave,
+                                      enum blr_slave_check check)
 {
-    /**
-     * Check for mariadb10_master_gtid option set to On and
-     * connecting slave with GTID request.
-     */
-    if (router->mariadb10_master_gtid && !slave->mariadb_gtid)
+    int rv = true;
+    char *err_msg = NULL;
+    char *err_status = "HY000";
+    int err_code = BINLOG_FATAL_ERROR_READING;
+    char *msg_detail = "";
+
+    switch(check)
     {
-        const char *err_msg = "MariaDB 10 Slave GTID is required"
-                              " for Slave registration.";
+    case BLR_SLAVE_CONNECTING: // (1)
+        if (router->master_state == BLRM_UNCONFIGURED)
+        {
+            err_msg = "Binlog router is not yet configured"
+                       " for replication.";
+            rv = false;
+        }
+        break;
+
+    case BLR_SLAVE_IS_MARIADB10: // (2)
+        /**
+         * If Master is MariaDB10 don't allow registration from
+         * MariaDB/Mysql 5 Slaves
+         */
+        if (router->mariadb10_compat && !slave->mariadb10_compat)
+        {
+            err_msg = "MariaDB 10 Slave is required"
+                      " for Slave registration.";
+            rv = false;
+        }
+        break;
+
+    case BLR_SLAVE_HAS_MARIADB10_GTID: // (3)
+        /**
+         * Check for mariadb10_master_gtid option set to On and
+         * connecting slave with GTID request.
+         */
+        if (router->mariadb10_master_gtid && !slave->mariadb_gtid)
+        {
+            err_msg = "MariaDB 10 Slave GTID is required"
+                      " for Slave registration.";
+            msg_detail = " Please use: CHANGE MASTER TO master_use_gtid=slave_pos.";
+
+            rv = false;
+        }
+        break;
+    default:
+        MXS_WARNING("%s: Slave %s: Unkwon status check %d.",
+                    router->service->name,
+                    slave->dcb->remote,
+                    check);
+        break;
+    }
+
+    if (!rv)
+    {
+        /* Force BLRS_ERRORED state */
         spinlock_acquire(&slave->catch_lock);
         slave->state = BLRS_ERRORED;
         spinlock_release(&slave->catch_lock);
@@ -9064,16 +9094,14 @@ static int blr_check_mariadb10_slave_gtid(ROUTER_INSTANCE *router,
                               ++slave->seqno,
                               0,
                               err_msg,
-                              "HY000",
-                              BINLOG_FATAL_ERROR_READING);
-
-        MXS_ERROR("%s: Slave %s: %s"
-                  " Please use: CHANGE MASTER TO master_use_gtid=slave_pos.",
+                              err_status,
+                              err_code);
+        MXS_ERROR("%s: Slave %s: %s%s",
                   router->service->name,
                   slave->dcb->remote,
-                  err_msg);
-        return 0;
+                  err_msg,
+                  msg_detail);
     }
 
-    return 1;
+    return rv;
 }
