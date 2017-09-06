@@ -1950,18 +1950,6 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
     }
 }
 
-/**
- * Check the passed DCB to ensure it is in the list of all DCBS
- *
- * @param       dcb     The DCB to check
- * @return      1 if the DCB is in the list, otherwise 0
- */
-int
-dcb_isvalid(DCB *dcb)
-{
-    return !!dcb;
-}
-
 static void dcb_hangup_foreach_worker(int thread_id, struct server* server)
 {
     for (DCB *dcb = this_unit.all_dcbs[thread_id]; dcb; dcb = dcb->thread.next)

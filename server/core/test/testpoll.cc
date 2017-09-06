@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
+#include <maxscale/service.h>
 
 #include "test_utils.h"
 
@@ -97,6 +98,8 @@ test1()
     sleep(10);
     //TODO, fix this for workers: poll_shutdown();
     ss_dfprintf(stderr, "\t..done\nTidy up.");
+    SERVICE my_service = {};
+    dcb->service = &my_service;
     dcb_close(dcb);
     ss_dfprintf(stderr, "\t..done\n");
 

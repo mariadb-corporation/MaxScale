@@ -35,8 +35,9 @@
 #include <string.h>
 
 #include <maxscale/config.h>
-#include <maxscale/dcb.h>
 #include <maxscale/listener.h>
+
+#include "../dcb.cc"
 
 /**
  * test1    Allocate a dcb and do lots of other things
@@ -48,17 +49,16 @@ test1()
     DCB   *dcb;
     SERV_LISTENER dummy;
     /* Single buffer tests */
-    ss_dfprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_SERVICE_LISTENER");
+    ss_dfprintf(stderr, "testdcb : creating buffer with type DCB_ROLE_INTERNAL");
     dcb = dcb_alloc(DCB_ROLE_INTERNAL, &dummy);
     printDCB(dcb);
-    ss_info_dassert(dcb_isvalid(dcb), "New DCB must be valid");
     ss_dfprintf(stderr, "\t..done\nAllocated dcb.");
     printAllDCBs();
     ss_dfprintf(stderr, "\t..done\n");
     dcb->state = DCB_STATE_POLLING;
+    this_thread.current_dcb = dcb;
     dcb_close(dcb);
     ss_dfprintf(stderr, "Freed original dcb");
-    ss_info_dassert(!dcb_isvalid(dcb), "Closed DCB must not be valid");
     ss_dfprintf(stderr, "\t..done\n");
 
     return 0;

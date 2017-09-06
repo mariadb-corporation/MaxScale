@@ -247,6 +247,7 @@ main(int argc, char **argv)
 
     unlink(buf);
 
+    admin_users_init();
     result += test1();
     result += test2();
     result += test3();
