@@ -154,7 +154,7 @@ typedef struct dcb
     int             writeqlen;      /**< Current number of byes in the write queue */
     GWBUF           *writeq;        /**< Write Data Queue */
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
-    GWBUF           *dcb_readqueue; /**< read queue for storing incomplete reads */
+    GWBUF           *dcb_readqueue; /**< Read queue for storing incomplete reads */
     GWBUF           *dcb_fakequeue; /**< Fake event queue for generated events */
 
     DCBSTATS        stats;          /**< DCB related statistics */
@@ -261,9 +261,103 @@ char *dcb_role_name(DCB *);                  /* Return the name of a role */
 int dcb_accept_SSL(DCB* dcb);
 int dcb_connect_SSL(DCB* dcb);
 int dcb_listen(DCB *listener, const char *config, const char *protocol_name);
-void dcb_append_readqueue(DCB *dcb, GWBUF *buffer);
 void dcb_enable_session_timeouts();
 void dcb_process_idle_sessions(int thr);
+
+/**
+ * @brief Append a buffer the DCB's readqueue
+ *
+ * Usually data is stored into the DCB's readqueue when not enough data is
+ * available and the processing needs to be deferred until more data is available.
+ *
+ * @param dcb    The DCB to be appended to.
+ * @param buffer The buffer to append.
+ */
+static inline void dcb_readq_append(DCB *dcb, GWBUF *buffer)
+{
+    dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, buffer);
+}
+
+/**
+ * @brief Returns the read queue of the DCB.
+ *
+ * @note The read queue remains the property of the DCB.
+ *
+ * @return A buffer of NULL if there is no read queue.
+ */
+static GWBUF* dcb_readq_get(DCB* dcb)
+{
+    return dcb->dcb_readqueue;
+}
+
+/**
+ * @brief Returns whether a DCB currently has a read queue.
+ *
+ * @return True, if the DCB has a read queue, otherwise false.
+ */
+static inline bool dcb_readq_has(DCB* dcb)
+{
+    return dcb->dcb_readqueue != NULL;
+}
+
+/**
+ * @brief Returns the current length of the read queue
+ *
+ * @return Length of read queue
+ */
+static unsigned int dcb_readq_length(DCB* dcb)
+{
+    return dcb->dcb_readqueue ? gwbuf_length(dcb->dcb_readqueue) : 0;
+}
+
+/**
+ * @brief Prepend a buffer the DCB's readqueue
+ *
+ * @param dcb    The DCB to be prepended to.
+ * @param buffer The buffer to prepend
+ */
+static inline void dcb_readq_prepend(DCB *dcb, GWBUF *buffer)
+{
+    dcb->dcb_readqueue = gwbuf_append(buffer, dcb->dcb_readqueue);
+}
+
+/**
+ * @brief Returns the read queue of the DCB and sets the read queue to NULL.
+ *
+ * @note The read queue becomes the property of the caller.
+ *
+ * @return A buffer of NULL if there is no read queue.
+ */
+static GWBUF* dcb_readq_release(DCB* dcb)
+{
+    GWBUF* dcb_readqueue = dcb->dcb_readqueue;
+    dcb->dcb_readqueue = NULL;
+    return dcb_readqueue;
+}
+
+/**
+ * @brief Set read queue of a DCB
+ *
+ * The expectation is that there is no readqueue when this is done.
+ * The ownership of the provided buffer moved to the DCB.
+ *
+ * @param dcb    The DCB to be reset.
+ * @param buffer The buffer to reset with
+ */
+static inline void dcb_readq_set(DCB *dcb, GWBUF *buffer)
+{
+    if (dcb->dcb_readqueue)
+    {
+        MXS_ERROR("Read-queue set when there already is a read-queue.");
+        // TODO: Conceptually this should be freed here. However, currently
+        // TODO: the code just assigns without checking, so we do the same
+        // TODO: for now. If this is not set to NULL when it has been consumed,
+        // TODO: we would get a double free.
+        // TODO: gwbuf_free(dcb->dcb_readqueue);
+        dcb->dcb_readqueue = NULL;
+    }
+    dcb->dcb_readqueue = buffer;
+}
 
 /**
  * @brief Call a function for each connected DCB

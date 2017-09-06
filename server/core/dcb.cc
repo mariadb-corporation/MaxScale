@@ -2714,21 +2714,6 @@ dcb_role_name(DCB *dcb)
     return name;
 }
 
-/**
- * @brief Append a buffer the DCB's readqueue
- *
- * Usually data is stored into the DCB's readqueue when not enough data is
- * available and the processing needs to be deferred until more data is available.
- *
- * @param dcb DCB where the buffer is stored
- * @param buffer Buffer to store
- */
-void dcb_append_readqueue(DCB *dcb, GWBUF *buffer)
-{
-    dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, buffer);
-}
-
-
 static void dcb_add_to_worker_list(int thread_id, void* data)
 {
     DCB *dcb = (DCB*)data;
