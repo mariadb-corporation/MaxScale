@@ -17,17 +17,28 @@ exports.desc = 'Stop objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('service <name>', 'Stop a service', {}, function(argv) {
+        .command('service <name>', 'Stop a service', function(yargs) {
+            return yargs.epilog('Stopping a service will prevent all the listeners for that service ' +
+                                'from accepting new connections. Existing connections will still be ' +
+                                'handled normally until they are closed.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'services/' + argv.name + '/stop', null, {method: 'PUT'})
             })
         })
-        .command('monitor <name>', 'Stop a monitor', {}, function(argv) {
+        .command('monitor <name>', 'Stop a monitor', function(yargs) {
+            return yargs.epilog('Stopping a monitor will pause the monitoring of the servers. ' +
+                                'This can be used to manually control server states with the ' +
+                                '`set server` command.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'monitors/' + argv.name + '/stop', null, {method: 'PUT'})
             })
         })
-        .command('maxscale', 'Stop MaxScale by stopping all services', {}, function(argv) {
+        .command('maxscale', 'Stop MaxScale by stopping all services', function(yargs) {
+            return yargs.epilog('This command will execute the `stop service` command for ' +
+                                'all services in MaxScale.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'services/', function(res) {
                     var promises = []

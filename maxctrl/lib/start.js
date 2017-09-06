@@ -17,17 +17,24 @@ exports.desc = 'Start objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('service <name>', 'Start a service', {}, function(argv) {
+        .command('service <name>', 'Start a service', function(yargs) {
+            return yargs.epilog('This starts a service stopped by `stop service <name>`');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'services/' + argv.name + '/start', null, {method: 'PUT'})
             })
         })
-        .command('monitor <name>', 'Start a monitor', {}, function(argv) {
+        .command('monitor <name>', 'Start a monitor', function(yargs) {
+            return yargs.epilog('This starts a monitor stopped by `stop monitor <name>`');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'monitors/' + argv.name + '/start', null, {method: 'PUT'})
             })
         })
-        .command('maxscale', 'Start MaxScale by starting all services', {}, function(argv) {
+        .command('maxscale', 'Start MaxScale by starting all services', function(yargs) {
+            return yargs.epilog('This command will execute the `start service` command for ' +
+                                'all services in MaxScale.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'services/', function(res) {
                     var promises = []

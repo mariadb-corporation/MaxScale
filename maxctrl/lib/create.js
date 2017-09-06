@@ -42,7 +42,12 @@ exports.builder = function(yargs) {
             describe: 'Link the created server to these monitors',
             type: 'array'
         })
-        .command('server <name> <host> <port>', 'Create a new server', {}, function(argv) {
+        .command('server <name> <host> <port>', 'Create a new server', function(yargs) {
+            return yargs.epilog('The created server will not be used by any services or monitors ' +
+                                'unless the --services or --monitors options are given. The list ' +
+                                'of servers a service or a monitor uses can be altered with the ' +
+                                '`link` and `unlink` commands.');
+        }, function(argv) {
             var server = {
                 'data': {
                     'id': argv.name,
@@ -90,7 +95,10 @@ exports.builder = function(yargs) {
             describe: 'Password for the monitor user',
             type: 'string'
         })
-        .command('monitor <name> <module>', 'Create a new monitor', {}, function(argv) {
+        .command('monitor <name> <module>', 'Create a new monitor', function(yargs) {
+            return yargs.epilog('The list of servers given with the --servers option should not ' +
+                                'contain any servers that are already monitored by another monitor.');
+        }, function(argv) {
 
             var monitor = {
                 'data': {
@@ -147,7 +155,9 @@ exports.builder = function(yargs) {
             describe: 'TLS certificate verification depth',
             type: 'string'
         })
-        .command('listener <service> <name> <port>', 'Create a new listener', {}, function(argv) {
+        .command('listener <service> <name> <port>', 'Create a new listener', function(yargs) {
+            return yargs.epilog('The new listener will be taken into use immediately.');
+        }, function(argv) {
 
             var listener = {
                 'data': {
@@ -181,7 +191,12 @@ exports.builder = function(yargs) {
             default: 'basic',
             choices: ['admin', 'basic']
         })
-        .command('user <name> <password>', 'Create a new network user', {}, function(argv) {
+        .command('user <name> <password>', 'Create a new network user', function(yargs) {
+            return yargs.epilog('The created user can be used with the MaxScale REST API as ' +
+                                'well as the MaxAdmin network interface. By default the created ' +
+                                'user will have administrative privileges. To limit the user to ' +
+                                'read-only operations, use the `--type=basic` option.');
+        }, function(argv) {
 
             var user = {
                 'data': {

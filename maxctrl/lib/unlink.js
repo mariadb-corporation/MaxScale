@@ -35,10 +35,19 @@ exports.desc = 'Unlink objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('service <name> <server...>', 'Unlink servers from a service', {}, function(argv) {
+        .command('service <name> <server...>', 'Unlink servers from a service', function(yargs) {
+            return yargs.epilog('This command unlinks servers from a service, removing them from ' +
+                                'the list of available servers for that service. New connections to ' +
+                                'the service will not use the unlinked servers but existing ' +
+                                'connections can still use the servers.');
+        }, function(argv) {
             removeServer(argv, 'services/' + argv.name, argv.server)
         })
-        .command('monitor <name> <server...>', 'Unlink servers from a monitor', {}, function(argv) {
+        .command('monitor <name> <server...>', 'Unlink servers from a monitor', function(yargs) {
+            return yargs.epilog('This command unlinks servers from a monitor, removing them from ' +
+                                'the list of monitored servers. The servers will be left in their ' +
+                                'current state when they are unlinked from a monitor.');
+        }, function(argv) {
             removeServer(argv, 'monitors/' + argv.name, argv.server)
         })
         .usage('Usage: unlink <command>')

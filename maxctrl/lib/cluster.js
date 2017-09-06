@@ -125,8 +125,11 @@ exports.desc = 'Cluster objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('diff <target>', 'Show difference between host servers and <target>. ' +
-                 'Value must be in HOST:PORT format', {}, function(argv) {
+        .command('diff <target>', 'Show difference between host servers and <target>.', function(yargs) {
+            return yargs.epilog('The list of host servers is controlled with the --hosts option. ' +
+                                'The target server should not be in the host list. Value of <target> ' +
+                                'must be in HOST:PORT format');
+        }, function(argv) {
 
                      maxctrl(argv, function(host) {
                          return getDiffs(host, argv.target)
@@ -172,7 +175,15 @@ exports.builder = function(yargs) {
                              })
                      })
                  })
-        .command('sync <target>', 'Synchronize the cluster with target MaxScale server.', {}, function(argv) {
+        .command('sync <target>', 'Synchronize the cluster with target MaxScale server.', function(yargs) {
+            return yargs.epilog('This command will alter all MaxScale instances given in the --hosts ' +
+                                'option to represent the <target> MaxScale. If the synchronization of ' +
+                                'a MaxScale instance fails, it will be disabled by executing the `stop maxscale` ' +
+                                'command on that instance. Synchronization can be attempted again if a previous ' +
+                                'attempt failed due to a network failure or some other ephemeral error. Any other ' +
+                                'errors require manual synchronization of the MaxScale configuration files and a ' +
+                                'restart of the failed Maxscale.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getDiffs(argv.target, host)
                     .then(function(diffs) {

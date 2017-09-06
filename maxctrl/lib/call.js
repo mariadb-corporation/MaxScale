@@ -17,7 +17,9 @@ exports.desc = 'Call module commands'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('command <module> <command> [parameters...]', 'Call a module command', {}, function(argv) {
+        .command('command <module> <command> [params...]', 'Call a module command', function(yargs) {
+            return yargs.epilog('To inspect the list of module commands, execute `list commands`');
+        }, function(argv) {
             // First we have to find the correct method to use
             maxctrl(argv, function(host) {
                 return doRequest(host, 'maxscale/modules/' + argv.module + '/', function(resp) {
@@ -31,7 +33,7 @@ exports.builder = function(yargs) {
                         }
                     })
 
-                    return doAsyncRequest(host, 'maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.parameters.join('&'),
+                    return doAsyncRequest(host, 'maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.params.join('&'),
                                           function(resp) {
                                               return JSON.stringify(resp, null, 4)
                                           }, { method: verb })

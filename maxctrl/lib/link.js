@@ -35,10 +35,21 @@ exports.desc = 'Link objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('service <name> <server...>', 'Link servers to a service', {}, function(argv) {
+        .command('service <name> <server...>', 'Link servers to a service', function(yargs) {
+            return yargs.epilog('This command links servers to a service, making them available ' +
+                                'for any connections that use the service. Before a server is ' +
+                                'linked to a service, it should be linked to a monitor so that ' +
+                                'the server state is up to date. Newly linked server are only ' +
+                                'available to new connections, existing connections will use the ' +
+                                'old list of servers.');
+        }, function(argv) {
             addServer(argv, 'services/' + argv.name, argv.server)
         })
-        .command('monitor <name> <server...>', 'Link servers to a monitor', {}, function(argv) {
+        .command('monitor <name> <server...>', 'Link servers to a monitor', function(yargs) {
+            return yargs.epilog('Linking a server to a monitor will add it to the list of servers ' +
+                                'that are monitored by that monitor. A server can be monitored by ' +
+                                'only one monitor at a time.');
+        }, function(argv) {
             addServer(argv, 'monitors/' + argv.name, argv.server)
         })
         .usage('Usage: link <command>')

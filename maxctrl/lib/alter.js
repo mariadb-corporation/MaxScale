@@ -12,32 +12,69 @@
  */
 require('./common.js')()
 
+// TODO: Somehow query these lists from MaxScale
+
+// List of service parameters that can be altered at runtime
+const service_params = [
+    'user',
+    'passwd',
+    'enable_root_user',
+    'max_connections',
+    'connection_timeout',
+    'auth_all_servers',
+    'optimize_wildcard',
+    'strip_db_esc',
+    'localhost_match_wildcard_host',
+    'max_slave_connections',
+    'max_slave_replication_lag'
+]
+
+// List of maxscale parameters that can be altered at runtime
+const maxscale_params = [
+    'auth_connect_timeout',
+    'auth_read_timeout',
+    'auth_write_timeout',
+    'admin_auth'
+]
+
 exports.command = 'alter <command>'
 exports.desc = 'Alter objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('server <server> <key> <value>', 'Alter server parameters', {}, function(argv) {
+        .command('server <server> <key> <value>', 'Alter server parameters', function(yargs) {
+            return yargs.epilog('To display the server parameters, execute `show server <server>`');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'servers/' + argv.server, 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
-        .command('monitor <monitor> <key> <value>', 'Alter monitor parameters', {}, function(argv) {
+        .command('monitor <monitor> <key> <value>', 'Alter monitor parameters', function(yargs) {
+            return yargs.epilog('To display the monitor parameters, execute `show monitor <monitor>`');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'monitors/' + argv.monitor, 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
-        .command('service <service> <key> <value>', 'Alter service parameters', {}, function(argv) {
+        .command('service <service> <key> <value>', 'Alter service parameters', function(yargs) {
+            return yargs.epilog('To display the service parameters, execute `show service <service>`. ' +
+                                'The following list of parameters can be altered at runtime:\n\n' + JSON.stringify(service_params, null, 4));
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'services/' + argv.service, 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
-        .command('logging <key> <value>', 'Alter logging parameters', {}, function(argv) {
+        .command('logging <key> <value>', 'Alter logging parameters', function(yargs) {
+            return yargs.epilog('To display the logging parameters, execute `show logging`');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
-        .command('maxscale <key> <value>', 'Alter MaxScale parameters', {}, function(argv) {
+        .command('maxscale <key> <value>', 'Alter MaxScale parameters', function(yargs) {
+            return yargs.epilog('To display the MaxScale parameters, execute `show maxscale`. ' +
+                                'The following list of parameters can be altered at runtime:\n\n' + JSON.stringify(maxscale_params, null, 4));
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'maxscale', 'data.attributes.parameters.' + argv.key, argv.value)
             })

@@ -17,22 +17,36 @@ exports.desc = 'Destroy objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('server <name>', 'Destroy an unused server', {}, function(argv) {
+        .command('server <name>', 'Destroy an unused server', function(yargs) {
+            return yargs.epilog('The server must be unlinked from all services and monitor before it can be destroyed.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'servers/' + argv.name, null, {method: 'DELETE'})
             })
         })
-        .command('monitor <name>', 'Destroy an unused monitor', {}, function(argv) {
+        .command('monitor <name>', 'Destroy an unused monitor', function(yargs) {
+            return yargs.epilog('The monitor must be unlinked from all servers before it can be destroyed.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'monitors/' + argv.name, null, {method: 'DELETE'})
             })
         })
-        .command('listener <service> <name>', 'Destroy an unused listener', {}, function(argv) {
+        .command('listener <service> <name>', 'Destroy an unused listener', function(yargs) {
+            return yargs.epilog('Destroying a monitor causes it to be removed on the next restart. ' +
+                                'Destroying a listener at runtime stops it from accepting new ' +
+                                'connections but it will still be bound to the listening socket. This ' +
+                                'means that new listeners cannot be created to replace destroyed listeners ' +
+                                'without restarting MaxScale.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'services/' + argv.service + '/listeners/' + argv.name, null, {method: 'DELETE'})
             })
         })
-        .command('user <name>', 'Remove a network user', {}, function(argv) {
+        .command('user <name>', 'Remove a network user', function(yargs) {
+            return yargs.epilog('The last remaining administrative user cannot be removed. ' +
+                                'Create a replacement administrative user before attempting ' +
+                                'to remove the last administrative user.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'users/inet/' + argv.name, null, {method: 'DELETE'})
             })

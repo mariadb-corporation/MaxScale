@@ -18,7 +18,12 @@ exports.desc = 'Show objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('server <server>', 'Show server', {}, function(argv) {
+        .command('server <server>', 'Show server', function(yargs) {
+            return yargs.epilog('Show detailed information about a server. The `Parameters` ' +
+                                'field contains the currently configured parameters for this ' +
+                                'server. See `help alter server` for more details about altering ' +
+                                'server parameters.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'servers/' + argv.server, [
                     {'Server': 'id'},
@@ -35,7 +40,12 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('service <service>', 'Show service', {}, function(argv) {
+        .command('service <service>', 'Show service', function(yargs) {
+            return yargs.epilog('Show detailed information about a service. The `Parameters` ' +
+                                'field contains the currently configured parameters for this ' +
+                                'service. See `help alter service` for more details about altering ' +
+                                'service parameters.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'services/' + argv.service, [
                     {'Service': 'id'},
@@ -50,7 +60,12 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('monitor <monitor>', 'Show monitor', {}, function(argv) {
+        .command('monitor <monitor>', 'Show monitor', function(yargs) {
+            return yargs.epilog('Show detailed information about a monitor. The `Parameters` ' +
+                                'field contains the currently configured parameters for this ' +
+                                'monitor. See `help alter monitor` for more details about altering ' +
+                                'monitor parameters.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'monitors/' + argv.monitor, [
                     {'Monitor': 'id'},
@@ -61,7 +76,12 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('session <session>', 'Show session', {}, function(argv) {
+        .command('session <session>', 'Show session', function(yargs) {
+            return yargs.epilog('Show detailed information about a single session. ' +
+                                'The list of sessions can be retrieved with the ' +
+                                '`list sessions` command. The <session> is the session ' +
+                                'ID of a particular session.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'sessions/' + argv.session, [
                     {'Id': 'id'},
@@ -74,7 +94,9 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('filter <filter>', 'Show filter', {}, function(argv) {
+        .command('filter <filter>', 'Show filter', function(yargs) {
+            return yargs.epilog('The list of services that use this filter is show in the `Services` field.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'filters/' + argv.filter, [
                     {'Filter': 'id'},
@@ -84,7 +106,10 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('module <module>', 'Show loaded module', {}, function(argv) {
+        .command('module <module>', 'Show loaded module', function(yargs) {
+            return yargs.epilog('This command shows all available parameters as well as ' +
+                                'detailed version information of a loaded module.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'maxscale/modules/' + argv.module, [
                     {'Module': 'id'},
@@ -97,7 +122,10 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('maxscale', 'Show MaxScale information', {}, function(argv) {
+        .command('maxscale', 'Show MaxScale information', function(yargs) {
+            return yargs.epilog('See `help alter maxscale` for more details about altering ' +
+                                'MaxScale parameters.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'maxscale', [
                     {'Version': 'attributes.version'},
@@ -108,7 +136,10 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('logging', 'Show MaxScale logging information', {}, function(argv) {
+        .command('logging', 'Show MaxScale logging information', function(yargs) {
+            return yargs.epilog('See `help alter logging` for more details about altering ' +
+                                'logging parameters.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'maxscale/logs', [
                     {'Current Log File': 'attributes.log_file'},
@@ -117,7 +148,10 @@ exports.builder = function(yargs) {
                 ])
             })
         })
-        .command('commands <module>', 'Show module commands of a module', {}, function(argv) {
+        .command('commands <module>', 'Show module commands of a module', function(yargs) {
+            return yargs.epilog('This command shows the parameters the command expects with ' +
+                                'the parameter descriptions.');
+        }, function(argv) {
             maxctrl(argv, function(host) {
                 return getSubCollection(host, 'maxscale/modules/' + argv.module, 'attributes.commands', [
                     {'Command': 'id'},
