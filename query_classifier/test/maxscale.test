@@ -80,4 +80,7 @@ RELEASE SAVEPOINT id;
 
 SELECT her FROM (SELECT @@server_id as her) as t WHERE her REGEXP '.*';
 
-select * from db1.t1 union select * from db2.t2
+select * from db1.t1 union select * from db2.t2;
+
+# Names is a keyword as well
+select names from t;
