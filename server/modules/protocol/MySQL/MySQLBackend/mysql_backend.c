@@ -766,6 +766,43 @@ gw_read_and_write(DCB *dcb)
             MXS_INFO("Response to COM_CHANGE_USER is OK, writing stored query");
             rval = query ? dcb->func.write(dcb, query) : 1;
         }
+        else if (result == MYSQL_REPLY_AUTHSWITCHREQUEST &&
+                 gwbuf_length(reply) > MYSQL_EOF_PACKET_LEN)
+        {
+            /**
+             * The server requested a change of authentication methods.
+             * If we're changing the authentication method to the same one we
+             * are using now, it means that the server is simply generating
+             * a new scramble for the re-authentication process.
+             */
+            if (strcmp((char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN) == 0)
+            {
+                /** Load the new scramble into the protocol... */
+                gwbuf_copy_data(reply, 5 + strlen(DEFAULT_MYSQL_AUTH_PLUGIN) + 1,
+                                GW_MYSQL_SCRAMBLE_SIZE, proto->scramble);
+
+                /** ... and use it to send the encrypted password to the server */
+                rval = send_mysql_native_password_response(dcb);
+
+                /** Store the query until we know the result of the authentication
+                 * method switch. */
+                proto->stored_query = query;
+                proto->ignore_reply = true;
+                return rval;
+            }
+            else
+            {
+                /** The server requested a change to something other than
+                 * the default auth plugin */
+                gwbuf_free(query);
+                poll_fake_hangup_event(dcb);
+
+                // TODO: Use the authenticators to handle COM_CHANGE_USER responses
+                MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
+                          (char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN);
+
+            }
+        }
         else
         {
             if (result == MYSQL_REPLY_ERR)
@@ -774,22 +811,13 @@ gw_read_and_write(DCB *dcb)
                  * close the DCB and send an error to the client. */
                 log_error_response(dcb, reply);
             }
-            else if (result == MYSQL_REPLY_AUTHSWITCHREQUEST &&
-                     gwbuf_length(reply) > MYSQL_EOF_PACKET_LEN)
-            {
-                MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
-                          (char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN);
-            }
             else
             {
                 /** This should never happen */
                 MXS_ERROR("Unknown response to COM_CHANGE_USER (0x%02hhx), "
-                          "ignoring and waiting for correct result", result);
-                gwbuf_free(reply);
-                proto->stored_query = query;
-                proto->ignore_reply = true;
-                return 1;
+                          "closing connection", result);
             }
+
             gwbuf_free(query);
             poll_fake_hangup_event(dcb);
         }
