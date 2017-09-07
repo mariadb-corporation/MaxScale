@@ -389,11 +389,8 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
             /**
              * Link dcb to session. Unlink is called in dcb_final_free
              */
-            if (!session_link_dcb(session, dcb))
-            {
-                dcb_close(dcb);
-                return NULL;
-            }
+            session_link_dcb(session, dcb);
+
             MXS_DEBUG("Reusing a persistent connection, dcb %p", dcb);
             dcb->persistentstart = 0;
             dcb->was_persistent = true;
@@ -441,11 +438,8 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     /**
      * Link dcb to session. Unlink is called in dcb_final_free
      */
-    if (!session_link_dcb(session, dcb))
-    {
-        dcb_final_free(dcb);
-        return NULL;
-    }
+    session_link_dcb(session, dcb);
+
     fd = dcb->func.connect(dcb, server, session);
 
     if (fd == DCBFD_CLOSED)

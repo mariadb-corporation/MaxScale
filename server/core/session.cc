@@ -13,19 +13,6 @@
 
 /**
  * @file session.c  - A representation of the session within the gateway.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 17/06/13     Mark Riddoch            Initial implementation
- * 02/09/13     Massimiliano Pinto      Added session refcounter
- * 29/05/14     Mark Riddoch            Addition of filter mechanism
- * 23/08/15     Martin Brampton         Tidying; slight improvement in safety
- * 17/09/15     Martin Brampton         Keep failed session in existence - leave DCBs to close
- * 27/06/16     Martin Brampton         Amend to utilise list manager
- *
- * @endverbatim
  */
 #include <maxscale/session.h>
 
@@ -327,28 +314,16 @@ session_set_dummy(DCB *client_dcb)
     return session;
 }
 
-/**
- * Link a session to a DCB.
- *
- * @param session       The session to link with the dcb
- * @param dcb           The DCB to be linked
- * @return              True if the session was sucessfully linked to the DCB
- */
-bool
-session_link_dcb(MXS_SESSION *session, DCB *dcb)
+void session_link_dcb(MXS_SESSION *session, DCB *dcb)
 {
     ss_info_dassert(session->state != SESSION_STATE_FREE,
                     "If session->state is SESSION_STATE_FREE then this attempt to "
                     "access freed memory block.");
-    if (session->state == SESSION_STATE_FREE)
-    {
-        return false;
-    }
+
     atomic_add(&session->refcount, 1);
     dcb->session = session;
     /** Move this DCB under the same thread */
     dcb->poll.thread.id = session->client_dcb->poll.thread.id;
-    return true;
 }
 
 /**

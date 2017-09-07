@@ -42,7 +42,14 @@ typedef enum
 
 int session_isvalid(MXS_SESSION *);
 const char *session_state(mxs_session_state_t);
-bool session_link_dcb(MXS_SESSION *, struct dcb *);
+
+/**
+ * Link a session to a DCB.
+ *
+ * @param session  The session to link with the dcb
+ * @param dcb      The DCB to be linked
+ */
+void session_link_dcb(MXS_SESSION *session, struct dcb *dcb);
 
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
 
