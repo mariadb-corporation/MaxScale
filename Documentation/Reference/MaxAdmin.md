@@ -1672,6 +1672,7 @@ auth_connect_timeout         Connection timeout for permission checks
 auth_read_timeout            Read timeout for permission checks
 auth_write_timeout           Write timeout for permission checks
 admin_auth                   Enable admin interface authentication
+admin_log_auth_failures      Log admin interface authentication failures
 
 Example: alter maxscale auth_connect_timeout=10
 ```

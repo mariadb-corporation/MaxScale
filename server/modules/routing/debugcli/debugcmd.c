@@ -1641,6 +1641,7 @@ struct subcommand alteroptions[] =
         "auth_read_timeout            Read timeout for permission checks\n"
         "auth_write_timeout           Write timeout for permission checks\n"
         "admin_auth                   Enable admin interface authentication\n"
+        "admin_log_auth_failures      Log admin interface authentication failures\n"
         "\n"
         "Example: alter maxscale auth_connect_timeout=10",
         {
