@@ -412,7 +412,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
                                              MODULE_PROTOCOL)) == NULL)
     {
         dcb->state = DCB_STATE_DISCONNECTED;
-        dcb_final_free(dcb);
+        dcb_free_all_memory(dcb);
         MXS_ERROR("Failed to load protocol module '%s'", protocol);
         return NULL;
     }
@@ -427,9 +427,8 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
                                                                    MODULE_AUTHENTICATOR);
     if (authfuncs == NULL)
     {
-
         MXS_ERROR("Failed to load authenticator module '%s'", authenticator);
-        dcb_close(dcb);
+        dcb_free_all_memory(dcb);
         return NULL;
     }
 
@@ -446,8 +445,10 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     {
         MXS_DEBUG("Failed to connect to server [%s]:%d, from backend dcb %p, client dcp %p fd %d",
                   server->name, server->port, dcb, session->client_dcb, session->client_dcb->fd);
-        dcb->state = DCB_STATE_DISCONNECTED;
-        dcb_final_free(dcb);
+        // Remove the inc ref that was done in session_link_backend_dcb().
+        session_put_ref(dcb->session);
+        dcb->session = NULL;
+        dcb_free_all_memory(dcb);
         return NULL;
     }
     else
@@ -479,8 +480,12 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         (dcb->authenticator_data = dcb->authfunc.create(dcb->server->auth_instance)) == NULL)
     {
         MXS_ERROR("Failed to create authenticator for backend DCB.");
-        dcb->state = DCB_STATE_DISCONNECTED;
-        dcb_final_free(dcb);
+        close(dcb->fd);
+        dcb->fd = DCBFD_CLOSED;
+        // Remove the inc ref that was done in session_link_backend_dcb().
+        session_put_ref(dcb->session);
+        dcb->session = NULL;
+        dcb_free_all_memory(dcb);
         return NULL;
     }
 
@@ -489,10 +494,14 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
      */
     rc = poll_add_dcb(dcb);
 
-    if (rc)
+    if (rc != 0)
     {
-        dcb->state = DCB_STATE_DISCONNECTED;
-        dcb_final_free(dcb);
+        close(dcb->fd);
+        dcb->fd = DCBFD_CLOSED;
+        // Remove the inc ref that was done in session_link_backend_dcb().
+        session_put_ref(dcb->session);
+        dcb->session = NULL;
+        dcb_free_all_memory(dcb);
         return NULL;
     }
     /**
