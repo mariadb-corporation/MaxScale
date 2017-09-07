@@ -203,18 +203,6 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
 }
 
 /**
- * Provided only for consistency, simply calls dcb_close to guarantee
- * safe disposal of a DCB
- *
- * @param dcb   The DCB to free
- */
-void
-dcb_free(DCB *dcb)
-{
-    dcb_close(dcb);
-}
-
-/**
  * Free a DCB and remove it from the chain of all DCBs
  *
  * @param dcb The DCB to free
