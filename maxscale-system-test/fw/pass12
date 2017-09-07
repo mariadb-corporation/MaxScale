@@ -4,4 +4,3 @@ INSERT INTO t1 VALUES (1, 1, 1);
 SELECT name, address, email FROM t1;
 SELECT name, address, SUM(email) FROM t1;
 SELECT CAST(name AS TEXT), CAST(address AS TEXT), SUM(email) FROM t1;
-
