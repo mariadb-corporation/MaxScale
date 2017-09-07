@@ -328,7 +328,7 @@ blr_file_init(ROUTER_INSTANCE *router)
      */
 
     /* - 1 - try to find a binlog file number by reading the directory */
-    if (router->storage_type == BLR_BINLOG_STORAGE_FLAT)
+    if (!router->mariadb10_master_gtid)
     {
         root_len = strlen(router->fileroot);
         if ((dirp = opendir(path)) == NULL)
@@ -3133,7 +3133,12 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     fprintf(config_file, "master_port=%d\n", router->service->dbref->server->port);
     fprintf(config_file, "master_user=%s\n", router->user);
     fprintf(config_file, "master_password=%s\n", router->password);
-    fprintf(config_file, "filestem=%s\n", router->fileroot);
+
+    /* write filestem only if binlog file is set */
+    if (*router->binlog_name != 0)
+    {
+        fprintf(config_file, "filestem=%s\n", router->fileroot);
+    }
 
     /* Add SSL options */
     if (router->ssl_enabled)
