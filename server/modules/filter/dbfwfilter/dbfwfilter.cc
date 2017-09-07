@@ -1383,9 +1383,13 @@ int DbfwSession::routeQuery(GWBUF* buffer)
         }
 
         SUser suser = find_user_data(this_thread.users, user(), remote());
-        bool query_ok = command_is_mandatory(buffer);
+        bool query_ok = false;
 
-        if (suser)
+        if (command_is_mandatory(buffer))
+        {
+            query_ok = true;
+        }
+        else if (suser)
         {
             char* rname = NULL;
             bool match = suser->match(m_instance, this, analyzed_queue, &rname);
