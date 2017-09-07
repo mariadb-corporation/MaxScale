@@ -131,7 +131,8 @@ static inline void poll_inc_ref(MXS_POLL_DATA* data)
  * @param data  The poll data whose reference count should be decreased.
  *
  * @return The previous reference count. If the returned value is 1, then
- *         the caller is the last user of the data.
+ *         the caller should call @c data->free(data) to dispose of the
+ *         poll data.
  */
 static inline uint32_t poll_dec_ref(MXS_POLL_DATA* data)
 {

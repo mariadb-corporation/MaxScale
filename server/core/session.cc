@@ -37,6 +37,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/json_api.h>
 
+#include "maxscale/dcb.h"
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
 #include "maxscale/worker.hh"
@@ -392,7 +393,8 @@ static void session_free(MXS_SESSION *session)
 
     if (session->client_dcb)
     {
-        dcb_free_all_memory(session->client_dcb);
+        dcb_dec_ref(session->client_dcb);
+        session->client_dcb = NULL;
     }
     /**
      * If session is not child of some other session, free router_session.

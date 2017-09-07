@@ -20,7 +20,7 @@
  * the state data and pointers to other components that relate to the
  * use of a file descriptor.
  */
-#include <maxscale/dcb.h>
+#include "maxscale/dcb.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -123,6 +123,12 @@ static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t ev
 static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t ev);
 static bool dcb_session_check(DCB *dcb, const char *);
 
+static void poll_dcb_free(MXS_POLL_DATA* data)
+{
+    // MXS_POLL_DATA is the first member of DCB.
+    dcb_free_all_memory(reinterpret_cast<DCB*>(data));
+}
+
 void dcb_global_init()
 {
     this_unit.dcb_initialized.dcb_chk_top = CHK_NUM_DCB;
@@ -130,7 +136,8 @@ void dcb_global_init()
     this_unit.dcb_initialized.state = DCB_STATE_ALLOC;
     this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
     this_unit.dcb_initialized.poll.handler = dcb_poll_handler;
-    this_unit.dcb_initialized.poll.free = NULL;
+    this_unit.dcb_initialized.poll.free = poll_dcb_free;
+    this_unit.dcb_initialized.poll.refcount = 1;
     this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
 
     int nthreads = config_threadcount();
@@ -170,18 +177,17 @@ dcb_initialize(DCB *dcb)
 }
 
 /**
- * @brief Allocate or recycle a new DCB.
+ * @brief Allocate a new DCB.
  *
  * This routine performs the generic initialisation on the DCB before returning
- * the newly allocated or recycled DCB.
- *
- * Most fields will be already initialized by the list manager, through the
- * call to list_find_free, passing the DCB initialization function.
+ * the newly allocated DCB.
  *
  * Remaining fields are set from the given parameters, and then the DCB is
  * flagged as ready for use.
  *
  * @param dcb_role_t    The role for the new DCB
+ * @param listener      The listener if applicable.
+ *
  * @return An available DCB or NULL if none could be allocated.
  */
 DCB *
@@ -240,7 +246,8 @@ dcb_final_free(DCB *dcb)
             }
         }
     }
-    dcb_free_all_memory(dcb);
+
+    dcb_dec_ref(dcb);
 }
 
 /**
@@ -400,7 +407,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
                                              MODULE_PROTOCOL)) == NULL)
     {
         dcb->state = DCB_STATE_DISCONNECTED;
-        dcb_free_all_memory(dcb);
+        dcb_dec_ref(dcb);
         MXS_ERROR("Failed to load protocol module '%s'", protocol);
         return NULL;
     }
@@ -416,7 +423,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     if (authfuncs == NULL)
     {
         MXS_ERROR("Failed to load authenticator module '%s'", authenticator);
-        dcb_free_all_memory(dcb);
+        dcb_dec_ref(dcb);
         return NULL;
     }
 
@@ -436,7 +443,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         // Remove the inc ref that was done in session_link_backend_dcb().
         session_put_ref(dcb->session);
         dcb->session = NULL;
-        dcb_free_all_memory(dcb);
+        dcb_dec_ref(dcb);
         return NULL;
     }
     else
@@ -473,7 +480,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         // Remove the inc ref that was done in session_link_backend_dcb().
         session_put_ref(dcb->session);
         dcb->session = NULL;
-        dcb_free_all_memory(dcb);
+        dcb_dec_ref(dcb);
         return NULL;
     }
 
@@ -489,7 +496,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         // Remove the inc ref that was done in session_link_backend_dcb().
         session_put_ref(dcb->session);
         dcb->session = NULL;
-        dcb_free_all_memory(dcb);
+        dcb_dec_ref(dcb);
         return NULL;
     }
     /**

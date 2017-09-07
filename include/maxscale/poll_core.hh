@@ -23,12 +23,14 @@ struct MxsPollData : MXS_POLL_DATA
     MxsPollData()
     {
         handler = NULL;
+        free = NULL;
         thread.id = 0;
     }
 
     MxsPollData(mxs_poll_handler_t h)
     {
         handler = h;
+        free = NULL;
         thread.id = 0;
     }
 };
