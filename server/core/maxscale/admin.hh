@@ -21,7 +21,18 @@
 
 class Client
 {
+    Client(const Client&);
+    Client& operator=(const Client&);
+
 public:
+
+    enum state
+    {
+        OK,
+        FAILED,
+        INIT,
+        CLOSED
+    };
 
     /**
      * @brief Create a new client
@@ -29,7 +40,8 @@ public:
      * @param connection The connection handle for this client
      */
     Client(MHD_Connection *connection):
-        m_connection(connection)
+        m_connection(connection),
+        m_state(INIT)
     {
     }
 
@@ -52,9 +64,41 @@ public:
      */
     int process(std::string url, std::string method, const char* data, size_t *size);
 
+    /**
+     * @brief Authenticate the client
+     *
+     * @param connection The MHD connection object
+     * @param url        Requested URL
+     * @param method     The request method
+     *
+     * @return True if authentication was successful
+     */
+    bool auth(MHD_Connection* connection, const char* url, const char* method);
+
+    /**
+     * Get client state
+     *
+     * @return The client state
+     */
+    state get_state() const
+    {
+        return m_state;
+    }
+
+    /**
+     * Close the client connection
+     *
+     * All further requests will be rejected immediately
+     */
+    void close()
+    {
+        m_state = CLOSED;
+    }
+
 private:
     MHD_Connection* m_connection; /**< Connection handle */
     std::string     m_data;       /**< Uploaded data */
+    state           m_state;      /**< Client state */
 };
 
 /**

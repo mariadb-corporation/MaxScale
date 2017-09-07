@@ -171,7 +171,7 @@ void close_client(void *cls,
     delete client;
 }
 
-bool do_auth(MHD_Connection* connection, const char* url, const char* method)
+bool Client::auth(MHD_Connection* connection, const char* url, const char* method)
 {
     bool rval = true;
 
@@ -199,7 +199,6 @@ bool do_auth(MHD_Connection* connection, const char* url, const char* method)
                             "administrative privileges. Request: %s %s",
                             user, method, url);
             }
-            send_auth_error(connection);
             rval = false;
         }
         else
@@ -210,6 +209,8 @@ bool do_auth(MHD_Connection* connection, const char* url, const char* method)
         MXS_FREE(user);
         MXS_FREE(pw);
     }
+
+    m_state = rval ? Client::OK : Client::FAILED;
 
     return rval;
 }
@@ -224,26 +225,62 @@ int handle_client(void *cls,
                   void **con_cls)
 
 {
-    if (!do_auth(connection, url, method))
-    {
-        return MHD_NO;
-    }
-
     if (*con_cls == NULL)
     {
         if ((*con_cls = new (std::nothrow) Client(connection)) == NULL)
         {
             return MHD_NO;
         }
-        else if (modifies_data(connection, method))
-        {
-            // The first call doesn't have any data
-            return MHD_YES;
-        }
     }
 
     Client* client = static_cast<Client*>(*con_cls);
-    return client->process(url, method, upload_data, upload_data_size);
+    Client::state state = client->get_state();
+    int rval = MHD_NO;
+
+    if (state != Client::CLOSED)
+    {
+        if (state == Client::INIT)
+        {
+            // First request, do authentication
+            if (!client->auth(connection, url, method))
+            {
+                rval = MHD_YES;
+            }
+        }
+
+        if (client->get_state() == Client::OK)
+        {
+            // Authentication was successful, start processing the request
+            if (state == Client::INIT && modifies_data(connection, method))
+            {
+                // The first call doesn't have any data
+                rval = MHD_YES;
+            }
+            else
+            {
+                rval = client->process(url, method, upload_data, upload_data_size);
+            }
+        }
+        else if (client->get_state() == Client::FAILED)
+        {
+            // Authentication has failed, an error will be sent to the client
+            rval = MHD_YES;
+
+            if (*upload_data_size)
+            {
+                // The client is uploading data, discard it so we can send the error
+                *upload_data_size = 0;
+            }
+            else if (state != Client::INIT)
+            {
+                // The client has finished uploading data, send an error and close the connection
+                send_auth_error(connection);
+                client->close();
+            }
+        }
+    }
+
+    return rval;
 }
 
 static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_storage* addr)
