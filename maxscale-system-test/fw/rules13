@@ -1,0 +1,2 @@
+rule no_func_usage deny uses_function name address
+users %@% match any rules no_func_usage

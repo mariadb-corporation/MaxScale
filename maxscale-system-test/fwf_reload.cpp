@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     char rules_dir[4096];
 
     sprintf(rules_dir, "%s/fw/", test_dir);
-    int N = 12;
+    int N = 13;
     int i;
 
     Test->stop_maxscale();
