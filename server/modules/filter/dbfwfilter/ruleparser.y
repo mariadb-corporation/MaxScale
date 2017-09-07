@@ -80,7 +80,7 @@ ruleparams
     : mandatory optional optional
     | mandatory optional
     | mandatory
-    | optional
+    | {define_basic_rule(scanner);} optional
     ;
 
 rulename

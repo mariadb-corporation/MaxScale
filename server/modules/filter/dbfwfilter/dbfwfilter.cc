@@ -762,6 +762,7 @@ bool add_at_times_rule(void* scanner, const char* range)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
+    ss_dassert(!rstack->rule.empty());
     TIMERANGE* timerange = parse_time(range);
     ss_dassert(timerange);
 
@@ -783,6 +784,7 @@ void add_on_queries_rule(void* scanner, const char* sql)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
+    ss_dassert(!rstack->rule.empty());
     parse_querytypes(sql, rstack->rule.front());
 }
 
@@ -815,7 +817,20 @@ void set_matching_mode(void* scanner, enum match_type mode)
 }
 
 /**
+ * Define the current rule as a basic permission rule that always matches
+ *
+ * @param scanner Current scanner
+ */
+void define_basic_rule(void* scanner)
+{
+    struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
+    ss_dassert(rstack);
+    rstack->add(new Rule(rstack->name));
+}
+
+/**
  * Define the topmost rule as a wildcard rule
+ *
  * @param scanner Current scanner
  */
 void define_wildcard_rule(void* scanner)
@@ -827,8 +842,8 @@ void define_wildcard_rule(void* scanner)
 
 /**
  * Define the current rule as a columns rule
+ *
  * @param scanner Current scanner
- * @param columns List of column names
  */
 void define_columns_rule(void* scanner)
 {
@@ -839,8 +854,8 @@ void define_columns_rule(void* scanner)
 
 /**
  * Define the current rule as a function rule
+ *
  * @param scanner Current scanner
- * @param columns List of function names
  */
 void define_function_rule(void* scanner)
 {
@@ -853,9 +868,6 @@ void define_function_rule(void* scanner)
  * Define the current rule as a function usage rule
  *
  * @param scanner Current scanner
- * @param columns List of column names
- *
- * @return True if rule creation was successful
  */
 void define_function_usage_rule(void* scanner)
 {
@@ -866,8 +878,8 @@ void define_function_usage_rule(void* scanner)
 
 /**
  * Define the current rule as a function rule
+ *
  * @param scanner Current scanner
- * @param columns List of function names
  */
 void define_column_function_rule(void* scanner)
 {
@@ -878,6 +890,7 @@ void define_column_function_rule(void* scanner)
 
 /**
  * Define the topmost rule as a no_where_clause rule
+ *
  * @param scanner Current scanner
  */
 void define_where_clause_rule(void* scanner)
@@ -889,7 +902,11 @@ void define_where_clause_rule(void* scanner)
 
 /**
  * Define the topmost rule as a no_where_clause rule
- * @param scanner Current scanner
+ *
+ * @param scanner    Current scanner
+ * @param max        Maximum amount of queries inside a time window
+ * @param timeperiod The time window during which the queries are counted
+ * @param holdoff    The number of seconds queries are blocked after the limit is exceeded
  */
 void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdoff)
 {
@@ -900,8 +917,11 @@ void define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdo
 
 /**
  * Define the topmost rule as a regex rule
+ *
  * @param scanner Current scanner
  * @param pattern Quoted regex pattern
+ *
+ * @return True if the regex pattern was valid
  */
 bool define_regex_rule(void* scanner, char* pattern)
 {
