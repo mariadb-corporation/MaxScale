@@ -774,6 +774,12 @@ gw_read_and_write(DCB *dcb)
                  * close the DCB and send an error to the client. */
                 log_error_response(dcb, reply);
             }
+            else if (result == MYSQL_REPLY_AUTHSWITCHREQUEST &&
+                     gwbuf_length(reply) > MYSQL_EOF_PACKET_LEN)
+            {
+                MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
+                          (char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN);
+            }
             else
             {
                 /** This should never happen */
