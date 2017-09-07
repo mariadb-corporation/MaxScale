@@ -14,6 +14,8 @@
 
 #include "dbfwfilter.hh"
 
+#include <algorithm>
+
 #include <maxscale/pcre2.hh>
 
 /**
@@ -103,6 +105,11 @@ public:
 
 };
 
+static void make_lower(std::string& value)
+{
+    std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+}
+
 class ValueListRule: public Rule
 {
     ValueListRule(const ValueListRule&);
@@ -119,6 +126,7 @@ protected:
         Rule(name, type),
         m_values(values)
     {
+        std::for_each(m_values.begin(), m_values.end(), make_lower);
     }
 
     ValueList m_values;

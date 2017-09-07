@@ -156,6 +156,7 @@ bool ColumnsRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg)
         for (size_t i = 0; !rval && i < n_infos; ++i)
         {
             std::string tok = infos[i].column;
+            std::transform(tok.begin(), tok.end(), tok.begin(), ::tolower);
             ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
 
             if (it != m_values.end())
@@ -192,6 +193,7 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
             for (size_t i = 0; i < n_infos; ++i)
             {
                 std::string tok = infos[i].name;
+                std::transform(tok.begin(), tok.end(), tok.begin(), ::tolower);
                 ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
 
                 if (it != m_values.end())
@@ -223,6 +225,7 @@ bool FunctionUsageRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
             for (size_t j = 0; j < infos[i].n_fields; j++)
             {
                 std::string tok = infos[i].fields[j].column;
+                std::transform(tok.begin(), tok.end(), tok.begin(), ::tolower);
                 ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
 
                 if (it != m_values.end())
@@ -249,9 +252,12 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
 
         for (size_t i = 0; i < n_infos; ++i)
         {
+            std::string func = infos[i].name;
+            std::transform(func.begin(), func.end(), func.begin(), ::tolower);
+
             ValueList::const_iterator func_it = std::find(m_values.begin(),
                                                           m_values.end(),
-                                                          infos[i].name);
+                                                          func);
 
             if (func_it != m_values.end())
             {
@@ -259,16 +265,18 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
 
                 for (size_t j = 0; j < infos[i].n_fields; j++)
                 {
+                    std::string col = infos[i].fields[j].column;
+                    std::transform(col.begin(), col.end(), col.begin(), ::tolower);
                     ValueList::const_iterator col_it = std::find(m_columns.begin(),
                                                                  m_columns.end(),
-                                                                 infos[i].fields[j].column);
+                                                                 col);
 
                     if (col_it != m_columns.end())
                     {
                         MXS_NOTICE("rule '%s': query uses function '%s' with forbidden column: %s",
-                                   name().c_str(), func_it->c_str(), col_it->c_str());
+                                   name().c_str(), col.c_str(), func.c_str());
                         *msg = create_error("Permission denied to column '%s' with function '%s'.",
-                                            col_it->c_str(), func_it->c_str());
+                                            col.c_str(), func.c_str());
                         return true;
                     }
                 }
