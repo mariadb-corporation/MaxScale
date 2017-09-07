@@ -39,6 +39,14 @@ json_t* mxs_json_resource(const char* host, const char* self, json_t* data)
     return rval;
 }
 
+json_t* mxs_json_metadata(const char* host, const char* self, json_t* data)
+{
+    json_t* rval = json_object();
+    json_object_set_new(rval, CN_LINKS, self_link(host, self));
+    json_object_set_new(rval, CN_META, data);
+    return rval;
+}
+
 json_t* mxs_json_relationship(const char* host, const char* endpoint)
 {
     json_t* rel = json_object();

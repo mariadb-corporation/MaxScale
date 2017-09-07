@@ -667,14 +667,15 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
             {
                 if (output)
                 {
-                    rc = MHD_HTTP_OK;
-
-                    /** Store the command output in the meta field. This allows
+                    /**
+                     * Store the command output in the meta field. This allows
                      * all the commands to conform to the JSON API even though
-                     * the content of the field can vary from command to command. */
-                    json_t* obj = json_object();
-                    json_object_set_new(obj, CN_META, output);
-                    output = obj;
+                     * the content of the field can vary from command to command.
+                     */
+                    rc = MHD_HTTP_OK;
+                    std::string self = "/"; // The uri_segment doesn't have the leading slash
+                    self += request.uri_segment(0, request.uri_part_count());
+                    output = mxs_json_metadata(request.host(), self.c_str(), output);
                 }
                 else
                 {

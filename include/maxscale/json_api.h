@@ -39,15 +39,29 @@ MXS_BEGIN_DECLS
 /**
  * @brief Create a JSON object
  *
- * The caller should add a `data` field to the returned object.
- *
  * @param host Hostname of this server
  * @param self Endpoint of this resource
- * @param data The JSON data, either an array or an object
+ * @param data The JSON data, either an array or an object, stored in
+ *             the `data` field of the returned object
  *
  * @return A valid top-level JSON API object
  */
 json_t* mxs_json_resource(const char* host, const char* self, json_t* data);
+
+
+/**
+ * @brief Create a JSON metadata object
+ *
+ * This should be used to transport non-standard data to the client.
+ *
+ * @param host Hostname of this server
+ * @param self Endpoint of this resource
+ * @param data The JSON data, either an array or an object, stored in
+ *             the `meta` field of the returned object
+ *
+ * @return A valid top-level JSON API object
+ */
+json_t* mxs_json_metadata(const char* host, const char* self, json_t* data);
 
 /**
  * @brief Create an empty relationship object
