@@ -50,6 +50,15 @@ the [JSON API](http://jsonapi.org/format/) specification.
 - [sessions](Resources-Session.md)
 - [users](Resources-User.md)
 
+All of the current resources are in the `/v1/` namespace of the MaxScale REST
+API. Further additions to the namespace can be added that do not break backwards
+compatibility of any existing resources.
+
+In addition to the named resources, the REST API will respond with a HTTP 200 OK
+response to GET requests on the root resource (`/`) as well as the namespace
+root resource (`/v1/`). These can be used for HTTP health checks to determine
+whether MaxScale is running.
+
 ### Resource Relationships
 
 All resources return complete JSON objects. The returned objects can have a
@@ -104,9 +113,10 @@ parameters.
 
   - Pretty-print output.
 
-    If this parameter is set to `true` then the returned objects are
-    formatted in a more human readable format. All resources support this
-    parameter.
+    If this parameter is set to `true` then the returned objects are formatted
+    in a more human readable format. If the parameter is set to `false` then the
+    returned objects are formatted in a compact format.  All resources support
+    this parameter. The default value for this parameter is `true`.
 
 ## HTTP Headers
 
@@ -115,10 +125,6 @@ parameters.
 REST makes use of the HTTP protocols in its aim to provide a natural way to
 understand the workings of an API. The following request headers are understood
 by this API.
-
-#### Accept-Charset
-
-Acceptable character sets.
 
 #### Authorization
 
@@ -136,12 +142,6 @@ type and the request body must be a complete and valid JSON representation of a
 resource. All PATCH requests must use the `Content-Type: application/json` media
 type and the request body must be a JSON document containing a partial
 definition of the original resource.
-
-The current version of the API supports PATCH-like PUT requests with
-partial definitions of resources in the request body. This is discouraged
-as it goes against the intended use of the PUT method. Future versions of
-the MaxScale REST API can remove this support which means that this
-functionality is deprecated.
 
 #### Host
 
