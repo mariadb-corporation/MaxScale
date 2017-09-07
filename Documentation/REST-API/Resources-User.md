@@ -26,6 +26,9 @@ GET /v1/users/inet/:name
     "data": {
         "id": "my-user",
         "type": "inet",
+        "attributes": {
+            "account": "admin"
+        },
         "relationships": {
             "self": "http://localhost:8989/v1/users/inet/my-user"
         }
@@ -54,6 +57,9 @@ GET /v1/users/inet
         {
             "id": "my-user",
             "type": "inet",
+            "attributes": {
+                "account": "admin"
+            },
             "relationships": {
                 "self": "http://localhost:8989/v1/users/inet/my-user"
             }
@@ -78,17 +84,18 @@ GET /v1/users/unix/:name
 ```javascript
 {
     "links": {
-        "self": "http://localhost:8989/v1/users/unix"
+        "self": "http://localhost:8989/v1/users/unix/maxscale"
     },
-    "data": [
-        {
-            "id": "maxscale",
-            "type": "unix",
-            "relationships": {
-                "self": "http://localhost:8989/v1/users/unix/maxscale"
-            }
+    "data": {
+        "id": "maxscale",
+        "type": "unix",
+        "attributes": {
+            "account": "basic"
+        },
+        "relationships": {
+            "self": "http://localhost:8989/v1/users/unix/maxscale"
         }
-    ]
+    }
 }
 ```
 
@@ -113,6 +120,9 @@ GET /v1/users/unix
         {
             "id": "maxscale",
             "type": "unix",
+            "attributes": {
+                "account": "admin"
+            },
             "relationships": {
                 "self": "http://localhost:8989/v1/users/unix/maxscale"
             }
@@ -143,6 +153,9 @@ GET /v1/users
         {
             "id": "my-user",
             "type": "inet", // A network user
+            "attributes": {
+                "account": "admin"
+            },
             "relationships": {
                 "self": "http://localhost:8989/v1/users/inet/my-user"
             }
@@ -150,6 +163,9 @@ GET /v1/users
         {
             "id": "maxscale",
             "type": "unix", // A local UNIX account
+            "attributes": {
+                "account": "admin"
+            },
             "relationships": {
                 "self": "http://localhost:8989/v1/users/unix/maxscale"
             }
@@ -168,14 +184,16 @@ POST /v1/users/inet
 
 The request body must fulfill the following requirements.
 
-- The `/data/id`, `/data/type` and `/data/attributes/password` fields must be
-defined.
+- The `/data/id`, `/data/type`, `/data/attributes/account` and
+  `/data/attributes/password` fields must be defined.
 - The `/data/id` field defines the name of the account
 - The `/data/attributes/password` field defines the password for this user.
+- The `/data/attributes/account` field should be set to `admin` for
+  administrative users and `basic` to read-only users.
 - The value of the `/data/type` field must always be `inet`.
 
 Here is an example request body defining the network user _my-user_ with the
-password _my-password_.
+password _my-password_ that is allowed to execute only read-only operations.
 
 ```javascript
 {
@@ -183,7 +201,8 @@ password _my-password_.
         "id": "my-user",
         "type": "inet",
         "attributes": {
-            "password": "my-password"
+            "password": "my-password",
+            "account": "basic"
         }
     }
 }
@@ -206,17 +225,22 @@ POST /v1/users/unix
 
 The request body must fulfill the following requirements.
 
-- The `/data/id` and `/data/type` fields must be defined.
+- The `/data/id`, `/data/type` and `/data/attributes/account` fields must be defined.
 - The `/data/id` field defines the name of the account
+- The `/data/attributes/account` field should be set to `admin` for
+  administrative users and `basic` to read-only users.
 - The value of the `/data/type` field must always be `unix`.
 
-Here is an example request body enabling the UNIX account _jdoe_.
+Here is an example request body enabling the UNIX account _jdoe_ for read-only operations.
 
 ```javascript
 {
     "data": {
         "id": "jdoe",
         "type": "unix"
+        "attributes": {
+            "account": "basic"
+        }
     }
 }
 ```
