@@ -314,11 +314,9 @@ session_set_dummy(DCB *client_dcb)
     return session;
 }
 
-void session_link_dcb(MXS_SESSION *session, DCB *dcb)
+void session_link_backend_dcb(MXS_SESSION *session, DCB *dcb)
 {
-    ss_info_dassert(session->state != SESSION_STATE_FREE,
-                    "If session->state is SESSION_STATE_FREE then this attempt to "
-                    "access freed memory block.");
+    ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
 
     atomic_add(&session->refcount, 1);
     dcb->session = session;

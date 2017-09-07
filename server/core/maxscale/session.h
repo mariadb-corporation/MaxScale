@@ -44,12 +44,12 @@ int session_isvalid(MXS_SESSION *);
 const char *session_state(mxs_session_state_t);
 
 /**
- * Link a session to a DCB.
+ * Link a session to a backend DCB.
  *
  * @param session  The session to link with the dcb
- * @param dcb      The DCB to be linked
+ * @param dcb      The backend DCB to be linked
  */
-void session_link_dcb(MXS_SESSION *session, struct dcb *dcb);
+void session_link_backend_dcb(MXS_SESSION *session, struct dcb *dcb);
 
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
 
