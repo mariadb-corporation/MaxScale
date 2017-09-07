@@ -52,7 +52,6 @@
 #include <maxscale/random_jkiss.h>
 
 #include "maxscale/config.h"
-#include "maxscale/dcb.h"
 #include "maxscale/maxscale.h"
 #include "maxscale/messagequeue.hh"
 #include "maxscale/modules.h"
