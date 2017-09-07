@@ -29,10 +29,20 @@ describe("Enable/Disable Commands", function() {
 
     it('enable account', function() {
         return verifyCommand('enable account test', 'users/unix/test')
-            .should.be.fulfilled
+            .should.eventually.have.deep.property('data.attributes.account', 'basic')
     })
 
     it('disable account', function() {
+        return doCommand('disable account test')
+            .should.be.fulfilled
+    })
+
+    it('enable admin account', function() {
+        return verifyCommand('enable account test --type=admin', 'users/unix/test')
+            .should.eventually.have.deep.property('data.attributes.account', 'admin')
+    })
+
+    it('disable admin account', function() {
         return doCommand('disable account test')
             .should.be.fulfilled
     })

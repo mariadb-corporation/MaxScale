@@ -178,7 +178,13 @@ static std::string path_from_type(enum user_type type)
 
 json_t* admin_user_to_json(const char* host, const char* user, enum user_type type)
 {
-    user_account_type account = admin_user_is_inet_admin(user) ? USER_ACCOUNT_ADMIN : USER_ACCOUNT_BASIC;
+    user_account_type account = USER_ACCOUNT_BASIC;
+    if ((type ==  USER_TYPE_INET && admin_user_is_inet_admin(user)) ||
+        (type ==  USER_TYPE_UNIX && admin_user_is_unix_admin(user)))
+    {
+        account = USER_ACCOUNT_ADMIN;
+    }
+
     std::string path = path_from_type(type);
     path += "/";
     path += user;
