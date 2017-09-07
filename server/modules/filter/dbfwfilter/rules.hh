@@ -18,6 +18,28 @@
 
 #include <maxscale/pcre2.hh>
 
+namespace
+{
+
+static bool is_dml(GWBUF* buffer)
+{
+    qc_query_op_t optype = qc_get_operation(buffer);
+
+    switch (optype)
+    {
+    case QUERY_OP_SELECT:
+    case QUERY_OP_UPDATE:
+    case QUERY_OP_INSERT:
+    case QUERY_OP_DELETE:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+}
+
 /**
  * A structure used to identify individual rules and to store their contents
  *
@@ -72,7 +94,7 @@ public:
 
     bool need_full_parsing(GWBUF* buffer) const
     {
-        return true;
+        return is_dml(buffer);
     }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
@@ -98,7 +120,7 @@ public:
 
     bool need_full_parsing(GWBUF* buffer) const
     {
-        return true;
+        return is_dml(buffer);
     }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
@@ -118,7 +140,7 @@ class ValueListRule: public Rule
 public:
     bool need_full_parsing(GWBUF* buffer) const
     {
-        return true;
+        return is_dml(buffer);
     }
 
 protected:
@@ -227,7 +249,7 @@ public:
 
     bool need_full_parsing(GWBUF* buffer) const
     {
-        return true;
+        return is_dml(buffer);
     }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;

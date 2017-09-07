@@ -376,10 +376,9 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
 
 bool dbfw_reload_rules(const MODULECMD_ARG *argv, json_t** output)
 {
-    bool rval = true;
     MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
     Dbfw *inst = (Dbfw*)filter_def_get_instance(filter);
-    std::string filename;
+    std::string filename = inst->get_rule_file();
 
     if (modulecmd_arg_is_present(argv, 1))
     {
@@ -1158,7 +1157,7 @@ std::string Dbfw::get_rule_file() const
 
 int Dbfw::get_rule_version() const
 {
-    return m_version;
+    return atomic_load_int32(&m_version);
 }
 
 bool Dbfw::do_reload_rules(std::string filename)
@@ -1173,7 +1172,7 @@ bool Dbfw::do_reload_rules(std::string filename)
         {
             rval = true;
             m_filename = filename;
-            m_version++;
+            atomic_add(&m_version, 1);
             MXS_NOTICE("Reloaded rules from: %s", filename.c_str());
         }
         else
@@ -1195,12 +1194,6 @@ bool Dbfw::reload_rules(std::string filename)
 {
     mxs::SpinLockGuard guard(m_lock);
     return do_reload_rules(filename);
-}
-
-bool Dbfw::reload_rules()
-{
-    mxs::SpinLockGuard guard(m_lock);
-    return do_reload_rules(m_filename);
 }
 
 /**

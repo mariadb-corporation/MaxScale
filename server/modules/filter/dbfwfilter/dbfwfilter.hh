@@ -251,7 +251,6 @@ public:
      *         error occurs, it is stored in the modulecmd error system.
      */
     bool reload_rules(std::string filename);
-    bool reload_rules();
 
     /** Diagnostic routines */
     void diagnostics(DCB *dcb) const;
