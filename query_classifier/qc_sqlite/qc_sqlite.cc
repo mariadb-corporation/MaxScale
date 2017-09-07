@@ -1117,10 +1117,6 @@ public:
                 }
             }
         }
-        else
-        {
-            ss_dassert(!true);
-        }
 
         if (zColumn)
         {
