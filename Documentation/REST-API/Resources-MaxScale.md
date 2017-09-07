@@ -74,6 +74,7 @@ Update MaxScale parameters. The request body must define updated values for the
 - [auth_connect_timeout](../Getting-Started/Configuration-Guide.md#auth_connect_timeout)
 - [auth_read_timeout](../Getting-Started/Configuration-Guide.md#auth_read_timeout)
 - [auth_write_timeout](../Getting-Started/Configuration-Guide.md#auth_write_timeout)
+- [admin_log_auth_failures](../Getting-Started/Configuration-Guide.md#admin_log_auth_failures)
 
 ```
 PATCH /v1/maxscale
@@ -83,15 +84,11 @@ PATCH /v1/maxscale
 
 Parameters modified:
 
-```
-Status: 204 No Content
-```
+`Status: 204 No Content`
 
 Invalid JSON body:
 
-```
-Status: 403 Forbidden
-```
+`Status: 403 Forbidden`
 
 ## Get thread information
 
@@ -305,15 +302,11 @@ PATCH /v1/maxscale/logs
 
 Parameters modified:
 
-```
-Status: 204 No Content
-```
+`Status: 204 No Content`
 
 Invalid JSON body:
 
-```
-Status: 403 Forbidden
-```
+`Status: 403 Forbidden`
 
 ## Flush and rotate log files
 
@@ -326,9 +319,7 @@ POST /v1/maxscale/logs/flush
 
 #### Response
 
-```
-Status: 204 No Content
-```
+`Status: 204 No Content`
 
 ## Get task schedule
 
@@ -489,3 +480,55 @@ GET /v1/maxscale/modules
     ]
 }
 ```
+
+## Call a module command
+
+Modules can expose commands that can be called via the REST API. The module
+resource lists all commands in the `data.attributes.commands` list. Each value
+is a command sub-resource identified by its `id` field and the HTTP method the
+command uses is defined by the `attributes.method` field.
+
+The _:module_ in the URI must be a valid name of a loaded module and _:command_
+must be a valid command identifier that is exposed by that module. All
+parameters to the module commands are passed as HTTP request parameters.
+
+For read-only commands:
+
+```
+GET /v1/maxscale/modules/:module/:command
+```
+
+For commands that can modify data:
+
+```
+POST /v1/maxscale/modules/:module/:command
+```
+
+#### Response
+
+Command with output:
+
+`Status: 200 OK`
+
+```javascript
+{
+    "links": {
+        "self": "http://localhost:8989/v1/maxscale/modules/dbfwfilter/rules/json"
+    },
+    "meta": [
+        {
+            "name": "test3",
+            "type": "COLUMN",
+            "times_matched": 0
+        }
+    ]
+}
+```
+
+The contents of the `meta` field will contain the output of the module
+command. This output depends on the command that is being executed. It can
+contain any valid JSON value.
+
+Command with no output:
+
+`Status: 204 No Content`

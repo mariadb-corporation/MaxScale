@@ -227,8 +227,7 @@ GET /v1/services
 ### Get service listeners
 
 Get the listeners of a service. The _:name_ in the URI must be a valid service
-name with all whitespace replaced with hyphens. The service names are
-case-insensitive.
+name with all whitespace replaced with hyphens.
 
 ```
 GET /v1/services/:name/listeners
@@ -256,6 +255,73 @@ GET /v1/services/:name/listeners
             "type": "listeners"
         }
     ]
+}
+```
+
+### Get service listeners
+
+Get the listeners of a service. The _:name_ in the URI must be a valid service
+name with all whitespace replaced with hyphens.
+
+```
+GET /v1/services/:name/listeners
+```
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "links": {
+        "self": "http://localhost:8989/v1/services/Read-Connection-Router/listeners"
+    },
+    "data": [
+        {
+            "attributes": {
+                "parameters": {
+                    "port": 4008,
+                    "protocol": "MySQLClient",
+                    "authenticator": "MySQLAuth"
+                }
+            },
+            "id": "Read-Connection-Listener",
+            "type": "listeners"
+        }
+    ]
+}
+```
+
+### Get a sigle service listener
+
+Get the listeners of a service. The _:name_ in the URI must be a valid service
+name and _:listener_ must be a valid listener name, both with all whitespace
+replaced with hyphens.
+
+```
+GET /v1/services/:name/listeners/:listener
+```
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "links": {
+        "self": "http://localhost:8989/v1/services/RW-Split-Router/listeners/RW-Split-Listener"
+    },
+    "data": {
+        "attributes": {
+            "parameters": {
+                "port": 4006,
+                "protocol": "MySQLClient",
+                "authenticator": "MySQLAuth"
+            }
+        },
+        "id": "RW-Split-Listener",
+        "type": "listeners"
+    }
 }
 ```
 
