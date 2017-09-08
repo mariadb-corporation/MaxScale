@@ -13,34 +13,36 @@
  */
 
 #include <maxscale/cdefs.h>
+
+#include <mysql.h>
+#include <mysqld_error.h>
+
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <openssl/crypto.h>
+#include <openssl/err.h>
+#include <openssl/sha.h>
+#include <openssl/ssl.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
-#include <openssl/sha.h>
 #include <sys/ioctl.h>
-#include <errno.h>
 #include <sys/socket.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdbool.h>
-#include <fcntl.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <unistd.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <maxscale/service.h>
-#include <maxscale/router.h>
-#include <maxscale/poll.h>
-#include <maxscale/users.h>
-#include <maxscale/version.h>
+
 #include <maxscale/housekeeper.h>
+#include <maxscale/poll.h>
+#include <maxscale/router.h>
+#include <maxscale/service.h>
+#include <maxscale/users.h>
 #include <maxscale/utils.h>
-#include <mysql.h>
-#include <mysql_com.h>
-#include <mysqld_error.h>
+#include <maxscale/version.h>
 
 MXS_BEGIN_DECLS
 
