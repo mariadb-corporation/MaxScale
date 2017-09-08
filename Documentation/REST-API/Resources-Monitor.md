@@ -220,7 +220,9 @@ value of `monitors` and the `/data/attributes/module` field with the
 monitor module for this monitor. All of the monitor parameters can
 be defined at creation time.
 
-`POST /v1/monitors`
+```
+POST /v1/monitors
+```
 
 The following example defines a request body which creates the new monitor,
 _test-monitor_, and assigns two servers to be monitored by it. It also defines
@@ -257,7 +259,7 @@ a custom value for the _monitor_interval_ parameter.
 
 #### Response
 
-Monitor is created.
+Monitor is created:
 
 `Status: 204 No Content`
 
@@ -288,11 +290,31 @@ modified. Refer to the monitor module documentation for details on these paramet
 
 #### Response
 
-Monitor is modified.
+Monitor is modified:
 
 `Status: 204 No Content`
 
-Invalid request body.
+Invalid request body:
+
+`Status: 403 Forbidden`
+
+### Destroy a monitor
+
+Destroy a created monitor. The monitor must not have relationships to any
+servers and if it does a PATCH request which removes these relationships is
+required before a DELETE request for the monitor can be made.
+
+```
+DELETE /v1/monitor/:name/stop
+```
+
+#### Response
+
+Monitor is deleted:
+
+`Status: 204 No Content`
+
+Monitor could not be deleted:
 
 `Status: 403 Forbidden`
 
@@ -306,7 +328,7 @@ PUT /v1/monitor/:name/stop
 
 #### Response
 
-Monitor is stopped.
+Monitor is stopped:
 
 `Status: 204 No Content`
 
@@ -320,6 +342,6 @@ PUT /v1/monitor/:name/start
 
 #### Response
 
-Monitor is started.
+Monitor is started:
 
 `Status: 204 No Content`
