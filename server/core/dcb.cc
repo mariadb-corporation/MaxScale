@@ -93,7 +93,6 @@ static thread_local struct
 
 static void dcb_initialize(DCB *dcb);
 static void dcb_final_free(DCB *dcb);
-static void dcb_final_close(DCB *dcb);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
 static int  dcb_null_auth(DCB *dcb, SERVER *server, MXS_SESSION *session, GWBUF *buf);
@@ -247,7 +246,7 @@ dcb_final_free(DCB *dcb)
         }
     }
 
-    dcb_dec_ref(dcb);
+    dcb_free_all_memory(dcb);
 }
 
 /**
@@ -407,7 +406,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
                                              MODULE_PROTOCOL)) == NULL)
     {
         dcb->state = DCB_STATE_DISCONNECTED;
-        dcb_dec_ref(dcb);
+        dcb_free_all_memory(dcb);
         MXS_ERROR("Failed to load protocol module '%s'", protocol);
         return NULL;
     }
@@ -423,7 +422,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     if (authfuncs == NULL)
     {
         MXS_ERROR("Failed to load authenticator module '%s'", authenticator);
-        dcb_dec_ref(dcb);
+        dcb_free_all_memory(dcb);
         return NULL;
     }
 
@@ -443,7 +442,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         // Remove the inc ref that was done in session_link_backend_dcb().
         session_put_ref(dcb->session);
         dcb->session = NULL;
-        dcb_dec_ref(dcb);
+        dcb_free_all_memory(dcb);
         return NULL;
     }
     else
@@ -480,7 +479,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         // Remove the inc ref that was done in session_link_backend_dcb().
         session_put_ref(dcb->session);
         dcb->session = NULL;
-        dcb_dec_ref(dcb);
+        dcb_free_all_memory(dcb);
         return NULL;
     }
 
@@ -496,7 +495,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         // Remove the inc ref that was done in session_link_backend_dcb().
         session_put_ref(dcb->session);
         dcb->session = NULL;
-        dcb_dec_ref(dcb);
+        dcb_free_all_memory(dcb);
         return NULL;
     }
     /**
@@ -1094,14 +1093,10 @@ void dcb_close(DCB *dcb)
     {
         dcb->n_close = 1;
 
-        if (dcb != dcb_get_current())
-        {
-            // If the dcb to be closed is *not* the dcb for which event callbacks are being
-            // called, we close it immediately. Otherwise it will be closed once all callbacks
-            // have been called, in the end of dcb_process_poll_events(), which currently is
-            // above us in the call stack.
-            dcb_final_close(dcb);
-        }
+        Worker* worker = Worker::get(dcb->poll.thread.id);
+        ss_dassert(worker);
+
+        worker->register_zombie(dcb);
     }
     else
     {
@@ -1139,7 +1134,7 @@ void dcb_close_in_owning_thread(DCB* dcb)
     }
 }
 
-static void dcb_final_close(DCB* dcb)
+void dcb_final_close(DCB* dcb)
 {
 #if defined(SS_DEBUG)
     int wid = Worker::get_current_id();
@@ -3143,11 +3138,6 @@ static uint32_t dcb_handler(DCB* dcb, uint32_t events)
         dcb->fake_event = 0;
 
         rv |= dcb_process_poll_events(dcb, events);
-    }
-
-    if (dcb->n_close != 0)
-    {
-        dcb_final_close(dcb);
     }
 
     this_thread.current_dcb = NULL;

@@ -17,6 +17,7 @@
 MXS_BEGIN_DECLS
 
 void dcb_free_all_memory(DCB *dcb);
+void dcb_final_close(DCB *dcb);
 
 /**
  * @brief Increase the reference count of the DCB

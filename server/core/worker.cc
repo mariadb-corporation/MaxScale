@@ -31,6 +31,7 @@
 #include <maxscale/json_api.h>
 #include <maxscale/utils.hh>
 
+#include "maxscale/dcb.h"
 #include "maxscale/modules.h"
 #include "maxscale/poll.h"
 #include "maxscale/statistics.h"
@@ -845,8 +846,15 @@ void Worker::register_zombie(DCB* pDcb)
 
 void Worker::delete_zombies()
 {
-    // TODO: for_each(m_zombies.begin(), m_zombies.end(), dcb_free_all_memory);
-    m_zombies.resize(0);
+    // An algorithm cannot be used, as the final closing of a DCB may cause
+    // other DCBs to be registered in the zombie queue.
+
+    while (!m_zombies.empty())
+    {
+        DCB* pDcb = m_zombies.back();
+        m_zombies.resize(m_zombies.size() - 1);
+        dcb_final_close(pDcb);
+    }
 }
 
 void Worker::run()
@@ -1156,15 +1164,6 @@ void Worker::poll_waitevents()
 
         for (int i = 0; i < nfds; i++)
         {
-            MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
-            if (data->free)
-            {
-                poll_inc_ref(data);
-            }
-        }
-
-        for (int i = 0; i < nfds; i++)
-        {
             /** Calculate event queue statistics */
             int64_t started = hkheartbeat;
             int64_t qtime = started - cycle_start;
@@ -1222,18 +1221,6 @@ void Worker::poll_waitevents()
             }
 
             m_statistics.maxexectime = MXS_MAX(m_statistics.maxexectime, qtime);
-        }
-
-        for (int i = 0; i < nfds; i++)
-        {
-            MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
-            if (data->free)
-            {
-                if (poll_dec_ref(data) == 1)
-                {
-                    data->free(data);
-                }
-            }
         }
 
         dcb_process_idle_sessions(m_id);
