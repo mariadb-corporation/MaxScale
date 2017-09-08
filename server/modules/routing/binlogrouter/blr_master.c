@@ -294,12 +294,14 @@ static void blr_start_master(void* data)
     router->master->remote = MXS_STRDUP_A(router->service->dbref->server->name);
 
     MXS_NOTICE("%s: attempting to connect to master"
-               " server [%s]:%d, binlog %s, pos %lu",
+               " server [%s]:%d, binlog='%s', pos=%lu%s%s",
                router->service->name,
                router->service->dbref->server->name,
                router->service->dbref->server->port,
                router->binlog_name,
-               router->current_pos);
+               router->current_pos,
+               router->mariadb10_master_gtid ? ", GTID=" : "",
+               router->mariadb10_master_gtid ? router->last_mariadb_gtid : "");
 
     router->connect_time = time(0);
 
