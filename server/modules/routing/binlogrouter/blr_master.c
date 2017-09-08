@@ -145,7 +145,6 @@ extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 static bool blr_handle_missing_files(ROUTER_INSTANCE *router,
                                      char *new_file);
 static void worker_cb_start_master(int worker_id, void* data);
-extern bool blr_file_exists(ROUTER_INSTANCE *router);
 extern void blr_file_update_gtid(ROUTER_INSTANCE *router);
 static int blr_check_connect_retry(ROUTER_INSTANCE *router);
 
@@ -1633,9 +1632,9 @@ blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
     int rotated = 1;
     int remove_encrytion_ctx = 0;
 
-    /* Different file name in rotate event or missing binlog file */
+    /* Different file name in rotate event or missing current binlog file */
     if ((strncmp(router->binlog_name, file, slen) != 0) ||
-        !blr_file_exists(router))
+        !blr_binlog_file_exists(router, NULL))
     {
         remove_encrytion_ctx = 1;
         router->stats.n_rotates++;

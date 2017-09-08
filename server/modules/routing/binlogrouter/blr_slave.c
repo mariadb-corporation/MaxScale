@@ -363,6 +363,8 @@ static void blr_abort_change_master(ROUTER_INSTANCE *router,
                                     MASTER_SERVER_CFG *current_master,
                                     CHANGE_MASTER_OPTIONS *change_master,
                                     const char *error);
+static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
+                                         const char *errmsg);
 /**
  * Process a request packet from the slave server.
  *
@@ -1847,30 +1849,22 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
     {
         if (binlognamelen > BINLOG_FNAMELEN)
         {
+            /* Abort the request */
             char req_file[binlognamelen + 1];
             char errmsg[BINLOG_ERROR_MSG_LEN + 1];
             memcpy(req_file, (char *)ptr, binlognamelen);
             req_file[binlognamelen] = 0;
 
-            MXS_ERROR("Slave %lu requests COM_BINLOG_DUMP with a filename %s"
-                      " longer than max %d chars. Aborting.",
-                      (unsigned long)slave->serverid,
-                      req_file,
-                      BINLOG_FNAMELEN);
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                   "Connecting slave requested binlog"
-                   " file name %s longer than max %d chars.",
-                   req_file,
-                   BINLOG_FNAMELEN);
-
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Requested filename %s is longer than max %d chars.",
+                     req_file,
+                     BINLOG_FNAMELEN);
             errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
-            blr_send_custom_error(slave->dcb,
-                                  slave->seqno + 1,
-                                  0,
-                                  errmsg,
-                                  "HY000",
-                                  BINLOG_FATAL_ERROR_READING);
+            // ERROR
+            blr_slave_abort_dump_request(slave, errmsg);
+
             slave->state = BLRS_ERRORED;
             dcb_close(slave->dcb);
             return 1;
@@ -1893,6 +1887,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
                                     binlognamelen > 0,
                                     requested_pos))
         {
+             // ERROR
              slave->state = BLRS_ERRORED;
              dcb_close(slave->dcb);
              return 1;
@@ -1958,6 +1953,24 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
               slave->binlogfile,
               strlen(slave->binlogfile),
               (unsigned long)slave->binlog_pos);
+
+    /* Check first the requested file exists */
+    if (!blr_binlog_file_exists(router, slave->binlogfile))
+    {
+        char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+
+        snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                 "Requested file name '%s' doesn't exist",
+                 slave->binlogfile);
+        errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
+
+        // ERROR
+        blr_slave_abort_dump_request(slave, errmsg);
+
+        slave->state = BLRS_ERRORED;
+        dcb_close(slave->dcb);
+        return 1;
+    }
 
     /* First reply starts from seq = 1 */
     slave->seqno = 1;
@@ -6888,14 +6901,19 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
         /* Requested GTID Not Found */
         if (!f_gtid.gtid)
         {
-            MXS_WARNING("Requested MariaDB GTID '%s' by server %lu"
-                        " has not been found",
-                        slave->mariadb_gtid,
-                        (unsigned long)slave->serverid);
+            char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Requested MariaDB GTID '%s' by server %lu"
+                     " has not been found",
+                     slave->mariadb_gtid,
+                     (unsigned long)slave->serverid);
+            errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
             /* Check strict mode */
             if (slave->gtid_strict_mode)
             {
+                MXS_ERROR("%s", errmsg);
                 strcpy(slave->binlogfile, "");
                 slave->binlog_pos = 0;
                 blr_send_custom_error(slave->dcb,
@@ -6910,6 +6928,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
             else
             {
                 /* No strict mode: */
+                MXS_WARNING("%s", errmsg);
 
                 // - 1 -Set request GTID as current master one
                 MXS_FREE(slave->mariadb_gtid);
@@ -6962,8 +6981,8 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
                  * The binlog file could be different due to:
                  * a rotate event or other non GTID events written
                  * after that GTID.
-                 * If file exists events will be sent from requested file@pos
-                 * otherwise file & pos = GTID info file.
+                 * If file exists and pos >=4, events will be sent
+                 * from requested file@pos, otherwise from GTID file & pos.
                  */
 
                 // Add tree prefix
@@ -6982,7 +7001,8 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
                                       router->binlogdir,
                                       file_path,
                                       t_prefix[0] ? t_prefix: NULL);
-                if (blr_slave_get_file_size(file_path) != 0)
+                // File size is >=4 read: set pos.
+                if (blr_slave_get_file_size(file_path) >= 4)
                 {
                     slave->binlog_pos = req_pos;
                 }
@@ -9130,4 +9150,25 @@ static void blr_abort_change_master(ROUTER_INSTANCE *router,
     blr_master_restore_config(router, current_master);
     /* Free parsed options */
     blr_master_free_parsed_options(change_master);
+}
+
+/**
+ * Abort the COM_BINLOG_DUMP slave request
+ *
+ * @param slave     The connecting slave
+ * @param errmsg    Error message to send and log
+ */
+static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
+                                         const char *errmsg)
+{
+    MXS_ERROR("Slave %lu requests COM_BINLOG_DUMP: %s. Aborting.",
+              (unsigned long)slave->serverid,
+              errmsg);
+
+    blr_send_custom_error(slave->dcb,
+                          slave->seqno + 1,
+                          0,
+                          errmsg,
+                          "HY000",
+                          BINLOG_FATAL_ERROR_READING);
 }

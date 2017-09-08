@@ -4486,17 +4486,25 @@ bool blr_is_current_binlog(ROUTER_INSTANCE *router,
 }
 
 /**
- * Check whether the current binlog file exists.
+ * Check whether a binlog file exists.
  *
  * The file could have been manually removed by mistake.
- * The check is done when ROTATE event (real or fake) is seen by
- * blr_rotate_event().
+ * The check is done when:
+ * ROTATE event (real or fake) is seen by blr_rotate_event()
+ * or
+ * when a slave connects with a binlog_file name.
  *
- * @param router    The router instance
- * @return          True if file exists, false otherwise.
+ * If param log_file is NULL, the current router->binlog_name
+ * is checked.
+ *
+ *
+ * @param router      The router instance
+ * @param log_file    The file name to check
+ * @return            True if file exists, false otherwise.
  *
  */
-bool blr_file_exists(ROUTER_INSTANCE *router)
+bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
+                            const char *log_file)
 {
     bool ret = true;
     char path[PATH_MAX + 1] = "";
@@ -4518,15 +4526,22 @@ bool blr_file_exists(ROUTER_INSTANCE *router)
     }
 
     // Set final file name full path
-    strcat(path, router->binlog_name);
+    strcat(path,
+           log_file == NULL ?
+           router->binlog_name :
+           log_file);
 
     // Check file
     if (access(path, F_OK) == -1 && errno == ENOENT)
     {
         // No file found
-        MXS_WARNING("%s: ROTATE_EVENT, missing binlog file %s ",
+        MXS_WARNING("%s: %s, missing binlog file '%s'",
                     router->service->name,
+                    log_file == NULL ?
+                    "ROTATE_EVENT" :
+                    "Slave request",
                     path);
+
         ret = false;
     }
 
