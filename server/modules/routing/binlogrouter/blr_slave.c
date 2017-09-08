@@ -356,9 +356,13 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
                                    CHANGE_MASTER_OPTIONS *change_master);
 extern void blr_log_disabled_heartbeat(const ROUTER_INSTANCE *inst);
 extern void blr_close_master_in_main(void* data);
-static bool blr_check_connecting_slave(ROUTER_INSTANCE *router,
-                                      ROUTER_SLAVE *slave,
-                                      enum blr_slave_check check);
+static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
+                                       ROUTER_SLAVE *slave,
+                                       enum blr_slave_check check);
+static void blr_abort_change_master(ROUTER_INSTANCE *router,
+                                    MASTER_SERVER_CFG *current_master,
+                                    CHANGE_MASTER_OPTIONS *change_master,
+                                    const char *error);
 /**
  * Process a request packet from the slave server.
  *
@@ -3892,10 +3896,26 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     /* save current config option data */
     blr_master_get_config(router, current_master);
 
-    /*
-     * Change values in the router->service->dbref->server structure
-     * Change filename and position in the router structure
+    /* Abort if MASTER_USE_GTID is in use and
+     * router->mariadb10_master_gtid is not set
      */
+    if (!router->mariadb10_master_gtid &&
+         change_master.use_mariadb10_gtid)
+    {
+        snprintf(error,
+                 BINLOG_ERROR_MSG_LEN,
+                 "Cannot use MASTER_USE_GTID. "
+                 "Enable 'mariadb10_master_gtid' option first.");
+
+        blr_abort_change_master(router,
+                                current_master,
+                                &change_master,
+                                error);
+
+        spinlock_release(&router->lock);
+
+        return -1;
+    }
 
     /**
      * Handle connection options
@@ -3916,12 +3936,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                          "(%d seconds).",
                          BLR_HEARTBEAT_MAX_INTERVAL);
 
-            MXS_ERROR("%s: %s", router->service->name, error);
-
-            /* restore previous master_host and master_port */
-            blr_master_restore_config(router, current_master);
-
-            blr_master_free_parsed_options(&change_master);
+            blr_abort_change_master(router,
+                                    current_master,
+                                    &change_master,
+                                    error);
 
             spinlock_release(&router->lock);
 
@@ -3950,12 +3968,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                      "interval is not valid: %s.",
                      master_connect_retry);
 
-            MXS_ERROR("%s: %s", router->service->name, error);
-
-            /* restore previous master_host and master_port */
-            blr_master_restore_config(router, current_master);
-
-            blr_master_free_parsed_options(&change_master);
+            blr_abort_change_master(router,
+                                    current_master,
+                                    &change_master,
+                                    error);
 
             spinlock_release(&router->lock);
 
@@ -4012,12 +4028,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
     if (ssl_error == -1)
     {
-        MXS_ERROR("%s: %s", router->service->name, error);
-
-        /* restore previous master_host and master_port */
-        blr_master_restore_config(router, current_master);
-
-        blr_master_free_parsed_options(&change_master);
+        blr_abort_change_master(router,
+                                current_master,
+                                &change_master,
+                                error);
 
         spinlock_release(&router->lock);
 
@@ -4096,12 +4110,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
 
         if (change_binlog_error)
         {
-            MXS_ERROR("%s: %s", router->service->name, error);
-
-            /* restore previous master_host and master_port */
-            blr_master_restore_config(router, current_master);
-
-            blr_master_free_parsed_options(&change_master);
+            blr_abort_change_master(router,
+                                    current_master,
+                                    &change_master,
+                                    error);
 
             spinlock_release(&router->lock);
 
@@ -4121,12 +4133,11 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                      BINLOG_ERROR_MSG_LEN,
                      "%s MASTER_USE_GTID=Slave_pos is required",
                      err_prefix);
-            MXS_ERROR("%s: %s", router->service->name, error);
 
-            /* restore previous master_host and master_port */
-            blr_master_restore_config(router, current_master);
-
-            blr_master_free_parsed_options(&change_master);
+            blr_abort_change_master(router,
+                                    current_master,
+                                    &change_master,
+                                    error);
 
             spinlock_release(&router->lock);
 
@@ -4187,13 +4198,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         /* Return an error or set new binlog name at pos 4 */
         if (return_error)
         {
-
-            MXS_ERROR("%s: %s", router->service->name, error);
-
-            /* Restore previous master_host and master_port */
-            blr_master_restore_config(router, current_master);
-
-            blr_master_free_parsed_options(&change_master);
+            blr_abort_change_master(router,
+                                    current_master,
+                                    &change_master,
+                                    error);
 
             MXS_FREE(master_logfile);
 
@@ -4283,12 +4291,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         /* log error and return */
         if (return_error)
         {
-            MXS_ERROR("%s: %s", router->service->name, error);
-
-            /* restore previous master_host and master_port */
-            blr_master_restore_config(router, current_master);
-
-            blr_master_free_parsed_options(&change_master);
+            blr_abort_change_master(router,
+                                    current_master,
+                                    &change_master,
+                                    error);
 
             MXS_FREE(master_logfile);
 
@@ -9023,12 +9029,12 @@ static void blr_log_config_changes(ROUTER_INSTANCE *router,
  *
  * @param router    The router instance
  * @param slave     The registering slave
- *
+ * @param check     The check requested by the caller
  * @return          true on succes, false otherwise
  */
-static bool blr_check_connecting_slave(ROUTER_INSTANCE *router,
-                                      ROUTER_SLAVE *slave,
-                                      enum blr_slave_check check)
+static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
+                                       ROUTER_SLAVE *slave,
+                                       enum blr_slave_check check)
 {
     int rv = true;
     char *err_msg = NULL;
@@ -9104,4 +9110,24 @@ static bool blr_check_connecting_slave(ROUTER_INSTANCE *router,
     }
 
     return rv;
+}
+
+/**
+ * Abort the change master process
+ *
+ * @param router            The router instance
+ * @param current_master    Current master configuration
+ * @param change_master     The CHANGE MASTER TO options
+ * @param error             Error message to log
+ */
+static void blr_abort_change_master(ROUTER_INSTANCE *router,
+                                    MASTER_SERVER_CFG *current_master,
+                                    CHANGE_MASTER_OPTIONS *change_master,
+                                    const char *error)
+{
+    MXS_ERROR("%s: %s", router->service->name, error);
+    /* restore previous master_host and master_port */
+    blr_master_restore_config(router, current_master);
+    /* Free parsed options */
+    blr_master_free_parsed_options(change_master);
 }
