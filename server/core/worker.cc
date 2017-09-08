@@ -836,6 +836,19 @@ json_t* mxs_worker_list_to_json(const char* host)
     return task.resource();
 }
 
+void Worker::register_zombie(DCB* pDcb)
+{
+    ss_dassert(pDcb->poll.thread.id == m_id);
+
+    m_zombies.push_back(pDcb);
+}
+
+void Worker::delete_zombies()
+{
+    // TODO: for_each(m_zombies.begin(), m_zombies.end(), dcb_free_all_memory);
+    m_zombies.resize(0);
+}
+
 void Worker::run()
 {
     this_thread.current_worker_id = m_id;
@@ -1226,6 +1239,8 @@ void Worker::poll_waitevents()
         dcb_process_idle_sessions(m_id);
 
         m_state = ZPROCESSING;
+
+        delete_zombies();
 
         m_state = IDLE;
     } /*< while(1) */

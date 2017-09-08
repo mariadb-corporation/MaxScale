@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <memory>
+#include <vector>
 #include <maxscale/platform.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.hh>
@@ -67,10 +68,11 @@ class Worker : public MXS_WORKER
     Worker& operator = (const Worker&);
 
 public:
-    typedef WORKER_STATISTICS STATISTICS;
-    typedef WorkerTask Task;
-    typedef WorkerDisposableTask DisposableTask;
+    typedef WORKER_STATISTICS     STATISTICS;
+    typedef WorkerTask            Task;
+    typedef WorkerDisposableTask  DisposableTask;
     typedef Registry<MXS_SESSION> SessionsById;
+    typedef std::vector<DCB*>     Zombies;
 
     enum state_t
     {
@@ -225,6 +227,15 @@ public:
      * @return True on success, false on failure.
      */
     static bool remove_shared_fd(int fd);
+
+    /**
+     * Register zombie for later deletion.
+     *
+     * @param pZombie  DCB that will be deleted at end of event loop.
+     *
+     * @note The DCB must be owned by this worker.
+     */
+    void register_zombie(DCB* pZombie);
 
     /**
      * Main function of worker.
@@ -483,6 +494,8 @@ private:
 
     static Worker* create(int id, int epoll_listener_fd);
 
+    void delete_zombies();
+
     bool post_disposable(DisposableTask* pTask, enum execute_mode_t mode = EXECUTE_AUTO);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
@@ -509,6 +522,7 @@ private:
                                          *  worker and not e.g. listener sessions. For now,
                                          *  it's up to the protocol to decide whether a new
                                          *  session is added to the map. */
+    Zombies       m_zombies;            /*< DCBs to be deleted. */
 };
 
 }
