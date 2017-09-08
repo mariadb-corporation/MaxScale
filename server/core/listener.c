@@ -223,7 +223,7 @@ RSA* create_rsa(int bits)
     BIGNUM* bn = BN_new();
     BN_set_word(bn, RSA_F4);
     RSA* rsa = RSA_new();
-    RSA_generate_key_ex(rsa, bits, NULL, NULL);
+    RSA_generate_key_ex(rsa, bits, bn, NULL);
     BN_free(bn);
     return rsa;
 #else
