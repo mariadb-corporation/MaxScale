@@ -122,12 +122,6 @@ static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t ev
 static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t ev);
 static bool dcb_session_check(DCB *dcb, const char *);
 
-static void poll_dcb_free(MXS_POLL_DATA* data)
-{
-    // MXS_POLL_DATA is the first member of DCB.
-    dcb_free_all_memory(reinterpret_cast<DCB*>(data));
-}
-
 void dcb_global_init()
 {
     this_unit.dcb_initialized.dcb_chk_top = CHK_NUM_DCB;
@@ -135,8 +129,6 @@ void dcb_global_init()
     this_unit.dcb_initialized.state = DCB_STATE_ALLOC;
     this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
     this_unit.dcb_initialized.poll.handler = dcb_poll_handler;
-    this_unit.dcb_initialized.poll.free = poll_dcb_free;
-    this_unit.dcb_initialized.poll.refcount = 1;
     this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
 
     int nthreads = config_threadcount();

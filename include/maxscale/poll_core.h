@@ -46,23 +46,9 @@ struct mxs_poll_data;
  */
 typedef uint32_t (*mxs_poll_handler_t)(struct mxs_poll_data* data, int wid, uint32_t events);
 
-/**
- * Pointer to function that knows how to free a particular
- * 'struct mxs_poll_data' structure
- *
- * @param data The `mxs_poll_data` instance that contained this function pointer.
- */
-typedef void (*mxs_poll_free_t)(struct mxs_poll_data* data);
-
 typedef struct mxs_poll_data
 {
     mxs_poll_handler_t handler; /*< Handler for this particular kind of mxs_poll_data. */
-    mxs_poll_free_t free;       /*< Optional free function for mxs_poll_data. */
-    uint32_t refcount;          /*< Reference count, optionally used. If 'free' is provided,
-                                    refcount will be incremented before events are delivered
-                                    to the handler and decremented after. If reaches 0, then
-                                    the free function is called.
-                                */
     struct
     {
         int id;                 /*< The id of the worker thread. */
@@ -114,29 +100,5 @@ bool poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data
  * @return True on success, false on failure.
  */
 bool poll_remove_fd_from_worker(int wid, int fd);
-
-/**
- * Increase the reference count of the poll data.
- *
- * @param data  The poll data whose reference count should be increased.
- */
-static inline void poll_inc_ref(MXS_POLL_DATA* data)
-{
-    atomic_add_uint32(&data->refcount, 1);
-}
-
-/**
- * Decrease the reference count of the poll data.
- *
- * @param data  The poll data whose reference count should be decreased.
- *
- * @return The previous reference count. If the returned value is 1, then
- *         the caller should call @c data->free(data) to dispose of the
- *         poll data.
- */
-static inline uint32_t poll_dec_ref(MXS_POLL_DATA* data)
-{
-    return atomic_add_uint32(&data->refcount, -1);
-}
 
 MXS_END_DECLS

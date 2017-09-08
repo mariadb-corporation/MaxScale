@@ -163,8 +163,6 @@ Worker::Worker(int id,
     , m_shutdown_initiated(false)
 {
     MXS_POLL_DATA::handler = &Worker::epoll_instance_handler;
-    MXS_POLL_DATA::free = NULL;
-    MXS_POLL_DATA::refcount = 0;
     MXS_POLL_DATA::thread.id = id;
 }
 
