@@ -14,45 +14,35 @@
 /**
  * @file avro.c - Avro router, allows MaxScale to act as an intermediary for
  * MySQL replication binlog files and AVRO binary files
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                   Description
- * 25/02/2016   Massimiliano Pinto    Initial implementation
- *
- * @endverbatim
  */
 
 #include "avrorouter.h"
 
+#include <avro/errors.h>
+#include <ctype.h>
+#include <ini.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <time.h>
-#include <maxscale/service.h>
-#include <maxscale/server.h>
-#include <maxscale/router.h>
-#include <maxscale/atomic.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/housekeeper.h>
-#include <time.h>
-
-#include <maxscale/log_manager.h>
-
-#include <maxscale/protocol/mysql.h>
-#include <ini.h>
 #include <sys/stat.h>
+#include <time.h>
 
-#include <maxscale/random_jkiss.h>
 #include <binlog_common.h>
-#include <avro/errors.h>
+
 #include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/dcb.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/paths.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/random_jkiss.h>
+#include <maxscale/router.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/utils.h>
 
 #ifndef BINLOG_NAMEFMT
 #define BINLOG_NAMEFMT      "%s.%06d"

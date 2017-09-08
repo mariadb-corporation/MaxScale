@@ -15,24 +15,27 @@
 #define MXS_MODULE_NAME "MySQLClient"
 
 #include <maxscale/cppdefs.hh>
+
 #include <inttypes.h>
 #include <limits.h>
 #include <netinet/tcp.h>
 #include <sys/stat.h>
-#include <maxscale/protocol.h>
-#include <netinet/tcp.h>
-#include <sys/stat.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/poll.h>
+#include <maxscale/protocol.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
+#include <maxscale/router.h>
 #include <maxscale/session.h>
-#include <maxscale/worker.h>
 #include <maxscale/ssl.h>
+#include <maxscale/utils.h>
+#include <maxscale/worker.h>
+
 #include "setsqlmodeparser.hh"
 
 /** Return type of process_special_commands() */

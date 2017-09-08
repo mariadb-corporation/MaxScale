@@ -13,37 +13,28 @@
 
 /**
  * @file maxrows.c - Result set limit Filter
- * @verbatim
- *
- *
- * The filter returns a void result set if the number of rows in the result set
- * from backend exceeds the max_rows parameter.
- *
- * Date         Who                   Description
- * 26/10/2016   Massimiliano Pinto    Initial implementation
- * 04/11/2016   Massimiliano Pinto    Addition of SERVER_MORE_RESULTS_EXIST flag (0x0008)
- *                                    detection in handle_expecting_rows().
- * 07/11/2016   Massimiliano Pinto    handle_expecting_rows renamed to handle_rows
- * 20/12/2016   Massimiliano Pinto    csdata->res.n_rows counter works with MULTI_RESULT
- *                                    and large packets (> 16MB)
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "maxrows"
+
+#include <maxscale/cdefs.h>
+
+#include <stdbool.h>
+#include <stdint.h>
+
 #include <maxscale/alloc.h>
+#include <maxscale/buffer.h>
+#include <maxscale/debug.h>
 #include <maxscale/filter.h>
-#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
-#include <maxscale/query_classifier.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <maxscale/buffer.h>
+#include <maxscale/paths.h>
+#include <maxscale/poll.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/debug.h>
+#include <maxscale/query_classifier.h>
+
 #include "maxrows.h"
 
 static MXS_FILTER *createInstance(const char *name,

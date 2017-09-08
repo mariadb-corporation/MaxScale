@@ -22,71 +22,34 @@
  * The current prototype implement is designed to support MySQL 5.6 and has
  * a number of limitations. This prototype is merely a proof of concept and
  * should not be considered production ready.
- *
- * @verbatim
- * Revision History
- *
- * Date     Who         Description
- * 02/04/2014   Mark Riddoch        Initial implementation
- * 17/02/2015   Massimiliano Pinto  Addition of slave port and username in diagnostics
- * 18/02/2015   Massimiliano Pinto  Addition of dcb_close in closeSession
- * 07/05/2015   Massimiliano Pinto  Addition of MariaDB 10 compatibility support
- * 12/06/2015   Massimiliano Pinto  Addition of MariaDB 10 events in diagnostics()
- * 29/06/2015   Massimiliano Pinto  Addition of master.ini for easy startup configuration
- *                                  If not found router goes into BLRM_UNCONFIGURED state.
- *                                  Cache dir is 'cache' under router->binlogdir.
- * 07/08/2015   Massimiliano Pinto  Addition of binlog check at startup if trx_safe is on
- * 21/08/2015   Massimiliano Pinto  Added support for new config options:
- *                                  master_uuid, master_hostname, master_version
- *                                  If set those values are sent to slaves instead of
- *                                  saved master responses
- * 23/08/2015   Massimiliano Pinto  Added strerror_r
- * 09/09/2015   Martin Brampton     Modify error handler
- * 30/09/2015   Massimiliano Pinto  Addition of send_slave_heartbeat option
- * 23/10/2015   Markus Makela       Added current_safe_event
- * 27/10/2015   Martin Brampton     Amend getCapabilities to return RCAP_TYPE_NO_RSESSION
- * 19/04/2016   Massimiliano Pinto  UUID generation now comes from libuuid
- * 05/07/2016   Massimiliano Pinto  errorReply now handles error message in SHOW SLAVE STATUS
- *                                  for connection error and authentication failure.
- * 11/07/2016   Massimiliano Pinto  Added SSL backend support
- * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
- * 24/08/2016   Massimiliano Pinto  Added slave notification via CS_WAIT_DATA new state
- * 26/08/2016   Massimiliano Pinto  Addition of Start Encription Event description
- * 29/08/2016   Massimiliano Pinto  Addition of encrypt_binlog option
- * 08/11/2016   Massimiliano Pinto  Added destroyInstance()
- * 24/11/2016   Massimiliano Pinto  Addition of encryption options:
- *                                  encryption_algorithm and encryption_key_file
- *
- * @endverbatim
  */
 
 #include "blr.h"
+
+#include <ctype.h>
+#include <ini.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <time.h>
-#include <maxscale/service.h>
-#include <maxscale/server.h>
-#include <maxscale/router.h>
-#include <maxscale/atomic.h>
-#include <maxscale/utils.h>
-#include <maxscale/secrets.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/housekeeper.h>
-#include <maxscale/worker.h>
-#include <time.h>
-
-#include <maxscale/log_manager.h>
-
-#include <maxscale/protocol/mysql.h>
-#include <ini.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <uuid/uuid.h>
+
 #include <maxscale/alloc.h>
-#include <inttypes.h>
+#include <maxscale/atomic.h>
+#include <maxscale/dcb.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/router.h>
+#include <maxscale/secrets.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/users.h>
+#include <maxscale/utils.h>
+#include <maxscale/worker.h>
 
 /* The router entry points */
 static  MXS_ROUTER  *createInstance(SERVICE *service, char **options);

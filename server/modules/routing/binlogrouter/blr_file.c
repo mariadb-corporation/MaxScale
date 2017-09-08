@@ -13,66 +13,33 @@
 
 /**
  * @file blr_file.c - contains code for the router binlog file management
- *
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                 Description
- * 14/04/2014   Mark Riddoch        Initial implementation
- * 07/05/2015   Massimiliano Pinto  Added MAX_EVENT_TYPE_MARIADB10
- * 08/06/2015   Massimiliano Pinto  Addition of blr_cache_read_master_data()
- * 15/06/2015   Massimiliano Pinto  Addition of blr_file_get_next_binlogname()
- * 23/06/2015   Massimiliano Pinto  Addition of blr_file_use_binlog, blr_file_create_binlog
- * 29/06/2015   Massimiliano Pinto  Addition of blr_file_write_master_config()
- *                                  Cache directory is now 'cache' under router->binlogdir
- * 05/08/2015   Massimiliano Pinto  Initial implementation of transaction safety
- * 24/08/2015   Massimiliano Pinto  Added strerror_r
- * 26/08/2015   Massimiliano Pinto  Added MariaDB 10 GTID event check with flags = 0
- *                                  This is the current supported condition for detecting
- *                                  MariaDB 10 transaction start point.
- *                                  It's no longer using QUERY_EVENT with BEGIN
- * 23/10/2015   Markus Makela       Added current_safe_event
- * 26/04/2016   Massimiliano Pinto  Added MariaDB 10.0 and 10.1 GTID event flags detection
- * 11/07/2016   Massimiliano Pinto  Added SSL backend support
- * 16/09/2016   Massimiliano Pinto  Addition of IGNORABLE_EVENT in case of a missing event
- *                                  detected from master binlog stream
- * 19/09/2016   Massimiliano Pinto  START_ENCRYPTION_EVENT is detected by maxbinlocheck.
- * 21/09/2016   Massimiliano Pinto  Addition of START_ENCRYPTION_EVENT: new event is written
- * 25/11/2016   Massimiliano Pinto  Binlog files can be encrypted with specified AES key
- *                                  and AES algorithm (Only AES_CTR right now).
- *                                  Events are decrypted before being sent to slaves.
- *                                  Events larger than 16MBytes are currently not suitable
- *                                  for ecryption/decryption.
- * 29/11/2016   Massimiliano Pinto  Binlog files can be encrypted with AES_CBC
- *
- * @endverbatim
  */
 
 #include "blr.h"
 
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <dirent.h>
-#include <fcntl.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <maxscale/service.h>
-#include <maxscale/server.h>
-#include <maxscale/router.h>
-#include <maxscale/atomic.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/paths.h>
-#include <maxscale/log_manager.h>
+
 #include <maxscale/alloc.h>
-#include <inttypes.h>
-#include <maxscale/secrets.h>
+#include <maxscale/atomic.h>
+#include <maxscale/dcb.h>
 #include <maxscale/encryption.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/paths.h>
+#include <maxscale/router.h>
+#include <maxscale/secrets.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/utils.h>
 
 /**
  * AES_CTR handling

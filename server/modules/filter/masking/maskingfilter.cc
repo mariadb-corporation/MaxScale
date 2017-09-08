@@ -13,8 +13,11 @@
 
 #define MXS_MODULE_NAME "masking"
 #include "maskingfilter.hh"
-#include <maxscale/paths.h>
+
 #include <maxscale/modulecmd.h>
+#include <maxscale/paths.h>
+#include <maxscale/utils.h>
+
 #include "maskingrules.hh"
 
 using std::auto_ptr;

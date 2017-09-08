@@ -14,22 +14,22 @@
 #include "readwritesplit.hh"
 
 #include <inttypes.h>
-#include <stdio.h>
-#include <strings.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <cmath>
 #include <new>
 
-
-#include <maxscale/router.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/alloc.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/router.h>
+#include <maxscale/spinlock.h>
 
 #include "rwsplit_internal.hh"
 #include "rwsplitsession.hh"

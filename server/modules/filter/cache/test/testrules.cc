@@ -11,13 +11,15 @@
  * Public License.
  */
 
-#include <stdlib.h>
 #include "rules.h"
+
 #include <maxscale/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/config.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/query_classifier.h>
+
 #if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif

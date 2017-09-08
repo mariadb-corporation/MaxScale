@@ -12,12 +12,16 @@
  */
 
 #include <maxscale/cppdefs.hh>
+
 #include <stdlib.h>
 #include <iostream>
+
 #include <maxscale/alloc.h>
-#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
+#include <maxscale/utils.h>
+
 #include "storagefactory.hh"
 #include "teststorage.hh"
 

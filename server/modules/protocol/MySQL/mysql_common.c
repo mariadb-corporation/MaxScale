@@ -17,12 +17,13 @@
 
 #include <netinet/tcp.h>
 
-#include <maxscale/utils.h>
-#include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/utils.h>
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 

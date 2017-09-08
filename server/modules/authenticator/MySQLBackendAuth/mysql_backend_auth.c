@@ -20,20 +20,14 @@
  * The "heavy lifting" of the authentication is done by the protocol module so
  * the only thing left for this module is to read the final OK packet from the
  * server.
- *
- * @verbatim
- * Revision History
- * Date         Who                     Description
- * 27/09/2016   Markus Makela           Initial version
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "MySQLBackendAuth"
 
+#include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/alloc.h>
+#include <maxscale/server.h>
 #include <maxscale/utils.h>
 
 /** Authentication states */

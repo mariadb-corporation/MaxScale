@@ -18,8 +18,9 @@
 #include <inttypes.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/query_classifier.h>
 #include <maxscale/modutil.h>
+#include <maxscale/poll.h>
+#include <maxscale/query_classifier.h>
 
 namespace schemarouter
 {

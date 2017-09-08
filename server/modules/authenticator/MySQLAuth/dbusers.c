@@ -17,21 +17,21 @@
 
 #include "mysql_auth.h"
 
-#include <stdio.h>
 #include <ctype.h>
-#include <mysql.h>
 #include <netdb.h>
+#include <stdio.h>
 
+#include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/mysql_utils.h>
+#include <maxscale/paths.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/router.h>
+#include <maxscale/secrets.h>
 #include <maxscale/service.h>
 #include <maxscale/users.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/secrets.h>
-#include <maxscale/protocol/mysql.h>
-#include <mysqld_error.h>
-#include <maxscale/mysql_utils.h>
-#include <maxscale/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/utils.h>
 
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"

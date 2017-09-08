@@ -13,11 +13,13 @@
 
 #define MXS_MODULE_NAME "GSSAPIBackendAuth"
 
-#include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
+#include <maxscale/authenticator.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/server.h>
+
 #include "../gssapi_auth.h"
 
 /**

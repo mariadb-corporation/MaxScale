@@ -13,12 +13,15 @@
 
 #define MXS_MODULE_NAME "cache"
 #include "cachefilter.hh"
+
 #include <maxscale/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/jansson.hh>
 #include <maxscale/modulecmd.h>
+#include <maxscale/paths.h>
+#include <maxscale/utils.h>
+
 #include "cachemt.hh"
 #include "cachept.hh"
-#include "maxscale/jansson.hh"
 
 using std::auto_ptr;
 using std::string;

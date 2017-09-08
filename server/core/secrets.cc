@@ -14,16 +14,16 @@
 #include <maxscale/secrets.h>
 
 #include <ctype.h>
-#include <time.h>
-#include <sys/stat.h>
-
 #include <openssl/aes.h>
+#include <sys/stat.h>
+#include <time.h>
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/random_jkiss.h>
+#include <maxscale/utils.h>
 
 #include "maxscale/secrets.h"
 

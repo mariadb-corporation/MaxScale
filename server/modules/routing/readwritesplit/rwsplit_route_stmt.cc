@@ -14,14 +14,15 @@
 #include "readwritesplit.hh"
 #include "rwsplit_internal.hh"
 
-#include <strings.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 #include <maxscale/alloc.h>
-#include <maxscale/router.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/modutil.h>
+#include <maxscale/router.h>
 
 /**
  * The functions that support the routing of queries to back end

@@ -36,12 +36,8 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#include <maxscale/housekeeper.h>
-#include <maxscale/poll.h>
-#include <maxscale/router.h>
-#include <maxscale/service.h>
-#include <maxscale/users.h>
-#include <maxscale/utils.h>
+#include <maxscale/dcb.h>
+#include <maxscale/session.h>
 #include <maxscale/version.h>
 
 MXS_BEGIN_DECLS

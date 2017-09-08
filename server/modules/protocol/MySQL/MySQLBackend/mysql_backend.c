@@ -13,15 +13,16 @@
 
 #define MXS_MODULE_NAME "MySQLBackend"
 
-#include <maxscale/protocol/mysql.h>
+#include <maxscale/alloc.h>
 #include <maxscale/limits.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/modutil.h>
-#include <maxscale/utils.h>
-#include <mysqld_error.h>
-#include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/poll.h>
 #include <maxscale/protocol.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/router.h>
+#include <maxscale/utils.h>
 
 /*
  * MySQL Protocol module for handling the protocol between the gateway

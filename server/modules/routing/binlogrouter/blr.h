@@ -16,48 +16,24 @@
 
 /**
  * @file blr.h - The binlog router header file
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 02/04/14     Mark Riddoch            Initial implementation
- * 25/05/15     Massimiliano Pinto      Added BLRM_SLAVE_STOPPED state
- * 05/06/15     Massimiliano Pinto      Addition of m_errno, m_errmsg fields
- * 08/06/15     Massimiliano Pinto      Modification of MYSQL_ERROR_CODE and MYSQL_ERROR_MSG
- * 11/05/15     Massimiliano Pinto      Added mariadb10_compat to master and slave structs
- * 12/06/15     Massimiliano Pinto      Added mariadb10 new events
- * 23/06/15     Massimiliano Pinto      Addition of MASTER_SERVER_CFG struct
- * 24/06/15     Massimiliano Pinto      Added BLRM_UNCONFIGURED state
- * 05/08/15     Massimiliano Pinto      Initial implementation of transaction safety
- * 23/10/15     Markus Makela           Added current_safe_event
- * 26/04/16     Massimiliano Pinto      Added MariaDB 10.0 and 10.1 GTID event flags detection
- * 11/07/16     Massimiliano Pinto      Added SSL backend support
- * 22/07/16     Massimiliano Pinto      Added Semi-Sync replication support
- * 24/08/16     Massimiliano Pinto      Added slave notification state CS_WAIT_DATA.
- *                                      State CS_UPTODATE removed.
- * 01/09/2016   Massimiliano Pinto      Added support for ANNOTATE_ROWS_EVENT in COM_BINLOG_DUMP
- * 16/09/2016   Massimiliano Pinto      Addition of MARIADB10_START_ENCRYPTION_EVENT 0xa4
- * 19/09/2016   Massimiliano Pinto      Added encrypt_binlog=0|1 option
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "binlogrouter"
 
 #include <maxscale/cdefs.h>
 
-#include <stdint.h>
 #include <openssl/aes.h>
 #include <pthread.h>
+#include <stdint.h>
 #include <zlib.h>
 
-#include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
-#include <maxscale/thread.h>
+#include <maxscale/dcb.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
+#include <maxscale/service.h>
 #include <maxscale/sqlite3.h>
+#include <maxscale/thread.h>
 
 MXS_BEGIN_DECLS
 

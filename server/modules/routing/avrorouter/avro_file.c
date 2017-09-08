@@ -20,27 +20,21 @@
  *
  * Parts of this file have been copied from blr_file.c and modified for other
  * uses.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 25/02/2016   Markus Mäkelä   Initial implementation
- *
- * @endverbatim
  */
 
 #include "avrorouter.h"
 
 #include <binlog_common.h>
 #include <blr_constants.h>
-#include <sys/stat.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/pcre2.h>
+#include <glob.h>
 #include <ini.h>
 #include <stdlib.h>
-#include <glob.h>
+#include <sys/stat.h>
+
 #include <maxscale/alloc.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/pcre2.h>
+#include <maxscale/utils.h>
 
 static const char *statefile_section = "avro-conversion";
 static const char *ddl_list_name = "table-ddl.list";

@@ -25,58 +25,32 @@
  * The current prototype implement is designed to support MySQL 5.6 and has
  * a number of limitations. This prototype is merely a proof of concept and
  * should not be considered production ready.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                 Description
- * 02/04/2014   Mark Riddoch        Initial implementation
- * 07/05/2015   Massimiliano Pinto  Added MariaDB 10 Compatibility
- * 25/05/2015   Massimiliano Pinto  Added BLRM_SLAVE_STOPPED state
- * 08/06/2015   Massimiliano Pinto  Added m_errno and m_errmsg
- * 23/06/2015   Massimiliano Pinto  Master communication goes into BLRM_SLAVE_STOPPED state
- *                                  when an error is encountered in BLRM_BINLOGDUMP state.
- *                                  Server error code and msg are reported via SHOW SLAVE STATUS
- * 03/08/2015   Massimiliano Pinto  Initial implementation of transaction safety
- * 13/08/2015   Massimiliano Pinto  Addition of heartbeat check
- * 23/08/2015   Massimiliano Pinto  Added strerror_r
- * 26/08/2015   Massimiliano Pinto  Added MariaDB 10 GTID event check with flags = 0
- *                                  This is the current supported condition for detecting
- *                                  MariaDB 10 transaction start point.
- *                                  It's no longer using QUERY_EVENT with BEGIN
- * 25/09/2015   Massimiliano Pinto  Addition of lastEventReceived for slaves
- * 23/10/2015   Markus Makela       Added current_safe_event
- * 26/04/2016   Massimiliano Pinto  Added MariaDB 10.0 and 10.1 GTID event flags detection
- * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
- * 24/08/2016   Massimiliano Pinto  Added slave notification and blr_distribute_binlog_record removed
- * 01/09/2016   Massimiliano Pinto  Added support for ANNOTATE_ROWS_EVENT in COM_BINLOG_DUMP
- * 11/11/2016   Massimiliano Pinto  Encryption context is freed and set to null a new binlog file
- *                                  is being created due to ROTATE event.
- *
- * @endverbatim
  */
 
 #include "blr.h"
+
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/service.h>
-#include <maxscale/server.h>
-#include <maxscale/router.h>
-#include <maxscale/atomic.h>
-#include <maxscale/session.h>
-#include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/housekeeper.h>
-#include <maxscale/buffer.h>
-#include <maxscale/worker.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/thread.h>
-#include <maxscale/protocol/mysql.h>
+#include <sys/types.h>
+
 #include <maxscale/alloc.h>
-#include <inttypes.h>
+#include <maxscale/atomic.h>
+#include <maxscale/buffer.h>
+#include <maxscale/dcb.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/router.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/thread.h>
+#include <maxscale/utils.h>
+#include <maxscale/worker.h>
 
 static GWBUF *blr_make_query(DCB *dcb, char *query);
 static GWBUF *blr_make_registration(ROUTER_INSTANCE *router);

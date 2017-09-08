@@ -13,27 +13,18 @@
 
 /**
  * @file modutil.c  - Implementation of useful routines for modules
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 04/06/14     Mark Riddoch            Initial implementation
- * 24/10/14     Massimiliano Pinto      Added modutil_send_mysql_err_packet, modutil_create_mysql_err_msg
- * 04/01/16     Martin Brampton         Streamline code in modutil_get_complete_packets
- *
- * @endverbatim
  */
 
 #include <string.h>
 #include <strings.h>
 
-#include <maxscale/buffer.h>
-#include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
-#include <maxscale/poll.h>
+#include <maxscale/buffer.h>
 #include <maxscale/modutil.h>
 #include <maxscale/platform.h>
+#include <maxscale/poll.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/utils.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
 static SPINLOCK re_lock = SPINLOCK_INIT;

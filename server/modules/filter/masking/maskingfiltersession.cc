@@ -13,11 +13,15 @@
 
 #define MXS_MODULE_NAME "masking"
 #include "maskingfiltersession.hh"
+
 #include <sstream>
+
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/poll.h>
 #include <maxscale/protocol/mysql.h>
+
 #include "maskingfilter.hh"
 #include "mysql.hh"
 

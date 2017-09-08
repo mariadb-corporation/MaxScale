@@ -22,10 +22,11 @@
 #include <signal.h>
 #include <string.h>
 #include <algorithm>
+#include <map>
 #include <new>
 #include <string>
-#include <map>
 #include <vector>
+
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
@@ -33,6 +34,8 @@
 #include <maxscale/platform.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
+#include <maxscale/utils.h>
+
 #include "builtin_functions.h"
 
 using std::vector;

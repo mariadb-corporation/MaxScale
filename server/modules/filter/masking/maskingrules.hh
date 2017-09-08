@@ -13,11 +13,14 @@
  */
 
 #include <maxscale/cppdefs.hh>
-#include <memory>
-#include <tr1/memory>
+
 #include <string>
+#include <tr1/memory>
 #include <vector>
-#include <jansson.h>
+
+#include <maxscale/jansson.h>
+#include <maxscale/pcre2.h>
+
 #include "mysql.hh"
 
 /**
