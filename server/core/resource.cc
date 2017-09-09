@@ -777,6 +777,10 @@ public:
             r->add_constraint(Resource::REQUIRE_BODY);
         }
 
+        /**
+         * NOTE: all POST resources added after this DO NOT require a request body.
+         */
+
         /** For all module commands that modify state/data */
         m_post.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
@@ -794,6 +798,10 @@ public:
             SResource& r = *it;
             r->add_constraint(Resource::REQUIRE_BODY);
         }
+
+        /**
+         * NOTE: all PATCH resources added after this DO NOT require a request body.
+         */
 
         /** Change resource states */
         m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));

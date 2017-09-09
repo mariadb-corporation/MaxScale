@@ -353,20 +353,20 @@ new listener.
 }
 ```
 
-The following table contains all values that can be given in the _parameters_
-object.
+The following values can be given in the _parameters_ object. If SSL options are
+provided, the _ssl_key_, _ssl_cert_ and _ssl_ca_cert_ parameters must all be
+defined.
 
-|Parameter              | Description                                       |
-|-----------------------|---------------------------------------------------|
-|port                   | Port to listen on                                 |
-|address                | Interface to listen on                            |
-|authenticator          | Authenticator module                              |
-|authenticator_options  | Options for the authenticator                     |
-|ssl_key                | Path to SSL key                                   |
-|ssl_cert               | Path to SSL certificate                           |
-|ssl_ca_cert            | Path to SSL CA certificate                        |
-|ssl_version            | The SSL version to use [TLSv1.2|TLSv1.1|TLSv1.0]  |
-|ssl_cert_verify_depth  | Certificate verification depth                    |
+- [address](../Getting-Started/Configuration-Guide.md#user-content-address-1)
+- [port](../Getting-Started/Configuration-Guide.md#user-content-port-1)
+- [protocol](../Getting-Started/Configuration-Guide.md#user-content-protocol-1)
+- [authenticator](../Getting-Started/Configuration-Guide.md#user-content-authenticator-1)
+- [authenticator_options](../Getting-Started/Configuration-Guide.md#user-content-authenticator-options-1)
+- [ssl_key](../Getting-Started/Configuration-Guide.md#user-content-ssl_key-1)
+- [ssl_cert](../Getting-Started/Configuration-Guide.md#user-content-ssl_cert-1)
+- [ssl_ca_cert](../Getting-Started/Configuration-Guide.md#user-content-ssl_ca_cert-1)
+- [ssl_version](../Getting-Started/Configuration-Guide.md#user-content-ssl_version-1)
+- [ssl_cert_verify_depth](../Getting-Started/Configuration-Guide.md#user-content-ssl_cert_verify_depth-1)
 
 ### Destroy a listener
 
@@ -379,23 +379,13 @@ service. Both names must have all whitespace replaced with hyphens.
 
 #### Response
 
-OK:
+Listener is destroyed:
 
-```
-Status: 204 No Content
-```
-
-Listener not found:
-
-```
-Status: 404 Not Found
-```
+`Status: 204 No Content`
 
 Listener cannot be deleted:
 
-```
-Status: 403 Forbidden
-```
+`Status: 403 Forbidden`
 
 ### Update a service
 
@@ -426,11 +416,9 @@ Refer to the documentation on these parameters for valid values.
 
 #### Response
 
-Service is modified.
+Service is modified:
 
-```
-Status: 204 No Content
-```
+`Status: 204 No Content`
 
 ### Stop a service
 
@@ -442,7 +430,7 @@ PUT /v1/service/:name/stop
 
 #### Response
 
-Service is stopped.
+Service is stopped:
 
 `Status: 204 No Content`
 
@@ -456,6 +444,6 @@ PUT /v1/service/:name/start
 
 #### Response
 
-Service is started.
+Service is started:
 
 `Status: 204 No Content`

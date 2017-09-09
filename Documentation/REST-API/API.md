@@ -150,7 +150,7 @@ The address and port of the server.
 #### If-Match
 
 The request is performed only if the provided ETag value matches the one on the
-server. This field should be used with PUT requests to prevent concurrent
+server. This field should be used with PATCH requests to prevent concurrent
 updates to the same resource.
 
 The value of this header must be a value from the `ETag` header retrieved from
