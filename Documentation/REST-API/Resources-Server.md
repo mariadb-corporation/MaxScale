@@ -18,9 +18,7 @@ whitespace replaced with hyphens. The server names are case-insensitive.
 
 #### Response
 
-```
-Status: 200 OK
-```
+`Status: 200 OK`
 
 ```javascript
 {
@@ -62,7 +60,13 @@ Status: 200 OK
             "parameters": { // Server parameters
                 "address": "127.0.0.1",
                 "port": 3000,
-                "protocol": "MySQLBackend"
+                "protocol": "MySQLBackend",
+                "authenticator": "MySQLBackendAuth",
+                "ssl_key": "/etc/certs/client-key.pem",
+                "ssl_cert": "/etc/certs/client-cert.pem",
+                "ssl_ca_cert": "/etc/certs/ca.pem",
+                "ssl_cert_verify_depth": 9,
+                "ssl_version": "MAX"
             },
             "state": "Master, Running", // Server state string
             "version_string": "10.1.22-MariaDB", // Server version
@@ -85,12 +89,6 @@ Status: 200 OK
 }
 ```
 
-Server not found:
-
-```
-Status: 404 Not Found
-```
-
 ### Get all servers
 
 ```
@@ -101,9 +99,7 @@ GET /v1/servers
 
 Response contains a resource collection with all servers.
 
-```
-Status: 200 OK
-```
+`Status: 200 OK`
 
 ```javascript
 {
@@ -146,7 +142,13 @@ Status: 200 OK
                 "parameters": {
                     "address": "127.0.0.1",
                     "port": 3000,
-                    "protocol": "MySQLBackend"
+                    "protocol": "MySQLBackend",
+                    "authenticator": "MySQLBackendAuth",
+                    "ssl_key": "/etc/certs/client-key.pem",
+                    "ssl_cert": "/etc/certs/client-cert.pem",
+                    "ssl_ca_cert": "/etc/certs/ca.pem",
+                    "ssl_cert_verify_depth": 9,
+                    "ssl_version": "MAX"
                 },
                 "state": "Master, Running",
                 "version_string": "10.1.22-MariaDB",
@@ -197,7 +199,12 @@ Status: 200 OK
                 "parameters": {
                     "address": "127.0.0.1",
                     "port": 3001,
-                    "protocol": "MySQLBackend"
+                    "protocol": "MySQLBackend",
+                    "ssl_key": "/etc/certs/client-key.pem",
+                    "ssl_cert": "/etc/certs/client-cert.pem",
+                    "ssl_ca_cert": "/etc/certs/ca.pem",
+                    "ssl_cert_verify_depth": 9,
+                    "ssl_version": "MAX"
                 },
                 "state": "Slave, Running",
                 "version_string": "10.1.22-MariaDB",
@@ -295,20 +302,21 @@ The following parameters can be defined when a server is being created.
 - [protocol](../Getting-Started/Configuration-Guide.md#protocol)
 - [authenticator](../Getting-Started/Configuration-Guide.md#authenticator)
 - [authenticator_options](../Getting-Started/Configuration-Guide.md#authenticator-options)
+- [ssl_key](../Getting-Started/Configuration-Guide.md#ssl_key)
+- [ssl_cert](../Getting-Started/Configuration-Guide.md#ssl_cert)
+- [ssl_ca_cert](../Getting-Started/Configuration-Guide.md#ssl_ca_cert)
+- [ssl_version](../Getting-Started/Configuration-Guide.md#ssl_version)
+- [ssl_cert_verify_depth](../Getting-Started/Configuration-Guide.md#ssl_cert_verify_depth)
 
 #### Response
 
 Server created:
 
-```
-Status: 204 No Content
-```
+`Status: 204 No Content`
 
 Invalid JSON body:
 
-```
-Status: 403 Forbidden
-```
+`Status: 403 Forbidden`
 
 ### Update a server
 
@@ -444,32 +452,20 @@ Request for `PUT /v1/server/server1`:
 }
 ```
 
-The current implementation accepts PATCH requests with partially defined
-resources as request body. If parts of the resource are not defined (e.g. the
-`attributes` field in the above example), those parts of the resource are not
-modified. All parts that are defined are interpreted as the new definition of
-those part of the resource. In the above example, the `relationships` of the
-resource are completely redefined.
+If parts of the resource are not defined (e.g. the `attributes` field in the
+above example), those parts of the resource are not modified. All parts that are
+defined are interpreted as the new definition of those part of the resource. In
+the above example, the `relationships` of the resource are completely redefined.
 
 #### Response
 
 Server modified:
 
-```
-Status: 204 No Content
-```
-
-Server not found:
-
-```
-Status: 404 Not Found
-```
+`Status: 204 No Content`
 
 Invalid JSON body:
 
-```
-Status: 403 Forbidden
-```
+`Status: 403 Forbidden`
 
 ### Destroy a server
 
@@ -484,23 +480,13 @@ A server can only be deleted if it is not used by any services or monitors.
 
 #### Response
 
-OK:
+Server is destroyed:
 
-```
-Status: 204 No Content
-```
-
-Server not found:
-
-```
-Status: 404 Not Found
-```
+`Status: 204 No Content`
 
 Server is in use:
 
-```
-Status: 403 Forbidden
-```
+`Status: 403 Forbidden`
 
 ### Set server state
 
@@ -531,23 +517,13 @@ PUT /v1/servers/db-server-1/set?state=maintenance
 
 #### Response
 
-OK:
+Server state modified:
 
-```
-Status: 204 No Content
-```
-
-Server not found:
-
-```
-Status: 404 Not Found
-```
+`Status: 204 No Content`
 
 Missing or invalid parameter:
 
-```
-Status: 403 Forbidden
-```
+`Status: 403 Forbidden`
 
 ### Clear server state
 
@@ -562,20 +538,10 @@ _set_ endpoint documentation.
 
 #### Response
 
-OK:
+Server state modified:
 
-```
-Status: 204 No Content
-```
-
-Server not found:
-
-```
-Status: 404 Not Found
-```
+`Status: 204 No Content`
 
 Missing or invalid parameter:
 
-```
-Status: 403 Forbidden
-```
+`Status: 403 Forbidden`
