@@ -35,10 +35,7 @@
 #include "maxscale/modules.h"
 #include "maxscale/service.h"
 
-using std::string;
-using std::stringstream;
-using std::set;
-using mxs::Closer;
+typedef std::set<std::string> StringSet;
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
@@ -53,9 +50,9 @@ static void runtime_error(const char* fmt, ...)
     va_end(list);
 }
 
-static string runtime_get_error()
+static std::string runtime_get_error()
 {
-    string rval(runtime_errmsg);
+    std::string rval(runtime_errmsg);
     runtime_errmsg[0] = '\0';
     return rval;
 }
@@ -519,8 +516,8 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
 
 bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue)
 {
-    string key(zKey);
-    string value(zValue);
+    std::string key(zKey);
+    std::string value(zValue);
     bool valid = false;
 
     spinlock_acquire(&crt_lock);
@@ -625,7 +622,7 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
 bool runtime_alter_maxscale(const char* name, const char* value)
 {
     MXS_CONFIG& cnf = *config_get_global_options();
-    string key = name;
+    std::string key = name;
     bool rval = false;
 
     spinlock_acquire(&crt_lock);
@@ -932,9 +929,9 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     return rval;
 }
 
-static bool extract_relations(json_t* json, set<string>& relations,
+static bool extract_relations(json_t* json, StringSet& relations,
                               const char** relation_types,
-                              bool (*relation_check)(const string&, const string&))
+                              bool (*relation_check)(const std::string&, const std::string&))
 {
     bool rval = true;
 
@@ -955,8 +952,8 @@ static bool extract_relations(json_t* json, set<string>& relations,
                 if (id && json_is_string(id) &&
                     type && json_is_string(type))
                 {
-                    string id_value = json_string_value(id);
-                    string type_value = json_string_value(type);
+                    std::string id_value = json_string_value(id);
+                    std::string type_value = json_string_value(type);
 
                     if (relation_check(type_value, id_value))
                     {
@@ -1100,17 +1097,17 @@ const char* server_relation_types[] =
     NULL
 };
 
-static bool server_relation_is_valid(const string& type, const string& value)
+static bool server_relation_is_valid(const std::string& type, const std::string& value)
 {
     return (type == CN_SERVICES && service_find(value.c_str())) ||
            (type == CN_MONITORS && monitor_find(value.c_str()));
 }
 
-static bool unlink_server_from_objects(SERVER* server, set<string>& relations)
+static bool unlink_server_from_objects(SERVER* server, StringSet& relations)
 {
     bool rval = true;
 
-    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
     {
         if (!runtime_unlink_server(server, it->c_str()))
         {
@@ -1121,11 +1118,11 @@ static bool unlink_server_from_objects(SERVER* server, set<string>& relations)
     return rval;
 }
 
-static bool link_server_to_objects(SERVER* server, set<string>& relations)
+static bool link_server_to_objects(SERVER* server, StringSet& relations)
 {
     bool rval = true;
 
-    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
     {
         if (!runtime_link_server(server, it->c_str()))
         {
@@ -1138,12 +1135,12 @@ static bool link_server_to_objects(SERVER* server, set<string>& relations)
     return rval;
 }
 
-static string json_int_to_string(json_t* json)
+static std::string json_int_to_string(json_t* json)
 {
     char str[25]; // Enough to store any 64-bit integer value
     int64_t i = json_integer_value(json);
     snprintf(str, sizeof(str), "%ld", i);
-    return string(str);
+    return std::string(str);
 }
 
 SERVER* runtime_create_server_from_json(json_t* json)
@@ -1157,14 +1154,14 @@ SERVER* runtime_create_server_from_json(json_t* json)
         const char* address = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS));
 
         /** The port needs to be in string format */
-        string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
+        std::string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
 
         /** Optional parameters */
         const char* protocol = get_string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
         const char* authenticator = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
         const char* authenticator_options = get_string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
 
-        set<string> relations;
+        StringSet relations;
 
         if (extract_relations(json, relations, server_relation_types, server_relation_is_valid))
         {
@@ -1198,14 +1195,14 @@ bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_js
     }
 
     bool rval = false;
-    set<string> old_relations;
-    set<string> new_relations;
+    StringSet old_relations;
+    StringSet new_relations;
 
     if (extract_relations(old_json, old_relations, server_relation_types, server_relation_is_valid) &&
         extract_relations(new_json, new_relations, server_relation_types, server_relation_is_valid))
     {
-        set<string> removed_relations;
-        set<string> added_relations;
+        StringSet removed_relations;
+        StringSet added_relations;
 
         std::set_difference(old_relations.begin(), old_relations.end(),
                             new_relations.begin(), new_relations.end(),
@@ -1228,7 +1225,7 @@ bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_js
 bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 {
     bool rval = false;
-    Closer<json_t*> old_json(server_to_json(server, ""));
+    mxs::Closer<json_t*> old_json(server_to_json(server, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
@@ -1271,7 +1268,7 @@ const char* object_relation_types[] =
     NULL
 };
 
-static bool object_relation_is_valid(const string& type, const string& value)
+static bool object_relation_is_valid(const std::string& type, const std::string& value)
 {
     return type == CN_SERVERS && server_find_by_unique_name(value.c_str());
 }
@@ -1308,7 +1305,7 @@ static bool validate_monitor_json(json_t* json)
         }
         else
         {
-            set<string> relations;
+            StringSet relations;
             if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
             {
                 rval = true;
@@ -1319,11 +1316,11 @@ static bool validate_monitor_json(json_t* json)
     return rval;
 }
 
-static bool unlink_object_from_servers(const char* target, set<string>& relations)
+static bool unlink_object_from_servers(const char* target, StringSet& relations)
 {
     bool rval = true;
 
-    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
     {
         SERVER* server = server_find_by_unique_name(it->c_str());
 
@@ -1337,11 +1334,11 @@ static bool unlink_object_from_servers(const char* target, set<string>& relation
     return rval;
 }
 
-static bool link_object_to_servers(const char* target, set<string>& relations)
+static bool link_object_to_servers(const char* target, StringSet& relations)
 {
     bool rval = true;
 
-    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
     {
         SERVER* server = server_find_by_unique_name(it->c_str());
 
@@ -1390,14 +1387,14 @@ bool object_to_server_relations(const char* target, json_t* old_json, json_t* ne
     }
 
     bool rval = false;
-    set<string> old_relations;
-    set<string> new_relations;
+    StringSet old_relations;
+    StringSet new_relations;
 
     if (extract_relations(old_json, old_relations, object_relation_types, object_relation_is_valid) &&
         extract_relations(new_json, new_relations, object_relation_types, object_relation_is_valid))
     {
-        set<string> removed_relations;
-        set<string> added_relations;
+        StringSet removed_relations;
+        StringSet added_relations;
 
         std::set_difference(old_relations.begin(), old_relations.end(),
                             new_relations.begin(), new_relations.end(),
@@ -1424,7 +1421,7 @@ bool object_to_server_relations(const char* target, json_t* old_json, json_t* ne
 bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 {
     bool rval = false;
-    Closer<json_t*> old_json(monitor_to_json(monitor, ""));
+    mxs::Closer<json_t*> old_json(monitor_to_json(monitor, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
@@ -1479,7 +1476,7 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
  * @param key Parameter name
  * @return True if the parameter can be altered
  */
-static bool is_dynamic_param(const string& key)
+static bool is_dynamic_param(const std::string& key)
 {
     return key != CN_TYPE &&
            key != CN_ROUTER &&
@@ -1490,7 +1487,7 @@ static bool is_dynamic_param(const string& key)
 bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
 {
     bool rval = false;
-    Closer<json_t*> old_json(service_to_json(service, ""));
+    mxs::Closer<json_t*> old_json(service_to_json(service, ""));
     ss_dassert(old_json.get());
 
     if (is_valid_resource_body(new_json) &&
@@ -1505,7 +1502,7 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
         if (parameters)
         {
             /** Create a set of accepted service parameters */
-            set<string> paramset;
+            StringSet paramset;
             for (int i = 0; config_service_params[i]; i++)
             {
                 if (is_dynamic_param(config_service_params[i]))
@@ -1683,7 +1680,7 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
 
     if (validate_listener_json(json))
     {
-        string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
+        std::string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
 
         const char* id = get_string_or_null(json, MXS_JSON_PTR_ID);
         const char* address = get_string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
@@ -1708,7 +1705,7 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
 json_t* runtime_get_json_error()
 {
     json_t* obj = NULL;
-    string errmsg = runtime_get_error();
+    std::string errmsg = runtime_get_error();
 
     if (errmsg.length())
     {
@@ -1793,7 +1790,7 @@ bool runtime_create_user_from_json(json_t* json)
     {
         const char* user = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
-        string strtype = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
+        std::string strtype = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
         user_account_type type = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
         const char* err = NULL;
 
