@@ -40,7 +40,8 @@ typedef enum ssl_method_type
 #endif
     SERVICE_SSL_MAX,
     SERVICE_TLS_MAX,
-    SERVICE_SSL_TLS_MAX
+    SERVICE_SSL_TLS_MAX,
+    SERVICE_SSL_UNKNOWN
 } ssl_method_type_t;
 
 /**
@@ -75,6 +76,7 @@ bool ssl_check_data_to_process(struct dcb *dcb);
 bool ssl_required_by_dcb(struct dcb *dcb);
 bool ssl_required_but_not_negotiated(struct dcb *dcb);
 const char* ssl_method_type_to_string(ssl_method_type_t method_type);
+ssl_method_type_t string_to_ssl_method_type(const char* str);
 
 /**
  * Helper function for client ssl authentication. Authenticates and checks changes

@@ -1143,6 +1143,85 @@ static std::string json_int_to_string(json_t* json)
     return std::string(str);
 }
 
+static inline bool have_ssl_json(json_t* params)
+{
+    return mxs_json_pointer(params, CN_SSL_KEY) ||
+        mxs_json_pointer(params, CN_SSL_CERT) ||
+        mxs_json_pointer(params, CN_SSL_CA_CERT) ||
+        mxs_json_pointer(params, CN_SSL_VERSION) ||
+        mxs_json_pointer(params, CN_SSL_CERT_VERIFY_DEPTH);
+}
+
+static bool validate_ssl_json(json_t* params)
+{
+    bool rval = true;
+
+    if (is_string_or_null(params, CN_SSL_KEY) &&
+        is_string_or_null(params, CN_SSL_CERT) &&
+        is_string_or_null(params, CN_SSL_CA_CERT) &&
+        is_string_or_null(params, CN_SSL_VERSION) &&
+        is_count_or_null(params, CN_SSL_CERT_VERIFY_DEPTH))
+    {
+        if (!mxs_json_pointer(params, CN_SSL_KEY) ||
+            !mxs_json_pointer(params, CN_SSL_CERT) ||
+            !mxs_json_pointer(params, CN_SSL_CA_CERT))
+        {
+            runtime_error("SSL configuration requires '%s', '%s' and '%s' parameters");
+            rval = false;
+        }
+
+        json_t* ssl_version = mxs_json_pointer(params, CN_SSL_VERSION);
+        const char* ssl_version_str = ssl_version ? json_string_value(ssl_version) : NULL;
+
+        if (ssl_version_str && string_to_ssl_method_type(ssl_version_str) == SERVICE_SSL_UNKNOWN)
+        {
+            runtime_error("Invalid value for '%s': %s", CN_SSL_VERSION, ssl_version_str);
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
+static bool process_ssl_parameters(SERVER* server, json_t* params)
+{
+    ss_dassert(server->server_ssl == NULL);
+    bool rval = true;
+
+    if (have_ssl_json(params))
+    {
+        if (validate_ssl_json(params))
+        {
+            char buf[20]; // Enough to hold the string form of the ssl_cert_verify_depth
+            const char* key = json_string_value(mxs_json_pointer(params, CN_SSL_KEY));
+            const char* cert = json_string_value(mxs_json_pointer(params, CN_SSL_CERT));
+            const char* ca = json_string_value(mxs_json_pointer(params, CN_SSL_CA_CERT));
+            const char* version = json_string_value(mxs_json_pointer(params, CN_SSL_VERSION));
+            const char* depth = NULL;
+            json_t* depth_json = mxs_json_pointer(params, CN_SSL_CERT_VERIFY_DEPTH);
+
+            if (depth_json)
+            {
+                snprintf(buf, sizeof(buf), "%lld", json_integer_value(depth_json));
+                depth = buf;
+            }
+
+            if (!runtime_enable_server_ssl(server, key, cert, ca, version, depth))
+            {
+                runtime_error("Failed to initialize SSL for server '%s'. See "
+                              "error log for more details.", server->unique_name);
+                rval = false;
+            }
+        }
+        else
+        {
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
 SERVER* runtime_create_server_from_json(json_t* json)
 {
     SERVER* rval = NULL;
@@ -1169,8 +1248,10 @@ SERVER* runtime_create_server_from_json(json_t* json)
             {
                 rval = server_find_by_unique_name(name);
                 ss_dassert(rval);
+                json_t* param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
 
-                if (!link_server_to_objects(rval, relations))
+                if (!process_ssl_parameters(rval, param) ||
+                    !link_server_to_objects(rval, relations))
                 {
                     runtime_destroy_server(rval);
                     rval = NULL;
@@ -1662,11 +1743,7 @@ static bool validate_listener_json(json_t* json)
              is_string_or_null(param, CN_ADDRESS) &&
              is_string_or_null(param, CN_AUTHENTICATOR) &&
              is_string_or_null(param, CN_AUTHENTICATOR_OPTIONS) &&
-             is_string_or_null(param, CN_SSL_KEY) &&
-             is_string_or_null(param, CN_SSL_CERT) &&
-             is_string_or_null(param, CN_SSL_CA_CERT) &&
-             is_string_or_null(param, CN_SSL_VERSION) &&
-             is_count_or_null(param, CN_SSL_CERT_VERIFY_DEPTH))
+             validate_ssl_json(param))
     {
         rval = true;
     }

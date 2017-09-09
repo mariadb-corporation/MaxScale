@@ -1419,6 +1419,17 @@ static json_t* server_json_attributes(const SERVER* server)
         json_object_set_new(params, CN_MONITORPW, json_string(server->monpw));
     }
 
+    if (server->server_ssl)
+    {
+        json_object_set_new(params, CN_SSL_KEY, json_string(server->server_ssl->ssl_key));
+        json_object_set_new(params, CN_SSL_CERT, json_string(server->server_ssl->ssl_cert));
+        json_object_set_new(params, CN_SSL_CA_CERT, json_string(server->server_ssl->ssl_ca_cert));
+        json_object_set_new(params, CN_SSL_CERT_VERIFY_DEPTH,
+                            json_integer(server->server_ssl->ssl_cert_verify_depth));
+        json_object_set_new(params, CN_SSL_VERSION,
+                            json_string(ssl_method_type_to_string(server->server_ssl->ssl_method_type)));
+    }
+
     for (SERVER_PARAM* p = server->parameters; p; p = p->next)
     {
         json_object_set_new(params, p->name, json_string(p->value));

@@ -216,6 +216,33 @@ const char* ssl_method_type_to_string(ssl_method_type_t method_type)
     }
 }
 
+ssl_method_type_t string_to_ssl_method_type(const char* str)
+{
+    if (strcasecmp("MAX", str) == 0)
+    {
+        return SERVICE_SSL_TLS_MAX;
+    }
+
+#ifndef OPENSSL_1_1
+    else if (strcasecmp("TLSV10", str) == 0)
+    {
+        return SERVICE_TLS10;
+    }
+#endif
+#ifdef OPENSSL_1_0
+    else if (strcasecmp("TLSV11", str) == 0)
+    {
+        return SERVICE_TLS11;
+    }
+    else if (strcasecmp("TLSV12", str) == 0)
+    {
+        return SERVICE_TLS12;
+    }
+#endif
+
+    return SERVICE_SSL_UNKNOWN;
+}
+
 int ssl_authenticate_check_status(DCB* dcb)
 {
     int rval = MXS_AUTH_FAILED;
