@@ -90,13 +90,23 @@ int main(int argc, char **argv)
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
+    mxs_log_set_priority_enabled(LOG_NOTICE, false);
+    mxs_log_set_priority_enabled(LOG_ERR, true);
     mxs_log_set_priority_enabled(LOG_DEBUG, false);
     mxs_log_set_priority_enabled(LOG_INFO, false);
-    mxs_log_set_priority_enabled(LOG_NOTICE, false);
-    mxs_log_set_priority_enabled(LOG_ERR, false);
 
-    set_libdir(MXS_STRDUP_A(".."));
-    service = service_alloc("test_service", "binlogrouter");
+    char *lib_dir = getenv("LD_LIBRARY_PATH");
+    if (lib_dir)
+    {
+        set_libdir(MXS_STRDUP_A(lib_dir));
+    }
+
+    if ((service = service_alloc("test_service", "binlogrouter")) == NULL)
+    {
+        printf("Failed to allocate 'service' object\n");
+        return 1;
+    }
+
     strcpy(service->credentials.name, "foo");
     strcpy(service->credentials.authdata, "bar");
 
@@ -109,11 +119,11 @@ int main(int argc, char **argv)
             serviceAddRouterOption(service, s);
             s = strtok_r(NULL, ",", &lasts);
         }
-        set_libdir(MXS_STRDUP_A("../../../authenticator/MySQLBackendAuth/"));
         server = server_alloc("binlog_router_master_host", "_none_", 3306,
                               "MySQLBackend", "MySQLBackendAuth", NULL);
         if (server == NULL)
         {
+            printf("Failed to allocate 'server' object\n");
             return 1;
         }
 
