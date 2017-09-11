@@ -93,12 +93,14 @@ int dbfw_yyparse(void*);
 MXS_END_DECLS
 
 /** The rules and users for each thread */
-thread_local struct
+struct DbfwThread
 {
     int        rule_version;
     RuleList   rules;
     UserMap    users;
-} this_thread;
+};
+
+thread_local DbfwThread* this_thread = NULL;
 
 bool parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
 bool parse_limit_queries(Dbfw* instance, Rule* ruledef, const char* rule, char** saveptr);
@@ -127,7 +129,7 @@ static json_t* rules_to_json(const RuleList& rules)
 {
     json_t* rval = json_array();
 
-    for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
+    for (RuleList::const_iterator it = this_thread->rules.begin(); it != this_thread->rules.end(); it++)
     {
         const SRule& rule = *it;
         json_array_append_new(rval, rule_to_json(rule));
@@ -397,7 +399,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
 
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
-    if (this_thread.rules.empty() || this_thread.users.empty())
+    if (this_thread->rules.empty() || this_thread->users.empty())
     {
         if (!replace_rules(inst))
         {
@@ -405,7 +407,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
         }
     }
 
-    for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
+    for (RuleList::const_iterator it = this_thread->rules.begin(); it != this_thread->rules.end(); it++)
     {
         const SRule& rule = *it;
         char buf[rule->name().length() + 200]; // Some extra space
@@ -423,7 +425,7 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
 
     json_t* arr = json_array();
 
-    if (this_thread.rules.empty() || this_thread.users.empty())
+    if (this_thread->rules.empty() || this_thread->users.empty())
     {
         if (!replace_rules(inst))
         {
@@ -431,7 +433,7 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
         }
     }
 
-    for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
+    for (RuleList::const_iterator it = this_thread->rules.begin(); it != this_thread->rules.end(); it++)
     {
         const SRule& rule = *it;
         json_array_append_new(arr, rule_to_json(rule));
@@ -439,6 +441,24 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
 
     *output = arr;
     return true;
+}
+
+static int dbfw_thr_init()
+{
+    int rval = 0;
+
+    if ((this_thread = new (std::nothrow) DbfwThread) == NULL)
+    {
+        MXS_OOM();
+        rval = -1;
+    }
+
+    return rval;
+}
+
+static void dbfw_thr_finish()
+{
+    MXS_EXCEPTION_GUARD(delete this_thread);
 }
 
 static const MXS_ENUM_VALUE action_values[] =
@@ -501,8 +521,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         &Dbfw::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        dbfw_thr_init, /* Thread init. */
+        dbfw_thr_finish, /* Thread finish. */
         {
             {
                 "rules",
@@ -658,24 +678,15 @@ void dbfw_yyerror(void* scanner, const char* error)
  */
 static SRule find_rule_by_name(const RuleList& rules, std::string name)
 {
-    class RuleNameComparator
+  for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
-    public:
-        RuleNameComparator(std::string name):
-            m_name(name)
-        {}
-
-        bool operator()(const SRule& rule)
+        if ((*it)->name() == name)
         {
-            return rule->name() == m_name;
+            return *it;
         }
+    }
 
-    private:
-        std::string m_name;
-    };
-
-    RuleList::const_iterator it = std::find_if(rules.begin(), rules.end(), RuleNameComparator(name));
-    return it != rules.end() ? *it : SRule();
+    return SRule();
 }
 
 bool set_rule_name(void* scanner, char* name)
@@ -1079,11 +1090,11 @@ bool replace_rules(Dbfw* instance)
 
     if (process_rule_file(filename, &rules, &users))
     {
-        this_thread.rules.swap(rules);
-        this_thread.users.swap(users);
+        this_thread->rules.swap(rules);
+        this_thread->users.swap(users);
         rval = true;
     }
-    else if (!this_thread.rules.empty() && !this_thread.users.empty())
+    else if (!this_thread->rules.empty() && !this_thread->users.empty())
     {
         MXS_ERROR("Failed to parse rules at '%s'. Old rules are still used.",
                   filename.c_str());
@@ -1103,14 +1114,14 @@ static bool update_rules(Dbfw* my_instance)
     bool rval = true;
     int rule_version = my_instance->get_rule_version();
 
-    if (this_thread.rule_version < rule_version)
+    if (this_thread->rule_version < rule_version)
     {
         if (!replace_rules(my_instance))
         {
             rval = false;
         }
 
-        this_thread.rule_version = rule_version;
+        this_thread->rule_version = rule_version;
     }
 
     return rval;
@@ -1395,7 +1406,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
             ss_dassert(analyzed_queue);
         }
 
-        SUser suser = find_user_data(this_thread.users, user(), remote());
+        SUser suser = find_user_data(this_thread->users, user(), remote());
         bool query_ok = false;
 
         if (command_is_mandatory(buffer))
@@ -1659,7 +1670,7 @@ void Dbfw::diagnostics(DCB *dcb) const
     dcb_printf(dcb, "Firewall Filter\n");
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
-    for (RuleList::const_iterator it = this_thread.rules.begin(); it != this_thread.rules.end(); it++)
+    for (RuleList::const_iterator it = this_thread->rules.begin(); it != this_thread->rules.end(); it++)
     {
         const SRule& rule = *it;
         char buf[rule->name().length() + 200];
@@ -1680,5 +1691,5 @@ void Dbfw::diagnostics(DCB *dcb) const
  */
 json_t* Dbfw::diagnostics_json() const
 {
-    return rules_to_json(this_thread.rules);
+    return rules_to_json(this_thread->rules);
 }
