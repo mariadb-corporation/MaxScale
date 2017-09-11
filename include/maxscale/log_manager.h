@@ -119,7 +119,7 @@ static inline bool mxs_log_priority_is_enabled(int priority)
 int mxs_log_message(int priority,
                     const char* modname,
                     const char* file, int line, const char* function,
-                    const char* format, ...) __attribute__((format(printf, 6, 7)));
+                    const char* format, ...) mxs_attribute((format(printf, 6, 7)));
 /**
  * Log an error, warning, notice, info, or debug  message.
  *

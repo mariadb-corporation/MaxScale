@@ -42,6 +42,9 @@ static SPINLOCK crt_lock = SPINLOCK_INIT;
 #define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local char runtime_errmsg[RUNTIME_ERRMSG_BUFSIZE];
 
+/** Attributes need to be in the declaration */
+static void runtime_error(const char* fmt, ...) mxs_attribute((format (printf, 1, 2)));
+
 static void runtime_error(const char* fmt, ...)
 {
     va_list list;
@@ -1166,7 +1169,8 @@ static bool validate_ssl_json(json_t* params)
             !mxs_json_pointer(params, CN_SSL_CERT) ||
             !mxs_json_pointer(params, CN_SSL_CA_CERT))
         {
-            runtime_error("SSL configuration requires '%s', '%s' and '%s' parameters");
+            runtime_error("SSL configuration requires '%s', '%s' and '%s' parameters",
+                          CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT);
             rval = false;
         }
 

@@ -80,6 +80,17 @@
 #define MXS_MAX(a,b) ((a)>(b) ? (a) : (b))
 
 /**
+ * Define function attributes
+ *
+ * The function attributes are compiler specific.
+ */
+#ifdef __GNUC__
+#define mxs_attribute(a) __attribute__(a)
+#else
+#define mxs_attribute(a)
+#endif
+
+/**
  * COMMON INCLUDE FILES
  */
 #include <stdbool.h>

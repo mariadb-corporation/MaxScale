@@ -509,7 +509,7 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **
                 if (!process_argument(cmd, &cmd->arg_types[i], argv[i], &arg->argv[i], &err))
                 {
                     error = true;
-                    modulecmd_set_error("Argument %d, %s: %s", i + 1, err, argv[i] ? argv[i] : "No argument given");
+                    modulecmd_set_error("Argument %d, %s: %s", i + 1, err, argv[i] ? (char*)argv[i] : "No argument given");
                     break;
                 }
             }
