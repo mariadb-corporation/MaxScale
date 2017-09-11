@@ -992,8 +992,11 @@ int dcb_drain_writeq(DCB *dcb)
         }
     }
 
-    /* The write queue has drained, potentially need to call a callback function */
-    dcb_call_callback(dcb, DCB_REASON_DRAINED);
+    if (dcb->writeq == NULL)
+    {
+        /* The write queue has drained, potentially need to call a callback function */
+        dcb_call_callback(dcb, DCB_REASON_DRAINED);
+    }
 
     return total_written;
 }
