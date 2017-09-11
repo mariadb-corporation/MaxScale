@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <string>
+
 #include <maxscale/listener.h>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.h>
@@ -232,6 +234,25 @@ RSA* create_rsa(int bits)
 #endif
 }
 
+static thread_local std::string ssl_errbuf;
+
+static const char* get_ssl_errors()
+{
+    char errbuf[200]; // Enough space according to OpenSSL documentation
+    ssl_errbuf.clear();
+
+    for (int err = ERR_get_error(); err; err = ERR_get_error())
+    {
+        if (!ssl_errbuf.empty())
+        {
+            ssl_errbuf += ", ";
+        }
+        ssl_errbuf += ERR_error_string(err, errbuf);
+    }
+
+    return ssl_errbuf.c_str();
+}
+
 /**
  * Initialize the listener's SSL context. This sets up the generated RSA
  * encryption keys, chooses the listener encryption level and configures the
@@ -279,7 +300,7 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
 
         if ((ssl_listener->ctx = SSL_CTX_new(ssl_listener->method)) == NULL)
         {
-            MXS_ERROR("SSL context initialization failed.");
+            MXS_ERROR("SSL context initialization failed: %s", get_ssl_errors());
             return -1;
         }
 
@@ -311,28 +332,28 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
             /** Load the server certificate */
             if (SSL_CTX_use_certificate_chain_file(ssl_listener->ctx, ssl_listener->ssl_cert) <= 0)
             {
-                MXS_ERROR("Failed to set server SSL certificate.");
+                MXS_ERROR("Failed to set server SSL certificate: %s", get_ssl_errors());
                 return -1;
             }
 
             /* Load the private-key corresponding to the server certificate */
             if (SSL_CTX_use_PrivateKey_file(ssl_listener->ctx, ssl_listener->ssl_key, SSL_FILETYPE_PEM) <= 0)
             {
-                MXS_ERROR("Failed to set server SSL key.");
+                MXS_ERROR("Failed to set server SSL key: %s", get_ssl_errors());
                 return -1;
             }
 
             /* Check if the server certificate and private-key matches */
             if (!SSL_CTX_check_private_key(ssl_listener->ctx))
             {
-                MXS_ERROR("Server SSL certificate and key do not match.");
+                MXS_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
                 return -1;
             }
 
             /* Load the RSA CA certificate into the SSL_CTX structure */
             if (!SSL_CTX_load_verify_locations(ssl_listener->ctx, ssl_listener->ssl_ca_cert, NULL))
             {
-                MXS_ERROR("Failed to set Certificate Authority file.");
+                MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
                 return -1;
             }
         }
