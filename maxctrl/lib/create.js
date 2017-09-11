@@ -18,7 +18,9 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
     // Common options
-        .group(['protocol', 'authenticator', 'authenticator-options'], 'Common create options:')
+        .group(['protocol', 'authenticator', 'authenticator-options', 'tls-key',
+                'tls-cert', 'tls-ca-cert', 'tls-version', 'tls-cert-verify-depth'],
+               'Common create options:')
         .option('protocol', {
             describe: 'Protocol module name',
             type: 'string'
@@ -29,6 +31,26 @@ exports.builder = function(yargs) {
         })
         .option('authenticator-options', {
             describe: 'Option string for the authenticator',
+            type: 'string'
+        })
+        .option('tls-key', {
+            describe: 'Path to TLS key',
+            type: 'string'
+        })
+        .option('tls-cert', {
+            describe: 'Path to TLS certificate',
+            type: 'string'
+        })
+        .option('tls-ca-cert', {
+            describe: 'Path to TLS CA certificate',
+            type: 'string'
+        })
+        .option('tls-version', {
+            describe: 'TLS version to use',
+            type: 'string'
+        })
+        .option('tls-cert-verify-depth', {
+            describe: 'TLS certificate verification depth',
             type: 'string'
         })
 
@@ -58,7 +80,12 @@ exports.builder = function(yargs) {
                             'port': argv.port,
                             'protocol': argv.protocol,
                             'authenticator': argv.authenticator,
-                            'authenticator_options': argv.auth_options
+                            'authenticator_options': argv.auth_options,
+                            'ssl_key': argv['tls-key'],
+                            'ssl_cert': argv['tls-cert'],
+                            'ssl_ca_cert': argv['tls-ca-cert'],
+                            'ssl_version': argv['tls-version'],
+                            'ssl_cert_verify_depth': argv['tls-cert-verify-depth']
                         }
                     }
                 }
@@ -128,32 +155,11 @@ exports.builder = function(yargs) {
         })
 
     // Create listener
-        .group(['interface', 'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-version', 'tls-cert-verify-depth'], 'Create listener options:')
+        .group(['interface'], 'Create listener options:')
         .option('interface', {
             describe: 'Interface to listen on',
             type: 'string',
             default: '::'
-        })
-    // Should these have ssl as a prefix even though SSL isn't supported?
-        .option('tls-key', {
-            describe: 'Path to TLS key',
-            type: 'string'
-        })
-        .option('tls-cert', {
-            describe: 'Path to TLS certificate',
-            type: 'string'
-        })
-        .option('tls-ca-cert', {
-            describe: 'Path to TLS CA certificate',
-            type: 'string'
-        })
-        .option('tls-version', {
-            describe: 'TLS version to use',
-            type: 'string'
-        })
-        .option('tls-cert-verify-depth', {
-            describe: 'TLS certificate verification depth',
-            type: 'string'
         })
         .command('listener <service> <name> <port>', 'Create a new listener', function(yargs) {
             return yargs.epilog('The new listener will be taken into use immediately.');
@@ -174,7 +180,7 @@ exports.builder = function(yargs) {
                             'ssl_cert': argv['tls-cert'],
                             'ssl_ca_cert': argv['tls-ca-cert'],
                             'ssl_version': argv['tls-version'],
-                            'ssl_cert_verify_depth': argv['tls-cert-verify-depth'],
+                            'ssl_cert_verify_depth': argv['tls-cert-verify-depth']
                         }
                     }
                 }

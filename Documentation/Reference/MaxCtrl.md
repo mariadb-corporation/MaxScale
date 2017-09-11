@@ -309,6 +309,11 @@ Common create options:
   --protocol               Protocol module name                         [string]
   --authenticator          Authenticator module name                    [string]
   --authenticator-options  Option string for the authenticator          [string]
+  --tls-key                Path to TLS key                              [string]
+  --tls-cert               Path to TLS certificate                      [string]
+  --tls-ca-cert            Path to TLS CA certificate                   [string]
+  --tls-version            TLS version to use                           [string]
+  --tls-cert-verify-depth  TLS certificate verification depth           [string]
 
 Create server options:
   --services  Link the created server to these services                  [array]
@@ -320,12 +325,7 @@ Create monitor options:
   --monitor-password  Password for the monitor user                     [string]
 
 Create listener options:
-  --interface              Interface to listen on       [string] [default: "::"]
-  --tls-key                Path to TLS key                              [string]
-  --tls-cert               Path to TLS certificate                      [string]
-  --tls-ca-cert            Path to TLS CA certificate                   [string]
-  --tls-version            TLS version to use                           [string]
-  --tls-cert-verify-depth  TLS certificate verification depth           [string]
+  --interface  Interface to listen on                   [string] [default: "::"]
 
 Create user options:
   --type  Type of user to create
@@ -359,9 +359,8 @@ The new listener will be taken into use immediately.
 Usage: `maxctrl.js create user <name> <password>`
 
 The created user can be used with the MaxScale REST API as well as the MaxAdmin
-network interface. By default the created user will have administrative
-privileges. To limit the user to read-only operations, use the `--type=basic`
-option.
+network interface. By default the created user will have read-only privileges.
+To make the user an administrative user, use the `--type=admin` option.
 
 ## destroy
 
