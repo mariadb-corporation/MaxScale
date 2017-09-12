@@ -45,6 +45,7 @@ where `4711` is the session id.
 
 [Here is a list of bugs fixed in MaxScale 2.1.7.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.7)
 
+* (MXS-1396)[https://jira.mariadb.org/browse/MXS-1396] Persistent connections hang with Percona Server 5.6.37-82.2-log
 * (MXS-1395)[https://jira.mariadb.org/browse/MXS-1395] SELECT NAMES FROM TABLE is not parsed completely
 * (MXS-1385)[https://jira.mariadb.org/browse/MXS-1385] Monitor script arguments can be truncated
 * (MXS-1384)[https://jira.mariadb.org/browse/MXS-1384] maxscale.cnf script field length limitation
