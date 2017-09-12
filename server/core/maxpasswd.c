@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <getopt.h>
 
 #include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
