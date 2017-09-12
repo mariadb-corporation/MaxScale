@@ -107,7 +107,7 @@ extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
 
 extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
-extern void maxscaleCall(Parse*, SrcList* pName);
+extern void maxscaleCall(Parse*, SrcList* pName, ExprList* pExprList);
 extern void maxscaleCheckTable(Parse*, SrcList* pTables);
 extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
@@ -2691,21 +2691,12 @@ default_opt ::= DEFAULT.
 //
 cmd ::= call.
 
-call_arg ::= INTEGER.
-call_arg ::= FLOAT.
-call_arg ::= STRING.
-call_arg ::= id.
-call_arg ::= VARIABLE.
+%type call_args_opt {ExprList*}
+call_args_opt(A) ::= . {A=0;}
+call_args_opt(A) ::= LP exprlist(X) RP. {A=X;}
 
-call_args ::= call_arg.
-call_args ::= call_args COMMA call_arg.
-
-call_args_opt ::= .
-call_args_opt ::= LP RP.
-call_args_opt ::= LP call_args RP.
-
-call ::= CALL fullname(X) call_args_opt. {
-  maxscaleCall(pParse, X);
+call ::= CALL fullname(X) call_args_opt(Y). {
+    maxscaleCall(pParse, X, Y);
 }
 
 //////////////////////// DROP FUNCTION statement ////////////////////////////////////

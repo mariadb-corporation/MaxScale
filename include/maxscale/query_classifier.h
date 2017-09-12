@@ -94,7 +94,8 @@ typedef enum qc_query_op
     QUERY_OP_CHANGE_DB     = (1 << 8),
     QUERY_OP_LOAD          = (1 << 9),
     QUERY_OP_GRANT         = (1 << 10),
-    QUERY_OP_REVOKE        = (1 << 11)
+    QUERY_OP_REVOKE        = (1 << 11),
+    QUERY_OP_CALL          = (1 << 12),
 } qc_query_op_t;
 
 /**

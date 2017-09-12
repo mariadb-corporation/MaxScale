@@ -530,6 +530,9 @@ const char* qc_op_to_string(qc_query_op_t op)
     case QUERY_OP_REVOKE:
         return "QUERY_OP_REVOKE";
 
+    case QUERY_OP_CALL:
+        return "QUERY_OP_CALL";
+
     default:
         return "UNKNOWN_QUERY_OP";
     }

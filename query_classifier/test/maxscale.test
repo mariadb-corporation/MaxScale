@@ -84,3 +84,6 @@ select * from db1.t1 union select * from db2.t2;
 
 # Names is a keyword as well
 select names from t;
+
+call p1();
+call p1(@var);
