@@ -1104,6 +1104,9 @@ public:
         case MAX_NO_FIELD_TYPES:
             ss_dassert(!true);
             break;
+
+        default:
+            break;
         }
 
         ++m_iNulls;
