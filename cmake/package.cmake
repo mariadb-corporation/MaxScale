@@ -3,7 +3,7 @@
 execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
 
 # Check target
-set(PACK_TARGETS "core" "devel" "external" "all" "client")
+set(PACK_TARGETS "core" "devel" "experimental" "all" "client")
 if(DEFINED TARGET_COMPONENT AND NOT TARGET_COMPONENT STREQUAL "")
   set(LIST_INDEX -1)
   list(FIND PACK_TARGETS ${TARGET_COMPONENT} LIST_INDEX)
