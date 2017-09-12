@@ -2490,9 +2490,20 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 
     /**
      * End of while reading
-     * Checking last buffer first
+     *
+     * Note:
+     * - the reading routine can set 'record' pointer to NULL
+     * - after reading & sending it is always set to NULL
+     * - if the above loop ends due to burst and burstsize values,
+     *   the 'record' is NULL as well (no reads at all or at least
+     *   one succesfull read).
+     *
+     * Now checking read error indicator.
      */
-    if (record == NULL)
+
+    ss_dassert(record == NULL);
+
+    if (hdr.ok != SLAVE_POS_READ_OK)
     {
         slave->stats.n_failed_read++;
 
@@ -2577,21 +2588,20 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                        read_errmsg);
         }
     }
+
+    /* Remove BUSY state */
     spinlock_acquire(&slave->catch_lock);
     slave->cstate &= ~CS_BUSY;
     spinlock_release(&slave->catch_lock);
 
-    if (record)
-    {
-        slave->stats.n_flows++;
-        spinlock_acquire(&slave->catch_lock);
-        slave->cstate |= CS_EXPECTCB;
-        spinlock_release(&slave->catch_lock);
+    ss_dassert(hdr.ok == SLAVE_POS_READ_OK);
 
-        /* force slave to read events via catchup routine */
-        poll_fake_write_event(slave->dcb);
-    }
-    else if (slave->binlog_pos == router->binlog_position &&
+    /**
+     * Check now slave position with read indicator = SLAVE_POS_READ_OK
+     *
+     * 1) Same name and pos as current router file: aka Up To Date
+     */
+    if (slave->binlog_pos == router->binlog_position &&
              blr_is_current_binlog(router, slave))
     {
         spinlock_acquire(&router->binlog_lock);
@@ -2613,9 +2623,12 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
         }
         else
         {
-            /* set the CS_WAIT_DATA that allows notification
-             * when new events are received form master server
-             * call back routine will be called later.
+            /**
+             * The slave server is up to date!
+             *
+             * set the CS_WAIT_DATA: this allows notification
+             * when new events are received from master server,
+             * the call back routine will be called later.
              */
             slave->cstate |= CS_WAIT_DATA;
 
@@ -2626,10 +2639,15 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
     else
     {
         char next_file[BINLOG_FNAMELEN + 1] = "";
+        /* 2) Checking End Of File of the slave binlog file */
         if (slave->binlog_pos >= blr_file_size(file) &&
             router->rotating == 0 &&
             (!blr_is_current_binlog(router, slave)))
         {
+            /**
+             * If next file to read doesn't exist, retry the check up to
+             * MISSING_FILE_READ_RETRIES times before giving up.
+             */
             if (!blr_file_next_exists(router, slave, next_file))
             {
                 spinlock_acquire(&slave->catch_lock);
@@ -2717,7 +2735,10 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                 spinlock_acquire(&slave->catch_lock);
                 slave->cstate |= CS_EXPECTCB;
                 spinlock_release(&slave->catch_lock);
-                poll_fake_write_event(slave->dcb);
+                /*
+                 * Fake rotate written to client:
+                 * no need to call poll_fake_write_event()
+                 */
             }
             else
             {
@@ -2731,9 +2752,14 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
         }
         else
         {
+            /**
+             * Nothing has been written to client right now
+             * just retry to read again.
+             */
             spinlock_acquire(&slave->catch_lock);
             slave->cstate |= CS_EXPECTCB;
             spinlock_release(&slave->catch_lock);
+
             poll_fake_write_event(slave->dcb);
         }
     }
