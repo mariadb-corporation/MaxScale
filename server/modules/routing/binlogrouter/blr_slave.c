@@ -3852,9 +3852,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
                              char *error)
 {
     char *master_logfile = NULL;
-    char *master_log_pos = NULL;
     int change_binlog = 0;
-    long long pos = 0;
     MASTER_SERVER_CFG *current_master = NULL;
     CHANGE_MASTER_OPTIONS change_master;
     int parse_ret;
@@ -4005,17 +4003,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
         {
             router->retry_interval = h_val;
         }
-    }
-
-    /* Set new binlog position from parsed SQL command */
-    master_log_pos = change_master.binlog_pos;
-    if (master_log_pos == NULL)
-    {
-        pos = 0;
-    }
-    else
-    {
-        pos = atoll(master_log_pos);
     }
 
     /* Change the replication user */
