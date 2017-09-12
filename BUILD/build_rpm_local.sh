@@ -40,6 +40,7 @@ then
     for component in experimental devel client
     do
         cd _build
+        rm CMakeCache.txt
         cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
         sudo make package
         cd ..
