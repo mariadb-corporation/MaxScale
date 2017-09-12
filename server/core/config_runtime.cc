@@ -330,6 +330,12 @@ static long get_positive_int(const char *value)
     return 0;
 }
 
+static inline bool is_valid_integer(const char* value)
+{
+    char* endptr;
+    return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
+}
+
 bool runtime_alter_server(SERVER *server, const char *key, const char *value)
 {
     spinlock_acquire(&crt_lock);
@@ -359,6 +365,22 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
     {
         valid = true;
         server_update_credentials(server, server->monuser, value);
+    }
+    else if (strcmp(key, CN_PERSISTPOOLMAX) == 0)
+    {
+        if (is_valid_integer(value))
+        {
+            valid = true;
+            server->persistpoolmax = atoi(value);
+        }
+    }
+    else if (strcmp(key, CN_PERSISTMAXTIME) == 0)
+    {
+        if (is_valid_integer(value))
+        {
+            valid = true;
+            server->persistmaxtime = atoi(value);
+        }
     }
     else
     {

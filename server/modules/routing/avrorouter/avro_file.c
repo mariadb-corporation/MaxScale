@@ -635,38 +635,24 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
 
         MXS_DEBUG("%s(%x) - %llu", binlog_event_name(hdr.event_type), hdr.event_type, pos);
 
+        uint32_t original_size = hdr.event_size;
+
+        if (router->binlog_checksum)
+        {
+            hdr.event_size -= 4;
+        }
+
         /* check for FORMAT DESCRIPTION EVENT */
         if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
         {
-            int event_header_length;
-            int event_header_ntypes;
+            const int BLRM_FDE_EVENT_TYPES_OFFSET = 2 + 50 + 4 + 1;
+            const int FDE_EXTRA_BYTES = 5;
+            int event_header_length = ptr[BLRM_FDE_EVENT_TYPES_OFFSET - 1];
+            int n_events = hdr.event_size - event_header_length - BLRM_FDE_EVENT_TYPES_OFFSET - FDE_EXTRA_BYTES;
+            uint8_t* checksum = ptr + hdr.event_size - event_header_length - FDE_EXTRA_BYTES;
 
-            /** Extract the event header lengths */
-            event_header_length = ptr[2 + 50 + 4];
-            event_header_ntypes = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
-            memcpy(router->event_type_hdr_lens, ptr + 2 + 50 + 5, event_header_ntypes);
-            router->event_types = event_header_ntypes;
-
-            switch (event_header_ntypes)
-            {
-            case 168: /* mariadb 10 LOG_EVENT_TYPES*/
-                event_header_ntypes -= 163;
-                break;
-
-            case 165: /* mariadb 5 LOG_EVENT_TYPES*/
-                event_header_ntypes -= 160;
-                break;
-
-            default: /* mysql 5.6 LOG_EVENT_TYPES = 35 */
-                event_header_ntypes -= 35;
-                break;
-            }
-
-            uint8_t *checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
-            if (checksum[0] == 1)
-            {
-                found_chksum = true;
-            }
+            router->event_types = n_events;
+            router->binlog_checksum = checksum[0];
         }
         /* Decode CLOSE/STOP Event */
         else if (hdr.event_type == STOP_EVENT)
@@ -767,7 +753,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             break;
         }
 
-        if (hdr.next_pos > 0 && hdr.next_pos != (pos + hdr.event_size))
+        if (hdr.next_pos > 0 && hdr.next_pos != (pos + original_size))
         {
             MXS_INFO("Binlog %s: next pos %u != (pos %llu + event_size %u), truncating to %llu",
                      router->binlog_name, hdr.next_pos, pos, hdr.event_size, pos);
@@ -1013,7 +999,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
 {
     int dblen = ptr[DBNM_OFF];
     int vblklen = ptr[VBLK_OFF];
-    int len = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen) + 1;
+    int len = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen);
     char *sql = (char *) ptr + PHDR_OFF + vblklen + 1 + dblen;
     char db[dblen + 1];
     memcpy(db, (char*) ptr + PHDR_OFF + vblklen, dblen);

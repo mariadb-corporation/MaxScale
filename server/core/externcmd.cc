@@ -216,7 +216,9 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
     {
         for (int i = 0; cmd->argv[i] && rval; i++)
         {
-            size_t size = strlen(cmd->argv[i]);
+            size_t size_orig = strlen(cmd->argv[i]);
+            size_t size_replace = strlen(replace);
+            size_t size = MXS_MAX(size_orig, size_replace);
             char* dest = (char*)MXS_MALLOC(size);
             if (dest)
             {

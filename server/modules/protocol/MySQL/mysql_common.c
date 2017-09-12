@@ -79,6 +79,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->protocol_command.scom_nbytes_to_read = 0;
     p->stored_query = NULL;
     p->extra_capabilities = 0;
+    p->ignore_replies = 0;
 #if defined(SS_DEBUG)
     p->protocol_chk_top = CHK_NUM_PROTOCOL;
     p->protocol_chk_tail = CHK_NUM_PROTOCOL;

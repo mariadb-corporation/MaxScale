@@ -662,6 +662,27 @@ static inline bool collecting_resultset(MySQLProtocol *proto, uint64_t capabilit
 }
 
 /**
+ * Helpers for checking OK and ERR packets specific to COM_CHANGE_USER
+ */
+static inline bool not_ok_packet(const GWBUF* buffer)
+{
+    uint8_t* data = GWBUF_DATA(buffer);
+
+    return data[4] != MYSQL_REPLY_OK ||
+        // Should be more than 7 bytes of payload
+        gw_mysql_get_byte3(data) < MYSQL_OK_PACKET_MIN_LEN - MYSQL_HEADER_LEN ||
+        // Should have no affected rows
+        data[5] != 0 ||
+        // Should not generate an insert ID
+        data[6] != 0;
+}
+
+static inline bool not_err_packet(const GWBUF* buffer)
+{
+    return GWBUF_DATA(buffer)[4] != MYSQL_REPLY_ERR;
+}
+
+/**
  * @brief With authentication completed, read new data and write to backend
  *
  * @param dcb           Descriptor control block for backend server
@@ -701,8 +722,9 @@ gw_read_and_write(DCB *dcb)
     /** Ask what type of output the router/filter chain expects */
     uint64_t capabilities = service_get_capabilities(session->service);
     bool result_collected = false;
+    MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT) || (proto->ignore_replies != 0))
     {
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
@@ -717,10 +739,9 @@ gw_read_and_write(DCB *dcb)
 
         read_buffer = tmp;
 
-        MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-
         if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
-            proto->collect_result)
+            proto->collect_result ||
+            proto->ignore_replies != 0)
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
             {
@@ -767,39 +788,67 @@ gw_read_and_write(DCB *dcb)
         }
     }
 
-    MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
-
     if (proto->ignore_replies > 0)
     {
-        /**
-         * The reply to an ignorable command is in the packet. Extract the
-         * response type and discard the response.
-         */
-        uint8_t result = 0xff;
-        gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN, 1, &result);
-        proto->ignore_replies--;
-        ss_dassert(proto->ignore_replies >= 0);
-        gwbuf_free(read_buffer);
-
-        int rval = 0;
+        /** The reply to a COM_CHANGE_USER is in packet */
         GWBUF *query = proto->stored_query;
         proto->stored_query = NULL;
+        proto->ignore_replies--;
+        ss_dassert(proto->ignore_replies >= 0);
+        GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
+
+        while (read_buffer)
+        {
+            /** Skip to the last packet if we get more than one */
+            gwbuf_free(reply);
+            reply = modutil_get_next_MySQL_packet(&read_buffer);
+        }
+
+        ss_dassert(reply);
+        ss_dassert(!read_buffer);
+        uint8_t result = MYSQL_GET_COMMAND(GWBUF_DATA(reply));
+        int rval = 0;
 
         if (result == MYSQL_REPLY_OK)
         {
+            MXS_INFO("Response to COM_CHANGE_USER is OK, writing stored query");
             rval = query ? dcb->func.write(dcb, query) : 1;
         }
-        else if (query)
+        else
         {
             /**
              * The ignorable command failed when we had a queued query from the
              * client. Generate a fake hangup event to close the DCB and send
              * an error to the client.
              */
+            if (result == MYSQL_REPLY_ERR)
+            {
+                /** The COM_CHANGE USER failed, generate a fake hangup event to
+                 * close the DCB and send an error to the client. */
+                log_error_response(dcb, reply);
+            }
+            else if (result == MYSQL_REPLY_AUTHSWITCHREQUEST &&
+                     gwbuf_length(reply) > MYSQL_EOF_PACKET_LEN)
+            {
+                MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
+                          (char*)GWBUF_DATA(reply) + 5, DEFAULT_MYSQL_AUTH_PLUGIN);
+            }
+            else
+            {
+                /** This should never happen */
+                MXS_ERROR("Unknown response to COM_CHANGE_USER (0x%02hhx), "
+                          "ignoring and waiting for correct result", result);
+                gwbuf_free(reply);
+                proto->stored_query = query;
+                proto->ignore_replies++;
+                return 1;
+            }
+
             gwbuf_free(query);
             poll_fake_hangup_event(dcb);
         }
 
+        gwbuf_free(reply);
         return rval;
     }
 
@@ -947,10 +996,28 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
     CHK_DCB(dcb);
 
-    if (dcb->was_persistent && dcb->state == DCB_STATE_POLLING &&
-        backend_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
+    if (dcb->was_persistent)
     {
+        ss_dassert(!dcb->fakeq);
+        ss_dassert(!dcb->readq);
+        ss_dassert(!dcb->delayq);
+        ss_dassert(!dcb->writeq);
         ss_dassert(dcb->persistentstart == 0);
+        dcb->was_persistent = false;
+        ss_dassert(backend_protocol->ignore_replies >= 0);
+        backend_protocol->ignore_replies = 0;
+
+        if (dcb->state != DCB_STATE_POLLING ||
+            backend_protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
+        {
+            MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
+                     STRDCBSTATE(dcb->state),
+                     STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
+            gwbuf_free(queue);
+            return 0;
+        }
+
+
         /**
          * This is a DCB that was just taken out of the persistent connection pool.
          * We need to sent a COM_CHANGE_USER query to the backend to reset the
@@ -962,18 +1029,45 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
              * response is received. */
             gwbuf_free(backend_protocol->stored_query);
         }
-        dcb->was_persistent = false;
-        backend_protocol->ignore_replies++;
-        ss_dassert(backend_protocol->ignore_replies > 0);
-        backend_protocol->stored_query = queue;
+
+        if (MYSQL_IS_COM_QUIT(GWBUF_DATA(queue)))
+        {
+            /** The connection is being closed before the first write to this
+             * backend was done. The COM_QUIT is ignored and the DCB will be put
+             * back into the pool once it's closed. */
+            MXS_INFO("COM_QUIT received as the first write, ignoring and "
+                     "sending the DCB back to the pool.");
+            gwbuf_free(queue);
+            return 1;
+        }
 
         GWBUF *buf = gw_create_change_user_packet(dcb->session->client_dcb->data, dcb->protocol);
-        return dcb_write(dcb, buf) ? 1 : 0;
+        int rc = 0;
+
+        if (dcb_write(dcb, buf))
+        {
+            MXS_INFO("Sent COM_CHANGE_USER");
+            backend_protocol->ignore_replies++;
+            backend_protocol->stored_query = queue;
+            rc = 1;
+        }
+        else
+        {
+            gwbuf_free(queue);
+        }
+
+        return rc;
     }
     else if (backend_protocol->ignore_replies > 0)
     {
         if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
         {
+            /** The COM_CHANGE_USER was already sent but the session is already
+             * closing. We ignore the COM_QUIT in the hopes that the response
+             * to the COM_CHANGE_USER comes before the DCB is closed. If the
+             * DCB is closed before the response arrives, the connection will
+             * not qualify the persistent connection pool. */
+            MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, ignoring");
             gwbuf_free(queue);
         }
         else
@@ -981,8 +1075,10 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
             /**
              * We're still waiting on the reply to the COM_CHANGE_USER, append the
              * buffer to the stored query. This is possible if the client sends
-             * BLOB data on the first command.
+             * BLOB data on the first command or is sending multiple COM_QUERY
+             * packets at one time.
              */
+            MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
             backend_protocol->stored_query = gwbuf_append(backend_protocol->stored_query, queue);
         }
         return 1;
@@ -1210,6 +1306,8 @@ static void backend_set_delayqueue(DCB *dcb, GWBUF *queue)
 static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
 {
     ss_dassert(buffer);
+    ss_dassert(dcb->persistentstart == 0);
+    ss_dassert(!dcb->was_persistent);
 
     if (MYSQL_IS_CHANGE_USER(((uint8_t *)GWBUF_DATA(buffer))))
     {
@@ -1958,5 +2056,8 @@ static bool get_ip_string_and_port(struct sockaddr_storage *sa,
 static bool gw_connection_established(DCB* dcb)
 {
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-    return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE;
+    return
+        proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE &&
+        (proto->ignore_replies == 0)
+        && !proto->stored_query;
 }

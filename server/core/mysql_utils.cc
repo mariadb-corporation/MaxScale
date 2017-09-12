@@ -166,6 +166,10 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
         mysql_ssl_set(con, listener->ssl_key, listener->ssl_cert, listener->ssl_ca_cert, NULL, NULL);
     }
 
+    char yes = 1;
+    mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
+    mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
+
     MYSQL* mysql = mysql_real_connect(con, server->name, user, passwd, NULL, server->port, NULL, 0);
 
     if (mysql)
@@ -174,11 +178,6 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
         MY_CHARSET_INFO cs_info;
         mysql_get_character_set_info(mysql, &cs_info);
         server->charset = cs_info.number;
-
-        if (mysql_query(mysql, "SET SQL_MODE=''"))
-        {
-            MXS_ERROR("Failed to change SQL_MODE: %s", mysql_error(mysql));
-        }
     }
 
     return mysql;

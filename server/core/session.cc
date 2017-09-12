@@ -171,12 +171,14 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     session->stats.connect = time(0);
     session->stmt.buffer = NULL;
     session->stmt.target = NULL;
+    session->qualifies_for_pooling = false;
 
     MXS_CONFIG *config = config_get_global_options();
     // If MaxScale is running in Oracle mode, then autocommit needs to
     // initially be off.
     bool autocommit = (config->qc_sql_mode == QC_SQL_MODE_ORACLE) ? false : true;
     session_set_autocommit(session, autocommit);
+
     /*<
      * Associate the session to the client DCB and set the reference count on
      * the session to indicate that there is a single reference to the
@@ -497,7 +499,8 @@ printAllSessions()
 /** Callback for dprintAllSessions */
 bool dprintAllSessions_cb(DCB *dcb, void *data)
 {
-    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER &&
+        dcb->session->state != SESSION_STATE_DUMMY)
     {
         DCB *out_dcb = (DCB*)data;
         dprintSession(out_dcb, dcb->session);
@@ -1151,6 +1154,17 @@ json_t* session_list_to_json(const char* host)
     SessionListData data = {json_array(), host};
     dcb_foreach(seslist_cb, &data);
     return mxs_json_resource(host, MXS_JSON_API_SESSIONS, data.json);
+}
+
+void session_qualify_for_pool(MXS_SESSION* session)
+{
+    session->qualifies_for_pooling = true;
+}
+
+bool session_valid_for_pool(const MXS_SESSION* session)
+{
+    ss_dassert(session->state != SESSION_STATE_DUMMY);
+    return session->qualifies_for_pooling;
 }
 
 MXS_SESSION* session_get_current()

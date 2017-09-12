@@ -612,6 +612,7 @@ columnid(A) ::= nm(X). {
   /*KEY*/
   /*LIKE_KW*/
   MASTER /*MATCH*/ MERGE
+  NAMES
   NO
   OF OFFSET OPEN
   QUICK

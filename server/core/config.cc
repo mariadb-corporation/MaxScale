@@ -1233,8 +1233,8 @@ MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
 
     if (p2)
     {
-        p2->name = MXS_STRNDUP_A(param->name, MAX_PARAM_LEN);
-        p2->value = MXS_STRNDUP_A(param->value, MAX_PARAM_LEN);
+        p2->name = MXS_STRDUP_A(param->name);
+        p2->value = MXS_STRDUP_A(param->value);
         p2->next = NULL;
     }
 

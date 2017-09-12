@@ -381,6 +381,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
             dcb->persistentstart = 0;
             dcb->was_persistent = true;
             dcb->last_read = hkheartbeat;
+            atomic_add_uint64(&server->stats.n_from_pool, 1);
             return dcb;
         }
         else
@@ -1230,6 +1231,8 @@ dcb_maybe_add_persistent(DCB *dcb)
         && (dcb->func.established == NULL || dcb->func.established(dcb))
         && strlen(dcb->user)
         && dcb->server
+        && dcb->session
+        && session_valid_for_pool(dcb->session)
         && dcb->server->persistpoolmax
         && (dcb->server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
@@ -1260,6 +1263,16 @@ dcb_maybe_add_persistent(DCB *dcb)
             dcb->callbacks = loopcallback->next;
             MXS_FREE(loopcallback);
         }
+
+        /** Free all buffered data */
+        gwbuf_free(dcb->fakeq);
+        gwbuf_free(dcb->readq);
+        gwbuf_free(dcb->delayq);
+        gwbuf_free(dcb->writeq);
+        dcb->fakeq = NULL;
+        dcb->readq = NULL;
+        dcb->delayq = NULL;
+        dcb->writeq = NULL;
 
         dcb->nextpersistent = dcb->server->persistent[dcb->poll.thread.id];
         dcb->server->persistent[dcb->poll.thread.id] = dcb;

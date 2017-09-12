@@ -1001,28 +1001,33 @@ GWBUF* modutil_create_query(const char* query)
  */
 int modutil_count_statements(GWBUF* buffer)
 {
-    char* ptr = ((char*)(buffer)->start + 5);
+    char* start = ((char*)(buffer)->start + 5);
+    char* ptr = start;
     char* end = ((char*)(buffer)->end);
     int num = 1;
 
     while (ptr < end && (ptr = strnchr_esc(ptr, ';', end - ptr)))
     {
         num++;
-        while (*ptr == ';')
+        while (ptr < end && *ptr == ';')
         {
             ptr++;
         }
     }
 
     ptr = end - 1;
-    while (isspace(*ptr))
-    {
-        ptr--;
-    }
 
-    if (*ptr == ';')
+    if (ptr >= start && ptr < end)
     {
-        num--;
+        while (ptr > start && isspace(*ptr))
+        {
+            ptr--;
+        }
+
+        if (*ptr == ';')
+        {
+            num--;
+        }
     }
 
     return num;

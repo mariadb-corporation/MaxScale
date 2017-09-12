@@ -1038,6 +1038,19 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     /** Reset error handler when routing of the new query begins */
     dcb->dcb_errhandle_called = false;
 
+    if (proto->current_command == MYSQL_COM_QUIT)
+    {
+        /** The client is closing the connection. We know that this will be the
+         * last command the client sends so the backend connections are very likely
+         * to be in an idle state.
+         *
+         * If the client is pipelining the queries (i.e. sending N request as
+         * a batch and then expecting N responses) then it is possible that
+         * the backend connections are not idle when the COM_QUIT is received.
+         * In most cases we can assume that the connections are idle. */
+        session_qualify_for_pool(session);
+    }
+
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
         /**

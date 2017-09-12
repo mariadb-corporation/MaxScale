@@ -553,6 +553,9 @@ dprintServer(DCB *dcb, const SERVER *server)
         dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
         dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);
         dcb_printf(dcb, "\tPersistent max time (secs):          %ld\n", server->persistmaxtime);
+        dcb_printf(dcb, "\tConnections taken from pool:         %lu\n", server->stats.n_from_pool);
+        double d =  (double)server->stats.n_from_pool / (double)(server->stats.n_connections + server->stats.n_from_pool + 1);
+        dcb_printf(dcb, "\tPool availability:                   %0.2lf%%\n", d * 100.0);
     }
     if (server->server_ssl)
     {

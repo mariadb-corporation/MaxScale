@@ -57,10 +57,12 @@ typedef struct server_params
  */
 typedef struct
 {
-    int n_connections; /**< Number of connections */
-    int n_current;     /**< Current connections */
-    int n_current_ops; /**< Current active operations */
-    int n_persistent;  /**< Current persistent pool */
+    int n_connections;    /**< Number of connections */
+    int n_current;        /**< Current connections */
+    int n_current_ops;    /**< Current active operations */
+    int n_persistent;     /**< Current persistent pool */
+    uint64_t n_new_conn;  /**< Times the current pool was empty */
+    uint64_t n_from_pool; /**< Times when a connection was available from the pool */
 } SERVER_STATS;
 
 /**
