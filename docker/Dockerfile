@@ -14,7 +14,7 @@ sqlite-libs tcl-dev util-linux-dev xz xz-dev"
 # Packages that can be removed after build
 ARG REM_PKGS="bison bash cmake flex gcc git gnutls-dev g++ jansson-dev \
 libedit-dev libgcrypt-dev lua-dev make ncurses-dev openssl-dev perl sqlite-dev \
-tcl-dev util-linux-dev xz-dev"
+tcl-dev xz-dev"
 
 # MaxScale-specific parameters
 ARG MS_DIR=/MaxScale_workdir

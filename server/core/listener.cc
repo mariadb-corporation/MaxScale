@@ -36,6 +36,7 @@
 #include <maxscale/listener.h>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.h>
+#include <maxscale/platform.h>
 #include <maxscale/protocol.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
@@ -234,23 +235,29 @@ RSA* create_rsa(int bits)
 #endif
 }
 
-static thread_local std::string ssl_errbuf;
+// thread-local non-POD types are not supported with older versions of GCC
+static thread_local std::string* ssl_errbuf;
 
 static const char* get_ssl_errors()
 {
+    if (ssl_errbuf == NULL)
+    {
+        ssl_errbuf = new std::string;
+    }
+
     char errbuf[200]; // Enough space according to OpenSSL documentation
-    ssl_errbuf.clear();
+    ssl_errbuf->clear();
 
     for (int err = ERR_get_error(); err; err = ERR_get_error())
     {
-        if (!ssl_errbuf.empty())
+        if (!ssl_errbuf->empty())
         {
-            ssl_errbuf += ", ";
+            ssl_errbuf->append(", ");
         }
-        ssl_errbuf += ERR_error_string(err, errbuf);
+        ssl_errbuf->append(ERR_error_string(err, errbuf));
     }
 
-    return ssl_errbuf.c_str();
+    return ssl_errbuf->c_str();
 }
 
 /**
