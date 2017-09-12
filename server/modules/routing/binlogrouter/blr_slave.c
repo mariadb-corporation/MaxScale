@@ -365,6 +365,17 @@ static void blr_abort_change_master(ROUTER_INSTANCE *router,
                                     const char *error);
 static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
                                          const char *errmsg);
+static bool blr_binlog_change_check(const ROUTER_INSTANCE *router,
+                                    const CHANGE_MASTER_OPTIONS change_master,
+                                    char *error);
+static bool blr_change_binlog_name(ROUTER_INSTANCE *router,
+                                   char *log_file,
+                                   char **new_logfile,
+                                   char *error);
+static bool blr_apply_changes(ROUTER_INSTANCE *router,
+                              CHANGE_MASTER_OPTIONS change_master,
+                              char *new_logfile,
+                              char *error);
 /**
  * Process a request packet from the slave server.
  *
@@ -4052,291 +4063,33 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
     }
 
     /**
+     * Check if binlog file can be changed
+     *
      * Change the binlog filename as from MASTER_LOG_FILE
      * New binlog file could be the next one or current one
+     * or empty if router->mariadb10_master_gtid is set.
      */
-    master_logfile = blr_set_master_logfile(router,
-                                            change_master.binlog_file,
-                                            error);
-
-    /**
-      * If MASTER_LOG_FILE is not set
-      * and master connection is configured
-      * set master_logfile to current binlog_name.
-      *
-      * 'router->use_mariadb10_gtid' value is checked before
-      * returning an error
-      */
-    if (master_logfile == NULL)
+    if (!blr_binlog_change_check(router,
+                                change_master,
+                                error) ||
+        !blr_change_binlog_name(router,
+                                change_master.binlog_file,
+                                &master_logfile,
+                                error) ||
+        !blr_apply_changes(router,
+                           change_master,
+                           master_logfile,
+                           error))
     {
-        bool change_binlog_error = true;
-        const char *err_prefix = "Router is not configured "
-                                 "for master connection,";
-        /* Replication is not configured yet */
-        if (router->master_state == BLRM_UNCONFIGURED)
-        {
-            /* Check MASTER_USE_GTID option */
-            if (router->mariadb10_master_gtid &&
-                !change_master.use_mariadb10_gtid)
-            {
-                snprintf(error,
-                         BINLOG_ERROR_MSG_LEN,
-                         "%s MASTER_USE_GTID=Slave_pos is required",
-                         err_prefix);
-            }
-            else
-            {
-                /* If there is another error message keep it */
-                if (!strlen(error) &&
-                    !change_master.use_mariadb10_gtid)
-                {
-                    snprintf(error,
-                             BINLOG_ERROR_MSG_LEN,
-                             "%s MASTER_LOG_FILE is required",
-                             err_prefix);
-                }
-            }
+        blr_abort_change_master(router,
+                                current_master,
+                                &change_master,
+                                error);
+        MXS_FREE(master_logfile);
 
-            change_binlog_error = strlen(error) ? true : false;
-        }
-        else
-        {
-            /* If errors returned set error */
-            if (strlen(error) &&
-                (router->mariadb10_master_gtid &&
-                 !change_master.use_mariadb10_gtid))
-            {
-                /* MASTER_USE_GTID option not set */
-                snprintf(error,
-                         BINLOG_ERROR_MSG_LEN,
-                         "%s MASTER_USE_GTID=Slave_pos is required",
-                         err_prefix);
-            }
-            else
-            {
-                /* Use current binlog file */
-                master_logfile = MXS_STRDUP_A(router->binlog_name);
+        spinlock_release(&router->lock);
 
-                change_binlog_error = false;
-            }
-        }
-
-        if (change_binlog_error)
-        {
-            blr_abort_change_master(router,
-                                    current_master,
-                                    &change_master,
-                                    error);
-
-            spinlock_release(&router->lock);
-
-            return -1;
-        }
-    }
-    else
-    /* master_log_file is not NULL */
-    {
-        /* Check for MASTER_USE_GTID option */
-        const char *err_prefix = "Router is not configured "
-                                 "for master connection,";
-        if (router->mariadb10_master_gtid &&
-            !change_master.use_mariadb10_gtid)
-        {
-            snprintf(error,
-                     BINLOG_ERROR_MSG_LEN,
-                     "%s MASTER_USE_GTID=Slave_pos is required",
-                     err_prefix);
-
-            blr_abort_change_master(router,
-                                    current_master,
-                                    &change_master,
-                                    error);
-
-            spinlock_release(&router->lock);
-
-            return -1;
-        }
-    }
-
-    /**
-     * If master connection is configured check new binlog name:
-     * If binlog name has changed to next one
-     * then only position 4 is allowed
-     */
-
-    /**
-     * Check whether MASTER_USE_GTID option was set
-     */
-    if ((router->mariadb10_master_gtid &&
-        !change_master.use_mariadb10_gtid) &&
-        strcmp(master_logfile, router->binlog_name) != 0 &&
-        router->master_state != BLRM_UNCONFIGURED)
-    {
-        int return_error = 0;
-        if (master_log_pos == NULL)
-        {
-            snprintf(error,
-                     BINLOG_ERROR_MSG_LEN,
-                     "Please provide an explicit MASTER_LOG_POS "
-                     "for new MASTER_LOG_FILE %s: "
-                     "Permitted binlog pos is %d. "
-                     "Current master_log_file=%s, master_log_pos=%lu",
-                     master_logfile,
-                     4,
-                     router->binlog_name,
-                     router->current_pos);
-
-            return_error = 1;
-        }
-        else
-        {
-            if (pos != 4)
-            {
-                snprintf(error,
-                         BINLOG_ERROR_MSG_LEN,
-                         "Can not set MASTER_LOG_POS to %s for "
-                         "MASTER_LOG_FILE %s: "
-                         "Permitted binlog pos is %d. "
-                         "Current master_log_file=%s, master_log_pos=%lu",
-                         master_log_pos,
-                         master_logfile,
-                         4,
-                         router->binlog_name,
-                         router->current_pos);
-
-                return_error = 1;
-            }
-        }
-
-        /* Return an error or set new binlog name at pos 4 */
-        if (return_error)
-        {
-            blr_abort_change_master(router,
-                                    current_master,
-                                    &change_master,
-                                    error);
-
-            MXS_FREE(master_logfile);
-
-            spinlock_release(&router->lock);
-
-            return -1;
-        }
-        else
-        {
-            /* Set new filename at pos 4 */
-            strcpy(router->binlog_name, master_logfile);
-
-            router->current_pos = 4;
-            router->binlog_position = 4;
-            router->current_safe_event = 4;
-
-            /**
-             * Close current file binlog file,
-             * next start slave will create the new one
-             */
-            fsync(router->binlog_fd);
-            close(router->binlog_fd);
-            router->binlog_fd = -1;
-
-            MXS_INFO("%s: New MASTER_LOG_FILE is [%s]",
-                     router->service->name,
-                     router->binlog_name);
-        }
-    }
-    /* MariaDB 10 GTID request */
-    else if (router->mariadb10_master_gtid &&
-             change_master.use_mariadb10_gtid)
-    {
-        /* Set empty filename at pos 4 */
-        strcpy(router->binlog_name, "");
-
-        router->current_pos = 4;
-        router->binlog_position = 4;
-        router->current_safe_event = 4;
-
-        MXS_INFO("%s: MASTER_USE_GTID is [%s], value [%s]",
-                 router->service->name,
-                 change_master.use_mariadb10_gtid,
-                 router->last_mariadb_gtid);
-    }
-    else
-    {
-        /**
-         * Same binlog or master connection not configured
-         * Position cannot be different from
-         * current pos or 4 (if BLRM_UNCONFIGURED)
-         */
-        int return_error = 0;
-
-        if (router->master_state == BLRM_UNCONFIGURED)
-        {
-            if (master_log_pos != NULL && pos != 4)
-            {
-                snprintf(error,
-                         BINLOG_ERROR_MSG_LEN,
-                         "Can not set MASTER_LOG_POS to %s: "
-                         "Permitted binlog pos is 4. Specified master_log_file=%s",
-                         master_log_pos,
-                         master_logfile);
-
-                return_error = 1;
-            }
-
-        }
-        else
-        {
-            if (master_log_pos != NULL && pos != router->current_pos)
-            {
-                snprintf(error,
-                         BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
-                         "Permitted binlog pos is %lu. "
-                         "Current master_log_file=%s, master_log_pos=%lu",
-                         master_log_pos,
-                         router->current_pos,
-                         router->binlog_name,
-                         router->current_pos);
-
-                return_error = 1;
-            }
-        }
-
-        /* log error and return */
-        if (return_error)
-        {
-            blr_abort_change_master(router,
-                                    current_master,
-                                    &change_master,
-                                    error);
-
-            MXS_FREE(master_logfile);
-
-            spinlock_release(&router->lock);
-
-            return -1;
-        }
-        else
-        {
-            /**
-             * no pos change, set it to 4 if BLRM_UNCONFIGURED
-             * Also set binlog name if UNCONFIGURED
-             */
-            if (router->master_state == BLRM_UNCONFIGURED)
-            {
-                router->current_pos = 4;
-                router->binlog_position = 4;
-                router->current_safe_event = 4;
-                strcpy(router->binlog_name, master_logfile);
-
-                MXS_INFO("%s: New MASTER_LOG_FILE is [%s]",
-                         router->service->name,
-                         router->binlog_name);
-            }
-
-            MXS_INFO("%s: New MASTER_LOG_POS is [%lu]",
-                     router->service->name,
-                     router->current_pos);
-        }
+        return -1;
     }
 
     /* Log config changes (without passwords) */
@@ -4444,7 +4197,9 @@ blr_set_master_port(ROUTER_INSTANCE *router, char *port)
  * @return            New binlog file or NULL on error
  */
 static char *
-blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error)
+blr_set_master_logfile(ROUTER_INSTANCE *router,
+                       char *filename,
+                       char *error)
 {
     char *new_binlog_file = NULL;
 
@@ -9171,4 +8926,302 @@ static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
                           errmsg,
                           "HY000",
                           BINLOG_FATAL_ERROR_READING);
+}
+
+/**
+ * Check whether the current binlog file can be changed
+ *
+ * @param router          The curret router instance
+ * @param change_master   The options in CHANGE_MASTER TO command
+ * @param error           Pointer to outout error message
+ *
+ * @return                True if binlog can be changed or false.
+ */
+static bool blr_binlog_change_check(const ROUTER_INSTANCE *router,
+                                    const CHANGE_MASTER_OPTIONS change_master,
+                                    char *error)
+{
+    char *master_logfile = NULL;
+
+    /**
+     * MASTER_LOG_FILE is not set in CHANGE MASTER TO.
+     * If binlog server is not configured and
+     * mariadb10_master_gtid is not set, then return an error.
+     */
+    if (change_master.binlog_file == NULL)
+    {
+        if (router->master_state == BLRM_UNCONFIGURED &&
+            !router->mariadb10_master_gtid)
+        {
+            snprintf(error,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Router is not configured for master connection, "
+                     "MASTER_LOG_FILE is required");
+
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    else
+    /**
+     * If binlog file is set in CHANGE MASTER TO
+     * and MASTER_USE_GTID option is on, then return an error.
+     */
+    {
+        /**
+         * Check first MASTER_USE_GTID option:
+         *
+         * if not present return an error:
+         */
+        if (router->mariadb10_master_gtid &&
+            !change_master.use_mariadb10_gtid)
+        {
+            snprintf(error,
+                     BINLOG_ERROR_MSG_LEN,
+                     "%s MASTER_USE_GTID=Slave_pos is required",
+                     router->master_state == BLRM_UNCONFIGURED ?
+                     "Router is not configured for master connection," :
+                     "Cannot use MASTER_LOG_FILE for master connection,");
+
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Set the new binlog filenanme from MASTER_LOG_FILE
+ *
+ * If no name change, the current router file is set.
+ * Note:
+ *  Empty filename, MASTER_LOG_FILE = '', can be passed only
+ *  if mariadb10_master_gtid option is set.
+ *
+ * @param router         The router instance
+ * @param binlog_file    The binlog file in MASTER_LOG_FILE
+ * @param error          Ouput error message
+ * @param new_logfile    The new log file name
+ *
+ * @return    True if binlog name has been set or false
+ *            on errors
+ */
+static bool blr_change_binlog_name(ROUTER_INSTANCE *router,
+                                   char *binlog_file,
+                                   char **new_logfile,
+                                   char *error)
+{
+    bool ret = true;
+
+    /* MASTER_LOG_FILE is not present in CHANGE MASTER TO */
+    if (binlog_file == NULL)
+    {
+        /* Use current binlog file */
+        *new_logfile = MXS_STRDUP_A(router->binlog_name);
+    }
+    else
+    {
+        /**
+         * Change the binlog filename as from MASTER_LOG_FILE
+         * New binlog file can be:
+         * - the next in sequence router file
+         * - current router file
+         * - empty if router->mariadb10_master_gtid is set.
+         */
+         *new_logfile = blr_set_master_logfile(router,
+                                               binlog_file,
+                                               error);
+         if (*new_logfile == NULL)
+         {
+             if (!router->mariadb10_master_gtid ||
+                 strlen(binlog_file) > 1)
+             {
+                 /* Binlog name can not be changed */
+                 ret = false;
+            }
+            else
+            {
+                *new_logfile = MXS_STRDUP_A("");
+            }
+         }
+     }
+     return ret;
+}
+
+/**
+ * Apply binlog filename and position changes
+ *
+ * @param router           The current router instance
+ * @param change_master    The change master options
+ * @param error            The error message to fill
+ * @param new_logfile      The new binlog filename
+ *                         set in previous stage
+ *
+ * @return                 True if changes have been set
+ *                         or false on errors.
+ */
+static bool blr_apply_changes(ROUTER_INSTANCE *router,
+                              CHANGE_MASTER_OPTIONS change_master,
+                              char *new_logfile,
+                              char *error)
+{
+    bool ret = true;
+    char *master_log_pos = NULL;
+    long long pos = 0;
+
+    /* Set new binlog position from MASTER_LOG_POS */
+    master_log_pos = change_master.binlog_pos;
+    if (master_log_pos == NULL)
+    {
+        pos = 0;
+    }
+    else
+    {
+        pos = atoll(master_log_pos);
+    }
+
+    /**
+     * Binlog name and position are checked if:
+     * - mariadb10_master_gtid is off and
+     * - master connection is already configured.
+     * Checks:
+     *  (1) filename is different from current router log file and pos != 4
+     *  (2) position is not current one for current file
+
+     * Binlog file and pos can set after all checks.
+     */
+
+    /* MariaDB 10 GTID request */
+    if (router->mariadb10_master_gtid)
+    {
+       if (change_master.use_mariadb10_gtid)
+       {
+            /* MASTER_USE_GTID=Slave_pos is set */
+            MXS_INFO("%s: MASTER_USE_GTID is [%s]",
+                     router->service->name,
+                     change_master.use_mariadb10_gtid);
+       }
+
+       /* Always log the current GTID value with CHANGE_MASTER TO */
+       MXS_INFO("%s: CHANGE MASTER TO, current GTID value is [%s]",
+                router->service->name,
+                router->last_mariadb_gtid);
+
+       /* Always set empty filename at pos 4 with CHANGE_MASTER TO */
+       strcpy(router->binlog_name, "");
+
+       router->current_pos = 4;
+       router->binlog_position = 4;
+       router->current_safe_event = 4;
+    }
+    /* The new filename is not the current one */
+    else if (strcmp(new_logfile, router->binlog_name) != 0 &&
+             router->master_state != BLRM_UNCONFIGURED)
+    {
+        if (master_log_pos == NULL)
+        {
+            snprintf(error,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Please provide an explicit MASTER_LOG_POS "
+                     "for new MASTER_LOG_FILE %s: "
+                     "Permitted binlog pos is %d. "
+                     "Current master_log_file=%s, master_log_pos=%lu",
+                     new_logfile,
+                     4,
+                     router->binlog_name,
+                     router->current_pos);
+
+            ret = false;
+        }
+        else
+        {
+            if (pos != 4)
+            {
+                snprintf(error,
+                         BINLOG_ERROR_MSG_LEN,
+                         "Can not set MASTER_LOG_POS to %s for "
+                         "MASTER_LOG_FILE %s: "
+                         "Permitted binlog pos is %d. "
+                         "Current master_log_file=%s, master_log_pos=%lu",
+                         master_log_pos,
+                         new_logfile,
+                         4,
+                         router->binlog_name,
+                         router->current_pos);
+
+                ret = false;
+            }
+        }
+
+        /* Set new binlog name at pos 4 */
+        if (ret)
+        {
+            strcpy(router->binlog_name, new_logfile);
+
+            router->current_pos = 4;
+            router->binlog_position = 4;
+            router->current_safe_event = 4;
+
+            /**
+             * Close current file binlog file,
+             * next start slave will create the new one
+             */
+            fsync(router->binlog_fd);
+            close(router->binlog_fd);
+            router->binlog_fd = -1;
+
+            MXS_INFO("%s: New MASTER_LOG_FILE is [%s]",
+                     router->service->name,
+                     router->binlog_name);
+        }
+    }
+    else
+    {
+        /**
+         * Same binlog or master connection not configured
+         * Position cannot be different from
+         * current pos or 4 (if BLRM_UNCONFIGURED).
+         * Note:
+         * pos is not checked if router->mariadb10_master_gtid is set
+         */
+        if (router->master_state == BLRM_UNCONFIGURED)
+        {
+            if (master_log_pos != NULL && pos != 4)
+            {
+                snprintf(error,
+                         BINLOG_ERROR_MSG_LEN,
+                         "Can not set MASTER_LOG_POS to %s: "
+                         "Permitted binlog pos is 4. Specified master_log_file=%s",
+                         master_log_pos,
+                         new_logfile);
+
+                ret = false;
+            }
+        }
+        else
+        {
+            if (master_log_pos != NULL && pos != router->current_pos)
+            {
+                snprintf(error,
+                         BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
+                         "Permitted binlog pos is %lu. "
+                         "Current master_log_file=%s, master_log_pos=%lu",
+                         master_log_pos,
+                         router->current_pos,
+                         router->binlog_name,
+                         router->current_pos);
+
+                ret = false;
+            }
+        }
+    }
+
+    return ret;
 }
