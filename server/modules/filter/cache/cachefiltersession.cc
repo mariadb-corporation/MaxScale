@@ -248,7 +248,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     switch ((int)MYSQL_GET_COMMAND(pData))
     {
-    case MYSQL_COM_INIT_DB:
+    case MXS_COM_INIT_DB:
         {
             ss_dassert(!m_zUseDb);
             size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1; // Remove the command byte.
@@ -272,21 +272,21 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
         }
         break;
 
-    case MYSQL_COM_STMT_PREPARE:
+    case MXS_COM_STMT_PREPARE:
         if (log_decisions())
         {
-            MXS_NOTICE("MYSQL_COM_STMT_PREPARE, ignoring.");
+            MXS_NOTICE("COM_STMT_PREPARE, ignoring.");
         }
         break;
 
-    case MYSQL_COM_STMT_EXECUTE:
+    case MXS_COM_STMT_EXECUTE:
         if (log_decisions())
         {
-            MXS_NOTICE("MYSQL_COM_STMT_EXECUTE, ignoring.");
+            MXS_NOTICE("COM_STMT_EXECUTE, ignoring.");
         }
         break;
 
-    case MYSQL_COM_QUERY:
+    case MXS_COM_QUERY:
         if (should_consult_cache(pPacket))
         {
             if (m_pCache->should_store(m_zDefaultDb, pPacket))

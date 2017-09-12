@@ -139,7 +139,7 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
         }
         else
         {
-            if (*command == MYSQL_COM_QUERY &&
+            if (*command == MXS_COM_QUERY &&
                 qc_get_operation(buffer) == QUERY_OP_EXECUTE)
             {
                 std::string id = get_text_ps_id(buffer);
@@ -248,7 +248,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
             succp = handle_got_target(inst, rses, querybuf, target, store_stmt);
 
-            if (succp && command == MYSQL_COM_STMT_EXECUTE && not_locked_to_master)
+            if (succp && command == MXS_COM_STMT_EXECUTE && not_locked_to_master)
             {
                 /** Track the targets of the COM_STMT_EXECUTE statements. This
                  * information is used to route all COM_STMT_FETCH commands
@@ -584,8 +584,8 @@ route_target_t get_route_target(RWSplitSession *rses, uint8_t command,
      */
     if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
         qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-        command == MYSQL_COM_STMT_CLOSE ||
-        command == MYSQL_COM_STMT_RESET)
+        command == MXS_COM_STMT_CLOSE ||
+        command == MXS_COM_STMT_RESET)
     {
         target = TARGET_ALL;
     }
@@ -944,7 +944,7 @@ SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
     int rlag_max = rses_get_max_replication_lag(rses);
     SRWBackend target;
 
-    if (cmd == MYSQL_COM_STMT_FETCH)
+    if (cmd == MXS_COM_STMT_FETCH)
     {
         /** The COM_STMT_FETCH must be executed on the same server as the
          * COM_STMT_EXECUTE was executed on */
@@ -1082,10 +1082,10 @@ bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
 
 static inline bool query_creates_reply(uint8_t cmd)
 {
-    return cmd != MYSQL_COM_QUIT &&
-           cmd != MYSQL_COM_STMT_SEND_LONG_DATA &&
-           cmd != MYSQL_COM_STMT_CLOSE &&
-           cmd != MYSQL_COM_STMT_FETCH; // Fetch is done mid-result
+    return cmd != MXS_COM_QUIT &&
+           cmd != MXS_COM_STMT_SEND_LONG_DATA &&
+           cmd != MXS_COM_STMT_CLOSE &&
+           cmd != MXS_COM_STMT_FETCH; // Fetch is done mid-result
 }
 
 static inline bool is_large_query(GWBUF* buf)

@@ -354,8 +354,8 @@ static int routeQuery(MXS_FILTER *instance,
 
     switch ((int)MYSQL_GET_COMMAND(data))
     {
-    case MYSQL_COM_QUERY:
-    case MYSQL_COM_STMT_EXECUTE:
+    case MXS_COM_QUERY:
+    case MXS_COM_STMT_EXECUTE:
         {
             /* Set input query only with MAXROWS_RETURN_ERR */
             if (csdata->instance->config.m_return == MAXROWS_RETURN_ERR &&

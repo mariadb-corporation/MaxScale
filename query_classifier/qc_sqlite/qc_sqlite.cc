@@ -2670,7 +2670,7 @@ public:
                     // Sequence id
                     *ptr++ = 0x00;
                     // Command
-                    *ptr++ = MYSQL_COM_QUERY;
+                    *ptr++ = MXS_COM_QUERY;
 
                     memcpy(ptr, zStmt, preparable_stmt_len);
                 }
@@ -3430,7 +3430,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
         {
             uint8_t command = MYSQL_GET_COMMAND(data);
 
-            if ((command == MYSQL_COM_QUERY) || (command == MYSQL_COM_STMT_PREPARE))
+            if ((command == MXS_COM_QUERY) || (command == MXS_COM_STMT_PREPARE))
             {
                 bool suppress_logging = false;
 
@@ -3481,7 +3481,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
                     this_thread.pInfo->m_pQuery = NULL;
                     this_thread.pInfo->m_nQuery = 0;
 
-                    if (command == MYSQL_COM_STMT_PREPARE)
+                    if (command == MXS_COM_STMT_PREPARE)
                     {
                         pInfo->m_type_mask |= QUERY_TYPE_PREPARE_STMT;
                     }

@@ -808,7 +808,7 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
         if (protocol_is_idle(dcb))
         {
             int pktlen;
-            uint8_t cmd = (uint8_t)MYSQL_COM_QUERY; // Treat empty packets as COM_QUERY
+            uint8_t cmd = (uint8_t)MXS_COM_QUERY; // Treat empty packets as COM_QUERY
 
             /**
              * Buffer has at least 5 bytes, the packet is in contiguous memory
@@ -861,7 +861,7 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
             if (dcb->protocol_packet_length - MYSQL_HEADER_LEN != GW_MYSQL_MAX_PACKET_LEN)
             {
                 /** We're processing the first packet of a command */
-                proto->current_command = (mysql_server_cmd_t)cmd;
+                proto->current_command = (mxs_mysql_cmd_t)cmd;
             }
 
             dcb->protocol_packet_length = pktlen + MYSQL_HEADER_LEN;
@@ -1041,7 +1041,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     /** Reset error handler when routing of the new query begins */
     dcb->dcb_errhandle_called = false;
 
-    if (proto->current_command == MYSQL_COM_QUIT)
+    if (proto->current_command == MXS_COM_QUIT)
     {
         /** The client is closing the connection. We know that this will be the
          * last command the client sends so the backend connections are very likely
@@ -1089,7 +1089,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
 
-    if (proto->current_command == MYSQL_COM_QUIT)
+    if (proto->current_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
         dcb_close(dcb);
@@ -1458,7 +1458,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             CHK_GWBUF(packetbuf);
 
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
-            proto->current_command = (mysql_server_cmd_t)mxs_mysql_get_command(packetbuf);
+            proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(packetbuf);
 
             /**
              * This means that buffer includes exactly one MySQL
@@ -1500,7 +1500,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                         session_set_trx_state(session, SESSION_TRX_INACTIVE);
                     }
 
-                    if (mxs_mysql_get_command(packetbuf) == MYSQL_COM_QUERY)
+                    if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
                     {
                         uint32_t type = qc_get_trx_type_mask(packetbuf);
 
@@ -1635,7 +1635,7 @@ static spec_com_res_t process_special_commands(DCB *dcb, GWBUF *read_buffer, int
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
     uint8_t opt;
 
-    if (proto->current_command == MYSQL_COM_SET_OPTION &&
+    if (proto->current_command == MXS_COM_SET_OPTION &&
         gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 2, 1, &opt))
     {
         if (opt)
@@ -1650,7 +1650,7 @@ static spec_com_res_t process_special_commands(DCB *dcb, GWBUF *read_buffer, int
     /**
      * Handle COM_PROCESS_KILL
      */
-    else if (proto->current_command == MYSQL_COM_PROCESS_KILL)
+    else if (proto->current_command == MXS_COM_PROCESS_KILL)
     {
         /* Make sure we have a complete SQL packet before trying to read the
          * process id. If not, try again next time. */
@@ -1672,7 +1672,7 @@ static spec_com_res_t process_special_commands(DCB *dcb, GWBUF *read_buffer, int
             }
         }
     }
-    else if (proto->current_command == MYSQL_COM_QUERY)
+    else if (proto->current_command == MXS_COM_QUERY)
     {
         /* Limits on the length of the queries in which "KILL" is searched for. Reducing
          * LONGEST_KILL will reduce overhead but also limit the range of accepted queries. */

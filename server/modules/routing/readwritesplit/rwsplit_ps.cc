@@ -23,7 +23,7 @@ uint32_t get_prepare_type(GWBUF* buffer)
 {
     uint32_t type;
 
-    if (mxs_mysql_get_command(buffer) == MYSQL_COM_STMT_PREPARE)
+    if (mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE)
     {
         // TODO: This could be done inside the query classifier
         size_t packet_len = gwbuf_length(buffer);
@@ -38,7 +38,7 @@ uint32_t get_prepare_type(GWBUF* buffer)
         // Sequence id
         *ptr++ = 0x00;
         // Command
-        *ptr++ = MYSQL_COM_QUERY;
+        *ptr++ = MXS_COM_QUERY;
 
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, payload_len - 1, ptr);
         type = qc_get_type_mask(stmt);
@@ -139,17 +139,17 @@ uint32_t PSManager::get_type(uint32_t id) const
 
 void PSManager::store(GWBUF* buffer, uint32_t id)
 {
-    ss_dassert(mxs_mysql_get_command(buffer) == MYSQL_COM_STMT_PREPARE ||
+    ss_dassert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_PREPARE ||
                qc_query_is_type(qc_get_type_mask(buffer),
                                 QUERY_TYPE_PREPARE_NAMED_STMT));
 
     switch (mxs_mysql_get_command(buffer))
     {
-    case MYSQL_COM_QUERY:
+    case MXS_COM_QUERY:
         m_text_ps[get_text_ps_id(buffer)] = get_prepare_type(buffer);
         break;
 
-    case MYSQL_COM_STMT_PREPARE:
+    case MXS_COM_STMT_PREPARE:
         m_binary_ps[id] = get_prepare_type(buffer);
         break;
 

@@ -65,46 +65,46 @@ uint32_t determine_query_type(GWBUF *querybuf, int command)
 
     switch (command)
     {
-    case MYSQL_COM_QUIT: /*< 1 QUIT will close all sessions */
-    case MYSQL_COM_INIT_DB: /*< 2 DDL must go to the master */
-    case MYSQL_COM_REFRESH: /*< 7 - I guess this is session but not sure */
-    case MYSQL_COM_DEBUG: /*< 0d all servers dump debug info to stdout */
-    case MYSQL_COM_PING: /*< 0e all servers are pinged */
-    case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
-    case MYSQL_COM_SET_OPTION: /*< 1b send options to all servers */
+    case MXS_COM_QUIT: /*< 1 QUIT will close all sessions */
+    case MXS_COM_INIT_DB: /*< 2 DDL must go to the master */
+    case MXS_COM_REFRESH: /*< 7 - I guess this is session but not sure */
+    case MXS_COM_DEBUG: /*< 0d all servers dump debug info to stdout */
+    case MXS_COM_PING: /*< 0e all servers are pinged */
+    case MXS_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
+    case MXS_COM_SET_OPTION: /*< 1b send options to all servers */
         type = QUERY_TYPE_SESSION_WRITE;
         break;
 
-    case MYSQL_COM_CREATE_DB: /**< 5 DDL must go to the master */
-    case MYSQL_COM_DROP_DB: /**< 6 DDL must go to the master */
-    case MYSQL_COM_STMT_CLOSE: /*< free prepared statement */
-    case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-    case MYSQL_COM_STMT_RESET: /*< resets the data of a prepared statement */
+    case MXS_COM_CREATE_DB: /**< 5 DDL must go to the master */
+    case MXS_COM_DROP_DB: /**< 6 DDL must go to the master */
+    case MXS_COM_STMT_CLOSE: /*< free prepared statement */
+    case MXS_COM_STMT_SEND_LONG_DATA: /*< send data to column */
+    case MXS_COM_STMT_RESET: /*< resets the data of a prepared statement */
         type = QUERY_TYPE_WRITE;
         break;
 
-    case MYSQL_COM_QUERY:
+    case MXS_COM_QUERY:
         type = qc_get_type_mask(querybuf);
         break;
 
-    case MYSQL_COM_STMT_PREPARE:
+    case MXS_COM_STMT_PREPARE:
         type = qc_get_type_mask(querybuf);
         type |= QUERY_TYPE_PREPARE_STMT;
         break;
 
-    case MYSQL_COM_STMT_EXECUTE:
+    case MXS_COM_STMT_EXECUTE:
         /** Parsing is not needed for this type of packet */
         type = QUERY_TYPE_EXEC_STMT;
         break;
 
-    case MYSQL_COM_SHUTDOWN: /**< 8 where should shutdown be routed ? */
-    case MYSQL_COM_STATISTICS: /**< 9 ? */
-    case MYSQL_COM_PROCESS_INFO: /**< 0a ? */
-    case MYSQL_COM_CONNECT: /**< 0b ? */
-    case MYSQL_COM_PROCESS_KILL: /**< 0c ? */
-    case MYSQL_COM_TIME: /**< 0f should this be run in gateway ? */
-    case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
-    case MYSQL_COM_DAEMON: /**< 1d ? */
+    case MXS_COM_SHUTDOWN: /**< 8 where should shutdown be routed ? */
+    case MXS_COM_STATISTICS: /**< 9 ? */
+    case MXS_COM_PROCESS_INFO: /**< 0a ? */
+    case MXS_COM_CONNECT: /**< 0b ? */
+    case MXS_COM_PROCESS_KILL: /**< 0c ? */
+    case MXS_COM_TIME: /**< 0f should this be run in gateway ? */
+    case MXS_COM_DELAYED_INSERT: /**< 10 ? */
+    case MXS_COM_DAEMON: /**< 1d ? */
     default:
         break;
     }
@@ -129,7 +129,7 @@ uint32_t determine_query_type(GWBUF *querybuf, int command)
 bool
 is_packet_a_query(int packet_type)
 {
-    return (packet_type == MYSQL_COM_QUERY);
+    return (packet_type == MXS_COM_QUERY);
 }
 
 /*

@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/service.h>
 #include <maxscale/server.h>
@@ -49,6 +50,7 @@
 #include <maxscale/resultset.h>
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
+#include <maxscale/protocol/mysql.h>
 
 #include "../../../core/maxscale/modules.h"
 #include "../../../core/maxscale/monitor.h"
@@ -345,13 +347,13 @@ execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
     {
         switch (MYSQL_COMMAND(queue))
         {
-        case COM_PING:
+        case MXS_COM_PING:
             rc = maxinfo_ping(instance, session, queue);
             break;
-        case COM_STATISTICS:
+        case MXS_COM_STATISTICS:
             rc = maxinfo_statistics(instance, session, queue);
             break;
-        case COM_QUIT:
+        case MXS_COM_QUIT:
             break;
         default:
             MXS_ERROR("Unexpected MySQL command 0x%x",

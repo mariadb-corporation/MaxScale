@@ -91,20 +91,20 @@ bool Backend::execute_session_command()
 
     switch (sescmd.get_command())
     {
-    case MYSQL_COM_QUIT:
-    case MYSQL_COM_STMT_CLOSE:
+    case MXS_COM_QUIT:
+    case MXS_COM_STMT_CLOSE:
         /** These commands do not generate responses */
         rval = write(buffer, NO_RESPONSE);
         complete_session_command();
         break;
 
-    case MYSQL_COM_CHANGE_USER:
+    case MXS_COM_CHANGE_USER:
         /** This makes it possible to handle replies correctly */
         gwbuf_set_type(buffer, GWBUF_TYPE_SESCMD);
         rval = auth(buffer);
         break;
 
-    case MYSQL_COM_QUERY:
+    case MXS_COM_QUERY:
     default:
         /**
          * Mark session command buffer, it triggers writing

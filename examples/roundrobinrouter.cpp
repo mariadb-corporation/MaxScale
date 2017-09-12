@@ -485,7 +485,7 @@ void RRRouterSession::close()
 void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& target, bool& route_to_all)
 {
     /* Extract the command type from the SQL-buffer */
-    mysql_server_cmd_t cmd_type = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
+    mxs_mysql_cmd_t cmd_type = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
     /* The "query_types" is only really valid for query-commands but let's use
      * it here for all command types.
      */
@@ -493,7 +493,7 @@ void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& targe
 
     switch (cmd_type)
     {
-    case MYSQL_COM_QUERY:
+    case MXS_COM_QUERY:
         {
             /* Use the inbuilt query_classifier to get information about
              * the query. The default qc works with mySQL-queries.
@@ -509,15 +509,15 @@ void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& targe
 #endif
         }
         break;
-    case MYSQL_COM_INIT_DB:
+    case MXS_COM_INIT_DB:
         query_types = q_route_to_all;
         RR_DEBUG("MYSQL_COM_INIT_DB");
         break;
-    case MYSQL_COM_QUIT:
+    case MXS_COM_QUIT:
         query_types = q_route_to_all;
         RR_DEBUG("MYSQL_COM_QUIT");
         break;
-    case MYSQL_COM_FIELD_LIST:
+    case MXS_COM_FIELD_LIST:
         query_types = q_route_to_rr;
         RR_DEBUG("MYSQL_COM_FIELD_LIST");
         break;

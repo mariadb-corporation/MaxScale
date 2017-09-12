@@ -387,7 +387,7 @@ static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
 
     if (GWBUF_IS_TYPE_SESCMD(buffer))
     {
-        mysql_server_cmd_t cmd = mxs_mysql_get_command(buffer);
+        mxs_mysql_cmd_t cmd = mxs_mysql_get_command(buffer);
         protocol_add_srv_command(proto, cmd);
     }
     if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
@@ -616,13 +616,13 @@ static inline bool session_ok_to_route(DCB *dcb)
 
 static inline bool expecting_resultset(MySQLProtocol *proto)
 {
-    return proto->current_command == MYSQL_COM_QUERY ||
-           proto->current_command == MYSQL_COM_STMT_FETCH;
+    return proto->current_command == MXS_COM_QUERY ||
+           proto->current_command == MXS_COM_STMT_FETCH;
 }
 
 static inline bool expecting_ps_response(MySQLProtocol *proto)
 {
-    return proto->current_command == MYSQL_COM_STMT_PREPARE;
+    return proto->current_command == MXS_COM_STMT_PREPARE;
 }
 
 static inline bool complete_ps_response(GWBUF *buffer)
@@ -887,7 +887,7 @@ gw_read_and_write(DCB *dcb)
          * If protocol has session command set, concatenate whole
          * response into one buffer.
          */
-        if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, true) != MYSQL_COM_UNDEFINED)
+        if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, true) != MXS_COM_UNDEFINED)
         {
             if (result_collected)
             {
@@ -1139,14 +1139,14 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
     case MXS_AUTH_STATE_COMPLETE:
         {
             uint8_t* ptr = GWBUF_DATA(queue);
-            mysql_server_cmd_t cmd = mxs_mysql_get_command(queue);
+            mxs_mysql_cmd_t cmd = mxs_mysql_get_command(queue);
 
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
                       dcb, dcb->fd, STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
 
             prepare_for_write(dcb, queue);
 
-            if (cmd == MYSQL_COM_QUIT && dcb->server->persistpoolmax)
+            if (cmd == MXS_COM_QUIT && dcb->server->persistpoolmax)
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
                 gwbuf_free(queue);
@@ -1538,7 +1538,7 @@ static int gw_change_user(DCB *backend,
          * packet and add it to client's read buffer.
          */
         protocol_add_srv_command((MySQLProtocol*)backend->protocol,
-                                 MYSQL_COM_CHANGE_USER);
+                                 MXS_COM_CHANGE_USER);
         modutil_reply_auth_error(backend, message, 0);
         rv = 1;
     }
@@ -1601,7 +1601,7 @@ static GWBUF* process_response_data(DCB* dcb,
      */
     while (nbytes_to_process != 0)
     {
-        mysql_server_cmd_t srvcmd;
+        mxs_mysql_cmd_t srvcmd;
         bool succp;
 
         srvcmd = protocol_get_srv_command(p, false);

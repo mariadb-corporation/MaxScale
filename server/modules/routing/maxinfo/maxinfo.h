@@ -100,13 +100,6 @@ typedef struct maxinfo_tree
 
 
 #define MYSQL_COMMAND(buf)  (*((uint8_t *)GWBUF_DATA(buf) + 4))
-/**
- * MySQL protocol OpCodes needed for replication
- */
-#define COM_QUIT                0x01
-#define COM_QUERY               0x03
-#define COM_STATISTICS              0x09
-#define COM_PING                0x0e
 
 /**
  * Token values for the tokeniser used by the parser for maxinfo

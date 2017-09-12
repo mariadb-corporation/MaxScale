@@ -684,7 +684,7 @@ blr_make_query(DCB *dcb, char *query)
 
     // This is hack to get the result set processing in order for binlogrouter
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-    proto->current_command = MYSQL_COM_QUERY;
+    proto->current_command = MXS_COM_QUERY;
 
     return buf;
 }
@@ -753,7 +753,7 @@ blr_make_registration(ROUTER_INSTANCE *router)
 
     // This is hack to get the result set processing in order for binlogrouter
     MySQLProtocol *proto = (MySQLProtocol*)router->master->protocol;
-    proto->current_command = MYSQL_COM_REGISTER_SLAVE;
+    proto->current_command = MXS_COM_REGISTER_SLAVE;
 
     return buf;
 }
@@ -805,7 +805,7 @@ blr_make_binlog_dump(ROUTER_INSTANCE *router)
 
     // This is hack to get the result set processing in order for binlogrouter
     MySQLProtocol *proto = (MySQLProtocol*)router->master->protocol;
-    proto->current_command = MYSQL_COM_BINLOG_DUMP;
+    proto->current_command = MXS_COM_BINLOG_DUMP;
 
     return buf;
 }

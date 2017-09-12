@@ -197,7 +197,7 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type)
     bool rval = false;
 
     if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS &&
-        packet_type == MYSQL_COM_QUERY)
+        packet_type == MXS_COM_QUERY)
     {
         char *ptr, *data = (char*)GWBUF_DATA(buf) + 5;
         /** Payload size without command byte */

@@ -27,7 +27,7 @@
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 
-static server_command_t* server_command_init(server_command_t* srvcmd, mysql_server_cmd_t cmd);
+static server_command_t* server_command_init(server_command_t* srvcmd, mxs_mysql_cmd_t cmd);
 
 /**
  * @brief Allocate a new MySQL_session
@@ -74,8 +74,8 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     }
     p->protocol_state = MYSQL_PROTOCOL_ALLOC;
     p->protocol_auth_state = MXS_AUTH_STATE_INIT;
-    p->current_command = MYSQL_COM_UNDEFINED;
-    p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
+    p->current_command = MXS_COM_UNDEFINED;
+    p->protocol_command.scom_cmd = MXS_COM_UNDEFINED;
     p->protocol_command.scom_nresponse_packets = 0;
     p->protocol_command.scom_nbytes_to_read = 0;
     p->stored_query = NULL;
@@ -584,7 +584,7 @@ GWBUF* gw_MySQL_get_packets(GWBUF** p_srcbuf,
 
 
 static server_command_t* server_command_init(server_command_t* srvcmd,
-                                             mysql_server_cmd_t cmd)
+                                             mxs_mysql_cmd_t cmd)
 {
     server_command_t* c;
 
@@ -667,7 +667,7 @@ void protocol_archive_srv_command(MySQLProtocol* p)
     /** Remove from command list */
     if (s1->scom_next == NULL)
     {
-        p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
+        p->protocol_command.scom_cmd = MXS_COM_UNDEFINED;
     }
     else
     {
@@ -685,7 +685,7 @@ retblock:
  * to MySQLProtocol structure. It is removed when response has arrived.
  */
 void protocol_add_srv_command(MySQLProtocol*     p,
-                              mysql_server_cmd_t cmd)
+                              mxs_mysql_cmd_t cmd)
 {
 #if defined(EXTRA_SS_DEBUG)
     server_command_t* c;
@@ -696,7 +696,7 @@ void protocol_add_srv_command(MySQLProtocol*     p,
         return;
     }
     /** this is the only server command in protocol */
-    if (p->protocol_command.scom_cmd == MYSQL_COM_UNDEFINED)
+    if (p->protocol_command.scom_cmd == MXS_COM_UNDEFINED)
     {
         /** write into structure */
         server_command_init(&p->protocol_command, cmd);
@@ -713,7 +713,7 @@ void protocol_add_srv_command(MySQLProtocol*     p,
 
     c = &p->protocol_command;
 
-    while (c != NULL && c->scom_cmd != MYSQL_COM_UNDEFINED)
+    while (c != NULL && c->scom_cmd != MXS_COM_UNDEFINED)
     {
         MXS_INFO("fd %d : %d %s",
                  p->owner_dcb->fd,
@@ -743,7 +743,7 @@ void protocol_remove_srv_command(MySQLProtocol* p)
 #endif
     if (s->scom_next == NULL)
     {
-        p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
+        p->protocol_command.scom_cmd = MXS_COM_UNDEFINED;
     }
     else
     {
@@ -752,10 +752,10 @@ void protocol_remove_srv_command(MySQLProtocol* p)
     }
 }
 
-mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p,
+mxs_mysql_cmd_t protocol_get_srv_command(MySQLProtocol* p,
                                             bool           removep)
 {
-    mysql_server_cmd_t cmd;
+    mxs_mysql_cmd_t cmd;
 
     cmd = p->protocol_command.scom_cmd;
 
@@ -784,7 +784,7 @@ void mysql_num_response_packets(GWBUF *buf, uint8_t cmd, int *npackets, size_t *
     {
         switch (cmd)
         {
-        case MYSQL_COM_STMT_PREPARE:
+        case MXS_COM_STMT_PREPARE:
             gwbuf_copy_data(buf, 9, 2, readbuf);
             nparam = gw_mysql_get_byte2(readbuf);
             gwbuf_copy_data(buf, 11, 2, readbuf);
@@ -792,9 +792,9 @@ void mysql_num_response_packets(GWBUF *buf, uint8_t cmd, int *npackets, size_t *
             *npackets = 1 + nparam + MXS_MIN(1, nparam) + nattr + MXS_MIN(nattr, 1);
             break;
 
-        case MYSQL_COM_QUIT:
-        case MYSQL_COM_STMT_SEND_LONG_DATA:
-        case MYSQL_COM_STMT_CLOSE:
+        case MXS_COM_QUIT:
+        case MXS_COM_STMT_SEND_LONG_DATA:
+        case MXS_COM_STMT_CLOSE:
             *npackets = 0; /*< these don't reply anything */
             break;
 
@@ -1611,7 +1611,7 @@ bool mxs_mysql_more_results_after_ok(GWBUF *buffer)
     return rval;
 }
 
-mysql_server_cmd_t mxs_mysql_current_command(MXS_SESSION* session)
+mxs_mysql_cmd_t mxs_mysql_current_command(MXS_SESSION* session)
 {
     MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
     return proto->current_command;
@@ -1681,8 +1681,8 @@ uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer)
 
 bool mxs_mysql_command_will_respond(uint8_t cmd)
 {
-    return cmd != MYSQL_COM_STMT_SEND_LONG_DATA &&
-           cmd != MYSQL_COM_QUIT &&
-           cmd != MYSQL_COM_STMT_CLOSE &&
-           cmd != MYSQL_COM_STMT_FETCH;
+    return cmd != MXS_COM_STMT_SEND_LONG_DATA &&
+           cmd != MXS_COM_QUIT &&
+           cmd != MXS_COM_STMT_CLOSE &&
+           cmd != MXS_COM_STMT_FETCH;
 }

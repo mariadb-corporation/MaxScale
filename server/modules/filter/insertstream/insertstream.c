@@ -606,7 +606,7 @@ static bool extract_insert_target(GWBUF *buffer, char* target, int len)
 {
     bool rval = false;
 
-    if (MYSQL_GET_COMMAND(GWBUF_DATA(buffer)) == MYSQL_COM_QUERY &&
+    if (MYSQL_GET_COMMAND(GWBUF_DATA(buffer)) == MXS_COM_QUERY &&
         qc_get_operation(buffer) == QUERY_OP_INSERT &&
         only_implicit_values(buffer))
     {

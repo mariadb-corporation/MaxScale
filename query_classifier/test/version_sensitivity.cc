@@ -12,9 +12,6 @@
  */
 
 #include <iostream>
-#define MYSQL_COM_QUIT        COM_QUIT
-#define MYSQL_COM_INIT_DB     COM_INIT_DB
-#define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>

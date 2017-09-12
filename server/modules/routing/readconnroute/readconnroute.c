@@ -506,7 +506,7 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 }
 
 /** Log routing failure due to closed session */
-static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
+static void log_closed_session(mxs_mysql_cmd_t mysql_command, bool is_closed,
                                SERVER_REF *ref)
 {
     char msg[MAX_SERVER_ADDRESS_LEN + 200] = ""; // Extra space for message
@@ -550,7 +550,7 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
     int rc = 0;
     DCB* backend_dcb;
     MySQLProtocol *proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
-    mysql_server_cmd_t mysql_command = proto->current_command;
+    mxs_mysql_cmd_t mysql_command = proto->current_command;
     bool rses_is_closed;
 
     inst->stats.n_queries++;
@@ -589,11 +589,11 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
 
     switch (mysql_command)
     {
-    case MYSQL_COM_CHANGE_USER:
+    case MXS_COM_CHANGE_USER:
         rc = backend_dcb->func.auth(backend_dcb, NULL, backend_dcb->session,
                                     queue);
         break;
-    case MYSQL_COM_QUERY:
+    case MXS_COM_QUERY:
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
             trc = modutil_get_SQL(queue);

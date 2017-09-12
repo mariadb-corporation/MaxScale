@@ -261,9 +261,42 @@ typedef enum
 #define MXS_MARIA_CAP_COM_MULTI            (1 << 1)
 #define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1 << 2)
 
-typedef enum enum_server_command mysql_server_cmd_t;
+typedef enum
+{
+    MXS_COM_SLEEP = 0,
+    MXS_COM_QUIT,
+    MXS_COM_INIT_DB,
+    MXS_COM_QUERY,
+    MXS_COM_FIELD_LIST,
+    MXS_COM_CREATE_DB,
+    MXS_COM_DROP_DB,
+    MXS_COM_REFRESH,
+    MXS_COM_SHUTDOWN,
+    MXS_COM_STATISTICS,
+    MXS_COM_PROCESS_INFO,
+    MXS_COM_CONNECT,
+    MXS_COM_PROCESS_KILL,
+    MXS_COM_DEBUG,
+    MXS_COM_PING,
+    MXS_COM_TIME = 15,
+    MXS_COM_DELAYED_INSERT,
+    MXS_COM_CHANGE_USER,
+    MXS_COM_BINLOG_DUMP,
+    MXS_COM_TABLE_DUMP,
+    MXS_COM_CONNECT_OUT = 20,
+    MXS_COM_REGISTER_SLAVE,
+    MXS_COM_STMT_PREPARE = 22,
+    MXS_COM_STMT_EXECUTE = 23,
+    MXS_COM_STMT_SEND_LONG_DATA = 24,
+    MXS_COM_STMT_CLOSE = 25,
+    MXS_COM_STMT_RESET = 26,
+    MXS_COM_SET_OPTION = 27,
+    MXS_COM_STMT_FETCH = 28,
+    MXS_COM_DAEMON,
+    MXS_COM_END
+} mxs_mysql_cmd_t;
 
-static const mysql_server_cmd_t MYSQL_COM_UNDEFINED = (mysql_server_cmd_t) - 1;
+static const mxs_mysql_cmd_t MXS_COM_UNDEFINED = (mxs_mysql_cmd_t) - 1;
 
 /**
  * List of server commands, and number of response packets are stored here.
@@ -272,7 +305,7 @@ static const mysql_server_cmd_t MYSQL_COM_UNDEFINED = (mysql_server_cmd_t) - 1;
  */
 typedef struct server_command_st
 {
-    mysql_server_cmd_t        scom_cmd;
+    mxs_mysql_cmd_t           scom_cmd;
     int                       scom_nresponse_packets; /*< packets in response */
     size_t                    scom_nbytes_to_read;    /*< bytes left to read in current packet */
     struct server_command_st* scom_next;
@@ -291,7 +324,7 @@ typedef struct
 #endif
     int                    fd;                           /*< The socket descriptor */
     struct dcb*            owner_dcb;                    /*< The DCB of the socket we are running on */
-    mysql_server_cmd_t     current_command;              /*< Current command being executed */
+    mxs_mysql_cmd_t        current_command;              /*< Current command being executed */
     server_command_t       protocol_command;             /*< session command list */
     server_command_t*      protocol_cmd_history;         /*< session command history */
     mxs_auth_state_t       protocol_auth_state;          /*< Authentication status */
@@ -325,9 +358,9 @@ typedef struct
 #define MYSQL_REPLY_LOCAL_INFILE      0xfb
 #define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe /**< Only sent during authentication */
 
-static inline mysql_server_cmd_t MYSQL_GET_COMMAND(const uint8_t* header)
+static inline mxs_mysql_cmd_t MYSQL_GET_COMMAND(const uint8_t* header)
 {
-    return (mysql_server_cmd_t)header[4];
+    return (mxs_mysql_cmd_t)header[4];
 }
 
 static inline uint8_t MYSQL_GET_PACKET_NO(const uint8_t* header)
@@ -352,18 +385,18 @@ static inline bool MYSQL_IS_ERROR_PACKET(const uint8_t* header)
 
 static inline bool MYSQL_IS_COM_QUIT(const uint8_t* header)
 {
-    return MYSQL_GET_COMMAND(header) == MYSQL_COM_QUIT &&
+    return MYSQL_GET_COMMAND(header) == MXS_COM_QUIT &&
         MYSQL_GET_PAYLOAD_LEN(header) == 1;
 }
 
 static inline bool MYSQL_IS_COM_INIT_DB(const uint8_t* header)
 {
-    return MYSQL_GET_COMMAND(header) == MYSQL_COM_INIT_DB;
+    return MYSQL_GET_COMMAND(header) == MXS_COM_INIT_DB;
 }
 
 static inline bool MYSQL_IS_CHANGE_USER(const uint8_t* header)
 {
-    return MYSQL_GET_COMMAND(header) == MYSQL_COM_CHANGE_USER;
+    return MYSQL_GET_COMMAND(header) == MXS_COM_CHANGE_USER;
 }
 
 /* The following can be compared using memcmp to detect a null password */
@@ -405,11 +438,11 @@ int mysql_send_auth_error (
 
 GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf);
 GWBUF* gw_MySQL_get_packets(GWBUF** p_readbuf, int* npackets);
-void   protocol_add_srv_command(MySQLProtocol* p, mysql_server_cmd_t cmd);
+void   protocol_add_srv_command(MySQLProtocol* p, mxs_mysql_cmd_t cmd);
 void   protocol_remove_srv_command(MySQLProtocol* p);
 bool   protocol_waits_response(MySQLProtocol* p);
-mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p, bool removep);
-int  get_stmt_nresponse_packets(GWBUF* buf, mysql_server_cmd_t cmd);
+mxs_mysql_cmd_t protocol_get_srv_command(MySQLProtocol* p, bool removep);
+int  get_stmt_nresponse_packets(GWBUF* buf, mxs_mysql_cmd_t cmd);
 bool protocol_get_response_status (MySQLProtocol* p, int* npackets, size_t* nbytes);
 void protocol_set_response_status (MySQLProtocol* p, int  npackets, size_t  nbytes);
 void protocol_archive_srv_command(MySQLProtocol* p);
@@ -500,7 +533,7 @@ bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer);
 bool mxs_mysql_more_results_after_ok(GWBUF *buffer);
 
 /** Get current command for a session */
-mysql_server_cmd_t mxs_mysql_current_command(MXS_SESSION* session);
+mxs_mysql_cmd_t mxs_mysql_current_command(MXS_SESSION* session);
 /**
  * @brief Calculate how many packets a session command will receive
  *

@@ -33,11 +33,11 @@ do{ \
 
 static inline bool is_ps_command(uint8_t cmd)
 {
-    return cmd == MYSQL_COM_STMT_EXECUTE ||
-           cmd == MYSQL_COM_STMT_SEND_LONG_DATA ||
-           cmd == MYSQL_COM_STMT_CLOSE ||
-           cmd == MYSQL_COM_STMT_FETCH ||
-           cmd == MYSQL_COM_STMT_RESET;
+    return cmd == MXS_COM_STMT_EXECUTE ||
+           cmd == MXS_COM_STMT_SEND_LONG_DATA ||
+           cmd == MXS_COM_STMT_CLOSE ||
+           cmd == MXS_COM_STMT_FETCH ||
+           cmd == MXS_COM_STMT_RESET;
 }
 
 /*

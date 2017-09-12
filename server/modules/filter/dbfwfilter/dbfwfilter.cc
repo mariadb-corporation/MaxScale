@@ -1273,13 +1273,13 @@ static bool command_is_mandatory(const GWBUF *buffer)
 {
     switch (MYSQL_GET_COMMAND((uint8_t*)GWBUF_DATA(buffer)))
     {
-    case MYSQL_COM_QUIT:
-    case MYSQL_COM_PING:
-    case MYSQL_COM_CHANGE_USER:
-    case MYSQL_COM_SET_OPTION:
-    case MYSQL_COM_FIELD_LIST:
-    case MYSQL_COM_PROCESS_KILL:
-    case MYSQL_COM_PROCESS_INFO:
+    case MXS_COM_QUIT:
+    case MXS_COM_PING:
+    case MXS_COM_CHANGE_USER:
+    case MXS_COM_SET_OPTION:
+    case MXS_COM_FIELD_LIST:
+    case MXS_COM_PROCESS_KILL:
+    case MXS_COM_PROCESS_INFO:
         return true;
 
     default:

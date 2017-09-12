@@ -509,11 +509,11 @@ static bool route_stored_query(RWSplitSession *rses)
  */
 bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
 {
-    mysql_server_cmd_t cmd = mxs_mysql_current_command(backend->dcb()->session);
+    mxs_mysql_cmd_t cmd = mxs_mysql_current_command(backend->dcb()->session);
 
     if (backend->get_reply_state() == REPLY_STATE_START && !mxs_mysql_is_result_set(buffer))
     {
-        if (cmd == MYSQL_COM_STMT_PREPARE || !mxs_mysql_more_results_after_ok(buffer))
+        if (cmd == MXS_COM_STMT_PREPARE || !mxs_mysql_more_results_after_ok(buffer))
         {
             /** Not a result set, we have the complete response */
             LOG_RS(backend, REPLY_STATE_DONE);
@@ -534,7 +534,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
             LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
             backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
         }
-        else if (n_eof == 1 && cmd != MYSQL_COM_FIELD_LIST)
+        else if (n_eof == 1 && cmd != MXS_COM_FIELD_LIST)
         {
             /** Waiting for the EOF packet after the rows */
             LOG_RS(backend, REPLY_STATE_RSET_ROWS);
@@ -544,7 +544,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
         {
             /** We either have a complete result set or a response to
              * a COM_FIELD_LIST command */
-            ss_dassert(n_eof == 2 || (n_eof == 1 && cmd == MYSQL_COM_FIELD_LIST));
+            ss_dassert(n_eof == 2 || (n_eof == 1 && cmd == MXS_COM_FIELD_LIST));
             LOG_RS(backend, REPLY_STATE_DONE);
             backend->set_reply_state(REPLY_STATE_DONE);
 
@@ -894,7 +894,7 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
 
         if (rses->query_queue == NULL &&
             (rses->expected_responses == 0 ||
-             info.command == MYSQL_COM_STMT_FETCH ||
+             info.command == MXS_COM_STMT_FETCH ||
              rses->load_data_state == LOAD_DATA_ACTIVE ||
              rses->large_query))
         {

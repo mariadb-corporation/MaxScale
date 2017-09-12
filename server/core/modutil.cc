@@ -318,16 +318,16 @@ char *
 modutil_get_query(GWBUF *buf)
 {
     uint8_t* packet;
-    mysql_server_cmd_t packet_type;
+    mxs_mysql_cmd_t packet_type;
     size_t len;
     char* query_str = NULL;
 
     packet = GWBUF_DATA(buf);
-    packet_type = (mysql_server_cmd_t)packet[4];
+    packet_type = (mxs_mysql_cmd_t)packet[4];
 
     switch (packet_type)
     {
-    case MYSQL_COM_QUIT:
+    case MXS_COM_QUIT:
         len = strlen("[Quit msg]") + 1;
         if ((query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
@@ -337,7 +337,7 @@ modutil_get_query(GWBUF *buf)
         memset(&query_str[len], 0, 1);
         break;
 
-    case MYSQL_COM_QUERY:
+    case MXS_COM_QUERY:
         len = MYSQL_GET_PAYLOAD_LEN(packet) - 1; /*< distract 1 for packet type byte */
         if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
@@ -1334,66 +1334,66 @@ const char* STRPACKETTYPE(int p)
 {
     switch (p)
     {
-        case MYSQL_COM_SLEEP:
-            return "MYSQL_COM_SLEEP";
-        case MYSQL_COM_QUIT:
-            return "MYSQL_COM_QUIT";
-        case MYSQL_COM_INIT_DB:
-            return "MYSQL_COM_INIT_DB";
-        case MYSQL_COM_QUERY:
-            return "MYSQL_COM_QUERY";
-        case MYSQL_COM_FIELD_LIST:
-            return "MYSQL_COM_FIELD_LIST";
-        case MYSQL_COM_CREATE_DB:
-            return "MYSQL_COM_CREATE_DB";
-        case MYSQL_COM_DROP_DB:
-            return "MYSQL_COM_DROP_DB";
-        case MYSQL_COM_REFRESH:
-            return "MYSQL_COM_REFRESH";
-        case MYSQL_COM_SHUTDOWN:
-            return "MYSQL_COM_SHUTDOWN";
-        case MYSQL_COM_STATISTICS:
-            return "MYSQL_COM_STATISTICS";
-        case MYSQL_COM_PROCESS_INFO:
-            return "MYSQL_COM_PROCESS_INFO";
-        case MYSQL_COM_CONNECT:
-            return "MYSQL_COM_CONNECT";
-        case MYSQL_COM_PROCESS_KILL:
-            return "MYSQL_COM_PROCESS_KILL";
-        case MYSQL_COM_DEBUG:
-            return "MYSQL_COM_DEBUG";
-        case MYSQL_COM_PING:
-            return "MYSQL_COM_PING";
-        case MYSQL_COM_TIME:
-            return "MYSQL_COM_TIME";
-        case MYSQL_COM_DELAYED_INSERT:
-            return "MYSQL_COM_DELAYED_INSERT";
-        case MYSQL_COM_CHANGE_USER:
-            return "MYSQL_COM_CHANGE_USER";
-        case MYSQL_COM_BINLOG_DUMP:
-            return "MYSQL_COM_BINLOG_DUMP";
-        case MYSQL_COM_TABLE_DUMP:
-            return "MYSQL_COM_TABLE_DUMP";
-        case MYSQL_COM_CONNECT_OUT:
-            return "MYSQL_COM_CONNECT_OUT";
-        case MYSQL_COM_REGISTER_SLAVE:
-            return "MYSQL_COM_REGISTER_SLAVE";
-        case MYSQL_COM_STMT_PREPARE:
-            return "MYSQL_COM_STMT_PREPARE";
-        case MYSQL_COM_STMT_EXECUTE:
-            return "MYSQL_COM_STMT_EXECUTE";
-        case MYSQL_COM_STMT_SEND_LONG_DATA:
-            return "MYSQL_COM_STMT_SEND_LONG_DATA";
-        case MYSQL_COM_STMT_CLOSE:
-            return "MYSQL_COM_STMT_CLOSE";
-        case MYSQL_COM_STMT_RESET:
-            return "MYSQL_COM_STMT_RESET";
-        case MYSQL_COM_SET_OPTION:
-            return "MYSQL_COM_SET_OPTION";
-        case MYSQL_COM_STMT_FETCH:
-            return "MYSQL_COM_STMT_FETCH";
-        case MYSQL_COM_DAEMON:
-            return "MYSQL_COM_DAEMON";
+        case MXS_COM_SLEEP:
+            return "COM_SLEEP";
+        case MXS_COM_QUIT:
+            return "COM_QUIT";
+        case MXS_COM_INIT_DB:
+            return "COM_INIT_DB";
+        case MXS_COM_QUERY:
+            return "COM_QUERY";
+        case MXS_COM_FIELD_LIST:
+            return "COM_FIELD_LIST";
+        case MXS_COM_CREATE_DB:
+            return "COM_CREATE_DB";
+        case MXS_COM_DROP_DB:
+            return "COM_DROP_DB";
+        case MXS_COM_REFRESH:
+            return "COM_REFRESH";
+        case MXS_COM_SHUTDOWN:
+            return "COM_SHUTDOWN";
+        case MXS_COM_STATISTICS:
+            return "COM_STATISTICS";
+        case MXS_COM_PROCESS_INFO:
+            return "COM_PROCESS_INFO";
+        case MXS_COM_CONNECT:
+            return "COM_CONNECT";
+        case MXS_COM_PROCESS_KILL:
+            return "COM_PROCESS_KILL";
+        case MXS_COM_DEBUG:
+            return "COM_DEBUG";
+        case MXS_COM_PING:
+            return "COM_PING";
+        case MXS_COM_TIME:
+            return "COM_TIME";
+        case MXS_COM_DELAYED_INSERT:
+            return "COM_DELAYED_INSERT";
+        case MXS_COM_CHANGE_USER:
+            return "COM_CHANGE_USER";
+        case MXS_COM_BINLOG_DUMP:
+            return "COM_BINLOG_DUMP";
+        case MXS_COM_TABLE_DUMP:
+            return "COM_TABLE_DUMP";
+        case MXS_COM_CONNECT_OUT:
+            return "COM_CONNECT_OUT";
+        case MXS_COM_REGISTER_SLAVE:
+            return "COM_REGISTER_SLAVE";
+        case MXS_COM_STMT_PREPARE:
+            return "COM_STMT_PREPARE";
+        case MXS_COM_STMT_EXECUTE:
+            return "COM_STMT_EXECUTE";
+        case MXS_COM_STMT_SEND_LONG_DATA:
+            return "COM_STMT_SEND_LONG_DATA";
+        case MXS_COM_STMT_CLOSE:
+            return "COM_STMT_CLOSE";
+        case MXS_COM_STMT_RESET:
+            return "COM_STMT_RESET";
+        case MXS_COM_SET_OPTION:
+            return "COM_SET_OPTION";
+        case MXS_COM_STMT_FETCH:
+            return "COM_STMT_FETCH";
+        case MXS_COM_DAEMON:
+            return "COM_DAEMON";
     }
 
     snprintf(unknow_type, sizeof(unknow_type), format_str, p);

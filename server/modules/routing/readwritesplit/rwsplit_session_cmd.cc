@@ -40,7 +40,7 @@ void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
             uint64_t id = backend->complete_session_command();
             MXS_PS_RESPONSE resp = {};
 
-            if (command == MYSQL_COM_STMT_PREPARE)
+            if (command == MXS_COM_STMT_PREPARE)
             {
                 // This should never fail or the backend protocol is broken
                 ss_debug(bool b = )mxs_mysql_extract_ps_response(*ppPacket, &resp);
@@ -60,7 +60,7 @@ void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
                  * be compared to it */
                 rses->sescmd_responses[id] = cmd;
 
-                if (command == MYSQL_COM_STMT_PREPARE)
+                if (command == MXS_COM_STMT_PREPARE)
                 {
                     /** Map the returned response to the internal ID */
                     rses->ps_handles[resp.id] = id;

@@ -54,8 +54,8 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
     // TODO: Breaks if responses are not waited for, before the next request is sent.
     switch (request.command())
     {
-    case MYSQL_COM_QUERY:
-    case MYSQL_COM_STMT_EXECUTE:
+    case MXS_COM_QUERY:
+    case MXS_COM_STMT_EXECUTE:
         m_res.reset(request.command(), m_filter.rules());
         m_state = EXPECTING_RESPONSE;
         break;
@@ -273,7 +273,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
 {
     switch (m_res.command())
     {
-    case MYSQL_COM_QUERY:
+    case MXS_COM_QUERY:
         {
             ComQueryResponse::TextResultsetRow row(response, m_res.types());
 
@@ -301,7 +301,7 @@ void MaskingFilterSession::mask_values(ComPacket& response)
         }
         break;
 
-    case MYSQL_COM_STMT_EXECUTE:
+    case MXS_COM_STMT_EXECUTE:
         {
             ComQueryResponse::BinaryResultsetRow row(response, m_res.types());
 

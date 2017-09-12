@@ -115,7 +115,7 @@ public:
 
             uint8_t command = pPayload[0];
 
-            if (command == MYSQL_COM_QUERY)
+            if (command == MXS_COM_QUERY)
             {
                 const uint8_t* pStmt = &pPayload[1];
 
