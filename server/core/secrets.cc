@@ -369,7 +369,7 @@ decrypt_password(const char *crypt)
     enlen = strlen(crypt) / 2;
     gw_hex2bin(encrypted, crypt, strlen(crypt));
 
-    if ((plain = (unsigned char *) MXS_MALLOC(80)) == NULL)
+    if ((plain = (unsigned char *) MXS_MALLOC(enlen + 1)) == NULL)
     {
         MXS_FREE(keys);
         return NULL;
@@ -378,6 +378,7 @@ decrypt_password(const char *crypt)
     AES_set_decrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
     AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, keys->initvector, AES_DECRYPT);
+    plain[enlen] = '\0';
     MXS_FREE(keys);
 
     return (char *) plain;

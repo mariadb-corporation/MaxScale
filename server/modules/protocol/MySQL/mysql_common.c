@@ -1164,19 +1164,19 @@ static int response_length(bool with_ssl, bool ssl_established, char *user, uint
 }
 
 /**
- * @brief Helper function to load hashed password
- * @param conn DCB Protocol object
- * @param payload Destination where hashed password is written
- * @param passwd Client's double SHA1 password
- * @return Address of the next byte after the end of the stored password
+ * Calculates the a hash from a scramble and a password
+ *
+ * The algorithm used is: `SHA1(scramble + SHA1(SHA1(password))) ^ SHA1(password)`
+ *
+ * @param scramble The 20 byte scramble sent by the server
+ * @param passwd   The SHA1(password) sent by the client
+ * @param output   Pointer where the resulting 20 byte hash is stored
  */
-static uint8_t *
-load_hashed_password(uint8_t *scramble, uint8_t *payload, uint8_t *passwd)
+static void calculate_hash(uint8_t *scramble, uint8_t *passwd, uint8_t *output)
 {
     uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE] = "";
     uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE] = "";
     uint8_t new_sha[GW_MYSQL_SCRAMBLE_SIZE] = "";
-    uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
 
     // hash1 is the function input, SHA1(real_password)
     memcpy(hash1, passwd, GW_MYSQL_SCRAMBLE_SIZE);
@@ -1188,17 +1188,24 @@ load_hashed_password(uint8_t *scramble, uint8_t *payload, uint8_t *passwd)
     gw_sha1_2_str(scramble, GW_MYSQL_SCRAMBLE_SIZE, hash2, GW_MYSQL_SCRAMBLE_SIZE, new_sha);
 
     // compute the xor in client_scramble
-    gw_str_xor(client_scramble, new_sha, hash1, GW_MYSQL_SCRAMBLE_SIZE);
+    gw_str_xor(output, new_sha, hash1, GW_MYSQL_SCRAMBLE_SIZE);
+}
 
-    // set the auth-length
-    *payload = GW_MYSQL_SCRAMBLE_SIZE;
-    payload++;
-
-    //copy the 20 bytes scramble data after packet_buffer + 36 + user + NULL + 1 (byte of auth-length)
-    memcpy(payload, client_scramble, GW_MYSQL_SCRAMBLE_SIZE);
-
-    payload += GW_MYSQL_SCRAMBLE_SIZE;
-    return payload;
+/**
+ * @brief Helper function to load hashed password
+ *
+ * @param conn DCB Protocol object
+ * @param payload Destination where hashed password is written
+ * @param passwd Client's double SHA1 password
+ *
+ * @return Address of the next byte after the end of the stored password
+ */
+static uint8_t *
+load_hashed_password(uint8_t *scramble, uint8_t *payload, uint8_t *passwd)
+{
+    *payload++ = GW_MYSQL_SCRAMBLE_SIZE;
+    calculate_hash(scramble, passwd, payload);
+    return payload + GW_MYSQL_SCRAMBLE_SIZE;
 }
 
 /**
@@ -1389,6 +1396,32 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     return rval;
 }
 
+int send_mysql_native_password_response(DCB* dcb)
+{
+    MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol;
+    MYSQL_session local_session;
+    gw_get_shared_session_auth_info(dcb, &local_session);
+
+    uint8_t *curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
+        local_session.client_sha1 : null_client_sha1;
+
+    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
+    uint8_t* data = GWBUF_DATA(buffer);
+    gw_mysql_set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
+    data[3] = 2; // This is the third packet after the COM_CHANGE_USER
+    calculate_hash(proto->scramble, curr_passwd, data + MYSQL_HEADER_LEN);
+
+    return dcb_write(dcb, buffer);
+}
+
+/**
+ * Decode mysql server handshake
+ *
+ * @param conn The MySQLProtocol structure
+ * @param payload The bytes just read from the net
+ * @return 0 on success, < 0 on failure
+ *
+ */
 int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
 {
     uint8_t *server_version_end = NULL;
