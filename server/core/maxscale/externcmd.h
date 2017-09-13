@@ -22,10 +22,11 @@ MXS_BEGIN_DECLS
 
 typedef struct extern_cmd_t
 {
-    char** argv; /*< Argument vector for the command, first being the actual command
-                * being executed. */
-    int n_exec; /*< Number of times executed */
-    pid_t child; /*< PID of the child process */
+    char** argv;      /**< Argument vector for the command, first being the
+                       * actual command being executed */
+    int n_exec;       /**< Number of times executed */
+    pid_t child;      /**< PID of the child process */
+    uint32_t timeout; /**< Command timeout in seconds */
 } EXTERNCMD;
 
 char* externcmd_extract_command(const char* argstr);

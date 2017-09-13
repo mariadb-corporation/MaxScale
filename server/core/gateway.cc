@@ -369,45 +369,6 @@ sigint_handler(int i)
     }
 }
 
-static void
-sigchld_handler (int i)
-{
-    int exit_status = 0;
-    pid_t child = -1;
-
-    if ((child = wait(&exit_status)) == -1)
-    {
-        MXS_ERROR("Failed to wait child process: %d %s",
-                  errno, mxs_strerror(errno));
-    }
-    else
-    {
-        if (WIFEXITED(exit_status))
-        {
-            if (WEXITSTATUS(exit_status) != 0)
-            {
-                MXS_ERROR("Child process %d exited with status %d",
-                          child, WEXITSTATUS(exit_status));
-            }
-            else
-            {
-                MXS_INFO("Child process %d exited with status %d",
-                         child, WEXITSTATUS(exit_status));
-            }
-        }
-        else if (WIFSIGNALED(exit_status))
-        {
-            MXS_ERROR("Child process %d was stopped by signal %d.",
-                      child, WTERMSIG(exit_status));
-        }
-        else
-        {
-            MXS_ERROR("Child process %d did not exit normally. Exit status: %d",
-                      child, exit_status);
-        }
-    }
-}
-
 volatile sig_atomic_t fatal_handling = 0;
 
 static int signal_set(int sig, void (*handler)(int));
@@ -1174,11 +1135,6 @@ bool configure_signals(void)
     }
 
     if (!configure_signal(SIGFPE, "SIGFPE", sigfatal_handler))
-    {
-        return false;
-    }
-
-    if (!configure_signal(SIGCHLD, "SIGCHLD", sigchld_handler))
     {
         return false;
     }

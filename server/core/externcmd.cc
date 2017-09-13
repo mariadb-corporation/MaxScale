@@ -16,10 +16,12 @@
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/wait.h>
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/pcre2.h>
+#include <maxscale/thread.h>
 
 
 
@@ -175,6 +177,7 @@ int externcmd_execute(EXTERNCMD* cmd)
     int rval = 0;
     pid_t pid;
 
+    // The SIGCHLD handler must be disabled before child process is forked
     pid = fork();
 
     if (pid < 0)
@@ -191,9 +194,71 @@ int externcmd_execute(EXTERNCMD* cmd)
     }
     else
     {
+        MXS_INFO("Executing command '%s' in process %d", cmd->argv[0], pid);
         cmd->child = pid;
         cmd->n_exec++;
-        MXS_DEBUG("[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd->argv[0]);
+
+        bool first_warning = true;
+        bool again = true;
+        uint64_t t = 0;
+        uint64_t t_max = cmd->timeout * 1000;
+
+        while (again)
+        {
+            int exit_status;
+
+            switch (waitpid(pid, &exit_status, WNOHANG))
+            {
+                case -1:
+                    MXS_ERROR("Failed to wait for child process: %d, %s", errno, mxs_strerror(errno));
+                    again = false;
+                    break;
+
+                case 0:
+                    if (t++ > t_max)
+                    {
+                        // Command timed out
+                        t = 0;
+                        if (first_warning)
+                        {
+                            MXS_WARNING("Soft timeout for command '%s', sending SIGTERM", cmd->argv[0]);
+                            kill(pid, SIGTERM);
+                            first_warning = false;
+                        }
+                        else
+                        {
+                            MXS_ERROR("Hard timeout for command '%s', sending SIGKILL", cmd->argv[0]);
+                            kill(pid, SIGKILL);
+                        }
+                    }
+                    else
+                    {
+                        // Sleep and try again
+                        thread_millisleep(1);
+                    }
+                    break;
+
+                default:
+                    again = false;
+
+                    if (WIFEXITED(exit_status))
+                    {
+                        rval = WEXITSTATUS(exit_status);
+                    }
+                    else if (WIFSIGNALED(exit_status))
+                    {
+                        rval = WTERMSIG(exit_status);
+                    }
+                    else
+                    {
+                        rval = exit_status;
+                        MXS_ERROR("Command '%s' did not exit normally. Exit status: %d",
+                                  cmd->argv[0], exit_status);
+                    }
+                    break;
+            }
+        }
+
     }
 
     return rval;
