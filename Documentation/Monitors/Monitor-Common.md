@@ -87,6 +87,15 @@ For example, the previous example will be executed as:
 /home/user/myscript.sh initiator=[192.168.0.10]:3306 event=master_down live_nodes=[192.168.0.201]:3306,[192.168.0.121]:3306
 ```
 
+### `script_timeout`
+
+The timeout for the executed script in seconds. The default value is 90
+seconds.
+
+If the script execution exceeds the configured timeout, it is stopped by sending
+a SIGTERM signal to it. If the process does not stop, a SIGKILL signal will be
+sent to it once the execution time is greater than twice the configured timeout.
+
 ### `events`
 
 A list of event names which cause the script to be executed. If this option is not defined, all events cause the script to be executed. The list must contain a comma separated list of event names.

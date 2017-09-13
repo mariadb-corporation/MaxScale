@@ -17,6 +17,15 @@ Significant whitespace in object names is now deprecated. All object names
 squeezing repeating whitespace and replacing it with hyphens. If any
 object name conversions take place, a warning will be logged.
 
+### Monitor Scripts
+
+The execution of monitor scripts has been made synchronous. This means
+that a monitor will wait until the executed script is done or until a
+timeout is exceeded. The timeout is configurable with the `script_timeout`
+parameter.
+
+For more information, refer to the [monitor documentation](../Monitors/Monitor-Common.md).
+
 ### Read-only Administrative Users
 
 Users that can only perform read-only operations can be created with `add
