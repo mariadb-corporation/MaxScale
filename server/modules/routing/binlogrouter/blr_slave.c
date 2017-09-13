@@ -9217,6 +9217,22 @@ static bool blr_apply_changes(ROUTER_INSTANCE *router,
 
                 ret = false;
             }
+            else
+            {
+                /**
+                 * BLRM_UNCONFIGURED state:
+                 * - set pos to 4
+                 * - set binlog name
+                 */
+                router->current_pos = 4;
+                router->binlog_position = 4;
+                router->current_safe_event = 4;
+                strcpy(router->binlog_name, new_logfile);
+
+                MXS_INFO("%s: New MASTER_LOG_FILE is [%s]",
+                         router->service->name,
+                         router->binlog_name);
+            }
         }
         else
         {
@@ -9233,6 +9249,13 @@ static bool blr_apply_changes(ROUTER_INSTANCE *router,
 
                 ret = false;
             }
+        }
+
+        if (ret)
+        {
+            MXS_INFO("%s: New MASTER_LOG_POS is [%lu]",
+                     router->service->name,
+                     router->current_pos);
         }
     }
 
