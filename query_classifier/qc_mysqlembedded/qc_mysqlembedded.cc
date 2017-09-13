@@ -2042,6 +2042,10 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                         *operation = QUERY_OP_EXECUTE;
                         break;
 
+                    case SQLCOM_CALL:
+                        *operation = QUERY_OP_CALL;
+                        break;
+
                     default:
                         *operation = QUERY_OP_UNDEFINED;
                     }

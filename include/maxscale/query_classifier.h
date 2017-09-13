@@ -95,6 +95,7 @@ typedef enum qc_query_op
     QUERY_OP_UNDEFINED = 0,
 
     QUERY_OP_ALTER,
+    QUERY_OP_CALL,
     QUERY_OP_CHANGE_DB,
     QUERY_OP_CREATE,
     QUERY_OP_DELETE,

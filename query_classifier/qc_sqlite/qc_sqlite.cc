@@ -2014,6 +2014,7 @@ public:
 
         m_status = QC_QUERY_PARSED;
         m_type_mask = QUERY_TYPE_WRITE;
+        m_operation = QUERY_OP_CALL;
 
         if (pExprList)
         {

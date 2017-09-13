@@ -362,6 +362,9 @@ const char* qc_op_to_string(qc_query_op_t op)
     case QUERY_OP_ALTER:
         return "QUERY_OP_ALTER";
 
+    case QUERY_OP_CALL:
+        return "QUERY_OP_CALL";
+
     case QUERY_OP_CHANGE_DB:
         return "QUERY_OP_CHANGE_DB";
 
