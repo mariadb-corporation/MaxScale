@@ -95,6 +95,11 @@ MXS_END_DECLS
 /** The rules and users for each thread */
 struct DbfwThread
 {
+    DbfwThread():
+    rule_version(0)
+    {
+    }
+
     int        rule_version;
     RuleList   rules;
     UserMap    users;
