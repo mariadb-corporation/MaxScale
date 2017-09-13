@@ -26,12 +26,14 @@
 
 
 /**
- * Tokenize a string into arguments suitable for a execvp call.
+ * Tokenize a string into arguments suitable for a `execvp` call
+ *
  * @param args Argument string
  * @param argv Array of char pointers to be filled with tokenized arguments
+ *
  * @return 0 on success, -1 on error
  */
-int tokenize_arguments(char* argstr, char** argv)
+static int tokenize_arguments(char* argstr, char** argv)
 {
     int i = 0;
     bool quoted = false;
@@ -101,20 +103,14 @@ int tokenize_arguments(char* argstr, char** argv)
     return 0;
 }
 
-/**
- * Allocate a new external command.
- * The name and parameters are copied into the external command structure so
- * the original memory can be freed if needed.
- * @param command Command to execute with the parameters
- * @return Pointer to new external command struct or NULL if an error occurred
- */
-EXTERNCMD* externcmd_allocate(char* argstr)
+EXTERNCMD* externcmd_allocate(char* argstr, uint32_t timeout)
 {
     EXTERNCMD* cmd = (EXTERNCMD*) MXS_MALLOC(sizeof(EXTERNCMD));
     char** argv = (char**) MXS_MALLOC(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX);
 
     if (argstr && cmd && argv)
     {
+        cmd->timeout = timeout;
         cmd->argv = argv;
         if (tokenize_arguments(argstr, cmd->argv) == 0)
         {
@@ -150,10 +146,6 @@ EXTERNCMD* externcmd_allocate(char* argstr)
     return cmd;
 }
 
-/**
- * Free a previously allocated external command.
- * @param cmd Command to free
- */
 void externcmd_free(EXTERNCMD* cmd)
 {
     if (cmd)
@@ -167,17 +159,13 @@ void externcmd_free(EXTERNCMD* cmd)
     }
 }
 
-/**
- *Execute a command in a separate process.
- *@param cmd Command to execute
- *@return 0 on success, -1 on error.
- */
 int externcmd_execute(EXTERNCMD* cmd)
 {
     int rval = 0;
     pid_t pid;
 
-    // The SIGCHLD handler must be disabled before child process is forked
+    // The SIGCHLD handler must be disabled before child process is forked,
+    // otherwise we'll get an error
     pid = fork();
 
     if (pid < 0)
@@ -264,13 +252,6 @@ int externcmd_execute(EXTERNCMD* cmd)
     return rval;
 }
 
-/**
- * Substitute all occurrences of @c match with @c replace in the arguments for @c cmd.
- * @param cmd External command
- * @param match Match string
- * @param replace Replacement string
- * @return true if replacement was successful, false on error
- */
 bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* replace)
 {
     int err;
@@ -320,7 +301,7 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
  * @param str Command string, optionally with arguments
  * @return Command part of the string if arguments were defined
  */
-char* get_command(const char* str)
+static char* get_command(const char* str)
 {
     char* rval = NULL;
     const char* start = str;
@@ -353,14 +334,6 @@ char* get_command(const char* str)
     return rval;
 }
 
-/**
- * Check if a command can be executed.
- *
- * Checks if the file being executed exists and if the current user has execution
- * permissions on the file.
- * @param argstr Command to check. Can contain arguments for the command.
- * @return True if the file was found and the use has execution permissions to it.
- */
 bool externcmd_can_execute(const char* argstr)
 {
     bool rval = false;
@@ -385,12 +358,6 @@ bool externcmd_can_execute(const char* argstr)
     return rval;
 }
 
-/**
- * Simple matching of string and command
- * @param cmd Command where the match is searched from
- * @param match String to search for
- * @return True if the string matched
- */
 bool externcmd_matches(const EXTERNCMD* cmd, const char* match)
 {
     for (int i = 0; cmd->argv[i]; i++)
