@@ -68,6 +68,7 @@ const char CN_BACKEND_WRITE_TIMEOUT[]    = "backend_write_timeout";
 const char CN_BACKEND_CONNECT_TIMEOUT[]  = "backend_connect_timeout";
 const char CN_MONITOR_INTERVAL[]         = "monitor_interval";
 const char CN_JOURNAL_MAX_AGE[]          = "journal_max_age";
+const char CN_SCRIPT_TIMEOUT[]           = "script_timeout";
 const char CN_SCRIPT[]                   = "script";
 const char CN_EVENTS[]                   = "events";
 
@@ -130,6 +131,7 @@ MXS_MONITOR* monitor_alloc(const char *name, const char *module)
     mon->connect_attempts = DEFAULT_CONNECTION_ATTEMPTS;
     mon->interval = DEFAULT_MONITOR_INTERVAL;
     mon->journal_max_age = DEFAULT_JOURNAL_MAX_AGE;
+    mon->script_timeout = DEFAULT_SCRIPT_TIMEOUT;
     mon->parameters = NULL;
     mon->server_pending_changes = false;
     spinlock_init(&mon->lock);
@@ -649,6 +651,17 @@ void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value)
 }
 
 /**
+ * Set the maximum age of the monitor journal
+ *
+ * @param mon           The monitor instance
+ * @param interval      The journal age in seconds
+ */
+void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value)
+{
+    mon->script_timeout = value;
+}
+
+/**
  * Set Monitor timeouts for connect/read/write
  *
  * @param mon           The monitor instance
@@ -1143,7 +1156,7 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
     char arg[strlen(script) + 1];
     strcpy(arg, script);
 
-    EXTERNCMD* cmd = externcmd_allocate(arg);
+    EXTERNCMD* cmd = externcmd_allocate(arg, mon->script_timeout);
 
     if (cmd == NULL)
     {
@@ -1196,10 +1209,22 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
         externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
     }
 
-    if (externcmd_execute(cmd))
+    int rv = externcmd_execute(cmd);
+
+    if (rv)
     {
-        MXS_ERROR("Failed to execute script '%s' on server state change event '%s'.",
-                  script, mon_get_event_name(ptr));
+        if (rv == -1)
+        {
+            // Internal error
+            MXS_ERROR("Failed to execute script '%s' on server state change event '%s'",
+                      script, mon_get_event_name(ptr));
+        }
+        else
+        {
+            // Script returned a non-zero value
+            MXS_ERROR("Script '%s' returned %d on event '%s'",
+                      script, rv, mon_get_event_name(ptr));
+        }
     }
     else
     {

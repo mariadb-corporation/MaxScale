@@ -242,6 +242,7 @@ const char *config_monitor_params[] =
     CN_EVENTS,
     CN_MONITOR_INTERVAL,
     CN_JOURNAL_MAX_AGE,
+    CN_SCRIPT_TIMEOUT,
     CN_BACKEND_CONNECT_TIMEOUT,
     CN_BACKEND_READ_TIMEOUT,
     CN_BACKEND_WRITE_TIMEOUT,
@@ -3141,8 +3142,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         {
             char *endptr;
             long interval = strtol(journal_age, &endptr, 0);
-            /* The interval must be >0 because it is used as a divisor.
-                Perhaps a greater minimum value should be added? */
+
             if (*endptr == '\0' && interval > 0)
             {
                 monitorSetJournalMaxAge(monitor, (time_t)interval);
@@ -3159,6 +3159,30 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
                        "using default value of %d seconds.",
                        obj->object, CN_JOURNAL_MAX_AGE, DEFAULT_JOURNAL_MAX_AGE);
+        }
+
+        char *script_timeout = config_get_value(obj->parameters, CN_SCRIPT_TIMEOUT);
+        if (script_timeout)
+        {
+            char *endptr;
+            long interval = strtol(script_timeout, &endptr, 0);
+
+            if (*endptr == '\0' && interval > 0)
+            {
+                monitorSetScriptTimeout(monitor, (uint32_t)interval);
+            }
+            else
+            {
+                error_count++;
+                MXS_NOTICE("Invalid '%s' parameter for monitor '%s'",
+                           CN_SCRIPT_TIMEOUT, obj->object);
+            }
+        }
+        else
+        {
+            MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
+                       "using default value of %d seconds.",
+                       obj->object, CN_SCRIPT_TIMEOUT, DEFAULT_SCRIPT_TIMEOUT);
         }
 
         char *connect_timeout = config_get_value(obj->parameters, CN_BACKEND_CONNECT_TIMEOUT);

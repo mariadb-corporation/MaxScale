@@ -32,6 +32,9 @@ MXS_BEGIN_DECLS
 /** Default maximum journal age in seconds */
 #define DEFAULT_JOURNAL_MAX_AGE 28800
 
+/** Default script execution timeout in seconds */
+#define DEFAULT_SCRIPT_TIMEOUT 90
+
 /**
  * Monitor network timeout types
  */
@@ -70,6 +73,7 @@ bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
 void monitorSetInterval (MXS_MONITOR *, unsigned long);
 bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
 void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value);
+void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value);
 
 /**
  * @brief Serialize a monitor to a file

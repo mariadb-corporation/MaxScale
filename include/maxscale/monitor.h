@@ -203,6 +203,7 @@ struct mxs_monitor
        * If yes, the next monitor loop starts early.  */
     bool active; /**< True if monitor is active */
     time_t journal_max_age; /**< Maximum age of journal file */
+    uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 
@@ -248,6 +249,7 @@ extern const char CN_BACKEND_WRITE_TIMEOUT[];
 extern const char CN_BACKEND_CONNECT_TIMEOUT[];
 extern const char CN_MONITOR_INTERVAL[];
 extern const char CN_JOURNAL_MAX_AGE[];
+extern const char CN_SCRIPT_TIMEOUT[];
 extern const char CN_SCRIPT[];
 extern const char CN_EVENTS[];
 
