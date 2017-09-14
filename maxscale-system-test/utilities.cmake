@@ -102,3 +102,14 @@ ExternalProject_Add(connector-c
 
 include_directories(${CMAKE_BINARY_DIR}/include)
 set(MYSQL_CLIENT ${CMAKE_BINARY_DIR}/lib/mariadb/libmariadbclient.a CACHE INTERNAL "")
+
+# Build the CDC connector
+ExternalProject_Add(cdc_connector
+  SOURCE_DIR ${CMAKE_SOURCE_DIR}/cdc_connector/
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cdc_connector/
+  BUILD_COMMAND make
+  INSTALL_COMMAND make install)
+
+set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/include/ CACHE INTERNAL "")
+set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/lib/libcdc_connector.a CACHE INTERNAL "")
+include_directories(${CMAKE_BINARY_DIR}/cdc_connector/include)
