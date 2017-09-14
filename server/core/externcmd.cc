@@ -17,13 +17,13 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <fcntl.h>
+#include <string>
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/thread.h>
-
-
 
 /**
  * Tokenize a string into arguments suitable for a `execvp` call
@@ -159,8 +159,24 @@ void externcmd_free(EXTERNCMD* cmd)
     }
 }
 
-int externcmd_execute(EXTERNCMD* cmd)
+int externcmd_execute(EXTERNCMD* cmd, char** dest)
 {
+    // Always set dest to NULL before starting
+    *dest = NULL;
+
+    // Create a pipe where the command can print output
+    int fd[2];
+
+    if (pipe(fd) == -1)
+    {
+        MXS_ERROR("Failed to open pipe: [%d] %s", errno, mxs_strerror(errno));
+        return -1;
+    }
+
+    // Make them non-blocking
+    fcntl(fd[0], F_SETFL, O_NONBLOCK);
+    fcntl(fd[1], F_SETFL, O_NONBLOCK);
+
     int rval = 0;
     pid_t pid;
 
@@ -170,14 +186,25 @@ int externcmd_execute(EXTERNCMD* cmd)
 
     if (pid < 0)
     {
+        close(fd[0]);
+        close(fd[1]);
         MXS_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
                   cmd->argv[0], errno, mxs_strerror(errno));
         rval = -1;
     }
     else if (pid == 0)
     {
-        /** Child process, execute command */
+        // This is the child process. Close the read end of the pipe and redirect
+        // both stdout and stderr to the write end of the pipe
+        close(fd[0]);
+        dup2(fd[1], STDOUT_FILENO);
+        dup2(fd[1], STDERR_FILENO);
+
+        // Execute the command
         execvp(cmd->argv[0], cmd->argv);
+
+        // Close the write end of the pipe and exit
+        close(fd[1]);
         _exit(1);
     }
     else
@@ -186,10 +213,14 @@ int externcmd_execute(EXTERNCMD* cmd)
         cmd->child = pid;
         cmd->n_exec++;
 
+        std::string output;
         bool first_warning = true;
         bool again = true;
         uint64_t t = 0;
         uint64_t t_max = cmd->timeout * 1000;
+
+        // Close the write end of the pipe
+        close(fd[1]);
 
         while (again)
         {
@@ -197,56 +228,68 @@ int externcmd_execute(EXTERNCMD* cmd)
 
             switch (waitpid(pid, &exit_status, WNOHANG))
             {
-                case -1:
-                    MXS_ERROR("Failed to wait for child process: %d, %s", errno, mxs_strerror(errno));
-                    again = false;
-                    break;
+            case -1:
+                MXS_ERROR("Failed to wait for child process: %d, %s", errno, mxs_strerror(errno));
+                again = false;
+                break;
 
-                case 0:
-                    if (t++ > t_max)
+            case 0:
+                if (t++ > t_max)
+                {
+                    // Command timed out
+                    t = 0;
+                    if (first_warning)
                     {
-                        // Command timed out
-                        t = 0;
-                        if (first_warning)
-                        {
-                            MXS_WARNING("Soft timeout for command '%s', sending SIGTERM", cmd->argv[0]);
-                            kill(pid, SIGTERM);
-                            first_warning = false;
-                        }
-                        else
-                        {
-                            MXS_ERROR("Hard timeout for command '%s', sending SIGKILL", cmd->argv[0]);
-                            kill(pid, SIGKILL);
-                        }
+                        MXS_WARNING("Soft timeout for command '%s', sending SIGTERM", cmd->argv[0]);
+                        kill(pid, SIGTERM);
+                        first_warning = false;
                     }
                     else
                     {
-                        // Sleep and try again
-                        thread_millisleep(1);
+                        MXS_ERROR("Hard timeout for command '%s', sending SIGKILL", cmd->argv[0]);
+                        kill(pid, SIGKILL);
                     }
-                    break;
+                }
+                else
+                {
+                    // Sleep and try again
+                    thread_millisleep(1);
+                }
+                break;
 
-                default:
-                    again = false;
+            default:
+                again = false;
 
-                    if (WIFEXITED(exit_status))
-                    {
-                        rval = WEXITSTATUS(exit_status);
-                    }
-                    else if (WIFSIGNALED(exit_status))
-                    {
-                        rval = WTERMSIG(exit_status);
-                    }
-                    else
-                    {
-                        rval = exit_status;
-                        MXS_ERROR("Command '%s' did not exit normally. Exit status: %d",
-                                  cmd->argv[0], exit_status);
-                    }
-                    break;
+                if (WIFEXITED(exit_status))
+                {
+                    rval = WEXITSTATUS(exit_status);
+                }
+                else if (WIFSIGNALED(exit_status))
+                {
+                    rval = WTERMSIG(exit_status);
+                }
+                else
+                {
+                    rval = exit_status;
+                    MXS_ERROR("Command '%s' did not exit normally. Exit status: %d",
+                              cmd->argv[0], exit_status);
+                }
+                break;
+            }
+
+            int n;
+            char buf[4096]; // This seems like enough space
+
+            while ((n = read(fd[0], buf, sizeof(buf))) > 0)
+            {
+                // Read all available output
+                output.append(buf, n);
             }
         }
 
+        // Close the read end of the pipe and copy the data to the output parameter
+        close(fd[0]);
+        *dest = MXS_STRDUP_A(output.c_str());
     }
 
     return rval;

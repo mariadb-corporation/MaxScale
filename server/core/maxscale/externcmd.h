@@ -55,11 +55,14 @@ void externcmd_free(EXTERNCMD* cmd);
 /**
  * Execute a command
  *
- * @param cmd Command to execute
+ * The output of the command must be freed by the caller by calling MXS_FREE.
+ *
+ * @param cmd  Command to execute
+ * @param dest Pointer where to store the output of the command
  *
  * @return The return value of the executed command or -1 on error
  */
-int externcmd_execute(EXTERNCMD* cmd);
+int externcmd_execute(EXTERNCMD* cmd, char** dest);
 
 /**
  * Substitute all occurrences of @c match with @c replace in the arguments for @c cmd
