@@ -3,7 +3,7 @@
  */
 
 #include "../testconnections.h"
-#include "../cdc_connector.h"
+#include <cdc_connector.h>
 #include "cdc_result.h"
 #include <iostream>
 #include <stdio.h>

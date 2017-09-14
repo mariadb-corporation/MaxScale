@@ -1,4 +1,5 @@
 #include "cdc_connector.h"
+
 #include <arpa/inet.h>
 #include <stdexcept>
 #include <unistd.h>
@@ -6,6 +7,7 @@
 #include <openssl/sha.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <jansson.h>
 
 #define CDC_CONNECTOR_VERSION "1.0.0"
 
