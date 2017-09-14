@@ -139,6 +139,16 @@ std::string type_to_table_name(const char* type)
     return name;
 }
 
+static std::string unquote(std::string str)
+{
+    if (str[0] == '\"')
+    {
+        str = str.substr(1, str.length() - 2);
+    }
+
+    return str;
+}
+
 bool run_test(TestConnections& test)
 {
     bool rval = true;
@@ -172,17 +182,17 @@ bool run_test(TestConnections& test)
             {
                 for (int j = 0; test_set[x].values[j]; j++)
                 {
-                    std::string row;
+                    CDC::Row row;
 
-                    if (conn.readRow(row))
+                    if ((row = conn.read()))
                     {
-                        TestInput input(test_set[x].values[j], test_set[x].types[i]);
-                        TestOutput output(row, field_name);
+                        std::string input = unquote(test_set[x].values[j]);
+                        std::string output = row->value(field_name);
 
-                        if (input != output)
+                        if (input != output && (input != "NULL" || output != ""))
                         {
                             test.tprintf("Result mismatch: %s(%s) => %s",
-                                         test_set[x].types[i], test_set[x].values[j], output.getValue().c_str());
+                                         test_set[x].types[i], input.c_str(), output.c_str());
                             rval = false;
                         }
                     }
