@@ -21,7 +21,7 @@ TestInput::TestInput(const std::string& value, const std::string& type, const st
 TestOutput::TestOutput(const std::string& input, const std::string& name)
 {
     json_error_t err;
-    json_t *js = json_loads(input.c_str(), 0, &err);
+    json_t *js = json_loads(input.c_str(), JSON_ALLOW_NUL, &err);
 
     if (js)
     {
