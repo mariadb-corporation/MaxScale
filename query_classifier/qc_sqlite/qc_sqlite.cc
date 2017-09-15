@@ -4413,14 +4413,12 @@ static int32_t qc_sqlite_process_init(void)
 
         this_unit.initialized = true;
 
-        if (qc_sqlite_thread_init() == 0)
+        if (this_unit.log_level != QC_LOG_NOTHING)
         {
-            if (this_unit.log_level != QC_LOG_NOTHING)
-            {
-                const char* message = NULL;
+            const char* message = NULL;
 
-                switch (this_unit.log_level)
-                {
+            switch (this_unit.log_level)
+            {
                 case QC_LOG_NON_PARSED:
                     message = "Statements that cannot be parsed completely are logged.";
                     break;
@@ -4435,16 +4433,9 @@ static int32_t qc_sqlite_process_init(void)
 
                 default:
                     ss_dassert(!true);
-                }
-
-                MXS_NOTICE("%s", message);
             }
-        }
-        else
-        {
-            this_unit.initialized = false;
 
-            sqlite3_shutdown();
+            MXS_NOTICE("%s", message);
         }
     }
     else

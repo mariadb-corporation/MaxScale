@@ -176,8 +176,9 @@ QUERY_CLASSIFIER* get_classifier(const char* zName, qc_sql_mode_t sql_mode, cons
 
     if (pClassifier)
     {
-        if ((pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK) ||
-            ((pClassifier->qc_process_init() != QC_RESULT_OK)))
+        if (pClassifier->qc_setup(sql_mode, zArgs) != QC_RESULT_OK ||
+            pClassifier->qc_process_init() != QC_RESULT_OK ||
+            pClassifier->qc_thread_init() != QC_RESULT_OK)
         {
             cerr << "error: Could not setup or init classifier " << zName << "." << endl;
             qc_unload(pClassifier);

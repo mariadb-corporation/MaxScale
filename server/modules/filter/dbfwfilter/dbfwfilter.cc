@@ -92,6 +92,9 @@ int dbfw_yyparse(void*);
 #endif
 MXS_END_DECLS
 
+namespace
+{
+
 /** The rules and users for each thread */
 struct DbfwThread
 {
@@ -106,6 +109,8 @@ struct DbfwThread
 };
 
 thread_local DbfwThread* this_thread = NULL;
+
+}
 
 bool parse_at_times(const char** tok, char** saveptr, Rule* ruledef);
 bool parse_limit_queries(Dbfw* instance, Rule* ruledef, const char* rule, char** saveptr);
@@ -450,6 +455,7 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
 
 static int dbfw_thr_init()
 {
+    ss_dassert(this_thread == NULL);
     int rval = 0;
 
     if ((this_thread = new (std::nothrow) DbfwThread) == NULL)

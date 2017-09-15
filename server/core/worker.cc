@@ -857,11 +857,19 @@ void Worker::delete_zombies()
 
 void Worker::run()
 {
-    this_thread.current_worker_id = m_id;
-    poll_waitevents();
-    this_thread.current_worker_id = WORKER_ABSENT_ID;
+    if (modules_thread_init())
+    {
+        this_thread.current_worker_id = m_id;
+        poll_waitevents();
+        this_thread.current_worker_id = WORKER_ABSENT_ID;
 
-    MXS_NOTICE("Worker %d has shut down.", m_id);
+        MXS_NOTICE("Worker %d has shut down.", m_id);
+        modules_thread_finish();
+    }
+    else
+    {
+        MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
+    }
 }
 
 bool Worker::start(size_t stack_size)
@@ -1069,18 +1077,8 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 //static
 void Worker::thread_main(void* pArg)
 {
-    if (modules_thread_init())
-    {
-        Worker* pWorker = static_cast<Worker*>(pArg);
-
-        pWorker->run();
-
-        modules_thread_finish();
-    }
-    else
-    {
-        MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
-    }
+    Worker* pWorker = static_cast<Worker*>(pArg);
+    pWorker->run();
 }
 
 /**
