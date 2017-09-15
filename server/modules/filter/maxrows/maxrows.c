@@ -185,8 +185,8 @@ typedef struct maxrows_response_state
     size_t n_fields;      /**< How many fields we have received, <= n_totalfields. */
     size_t n_rows;        /**< How many rows we have received. */
     size_t offset;        /**< Where we are in the response buffer. */
-    size_t rows_offset;   /**< Offset to first row in result set */
     size_t length;        /**< Buffer size. */
+    GWBUF* column_defs;   /**< Buffer with result set columns definitions */
 } MAXROWS_RESPONSE_STATE;
 
 static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state);
@@ -415,8 +415,18 @@ static int clientReply(MXS_FILTER *instance,
 
     if (csdata->res.data)
     {
-        gwbuf_append(csdata->res.data, data);
-        csdata->res.length += gwbuf_length(data);
+        if (csdata->discard_resultset &&
+            csdata->state == MAXROWS_EXPECTING_ROWS)
+        {
+            gwbuf_free(csdata->res.data);
+            csdata->res.data = data;
+            csdata->res.length = gwbuf_length(data);
+        }
+        else
+        {
+            gwbuf_append(csdata->res.data, data);
+            csdata->res.length += gwbuf_length(data);
+        }
     }
     else
     {
@@ -495,7 +505,6 @@ static void diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dc
     dcb_printf(dcb, "Maxrows filter is working\n");
 }
 
-
 /**
  * Capability routine.
  *
@@ -520,7 +529,7 @@ static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state)
     state->n_fields = 0;
     state->n_rows = 0;
     state->offset = 0;
-    state->rows_offset = 0;
+    state->column_defs = NULL;
 }
 
 /**
@@ -599,16 +608,18 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
             case 0xfe: // EOF, the one after the fields.
                 csdata->res.offset += packetlen;
 
-                /* Now set the offset to the first resultset
-                 * this could be used for empty response handler
+                /**
+                 * Set the buffer with column definitions.
+                 * This will be used only by the empty response handler.
                  */
-                if (!csdata->res.rows_offset)
+                if (!csdata->res.column_defs &&
+                    csdata->instance->config.m_return == MAXROWS_RETURN_EMPTY)
                 {
-                    csdata->res.rows_offset = csdata->res.offset;
+                    csdata->res.column_defs = gwbuf_clone(csdata->res.data);
                 }
 
                 csdata->state = MAXROWS_EXPECTING_ROWS;
-                rv = handle_rows(csdata, csdata->res.data,csdata->res.offset);
+                rv = handle_rows(csdata, csdata->res.data, csdata->res.offset);
                 break;
 
             default: // Field information.
@@ -641,11 +652,6 @@ static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata)
 
     if ((int)MYSQL_GET_COMMAND(GWBUF_DATA(csdata->res.data)) == 0xff)
     {
-        /**
-         * Error text message is after:
-         * MYSQL_HEADER_LEN offset + status flag (1) + error code (2) +
-         * 6 bytes message status = MYSQL_HEADER_LEN + 9
-         */
         MXS_INFO("Error packet received from backend "
                  "(possibly a server shut down ?): [%s].",
                  GWBUF_DATA(csdata->res.data) + MYSQL_HEADER_LEN + 9);
@@ -1016,12 +1022,20 @@ static int send_upstream(MAXROWS_SESSION_DATA *csdata)
     ss_dassert(csdata->res.data != NULL);
 
     /* Free a saved SQL not freed by send_error_upstream() */
-    if (csdata->input_sql)
+    if (csdata->instance->config.m_return == MAXROWS_RETURN_ERR)
     {
         gwbuf_free(csdata->input_sql);
         csdata->input_sql = NULL;
     }
 
+    /* Free a saved columndefs not freed by send_eof_upstream() */
+    if (csdata->instance->config.m_return == MAXROWS_RETURN_EMPTY)
+    {
+        gwbuf_free(csdata->res.column_defs);
+        csdata->res.column_defs = NULL;
+    }
+
+    /* Send data to client */
     int rv = csdata->up.clientReply(csdata->up.instance,
                                     csdata->up.session,
                                     csdata->res.data);
@@ -1046,22 +1060,24 @@ static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata)
     /* Sequence byte is #3 */
     uint8_t eof[MYSQL_EOF_PACKET_LEN] = {05, 00, 00, 01, 0xfe, 00, 00, 02, 00};
     GWBUF *new_pkt = NULL;
+
+    ss_dassert(csdata->res.data != NULL);
+    ss_dassert(csdata->res.column_defs != NULL);
+
     /**
      * The offset to server reply pointing to
      * next byte after column definitions EOF
      * of the first result set.
      */
-    size_t offset = csdata->res.rows_offset;
-
-    ss_dassert(csdata->res.data != NULL);
+    size_t offset = gwbuf_length(csdata->res.column_defs);
 
     /* Data to send + added EOF */
     uint8_t *new_result = MXS_MALLOC(offset + MYSQL_EOF_PACKET_LEN);
 
     if (new_result)
     {
-        /* Get contiguous data from beginning to specified offset */
-        gwbuf_copy_data(csdata->res.data, 0, offset, new_result);
+        /* Get contiguous data from saved columns defintions buffer */
+        gwbuf_copy_data(csdata->res.column_defs, 0, offset, new_result);
 
         /* Increment sequence number for the EOF being added for empty resultset:
          * last one if found in EOF terminating column def
@@ -1094,9 +1110,12 @@ static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata)
         rv = 0;
     }
 
-    /* Free full input buffer */
+    /* Free all data buffers */
     gwbuf_free(csdata->res.data);
+    gwbuf_free(csdata->res.column_defs);
+
     csdata->res.data = NULL;
+    csdata->res.column_defs = NULL;
 
     return rv;
 }
@@ -1134,6 +1153,8 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
     int rv = csdata->up.clientReply(csdata->up.instance,
                                     csdata->up.session,
                                     packet);
+
+    /* Free server result buffer */
     gwbuf_free(csdata->res.data);
     csdata->res.data = NULL;
 
@@ -1215,10 +1236,10 @@ static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
 
     /* Free server result buffer */
     gwbuf_free(csdata->res.data);
+    csdata->res.data = NULL;
+
     /* Free input_sql buffer */
     gwbuf_free(csdata->input_sql);
-
-    csdata->res.data = NULL;
     csdata->input_sql = NULL;
 
     return rv;
