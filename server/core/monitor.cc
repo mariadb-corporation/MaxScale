@@ -1209,29 +1209,21 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
         externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
     }
 
-    char* out = NULL;
-    std::string str;
-    int rv = externcmd_execute(cmd, &out);
-
-    if (out)
-    {
-        str = trim(out);
-        MXS_FREE(out);
-    }
+    int rv = externcmd_execute(cmd);
 
     if (rv)
     {
         if (rv == -1)
         {
             // Internal error
-            MXS_ERROR("Failed to execute script '%s' on server state change event '%s': %s",
-                      script, mon_get_event_name(ptr), str.c_str());
+            MXS_ERROR("Failed to execute script '%s' on server state change event '%s'",
+                      script, mon_get_event_name(ptr));
         }
         else
         {
             // Script returned a non-zero value
-            MXS_ERROR("Script '%s' returned %d on event '%s': %s",
-                      script, rv, mon_get_event_name(ptr), str.c_str());
+            MXS_ERROR("Script '%s' returned %d on event '%s'",
+                      script, rv, mon_get_event_name(ptr));
         }
     }
     else
@@ -1273,8 +1265,8 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
             scriptStr = cmd->argv[0]; // print at least something
         }
 
-        MXS_NOTICE("Executed monitor script '%s' on event '%s': %s",
-                   scriptStr, mon_get_event_name(ptr), str.c_str());
+        MXS_NOTICE("Executed monitor script '%s' on event '%s'",
+                   scriptStr, mon_get_event_name(ptr));
 
         if (!memError)
         {

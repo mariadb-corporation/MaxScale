@@ -159,11 +159,8 @@ void externcmd_free(EXTERNCMD* cmd)
     }
 }
 
-int externcmd_execute(EXTERNCMD* cmd, char** dest)
+int externcmd_execute(EXTERNCMD* cmd)
 {
-    // Always set dest to NULL before starting
-    *dest = NULL;
-
     // Create a pipe where the command can print output
     int fd[2];
 
@@ -172,10 +169,6 @@ int externcmd_execute(EXTERNCMD* cmd, char** dest)
         MXS_ERROR("Failed to open pipe: [%d] %s", errno, mxs_strerror(errno));
         return -1;
     }
-
-    // Make them non-blocking
-    fcntl(fd[0], F_SETFL, O_NONBLOCK);
-    fcntl(fd[1], F_SETFL, O_NONBLOCK);
 
     int rval = 0;
     pid_t pid;
@@ -219,8 +212,9 @@ int externcmd_execute(EXTERNCMD* cmd, char** dest)
         uint64_t t = 0;
         uint64_t t_max = cmd->timeout * 1000;
 
-        // Close the write end of the pipe
+        // Close the write end of the pipe and make the read end non-blocking
         close(fd[1]);
+        fcntl(fd[0], F_SETFL, O_NONBLOCK);
 
         while (again)
         {
@@ -284,12 +278,31 @@ int externcmd_execute(EXTERNCMD* cmd, char** dest)
             {
                 // Read all available output
                 output.append(buf, n);
+
+                for (size_t pos = output.find("\n");
+                     pos != std::string::npos; pos = output.find("\n"))
+                {
+                    if (pos == 0)
+                    {
+                        output.erase(0, 1);
+                    }
+                    else
+                    {
+                        std::string line = output.substr(0, pos);
+                        output.erase(0, pos + 1);
+                        MXS_NOTICE("%s", line.c_str());
+                    }
+                }
             }
+        }
+
+        if (!output.empty())
+        {
+            MXS_NOTICE("%s", output.c_str());
         }
 
         // Close the read end of the pipe and copy the data to the output parameter
         close(fd[0]);
-        *dest = MXS_STRDUP_A(output.c_str());
     }
 
     return rval;
