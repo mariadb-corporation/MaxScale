@@ -652,8 +652,14 @@ static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata)
 
     if ((int)MYSQL_GET_COMMAND(GWBUF_DATA(csdata->res.data)) == 0xff)
     {
+        /**
+         * Error text message is after:
+         * MYSQL_HEADER_LEN offset + status flag (1) + error code (2) +
+         * 6 bytes message status = MYSQL_HEADER_LEN + 9
+         */
         MXS_INFO("Error packet received from backend "
-                 "(possibly a server shut down ?): [%s].",
+                 "(possibly a server shut down ?): [%.*s].",
+                 (int)msg_size - (MYSQL_HEADER_LEN + 9),
                  GWBUF_DATA(csdata->res.data) + MYSQL_HEADER_LEN + 9);
     }
     else
