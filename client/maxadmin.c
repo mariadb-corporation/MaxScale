@@ -200,6 +200,7 @@ main(int argc, char **argv)
     {
         // Both unix socket path and at least of the internet socket
         // options have been provided.
+        printf("\nError: Both socket and network options are provided\n\n");
         DoUsage(argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -812,8 +813,8 @@ DoUsage(const char *progname)
 {
     PrintVersion(progname);
     printf("The MaxScale administrative and monitor client.\n\n");
-    printf("Usage: %s [(-S socket)|([-u user] [-p password] [-h hostname] [-P port])]"
-           "[<command file> | <command>]\n\n", progname);
+    printf("Usage: %s [-S socket] <command>\n", progname);
+    printf("       %s [-u user] [-p password] [-h hostname] [-P port] <command>\n\n", progname);
     printf("  -S|--socket=...   The UNIX domain socket to connect to, The default is\n");
     printf("                    %s\n", MAXADMIN_DEFAULT_SOCKET);
     printf("  -u|--user=...     The user name to use for the connection, default\n");
