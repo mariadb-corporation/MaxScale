@@ -484,6 +484,10 @@ add_test_executable(mxs1123.cpp mxs1123 mxs1123 LABELS maxscale REPL_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1319
 add_test_executable(mxs1319.cpp mxs1319 replication LABELS MySQLAuth REPL_BACKEND)
 
+# MXS-1418: Removing a server from a service breaks the connection
+# https://jira.mariadb.org/browse/MXS-1418
+add_test_executable(mxs1418.cpp mxs1418 replication LABELS maxscale REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 

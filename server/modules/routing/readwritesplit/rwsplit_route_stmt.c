@@ -502,7 +502,6 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * server, or master.
              */
             if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                SERVER_REF_IS_ACTIVE(b) &&
                 (strncasecmp(name, b->server->unique_name, PATH_MAX) == 0) &&
                 (SERVER_IS_SLAVE(&server) || SERVER_IS_RELAY_SERVER(&server) ||
                  SERVER_IS_MASTER(&server)))
@@ -537,7 +536,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * Unused backend or backend which is not master nor
              * slave can't be used
              */
-            if (!BREF_IS_IN_USE(&backend_ref[i]) || !SERVER_REF_IS_ACTIVE(b) ||
+            if (!BREF_IS_IN_USE(&backend_ref[i]) ||
                 (!SERVER_IS_MASTER(&server) && !SERVER_IS_SLAVE(&server)))
             {
                 continue;
@@ -627,7 +626,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
      */
     if (btype == BE_MASTER)
     {
-        if (master_bref && SERVER_REF_IS_ACTIVE(master_bref->ref))
+        if (master_bref)
         {
             /** It is possible for the server status to change at any point in time
              * so copying it locally will make possible error messages
