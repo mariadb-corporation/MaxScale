@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         iterations = 1;
     }
     char str[1024];
-    Test->set_timeout(10);
+    Test->set_timeout(60);
 
     Test->connect_maxscale();
     Test->repl->connect();
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
         Test->stop_timeout();
         Test->repl->sync_slaves();
 
-        Test->set_timeout(100);
+        Test->set_timeout(200);
         Test->tprintf("Create t1\n");
         create_t1(Test->conn_rwsplit);
         Test->tprintf("Loading data to t1 from file\n");
