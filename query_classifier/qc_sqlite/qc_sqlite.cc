@@ -4453,8 +4453,6 @@ static void qc_sqlite_process_end(void)
 
     finish_builtin_functions();
 
-    qc_sqlite_thread_end();
-
     sqlite3_shutdown();
     this_unit.initialized = false;
 }
