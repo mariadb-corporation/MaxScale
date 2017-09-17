@@ -388,12 +388,6 @@ add_test_executable(mxs559_block_master.cpp mxs559_block_master mxs559 LABELS re
 # Playing with blocking and unblocking nodes under INSERT load
 add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera_mxs564 LABELS readwritesplit readconnroute GALERA_BACKEND)
 
-# Executes simple queries from python script in the loop
-add_test_script(mxs585.py mxs585.py replication LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
-
-# Simple transactions in the loop from python script with client SSL on
-add_test_script(mxs598.py mxs598.py ssl LABELS MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
-
 # Regression case for the bug "MaxScale fails to start silently if config file is not readable"
 add_test_executable(mxs621_unreadable_cnf.cpp mxs621_unreadable_cnf replication LABELS maxscale REPL_BACKEND)
 
