@@ -18,7 +18,7 @@ std::string do_query(TestConnections& test)
 {
     MYSQL* conn = test.open_rwsplit_connection();
 
-    const char* query = "SELECT SLEEP(10), @@server_id";
+    const char* query = "SELECT SLEEP(15), @@server_id";
     char output[512] = "";
 
     find_field(conn, query, "@@server_id", output);
@@ -38,11 +38,13 @@ int main(int argc, char *argv[])
     test.repl->close_connections();
 
     test.set_timeout(60);
-    test.add_result(do_query(test) != slave, "The slave should respond to the first query");
+    std::string res = do_query(test);
+    test.add_result(res != slave, "The slave should respond to the first query: %s", res.c_str());
 
     pthread_t thr;
     pthread_create(&thr, NULL, async_block, &test);
-    test.add_result(do_query(test) != master, "The master should respond to the second query");
+    res = do_query(test);
+    test.add_result(res != master, "The master should respond to the second query: %s", res.c_str());
     pthread_join(thr, NULL);
     test.repl->unblock_node(1);
 
