@@ -21,6 +21,7 @@
 #include <string>
 
 #include <maxscale/alloc.h>
+#include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/thread.h>
@@ -159,6 +160,61 @@ void externcmd_free(EXTERNCMD* cmd)
     }
 }
 
+static const char* skip_whitespace(const char* ptr)
+{
+    while (*ptr && isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    return ptr;
+}
+
+static const char* skip_prefix(const char* str)
+{
+    const char* ptr = strchr(str, ':');
+    ss_dassert(ptr);
+
+    ptr++;
+    return skip_whitespace(ptr);
+}
+
+static void log_output(const char* cmd, const std::string& str)
+{
+    int err;
+
+    if (mxs_pcre2_simple_match("(?i)^[[:space:]]*alert[[:space:]]*[:]",
+                               str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+    {
+        MXS_ALERT("%s: %s", cmd, skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
+                               str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+    {
+        MXS_ERROR("%s: %s", cmd, skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*warning[[:space:]]*[:]",
+                                    str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+    {
+        MXS_WARNING("%s: %s", cmd, skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*notice[[:space:]]*[:]",
+                                    str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+    {
+        MXS_NOTICE("%s: %s", cmd, skip_prefix(str.c_str()));
+    }
+    else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*(info|debug)[[:space:]]*[:]",
+                                    str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+    {
+        MXS_INFO("%s: %s", cmd, skip_prefix(str.c_str()));
+    }
+    else
+    {
+        // No special format, log as notice level message
+        MXS_NOTICE("%s: %s", cmd, skip_whitespace(str.c_str()));
+    }
+}
+
 int externcmd_execute(EXTERNCMD* cmd)
 {
     // Create a pipe where the command can print output
@@ -290,7 +346,7 @@ int externcmd_execute(EXTERNCMD* cmd)
                     {
                         std::string line = output.substr(0, pos);
                         output.erase(0, pos + 1);
-                        MXS_NOTICE("%s", line.c_str());
+                        log_output(cmd->argv[0], line);
                     }
                 }
             }
@@ -298,7 +354,7 @@ int externcmd_execute(EXTERNCMD* cmd)
 
         if (!output.empty())
         {
-            MXS_NOTICE("%s", output.c_str());
+            log_output(cmd->argv[0], output);
         }
 
         // Close the read end of the pipe and copy the data to the output parameter

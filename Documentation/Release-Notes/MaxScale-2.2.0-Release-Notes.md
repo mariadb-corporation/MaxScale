@@ -24,6 +24,11 @@ that a monitor will wait until the executed script is done or until a
 timeout is exceeded. The timeout is configurable with the `script_timeout`
 parameter.
 
+In addition to this, the output of the script is logged into the MaxScale log
+file. The message is logged on the matching log level if it is prefixed with one
+of `alert:`, `error:`, `warning:`, `notice:`, `info:` or `debug:`. If no prefix
+is provided, the message is logged on the notice level.
+
 For more information, refer to the [monitor documentation](../Monitors/Monitor-Common.md).
 
 ### Read-only Administrative Users

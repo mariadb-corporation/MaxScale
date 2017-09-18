@@ -87,6 +87,17 @@ For example, the previous example will be executed as:
 /home/user/myscript.sh initiator=[192.168.0.10]:3306 event=master_down live_nodes=[192.168.0.201]:3306,[192.168.0.121]:3306
 ```
 
+Any output by the executed script will be logged into the MaxScale log. Each
+outputted line will be logged as a separate log message.
+
+The log level on which the messages are logged depends on the format of the
+messages. If the first word in the output line is one of `alert:`, `error:`,
+`warning:`, `notice:`, `info:` or `debug:`, the message will be logged on the
+corresponding level. If the message is not prefixed with one of the keywords,
+the message will be logged on the notice level. Whitespace before, after or
+inbetween the keyword and the colon is ignored and the matching is
+case-insensitive.
+
 ### `script_timeout`
 
 The timeout for the executed script in seconds. The default value is 90
