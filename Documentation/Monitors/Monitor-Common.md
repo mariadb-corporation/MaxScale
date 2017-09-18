@@ -82,6 +82,12 @@ The following substitutions will be made to the parameter value:
 * `$SYNCEDLIST` will be replaced with a list of server IPs and ports that are synced Galera nodes
 * `$PARENT` will be replaced with the IP and port of the parent node of the server who initiated
    the event. For master-slave setups, this will be the master if the initiating server is a slave.
+* `$CHILDREN` will be replaced with the IPs and ports of the child nodes of the server who initiated
+   the event. For master-slave setups, this will be a list of slave servers if the initiating server is a master.
+
+The expanded variable value can be an empty string if no servers match the
+variable's requirements. For example, if no masters are available `$MASTERLIST`
+will expand into an empty string.
 
 For example, the previous example will be executed as:
 

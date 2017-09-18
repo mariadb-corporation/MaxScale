@@ -1165,6 +1165,33 @@ static MXS_MONITOR_SERVERS* find_parent_node(MXS_MONITOR_SERVERS* servers,
     return rval;
 }
 
+static std::string child_nodes(MXS_MONITOR_SERVERS* servers,
+                               MXS_MONITOR_SERVERS* parent)
+{
+    std::stringstream ss;
+
+    if (parent->server->node_id > 0)
+    {
+        bool have_content = false;
+
+        for (MXS_MONITOR_SERVERS* node = servers; node; node = node->next)
+        {
+            if (node->server->master_id == parent->server->node_id)
+            {
+                if (have_content)
+                {
+                    ss << ",";
+                }
+
+                ss << "[" << node->server->name << "]:" << node->server->port;
+                have_content = true;
+            }
+        }
+    }
+
+    return ss.str();
+}
+
 /**
  * Launch a script
  * @param mon Owning monitor
@@ -1203,6 +1230,11 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
             ss << "[" << parent->server->name << "]:" << parent->server->port;
         }
         externcmd_substitute_arg(cmd, "[$]PARENT", ss.str().c_str());
+    }
+
+    if (externcmd_matches(cmd, "$CHILDREN"))
+    {
+        externcmd_substitute_arg(cmd, "[$]CHILDREN", child_nodes(mon->databases, ptr).c_str());
     }
 
     if (externcmd_matches(cmd, "$EVENT"))
