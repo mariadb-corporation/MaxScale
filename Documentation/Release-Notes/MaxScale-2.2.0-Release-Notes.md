@@ -166,6 +166,15 @@ uncontrolled shutdown. By doing the journaling of server states, the mysqlmon
 monitor is able to keep track of stale master and stale slave states across
 restarts and crashes.
 
+### New Variables for Monitor Scripts
+
+The PARENT and CHILDREN variables were added to the monitor scripts. The former
+expands to the direct parent node of the server that triggers the event and the
+latter expands to a list of servers that are direct descendants of the server
+that triggered the event.
+
+For more information, refer to the [monitor documentation](../Monitors/Monitor-Common.md).
+
 ### Avrorouter `deflate` compression
 
 The Avrorouter now supports the `deflate` compression method. This allows the
