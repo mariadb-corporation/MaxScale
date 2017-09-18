@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <sstream>
 #include <set>
 #include <zlib.h>
 #include <sys/stat.h>
@@ -1144,6 +1145,26 @@ mon_print_fail_status(MXS_MONITOR_SERVERS* mon_srv)
     return (SERVER_IS_DOWN(mon_srv->server) && mon_srv->mon_err_count == 0);
 }
 
+static MXS_MONITOR_SERVERS* find_parent_node(MXS_MONITOR_SERVERS* servers,
+                                             MXS_MONITOR_SERVERS* target)
+{
+    MXS_MONITOR_SERVERS* rval = NULL;
+
+    if (target->server->master_id > 0)
+    {
+        for (MXS_MONITOR_SERVERS* node = servers; node; node = node->next)
+        {
+            if (node->server->node_id == target->server->master_id)
+            {
+                rval = node;
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
 /**
  * Launch a script
  * @param mon Owning monitor
@@ -1170,6 +1191,18 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
         char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
         snprintf(initiator, sizeof(initiator), "[%s]:%d", ptr->server->name, ptr->server->port);
         externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
+    }
+
+    if (externcmd_matches(cmd, "$PARENT"))
+    {
+        std::stringstream ss;
+        MXS_MONITOR_SERVERS* parent = find_parent_node(mon->databases, ptr);
+
+        if (parent)
+        {
+            ss << "[" << parent->server->name << "]:" << parent->server->port;
+        }
+        externcmd_substitute_arg(cmd, "[$]PARENT", ss.str().c_str());
     }
 
     if (externcmd_matches(cmd, "$EVENT"))

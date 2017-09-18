@@ -80,6 +80,8 @@ The following substitutions will be made to the parameter value:
 * `$SLAVELIST` will be replaced with a list of server IPs and ports that are slaves
 * `$MASTERLIST` will be replaced with a list of server IPs and ports that are masters
 * `$SYNCEDLIST` will be replaced with a list of server IPs and ports that are synced Galera nodes
+* `$PARENT` will be replaced with the IP and port of the parent node of the server who initiated
+   the event. For master-slave setups, this will be the master if the initiating server is a slave.
 
 For example, the previous example will be executed as:
 
