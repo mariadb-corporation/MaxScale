@@ -421,6 +421,7 @@ static int clientReply(MXS_FILTER *instance,
             gwbuf_free(csdata->res.data);
             csdata->res.data = data;
             csdata->res.length = gwbuf_length(data);
+            csdata->res.offset = 0;
         }
         else
         {
