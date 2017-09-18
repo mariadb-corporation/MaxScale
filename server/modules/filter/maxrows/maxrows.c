@@ -998,7 +998,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
         }
     }
 
-    csdata->res.offset += offset;
+    csdata->res.offset += offset - extra_offset;
 
     return rv;
 }
