@@ -795,9 +795,13 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
 }
 
 /**
- * Called when resultset rows are handled.
+ * Called when resultset rows are handled
  *
- * @param csdata The maxrows session data.
+ * @param csdata       The maxrows session data
+ * @param buffer       The buffer containing the packet
+ * @param extra_offset Offset into @c buffer where the packet is stored
+ *
+ * @return The return value of the upstream component
  */
 static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra_offset)
 {
