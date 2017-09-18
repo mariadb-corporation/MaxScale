@@ -24,9 +24,11 @@ report at [Jira](https://jira.mariadb.org).
 [Here is a list of bugs fixed in MaxScale 2.1.8.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.8)
 
 * (MXS-1421)[https://jira.mariadb.org/browse/MXS-1421] Even though limit is reached, maxrows continues to buffer resultset.
+* (MXS-1418)[https://jira.mariadb.org/browse/MXS-1418] remove server does not drain node
 * (MXS-1414)[https://jira.mariadb.org/browse/MXS-1414] About  Presistent Connection  Mysql Gone away
 * (MXS-1412)[https://jira.mariadb.org/browse/MXS-1412] Performance issue with MaxRows filter
 * (MXS-1411)[https://jira.mariadb.org/browse/MXS-1411] error : (46) [maxrows] Received data from the backend although we were expecting nothing.
+* (MXS-1409)[https://jira.mariadb.org/browse/MXS-1409] maxadmin socket with port results in help
 * (MXS-1400)[https://jira.mariadb.org/browse/MXS-1400] Crash with OpenSSL 1.1
 * (MXS-1396)[https://jira.mariadb.org/browse/MXS-1396] Persistent connections hang with Percona Server 5.6.37-82.2-log
 
