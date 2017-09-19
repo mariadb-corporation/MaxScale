@@ -111,5 +111,5 @@ ExternalProject_Add(cdc_connector
   INSTALL_COMMAND make install)
 
 set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/include/ CACHE INTERNAL "")
-set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/lib/libcdc_connector.a CACHE INTERNAL "")
+set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/lib/libcdc_connector.so CACHE INTERNAL "")
 include_directories(${CMAKE_BINARY_DIR}/cdc_connector/include)
