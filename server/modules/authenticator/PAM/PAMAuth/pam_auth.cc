@@ -13,6 +13,7 @@
 #include"pam_auth.hh"
 
 #include <maxscale/authenticator.h>
+#include <maxscale/users.h>
 
 #include "pam_instance.hh"
 #include "pam_client_session.hh"

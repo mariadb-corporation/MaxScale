@@ -12,6 +12,7 @@
  */
 
 #include "pam_backend_session.hh"
+#include <maxscale/server.h>
 
 namespace
 {
