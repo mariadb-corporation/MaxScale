@@ -1325,6 +1325,7 @@ int main(int argc, char **argv)
     void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
     MXS_CONFIG* cnf = NULL;
     int numlocks = 0;
+    bool pid_file_created = false;
 
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
@@ -1929,6 +1930,8 @@ int main(int argc, char **argv)
             rc = MAXSCALE_ALREADYRUNNING;
             goto return_main;
         }
+
+        pid_file_created = true;
     }
 
     /** Initialize statistics */
@@ -2080,14 +2083,16 @@ int main(int argc, char **argv)
     MXS_NOTICE("MaxScale shutdown completed.");
 
     unload_all_modules();
-    /* Remove Pidfile */
-    unlock_pidfile();
-    unlink_pidfile();
 
     ERR_free_strings();
     EVP_cleanup();
 
 return_main:
+    if (pid_file_created)
+    {
+        unlock_pidfile();
+        unlink_pidfile();
+    }
 
     mxs_log_flush_sync();
 
