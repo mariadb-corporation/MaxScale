@@ -19,6 +19,7 @@ Group=maxscale
 ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale
 TimeoutStartSec=120
 LimitNOFILE=65535
+StartLimitBurst=0
 
 [Install]
 WantedBy=multi-user.target
