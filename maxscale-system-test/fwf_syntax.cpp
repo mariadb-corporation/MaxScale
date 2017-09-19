@@ -41,45 +41,41 @@ const char *rules_failure[] =
     NULL
 };
 
-void truncate_maxscale_logs(TestConnections *test)
+void truncate_maxscale_logs(TestConnections& test)
 {
-    test->ssh_maxscale(true, "truncate -s 0 /var/log/maxscale/*");
+    test.ssh_maxscale(true, "truncate -s 0 /var/log/maxscale/*");
 }
 
-void add_rule(const char *rule)
+void create_rule(const char *rule, const char* user)
 {
     FILE *file = fopen(temp_rules, "a");
     fprintf(file, "%s\n", rule);
+    fprintf(file, "%s\n", user);
     fclose(file);
 }
 
 int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections *test = new TestConnections(argc, argv);
-    test->stop_timeout();
-    test->stop_maxscale();
+    TestConnections test(argc, argv);
+    test.stop_maxscale();
 
     for (int i = 0; rules_failure[i]; i++)
     {
         /** Create rule file with syntax error */
         truncate(temp_rules, 0);
-        add_rule(rules_failure[i]);
-        add_rule(users_ok[0]);
-        copy_rules(test, (char*)temp_rules, (char*)test_dir);
+        create_rule(rules_failure[i], users_ok[0]);
+        copy_rules(&test, (char*)temp_rules, (char*)test_dir);
 
-        test->tprintf("Testing rule: %s\n", rules_failure[i]);
-        test->start_maxscale();
-        sleep(3);
+        test.tprintf("Testing rule: %s\n", rules_failure[i]);
+        test.add_result(test.start_maxscale() == 0, "MaxScale should fail to start");
 
         /** Check that MaxScale did not start and that the log contains
          * a message about the syntax error. */
-        test->check_maxscale_processes(0);
-        test->check_log_err("syntax error", true);
+        test.check_maxscale_processes(0);
+        test.check_log_err("syntax error", true);
         truncate_maxscale_logs(test);
     }
 
-    int rval = test->global_result;
-    delete test;
-    return rval;
+    return test.global_result;
 }
