@@ -32,8 +32,14 @@ int main(int argc, char *argv[])
     char rules_dir[4096];
     FILE* file;
 
+    Test->ssh_maxscale(true, "cd %s;"
+                       "rm -rf rules;"
+                       "mkdir rules;"
+                       "chown vagrant:vagrant rules",
+                       Test->maxscale_access_homedir);
+
     sprintf(rules_dir, "%s/fw/", test_dir);
-    int N = 13;
+    int N = 18;
     int i;
 
     for (i = 1; i < N + 1; i++)
@@ -41,12 +47,10 @@ int main(int argc, char *argv[])
         Test->set_timeout(180);
         local_result = 0;
 
-        Test->stop_maxscale();
-
         sprintf(str, "rules%d", i);
         copy_rules(Test, str, rules_dir);
 
-        Test->start_maxscale();
+        Test->restart_maxscale();
         Test->connect_rwsplit();
 
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
@@ -130,7 +134,6 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(180);
-    Test->stop_maxscale();
 
     // Test for at_times clause
     if (Test->verbose)
@@ -142,14 +145,15 @@ int main(int argc, char *argv[])
 
     if (Test->verbose)
     {
-        Test->tprintf("DELETE quries without WHERE clause will be blocked during next 2 minutes");
+        Test->tprintf("DELETE quries without WHERE clause will be blocked during the 15 seconds");
         Test->tprintf("Put time to rules.txt: %s", str);
     }
-    Test->ssh_maxscale(false, "start_time=`date +%%T`; stop_time=` date --date "
-                       "\"now +2 mins\" +%%T`; %s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
+    Test->ssh_maxscale(false, "start_time=`date +%%T`;"
+                       "stop_time=` date --date \"now +15 secs\" +%%T`;"
+                       "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
                        Test->maxscale_access_sudo, Test->maxscale_access_homedir);
 
-    Test->start_maxscale();
+    Test->restart_maxscale();
     Test->connect_rwsplit();
 
     Test->tprintf("Trying 'DELETE FROM t1' and expecting FAILURE");
@@ -160,10 +164,10 @@ int main(int argc, char *argv[])
         Test->add_result(1, "Query succeded, but fail expected, errono is %d", mysql_errno(Test->conn_rwsplit));
     }
 
-    Test->tprintf("Waiting 3 minutes and trying 'DELETE FROM t1', expecting OK");
+    Test->tprintf("Waiting 16 seconds and trying 'DELETE FROM t1', expecting OK");
 
     Test->stop_timeout();
-    sleep(180);
+    sleep(16);
     Test->set_timeout(180);
     Test->try_query(Test->conn_rwsplit, "DELETE FROM t1");
 
@@ -190,7 +194,6 @@ int main(int argc, char *argv[])
     double elapsedTime;
     gettimeofday(&t1, NULL);
 
-
     do
     {
         gettimeofday(&t2, NULL);
@@ -208,8 +211,8 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(180);
-    printf("Trying 20 quries, 1 query / second");
-    for (i = 0; i < 20; i++)
+    Test->tprintf("Trying 12 quries, 1 query / second");
+    for (i = 0; i < 12; i++)
     {
         sleep(1);
         Test->add_result(execute_query_silent(Test->conn_rwsplit, "SELECT * FROM t1"), "query failed");
@@ -218,26 +221,6 @@ int main(int argc, char *argv[])
             Test->tprintf("%d ", i);
         }
     }
-
-    Test->set_timeout(180);
-    Test->tprintf("Stopping Maxscale");
-    Test->stop_maxscale();
-
-    Test->tprintf("Trying rules with syntax error");
-    Test->tprintf("Copying rules to Maxscale machine: %s", str);
-    copy_rules(Test, (char *) "rules_syntax_error", rules_dir);
-
-    Test->tprintf("Starting Maxscale");
-    Test->start_maxscale();
-    Test->connect_rwsplit();
-
-    Test->tprintf("Trying to connect to Maxscale when 'rules' has syntax error, expecting failures");
-    if (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") == 0)
-    {
-        Test->add_result(1, "Rule has syntax error, but query OK");
-    }
-
-    Test->check_maxscale_processes(0);
 
     int rval = Test->global_result;
     delete Test;

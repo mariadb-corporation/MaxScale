@@ -257,7 +257,6 @@ add_test_executable(false_monitor_state_change.cpp false_monitor_state_change re
 
 # A set of tests for Firewall filter
 add_test_executable(fwf.cpp fwf fwf LABELS dbfwfilter REPL_BACKEND)
-add_test_executable(fwf2.cpp fwf2 fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_duplicate_rules.cpp fwf_duplicate_rules fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_prepared_stmt.cpp fwf_prepared_stmt fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_actions.cpp fwf_actions fwf_action LABELS dbfwfilter REPL_BACKEND)
