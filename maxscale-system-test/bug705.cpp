@@ -242,15 +242,9 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Restarting MaxScale\n");
 
-    Test->set_timeout(100);
+    Test->set_timeout(120);
     Test->restart_maxscale();
 
-    Test->stop_maxscale();
-    Test->stop_timeout();
-    Test->tprintf("Waiting 20 seconds\n");
-    sleep(20);
-
-    Test->set_timeout(60);
     Test->check_log_err((char *) "Loading database names", false);
     Test->check_log_err((char *) "Unknown column", false);
 
