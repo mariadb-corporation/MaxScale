@@ -355,6 +355,11 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_
     return rval;
 }
 
+bool check_for_sp_call(GWBUF *buf, mysql_server_cmd_t packet_type)
+{
+    return packet_type == MYSQL_COM_QUERY && qc_get_operation(buf) == QUERY_OP_CALL;
+}
+
 /**
  * @brief Determine the type of a query
  *

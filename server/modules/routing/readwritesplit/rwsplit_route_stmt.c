@@ -134,9 +134,11 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             succp = handle_master_is_target(inst, rses, &target_dcb);
 
             if (!rses->rses_config.strict_multi_stmt &&
+                !rses->rses_config.strict_sp_calls &&
                 rses->forced_node == rses->rses_master_ref)
             {
-                /** Reset the forced node as we're in relaxed multi-statement mode */
+                /** Reset the forced node as we're in relaxed multi-statement
+                 * and SP call mode */
                 rses->forced_node = NULL;
             }
         }
@@ -892,12 +894,14 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
      * situation, assigning QUERY_TYPE_WRITE for the query will trigger
      * the error processing. */
     if ((rses->forced_node == NULL || rses->forced_node != rses->rses_master_ref) &&
-        check_for_multi_stmt(querybuf, rses->client_dcb->protocol, packet_type))
+        (check_for_multi_stmt(querybuf, rses->client_dcb->protocol, packet_type) ||
+         check_for_sp_call(querybuf, packet_type)))
     {
         if (rses->rses_master_ref)
         {
             rses->forced_node = rses->rses_master_ref;
-            MXS_INFO("Multi-statement query, routing all future queries to master.");
+            MXS_INFO("Multi-statement query or stored procedure call, routing "
+                     "all future queries to master.");
         }
         else
         {

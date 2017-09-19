@@ -146,6 +146,7 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                             GWBUF *querybuf, qc_query_type_t type);
 bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_type);
+bool check_for_sp_call(GWBUF *buf, mysql_server_cmd_t packet_type);
 qc_query_type_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
 void close_failed_bref(backend_ref_t *bref, bool fatal);
 

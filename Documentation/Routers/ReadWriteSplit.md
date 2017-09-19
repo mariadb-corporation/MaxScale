@@ -221,6 +221,15 @@ multi-statement queries.
 router_options=strict_multi_stmt=false
 ```
 
+### `strict_sp_calls`
+
+Similar to `strict_multi_stmt`, this option allows all queries after a CALL
+operation on a stored procedure to be routed to the master. This option is
+disabled by default and was added in MaxScale 2.1.9.
+
+All warnings and restrictions that apply to `strict_multi_stmt` also apply to
+`strict_sp_calls`.
+
 ### `master_failure_mode`
 
 This option controls how the failure of a master server is handled. By default,

@@ -272,6 +272,7 @@ typedef struct rwsplit_config_st
     bool              master_accept_reads; /**< Use master for reads */
     bool              strict_multi_stmt; /**< Force non-multistatement queries to be routed
                                              * to the master after a multistatement query. */
+    bool              strict_sp_calls; /**< Lock session to master after an SP call */
     enum failure_mode master_failure_mode; /**< Master server failure handling mode.
                                                * @see enum failure_mode */
     bool              retry_failed_reads; /**< Retry failed reads on other servers */

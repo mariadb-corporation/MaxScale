@@ -195,6 +195,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"disable_sescmd_history", MXS_MODULE_PARAM_BOOL, "true"},
             {"max_sescmd_history", MXS_MODULE_PARAM_COUNT, "0"},
             {"strict_multi_stmt",  MXS_MODULE_PARAM_BOOL, "true"},
+            {"strict_sp_calls",  MXS_MODULE_PARAM_BOOL, "false"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
@@ -275,6 +276,7 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
     router->rwsplit_config.max_slave_replication_lag = config_get_integer(params, "max_slave_replication_lag");
     router->rwsplit_config.retry_failed_reads = config_get_bool(params, "retry_failed_reads");
     router->rwsplit_config.strict_multi_stmt = config_get_bool(params, "strict_multi_stmt");
+    router->rwsplit_config.strict_sp_calls = config_get_bool(params, "strict_sp_calls");
     router->rwsplit_config.disable_sescmd_history = config_get_bool(params, "disable_sescmd_history");
     router->rwsplit_config.max_sescmd_history = config_get_integer(params, "max_sescmd_history");
     router->rwsplit_config.master_accept_reads = config_get_bool(params, "master_accept_reads");
@@ -606,6 +608,8 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
                router->rwsplit_config.retry_failed_reads ? "true" : "false");
     dcb_printf(dcb, "\tstrict_multi_stmt:         %s\n",
                router->rwsplit_config.strict_multi_stmt ? "true" : "false");
+    dcb_printf(dcb, "\tstrict_sp_calls:           %s\n",
+               router->rwsplit_config.strict_sp_calls ? "true" : "false");
     dcb_printf(dcb, "\tdisable_sescmd_history:    %s\n",
                router->rwsplit_config.disable_sescmd_history ? "true" : "false");
     dcb_printf(dcb, "\tmax_sescmd_history:        %d\n",
@@ -1186,6 +1190,10 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
             else if (strcmp(options[i], "strict_multi_stmt") == 0)
             {
                 router->rwsplit_config.strict_multi_stmt = config_truth_value(value);
+            }
+            else if (strcmp(options[i], "strict_sp_calls") == 0)
+            {
+                router->rwsplit_config.strict_sp_calls = config_truth_value(value);
             }
             else if (strcmp(options[i], "retry_failed_reads") == 0)
             {
