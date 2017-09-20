@@ -1,73 +1,5 @@
 /**
  * @file pers_01.cpp - Persistent connection tests
- * configuration:
- * @verbatim
-[server1]
-type=server
-address=###node_server_IP_1###
-port=###node_server_port_1###
-protocol=MySQLBackend
-persistpoolmax=1
-persistmaxtime=3660
-
-[server2]
-type=server
-address=###node_server_IP_2###
-port=###node_server_port_2###
-protocol=MySQLBackend
-persistpoolmax=5
-persistmaxtime=60
-
-[server3]
-type=server
-address=###node_server_IP_3###
-port=###node_server_port_3###
-protocol=MySQLBackend
-persistpoolmax=10
-persistmaxtime=60
-
-[server4]
-type=server
-address=###node_server_IP_4###
-port=###node_server_port_4###
-protocol=MySQLBackend
-persistpoolmax=30
-persistmaxtime=30
-
-[gserver1]
-type=server
-address=###galera_server_IP_1###
-port=###galera_server_port_1###
-protocol=MySQLBackend
-persistpoolmax=10
-persistmaxtime=3660
-
-[gserver2]
-type=server
-address=###galera_server_IP_2###
-port=###galera_server_port_2###
-protocol=MySQLBackend
-persistpoolmax=15
-persistmaxtime=30
-
-[gserver3]
-type=server
-address=###galera_server_IP_3###
-port=###galera_server_port_3###
-protocol=MySQLBackend
-persistpoolmax=19
-persistmaxtime=0
-
-[gserver4]
-type=server
-address=###galera_server_IP_4###
-port=###galera_server_port_4###
-protocol=MySQLBackend
-persistpoolmax=0
-persistmaxtime=3660
-
-
-@endverbatim
  * open 70 connections to all Maxscale services
  * close connections
  * TEST1: check value of "Persistent measured pool size" parameter in  'maxadmin' output, expect:
@@ -123,7 +55,6 @@ void check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * ser
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(30);
     int pers_conn_expected[4];
     int galera_pers_conn_expected[4];
 
@@ -138,37 +69,35 @@ int main(int argc, char *argv[])
     galera_pers_conn_expected[2] = 0;
     galera_pers_conn_expected[3] = 0;
 
-    Test->restart_maxscale();
-
     Test->add_result(Test->create_connections(70, true, true, true, true),
-                     "Error creating connections\n");
+                     "Error creating connections");
     sleep(5);
     Test->set_timeout(20);
 
-    Test->tprintf("Test 1:\n");
+    Test->tprintf("Test 1:");
     check_pers_conn(Test, pers_conn_expected, (char *) "server");
 
-    Test->tprintf("Galera: \n");
+    Test->tprintf("Galera: ");
     check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
 
     Test->stop_timeout();
 
-    Test->tprintf("Sleeping 10 seconds\n");
+    Test->tprintf("Sleeping 10 seconds");
     sleep(10);
 
     Test->set_timeout(20);
-    Test->tprintf("Test 2:\n");
+    Test->tprintf("Test 2:");
     check_pers_conn(Test, pers_conn_expected, (char *) "server");
 
-    printf("Galera: \n");
+    Test->tprintf("Galera: ");
     check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
 
-    Test->tprintf("Sleeping 30 seconds\n");
+    Test->tprintf("Sleeping 30 seconds");
     Test->stop_timeout();
     sleep(30);
 
     Test->set_timeout(20);
-    printf("Test 3:\n");
+    Test->tprintf("Test 3:");
 
     pers_conn_expected[0] = 1;
     pers_conn_expected[1] = 5;
@@ -182,15 +111,15 @@ int main(int argc, char *argv[])
 
     check_pers_conn(Test, pers_conn_expected, (char *) "server");
 
-    Test->tprintf("Galera: \n");
+    Test->tprintf("Galera: ");
     check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
 
-    Test->tprintf("Sleeping 30 seconds\n");
+    Test->tprintf("Sleeping 30 seconds");
     Test->stop_timeout();
     sleep(30);
     Test->set_timeout(20);
 
-    Test->tprintf("Test 3:\n");
+    Test->tprintf("Test 3:");
 
     pers_conn_expected[0] = 1;
     pers_conn_expected[1] = 0;
@@ -204,7 +133,7 @@ int main(int argc, char *argv[])
 
     check_pers_conn(Test, pers_conn_expected, (char *) "server");
 
-    Test->tprintf("Galera: \n");
+    Test->tprintf("Galera: ");
     check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
     int rval = Test->global_result;
     delete Test;
