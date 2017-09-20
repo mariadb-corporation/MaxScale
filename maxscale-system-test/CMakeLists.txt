@@ -488,6 +488,12 @@ add_test_executable(mxs1319.cpp mxs1319 replication LABELS MySQLAuth REPL_BACKEN
 # https://jira.mariadb.org/browse/MXS-1418
 add_test_executable(mxs1418.cpp mxs1418 replication LABELS maxscale REPL_BACKEND)
 
+# MXS-1295: MaxScale's readwritesplit router does not take into account the fact
+# that stored procedure call may change the value of a user variable
+#
+# https://jira.mariadb.org/browse/MXS-1295
+add_test_executable(mxs1295_sp_call.cpp mxs1295_sp_call mxs1295 LABELS maxscale REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
