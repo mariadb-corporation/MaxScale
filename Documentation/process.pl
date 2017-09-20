@@ -16,5 +16,5 @@ while (<>)
     my $issue = @parts[1];
     my $desc = @parts[0];
 
-    print "* ($issue)[https://jira.mariadb.org/browse/$issue] $desc\n";
+    print "* [$issue](https://jira.mariadb.org/browse/$issue) $desc\n";
 }
