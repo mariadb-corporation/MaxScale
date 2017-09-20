@@ -9062,6 +9062,8 @@ static bool blr_change_binlog_name(ROUTER_INSTANCE *router,
             else
             {
                 *new_logfile = MXS_STRDUP_A("");
+                // Blank the error message
+                error[0] = 0;
             }
          }
      }
