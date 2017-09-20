@@ -424,7 +424,7 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
 
             /** The server must be a valid slave, relay server, or master */
 
-            if (backend->in_use() && backend->is_active() &&
+            if (backend->in_use() &&
                 (strcasecmp(name, backend->name()) == 0) &&
                 (backend->is_slave() ||
                  backend->is_relay() ||
@@ -451,7 +451,7 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
              * Unused backend or backend which is not master nor
              * slave can't be used
              */
-            if (!backend->in_use() || !backend->is_active() ||
+            if (!backend->in_use() ||
                 (!backend->is_master() && !backend->is_slave()))
             {
                 continue;
@@ -527,7 +527,7 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
      */
     else if (btype == BE_MASTER)
     {
-        if (master && master->is_active())
+        if (master)
         {
             /** It is possible for the server status to change at any point in time
              * so copying it locally will make possible error messages

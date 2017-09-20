@@ -524,8 +524,28 @@ int CacheFilterSession::handle_expecting_nothing()
 {
     ss_dassert(m_state == CACHE_EXPECTING_NOTHING);
     ss_dassert(m_res.pData);
-    MXS_ERROR("Received data from the backend althoug we were expecting nothing.");
-    ss_dassert(!true);
+    unsigned long msg_size = gwbuf_length(m_res.pData);
+
+    if ((int)MYSQL_GET_COMMAND(GWBUF_DATA(m_res.pData)) == 0xff)
+    {
+        /**
+         * Error text message is after:
+         * MYSQL_HEADER_LEN offset + status flag (1) + error code (2) +
+         * 6 bytes message status = MYSQL_HEADER_LEN + 9
+         */
+        MXS_INFO("Error packet received from backend "
+                 "(possibly a server shut down ?): [%.*s].",
+                 (int)msg_size - (MYSQL_HEADER_LEN + 9),
+                 GWBUF_DATA(m_res.pData) + MYSQL_HEADER_LEN + 9);
+    }
+    else
+    {
+        MXS_WARNING("Received data from the backend although "
+                    "filter is expecting nothing. "
+                    "Packet size is %lu bytes long.",
+                    msg_size);
+        ss_dassert(!true);
+    }
 
     return send_upstream();
 }
