@@ -1,4 +1,4 @@
-#!/bin/perl
+#!/usr/bin/env perl
 
 # Discard the CSV headers
 <>;
