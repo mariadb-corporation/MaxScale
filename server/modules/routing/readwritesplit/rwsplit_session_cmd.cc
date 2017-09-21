@@ -63,6 +63,7 @@ void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
                 if (command == MXS_COM_STMT_PREPARE)
                 {
                     /** Map the returned response to the internal ID */
+                    MXS_INFO("PS ID %u maps to internal ID %lu", resp.id, id);
                     rses->ps_handles[resp.id] = id;
                 }
             }
