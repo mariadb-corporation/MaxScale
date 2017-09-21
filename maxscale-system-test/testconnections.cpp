@@ -1619,12 +1619,12 @@ int TestConnections::get_client_ip(char * ip)
     unsigned int conn_num = 0;
 
     connect_rwsplit();
-    if (execute_query(conn_rwsplit, (char *) "CREATE DATABASE IF NOT EXISTS db_to_check_clent_ip") != 0 )
+    if (execute_query(conn_rwsplit, (char *) "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0 )
     {
         return ret;
     }
     close_rwsplit();
-    conn = open_conn_db(rwsplit_port, maxscale_IP, (char *) "db_to_check_clent_ip", maxscale_user,
+    conn = open_conn_db(rwsplit_port, maxscale_IP, (char *) "db_to_check_client_ip", maxscale_user,
                         maxscale_password, ssl);
 
     if (conn != NULL)
@@ -1652,7 +1652,7 @@ int TestConnections::get_client_ip(char * ip)
                     row = mysql_fetch_row(res);
                     if ( (row[2] != NULL ) && (row[3] != NULL) )
                     {
-                        if  (strstr(row[3], "db_to_check_clent_ip") != NULL)
+                        if  (strstr(row[3], "db_to_check_client_ip") != NULL)
                         {
                             ret = 0;
                             strcpy(ip, row[2]);
@@ -1662,6 +1662,7 @@ int TestConnections::get_client_ip(char * ip)
             }
             mysql_free_result(res);
         }
+        execute_query(conn_rwsplit, "DROP DATABASE db_to_check_client_ip");
     }
 
     mysql_close(conn);
