@@ -1068,25 +1068,66 @@ static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
     return "undefined_event";
 }
 
+enum credentials_approach_t
+{
+    CREDENTIALS_INCLUDE,
+    CREDENTIALS_EXCLUDE,
+};
+
 /**
  * Create a list of running servers
  *
- * @param servers Monitored servers
+ * @param mon The monitor
  * @param dest Destination where the string is appended, must be null terminated
  * @param len Length of @c dest
+ * @param approach Whether credentials should be included or not.
  */
-static void mon_append_node_names(MXS_MONITOR_SERVERS* servers, char* dest, int len, int status)
+static void mon_append_node_names(MXS_MONITOR* mon,
+                                  char* dest,
+                                  int len,
+                                  int status,
+                                  credentials_approach_t approach = CREDENTIALS_EXCLUDE)
 {
+    MXS_MONITOR_SERVERS* servers = mon->databases;
+
     const char *separator = "";
-    char arr[MAX_SERVER_ADDRESS_LEN + 64]; // Some extra space for port and separator
+    char arr[MAX_SERVER_MONUSER_LEN +
+             MAX_SERVER_MONPW_LEN +
+             MAX_SERVER_ADDRESS_LEN + 64]; // Some extra space for port and separator
     dest[0] = '\0';
 
     while (servers && len)
     {
         if (status == 0 || servers->server->status & status)
         {
-            snprintf(arr, sizeof(arr), "%s[%s]:%d", separator, servers->server->name,
-                     servers->server->port);
+            if (approach == CREDENTIALS_EXCLUDE)
+            {
+                snprintf(arr, sizeof(arr), "%s[%s]:%d", separator, servers->server->name,
+                         servers->server->port);
+            }
+            else
+            {
+                const char* user;
+                const char* password;
+                if (*servers->server->monuser)
+                {
+                    user = servers->server->monuser;
+                    password = servers->server->monpw;
+                }
+                else
+                {
+                    user = mon->user;
+                    password = mon->password;
+                }
+
+                snprintf(arr, sizeof(arr), "%s%s:%s@[%s]:%d",
+                         separator,
+                         user,
+                         password,
+                         servers->server->name,
+                         servers->server->port);
+            }
+
             separator = ",";
             int arrlen = strlen(arr);
 
@@ -1244,33 +1285,40 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
 
     char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
 
+    if (externcmd_matches(cmd, "$CREDENTIALS"))
+    {
+        // We provide the credentials for _all_ servers.
+        mon_append_node_names(mon, nodelist, sizeof(nodelist), 0, CREDENTIALS_INCLUDE);
+        externcmd_substitute_arg(cmd, "[$]CREDENTIALS", nodelist);
+    }
+
     if (externcmd_matches(cmd, "$NODELIST"))
     {
-        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_RUNNING);
+        mon_append_node_names(mon, nodelist, sizeof(nodelist), SERVER_RUNNING);
         externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$LIST"))
     {
-        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), 0);
+        mon_append_node_names(mon, nodelist, sizeof(nodelist), 0);
         externcmd_substitute_arg(cmd, "[$]LIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$MASTERLIST"))
     {
-        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_MASTER);
+        mon_append_node_names(mon, nodelist, sizeof(nodelist), SERVER_MASTER);
         externcmd_substitute_arg(cmd, "[$]MASTERLIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$SLAVELIST"))
     {
-        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_SLAVE);
+        mon_append_node_names(mon, nodelist, sizeof(nodelist), SERVER_SLAVE);
         externcmd_substitute_arg(cmd, "[$]SLAVELIST", nodelist);
     }
 
     if (externcmd_matches(cmd, "$SYNCEDLIST"))
     {
-        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_JOINED);
+        mon_append_node_names(mon, nodelist, sizeof(nodelist), SERVER_JOINED);
         externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
     }
 
