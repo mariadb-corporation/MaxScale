@@ -75,8 +75,8 @@ int main(int argc, char **argv)
     int rc;
     char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
     CHANGE_MASTER_OPTIONS change_master;
-    char query[255 + 1] = "";
-    char saved_query[255 + 1] = "";
+    char query[512 + 1] = "";
+    char saved_query[512 + 1] = "";
     int command_offset = strlen("CHANGE MASTER TO");
     char *master_log_file = NULL;
     char *master_log_pos = NULL;
