@@ -25,6 +25,7 @@ For any problems you encounter, please consider submitting a bug report at
 
 [Here is a list of bugs fixed in MaxScale 2.1.9.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.9)
 
+* [MXS-1435](https://jira.mariadb.org/browse/MXS-1435) Persistent connections can hang on COM_QUIT
 * [MXS-1377](https://jira.mariadb.org/browse/MXS-1377) maxscale doesn't cleanup pid file on startup error
 * [MXS-1295](https://jira.mariadb.org/browse/MXS-1295) MaxScale's readwritesplit router does not take into account the fact that stored procedure call may change the value of  a user variable
 
