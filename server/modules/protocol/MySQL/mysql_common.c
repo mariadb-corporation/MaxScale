@@ -29,10 +29,6 @@ uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 
 static server_command_t* server_command_init(server_command_t* srvcmd, mxs_mysql_cmd_t cmd);
 
-/**
- * @brief Allocate a new MySQL_session
- * @return New MySQL_session or NULL if memory allocation failed
- */
 MYSQL_session* mysql_session_alloc()
 {
     MYSQL_session *ses = MXS_CALLOC(1, sizeof(MYSQL_session));
@@ -48,19 +44,6 @@ MYSQL_session* mysql_session_alloc()
     return ses;
 }
 
-/**
- * Creates MySQL protocol structure
- *
- * @param dcb *          Must be non-NULL.
- * @param fd
- *
- * @return
- *
- *
- * @details Protocol structure does not have fd because dcb is not
- * connected yet.
- *
- */
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
 {
     MySQLProtocol* p;
@@ -94,13 +77,6 @@ return_p:
     return p;
 }
 
-/**
- * Free protocol object
- *
- * @param dcb Owner DCB
- *
- * @return True if protocol was closed
- */
 bool mysql_protocol_done(DCB* dcb)
 {
     bool rval = false;
@@ -126,13 +102,6 @@ bool mysql_protocol_done(DCB* dcb)
     return rval;
 }
 
-/**
- * Return a string representation of a MySQL protocol state.
- *
- * @param state The protocol state
- * @return String representation of the state
- *
- */
 const char* gw_mysql_protocol_state2string (int state)
 {
     switch (state)
@@ -154,6 +123,12 @@ const char* gw_mysql_protocol_state2string (int state)
     default:
         return "MySQL (unknown protocol state)";
     }
+}
+
+void mysql_protocol_set_current_command(DCB* dcb, mxs_mysql_cmd_t cmd)
+{
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+    proto->current_command = cmd;
 }
 
 GWBUF* mysql_create_com_quit(GWBUF* bufparam,
