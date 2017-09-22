@@ -108,7 +108,7 @@ modutil_extract_SQL(GWBUF *buf, char **sql, int *length)
 {
     unsigned char *ptr;
 
-    if (!modutil_is_SQL(buf))
+    if (!modutil_is_SQL(buf) && !modutil_is_SQL_prepare(buf))
     {
         return 0;
     }
