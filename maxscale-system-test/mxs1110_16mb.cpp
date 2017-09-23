@@ -22,6 +22,11 @@ int main(int argc, char *argv[])
 
     Test->copy_to_maxscale("./cache/cache_basic/cache_rules.json", "~/");
 
+    Test->ssh_maxscale(true, "cd %s;"
+                       "rm -rf rules;"
+                       "mkdir rules;"
+                       "chown vagrant:vagrant rules",
+                       Test->maxscale_access_homedir);
     copy_rules(Test, (char *) "rules2", "./fw/");
 
     Test->start_maxscale();
