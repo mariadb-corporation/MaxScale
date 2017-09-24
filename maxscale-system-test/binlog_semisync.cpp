@@ -13,66 +13,48 @@
 
 int main(int argc, char *argv[])
 {
+    TestConnections test(argc, argv);
 
-    TestConnections * Test = new TestConnections(argc, argv);
-    Test->tprintf("Test object initialized");
-    Test->set_timeout(3000);
-    Test->tprintf("Trying to connect to backend");
+    test.repl->connect();
+    test.binlog_cmd_option = 1;
+    test.start_binlog();
+    test.repl->connect();
+    test.tprintf("install semisync plugin");
+    execute_query(test.repl->nodes[0],
+                  (char *) "INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so';");
 
-    if (Test->repl->connect() == 0)
-    {
-        Test->tprintf("DROP TABLE t1");
-        execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1;");
+    test.tprintf("Reconnect");
+    test.repl->close_connections();
+    test.repl->connect();
+    test.tprintf("SET GLOBAL rpl_semi_sync_master_enabled = 1;");
+    execute_query(test.repl->nodes[0], (char *) "SET GLOBAL rpl_semi_sync_master_enabled = 1;");
+    test.repl->close_connections();
+    test_binlog(&test);
 
-        Test->repl->close_connections();
-        sleep(5);
+    test.repl->connect();
+    test.tprintf("SET GLOBAL rpl_semi_sync_master_enabled = 0;");
+    execute_query(test.repl->nodes[0], (char *) "SET GLOBAL rpl_semi_sync_master_enabled = 0;");
+    test.repl->close_connections();
+    test_binlog(&test);
 
-        Test->binlog_cmd_option = 1;
-        Test->start_binlog();
-        Test->repl->connect();
-        Test->tprintf("install semisync plugin");
-        execute_query(Test->repl->nodes[0],
-                      (char *) "INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so';");
+    test.repl->connect();
+    test.tprintf("uninstall semisync plugin");
+    execute_query(test.repl->nodes[0], (char *) "UNINSTALL PLUGIN rpl_semi_sync_master;");
+    test.tprintf("Reconnect");
+    test.repl->close_connections();
+    test.repl->connect();
+    test.tprintf("SET GLOBAL rpl_semi_sync_master_enabled = 1;");
+    execute_query(test.repl->nodes[0], (char *) "SET GLOBAL rpl_semi_sync_master_enabled = 1;");
+    test.repl->close_connections();
+    test_binlog(&test);
 
-        Test->tprintf("Reconnect");
-        Test->repl->close_connections();
-        Test->repl->connect();
-        Test->tprintf("SET GLOBAL rpl_semi_sync_master_enabled = 1;");
-        execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL rpl_semi_sync_master_enabled = 1;");
-        Test->repl->close_connections();
-        test_binlog(Test);
+    test.repl->connect();
+    test.tprintf("SET GLOBAL rpl_semi_sync_master_enabled = 0;");
+    execute_query(test.repl->nodes[0], (char *) "SET GLOBAL rpl_semi_sync_master_enabled = 0;");
+    test.repl->sync_slaves();;
+    test.repl->close_connections();
+    test_binlog(&test);
 
-        Test->repl->connect();
-        Test->tprintf("SET GLOBAL rpl_semi_sync_master_enabled = 0;");
-        execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL rpl_semi_sync_master_enabled = 0;");
-        Test->repl->close_connections();
-        test_binlog(Test);
-
-        Test->repl->connect();
-        Test->tprintf("uninstall semisync plugin");
-        execute_query(Test->repl->nodes[0], (char *) "UNINSTALL PLUGIN rpl_semi_sync_master;");
-        Test->tprintf("Reconnect");
-        Test->repl->close_connections();
-        Test->repl->connect();
-        Test->tprintf("SET GLOBAL rpl_semi_sync_master_enabled = 1;");
-        execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL rpl_semi_sync_master_enabled = 1;");
-        Test->repl->close_connections();
-        test_binlog(Test);
-
-        Test->repl->connect();
-        Test->tprintf("SET GLOBAL rpl_semi_sync_master_enabled = 0;");
-        execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL rpl_semi_sync_master_enabled = 0;");
-        sleep(10);
-        Test->repl->close_connections();
-        test_binlog(Test);
-    }
-    else
-    {
-        Test->add_result(1, "Can't connect to backend");
-    }
-
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return test.global_result;
 }
 

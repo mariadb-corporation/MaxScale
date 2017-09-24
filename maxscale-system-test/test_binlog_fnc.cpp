@@ -29,7 +29,7 @@ int check_sha1(TestConnections* Test)
     local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
     Test->tprintf("Logs flushed");
     Test->set_timeout(100);
-    sleep(20);
+    Test->repl->sync_slaves();
     Test->tprintf("ls after first FLUSH LOGS");
     Test->tprintf("Maxscale");
     Test->set_timeout(50);
@@ -45,7 +45,7 @@ int check_sha1(TestConnections* Test)
     Test->tprintf("Logs flushed");
 
     Test->set_timeout(50);
-    sleep(20);
+    Test->repl->sync_slaves();
     Test->set_timeout(50);
     Test->tprintf("ls before FLUSH LOGS");
     Test->tprintf("Maxscale");
@@ -86,7 +86,7 @@ int check_sha1(TestConnections* Test)
         }
         if (strcmp(s_maxscale, s) != 0)
         {
-            Test->tprintf("Binlog from master checksum is not eqiual to binlog checksum from Maxscale node");
+            Test->tprintf("Binlog from master checksum is not equal to binlog checksum from Maxscale node");
             local_result++;
         }
     }
@@ -103,8 +103,9 @@ int start_transaction(TestConnections* Test)
     local_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
     Test->tprintf("INSERT data");
     local_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
-    Test->stop_timeout();
-    sleep(20);
+    Test->set_timeout(120);
+    Test->repl->sync_slaves();
+
     return local_result;
 }
 
@@ -123,8 +124,9 @@ void test_binlog(TestConnections* Test)
     create_t1(Test->repl->nodes[0]);
     Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "Data inserting to t1 failed");
     Test->stop_timeout();
-    Test->tprintf("Sleeping to let replication happen");
-    sleep(60);
+    Test->tprintf("Waiting for replication to catch up");
+    Test->set_timeout(120);
+    Test->repl->sync_slaves();
 
     for (i = 0; i < Test->repl->N; i++)
     {
@@ -150,8 +152,8 @@ void test_binlog(TestConnections* Test)
     Test->tprintf("INSERT INTO t1 VALUES(112, 10)");
     Test->try_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
     Test->try_query(Test->repl->nodes[0], (char *) "COMMIT");
-    Test->stop_timeout();
-    sleep(20);
+    Test->set_timeout(120);
+    Test->repl->sync_slaves();
 
     Test->set_timeout(20);
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
@@ -217,9 +219,8 @@ void test_binlog(TestConnections* Test)
     Test->tprintf("START SLAVE against Maxscale binlog");
     Test->try_query(binlog, (char *) "START SLAVE");
 
-    Test->tprintf("Sleeping to let replication happen");
-    Test->stop_timeout();
-    sleep(30);
+    Test->set_timeout(120);
+    Test->repl->sync_slaves();
 
     for (i = 0; i < Test->repl->N; i++)
     {
