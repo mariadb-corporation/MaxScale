@@ -133,13 +133,13 @@ int main(int argc, char* argv[])
 
         if (qc_setup(QC_LIB, QC_SQL_MODE_DEFAULT, NULL))
         {
-            if (qc_process_init(QC_INIT_BOTH))
+            if (qc_process_init(QC_INIT_BOTH) && qc_thread_init(QC_INIT_BOTH))
             {
                 rc = test();
             }
             else
             {
-                cerr << "error: Could not perform process initialization for " << QC_LIB << "." << endl;
+                cerr << "error: Could not perform process/thread initialization for " << QC_LIB << "." << endl;
             }
         }
         else

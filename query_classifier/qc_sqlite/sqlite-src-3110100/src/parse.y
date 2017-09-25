@@ -384,10 +384,21 @@ create_table ::= createkw temp(T) TABLE ifnotexists(E) nm(Y) dbnm(Z). {
    sqlite3StartTable(pParse,&Y,&Z,T,0,0,E);
 #endif
 }
+%ifdef MAXSCALE
+or_replace_opt ::= .
+or_replace_opt ::= OR REPLACE.
+
+createkw(A) ::= CREATE(X) or_replace_opt.  {
+  disableLookaside(pParse);
+  A = X;
+}
+%endif
+%ifndef MAXSCALE
 createkw(A) ::= CREATE(X).  {
   disableLookaside(pParse);
   A = X;
 }
+%endif
 %type ifnotexists {int}
 ifnotexists(A) ::= .              {A = 0;}
 ifnotexists(A) ::= IF NOT EXISTS. {A = 1;}
@@ -904,9 +915,6 @@ ifexists(A) ::= .            {A = 0;}
 //
 %ifndef SQLITE_OMIT_VIEW
 %ifdef MAXSCALE
-or_replace_opt ::= .
-or_replace_opt ::= OR REPLACE.
-
 %type algorithm {int}
 algorithm(A) ::= UNDEFINED. {A=0;}
 algorithm(A) ::= MERGE. {A=0;}
@@ -916,7 +924,7 @@ algorithm(A) ::= TEMPTABLE. {A=1;}
 algorithm_opt(A) ::= . {A=0;}
 algorithm_opt(A) ::= ALGORITHM EQ algorithm(X). {A=X;}
 
-cmd ::= createkw(X) or_replace_opt algorithm_opt(T) VIEW ifnotexists(E) nm(Y) dbnm(Z) eidlist_opt(C)
+cmd ::= createkw(X) algorithm_opt(T) VIEW ifnotexists(E) nm(Y) dbnm(Z) eidlist_opt(C)
           AS select(S). {
   mxs_sqlite3CreateView(pParse, &X, &Y, &Z, C, S, T, E);
   sqlite3SelectDelete(pParse->db, S);

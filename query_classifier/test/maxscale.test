@@ -87,3 +87,5 @@ select names from t;
 
 call p1();
 call p1(@var);
+
+create or replace table t (a int);

@@ -21,7 +21,11 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=array-bounds")
 
 add_library(qc_sqlite SHARED qc_sqlite.cc qc_sqlite3.c builtin_functions.c)
 add_dependencies(qc_sqlite maxscale_sqlite)
-add_definitions(-DMAXSCALE -DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_OMIT_ATTACH -DSQLITE_OMIT_REINDEX -DSQLITE_OMIT_AUTOVACUUM -DSQLITE_OMIT_PRAGMA)
+# If you feel a need to add something here, check also the handling of 'enable_maxscale'
+# in sqlite-src-3110100/configure.
+# In configure we have defined SQLITE_OMIT_VIRTUALTABLE, but it cannot be defined here,
+# although conceptually is should, as one needed static function in case will be missing.
+add_definitions(-DMAXSCALE -DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_OMIT_ATTACH -DSQLITE_OMIT_REINDEX -DSQLITE_OMIT_AUTOVACUUM -DSQLITE_OMIT_PRAGMA )
 
 set_target_properties(qc_sqlite PROPERTIES VERSION "1.0.0")
 set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/qc_sqlite.map)
