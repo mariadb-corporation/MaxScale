@@ -1091,12 +1091,11 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
         {
             /** The COM_CHANGE_USER was already sent but the session is already
-             * closing. We ignore the COM_QUIT in the hopes that the response
-             * to the COM_CHANGE_USER comes before the DCB is closed. If the
-             * DCB is closed before the response arrives, the connection will
-             * not qualify the persistent connection pool. */
-            MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, ignoring");
+             * closing. */
+            MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, closing pooled connection");
             gwbuf_free(queue);
+            poll_fake_hangup_event(dcb);
+            rc = 0;
         }
         else
         {
@@ -1108,8 +1107,9 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
              */
             MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
             backend_protocol->stored_query = gwbuf_append(backend_protocol->stored_query, queue);
+            rc = 1;
         }
-        return 1;
+        return rc;
     }
 
     /**
