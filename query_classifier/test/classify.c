@@ -313,7 +313,9 @@ int main(int argc, char** argv)
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup(lib, QC_SQL_MODE_DEFAULT, NULL) && qc_process_init(QC_INIT_BOTH))
+            if (qc_setup(lib, QC_SQL_MODE_DEFAULT, NULL) &&
+                qc_process_init(QC_INIT_BOTH) &&
+                qc_thread_init(QC_INIT_BOTH))
             {
                 rc = run(input_name, expected_name);
                 qc_process_end(QC_INIT_BOTH);
