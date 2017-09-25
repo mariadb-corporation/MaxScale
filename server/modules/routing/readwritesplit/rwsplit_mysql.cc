@@ -150,7 +150,11 @@ is_packet_a_query(int packet_type)
 void
 log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
 {
-    if (rses->load_data_state == LOAD_DATA_INACTIVE)
+    if (rses->large_query)
+    {
+        MXS_INFO("> Processing large request with more than 2^24 bytes of data");
+    }
+    else if (rses->load_data_state == LOAD_DATA_INACTIVE)
     {
         uint8_t *packet = GWBUF_DATA(querybuf);
         unsigned char command = packet[4];

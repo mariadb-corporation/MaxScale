@@ -50,6 +50,7 @@
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/worker.h>
+#include <maxscale/paths.h>
 
 /* The router entry points */
 static  MXS_ROUTER  *createInstance(SERVICE *service, char **options);
@@ -177,7 +178,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"master_version", MXS_MODULE_PARAM_STRING},
             {"master_hostname", MXS_MODULE_PARAM_STRING},
             {"slave_hostname", MXS_MODULE_PARAM_STRING},
-            {"mariadb10-compatibility", MXS_MODULE_PARAM_BOOL, "false"},
+            {"mariadb10-compatibility", MXS_MODULE_PARAM_BOOL, "true"},
             {"maxwell-compatibility", MXS_MODULE_PARAM_BOOL, "false"},
             {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
             {"file", MXS_MODULE_PARAM_COUNT, "1"},
@@ -201,7 +202,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "binlogdir",
                 MXS_MODULE_PARAM_PATH,
-                NULL,
+                MXS_DEFAULT_DATADIR,
                 MXS_MODULE_OPT_PATH_R_OK |
                 MXS_MODULE_OPT_PATH_W_OK |
                 MXS_MODULE_OPT_PATH_CREAT
@@ -242,13 +243,6 @@ createInstance(SERVICE *service, char **options)
     {
         MXS_ERROR("%s: Error: Service is missing user credentials."
                   " Add the missing username or passwd parameter to the service.",
-                  service->name);
-        return NULL;
-    }
-
-    if (options == NULL || options[0] == NULL)
-    {
-        MXS_ERROR("%s: Error: No router options supplied for binlogrouter",
                   service->name);
         return NULL;
     }

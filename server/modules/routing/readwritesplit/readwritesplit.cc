@@ -466,6 +466,11 @@ static bool route_stored_query(RWSplitSession *rses)
         GWBUF *temp_storage = rses->query_queue;
         rses->query_queue = NULL;
 
+        // TODO: Move the handling of queued queries to the client protocol
+        // TODO: module where the command tracking is done automatically.
+        uint8_t cmd = mxs_mysql_get_command(query_queue);
+        mysql_protocol_set_current_command(rses->client_dcb, (mxs_mysql_cmd_t)cmd);
+
         if (!routeQuery((MXS_ROUTER*)rses->router, (MXS_ROUTER_SESSION*)rses, query_queue))
         {
             rval = false;
@@ -889,15 +894,15 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
     }
     else
     {
-        /** Gather the information required to make routing decisions */
-        RouteInfo info(rses, querybuf);
-
         if (rses->query_queue == NULL &&
             (rses->expected_responses == 0 ||
-             info.command == MXS_COM_STMT_FETCH ||
+             mxs_mysql_get_command(querybuf) == MXS_COM_STMT_FETCH ||
              rses->load_data_state == LOAD_DATA_ACTIVE ||
              rses->large_query))
         {
+            /** Gather the information required to make routing decisions */
+            RouteInfo info(rses, querybuf);
+
             /** No active or pending queries */
             if (route_single_stmt(inst, rses, querybuf, info))
             {
@@ -917,6 +922,7 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
             rses->query_queue = gwbuf_append(rses->query_queue, querybuf);
             querybuf = NULL;
             rval = 1;
+            ss_dassert(rses->expected_responses > 0);
 
             if (rses->expected_responses == 0 && !route_stored_query(rses))
             {

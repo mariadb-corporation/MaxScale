@@ -182,7 +182,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
     uint8_t command = info.command;
     uint32_t qtype = info.type;
     route_target_t route_target = info.target;
-    bool not_locked_to_master = !rses->prev_target &&
+    bool not_locked_to_master = !rses->large_query &&
         (!rses->target_node || rses->target_node != rses->current_master);
 
     if (not_locked_to_master && is_ps_command(command))
@@ -1091,7 +1091,12 @@ static inline bool query_creates_reply(uint8_t cmd)
 static inline bool is_large_query(GWBUF* buf)
 {
     uint32_t buflen = gwbuf_length(buf);
+
+    // The buffer should contain at most (2^24 - 1) + 4 bytes ...
     ss_dassert(buflen <= MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN);
+    // ... and the payload should be buflen - 4 bytes
+    ss_dassert(MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buf)) == buflen - MYSQL_HEADER_LEN);
+
     return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
 }
 
@@ -1165,10 +1170,15 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
             }
         }
 
-        /** Store the previous target if we're processing a multi-packet query */
         if ((rses->large_query = large_query))
         {
+            /** Store the previous target as we're processing a multi-packet query */
             rses->prev_target = target;
+        }
+        else
+        {
+            /** Otherwise reset it so we know the query is complete */
+            rses->prev_target.reset();
         }
 
         /**

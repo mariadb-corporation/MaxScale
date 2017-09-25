@@ -17,49 +17,49 @@ int check_sha1(TestConnections* Test)
     char *s;
 
     Test->set_timeout(50);
-    Test->tprintf("ls before FLUSH LOGS\n");
-    Test->tprintf("Maxscale\n");
+    Test->tprintf("ls before FLUSH LOGS");
+    Test->tprintf("Maxscale");
     Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
-    Test->tprintf("Master\n");
+    Test->tprintf("Master");
     Test->set_timeout(50);
     Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
-    Test->tprintf("FLUSH LOGS\n");
+    Test->tprintf("FLUSH LOGS");
     Test->set_timeout(100);
     local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-    Test->tprintf("Logs flushed\n");
+    Test->tprintf("Logs flushed");
     Test->set_timeout(100);
-    sleep(20);
-    Test->tprintf("ls after first FLUSH LOGS\n");
-    Test->tprintf("Maxscale\n");
+    Test->repl->sync_slaves();
+    Test->tprintf("ls after first FLUSH LOGS");
+    Test->tprintf("Maxscale");
     Test->set_timeout(50);
     Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
 
-    Test->tprintf("Master\n");
+    Test->tprintf("Master");
     Test->set_timeout(50);
     Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
     Test->set_timeout(100);
-    Test->tprintf("FLUSH LOGS\n");
+    Test->tprintf("FLUSH LOGS");
     local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-    Test->tprintf("Logs flushed\n");
+    Test->tprintf("Logs flushed");
 
     Test->set_timeout(50);
-    sleep(20);
+    Test->repl->sync_slaves();
     Test->set_timeout(50);
-    Test->tprintf("ls before FLUSH LOGS\n");
-    Test->tprintf("Maxscale\n");
+    Test->tprintf("ls before FLUSH LOGS");
+    Test->tprintf("Maxscale");
 
     Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
 
-    Test->tprintf("Master\n");
+    Test->tprintf("Master");
     Test->set_timeout(50);
     Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
 
     for (i = 1; i < 3; i++)
     {
-        Test->tprintf("\nFILE: 000000%d\n", i);
+        Test->tprintf("FILE: 000000%d", i);
         Test->set_timeout(50);
         s_maxscale = Test->ssh_maxscale_output(true, "sha1sum %s/mar-bin.00000%d", Test->maxscale_binlog_dir, i);
         if (s_maxscale != NULL)
@@ -69,7 +69,7 @@ int check_sha1(TestConnections* Test)
             {
                 x[0] = 0;
             }
-            Test->tprintf("Binlog checksum from Maxscale %s\n", s_maxscale);
+            Test->tprintf("Binlog checksum from Maxscale %s", s_maxscale);
         }
 
         sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
@@ -82,11 +82,11 @@ int check_sha1(TestConnections* Test)
             {
                 x[0] = 0;
             }
-            Test->tprintf("Binlog checksum from master %s\n", s);
+            Test->tprintf("Binlog checksum from master %s", s);
         }
         if (strcmp(s_maxscale, s) != 0)
         {
-            Test->tprintf("Binlog from master checksum is not eqiual to binlog checksum from Maxscale node\n");
+            Test->tprintf("Binlog from master checksum is not equal to binlog checksum from Maxscale node");
             local_result++;
         }
     }
@@ -96,15 +96,16 @@ int check_sha1(TestConnections* Test)
 int start_transaction(TestConnections* Test)
 {
     int local_result = 0;
-    Test->tprintf("Transaction test\n");
-    Test->tprintf("Start transaction\n");
+    Test->tprintf("Transaction test");
+    Test->tprintf("Start transaction");
     execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10;");
     local_result += execute_query(Test->repl->nodes[0], (char *) "START TRANSACTION");
     local_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
-    Test->tprintf("INSERT data\n");
+    Test->tprintf("INSERT data");
     local_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
-    Test->stop_timeout();
-    sleep(20);
+    Test->set_timeout(120);
+    Test->repl->sync_slaves();
+
     return local_result;
 }
 
@@ -121,122 +122,116 @@ void test_binlog(TestConnections* Test)
 
     Test->set_timeout(100);
     create_t1(Test->repl->nodes[0]);
-    Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "Data inserting to t1 failed\n");
+    Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "Data inserting to t1 failed");
     Test->stop_timeout();
-    Test->tprintf("Sleeping to let replication happen\n");
-    sleep(60);
+    Test->tprintf("Waiting for replication to catch up");
+    Test->set_timeout(120);
+    Test->repl->sync_slaves();
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
+        Test->tprintf("Checking data from node %d (%s)", i, Test->repl->IP[i]);
         Test->set_timeout(100);
-        Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "Selecting from t1 failed\n");
+        Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "Selecting from t1 failed");
         Test->stop_timeout();
     }
 
     Test->set_timeout(10);
-    Test->tprintf("First transaction test (with ROLLBACK)\n");
+    Test->tprintf("First transaction test (with ROLLBACK)");
     start_transaction(Test);
 
     Test->set_timeout(50);
 
-    Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
+    Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "111"), "SELECT check failed\n");
+                     "111"), "SELECT check failed");
 
-    //Test->add_result(check_sha1(Test), "sha1 check failed\n");
 
-    Test->tprintf("ROLLBACK\n");
+    Test->tprintf("ROLLBACK");
     Test->try_query(Test->repl->nodes[0], (char *) "ROLLBACK");
-    Test->tprintf("INSERT INTO t1 VALUES(112, 10)\n");
+    Test->tprintf("INSERT INTO t1 VALUES(112, 10)");
     Test->try_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
     Test->try_query(Test->repl->nodes[0], (char *) "COMMIT");
-    Test->stop_timeout();
-    sleep(20);
+    Test->set_timeout(120);
+    Test->repl->sync_slaves();
 
     Test->set_timeout(20);
-    Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
+    Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "112"), "SELECT check failed\n");
+                     "112"), "SELECT check failed");
 
-    Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave\n");
+    Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave");
     Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "112"), "SELECT check failed\n");
-    Test->tprintf("DELETE FROM t1 WHERE fl=10\n");
+                     "112"), "SELECT check failed");
+    Test->tprintf("DELETE FROM t1 WHERE fl=10");
     Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
-    Test->tprintf("Checking t1\n");
-    Test->add_result(select_from_t1(Test->repl->nodes[0], 4), "SELECT from t1 failed\n");
+    Test->tprintf("Checking t1");
+    Test->add_result(select_from_t1(Test->repl->nodes[0], 4), "SELECT from t1 failed");
 
-    Test->tprintf("Second transaction test (with COMMIT)\n");
+    Test->tprintf("Second transaction test (with COMMIT)");
     start_transaction(Test);
 
-    Test->tprintf("COMMIT\n");
+    Test->tprintf("COMMIT");
     Test->try_query(Test->repl->nodes[0], (char *) "COMMIT");
 
-    Test->tprintf("SELECT, checking inserted values\n");
+    Test->tprintf("SELECT, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "111"), "SELECT check failed\n");
+                     "111"), "SELECT check failed");
 
-    Test->tprintf("SELECT, checking inserted values from slave\n");
+    Test->tprintf("SELECT, checking inserted values from slave");
     Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "111"), "SELECT check failed\n");
-    Test->tprintf("DELETE FROM t1 WHERE fl=10\n");
+                     "111"), "SELECT check failed");
+    Test->tprintf("DELETE FROM t1 WHERE fl=10");
     Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 
     Test->stop_timeout();
 
     Test->set_timeout(50);
-    Test->add_result(check_sha1(Test), "sha1 check failed\n");
+    Test->add_result(check_sha1(Test), "sha1 check failed");
     Test->repl->close_connections();
 
     Test->stop_timeout();
 
     // test SLAVE STOP/START
     Test->tprintf("test SLAVE STOP/START");
-    for (int j = 1; j < 2; j++)
+    Test->set_timeout(100);
+    Test->repl->connect();
+
+    Test->tprintf("Dropping and re-creating t1");
+    Test->try_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1");
+    create_t1(Test->repl->nodes[0]);
+
+    Test->tprintf("Connecting to MaxScale binlog router");
+    binlog = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password,
+                       Test->ssl);
+
+    Test->tprintf("STOP SLAVE against Maxscale binlog");
+    execute_query(binlog, (char *) "STOP SLAVE");
+
+    Test->tprintf("FLUSH LOGS on master");
+    execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+
+    Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "INSERT into t1 failed");
+
+    Test->tprintf("START SLAVE against Maxscale binlog");
+    Test->try_query(binlog, (char *) "START SLAVE");
+
+    Test->set_timeout(120);
+    Test->repl->sync_slaves();
+
+    for (i = 0; i < Test->repl->N; i++)
     {
-        Test->set_timeout(100);
-        Test->repl->connect();
-
-        Test->tprintf("Dropping and re-creating t1\n");
-        Test->try_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1");
-        create_t1(Test->repl->nodes[0]);
-
-        Test->tprintf("Connecting to MaxScale binlog router\n");
-        binlog = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password,
-                           Test->ssl);
-
-        Test->tprintf("STOP SLAVE against Maxscale binlog\n");
-        execute_query(binlog, (char *) "STOP SLAVE");
-
-        if (j == 1)
-        {
-            Test->tprintf("FLUSH LOGS on master\n");
-            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-            execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-        }
-        Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "INSERT into t1 failed\n");
-
-        Test->tprintf("START SLAVE against Maxscale binlog\n");
-        Test->try_query(binlog, (char *) "START SLAVE");
-
-        Test->tprintf("Sleeping to let replication happen\n");
-        Test->stop_timeout();
-        sleep(30);
-
-        for (i = 0; i < Test->repl->N; i++)
-        {
-            Test->set_timeout(50);
-            Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
-            Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "SELECT from t1 failed\n");
-        }
-
-        Test->set_timeout(100);
-        Test->add_result(check_sha1(Test), "sha1 check failed\n");
-        Test->repl->close_connections();
-        Test->stop_timeout();
+        Test->set_timeout(50);
+        Test->tprintf("Checking data from node %d (%s)", i, Test->repl->IP[i]);
+        Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "SELECT from t1 failed");
     }
+
+    Test->set_timeout(100);
+    Test->add_result(check_sha1(Test), "sha1 check failed");
+    Test->repl->close_connections();
+    Test->stop_timeout();
 }
 

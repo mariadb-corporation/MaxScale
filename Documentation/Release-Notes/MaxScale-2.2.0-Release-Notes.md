@@ -129,6 +129,14 @@ it will now look like
 ```
 where `4711` is the session id.
 
+### Binlogrouter Default Values
+
+The _binlogdir_ now has a default value of `/var/lib/maxscale/`. Previously the
+parameter was mandatory even though it was documented to have a default value.
+
+The _mariadb10-compatibility_ is enabled by default since MaxScale 2.2.0. This
+allows easier use of the MariaDB 10 series server.
+
 ## Dropped Features
 
 ### MaxAdmin

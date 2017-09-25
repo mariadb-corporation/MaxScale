@@ -311,8 +311,23 @@ static bool conversion_task_ctl(AVRO_INSTANCE *inst, bool start)
  * @param inst Avro router instance
  * @param options The @c router_options of a binlogrouter instance
  */
-void read_source_service_options(AVRO_INSTANCE *inst, const char** options)
+void read_source_service_options(AVRO_INSTANCE *inst, const char** options,
+                                 MXS_CONFIG_PARAMETER* params)
 {
+    for (MXS_CONFIG_PARAMETER* p = params; p; p = p->next)
+    {
+        if (strcmp(p->name, "binlogdir") == 0)
+        {
+            MXS_FREE(inst->binlogdir);
+            inst->binlogdir = MXS_STRDUP_A(p->value);
+        }
+        else if (strcmp(p->name, "filestem") == 0)
+        {
+            MXS_FREE(inst->fileroot);
+            inst->fileroot = MXS_STRDUP_A(p->value);
+        }
+    }
+
     if (options)
     {
         for (int i = 0; options[i]; i++)
@@ -328,11 +343,12 @@ void read_source_service_options(AVRO_INSTANCE *inst, const char** options)
 
                 if (strcmp(option, "binlogdir") == 0)
                 {
+                    MXS_FREE(inst->binlogdir);
                     inst->binlogdir = MXS_STRDUP_A(value);
-                    MXS_INFO("Reading MySQL binlog files from %s", inst->binlogdir);
                 }
                 else if (strcmp(option, "filestem") == 0)
                 {
+                    MXS_FREE(inst->fileroot);
                     inst->fileroot = MXS_STRDUP_A(value);
                 }
             }
@@ -437,7 +453,8 @@ createInstance(SERVICE *service, char **options)
             {
                 MXS_NOTICE("[%s] Using configuration options from service '%s'.",
                            service->name, source->name);
-                read_source_service_options(inst, (const char**)source->routerOptions);
+                read_source_service_options(inst, (const char**)source->routerOptions,
+                                            source->svc_config_param);
             }
             else
             {
@@ -453,6 +470,7 @@ createInstance(SERVICE *service, char **options)
 
     if (param)
     {
+        MXS_FREE(inst->binlogdir);
         inst->binlogdir = MXS_STRDUP_A(param->value);
     }
 
@@ -517,6 +535,11 @@ createInstance(SERVICE *service, char **options)
     if (inst->binlogdir == NULL)
     {
         MXS_ERROR("No 'binlogdir' option found in source service, in parameters or in router_options.");
+        err = true;
+    }
+    else if (inst->fileroot == NULL)
+    {
+        MXS_ERROR("No 'filestem' option found in source service, in parameters or in router_options.");
         err = true;
     }
     else if (ensure_dir_ok(inst->binlogdir, R_OK) && ensure_dir_ok(inst->avrodir, W_OK))

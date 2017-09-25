@@ -32,15 +32,15 @@ following options should be given as a value to the `router_options` parameter.
 
 ### `binlogdir`
 
-This parameter controls the location where MariaDB MaxScale stores the binary log
-files. If this parameter is not set to a directory name then MariaDB
-MaxScale will store the binlog files in the directory
-`/var/cache/maxscale/<Service Name>` where `<Service Name>` is the name of the
-service in the configuration file.  The _binlogdir_ also contains the
-_cache_ subdirectory which stores data retrieved from the master during the slave
-registration phase. The master.ini file also resides in the _binlogdir_. This
-file keeps track of the current master configuration and it is updated when a
-`CHANGE MASTER TO` query is executed.
+This parameter controls the location where MariaDB MaxScale stores the binary
+log files. If this parameter is not set to a directory name then MariaDB
+MaxScale will store the binlog files in the directory `/var/lib/maxscale/`.
+
+The _binlogdir_ also contains the _cache_ subdirectory which stores data
+retrieved from the master during the slave registration phase. The master.ini
+file also resides in the _binlogdir_. This file keeps track of the current
+master configuration and it is updated when a `CHANGE MASTER TO` query is
+executed.
 
 From 2.1 onwards, the 'cache' directory is stored in the same location as other
 user credential caches. This means that with the default options, the user
@@ -159,7 +159,9 @@ the router options.
 ### `mariadb10-compatibility`
 
 This parameter allows binlogrouter to replicate from a MariaDB 10.0 master
-server. GTID will not be used in the replication.
+server. If `mariadb10_slave_gtid` is not enabled GTID will not be used in the
+replication. This parameter is enabled by default since MaxScale 2.2.0. In
+earlier versions the parameter was disabled by default.
 
 ```
 # Example

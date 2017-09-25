@@ -108,6 +108,11 @@ uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer)
     {
         rval = it->second;
     }
+    else
+    {
+        MXS_WARNING("Client requests unknown prepared statement ID '%u' that "
+                    "does not map to an internal ID", id);
+    }
 
     return rval;
 }
