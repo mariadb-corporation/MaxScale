@@ -129,6 +129,7 @@ static struct option long_options[] =
     {"version-full",     no_argument,       0, 'V'},
     {"help",             no_argument,       0, '?'},
     {"connector_plugindir", required_argument, 0, 'H'},
+    {"passive",          no_argument,       0, 'p'},
     {"debug",            required_argument, 0, 'g'},
     {0, 0, 0, 0}
 };
@@ -922,6 +923,7 @@ static void usage(void)
             "  -S, --maxlog=[yes|no]       log messages to MaxScale log (default: yes)\n"
             "  -G, --log_augmentation=0|1  augment messages with the name of the function\n"
             "                              where the message was logged (default: 0)\n"
+            "  -p, --passive               start MaxScale as a passive standby\n"
             "  -g, --debug=arg1,arg2,...   enable or disable debug features. Supported arguments:\n",
             progname);
     for (int i = 0; debug_arguments[i].action != NULL; i++)
@@ -1289,7 +1291,7 @@ int main(int argc, char **argv)
     file_write_header(stderr);
 
     // Option string for getopt
-    const char accepted_opts[] = "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:";
+    const char accepted_opts[] = "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
 
     /*<
      * Register functions which are called at exit.
@@ -1575,6 +1577,10 @@ int main(int argc, char **argv)
 
         case 'c':
             config_check = true;
+            break;
+
+        case 'p':
+            cnf->passive = true;
             break;
 
         case 'g':

@@ -126,6 +126,7 @@ extern const char CN_NAME[];
 extern const char CN_NON_BLOCKING_POLLS[];
 extern const char CN_OPTIONS[];
 extern const char CN_PARAMETERS[];
+extern const char CN_PASSIVE[];
 extern const char CN_PASSWORD[];
 extern const char CN_POLL_SLEEP[];
 extern const char CN_PORT[];
@@ -208,6 +209,7 @@ typedef struct
     unsigned int  auth_read_timeout;                   /**< Read timeout for the user authentication */
     unsigned int  auth_write_timeout;                  /**< Write timeout for the user authentication */
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
+    bool          passive;                             /**< True if MaxScale is in passive mode */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
     qc_sql_mode_t qc_sql_mode;                         /**< The query classifier sql mode */

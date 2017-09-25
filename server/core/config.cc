@@ -104,6 +104,7 @@ const char CN_NAME[]                          = "name";
 const char CN_NON_BLOCKING_POLLS[]            = "non_blocking_polls";
 const char CN_OPTIONS[]                       = "options";
 const char CN_PARAMETERS[]                    = "parameters";
+const char CN_PASSIVE[]                       = "passive";
 const char CN_PASSWORD[]                      = "password";
 const char CN_POLL_SLEEP[]                    = "poll_sleep";
 const char CN_PORT[]                          = "port";
@@ -1566,6 +1567,10 @@ handle_global_item(const char *name, const char *value)
     {
         gateway.admin_log_auth_failures = config_truth_value(value);
     }
+    else if (strcmp(name, CN_PASSIVE) == 0)
+    {
+        gateway.passive = config_truth_value((char*)value);
+    }
     else
     {
         for (i = 0; lognames[i].name; i++)
@@ -1755,6 +1760,7 @@ void config_set_global_defaults()
     gateway.admin_ssl_key[0] = '\0';
     gateway.admin_ssl_cert[0] = '\0';
     gateway.admin_ssl_ca_cert[0] = '\0';
+    gateway.passive = false;
 
     gateway.thread_stack_size = 0;
     pthread_attr_t attr;
@@ -3897,6 +3903,7 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
     json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
     json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
+    json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
 
     json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
 
@@ -3942,6 +3949,7 @@ static bool create_global_config(const char *filename)
     dprintf(file, "%s=%u\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout);
     dprintf(file, "%s=%u\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
+    dprintf(file, "%s=%u\n", CN_PASSIVE, gateway.passive);
 
     close(file);
 

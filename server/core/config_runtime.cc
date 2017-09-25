@@ -749,6 +749,23 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_LOG_AUTH_FAILURES, value);
         }
     }
+    else if (key == CN_PASSIVE)
+    {
+        int boolval = config_truth_value(value);
+
+        if (boolval != -1)
+        {
+            MXS_NOTICE("Updated '%s' from '%s' to '%s'", CN_PASSIVE,
+                       cnf.passive ? "true" : "false",
+                       boolval ? "true" : "false");
+            cnf.passive = boolval;
+            rval = true;
+        }
+        else
+        {
+            runtime_error("Invalid boolean value for '%s': %s", CN_PASSIVE, value);
+        }
+    }
     else
     {
         runtime_error("Unknown global parameter: %s=%s", name, value);
