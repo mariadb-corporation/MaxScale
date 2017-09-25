@@ -182,17 +182,25 @@ static int auth_cb(void *data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
+int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
                         uint8_t *scramble, size_t scramble_len)
 {
+    sqlite3 *handle = instance->handle;
     size_t len = sizeof(mysqlauth_validate_user_query) + strlen(session->user) * 2 +
                  strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
     char sql[len + 1];
     int rval = MXS_AUTH_FAILED;
     char *err;
 
-    sprintf(sql, mysqlauth_validate_user_query, session->user, dcb->remote,
-            dcb->remote, session->db, session->db);
+    if (instance->skip_auth)
+    {
+        sprintf(sql, mysqlauth_skip_auth_query, session->user, session->db, session->db);
+    }
+    else
+    {
+        sprintf(sql, mysqlauth_validate_user_query, session->user, dcb->remote,
+                dcb->remote, session->db, session->db);
+    }
 
     struct user_query_result res = {};
 

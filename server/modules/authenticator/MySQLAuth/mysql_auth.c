@@ -329,19 +329,18 @@ mysql_auth_authenticate(DCB *dcb)
 
         MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
 
-        auth_ret = validate_mysql_user(instance->handle, dcb, client_data,
+        auth_ret = validate_mysql_user(instance, dcb, client_data,
                                        protocol->scramble, sizeof(protocol->scramble));
 
         if (auth_ret != MXS_AUTH_SUCCEEDED &&
-            !instance->skip_auth &&
             service_refresh_users(dcb->service) == 0)
         {
-            auth_ret = validate_mysql_user(instance->handle, dcb, client_data,
+            auth_ret = validate_mysql_user(instance, dcb, client_data,
                                            protocol->scramble, sizeof(protocol->scramble));
         }
 
         /* on successful authentication, set user into dcb field */
-        if (auth_ret == MXS_AUTH_SUCCEEDED || instance->skip_auth)
+        if (auth_ret == MXS_AUTH_SUCCEEDED)
         {
             auth_ret = MXS_AUTH_SUCCEEDED;
             dcb->user = MXS_STRDUP_A(client_data->user);
@@ -667,7 +666,7 @@ int mysql_auth_reauthenticate(DCB *dcb, const char *user,
     temp.auth_token_len = token_len;
 
     MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
-    int rc = validate_mysql_user(instance->handle, dcb, &temp, scramble, scramble_len);
+    int rc = validate_mysql_user(instance, dcb, &temp, scramble, scramble_len);
 
     if (rc == MXS_AUTH_SUCCEEDED)
     {

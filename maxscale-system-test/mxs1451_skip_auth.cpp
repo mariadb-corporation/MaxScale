@@ -24,6 +24,11 @@ int main(int argc, char *argv[])
     test.try_query(conn, "SHOW DATABASES");
     mysql_close(conn);
 
+    test.tprintf("Trying query with bad credentials");
+    conn = open_conn_db(test.rwsplit_port, test.maxscale_ip(), "test", "wrong_user", "wrong_password", false);
+    test.add_result(execute_query_silent(conn, "SHOW DATABASES") == 0, "Connection with bad credentials should fail");
+    mysql_close(conn);
+
     test.set_timeout(60);
     test.tprintf("Dropping user");
     test.repl->connect();
