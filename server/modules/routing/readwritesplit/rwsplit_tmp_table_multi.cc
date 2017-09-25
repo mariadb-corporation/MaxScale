@@ -224,3 +224,8 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type)
 
     return rval;
 }
+
+bool check_for_sp_call(GWBUF *buf, uint8_t packet_type)
+{
+    return packet_type == MXS_COM_QUERY && qc_get_operation(buf) == QUERY_OP_CALL;
+}

@@ -183,7 +183,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
     uint32_t qtype = info.type;
     route_target_t route_target = info.target;
     bool not_locked_to_master = !rses->large_query &&
-        (!rses->target_node || rses->target_node != rses->current_master);
+                                (!rses->target_node || rses->target_node != rses->current_master);
 
     if (not_locked_to_master && is_ps_command(command))
     {
@@ -236,6 +236,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
             succp = handle_master_is_target(inst, rses, &target);
 
             if (!rses->rses_config.strict_multi_stmt &&
+                !rses->rses_config.strict_sp_calls &&
                 rses->target_node == rses->current_master)
             {
                 /** Reset the forced node as we're in relaxed multi-statement mode */
@@ -774,12 +775,15 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
      * situation, assigning QUERY_TYPE_WRITE for the query will trigger
      * the error processing. */
     if ((rses->target_node == NULL || rses->target_node != rses->current_master) &&
-        check_for_multi_stmt(querybuf, rses->client_dcb->protocol, packet_type))
+        (check_for_multi_stmt(querybuf, rses->client_dcb->protocol, packet_type) ||
+         check_for_sp_call(querybuf, packet_type)))
     {
         if (rses->current_master)
         {
             rses->target_node = rses->current_master;
-            MXS_INFO("Multi-statement query, routing all future queries to master.");
+            MXS_INFO("Multi-statement query or stored procedure call, routing "
+                     "all future queries to master.");
+
         }
         else
         {

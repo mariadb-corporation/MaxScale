@@ -161,6 +161,7 @@ struct Config
         disable_sescmd_history(config_get_bool(params, "disable_sescmd_history")),
         master_accept_reads(config_get_bool(params, "master_accept_reads")),
         strict_multi_stmt(config_get_bool(params, "strict_multi_stmt")),
+        strict_sp_calls(config_get_bool(params, "strict_sp_calls")),
         retry_failed_reads(config_get_bool(params, "retry_failed_reads")),
         connection_keepalive(config_get_integer(params, "connection_keepalive")),
         max_slave_replication_lag(config_get_integer(params, "max_slave_replication_lag")),
@@ -178,6 +179,7 @@ struct Config
     bool              master_accept_reads;       /**< Use master for reads */
     bool              strict_multi_stmt;         /**< Force non-multistatement queries to be routed to
                                                   * the master after a multistatement query. */
+    bool              strict_sp_calls;           /**< Lock session to master after an SP call */
     bool              retry_failed_reads;        /**< Retry failed reads on other servers */
     int               connection_keepalive;      /**< Send pings to servers that have been idle
                                                   * for too long */
