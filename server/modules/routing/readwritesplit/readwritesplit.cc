@@ -195,6 +195,10 @@ static bool rwsplit_process_router_options(Config& config,
             {
                 config.strict_multi_stmt = config_truth_value(value);
             }
+            else if (strcmp(options[i], "strict_sp_calls") == 0)
+            {
+                config.strict_sp_calls = config_truth_value(value);
+            }
             else if (strcmp(options[i], "retry_failed_reads") == 0)
             {
                 config.retry_failed_reads = config_truth_value(value);
@@ -966,6 +970,8 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
                router->config().retry_failed_reads ? "true" : "false");
     dcb_printf(dcb, "\tstrict_multi_stmt:         %s\n",
                router->config().strict_multi_stmt ? "true" : "false");
+    dcb_printf(dcb, "\tstrict_sp_calls:           %s\n",
+               router->config().strict_sp_calls ? "true" : "false");
     dcb_printf(dcb, "\tdisable_sescmd_history:    %s\n",
                router->config().disable_sescmd_history ? "true" : "false");
     dcb_printf(dcb, "\tmax_sescmd_history:        %lu\n",
@@ -1036,6 +1042,8 @@ static json_t* diagnostics_json(const MXS_ROUTER *instance)
                         json_boolean(router->config().retry_failed_reads));
     json_object_set_new(rval, "strict_multi_stmt",
                         json_boolean(router->config().strict_multi_stmt));
+    json_object_set_new(rval, "strict_sp_calls",
+                        json_boolean(router->config().strict_sp_calls));
     json_object_set_new(rval, "disable_sescmd_history",
                         json_boolean(router->config().disable_sescmd_history));
     json_object_set_new(rval, "max_sescmd_history",
@@ -1398,6 +1406,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"disable_sescmd_history", MXS_MODULE_PARAM_BOOL, "true"},
             {"max_sescmd_history", MXS_MODULE_PARAM_COUNT, "0"},
             {"strict_multi_stmt",  MXS_MODULE_PARAM_BOOL, "true"},
+            {"strict_sp_calls",  MXS_MODULE_PARAM_BOOL, "false"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},
             {MXS_END_MODULE_PARAMS}

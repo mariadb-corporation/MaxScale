@@ -118,6 +118,7 @@ bool is_read_tmp_table(RWSplitSession *router_cli_ses,
 void check_create_tmp_table(RWSplitSession *router_cli_ses,
                             GWBUF *querybuf, uint32_t type);
 bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type);
+bool check_for_sp_call(GWBUF *buf, uint8_t packet_type);
 
 void close_all_connections(SRWBackendList& backends);
 
