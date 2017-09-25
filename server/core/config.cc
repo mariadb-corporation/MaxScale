@@ -158,7 +158,6 @@ static char *config_get_value(MXS_CONFIG_PARAMETER *, const char *);
 static char *config_get_password(MXS_CONFIG_PARAMETER *);
 static const char* config_get_value_string(const MXS_CONFIG_PARAMETER *params, const char *name);
 static int handle_global_item(const char *, const char *);
-static void global_defaults();
 static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
 static bool check_first_last_char(const char* string, char expected);
@@ -831,8 +830,6 @@ config_load(const char *filename)
 {
     ss_dassert(!config_file);
 
-    global_defaults();
-
     config_file = filename;
     bool rval = config_load_and_process(filename, process_config_context);
 
@@ -854,8 +851,6 @@ bool config_reload()
         {
             MXS_FREE(gateway.version_string);
         }
-
-        global_defaults();
 
         rval = config_load_and_process(config_file, process_config_update);
     }
@@ -1737,11 +1732,7 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
     return NULL;
 }
 
-/**
- * Set the defaults for the global configuration options
- */
-static void
-global_defaults()
+void config_set_global_defaults()
 {
     uint8_t mac_addr[6] = "";
     struct utsname uname_data;
@@ -1753,6 +1744,9 @@ global_defaults()
     gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     gateway.skip_permission_checks = false;
+    gateway.syslog = 1;
+    gateway.maxlog = 1;
+    gateway.log_to_shm = 0;
     gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
     gateway.admin_auth = true;
     gateway.admin_log_auth_failures = true;

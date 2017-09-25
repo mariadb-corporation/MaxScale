@@ -1248,11 +1248,6 @@ bool set_dirs(const char *basedir)
 int main(int argc, char **argv)
 {
     int      rc = MAXSCALE_SHUTDOWN;
-    int      l;
-    int      i;
-    int      n;
-    int      ini_rval;
-    intptr_t thread_id;
     int      n_threads; /*< number of epoll listener threads */
     size_t   thread_stack_size;
     int      n_services;
@@ -1276,14 +1271,13 @@ int main(int argc, char **argv)
     bool config_check = false;
     bool to_stdout = false;
     void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
-    MXS_CONFIG* cnf = NULL;
     int numlocks = 0;
     bool pid_file_created = false;
     Worker* worker;
 
-    *syslog_enabled = 1;
-    *maxlog_enabled = 1;
-    *log_to_shm = 0;
+    config_set_global_defaults();
+    MXS_CONFIG* cnf = config_get_global_options();
+    ss_dassert(cnf);
 
     maxscale_reset_starttime();
 
@@ -1293,12 +1287,16 @@ int main(int argc, char **argv)
     snprintf(datadir, PATH_MAX, "%s", default_datadir);
     datadir[PATH_MAX] = '\0';
     file_write_header(stderr);
+
+    // Option string for getopt
+    const char accepted_opts[] = "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:";
+
     /*<
      * Register functions which are called at exit.
      */
-    for (i = 0; exitfunp[i] != NULL; i++)
+    for (int i = 0; exitfunp[i] != NULL; i++)
     {
-        l = atexit(*exitfunp);
+        int l = atexit(*exitfunp);
 
         if (l != 0)
         {
@@ -1310,10 +1308,10 @@ int main(int argc, char **argv)
     }
 
 #ifdef HAVE_GLIBC
-    while ((opt = getopt_long(argc, argv, "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:",
+    while ((opt = getopt_long(argc, argv, accepted_opts,
                               long_options, &option_index)) != -1)
 #else
-    while ((opt = getopt(argc, argv, "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:")) != -1)
+    while ((opt = getopt(argc, argv, accepted_opts)) != -1)
 #endif
     {
         bool succp = true;
@@ -1719,7 +1717,7 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    for (i = 0; i < numlocks + 1; i++)
+    for (int i = 0; i < numlocks + 1; i++)
     {
         spinlock_init(&ssl_locks[i]);
     }
@@ -1864,9 +1862,6 @@ int main(int argc, char **argv)
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
-
-    cnf = config_get_global_options();
-    ss_dassert(cnf);
 
     if (!qc_setup(cnf->qc_name, cnf->qc_sql_mode, cnf->qc_args))
     {
@@ -2020,7 +2015,7 @@ int main(int argc, char **argv)
      * Start workers. We start from 1, worker 0 will be running in the main thread.
      */
     thread_stack_size = config_thread_stack_size();
-    for (i = 1; i < n_threads; i++)
+    for (int i = 1; i < n_threads; i++)
     {
         worker = Worker::get(i);
         ss_dassert(worker);
@@ -2089,7 +2084,7 @@ int main(int argc, char **argv)
     /*<
      * Wait for worker threads to exit.
      */
-    for (i = 1; i < n_threads; i++)
+    for (int i = 1; i < n_threads; i++)
     {
         worker = Worker::get(i);
         ss_dassert(worker);

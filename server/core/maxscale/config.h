@@ -43,6 +43,11 @@ extern const char *config_filter_params[];
 extern const char *config_server_params[];
 
 /**
+ * Set the defaults for the global configuration options
+ */
+void config_set_global_defaults();
+
+/**
  * @brief Generate default module parameters
  *
  * Adds any default parameters to @c ctx that aren't already in it.
