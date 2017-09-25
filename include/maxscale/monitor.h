@@ -163,13 +163,14 @@ typedef enum
  */
 typedef struct monitor_servers
 {
-    SERVER *server;               /**< The server being monitored */
-    MYSQL *con;                   /**< The MySQL connection */
+    SERVER *server;                 /**< The server being monitored */
+    MYSQL *con;                     /**< The MySQL connection */
     bool log_version_err;
     int mon_err_count;
     unsigned int mon_prev_status;
-    unsigned int pending_status;  /**< Pending Status flag bitmap */
-    struct monitor_servers *next; /**< The next server in the list */
+    unsigned int pending_status;    /**< Pending Status flag bitmap */
+    mxs_monitor_event_t last_event; /**< The last event that occurred on this server*/
+    struct monitor_servers *next;   /**< The next server in the list */
 } MXS_MONITOR_SERVERS;
 
 /**

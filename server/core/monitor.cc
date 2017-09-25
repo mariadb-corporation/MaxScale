@@ -321,6 +321,7 @@ bool monitorAddServer(MXS_MONITOR *mon, SERVER *server)
         db->next = NULL;
         db->mon_err_count = 0;
         db->log_version_err = true;
+        db->last_event = UNDEFINED_EVENT;
         /** Server status is uninitialized */
         db->mon_prev_status = -1;
         /* pending status is updated by get_replication_tree */
@@ -1708,6 +1709,16 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
         if (mon_status_changed(ptr))
         {
             mon_log_state_change(ptr);
+
+            /**
+             * The last executed event will be needed if a passive MaxScale is
+             * promoted to an active one and the last event that occurred on
+             * a server was a master_down event.
+             *
+             * In this case, a failover script should be called if no master_up
+             * or new_master events are triggered within a pre-defined time limit.
+             */
+            ptr->last_event = mon_get_event_type(ptr);
 
             if (script && (events & mon_get_event_type(ptr)))
             {
