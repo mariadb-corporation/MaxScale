@@ -51,6 +51,7 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/users.h>
+#include <maxscale/utils.h>
 #include <maxscale/version.h>
 #include <debugcli.h>
 
@@ -1741,7 +1742,7 @@ execute_cmd(CLI_SESSION *cli)
     bool           in_space = false;
     int            nskip = 0;
 
-    args[0] = cli->cmdbuf;
+    args[0] = trim_leading(cli->cmdbuf);
     ptr = args[0];
     lptr = ptr;
     i = 1;
