@@ -594,6 +594,11 @@ documentation for more details.
 Enable or disable the admin interface. This allows the admin interface to
 be completely disabled to prevent access to it.
 
+#### `admin_log_auth_failures`
+
+Log authentication failures for the admin interface. This parameter expects a
+boolean value and is enabled by default.
+
 #### `sql_mode`
 
 Specifies whether the query classifier parser should initially expect _MariaDB_
