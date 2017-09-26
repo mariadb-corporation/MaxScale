@@ -452,13 +452,24 @@ bool mxs_mkdir_all(const char *path, int mask)
     return mkdir_all_internal(local_path, (mode_t)mask);
 }
 
-/**
- * Trim leading and trailing whitespace from a string
- *
- * @param str String to trim
- * @return    Trimmed string
- */
-char* trim(char *str)
+char* trim_leading(char* str)
+{
+    char* ptr = str;
+
+    while (isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    if (ptr != str)
+    {
+        memmove(str, ptr, strlen(ptr) + 1);
+    }
+
+    return str;
+}
+
+char* trim_trailing(char* str)
 {
     char* ptr = strchr(str, '\0') - 1;
 
@@ -472,19 +483,12 @@ char* trim(char *str)
         *(ptr + 1) = '\0';
     }
 
-    ptr = str;
-
-    while (isspace(*ptr))
-    {
-        ptr++;
-    }
-
-    if (ptr != str)
-    {
-        memmove(str, ptr, strlen(ptr) + 1);
-    }
-
     return str;
+}
+
+char* trim(char *str)
+{
+    return trim_leading(trim_trailing(str));
 }
 
 /**
