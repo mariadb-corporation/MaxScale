@@ -490,6 +490,10 @@ add_test_executable(mxs1418.cpp mxs1418 replication LABELS maxscale REPL_BACKEND
 # https://jira.mariadb.org/browse/MXS-1295
 add_test_executable(mxs1295_sp_call.cpp mxs1295_sp_call mxs1295 LABELS maxscale REPL_BACKEND)
 
+# MXS-1451: Password is not stored with skip_authentication=true
+# https://jira.mariadb.org/browse/MXS-1451
+add_test_executable(mxs1451_skip_auth.cpp mxs1451_skip_auth mxs1451_skip_auth LABELS maxscale REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 

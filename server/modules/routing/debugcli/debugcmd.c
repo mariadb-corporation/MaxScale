@@ -27,32 +27,34 @@
  */
 #include <maxscale/cdefs.h>
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <telnetd.h>
 #include <sys/syslog.h>
+#include <telnetd.h>
 
-#include <maxscale/alloc.h>
-#include <maxscale/service.h>
-#include <maxscale/router.h>
-#include <maxscale/filter.h>
-#include <maxscale/modulecmd.h>
-#include <maxscale/atomic.h>
-#include <maxscale/server.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/buffer.h>
-#include <maxscale/dcb.h>
-#include <maxscale/users.h>
-#include <maxscale/config.h>
 #include <maxscale/adminusers.h>
-#include <debugcli.h>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/buffer.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
+#include <maxscale/filter.h>
 #include <maxscale/housekeeper.h>
-#include <maxscale/maxscale.h>
-#include <maxscale/version.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/modulecmd.h>
+#include <maxscale/router.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/users.h>
+#include <maxscale/utils.h>
+#include <maxscale/version.h>
 #include <maxscale/worker.h>
+
+#include <debugcli.h>
 
 #include "../../../core/maxscale/config_runtime.h"
 #include "../../../core/maxscale/maxscale.h"
@@ -1906,7 +1908,7 @@ execute_cmd(CLI_SESSION *cli)
     bool           in_space = false;
     int            nskip = 0;
 
-    args[0] = cli->cmdbuf;
+    args[0] = trim_leading(cli->cmdbuf);
     ptr = args[0];
     lptr = ptr;
     i = 1;
