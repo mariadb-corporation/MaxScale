@@ -25,54 +25,34 @@
  * There are two "built in" commands, the help command and the quit
  * command.
  *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 20/06/13     Mark Riddoch            Initial implementation
- * 17/07/13     Mark Riddoch            Additional commands
- * 09/08/13     Massimiliano Pinto      Added enable/disable commands (now only for log)
- * 20/05/14     Mark Riddoch            Added ability to give server and service names rather
- *                                      than simply addresses
- * 23/05/14     Mark Riddoch            Added support for developer and user modes
- * 29/05/14     Mark Riddoch            Add Filter support
- * 16/10/14     Mark Riddoch            Add show eventq
- * 05/03/15     Massimiliano Pinto      Added enable/disable feedback
- * 27/05/15     Martin Brampton         Add show persistent [server]
- * 06/11/15     Martin Brampton         Add show buffers (conditional compilation)
- * 23/05/16     Massimiliano Pinto      'add user' and 'remove user'
- *                                      no longer accept password parameter
- * 27/06/16     Martin Brampton         Modify to work with list manager sessions
- *
- * @endverbatim
  */
 #include <maxscale/cdefs.h>
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <telnetd.h>
 #include <sys/syslog.h>
+#include <telnetd.h>
 
-#include <maxscale/alloc.h>
-#include <maxscale/service.h>
-#include <maxscale/router.h>
-#include <maxscale/filter.h>
-#include <maxscale/modulecmd.h>
-#include <maxscale/atomic.h>
-#include <maxscale/server.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/buffer.h>
-#include <maxscale/dcb.h>
-#include <maxscale/users.h>
-#include <maxscale/config.h>
 #include <maxscale/adminusers.h>
-#include <debugcli.h>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/buffer.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
+#include <maxscale/filter.h>
 #include <maxscale/housekeeper.h>
-#include <maxscale/maxscale.h>
-#include <maxscale/version.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/modulecmd.h>
+#include <maxscale/router.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/users.h>
+#include <maxscale/version.h>
+#include <debugcli.h>
 
 #include "../../../core/maxscale/config_runtime.h"
 #include "../../../core/maxscale/maxscale.h"
