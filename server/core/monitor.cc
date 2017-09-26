@@ -71,6 +71,7 @@ const char CN_BACKEND_CONNECT_TIMEOUT[]  = "backend_connect_timeout";
 const char CN_MONITOR_INTERVAL[]         = "monitor_interval";
 const char CN_JOURNAL_MAX_AGE[]          = "journal_max_age";
 const char CN_SCRIPT_TIMEOUT[]           = "script_timeout";
+const char CN_FAILOVER_TIMEOUT[]         = "failover_timeout";
 const char CN_SCRIPT[]                   = "script";
 const char CN_EVENTS[]                   = "events";
 
@@ -664,6 +665,17 @@ void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value)
 void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value)
 {
     mon->script_timeout = value;
+}
+
+/**
+ * Set the maximum age of the monitor journal
+ *
+ * @param mon           The monitor instance
+ * @param interval      The journal age in seconds
+ */
+void monitorSetFailoverTimeout(MXS_MONITOR *mon, uint32_t value)
+{
+    mon->failover_timeout = value;
 }
 
 /**
@@ -1546,6 +1558,7 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
     dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
     dprintf(file, "%s=%ld\n", CN_JOURNAL_MAX_AGE, monitor->journal_max_age);
     dprintf(file, "%s=%d\n", CN_SCRIPT_TIMEOUT, monitor->script_timeout);
+    dprintf(file, "%s=%d\n", CN_FAILOVER_TIMEOUT, monitor->failover_timeout);
 
     if (monitor->databases)
     {
@@ -1575,6 +1588,7 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
         CN_BACKEND_CONNECT_ATTEMPTS,
         CN_JOURNAL_MAX_AGE,
         CN_SCRIPT_TIMEOUT,
+        CN_FAILOVER_TIMEOUT,
         CN_SERVERS
     };
 
@@ -1811,6 +1825,7 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
     json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
     json_object_set_new(rval, CN_JOURNAL_MAX_AGE, json_integer(monitor->journal_max_age));
     json_object_set_new(rval, CN_SCRIPT_TIMEOUT, json_integer(monitor->script_timeout));
+    json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(monitor->script_timeout));
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);

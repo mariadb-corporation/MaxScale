@@ -205,7 +205,7 @@ struct mxs_monitor
     bool active; /**< True if monitor is active */
     time_t journal_max_age; /**< Maximum age of journal file */
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
-    int32_t failover_timeout; /**< Timeout in seconds for failover script */
+    uint32_t failover_timeout; /**< Timeout in seconds for failover script */
     int64_t last_master_up; /**< Time when the last master_up event was triggered */
     int64_t last_master_down; /**< Time when the last master_down event was triggered */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
@@ -254,6 +254,7 @@ extern const char CN_BACKEND_CONNECT_TIMEOUT[];
 extern const char CN_MONITOR_INTERVAL[];
 extern const char CN_JOURNAL_MAX_AGE[];
 extern const char CN_SCRIPT_TIMEOUT[];
+extern const char CN_FAILOVER_TIMEOUT[];
 extern const char CN_SCRIPT[];
 extern const char CN_EVENTS[];
 

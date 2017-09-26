@@ -522,6 +522,15 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
             monitorSetScriptTimeout(monitor, ival);
         }
     }
+    else if (strcmp(key, CN_FAILOVER_TIMEOUT) == 0)
+    {
+        long ival = get_positive_int(value);
+        if (ival)
+        {
+            valid = true;
+            monitorSetFailoverTimeout(monitor, ival);
+        }
+    }
     else
     {
         /** We're modifying module specific parameters and we need to stop the monitor */
