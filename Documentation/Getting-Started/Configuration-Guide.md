@@ -196,6 +196,15 @@ write or modify the data in the backend server. The default is 2 seconds.
 auth_write_timeout=10
 ```
 
+#### `passive`
+
+Controls whether MaxScale is a passive node in a cluster of multiple MaxScale
+instances. The default value is false.
+
+This parameter is intended to be used with multiple MaxScale instances that use
+failover functionality to manipulate the cluster in some form. Passive nodes
+only observe the clusters being monitored and take no direct actions.
+
 #### `ms_timestamp`
 
 Enable or disable the high precision timestamps in logfiles. Enabling this adds

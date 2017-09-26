@@ -75,6 +75,7 @@ Update MaxScale parameters. The request body must define updated values for the
 - [auth_read_timeout](../Getting-Started/Configuration-Guide.md#auth_read_timeout)
 - [auth_write_timeout](../Getting-Started/Configuration-Guide.md#auth_write_timeout)
 - [admin_log_auth_failures](../Getting-Started/Configuration-Guide.md#admin_log_auth_failures)
+- [passive](../Getting-Started/Configuration-Guide.md#passive)
 
 ```
 PATCH /v1/maxscale
