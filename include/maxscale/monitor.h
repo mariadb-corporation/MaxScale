@@ -169,7 +169,7 @@ typedef struct monitor_servers
     int mon_err_count;
     unsigned int mon_prev_status;
     unsigned int pending_status;    /**< Pending Status flag bitmap */
-    mxs_monitor_event_t last_event; /**< The last event that occurred on this server*/
+    bool new_event;                 /**< Whether an action was taken on the last event */
     struct monitor_servers *next;   /**< The next server in the list */
 } MXS_MONITOR_SERVERS;
 
@@ -205,6 +205,9 @@ struct mxs_monitor
     bool active; /**< True if monitor is active */
     time_t journal_max_age; /**< Maximum age of journal file */
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
+    int32_t failover_timeout; /**< Timeout in seconds for failover script */
+    int64_t last_master_up; /**< Time when the last master_up event was triggered */
+    int64_t last_master_down; /**< Time when the last master_down event was triggered */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 
@@ -266,6 +269,7 @@ bool mon_print_fail_status(MXS_MONITOR_SERVERS* mon_srv);
 
 mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database);
 void mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval);
+const char* mon_get_event_name(mxs_monitor_event_t event);
 
 void lock_monitor_servers(MXS_MONITOR *monitor);
 void release_monitor_servers(MXS_MONITOR *monitor);

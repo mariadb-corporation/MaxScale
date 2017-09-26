@@ -35,6 +35,9 @@ MXS_BEGIN_DECLS
 /** Default script execution timeout in seconds */
 #define DEFAULT_SCRIPT_TIMEOUT 90
 
+/** Default failover script timeout */
+#define DEFAULT_FAILOVER_TIMEOUT 90
+
 /**
  * Monitor network timeout types
  */

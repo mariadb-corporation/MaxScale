@@ -37,6 +37,9 @@
 #include <maxscale/utils.h>
 #include <maxscale/semaphore.hh>
 #include <maxscale/json_api.h>
+#include <maxscale/hk_heartbeat.h>
+#include <maxscale/http.hh>
+#include <maxscale/maxscale.h>
 
 #include "maxscale/monitor.h"
 #include "maxscale/poll.h"
@@ -141,6 +144,10 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->is_active = true;
     server->charset = SERVER_DEFAULT_CHARSET;
     server->proxy_protocol = false;
+
+    // Set last event to server_up as the server is in Running state on startup
+    server->last_event = SERVER_UP_EVENT;
+    server->triggered_at = 0;
 
     spinlock_acquire(&server_spin);
     server->next = allServers;
@@ -496,6 +503,11 @@ dprintServer(DCB *dcb, const SERVER *server)
     dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string);
     dcb_printf(dcb, "\tNode Id:                             %ld\n", server->node_id);
     dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
+    dcb_printf(dcb, "\tLast event:                          %s\n",
+               mon_get_event_name((mxs_monitor_event_t)server->last_event));
+    time_t t = maxscale_started() + (server->triggered_at / 10);
+    dcb_printf(dcb, "\tTriggered at:                        %s\n", http_to_date(t).c_str());
+
     if (server->slaves)
     {
         int i;
@@ -1450,6 +1462,11 @@ static json_t* server_json_attributes(const SERVER* server)
     json_object_set_new(attr, "node_id", json_integer(server->node_id));
     json_object_set_new(attr, "master_id", json_integer(server->master_id));
     json_object_set_new(attr, "replication_depth", json_integer(server->depth));
+
+    const char* event_name = mon_get_event_name((mxs_monitor_event_t)server->last_event);
+    time_t t = maxscale_started() + (server->triggered_at / 10);
+    json_object_set_new(attr, "last_event", json_string(event_name));
+    json_object_set_new(attr, "triggered_at", json_string(http_to_date(t).c_str()));
 
     if (server->slaves)
     {

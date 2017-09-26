@@ -43,6 +43,7 @@
 #include <maxscale/http.hh>
 #include <maxscale/version.h>
 #include <maxscale/maxscale.h>
+#include <maxscale/hk_heartbeat.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
@@ -1761,6 +1762,7 @@ void config_set_global_defaults()
     gateway.admin_ssl_cert[0] = '\0';
     gateway.admin_ssl_ca_cert[0] = '\0';
     gateway.passive = false;
+    gateway.promoted_at = 0;
 
     gateway.thread_stack_size = 0;
     pthread_attr_t attr;
@@ -3913,10 +3915,13 @@ json_t* config_maxscale_to_json(const char* host)
     }
 
     json_t* attr = json_object();
+    time_t started = maxscale_started();
+    time_t activated = started + (cnf->promoted_at / 10);
     json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
     json_object_set_new(attr, "commit", json_string(MAXSCALE_COMMIT));
-    json_object_set_new(attr, "started_at", json_string(http_to_date(maxscale_started()).c_str()));
+    json_object_set_new(attr, "started_at", json_string(http_to_date(started).c_str()));
+    json_object_set_new(attr, "activated_at", json_string(http_to_date(activated).c_str()));
     json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
 
     json_t* obj = json_object();

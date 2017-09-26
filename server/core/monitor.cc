@@ -27,15 +27,16 @@
 #include <sys/stat.h>
 
 #include <maxscale/alloc.h>
-#include <mysqld_error.h>
-#include <maxscale/paths.h>
-#include <maxscale/utils.h>
+#include <maxscale/hk_heartbeat.h>
+#include <maxscale/json_api.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/json_api.h>
+#include <maxscale/utils.h>
+#include <mysqld_error.h>
 
 #include "maxscale/config.h"
 #include "maxscale/externcmd.h"
@@ -135,6 +136,7 @@ MXS_MONITOR* monitor_alloc(const char *name, const char *module)
     mon->script_timeout = DEFAULT_SCRIPT_TIMEOUT;
     mon->parameters = NULL;
     mon->server_pending_changes = false;
+    mon->failover_timeout = DEFAULT_FAILOVER_TIMEOUT;
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
     mon->next = allMonitors;
@@ -321,7 +323,8 @@ bool monitorAddServer(MXS_MONITOR *mon, SERVER *server)
         db->next = NULL;
         db->mon_err_count = 0;
         db->log_version_err = true;
-        db->last_event = UNDEFINED_EVENT;
+        db->new_event = true;
+
         /** Server status is uninitialized */
         db->mon_prev_status = -1;
         /* pending status is updated by get_replication_tree */
@@ -1048,15 +1051,8 @@ static mxs_monitor_event_t mon_get_event_type(MXS_MONITOR_SERVERS* node)
     return rval;
 }
 
-/*
- * Given a monitor event (enum) provide a text string equivalent
- * @param   node    The monitor server data whose event is wanted
- * @result  string  The name of the monitor event for the server
- */
-static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
+const char* mon_get_event_name(mxs_monitor_event_t event)
 {
-    mxs_monitor_event_t event = mon_get_event_type(node);
-
     for (int i = 0; mxs_monitor_event_enum_values[i].name; i++)
     {
         if (mxs_monitor_event_enum_values[i].enum_value & event)
@@ -1067,6 +1063,16 @@ static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
 
     ss_dassert(false);
     return "undefined_event";
+}
+
+/*
+ * Given a monitor event (enum) provide a text string equivalent
+ * @param   node    The monitor server data whose event is wanted
+ * @result  string  The name of the monitor event for the server
+ */
+static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
+{
+    return mon_get_event_name(mon_get_event_type(node));
 }
 
 enum credentials_approach_t
@@ -1718,11 +1724,53 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
              * In this case, a failover script should be called if no master_up
              * or new_master events are triggered within a pre-defined time limit.
              */
-            ptr->last_event = mon_get_event_type(ptr);
+            mxs_monitor_event_t event = mon_get_event_type(ptr);
+            ptr->server->last_event = event;
+            ptr->server->triggered_at = hkheartbeat;
+            ptr->new_event = true;
+
+            if (event == MASTER_DOWN_EVENT)
+            {
+                monitor->last_master_down = hkheartbeat;
+            }
+            else if (event == MASTER_UP_EVENT || event == NEW_MASTER_EVENT)
+            {
+                monitor->last_master_up = hkheartbeat;
+            }
 
             if (script && (events & mon_get_event_type(ptr)))
             {
                 monitor_launch_script(monitor, ptr, script);
+            }
+        }
+        else
+        {
+            /**
+             * If a master_down event was triggered when this MaxScale was
+             * passive, we need to execute the failover script again if no new
+             * masters have appeared and this MaxScale has been set as active
+             * since the event took place.
+             */
+            MXS_CONFIG* cnf = config_get_global_options();
+
+            if (!cnf->passive && // This is not a passive MaxScale
+                ptr->server->last_event == MASTER_DOWN_EVENT && // This is a master that went down
+                cnf->promoted_at >= ptr->server->triggered_at && // Promoted to active after the event took place
+                ptr->new_event && // Event has not yet been processed
+                monitor->last_master_down > monitor->last_master_up) // Latest relevant event
+            {
+                // Scale the timeout to heartbeat resolution which is 1/10th of a second
+                int64_t timeout = (int64_t)monitor->failover_timeout * 10;
+                int64_t t = hkheartbeat - ptr->server->triggered_at;
+
+                if (t > timeout)
+                {
+                    MXS_WARNING("Failover of server '%s' did not take place within "
+                                "%u seconds, failover script needs to be re-triggered",
+                                ptr->server->unique_name, monitor->failover_timeout);
+                    // TODO: Launch the failover script
+                    ptr->new_event = false;
+                }
             }
         }
     }

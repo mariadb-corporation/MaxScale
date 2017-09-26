@@ -23,6 +23,7 @@
 #include <algorithm>
 
 #include <maxscale/atomic.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/paths.h>
@@ -758,6 +759,13 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             MXS_NOTICE("Updated '%s' from '%s' to '%s'", CN_PASSIVE,
                        cnf.passive ? "true" : "false",
                        boolval ? "true" : "false");
+
+            if (cnf.passive && !boolval)
+            {
+                // This MaxScale is being promoted to the active instance
+                cnf.promoted_at = hkheartbeat;
+            }
+
             cnf.passive = boolval;
             rval = true;
         }

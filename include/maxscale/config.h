@@ -210,6 +210,8 @@ typedef struct
     unsigned int  auth_write_timeout;                  /**< Write timeout for the user authentication */
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     bool          passive;                             /**< True if MaxScale is in passive mode */
+    int64_t       promoted_at;                         /**< Time when this Maxscale instance was
+                                                        * promoted from a passive to an active */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
     qc_sql_mode_t qc_sql_mode;                         /**< The query classifier sql mode */
