@@ -66,6 +66,12 @@ static const char mysqlauth_validate_user_query[] =
     " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host) AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
     " LIMIT 1";
 
+/** Query that only checks if there's a matching user */
+static const char mysqlauth_skip_auth_query[] =
+    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
+    " WHERE user = '%s' AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
+    " LIMIT 1";
+
 /** Query that checks that the database exists */
 static const char mysqlauth_validate_database_query[] =
     "SELECT * FROM " MYSQLAUTH_DATABASES_TABLE_NAME " WHERE db = '%s' LIMIT 1";
@@ -181,7 +187,7 @@ int replace_mysql_users(SERV_LISTENER *listener, bool skip_local);
 /**
  * @brief Verify the user has access to the database
  *
- * @param handle       SQLite handle to MySQLAuth user database
+ * @param instance     MySQLAuth instance
  * @param dcb          Client DCB
  * @param session      Shared MySQL session
  * @param scramble     The scramble sent to the client in the initial handshake
@@ -189,7 +195,7 @@ int replace_mysql_users(SERV_LISTENER *listener, bool skip_local);
  *
  * @return MXS_AUTH_SUCCEEDED if the user has access to the database
  */
-int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
-                         uint8_t *scramble, size_t scramble_len);
+int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
+                        uint8_t *scramble, size_t scramble_len);
 
 MXS_END_DECLS
