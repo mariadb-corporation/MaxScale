@@ -13,31 +13,66 @@
 
 #include <maxscale/utils.h>
 #include <string.h>
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 namespace
 {
 
-#define TRIM_TEST_CASE_ENTRY(zFrom, zTo) { zFrom, zTo }
+#define TRIM_TCE(zFrom, zTo) { zFrom, zTo }
 
 struct TRIM_TEST_CASE
 {
     const char* zFrom;
     const char* zTo;
-} trim_testcases[] =
+};
+
+TRIM_TEST_CASE trim_testcases[] =
 {
-    TRIM_TEST_CASE_ENTRY("", ""),
-    TRIM_TEST_CASE_ENTRY("a", "a"),
-    TRIM_TEST_CASE_ENTRY(" a", "a"),
-    TRIM_TEST_CASE_ENTRY("a ", "a"),
-    TRIM_TEST_CASE_ENTRY("a ", "a"),
-    TRIM_TEST_CASE_ENTRY(" a ", "a"),
-    TRIM_TEST_CASE_ENTRY("  a", "a"),
-    TRIM_TEST_CASE_ENTRY("a  ", "a"),
-    TRIM_TEST_CASE_ENTRY("  a  ", "a"),
-    TRIM_TEST_CASE_ENTRY("  a b  ", "a b"),
+    TRIM_TCE("", ""),
+    TRIM_TCE("a", "a"),
+    TRIM_TCE(" a", "a"),
+    TRIM_TCE("a ", "a"),
+    TRIM_TCE(" a ", "a"),
+    TRIM_TCE("  a", "a"),
+    TRIM_TCE("a  ", "a"),
+    TRIM_TCE("  a  ", "a"),
+    TRIM_TCE("  a b  ", "a b"),
 };
 
 const int n_trim_testcases = sizeof(trim_testcases) / sizeof(trim_testcases[0]);
+
+TRIM_TEST_CASE trim_leading_testcases[] =
+{
+    TRIM_TCE("", ""),
+    TRIM_TCE("a", "a"),
+    TRIM_TCE(" a", "a"),
+    TRIM_TCE("a ", "a "),
+    TRIM_TCE(" a ", "a "),
+    TRIM_TCE("  a", "a"),
+    TRIM_TCE("a  ", "a  "),
+    TRIM_TCE("  a  ", "a  "),
+    TRIM_TCE("  a b  ", "a b  "),
+};
+
+const int n_trim_leading_testcases = sizeof(trim_leading_testcases) / sizeof(trim_leading_testcases[0]);
+
+TRIM_TEST_CASE trim_trailing_testcases[] =
+{
+    TRIM_TCE("", ""),
+    TRIM_TCE("a", "a"),
+    TRIM_TCE(" a", " a"),
+    TRIM_TCE("a ", "a"),
+    TRIM_TCE(" a ", " a"),
+    TRIM_TCE("  a", "  a"),
+    TRIM_TCE("a  ", "a"),
+    TRIM_TCE("  a  ", "  a"),
+    TRIM_TCE("  a b  ", "  a b"),
+};
+
+const int n_trim_trailing_testcases = sizeof(trim_trailing_testcases) / sizeof(trim_trailing_testcases[0]);
 
 
 int test(TRIM_TEST_CASE* pTest_cases, int n_test_cases, char* (*p)(char*))
@@ -63,9 +98,22 @@ int test(TRIM_TEST_CASE* pTest_cases, int n_test_cases, char* (*p)(char*))
     return rv;
 }
 
-int test1()
+int test_trim()
 {
+    cout << "trim()" << endl;
     return test(trim_testcases, n_trim_testcases, trim);
+}
+
+int test_trim_leading()
+{
+    cout << "trim_leading()" << endl;
+    return test(trim_leading_testcases, n_trim_leading_testcases, trim_leading);
+}
+
+int test_trim_trailing()
+{
+    cout << "trim_trailing()" << endl;
+    return test(trim_trailing_testcases, n_trim_trailing_testcases, trim_trailing);
 }
 
 }
@@ -74,7 +122,9 @@ int main(int argc, char* argv[])
 {
     int rv = 0;
 
-    rv += test1();
+    rv += test_trim();
+    rv += test_trim_leading();
+    rv += test_trim_trailing();
 
     return rv;
 }
