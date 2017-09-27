@@ -381,6 +381,7 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
             if (dest)
             {
                 mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, cmd->argv[i], replace, &dest, &size);
+
                 switch (rc)
                 {
                 case MXS_PCRE2_ERROR:
