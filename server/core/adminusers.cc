@@ -290,6 +290,7 @@ static USERS* load_users(const char *fname)
         {
             /** New format users */
             rval = users_from_json(json);
+            json_decref(json);
         }
         else
         {

@@ -121,7 +121,7 @@ add_test_executable(bug547.cpp bug547 replication LABELS readwritesplit REPL_BAC
 add_test_executable(bug681.cpp bug681 galera.bug681 LABELS readwritesplit GALERA_BACKEND)
 
 # Regression case for the bug "crash with tee filter"
-#add_test_executable(bug643.cpp bug643 bug643 LABELS tee REPL_BACKEND)
+add_test_executable(bug643.cpp bug643 bug643 LABELS tee REPL_BACKEND)
 
 # Regression case for the bug ""Different error messages from MariaDB and Maxscale"
 add_test_script(bug561.sh bug561.sh replication LABELS MySQLAuth REPL_BACKEND)
@@ -166,13 +166,13 @@ add_test_executable(bug626.cpp bug626 replication LABELS MySQLAuth MySQLProtocol
 add_test_executable(bug634.cpp bug634 replication LABELS readwritesplit REPL_BACKEND)
 
 # Regression cases for several TEE filter hangs
-#add_test_executable(bug645.cpp bug645 bug645 LABELS tee REPL_BACKEND)
-#add_test_executable(bug645_1.cpp bug645_1 bug645_1 LABELS tee REPL_BACKEND)
-#add_test_executable(bug649.cpp bug649 bug645 LABELS tee)
-#add_test_executable(bug650.cpp bug650 bug650 LABELS tee REPL_BACKEND)
+add_test_executable(bug645.cpp bug645 bug645 LABELS tee REPL_BACKEND)
+add_test_executable(bug645_1.cpp bug645_1 bug645_1 LABELS tee REPL_BACKEND)
+add_test_executable(bug649.cpp bug649 bug645 LABELS tee REPL_BACKEND)
+add_test_executable(bug650.cpp bug650 bug650 LABELS tee REPL_BACKEND)
 
 # Heavy test for TEE filter
-#add_test_script(bug648 sql_queries bug648 LABELS tee UNSTABLE HEAVY REPL_BACKEND)
+add_test_script(bug648 sql_queries bug648 LABELS tee HEAVY REPL_BACKEND)
 
 # Crash when host name for some user in mysql.user is very long
 add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
@@ -181,7 +181,7 @@ add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol
 add_test_executable(bug654.cpp bug654 replication LABELS maxscale REPL_BACKEND)
 
 # Regression case for the bug "Tee filter: closing child session causes MaxScale to fail"
-#add_test_executable(bug657.cpp bug657 bug657 LABELS tee REPL_BACKEND)
+add_test_executable(bug657.cpp bug657 bug657 LABELS tee REPL_BACKEND)
 
 # Block backends (master or all slaves) and tries to connect Maxscale
 add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
@@ -193,7 +193,7 @@ add_test_executable(bug662.cpp bug662 bug662 LABELS readwritesplit readconnroute
 add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol)
 
 # TEE fileter: execute long sequence of queries ans session commands in the loop
-#add_test_executable(bug670.cpp bug670 bug670 LABELS tee REPL_BACKEND)
+add_test_executable(bug670.cpp bug670 bug670 LABELS tee REPL_BACKEND)
 
 # Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
 add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
@@ -376,7 +376,7 @@ add_test_executable(mxs431.cpp mxs431 sharding LABELS schemarouter REPL_BACKEND 
 add_test_executable(mxs47.cpp mxs47 replication LABELS MySQLProtocol LIGHT REPL_BACKEND)
 
 # Regression case for the bug "USE <db> hangs when Tee filter uses matching"
-#add_test_executable(mxs501_tee_usedb.cpp mxs501_tee_usedb mxs501 LABELS tee REPL_BACKEND)
+add_test_executable(mxs501_tee_usedb.cpp mxs501_tee_usedb mxs501 LABELS tee REPL_BACKEND)
 
 # Open connection, execute 'change user', close connection in the loop
 add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548 LABELS MySQLProtocol REPL_BACKEND)
