@@ -51,13 +51,14 @@ all matching queries, or `ignore` which allows all queries to proceed.
 The following statement types will always be allowed through when `action` is
 set to `allow`:
 
- - COM_QUIT: Client closes connection
- - COM_PING: Server is pinged
  - COM_CHANGE_USER: The user is changed for an active connection
- - COM_SET_OPTION: Client multi-statements are being configured
  - COM_FIELD_LIST: Alias for the `SHOW TABLES;` query
- - COM_PROCESS_KILL: Alias for `KILL <id>;` query
+ - COM_INIT_DB: Alias for `USE <db>;`
+ - COM_PING: Server is pinged
  - COM_PROCESS_INFO: Alias for `SHOW PROCESSLIST;`
+ - COM_PROCESS_KILL: Alias for `KILL <id>;` query
+ - COM_QUIT: Client closes connection
+ - COM_SET_OPTION: Client multi-statements are being configured
 
 You can have both blacklist and whitelist functionality by configuring one
 filter with `action=allow` and another one with `action=block`. You can then use

@@ -2310,6 +2310,7 @@ static bool command_is_mandatory(const GWBUF *buffer)
     {
     case MYSQL_COM_CHANGE_USER:
     case MYSQL_COM_FIELD_LIST:
+    case MYSQL_COM_INIT_DB:
     case MYSQL_COM_PING:
     case MYSQL_COM_PROCESS_INFO:
     case MYSQL_COM_PROCESS_KILL:
