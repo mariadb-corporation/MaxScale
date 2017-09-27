@@ -220,10 +220,12 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
             size_t size_orig = strlen(cmd->argv[i]);
             size_t size_replace = strlen(replace);
             size_t size = MXS_MAX(size_orig, size_replace);
-            char* dest = MXS_MALLOC(size);
-            if (dest)
+            char* dest;
+
+            if (size && (dest = MXS_MALLOC(size)))
             {
                 mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, cmd->argv[i], replace, &dest, &size);
+
                 switch (rc)
                 {
                 case MXS_PCRE2_ERROR:
