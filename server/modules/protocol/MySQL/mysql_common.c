@@ -978,9 +978,14 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     CHK_DCB(dcb);
     CHK_SESSION(dcb->session);
 
-
-    if (dcb->session->state != SESSION_STATE_ALLOC &&
-        dcb->session->state != SESSION_STATE_DUMMY)
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    {
+        // The shared session data can be extracted at any time if the client DCB is used.
+        ss_dassert(dcb->data);
+        memcpy(session, dcb->data, sizeof(MYSQL_session));
+    }
+    else if (dcb->session->state != SESSION_STATE_ALLOC &&
+             dcb->session->state != SESSION_STATE_DUMMY)
     {
         memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }
@@ -1239,21 +1244,18 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
     return final_capabilities;
 }
 
-GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
+GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
                                  bool with_ssl, bool ssl_established)
 {
-    MYSQL_session client;
-    gw_get_shared_session_auth_info(session->client_dcb, &client);
-
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     uint8_t *curr_passwd = NULL;
 
-    if (memcmp(client.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) != 0)
+    if (memcmp(client->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) != 0)
     {
-        curr_passwd = client.client_sha1;
+        curr_passwd = client->client_sha1;
     }
 
-    uint32_t capabilities = create_capabilities(conn, with_ssl, client.db[0], false);
+    uint32_t capabilities = create_capabilities(conn, with_ssl, client->db[0], false);
     gw_mysql_set_byte4(client_capabilities, capabilities);
 
     /**
@@ -1263,8 +1265,8 @@ GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
      */
     const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
 
-    long bytes = response_length(with_ssl, ssl_established, client.user,
-                                 curr_passwd, client.db, auth_plugin_name);
+    long bytes = response_length(with_ssl, ssl_established, client->user,
+                                 curr_passwd, client->db, auth_plugin_name);
 
     // allocating the GWBUF
     GWBUF *buffer = gwbuf_alloc(bytes);
@@ -1303,8 +1305,8 @@ GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
     if (!with_ssl || ssl_established)
     {
         // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
-        memcpy(payload, client.user, strlen(client.user));
-        payload += strlen(client.user);
+        memcpy(payload, client->user, strlen(client->user));
+        payload += strlen(client->user);
         payload++;
 
         if (curr_passwd)
@@ -1317,10 +1319,10 @@ GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
         }
 
         // if the db is not NULL append it
-        if (client.db[0])
+        if (client->db[0])
         {
-            memcpy(payload, client.db, strlen(client.db));
-            payload += strlen(client.db);
+            memcpy(payload, client->db, strlen(client->db));
+            payload += strlen(client->db);
             payload++;
         }
 
@@ -1353,7 +1355,10 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     bool with_ssl = dcb->server->server_ssl;
     bool ssl_established = dcb->ssl_state == SSL_ESTABLISHED;
 
-    GWBUF* buffer = gw_generate_auth_response(dcb->session, dcb->protocol,
+    MYSQL_session client;
+    gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
+
+    GWBUF* buffer = gw_generate_auth_response(&client, dcb->protocol,
                                               with_ssl, ssl_established);
     ss_dassert(buffer);
 

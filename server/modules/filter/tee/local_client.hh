@@ -71,6 +71,6 @@ private:
     mxs::Buffer             m_partial;
     size_t                  m_expected_bytes;
     std::deque<mxs::Buffer> m_queue;
-    MXS_SESSION*            m_session;
+    MYSQL_session           m_client;
     MySQLProtocol           m_protocol;
 };
