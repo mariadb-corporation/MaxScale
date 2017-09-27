@@ -1777,6 +1777,8 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
 {
     const char WORD_CONNECTION[] = "CONNECTION";
     const char WORD_QUERY[] = "QUERY";
+    const char WORD_HARD[] = "HARD";
+    const char WORD_SOFT[] = "SOFT";
     const char DELIM[] = " \n\t";
 
     kill_type_t kill_type = KT_CONNECTION;
@@ -1822,9 +1824,19 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
             {
                 get_next = true;
             }
-            /* Move to next state regardless of comparison result. The current
-             * part is optional and the process id may already be in the token. */
-            state = ID;
+
+            if (strncasecmp(token, WORD_HARD, sizeof(WORD_HARD) - 1) == 0 ||
+                strncasecmp(token, WORD_SOFT, sizeof(WORD_SOFT) - 1) == 0)
+            {
+                /* This is an optional token and needs to be ignored */
+                get_next = true;
+            }
+            else
+            {
+                /* Move to next state regardless of comparison result. The current
+                 * part is optional and the process id may already be in the token. */
+                state = ID;
+            }
             break;
 
         case ID:
