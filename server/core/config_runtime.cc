@@ -503,6 +503,24 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
             monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS, ival);
         }
     }
+    else if (strcmp(key, CN_JOURNAL_MAX_AGE) == 0)
+    {
+        long ival = get_positive_int(value);
+        if (ival)
+        {
+            valid = true;
+            monitorSetJournalMaxAge(monitor, ival);
+        }
+    }
+    else if (strcmp(key, CN_SCRIPT_TIMEOUT) == 0)
+    {
+        long ival = get_positive_int(value);
+        if (ival)
+        {
+            valid = true;
+            monitorSetScriptTimeout(monitor, ival);
+        }
+    }
     else
     {
         /** We're modifying module specific parameters and we need to stop the monitor */
