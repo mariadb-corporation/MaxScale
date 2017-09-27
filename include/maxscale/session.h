@@ -415,15 +415,6 @@ bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const struct server
 void session_clear_stmt(MXS_SESSION *session);
 
 /**
- * Try to kill a specific session. This function only sends messages to
- * worker threads without waiting for the result.
- *
- * @param issuer The session where the command originates.
- * @param target_id Target session id.
- */
-void session_broadcast_kill_command(MXS_SESSION* issuer, uint64_t target_id);
-
-/**
  * @brief Convert a session to JSON
  *
  * @param session Session to convert

@@ -47,13 +47,6 @@ typedef enum spec_com_res_t
     // wait for more data.
 } spec_com_res_t;
 
-/* Type of the kill-command sent by client. */
-typedef enum kill_type
-{
-    KT_CONNECTION,
-    KT_QUERY
-} kill_type_t;
-
 const char WORD_KILL[] = "KILL";
 
 static int process_init(void);
@@ -1674,9 +1667,7 @@ static spec_com_res_t process_special_commands(DCB *dcb, GWBUF *read_buffer, int
                 == sizeof(bytes))
             {
                 uint64_t process_id = gw_mysql_get_byte4(bytes);
-                session_broadcast_kill_command(dcb->session, process_id);
-                // Even if id not found, send ok. TODO: send a correct response to client
-                mxs_mysql_send_ok(dcb, 1, 0, NULL);
+                mxs_mysql_execute_kill(dcb->session, process_id, KT_CONNECTION);
                 rval = RES_END;
             }
         }
@@ -1735,30 +1726,11 @@ spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t cu
             kill_type_t kt = KT_CONNECTION;
             uint64_t thread_id = 0;
             bool parsed = parse_kill_query(querybuf, &thread_id, &kt);
+            rval = RES_END;
 
             if (parsed && (thread_id > 0)) // MaxScale session counter starts at 1
             {
-                switch (kt)
-                {
-                case KT_CONNECTION:
-                    session_broadcast_kill_command(dcb->session, thread_id);
-                    // Even if id not found, send ok. TODO: send a correct response to client
-                    mxs_mysql_send_ok(dcb, 1, 0, NULL);
-                    rval = RES_END;
-                    break;
-
-                case KT_QUERY:
-                    // TODO: Implement this
-                    MXS_WARNING("Received 'KILL QUERY %" PRIu64 "' from "
-                                "the client. This feature is not supported.", thread_id);
-                    mysql_send_custom_error(dcb, 1, 0, "'KILL QUERY <thread_id>' "
-                                            "is not supported.");
-                    rval = RES_END;
-                    break;
-
-                default:
-                    ss_dassert(!true);
-                }
+                mxs_mysql_execute_kill(dcb->session, thread_id, kt);
             }
         }
     }

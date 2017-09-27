@@ -17,6 +17,9 @@
 
 #include <netinet/tcp.h>
 
+#include <sstream>
+#include <vector>
+
 #include <maxscale/alloc.h>
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/log_manager.h>
@@ -24,6 +27,8 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
+#include <maxscale/protocol/mariadb_client.hh>
+
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 
@@ -31,7 +36,7 @@ static server_command_t* server_command_init(server_command_t* srvcmd, mxs_mysql
 
 MYSQL_session* mysql_session_alloc()
 {
-    MYSQL_session *ses = MXS_CALLOC(1, sizeof(MYSQL_session));
+    MYSQL_session* ses = (MYSQL_session*)MXS_CALLOC(1, sizeof(MYSQL_session));
 
     if (ses)
     {
@@ -1358,7 +1363,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     MYSQL_session client;
     gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
 
-    GWBUF* buffer = gw_generate_auth_response(&client, dcb->protocol,
+    GWBUF* buffer = gw_generate_auth_response(&client, (MySQLProtocol*)dcb->protocol,
                                               with_ssl, ssl_established);
     ss_dassert(buffer);
 
@@ -1682,4 +1687,59 @@ bool mxs_mysql_command_will_respond(uint8_t cmd)
            cmd != MXS_COM_QUIT &&
            cmd != MXS_COM_STMT_CLOSE &&
            cmd != MXS_COM_STMT_FETCH;
+}
+
+typedef std::vector< std::pair<SERVER*, uint64_t> > TargetList;
+
+struct KillInfo
+{
+    uint64_t target_id;
+    TargetList targets;
+};
+
+static bool kill_func(DCB *dcb, void *data)
+{
+    KillInfo* info = (KillInfo*)data;
+
+    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&
+        dcb->session->ses_id == info->target_id)
+    {
+        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+        info->targets.push_back(std::make_pair(dcb->server, proto->thread_id));
+    }
+
+    return true;
+}
+
+void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
+{
+    // Gather a list of servers and connection IDs to kill
+    KillInfo info = {target_id};
+    dcb_foreach(kill_func, &info);
+
+    if (info.targets.empty())
+    {
+        // No session found, send an error
+        std::stringstream err;
+        err << "Unknown thread id: " << target_id;
+        mysql_send_standard_error(issuer->client_dcb, 1, 1094, err.str().c_str());
+    }
+    else
+    {
+        // Execute the KILL on all of the servers
+        for (TargetList::iterator it = info.targets.begin();
+             it != info.targets.end(); it++)
+        {
+            LocalClient* client = LocalClient::create(issuer, it->first);
+            std::stringstream ss;
+            ss << "KILL " << (type == KT_QUERY ? "QUERY " : "") << it->second;
+            GWBUF* buffer = modutil_create_query(ss.str().c_str());
+            client->queue_query(buffer);
+            gwbuf_free(buffer);
+
+            // The LocalClient needs to delete itself once the queries are done
+            client->self_destruct();
+        }
+        mxs_mysql_send_ok(issuer->client_dcb, 1, 0, NULL);
+    }
 }
