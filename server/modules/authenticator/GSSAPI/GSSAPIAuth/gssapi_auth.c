@@ -601,8 +601,16 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
 
     if (serviceGetUser(listener->service, &user, &pw) && (pw = decrypt_password(pw)))
     {
+        bool no_active_servers = true;
+
         for (SERVER_REF *servers = listener->service->dbref; servers; servers = servers->next)
         {
+            if (!SERVER_REF_IS_ACTIVE(servers) || !SERVER_IS_ACTIVE(servers->server))
+            {
+                continue;
+            }
+
+            no_active_servers = false;
             MYSQL *mysql = mysql_init(NULL);
 
             if (mxs_mysql_real_connect(mysql, servers->server, user, pw))
@@ -645,6 +653,11 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
         }
 
         MXS_FREE(pw);
+
+        if (no_active_servers)
+        {
+            rval = MXS_AUTH_LOADUSERS_OK;
+        }
     }
 
     return rval;
