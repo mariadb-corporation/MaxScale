@@ -82,8 +82,8 @@ void handle_connection_keepalive(RWSplit *inst, RWSplitSession *rses,
 
             if (diff > keepalive)
             {
-                MXS_INFO("Pinging %s, idle for %d seconds",
-                         backend->name(), diff / 10);
+                MXS_INFO("Pinging %s, idle for %ld seconds",
+                         backend->name(), HB_TO_SEC(diff));
                 modutil_ignorable_ping(backend->dcb());
             }
         }

@@ -1784,8 +1784,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
                 ptr->new_event && // Event has not yet been processed
                 monitor->last_master_down > monitor->last_master_up) // Latest relevant event
             {
-                // Scale the timeout to heartbeat resolution which is 1/10th of a second
-                int64_t timeout = (int64_t)monitor->failover_timeout * 10;
+                int64_t timeout = SEC_TO_HB(monitor->failover_timeout);
                 int64_t t = hkheartbeat - ptr->server->triggered_at;
 
                 if (t > timeout)
