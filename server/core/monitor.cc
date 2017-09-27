@@ -946,6 +946,8 @@ monitor_clear_pending_status(MXS_MONITOR_SERVERS *ptr, int bit)
  *
  * @param   node                The monitor server data for a particular server
  * @result  monitor_event_t     A monitor event (enum)
+ *
+ * @note This function must only be called from mon_process_state_changes
  */
 static mxs_monitor_event_t mon_get_event_type(MXS_MONITOR_SERVERS* node)
 {
@@ -1079,7 +1081,7 @@ const char* mon_get_event_name(mxs_monitor_event_t event)
  */
 static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
 {
-    return mon_get_event_name(mon_get_event_type(node));
+    return mon_get_event_name((mxs_monitor_event_t)node->server->last_event);
 }
 
 enum credentials_approach_t
@@ -1733,8 +1735,6 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
     {
         if (mon_status_changed(ptr))
         {
-            mon_log_state_change(ptr);
-
             /**
              * The last executed event will be needed if a passive MaxScale is
              * promoted to an active one and the last event that occurred on
@@ -1747,6 +1747,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             ptr->server->last_event = event;
             ptr->server->triggered_at = hkheartbeat;
             ptr->new_event = true;
+            mon_log_state_change(ptr);
 
             if (event == MASTER_DOWN_EVENT)
             {
@@ -1762,7 +1763,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
                 monitor->last_master_up = hkheartbeat;
             }
 
-            if (script && (events & mon_get_event_type(ptr)))
+            if (script && (events & event))
             {
                 monitor_launch_script(monitor, ptr, script, monitor->script_timeout);
             }
@@ -1790,7 +1791,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
                 if (t > timeout)
                 {
                     MXS_WARNING("Failover of server '%s' did not take place within "
-                                "%u seconds, failover script needs to be re-triggered",
+                                "%u seconds, failover needs to be re-triggered",
                                 ptr->server->unique_name, monitor->failover_timeout);
                     failed_master = ptr;
                     ptr->new_event = false;
