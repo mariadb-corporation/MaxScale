@@ -77,6 +77,7 @@ void monitorSetInterval (MXS_MONITOR *, unsigned long);
 bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
 void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value);
 void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value);
+void monitorSetFailover(MXS_MONITOR *mon, bool value);
 void monitorSetFailoverTimeout(MXS_MONITOR *mon, uint32_t value);
 
 /**
