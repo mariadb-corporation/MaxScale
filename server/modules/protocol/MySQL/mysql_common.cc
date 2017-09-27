@@ -1731,8 +1731,12 @@ void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t
              it != info.targets.end(); it++)
         {
             LocalClient* client = LocalClient::create(issuer, it->first);
+            const char* hard = (type & KT_HARD) ? "HARD " :
+                               (type & KT_SOFT) ? "SOFT " :
+                               "";
+            const char* query = (type & KT_QUERY) ? "QUERY " : "";
             std::stringstream ss;
-            ss << "KILL " << (type == KT_QUERY ? "QUERY " : "") << it->second;
+            ss << "KILL " << hard << query << it->second;
             GWBUF* buffer = modutil_create_query(ss.str().c_str());
             client->queue_query(buffer);
             gwbuf_free(buffer);

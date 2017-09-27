@@ -627,8 +627,10 @@ bool mxs_mysql_command_will_respond(uint8_t cmd);
 /* Type of the kill-command sent by client. */
 typedef enum kill_type
 {
-    KT_CONNECTION,
-    KT_QUERY
+    KT_CONNECTION = (1 << 0),
+    KT_QUERY      = (1 << 1),
+    KT_SOFT       = (1 << 2),
+    KT_HARD       = (1 << 3)
 } kill_type_t;
 
 void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);

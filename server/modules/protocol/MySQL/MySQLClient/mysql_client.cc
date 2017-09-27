@@ -1762,7 +1762,7 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
     const char WORD_SOFT[] = "SOFT";
     const char DELIM[] = " \n\t";
 
-    kill_type_t kill_type = KT_CONNECTION;
+    int kill_type = KT_CONNECTION;
     unsigned long long int thread_id = 0;
 
     enum kill_parse_state_t
@@ -1806,10 +1806,14 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
                 get_next = true;
             }
 
-            if (strncasecmp(token, WORD_HARD, sizeof(WORD_HARD) - 1) == 0 ||
-                strncasecmp(token, WORD_SOFT, sizeof(WORD_SOFT) - 1) == 0)
+            if (strncasecmp(token, WORD_HARD, sizeof(WORD_HARD) - 1) == 0)
             {
-                /* This is an optional token and needs to be ignored */
+                kill_type |= KT_HARD;
+                get_next = true;
+            }
+            else if (strncasecmp(token, WORD_SOFT, sizeof(WORD_SOFT) - 1) == 0)
+            {
+                kill_type |= KT_SOFT;
                 get_next = true;
             }
             else
@@ -1888,7 +1892,7 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
     else
     {
         *thread_id_out = thread_id;
-        *kt_out = kill_type;
+        *kt_out = (kill_type_t)kill_type;
         return true;
     }
 }
