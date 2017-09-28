@@ -1037,6 +1037,15 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                         return 1;
                     }
 
+                    /* Mark as active the master server struct */
+                    spinlock_acquire(&router->lock);
+                    if (!router->service->dbref->server->is_active)
+                    {
+                        router->service->dbref->server->is_active = true;
+                        router->service->dbref->active = true;
+                    }
+                    spinlock_release(&router->lock);
+
                     /**
                      * check if router is BLRM_UNCONFIGURED
                      * and change state to BLRM_SLAVE_STOPPED

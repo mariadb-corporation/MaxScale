@@ -715,9 +715,12 @@ createInstance(SERVICE *service, char **options)
         /** Set SSL pointer in in server struct */
         server->server_ssl = ssl_cfg;
 
-        /* Set server unique name */
         /* Add server to service backend list */
         serviceAddBackend(inst->service, server);
+
+        /* Hide backend server struct */
+        service->dbref->server->is_active = false;
+        service->dbref->active = false;
     }
 
     /*
@@ -766,6 +769,9 @@ createInstance(SERVICE *service, char **options)
     else
     {
         inst->master_state = BLRM_UNCONNECTED;
+        /* Set backend server as active */
+        service->dbref->server->is_active = true;
+        service->dbref->active = true;
     }
 
     /**
