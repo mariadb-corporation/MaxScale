@@ -16,14 +16,14 @@
 
 namespace
 {
-    /**
- * Check that the AuthSwitchRequest packet is as expected. Inverse of
- * create_auth_change_packet() in pam_auth.cc.
- *
- * @param dcb Backend DCB
- * @param buffer Buffer containing an AuthSwitchRequest packet
- * @return True on success, false on error
- */
+/**
+* Check that the AuthSwitchRequest packet is as expected. Inverse of
+* create_auth_change_packet() in pam_auth.cc.
+*
+* @param dcb Backend DCB
+* @param buffer Buffer containing an AuthSwitchRequest packet
+* @return True on success, false on error
+*/
 bool check_auth_switch_request(DCB *dcb, GWBUF *buffer)
 {
     /**

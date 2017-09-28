@@ -262,7 +262,8 @@ printUsage(const char *progname)
     printVersion(progname);
 
     printf("The MaxScale binlog check utility.\n\n");
-    printf("Usage: %s [-f] [-M] [-d] [-V] [-H] [-K file] [-A algo] [-R pos] [-T pos] [<binlog file>]\n\n", progname);
+    printf("Usage: %s [-f] [-M] [-d] [-V] [-H] [-K file] [-A algo] [-R pos] [-T pos] [<binlog file>]\n\n",
+           progname);
     printf("  -f|--fix              Fix binlog file, require write permissions (truncate)\n");
     printf("  -d|--debug            Print debug messages\n");
     printf("  -M|--mariadb10        MariaDB 10 binlog compatibility\n");

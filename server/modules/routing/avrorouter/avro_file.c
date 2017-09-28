@@ -99,7 +99,8 @@ void avro_close_binlog(int fd)
  * @param filepath Path to the created file
  * @param json_schema The schema of the table in JSON format
  */
-AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec, size_t block_size)
+AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, const char *codec,
+                             size_t block_size)
 {
     AVRO_TABLE *table = MXS_CALLOC(1, sizeof(AVRO_TABLE));
     if (table)

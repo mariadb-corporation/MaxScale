@@ -62,14 +62,14 @@ static void    diagnostics(MXS_FILTER *instance,
                            MXS_FILTER_SESSION *sdata,
                            DCB *dcb);
 static json_t* diagnostics_json(const MXS_FILTER *instance,
-                           const MXS_FILTER_SESSION *sdata);
+                                const MXS_FILTER_SESSION *sdata);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
 enum maxrows_return_mode
 {
-  MAXROWS_RETURN_EMPTY = 0,
-  MAXROWS_RETURN_ERR,
-  MAXROWS_RETURN_OK
+    MAXROWS_RETURN_EMPTY = 0,
+    MAXROWS_RETURN_ERR,
+    MAXROWS_RETURN_OK
 };
 
 static const MXS_ENUM_VALUE return_option_values[] =
@@ -844,7 +844,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata, GWBUF* buffer, size_t extra
              */
             if (pending_large_data &&
                 (packetlen >= MYSQL_HEADER_LEN &&
-                packetlen < MYSQL_EOF_PACKET_LEN))
+                 packetlen < MYSQL_EOF_PACKET_LEN))
             {
                 // Update offset, number of rows and break
                 offset += packetlen;
@@ -1152,12 +1152,13 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
 {
     /* Note: sequence id is always 01 (4th byte) */
     const static uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] = { 07, 00, 00, 01, 00, 00,
-                                                         00, 02, 00, 00, 00 };
+                                                         00, 02, 00, 00, 00
+                                                       };
 
     ss_dassert(csdata->res.data != NULL);
 
     GWBUF *packet = gwbuf_alloc(MYSQL_OK_PACKET_MIN_LEN);
-    if(!packet)
+    if (!packet)
     {
         /* Abort clienrt connection */
         poll_fake_hangup_event(csdata->session->client_dcb);
@@ -1275,21 +1276,21 @@ static int send_error_upstream(MAXROWS_SESSION_DATA *csdata)
  */
 static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA *csdata)
 {
-    switch(csdata->instance->config.m_return)
+    switch (csdata->instance->config.m_return)
     {
-        case MAXROWS_RETURN_EMPTY:
-            return send_eof_upstream(csdata);
-            break;
-        case MAXROWS_RETURN_OK:
-            return send_ok_upstream(csdata);
-            break;
-        case MAXROWS_RETURN_ERR:
-            return send_error_upstream(csdata);
-            break;
-        default:
-            MXS_ERROR("MaxRows config value not expected!");
-            ss_dassert(!true);
-            return 0;
-            break;
+    case MAXROWS_RETURN_EMPTY:
+        return send_eof_upstream(csdata);
+        break;
+    case MAXROWS_RETURN_OK:
+        return send_ok_upstream(csdata);
+        break;
+    case MAXROWS_RETURN_ERR:
+        return send_error_upstream(csdata);
+        break;
+    default:
+        MXS_ERROR("MaxRows config value not expected!");
+        ss_dassert(!true);
+        return 0;
+        break;
     }
 }

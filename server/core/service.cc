@@ -393,7 +393,7 @@ int serviceStartAllPorts(SERVICE* service)
             /** Service failed to start any ports. Try again later. */
             service->stats.n_failed_starts++;
             char taskname[strlen(service->name) + strlen("_start_retry_") +
-                          (int) ceil(log10(INT_MAX)) + 1];
+                                                (int) ceil(log10(INT_MAX)) + 1];
             int retry_after = MXS_MIN(service->stats.n_failed_starts * 10, service->max_retry_interval);
             snprintf(taskname, sizeof(taskname), "%s_start_retry_%d",
                      service->name, service->stats.n_failed_starts);
@@ -788,9 +788,9 @@ bool serviceHasListener(SERVICE* service, const char* name, const char* protocol
             // Listener with same name exists
             (strcmp(listener->name, name) == 0 ||
              // Listener listening on the same interface and port exists
-            ((strcmp(listener->protocol, protocol) == 0 && listener->port == port &&
-            ((address && listener->address && strcmp(listener->address, address) == 0) ||
-             (address == NULL && listener->address == NULL))))))
+             ((strcmp(listener->protocol, protocol) == 0 && listener->port == port &&
+               ((address && listener->address && strcmp(listener->address, address) == 0) ||
+                (address == NULL && listener->address == NULL))))))
         {
             return true;
         }

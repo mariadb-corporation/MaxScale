@@ -548,7 +548,7 @@ private:
     // Significantly faster than library version.
     static char toupper(char c)
     {
-        return (c >= 'a' && c <='z') ? c - ('a' - 'A') : c;
+        return (c >= 'a' && c <= 'z') ? c - ('a' - 'A') : c;
     }
 
     token_t expect_token(const char* zWord, int len, token_t token)

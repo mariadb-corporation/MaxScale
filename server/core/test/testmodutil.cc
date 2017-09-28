@@ -62,7 +62,8 @@ test1()
     ss_dfprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
     ss_info_dassert(0 == modutil_MySQL_Query(buffer, &sql, &length, &residual), "Default buffer should fail");
     ss_dfprintf(stderr, "\t..done\nReplace SQL in buffer");
-    ss_info_dassert(0 == modutil_replace_SQL(buffer, (char*)"select * from some_table;"), "Default buffer should fail");
+    ss_info_dassert(0 == modutil_replace_SQL(buffer, (char*)"select * from some_table;"),
+                    "Default buffer should fail");
     ss_dfprintf(stderr, "\t..done\nTidy up.");
     gwbuf_free(buffer);
     ss_dfprintf(stderr, "\t..done\n");

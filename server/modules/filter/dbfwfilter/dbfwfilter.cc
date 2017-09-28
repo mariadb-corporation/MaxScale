@@ -99,7 +99,7 @@ namespace
 struct DbfwThread
 {
     DbfwThread():
-    rule_version(0)
+        rule_version(0)
     {
     }
 
@@ -689,7 +689,7 @@ void dbfw_yyerror(void* scanner, const char* error)
  */
 static SRule find_rule_by_name(const RuleList& rules, std::string name)
 {
-  for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
+    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
         if ((*it)->name() == name)
         {

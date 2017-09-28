@@ -26,7 +26,7 @@ void Semaphore::get_current_timespec(time_t seconds,
 
     timespec& ts = *pTs;
 
-    ss_debug(int rc=) clock_gettime(CLOCK_REALTIME, &ts);
+    ss_debug(int rc = ) clock_gettime(CLOCK_REALTIME, &ts);
     ss_dassert(rc == 0);
 
     ts.tv_sec += seconds;

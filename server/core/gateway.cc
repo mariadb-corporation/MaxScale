@@ -209,7 +209,7 @@ const DEBUG_ARGUMENT debug_arguments[] =
     },
     {
         "redirect-output-to-file", redirect_output_to_file,
-            "redirect stdout and stderr to the file given as an argument"
+        "redirect stdout and stderr to the file given as an argument"
     },
     {NULL, NULL, NULL}
 };
@@ -2733,7 +2733,7 @@ static int set_user(const char* user)
     }
     if (prctl(PR_GET_DUMPABLE) == 0)
     {
-        if (prctl(PR_SET_DUMPABLE , 1) == -1)
+        if (prctl(PR_SET_DUMPABLE, 1) == -1)
         {
             printf("Error: Failed to set dumpable flag on for the process '%s': %d %s\n",
                    pwname->pw_name, errno, mxs_strerror(errno));

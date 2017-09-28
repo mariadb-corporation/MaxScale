@@ -473,7 +473,8 @@ test1()
     ss_info_dassert(hint == buffer->hint, "Buffer should point to first and only hint");
     ss_dfprintf(stderr, "\t..done\nSet a property for the buffer");
     gwbuf_add_property(buffer, (char*)"name", (char*)"value");
-    ss_info_dassert(0 == strcmp("value", gwbuf_get_property(buffer, (char*)"name")), "Should now have correct property");
+    ss_info_dassert(0 == strcmp("value", gwbuf_get_property(buffer, (char*)"name")),
+                    "Should now have correct property");
     strcpy((char*)GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
     ss_dfprintf(stderr, "\t..done\nLoad some data into the buffer");
     ss_info_dassert('q' == GWBUF_DATA_CHAR(buffer, 4), "Fourth character of buffer must be 'q'");

@@ -601,8 +601,8 @@ static bool rule_check_database_options(json_t* pColumn,
                       rule_type,
                       KEY_TABLE,
                       KEY_DATABASE);
-       }
-       return false;
+        }
+        return false;
     }
 }
 
@@ -1189,11 +1189,11 @@ void MaskingRules::ObfuscateRule::rewrite(LEncString& s) const
 
     for (LEncString::iterator i = s.begin(); i <= s.end(); i++)
     {
-      // ASCII 32 is first printable char
-      unsigned char d = abs((char)(*i ^ c)) + 32;
-      c += d << 3;
-      // ASCII 126 is last printable char
-      *i = d <= 126 ? d : 126;
+        // ASCII 32 is first printable char
+        unsigned char d = abs((char)(*i ^ c)) + 32;
+        c += d << 3;
+        // ASCII 126 is last printable char
+        *i = d <= 126 ? d : 126;
     }
 }
 

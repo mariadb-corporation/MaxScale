@@ -91,12 +91,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread finish. */
         {
             { Config::rules_name, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
-            { Config::warn_type_mismatch_name,
-              MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
-              MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values },
-            { Config::large_payload_name,
-              MXS_MODULE_PARAM_ENUM, Config::large_payload_default,
-              MXS_MODULE_OPT_NONE, Config::large_payload_values },
+            {
+                Config::warn_type_mismatch_name,
+                MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
+                MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values
+            },
+            {
+                Config::large_payload_name,
+                MXS_MODULE_PARAM_ENUM, Config::large_payload_default,
+                MXS_MODULE_OPT_NONE, Config::large_payload_values
+            },
             { MXS_END_MODULE_PARAMS }
         }
     };

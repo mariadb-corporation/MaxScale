@@ -185,13 +185,17 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"transaction_safety", MXS_MODULE_PARAM_BOOL, "false"},
             {"semisync", MXS_MODULE_PARAM_BOOL, "false"},
             {"encrypt_binlog", MXS_MODULE_PARAM_BOOL, "false"},
-            {"encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc",
-             MXS_MODULE_OPT_NONE, enc_algo_values},
+            {
+                "encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc",
+                MXS_MODULE_OPT_NONE, enc_algo_values
+            },
             {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
             {"mariadb10_slave_gtid", MXS_MODULE_PARAM_BOOL, "false"},
             {"mariadb10_master_gtid", MXS_MODULE_PARAM_BOOL, "false"},
-            {"binlog_structure", MXS_MODULE_PARAM_ENUM, "flat",
-             MXS_MODULE_OPT_NONE, binlog_storage_values},
+            {
+                "binlog_structure", MXS_MODULE_PARAM_ENUM, "flat",
+                MXS_MODULE_OPT_NONE, binlog_storage_values
+            },
             {"shortburst", MXS_MODULE_PARAM_COUNT, DEF_SHORT_BURST},
             {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
@@ -788,9 +792,9 @@ createInstance(SERVICE *service, char **options)
         inst->storage_type == BLR_BINLOG_STORAGE_TREE)
     {
         MXS_ERROR("%s: binlog_structure 'tree' mode can be enabled only"
-                      " with MariaDB Master GTID registration feature."
-                      " Please enable it with option"
-                      " 'mariadb10_master_gtid = on'",
+                  " with MariaDB Master GTID registration feature."
+                  " Please enable it with option"
+                  " 'mariadb10_master_gtid = on'",
                   service->name);
         free_instance(inst);
         return NULL;
@@ -1117,9 +1121,9 @@ createInstance(SERVICE *service, char **options)
                                               " Please issue SET @@GLOBAL.GTID_SLAVE_POS =''"
                                               " and START SLAVE."
                                               " Existing binlogs might be overwritten.");
-               MXS_ERROR("%s: %s",
-                         inst->service->name,
-                         inst->m_errmsg);
+                MXS_ERROR("%s: %s",
+                          inst->service->name,
+                          inst->m_errmsg);
 
                 return (MXS_ROUTER *)inst;
             }
@@ -1239,7 +1243,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     slave->encryption_ctx = NULL;
     slave->mariadb_gtid = NULL;
     slave->gtid_maps = NULL;
-    memset(&slave->f_info, 0 , sizeof (MARIADB_GTID_INFO));
+    memset(&slave->f_info, 0, sizeof (MARIADB_GTID_INFO));
 
     /**
      * Add this session to the list of active sessions.
@@ -1975,10 +1979,12 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
     {
         json_t* obj = json_object();
 
-        json_object_set_new(obj, "ssl_ca_cert", json_string(router_inst->service->dbref->server->server_ssl->ssl_ca_cert));
+        json_object_set_new(obj, "ssl_ca_cert",
+                            json_string(router_inst->service->dbref->server->server_ssl->ssl_ca_cert));
         json_object_set_new(obj, "ssl_cert", json_string(router_inst->service->dbref->server->server_ssl->ssl_cert));
         json_object_set_new(obj, "ssl_key", json_string(router_inst->service->dbref->server->server_ssl->ssl_key));
-        json_object_set_new(obj, "ssl_version", json_string(router_inst->ssl_version ? router_inst->ssl_version : "MAX"));
+        json_object_set_new(obj, "ssl_version",
+                            json_string(router_inst->ssl_version ? router_inst->ssl_version : "MAX"));
 
         json_object_set_new(rval, "master_ssl", obj);
     }
@@ -1989,9 +1995,9 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
         json_t* obj = json_object();
 
         json_object_set_new(obj, "key", json_string(
-                                                    router_inst->encryption.key_management_filename));
+                                router_inst->encryption.key_management_filename));
         json_object_set_new(obj, "algorithm", json_string(
-                                                          blr_get_encryption_algorithm(router_inst->encryption.encryption_algorithm)));
+                                blr_get_encryption_algorithm(router_inst->encryption.encryption_algorithm)));
         json_object_set_new(obj, "key_length",
                             json_integer(8 * router_inst->encryption.key_len));
 
@@ -2050,7 +2056,7 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
     json_object_set_new(rval, "residual_packets", json_integer(router_inst->stats.n_residuals));
 
     double average_packets = router_inst->stats.n_reads != 0 ?
-        ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0;
+                             ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0;
 
     json_object_set_new(rval, "average_events_per_packets", json_real(average_packets));
 
@@ -2424,11 +2430,11 @@ errorReply(MXS_ROUTER *instance,
     {
         /* Stopped state, no reconnection */
         MXS_INFO("%s: Master connection has been closed. State is '%s', "
-                  "%snot retrying a new connection to master [%s]:%d",
-                  router->service->name,
-                  blrm_states[router->master_state], msg,
-                  router->service->dbref->server->name,
-                  router->service->dbref->server->port);
+                 "%snot retrying a new connection to master [%s]:%d",
+                 router->service->name,
+                 blrm_states[router->master_state], msg,
+                 router->service->dbref->server->name,
+                 router->service->dbref->server->port);
     }
 
     if (errmsg)
@@ -2853,9 +2859,9 @@ blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *ins
         if (new_val < 0)
         {
             MXS_WARNING("Found invalid 'master_heartbeat_period' value"
-                      " for service '%s': %s, ignoring it.",
-                      inst->service->name,
-                      value);
+                        " for service '%s': %s, ignoring it.",
+                        inst->service->name,
+                        value);
         }
         else
         {
@@ -2872,9 +2878,9 @@ blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *ins
         if (new_val <= 0)
         {
             MXS_WARNING("Found invalid 'master_connect_retry' value"
-                      " for service '%s': %s, ignoring it.",
-                      inst->service->name,
-                      value);
+                        " for service '%s': %s, ignoring it.",
+                        inst->service->name,
+                        value);
         }
         else
         {
@@ -3350,15 +3356,15 @@ static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst)
     int rc = sqlite3_exec(inst->gtid_maps,
                           "BEGIN;"
                           "CREATE TABLE IF NOT EXISTS gtid_maps("
-                              "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                              "rep_domain INT, "
-                              "server_id INT, "
-                              "sequence BIGINT, "
-                              "binlog_file VARCHAR(255), "
-                              "start_pos BIGINT, "
-                              "end_pos BIGINT);"
+                          "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                          "rep_domain INT, "
+                          "server_id INT, "
+                          "sequence BIGINT, "
+                          "binlog_file VARCHAR(255), "
+                          "start_pos BIGINT, "
+                          "end_pos BIGINT);"
                           "CREATE UNIQUE INDEX IF NOT EXISTS gtid_index "
-                              "ON gtid_maps(rep_domain, server_id, sequence, binlog_file);"
+                          "ON gtid_maps(rep_domain, server_id, sequence, binlog_file);"
                           "COMMIT;",
                           NULL, NULL, &errmsg);
     if (rc != SQLITE_OK)

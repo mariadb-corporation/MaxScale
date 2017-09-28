@@ -330,7 +330,7 @@ static void merge_netmask(char *host)
              */
             *delimiter_loc = '/';
             MXS_ERROR("Unrecognized IP-bytes in host/mask-combination. "
-                    "Merge incomplete: %s", host);
+                      "Merge incomplete: %s", host);
             return;
         }
 
@@ -346,7 +346,7 @@ static void merge_netmask(char *host)
     {
         *delimiter_loc = '/';
         MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
-                "Merge incomplete: %s", host);
+                  "Merge incomplete: %s", host);
     }
 }
 
@@ -463,21 +463,21 @@ static int gw_mysql_set_timeouts(MYSQL* handle)
     MXS_CONFIG* cnf = config_get_global_options();
 
     if ((rc = mysql_optionsv(handle, MYSQL_OPT_READ_TIMEOUT,
-                            (void *) &cnf->auth_read_timeout)))
+                             (void *) &cnf->auth_read_timeout)))
     {
         MXS_ERROR("Failed to set read timeout for backend connection.");
         goto retblock;
     }
 
     if ((rc = mysql_optionsv(handle, MYSQL_OPT_CONNECT_TIMEOUT,
-                            (void *) &cnf->auth_conn_timeout)))
+                             (void *) &cnf->auth_conn_timeout)))
     {
         MXS_ERROR("Failed to set connect timeout for backend connection.");
         goto retblock;
     }
 
     if ((rc = mysql_optionsv(handle, MYSQL_OPT_WRITE_TIMEOUT,
-                            (void *) &cnf->auth_write_timeout)))
+                             (void *) &cnf->auth_write_timeout)))
     {
         MXS_ERROR("Failed to set write timeout for backend connection.");
         goto retblock;
@@ -537,7 +537,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
     const char *template = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
     const char* query_pw = strstr(server->version_string, "5.7.") ?
-    MYSQL57_PASSWORD : MYSQL_PASSWORD;
+                           MYSQL57_PASSWORD : MYSQL_PASSWORD;
     char query[strlen(template) + strlen(query_pw) + 1];
     bool rval = true;
     sprintf(query, template, query_pw);

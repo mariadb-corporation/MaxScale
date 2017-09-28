@@ -728,7 +728,7 @@ void protocol_remove_srv_command(MySQLProtocol* p)
 }
 
 mxs_mysql_cmd_t protocol_get_srv_command(MySQLProtocol* p,
-                                            bool           removep)
+                                         bool           removep)
 {
     mxs_mysql_cmd_t cmd;
 
@@ -1095,7 +1095,7 @@ int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char*
  * @return The length of the response packet
  */
 static int response_length(bool with_ssl, bool ssl_established, char *user, uint8_t *passwd,
-                char *dbname, const char *auth_module)
+                           char *dbname, const char *auth_module)
 {
     long bytes;
 
@@ -1379,7 +1379,7 @@ int send_mysql_native_password_response(DCB* dcb)
     gw_get_shared_session_auth_info(dcb, &local_session);
 
     uint8_t *curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
-        local_session.client_sha1 : null_client_sha1;
+                           local_session.client_sha1 : null_client_sha1;
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);

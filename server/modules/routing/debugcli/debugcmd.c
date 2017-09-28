@@ -931,7 +931,7 @@ struct subcommand addoptions[] =
 {
     {
         "user", 2, 2, inet_add_admin_user,
-         "Add an administrative account for using maxadmin over the network",
+        "Add an administrative account for using maxadmin over the network",
         "Usage: add user USER PASSWORD\n"
         "\n"
         "Parameters:\n"

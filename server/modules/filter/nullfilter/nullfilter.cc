@@ -41,7 +41,7 @@ const MXS_ENUM_VALUE capability_values[] =
 };
 
 size_t RCAP_TYPE_NAME_MAXLEN = 30; // strlen(RCAP_TYPE_TRANSACTION_TRACKING)
-size_t RCAP_TYPE_COUNT = sizeof(capability_values)/sizeof(capability_values[0]);
+size_t RCAP_TYPE_COUNT = sizeof(capability_values) / sizeof(capability_values[0]);
 
 }
 
