@@ -1798,7 +1798,8 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
         case CONN_QUERY:
             if (strncasecmp(token, WORD_QUERY, sizeof(WORD_QUERY) - 1) == 0)
             {
-                kill_type = KT_QUERY;
+                kill_type &= ~KT_CONNECTION;
+                kill_type |= KT_QUERY;
                 get_next = true;
             }
             else if (strncasecmp(token, WORD_CONNECTION, sizeof(WORD_CONNECTION) - 1) == 0)

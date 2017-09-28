@@ -3,7 +3,7 @@
 #include "../MySQLClient/mysql_client.cc"
 
 int test_one_query(const char *query, bool should_succeed, uint64_t expected_tid,
-                   kill_type_t expected_kt)
+                   int expected_kt)
 {
     char *query_copy = MXS_STRDUP_A(query);
     uint64_t result_tid = 1111111;
@@ -13,7 +13,7 @@ int test_one_query(const char *query, bool should_succeed, uint64_t expected_tid
     if (!should_succeed)
     {
         result_tid = expected_tid;
-        result_kt = expected_kt;
+        result_kt = (kill_type_t)expected_kt;
     }
     bool success = parse_kill_query(query_copy, &result_tid, &result_kt);
     MXS_FREE(query_copy);
@@ -49,7 +49,7 @@ typedef struct test_t
     const char *query;
     bool should_succeed;
     uint64_t correct_id;
-    kill_type_t correct_kt;
+    int correct_kt;
 } test_t;
 
 int main(int argc, char **argv)
@@ -73,7 +73,16 @@ int main(int argc, char **argv)
         {"KIll query   \t    \n    \t   21  \n \t   ", true, 21, KT_QUERY},
         {"KIll   \t    \n    \t   -6  \n \t   ",       false, 0, KT_CONNECTION},
         {"KIll 12345678901234567890123456  \n \t   ",  false, 0, KT_CONNECTION},
-        {"kill ;", false, 0, KT_QUERY}
+        {"kill ;", false, 0, KT_QUERY},
+        {" kill ConNectioN 123 HARD",        false, 123, KT_CONNECTION},
+        {" kill ConNectioN 123 SOFT",        false, 123, KT_CONNECTION},
+        {" kill ConNectioN SOFT 123",        false, 123, KT_CONNECTION},
+        {" kill  HARD ConNectioN 123",       true,  123, KT_CONNECTION | KT_HARD},
+        {" kill  SOFT ConNectioN 123",       true,  123, KT_CONNECTION | KT_SOFT},
+        {" kill  HARD 123",                  true,  123, KT_CONNECTION | KT_HARD},
+        {" kill  SOFT 123",                  true,  123, KT_CONNECTION | KT_SOFT},
+        {"KIll soft query 21 ",              true, 21, KT_QUERY | KT_SOFT},
+        {"KIll query soft 21 ",              false, 21, KT_QUERY}
     };
     int result = 0;
     int arr_size = sizeof(tests) / sizeof(test_t);
@@ -82,7 +91,7 @@ int main(int argc, char **argv)
         const char *query = tests[i].query;
         bool should_succeed = tests[i].should_succeed;
         uint64_t expected_tid = tests[i].correct_id;
-        kill_type_t expected_kt = tests[i].correct_kt;
+        int expected_kt = tests[i].correct_kt;
         result += test_one_query(query, should_succeed, expected_tid, expected_kt);
     }
     return result;
