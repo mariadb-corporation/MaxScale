@@ -670,12 +670,12 @@ static inline bool not_ok_packet(const GWBUF* buffer)
     uint8_t* data = GWBUF_DATA(buffer);
 
     return data[4] != MYSQL_REPLY_OK ||
-        // Should be more than 7 bytes of payload
-        gw_mysql_get_byte3(data) < MYSQL_OK_PACKET_MIN_LEN - MYSQL_HEADER_LEN ||
-        // Should have no affected rows
-        data[5] != 0 ||
-        // Should not generate an insert ID
-        data[6] != 0;
+           // Should be more than 7 bytes of payload
+           gw_mysql_get_byte3(data) < MYSQL_OK_PACKET_MIN_LEN - MYSQL_HEADER_LEN ||
+           // Should have no affected rows
+           data[5] != 0 ||
+           // Should not generate an insert ID
+           data[6] != 0;
 }
 
 static inline bool not_err_packet(const GWBUF* buffer)

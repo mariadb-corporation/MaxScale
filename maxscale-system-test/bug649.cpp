@@ -53,21 +53,13 @@ int main(int argc, char *argv[])
     int check_iret[threads_num];
 
     Test = new TestConnections(argc, argv);
-    int time_to_run = (Test->smoke) ? 10 : 30;
-    Test->set_timeout(10);
-
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
-    Test->connect_rwsplit();
+    int time_to_run = 10;
+    Test->set_timeout(60);
 
     Test->repl->connect();
-    Test->tprintf("Drop t1 if exists\n");
-    execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
-    Test->tprintf("Create t1\n");
-    Test->add_result(create_t1(Test->repl->nodes[0]), "t1 creation Failed\n");
+    create_t1(Test->repl->nodes[0]);
+    Test->repl->sync_slaves();
     Test->repl->close_connections();
-
-    Test->stop_timeout();
-    sleep(5);
 
     create_insert_string(sql, 65000, 1);
     Test->tprintf("Creating query threads\n", time_to_run);
@@ -90,14 +82,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-    if (execute_query_silent(Test->conn_rwsplit, (char *) "show processlist;") == 0)
-    {
-        Test->add_result(1, "Failure is expected, but query is ok\n");
-    }
-
-    Test->stop_timeout();
-    sleep(time_to_run);
-
+    Test->add_result(execute_query(Test->conn_rwsplit, "show processlist;") == 0, "Query should fail");
     Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0);
     fflush(stdout);
@@ -110,23 +95,14 @@ int main(int argc, char *argv[])
         pthread_join(parall_traffic1[i], NULL);
         Test->tprintf("exit %d\n", i);
     }
-    Test->stop_timeout();
-    sleep(5);
 
     Test->set_timeout(20);
     Test->tprintf("Checking Maxscale is alive\n");
     Test->check_maxscale_alive();
 
-    Test->set_timeout(20);
-    Test->tprintf("Reconnecting to RWSplit ...\n");
-    Test->connect_rwsplit();
-    Test->tprintf("                        ... and trying query\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
-    Test->close_rwsplit();
-
     /** Clean up */
     Test->repl->connect();
-    execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
+    execute_query(Test->repl->nodes[0], "DROP TABLE t1;");
 
     int rval = Test->global_result;
     delete Test;

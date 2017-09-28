@@ -989,7 +989,8 @@ static void set_port(struct sockaddr_storage *addr, uint16_t port)
     }
 }
 
-int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr, const char *host, uint16_t port)
+int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr, const char *host,
+                        uint16_t port)
 {
     ss_dassert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
     struct addrinfo *ai = NULL, hint = {};

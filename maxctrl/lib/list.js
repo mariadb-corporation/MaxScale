@@ -19,7 +19,8 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('servers', 'List servers', function(yargs) {
-            return yargs.epilog('List all servers in MaxScale.');
+            return yargs.epilog('List all servers in MaxScale.')
+                .usage('Usage: list servers')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'servers', [
@@ -32,7 +33,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('services', 'List services', function(yargs) {
-            return yargs.epilog('List all services and the servers they use.');
+            return yargs.epilog('List all services and the servers they use.')
+                .usage('Usage: list services')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'services',[
@@ -45,7 +47,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('listeners <service>', 'List listeners of a service', function(yargs) {
-            return yargs.epilog('List listeners for a service.');
+            return yargs.epilog('List listeners for a service.')
+                .usage('Usage: list listeners <service>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getSubCollection(host, 'services/' + argv.service, 'attributes.listeners', [
@@ -56,7 +59,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('monitors', 'List monitors', function(yargs) {
-            return yargs.epilog('List all monitors in MaxScale.');
+            return yargs.epilog('List all monitors in MaxScale.')
+                .usage('Usage: list monitors')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'monitors', [
@@ -67,7 +71,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('sessions', 'List sessions', function(yargs) {
-            return yargs.epilog('List all client sessions.');
+            return yargs.epilog('List all client sessions.')
+                .usage('Usage: list sessions')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'sessions',[
@@ -79,7 +84,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('filters', 'List filters', function(yargs) {
-            return yargs.epilog('List all filters in MaxScale.');
+            return yargs.epilog('List all filters in MaxScale.')
+                .usage('Usage: list filters')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'filters', [
@@ -90,7 +96,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('modules', 'List loaded modules', function(yargs) {
-            return yargs.epilog('List all currently loaded modules.');
+            return yargs.epilog('List all currently loaded modules.')
+                .usage('Usage: list modules')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'maxscale/modules',[
@@ -101,7 +108,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('users', 'List created network users', function(yargs) {
-            return yargs.epilog('List the users that can be used to connect to the MaxScale REST API.');
+            return yargs.epilog('List the users that can be used to connect to the MaxScale REST API.')
+                .usage('Usage: list users')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'users/inet',[
@@ -110,7 +118,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('commands', 'List module commands', function(yargs) {
-            return yargs.epilog('List all available module commands.');
+            return yargs.epilog('List all available module commands.')
+                .usage('Usage: list commands')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getCollection(host, 'maxscale/modules',[

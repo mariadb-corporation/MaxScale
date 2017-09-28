@@ -172,7 +172,7 @@ struct TEST_CASE
     },
 };
 
-const int N_TEST_CASES = sizeof(test_cases)/sizeof(test_cases[0]);
+const int N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
 
 int test(GWBUF** ppStmt,
          SetSqlModeParser::sql_mode_t expected_sql_mode,

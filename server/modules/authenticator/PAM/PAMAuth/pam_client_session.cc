@@ -250,7 +250,7 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
         if (i == 0 || service_refresh_users(dcb->service) == 0)
         {
             if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb,
-                         services_out, &err) != SQLITE_OK)
+                             services_out, &err) != SQLITE_OK)
             {
                 MXS_ERROR("Failed to execute query: '%s'", err);
                 sqlite3_free(err);

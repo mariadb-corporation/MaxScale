@@ -303,13 +303,9 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
     for (int i = 0; i < cmd->arg_count_max; i++)
     {
         modulecmd_arg_type_t *type = &cmd->arg_types[i];
-
-        if (MODULECMD_GET_TYPE(type) != MODULECMD_ARG_OUTPUT)
-        {
-            dcb_printf(dcb, "%s%s",
-                       modulecmd_argtype_to_str(&cmd->arg_types[i]),
-                       i < cmd->arg_count_max - 1 ? " " : "");
-        }
+        dcb_printf(dcb, "%s%s",
+                   modulecmd_argtype_to_str(&cmd->arg_types[i]),
+                   i < cmd->arg_count_max - 1 ? " " : "");
     }
 
     dcb_printf(dcb, "\n\n");
@@ -317,13 +313,9 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
     for (int i = 0; i < cmd->arg_count_max; i++)
     {
         modulecmd_arg_type_t *type = &cmd->arg_types[i];
-
-        if (MODULECMD_GET_TYPE(type) != MODULECMD_ARG_OUTPUT)
-        {
-            dcb_printf(dcb, "    %s - %s\n",
-                       modulecmd_argtype_to_str(&cmd->arg_types[i]),
-                       cmd->arg_types[i].description);
-        }
+        dcb_printf(dcb, "    %s - %s\n",
+                   modulecmd_argtype_to_str(&cmd->arg_types[i]),
+                   cmd->arg_types[i].description);
     }
 
     dcb_printf(dcb, "\n");
@@ -931,7 +923,7 @@ struct subcommand addoptions[] =
 {
     {
         "user", 2, 2, inet_add_admin_user,
-         "Add an administrative account for using maxadmin over the network",
+        "Add an administrative account for using maxadmin over the network",
         "Usage: add user USER PASSWORD\n"
         "\n"
         "Parameters:\n"
@@ -1584,12 +1576,15 @@ struct subcommand alteroptions[] =
         "KEY=VALUE List of `key=value` pairs separated by spaces\n"
         "\n"
         "All monitors support the following values for KEY:\n"
-        "user                    Username used when connecting to servers\n"
-        "password                Password used when connecting to servers\n"
-        "monitor_interval        Monitoring interval in milliseconds\n"
-        "backend_connect_timeout Server coneection timeout in seconds\n"
-        "backend_write_timeout   Server write timeout in seconds\n"
-        "backend_read_timeout    Server read timeout in seconds\n"
+        "user                     Username used when connecting to servers\n"
+        "password                 Password used when connecting to servers\n"
+        "monitor_interval         Monitoring interval in milliseconds\n"
+        "backend_connect_timeout  Server coneection timeout in seconds\n"
+        "backend_write_timeout    Server write timeout in seconds\n"
+        "backend_read_timeout     Server read timeout in seconds\n"
+        "backend_connect_attempts Number of re-connection attempts\n"
+        "journal_max_age          Maximum age of server state journal\n"
+        "script_timeout           Timeout in seconds for monitor scripts\n"
         "\n"
         "This will alter an existing parameter of a monitor. To remove parameters,\n"
         "pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='\n"
@@ -1659,12 +1654,6 @@ struct subcommand alteroptions[] =
     }
 };
 
-static inline bool requires_output_dcb(const MODULECMD *cmd)
-{
-    modulecmd_arg_type_t *type = &cmd->arg_types[0];
-    return cmd->arg_count_max > 0 && MODULECMD_GET_TYPE(type) == MODULECMD_ARG_OUTPUT;
-}
-
 static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
                               char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
                               char *v10, char *v11, char *v12)
@@ -1682,18 +1671,6 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
 
     if (cmd)
     {
-        if (requires_output_dcb(cmd))
-        {
-            /** The command requires a DCB for output, add the client DCB
-             * as the first argument */
-            for (int i = valuelen - 1; i > 0; i--)
-            {
-                values[i] = values[i - 1];
-            }
-            values[0] = dcb;
-            numargs += numargs + 1 < valuelen - 1 ? 1 : 0;
-        }
-
         MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, numargs, values);
 
         if (arg)
@@ -1702,11 +1679,15 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
 
             if (!modulecmd_call_command(cmd, arg, &output))
             {
-                dcb_printf(dcb, "Error: %s\n", modulecmd_get_error());
+                const char* err = modulecmd_get_error();
+                dcb_printf(dcb, "Error: %s\n", *err ? err :
+                           "Call to module command failed, see log file for more details");
             }
             else if (output)
             {
-                dcb_printf(dcb, "%s\n", json_dumps(output, JSON_INDENT(4)));
+                char* js = json_dumps(output, JSON_INDENT(4));
+                dcb_printf(dcb, "%s\n", js);
+                MXS_FREE(js);
             }
 
             json_decref(output);

@@ -1206,7 +1206,7 @@ bool config_get_compiled_regexes(const MXS_CONFIG_PARAMETER *params,
     {
         ss_dassert(out_codes[i]);
         *out_codes[i] = config_get_compiled_regex(params, keys[i], options,
-                                                    &ovec_size_temp);
+                                                  &ovec_size_temp);
         if (*out_codes[i])
         {
             if (ovec_size_temp > max_ovec_size)

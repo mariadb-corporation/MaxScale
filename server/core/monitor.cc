@@ -1537,6 +1537,8 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
     dprintf(file, "%s=%d\n", CN_BACKEND_WRITE_TIMEOUT, monitor->write_timeout);
     dprintf(file, "%s=%d\n", CN_BACKEND_READ_TIMEOUT, monitor->read_timeout);
     dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
+    dprintf(file, "%s=%ld\n", CN_JOURNAL_MAX_AGE, monitor->journal_max_age);
+    dprintf(file, "%s=%d\n", CN_SCRIPT_TIMEOUT, monitor->script_timeout);
 
     if (monitor->databases)
     {
@@ -1564,6 +1566,8 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
         CN_BACKEND_WRITE_TIMEOUT,
         CN_BACKEND_READ_TIMEOUT,
         CN_BACKEND_CONNECT_ATTEMPTS,
+        CN_JOURNAL_MAX_AGE,
+        CN_SCRIPT_TIMEOUT,
         CN_SERVERS
     };
 
@@ -1747,6 +1751,7 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
     json_object_set_new(rval, CN_BACKEND_WRITE_TIMEOUT, json_integer(monitor->write_timeout));
     json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
     json_object_set_new(rval, CN_JOURNAL_MAX_AGE, json_integer(monitor->journal_max_age));
+    json_object_set_new(rval, CN_SCRIPT_TIMEOUT, json_integer(monitor->script_timeout));
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);

@@ -61,8 +61,8 @@ struct WORKER_STATISTICS
 };
 
 class Worker : public MXS_WORKER
-             , private MessageQueue::Handler
-             , private MXS_POLL_DATA
+    , private MessageQueue::Handler
+    , private MXS_POLL_DATA
 {
     Worker(const Worker&);
     Worker& operator = (const Worker&);

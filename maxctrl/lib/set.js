@@ -23,7 +23,8 @@ exports.builder = function(yargs) {
                                 'Any other states will be overridden by the monitor on the next ' +
                                 'monitoring interval. To manually control server states, use the ' +
                                 '`stop monitor <name>` command to stop the monitor before setting ' +
-                                'the server states manually.');
+                                'the server states manually.')
+                .usage('Usage: set server <server> <state>')
         }, function(argv) {
             var target = 'servers/' + argv.server + '/set?state=' + argv.state
             maxctrl(argv, function(host) {

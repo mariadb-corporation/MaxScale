@@ -96,46 +96,46 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
 extern "C"
 {
 
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_PROTOCOL MyObject =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        gw_read_client_event,                   /* Read - EPOLLIN handler        */
-        gw_MySQLWrite_client,                   /* Write - data from gateway     */
-        gw_write_client_event,                  /* WriteReady - EPOLLOUT handler */
-        gw_error_client_event,                  /* Error - EPOLLERR handler      */
-        gw_client_hangup_event,                 /* HangUp - EPOLLHUP handler     */
-        gw_MySQLAccept,                         /* Accept                        */
-        NULL,                                   /* Connect                       */
-        gw_client_close,                        /* Close                         */
-        gw_MySQLListener,                       /* Listen                        */
-        NULL,                                   /* Authentication                */
-        NULL,                                   /* Session                       */
-        gw_default_auth,                        /* Default authenticator         */
-        gw_connection_limit,                    /* Send error connection limit   */
-        NULL
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_GA,
-        MXS_PROTOCOL_VERSION,
-        "The client to MaxScale MySQL protocol implementation",
-        "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        process_init,
-        process_finish,
-        thread_init,
-        thread_finish,
+        static MXS_PROTOCOL MyObject =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            gw_read_client_event,                   /* Read - EPOLLIN handler        */
+            gw_MySQLWrite_client,                   /* Write - data from gateway     */
+            gw_write_client_event,                  /* WriteReady - EPOLLOUT handler */
+            gw_error_client_event,                  /* Error - EPOLLERR handler      */
+            gw_client_hangup_event,                 /* HangUp - EPOLLHUP handler     */
+            gw_MySQLAccept,                         /* Accept                        */
+            NULL,                                   /* Connect                       */
+            gw_client_close,                        /* Close                         */
+            gw_MySQLListener,                       /* Listen                        */
+            NULL,                                   /* Authentication                */
+            NULL,                                   /* Session                       */
+            gw_default_auth,                        /* Default authenticator         */
+            gw_connection_limit,                    /* Send error connection limit   */
+            NULL
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_PROTOCOL,
+            MXS_MODULE_GA,
+            MXS_PROTOCOL_VERSION,
+            "The client to MaxScale MySQL protocol implementation",
+            "V1.1.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            process_init,
+            process_finish,
+            thread_init,
+            thread_finish,
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
+
+        return &info;
+    }
 
 }
 /*lint +e14 */
@@ -1384,7 +1384,7 @@ static int gw_client_close(DCB *dcb)
         {
             ss_dassert(target->state == SESSION_STATE_ROUTER_READY ||
                        target->state == SESSION_STATE_STOPPING);
-            ss_debug(bool removed =) mxs_worker_deregister_session(target->ses_id);
+            ss_debug(bool removed = ) mxs_worker_deregister_session(target->ses_id);
             ss_dassert(removed);
             session_close(target);
         }
@@ -1777,6 +1777,8 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
 {
     const char WORD_CONNECTION[] = "CONNECTION";
     const char WORD_QUERY[] = "QUERY";
+    const char WORD_HARD[] = "HARD";
+    const char WORD_SOFT[] = "SOFT";
     const char DELIM[] = " \n\t";
 
     kill_type_t kill_type = KT_CONNECTION;
@@ -1822,9 +1824,19 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
             {
                 get_next = true;
             }
-            /* Move to next state regardless of comparison result. The current
-             * part is optional and the process id may already be in the token. */
-            state = ID;
+
+            if (strncasecmp(token, WORD_HARD, sizeof(WORD_HARD) - 1) == 0 ||
+                strncasecmp(token, WORD_SOFT, sizeof(WORD_SOFT) - 1) == 0)
+            {
+                /* This is an optional token and needs to be ignored */
+                get_next = true;
+            }
+            else
+            {
+                /* Move to next state regardless of comparison result. The current
+                 * part is optional and the process id may already be in the token. */
+                state = ID;
+            }
             break;
 
         case ID:

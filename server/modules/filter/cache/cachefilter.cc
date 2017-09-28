@@ -90,18 +90,14 @@ void cache_config_reset(CACHE_CONFIG& config)
  */
 bool cache_command_show(const MODULECMD_ARG* pArgs, json_t** output)
 {
-    ss_dassert(pArgs->argc == 2);
-    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_OUTPUT);
+    ss_dassert(pArgs->argc == 1);
     ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_FILTER);
-
-    DCB* pDcb = pArgs->argv[0].value.dcb;
-    ss_dassert(pDcb);
 
     const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
     ss_dassert(pFilterDef);
     CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(filter_def_get_instance(pFilterDef));
 
-    MXS_EXCEPTION_GUARD(pFilter->cache().show(pDcb));
+    MXS_EXCEPTION_GUARD(*output = pFilter->cache().show_json());
 
     return true;
 }
@@ -146,7 +142,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t show_argv[] =
     {
-        { MODULECMD_ARG_OUTPUT, "The output dcb" },
         { MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name" }
     };
 
