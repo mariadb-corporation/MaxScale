@@ -1709,7 +1709,9 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
             }
             else if (output)
             {
-                dcb_printf(dcb, "%s\n", json_dumps(output, JSON_INDENT(4)));
+                char* js = json_dumps(output, JSON_INDENT(4));
+                dcb_printf(dcb, "%s\n", js);
+                MXS_FREE(js);
             }
 
             json_decref(output);
