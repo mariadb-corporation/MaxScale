@@ -1705,7 +1705,9 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
 
             if (!modulecmd_call_command(cmd, arg, &output))
             {
-                dcb_printf(dcb, "Error: %s\n", modulecmd_get_error());
+                const char* err = modulecmd_get_error();
+                dcb_printf(dcb, "Error: %s\n", *err ? err :
+                           "Call to module command failed, see log file for more details");
             }
             else if (output)
             {
