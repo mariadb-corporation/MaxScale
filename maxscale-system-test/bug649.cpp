@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-    test.try_query(Test->conn_rwsplit, "show processlist;");
+    Test->add_result(execute_query(Test->conn_rwsplit, "show processlist;") == 0, "Query should fail");
     Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0);
     fflush(stdout);
