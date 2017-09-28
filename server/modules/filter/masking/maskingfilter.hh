@@ -38,7 +38,7 @@ public:
 
     uint64_t getCapabilities();
 
-    void reload(DCB* pOut);
+    bool reload();
 
     const Config& config() const
     {

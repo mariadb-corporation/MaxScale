@@ -100,13 +100,13 @@
  */
 typedef struct
 {
-   int seq_no;              /* Output sequence in result set */
-   char *last_file;         /* Last binlog file found in GTID repo */
-   const char *binlogdir;   /* Binlog files cache dir */
-   DCB *client;             /* Connected client DCB */
-   bool use_tree;           /* Binlog structure type */
-   size_t n_files;          /* How many files */
-   uint64_t rowid;          /* ROWID of router current file*/
+    int seq_no;              /* Output sequence in result set */
+    char *last_file;         /* Last binlog file found in GTID repo */
+    const char *binlogdir;   /* Binlog files cache dir */
+    DCB *client;             /* Connected client DCB */
+    bool use_tree;           /* Binlog structure type */
+    size_t n_files;          /* How many files */
+    uint64_t rowid;          /* ROWID of router current file*/
 } BINARY_LOG_DATA_RESULT;
 
 extern void poll_fake_write_event(DCB *dcb);
@@ -486,7 +486,8 @@ blr_skip_leading_sql_comments(const char *sql_query)
 {
     const char *p = sql_query;
 
-    while (*p) {
+    while (*p)
+    {
         if (*p == '/' && p[1] == '*')
         {
             ++p; // skip '/'
@@ -709,15 +710,16 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
     }
     else
-    {    /* Handle ADMIN commands */
-         if (blr_handle_admin_stmt(router,
-                                   slave,
-                                   word,
-                                   brkb))
-         {
-             MXS_FREE(query_text);
-             return 1;
-         }
+    {
+        /* Handle ADMIN commands */
+        if (blr_handle_admin_stmt(router,
+                                  slave,
+                                  word,
+                                  brkb))
+        {
+            MXS_FREE(query_text);
+            return 1;
+        }
     }
 
     /* - 3 - Handle unsuppored statements from client */
@@ -829,7 +831,8 @@ static uint8_t timestamp_def[] =
     0x00, 0x00, 0x03, 0xfe, 0x00, 0x00, 0x02, 0x00
 };
 static uint8_t timestamp_eof[] = { 0x05, 0x00, 0x00, 0x05,
-                                   0xfe, 0x00, 0x00, 0x02, 0x00 };
+                                   0xfe, 0x00, 0x00, 0x02, 0x00
+                                 };
 
 /**
  * Send a response to a "SELECT UNIX_TIMESTAMP()" request.
@@ -1206,8 +1209,8 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
 
     /* Get the right GTID columns array */
     const char **gtid_status_columns = router->mariadb10_gtid ?
-                                 mariadb10_gtid_status_columns :
-                                 mysql_gtid_status_columns;
+                                       mariadb10_gtid_status_columns :
+                                       mysql_gtid_status_columns;
     /* Increment ncols with the right GTID columns */
     while (gtid_status_columns[gtid_cols++])
     {
@@ -1664,7 +1667,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
  * Send the response to the SQL command "SHOW SLAVE HOSTS"
  *
  * @param    router    The binlog router instance
- * @param    slave     The connected slave server 
+ * @param    slave     The connected slave server
  * @return             Non-zero if data was sent
  */
 static int
@@ -1898,10 +1901,10 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
                                     binlognamelen > 0,
                                     requested_pos))
         {
-             // ERROR
-             slave->state = BLRS_ERRORED;
-             dcb_close(slave->dcb);
-             return 1;
+            // ERROR
+            slave->state = BLRS_ERRORED;
+            dcb_close(slave->dcb);
+            return 1;
         }
     }
     else
@@ -2602,7 +2605,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
      * 1) Same name and pos as current router file: aka Up To Date
      */
     if (slave->binlog_pos == router->binlog_position &&
-             blr_is_current_binlog(router, slave))
+        blr_is_current_binlog(router, slave))
     {
         spinlock_acquire(&router->binlog_lock);
         spinlock_acquire(&slave->catch_lock);
@@ -3241,7 +3244,7 @@ blr_slave_send_disconnected_server(ROUTER_INSTANCE *router,
  * and close the connection to that server
  *
  * @param   router      The binlog router instance
- * @param   slave       The connected slave server 
+ * @param   slave       The connected slave server
  * @param   server_id   The slave server_id to disconnect
  * @return              Non-zero if data was sent to the client
  */
@@ -3262,7 +3265,7 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router,
     {
         /* don't examine slaves with state = 0 */
         if ((sptr->state == BLRS_REGISTERED ||
-            sptr->state == BLRS_DUMPING) &&
+             sptr->state == BLRS_DUMPING) &&
             sptr->serverid == server_id)
         {
             /* server_id found */
@@ -3752,7 +3755,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                     /* A new binlog file has been created and opened
                      * by CHANGE MASTER TO: use it
                      */
-                     blr_file_append(router, router->binlog_name);
+                    blr_file_append(router, router->binlog_name);
                 }
             }
         }
@@ -3810,9 +3813,9 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
  */
 static void
 blr_slave_send_error_packet(ROUTER_SLAVE *slave,
-                           char *msg,
-                           unsigned int err_num,
-                           char *status)
+                            char *msg,
+                            unsigned int err_num,
+                            char *status)
 {
     GWBUF *pkt;
     unsigned char *data;
@@ -3948,7 +3951,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
      * router->mariadb10_master_gtid is not set
      */
     if (!router->mariadb10_master_gtid &&
-         change_master.use_mariadb10_gtid)
+        change_master.use_mariadb10_gtid)
     {
         snprintf(error,
                  BINLOG_ERROR_MSG_LEN,
@@ -3978,11 +3981,11 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
             h_val > BLR_HEARTBEAT_MAX_INTERVAL)
         {
             snprintf(error,
-                         BINLOG_ERROR_MSG_LEN,
-                         "The requested value for the heartbeat period is "
-                         "either negative or exceeds the maximum allowed "
-                         "(%d seconds).",
-                         BLR_HEARTBEAT_MAX_INTERVAL);
+                     BINLOG_ERROR_MSG_LEN,
+                     "The requested value for the heartbeat period is "
+                     "either negative or exceeds the maximum allowed "
+                     "(%d seconds).",
+                     BLR_HEARTBEAT_MAX_INTERVAL);
 
             blr_abort_change_master(router,
                                     current_master,
@@ -4053,7 +4056,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
          !change_master.ssl_key))
     {
         if (change_master.ssl_enabled &&
-           atoi(change_master.ssl_enabled))
+            atoi(change_master.ssl_enabled))
         {
             snprintf(error,
                      BINLOG_ERROR_MSG_LEN,
@@ -4083,8 +4086,8 @@ int blr_handle_change_master(ROUTER_INSTANCE* router,
      * or empty if router->mariadb10_master_gtid is set.
      */
     if (!blr_binlog_change_check(router,
-                                change_master,
-                                error) ||
+                                 change_master,
+                                 error) ||
         !blr_change_binlog_name(router,
                                 change_master.binlog_file,
                                 &master_logfile,
@@ -6299,10 +6302,10 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
     else if (strcasecmp(word, "@@version_comment") == 0)
     {
         if (!router->saved_master.selectvercom)
-        /**
-         * This allows mysql client to get in when
-         * @@version_comment is not available
-         */
+            /**
+             * This allows mysql client to get in when
+             * @@version_comment is not available
+             */
         {
             blr_slave_send_ok(router, slave);
             return true;
@@ -6310,8 +6313,8 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
         else
         {
             blr_slave_replay(router,
-                            slave,
-                            router->saved_master.selectvercom);
+                             slave,
+                             router->saved_master.selectvercom);
             return true;
         }
     }
@@ -6494,10 +6497,10 @@ static GWBUF *blr_build_fake_rotate_event(ROUTER_SLAVE *slave,
         return NULL;
     }
 
-    /* Add 1 byte to paylod for status indicator */ 
+    /* Add 1 byte to paylod for status indicator */
     hdr.payload_len = len + 1;
 
-    /* Add sequence and increment it */   
+    /* Add sequence and increment it */
     hdr.seqno = slave->seqno++;
 
     /* Set status indicator byte to OK */
@@ -6768,7 +6771,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
                 blr_get_file_fullpath(slave->binlogfile,
                                       router->binlogdir,
                                       file_path,
-                                      t_prefix[0] ? t_prefix: NULL);
+                                      t_prefix[0] ? t_prefix : NULL);
                 // File size is >=4 read: set pos.
                 if (blr_slave_get_file_size(file_path) >= 4)
                 {
@@ -6947,7 +6950,7 @@ static bool blr_handle_maxwell_stmt(ROUTER_INSTANCE *router,
     static const char maxwell_lower_case_tables_query[] = "select @@lower_case_table_names";
 
     if (strcmp(blr_skip_leading_sql_comments(maxwell_stmt),
-        MYSQL_CONNECTOR_SERVER_VARS_QUERY) == 0)
+               MYSQL_CONNECTOR_SERVER_VARS_QUERY) == 0)
     {
         int rc = blr_slave_replay(router,
                                   slave,
@@ -7075,8 +7078,8 @@ static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
                                         errmsg,
                                         1198,
                                         NULL);
-         }
-         return true;
+        }
+        return true;
     }
     else if (strcasecmp(word, "GLOBAL") == 0)
     {
@@ -7480,11 +7483,11 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
              * Set the GTID string, it could be an empty
              * in case of a fresh new setup.
              */
-             MXS_FREE(slave->mariadb_gtid);
-             slave->mariadb_gtid = MXS_STRDUP_A(heading);
+            MXS_FREE(slave->mariadb_gtid);
+            slave->mariadb_gtid = MXS_STRDUP_A(heading);
 
-             blr_slave_send_ok(router, slave);
-             return true;
+            blr_slave_send_ok(router, slave);
+            return true;
         }
         else
         {
@@ -7894,7 +7897,7 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
 
                     if (!router->mariadb10_master_gtid &&
                         (strlen(router->prevbinlog) &&
-                        strcmp(router->prevbinlog, router->binlog_name) != 0))
+                         strcmp(router->prevbinlog, router->binlog_name) != 0))
                     {
                         if (blr_file_new_binlog(router, router->binlog_name))
                         {
@@ -7985,7 +7988,7 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE *router,
     blr_get_file_fullpath(binlog_file,
                           router->binlogdir,
                           file_path,
-                          t_prefix[0] ? t_prefix: NULL);
+                          t_prefix[0] ? t_prefix : NULL);
 
     /**
      * Get the next file in sequence or next by GTID maps
@@ -8012,7 +8015,7 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE *router,
         blr_get_file_fullpath(binlog_file,
                               router->binlogdir,
                               file_path,
-                              t_prefix[0] ? t_prefix: NULL);
+                              t_prefix[0] ? t_prefix : NULL);
 
         skipped_files = true;
     }
@@ -8069,20 +8072,20 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
     char current_file[BINLOG_FNAMELEN];
     uint64_t current_pos = 0;
     static const char select_query[] = "SELECT binlog_file, "
-                                           "MAX(end_pos) AS size, "
-                                           "rep_domain, "
-                                           "server_id "
+                                       "MAX(end_pos) AS size, "
+                                       "rep_domain, "
+                                       "server_id "
                                        "FROM gtid_maps "
-                                           "GROUP BY binlog_file "
+                                       "GROUP BY binlog_file "
                                        "ORDER BY id ASC;";
     static const char select_query_full[] = "SELECT binlog_file, "
-                                                "MAX(end_pos) AS size, "
-                                                "rep_domain, "
-                                                "server_id "
+                                            "MAX(end_pos) AS size, "
+                                            "rep_domain, "
+                                            "server_id "
                                             "FROM gtid_maps "
-                                                "GROUP BY rep_domain, "
-                                                         "server_id, "
-                                                         "binlog_file "
+                                            "GROUP BY rep_domain, "
+                                            "server_id, "
+                                            "binlog_file "
                                             "ORDER BY id ASC;";
     int seqno;
     char *errmsg = NULL;
@@ -8186,8 +8189,8 @@ blr_show_binary_logs(ROUTER_INSTANCE *router,
             char t_prefix[BINLOG_FILE_EXTRA_INFO];
             sprintf(t_prefix,
                     "%" PRIu32 "/%" PRIu32 "/",
-                     router->mariadb10_gtid_domain,
-                     router->orig_masterid);
+                    router->mariadb10_gtid_domain,
+                    router->orig_masterid);
 
             // Add prefix before filename
             sprintf(last_filename,
@@ -8287,8 +8290,8 @@ static int binary_logs_select_cb(void *data,
         GWBUF *pkt;
         char file_path[PATH_MAX + 1];
         char filename[1 +
-                      strlen(values[0]) +
-                      BINLOG_FILE_EXTRA_INFO];
+                        strlen(values[0]) +
+                        BINLOG_FILE_EXTRA_INFO];
         char t_prefix[BINLOG_FILE_EXTRA_INFO] = "";
 
         sprintf(t_prefix,
@@ -8412,7 +8415,7 @@ static int blr_slave_send_id_ro(ROUTER_INSTANCE *router,
                                      "0",       // o = OFF
                                      seqno++)) != NULL)
     {
-         /* Write packet to client */
+        /* Write packet to client */
         MXS_SESSION_ROUTE_REPLY(slave->dcb->session, pkt);
     }
 
@@ -8438,15 +8441,15 @@ static bool blr_handle_complex_select(ROUTER_INSTANCE *router,
                                       const char *coln)
 {
     /* Strip leading spaces */
-    while(isspace(*coln))
+    while (isspace(*coln))
     {
         coln++;
     }
 
     if ((strcasecmp(col1, "@@server_id") == 0 ||
-        strcasecmp(col1, "@@global.server_id") == 0) &&
-         (strcasecmp(coln, "@@read_only") == 0 ||
-          strcasecmp(coln, "@@global.read_only") == 0))
+         strcasecmp(col1, "@@global.server_id") == 0) &&
+        (strcasecmp(coln, "@@read_only") == 0 ||
+         strcasecmp(coln, "@@global.read_only") == 0))
     {
         blr_slave_send_id_ro(router, slave);
         return true;
@@ -8567,7 +8570,7 @@ static const char *blr_purge_getfile(char *purge_command)
         return NULL;
     }
     else
-    // Check for TO 'file'
+        // Check for TO 'file'
     {
         if (strcasecmp(word, "TO") != 0)
         {
@@ -8620,24 +8623,24 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
     size_t n_delete = 0;
     // Select first ROWID of user specifed file
     static const char find_file_tpl[] = "SELECT MIN(id) AS min_id, "
-                                            "(rep_domain || '/' || "
-                                             "server_id || '/' || "
-                                             "binlog_file) AS file "
+                                        "(rep_domain || '/' || "
+                                        "server_id || '/' || "
+                                        "binlog_file) AS file "
                                         "FROM gtid_maps "
-                                            "WHERE binlog_file = '%s' "
+                                        "WHERE binlog_file = '%s' "
                                         "GROUP BY binlog_file "
                                         "ORDER BY id ASC;";
     // SELECT files with ROWID < given one and DELETE
     static const char delete_list_tpl[] = "SELECT binlog_file, "
-                                             "(rep_domain || '/' || "
-                                               "server_id || '/' || "
-                                               "binlog_file) AS file "
+                                          "(rep_domain || '/' || "
+                                          "server_id || '/' || "
+                                          "binlog_file) AS file "
                                           "FROM gtid_maps "
-                                             "WHERE id < %" PRIu64 " "
+                                          "WHERE id < %" PRIu64 " "
                                           "GROUP BY file "
                                           "ORDER BY id ASC; "
                                           "DELETE FROM gtid_maps "
-                                             "WHERE id < %" PRIu64 ";";
+                                          "WHERE id < %" PRIu64 ";";
     static char sql_stmt[GTID_SQL_BUFFER_SIZE];
     BINARY_LOG_DATA_RESULT result;
     static const char *selected_file;
@@ -8696,10 +8699,10 @@ blr_purge_binary_logs(ROUTER_INSTANCE *router,
 
         /* Purge all files with ROWID < result.rowid */
         if (sqlite3_exec(router->gtid_maps,
-                     sql_stmt,
-                     binary_logs_purge_cb,
-                     &result,
-                     &errmsg) != SQLITE_OK)
+                         sql_stmt,
+                         binary_logs_purge_cb,
+                         &result,
+                         &errmsg) != SQLITE_OK)
         {
             MXS_ERROR("Failed to select list of files to purge"
                       "from GTID maps DB: %s, select [%s]",
@@ -8830,13 +8833,13 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE *router,
     int err_code = BINLOG_FATAL_ERROR_READING;
     char *msg_detail = "";
 
-    switch(check)
+    switch (check)
     {
     case BLR_SLAVE_CONNECTING: // (1)
         if (router->master_state == BLRM_UNCONFIGURED)
         {
             err_msg = "Binlog router is not yet configured"
-                       " for replication.";
+                      " for replication.";
             rv = false;
         }
         break;
@@ -8979,10 +8982,10 @@ static bool blr_binlog_change_check(const ROUTER_INSTANCE *router,
         }
     }
     else
-    /**
-     * If binlog file is set in CHANGE MASTER TO
-     * and MASTER_USE_GTID option is on, then return an error.
-     */
+        /**
+         * If binlog file is set in CHANGE MASTER TO
+         * and MASTER_USE_GTID option is on, then return an error.
+         */
     {
         /**
          * Check first MASTER_USE_GTID option:
@@ -9048,16 +9051,16 @@ static bool blr_change_binlog_name(ROUTER_INSTANCE *router,
          * - current router file
          * - empty if router->mariadb10_master_gtid is set.
          */
-         *new_logfile = blr_set_master_logfile(router,
-                                               binlog_file,
-                                               error);
-         if (*new_logfile == NULL)
-         {
-             if (!router->mariadb10_master_gtid ||
-                 strlen(binlog_file) > 1)
-             {
-                 /* Binlog name can not be changed */
-                 ret = false;
+        *new_logfile = blr_set_master_logfile(router,
+                                              binlog_file,
+                                              error);
+        if (*new_logfile == NULL)
+        {
+            if (!router->mariadb10_master_gtid ||
+                strlen(binlog_file) > 1)
+            {
+                /* Binlog name can not be changed */
+                ret = false;
             }
             else
             {
@@ -9065,9 +9068,9 @@ static bool blr_change_binlog_name(ROUTER_INSTANCE *router,
                 // Blank the error message
                 error[0] = 0;
             }
-         }
-     }
-     return ret;
+        }
+    }
+    return ret;
 }
 
 /**
@@ -9116,25 +9119,25 @@ static bool blr_apply_changes(ROUTER_INSTANCE *router,
     /* MariaDB 10 GTID request */
     if (router->mariadb10_master_gtid)
     {
-       if (change_master.use_mariadb10_gtid)
-       {
+        if (change_master.use_mariadb10_gtid)
+        {
             /* MASTER_USE_GTID=Slave_pos is set */
             MXS_INFO("%s: MASTER_USE_GTID is [%s]",
                      router->service->name,
                      change_master.use_mariadb10_gtid);
-       }
+        }
 
-       /* Always log the current GTID value with CHANGE_MASTER TO */
-       MXS_INFO("%s: CHANGE MASTER TO, current GTID value is [%s]",
-                router->service->name,
-                router->last_mariadb_gtid);
+        /* Always log the current GTID value with CHANGE_MASTER TO */
+        MXS_INFO("%s: CHANGE MASTER TO, current GTID value is [%s]",
+                 router->service->name,
+                 router->last_mariadb_gtid);
 
-       /* Always set empty filename at pos 4 with CHANGE_MASTER TO */
-       strcpy(router->binlog_name, "");
+        /* Always set empty filename at pos 4 with CHANGE_MASTER TO */
+        strcpy(router->binlog_name, "");
 
-       router->current_pos = 4;
-       router->binlog_position = 4;
-       router->current_safe_event = 4;
+        router->current_pos = 4;
+        router->binlog_position = 4;
+        router->current_safe_event = 4;
     }
     /* The new filename is not the current one */
     else if (strcmp(new_logfile, router->binlog_name) != 0 &&

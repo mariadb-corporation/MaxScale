@@ -22,7 +22,8 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about a server. The `Parameters` ' +
                                 'field contains the currently configured parameters for this ' +
                                 'server. See `help alter server` for more details about altering ' +
-                                'server parameters.');
+                                'server parameters.')
+                .usage('Usage: show server <server>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'servers/' + argv.server, [
@@ -46,7 +47,8 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about a service. The `Parameters` ' +
                                 'field contains the currently configured parameters for this ' +
                                 'service. See `help alter service` for more details about altering ' +
-                                'service parameters.');
+                                'service parameters.')
+                .usage('Usage: show service <service>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'services/' + argv.service, [
@@ -66,7 +68,8 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about a monitor. The `Parameters` ' +
                                 'field contains the currently configured parameters for this ' +
                                 'monitor. See `help alter monitor` for more details about altering ' +
-                                'monitor parameters.');
+                                'monitor parameters.')
+                .usage('Usage: show monitor <monitor>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'monitors/' + argv.monitor, [
@@ -82,7 +85,8 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about a single session. ' +
                                 'The list of sessions can be retrieved with the ' +
                                 '`list sessions` command. The <session> is the session ' +
-                                'ID of a particular session.');
+                                'ID of a particular session.')
+                .usage('Usage: show session <session>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'sessions/' + argv.session, [
@@ -97,7 +101,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('filter <filter>', 'Show filter', function(yargs) {
-            return yargs.epilog('The list of services that use this filter is show in the `Services` field.');
+            return yargs.epilog('The list of services that use this filter is show in the `Services` field.')
+                .usage('Usage: show filter <filter>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'filters/' + argv.filter, [
@@ -110,7 +115,8 @@ exports.builder = function(yargs) {
         })
         .command('module <module>', 'Show loaded module', function(yargs) {
             return yargs.epilog('This command shows all available parameters as well as ' +
-                                'detailed version information of a loaded module.');
+                                'detailed version information of a loaded module.')
+                .usage('Usage: show module <module>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'maxscale/modules/' + argv.module, [
@@ -126,7 +132,8 @@ exports.builder = function(yargs) {
         })
         .command('maxscale', 'Show MaxScale information', function(yargs) {
             return yargs.epilog('See `help alter maxscale` for more details about altering ' +
-                                'MaxScale parameters.');
+                                'MaxScale parameters.')
+                .usage('Usage: show maxscale')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'maxscale', [
@@ -141,7 +148,8 @@ exports.builder = function(yargs) {
         })
         .command('logging', 'Show MaxScale logging information', function(yargs) {
             return yargs.epilog('See `help alter logging` for more details about altering ' +
-                                'logging parameters.');
+                                'logging parameters.')
+                .usage('Usage: show logging')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getResource(host, 'maxscale/logs', [
@@ -153,7 +161,8 @@ exports.builder = function(yargs) {
         })
         .command('commands <module>', 'Show module commands of a module', function(yargs) {
             return yargs.epilog('This command shows the parameters the command expects with ' +
-                                'the parameter descriptions.');
+                                'the parameter descriptions.')
+                .usage('Usage: show commands <module>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getSubCollection(host, 'maxscale/modules/' + argv.module, 'attributes.commands', [

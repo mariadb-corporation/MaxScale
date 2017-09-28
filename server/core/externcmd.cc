@@ -189,7 +189,7 @@ static void log_output(const char* cmd, const std::string& str)
         MXS_ALERT("%s: %s", cmd, skip_prefix(str.c_str()));
     }
     else if (mxs_pcre2_simple_match("(?i)^[[:space:]]*error[[:space:]]*[:]",
-                               str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
+                                    str.c_str(), 0, &err) == MXS_PCRE2_MATCH)
     {
         MXS_ERROR("%s: %s", cmd, skip_prefix(str.c_str()));
     }

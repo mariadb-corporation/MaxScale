@@ -78,6 +78,7 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/alloc.h>
 #include <maxscale/spinlock.hh>
+#include <maxscale/utils.h>
 
 #include "rules.hh"
 #include "user.hh"
@@ -99,7 +100,7 @@ namespace
 struct DbfwThread
 {
     DbfwThread():
-    rule_version(0)
+        rule_version(0)
     {
     }
 
@@ -499,27 +500,17 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "rules/reload", MODULECMD_TYPE_ACTIVE,
-                               dbfw_reload_rules, 2, args_rules_reload,
-                               "Reload dbfwfilter rules");
-
-    modulecmd_arg_type_t args_rules_show[] =
-    {
-        {MODULECMD_ARG_OUTPUT, "DCB where result is written"},
-        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to inspect"}
-    };
-
-    modulecmd_register_command(MXS_MODULE_NAME, "rules", MODULECMD_TYPE_PASSIVE,
-                               dbfw_show_rules, 2, args_rules_show,
-                               "(deprecated) Show dbfwfilter rule statistics");
+                               dbfw_reload_rules, MXS_ARRAY_NELEMS(args_rules_reload),
+                               args_rules_reload, "Reload dbfwfilter rules");
 
     modulecmd_arg_type_t args_rules_show_json[] =
     {
         {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to inspect"}
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "rules/json", MODULECMD_TYPE_PASSIVE,
-                               dbfw_show_rules_json, 1, args_rules_show_json,
-                               "Show dbfwfilter rule statistics as JSON");
+    modulecmd_register_command(MXS_MODULE_NAME, "rules", MODULECMD_TYPE_PASSIVE,
+                               dbfw_show_rules_json, MXS_ARRAY_NELEMS(args_rules_show_json),
+                               args_rules_show_json, "Show dbfwfilter rule statistics");
 
     static MXS_MODULE info =
     {
@@ -689,7 +680,7 @@ void dbfw_yyerror(void* scanner, const char* error)
  */
 static SRule find_rule_by_name(const RuleList& rules, std::string name)
 {
-  for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
+    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
         if ((*it)->name() == name)
         {

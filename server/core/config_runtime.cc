@@ -833,8 +833,8 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
         if (ssl_key && ssl_cert && ssl_ca &&
             (ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth)) == NULL)
         {
-                MXS_ERROR("SSL initialization for listener '%s' failed.", name);
-                runtime_error("SSL initialization for listener '%s' failed.", name);
+            MXS_ERROR("SSL initialization for listener '%s' failed.", name);
+            runtime_error("SSL initialization for listener '%s' failed.", name);
         }
         else
         {
@@ -1214,10 +1214,10 @@ static std::string json_int_to_string(json_t* json)
 static inline bool have_ssl_json(json_t* params)
 {
     return mxs_json_pointer(params, CN_SSL_KEY) ||
-        mxs_json_pointer(params, CN_SSL_CERT) ||
-        mxs_json_pointer(params, CN_SSL_CA_CERT) ||
-        mxs_json_pointer(params, CN_SSL_VERSION) ||
-        mxs_json_pointer(params, CN_SSL_CERT_VERIFY_DEPTH);
+           mxs_json_pointer(params, CN_SSL_CERT) ||
+           mxs_json_pointer(params, CN_SSL_CA_CERT) ||
+           mxs_json_pointer(params, CN_SSL_VERSION) ||
+           mxs_json_pointer(params, CN_SSL_CERT_VERIFY_DEPTH);
 }
 
 static bool validate_ssl_json(json_t* params)
@@ -1230,9 +1230,12 @@ static bool validate_ssl_json(json_t* params)
         is_string_or_null(params, CN_SSL_VERSION) &&
         is_count_or_null(params, CN_SSL_CERT_VERIFY_DEPTH))
     {
-        if (!mxs_json_pointer(params, CN_SSL_KEY) ||
-            !mxs_json_pointer(params, CN_SSL_CERT) ||
-            !mxs_json_pointer(params, CN_SSL_CA_CERT))
+        if ((mxs_json_pointer(params, CN_SSL_KEY) ||
+             mxs_json_pointer(params, CN_SSL_CERT) ||
+             mxs_json_pointer(params, CN_SSL_CA_CERT)) &&
+            (!mxs_json_pointer(params, CN_SSL_KEY) ||
+             !mxs_json_pointer(params, CN_SSL_CERT) ||
+             !mxs_json_pointer(params, CN_SSL_CA_CERT)))
         {
             runtime_error("SSL configuration requires '%s', '%s' and '%s' parameters",
                           CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT);

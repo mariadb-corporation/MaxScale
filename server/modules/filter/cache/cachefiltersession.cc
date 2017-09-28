@@ -79,8 +79,8 @@ const char* NON_CACHEABLE_VARIABLES[] =
     "localtimestamp",
 };
 
-const size_t N_NON_CACHEABLE_FUNCTIONS = sizeof(NON_CACHEABLE_FUNCTIONS)/sizeof(NON_CACHEABLE_FUNCTIONS[0]);
-const size_t N_NON_CACHEABLE_VARIABLES = sizeof(NON_CACHEABLE_VARIABLES)/sizeof(NON_CACHEABLE_VARIABLES[0]);
+const size_t N_NON_CACHEABLE_FUNCTIONS = sizeof(NON_CACHEABLE_FUNCTIONS) / sizeof(NON_CACHEABLE_FUNCTIONS[0]);
+const size_t N_NON_CACHEABLE_VARIABLES = sizeof(NON_CACHEABLE_VARIABLES) / sizeof(NON_CACHEABLE_VARIABLES[0]);
 
 int compare_name(const void* pLeft, const void* pRight)
 {
@@ -146,7 +146,7 @@ bool is_select_statement(GWBUF* pStmt)
     char* pSql;
     int len;
 
-    ss_debug(int rc =) modutil_extract_SQL(pStmt, &pSql, &len);
+    ss_debug(int rc = ) modutil_extract_SQL(pStmt, &pSql, &len);
     ss_dassert(rc == 1);
 
     char* pSql_end = pSql + len;

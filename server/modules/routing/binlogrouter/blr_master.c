@@ -172,8 +172,8 @@ static void blr_start_master(void* data)
         else
         {
             MXS_NOTICE("%s: Master Connect: binlog current state is [%s]\n",
-                        router->service->name,
-                        blrm_states[router->master_state]);
+                       router->service->name,
+                       blrm_states[router->master_state]);
         }
 
         /* Return only if state is not BLRM_CONNECTING */
@@ -3187,10 +3187,10 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
          */
         if (router->master_state == BLRM_CHECK_SEMISYNC)
         {
-           if (blr_register_setsemisync(router, buf))
-           {
-               break;
-           }
+            if (blr_register_setsemisync(router, buf))
+            {
+                break;
+            }
         }
     case BLRM_REQUEST_SEMISYNC:
         /**
@@ -3284,9 +3284,9 @@ static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
             format_gtid_val,
             router->last_mariadb_gtid);
 
-     MXS_INFO("%s: Requesting GTID (%s) from master server.",
-                   router->service->name,
-                   router->last_mariadb_gtid);
+    MXS_INFO("%s: Requesting GTID (%s) from master server.",
+             router->service->name,
+             router->last_mariadb_gtid);
     // Send the request
     blr_register_send_command(router,
                               set_gtid,
@@ -3412,27 +3412,27 @@ static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
          */
         if (hdr->next_pos && (hdr->next_pos > binlog_file_eof))
         {
-             uint64_t hole_size = hdr->next_pos - binlog_file_eof;
+            uint64_t hole_size = hdr->next_pos - binlog_file_eof;
 
-             MXS_INFO("Detected hole while processing"
-                      " a Fake GTID_LIST Event: hole size will be %"
-                      PRIu64 " bytes",
-                      hole_size);
+            MXS_INFO("Detected hole while processing"
+                     " a Fake GTID_LIST Event: hole size will be %"
+                     PRIu64 " bytes",
+                     hole_size);
 
-             /* Set the offet for the write routine */
-             spinlock_acquire(&router->binlog_lock);
+            /* Set the offet for the write routine */
+            spinlock_acquire(&router->binlog_lock);
 
-             router->last_written = binlog_file_eof;
+            router->last_written = binlog_file_eof;
 
-             spinlock_release(&router->binlog_lock);
+            spinlock_release(&router->binlog_lock);
 
-             // Write One Hole
-             // TODO: write small holes
-             blr_write_special_event(router,
-                                     binlog_file_eof,
-                                     hole_size,
-                                     hdr,
-                                     BLRM_IGNORABLE);
+            // Write One Hole
+            // TODO: write small holes
+            blr_write_special_event(router,
+                                    binlog_file_eof,
+                                    hole_size,
+                                    hdr,
+                                    BLRM_IGNORABLE);
         }
         else
         {

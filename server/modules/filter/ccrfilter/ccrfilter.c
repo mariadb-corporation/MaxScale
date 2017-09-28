@@ -209,9 +209,9 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         const char* keys[] = {PARAM_MATCH, PARAM_IGNORE};
         pcre2_code** code_arr[] = {&my_instance->re, &my_instance->nore};
 
-        if (!config_get_compiled_regexes(params, keys, sizeof(keys)/sizeof(char*),
-                                     cflags, &my_instance->ovector_size,
-                                     code_arr))
+        if (!config_get_compiled_regexes(params, keys, sizeof(keys) / sizeof(char*),
+                                         cflags, &my_instance->ovector_size,
+                                         code_arr))
         {
             MXS_FREE(my_instance->match);
             MXS_FREE(my_instance->nomatch);

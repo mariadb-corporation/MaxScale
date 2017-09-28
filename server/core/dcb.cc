@@ -1158,7 +1158,7 @@ void dcb_final_close(DCB* dcb)
     if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&  // Backend DCB
         dcb->state == DCB_STATE_POLLING &&            // Being polled
         dcb->persistentstart == 0 &&                  // Not already in (> 0) or being evicted from (-1)
-                                                      // the persistent pool.
+        // the persistent pool.
         dcb->server)                                  // And has a server
     {
         /* May be a candidate for persistence, so save user name */

@@ -69,15 +69,15 @@ static const char* codec_to_string(enum mxs_avro_codec_type type)
 {
     switch (type)
     {
-        case MXS_AVRO_CODEC_NULL:
-            return "null";
-        case MXS_AVRO_CODEC_DEFLATE:
-            return "deflate";
-        case MXS_AVRO_CODEC_SNAPPY:
-            return "snappy";
-        default:
-            ss_dassert(false);
-            return "null";
+    case MXS_AVRO_CODEC_NULL:
+        return "null";
+    case MXS_AVRO_CODEC_DEFLATE:
+        return "deflate";
+    case MXS_AVRO_CODEC_SNAPPY:
+        return "snappy";
+    default:
+        ss_dassert(false);
+        return "null";
     }
 }
 

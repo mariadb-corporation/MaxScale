@@ -158,10 +158,10 @@ static uint8_t *blr_create_ignorable_event(uint32_t event_size,
                                            uint32_t event_pos,
                                            bool do_checksum);
 int blr_write_special_event(ROUTER_INSTANCE *router,
-                                   uint32_t file_offset,
-                                   uint32_t hole_size,
-                                   REP_HEADER *hdr,
-                                   int type);
+                            uint32_t file_offset,
+                            uint32_t hole_size,
+                            REP_HEADER *hdr,
+                            int type);
 static uint8_t *blr_create_start_encryption_event(ROUTER_INSTANCE *router,
                                                   uint32_t event_pos,
                                                   bool do_checksum);
@@ -481,13 +481,13 @@ blr_file_create(ROUTER_INSTANCE *router, char *orig_file)
     strcpy(path, router->binlogdir);
     strcat(path, "/");
 
-   /**
-    * Create file using domain and server_id prefix
-    */
-   if (router->mariadb10_compat &&
-       router->mariadb10_master_gtid &&
-       router->storage_type == BLR_BINLOG_STORAGE_TREE)
-   {
+    /**
+     * Create file using domain and server_id prefix
+     */
+    if (router->mariadb10_compat &&
+        router->mariadb10_master_gtid &&
+        router->storage_type == BLR_BINLOG_STORAGE_TREE)
+    {
         char prefix[BINLOG_FILE_EXTRA_INFO];
         // Add prefix
         sprintf(prefix,
@@ -1585,17 +1585,17 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
     char bigbuf[PATH_MAX + 1];
     char select_query[GTID_SQL_BUFFER_SIZE];
     const char select_tpl[] = "SELECT "
-                                 "(rep_domain || '/' || server_id || '/' || binlog_file) AS file, "
-                                 "rep_domain, "
-                                 "server_id, "
-                                 "binlog_file "
+                              "(rep_domain || '/' || server_id || '/' || binlog_file) AS file, "
+                              "rep_domain, "
+                              "server_id, "
+                              "binlog_file "
                               "FROM gtid_maps "
-                                 "WHERE id = "
-                                     "(SELECT MAX(id) "
-                                         "FROM gtid_maps "
-                                             "WHERE (binlog_file='%s' AND "
-                                                 "rep_domain = %" PRIu32 " AND "
-                                                 "server_id = %" PRIu32 ")) + 1;";
+                              "WHERE id = "
+                              "(SELECT MAX(id) "
+                              "FROM gtid_maps "
+                              "WHERE (binlog_file='%s' AND "
+                              "rep_domain = %" PRIu32 " AND "
+                              "server_id = %" PRIu32 ")) + 1;";
 
     MARIADB_GTID_INFO result = {};
     MARIADB_GTID_ELEMS gtid_elms = {};
@@ -2603,8 +2603,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                              n_sequence);
 
                     MXS_DEBUG("GTID List Event has %lu GTIDs, first one is %s",
-                               n_gtids,
-                               mariadb_gtid);
+                              n_gtids,
+                              mariadb_gtid);
 
                     if (router->storage_type == BLR_BINLOG_STORAGE_TREE)
                     {
@@ -3945,27 +3945,27 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
 {
     int sql_ret;
     static const char insert_tpl[] = "INSERT OR FAIL INTO gtid_maps("
-                                         "rep_domain, "
-                                         "server_id, "
-                                         "sequence, "
-                                         "binlog_file, "
-                                         "start_pos, "
-                                         "end_pos) "
+                                     "rep_domain, "
+                                     "server_id, "
+                                     "sequence, "
+                                     "binlog_file, "
+                                     "start_pos, "
+                                     "end_pos) "
                                      "VALUES ( "
-                                         "%" PRIu32 ", "
-                                         "%" PRIu32 ", "
-                                         "%" PRIu64 ", "
-                                         "\"%s\", "
-                                         "%" PRIu64 ", "
-                                         "%" PRIu64 ");";
+                                     "%" PRIu32 ", "
+                                     "%" PRIu32 ", "
+                                     "%" PRIu64 ", "
+                                     "\"%s\", "
+                                     "%" PRIu64 ", "
+                                     "%" PRIu64 ");";
 
     static const char update_tpl[] = "UPDATE gtid_maps SET "
-                                         "start_pos = %" PRIu64 ", "
-                                         "end_pos = %" PRIu64 " "
+                                     "start_pos = %" PRIu64 ", "
+                                     "end_pos = %" PRIu64 " "
                                      "WHERE rep_domain = %" PRIu32 " AND "
-                                         "server_id = %" PRIu32 " AND "
-                                         "sequence = %" PRIu64 " AND "
-                                         "binlog_file = \"%s\";";
+                                     "server_id = %" PRIu32 " AND "
+                                     "sequence = %" PRIu64 " AND "
+                                     "binlog_file = \"%s\";";
     char *errmsg;
     char sql_stmt[GTID_SQL_BUFFER_SIZE];
     MARIADB_GTID_INFO gtid_info;
@@ -4132,19 +4132,19 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
      * with old content.
      */
     static const char select_tpl[] = "SELECT "
-                                         "(rep_domain ||"
-                                           " '-' || server_id ||"
-                                           " '-' || sequence) AS gtid, "
-                                         "binlog_file, "
-                                         "start_pos, "
-                                         "end_pos, "
-                                         "rep_domain, "
-                                         "server_id, "
-                                         "sequence "
+                                     "(rep_domain ||"
+                                     " '-' || server_id ||"
+                                     " '-' || sequence) AS gtid, "
+                                     "binlog_file, "
+                                     "start_pos, "
+                                     "end_pos, "
+                                     "rep_domain, "
+                                     "server_id, "
+                                     "sequence "
                                      "FROM gtid_maps "
-                                         "WHERE (rep_domain = %" PRIu32 " AND "
-                                                 "server_id = %" PRIu32 " AND "
-                                                 "sequence = %" PRIu64 ") "
+                                     "WHERE (rep_domain = %" PRIu32 " AND "
+                                     "server_id = %" PRIu32 " AND "
+                                     "sequence = %" PRIu64 ") "
                                      "ORDER BY id DESC LIMIT 1;";
     ss_dassert(gtid != NULL);
 
@@ -4295,20 +4295,20 @@ bool blr_load_last_mariadb_gtid(ROUTER_INSTANCE *router,
     char *errmsg = NULL;
     MARIADB_GTID_ELEMS gtid_elms = {};
     static const char last_gtid[] = "SELECT "
-                                         "(rep_domain ||"
-                                           " '-' || server_id ||"
-                                           " '-' || sequence) AS gtid, "
-                                         "binlog_file, "
-                                         "start_pos, "
-                                         "end_pos, "
-                                         "rep_domain, "
-                                         "server_id, "
-                                         "sequence "
-                                     "FROM gtid_maps "
-                                     "WHERE id = "
-                                         "(SELECT MAX(id) "
-                                              "FROM gtid_maps "
-                                           "WHERE start_pos > 4);";
+                                    "(rep_domain ||"
+                                    " '-' || server_id ||"
+                                    " '-' || sequence) AS gtid, "
+                                    "binlog_file, "
+                                    "start_pos, "
+                                    "end_pos, "
+                                    "rep_domain, "
+                                    "server_id, "
+                                    "sequence "
+                                    "FROM gtid_maps "
+                                    "WHERE id = "
+                                    "(SELECT MAX(id) "
+                                    "FROM gtid_maps "
+                                    "WHERE start_pos > 4);";
 
     /* Find the last GTID */
     if (sqlite3_exec(router->gtid_maps,
@@ -4376,18 +4376,18 @@ bool blr_get_last_file(ROUTER_INSTANCE *router,
     char *errmsg = NULL;
     MARIADB_GTID_ELEMS gtid_elms = {};
     static const char last_gtid[] = "SELECT "
-                                         "(rep_domain ||"
-                                           " '-' || server_id ||"
-                                           " '-' || sequence) AS gtid, "
-                                         "binlog_file, "
-                                         "start_pos, "
-                                         "end_pos, "
-                                         "rep_domain, "
-                                         "server_id, "
-                                         "sequence "
-                                     "FROM gtid_maps "
-                                     "WHERE id = "
-                                         "(SELECT MAX(id) FROM gtid_maps);";
+                                    "(rep_domain ||"
+                                    " '-' || server_id ||"
+                                    " '-' || sequence) AS gtid, "
+                                    "binlog_file, "
+                                    "start_pos, "
+                                    "end_pos, "
+                                    "rep_domain, "
+                                    "server_id, "
+                                    "sequence "
+                                    "FROM gtid_maps "
+                                    "WHERE id = "
+                                    "(SELECT MAX(id) FROM gtid_maps);";
 
     /* Find the the last file */
     if (sqlite3_exec(router->gtid_maps,
@@ -4428,10 +4428,10 @@ bool blr_compare_binlogs(ROUTER_INSTANCE *router,
     }
     else
     {
-       // domain_id, server_id and strcmp()
-       return ((router->mariadb10_gtid_domain == info->domain_id) &&
-               (router->orig_masterid == info->server_id) &&
-               strcmp(r_file, s_file) == 0);
+        // domain_id, server_id and strcmp()
+        return ((router->mariadb10_gtid_domain == info->domain_id) &&
+                (router->orig_masterid == info->server_id) &&
+                strcmp(r_file, s_file) == 0);
     }
 }
 
@@ -4489,7 +4489,7 @@ bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
                 "%" PRIu32 "/%" PRIu32 "/",
                 router->mariadb10_gtid_domain,
                 router->orig_masterid);
-                strcat(path, prefix);
+        strcat(path, prefix);
     }
 
     // Set final file name full path

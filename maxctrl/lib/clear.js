@@ -18,7 +18,8 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('server <server> <state>', 'Clear server state', function(yargs) {
-            return yargs.epilog('This command clears a server state set by the `set server <server> <state>` command');
+            return yargs.epilog('This command clears a server state set by the `set server <server> <state>` command')
+                .usage('Usage: clear server <server> <state>')
         }, function(argv) {
             var target = 'servers/' + argv.server + '/clear?state=' + argv.state
             maxctrl(argv, function(host) {

@@ -358,12 +358,6 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
             }
             break;
 
-        case MODULECMD_ARG_OUTPUT:
-            arg->type.type = MODULECMD_ARG_OUTPUT;
-            arg->value.dcb = (DCB*)value;
-            rval = true;
-            break;
-
         default:
             ss_dassert(false);
             MXS_ERROR("Undefined argument type: %0lx", type->type);
@@ -713,10 +707,6 @@ const char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
         rval = format_type(type, "FILTER");
         break;
 
-    case MODULECMD_ARG_OUTPUT:
-        rval = format_type(type, "OUTPUT");
-        break;
-
     default:
         ss_dassert(false);
         MXS_ERROR("Unknown type");
@@ -730,18 +720,4 @@ bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx)
 {
     return arg->argc > idx &&
            MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
-}
-
-bool modulecmd_requires_output_dcb(const MODULECMD* cmd)
-{
-    for (int i = 0; i < cmd->arg_count_max; i++)
-    {
-        if (cmd->arg_types[i].type == MODULECMD_ARG_OUTPUT)
-        {
-            /** We can't call this as it requries a DCB for output so don't show it */
-            return true;
-        }
-    }
-
-    return false;
 }

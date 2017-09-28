@@ -360,12 +360,6 @@ struct cb_param
 
 bool modulecmd_cb(const MODULECMD *cmd, void *data)
 {
-    if (modulecmd_requires_output_dcb(cmd))
-    {
-        /** Module requires an output DCB, don't print it */
-        return true;
-    }
-
     cb_param* d = static_cast<cb_param*>(data);
 
     json_t* obj = json_object();

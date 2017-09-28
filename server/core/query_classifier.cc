@@ -803,7 +803,7 @@ qc_sql_mode_t qc_get_sql_mode()
 
     qc_sql_mode_t sql_mode;
 
-    ss_debug(int32_t rv =) classifier->qc_get_sql_mode(&sql_mode);
+    ss_debug(int32_t rv = ) classifier->qc_get_sql_mode(&sql_mode);
     ss_dassert(rv == QC_RESULT_OK);
 
     return sql_mode;
@@ -814,6 +814,6 @@ void qc_set_sql_mode(qc_sql_mode_t sql_mode)
     QC_TRACE();
     ss_dassert(classifier);
 
-    ss_debug(int32_t rv =) classifier->qc_set_sql_mode(sql_mode);
+    ss_debug(int32_t rv = ) classifier->qc_set_sql_mode(sql_mode);
     ss_dassert(rv == QC_RESULT_OK);
 }
