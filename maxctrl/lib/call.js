@@ -18,7 +18,8 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('command <module> <command> [params...]', 'Call a module command', function(yargs) {
-            return yargs.epilog('To inspect the list of module commands, execute `list commands`');
+            return yargs.epilog('To inspect the list of module commands, execute `list commands`')
+                .usage('Usage: call command <module> <command> [params...]')
         }, function(argv) {
             // First we have to find the correct method to use
             maxctrl(argv, function(host) {

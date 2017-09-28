@@ -68,7 +68,8 @@ exports.builder = function(yargs) {
             return yargs.epilog('The created server will not be used by any services or monitors ' +
                                 'unless the --services or --monitors options are given. The list ' +
                                 'of servers a service or a monitor uses can be altered with the ' +
-                                '`link` and `unlink` commands.');
+                                '`link` and `unlink` commands.')
+                .usage('Usage: create server <name> <host> <port>')
         }, function(argv) {
             var server = {
                 'data': {
@@ -124,7 +125,8 @@ exports.builder = function(yargs) {
         })
         .command('monitor <name> <module>', 'Create a new monitor', function(yargs) {
             return yargs.epilog('The list of servers given with the --servers option should not ' +
-                                'contain any servers that are already monitored by another monitor.');
+                                'contain any servers that are already monitored by another monitor.')
+                .usage('Usage: create monitor <name> <module>')
         }, function(argv) {
 
             var monitor = {
@@ -162,7 +164,8 @@ exports.builder = function(yargs) {
             default: '::'
         })
         .command('listener <service> <name> <port>', 'Create a new listener', function(yargs) {
-            return yargs.epilog('The new listener will be taken into use immediately.');
+            return yargs.epilog('The new listener will be taken into use immediately.')
+                .usage('Usage: create listener <service> <name> <port>')
         }, function(argv) {
 
             var listener = {
@@ -201,7 +204,8 @@ exports.builder = function(yargs) {
             return yargs.epilog('The created user can be used with the MaxScale REST API as ' +
                                 'well as the MaxAdmin network interface. By default the created ' +
                                 'user will have read-only privileges. To make the user an ' +
-                                'administrative user, use the `--type=admin` option.');
+                                'administrative user, use the `--type=admin` option.')
+                .usage('Usage: create user <name> <password>')
         }, function(argv) {
 
             var user = {

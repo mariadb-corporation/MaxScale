@@ -20,7 +20,8 @@ exports.builder = function(yargs) {
         .command('service <name>', 'Stop a service', function(yargs) {
             return yargs.epilog('Stopping a service will prevent all the listeners for that service ' +
                                 'from accepting new connections. Existing connections will still be ' +
-                                'handled normally until they are closed.');
+                                'handled normally until they are closed.')
+                .usage('Usage: stop service <name>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'services/' + argv.name + '/stop', null, {method: 'PUT'})
@@ -29,7 +30,8 @@ exports.builder = function(yargs) {
         .command('monitor <name>', 'Stop a monitor', function(yargs) {
             return yargs.epilog('Stopping a monitor will pause the monitoring of the servers. ' +
                                 'This can be used to manually control server states with the ' +
-                                '`set server` command.');
+                                '`set server` command.')
+                .usage('Usage: stop monitor <name>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'monitors/' + argv.name + '/stop', null, {method: 'PUT'})
@@ -37,7 +39,8 @@ exports.builder = function(yargs) {
         })
         .command('maxscale', 'Stop MaxScale by stopping all services', function(yargs) {
             return yargs.epilog('This command will execute the `stop service` command for ' +
-                                'all services in MaxScale.');
+                                'all services in MaxScale.')
+                .usage('Usage: stop maxscale')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'services/', function(res) {

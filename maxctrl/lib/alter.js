@@ -44,14 +44,16 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('server <server> <key> <value>', 'Alter server parameters', function(yargs) {
-            return yargs.epilog('To display the server parameters, execute `show server <server>`');
+            return yargs.epilog('To display the server parameters, execute `show server <server>`')
+            .usage('Usage: alter server <server> <key> <value>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'servers/' + argv.server, 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
         .command('monitor <monitor> <key> <value>', 'Alter monitor parameters', function(yargs) {
-            return yargs.epilog('To display the monitor parameters, execute `show monitor <monitor>`');
+            return yargs.epilog('To display the monitor parameters, execute `show monitor <monitor>`')
+            .usage('Usage: alter monitor <monitor> <key> <value>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'monitors/' + argv.monitor, 'data.attributes.parameters.' + argv.key, argv.value)
@@ -59,14 +61,16 @@ exports.builder = function(yargs) {
         })
         .command('service <service> <key> <value>', 'Alter service parameters', function(yargs) {
             return yargs.epilog('To display the service parameters, execute `show service <service>`. ' +
-                                'The following list of parameters can be altered at runtime:\n\n' + JSON.stringify(service_params, null, 4));
+                                'The following list of parameters can be altered at runtime:\n\n' + JSON.stringify(service_params, null, 4))
+            .usage('Usage: alter service <service> <key> <value>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'services/' + argv.service, 'data.attributes.parameters.' + argv.key, argv.value)
             })
         })
         .command('logging <key> <value>', 'Alter logging parameters', function(yargs) {
-            return yargs.epilog('To display the logging parameters, execute `show logging`');
+            return yargs.epilog('To display the logging parameters, execute `show logging`')
+                .usage('Usage: alter logging <key> <value>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'maxscale/logs', 'data.attributes.parameters.' + argv.key, argv.value)
@@ -74,7 +78,8 @@ exports.builder = function(yargs) {
         })
         .command('maxscale <key> <value>', 'Alter MaxScale parameters', function(yargs) {
             return yargs.epilog('To display the MaxScale parameters, execute `show maxscale`. ' +
-                                'The following list of parameters can be altered at runtime:\n\n' + JSON.stringify(maxscale_params, null, 4));
+                                'The following list of parameters can be altered at runtime:\n\n' + JSON.stringify(maxscale_params, null, 4))
+                .usage('Usage: alter maxscale <key> <value>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return updateValue(host, 'maxscale', 'data.attributes.parameters.' + argv.key, argv.value)

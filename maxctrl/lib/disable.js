@@ -25,7 +25,8 @@ exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
         .command('log-priority <log>', 'Disable log priority [warning|notice|info|debug]', function(yargs) {
-            return yargs.epilog('The `debug` log priority is only available for debug builds of MaxScale.');
+            return yargs.epilog('The `debug` log priority is only available for debug builds of MaxScale.')
+                .usage('Usage: disable log-priority <log>')
         }, function(argv) {
             if (log_levels.indexOf(argv.log) != -1) {
                 maxctrl(argv, function(host) {
@@ -38,7 +39,8 @@ exports.builder = function(yargs) {
             }
         })
         .command('account <name>', 'Disable a Linux user account from administrative use', function(yargs) {
-            return yargs.epilog('The Linux user accounts are used by the MaxAdmin UNIX Domain Socket interface');
+            return yargs.epilog('The Linux user accounts are used by the MaxAdmin UNIX Domain Socket interface')
+                .usage('Usage: disable account <name>')
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return doRequest(host, 'users/unix/' + argv.name, null, { method: 'DELETE'})
