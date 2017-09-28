@@ -55,6 +55,7 @@ private:
     GWBUF* read_complete_packet();
     void   drain_queue();
     void   error();
+    void   close();
 
     /** Client states */
     enum vc_state

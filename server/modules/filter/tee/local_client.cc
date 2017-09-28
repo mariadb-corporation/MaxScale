@@ -44,7 +44,7 @@ LocalClient::~LocalClient()
 {
     if (m_state != VC_ERROR)
     {
-        close(m_sock);
+        close();
     }
 }
 
@@ -65,10 +65,21 @@ bool LocalClient::queue_query(GWBUF* buffer)
     return my_buf != NULL;
 }
 
+void LocalClient::close()
+{
+    mxs::Worker* worker = mxs::Worker::get_current();
+    ss_dassert(worker);
+    worker->remove_fd(m_sock);
+    ::close(m_sock);
+}
+
 void LocalClient::error()
 {
-    close(m_sock);
-    m_state = VC_ERROR;
+    if (m_state != VC_ERROR)
+    {
+        close();
+        m_state = VC_ERROR;
+    }
 }
 
 void LocalClient::process(uint32_t events)
@@ -228,7 +239,7 @@ LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
             int fd = open_network_socket(MXS_SOCKET_NETWORK, &addr, "127.0.0.1",
                                          service->ports->port);
 
-            if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS)
+            if (fd > 0 && (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS))
             {
                 LocalClient* relay = new (std::nothrow) LocalClient(session, fd);
 
@@ -242,12 +253,17 @@ LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
                     }
                     else
                     {
+                        relay->m_state = VC_ERROR;
                         delete rval;
                         rval = NULL;
                     }
                 }
             }
 
+            if (rval == NULL && fd > 0)
+            {
+                ::close(fd);
+            }
             break;
         }
     }
