@@ -71,8 +71,6 @@ const char CN_BACKEND_CONNECT_TIMEOUT[]  = "backend_connect_timeout";
 const char CN_MONITOR_INTERVAL[]         = "monitor_interval";
 const char CN_JOURNAL_MAX_AGE[]          = "journal_max_age";
 const char CN_SCRIPT_TIMEOUT[]           = "script_timeout";
-const char CN_FAILOVER[]                 = "failover";
-const char CN_FAILOVER_TIMEOUT[]         = "failover_timeout";
 const char CN_SCRIPT[]                   = "script";
 const char CN_EVENTS[]                   = "events";
 
@@ -138,8 +136,6 @@ MXS_MONITOR* monitor_alloc(const char *name, const char *module)
     mon->script_timeout = DEFAULT_SCRIPT_TIMEOUT;
     mon->parameters = NULL;
     mon->server_pending_changes = false;
-    mon->failover = false;
-    mon->failover_timeout = DEFAULT_FAILOVER_TIMEOUT;
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
     mon->next = allMonitors;
@@ -661,16 +657,6 @@ void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value)
 void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value)
 {
     mon->script_timeout = value;
-}
-
-void monitorSetFailover(MXS_MONITOR *mon, bool value)
-{
-    mon->failover = value;
-}
-
-void monitorSetFailoverTimeout(MXS_MONITOR *mon, uint32_t value)
-{
-    mon->failover_timeout = value;
 }
 
 /**
@@ -1560,8 +1546,6 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
     dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
     dprintf(file, "%s=%ld\n", CN_JOURNAL_MAX_AGE, monitor->journal_max_age);
     dprintf(file, "%s=%d\n", CN_SCRIPT_TIMEOUT, monitor->script_timeout);
-    dprintf(file, "%s=%s\n", CN_FAILOVER, monitor->failover ? "true" : "false");
-    dprintf(file, "%s=%d\n", CN_FAILOVER_TIMEOUT, monitor->failover_timeout);
 
     if (monitor->databases)
     {
@@ -1591,8 +1575,6 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
         CN_BACKEND_CONNECT_ATTEMPTS,
         CN_JOURNAL_MAX_AGE,
         CN_SCRIPT_TIMEOUT,
-        CN_FAILOVER,
-        CN_FAILOVER_TIMEOUT,
         CN_SERVERS
     };
 
@@ -1763,8 +1745,9 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
     }
 }
 
-void mon_process_failover(MXS_MONITOR *monitor)
+bool mon_process_failover(MXS_MONITOR *monitor, uint32_t failover_timeout)
 {
+    bool rval = true;
     MXS_CONFIG* cnf = config_get_global_options();
     MXS_MONITOR_SERVERS* failed_master = NULL;
 
@@ -1774,18 +1757,16 @@ void mon_process_failover(MXS_MONITOR *monitor)
         {
             if (ptr->server->last_event == MASTER_DOWN_EVENT)
             {
-                if (monitor->failover && !cnf->passive)
+                if (!cnf->passive)
                 {
                     if (failed_master)
                     {
                         MXS_ALERT("Multiple failed master servers detected: "
                                   "'%s' is the first master to fail but server "
-                                  "'%s' has also triggered a master_down event."
-                                  "Aborting and disabling failover.",
+                                  "'%s' has also triggered a master_down event.",
                                   failed_master->server->unique_name,
                                   ptr->server->unique_name);
-                        monitorSetFailover(monitor, false);
-                        return;
+                        return false;
                     }
                     else
                     {
@@ -1803,21 +1784,20 @@ void mon_process_failover(MXS_MONITOR *monitor)
              * since the event took place.
              */
 
-            if (monitor->failover && // Failover is enabled
-                !cnf->passive && // This is not a passive MaxScale
+            if (!cnf->passive && // This is not a passive MaxScale
                 ptr->server->last_event == MASTER_DOWN_EVENT && // This is a master that went down
                 cnf->promoted_at >= ptr->server->triggered_at && // Promoted to active after the event took place
                 ptr->new_event && // Event has not yet been processed
                 monitor->last_master_down > monitor->last_master_up) // Latest relevant event
             {
-                int64_t timeout = SEC_TO_HB(monitor->failover_timeout);
+                int64_t timeout = SEC_TO_HB(failover_timeout);
                 int64_t t = hkheartbeat - ptr->server->triggered_at;
 
                 if (t > timeout)
                 {
                     MXS_WARNING("Failover of server '%s' did not take place within "
                                 "%u seconds, failover needs to be re-triggered",
-                                ptr->server->unique_name, monitor->failover_timeout);
+                                ptr->server->unique_name, failover_timeout);
                     failed_master = ptr;
                     ptr->new_event = false;
                 }
@@ -1837,15 +1817,13 @@ void mon_process_failover(MXS_MONITOR *monitor)
                                    "SLAVELIST=$SLAVELIST SYNCEDLIST=$SYNCEDLIST";
 
         if (monitor_launch_script(monitor, failed_master, failover_cmd,
-                                  monitor->failover_timeout))
+                                  failover_timeout))
         {
-            MXS_ALERT("Failed to perform failover, disabling failover functionality. "
-                      "To enable failover functionalty, manually set 'failover'  "
-                      "to 'true' for monitor '%s' via MaxAdmin or the REST API.",
-                      monitor->name);
-            monitorSetFailover(monitor, false);
+            rval = false;
         }
     }
+
+    return rval;
 }
 
 static const char* monitor_state_to_string(int state)
@@ -1883,8 +1861,6 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
     json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
     json_object_set_new(rval, CN_JOURNAL_MAX_AGE, json_integer(monitor->journal_max_age));
     json_object_set_new(rval, CN_SCRIPT_TIMEOUT, json_integer(monitor->script_timeout));
-    json_object_set_new(rval, CN_FAILOVER, json_boolean(monitor->failover));
-    json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(monitor->script_timeout));
 
     /** Add custom module parameters */
     const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);

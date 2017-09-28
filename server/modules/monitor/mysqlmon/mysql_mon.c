@@ -60,6 +60,12 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor);
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
+static const char CN_FAILOVER[]         = "failover";
+static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
+
+/** Default failover timeout */
+#define DEFAULT_FAILOVER_TIMEOUT "90"
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -116,6 +122,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_NONE,
                 mxs_monitor_event_enum_values
             },
+            {CN_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -262,6 +270,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     handle->allow_external_slaves = config_get_bool(params, "allow_external_slaves");
+    handle->failover = config_get_bool(params, CN_FAILOVER);
+    handle->failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
 
     bool error = false;
 
@@ -319,6 +329,8 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
     const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
 
+    dcb_printf(dcb, "Failover:\t%s\n", handle->failover ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Failover Timeout:\t%u\n", handle->failover_timeout);
     dcb_printf(dcb, "MaxScale MonitorId:\t%lu\n", handle->id);
     dcb_printf(dcb, "Replication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
@@ -365,6 +377,8 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     json_object_set_new(rval, "failcount", json_integer(handle->failcount));
     json_object_set_new(rval, "allow_cluster_recovery", json_boolean(handle->allow_cluster_recovery));
     json_object_set_new(rval, "mysql51_replication", json_boolean(handle->mysql51_replication));
+    json_object_set_new(rval, CN_FAILOVER, json_boolean(handle->failover));
+    json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(handle->failover_timeout));
 
     if (handle->script)
     {
@@ -1401,7 +1415,17 @@ monitorMain(void *arg)
          * need to be launched.
          */
         mon_process_state_changes(mon, handle->script, handle->events);
-        mon_process_failover(mon);
+
+        if (handle->failover)
+        {
+            if (!mon_process_failover(mon, handle->failover_timeout))
+            {
+                MXS_ALERT("Failed to perform failover, disabling failover functionality. "
+                          "To enable failover functionality, manually set 'failover' to "
+                          "'true' for monitor '%s' via MaxAdmin or the REST API.", mon->name);
+                handle->failover = false;
+            }
+        }
 
         /* log master detection failure of first master becomes available after failure */
         if (root_master &&

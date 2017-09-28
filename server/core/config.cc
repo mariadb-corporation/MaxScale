@@ -244,8 +244,6 @@ const char *config_monitor_params[] =
     CN_MONITOR_INTERVAL,
     CN_JOURNAL_MAX_AGE,
     CN_SCRIPT_TIMEOUT,
-    CN_FAILOVER,
-    CN_FAILOVER_TIMEOUT,
     CN_BACKEND_CONNECT_TIMEOUT,
     CN_BACKEND_READ_TIMEOUT,
     CN_BACKEND_WRITE_TIMEOUT,
@@ -3187,41 +3185,6 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             MXS_NOTICE("Monitor '%s' is missing the '%s' parameter, "
                        "using default value of %d seconds.",
                        obj->object, CN_SCRIPT_TIMEOUT, DEFAULT_SCRIPT_TIMEOUT);
-        }
-
-        char *failover = config_get_value(obj->parameters, CN_FAILOVER);
-        if (failover)
-        {
-            int val = config_truth_value(failover);
-
-            if (val != -1)
-            {
-                monitorSetFailover(monitor, val);
-            }
-            else
-            {
-                error_count++;
-                MXS_NOTICE("Invalid '%s' parameter for monitor '%s'",
-                           CN_FAILOVER, obj->object);
-            }
-        }
-
-        char *failover_timeout = config_get_value(obj->parameters, CN_FAILOVER_TIMEOUT);
-        if (failover_timeout)
-        {
-            char *endptr;
-            long interval = strtol(failover_timeout, &endptr, 0);
-
-            if (*endptr == '\0' && interval > 0)
-            {
-                monitorSetFailoverTimeout(monitor, (uint32_t)interval);
-            }
-            else
-            {
-                error_count++;
-                MXS_NOTICE("Invalid '%s' parameter for monitor '%s'",
-                           CN_FAILOVER_TIMEOUT, obj->object);
-            }
         }
 
         char *connect_timeout = config_get_value(obj->parameters, CN_BACKEND_CONNECT_TIMEOUT);

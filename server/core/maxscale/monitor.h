@@ -35,9 +35,6 @@ MXS_BEGIN_DECLS
 /** Default script execution timeout in seconds */
 #define DEFAULT_SCRIPT_TIMEOUT 90
 
-/** Default failover script timeout */
-#define DEFAULT_FAILOVER_TIMEOUT 90
-
 /**
  * Monitor network timeout types
  */
@@ -77,8 +74,6 @@ void monitorSetInterval (MXS_MONITOR *, unsigned long);
 bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
 void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value);
 void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value);
-void monitorSetFailover(MXS_MONITOR *mon, bool value);
-void monitorSetFailoverTimeout(MXS_MONITOR *mon, uint32_t value);
 
 /**
  * @brief Serialize a monitor to a file
