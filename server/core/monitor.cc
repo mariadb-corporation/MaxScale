@@ -1728,9 +1728,6 @@ void servers_status_current_to_pending(MXS_MONITOR *monitor)
 
 void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_t events)
 {
-    MXS_CONFIG* cnf = config_get_global_options();
-    MXS_MONITOR_SERVERS* failed_master = NULL;
-
     for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
     {
         if (mon_status_changed(ptr))
@@ -1752,11 +1749,6 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             if (event == MASTER_DOWN_EVENT)
             {
                 monitor->last_master_down = hkheartbeat;
-
-                if (monitor->failover && !cnf->passive)
-                {
-                    failed_master = ptr;
-                }
             }
             else if (event == MASTER_UP_EVENT || event == NEW_MASTER_EVENT)
             {
@@ -1766,6 +1758,40 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             if (script && (events & event))
             {
                 monitor_launch_script(monitor, ptr, script, monitor->script_timeout);
+            }
+        }
+    }
+}
+
+void mon_process_failover(MXS_MONITOR *monitor)
+{
+    MXS_CONFIG* cnf = config_get_global_options();
+    MXS_MONITOR_SERVERS* failed_master = NULL;
+
+    for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+    {
+        if (mon_status_changed(ptr))
+        {
+            if (ptr->server->last_event == MASTER_DOWN_EVENT)
+            {
+                if (monitor->failover && !cnf->passive)
+                {
+                    if (failed_master)
+                    {
+                        MXS_ALERT("Multiple failed master servers detected: "
+                                  "'%s' is the first master to fail but server "
+                                  "'%s' has also triggered a master_down event."
+                                  "Aborting and disabling failover.",
+                                  failed_master->server->unique_name,
+                                  ptr->server->unique_name);
+                        monitorSetFailover(monitor, false);
+                        return;
+                    }
+                    else
+                    {
+                        failed_master = ptr;
+                    }
+                }
             }
         }
         else

@@ -290,6 +290,22 @@ void release_monitor_servers(MXS_MONITOR *monitor);
 void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_t events);
 
 /**
+ * @brief Process possible failover event
+ *
+ * If a master failure has occurred and MaxScale is configured with failover
+ * functionality, this fuction executes an external failover program to elect
+ * a new master server.
+ *
+ * This function should be called immediately after @c mon_process_state_changes.
+ *
+ * @param monitor Monitor whose cluster is processed
+ *
+ * @todo Currently this only works with flat replication topologies and
+ *       needs to be moved inside mysqlmon as it is MariaDB specific code.
+ */
+void mon_process_failover(MXS_MONITOR *monitor);
+
+/**
  * @brief Hangup connections to failed servers
  *
  * Injects hangup events for DCB that are connected to servers that are down.

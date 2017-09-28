@@ -214,6 +214,35 @@ assigned the _Slave_ status which allows them to be used like normal slave
 servers. When the option is disabled, the servers will only receive the _Slave
 of External Server_ status and they will not be used.
 
+### `failover`
+
+Enable automated master failover. This parameter expects a boolean value and the
+default value is false.
+
+When the failover functionality is enabled, traditional MariaDB Master-Slave
+clusters will automatically elect a new master if the old master goes down. The
+failover functionality will not take place when MaxScale is configured as a
+passive instance. For details on how MaxScale behaves in passive mode, see the
+following documentation of `failover_timeout`.
+
+If an attempt at failover fails or multiple master servers are detected, an
+error is logged and the failover functionality is disabled. If this happens, the
+cluster must be fixed manually and the failover needs to be re-enabled via the
+REST API or MaxAdmin.
+
+### `failover_timeout`
+
+The timeout for the cluster failover in seconds. The default value is 90
+seconds.
+
+If no successful failover takes place within the configured time period, a
+message is logged and the failover functionality is disabled.
+
+This parameter also controls how long a MaxScale instance that has transitioned
+from passive to active will wait for a failover to take place after an apparent
+loss of a master server. If no new master server is detected within the
+configured time period, the failover will be initiated again.
+
 ## Using the MySQL Monitor With Binlogrouter
 
 Since MaxScale 2.2 it's possible to detect a replication setup
@@ -252,5 +281,7 @@ script=mail_to_admin.sh
 events=master_down,slave_down
 ```
 
-When a master or a slave server goes down, the script is executed, a mail is sent and the administrator will be immediately notified of any possible problems.
-This is just a simple example showing what you can do with MaxScale and monitor scripts.
+When a master or a slave server goes down, the script is executed, a mail is
+sent and the administrator will be immediately notified of any possible
+problems.  This is just a simple example showing what you can do with MaxScale
+and monitor scripts.

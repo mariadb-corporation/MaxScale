@@ -115,19 +115,6 @@ If the script execution exceeds the configured timeout, it is stopped by sending
 a SIGTERM signal to it. If the process does not stop, a SIGKILL signal will be
 sent to it once the execution time is greater than twice the configured timeout.
 
-### `failover_timeout`
-
-The timeout for the cluster failover in seconds. The default value is 90
-seconds.
-
-If no successful failover takes place within the configured time period, a
-message is logged and the failover functionality is disabled.
-
-This parameter also controls how long a MaxScale instance that has transitioned
-from passive to active will wait for a failover to take place after an apparent
-loss of a master server. If no new master server is detected within the
-configured time period, the failover will be initiated again.
-
 ### `events`
 
 A list of event names which cause the script to be executed. If this option is not defined, all events cause the script to be executed. The list must contain a comma separated list of event names.

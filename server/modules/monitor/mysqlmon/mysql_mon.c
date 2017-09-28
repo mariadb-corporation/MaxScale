@@ -1401,6 +1401,7 @@ monitorMain(void *arg)
          * need to be launched.
          */
         mon_process_state_changes(mon, handle->script, handle->events);
+        mon_process_failover(mon);
 
         /* log master detection failure of first master becomes available after failure */
         if (root_master &&
