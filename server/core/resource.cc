@@ -638,7 +638,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
     const MODULECMD* cmd = modulecmd_find_command(module.c_str(), identifier.c_str());
 
-    if (cmd && !modulecmd_requires_output_dcb(cmd))
+    if (cmd)
     {
         if ((!MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_GET) ||
             (MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_POST))

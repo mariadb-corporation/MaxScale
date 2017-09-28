@@ -62,9 +62,6 @@ typedef struct
 #define MODULECMD_ARG_DCB         8 /**< DCB */
 #define MODULECMD_ARG_MONITOR     9 /**< Monitor */
 #define MODULECMD_ARG_FILTER      10 /**< Filter */
-#define MODULECMD_ARG_OUTPUT      11 /**< DCB suitable for writing results to.
-                                          This should always be the first argument
-                                          if the function requires an output DCB. */
 
 /** What type of an action does the command perform? */
 enum modulecmd_type
@@ -196,7 +193,6 @@ const MODULECMD* modulecmd_find_command(const char *domain, const char *identifi
  * | MODULECMD_ARG_STRING  | String            |
  * | MODULECMD_ARG_BOOLEAN | Boolean value     |
  * | MODULECMD_ARG_DCB     | Raw DCB pointer   |
- * | MODULECMD_ARG_OUTPUT  | DCB for output    |
  *
  * @param cmd Command for which the parameters are parsed
  * @param argc Number of arguments
@@ -222,15 +218,6 @@ void modulecmd_arg_free(MODULECMD_ARG *arg);
  * @return True if the optional argument is present
  */
 bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx);
-
-/**
- * @brief Check if module command requires an output DCB
- *
- * @param cmd Command to check
- *
- * @return True if module requires a DCB for printing output
- */
-bool modulecmd_requires_output_dcb(const MODULECMD* cmd);
 
 /**
  * @brief Call a registered command
