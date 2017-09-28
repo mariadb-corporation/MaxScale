@@ -65,6 +65,8 @@ typedef struct
     bool allow_external_slaves; /**< Whether to allow usage of external slave servers */
     bool failover; /**< If master failover is enabled */
     uint32_t failover_timeout; /**< Timeout in seconds for the master failover */
+    bool switchover; /**< If master switchover is enabled */
+    uint32_t switchover_timeout; /**< Timeout in seconds for the master switchover */
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
 

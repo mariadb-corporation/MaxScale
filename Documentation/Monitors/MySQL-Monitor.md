@@ -243,6 +243,39 @@ from passive to active will wait for a failover to take place after an apparent
 loss of a master server. If no new master server is detected within the
 configured time period, the failover will be initiated again.
 
+### `switchover`
+
+Enable switchover via MaxScale. This parameter expects a boolean value and
+the default value is false.
+
+When the switchover functionality is enabled, a REST API endpoint will be
+made available, using which switchover may be performed. The endpoint will
+be available irrespective of whether MaxScale is in active or passive mode,
+but switchover will only be attempted if MaxScale is in active mode and an
+error logged if an attempt is made when MaxScale is in passive mode.
+Switchover may also be triggered from MaxAdmin and the same rules regarding
+active/passive holds.
+
+It is safe to perform switchover even with the failover functionality
+enabled, as MaxScale will disable the failover behaviour for the duration
+of the switchover.
+
+Only if the switchover succeeds, will the failover functionality be re-enabled.
+Otherwise it will remain disabled and must be turned on manually via the REST
+API or MaxAdmin.
+
+TODO: Document the URL path. Probably will include the monitor section name
+      from the configuration.
+
+### `switchover_timeout`
+
+The timeout for the cluster switchover in seconds. The default value is 90
+seconds.
+
+If no successful switchover takes place within the configured time period,
+a message is logged and the failover (not switchover) functionality will not
+be enabled, even if it was enabled before the switchover attempt.
+
 ## Using the MySQL Monitor With Binlogrouter
 
 Since MaxScale 2.2 it's possible to detect a replication setup
