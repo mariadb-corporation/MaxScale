@@ -124,6 +124,8 @@ static void stats_func(void *);
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
 GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
+/* Set checksum value in router instance from a master reply or saved buffer */
+extern void blr_set_checksum(ROUTER_INSTANCE *instance, GWBUF *buf);
 
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
@@ -827,6 +829,18 @@ createInstance(SERVICE *service, char **options)
 
         /* Read any cached response messages */
         blr_cache_read_master_data(inst);
+
+        /**
+         * The value of master checksum is known only at registration time, so
+         * as soon as replication succeds the value is updated.
+         * Set now the binlog checksum from the saved value.
+         * This is very useful in case of possible failure in the
+         * registration phase for any reason: master is down, wrong password etc.
+         * In this case a connecting slave will get the checksum value
+         * from previous registration instead of default one (CRC32)
+         * which can be wrong if slave has binlog_checksum = NONE.
+         */
+        blr_set_checksum(inst, inst->saved_master.chksum2);
 
         /* Find latest binlog file or create a new one (000001) */
         if (blr_file_init(inst) == 0)

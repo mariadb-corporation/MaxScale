@@ -513,16 +513,9 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         break;
     case BLRM_CHKSUM2:
         {
-            char *val = blr_extract_column(buf, 1);
+            // Set checksum from master reply
+            blr_set_checksum(router, buf);
 
-            if (val && strncasecmp(val, "NONE", 4) == 0)
-            {
-                router->master_chksum = false;
-            }
-            if (val)
-            {
-                MXS_FREE(val);
-            }
             // Response to the master_binlog_checksum, should be stored
             if (router->saved_master.chksum2)
             {
@@ -2617,5 +2610,27 @@ void blr_notify_all_slaves(ROUTER_INSTANCE *router)
     if (notified > 0)
     {
         MXS_DEBUG("Notified %d slaves about new data.", notified);
+    }
+}
+
+/**
+ * Set checksum value in router instance
+ *
+ * @param inst    The router instance
+ * @param buf     The buffer with checksum value
+ */
+void blr_set_checksum(ROUTER_INSTANCE *inst, GWBUF *buf)
+{
+    if (buf)
+    {
+        char *val = blr_extract_column(buf, 1);
+        if (val && strncasecmp(val, "NONE", 4) == 0)
+        {
+            inst->master_chksum = false;
+        }
+        if (val)
+        {
+            MXS_FREE(val);
+        }
     }
 }
