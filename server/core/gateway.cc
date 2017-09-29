@@ -2076,6 +2076,9 @@ int main(int argc, char **argv)
     ss_dassert(worker);
     worker->run();
 
+    /*< Stop all the monitors */
+    monitorStopAll();
+
     /** Stop administrative interface */
     mxs_admin_shutdown();
 
