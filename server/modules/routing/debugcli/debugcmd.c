@@ -1679,13 +1679,23 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
         {
             json_t* output = NULL;
 
-            if (!modulecmd_call_command(cmd, arg, &output))
+            bool succeeded = modulecmd_call_command(cmd, arg, &output);
+
+            if (!succeeded && !output)
             {
-                const char* err = modulecmd_get_error();
-                dcb_printf(dcb, "Error: %s\n", *err ? err :
-                           "Call to module command failed, see log file for more details");
+                const char* s = modulecmd_get_error();
+                ss_dassert(s);
+
+                if (*s == 0)
+                {
+                    // No error had been set, so we add a default one.
+                    modulecmd_set_error("%s", "Call to module command failed, see log file for more details.");
+                }
+
+                output = modulecmd_get_json_error();
             }
-            else if (output)
+
+            if (output)
             {
                 char* js = json_dumps(output, JSON_INDENT(4));
                 dcb_printf(dcb, "%s\n", js);
