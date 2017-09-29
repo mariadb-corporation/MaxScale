@@ -305,13 +305,18 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         MXS_FREE(handle);
         handle = NULL;
     }
-    else if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+    else
     {
-        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
-        hashtable_free(handle->server_info);
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        handle = NULL;
+        handle->status = MXS_MONITOR_RUNNING;
+
+        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        {
+            MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
+            hashtable_free(handle->server_info);
+            MXS_FREE(handle->script);
+            MXS_FREE(handle);
+            handle = NULL;
+        }
     }
 
     return handle;
@@ -1171,10 +1176,10 @@ monitorMain(void *arg)
     if (mysql_thread_init())
     {
         MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
+        handle->status = MXS_MONITOR_STOPPED;
         return;
     }
 
-    handle->status = MXS_MONITOR_RUNNING;
     load_server_journal(mon, &handle->master);
 
     while (1)
