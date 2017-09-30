@@ -109,7 +109,7 @@ void mxs_log_get_throttling(MXS_LOG_THROTTLING* throttling);
 static inline bool mxs_log_priority_is_enabled(int priority)
 {
     assert((priority & ~LOG_PRIMASK) == 0);
-    return MXS_LOG_PRIORITY_IS_ENABLED(priority);
+    return MXS_LOG_PRIORITY_IS_ENABLED(priority) || priority == LOG_ALERT;
 }
 
 int mxs_log_message(int priority,
