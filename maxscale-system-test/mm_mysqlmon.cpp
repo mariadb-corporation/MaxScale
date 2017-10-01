@@ -92,6 +92,12 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
 
+    Test->tprintf("Checking initial state of the servers");
+    check_status(Test, "server1", "Master, Running");
+    check_status(Test, "server2", "Slave, Running");
+    check_status(Test, "server3", "Slave, Running");
+    check_status(Test, "server4", "Slave, Running");
+
     Test->tprintf("Test 1 - Configure all servers into a multi-master ring with one slave");
 
     Test->set_timeout(120);

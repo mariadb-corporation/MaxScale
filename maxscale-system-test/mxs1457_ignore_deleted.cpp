@@ -17,6 +17,11 @@ int main(int argc, char *argv[])
     test.repl->sync_slaves();
     test.repl->close_connections();
 
+    /**
+     * The monitor needs to be stopped before the slaves are stopped to prevent
+     * it from detecting the broken replication.
+     */
+    test.ssh_maxscale(true, "maxadmin shutdown monitor \"MySQL Monitor\"");
     // Stop slaves and drop the user on the master
     test.repl->stop_slaves();
     test.repl->connect();

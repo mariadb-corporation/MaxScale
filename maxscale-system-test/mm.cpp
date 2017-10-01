@@ -34,12 +34,12 @@ int check_conf(TestConnections* Test, int blocked_node)
     Test->repl->connect();
     Test->connect_rwsplit();
     create_t1(Test->conn_rwsplit);
-    global_result += insert_into_t1(Test->conn_rwsplit, 4);
+    global_result += insert_into_t1(Test->conn_rwsplit, 3);
 
     printf("Sleeping to let replication happen\n");
     fflush(stdout);
     Test->stop_timeout();
-    sleep(30);
+    sleep(15);
 
     for (int i = 0; i < 2; i++)
     {
@@ -47,13 +47,13 @@ int check_conf(TestConnections* Test, int blocked_node)
         {
             Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
             Test->set_timeout(100);
-            global_result += select_from_t1(Test->repl->nodes[i], 4);
+            global_result += select_from_t1(Test->repl->nodes[i], 3);
         }
     }
     Test->set_timeout(100);
     printf("Checking data from rwsplit\n");
     fflush(stdout);
-    global_result += select_from_t1(Test->conn_rwsplit, 4);
+    global_result += select_from_t1(Test->conn_rwsplit, 3);
     global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
 
     Test->repl->close_connections();
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Block slave\n");
     Test->repl->block_node(0);
     Test->stop_timeout();
-    sleep(15);
+    sleep(10);
     Test->set_timeout(120);
     Test->get_maxadmin_param((char *) "show server server1", (char *) "Status:", maxadmin_result);
     printf("node0 %s\n", maxadmin_result);
@@ -110,12 +110,12 @@ int main(int argc, char *argv[])
     Test->set_timeout(120);
     Test->tprintf("Unlock slave\n");
     Test->repl->unblock_node(0);
-    sleep(15);
+    sleep(10);
 
     Test->set_timeout(120);
     Test->tprintf("Block master\n");
     Test->repl->block_node(1);
-    sleep(15);
+    sleep(10);
     Test->get_maxadmin_param((char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Down")  == NULL )
@@ -129,21 +129,21 @@ int main(int argc, char *argv[])
     execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=OFF");
     Test->repl->close_connections();
 
-    sleep(15);
+    sleep(10);
     Test->set_timeout(120);
     Test->tprintf("Put some data and check\n");
     Test->add_result(check_conf(Test, 1), "configuration broken\n");
 
     printf("Unlock slave\n");
     Test->repl->unblock_node(1);
-    sleep(15);
+    sleep(10);
 
     Test->set_timeout(120);
     printf("Make node 2 slave\n");
     Test->repl->connect();
     execute_query(Test->repl->nodes[1], (char *) "SET GLOBAL READ_ONLY=ON");
     Test->repl->close_connections();
-    sleep(15);
+    sleep(10);
 
     Test->set_timeout(120);
     printf("Put some data and check\n");
