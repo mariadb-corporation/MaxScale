@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
     sprintf(cmd, "%s/utf64.cnf", test_dir);
     for (int i = 0; i < Test->repl->N; i++)
     {
-        Test->repl->copy_to_node(cmd, (char *) "./", i);
-        Test->repl->ssh_node(i, (char *) "cp ./utf64.cnf /etc/my.cnf.d/", true);
+        Test->repl->copy_to_node(cmd, "./", i);
+        Test->repl->ssh_node(i, true, "cp ./utf64.cnf /etc/my.cnf.d/");
     }
 
     Test->repl->start_replication();
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Restore backend configuration\n");
     for (int i = 0; i < Test->repl->N; i++)
     {
-        Test->repl->ssh_node(i, (char *) "rm  /etc/my.cnf.d/utf64.cnf", true);
+        Test->repl->ssh_node(i, true, "rm  /etc/my.cnf.d/utf64.cnf");
     }
     Test->repl->start_replication();
 

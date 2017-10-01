@@ -213,7 +213,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
 
     if (use_snapshots)
     {
-        snapshot_reverted = revert_snapshot((char *) "clean");
+        snapshot_reverted = revert_snapshot("clean");
     }
 
     if (!snapshot_reverted && maxscale::check_nodes)
@@ -602,7 +602,7 @@ void TestConnections::process_template(const char *template_name, const char *de
         }
 
         mdn[j]->connect();
-        execute_query(mdn[j]->nodes[0], (char *) "CREATE DATABASE IF NOT EXISTS test");
+        execute_query(mdn[j]->nodes[0], "CREATE DATABASE IF NOT EXISTS test");
         mdn[j]->close_connections();
     }
 
@@ -616,7 +616,7 @@ void TestConnections::process_template(const char *template_name, const char *de
     {
         system("sed -i \"s/###repl51###/mysql51_replication=true/g\" maxscale.cnf");
     }
-    copy_to_maxscale((char *) "maxscale.cnf", (char *) dest);
+    copy_to_maxscale("maxscale.cnf", (char *) dest);
 }
 
 int TestConnections::init_maxscale()
@@ -711,7 +711,7 @@ int TestConnections::stop_maxscale()
     return res;
 }
 
-int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
+int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, const char* prefix)
 {
     int local_result = 0;
     char * mariadb_log;
@@ -726,7 +726,7 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
     {
         if (strcmp(repl->IP[i], "127.0.0.1") != 0) // Do not copy MariaDB logs in case of local backend
         {
-            mariadb_log = repl->ssh_node_output(i, (char *) "cat /var/lib/mysql/*.err", true, &exit_code);
+            mariadb_log = repl->ssh_node_output(i, "cat /var/lib/mysql/*.err", true, &exit_code);
             sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
             f = fopen(str, "w");
             if (f != NULL)
@@ -752,8 +752,8 @@ int TestConnections::copy_all_logs()
 
     if (!no_backend_log_copy)
     {
-        copy_mariadb_logs(repl, (char *) "node");
-        copy_mariadb_logs(galera, (char *) "galera");
+        copy_mariadb_logs(repl, "node");
+        copy_mariadb_logs(galera, "galera");
     }
 
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
@@ -857,9 +857,9 @@ int TestConnections::start_binlog()
     repl->stop_nodes();
 
     binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
-    execute_query(binlog, (char *) "stop slave");
-    execute_query(binlog, (char *) "reset slave all");
-    execute_query(binlog, (char *) "reset master");
+    execute_query(binlog, "stop slave");
+    execute_query(binlog, "reset slave all");
+    execute_query(binlog, "reset master");
     mysql_close(binlog);
 
     tprintf("Stopping maxscale\n");
@@ -889,13 +889,13 @@ int TestConnections::start_binlog()
     add_result(ssh_maxscale(true, "ls -la %s/", maxscale_binlog_dir), "ls failed\n");
 
     tprintf("show master status\n");
-    find_field(repl->nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
-    find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
+    find_field(repl->nodes[0], "show master status", "File", &log_file[0]);
+    find_field(repl->nodes[0], "show master status", "Position", &log_pos[0]);
     tprintf("Real master file: %s\n", log_file);
     tprintf("Real master pos : %s\n", log_pos);
 
     tprintf("Stopping first slave (node 1)\n");
-    try_query(repl->nodes[1], (char *) "stop slave;");
+    try_query(repl->nodes[1], "stop slave;");
     //repl->no_set_pos = true;
     repl->no_set_pos = false;
     tprintf("Configure first backend slave node to be slave of real master\n");
@@ -931,8 +931,8 @@ int TestConnections::start_binlog()
     // get Master status from Maxscale binlog
     tprintf("show master status\n");
     fflush(stdout);
-    find_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
-    find_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
+    find_field(binlog, "show master status", "File", &log_file[0]);
+    find_field(binlog, "show master status", "Position", &log_pos[0]);
 
     tprintf("Maxscale binlog master file: %s\n", log_file);
     fflush(stdout);
@@ -943,7 +943,7 @@ int TestConnections::start_binlog()
     fflush(stdout);
     for (i = 2; i < repl->N; i++)
     {
-        try_query(repl->nodes[i], (char *) "stop slave;");
+        try_query(repl->nodes[i], "stop slave;");
         repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
     }
     repl->close_connections();
@@ -1012,23 +1012,23 @@ int TestConnections::start_mm()
     for (i = 0; i < 2; i++)
     {
         tprintf("Starting back node %d\n", i);
-        global_result += repl->start_node(i, (char *) "");
+        global_result += repl->start_node(i, "");
     }
 
     repl->connect();
     for (i = 0; i < 2; i++)
     {
-        execute_query(repl->nodes[i], (char *) "stop slave");
-        execute_query(repl->nodes[i], (char *) "reset master");
+        execute_query(repl->nodes[i], "stop slave");
+        execute_query(repl->nodes[i], "reset master");
     }
 
-    execute_query(repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=ON");
+    execute_query(repl->nodes[0], "SET GLOBAL READ_ONLY=ON");
 
-    find_field(repl->nodes[0], (char *) "show master status", (char *) "File", log_file1);
-    find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", log_pos1);
+    find_field(repl->nodes[0], "show master status", "File", log_file1);
+    find_field(repl->nodes[0], "show master status", "Position", log_pos1);
 
-    find_field(repl->nodes[1], (char *) "show master status", (char *) "File", log_file2);
-    find_field(repl->nodes[1], (char *) "show master status", (char *) "Position", log_pos2);
+    find_field(repl->nodes[1], "show master status", "File", log_file2);
+    find_field(repl->nodes[1], "show master status", "Position", log_pos2);
 
     repl->set_slave(repl->nodes[0], repl->IP[1],  repl->port[1], log_file2, log_pos2);
     repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file1, log_pos1);
@@ -1056,11 +1056,11 @@ void TestConnections::check_log_err(const char * err_msg, bool expected)
     set_timeout(50);
 
     tprintf("Reading maxscale.log\n");
-    if ( ( read_log((char *) "maxscale.log", &err_log_content) != 0) || (strlen(err_log_content) < 2) )
+    if ( ( read_log("maxscale.log", &err_log_content) != 0) || (strlen(err_log_content) < 2) )
     {
         tprintf("Reading maxscale1.log\n");
         free(err_log_content);
-        if (read_log((char *) "maxscale1.log", &err_log_content) != 0)
+        if (read_log("maxscale1.log", &err_log_content) != 0)
         {
             add_result(1, "Error reading log\n");
         }
@@ -1103,7 +1103,7 @@ int TestConnections::find_connected_slave(int * global_result)
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscale_ip(), maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscale_ip(), maxscale_hostname, "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         if ((i == 0) && (conn_num != 1))
         {
@@ -1134,7 +1134,7 @@ int TestConnections::find_connected_slave1()
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscale_ip(), maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscale_ip(), maxscale_hostname, "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0))
@@ -1183,13 +1183,13 @@ int TestConnections::check_maxscale_alive()
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
     set_timeout(10);
-    try_query(conn_rwsplit, (char *) "show databases;");
+    try_query(conn_rwsplit, "show databases;");
     tprintf("ReadConn Master \n");
     set_timeout(10);
-    try_query(conn_master, (char *) "show databases;");
+    try_query(conn_master, "show databases;");
     tprintf("ReadConn Slave \n");
     set_timeout(10);
-    try_query(conn_slave, (char *) "show databases;");
+    try_query(conn_slave, "show databases;");
     set_timeout(10);
     close_maxscale_connections()    ;
     add_result(global_result - gr, "Maxscale is not alive\n");
@@ -1377,7 +1377,7 @@ int TestConnections::copy_to_maxscale(const char* src, const char* dest)
     {
 
         sprintf(sys, "scp -q -i %s -o UserKnownHostsFile=/dev/null "
-                     "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
+                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
                 maxscale_keyfile, src, maxscale_access_user, maxscale_IP, dest);
     }
     return system(sys);
@@ -1395,7 +1395,7 @@ int TestConnections::copy_from_maxscale(char* src, char* dest)
     else
     {
         sprintf(sys, "scp -i %s -o UserKnownHostsFile=/dev/null "
-                     "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
+                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
                 maxscale_keyfile, maxscale_access_user, maxscale_IP, src, dest);
     }
     return system(sys);
@@ -1562,12 +1562,12 @@ int TestConnections::get_client_ip(char * ip)
     unsigned int conn_num = 0;
 
     connect_rwsplit();
-    if (execute_query(conn_rwsplit, (char *) "CREATE DATABASE IF NOT EXISTS db_to_check_clent_ip") != 0 )
+    if (execute_query(conn_rwsplit, "CREATE DATABASE IF NOT EXISTS db_to_check_clent_ip") != 0 )
     {
         return ret;
     }
     close_rwsplit();
-    conn = open_conn_db(rwsplit_port, maxscale_IP, (char *) "db_to_check_clent_ip", maxscale_user,
+    conn = open_conn_db(rwsplit_port, maxscale_IP, "db_to_check_clent_ip", maxscale_user,
                         maxscale_password, ssl);
 
     if (conn != NULL)
@@ -1830,7 +1830,8 @@ int TestConnections::try_query(MYSQL *conn, const char *format, ...)
     va_end(valist);
 
     int res = execute_query1(conn, sql, false);
-    add_result(res, "Query '%.*s%s' failed!\n", message_len < 100 ? message_len : 100, sql, message_len < 100 ? "" : "...");
+    add_result(res, "Query '%.*s%s' failed!\n", message_len < 100 ? message_len : 100, sql,
+               message_len < 100 ? "" : "...");
     return res;
 }
 
@@ -1851,7 +1852,7 @@ int TestConnections::find_master_maxadmin(Mariadb_nodes * nodes)
         char show_server[256];
         char res[256];
         sprintf(show_server, "show server server%d", i + 1);
-        get_maxadmin_param(show_server, (char *) "Status", res);
+        get_maxadmin_param(show_server, "Status", res);
 
         if (strstr(res, "Master"))
         {
@@ -1879,7 +1880,7 @@ int TestConnections::find_slave_maxadmin(Mariadb_nodes * nodes)
         char show_server[256];
         char res[256];
         sprintf(show_server, "show server server%d", i + 1);
-        get_maxadmin_param(show_server, (char *) "Status", res);
+        get_maxadmin_param(show_server, "Status", res);
 
         if (strstr(res, "Slave"))
         {
@@ -1934,14 +1935,9 @@ int TestConnections::check_maxadmin_param(const char *command, const char *param
     return rval;
 }
 
-int TestConnections::get_maxadmin_param(char *command, char *param, char *result)
+int TestConnections::get_maxadmin_param(const char* command, const char* param, char* result)
 {
-    char        * buf;
-
-    buf = ssh_maxscale_output(true, "maxadmin %s", command);
-
-    //printf("%s\n", buf);
-
+    char* buf = ssh_maxscale_output(true, "maxadmin %s", command);
     char *x = strstr(buf, param);
 
     if (x == NULL)
@@ -1981,7 +1977,7 @@ int TestConnections::list_dirs()
     for (int i = 0; i < repl->N; i++)
     {
         tprintf("ls on node %d\n", i);
-        repl->ssh_node(i, (char *) "ls -la /var/lib/mysql", true);
+        repl->ssh_node(i, true, "ls -la /var/lib/mysql");
         fflush(stdout);
     }
     tprintf("ls maxscale \n");
@@ -2034,7 +2030,7 @@ int TestConnections::take_snapshot(char * snapshot_name)
     return system(str);
 }
 
-int TestConnections::revert_snapshot(char * snapshot_name)
+int TestConnections::revert_snapshot(const char* snapshot_name)
 {
     char str[4096];
     sprintf(str, "%s %s", revert_snapshot_command, snapshot_name);

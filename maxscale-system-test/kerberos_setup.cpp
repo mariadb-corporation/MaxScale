@@ -32,13 +32,12 @@ int main(int argc, char *argv[])
     sprintf(str, "%s/krb5.conf", test_dir);
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->repl->ssh_node(i, (char *)
-                             "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-workstation pam_krb5", true);
+        Test->repl->ssh_node(i, true, "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-workstation pam_krb5");
         Test->repl->copy_to_node(str, (char *) "~/", i);
-        Test->repl->ssh_node(i, (char *) "cp ~/krb5.conf /etc/", true);
+        Test->repl->ssh_node(i, true, "cp ~/krb5.conf /etc/");
 
         Test->repl->copy_to_node((char *) "hosts", (char *) "~/", i);
-        Test->repl->ssh_node(i, (char *) "cp ~/hosts /etc/", true);
+        Test->repl->ssh_node(i, true, "cp ~/hosts /etc/");
     }
 
     Test->tprintf("Copying 'hosts' and krb5.conf files to Maxscale node\n");
@@ -96,12 +95,12 @@ int main(int argc, char *argv[])
     {
         sprintf(str, "%s/kerb.cnf", test_dir);
         Test->repl->copy_to_node(str, (char *) "~/", i);
-        Test->repl->ssh_node(i, (char *) "cp ~/kerb.cnf /etc/my.cnf.d/", true);
+        Test->repl->ssh_node(i, true, "cp ~/kerb.cnf /etc/my.cnf.d/");
 
         Test->repl->copy_to_node((char *) "krb5.keytab", (char *) "~/", i);
-        Test->repl->ssh_node(i, (char *) "cp ~/krb5.keytab /etc/", true);
+        Test->repl->ssh_node(i, true, "cp ~/krb5.keytab /etc/");
 
-        Test->repl->ssh_node(i, (char *) "kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab", false);
+        Test->repl->ssh_node(i, false, "kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab");
     }
 
     Test->tprintf("Installing gssapi plugin to all nodes\n");
@@ -118,18 +117,18 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Trying use usr1 to execute query: RW Split\n");
     Test->add_result(
-        Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4006", false),
+        Test->repl->ssh_node(1, false,
+                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4006"),
         "Error executing query against RW Split\n");
     Test->tprintf("Trying use usr1 to execute query: Read Connection Master\n");
     Test->add_result(
-        Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4008", false),
+        Test->repl->ssh_node(1, false,
+                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4008"),
         "Error executing query against Read Connection Master\n");
     Test->tprintf("Trying use usr1 to execute query: Read Connection Slave\n");
     Test->add_result(
-        Test->repl->ssh_node(1,
-                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4009", false),
+        Test->repl->ssh_node(1, false,
+                             "echo select User,Host from mysql.user | mysql -uusr1 -h maxscale.maxscale.test -P 4009"),
         "Error executing query against Read Connection Slave\n");
 
     int rval = Test->global_result;

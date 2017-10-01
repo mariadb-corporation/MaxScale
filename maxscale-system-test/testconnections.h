@@ -220,7 +220,7 @@ public:
      * @param prefix file name prefix
      * @return 0 if success
      */
-    int copy_mariadb_logs(Mariadb_nodes *repl, char * prefix);
+    int copy_mariadb_logs(Mariadb_nodes *repl, const char* prefix);
 
     /**
      * @brief no_backend_log_copy if true logs from backends are not copied (needed if case of Aurora RDS backend or similar)
@@ -647,7 +647,7 @@ public:
     int execute_maxadmin_command(char * cmd);
     int execute_maxadmin_command_print(char * cmd);
     int check_maxadmin_param(const char *command, const  char *param, const  char *value);
-    int get_maxadmin_param(char *command, char *param, char *result);
+    int get_maxadmin_param(const char* command, const char* param, char* result);
     void check_current_operations(int value);
     void check_current_connections(int value);
 
@@ -682,7 +682,7 @@ public:
      * @param snapshot_name name of snapshot to revert
      * @return 0 in case of success or mdbci error code in case of error
      */
-    int revert_snapshot(char * snapshot_name);
+    int revert_snapshot(const char* snapshot_name);
 
     /**
      * @brief Test a bad configuration
