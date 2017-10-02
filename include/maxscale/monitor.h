@@ -274,6 +274,21 @@ void lock_monitor_servers(MXS_MONITOR *monitor);
 void release_monitor_servers(MXS_MONITOR *monitor);
 
 /**
+ * Alter monitor parameters
+ *
+ * The monitor parameters should not be altered while the monitor is
+ * running. To alter a parameter from outside a monitor module, stop the monitor,
+ * do the alteration and then restart the monitor. The monitor "owns" the parameters
+ * as long as it is running so if the monitor needs to change its own parameters,
+ * it can do it without stopping itself.
+ *
+ * @param monitor Monitor whose parameter is altered
+ * @param key     Parameter name to alter
+ * @param value   New value for the parameter
+ */
+void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* value);
+
+/**
  * @brief Handle state change events
  *
  * This function should be called by all monitors at the end of each monitoring

@@ -856,6 +856,8 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
  */
 void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
 {
+    spinlock_acquire(&monitor->lock);
+
     while (params)
     {
         MXS_CONFIG_PARAMETER* old = config_get_param(monitor->parameters, params->name);
@@ -874,11 +876,16 @@ void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
 
         params = params->next;
     }
+
+    spinlock_release(&monitor->lock);
 }
 
 bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key)
 {
     MXS_CONFIG_PARAMETER *prev = NULL;
+    bool rval = false;
+
+    spinlock_acquire(&monitor->lock);
 
     for (MXS_CONFIG_PARAMETER *p = monitor->parameters; p; p = p->next)
     {
@@ -887,19 +894,41 @@ bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key)
             if (p == monitor->parameters)
             {
                 monitor->parameters = monitor->parameters->next;
-                p->next = NULL;
             }
             else
             {
                 prev->next = p->next;
-                p->next = NULL;
             }
+
+            p->next = NULL;
             config_parameter_free(p);
-            return true;
+            rval = true;
+            break;
         }
+
         prev = p;
     }
-    return false;
+
+    spinlock_release(&monitor->lock);
+
+    return rval;
+}
+
+void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* value)
+{
+    spinlock_acquire(&monitor->lock);
+
+    for (MXS_CONFIG_PARAMETER* p = monitor->parameters; p; p = p->next)
+    {
+        if (strcmp(p->name, key) == 0)
+        {
+            MXS_FREE(p->value);
+            p->value = MXS_STRDUP_A(value);
+            break;
+        }
+    }
+
+    spinlock_release(&monitor->lock);
 }
 
 /**
@@ -1531,6 +1560,8 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
         return false;
     }
 
+    spinlock_acquire(&monitor->lock);
+
     dprintf(file, "[%s]\n", monitor->name);
     dprintf(file, "%s=monitor\n", CN_TYPE);
     dprintf(file, "%s=%s\n", CN_MODULE, monitor->module_name);
@@ -1584,6 +1615,8 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
             dprintf(file, "%s=%s\n", p->name, p->value);
         }
     }
+
+    spinlock_release(&monitor->lock);
 
     close(file);
 

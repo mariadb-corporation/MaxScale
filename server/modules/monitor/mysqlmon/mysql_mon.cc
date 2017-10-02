@@ -1878,6 +1878,8 @@ monitorMain(void *arg)
                 MXS_ALERT("Failed to perform failover, disabling failover functionality. "
                           "To enable failover functionality, manually set 'failover' to "
                           "'true' for monitor '%s' via MaxAdmin or the REST API.", mon->name);
+
+                mon_alter_parameter(handle->monitor, CN_FAILOVER, "false");
                 handle->failover = false;
             }
         }
