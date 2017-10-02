@@ -287,11 +287,47 @@ int test1()
     ss_dassert(json_is_array(mxs_json_pointer(json, "data/0/attributes/slaves")));
     ss_dassert(json_array_size(mxs_json_pointer(json, "data/0/attributes/slaves")) == 3);
 
+    json_decref(json);
+
+    return 0;
+}
+
+int test2()
+{
+    char *s;
+    json_t* err;
+
+    err = mxs_json_error("%s", "This is an error!");
+    s = json_dumps(err, 0);
+    printf("%s\n", s);
+    ss_dassert(strcmp(s, "{\"errors\": [{\"detail\": \"This is an error!\"}]}") == 0);
+    MXS_FREE(s);
+
+    json_decref(err);
+
+    err = mxs_json_error_append(NULL, "%s", "This is an error!");
+    s = json_dumps(err, 0);
+    printf("%s\n", s);
+    ss_dassert(strcmp(s, "{\"errors\": [{\"detail\": \"This is an error!\"}]}") == 0);
+    MXS_FREE(s);
+
+    err = mxs_json_error_append(err, "%s", "This is another error!");
+    s = json_dumps(err, 0);
+    printf("%s\n", s);
+    ss_dassert(strcmp(s,
+                      "{\"errors\": [{\"detail\": \"This is an error!\"}, "
+                      "{\"detail\": \"This is another error!\"}]}") == 0);
+    MXS_FREE(s);
+
+    json_decref(err);
+
     return 0;
 }
 
 int main(int argc, char** argv)
 {
-    test1();
+    int errors = 0;
+    errors += test1();
+    errors += test2();
     return 0;
 }

@@ -20,6 +20,14 @@
 
 using std::string;
 
+namespace
+{
+
+const char DETAIL[] = "detail";
+const char ERRORS[] = "errors";
+
+}
+
 static json_t* self_link(const char* host, const char* endpoint)
 {
     json_t* self_link = json_object();
@@ -164,6 +172,26 @@ json_t* mxs_json_self_link(const char* host, const char* path, const char* id)
     return links;
 }
 
+static json_t* json_error_detail(const char* message)
+{
+    json_t* err = json_object();
+    json_object_set_new(err, DETAIL, json_string(message));
+    return err;
+}
+
+static json_t* json_error(const char* message)
+{
+    json_t* err = json_error_detail(message);
+
+    json_t* arr = json_array();
+    json_array_append_new(arr, err);
+
+    json_t* obj = json_object();
+    json_object_set_new(obj, ERRORS, arr);
+
+    return obj;
+}
+
 json_t* mxs_json_error(const char* format, ...)
 {
     va_list args;
@@ -177,14 +205,46 @@ json_t* mxs_json_error(const char* format, ...)
     vsnprintf(message, sizeof(message), format, args);
     va_end(args);
 
-    json_t* err = json_object();
-    json_object_set_new(err, "detail", json_string(message));
+    return json_error(message);
+}
 
-    json_t* arr = json_array();
-    json_array_append_new(arr, err);
+static json_t* json_error_append(json_t* obj, const char* message)
+{
+    json_t* err = json_error_detail(message);
 
-    json_t* obj = json_object();
-    json_object_set_new(obj, "errors", arr);
+    json_t* arr = json_object_get(obj, ERRORS);
+    ss_dassert(arr);
+    ss_dassert(json_is_array(arr));
+
+    if (arr)
+    {
+        json_array_append_new(arr, err);
+    }
+
+    return obj;
+}
+
+json_t* mxs_json_error_append(json_t* obj, const char* format, ...)
+{
+    va_list args;
+
+    va_start(args, format);
+    int len = vsnprintf(NULL, 0, format, args);
+    va_end(args);
+
+    char message[len + 1];
+    va_start(args, format);
+    vsnprintf(message, sizeof(message), format, args);
+    va_end(args);
+
+    if (!obj)
+    {
+        obj = json_error(message);
+    }
+    else
+    {
+        obj = json_error_append(obj, message);
+    }
 
     return obj;
 }

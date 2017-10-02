@@ -116,4 +116,15 @@ json_t* mxs_json_pointer(json_t* json, const char* json_ptr);
  */
 json_t* mxs_json_error(const char* format, ...);
 
+/**
+ * @brief Append error to existing JSON object.
+ *
+ * @param object Existing json error object, or NULL.
+ * @param format Format string
+ * @param ...    Variable argument list
+ *
+ * @return The error added to 'errors' array of the JSON object.
+ */
+json_t* mxs_json_error_append(json_t* object, const char* format, ...);
+
 MXS_END_DECLS
