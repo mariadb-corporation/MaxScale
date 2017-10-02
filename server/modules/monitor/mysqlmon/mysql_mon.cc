@@ -22,6 +22,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/debug.h>
+#include <maxscale/json_api.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
@@ -81,16 +82,16 @@ static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
  *
  * @param current_master        The specified current master.
  * @param server                The server to check against.
- * @param result                Result object, for adding error information.
  * @param current_master_found  On output, true if @server is @c current_master.
+ * @param error                 On output, error object if function failed.
  *
  * @return False, if there is some error with the specified current master,
  *         True otherwise.
  */
 bool mysql_switchover_check_current(SERVER* current_master,
                                     SERVER* server,
-                                    json_t* result,
-                                    bool* current_master_found)
+                                    bool* current_master_found,
+                                    json_t** error)
 {
     bool rv = true;
     bool is_master = SERVER_IS_MASTER(server);
@@ -101,33 +102,15 @@ bool mysql_switchover_check_current(SERVER* current_master,
 
         if (!is_master)
         {
-            std::string s;
-            s += "Specified current master ";
-            s += current_master->unique_name;
-            s += " is a server, but it is not the current master.";
-
-            json_t* error = json_string(s.c_str());
-            if (error)
-            {
-                json_object_set_new(result, "error", error);
-            }
-
+            *error = mxs_json_error("Specified %s is a server, but not the current master.",
+                                    current_master->unique_name);
             rv = false;
         }
     }
     else if (is_master)
     {
-        std::string s;
-        s += "Current master not specified, although there is a master, ";
-        s += server->unique_name;
-        s += ".";
-
-        json_t* error = json_string(s.c_str());
-        if (error)
-        {
-            json_object_set_new(result, "error", error);
-        }
-
+        *error = mxs_json_error("Current master not specified, even though there is "
+                                "a master (%s).", server->unique_name);
         rv = false;
     }
 
@@ -139,16 +122,16 @@ bool mysql_switchover_check_current(SERVER* current_master,
  *
  * @param new_master        The specified new master.
  * @param server            The server to check against.
- * @param result            Result object, for adding error information.
  * @param new_master_found  On output, true if the @c server is @c new_master.
+ * @param error             On output, error object if function failed.
  *
  * @return False, if there is some error with the specified current master,
  *         True otherwise.
  */
 bool mysql_switchover_check_new(SERVER* new_master,
                                 SERVER* server,
-                                json_t* result,
-                                bool* new_master_found)
+                                bool* new_master_found,
+                                json_t** error)
 {
     bool rv = true;
     bool is_master = SERVER_IS_MASTER(server);
@@ -159,17 +142,8 @@ bool mysql_switchover_check_new(SERVER* new_master,
 
         if (is_master)
         {
-            std::string s;
-            s += "Specified new master ";
-            s += new_master->unique_name;
-            s += " is already master.";
-
-            json_t* error = json_string(s.c_str());
-            if (error)
-            {
-                json_object_set_new(result, "error", error);
-            }
-
+            *error = mxs_json_error("Specified new master %s is already the current master.",
+                                    new_master->unique_name);
             rv = false;
         }
     }
@@ -180,15 +154,14 @@ bool mysql_switchover_check_new(SERVER* new_master,
 /**
  * Check whether specified current and new master are acceptable.
  *
+ * @param mon               The monitor.
  * @param new_master        The specified new master.
- * @param server            The server to check against.
- * @param result            Result object, for adding error information.
- * @param new_master_found  On output, true if the @c server is @c new_master.
+ * @param current_master    The specifiec current master (may be NULL).
+ * @param error             On output, error object if function failed.
  *
- * @return False, if there is some error with the specified current master,
- *         True otherwise.
+ * @return True if switchover can proceeed, false otherwise.
  */
-bool mysql_switchover_check(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_master, json_t* result)
+bool mysql_switchover_check(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_master, json_t** error)
 {
     bool rv = true;
 
@@ -204,12 +177,12 @@ bool mysql_switchover_check(MXS_MONITOR* mon, SERVER* new_master, SERVER* curren
 
         if (!current_master_found)
         {
-            rv = mysql_switchover_check_current(current_master, server, result, &current_master_found);
+            rv = mysql_switchover_check_current(current_master, server, &current_master_found, error);
         }
 
         if (rv)
         {
-            rv = mysql_switchover_check_new(new_master, server, result, &new_master_found);
+            rv = mysql_switchover_check_new(new_master, server, &new_master_found, error);
         }
 
         monitored_server = monitored_server->next;
@@ -217,26 +190,19 @@ bool mysql_switchover_check(MXS_MONITOR* mon, SERVER* new_master, SERVER* curren
 
     if (rv && ((current_master && !current_master_found) || !new_master_found))
     {
-        std::string s;
+        *error = NULL;
 
         if (current_master && !current_master_found)
         {
-            s += "Current master ";
-            s += current_master->unique_name;
-            s += " specified, but not found amongst existing servers. ";
+            *error = mxs_json_error("Specified current master %s is not found amongst "
+                                    "existing servers.", current_master->unique_name);
         }
 
         if (!new_master_found)
         {
-            s += "Specified new master ";
-            s += new_master->unique_name;
-            s += " not found amongst existing servers.";
-        }
-
-        json_t* error = json_string(s.c_str());
-        if (error)
-        {
-            json_object_set_new(result, "error", error);
+            *error = mxs_json_error_append(*error,
+                                           "Specified new master %s is not found amongst "
+                                           "existing servers.", new_master->unique_name);
         }
 
         rv = false;
@@ -245,7 +211,7 @@ bool mysql_switchover_check(MXS_MONITOR* mon, SERVER* new_master, SERVER* curren
     return rv;
 }
 
-bool mysql_switchover_perform(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_master, json_t* result)
+bool mysql_switchover_perform(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_master, json_t** result)
 {
     // TODO: Launch actual switchover command.
 
@@ -261,9 +227,10 @@ bool mysql_switchover_perform(MXS_MONITOR* mon, SERVER* new_master, SERVER* curr
     s += new_master->unique_name;
     s += ".";
 
+    *result = json_object();
     json_t* data = json_string(s.c_str());
 
-    json_object_set_new(result, "data", data);
+    json_object_set_new(*result, "data", data);
 
     return true;
 }
@@ -286,75 +253,65 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
 
     *output = NULL;
 
-    json_t* result = json_object();
-    if (result)
+    bool stopped = stop_monitor(mon);
+
+    if (stopped)
     {
-        *output = result;
+        MXS_NOTICE("Stopped the monitor %s for the duration of switchover.", mon->name);
+    }
+    else
+    {
+        MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", mon->name);
+    }
 
-        bool stopped = stop_monitor(mon);
+    rv = mysql_switchover_check(mon, new_master, current_master, output);
 
-        if (stopped)
-        {
-            MXS_NOTICE("Stopped the monitor %s for the duration of switchover.", mon->name);
-        }
-        else
-        {
-            MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", mon->name);
-        }
+    if (rv)
+    {
+        bool failover = config_get_bool(mon->parameters, CN_FAILOVER);
 
-        rv = mysql_switchover_check(mon, new_master, current_master, result);
+        rv = mysql_switchover_perform(mon, new_master, current_master, output);
 
         if (rv)
         {
-            bool failover = config_get_bool(mon->parameters, CN_FAILOVER);
+            MXS_NOTICE("Switchover %s -> %s performed.",
+                       current_master->unique_name ? current_master->unique_name : "(none)",
+                       new_master->unique_name);
 
-            rv = mysql_switchover_perform(mon, new_master, current_master, result);
-
-            if (rv)
-            {
-                MXS_NOTICE("Switchover %s -> %s performed.",
-                           current_master->unique_name ? current_master->unique_name : "(none)",
-                           new_master->unique_name);
-
-                if (stopped)
-                {
-                    startMonitor(mon, mon->parameters);
-                }
-            }
-            else
-            {
-                if (failover)
-                {
-                    // TODO: There could be a more convenient way for this.
-                    MXS_CONFIG_PARAMETER p = {};
-                    p.name = const_cast<char*>(CN_FAILOVER);
-                    p.value = const_cast<char*>("false");
-
-                    monitorAddParameters(mon, &p);
-
-                    MXS_ALERT("Switchover %s -> %s failed, failover has been disabled.",
-                              current_master->unique_name ? current_master->unique_name : "(none)",
-                              new_master->unique_name);
-                }
-                else
-                {
-                    MXS_ERROR("Switchover %s -> %s failed.",
-                              current_master->unique_name ? current_master->unique_name : "(none)",
-                              new_master->unique_name);
-                }
-            }
-        }
-        else
-        {
             if (stopped)
             {
                 startMonitor(mon, mon->parameters);
             }
         }
+        else
+        {
+            if (failover)
+            {
+                // TODO: There could be a more convenient way for this.
+                MXS_CONFIG_PARAMETER p = {};
+                p.name = const_cast<char*>(CN_FAILOVER);
+                p.value = const_cast<char*>("false");
+
+                monitorAddParameters(mon, &p);
+
+                MXS_ALERT("Switchover %s -> %s failed, failover has been disabled.",
+                          current_master->unique_name ? current_master->unique_name : "(none)",
+                          new_master->unique_name);
+            }
+            else
+            {
+                MXS_ERROR("Switchover %s -> %s failed.",
+                          current_master->unique_name ? current_master->unique_name : "(none)",
+                          new_master->unique_name);
+            }
+        }
     }
     else
     {
-        rv = false;
+        if (stopped)
+        {
+            startMonitor(mon, mon->parameters);
+        }
     }
 
     return rv;
@@ -370,17 +327,15 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
  */
 bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** output)
 {
-    ss_dassert(args->argc == 3);
+    ss_dassert((args->argc == 2) || (args->argc == 3));
     ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
     ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
-    ss_dassert((MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER) ||
-               (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_NONE));
+    ss_dassert((args->argc == 2) ||
+               (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
 
     MXS_MONITOR* mon = args->argv[0].value.monitor;
     SERVER* new_master = args->argv[1].value.server;
-    SERVER* current_master =
-        (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER) ?
-        args->argv[2].value.server : NULL;
+    SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
 
     return mysql_switchover(mon, new_master, current_master, output);
 }
