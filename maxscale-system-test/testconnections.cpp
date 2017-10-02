@@ -4,6 +4,8 @@
 #include <stdarg.h>
 #include <sys/time.h>
 #include <time.h>
+#include <signal.h>
+#include <execinfo.h>
 
 #include "mariadb_func.h"
 #include "maxadmin_operations.h"
@@ -16,6 +18,28 @@ static bool start = true;
 static bool check_nodes = true;
 static std::string required_repl_version;
 static std::string required_galera_version;
+}
+
+static int signal_set(int sig, void (*handler)(int))
+{
+    struct sigaction sigact = {};
+    sigact.sa_handler = handler;
+
+    do
+    {
+        errno = 0;
+        sigaction(sig, &sigact, NULL);
+    }
+    while (errno == EINTR);
+}
+
+void sigfatal_handler(int i)
+{
+    void *addrs[128];
+    int count = backtrace(addrs, 128);
+    backtrace_symbols_fd(addrs, count, STDERR_FILENO);
+    signal_set(i, SIG_DFL);
+    raise(i);
 }
 
 void TestConnections::check_nodes(bool value)
@@ -44,6 +68,14 @@ TestConnections::TestConnections(int argc, char *argv[]):
     global_result(0), binlog_cmd_option(0), enable_timeouts(true), use_ipv6(false),
     no_galera(false)
 {
+    signal_set(SIGSEGV, sigfatal_handler);
+    signal_set(SIGABRT, sigfatal_handler);
+    signal_set(SIGFPE, sigfatal_handler);
+    signal_set(SIGILL, sigfatal_handler);
+#ifdef SIGBUS
+    signal_set(SIGBUS, sigfatal_handler);
+#endif
+
     chdir(test_dir);
     gettimeofday(&start_time, NULL);
     ports[0] = rwsplit_port;
