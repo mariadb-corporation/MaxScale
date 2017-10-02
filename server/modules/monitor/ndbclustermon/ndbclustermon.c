@@ -350,7 +350,7 @@ monitorMain(void *arg)
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;

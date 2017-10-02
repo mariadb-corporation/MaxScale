@@ -125,7 +125,7 @@ monitorMain(void *arg)
         lock_monitor_servers(monitor);
         servers_status_pending_to_current(monitor);
 
-        for (MXS_MONITORED_SERVER *ptr = monitor->databases; ptr; ptr = ptr->next)
+        for (MXS_MONITORED_SERVER *ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
         {
             update_server_status(monitor, ptr);
 

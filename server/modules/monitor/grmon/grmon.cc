@@ -273,7 +273,7 @@ void GRMon::main()
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
-        for (MXS_MONITORED_SERVER *ptr = m_monitor->databases; ptr; ptr = ptr->next)
+        for (MXS_MONITORED_SERVER *ptr = m_monitor->monitored_servers; ptr; ptr = ptr->next)
         {
             update_server_status(m_monitor, ptr);
         }

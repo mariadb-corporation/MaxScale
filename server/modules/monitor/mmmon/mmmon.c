@@ -547,7 +547,7 @@ monitorMain(void *arg)
         servers_status_pending_to_current(mon);
 
         /* start from the first server in the list */
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
 
         while (ptr)
         {
@@ -584,7 +584,7 @@ monitorMain(void *arg)
 
         /* Update server status from monitor pending status on that server*/
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         while (ptr)
         {
             if (!SERVER_IN_MAINT(ptr->server))
@@ -656,7 +656,7 @@ static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *mon)
     MM_MONITOR* handle = mon->handle;
     MXS_MONITORED_SERVER *ptr;
 
-    ptr = mon->databases;
+    ptr = mon->monitored_servers;
 
     while (ptr)
     {

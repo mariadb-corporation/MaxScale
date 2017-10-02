@@ -534,7 +534,7 @@ monitorMain(void *arg)
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;
@@ -583,7 +583,7 @@ monitorMain(void *arg)
 
         handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
 
         while (ptr)
         {
@@ -668,7 +668,7 @@ monitorMain(void *arg)
  */
 static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
 {
-    MXS_MONITORED_SERVER *moitor_servers = mon->databases;
+    MXS_MONITORED_SERVER *moitor_servers = mon->monitored_servers;
     MXS_MONITORED_SERVER *candidate_master = NULL;
     GALERA_MONITOR* handle = mon->handle;
     long min_id = -1;
@@ -819,7 +819,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
 
     strcpy(donor_list, DONOR_LIST_SET_VAR);
 
-    ptr = mon->databases;
+    ptr = mon->monitored_servers;
 
     /* Create an array of slave nodes */
     while (ptr)
@@ -1199,7 +1199,7 @@ static void set_cluster_members(MXS_MONITOR *mon)
     char *c_uuid = handle->cluster_info.c_uuid;
     int c_size = handle->cluster_info.c_size;
 
-    ptr = mon->databases;
+    ptr = mon->monitored_servers;
     while (ptr)
     {
         /* Fetch cluster info for this server, if any */

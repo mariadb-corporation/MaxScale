@@ -275,7 +275,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         error = true;
     }
 
-    if (!init_server_info(handle, monitor->databases))
+    if (!init_server_info(handle, monitor->monitored_servers))
     {
         error = true;
     }
@@ -328,7 +328,7 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
     dcb_printf(dcb, "Server information\n\n");
 
-    for (MXS_MONITORED_SERVER *db = mon->databases; db; db = db->next)
+    for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
     {
         MYSQL_SERVER_INFO *serv_info =
             static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info, db->server->unique_name));
@@ -376,11 +376,11 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
         json_object_set_new(rval, "script", json_string(handle->script));
     }
 
-    if (mon->databases)
+    if (mon->monitored_servers)
     {
         json_t* arr = json_array();
 
-        for (MXS_MONITORED_SERVER *db = mon->databases; db; db = db->next)
+        for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
         {
             json_t* srv = json_object();
             MYSQL_SERVER_INFO *serv_info =
@@ -556,7 +556,7 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
  */
 static MXS_MONITORED_SERVER *build_mysql51_replication_tree(MXS_MONITOR *mon)
 {
-    MXS_MONITORED_SERVER* database = mon->databases;
+    MXS_MONITORED_SERVER* database = mon->monitored_servers;
     MXS_MONITORED_SERVER *ptr, *rval = NULL;
     int i;
     MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
@@ -623,12 +623,12 @@ static MXS_MONITORED_SERVER *build_mysql51_replication_tree(MXS_MONITOR *mon)
         database = database->next;
     }
 
-    database = mon->databases;
+    database = mon->monitored_servers;
 
     /** Set master server IDs */
     while (database)
     {
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
 
         while (ptr)
         {
@@ -1190,7 +1190,7 @@ monitorMain(void *arg)
         servers_status_pending_to_current(mon);
 
         /* start from the first server in the list */
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
 
         while (ptr)
         {
@@ -1247,7 +1247,7 @@ monitorMain(void *arg)
             ptr = ptr->next;
         }
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         /* if only one server is configured, that's is Master */
         if (num_servers == 1)
         {
@@ -1283,10 +1283,10 @@ monitorMain(void *arg)
             /** Find all the master server cycles in the cluster graph. If
                 multiple masters are found, the servers with the read_only
                 variable set to ON will be assigned the slave status. */
-            find_graph_cycles(handle, mon->databases, num_servers);
+            find_graph_cycles(handle, mon->monitored_servers, num_servers);
         }
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         while (ptr)
         {
             MYSQL_SERVER_INFO *serv_info =
@@ -1295,8 +1295,8 @@ monitorMain(void *arg)
             ss_dassert(serv_info);
 
             if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
-                getSlaveOfNodeId(mon->databases, ptr->server->node_id) &&
-                getServerByNodeId(mon->databases, ptr->server->master_id) &&
+                getSlaveOfNodeId(mon->monitored_servers, ptr->server->node_id) &&
+                getServerByNodeId(mon->monitored_servers, ptr->server->master_id) &&
                 (!handle->multimaster || serv_info->group == 0))
             {
                 /** This server is both a slave and a master i.e. a relay master */
@@ -1315,7 +1315,7 @@ monitorMain(void *arg)
 
         /* Update server status from monitor pending status on that server*/
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         while (ptr)
         {
             if (!SERVER_IN_MAINT(ptr->server))
@@ -1401,10 +1401,10 @@ monitorMain(void *arg)
             if we need to do a failover */
         if (handle->detect_standalone_master)
         {
-            if (failover_required(handle, mon->databases))
+            if (failover_required(handle, mon->monitored_servers))
             {
                 /** Other servers have died, initiate a failover to the last remaining server */
-                do_failover(handle, mon->databases);
+                do_failover(handle, mon->monitored_servers);
             }
             else
             {
@@ -1457,7 +1457,7 @@ monitorMain(void *arg)
              SERVER_IS_RELAY_SERVER(root_master->server)))
         {
             set_master_heartbeat(handle, root_master);
-            ptr = mon->databases;
+            ptr = mon->monitored_servers;
 
             while (ptr)
             {
@@ -1796,7 +1796,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
     long node_id;
     int root_level;
 
-    ptr = mon->databases;
+    ptr = mon->monitored_servers;
     root_level = num_servers;
 
     while (ptr)
@@ -1817,7 +1817,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
         if (node_id < 1)
         {
             MXS_MONITORED_SERVER *find_slave;
-            find_slave = getSlaveOfNodeId(mon->databases, current->node_id);
+            find_slave = getSlaveOfNodeId(mon->monitored_servers, current->node_id);
 
             if (find_slave == NULL)
             {
@@ -1844,7 +1844,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
                 root_level = current->depth;
                 handle->master = ptr;
             }
-            backend = getServerByNodeId(mon->databases, node_id);
+            backend = getServerByNodeId(mon->monitored_servers, node_id);
 
             if (backend)
             {
@@ -1866,7 +1866,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
                 MXS_MONITORED_SERVER *master;
                 current->depth = depth;
 
-                master = getServerByNodeId(mon->databases, current->master_id);
+                master = getServerByNodeId(mon->monitored_servers, current->master_id);
                 if (master && master->server && master->server->node_id > 0)
                 {
                     add_slave_to_master(master->server->slaves, sizeof(master->server->slaves),
@@ -2148,7 +2148,7 @@ bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database)
  */
 void check_maxscale_schema_replication(MXS_MONITOR *monitor)
 {
-    MXS_MONITORED_SERVER* database = monitor->databases;
+    MXS_MONITORED_SERVER* database = monitor->monitored_servers;
     bool err = false;
 
     while (database)

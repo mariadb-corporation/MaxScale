@@ -182,7 +182,7 @@ struct mxs_monitor
     char password[MAX_MONITOR_PASSWORD_LEN]; /*< Monitor password */
     SPINLOCK lock;
     MXS_CONFIG_PARAMETER* parameters; /*< configuration parameters */
-    MXS_MONITORED_SERVER* databases; /*< List of databases the monitor monitors */
+    MXS_MONITORED_SERVER* monitored_servers; /*< List of servers the monitor monitors */
     monitor_state_t state;        /**< The state of the monitor */
     int connect_timeout;          /**< Connect timeout in seconds for mysql_real_connect */
     int connect_attempts;      /**< How many times a connection is attempted */

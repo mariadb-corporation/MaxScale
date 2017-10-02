@@ -960,9 +960,9 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     {
         monitorStop(monitor);
 
-        while (monitor->databases)
+        while (monitor->monitored_servers)
         {
-            monitorRemoveServer(monitor, monitor->databases->server);
+            monitorRemoveServer(monitor, monitor->monitored_servers->server);
         }
         monitorDestroy(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->name);
