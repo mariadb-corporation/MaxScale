@@ -538,7 +538,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     bool rval = true;
     sprintf(query, template, query_pw);
 
-    if (mysql_query(mysql, query) != 0)
+    if (mxs_mysql_query(mysql, query) != 0)
     {
         if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
@@ -568,7 +568,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         }
     }
 
-    if (mysql_query(mysql, "SELECT user, host, db FROM mysql.db limit 1") != 0)
+    if (mxs_mysql_query(mysql, "SELECT user, host, db FROM mysql.db limit 1") != 0)
     {
         if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
@@ -596,7 +596,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         }
     }
 
-    if (mysql_query(mysql, "SELECT user, host, db FROM mysql.tables_priv limit 1") != 0)
+    if (mxs_mysql_query(mysql, "SELECT user, host, db FROM mysql.tables_priv limit 1") != 0)
     {
         if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
@@ -747,7 +747,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
 
     if (query)
     {
-        if (mysql_query(con, query) == 0)
+        if (mxs_mysql_query(con, query) == 0)
         {
             MYSQL_RES *result = mysql_store_result(con);
 
@@ -801,7 +801,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
     }
 
     /** Load the list of databases */
-    if (mysql_query(con, "SHOW DATABASES") == 0)
+    if (mxs_mysql_query(con, "SHOW DATABASES") == 0)
     {
         MYSQL_RES *result = mysql_store_result(con);
         if (result)

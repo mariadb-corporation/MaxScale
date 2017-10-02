@@ -615,7 +615,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
 
             if (mxs_mysql_real_connect(mysql, servers->server, user, pw))
             {
-                if (mysql_query(mysql, gssapi_users_query))
+                if (mxs_mysql_query(mysql, gssapi_users_query))
                 {
                     MXS_ERROR("Failed to query server '%s' for GSSAPI users: %s",
                               servers->server->unique_name, mysql_error(mysql));

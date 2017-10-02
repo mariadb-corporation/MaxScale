@@ -30,6 +30,7 @@
 #include "mmmon.h"
 #include <maxscale/dcb.h>
 #include <maxscale/alloc.h>
+#include <maxscale/mysql_utils.h>
 
 static void monitorMain(void *);
 
@@ -258,7 +259,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     }
 
     /* get server_id form current node */
-    if (mysql_query(database->con, "SELECT @@server_id") == 0
+    if (mxs_mysql_query(database->con, "SELECT @@server_id") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         long server_id = -1;
@@ -295,7 +296,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     if (server_version >= 100000)
     {
 
-        if (mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
+        if (mxs_mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
             && (result = mysql_store_result(database->con)) != NULL)
         {
             int i = 0;
@@ -358,7 +359,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     }
     else
     {
-        if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
+        if (mxs_mysql_query(database->con, "SHOW SLAVE STATUS") == 0
             && (result = mysql_store_result(database->con)) != NULL)
         {
             long master_id = -1;
@@ -423,7 +424,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     }
 
     /* get variable 'read_only' set by an external component */
-    if (mysql_query(database->con, "SHOW GLOBAL VARIABLES LIKE 'read_only'") == 0
+    if (mxs_mysql_query(database->con, "SHOW GLOBAL VARIABLES LIKE 'read_only'") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         if (mysql_field_count(database->con) < 2)
