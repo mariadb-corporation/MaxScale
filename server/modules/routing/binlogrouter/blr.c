@@ -125,7 +125,6 @@ static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
 GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
 /* Set checksum value in router instance from a master reply or saved buffer */
-extern void blr_set_checksum(ROUTER_INSTANCE *instance, GWBUF *buf);
 
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;

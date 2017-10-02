@@ -108,7 +108,6 @@ static int blr_get_master_semisync(GWBUF *buf);
 static void blr_terminate_master_replication(ROUTER_INSTANCE *router, uint8_t* ptr, int len);
 void blr_notify_all_slaves(ROUTER_INSTANCE *router);
 extern bool blr_notify_waiting_slave(ROUTER_SLAVE *slave);
-void blr_set_checksum(ROUTER_INSTANCE *inst, GWBUF *buf);
 
 static int keepalive = 1;
 
