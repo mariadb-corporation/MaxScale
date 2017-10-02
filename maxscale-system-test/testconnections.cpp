@@ -66,7 +66,8 @@ TestConnections::TestConnections(int argc, char *argv[]):
     no_backend_log_copy(false), use_snapshots(false), verbose(false), rwsplit_port(4006),
     readconn_master_port(4008), readconn_slave_port(4009), binlog_port(5306),
     global_result(0), binlog_cmd_option(0), enable_timeouts(true), use_ipv6(false),
-    no_galera(false)
+    no_galera(false),
+    no_vm_revert(true)
 {
     signal_set(SIGSEGV, sigfatal_handler);
     signal_set(SIGABRT, sigfatal_handler);
@@ -303,8 +304,15 @@ TestConnections::~TestConnections()
 
     if (global_result != 0 )
     {
-        tprintf("Reverting snapshot\n");
-        revert_snapshot((char*) "clean");
+        if (no_vm_revert)
+        {
+            tprintf("no_vm_revert flag is set, not reverting VMs\n");
+        }
+        else
+        {
+            tprintf("Reverting snapshot\n");
+            revert_snapshot((char*) "clean");
+        }
     }
 
     delete repl;
@@ -550,6 +558,12 @@ int TestConnections::read_env()
     if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
     {
         maxscale::start = false;
+    }
+
+    env = getenv("no_vm_revert");
+    if ((env != NULL) && ((strcasecmp(env, "no") == 0) || (strcasecmp(env, "false") == 0) ))
+    {
+        no_vm_revert = false;
     }
 }
 

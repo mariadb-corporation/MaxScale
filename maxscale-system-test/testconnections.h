@@ -258,6 +258,12 @@ public:
     bool no_galera;
 
     /**
+     * @brief no_vm_revert If true tests do not revert VMs after the test even if test failed
+     * (use it for debugging)
+     */
+    bool no_vm_revert;
+
+    /**
     * @brief ssl_options string with ssl configuration for command line client
     */
     char ssl_options[1024];
