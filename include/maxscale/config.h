@@ -74,6 +74,7 @@ typedef struct
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
+    int           query_retries;                       /**< Number of times a interrupted query is retried */
 } MXS_CONFIG;
 
 /**

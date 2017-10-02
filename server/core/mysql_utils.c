@@ -21,12 +21,15 @@
  */
 
 #include <maxscale/mysql_utils.h>
+
 #include <string.h>
 #include <stdbool.h>
+#include <errmsg.h>
+
 #include <maxscale/alloc.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/debug.h>
 #include <maxscale/config.h>
+#include <maxscale/debug.h>
+#include <maxscale/log_manager.h>
 
 /**
  * @brief Calculate the length of a length-encoded integer in bytes
@@ -147,16 +150,6 @@ char* mxs_lestr_consume(uint8_t** c, size_t *size)
     return start;
 }
 
-
-
-/**
- * Creates a connection to a MySQL database engine. If necessary, initializes SSL.
- *
- * @param con    A valid MYSQL structure.
- * @param server The server on which the MySQL engine is running.
- * @param user   The MySQL login ID.
- * @param passwd The password for the user.
- */
 MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, const char *passwd)
 {
     SSL_LISTENER *listener = server->server_ssl;
@@ -181,6 +174,38 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
     }
 
     return mysql;
+}
+
+static bool is_connection_error(int errcode)
+{
+    switch (errcode)
+    {
+        case CR_SOCKET_CREATE_ERROR:
+        case CR_CONNECTION_ERROR:
+        case CR_CONN_HOST_ERROR:
+        case CR_IPSOCK_ERROR:
+        case CR_SERVER_GONE_ERROR:
+        case CR_TCP_CONNECTION:
+        case CR_SERVER_LOST:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+int mxs_mysql_query(MYSQL* conn, const char* query)
+{
+    MXS_CONFIG* cnf = config_get_global_options();
+    int rc = mysql_query(conn, query);
+
+    for (int n = 0; rc != 0 && n < cnf->query_retries &&
+         is_connection_error(mysql_errno(conn)); n++)
+    {
+        rc = mysql_query(conn, query);
+    }
+
+    return rc;
 }
 
 bool mxs_mysql_trim_quotes(char *s)

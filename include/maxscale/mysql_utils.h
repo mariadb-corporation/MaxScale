@@ -29,7 +29,29 @@ uint64_t mxs_leint_consume(uint8_t ** c);
 char* mxs_lestr_consume_dup(uint8_t** c);
 char* mxs_lestr_consume(uint8_t** c, size_t *size);
 
-MYSQL *mxs_mysql_real_connect(MYSQL *mysql, SERVER *server, const char *user, const char *passwd);
+/**
+ * Creates a connection to a MySQL database engine. If necessary, initializes SSL.
+ *
+ * @param con    A valid MYSQL structure.
+ * @param server The server on which the MySQL engine is running.
+ * @param user   The MySQL login ID.
+ * @param passwd The password for the user.
+ *
+ * @return New connection or NULL on error
+ */
+MYSQL* mxs_mysql_real_connect(MYSQL *mysql, SERVER *server, const char *user, const char *passwd);
+
+/**
+ * Execute a query
+ *
+ * This function wraps mysql_query in a way that automatic query retry is possible.
+ *
+ * @param conn  MySQL connection
+ * @param query Query to execute
+ *
+ * @return return value of mysql_query
+ */
+int mxs_mysql_query(MYSQL* conn, const char* query);
 
 /**
  * Trim MySQL quote characters surrounding a string.

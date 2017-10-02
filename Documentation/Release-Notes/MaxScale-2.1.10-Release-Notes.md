@@ -22,6 +22,18 @@ release notes:
 For any problems you encounter, please consider submitting a bug report at
 [Jira](https://jira.mariadb.org).
 
+## Changed Features
+
+### Internal Query Retries
+
+The internal SQL queries that MaxScale executes to load database users as well
+as monitor the database itself can now be automatically retried if they are
+interrupted. The new global parameter, `query_retries` controls the number of
+retry attempts each query will receive if it fails due to a network problem.
+
+To enable this functionality, add `query_retries=<number-of-retries>` under the
+`[maxscale]` section where _<number-of-retries>_ is a positive integer.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.1.10.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.10)

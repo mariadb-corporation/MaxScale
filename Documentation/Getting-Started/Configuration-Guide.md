@@ -172,6 +172,15 @@ write or modify the data in the backend server. The default is 2 seconds.
 auth_write_timeout=10
 ```
 
+#### `query_retries`
+
+The number of times an interrupted query will be retried. This feature was added
+in MaxScale 2.1.10 and is disabled by default.
+
+An interrupted query is any query that is interrupted by a network
+error. Connection timeouts will not trigger a reconnection as it is advisable to
+increase the timeouts rather than to try timed out queries again.
+
 #### `ms_timestamp`
 
 Enable or disable the high precision timestamps in logfiles. Enabling this adds

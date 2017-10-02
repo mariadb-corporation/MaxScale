@@ -1305,6 +1305,20 @@ handle_global_item(const char *name, const char *value)
     {
         gateway.qc_args = MXS_STRDUP_A(value);
     }
+    else if (strcmp(name, "query_retries") == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval >= 0)
+        {
+            gateway.query_retries = intval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid timeout value for 'query_retries': %s", value);
+            return 0;
+        }
+    }
     else if (strcmp(name, "log_throttling") == 0)
     {
         if (*value == 0)
@@ -1591,6 +1605,8 @@ global_defaults()
     gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     gateway.skip_permission_checks = false;
+    gateway.query_retries = DEFAULT_QUERY_RETRIES;
+
     if (version_string != NULL)
     {
         gateway.version_string = MXS_STRDUP_A(version_string);
