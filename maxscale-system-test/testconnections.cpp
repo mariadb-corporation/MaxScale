@@ -643,6 +643,7 @@ int TestConnections::init_maxscale()
                  "%s"
                  "iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;"
                  "rm -f %s/maxscale.log %s/maxscale1.log;"
+                 "rm -f /var/log/maxscale/.secrets;" // Needs to be explicitly deleted
                  "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
                  "%s",
                  maxscale_access_homedir, maxscale_access_homedir, maxscale_access_homedir,
