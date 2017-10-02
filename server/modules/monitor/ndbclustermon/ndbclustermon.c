@@ -188,7 +188,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
  * @param database  The database to probe
  */
 static void
-monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultPasswd, MXS_MONITOR *mon)
+monitorDatabase(MXS_MONITORED_SERVER *database, char *defaultUser, char *defaultPasswd, MXS_MONITOR *mon)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -308,7 +308,7 @@ monitorMain(void *arg)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR*)arg;
     MXS_MONITOR* mon = handle->monitor;
-    MXS_MONITOR_SERVERS *ptr;
+    MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
 
     if (mysql_thread_init())

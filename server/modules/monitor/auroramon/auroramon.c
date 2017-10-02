@@ -43,7 +43,7 @@ typedef struct aurora_monitor
  * @param monitor  Monitor object
  * @param database Server whose status should be updated
  */
-void update_server_status(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *database)
+void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
 {
     if (!SERVER_IN_MAINT(database->server))
     {
@@ -125,7 +125,7 @@ monitorMain(void *arg)
         lock_monitor_servers(monitor);
         servers_status_pending_to_current(monitor);
 
-        for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+        for (MXS_MONITORED_SERVER *ptr = monitor->databases; ptr; ptr = ptr->next)
         {
             update_server_status(monitor, ptr);
 

@@ -40,12 +40,12 @@ public:
     ~GRMon();
 
 private:
-    THREAD               m_thread;   /**< Monitor thread */
-    int                  m_shutdown; /**< Flag to shutdown the monitor thread */
-    MXS_MONITOR_SERVERS* m_master;   /**< The master server */
-    std::string          m_script;
-    uint64_t             m_events;   /**< Enabled events */
-    MXS_MONITOR*         m_monitor;
+    THREAD                m_thread;   /**< Monitor thread */
+    int                   m_shutdown; /**< Flag to shutdown the monitor thread */
+    MXS_MONITORED_SERVER* m_master;   /**< The master server */
+    std::string           m_script;
+    uint64_t              m_events;   /**< Enabled events */
+    MXS_MONITOR*          m_monitor;
 
     GRMon(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER *params);
 
@@ -148,7 +148,7 @@ static inline bool is_false(const char* value)
            strcasecmp(value, "false") == 0;
 }
 
-static bool is_master(MXS_MONITOR_SERVERS* server)
+static bool is_master(MXS_MONITORED_SERVER* server)
 {
     bool rval = false;
     MYSQL_RES* result;
@@ -175,7 +175,7 @@ static bool is_master(MXS_MONITOR_SERVERS* server)
     return rval;
 }
 
-static bool is_slave(MXS_MONITOR_SERVERS* server)
+static bool is_slave(MXS_MONITORED_SERVER* server)
 {
     bool rval = false;
     MYSQL_RES* result;
@@ -202,7 +202,7 @@ static bool is_slave(MXS_MONITOR_SERVERS* server)
     return rval;
 }
 
-static void update_server_status(MXS_MONITOR* monitor, MXS_MONITOR_SERVERS* server)
+static void update_server_status(MXS_MONITOR* monitor, MXS_MONITORED_SERVER* server)
 {
     /* Don't even probe server flagged as in maintenance */
     if (SERVER_IN_MAINT(server->server))
@@ -273,7 +273,7 @@ void GRMon::main()
         lock_monitor_servers(m_monitor);
         servers_status_pending_to_current(m_monitor);
 
-        for (MXS_MONITOR_SERVERS *ptr = m_monitor->databases; ptr; ptr = ptr->next)
+        for (MXS_MONITORED_SERVER *ptr = m_monitor->databases; ptr; ptr = ptr->next)
         {
             update_server_status(m_monitor, ptr);
         }
