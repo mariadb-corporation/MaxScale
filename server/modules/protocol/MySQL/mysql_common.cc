@@ -17,6 +17,7 @@
 
 #include <netinet/tcp.h>
 
+#include <set>
 #include <sstream>
 #include <vector>
 
@@ -1014,6 +1015,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
  * @param message SQL message
  * @return 1 on success, 0 on error
  *
+ * @todo Support more than 255 affected rows
  */
 int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char* message)
 {
@@ -1746,4 +1748,53 @@ void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t
         }
         mxs_mysql_send_ok(issuer->client_dcb, 1, 0, NULL);
     }
+}
+
+typedef std::set<SERVER*> ServerSet;
+
+struct KillUserInfo
+{
+    std::string user;
+    ServerSet targets;
+};
+
+
+static bool kill_user_func(DCB *dcb, void *data)
+{
+    KillUserInfo* info = (KillUserInfo*)data;
+
+    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&
+        strcasecmp(dcb->session->client_dcb->user, info->user.c_str()) == 0)
+    {
+        info->targets.insert(dcb->server);
+    }
+
+    return true;
+}
+
+void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type)
+{
+    // Gather a list of servers and connection IDs to kill
+    KillUserInfo info = {user};
+    dcb_foreach(kill_user_func, &info);
+
+    // Execute the KILL on all of the servers
+    for (ServerSet::iterator it = info.targets.begin();
+         it != info.targets.end(); it++)
+    {
+        LocalClient* client = LocalClient::create(issuer, *it);
+        const char* hard = (type & KT_HARD) ? "HARD " :
+            (type & KT_SOFT) ? "SOFT " : "";
+        const char* query = (type & KT_QUERY) ? "QUERY " : "";
+        std::stringstream ss;
+        ss << "KILL " << hard << query << "USER " << user;
+        GWBUF* buffer = modutil_create_query(ss.str().c_str());
+        client->queue_query(buffer);
+        gwbuf_free(buffer);
+
+        // The LocalClient needs to delete itself once the queries are done
+        client->self_destruct();
+    }
+
+    mxs_mysql_send_ok(issuer->client_dcb, info.targets.size(), 0, NULL);
 }

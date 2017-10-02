@@ -634,5 +634,6 @@ typedef enum kill_type
 } kill_type_t;
 
 void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
+void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
 
 MXS_END_DECLS
