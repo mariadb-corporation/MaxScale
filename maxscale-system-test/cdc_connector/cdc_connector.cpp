@@ -213,6 +213,20 @@ bool Connection::requestData(const std::string& table, const std::string& gtid)
         m_error = "Failed to write request: ";
         m_error += strerror_r(errno, err, sizeof (err));
     }
+    else
+    {
+        // Read the first row to know if data request was successful
+        Row row = read();
+
+        if (row)
+        {
+            m_first_row = row;
+        }
+        else
+        {
+            rval = false;
+        }
+    }
 
     return rval;
 }
@@ -288,7 +302,11 @@ Row Connection::read()
     Row rval;
     std::string row;
 
-    if (readRow(row))
+    if (m_first_row)
+    {
+        rval.swap(m_first_row);
+    }
+    else if (readRow(row))
     {
         json_error_t err;
         json_t* js = json_loads(row.c_str(), JSON_ALLOW_NUL, &err);

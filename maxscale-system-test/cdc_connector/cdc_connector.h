@@ -52,6 +52,7 @@ private:
     std::string m_schema;
     ValueList m_keys;
     ValueList m_types;
+    Row       m_first_row;
 
     bool doAuth();
     bool doRegistration();

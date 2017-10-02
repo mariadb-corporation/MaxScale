@@ -85,7 +85,7 @@ typedef struct
     int disableMasterFailback; /**< Monitor flag for Galera Cluster Master failback */
     int availableWhenDonor; /**< Monitor flag for Galera Cluster Donor availability */
     bool disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
-    MXS_MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
+    MXS_MONITORED_SERVER *master; /**< Master server for MySQL Master/Slave replication */
     char* script;
     bool root_node_as_master; /**< Whether we require that the Master should
                                     * have a wsrep_local_index of 0 */

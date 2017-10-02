@@ -2082,6 +2082,9 @@ int main(int argc, char **argv)
     /** Stop administrative interface */
     mxs_admin_shutdown();
 
+    /*< Stop all the monitors */
+    monitorStopAll();
+
     /*<
      * Wait for the housekeeper to finish.
      */
@@ -2110,9 +2113,6 @@ int main(int argc, char **argv)
      * Wait the flush thread.
      */
     thread_wait(log_flush_thr);
-
-    /*< Stop all the monitors */
-    monitorStopAll();
 
     /*< Call finish on all modules. */
     modules_process_finish();

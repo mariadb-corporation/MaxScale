@@ -497,15 +497,18 @@ int gw_read_client_event(DCB* dcb)
      */
     case MXS_AUTH_STATE_MESSAGE_READ:
         /* After this call read_buffer will point to freed data */
+        dcb_readq_set(dcb, read_buffer);
         if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
                                 (int)(MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
             (0 != max_bytes && nbytes_read < max_bytes))
         {
-
-            dcb_readq_set(dcb, read_buffer);
-
             return 0;
         }
+
+        read_buffer = modutil_get_next_MySQL_packet(&dcb->readq);
+        ss_dassert(read_buffer);
+        nbytes_read = gwbuf_length(read_buffer);
+
         return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
         break;
 
@@ -713,6 +716,12 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             ss_debug(bool check = ) mxs_worker_register_session(session);
             ss_dassert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
+
+            if (dcb->readq)
+            {
+                // The user has already send more data, process it
+                poll_fake_read_event(dcb);
+            }
         }
         else
         {
