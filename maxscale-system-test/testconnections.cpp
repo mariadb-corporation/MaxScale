@@ -1652,12 +1652,12 @@ int TestConnections::get_client_ip(char * ip)
     unsigned int conn_num = 0;
 
     connect_rwsplit();
-    if (execute_query(conn_rwsplit, "CREATE DATABASE IF NOT EXISTS db_to_check_clent_ip") != 0 )
+    if (execute_query(conn_rwsplit, "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0 )
     {
         return ret;
     }
     close_rwsplit();
-    conn = open_conn_db(rwsplit_port, maxscale_IP, "db_to_check_clent_ip", maxscale_user,
+    conn = open_conn_db(rwsplit_port, maxscale_IP, "db_to_check_client_ip", maxscale_user,
                         maxscale_password, ssl);
 
     if (conn != NULL)
