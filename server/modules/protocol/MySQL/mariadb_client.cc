@@ -11,17 +11,16 @@
  * Public License.
  */
 
-#include "local_client.hh"
-
+#include <maxscale/protocol/mariadb_client.hh>
 #include <maxscale/utils.h>
 
 // TODO: Find a way to cleanly expose this
 #include "../../../core/maxscale/worker.hh"
 
 #ifdef EPOLLRDHUP
-#define ERROR_EVENTS (EPOLLRDHUP | EPOLLHUP)
+#define ERROR_EVENTS (EPOLLRDHUP | EPOLLHUP | EPOLLERR)
 #else
-#define ERROR_EVENTS EPOLLHUP
+#define ERROR_EVENTS (EPOLLHUP | EPOLLERR)
 #endif
 
 static const uint32_t poll_events = EPOLLIN | EPOLLOUT | EPOLLET | ERROR_EVENTS;
@@ -30,14 +29,16 @@ LocalClient::LocalClient(MXS_SESSION* session, int fd):
     m_state(VC_WAITING_HANDSHAKE),
     m_sock(fd),
     m_expected_bytes(0),
-    m_session(session)
+    m_client({}),
+    m_protocol({}),
+    m_self_destruct(false)
 {
     MXS_POLL_DATA::handler = LocalClient::poll_handler;
-    MySQLProtocol* client = (MySQLProtocol*)m_session->client_dcb->protocol;
-    m_protocol = {};
+    MySQLProtocol* client = (MySQLProtocol*)session->client_dcb->protocol;
     m_protocol.charset = client->charset;
     m_protocol.client_capabilities = client->client_capabilities;
     m_protocol.extra_capabilities = client->extra_capabilities;
+    gw_get_shared_session_auth_info(session->client_dcb, &m_client);
 }
 
 LocalClient::~LocalClient()
@@ -63,6 +64,14 @@ bool LocalClient::queue_query(GWBUF* buffer)
     }
 
     return my_buf != NULL;
+}
+
+void LocalClient::self_destruct()
+{
+    GWBUF* buffer = mysql_create_com_quit(NULL, 0);
+    queue_query(buffer);
+    gwbuf_free(buffer);
+    m_self_destruct = true;
 }
 
 void LocalClient::close()
@@ -95,7 +104,7 @@ void LocalClient::process(uint32_t events)
             {
                 if (gw_decode_mysql_server_handshake(&m_protocol, GWBUF_DATA(buf) + MYSQL_HEADER_LEN) == 0)
                 {
-                    GWBUF* response = gw_generate_auth_response(m_session, &m_protocol, false, false);
+                    GWBUF* response = gw_generate_auth_response(&m_client, &m_protocol, false, false);
                     m_queue.push_front(response);
                     m_state = VC_RESPONSE_SENT;
                 }
@@ -133,6 +142,10 @@ void LocalClient::process(uint32_t events)
     if (m_queue.size() && m_state != VC_ERROR)
     {
         drain_queue();
+    }
+    else if (m_state == VC_ERROR && m_self_destruct)
+    {
+        delete this;
     }
 }
 
@@ -224,6 +237,40 @@ uint32_t LocalClient::poll_handler(struct mxs_poll_data* data, int wid, uint32_t
     return 0;
 }
 
+LocalClient* LocalClient::create(MXS_SESSION* session, const char* ip, uint64_t port)
+{
+    LocalClient* rval = NULL;
+    sockaddr_storage addr;
+    int fd = open_network_socket(MXS_SOCKET_NETWORK, &addr, ip, port);
+
+    if (fd > 0 && (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS))
+    {
+        LocalClient* relay = new (std::nothrow) LocalClient(session, fd);
+
+        if (relay)
+        {
+            mxs::Worker* worker = mxs::Worker::get_current();
+
+            if (worker->add_fd(fd, poll_events, (MXS_POLL_DATA*)relay))
+            {
+                rval = relay;
+            }
+            else
+            {
+                relay->m_state = VC_ERROR;
+                delete rval;
+                rval = NULL;
+            }
+        }
+    }
+
+    if (rval == NULL && fd > 0)
+    {
+        ::close(fd);
+    }
+    return rval;
+}
+
 LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
 {
     LocalClient* rval = NULL;
@@ -235,38 +282,15 @@ LocalClient* LocalClient::create(MXS_SESSION* session, SERVICE* service)
         if (listener->port > 0)
         {
             /** Pick the first network listener */
-            sockaddr_storage addr;
-            int fd = open_network_socket(MXS_SOCKET_NETWORK, &addr, "127.0.0.1",
-                                         service->ports->port);
-
-            if (fd > 0 && (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == 0 || errno == EINPROGRESS))
-            {
-                LocalClient* relay = new (std::nothrow) LocalClient(session, fd);
-
-                if (relay)
-                {
-                    mxs::Worker* worker = mxs::Worker::get_current();
-
-                    if (worker->add_fd(fd, poll_events, (MXS_POLL_DATA*)relay))
-                    {
-                        rval = relay;
-                    }
-                    else
-                    {
-                        relay->m_state = VC_ERROR;
-                        delete rval;
-                        rval = NULL;
-                    }
-                }
-            }
-
-            if (rval == NULL && fd > 0)
-            {
-                ::close(fd);
-            }
+            rval = create(session, "127.0.0.1", service->ports->port);
             break;
         }
     }
 
     return rval;
+}
+
+LocalClient* LocalClient::create(MXS_SESSION* session, SERVER* server)
+{
+    return create(session, server->name, server->port);
 }

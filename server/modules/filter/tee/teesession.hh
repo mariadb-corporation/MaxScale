@@ -15,8 +15,7 @@
 #include <maxscale/cppdefs.hh>
 
 #include <maxscale/filter.hh>
-
-#include "local_client.hh"
+#include <maxscale/protocol/mariadb_client.hh>
 
 class Tee;
 

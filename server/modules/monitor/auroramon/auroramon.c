@@ -23,6 +23,7 @@
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
+#include <maxscale/mysql_utils.h>
 
 typedef struct aurora_monitor
 {
@@ -60,9 +61,9 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
             MYSQL_RES *result;
 
             /** Connection is OK, query for replica status */
-            if (mysql_query(database->con, "SELECT @@aurora_server_id, server_id FROM "
-                            "information_schema.replica_host_status "
-                            "WHERE session_id = 'MASTER_SESSION_ID'") == 0 &&
+            if (mxs_mysql_query(database->con, "SELECT @@aurora_server_id, server_id FROM "
+                                "information_schema.replica_host_status "
+                                "WHERE session_id = 'MASTER_SESSION_ID'") == 0 &&
                 (result = mysql_store_result(database->con)))
             {
                 ss_dassert(mysql_field_count(database->con) == 2);

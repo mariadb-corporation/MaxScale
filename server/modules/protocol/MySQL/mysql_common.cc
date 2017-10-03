@@ -17,6 +17,10 @@
 
 #include <netinet/tcp.h>
 
+#include <set>
+#include <sstream>
+#include <vector>
+
 #include <maxscale/alloc.h>
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/log_manager.h>
@@ -24,6 +28,8 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
+#include <maxscale/protocol/mariadb_client.hh>
+
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 
@@ -31,7 +37,7 @@ static server_command_t* server_command_init(server_command_t* srvcmd, mxs_mysql
 
 MYSQL_session* mysql_session_alloc()
 {
-    MYSQL_session *ses = MXS_CALLOC(1, sizeof(MYSQL_session));
+    MYSQL_session* ses = (MYSQL_session*)MXS_CALLOC(1, sizeof(MYSQL_session));
 
     if (ses)
     {
@@ -978,9 +984,14 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     CHK_DCB(dcb);
     CHK_SESSION(dcb->session);
 
-
-    if (dcb->session->state != SESSION_STATE_ALLOC &&
-        dcb->session->state != SESSION_STATE_DUMMY)
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    {
+        // The shared session data can be extracted at any time if the client DCB is used.
+        ss_dassert(dcb->data);
+        memcpy(session, dcb->data, sizeof(MYSQL_session));
+    }
+    else if (dcb->session->state != SESSION_STATE_ALLOC &&
+             dcb->session->state != SESSION_STATE_DUMMY)
     {
         memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }
@@ -1004,6 +1015,7 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
  * @param message SQL message
  * @return 1 on success, 0 on error
  *
+ * @todo Support more than 255 affected rows
  */
 int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char* message)
 {
@@ -1239,21 +1251,18 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
     return final_capabilities;
 }
 
-GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
+GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
                                  bool with_ssl, bool ssl_established)
 {
-    MYSQL_session client;
-    gw_get_shared_session_auth_info(session->client_dcb, &client);
-
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     uint8_t *curr_passwd = NULL;
 
-    if (memcmp(client.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) != 0)
+    if (memcmp(client->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) != 0)
     {
-        curr_passwd = client.client_sha1;
+        curr_passwd = client->client_sha1;
     }
 
-    uint32_t capabilities = create_capabilities(conn, with_ssl, client.db[0], false);
+    uint32_t capabilities = create_capabilities(conn, with_ssl, client->db[0], false);
     gw_mysql_set_byte4(client_capabilities, capabilities);
 
     /**
@@ -1263,8 +1272,8 @@ GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
      */
     const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
 
-    long bytes = response_length(with_ssl, ssl_established, client.user,
-                                 curr_passwd, client.db, auth_plugin_name);
+    long bytes = response_length(with_ssl, ssl_established, client->user,
+                                 curr_passwd, client->db, auth_plugin_name);
 
     // allocating the GWBUF
     GWBUF *buffer = gwbuf_alloc(bytes);
@@ -1303,8 +1312,8 @@ GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
     if (!with_ssl || ssl_established)
     {
         // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
-        memcpy(payload, client.user, strlen(client.user));
-        payload += strlen(client.user);
+        memcpy(payload, client->user, strlen(client->user));
+        payload += strlen(client->user);
         payload++;
 
         if (curr_passwd)
@@ -1317,10 +1326,10 @@ GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
         }
 
         // if the db is not NULL append it
-        if (client.db[0])
+        if (client->db[0])
         {
-            memcpy(payload, client.db, strlen(client.db));
-            payload += strlen(client.db);
+            memcpy(payload, client->db, strlen(client->db));
+            payload += strlen(client->db);
             payload++;
         }
 
@@ -1353,7 +1362,10 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     bool with_ssl = dcb->server->server_ssl;
     bool ssl_established = dcb->ssl_state == SSL_ESTABLISHED;
 
-    GWBUF* buffer = gw_generate_auth_response(dcb->session, dcb->protocol,
+    MYSQL_session client;
+    gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
+
+    GWBUF* buffer = gw_generate_auth_response(&client, (MySQLProtocol*)dcb->protocol,
                                               with_ssl, ssl_established);
     ss_dassert(buffer);
 
@@ -1677,4 +1689,112 @@ bool mxs_mysql_command_will_respond(uint8_t cmd)
            cmd != MXS_COM_QUIT &&
            cmd != MXS_COM_STMT_CLOSE &&
            cmd != MXS_COM_STMT_FETCH;
+}
+
+typedef std::vector< std::pair<SERVER*, uint64_t> > TargetList;
+
+struct KillInfo
+{
+    uint64_t target_id;
+    TargetList targets;
+};
+
+static bool kill_func(DCB *dcb, void *data)
+{
+    KillInfo* info = (KillInfo*)data;
+
+    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&
+        dcb->session->ses_id == info->target_id)
+    {
+        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+        info->targets.push_back(std::make_pair(dcb->server, proto->thread_id));
+    }
+
+    return true;
+}
+
+void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
+{
+    // Gather a list of servers and connection IDs to kill
+    KillInfo info = {target_id};
+    dcb_foreach(kill_func, &info);
+
+    if (info.targets.empty())
+    {
+        // No session found, send an error
+        std::stringstream err;
+        err << "Unknown thread id: " << target_id;
+        mysql_send_standard_error(issuer->client_dcb, 1, 1094, err.str().c_str());
+    }
+    else
+    {
+        // Execute the KILL on all of the servers
+        for (TargetList::iterator it = info.targets.begin();
+             it != info.targets.end(); it++)
+        {
+            LocalClient* client = LocalClient::create(issuer, it->first);
+            const char* hard = (type & KT_HARD) ? "HARD " :
+                               (type & KT_SOFT) ? "SOFT " :
+                               "";
+            const char* query = (type & KT_QUERY) ? "QUERY " : "";
+            std::stringstream ss;
+            ss << "KILL " << hard << query << it->second;
+            GWBUF* buffer = modutil_create_query(ss.str().c_str());
+            client->queue_query(buffer);
+            gwbuf_free(buffer);
+
+            // The LocalClient needs to delete itself once the queries are done
+            client->self_destruct();
+        }
+        mxs_mysql_send_ok(issuer->client_dcb, 1, 0, NULL);
+    }
+}
+
+typedef std::set<SERVER*> ServerSet;
+
+struct KillUserInfo
+{
+    std::string user;
+    ServerSet targets;
+};
+
+
+static bool kill_user_func(DCB *dcb, void *data)
+{
+    KillUserInfo* info = (KillUserInfo*)data;
+
+    if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER &&
+        strcasecmp(dcb->session->client_dcb->user, info->user.c_str()) == 0)
+    {
+        info->targets.insert(dcb->server);
+    }
+
+    return true;
+}
+
+void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type)
+{
+    // Gather a list of servers and connection IDs to kill
+    KillUserInfo info = {user};
+    dcb_foreach(kill_user_func, &info);
+
+    // Execute the KILL on all of the servers
+    for (ServerSet::iterator it = info.targets.begin();
+         it != info.targets.end(); it++)
+    {
+        LocalClient* client = LocalClient::create(issuer, *it);
+        const char* hard = (type & KT_HARD) ? "HARD " :
+            (type & KT_SOFT) ? "SOFT " : "";
+        const char* query = (type & KT_QUERY) ? "QUERY " : "";
+        std::stringstream ss;
+        ss << "KILL " << hard << query << "USER " << user;
+        GWBUF* buffer = modutil_create_query(ss.str().c_str());
+        client->queue_query(buffer);
+        gwbuf_free(buffer);
+
+        // The LocalClient needs to delete itself once the queries are done
+        client->self_destruct();
+    }
+
+    mxs_mysql_send_ok(issuer->client_dcb, info.targets.size(), 0, NULL);
 }

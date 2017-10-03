@@ -456,7 +456,7 @@ int execute_query_count_rows(MYSQL *conn, const char *sql)
     return rval;
 }
 
-int get_conn_num(MYSQL *conn, char * ip, char *hostname, char * db)
+int get_conn_num(MYSQL *conn, const char* ip, const char* hostname, const char* db)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;
@@ -584,16 +584,16 @@ unsigned int get_seconds_behind_master(MYSQL *conn)
     char SBM_str[16];
     unsigned int SBM = 0;
     if (find_field(
-                conn, (char *) "show slave status;",
-                (char *) "Seconds_Behind_Master", &SBM_str[0]
-            ) != 1)
+            conn, (char *) "show slave status;",
+            (char *) "Seconds_Behind_Master", &SBM_str[0]
+        ) != 1)
     {
         sscanf(SBM_str, "%u", &SBM);
     }
     return SBM;
 }
 
-int read_log(char * name, char ** err_log_content_p)
+int read_log(const char* name, char ** err_log_content_p)
 {
     FILE *f;
     *err_log_content_p = NULL;

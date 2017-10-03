@@ -84,13 +84,19 @@ void check_group(TestConnections *Test, const char *server, const char *group)
 void change_master(TestConnections *Test, int slave, int master)
 {
     execute_query(Test->repl->nodes[slave], "CHANGE MASTER TO master_host='%s', master_port=3306, "
-                  "master_log_file='mar-bin.000001', master_log_pos=310, master_user='repl', master_password='repl';START SLAVE",
+                  "master_log_file='mar-bin.000001', master_log_pos=4, master_user='repl', master_password='repl';START SLAVE",
                   Test->repl->IP[master], Test->repl->user_name, Test->repl->password);
 }
 
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
+
+    Test->tprintf("Checking initial state of the servers");
+    check_status(Test, "server1", "Master, Running");
+    check_status(Test, "server2", "Slave, Running");
+    check_status(Test, "server3", "Slave, Running");
+    check_status(Test, "server4", "Slave, Running");
 
     Test->tprintf("Test 1 - Configure all servers into a multi-master ring with one slave");
 

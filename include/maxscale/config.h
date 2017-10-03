@@ -21,6 +21,7 @@
 #include <limits.h>
 #include <openssl/sha.h>
 #include <sys/utsname.h>
+#include <time.h>
 
 #include <maxscale/modinfo.h>
 #include <maxscale/jansson.h>
@@ -133,6 +134,8 @@ extern const char CN_PORT[];
 extern const char CN_PROTOCOL[];
 extern const char CN_QUERY_CLASSIFIER[];
 extern const char CN_QUERY_CLASSIFIER_ARGS[];
+extern const char CN_QUERY_RETRIES[];
+extern const char CN_QUERY_RETRY_TIMEOUT[];
 extern const char CN_RELATIONSHIPS[];
 extern const char CN_LINKS[];
 extern const char CN_REQUIRED[];
@@ -223,6 +226,8 @@ typedef struct
     char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
     char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
     char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */
+    int           query_retries;                       /**< Number of times a interrupted query is retried */
+    time_t        query_retry_timeout;                 /**< Timeout for query retries */
 } MXS_CONFIG;
 
 /**

@@ -809,7 +809,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
                 break;
             }
         }
-        else if (mysql_query(mondb->con, query) != 0)
+        else if (mxs_mysql_query(mondb->con, query) != 0)
         {
             switch (mysql_errno(mondb->con))
             {

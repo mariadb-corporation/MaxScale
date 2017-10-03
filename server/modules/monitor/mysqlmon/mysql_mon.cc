@@ -906,7 +906,7 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
 
     MYSQL_RES* result;
 
-    if (mysql_query(database->con, query) == 0
+    if (mxs_mysql_query(database->con, query) == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         if (mysql_field_count(database->con) < columns)
@@ -1022,7 +1022,7 @@ static MXS_MONITORED_SERVER *build_mysql51_replication_tree(MXS_MONITOR *mon)
         int nslaves = 0;
         if (database->con)
         {
-            if (mysql_query(database->con, "SHOW SLAVE HOSTS") == 0
+            if (mxs_mysql_query(database->con, "SHOW SLAVE HOSTS") == 0
                 && (result = mysql_store_result(database->con)) != NULL)
             {
                 if (mysql_field_count(database->con) < 4)
@@ -1201,7 +1201,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     ss_dassert(serv_info);
 
     /* Check whether current server is MaxScale Binlog Server */
-    if (mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
+    if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
         (result = mysql_store_result(database->con)) != NULL)
     {
         serv_info->binlog_relay = true;
@@ -1213,7 +1213,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     }
 
     /* Get server_id and read_only from current node */
-    if (mysql_query(database->con, "SELECT @@server_id, @@read_only") == 0
+    if (mxs_mysql_query(database->con, "SELECT @@server_id, @@read_only") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         long server_id = -1;
@@ -2024,8 +2024,8 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
     }
 
     /* check if the maxscale_schema database and replication_heartbeat table exist */
-    if (mysql_query(database->con, "SELECT table_name FROM information_schema.tables "
-                    "WHERE table_schema = 'maxscale_schema' AND table_name = 'replication_heartbeat'"))
+    if (mxs_mysql_query(database->con, "SELECT table_name FROM information_schema.tables "
+                        "WHERE table_schema = 'maxscale_schema' AND table_name = 'replication_heartbeat'"))
     {
         MXS_ERROR( "Error checking for replication_heartbeat in Master server"
                    ": %s", mysql_error(database->con));
@@ -2047,7 +2047,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
     if (0 == returned_rows)
     {
         /* create repl_heartbeat table in maxscale_schema database */
-        if (mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
+        if (mxs_mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
                         "maxscale_schema.replication_heartbeat "
                         "(maxscale_id INT NOT NULL, "
                         "master_server_id INT NOT NULL, "
@@ -2067,7 +2067,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
     sprintf(heartbeat_purge_query,
             "DELETE FROM maxscale_schema.replication_heartbeat WHERE master_timestamp < %lu", purge_time);
 
-    if (mysql_query(database->con, heartbeat_purge_query))
+    if (mxs_mysql_query(database->con, heartbeat_purge_query))
     {
         MXS_ERROR("Error deleting from maxscale_schema.replication_heartbeat "
                   "table: [%s], %s",
@@ -2085,7 +2085,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
             heartbeat, handle->master->server->node_id, id);
 
     /* Try to insert MaxScale timestamp into master */
-    if (mysql_query(database->con, heartbeat_insert_query))
+    if (mxs_mysql_query(database->con, heartbeat_insert_query))
     {
 
         database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
@@ -2103,7 +2103,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
                     "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)",
                     handle->master->server->node_id, id, heartbeat);
 
-            if (mysql_query(database->con, heartbeat_insert_query))
+            if (mxs_mysql_query(database->con, heartbeat_insert_query))
             {
 
                 database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
@@ -2164,7 +2164,7 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database
             id, handle->master->server->node_id);
 
     /* if there is a master then send the query to the slave with master_id */
-    if (handle->master != NULL && (mysql_query(database->con, select_heartbeat_query) == 0
+    if (handle->master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
                                    && (result = mysql_store_result(database->con)) != NULL))
     {
         int rows_found = 0;
@@ -2438,8 +2438,8 @@ bool check_replicate_ignore_table(MXS_MONITORED_SERVER* database)
     MYSQL_RES *result;
     bool rval = true;
 
-    if (mysql_query(database->con,
-                    "show variables like 'replicate_ignore_table'") == 0 &&
+    if (mxs_mysql_query(database->con,
+                        "show variables like 'replicate_ignore_table'") == 0 &&
         (result = mysql_store_result(database->con)) &&
         mysql_num_fields(result) > 1)
     {
@@ -2482,8 +2482,8 @@ bool check_replicate_do_table(MXS_MONITORED_SERVER* database)
     MYSQL_RES *result;
     bool rval = true;
 
-    if (mysql_query(database->con,
-                    "show variables like 'replicate_do_table'") == 0 &&
+    if (mxs_mysql_query(database->con,
+                        "show variables like 'replicate_do_table'") == 0 &&
         (result = mysql_store_result(database->con)) &&
         mysql_num_fields(result) > 1)
     {
@@ -2525,8 +2525,8 @@ bool check_replicate_wild_do_table(MXS_MONITORED_SERVER* database)
     MYSQL_RES *result;
     bool rval = true;
 
-    if (mysql_query(database->con,
-                    "show variables like 'replicate_wild_do_table'") == 0 &&
+    if (mxs_mysql_query(database->con,
+                        "show variables like 'replicate_wild_do_table'") == 0 &&
         (result = mysql_store_result(database->con)) &&
         mysql_num_fields(result) > 1)
     {
@@ -2572,8 +2572,8 @@ bool check_replicate_wild_ignore_table(MXS_MONITORED_SERVER* database)
     MYSQL_RES *result;
     bool rval = true;
 
-    if (mysql_query(database->con,
-                    "show variables like 'replicate_wild_ignore_table'") == 0 &&
+    if (mxs_mysql_query(database->con,
+                        "show variables like 'replicate_wild_ignore_table'") == 0 &&
         (result = mysql_store_result(database->con)) &&
         mysql_num_fields(result) > 1)
     {

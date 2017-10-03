@@ -197,10 +197,14 @@ to the server. For more information, see the server section in the
 
 ### KILL command support
 
-The MySQL client protocol now detects `KILL <thread_id>` statements (binary and
-query forms) and kills the MaxScale session with the given id. This feature has
-some limitations, see [Limitations](../About/Limitations.md) for more
-information.
+The MySQL client protocol now supports execution of `KILL` statements through
+MaxScale. The connection IDs in these queries will be transformed into the
+correct ones by MaxScale.
+
+`KILL QUERY ID <query_id>` is not supported by MaxScale and it needs to be
+executed directly on the relevant backend server. In addition to this, there are
+minor limitations to the `KILL` command handling. See
+[Limitations](../About/Limitations.md) for more information.
 
 ### New `uses_function` rule for dbfwfilter
 

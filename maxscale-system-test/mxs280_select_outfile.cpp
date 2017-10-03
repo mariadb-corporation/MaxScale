@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(30);
-        Test->repl->ssh_node(i, (char *) "touch /tmp/t1.csv", true);
+        Test->repl->ssh_node(i, true, "touch /tmp/t1.csv");
     }
 
     Test->add_result(create_t1(Test->conn_rwsplit), "Error creating t1\n");
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(30);
-        Test->repl->ssh_node(i, (char *) "rm -rf /tmp/t1.csv", true);
+        Test->repl->ssh_node(i, true, "rm -rf /tmp/t1.csv");
     }
 
     Test->set_timeout(30);

@@ -384,33 +384,33 @@ sigfatal_handler(int i)
     }
     fatal_handling = 1;
     MXS_CONFIG* cnf = config_get_global_options();
-    fprintf(stderr, "\n\nMaxScale " MAXSCALE_VERSION " received fatal signal %d\n", i);
+    fprintf(stderr, "Fatal: MaxScale " MAXSCALE_VERSION " received fatal signal %d. "
+            "Attempting backtrace.\n", i);
+    fprintf(stderr, "Commit ID: %s System name: %s Release string: %s\n\n",
+            maxscale_commit, cnf->sysname, cnf->release_string);
+#ifdef HAVE_GLIBC
 
-    MXS_ALERT("Fatal: MaxScale " MAXSCALE_VERSION " received fatal signal %d. Attempting backtrace.", i);
+    void *addrs[128];
+    int count = backtrace(addrs, 128);
 
+    // First print the stack trace to stderr as malloc is likely broken
+    backtrace_symbols_fd(addrs, count, STDERR_FILENO);
+
+    MXS_ALERT("Fatal: MaxScale " MAXSCALE_VERSION " received fatal signal %d. "
+              "Attempting backtrace.", i);
     MXS_ALERT("Commit ID: %s System name: %s "
               "Release string: %s",
               maxscale_commit, cnf->sysname, cnf->release_string);
+    // Then see if we can log them
+    char** symbols = backtrace_symbols(addrs, count);
 
-#ifdef HAVE_GLIBC
+    if (symbols)
     {
-        void *addrs[128];
-        int count = backtrace(addrs, 128);
-        char** symbols = backtrace_symbols(addrs, count);
-
-        if (symbols)
+        for (int n = 0; n < count; n++)
         {
-            for (int n = 0; n < count; n++)
-            {
-                MXS_ALERT("  %s\n", symbols[n]);
-            }
-            MXS_FREE(symbols);
+            MXS_ALERT("  %s\n", symbols[n]);
         }
-        else
-        {
-            fprintf(stderr, "\nresolving symbols to error log failed, writing call trace to stderr:\n");
-            backtrace_symbols_fd(addrs, count, fileno(stderr));
-        }
+        MXS_FREE(symbols);
     }
 #endif
 
@@ -421,8 +421,6 @@ sigfatal_handler(int i)
     signal_set(i, SIG_DFL);
     raise(i);
 }
-
-
 
 /**
  * @node Wraps sigaction calls
@@ -2078,6 +2076,9 @@ int main(int argc, char **argv)
     worker = Worker::get(0);
     ss_dassert(worker);
     worker->run();
+
+    /*< Stop all the monitors */
+    monitorStopAll();
 
     /** Stop administrative interface */
     mxs_admin_shutdown();

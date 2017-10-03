@@ -88,14 +88,11 @@ int main(int argc, char *argv[])
     Test->repl->sync_slaves();
     Test->set_timeout(200);
 
-    sprintf(str, "%s rm -f /tmp/t*.csv; %s chmod 777 /tmp", Test->repl->access_sudo[0],
-            Test->repl->access_sudo[0]);
-    Test->tprintf("%s\n", str);
     for (int k = 0; k < Test->repl->N; k++)
     {
-        Test->repl->ssh_node(k, str, false);
+        Test->repl->ssh_node(k, false, "%s rm -f /tmp/t*.csv; %s chmod 777 /tmp",
+                             Test->repl->access_sudo[0], Test->repl->access_sudo[0]);
     }
-    //system(str);
 
     Test->tprintf("Copying data from t1 to file...\n");
     Test->tprintf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");

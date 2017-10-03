@@ -23,9 +23,11 @@
 
 MXS_BEGIN_DECLS
 
-#define DEFAULT_NBPOLLS         3       /**< Default number of non block polls before we block */
-#define DEFAULT_POLLSLEEP       1000    /**< Default poll wait time (milliseconds) */
-#define DEFAULT_NTHREADS        1       /**< Default number of polling threads */
+#define DEFAULT_NBPOLLS             3    /**< Default number of non block polls before we block */
+#define DEFAULT_POLLSLEEP           1000 /**< Default poll wait time (milliseconds) */
+#define DEFAULT_NTHREADS            1    /**< Default number of polling threads */
+#define DEFAULT_QUERY_RETRIES       0    /**< Number of retries for interrupted queries */
+#define DEFAULT_QUERY_RETRY_TIMEOUT 5    /**< Timeout for query retries */
 
 /**
  * Maximum length for configuration parameter value.
