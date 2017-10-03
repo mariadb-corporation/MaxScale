@@ -92,4 +92,16 @@ bool monitor_serialize(const MXS_MONITOR *monitor);
  */
 MXS_MONITOR* monitor_server_in_use(const SERVER *server);
 
+/**
+ * Launch a script
+ *
+ * @param mon     Owning monitor
+ * @param ptr     The server which has changed state
+ * @param script  Script to execute
+ * @param timeout Timeout in seconds for the script
+ *
+ * @return Return value of the executed script or -1 on error
+ */
+int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout);
+
 MXS_END_DECLS
