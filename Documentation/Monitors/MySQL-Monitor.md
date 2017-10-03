@@ -230,6 +230,14 @@ error is logged and the failover functionality is disabled. If this happens, the
 cluster must be fixed manually and the failover needs to be re-enabled via the
 REST API or MaxAdmin.
 
+### `failover_script`
+
+*NOTE* By default, MariaDB MaxScale uses the MariaDB provided failover
+script, so `failover_script` need not be specified.
+
+This command will be executed in order to perform a failover. `failover_script`
+should be specified the same way as [script](./Monitor-Common.md#script) is.
+
 ### `failover_timeout`
 
 The timeout for the cluster failover in seconds. The default value is 90
