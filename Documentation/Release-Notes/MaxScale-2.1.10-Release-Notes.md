@@ -30,6 +30,8 @@ The internal SQL queries that MaxScale executes to load database users as well
 as monitor the database itself can now be automatically retried if they are
 interrupted. The new global parameter, `query_retries` controls the number of
 retry attempts each query will receive if it fails due to a network problem.
+The `query_retry_timeout` global parameter controls the total timeout for the
+retries.
 
 To enable this functionality, add `query_retries=<number-of-retries>` under the
 `[maxscale]` section where _<number-of-retries>_ is a positive integer.

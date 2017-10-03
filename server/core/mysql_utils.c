@@ -197,10 +197,12 @@ static bool is_connection_error(int errcode)
 int mxs_mysql_query(MYSQL* conn, const char* query)
 {
     MXS_CONFIG* cnf = config_get_global_options();
+    time_t start = time(NULL);
     int rc = mysql_query(conn, query);
 
     for (int n = 0; rc != 0 && n < cnf->query_retries &&
-         is_connection_error(mysql_errno(conn)); n++)
+         is_connection_error(mysql_errno(conn)) &&
+         time(NULL) - start < cnf->query_retry_timeout; n++)
     {
         rc = mysql_query(conn, query);
     }

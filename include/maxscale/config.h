@@ -21,6 +21,7 @@
 #include <limits.h>
 #include <openssl/sha.h>
 #include <sys/utsname.h>
+#include <time.h>
 
 #include <maxscale/modinfo.h>
 
@@ -75,6 +76,7 @@ typedef struct
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
     int           query_retries;                       /**< Number of times a interrupted query is retried */
+    time_t        query_retry_timeout;                 /**< Timeout for query retries */
 } MXS_CONFIG;
 
 /**

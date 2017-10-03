@@ -1319,6 +1319,20 @@ handle_global_item(const char *name, const char *value)
             return 0;
         }
     }
+    else if (strcmp(name, "query_retry_timeout") == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval > 0)
+        {
+            gateway.query_retries = intval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid timeout value for 'query_retry_timeout': %s", value);
+            return 0;
+        }
+    }
     else if (strcmp(name, "log_throttling") == 0)
     {
         if (*value == 0)
@@ -1606,6 +1620,7 @@ global_defaults()
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     gateway.skip_permission_checks = false;
     gateway.query_retries = DEFAULT_QUERY_RETRIES;
+    gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
 
     if (version_string != NULL)
     {
