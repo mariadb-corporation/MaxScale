@@ -69,7 +69,7 @@ typedef struct
     int availableWhenDonor; /**< Monitor flag for Galera Cluster Donor availability */
     int disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
     bool mysql51_replication; /**< Use MySQL 5.1 replication */
-    MXS_MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
+    MXS_MONITORED_SERVER *master; /**< Master server for MySQL Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
     uint64_t events; /*< enabled events */
     HASHTABLE *server_info; /**< Contains server specific information */

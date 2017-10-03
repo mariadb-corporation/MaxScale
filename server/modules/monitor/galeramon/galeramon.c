@@ -34,8 +34,8 @@ static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 static json_t* diagnostics_json(const MXS_MONITOR *);
-static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR*);
-static MXS_MONITOR_SERVERS *set_cluster_master(MXS_MONITOR_SERVERS *, MXS_MONITOR_SERVERS *, int);
+static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR*);
+static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *, MXS_MONITORED_SERVER *, int);
 static void disableMasterFailback(void *, int);
 bool isGaleraEvent(mxs_monitor_event_t event);
 static void update_sst_donor_nodes(MXS_MONITOR*, int);
@@ -269,7 +269,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
  * @param database      The database to probe
  */
 static void
-monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
+monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
 {
     GALERA_MONITOR* handle = (GALERA_MONITOR*) mon->handle;
     MYSQL_ROW row;
@@ -483,9 +483,9 @@ monitorMain(void *arg)
 {
     GALERA_MONITOR *handle = (GALERA_MONITOR*)arg;
     MXS_MONITOR* mon = handle->monitor;
-    MXS_MONITOR_SERVERS *ptr;
+    MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
-    MXS_MONITOR_SERVERS *candidate_master = NULL;
+    MXS_MONITORED_SERVER *candidate_master = NULL;
     int master_stickiness;
     int is_cluster = 0;
     int log_no_members = 1;
@@ -534,7 +534,7 @@ monitorMain(void *arg)
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;
@@ -583,7 +583,7 @@ monitorMain(void *arg)
 
         handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
 
         while (ptr)
         {
@@ -666,10 +666,10 @@ monitorMain(void *arg)
  * @param   servers The monitored servers list
  * @return  The candidate master on success, NULL on failure
  */
-static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR* mon)
+static MXS_MONITORED_SERVER *get_candidate_master(MXS_MONITOR* mon)
 {
-    MXS_MONITOR_SERVERS *moitor_servers = mon->databases;
-    MXS_MONITOR_SERVERS *candidate_master = NULL;
+    MXS_MONITORED_SERVER *moitor_servers = mon->monitored_servers;
+    MXS_MONITORED_SERVER *candidate_master = NULL;
     GALERA_MONITOR* handle = mon->handle;
     long min_id = -1;
     int minval = INT_MAX;
@@ -741,8 +741,8 @@ static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR* mon)
  * @param   candidate_master The candidate master server accordingly to the selection rule
  * @return  The  master node pointer (could be NULL)
  */
-static MXS_MONITOR_SERVERS *set_cluster_master(MXS_MONITOR_SERVERS *current_master,
-                                               MXS_MONITOR_SERVERS *candidate_master,
+static MXS_MONITORED_SERVER *set_cluster_master(MXS_MONITORED_SERVER *current_master,
+                                               MXS_MONITORED_SERVER *candidate_master,
                                                int master_stickiness)
 {
     /*
@@ -791,7 +791,7 @@ static MXS_MONITOR_SERVERS *set_cluster_master(MXS_MONITOR_SERVERS *current_mast
  */
 static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
 {
-    MXS_MONITOR_SERVERS *ptr;
+    MXS_MONITORED_SERVER *ptr;
     MYSQL_ROW row;
     MYSQL_RES *result;
     GALERA_MONITOR *handle = mon->handle;
@@ -804,7 +804,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
     }
 
     unsigned int found_slaves = 0;
-    MXS_MONITOR_SERVERS *node_list[is_cluster - 1];
+    MXS_MONITORED_SERVER *node_list[is_cluster - 1];
     /* Donor list size = DONOR_LIST_SET_VAR + n_hosts * max_host_len + n_hosts + 1 */
 
     char *donor_list = MXS_CALLOC(1, strlen(DONOR_LIST_SET_VAR) +
@@ -819,14 +819,14 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
 
     strcpy(donor_list, DONOR_LIST_SET_VAR);
 
-    ptr = mon->databases;
+    ptr = mon->monitored_servers;
 
     /* Create an array of slave nodes */
     while (ptr)
     {
         if (SERVER_IS_JOINED(ptr->server) && SERVER_IS_SLAVE(ptr->server))
         {
-            node_list[found_slaves] = (MXS_MONITOR_SERVERS *)ptr;
+            node_list[found_slaves] = (MXS_MONITORED_SERVER *)ptr;
             found_slaves++;
 
             /* Check the server parameter "priority"
@@ -854,13 +854,13 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
     /* Sort the array */
     qsort(node_list,
           found_slaves,
-          sizeof(MXS_MONITOR_SERVERS *),
+          sizeof(MXS_MONITORED_SERVER *),
           sort_order ? compare_node_priority : compare_node_index);
 
     /* Select nodename from each server and append it to node_list */
     for (int k = 0; k < found_slaves; k++)
     {
-        MXS_MONITOR_SERVERS *ptr = node_list[k];
+        MXS_MONITORED_SERVER *ptr = node_list[k];
 
         /* Get the Galera node name */
         if (mxs_mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
@@ -906,7 +906,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
     /* Set now rep_sst_donor in each slave node */
     for (int k = 0; k < found_slaves; k++)
     {
-        MXS_MONITOR_SERVERS *ptr = node_list[k];
+        MXS_MONITORED_SERVER *ptr = node_list[k];
         /* Set the Galera SST donor node list */
         if (mxs_mysql_query(ptr->con, donor_list) == 0)
         {
@@ -937,8 +937,8 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
 
 static int compare_node_index (const void *a, const void *b)
 {
-    const MXS_MONITOR_SERVERS *s_a = *(MXS_MONITOR_SERVERS * const *)a;
-    const MXS_MONITOR_SERVERS *s_b = *(MXS_MONITOR_SERVERS * const *)b;
+    const MXS_MONITORED_SERVER *s_a = *(MXS_MONITORED_SERVER * const *)a;
+    const MXS_MONITORED_SERVER *s_b = *(MXS_MONITORED_SERVER * const *)b;
 
     // Order is DESC: b - a
     return s_b->server->node_id - s_a->server->node_id;
@@ -965,8 +965,8 @@ static int compare_node_index (const void *a, const void *b)
 
 static int compare_node_priority (const void *a, const void *b)
 {
-    const MXS_MONITOR_SERVERS *s_a = *(MXS_MONITOR_SERVERS * const *)a;
-    const MXS_MONITOR_SERVERS *s_b = *(MXS_MONITOR_SERVERS * const *)b;
+    const MXS_MONITORED_SERVER *s_a = *(MXS_MONITORED_SERVER * const *)a;
+    const MXS_MONITORED_SERVER *s_b = *(MXS_MONITORED_SERVER * const *)b;
 
     const char *pri_a = server_get_parameter(s_a->server, "priority");
     const char *pri_b = server_get_parameter(s_b->server, "priority");
@@ -1195,11 +1195,11 @@ static void set_cluster_members(MXS_MONITOR *mon)
 {
     GALERA_MONITOR *handle = mon->handle;
     GALERA_NODE_INFO *value;
-    MXS_MONITOR_SERVERS *ptr;
+    MXS_MONITORED_SERVER *ptr;
     char *c_uuid = handle->cluster_info.c_uuid;
     int c_size = handle->cluster_info.c_size;
 
-    ptr = mon->databases;
+    ptr = mon->monitored_servers;
     while (ptr)
     {
         /* Fetch cluster info for this server, if any */
