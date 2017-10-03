@@ -1026,6 +1026,7 @@ int TestConnections::start_binlog()
         fflush(stdout);
         tprintf("Maxscale binlog master pos : %s\n", log_pos);
         fflush(stdout);
+    }
 
     tprintf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");
     fflush(stdout);
