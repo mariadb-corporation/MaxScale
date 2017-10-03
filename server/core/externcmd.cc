@@ -34,7 +34,7 @@
  *
  * @return 0 on success, -1 on error
  */
-static int tokenize_arguments(char* argstr, char** argv)
+static int tokenize_arguments(const char* argstr, char** argv)
 {
     int i = 0;
     bool quoted = false;
@@ -104,7 +104,7 @@ static int tokenize_arguments(char* argstr, char** argv)
     return 0;
 }
 
-EXTERNCMD* externcmd_allocate(char* argstr, uint32_t timeout)
+EXTERNCMD* externcmd_allocate(const char* argstr, uint32_t timeout)
 {
     EXTERNCMD* cmd = (EXTERNCMD*) MXS_MALLOC(sizeof(EXTERNCMD));
     char** argv = (char**) MXS_MALLOC(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX);
