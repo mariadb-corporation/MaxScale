@@ -80,27 +80,30 @@ static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 /**
  * Check whether specified current master is acceptable.
  *
- * @param current_master        The specified current master.
- * @param server                The server to check against.
- * @param current_master_found  On output, true if @server is @c current_master.
- * @param error                 On output, error object if function failed.
+ * @param current_master            The specified current master.
+ * @param monitored_server          The server to check against.
+ * @param monitored_current_master  On output, @c monitored_server, if @c monitored_server
+ *                                  is the same server as @c current_master.
+ * @param error                     On output, error object if function failed.
  *
  * @return False, if there is some error with the specified current master,
  *         True otherwise.
  */
 bool mysql_switchover_check_current(SERVER* current_master,
-                                    SERVER* server,
-                                    bool* current_master_found,
+                                    MXS_MONITORED_SERVER* monitored_server,
+                                    MXS_MONITORED_SERVER** monitored_current_master,
                                     json_t** error)
 {
     bool rv = true;
-    bool is_master = SERVER_IS_MASTER(server);
+    bool is_master = SERVER_IS_MASTER(monitored_server->server);
 
-    if (current_master == server)
+    if (current_master == monitored_server->server)
     {
-        *current_master_found = true;
-
-        if (!is_master)
+        if (is_master)
+        {
+            *monitored_current_master = monitored_server;
+        }
+        else
         {
             *error = mxs_json_error("Specified %s is a server, but not the current master.",
                                     current_master->unique_name);
@@ -110,7 +113,7 @@ bool mysql_switchover_check_current(SERVER* current_master,
     else if (is_master)
     {
         *error = mxs_json_error("Current master not specified, even though there is "
-                                "a master (%s).", server->unique_name);
+                                "a master (%s).", monitored_server->server->unique_name);
         rv = false;
     }
 
@@ -120,27 +123,30 @@ bool mysql_switchover_check_current(SERVER* current_master,
 /**
  * Check whether specified new master is acceptable.
  *
- * @param new_master        The specified new master.
- * @param server            The server to check against.
- * @param new_master_found  On output, true if the @c server is @c new_master.
- * @param error             On output, error object if function failed.
+ * @param new_master            The specified new master.
+ * @param monitored_server      The server to check against.
+ * @param monitored_new_master  On output, @c monitored_server, if @c monitored_server
+ *                              is the same server as @c new_master.
+ * @param error                 On output, error object if function failed.
  *
  * @return False, if there is some error with the specified current master,
  *         True otherwise.
  */
 bool mysql_switchover_check_new(SERVER* new_master,
-                                SERVER* server,
-                                bool* new_master_found,
+                                MXS_MONITORED_SERVER* monitored_server,
+                                MXS_MONITORED_SERVER** monitored_new_master,
                                 json_t** error)
 {
     bool rv = true;
-    bool is_master = SERVER_IS_MASTER(server);
+    bool is_master = SERVER_IS_MASTER(monitored_server->server);
 
-    if (new_master == server)
+    if (new_master == monitored_server->server)
     {
-        *new_master_found = true;
-
-        if (is_master)
+        if (!is_master)
+        {
+            *monitored_new_master = monitored_server;
+        }
+        else
         {
             *error = mxs_json_error("Specified new master %s is already the current master.",
                                     new_master->unique_name);
@@ -154,51 +160,59 @@ bool mysql_switchover_check_new(SERVER* new_master,
 /**
  * Check whether specified current and new master are acceptable.
  *
- * @param mon               The monitor.
- * @param new_master        The specified new master.
- * @param current_master    The specifiec current master (may be NULL).
- * @param error             On output, error object if function failed.
+ * @param mon                       The monitor.
+ * @param new_master                The specified new master.
+ * @param current_master            The specifiec current master (may be NULL).
+ * @param monitored_new_master      On output, the monitored server corresponding to
+ *                                  @c new_master.
+ * @param monitored_current_master  On output, the monitored server corresponding to
+ *                                  @c current_master.
+ * @param error                     On output, error object if function failed.
  *
  * @return True if switchover can proceeed, false otherwise.
  */
-bool mysql_switchover_check(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_master, json_t** error)
+bool mysql_switchover_check(MXS_MONITOR* mon,
+                            SERVER* new_master,
+                            SERVER* current_master,
+                            MXS_MONITORED_SERVER** monitored_new_master,
+                            MXS_MONITORED_SERVER** monitored_current_master,
+                            json_t** error)
 {
     bool rv = true;
 
-    bool current_master_found = false;
-    bool new_master_found = false;
+    *monitored_new_master = NULL;
+    *monitored_current_master = NULL;
+    *error = NULL;
 
-    // TODO: Is locking needed here?
     MXS_MONITORED_SERVER* monitored_server = mon->monitored_servers;
 
-    while (rv && !current_master_found && !new_master_found && monitored_server)
+    while (rv && !*monitored_current_master && !*monitored_new_master && monitored_server)
     {
-        SERVER* server = monitored_server->server;
-
-        if (!current_master_found)
+        if (!*monitored_current_master)
         {
-            rv = mysql_switchover_check_current(current_master, server, &current_master_found, error);
+            rv = mysql_switchover_check_current(current_master,
+                                                monitored_server,
+                                                monitored_current_master,
+                                                error);
         }
 
         if (rv)
         {
-            rv = mysql_switchover_check_new(new_master, server, &new_master_found, error);
+            rv = mysql_switchover_check_new(new_master, monitored_server, monitored_new_master, error);
         }
 
         monitored_server = monitored_server->next;
     }
 
-    if (rv && ((current_master && !current_master_found) || !new_master_found))
+    if (rv && ((current_master && !*monitored_current_master) || !*monitored_new_master))
     {
-        *error = NULL;
-
-        if (current_master && !current_master_found)
+        if (current_master && !*monitored_current_master)
         {
             *error = mxs_json_error("Specified current master %s is not found amongst "
                                     "existing servers.", current_master->unique_name);
         }
 
-        if (!new_master_found)
+        if (!*monitored_new_master)
         {
             *error = mxs_json_error_append(*error,
                                            "Specified new master %s is not found amongst "
@@ -211,28 +225,39 @@ bool mysql_switchover_check(MXS_MONITOR* mon, SERVER* new_master, SERVER* curren
     return rv;
 }
 
-bool mysql_switchover_perform(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_master, json_t** result)
+bool mysql_switchover_perform(MXS_MONITOR* mon,
+                              MXS_MONITORED_SERVER* monitored_new_master,
+                              MXS_MONITORED_SERVER* monitored_current_master,
+                              json_t** result)
 {
+    MYSQL_MONITOR* mysql_mon = static_cast<MYSQL_MONITOR*>(mon->handle);
+
+    SERVER* new_master = monitored_new_master->server;
+    SERVER* current_master = monitored_current_master ? monitored_current_master->server : NULL;
+
     // TODO: Launch actual switchover command.
+    const char NONE[] = "none";
+    const char SWITCHOVER_FORMAT[] =
+        "/usr/bin/echo --from=%s --to=%s "
+        "INITIATOR=$INITIATOR "
+        "PARENT=$PARENT CHILDREN=$CHILDREN EVENT=$EVENT "
+        "CREDENTIALS=$CREDENTIALS NODELIST=$NODELIST "
+        "LIST=$LIST MASTERLIST=$MASTERLIST "
+        "SLAVELIST=$SLAVELIST SYNCEDLIST=$SYNCEDLIST";
 
-    std::string s;
-    s += "Performing switchover ";
-    if (current_master)
-    {
-        s += "from ";
-        s += current_master ? current_master->unique_name : "(none)";
-        s += " ";
-    }
-    s += "to ";
-    s += new_master->unique_name;
-    s += ".";
+    char switchover_cmd[sizeof(SWITCHOVER_FORMAT) +
+                        strlen(new_master->unique_name) +
+                        current_master ? strlen(current_master->unique_name) : sizeof(NONE)];
 
-    *result = json_object();
-    json_t* data = json_string(s.c_str());
+    sprintf(switchover_cmd, SWITCHOVER_FORMAT,
+            current_master ? current_master->unique_name : NONE,
+            new_master->unique_name);
 
-    json_object_set_new(*result, "data", data);
+    // TODO: We behave as if the specified new master would be the server that causes the
+    // TODO: event, although that's not really the case.
+    int rv = monitor_launch_script(mon, monitored_new_master, switchover_cmd, mysql_mon->switchover_timeout);
 
-    return true;
+    return rv == 0 ? true : false;
 }
 
 /**
@@ -264,13 +289,19 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
         MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", mon->name);
     }
 
-    rv = mysql_switchover_check(mon, new_master, current_master, output);
+    MXS_MONITORED_SERVER* monitored_new_master = NULL;
+    MXS_MONITORED_SERVER* monitored_current_master = NULL;
+
+    rv = mysql_switchover_check(mon,
+                                new_master, current_master,
+                                &monitored_new_master, &monitored_current_master,
+                                output);
 
     if (rv)
     {
         bool failover = config_get_bool(mon->parameters, CN_FAILOVER);
 
-        rv = mysql_switchover_perform(mon, new_master, current_master, output);
+        rv = mysql_switchover_perform(mon, monitored_new_master, monitored_current_master, output);
 
         if (rv)
         {
@@ -334,10 +365,25 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** output)
                (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
 
     MXS_MONITOR* mon = args->argv[0].value.monitor;
+    MYSQL_MONITOR* mysql_mon = static_cast<MYSQL_MONITOR*>(mon->handle);
     SERVER* new_master = args->argv[1].value.server;
     SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
 
-    return mysql_switchover(mon, new_master, current_master, output);
+    bool rv;
+
+    if (mysql_mon->switchover)
+    {
+        rv = mysql_switchover(mon, new_master, current_master, output);
+    }
+    else
+    {
+        *output = mxs_json_error("Switchover %s -> %s not performed, as switchover is not enabled.",
+                                 current_master ? current_master->unique_name : "(none)",
+                                 new_master->unique_name);
+        rv = false;
+    }
+
+    return rv;
 }
 
 /**
