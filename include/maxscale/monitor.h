@@ -161,16 +161,17 @@ typedef enum
 /**
  * The linked list of servers that are being monitored by the monitor module.
  */
-typedef struct monitor_servers
+typedef struct monitored_server
 {
-    SERVER *server;               /**< The server being monitored */
-    MYSQL *con;                   /**< The MySQL connection */
+    SERVER *server;                 /**< The server being monitored */
+    MYSQL *con;                     /**< The MySQL connection */
     bool log_version_err;
     int mon_err_count;
     unsigned int mon_prev_status;
-    unsigned int pending_status;  /**< Pending Status flag bitmap */
-    struct monitor_servers *next; /**< The next server in the list */
-} MXS_MONITOR_SERVERS;
+    unsigned int pending_status;    /**< Pending Status flag bitmap */
+    bool new_event;                 /**< Whether an action was taken on the last event */
+    struct monitored_server *next;  /**< The next server in the list */
+} MXS_MONITORED_SERVER;
 
 /**
  * Representation of the running monitor.
@@ -182,7 +183,7 @@ struct mxs_monitor
     char password[MAX_MONITOR_PASSWORD_LEN]; /*< Monitor password */
     SPINLOCK lock;
     MXS_CONFIG_PARAMETER* parameters; /*< configuration parameters */
-    MXS_MONITOR_SERVERS* databases; /*< List of databases the monitor monitors */
+    MXS_MONITORED_SERVER* monitored_servers; /*< List of servers the monitor monitors */
     monitor_state_t state;        /**< The state of the monitor */
     int connect_timeout;          /**< Connect timeout in seconds for mysql_real_connect */
     int connect_attempts;      /**< How many times a connection is attempted */
@@ -204,6 +205,8 @@ struct mxs_monitor
     bool active; /**< True if monitor is active */
     time_t journal_max_age; /**< Maximum age of journal file */
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
+    int64_t last_master_up; /**< Time when the last master_up event was triggered */
+    int64_t last_master_down; /**< Time when the last master_down event was triggered */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 
@@ -255,19 +258,35 @@ extern const char CN_EVENTS[];
 
 bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 
-void monitor_clear_pending_status(MXS_MONITOR_SERVERS *ptr, int bit);
-void monitor_set_pending_status(MXS_MONITOR_SERVERS *ptr, int bit);
+void monitor_clear_pending_status(MXS_MONITORED_SERVER *ptr, int bit);
+void monitor_set_pending_status(MXS_MONITORED_SERVER *ptr, int bit);
 void servers_status_pending_to_current(MXS_MONITOR *monitor);
 void servers_status_current_to_pending(MXS_MONITOR *monitor);
 
-bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv);
-bool mon_print_fail_status(MXS_MONITOR_SERVERS* mon_srv);
+bool mon_status_changed(MXS_MONITORED_SERVER* mon_srv);
+bool mon_print_fail_status(MXS_MONITORED_SERVER* mon_srv);
 
-mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database);
-void mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval);
+mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database);
+void mon_log_connect_error(MXS_MONITORED_SERVER* database, mxs_connect_result_t rval);
+const char* mon_get_event_name(mxs_monitor_event_t event);
 
 void lock_monitor_servers(MXS_MONITOR *monitor);
 void release_monitor_servers(MXS_MONITOR *monitor);
+
+/**
+ * Alter monitor parameters
+ *
+ * The monitor parameters should not be altered while the monitor is
+ * running. To alter a parameter from outside a monitor module, stop the monitor,
+ * do the alteration and then restart the monitor. The monitor "owns" the parameters
+ * as long as it is running so if the monitor needs to change its own parameters,
+ * it can do it without stopping itself.
+ *
+ * @param monitor Monitor whose parameter is altered
+ * @param key     Parameter name to alter
+ * @param value   New value for the parameter
+ */
+void mon_alter_parameter(MXS_MONITOR* monitor, const char* key, const char* value);
 
 /**
  * @brief Handle state change events
@@ -280,6 +299,25 @@ void release_monitor_servers(MXS_MONITOR *monitor);
  * @param events Enabled events
  */
 void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_t events);
+
+/**
+ * @brief Process possible failover event
+ *
+ * If a master failure has occurred and MaxScale is configured with failover
+ * functionality, this fuction executes an external failover program to elect
+ * a new master server.
+ *
+ * This function should be called immediately after @c mon_process_state_changes.
+ *
+ * @param monitor          Monitor whose cluster is processed
+ * @param failover_timeout Timeout in seconds for the failover
+ *
+ * @return True on success, false on error
+ *
+ * @todo Currently this only works with flat replication topologies and
+ *       needs to be moved inside mysqlmon as it is MariaDB specific code.
+ */
+bool mon_process_failover(MXS_MONITOR *monitor, uint32_t failover_timeout);
 
 /**
  * @brief Hangup connections to failed servers
@@ -295,7 +333,7 @@ void mon_hangup_failed_servers(MXS_MONITOR *monitor);
  *
  * @param db Database where the query failed
  */
-void mon_report_query_error(MXS_MONITOR_SERVERS* db);
+void mon_report_query_error(MXS_MONITORED_SERVER* db);
 
 /**
  * @brief Convert monitor to JSON
@@ -332,7 +370,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host);
  * @param monitor Monitor to journal
  * @param master  The current master server or NULL if no master exists
  */
-void store_server_journal(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master);
+void store_server_journal(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master);
 
 /**
  * @brief Load a journal of server states
@@ -340,6 +378,6 @@ void store_server_journal(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *master);
  * @param monitor Monitor where journal is loaded
  * @param master  Set to point to the current master
  */
-void load_server_journal(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS **master);
+void load_server_journal(MXS_MONITOR *monitor, MXS_MONITORED_SERVER **master);
 
 MXS_END_DECLS

@@ -113,7 +113,7 @@ json_t* mxs_logs_to_json(const char* host);
 static inline bool mxs_log_priority_is_enabled(int priority)
 {
     assert((priority & ~LOG_PRIMASK) == 0);
-    return MXS_LOG_PRIORITY_IS_ENABLED(priority);
+    return MXS_LOG_PRIORITY_IS_ENABLED(priority) || priority == LOG_ALERT;
 }
 
 int mxs_log_message(int priority,

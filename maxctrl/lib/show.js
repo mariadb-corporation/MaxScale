@@ -31,6 +31,8 @@ exports.builder = function(yargs) {
                     {'Address': 'attributes.parameters.address'},
                     {'Port': 'attributes.parameters.port'},
                     {'State': 'attributes.state'},
+                    {'Last Event': 'attributes.last_event'},
+                    {'Triggered At': 'attributes.triggered_at'},
                     {'Services': 'relationships.services.data[].id'},
                     {'Monitors': 'relationships.monitors.data[].id'},
                     {'Master ID': 'attributes.master_id'},
@@ -138,6 +140,7 @@ exports.builder = function(yargs) {
                     {'Version': 'attributes.version'},
                     {'Commit': 'attributes.commit'},
                     {'Started At': 'attributes.started_at'},
+                    {'Activated At': 'attributes.activated_at'},
                     {'Uptime': 'attributes.uptime'},
                     {'Parameters': 'attributes.parameters'}
                 ])

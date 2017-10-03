@@ -1579,12 +1579,14 @@ struct subcommand alteroptions[] =
         "user                     Username used when connecting to servers\n"
         "password                 Password used when connecting to servers\n"
         "monitor_interval         Monitoring interval in milliseconds\n"
-        "backend_connect_timeout  Server coneection timeout in seconds\n"
+        "backend_connect_timeout  Server connection timeout in seconds\n"
         "backend_write_timeout    Server write timeout in seconds\n"
         "backend_read_timeout     Server read timeout in seconds\n"
         "backend_connect_attempts Number of re-connection attempts\n"
         "journal_max_age          Maximum age of server state journal\n"
         "script_timeout           Timeout in seconds for monitor scripts\n"
+        "failover                 Enable or disable failover\n"
+        "failover_timeout         Failover timeout in seconds\n"
         "\n"
         "This will alter an existing parameter of a monitor. To remove parameters,\n"
         "pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='\n"
@@ -1677,13 +1679,23 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
         {
             json_t* output = NULL;
 
-            if (!modulecmd_call_command(cmd, arg, &output))
+            bool succeeded = modulecmd_call_command(cmd, arg, &output);
+
+            if (!succeeded && !output)
             {
-                const char* err = modulecmd_get_error();
-                dcb_printf(dcb, "Error: %s\n", *err ? err :
-                           "Call to module command failed, see log file for more details");
+                const char* s = modulecmd_get_error();
+                ss_dassert(s);
+
+                if (*s == 0)
+                {
+                    // No error had been set, so we add a default one.
+                    modulecmd_set_error("%s", "Call to module command failed, see log file for more details.");
+                }
+
+                output = modulecmd_get_json_error();
             }
-            else if (output)
+
+            if (output)
             {
                 char* js = json_dumps(output, JSON_INDENT(4));
                 dcb_printf(dcb, "%s\n", js);

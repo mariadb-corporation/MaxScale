@@ -21,6 +21,7 @@
 #include <limits.h>
 #include <openssl/sha.h>
 #include <sys/utsname.h>
+#include <time.h>
 
 #include <maxscale/modinfo.h>
 #include <maxscale/jansson.h>
@@ -126,12 +127,15 @@ extern const char CN_NAME[];
 extern const char CN_NON_BLOCKING_POLLS[];
 extern const char CN_OPTIONS[];
 extern const char CN_PARAMETERS[];
+extern const char CN_PASSIVE[];
 extern const char CN_PASSWORD[];
 extern const char CN_POLL_SLEEP[];
 extern const char CN_PORT[];
 extern const char CN_PROTOCOL[];
 extern const char CN_QUERY_CLASSIFIER[];
 extern const char CN_QUERY_CLASSIFIER_ARGS[];
+extern const char CN_QUERY_RETRIES[];
+extern const char CN_QUERY_RETRY_TIMEOUT[];
 extern const char CN_RELATIONSHIPS[];
 extern const char CN_LINKS[];
 extern const char CN_REQUIRED[];
@@ -208,6 +212,9 @@ typedef struct
     unsigned int  auth_read_timeout;                   /**< Read timeout for the user authentication */
     unsigned int  auth_write_timeout;                  /**< Write timeout for the user authentication */
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
+    bool          passive;                             /**< True if MaxScale is in passive mode */
+    int64_t       promoted_at;                         /**< Time when this Maxscale instance was
+                                                        * promoted from a passive to an active */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
     qc_sql_mode_t qc_sql_mode;                         /**< The query classifier sql mode */
@@ -219,6 +226,8 @@ typedef struct
     char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
     char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
     char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */
+    int           query_retries;                       /**< Number of times a interrupted query is retried */
+    time_t        query_retry_timeout;                 /**< Timeout for query retries */
 } MXS_CONFIG;
 
 /**

@@ -541,6 +541,12 @@ void modulecmd_arg_free(MODULECMD_ARG* arg)
     }
 }
 
+static void modulecmd_clear_error()
+{
+    prepare_error();
+    errbuf[0] = '\0';
+}
+
 bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, json_t** output)
 {
     bool rval = false;
@@ -556,6 +562,8 @@ bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args, jso
         {
             args = &MODULECMD_NO_ARGUMENTS;
         }
+
+        modulecmd_clear_error();
 
         json_t* discard = NULL;
         rval = cmd->func(args, output ? output : &discard);
@@ -573,12 +581,6 @@ void modulecmd_set_error(const char *format, ...)
     va_start(list, format);
     vsnprintf(errbuf, MODULECMD_ERRBUF_SIZE, format, list);
     va_end(list);
-}
-
-static void modulecmd_clear_error()
-{
-    prepare_error();
-    errbuf[0] = '\0';
 }
 
 const char* modulecmd_get_error()

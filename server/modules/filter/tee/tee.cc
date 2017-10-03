@@ -25,7 +25,6 @@
 #include <maxscale/modulecmd.h>
 
 #include "tee.hh"
-#include "local_client.hh"
 #include "teesession.hh"
 
 static const MXS_ENUM_VALUE option_values[] =

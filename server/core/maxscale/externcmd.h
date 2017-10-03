@@ -42,7 +42,7 @@ char* externcmd_extract_command(const char* argstr);
  *
  * @return Pointer to new external command struct or NULL if an error occurred
  */
-EXTERNCMD* externcmd_allocate(char* argstr, uint32_t timeout);
+EXTERNCMD* externcmd_allocate(const char* argstr, uint32_t timeout);
 
 
 /**

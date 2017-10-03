@@ -188,7 +188,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
  * @param database  The database to probe
  */
 static void
-monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultPasswd, MXS_MONITOR *mon)
+monitorDatabase(MXS_MONITORED_SERVER *database, char *defaultUser, char *defaultPasswd, MXS_MONITOR *mon)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -229,7 +229,7 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
     server_string = database->server->version_string;
 
     /* Check if the the SQL node is able to contact one or more data nodes */
-    if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
+    if (mxs_mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         if (mysql_field_count(database->con) < 2)
@@ -256,7 +256,7 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
     }
 
     /* Check the the SQL node id in the MySQL cluster */
-    if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_cluster_node_id'") == 0
+    if (mxs_mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_cluster_node_id'") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         if (mysql_field_count(database->con) < 2)
@@ -308,7 +308,7 @@ monitorMain(void *arg)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR*)arg;
     MXS_MONITOR* mon = handle->monitor;
-    MXS_MONITOR_SERVERS *ptr;
+    MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
 
     if (mysql_thread_init())
@@ -350,7 +350,7 @@ monitorMain(void *arg)
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;

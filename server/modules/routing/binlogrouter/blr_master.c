@@ -2523,16 +2523,8 @@ static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
  */
 static void blr_register_handle_checksum(ROUTER_INSTANCE *router, GWBUF *buf)
 {
-    char *val = blr_extract_column(buf, 1);
-
-    if (val && strncasecmp(val, "NONE", 4) == 0)
-    {
-        router->master_chksum = false;
-    }
-    if (val)
-    {
-        MXS_FREE(val);
-    }
+    // Set checksum from master reply
+    blr_set_checksum(router, buf);
 
     // Response from master should be stored
     blr_register_cache_response(router,
@@ -3567,5 +3559,27 @@ static int blr_check_connect_retry(ROUTER_INSTANCE *router)
     else
     {
         return BLR_MASTER_BACKOFF_TIME * (1 + router->retry_count);
+    }
+}
+
+/**
+ * Set checksum value in router instance
+ *
+ * @param inst    The router instance
+ * @param buf     The buffer with checksum value
+ */
+void blr_set_checksum(ROUTER_INSTANCE *inst, GWBUF *buf)
+{
+    if (buf)
+    {
+        char *val = blr_extract_column(buf, 1);
+        if (val && strncasecmp(val, "NONE", 4) == 0)
+        {
+            inst->master_chksum = false;
+        }
+        if (val)
+        {
+            MXS_FREE(val);
+        }
     }
 }

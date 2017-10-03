@@ -43,7 +43,7 @@ static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 static json_t* diagnostics_json(const MXS_MONITOR *);
 static void detectStaleMaster(void *, int);
-static MXS_MONITOR_SERVERS *get_current_master(MXS_MONITOR *);
+static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 
 /**
@@ -203,7 +203,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
  * @param database  The database to probe
  */
 static void
-monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
+monitorDatabase(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -266,7 +266,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     server_string = database->server->version_string;
 
     /* get server_id form current node */
-    if (mysql_query(database->con, "SELECT @@server_id") == 0
+    if (mxs_mysql_query(database->con, "SELECT @@server_id") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         long server_id = -1;
@@ -303,7 +303,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     if (server_version >= 100000)
     {
 
-        if (mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
+        if (mxs_mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
             && (result = mysql_store_result(database->con)) != NULL)
         {
             int i = 0;
@@ -366,7 +366,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     }
     else
     {
-        if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
+        if (mxs_mysql_query(database->con, "SHOW SLAVE STATUS") == 0
             && (result = mysql_store_result(database->con)) != NULL)
         {
             long master_id = -1;
@@ -431,7 +431,7 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     }
 
     /* get variable 'read_only' set by an external component */
-    if (mysql_query(database->con, "SHOW GLOBAL VARIABLES LIKE 'read_only'") == 0
+    if (mxs_mysql_query(database->con, "SHOW GLOBAL VARIABLES LIKE 'read_only'") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         if (mysql_field_count(database->con) < 2)
@@ -500,9 +500,9 @@ monitorMain(void *arg)
 {
     MM_MONITOR *handle = (MM_MONITOR *)arg;
     MXS_MONITOR* mon = handle->monitor;
-    MXS_MONITOR_SERVERS *ptr;
+    MXS_MONITORED_SERVER *ptr;
     int detect_stale_master = false;
-    MXS_MONITOR_SERVERS *root_master = NULL;
+    MXS_MONITORED_SERVER *root_master = NULL;
     size_t nrounds = 0;
 
     detect_stale_master = handle->detectStaleMaster;
@@ -547,7 +547,7 @@ monitorMain(void *arg)
         servers_status_pending_to_current(mon);
 
         /* start from the first server in the list */
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
 
         while (ptr)
         {
@@ -584,7 +584,7 @@ monitorMain(void *arg)
 
         /* Update server status from monitor pending status on that server*/
 
-        ptr = mon->databases;
+        ptr = mon->monitored_servers;
         while (ptr)
         {
             if (!SERVER_IN_MAINT(ptr->server))
@@ -651,12 +651,12 @@ detectStaleMaster(void *arg, int enable)
  * @return              The server at root level with SERVER_MASTER bit
  */
 
-static MXS_MONITOR_SERVERS *get_current_master(MXS_MONITOR *mon)
+static MXS_MONITORED_SERVER *get_current_master(MXS_MONITOR *mon)
 {
     MM_MONITOR* handle = mon->handle;
-    MXS_MONITOR_SERVERS *ptr;
+    MXS_MONITORED_SERVER *ptr;
 
-    ptr = mon->databases;
+    ptr = mon->monitored_servers;
 
     while (ptr)
     {

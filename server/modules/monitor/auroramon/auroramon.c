@@ -23,6 +23,7 @@
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
+#include <maxscale/mysql_utils.h>
 
 typedef struct aurora_monitor
 {
@@ -43,7 +44,7 @@ typedef struct aurora_monitor
  * @param monitor  Monitor object
  * @param database Server whose status should be updated
  */
-void update_server_status(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *database)
+void update_server_status(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *database)
 {
     if (!SERVER_IN_MAINT(database->server))
     {
@@ -60,9 +61,9 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *database)
             MYSQL_RES *result;
 
             /** Connection is OK, query for replica status */
-            if (mysql_query(database->con, "SELECT @@aurora_server_id, server_id FROM "
-                            "information_schema.replica_host_status "
-                            "WHERE session_id = 'MASTER_SESSION_ID'") == 0 &&
+            if (mxs_mysql_query(database->con, "SELECT @@aurora_server_id, server_id FROM "
+                                "information_schema.replica_host_status "
+                                "WHERE session_id = 'MASTER_SESSION_ID'") == 0 &&
                 (result = mysql_store_result(database->con)))
             {
                 ss_dassert(mysql_field_count(database->con) == 2);
@@ -125,7 +126,7 @@ monitorMain(void *arg)
         lock_monitor_servers(monitor);
         servers_status_pending_to_current(monitor);
 
-        for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+        for (MXS_MONITORED_SERVER *ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
         {
             update_server_status(monitor, ptr);
 

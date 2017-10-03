@@ -17,6 +17,7 @@
  */
 
 #include <maxscale/monitor.h>
+#include "externcmd.h"
 
 MXS_BEGIN_DECLS
 
@@ -91,5 +92,30 @@ bool monitor_serialize(const MXS_MONITOR *monitor);
  * @return The monitor watching this server, or NULL if not monitored
  */
 MXS_MONITOR* monitor_server_in_use(const SERVER *server);
+
+/**
+ * Launch a script
+ *
+ * @param mon     Owning monitor
+ * @param ptr     The server which has changed state
+ * @param script  Script to execute
+ * @param timeout Timeout in seconds for the script
+ *
+ * @return Return value of the executed script or -1 on error
+ */
+int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout);
+
+/**
+ * Launch a command
+ *
+ * @param mon  Owning monitor
+ * @param ptr  The server which has changed state
+ * @param cmd  The command to execute.
+ *
+ * @note All default script variables will be replaced.
+ *
+ * @return Return value of the executed script or -1 on error.
+ */
+int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd);
 
 MXS_END_DECLS

@@ -487,14 +487,14 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload);
 /**
  * Create a response to the server handshake
  *
- * @param session         Session object
+ * @param client          Shared session data
  * @param conn            MySQL Protocol object for this connection
  * @param with_ssl        Whether to create an SSL response or a normal response packet
  * @param ssl_established Set to true if the SSL response has been sent
  *
  * @return Generated response packet
  */
-GWBUF* gw_generate_auth_response(MXS_SESSION* session, MySQLProtocol *conn,
+GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
                                  bool with_ssl, bool ssl_established);
 
 /** Read the backend server's handshake */
@@ -623,5 +623,17 @@ uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer);
  * @return True if a response is expected from the server
  */
 bool mxs_mysql_command_will_respond(uint8_t cmd);
+
+/* Type of the kill-command sent by client. */
+typedef enum kill_type
+{
+    KT_CONNECTION = (1 << 0),
+    KT_QUERY      = (1 << 1),
+    KT_SOFT       = (1 << 2),
+    KT_HARD       = (1 << 3)
+} kill_type_t;
+
+void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
+void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
 
 MXS_END_DECLS

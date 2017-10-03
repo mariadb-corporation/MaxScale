@@ -23,4 +23,14 @@ MXS_BEGIN_DECLS
 
 extern int64_t hkheartbeat;
 
+/**
+ * Convert heartbeats to seconds
+ */
+#define HB_TO_SEC(a) ((int64_t)a / 10)
+
+/**
+ * Convert seconds to heartbeats
+ */
+#define SEC_TO_HB(a) ((int64_t)a * 10)
+
 MXS_END_DECLS

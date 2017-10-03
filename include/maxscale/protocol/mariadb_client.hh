@@ -38,6 +38,7 @@ public:
      * @return New virtual client or NULL on error
      */
     static LocalClient* create(MXS_SESSION* session, SERVICE* service);
+    static LocalClient* create(MXS_SESSION* session, SERVER* server);
 
     /**
      * Queue a new query for execution
@@ -48,7 +49,15 @@ public:
      */
     bool queue_query(GWBUF* buffer);
 
+    /**
+     * Destroy the client by sending a COM_QUIT to the backend
+     *
+     * @note After calling this function, object must be treated as a deleted object
+     */
+    void self_destruct();
+
 private:
+    static LocalClient* create(MXS_SESSION* session, const char* ip, uint64_t port);
     LocalClient(MXS_SESSION* session, int fd);
     static uint32_t poll_handler(struct mxs_poll_data* data, int wid, uint32_t events);
     void   process(uint32_t events);
@@ -71,6 +80,7 @@ private:
     mxs::Buffer             m_partial;
     size_t                  m_expected_bytes;
     std::deque<mxs::Buffer> m_queue;
-    MXS_SESSION*            m_session;
+    MYSQL_session           m_client;
     MySQLProtocol           m_protocol;
+    bool                    m_self_destruct;
 };

@@ -868,9 +868,12 @@ createInstance(SERVICE *service, char **options)
         /** Set SSL pointer in in server struct */
         server->server_ssl = ssl_cfg;
 
-        /* Set server unique name */
         /* Add server to service backend list */
         serviceAddBackend(inst->service, server);
+
+        /* Hide backend server struct */
+        service->dbref->server->is_active = false;
+        service->dbref->active = false;
     }
 
     /*
@@ -919,6 +922,9 @@ createInstance(SERVICE *service, char **options)
     else
     {
         inst->master_state = BLRM_UNCONNECTED;
+        /* Set backend server as active */
+        service->dbref->server->is_active = true;
+        service->dbref->active = true;
     }
 
     /**
@@ -979,6 +985,18 @@ createInstance(SERVICE *service, char **options)
         blr_cache_read_master_data(inst);
 
         /**
+         * The value of master checksum is known only at registration time, so
+         * as soon as replication succeds the value is updated.
+         * Set now the binlog checksum from the saved value.
+         * This is very useful in case of possible failure in the
+         * registration phase for any reason: master is down, wrong password etc.
+         * In this case a connecting slave will get the checksum value
+         * from previous registration instead of default one (CRC32)
+         * which can be wrong if slave has binlog_checksum = NONE.
+         */
+        blr_set_checksum(inst, inst->saved_master.chksum2);
+
+        /*
          * Find latest binlog file in binlogdir or GTID maps repo
          */
         if (blr_file_init(inst) == 0)

@@ -291,7 +291,7 @@ public:
      * @param param command line parameters for DB server start command
      * @return 0 if success
      */
-    int start_node(int node, char * param);
+    int start_node(int node, const char* param);
 
     /**
      * @brief Check node via ssh and restart it if it is not resposible
@@ -354,11 +354,11 @@ public:
     /**
      * @brief executes shell command on the node using ssh
      * @param index number of the node (index)
-     * @param ssh command to execute
      * @param sudo if true the command is executed with root privelegues
-     * @return exit code of the coomand
+     * @param ssh command to execute
+     * @return exit code of the command
      */
-    int ssh_node(int node, const char *ssh, bool sudo);
+    int ssh_node(int node, bool sudo, const char *ssh, ...);
 
     /**
      * @brief Execute 'mysqladmin flush-hosts' on all nodes

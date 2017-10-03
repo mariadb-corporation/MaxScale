@@ -20,6 +20,7 @@
 #include <limits.h>
 #include <netinet/tcp.h>
 #include <sys/stat.h>
+#include <string>
 
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
@@ -46,13 +47,6 @@ typedef enum spec_com_res_t
     RES_MORE_DATA // Possible special command, but not enough data to be sure. Must
     // wait for more data.
 } spec_com_res_t;
-
-/* Type of the kill-command sent by client. */
-typedef enum kill_type
-{
-    KT_CONNECTION,
-    KT_QUERY
-} kill_type_t;
 
 const char WORD_KILL[] = "KILL";
 
@@ -82,7 +76,7 @@ static void gw_process_one_new_client(DCB *client_dcb);
 static spec_com_res_t process_special_commands(DCB *client_dcb, GWBUF *read_buffer, int nbytes_read);
 static spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t current,
                                         bool is_complete, unsigned int packet_len);
-static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *kt_out);
+static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *kt_out, std::string* user);
 
 /**
  * The module entry point routine. It is this routine that
@@ -497,15 +491,18 @@ int gw_read_client_event(DCB* dcb)
      */
     case MXS_AUTH_STATE_MESSAGE_READ:
         /* After this call read_buffer will point to freed data */
+        dcb_readq_set(dcb, read_buffer);
         if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
                                 (int)(MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
             (0 != max_bytes && nbytes_read < max_bytes))
         {
-
-            dcb_readq_set(dcb, read_buffer);
-
             return 0;
         }
+
+        read_buffer = modutil_get_next_MySQL_packet(&dcb->readq);
+        ss_dassert(read_buffer);
+        nbytes_read = gwbuf_length(read_buffer);
+
         return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
         break;
 
@@ -713,6 +710,12 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             ss_debug(bool check = ) mxs_worker_register_session(session);
             ss_dassert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
+
+            if (dcb->readq)
+            {
+                // The user has already send more data, process it
+                poll_fake_read_event(dcb);
+            }
         }
         else
         {
@@ -1665,9 +1668,7 @@ static spec_com_res_t process_special_commands(DCB *dcb, GWBUF *read_buffer, int
                 == sizeof(bytes))
             {
                 uint64_t process_id = gw_mysql_get_byte4(bytes);
-                session_broadcast_kill_command(dcb->session, process_id);
-                // Even if id not found, send ok. TODO: send a correct response to client
-                mxs_mysql_send_ok(dcb, 1, 0, NULL);
+                mxs_mysql_execute_kill(dcb->session, process_id, KT_CONNECTION);
                 rval = RES_END;
             }
         }
@@ -1725,30 +1726,18 @@ spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t cu
             querybuf[copied_len] = '\0';
             kill_type_t kt = KT_CONNECTION;
             uint64_t thread_id = 0;
-            bool parsed = parse_kill_query(querybuf, &thread_id, &kt);
+            rval = RES_END;
+            std::string user;
 
-            if (parsed && (thread_id > 0)) // MaxScale session counter starts at 1
+            if (parse_kill_query(querybuf, &thread_id, &kt, &user))
             {
-                switch (kt)
+                if (thread_id > 0)
                 {
-                case KT_CONNECTION:
-                    session_broadcast_kill_command(dcb->session, thread_id);
-                    // Even if id not found, send ok. TODO: send a correct response to client
-                    mxs_mysql_send_ok(dcb, 1, 0, NULL);
-                    rval = RES_END;
-                    break;
-
-                case KT_QUERY:
-                    // TODO: Implement this
-                    MXS_WARNING("Received 'KILL QUERY %" PRIu64 "' from "
-                                "the client. This feature is not supported.", thread_id);
-                    mysql_send_custom_error(dcb, 1, 0, "'KILL QUERY <thread_id>' "
-                                            "is not supported.");
-                    rval = RES_END;
-                    break;
-
-                default:
-                    ss_dassert(!true);
+                    mxs_mysql_execute_kill(dcb->session, thread_id, kt);
+                }
+                else if (!user.empty())
+                {
+                    mxs_mysql_execute_kill_user(dcb->session, user.c_str(), kt);
                 }
             }
         }
@@ -1764,31 +1753,48 @@ spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t cu
     return rval;
 }
 
+static void extract_user(char* token, std::string* user)
+{
+    char* end = strchr(token, ';');
+
+    if (end)
+    {
+        user->assign(token, end - token);
+    }
+    else
+    {
+        user->assign(token);
+    }
+}
+
 /**
- * Parse a "KILL [CONNECTION | QUERY] <process_id>" query. Will modify
- * the argument string even if unsuccessful.
+ * Parse a "KILL [CONNECTION | QUERY] [ <process_id> | USER <username> ]" query.
+ * Will modify the argument string even if unsuccessful.
  *
  * @param query Query string to parse
  * @paran thread_id_out Thread id output
  * @param kt_out Kill command type output
  * @return true on success, false on error
  */
-static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *kt_out)
+static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *kt_out, std::string* user)
 {
     const char WORD_CONNECTION[] = "CONNECTION";
     const char WORD_QUERY[] = "QUERY";
     const char WORD_HARD[] = "HARD";
     const char WORD_SOFT[] = "SOFT";
+    const char WORD_USER[] = "USER";
     const char DELIM[] = " \n\t";
 
-    kill_type_t kill_type = KT_CONNECTION;
+    int kill_type = KT_CONNECTION;
     unsigned long long int thread_id = 0;
+    std::string tmpuser;
 
     enum kill_parse_state_t
     {
         KILL,
         CONN_QUERY,
         ID,
+        USER,
         SEMICOLON,
         DONE
     } state = KILL;
@@ -1817,7 +1823,8 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
         case CONN_QUERY:
             if (strncasecmp(token, WORD_QUERY, sizeof(WORD_QUERY) - 1) == 0)
             {
-                kill_type = KT_QUERY;
+                kill_type &= ~KT_CONNECTION;
+                kill_type |= KT_QUERY;
                 get_next = true;
             }
             else if (strncasecmp(token, WORD_CONNECTION, sizeof(WORD_CONNECTION) - 1) == 0)
@@ -1825,10 +1832,14 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
                 get_next = true;
             }
 
-            if (strncasecmp(token, WORD_HARD, sizeof(WORD_HARD) - 1) == 0 ||
-                strncasecmp(token, WORD_SOFT, sizeof(WORD_SOFT) - 1) == 0)
+            if (strncasecmp(token, WORD_HARD, sizeof(WORD_HARD) - 1) == 0)
             {
-                /* This is an optional token and needs to be ignored */
+                kill_type |= KT_HARD;
+                get_next = true;
+            }
+            else if (strncasecmp(token, WORD_SOFT, sizeof(WORD_SOFT) - 1) == 0)
+            {
+                kill_type |= KT_SOFT;
                 get_next = true;
             }
             else
@@ -1840,52 +1851,50 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
             break;
 
         case ID:
+            if (strncasecmp(token, WORD_USER, sizeof(WORD_USER) - 1) == 0)
             {
-                /* strtoull()  accepts negative numbers, so check for '-' here */
-                if (*token == '-')
-                {
-                    error = true;
-                    break;
-                }
+                state = USER;
+                get_next = true;
+                break;
+            }
+            else
+            {
                 char *endptr_id = NULL;
-                thread_id = strtoull(token, &endptr_id, 0);
-                if ((thread_id == ULLONG_MAX) && (errno == ERANGE))
+
+                long long int l  = strtoll(token, &endptr_id, 0);
+
+                if ((l == LLONG_MAX && errno == ERANGE) ||
+                    (*endptr_id != '\0' && *endptr_id != ';') ||
+                    l <= 0 || endptr_id == token)
                 {
+                    // Not a positive 32-bit integer
                     error = true;
-                    errno = 0;
-                }
-                else if (endptr_id == token)
-                {
-                    error = true; // No digits were read
-                }
-                else if (*endptr_id == '\0') // Can be real end or written by strtok
-                {
-                    state = SEMICOLON; // In case we have space before ;
-                    get_next = true;
-                }
-                else if (*endptr_id == ';')
-                {
-                    token = endptr_id;
-                    state = SEMICOLON;
                 }
                 else
                 {
-                    error = true;
+                    ss_dassert(*endptr_id == '\0' || *endptr_id == ';');
+                    state = SEMICOLON; // In case we have space before ;
+                    get_next = true;
+                    thread_id = l;
                 }
             }
             break;
 
+        case USER:
+            extract_user(token, &tmpuser);
+            state = SEMICOLON;
+            get_next = true;
+            break;
+
         case SEMICOLON:
+            if (strncmp(token, ";", 1) == 0)
             {
-                if (strncmp(token, ";", 1) == 0)
-                {
-                    state = DONE;
-                    get_next = true;
-                }
-                else
-                {
-                    error = true;
-                }
+                state = DONE;
+                get_next = true;
+            }
+            else
+            {
+                error = true;
             }
             break;
 
@@ -1907,7 +1916,8 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
     else
     {
         *thread_id_out = thread_id;
-        *kt_out = kill_type;
+        *kt_out = (kill_type_t)kill_type;
+        *user = tmpuser;
         return true;
     }
 }

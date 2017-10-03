@@ -196,6 +196,33 @@ write or modify the data in the backend server. The default is 2 seconds.
 auth_write_timeout=10
 ```
 
+#### `query_retries`
+
+The number of times an interrupted query will be retried. This feature was added
+in MaxScale 2.1.10 and is disabled by default.
+
+An interrupted query is any query that is interrupted by a network
+error. Connection timeouts are included in network errors and thus is it
+advisable to make sure that the value of `query_retry_timeout` is set to an
+adequate value.
+
+#### `query_retry_timeout`
+
+The total timeout in seconds for any retried queries. The default value is 5
+seconds.
+
+An interrupted query is retried for either the configured amount of attempts or
+until the configured timeout is reached.
+
+#### `passive`
+
+Controls whether MaxScale is a passive node in a cluster of multiple MaxScale
+instances. The default value is false.
+
+This parameter is intended to be used with multiple MaxScale instances that use
+failover functionality to manipulate the cluster in some form. Passive nodes
+only observe the clusters being monitored and take no direct actions.
+
 #### `ms_timestamp`
 
 Enable or disable the high precision timestamps in logfiles. Enabling this adds

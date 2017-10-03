@@ -214,6 +214,115 @@ assigned the _Slave_ status which allows them to be used like normal slave
 servers. When the option is disabled, the servers will only receive the _Slave
 of External Server_ status and they will not be used.
 
+### `failover`
+
+Enable automated master failover. This parameter expects a boolean value and the
+default value is false.
+
+When the failover functionality is enabled, traditional MariaDB Master-Slave
+clusters will automatically elect a new master if the old master goes down. The
+failover functionality will not take place when MaxScale is configured as a
+passive instance. For details on how MaxScale behaves in passive mode, see the
+following documentation of `failover_timeout`.
+
+If an attempt at failover fails or multiple master servers are detected, an
+error is logged and the failover functionality is disabled. If this happens, the
+cluster must be fixed manually and the failover needs to be re-enabled via the
+REST API or MaxAdmin.
+
+### `failover_timeout`
+
+The timeout for the cluster failover in seconds. The default value is 90
+seconds.
+
+If no successful failover takes place within the configured time period, a
+message is logged and the failover functionality is disabled.
+
+This parameter also controls how long a MaxScale instance that has transitioned
+from passive to active will wait for a failover to take place after an apparent
+loss of a master server. If no new master server is detected within the
+configured time period, the failover will be initiated again.
+
+### `switchover`
+
+Enable switchover via MaxScale. This parameter expects a boolean value and
+the default value is false.
+
+When the switchover functionality is enabled, a REST API endpoint will be
+made available, using which switchover may be performed. The endpoint will
+be available irrespective of whether MaxScale is in active or passive mode,
+but switchover will only be attempted if MaxScale is in active mode and an
+error logged if an attempt is made when MaxScale is in passive mode.
+Switchover may also be triggered from MaxAdmin and the same rules regarding
+active/passive holds.
+
+It is safe to perform switchover even with the failover functionality
+enabled, as MaxScale will disable the failover behaviour for the duration
+of the switchover.
+
+Only if the switchover succeeds, will the failover functionality be re-enabled.
+Otherwise it will remain disabled and must be turned on manually via the REST
+API or MaxAdmin.
+
+When switchover is iniated via the REST-API, the URL path looks as follows:
+```
+/v1/maxscale/mysqlmon/switchover?<monitor-instance>&<new-master>&<current-master>
+```
+where `<monitor-instance>` is the monitor section mame from the MaxScale
+configuration file, `<new-master>` the name of the server that should be
+made into the new master and `<current-master>` the server that currently
+is the master. If there is no master currently, then `<current-master>`
+need not be specified.
+
+So, given a MaxScale configuration file like
+```
+[Cluster1]
+type=monitor
+module=mysqlmon
+servers=server1, server2, server3, server 4
+...
+```
+with the assumption that `server2` is the current master, then the URL
+path for making `server4` the new master would be:
+```
+/v1/maxscale/mysqlmon/switchover?Cluster1&server4&server2
+```
+
+### `switchover_script`
+
+*NOTE* By default, MariaDB MaxScale uses the MariaDB provided switchover
+script, so `switchover_script` need not be specified.
+
+This command will be executed when MaxScale has been told to perform a
+switchover, either via MaxAdmin or the REST-API. The parameter should be an
+absolute path to a command or the command should be in the executable path.
+The user which is used to run MaxScale should have execution rights to the
+file itself and the directory it resides in.
+
+```
+script=/home/user/myswitchover.sh current_master=$CURRENT_MASTER new_master=$NEW_MASTER
+```
+
+In addition to the substitutions documented in
+[Common Monitor Parameters](./Monitor-Common.md)
+the following substitutions will be made to the parameter value:
+
+* `$CURRENT_MASTER` will be replaced with the IP and port of the current
+  master. If the is no current master, the value will be `none`.
+* `$NEW_MASTER` will be replaced with the IP and port of the server that
+  should be made into the new master.
+
+The script should return 0 for success and a non-zero value for failure.
+
+### `switchover_timeout`
+
+The timeout for the cluster switchover in seconds. The default value is 90
+seconds.
+
+If no successful switchover takes place within the configured time period,
+a message is logged and the failover (not switchover) functionality will not
+be enabled, even if it was enabled before the switchover attempt.
+
 ## Using the MySQL Monitor With Binlogrouter
 
 Since MaxScale 2.2 it's possible to detect a replication setup
@@ -252,5 +361,7 @@ script=mail_to_admin.sh
 events=master_down,slave_down
 ```
 
-When a master or a slave server goes down, the script is executed, a mail is sent and the administrator will be immediately notified of any possible problems.
-This is just a simple example showing what you can do with MaxScale and monitor scripts.
+When a master or a slave server goes down, the script is executed, a mail is
+sent and the administrator will be immediately notified of any possible
+problems.  This is just a simple example showing what you can do with MaxScale
+and monitor scripts.

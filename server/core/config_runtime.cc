@@ -23,6 +23,7 @@
 #include <algorithm>
 
 #include <maxscale/atomic.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.h>
 #include <maxscale/paths.h>
@@ -749,6 +750,30 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_LOG_AUTH_FAILURES, value);
         }
     }
+    else if (key == CN_PASSIVE)
+    {
+        int boolval = config_truth_value(value);
+
+        if (boolval != -1)
+        {
+            MXS_NOTICE("Updated '%s' from '%s' to '%s'", CN_PASSIVE,
+                       cnf.passive ? "true" : "false",
+                       boolval ? "true" : "false");
+
+            if (cnf.passive && !boolval)
+            {
+                // This MaxScale is being promoted to the active instance
+                cnf.promoted_at = hkheartbeat;
+            }
+
+            cnf.passive = boolval;
+            rval = true;
+        }
+        else
+        {
+            runtime_error("Invalid boolean value for '%s': %s", CN_PASSIVE, value);
+        }
+    }
     else
     {
         runtime_error("Unknown global parameter: %s=%s", name, value);
@@ -960,9 +985,9 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     {
         monitorStop(monitor);
 
-        while (monitor->databases)
+        while (monitor->monitored_servers)
         {
-            monitorRemoveServer(monitor, monitor->databases->server);
+            monitorRemoveServer(monitor, monitor->monitored_servers->server);
         }
         monitorDestroy(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->name);

@@ -43,6 +43,7 @@
 #include <maxscale/http.hh>
 #include <maxscale/version.h>
 #include <maxscale/maxscale.h>
+#include <maxscale/hk_heartbeat.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
@@ -104,12 +105,15 @@ const char CN_NAME[]                          = "name";
 const char CN_NON_BLOCKING_POLLS[]            = "non_blocking_polls";
 const char CN_OPTIONS[]                       = "options";
 const char CN_PARAMETERS[]                    = "parameters";
+const char CN_PASSIVE[]                       = "passive";
 const char CN_PASSWORD[]                      = "password";
 const char CN_POLL_SLEEP[]                    = "poll_sleep";
 const char CN_PORT[]                          = "port";
 const char CN_PROTOCOL[]                      = "protocol";
 const char CN_QUERY_CLASSIFIER[]              = "query_classifier";
 const char CN_QUERY_CLASSIFIER_ARGS[]         = "query_classifier_args";
+const char CN_QUERY_RETRIES[]                 = "query_retries";
+const char CN_QUERY_RETRY_TIMEOUT[]           = "query_retry_timeout";
 const char CN_RELATIONSHIPS[]                 = "relationships";
 const char CN_LINKS[]                         = "links";
 const char CN_REQUIRED[]                      = "required";
@@ -158,7 +162,6 @@ static char *config_get_value(MXS_CONFIG_PARAMETER *, const char *);
 static char *config_get_password(MXS_CONFIG_PARAMETER *);
 static const char* config_get_value_string(const MXS_CONFIG_PARAMETER *params, const char *name);
 static int handle_global_item(const char *, const char *);
-static void global_defaults();
 static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
 static bool check_first_last_char(const char* string, char expected);
@@ -831,8 +834,6 @@ config_load(const char *filename)
 {
     ss_dassert(!config_file);
 
-    global_defaults();
-
     config_file = filename;
     bool rval = config_load_and_process(filename, process_config_context);
 
@@ -854,8 +855,6 @@ bool config_reload()
         {
             MXS_FREE(gateway.version_string);
         }
-
-        global_defaults();
 
         rval = config_load_and_process(config_file, process_config_update);
     }
@@ -1473,6 +1472,34 @@ handle_global_item(const char *name, const char *value)
                       "'ORACLE'. Using 'DEFAULT' as default.", value, name);
         }
     }
+    else if (strcmp(name, CN_QUERY_RETRIES) == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval >= 0)
+        {
+            gateway.query_retries = intval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid timeout value for '%s': %s", CN_QUERY_RETRIES, value);
+            return 0;
+        }
+    }
+    else if (strcmp(name, CN_QUERY_RETRY_TIMEOUT) == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval > 0)
+        {
+            gateway.query_retries = intval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid timeout value for '%s': %s", CN_QUERY_RETRY_TIMEOUT, value);
+            return 0;
+        }
+    }
     else if (strcmp(name, CN_LOG_THROTTLING) == 0)
     {
         if (*value == 0)
@@ -1570,6 +1597,10 @@ handle_global_item(const char *name, const char *value)
     else if (strcmp(name, CN_ADMIN_LOG_AUTH_FAILURES) == 0)
     {
         gateway.admin_log_auth_failures = config_truth_value(value);
+    }
+    else if (strcmp(name, CN_PASSIVE) == 0)
+    {
+        gateway.passive = config_truth_value((char*)value);
     }
     else
     {
@@ -1737,11 +1768,7 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
     return NULL;
 }
 
-/**
- * Set the defaults for the global configuration options
- */
-static void
-global_defaults()
+void config_set_global_defaults()
 {
     uint8_t mac_addr[6] = "";
     struct utsname uname_data;
@@ -1753,6 +1780,9 @@ global_defaults()
     gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     gateway.skip_permission_checks = false;
+    gateway.syslog = 1;
+    gateway.maxlog = 1;
+    gateway.log_to_shm = 0;
     gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
     gateway.admin_auth = true;
     gateway.admin_log_auth_failures = true;
@@ -1761,6 +1791,10 @@ global_defaults()
     gateway.admin_ssl_key[0] = '\0';
     gateway.admin_ssl_cert[0] = '\0';
     gateway.admin_ssl_ca_cert[0] = '\0';
+    gateway.query_retries = DEFAULT_QUERY_RETRIES;
+    gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
+    gateway.passive = false;
+    gateway.promoted_at = 0;
 
     gateway.thread_stack_size = 0;
     pthread_attr_t attr;
@@ -3903,6 +3937,7 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
     json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
     json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
+    json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
 
     json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
 
@@ -3912,10 +3947,13 @@ json_t* config_maxscale_to_json(const char* host)
     }
 
     json_t* attr = json_object();
+    time_t started = maxscale_started();
+    time_t activated = started + HB_TO_SEC(cnf->promoted_at);
     json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
     json_object_set_new(attr, "commit", json_string(MAXSCALE_COMMIT));
-    json_object_set_new(attr, "started_at", json_string(http_to_date(maxscale_started()).c_str()));
+    json_object_set_new(attr, "started_at", json_string(http_to_date(started).c_str()));
+    json_object_set_new(attr, "activated_at", json_string(http_to_date(activated).c_str()));
     json_object_set_new(attr, "uptime", json_integer(maxscale_uptime()));
 
     json_t* obj = json_object();
@@ -3948,6 +3986,7 @@ static bool create_global_config(const char *filename)
     dprintf(file, "%s=%u\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout);
     dprintf(file, "%s=%u\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
+    dprintf(file, "%s=%u\n", CN_PASSIVE, gateway.passive);
 
     close(file);
 
