@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < Test->repl->N; i++)
     {
-        Test->repl->ssh_node(i, "sudo rm -f /etc/my.cnf.d/kerb.cnf", true);
+        Test->repl->ssh_node(i, true, "sudo rm -f /etc/my.cnf.d/kerb.cnf");
     }
 
     int rval = Test->global_result;
