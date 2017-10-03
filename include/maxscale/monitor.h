@@ -310,6 +310,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
  * This function should be called immediately after @c mon_process_state_changes.
  *
  * @param monitor          Monitor whose cluster is processed
+ * @param failover_script  The script to be used for performing the failover.
  * @param failover_timeout Timeout in seconds for the failover
  *
  * @return True on success, false on error
@@ -317,7 +318,9 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
  * @todo Currently this only works with flat replication topologies and
  *       needs to be moved inside mysqlmon as it is MariaDB specific code.
  */
-bool mon_process_failover(MXS_MONITOR *monitor, uint32_t failover_timeout);
+bool mon_process_failover(MXS_MONITOR *monitor,
+                          const char* failover_script,
+                          uint32_t failover_timeout);
 
 /**
  * @brief Hangup connections to failed servers

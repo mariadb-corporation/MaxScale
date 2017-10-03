@@ -1775,7 +1775,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
     }
 }
 
-bool mon_process_failover(MXS_MONITOR *monitor, uint32_t failover_timeout)
+bool mon_process_failover(MXS_MONITOR *monitor, const char* failover_script, uint32_t failover_timeout)
 {
     bool rval = true;
     MXS_CONFIG* cnf = config_get_global_options();
@@ -1839,15 +1839,7 @@ bool mon_process_failover(MXS_MONITOR *monitor, uint32_t failover_timeout)
     {
         MXS_NOTICE("Performing failover of server '%s'", failed_master->server->unique_name);
 
-        // TODO: Use the actual failover command
-        const char* failover_cmd = "/usr/bin/echo INITIATOR=$INITIATOR "
-                                   "PARENT=$PARENT CHILDREN=$CHILDREN EVENT=$EVENT "
-                                   "CREDENTIALS=$CREDENTIALS NODELIST=$NODELIST "
-                                   "LIST=$LIST MASTERLIST=$MASTERLIST "
-                                   "SLAVELIST=$SLAVELIST SYNCEDLIST=$SYNCEDLIST";
-
-        if (monitor_launch_script(monitor, failed_master, failover_cmd,
-                                  failover_timeout))
+        if (monitor_launch_script(monitor, failed_master, failover_script, failover_timeout))
         {
             rval = false;
         }

@@ -68,6 +68,7 @@ static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
 static const char CN_FAILOVER[]           = "failover";
+static const char CN_FAILOVER_SCRIPT[]    = "failover_script";
 static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
 static const char CN_SWITCHOVER[]         = "switchover";
 static const char CN_SWITCHOVER_SCRIPT[]  = "switchover_script";
@@ -78,7 +79,15 @@ static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 /** Default switchover timeout */
 #define DEFAULT_SWITCHOVER_TIMEOUT "90"
 
-// TODO: Specify the default switchover script.
+// TODO: Specify the real default failover script.
+static const char DEFAULT_FAILOVER_SCRIPT[] =
+    "/usr/bin/echo INITIATOR=$INITIATOR "
+    "PARENT=$PARENT CHILDREN=$CHILDREN EVENT=$EVENT "
+    "CREDENTIALS=$CREDENTIALS NODELIST=$NODELIST "
+    "LIST=$LIST MASTERLIST=$MASTERLIST "
+    "SLAVELIST=$SLAVELIST SYNCEDLIST=$SYNCEDLIST";
+
+// TODO: Specify the real default switchover script.
 static const char DEFAULT_SWITCHOVER_SCRIPT[] =
     "/usr/bin/echo CURRENT_MASTER=$CURRENT_MASTER NEW_MASTER=$NEW_MASTER "
     "INITIATOR=$INITIATOR "
@@ -511,6 +520,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 mxs_monitor_event_enum_values
             },
             {CN_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
+            {
+                CN_FAILOVER_SCRIPT,
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
             {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
             {CN_SWITCHOVER, MXS_MODULE_PARAM_BOOL, "false"},
             {
@@ -669,6 +684,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     handle->allow_external_slaves = config_get_bool(params, "allow_external_slaves");
     handle->failover = config_get_bool(params, CN_FAILOVER);
+    handle->failover_script = config_copy_string(params, CN_FAILOVER_SCRIPT);
     handle->failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
     handle->switchover = config_get_bool(params, CN_SWITCHOVER);
     handle->switchover_script = config_copy_string(params, CN_SWITCHOVER_SCRIPT);
@@ -1873,7 +1889,14 @@ monitorMain(void *arg)
 
         if (handle->failover)
         {
-            if (!mon_process_failover(mon, handle->failover_timeout))
+            const char* failover_script = handle->failover_script;
+
+            if (!failover_script)
+            {
+                failover_script = DEFAULT_FAILOVER_SCRIPT;
+            }
+
+            if (!mon_process_failover(mon, failover_script, handle->failover_timeout))
             {
                 MXS_ALERT("Failed to perform failover, disabling failover functionality. "
                           "To enable failover functionality, manually set 'failover' to "
