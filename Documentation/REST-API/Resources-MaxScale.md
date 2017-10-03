@@ -504,6 +504,13 @@ For commands that can modify data:
 POST /v1/maxscale/modules/:module/:command
 ```
 
+Here is an example POST requests to the dbfwfilter module command _reload_ with
+two parameters, the name of the filter instance and the path to a file:
+
+```
+POST /v1/maxscale/modules/dbfwfilter/reload?my-dbfwfilter-instance&/path/to/file.txt
+```
+
 #### Response
 
 Command with output:
