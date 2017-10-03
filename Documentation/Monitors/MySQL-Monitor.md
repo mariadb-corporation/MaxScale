@@ -264,8 +264,55 @@ Only if the switchover succeeds, will the failover functionality be re-enabled.
 Otherwise it will remain disabled and must be turned on manually via the REST
 API or MaxAdmin.
 
-TODO: Document the URL path. Probably will include the monitor section name
-      from the configuration.
+When switchover is iniated via the REST-API, the URL path looks as follows:
+```
+/v1/maxscale/mysqlmon/switchover?<monitor-instance>&<new-master>&<current-master>
+```
+where `<monitor-instance>` is the monitor section mame from the MaxScale
+configuration file, `<new-master>` the name of the server that should be
+made into the new master and `<current-master>` the server that currently
+is the master. If there is no master currently, then `<current-master>`
+need not be specified.
+
+So, given a MaxScale configuration file like
+```
+[Cluster1]
+type=monitor
+module=mysqlmon
+servers=server1, server2, server3, server 4
+...
+```
+with the assumption that `server2` is the current master, then the URL
+path for making `server4` the new master would be:
+```
+/v1/maxscale/mysqlmon/switchover?Cluster1&server4&server2
+```
+
+### `switchover_script`
+
+*NOTE* By default, MariaDB MaxScale uses the MariaDB provided switchover
+script, so `switchover_script` need not be specified.
+
+This command will be executed when MaxScale has been told to perform a
+switchover, either via MaxAdmin or the REST-API. The parameter should be an
+absolute path to a command or the command should be in the executable path.
+The user which is used to run MaxScale should have execution rights to the
+file itself and the directory it resides in.
+
+```
+script=/home/user/myswitchover.sh current_master=$CURRENT_MASTER new_master=$NEW_MASTER
+```
+
+In addition to the substitutions documented in
+[Common Monitor Parameters](./Monitor-Common.md)
+the following substitutions will be made to the parameter value:
+
+* `$CURRENT_MASTER` will be replaced with the IP and port of the current
+  master. If the is no current master, the value will be `none`.
+* `$NEW_MASTER` will be replaced with the IP and port of the server that
+  should be made into the new master.
+
+The script should return 0 for success and a non-zero value for failure.
 
 ### `switchover_timeout`
 

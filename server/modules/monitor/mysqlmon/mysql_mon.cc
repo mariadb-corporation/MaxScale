@@ -70,12 +70,22 @@ static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 static const char CN_FAILOVER[]           = "failover";
 static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
 static const char CN_SWITCHOVER[]         = "switchover";
+static const char CN_SWITCHOVER_SCRIPT[]  = "switchover_script";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 
 /** Default failover timeout */
 #define DEFAULT_FAILOVER_TIMEOUT "90"
 /** Default switchover timeout */
 #define DEFAULT_SWITCHOVER_TIMEOUT "90"
+
+// TODO: Specify the default switchover script.
+static const char DEFAULT_SWITCHOVER_SCRIPT[] =
+    "/usr/bin/echo CURRENT_MASTER=$CURRENT_MASTER NEW_MASTER=$NEW_MASTER "
+    "INITIATOR=$INITIATOR "
+    "PARENT=$PARENT CHILDREN=$CHILDREN EVENT=$EVENT "
+    "CREDENTIALS=$CREDENTIALS NODELIST=$NODELIST "
+    "LIST=$LIST MASTERLIST=$MASTERLIST "
+    "SLAVELIST=$SLAVELIST SYNCEDLIST=$SYNCEDLIST";
 
 /**
  * Check whether specified current master is acceptable.
@@ -235,27 +245,51 @@ bool mysql_switchover_perform(MXS_MONITOR* mon,
     SERVER* new_master = monitored_new_master->server;
     SERVER* current_master = monitored_current_master ? monitored_current_master->server : NULL;
 
-    // TODO: Launch actual switchover command.
-    const char NONE[] = "none";
-    const char SWITCHOVER_FORMAT[] =
-        "/usr/bin/echo --from=%s --to=%s "
-        "INITIATOR=$INITIATOR "
-        "PARENT=$PARENT CHILDREN=$CHILDREN EVENT=$EVENT "
-        "CREDENTIALS=$CREDENTIALS NODELIST=$NODELIST "
-        "LIST=$LIST MASTERLIST=$MASTERLIST "
-        "SLAVELIST=$SLAVELIST SYNCEDLIST=$SYNCEDLIST";
+    const char* switchover_script = mysql_mon->switchover_script;
 
-    char switchover_cmd[sizeof(SWITCHOVER_FORMAT) +
-                        strlen(new_master->unique_name) +
-                        current_master ? strlen(current_master->unique_name) : sizeof(NONE)];
+    if (!switchover_script)
+    {
+        switchover_script = DEFAULT_SWITCHOVER_SCRIPT;
+    }
 
-    sprintf(switchover_cmd, SWITCHOVER_FORMAT,
-            current_master ? current_master->unique_name : NONE,
-            new_master->unique_name);
+    int rv = -1;
 
-    // TODO: We behave as if the specified new master would be the server that causes the
-    // TODO: event, although that's not really the case.
-    int rv = monitor_launch_script(mon, monitored_new_master, switchover_cmd, mysql_mon->switchover_timeout);
+    EXTERNCMD* cmd = externcmd_allocate(switchover_script, mysql_mon->switchover_timeout);
+
+    if (cmd)
+    {
+        if (externcmd_matches(cmd, "$CURRENT_MASTER"))
+        {
+            char address[(current_master ? strlen(current_master->name) : 0) + 24]; // Extra space for port
+
+            if (current_master)
+            {
+                snprintf(address, sizeof(address), "[%s]:%d", current_master->name, current_master->port);
+            }
+            else
+            {
+                strcpy(address, "none");
+            }
+
+            externcmd_substitute_arg(cmd, "[$]CURRENT_MASTER", address);
+        }
+
+        if (externcmd_matches(cmd, "$NEW_MASTER"))
+        {
+            char address[strlen(new_master->name) + 24]; // Extra space for port
+            snprintf(address, sizeof(address), "[%s]:%d", new_master->name, new_master->port);
+            externcmd_substitute_arg(cmd, "[$]NEW_MASTER", address);
+        }
+
+        // TODO: We behave as if the specified new master would be the server that causes the
+        // TODO: event, although that's not really the case.
+        rv = monitor_launch_command(mon, monitored_new_master, cmd);
+    }
+    else
+    {
+        *result = mxs_json_error("Failed to initialize script '%s'. See log-file for the "
+                                 "cause of this failure.", switchover_script);
+    }
 
     return rv == 0 ? true : false;
 }
@@ -306,7 +340,7 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
         if (rv)
         {
             MXS_NOTICE("Switchover %s -> %s performed.",
-                       current_master->unique_name ? current_master->unique_name : "(none)",
+                       current_master->unique_name ? current_master->unique_name : "none",
                        new_master->unique_name);
 
             if (stopped)
@@ -326,13 +360,13 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
                 monitorAddParameters(mon, &p);
 
                 MXS_ALERT("Switchover %s -> %s failed, failover has been disabled.",
-                          current_master->unique_name ? current_master->unique_name : "(none)",
+                          current_master->unique_name ? current_master->unique_name : "none",
                           new_master->unique_name);
             }
             else
             {
                 MXS_ERROR("Switchover %s -> %s failed.",
-                          current_master->unique_name ? current_master->unique_name : "(none)",
+                          current_master->unique_name ? current_master->unique_name : "none",
                           new_master->unique_name);
             }
         }
@@ -369,18 +403,35 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** output)
     SERVER* new_master = args->argv[1].value.server;
     SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
 
-    bool rv;
+    bool rv = false;
 
-    if (mysql_mon->switchover)
+    if (!config_get_global_options()->passive)
     {
-        rv = mysql_switchover(mon, new_master, current_master, output);
+        if (mysql_mon->switchover)
+        {
+            rv = mysql_switchover(mon, new_master, current_master, output);
+        }
+        else
+        {
+            MXS_WARNING("Attempt to perform switchover %s -> %s, even though "
+                        "switchover is not enabled.",
+                        current_master ? current_master->unique_name : "none",
+                        new_master->unique_name);
+
+            *output = mxs_json_error("Switchover %s -> %s not performed, as switchover is not enabled.",
+                                     current_master ? current_master->unique_name : "none",
+                                     new_master->unique_name);
+        }
     }
     else
     {
-        *output = mxs_json_error("Switchover %s -> %s not performed, as switchover is not enabled.",
-                                 current_master ? current_master->unique_name : "(none)",
+        MXS_WARNING("Attempt to perform switchover %s -> %s, even though "
+                    "MaxScale is in passive mode.",
+                    current_master ? current_master->unique_name : "none",
+                    new_master->unique_name);
+        *output = mxs_json_error("Switchover %s -> %s not performed, as MaxScale is in passive mode.",
+                                 current_master ? current_master->unique_name : "none",
                                  new_master->unique_name);
-        rv = false;
     }
 
     return rv;
@@ -462,6 +513,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {CN_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
             {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
             {CN_SWITCHOVER, MXS_MODULE_PARAM_BOOL, "false"},
+            {
+                CN_SWITCHOVER_SCRIPT,
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
             {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
             {MXS_END_MODULE_PARAMS}
         }
@@ -574,6 +631,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     {
         handle->shutdown = 0;
         MXS_FREE(handle->script);
+        MXS_FREE(handle->switchover_script);
     }
     else
     {
@@ -613,6 +671,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->failover = config_get_bool(params, CN_FAILOVER);
     handle->failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
     handle->switchover = config_get_bool(params, CN_SWITCHOVER);
+    handle->switchover_script = config_copy_string(params, CN_SWITCHOVER_SCRIPT);
     handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
 
     bool error = false;
@@ -631,6 +690,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     if (error)
     {
         hashtable_free(handle->server_info);
+        MXS_FREE(handle->switchover_script);
         MXS_FREE(handle->script);
         MXS_FREE(handle);
         handle = NULL;
@@ -643,6 +703,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
             hashtable_free(handle->server_info);
+            MXS_FREE(handle->switchover_script);
             MXS_FREE(handle->script);
             MXS_FREE(handle);
             handle = NULL;
@@ -757,6 +818,11 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(handle->failover_timeout));
     json_object_set_new(rval, CN_SWITCHOVER, json_boolean(handle->switchover));
     json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(handle->switchover_timeout));
+
+    if (handle->switchover_script)
+    {
+        json_object_set_new(rval, CN_SWITCHOVER_SCRIPT, json_string(handle->script));
+    }
 
     if (handle->script)
     {
