@@ -1235,20 +1235,8 @@ static std::string child_nodes(MXS_MONITORED_SERVER* servers,
     return ss.str();
 }
 
-int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout)
+int monitor_launch_command(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, EXTERNCMD* cmd)
 {
-    char arg[strlen(script) + 1];
-    strcpy(arg, script);
-
-    EXTERNCMD* cmd = externcmd_allocate(arg, timeout);
-
-    if (cmd == NULL)
-    {
-        MXS_ERROR("Failed to initialize script '%s'. See previous errors for the "
-                  "cause of this failure.", script);
-        return -1;
-    }
-
     if (externcmd_matches(cmd, "$INITIATOR"))
     {
         char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
@@ -1325,13 +1313,13 @@ int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const cha
         {
             // Internal error
             MXS_ERROR("Failed to execute script '%s' on server state change event '%s'",
-                      script, mon_get_event_name(ptr));
+                      cmd->argv[0], mon_get_event_name(ptr));
         }
         else
         {
             // Script returned a non-zero value
             MXS_ERROR("Script '%s' returned %d on event '%s'",
-                      script, rv, mon_get_event_name(ptr));
+                      cmd->argv[0], rv, mon_get_event_name(ptr));
         }
     }
     else
@@ -1381,6 +1369,25 @@ int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const cha
             MXS_FREE(scriptStr);
         }
     }
+
+    return rv;
+}
+
+int monitor_launch_script(MXS_MONITOR* mon, MXS_MONITORED_SERVER* ptr, const char* script, uint32_t timeout)
+{
+    char arg[strlen(script) + 1];
+    strcpy(arg, script);
+
+    EXTERNCMD* cmd = externcmd_allocate(arg, timeout);
+
+    if (cmd == NULL)
+    {
+        MXS_ERROR("Failed to initialize script '%s'. See previous errors for the "
+                  "cause of this failure.", script);
+        return -1;
+    }
+
+    int rv = monitor_launch_command(mon, ptr, cmd);
 
     externcmd_free(cmd);
 
