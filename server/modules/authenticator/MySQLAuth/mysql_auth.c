@@ -592,11 +592,15 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     }
 
     int loaded = replace_mysql_users(port, skip_local);
+    bool injected = false;
 
-    if (loaded < 0)
+    if (loaded <= 0)
     {
-        MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.", service->name,
-                  port->name, port->address ? port->address : "::", port->port);
+        if (loaded < 0)
+        {
+            MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.", service->name,
+                      port->name, port->address ? port->address : "::", port->port);
+        }
 
         if (instance->inject_service_user)
         {
@@ -606,10 +610,20 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
             {
                 MXS_ERROR("[%s] Failed to inject service user.", port->service->name);
             }
+            else
+            {
+                injected = true;
+            }
         }
     }
 
-    if (loaded == 0 && !skip_local)
+    if (injected)
+    {
+        MXS_NOTICE("[%s] No users were loaded but 'inject_service_user' is enabled. "
+                   "Enabling service credentials for authentication until "
+                   "database users have been successfully loaded.", service->name);
+    }
+    else if (loaded == 0 && !skip_local)
     {
         MXS_WARNING("[%s]: failed to load any user information. Authentication"
                     " will probably fail as a result.", service->name);

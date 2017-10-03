@@ -229,7 +229,7 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
     server_string = database->server->version_string;
 
     /* Check if the the SQL node is able to contact one or more data nodes */
-    if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
+    if (mxs_mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         if (mysql_field_count(database->con) < 2)
@@ -256,7 +256,7 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
     }
 
     /* Check the the SQL node id in the MySQL cluster */
-    if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_cluster_node_id'") == 0
+    if (mxs_mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_cluster_node_id'") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         if (mysql_field_count(database->con) < 2)

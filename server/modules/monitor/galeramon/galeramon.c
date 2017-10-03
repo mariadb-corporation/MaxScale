@@ -324,7 +324,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
                            " 'wsrep_local_index',"
                            " 'wsrep_local_state')";
 
-    if (mysql_query(database->con, cluster_member) == 0
+    if (mxs_mysql_query(database->con, cluster_member) == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         if (mysql_field_count(database->con) < 2)
@@ -373,7 +373,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
                 /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
                 else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1)
                 {
-                    if (mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
+                    if (mxs_mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
                         && (result2 = mysql_store_result(database->con)) != NULL)
                     {
                         if (mysql_field_count(database->con) < 2)
@@ -863,7 +863,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
         MXS_MONITOR_SERVERS *ptr = node_list[k];
 
         /* Get the Galera node name */
-        if (mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
+        if (mxs_mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
             && (result = mysql_store_result(ptr->con)) != NULL)
         {
             if (mysql_field_count(ptr->con) < 2)
@@ -908,7 +908,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
     {
         MXS_MONITOR_SERVERS *ptr = node_list[k];
         /* Set the Galera SST donor node list */
-        if (mysql_query(ptr->con, donor_list) == 0)
+        if (mxs_mysql_query(ptr->con, donor_list) == 0)
         {
             MXS_DEBUG("SET GLOBAL rep_sst_donor OK in node %s",
                       ptr->server->unique_name);

@@ -1009,6 +1009,7 @@ extern const char *blr_get_encryption_algorithm(int);
 extern int blr_check_encryption_algorithm(char *);
 extern const char *blr_encryption_algorithm_list(void);
 extern bool blr_get_encryption_key(ROUTER_INSTANCE *);
+extern void blr_set_checksum(ROUTER_INSTANCE *instance, GWBUF *buf);
 extern const char *blr_skip_leading_sql_comments(const char *);
 extern bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *,
                                    const char *,

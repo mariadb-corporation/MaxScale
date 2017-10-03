@@ -542,7 +542,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     bool rval = true;
     sprintf(query, template, query_pw);
 
-    if (mysql_query(mysql, query) != 0)
+    if (mxs_mysql_query(mysql, query) != 0)
     {
         if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
@@ -572,7 +572,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         }
     }
 
-    if (mysql_query(mysql, "SELECT user, host, db FROM mysql.db limit 1") != 0)
+    if (mxs_mysql_query(mysql, "SELECT user, host, db FROM mysql.db limit 1") != 0)
     {
         if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
@@ -600,7 +600,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         }
     }
 
-    if (mysql_query(mysql, "SELECT user, host, db FROM mysql.tables_priv limit 1") != 0)
+    if (mxs_mysql_query(mysql, "SELECT user, host, db FROM mysql.tables_priv limit 1") != 0)
     {
         if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
@@ -747,7 +747,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
 
     if (query)
     {
-        if (mysql_query(con, query) == 0)
+        if (mxs_mysql_query(con, query) == 0)
         {
             MYSQL_RES *result = mysql_store_result(con);
 
@@ -801,7 +801,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
     }
 
     /** Load the list of databases */
-    if (mysql_query(con, "SHOW DATABASES") == 0)
+    if (mxs_mysql_query(con, "SHOW DATABASES") == 0)
     {
         MYSQL_RES *result = mysql_store_result(con);
         if (result)
@@ -855,14 +855,17 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
 
     SERVER_REF *server = service->dbref;
     int total_users = -1;
+    bool no_active_servers = true;
 
     for (server = service->dbref; !service->svc_do_shutdown && server; server = server->next)
     {
-        if (skip_local && server_is_mxs_service(server->server))
+        if (!SERVER_REF_IS_ACTIVE(server) || !SERVER_IS_ACTIVE(server->server) ||
+            (skip_local && server_is_mxs_service(server->server)))
         {
-            total_users = 0;
             continue;
         }
+
+        no_active_servers = false;
 
         MYSQL *con = gw_mysql_init();
         if (con)
@@ -897,7 +900,12 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
 
     MXS_FREE(dpwd);
 
-    if (server == NULL && total_users == -1)
+    if (no_active_servers)
+    {
+        // This service has no servers or all servers are local MaxScale services
+        total_users = 0;
+    }
+    else if (server == NULL && total_users == -1)
     {
         MXS_ERROR("Unable to get user data from backend database for service [%s]."
                   " Failed to connect to any of the backend databases.", service->name);

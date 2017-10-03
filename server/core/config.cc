@@ -110,6 +110,8 @@ const char CN_PORT[]                          = "port";
 const char CN_PROTOCOL[]                      = "protocol";
 const char CN_QUERY_CLASSIFIER[]              = "query_classifier";
 const char CN_QUERY_CLASSIFIER_ARGS[]         = "query_classifier_args";
+const char CN_QUERY_RETRIES[]                 = "query_retries";
+const char CN_QUERY_RETRY_TIMEOUT[]           = "query_retry_timeout";
 const char CN_RELATIONSHIPS[]                 = "relationships";
 const char CN_LINKS[]                         = "links";
 const char CN_REQUIRED[]                      = "required";
@@ -1473,6 +1475,34 @@ handle_global_item(const char *name, const char *value)
                       "'ORACLE'. Using 'DEFAULT' as default.", value, name);
         }
     }
+    else if (strcmp(name, CN_QUERY_RETRIES) == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval >= 0)
+        {
+            gateway.query_retries = intval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid timeout value for '%s': %s", CN_QUERY_RETRIES, value);
+            return 0;
+        }
+    }
+    else if (strcmp(name, CN_QUERY_RETRY_TIMEOUT) == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval > 0)
+        {
+            gateway.query_retries = intval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid timeout value for '%s': %s", CN_QUERY_RETRY_TIMEOUT, value);
+            return 0;
+        }
+    }
     else if (strcmp(name, CN_LOG_THROTTLING) == 0)
     {
         if (*value == 0)
@@ -1761,6 +1791,8 @@ global_defaults()
     gateway.admin_ssl_key[0] = '\0';
     gateway.admin_ssl_cert[0] = '\0';
     gateway.admin_ssl_ca_cert[0] = '\0';
+    gateway.query_retries = DEFAULT_QUERY_RETRIES;
+    gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
 
     gateway.thread_stack_size = 0;
     pthread_attr_t attr;

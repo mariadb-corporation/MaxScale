@@ -200,7 +200,7 @@ int execute_query_check_one(MYSQL *conn, const char *sql, const char *expected);
  * @param db    name of DB to which connections are counted
  * @return number of connections
  */
-int get_conn_num(MYSQL *conn, char * ip, char * hostname, char * db);
+int get_conn_num(MYSQL *conn, const char* ip, const char* hostname, const char* db);
 
 /**
  * @brief Find given filed in the SQL query reply
@@ -227,7 +227,7 @@ unsigned int get_seconds_behind_master(MYSQL *conn);
  * @param err_log_content   pointer to the buffer to store log file content
  * @return 0 in case of success, 1 in case of error
  */
-int read_log(char * name, char **err_log_content_p);
+int read_log(const char* name, char **err_log_content_p);
 
 int get_int_version(const std::string& version);
 int get_int_version(const char* version);
