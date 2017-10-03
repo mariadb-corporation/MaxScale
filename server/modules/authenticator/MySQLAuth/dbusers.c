@@ -230,7 +230,7 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
          * Try authentication with the hostname instead of the IP. We do this only
          * as a last resort so we avoid the high cost of the DNS lookup.
          */
-        char client_hostname[MYSQL_HOST_MAXLEN];
+        char client_hostname[MYSQL_HOST_MAXLEN] = "";
         get_hostname(dcb, client_hostname, sizeof(client_hostname) - 1);
 
         sprintf(sql, mysqlauth_validate_user_query, session->user, client_hostname,
