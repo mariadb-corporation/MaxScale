@@ -278,6 +278,13 @@ TestConnections::TestConnections(int argc, char *argv[]):
     if (maxscale_init)
     {
         init_maxscale();
+
+        if (!secondary_maxscale_IP.empty())
+        {
+            set_active_maxscale(MXS_SECONDARY);
+            init_maxscale();
+            set_active_maxscale(MXS_PRIMARY);
+        }
     }
 
     if (backend_ssl)
@@ -372,12 +379,28 @@ int TestConnections::read_env()
     if (env != NULL)
     {
         sprintf(maxscale_IP, "%s", env);
+        primary_maxscale_IP = env;
     }
+
     env = getenv("maxscale_network6");
     if (env != NULL)
     {
         sprintf(maxscale_IP6, "%s", env);
+        primary_maxscale_IP6 = env;
     }
+
+    env = getenv("maxscale2_IP");
+    if (env != NULL)
+    {
+        secondary_maxscale_IP = env;
+    }
+
+    env = getenv("maxscale2_network6");
+    if (env != NULL)
+    {
+        secondary_maxscale_IP = env;
+    }
+
     env = getenv("maxscale_user");
     if (env != NULL)
     {
@@ -2234,4 +2257,25 @@ int TestConnections::connect_readconn_slave()
 char* TestConnections::maxscale_ip() const
 {
     return use_ipv6 ?  (char*)maxscale_IP6 : (char*)maxscale_IP;
+}
+
+void TestConnections::set_active_maxscale(enum test_target target)
+{
+    switch (target)
+    {
+        case MXS_PRIMARY:
+            strcpy(maxscale_IP, primary_maxscale_IP.c_str());
+            strcpy(maxscale_IP6, primary_maxscale_IP6.c_str());
+            break;
+
+        case MXS_SECONDARY:
+            strcpy(maxscale_IP, secondary_maxscale_IP.c_str());
+            strcpy(maxscale_IP6, secondary_maxscale_IP6.c_str());
+            break;
+
+        default:
+            tprintf("Wrong enum value for 'set_active_maxscale': 0x%02x", target);
+            exit(1);
+            break;
+    }
 }
