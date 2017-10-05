@@ -257,7 +257,7 @@ public:
     /**
      * @brief ssl if true ssl will be used
      */
-    int ssl;
+    bool ssl;
 
     /**
      * @brief backend_ssl if true ssl configuratio for all servers will be added
