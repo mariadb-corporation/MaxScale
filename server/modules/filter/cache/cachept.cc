@@ -164,7 +164,7 @@ CachePT* CachePT::Create(const std::string&  name,
 
         while (!error && (i < n_threads))
         {
-            char suffix[6]; // Enough for 99999 threads
+            char suffix[12]; // Enough for 99999 threads
             sprintf(suffix, "%d", i);
 
             string namest(name + "-" + suffix);
