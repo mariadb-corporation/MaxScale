@@ -522,9 +522,31 @@ static bool is_large(GWBUF* buffer)
 
 static bool more_results_exist(GWBUF* buffer)
 {
-    ss_dassert(is_eof(buffer));
+    ss_dassert(is_eof(buffer) || mxs_mysql_is_ok_packet(buffer));
     uint16_t status = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1 + 2);
     return status & SERVER_MORE_RESULTS_EXIST;
+}
+
+static bool is_result_set(GWBUF *buffer)
+{
+    bool rval = false;
+
+    switch (GWBUF_DATA(buffer)[MYSQL_HEADER_LEN])
+    {
+
+        case MYSQL_REPLY_OK:
+        case MYSQL_REPLY_ERR:
+        case MYSQL_REPLY_LOCAL_INFILE:
+        case MYSQL_REPLY_EOF:
+            /** Not a result set */
+            break;
+
+        default:
+            rval = true;
+            break;
+    }
+
+    return rval;
 }
 
 /**
@@ -539,9 +561,9 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
 {
     mxs_mysql_cmd_t cmd = mxs_mysql_current_command(backend->dcb()->session);
 
-    if (backend->get_reply_state() == REPLY_STATE_START && !mxs_mysql_is_result_set(buffer))
+    if (backend->get_reply_state() == REPLY_STATE_START && !is_result_set(buffer))
     {
-        if (cmd == MXS_COM_STMT_PREPARE || !mxs_mysql_more_results_after_ok(buffer))
+        if (cmd == MXS_COM_STMT_PREPARE || !more_results_exist(buffer))
         {
             /** Not a result set, we have the complete response */
             LOG_RS(backend, REPLY_STATE_DONE);
