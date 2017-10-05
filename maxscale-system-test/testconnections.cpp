@@ -16,6 +16,7 @@ namespace maxscale
 {
 static bool start = true;
 static bool check_nodes = true;
+static bool multiple_maxscales = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
 }
@@ -60,6 +61,11 @@ void TestConnections::require_repl_version(const char *version)
 void TestConnections::require_galera_version(const char *version)
 {
     maxscale::required_galera_version = version;
+}
+
+void TestConnections::multiple_maxscales(bool value)
+{
+    maxscale::multiple_maxscales = value;
 }
 
 TestConnections::TestConnections(int argc, char *argv[]):
@@ -285,7 +291,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
     {
         init_maxscale();
 
-        if (!secondary_maxscale_IP.empty())
+        if (maxscale::multiple_maxscales && !secondary_maxscale_IP.empty())
         {
             set_active_maxscale(MXS_SECONDARY);
             init_maxscale();
