@@ -228,7 +228,7 @@ thread_test(void *arg)
 static int
 test2()
 {
-    pthread_t   tid[NUMBER_OF_THREADS - 1];
+    pthread_t   tid[NUMBER_OF_THREADS];
     int err, i, limit;
 
     thread_queue = mxs_queue_alloc(TEST_QUEUE_SIZE, HEARTBEATS_TO_EXPIRE);
