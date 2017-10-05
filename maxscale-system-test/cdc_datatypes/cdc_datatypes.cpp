@@ -176,7 +176,7 @@ bool run_test(TestConnections& test)
             test.set_timeout(60);
             test.tprintf("Testing type: %s", test_set[x].types[i]);
             std::string name = type_to_table_name(test_set[x].types[i]);
-            CDC::Connection conn(test.maxscale_IP, 4001, "skysql", "skysql");
+            CDC::Connection conn(test.maxscales->IP[0], 4001, "skysql", "skysql");
 
             if (conn.createConnection() && conn.requestData(name))
             {

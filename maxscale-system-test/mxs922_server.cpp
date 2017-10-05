@@ -15,7 +15,7 @@ int check_server_id(TestConnections *test, int idx)
     int b = -1;
     char str[1024];
 
-    if (find_field(test->conn_rwsplit, "SELECT @@server_id", "@@server_id", str) == 0)
+    if (find_field(test->maxscales->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", str) == 0)
     {
         b = atoi(str);
     }
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     config.alter_server(1, "address", "This-is-not-the-address-you-are-looking-for");
     config.alter_server(1, "port", 12345);
     test->connect_maxscale();
-    test->add_result(execute_query_silent(test->conn_rwsplit, "SELECT 1") == 0,
+    test->add_result(execute_query_silent(test->maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                      "Query with bad address should fail");
 
     config.remove_server(1);

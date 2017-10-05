@@ -97,7 +97,7 @@ int main(int argc, char** argv)
     test.tprintf("Creating table and inserting data");
     get_input();
     test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
 
     check(test);
     get_output(test);
@@ -144,7 +144,7 @@ int main(int argc, char** argv)
     get_input();
     test.close_maxscale_connections();
     test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "DROP TABLE test.t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
     test.close_maxscale_connections();
 
     get_output(test);

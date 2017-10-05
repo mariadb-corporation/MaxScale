@@ -41,8 +41,8 @@ int set_endspoints(RDS * cluster)
     }
 
     setenv("node_password", "skysqlrds", 1);
-    setenv("maxscale_user", "skysql", 1);
-    setenv("maxscale_password", "skysqlrds", 1);
+    setenv("maxscales->user_name", "skysql", 1);
+    setenv("maxscales->password", "skysqlrds", 1);
     setenv("no_nodes_check", "yes", 1);
     setenv("no_backend_log_copy", "yes", 1);
     return 0;
@@ -116,10 +116,10 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     Test->tprintf("Executing a query through readwritesplit before failover");
     Test->connect_rwsplit();
-    Test->try_query(Test->conn_rwsplit, "show processlist");
+    Test->try_query(Test->maxscales->conn_rwsplit[0][0], "show processlist");
     char server_id[1024];
     Test->tprintf("Get aurora_server_id\n");
-    find_field(Test->conn_rwsplit, "select @@aurora_server_id;", "server_id", &server_id[0]);
+    find_field(Test->maxscales->conn_rwsplit[0][0], "select @@aurora_server_id;", "server_id", &server_id[0]);
     Test->close_rwsplit();
     Test->tprintf("server_id before failover: %s\n", server_id);
 
@@ -136,9 +136,9 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     Test->tprintf("Executing a query through readwritesplit after failover");
     Test->connect_rwsplit();
-    Test->try_query(Test->conn_rwsplit, "show processlist");
+    Test->try_query(Test->maxscales->conn_rwsplit[0][0], "show processlist");
     Test->tprintf("Get aurora_server_id\n");
-    find_field(Test->conn_rwsplit, "select @@aurora_server_id;", "server_id", &server_id[0]);
+    find_field(Test->maxscales->conn_rwsplit[0][0], "select @@aurora_server_id;", "server_id", &server_id[0]);
     Test->close_rwsplit();
     Test->tprintf("server_id after failover: %s\n", server_id);
 

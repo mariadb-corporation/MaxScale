@@ -18,8 +18,9 @@
 #include <vector>
 
 Mariadb_nodes::Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose):
-    v51(false), use_ipv6(false)
+    v51(false)
 {
+    use_ipv6 = false;
     strcpy(prefix, pref);
     memset(this->nodes, 0, sizeof(this->nodes));
     memset(blocked, 0, sizeof(blocked));
@@ -79,21 +80,14 @@ void Mariadb_nodes::close_connections()
     }
 }
 
+
+
 int Mariadb_nodes::read_env()
 {
     char * env;
     char env_name[64];
 
-    sprintf(env_name, "%s_N", prefix);
-    env = getenv(env_name);
-    if (env != NULL)
-    {
-        sscanf(env, "%d", &N);
-    }
-    else
-    {
-        N = 0;
-    }
+    read_basic_env();
 
     sprintf(env_name, "%s_user", prefix);
     env = getenv(env_name);
@@ -124,43 +118,10 @@ int Mariadb_nodes::read_env()
         ssl = true;
     }
 
-
     if ((N > 0) && (N < 255))
     {
         for (int i = 0; i < N; i++)
         {
-            //reading IPs
-            sprintf(env_name, "%s_%03d_network", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(IP[i], "%s", env);
-            }
-
-            //reading private IPs
-            sprintf(env_name, "%s_%03d_private_ip", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(IP_private[i], "%s", env);
-            }
-            else
-            {
-                sprintf(IP_private[i], "%s", IP[i]);
-            }
-
-            //reading IPv6
-            sprintf(env_name, "%s_%03d_network6", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(IP6[i], "%s", env);
-            }
-            else
-            {
-                sprintf(IP6[i], "%s", IP[i]);
-            }
-
             //reading ports
             sprintf(env_name, "%s_%03d_port", prefix, i);
             env = getenv(env_name);
@@ -185,17 +146,7 @@ int Mariadb_nodes::read_env()
                 sprintf(socket[i], " ");
                 sprintf(socket_cmd[i], " ");
             }
-            //reading sshkey
-            sprintf(env_name, "%s_%03d_keyfile", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(sshkey[i], "%s", env);
-            }
-            else
-            {
-                sprintf(sshkey[i], "vagrant.pem");
-            }
+
 
             //reading start_db_command
             sprintf(env_name, "%s_%03d_start_db_command", prefix, i);
@@ -232,38 +183,6 @@ int Mariadb_nodes::read_env()
             {
                 sprintf(cleanup_db_command[i], " ");
             }
-
-            sprintf(env_name, "%s_%03d_whoami", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(access_user[i], "%s", env);
-            }
-            else
-            {
-                sprintf(access_user[i], "root");
-            }
-
-            sprintf(env_name, "%s_%03d_access_sudo", prefix, i);
-            env = getenv(env_name);
-            if (env != NULL)
-            {
-                sprintf(access_sudo[i], "%s", env);
-            }
-            else
-            {
-                sprintf(access_sudo[i], " ");
-            }
-
-            if (strcmp(access_user[i], "root") == 0)
-            {
-                sprintf(access_homedir[i], "/%s/", access_user[i]);
-            }
-            else
-            {
-                sprintf(access_homedir[i], "/home/%s/", access_user[i]);
-            }
-
         }
     }
 }
@@ -290,9 +209,9 @@ int Mariadb_nodes::find_master()
     while ((found == 0) && (i < N))
     {
         if (find_field(
-                    nodes[i], (char *) "show slave status;",
-                    (char *) "Master_Host", &str[0]
-                ) == 0 )
+                nodes[i], (char *) "show slave status;",
+                (char *) "Master_Host", &str[0]
+            ) == 0 )
         {
             found = 1;
             strcpy(master_IP, str);
@@ -417,8 +336,6 @@ int Mariadb_nodes::cleanup_db_nodes()
     return local_result;
 }
 
-
-
 int Mariadb_nodes::start_replication()
 {
     char str[1024];
@@ -493,7 +410,8 @@ int Galera_nodes::start_galera()
     sprintf(str, "%s/create_user_galera.sh", test_dir);
     copy_to_node(str, "~/", 0);
 
-    sprintf(str, "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s", user_name,
+    sprintf(str, "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
+            user_name,
             password, socket_cmd[0]);
     ssh_node(0, str, false);
 
@@ -602,36 +520,6 @@ int Mariadb_nodes::unblock_all_nodes()
         rval += this->unblock_node(i);
     }
     return rval;
-}
-
-int Mariadb_nodes::check_node_ssh(int node)
-{
-    int res = 0;
-    printf("Checking node %d\n", node);
-    fflush(stdout);
-
-    if (ssh_node(0, (char *) "ls > /dev/null", false) != 0)
-    {
-        printf("Node %d is not available\n", node);
-        fflush(stdout);
-        res = 1;
-    }
-    else
-    {
-        printf("Node %d is OK\n", node);
-        fflush(stdout);
-    }
-    return res;
-}
-
-int Mariadb_nodes::check_nodes()
-{
-    int res = 0;
-    for (int i = 0; i < N; i++)
-    {
-        res += check_node_ssh(i);
-    }
-    return res;
 }
 
 bool Mariadb_nodes::check_master_node(MYSQL *conn)
@@ -925,87 +813,6 @@ std::string Mariadb_nodes::get_server_id_str(int index)
     return ss.str();
 }
 
-void Mariadb_nodes::generate_ssh_cmd(char *cmd, int node, const char *ssh, bool sudo)
-{
-    if (strcmp(IP[node], "127.0.0.1") == 0)
-    {
-        if (sudo)
-        {
-            sprintf(cmd, "%s %s",
-                    access_sudo[node], ssh);
-        }
-        else
-        {
-            sprintf(cmd, "%s",
-                    ssh);
-
-        }
-    }
-    else
-    {
-
-        if (sudo)
-        {
-            sprintf(cmd,
-                    "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s %s\'",
-                    sshkey[node], access_user[node], IP[node], access_sudo[node], ssh);
-        }
-        else
-        {
-            sprintf(cmd,
-                    "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s'",
-                    sshkey[node], access_user[node], IP[node], ssh);
-        }
-    }
-}
-
-char * Mariadb_nodes::ssh_node_output(int node, const char *ssh, bool sudo, int *exit_code)
-{
-    char sys[strlen(ssh) + 1024];
-    generate_ssh_cmd(sys, node, ssh, sudo);
-    FILE *output = popen(sys, "r");
-    if (output == NULL)
-    {
-        printf("Error opening ssh %s\n", strerror(errno));
-        return NULL;
-    }
-    char buffer[1024];
-    size_t rsize = sizeof(buffer);
-    char* result = (char*)calloc(rsize, sizeof(char));
-
-    while (fgets(buffer, sizeof(buffer), output))
-    {
-        result = (char*)realloc(result, sizeof(buffer) + rsize);
-        rsize += sizeof(buffer);
-        strcat(result, buffer);
-    }
-    int code = pclose(output);
-    if (WIFEXITED(code))
-    {
-        * exit_code = WEXITSTATUS(code);
-    }
-    else
-    {
-        * exit_code = 256;
-    }
-    return result;
-}
-
-int Mariadb_nodes::ssh_node(int node, const char *ssh, bool sudo)
-{
-    char sys[strlen(ssh) + 1024];
-    generate_ssh_cmd(sys, node, ssh, sudo);
-    int return_code = system(sys);
-    if (WIFEXITED(return_code))
-    {
-        return WEXITSTATUS(return_code);
-    }
-    else
-    {
-        return 256;
-    }
-}
-
 int Mariadb_nodes::flush_hosts()
 {
 
@@ -1028,7 +835,8 @@ int Mariadb_nodes::flush_hosts()
             local_result++;
         }
 
-        if (mysql_query(nodes[i], "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''") == 0)
+        if (mysql_query(nodes[i],
+                        "SELECT CONCAT('\\'', user, '\\'@\\'', host, '\\'') FROM mysql.user WHERE user = ''") == 0)
         {
             MYSQL_RES *res = mysql_store_result(nodes[i]);
 
@@ -1048,7 +856,7 @@ int Mariadb_nodes::flush_hosts()
                 {
                     printf("Detected anonymous users, dropping them.\n");
 
-                    for (auto& s: users)
+                    for (auto& s : users)
                     {
                         std::string query = "DROP USER ";
                         query += s;
@@ -1152,7 +960,7 @@ int Mariadb_nodes::truncate_mariadb_logs()
     for (int node = 0; node < N; node++)
     {
         char sys[1024];
-        if (strcmp(IP[node], "127.0.0.1") !=0)
+        if (strcmp(IP[node], "127.0.0.1") != 0)
         {
             sprintf(sys,
                     "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s 'sudo truncate  /var/lib/mysql/*.err --size 0;sudo rm -f /etc/my.cnf.d/binlog_enc*\' &",
@@ -1221,60 +1029,6 @@ int Mariadb_nodes::disable_ssl()
     }
 
     return local_result;
-}
-
-int Mariadb_nodes::copy_to_node(const char* src, const char* dest, int i)
-{
-    if (i >= N)
-    {
-        return 1;
-    }
-    char sys[strlen(src) + strlen(dest) + 1024];
-
-    if (strcmp(IP[i], "127.0.0.1") == 0)
-    {
-        sprintf(sys, "cp %s %s",
-                src, dest);
-    }
-    else
-    {
-        sprintf(sys, "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
-                     "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
-                sshkey[i], src, access_user[i], IP[i], dest);
-    }
-    if (verbose)
-    {
-        printf("%s\n", sys);
-    }
-
-    return system(sys);
-}
-
-
-int Mariadb_nodes::copy_from_node(const char* src, const char* dest, int i)
-{
-    if (i >= N)
-    {
-        return 1;
-    }
-    char sys[strlen(src) + strlen(dest) + 1024];
-    if (strcmp(IP[i], "127.0.0.1") == 0)
-    {
-        sprintf(sys, "cp %s %s",
-                src, dest);
-    }
-    else
-    {
-        sprintf(sys, "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
-                     "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
-                sshkey[i], access_user[i], IP[i], src, dest);
-    }
-    if (verbose)
-    {
-        printf("%s\n", sys);
-    }
-
-    return system(sys);
 }
 
 static void wait_until_pos(MYSQL *mysql, int filenum, int pos)

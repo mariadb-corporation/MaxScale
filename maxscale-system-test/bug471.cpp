@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
                 Test->set_timeout(5);
                 sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j + 1);
 
-                find_field(Test->conn_rwsplit, hint_sql, (char *) "@@server_id", &server_id[0]);
+                find_field(Test->maxscales->conn_rwsplit[0], hint_sql, (char *) "@@server_id", &server_id[0]);
                 find_field(Test->repl->nodes[j], (char *) "select @@server_id;", (char *) "@@server_id", &server_id_d[0]);
 
                 Test->tprintf("server%d ID from Maxscale: \t%s\n", j + 1, server_id);

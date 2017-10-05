@@ -128,9 +128,9 @@ int main(int argc, char *argv[])
 
     Test->tprintf("executing fetch * from mysql.user \n");
     Test->set_timeout(10);
-    Test->try_query(Test->conn_rwsplit, (char *) "fetch * from mysql.user;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "fetch * from mysql.user;");
     Test->set_timeout(10);
-    Test->try_query(Test->conn_rwsplit, (char *) "fetch count(*) form mysql.user;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "fetch count(*) form mysql.user;");
 
     Test->set_timeout(10);
     Test->close_maxscale_connections();

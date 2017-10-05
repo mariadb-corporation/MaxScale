@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     Test->tprintf("set global max_connections = 2000");
     Test->connect_maxscale();
-    Test->try_query(Test->conn_rwsplit, (char *) "set global max_connections = 2000;\n");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "set global max_connections = 2000;\n");
     Test->close_maxscale_connections();
 
     Test->tprintf("Trying %d connections\n", connections);
@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     Test->tprintf("set global max_connections = 100");
     Test->connect_maxscale();
-    Test->try_query(Test->conn_rwsplit, (char *) "set global max_connections = 100;\n");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "set global max_connections = 100;\n");
     Test->close_maxscale_connections();
 
     Test->tprintf("Checking if Maxscale alive\n");

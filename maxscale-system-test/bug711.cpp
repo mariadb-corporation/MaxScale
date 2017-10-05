@@ -1,7 +1,7 @@
 /**
  * @file bug711.cpp bug711 regression case (Some MySQL Workbench Management actions hang with R/W split router)
  * - configure rwsplit with use_sql_variables_in=all
- * - try SHOW GLOBAL STATUS with all routers
+ * - try SHOW GLOBAL STATUS with all maxscales->routers[0]
  * - check if Maxscale is still alive
  */
 
@@ -46,11 +46,11 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
     Test->set_timeout(10);
     Test->tprintf("Trying SHOW GLOBAL STATUS against RWSplit\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "SHOW GLOBAL STATUS;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SHOW GLOBAL STATUS;");
     Test->tprintf("Trying SHOW GLOBAL STATUS against ReadConn master\n");
-    Test->try_query(Test->conn_master,  (char *) "SHOW GLOBAL STATUS;");
+    Test->try_query(Test->maxscales->conn_master[0],  (char *) "SHOW GLOBAL STATUS;");
     Test->tprintf("Trying SHOW GLOBAL STATUS against ReadConn slave\n");
-    Test->try_query(Test->conn_slave,   (char *) "SHOW GLOBAL STATUS;");
+    Test->try_query(Test->maxscales->conn_slave[0],   (char *) "SHOW GLOBAL STATUS;");
     Test->check_maxscale_alive();
     int rval = Test->global_result;
     delete Test;

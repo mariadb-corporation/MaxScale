@@ -20,10 +20,10 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
 
     /** Create a database on all nodes */
-    execute_query(Test->conn_master, "DROP DATABASE IF EXISTS duplicate;");
-    execute_query(Test->conn_master, "CREATE DATABASE duplicate;");
+    execute_query(Test->maxscales->conn_master[0], "DROP DATABASE IF EXISTS duplicate;");
+    execute_query(Test->maxscales->conn_master[0], "CREATE DATABASE duplicate;");
 
-    Test->add_result(execute_query(Test->conn_rwsplit, "SELECT 1") == 0,
+    Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                      "Query should fail when duplicate database is found.");
     Test->stop_timeout();
     sleep(10);

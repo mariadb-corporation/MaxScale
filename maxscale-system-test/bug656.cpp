@@ -15,15 +15,15 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
     Test->connect_rwsplit();
 
     Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0);
 
     //printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
-    //execute_query(Test->conn_rwsplit, (char *) "show processlist;");
-    execute_maxadmin_command_print(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password,
+    //execute_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;");
+    execute_maxadmin_command_print(Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0],
                                    (char *) "show servers");
 
     Test->tprintf("Setup firewall back to allow mysql and wait\n");

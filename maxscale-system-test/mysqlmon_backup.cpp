@@ -14,7 +14,7 @@ void check_master(TestConnections& test)
     test.add_result(test.find_master_maxadmin(test.repl) != 0, "Node 0 is not the master");
 
     test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
+    test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
     test.close_maxscale_connections();
 }
 
@@ -23,7 +23,7 @@ void check_slave(TestConnections& test)
     test.add_result(test.find_slave_maxadmin(test.repl) == -1, "No slaves found");
 
     test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "SELECT * FROM test.t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "SELECT * FROM test.t1");
     test.close_maxscale_connections();
 }
 
@@ -49,7 +49,7 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id int)");
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id int)");
     test.close_maxscale_connections();
 
     test.tprintf("Checking that node 0 is the master and slaves are OK");

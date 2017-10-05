@@ -15,7 +15,7 @@
 void run_test(TestConnections *Test, size_t size, int chunks)
 {
     char *insert_stmt = (char *) "INSERT INTO long_blob_table(x, b) VALUES(1, ?)";
-    MYSQL *conn = Test->conn_rwsplit;
+    MYSQL *conn = Test->maxscales->conn_rwsplit[0];
     MYSQL_STMT * stmt = mysql_stmt_init(conn);
 
     Test->tprintf("Preparing statement");

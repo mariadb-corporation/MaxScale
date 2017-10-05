@@ -28,10 +28,10 @@ void add_remove_maxadmin_user(TestConnections* Test)
 {
     char str[1024];
 
-    Test->tprintf("enable account %s to maxadmin:\n", Test->maxscale_access_user);
-    char * st3 = Test->ssh_maxscale_output(true, "maxadmin enable account %s", Test->maxscale_access_user);
+    Test->tprintf("enable account %s to maxadmin:\n", Test->maxscales->access_user[0]);
+    char * st3 = Test->ssh_maxscale_output(true, "maxadmin enable account %s", Test->maxscales->access_user[0]);
     Test->tprintf("Result: %s\n", st3);
-    sprintf(str, user_added, Test->maxscale_access_user);
+    sprintf(str, user_added, Test->maxscales->access_user[0]);
     if (strstr(st3, str) == NULL)
     {
         Test->add_result(1, "There is no proper '%s' message\n", str);
@@ -44,7 +44,7 @@ void add_remove_maxadmin_user(TestConnections* Test)
     Test->tprintf("trying maxadmin without 'root':\n");
     char * st4 = Test->ssh_maxscale_output(false, "maxadmin show users");
     Test->tprintf("Result: %s\n", st4);
-    sprintf(str, user_only, Test->maxscale_access_user);
+    sprintf(str, user_only, Test->maxscales->access_user[0]);
     if (strstr(st4, str) == NULL)
     {
         Test->add_result(1, "There is no proper '%s' message\n", str);
@@ -68,7 +68,7 @@ void add_remove_maxadmin_user(TestConnections* Test)
     Test->tprintf("trying maxadmin without 'root'\n");
     char * st7 = Test->ssh_maxscale_output(false, "maxadmin show users");
     Test->tprintf("Result: %s\n", st7);
-    sprintf(str, user_and_root, Test->maxscale_access_user);
+    sprintf(str, user_and_root, Test->maxscales->access_user[0]);
     if (strstr(st7, str) == NULL)
     {
         Test->add_result(1, "There is no proper '%s' message\n", str);
@@ -81,8 +81,8 @@ void add_remove_maxadmin_user(TestConnections* Test)
     Test->tprintf("creating readonly user");
     Test->ssh_maxscale(false, "maxadmin add readonly-user test test");
 
-    Test->tprintf("trying to remove user '%s'\n", Test->maxscale_access_user);
-    char * st8 = Test->ssh_maxscale_output(false, "maxadmin disable account %s", Test->maxscale_access_user);
+    Test->tprintf("trying to remove user '%s'\n", Test->maxscales->access_user[0]);
+    char * st8 = Test->ssh_maxscale_output(false, "maxadmin disable account %s", Test->maxscales->access_user[0]);
 
     if (strstr(st8, remove_last_admin))
     {
@@ -93,11 +93,11 @@ void add_remove_maxadmin_user(TestConnections* Test)
         Test->tprintf("OK\n");
     }
 
-    Test->tprintf("Trying with removed user '%s'\n", Test->maxscale_access_user);
+    Test->tprintf("Trying with removed user '%s'\n", Test->maxscales->access_user[0]);
     int st9 = Test->ssh_maxscale(false, "maxadmin show users");
     if (st9 == 0)
     {
-        Test->add_result(1, "User '%s' should be removed", Test->maxscale_access_user);
+        Test->add_result(1, "User '%s' should be removed", Test->maxscales->access_user[0]);
     }
     else
     {

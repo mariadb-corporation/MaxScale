@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
             {
                 Test->set_timeout(180);
 
-                if (execute_query_from_file(Test->conn_rwsplit, file) == 1)
+                if (execute_query_from_file(Test->maxscales->conn_rwsplit[0], file) == 1)
                 {
                     Test->tprintf("Query should succeed: %s\n", sql);
                     local_result++;
@@ -75,10 +75,10 @@ int main(int argc, char *argv[])
             {
                 Test->set_timeout(180);
 
-                int rc = execute_query_from_file(Test->conn_rwsplit, file);
+                int rc = execute_query_from_file(Test->maxscales->conn_rwsplit[0], file);
 
                 if (rc != -1 && (rc == 0 ||
-                                 mysql_errno(Test->conn_rwsplit) != 1141))
+                                 mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141))
                 {
                     Test->tprintf("Query should fail: %s\n", sql);
                     local_result++;

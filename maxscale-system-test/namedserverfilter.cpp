@@ -16,7 +16,7 @@ int compare_server_id(TestConnections* test, char *node_id)
 {
     char str[1024];
     int rval = 0;
-    if (find_field(test->conn_rwsplit, "SELECT @@server_id", "@@server_id", str))
+    if (find_field(test->maxscales->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", str))
     {
         test->tprintf("Failed to query for @@server_id.\n");
         rval = 1;

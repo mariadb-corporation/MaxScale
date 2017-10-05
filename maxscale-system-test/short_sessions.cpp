@@ -46,17 +46,17 @@ int main(int argc, char *argv[])
 
     test.tprintf("Checking t1 table using RWSplit router");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.conn_rwsplit, (char *) "SELECT * FROM t1;",
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1;",
                     iterations), "t1 is wrong");
 
     test.tprintf("Checking t1 table using ReadConn router in master mode");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.conn_master, (char *) "SELECT * FROM t1;",
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_master[0], (char *) "SELECT * FROM t1;",
                     iterations), "t1 is wrong");
 
     test.tprintf("Checking t1 table using ReadConn router in slave mode");
     test.set_timeout(240);
-    test.add_result(execute_select_query_and_check(test.conn_slave, (char *) "SELECT * FROM t1;", iterations),
+    test.add_result(execute_select_query_and_check(test.maxscales->conn_slave[0], (char *) "SELECT * FROM t1;", iterations),
                     "t1 is wrong");
 
     test.set_timeout(20);

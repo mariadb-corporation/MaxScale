@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 
     test.set_timeout(20);
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.conn_rwsplit);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
     const char* write_query = "SELECT @@server_id, @@last_insert_id";
     const char* read_query = "SELECT @@server_id";
     char buffer[100] = "";
@@ -47,7 +47,7 @@ int main(int argc, char** argv)
     test.add_result(strcmp(buffer, server_id[0]), "Expected server_id '%s', got '%s'", server_id[0], buffer);
 
     mysql_stmt_close(stmt);
-    stmt = mysql_stmt_init(test.conn_rwsplit);
+    stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
 
     // Execute read, should return a slave server ID
     test.add_result(mysql_stmt_prepare(stmt, read_query, strlen(read_query)), "Failed to prepare");

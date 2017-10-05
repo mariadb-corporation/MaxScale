@@ -15,10 +15,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int i;
 
-    Test->tprintf("Connecting to Maxscale %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to Maxscale %s\n", Test->maxscales->IP[0]);
 
     Test->tprintf("Connecting to Maxscale %s to check its behaviour in case of blocking all backends\n",
-                  Test->maxscale_IP);
+                  Test->maxscales->IP[0]);
     Test->connect_maxscale();
 
     for (i = 0; i < Test->repl->N; i++)

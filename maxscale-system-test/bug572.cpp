@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
 
     Test->tprintf("Trying GRANT for with bad IP: RWSplit\n");
-    create_drop_bad_user(Test->conn_rwsplit, Test);
+    create_drop_bad_user(Test->maxscales->conn_rwsplit[0], Test);
 
     Test->tprintf("Trying SELECT to check if Maxscale hangs\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "select * from mysql.user");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select * from mysql.user");
 
     int rval = Test->global_result;
     delete Test;

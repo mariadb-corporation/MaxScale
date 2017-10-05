@@ -32,15 +32,15 @@ int main(int argc, char *argv[])
 
     Test->connect_maxscale();
 
-    if (mysql_errno(Test->conn_rwsplit) == 0)
+    if (mysql_errno(Test->maxscales->conn_rwsplit[0]) == 0)
     {
         Test->add_result(1, "RWSplit services should fail, but it is started\n");
     }
 
     Test->tprintf("Trying query to ReadConn master\n");
-    Test->try_query(Test->conn_master, "show processlist;");
+    Test->try_query(Test->maxscales->conn_master[0], "show processlist;");
     Test->tprintf("Trying query to ReadConn slave\n");
-    Test->try_query(Test->conn_slave, "show processlist;");
+    Test->try_query(Test->maxscales->conn_slave[0], "show processlist;");
 
     Test->close_maxscale_connections();
 

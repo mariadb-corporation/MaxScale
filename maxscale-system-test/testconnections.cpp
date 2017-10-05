@@ -39,17 +39,15 @@ void TestConnections::require_galera_version(const char *version)
 }
 
 TestConnections::TestConnections(int argc, char *argv[]):
-    no_backend_log_copy(false), use_snapshots(false), verbose(false), rwsplit_port(4006),
-    readconn_master_port(4008), readconn_slave_port(4009), binlog_port(5306),
+    no_backend_log_copy(false), use_snapshots(false), verbose(false),
     global_result(0), binlog_cmd_option(0), enable_timeouts(true), use_ipv6(false),
     no_galera(false), binlog_master_gtid(false), binlog_slave_gtid(false),
     no_vm_revert(true)
 {
     chdir(test_dir);
     gettimeofday(&start_time, NULL);
-    ports[0] = rwsplit_port;
-    ports[1] = readconn_master_port;
-    ports[2] = readconn_slave_port;
+
+
 
     read_env();
 
@@ -172,7 +170,9 @@ TestConnections::TestConnections(int argc, char *argv[]):
     }
 
     repl->use_ipv6 = use_ipv6;
+    maxscales->use_ipv6 = use_ipv6;
 
+    maxscales = new Maxscales("maxscale", test_dir, verbose);
 
     if (maxscale::required_repl_version.length())
     {
@@ -325,52 +325,6 @@ int TestConnections::read_env()
         printf("Reading test setup configuration from environmental variables\n");
     }
 
-    env = getenv("maxscale_IP");
-    if (env != NULL)
-    {
-        sprintf(maxscale_IP, "%s", env);
-    }
-    env = getenv("maxscale_network6");
-    if (env != NULL)
-    {
-        sprintf(maxscale_IP6, "%s", env);
-    }
-    env = getenv("maxscale_user");
-    if (env != NULL)
-    {
-        sprintf(maxscale_user, "%s", env);
-    }
-    else
-    {
-        sprintf(maxscale_user, "skysql");
-    }
-    env = getenv("maxscale_password");
-    if (env != NULL)
-    {
-        sprintf(maxscale_password, "%s", env);
-    }
-    else
-    {
-        sprintf(maxscale_password, "skysql");
-    }
-    env = getenv("maxadmin_password");
-    if (env != NULL)
-    {
-        sprintf(maxadmin_password, "%s", env);
-    }
-    else
-    {
-        sprintf(maxadmin_password, "mariadb");
-    }
-    env = getenv("maxscale_keyfile");
-    if (env != NULL)
-    {
-        sprintf(maxscale_keyfile, "%s", env);
-    }
-    else
-    {
-        sprintf(maxscale_keyfile, "skysql");
-    }
 
     //env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
 
@@ -380,44 +334,8 @@ int TestConnections::read_env()
         sprintf(sysbench_dir, "%s", env);
     }
 
-    env = getenv("maxscale_cnf");
-    if (env != NULL)
-    {
-        sprintf(maxscale_cnf, "%s", env);
-    }
-    else
-    {
-        sprintf(maxscale_cnf, "/etc/maxscale.cnf");
-    }
-    env = getenv("maxscale_log_dir");
-    if (env != NULL)
-    {
-        sprintf(maxscale_log_dir, "%s", env);
-    }
-    else
-    {
-        sprintf(maxscale_log_dir, "/var/log/maxscale/");
-    }
-    env = getenv("maxscale_binlog_dir");
-    if (env != NULL)
-    {
-        sprintf(maxscale_binlog_dir, "%s", env);
-    }
-    else
-    {
-        sprintf(maxscale_binlog_dir, "/var/lib/maxscale/Binlog_Service/");
-    }
     //env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
-    env = getenv("maxscale_whoami");
-    if (env != NULL)
-    {
-        sprintf(maxscale_access_user, "%s", env);
-    }
-    env = getenv("maxscale_access_sudo");
-    if (env != NULL)
-    {
-        sprintf(maxscale_access_sudo, "%s", env);
-    }
+
     ssl = false;
     env = getenv("ssl");
     if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
@@ -446,16 +364,6 @@ int TestConnections::read_env()
         use_ipv6 = true;
     }
 
-    env = getenv("maxscale_hostname");
-    if (env != NULL)
-    {
-        sprintf(maxscale_hostname, "%s", env);
-    }
-    else
-    {
-        sprintf(maxscale_hostname, "%s", maxscale_IP);
-    }
-
     env = getenv("backend_ssl");
     if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
     {
@@ -466,14 +374,6 @@ int TestConnections::read_env()
         backend_ssl = false;
     }
 
-    if (strcmp(maxscale_access_user, "root") == 0)
-    {
-        sprintf(maxscale_access_homedir, "/%s/", maxscale_access_user);
-    }
-    else
-    {
-        sprintf(maxscale_access_homedir, "/home/%s/", maxscale_access_user);
-    }
 
     env = getenv("smoke");
     if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
@@ -538,12 +438,12 @@ int TestConnections::read_env()
 int TestConnections::print_env()
 {
     int  i;
-    printf("Maxscale IP\t%s\n", maxscale_IP);
-    printf("Maxscale User name\t%s\n", maxscale_user);
-    printf("Maxscale Password\t%s\n", maxscale_password);
-    printf("Maxscale SSH key\t%s\n", maxscale_keyfile);
-    printf("Maxadmin password\t%s\n", maxadmin_password);
-    printf("Access user\t%s\n", maxscale_access_user);
+    printf("Maxscale IP\t%s\n", maxscales->IP[0]);
+    printf("Maxscale User name\t%s\n", maxscales->user_name);
+    printf("Maxscale Password\t%s\n", maxscales->password);
+    printf("Maxscale SSH key\t%s\n", maxscales->sshkey[0]);
+    printf("Maxadmin password\t%s\n", maxscales->maxadmin_password[0]);
+    printf("Access user\t%s\n", maxscales->access_user[0]);
     repl->print_env();
     galera->print_env();
 }
@@ -620,10 +520,10 @@ void TestConnections::process_template(const char *template_name, const char *de
         mdn[j]->close_connections();
     }
 
-    sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscale_access_user);
+    sprintf(str, "sed -i \"s/###access_user###/%s/g\" maxscale.cnf", maxscales->access_user[0]);
     system(str);
 
-    sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscale_access_homedir);
+    sprintf(str, "sed -i \"s|###access_homedir###|%s|g\" maxscale.cnf", maxscales->access_homedir[0]);
     system(str);
 
     if (repl->v51)
@@ -638,15 +538,15 @@ int TestConnections::init_maxscale()
     const char * template_name = get_template_name(test_name);
     tprintf("Template is %s\n", template_name);
 
-    process_template(template_name, maxscale_access_homedir);
+    process_template(template_name, maxscales->access_homedir[0]);
 
-    ssh_maxscale(true, "cp maxscale.cnf %s;rm -rf %s/certs;mkdir -m a+wrx %s/certs;", maxscale_cnf,
-                 maxscale_access_homedir, maxscale_access_homedir);
+    ssh_maxscale(true, "cp maxscale.cnf %s;rm -rf %s/certs;mkdir -m a+wrx %s/certs;", maxscales->maxscale_cnf[0],
+                 maxscales->access_homedir[0], maxscales->access_homedir[0]);
 
     char str[4096];
     char dtr[4096];
     sprintf(str, "%s/ssl-cert/*", test_dir);
-    sprintf(dtr, "%s/certs/", maxscale_access_homedir);
+    sprintf(dtr, "%s/certs/", maxscales->access_homedir[0]);
     copy_to_maxscale(str, dtr);
     sprintf(str, "cp %s/ssl-cert/* .", test_dir);
     system(str);
@@ -659,9 +559,10 @@ int TestConnections::init_maxscale()
                  "rm -f %s/maxscale.log %s/maxscale1.log;"
                  "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
                  "%s",
-                 maxscale_access_homedir, maxscale_access_homedir, maxscale_access_homedir,
+                 maxscales->access_homedir[0], maxscales->access_homedir[0], maxscales->access_homedir[0],
                  maxscale::start ? "killall -9 maxscale;" : "",
-                 maxscale_log_dir, maxscale_log_dir, maxscale::start ? "service maxscale restart" : "");
+                 maxscales->maxscale_log_dir[0], maxscales->maxscale_log_dir[0],
+                 maxscale::start ? "service maxscale restart" : "");
 
     fflush(stdout);
 
@@ -694,9 +595,9 @@ int TestConnections::connect_maxscale()
 
 int TestConnections::close_maxscale_connections()
 {
-    mysql_close(conn_master);
-    mysql_close(conn_slave);
-    mysql_close(conn_rwsplit);
+    mysql_close(maxscales->conn_master[0]);
+    mysql_close(maxscales->conn_slave[0]);
+    mysql_close(maxscales->conn_rwsplit[0]);
 }
 
 int TestConnections::restart_maxscale()
@@ -819,21 +720,21 @@ int TestConnections::prepare_binlog()
     {
         add_result(ssh_maxscale(true,
                                 "sed -i \"s/,mariadb10-compatibility=1//\" %s",
-                                maxscale_cnf), "Error editing maxscale.cnf");
+                                maxscales->maxscale_cnf[0]), "Error editing maxscale.cnf");
     }
 
     tprintf("Removing all binlog data from Maxscale node");
-    add_result(ssh_maxscale(true, "rm -rf %s", maxscale_binlog_dir),
+    add_result(ssh_maxscale(true, "rm -rf %s", maxscales->maxscale_binlog_dir[0]),
                "Removing binlog data failed");
 
     tprintf("Creating binlog dir");
-    add_result(ssh_maxscale(true, "mkdir -p %s", maxscale_binlog_dir),
+    add_result(ssh_maxscale(true, "mkdir -p %s", maxscales->maxscale_binlog_dir[0]),
                "Creating binlog data dir failed");
     tprintf("Set 'maxscale' as a owner of binlog dir");
     add_result(ssh_maxscale(false,
                             "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
-                            maxscale_access_sudo, maxscale_binlog_dir,
-                            maxscale_access_sudo, maxscale_binlog_dir),
+                            maxscales->access_sudo[0], maxscales->maxscale_binlog_dir[0],
+                            maxscales->access_sudo[0], maxscales->maxscale_binlog_dir[0]),
                "directory ownership change failed");
     return 0;
 }
@@ -866,7 +767,7 @@ int TestConnections::start_binlog()
 
     repl->stop_nodes();
 
-    binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+    binlog = open_conn_no_db(maxscales->binlog_port[0], maxscales->IP[0], repl->user_name, repl->password, ssl);
     execute_query(binlog, (char *) "stop slave");
     execute_query(binlog, (char *) "reset slave all");
     execute_query(binlog, (char *) "reset master");
@@ -897,7 +798,7 @@ int TestConnections::start_binlog()
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
 
     tprintf("ls binlog data dir on Maxscale node\n");
-    add_result(ssh_maxscale(true, "ls -la %s/", maxscale_binlog_dir), "ls failed\n");
+    add_result(ssh_maxscale(true, "ls -la %s/", maxscales->maxscale_binlog_dir[0]), "ls failed\n");
 
     if (binlog_master_gtid)
     {
@@ -905,7 +806,8 @@ int TestConnections::start_binlog()
         tprintf("GTID for connection 1st slave to master!\n");
         try_query(repl->nodes[1], (char *) "stop slave");
         try_query(repl->nodes[1], (char *) "SET @@global.gtid_slave_pos=''");
-        sprintf(sys1, "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
+        sprintf(sys1,
+                "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
                 repl->IP[0], repl->port[0]);
         try_query(repl->nodes[1], sys1);
         try_query(repl->nodes[1], (char *) "start slave");
@@ -930,7 +832,7 @@ int TestConnections::start_binlog()
     add_result(start_maxscale(), "Maxscale start failed\n");
 
     tprintf("Connecting to MaxScale binlog router (with any DB)\n");
-    binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+    binlog = open_conn_no_db(maxscales->binlog_port[0], maxscales->IP[0], repl->user_name, repl->password, ssl);
 
     add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
@@ -940,7 +842,8 @@ int TestConnections::start_binlog()
         tprintf("GTID for connection binlog router to master!\n");
         try_query(binlog, (char *) "stop slave");
         try_query(binlog, (char *) "SET @@global.gtid_slave_pos=''");
-        sprintf(sys1, "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
+        sprintf(sys1,
+                "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
                 repl->IP[0], repl->port[0]);
         try_query(binlog, sys1);
     }
@@ -957,7 +860,7 @@ int TestConnections::start_binlog()
     {
         sprintf(sys1,
                 "CHANGE MASTER TO master_ssl_cert='%s/certs/client-cert.pem', master_ssl_ca='%s/certs/ca.pem', master_ssl=1, master_ssl_key='%s/certs/client-key.pem'",
-                maxscale_access_homedir, maxscale_access_homedir, maxscale_access_homedir);
+                maxscales->access_homedir[0], maxscales->access_homedir[0], maxscales->access_homedir[0]);
         tprintf("Configuring Master ssl: %s\n", sys1);
         try_query(binlog, sys1);
     }
@@ -973,8 +876,9 @@ int TestConnections::start_binlog()
         {
             try_query(repl->nodes[i], (char *) "stop slave");
             try_query(repl->nodes[i], (char *) "SET @@global.gtid_slave_pos=''");
-            sprintf(sys1, "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
-                    maxscale_IP, binlog_port);
+            sprintf(sys1,
+                    "CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='repl', MASTER_PASSWORD='repl', MASTER_USE_GTID=Slave_pos",
+                    maxscales->IP[0], maxscales->binlog_port[0]);
             try_query(repl->nodes[i], sys1);
             try_query(repl->nodes[i], (char *) "start slave");
         }
@@ -999,7 +903,7 @@ int TestConnections::start_binlog()
         for (i = 2; i < repl->N; i++)
         {
             try_query(repl->nodes[i], (char *) "stop slave");
-            repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
+            repl->set_slave(repl->nodes[i],  maxscales->IP[0], maxscales->binlog_port[0], log_file, log_pos);
         }
     }
 
@@ -1015,7 +919,8 @@ bool TestConnections::replicate_from_master()
     bool rval = true;
 
     /** Stop the binlogrouter */
-    MYSQL* conn = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+    MYSQL* conn = open_conn_no_db(maxscales->binlog_port[0], maxscales->IP[0], repl->user_name, repl->password,
+                                  ssl);
 
     if (execute_query(conn, "stop slave"))
     {
@@ -1036,7 +941,7 @@ bool TestConnections::replicate_from_master()
     repl->connect();
     execute_query(repl->nodes[0], "RESET MASTER");
 
-    conn = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+    conn = open_conn_no_db(maxscales->binlog_port[0], maxscales->IP[0], repl->user_name, repl->password, ssl);
 
     if (find_field(repl->nodes[0], "show master status", "File", log_file) ||
         repl->set_slave(conn, repl->IP[0], repl->port[0], log_file, log_pos) ||
@@ -1107,7 +1012,7 @@ void TestConnections::check_log_err(const char * err_msg, bool expected)
     tprintf("Getting logs\n");
     char sys1[4096];
     set_timeout(100);
-    sprintf(&sys1[0], "rm -f *.log; %s %s", get_logs_command, maxscale_IP);
+    sprintf(&sys1[0], "rm -f *.log; %s %s", get_logs_command, maxscales->IP[0]);
     //tprintf("Executing: %s\n", sys1);
     system(sys1);
     set_timeout(50);
@@ -1160,7 +1065,7 @@ int TestConnections::find_connected_slave(int * global_result)
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscale_ip(), maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(0), maxscales->hostname[0], (char *) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         if ((i == 0) && (conn_num != 1))
         {
@@ -1191,7 +1096,7 @@ int TestConnections::find_connected_slave1()
     repl->connect();
     for (int i = 0; i < repl->N; i++)
     {
-        conn_num = get_conn_num(repl->nodes[i], maxscale_ip(), maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(repl->nodes[i], maxscales->ip(0), maxscales->hostname[0], (char *) "test");
         tprintf("connections to %d: %u\n", i, conn_num);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0))
@@ -1240,13 +1145,13 @@ int TestConnections::check_maxscale_alive()
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
     set_timeout(10);
-    try_query(conn_rwsplit, (char *) "show databases;");
+    try_query(maxscales->conn_rwsplit[0], (char *) "show databases;");
     tprintf("ReadConn Master \n");
     set_timeout(10);
-    try_query(conn_master, (char *) "show databases;");
+    try_query(maxscales->conn_master[0], (char *) "show databases;");
     tprintf("ReadConn Slave \n");
     set_timeout(10);
-    try_query(conn_slave, (char *) "show databases;");
+    try_query(maxscales->conn_slave[0], (char *) "show databases;");
     set_timeout(10);
     close_maxscale_connections()    ;
     add_result(global_result - gr, "Maxscale is not alive\n");
@@ -1263,7 +1168,7 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     int rc;
 
     tprintf("Testing RWSplit, expecting %s\n", (rw_split ? "success" : "failure"));
-    rc = execute_query(conn_rwsplit, "select 1");
+    rc = execute_query(maxscales->conn_rwsplit[0], "select 1");
     if ((rc == 0) != rw_split)
     {
         tprintf("Error: Query %s\n", (rw_split ? "failed" : "succeeded"));
@@ -1271,7 +1176,7 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     }
 
     tprintf("Testing ReadConnRoute Master, expecting %s\n", (rc_master ? "success" : "failure"));
-    rc = execute_query(conn_master, "select 1");
+    rc = execute_query(maxscales->conn_master[0], "select 1");
     if ((rc == 0) != rc_master)
     {
         tprintf("Error: Query %s", (rc_master ? "failed" : "succeeded"));
@@ -1279,7 +1184,7 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     }
 
     tprintf("Testing ReadConnRoute Slave, expecting %s\n", (rc_slave ? "success" : "failure"));
-    rc = execute_query(conn_slave, "select 1");
+    rc = execute_query(maxscales->conn_slave[0], "select 1");
     if ((rc == 0) != rc_slave)
     {
         tprintf("Error: Query %s", (rc_slave ? "failed" : "succeeded"));
@@ -1290,13 +1195,13 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
 
 void TestConnections::generate_ssh_cmd(char * cmd, char * ssh, bool sudo)
 {
-    if (strcmp(maxscale_IP, "127.0.0.1") == 0)
+    if (strcmp(maxscales->IP[0], "127.0.0.1") == 0)
     {
         if (sudo)
         {
             sprintf(cmd,
                     "%s %s",
-                    maxscale_access_sudo, ssh);
+                    maxscales->access_sudo[0], ssh);
         }
         else
         {
@@ -1312,13 +1217,13 @@ void TestConnections::generate_ssh_cmd(char * cmd, char * ssh, bool sudo)
         {
             sprintf(cmd,
                     "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s '%s %s'",
-                    maxscale_keyfile, maxscale_access_user, maxscale_IP, maxscale_access_sudo, ssh);
+                    maxscales->sshkey[0], maxscales->access_user[0], maxscales->IP[0], maxscales->access_sudo[0], ssh);
         }
         else
         {
             sprintf(cmd,
                     "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s '%s\'",
-                    maxscale_keyfile, maxscale_access_user, maxscale_IP, ssh);
+                    maxscales->sshkey[0], maxscales->access_user[0], maxscales->IP[0], ssh);
         }
     }
 }
@@ -1391,7 +1296,7 @@ int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
 
     char *cmd = (char*)malloc(message_len + 1024);
 
-    if (strcmp(maxscale_IP, "127.0.0.1") == 0)
+    if (strcmp(maxscales->IP[0], "127.0.0.1") == 0)
     {
         tprintf("starting bash\n");
         sprintf(cmd, "bash");
@@ -1400,7 +1305,7 @@ int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
     {
         sprintf(cmd,
                 "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s%s",
-                maxscale_keyfile, maxscale_access_user, maxscale_IP, verbose ? "" :  " > /dev/null");
+                maxscales->sshkey[0], maxscales->access_user[0], maxscales->IP[0], verbose ? "" :  " > /dev/null");
     }
     int rc = 1;
     FILE *in = popen(cmd, "w");
@@ -1410,7 +1315,7 @@ int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
         if (sudo)
         {
             fprintf(in, "sudo su -\n");
-            fprintf(in, "cd /home/%s\n", maxscale_access_user);
+            fprintf(in, "cd /home/%s\n", maxscales->access_user[0]);
         }
 
         fprintf(in, "%s\n", sys);
@@ -1425,7 +1330,7 @@ int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
 int TestConnections::copy_to_maxscale(const char* src, const char* dest)
 {
     char sys[strlen(src) + strlen(dest) + 1024];
-    if (strcmp(maxscale_IP, "127.0.0.1") == 0)
+    if (strcmp(maxscales->IP[0], "127.0.0.1") == 0)
     {
         sprintf(sys, "cp %s %s",
                 src, dest);
@@ -1434,8 +1339,8 @@ int TestConnections::copy_to_maxscale(const char* src, const char* dest)
     {
 
         sprintf(sys, "scp -q -i %s -o UserKnownHostsFile=/dev/null "
-                     "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
-                maxscale_keyfile, src, maxscale_access_user, maxscale_IP, dest);
+                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
+                maxscales->sshkey[0], src, maxscales->access_user[0], maxscales->IP[0], dest);
     }
     return system(sys);
 }
@@ -1444,7 +1349,7 @@ int TestConnections::copy_to_maxscale(const char* src, const char* dest)
 int TestConnections::copy_from_maxscale(char* src, char* dest)
 {
     char sys[strlen(src) + strlen(dest) + 1024];
-    if (strcmp(maxscale_IP, "127.0.0.1") == 0)
+    if (strcmp(maxscales->IP[0], "127.0.0.1") == 0)
     {
         sprintf(sys, "cp %s %s",
                 src, dest);
@@ -1452,8 +1357,8 @@ int TestConnections::copy_from_maxscale(char* src, char* dest)
     else
     {
         sprintf(sys, "scp -i %s -o UserKnownHostsFile=/dev/null "
-                     "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
-                maxscale_keyfile, maxscale_access_user, maxscale_IP, src, dest);
+                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
+                maxscales->sshkey[0], maxscales->access_user[0], maxscales->IP[0], src, dest);
     }
     return system(sys);
 }
@@ -1528,7 +1433,7 @@ int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool mast
                 printf("Galera \n");
             }
 
-            galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
+            galera_conn[i] = open_conn(4016, maxscales->IP[0], maxscales->user_name, maxscales->password, ssl);
             if ( mysql_errno(galera_conn[i]) != 0)
             {
                 local_result++;
@@ -1619,13 +1524,15 @@ int TestConnections::get_client_ip(char * ip)
     unsigned int conn_num = 0;
 
     connect_rwsplit();
-    if (execute_query(conn_rwsplit, (char *) "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0 )
+    if (execute_query(maxscales->conn_rwsplit[0],
+                      (char *) "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0 )
     {
         return ret;
     }
     close_rwsplit();
-    conn = open_conn_db(rwsplit_port, maxscale_IP, (char *) "db_to_check_client_ip", maxscale_user,
-                        maxscale_password, ssl);
+    conn = open_conn_db(maxscales->rwsplit_port[0], maxscales->IP[0], (char *) "db_to_check_client_ip",
+                        maxscales->user_name,
+                        maxscales->password, ssl);
 
     if (conn != NULL)
     {
@@ -1662,7 +1569,7 @@ int TestConnections::get_client_ip(char * ip)
             }
             mysql_free_result(res);
         }
-        execute_query(conn_rwsplit, "DROP DATABASE db_to_check_client_ip");
+        execute_query(maxscales->conn_rwsplit[0], "DROP DATABASE db_to_check_client_ip");
     }
 
     mysql_close(conn);
@@ -1760,25 +1667,25 @@ int TestConnections::insert_select(int N)
 
     tprintf("Create t1\n");
     set_timeout(30);
-    create_t1(conn_rwsplit);
+    create_t1(maxscales->conn_rwsplit[0]);
 
     tprintf("Insert data into t1\n");
     set_timeout(N * 16 + 30);
-    insert_into_t1(conn_rwsplit, N);
+    insert_into_t1(maxscales->conn_rwsplit[0], N);
     stop_timeout();
     repl->sync_slaves();
 
     tprintf("SELECT: rwsplitter\n");
     set_timeout(30);
-    result += select_from_t1(conn_rwsplit, N);
+    result += select_from_t1(maxscales->conn_rwsplit[0], N);
 
     tprintf("SELECT: master\n");
     set_timeout(30);
-    result += select_from_t1(conn_master, N);
+    result += select_from_t1(maxscales->conn_master[0], N);
 
     tprintf("SELECT: slave\n");
     set_timeout(30);
-    result += select_from_t1(conn_slave, N);
+    result += select_from_t1(maxscales->conn_slave[0], N);
 
     return result;
 }
@@ -1791,11 +1698,11 @@ int TestConnections::use_db(char * db)
     sprintf(sql, "USE %s;", db);
     set_timeout(20);
     tprintf("selecting DB '%s' for rwsplit\n", db);
-    local_result += execute_query(conn_rwsplit, sql);
+    local_result += execute_query(maxscales->conn_rwsplit[0], sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
-    local_result += execute_query(conn_slave, sql);
+    local_result += execute_query(maxscales->conn_slave[0], sql);
     tprintf("selecting DB '%s' for readconn slave\n", db);
-    local_result += execute_query(conn_master, sql);
+    local_result += execute_query(maxscales->conn_master[0], sql);
     for (int i = 0; i < repl->N; i++)
     {
         tprintf("selecting DB '%s' for direct connection to node %d\n", db, i);
@@ -1816,7 +1723,7 @@ int TestConnections::check_t1_table(bool presence, char * db)
 
     tprintf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
     set_timeout(30);
-    int exists = check_if_t1_exists(conn_rwsplit);
+    int exists = check_if_t1_exists(maxscales->conn_rwsplit[0]);
 
     if (exists == presence)
     {
@@ -1828,7 +1735,7 @@ int TestConnections::check_t1_table(bool presence, char * db)
     }
 
     set_timeout(30);
-    exists = check_if_t1_exists(conn_master);
+    exists = check_if_t1_exists(maxscales->conn_master[0]);
 
     if (exists == presence)
     {
@@ -1841,7 +1748,7 @@ int TestConnections::check_t1_table(bool presence, char * db)
     }
 
     set_timeout(30);
-    exists = check_if_t1_exists(conn_slave);
+    exists = check_if_t1_exists(maxscales->conn_slave[0]);
 
     if (exists == presence)
     {
@@ -1888,15 +1795,16 @@ int TestConnections::try_query(MYSQL *conn, const char *format, ...)
     va_end(valist);
 
     int res = execute_query1(conn, sql, false);
-    add_result(res, "Query '%.*s%s' failed!\n", message_len < 100 ? message_len : 100, sql, message_len < 100 ? "" : "...");
+    add_result(res, "Query '%.*s%s' failed!\n", message_len < 100 ? message_len : 100, sql,
+               message_len < 100 ? "" : "...");
     return res;
 }
 
 int TestConnections::try_query_all(const char *sql)
 {
-    return try_query(conn_rwsplit, sql) +
-           try_query(conn_master, sql) +
-           try_query(conn_slave, sql);
+    return try_query(maxscales->conn_rwsplit[0], sql) +
+           try_query(maxscales->conn_master[0], sql) +
+           try_query(maxscales->conn_slave[0], sql);
 }
 
 int TestConnections::find_master_maxadmin(Mariadb_nodes * nodes)
@@ -2116,22 +2024,24 @@ int TestConnections::connect_rwsplit()
 {
     if (use_ipv6)
     {
-        conn_rwsplit = open_conn(rwsplit_port, maxscale_IP6, maxscale_user, maxscale_password, ssl);
+        maxscales->conn_rwsplit[0] = open_conn(maxscales->rwsplit_port[0], maxscales->IP6[0], maxscales->user_name,
+                                               maxscales->password, ssl);
     }
     else
     {
-        conn_rwsplit = open_conn(rwsplit_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
+        maxscales->conn_rwsplit[0] = open_conn(maxscales->rwsplit_port[0], maxscales->IP[0], maxscales->user_name,
+                                               maxscales->password, ssl);
     }
-    routers[0] = conn_rwsplit;
+    maxscales->routers[0][0] = maxscales->conn_rwsplit[0];
 
     int rc = 0;
-    int my_errno = mysql_errno(conn_rwsplit);
+    int my_errno = mysql_errno(maxscales->conn_rwsplit[0]);
 
     if (my_errno)
     {
         if (verbose)
         {
-            tprintf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(conn_rwsplit));
+            tprintf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(maxscales->conn_rwsplit[0]));
         }
         rc = my_errno;
     }
@@ -2143,22 +2053,24 @@ int TestConnections::connect_readconn_master()
 {
     if (use_ipv6)
     {
-        conn_master = open_conn(readconn_master_port, maxscale_IP6, maxscale_user, maxscale_password, ssl);
+        maxscales->conn_master[0] = open_conn(maxscales->readconn_master_port[0], maxscales->IP6[0],
+                                              maxscales->user_name, maxscales->password, ssl);
     }
     else
     {
-        conn_master = open_conn(readconn_master_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
+        maxscales->conn_master[0] = open_conn(maxscales->readconn_master_port[0], maxscales->IP[0],
+                                              maxscales->user_name, maxscales->password, ssl);
     }
-    routers[1] = conn_master;
+    maxscales->routers[0][1] = maxscales->conn_master[0];
 
     int rc = 0;
-    int my_errno = mysql_errno(conn_master);
+    int my_errno = mysql_errno(maxscales->conn_master[0]);
 
     if (my_errno)
     {
         if (verbose)
         {
-            tprintf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(conn_master));
+            tprintf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(maxscales->conn_master[0]));
         }
         rc = my_errno;
     }
@@ -2170,22 +2082,24 @@ int TestConnections::connect_readconn_slave()
 {
     if (use_ipv6)
     {
-        conn_slave = open_conn(readconn_slave_port, maxscale_IP6, maxscale_user, maxscale_password, ssl);
+        maxscales->conn_slave[0] = open_conn(maxscales->readconn_slave_port[0], maxscales->IP6[0],
+                                             maxscales->user_name, maxscales->password, ssl);
     }
     else
     {
-        conn_slave = open_conn(readconn_slave_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
+        maxscales->conn_slave[0] = open_conn(maxscales->readconn_slave_port[0], maxscales->IP[0],
+                                             maxscales->user_name, maxscales->password, ssl);
     }
-    routers[2] = conn_slave;
+    maxscales->routers[0][2] = maxscales->conn_slave[0];
 
     int rc = 0;
-    int my_errno = mysql_errno(conn_slave);
+    int my_errno = mysql_errno(maxscales->conn_slave[0]);
 
     if (my_errno)
     {
         if (verbose)
         {
-            tprintf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(conn_slave));
+            tprintf("Failed to connect to readwritesplit: %d, %s", my_errno, mysql_error(maxscales->conn_slave[0]));
         }
         rc = my_errno;
     }
@@ -2193,7 +2107,3 @@ int TestConnections::connect_readconn_slave()
     return rc;
 }
 
-char* TestConnections::maxscale_ip() const
-{
-    return use_ipv6 ?  (char*)maxscale_IP6 : (char*)maxscale_IP;
-}

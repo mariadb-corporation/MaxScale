@@ -30,7 +30,7 @@ int check_connnections_only_to_master(TestConnections * Test, int master)
     printf("Checking number of connections to each node\n");
     for (int i = 0; i < Test->repl->N; i++)
     {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_ip(), Test->maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscales->ip(0), Test->maxscales->hostname[0], (char *) "test");
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if (((i == master) && (conn_num != 1)) || ((i != master) && (conn_num != 0)))
         {

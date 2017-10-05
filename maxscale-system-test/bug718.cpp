@@ -53,11 +53,11 @@ int main(int argc, char *argv[])
         iret1[i] = pthread_create(&thread_v1[i], NULL, thread1, NULL);
     }
 
-    create_t1(Test->conn_rwsplit);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
     for (i = 0; i < iterations; i++)
     {
         Test->set_timeout(200);
-        insert_into_t1(Test->conn_rwsplit, 4);
+        insert_into_t1(Test->maxscales->conn_rwsplit[0], 4);
         printf("i=%d\n", i);
     }
     Test->set_timeout(300);
@@ -76,9 +76,9 @@ int main(int argc, char *argv[])
 
 void *thread1( void *ptr )
 {
-    MYSQL * conn = open_conn(Test->rwsplit_port , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password,
+    MYSQL * conn = open_conn(Test->maxscales->rwsplit_port[0] , Test->maxscales->IP[0], Test->maxscales->user_name, Test->maxscales->password,
                              Test->ssl);
-    MYSQL * g_conn = open_conn(4016 , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
+    MYSQL * g_conn = open_conn(4016 , Test->maxscales->IP[0], Test->maxscales->user_name, Test->maxscales->password, Test->ssl);
     char sql[1034];
 
     sprintf(sql, "CREATE DATABASE IF NOT EXISTS test%d;", db1_num);

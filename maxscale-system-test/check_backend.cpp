@@ -14,12 +14,12 @@ int main(int argc, char *argv[])
     sleep(5);*/
     Test->set_timeout(10);
 
-    Test->tprintf("Connecting to Maxscale routers with Master/Slave backend\n");
+    Test->tprintf("Connecting to Maxscale maxscales->routers[0] with Master/Slave backend\n");
     Test->connect_maxscale();
     Test->tprintf("Testing connections\n");
     Test->add_result(Test->test_maxscale_connections(true, true, true), "Can't connect to backend\n");
     Test->tprintf("Connecting to Maxscale router with Galera backend\n");
-    MYSQL * g_conn = open_conn(4016 , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
+    MYSQL * g_conn = open_conn(4016 , Test->maxscales->IP[0], Test->maxscales->user_name, Test->maxscales->password, Test->ssl);
     if (g_conn != NULL )
     {
         Test->tprintf("Testing connection\n");

@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
         fprintf(f, "%s node_%03d.maxscale.test\n", Test->repl->IP[i], i);
         fprintf(f, "%s node_%03d\n", Test->repl->IP[i], i);
     }
-    fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscale_IP);
-    fprintf(f, "%s maxscale\n", Test->maxscale_IP);
+    fprintf(f, "%s maxscale.maxscale.test\n", Test->maxscales->IP[0]);
+    fprintf(f, "%s maxscale\n", Test->maxscales->IP[0]);
     fclose(f);
 
     Test->tprintf("Copying 'hosts' and krb5.conf files to all nodes, installing kerberos client and MariaDB plugins\n");
@@ -51,10 +51,10 @@ int main(int argc, char *argv[])
     Test->tprintf("Copying 'hosts' and krb5.conf files to Maxscale node\n");
 
     Test->copy_to_maxscale((char *) "hosts", (char *) "~/");
-    Test->ssh_maxscale(true,  (char *) "cp %s/hosts /etc/", Test->maxscale_access_homedir);
+    Test->ssh_maxscale(true,  (char *) "cp %s/hosts /etc/", Test->maxscales->access_homedir[0]);
 
     Test->copy_to_maxscale(str, (char *) "~/");
-    Test->ssh_maxscale(true,  (char *) "cp %s/krb5.conf /etc/", Test->maxscale_access_homedir);
+    Test->ssh_maxscale(true,  (char *) "cp %s/krb5.conf /etc/", Test->maxscales->access_homedir[0]);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
     Test->ssh_maxscale(true, (char *) "yum clean all");

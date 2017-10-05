@@ -33,8 +33,8 @@ int check_conf(TestConnections* Test, int blocked_node)
 
     Test->repl->connect();
     Test->connect_rwsplit();
-    create_t1(Test->conn_rwsplit);
-    global_result += insert_into_t1(Test->conn_rwsplit, 4);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
+    global_result += insert_into_t1(Test->maxscales->conn_rwsplit[0], 4);
 
     printf("Sleeping to let replication happen\n");
     fflush(stdout);
@@ -53,11 +53,11 @@ int check_conf(TestConnections* Test, int blocked_node)
     Test->set_timeout(100);
     printf("Checking data from rwsplit\n");
     fflush(stdout);
-    global_result += select_from_t1(Test->conn_rwsplit, 4);
-    global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
+    global_result += select_from_t1(Test->maxscales->conn_rwsplit[0], 4);
+    global_result += execute_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE t1");
 
     Test->repl->close_connections();
-    mysql_close(Test->conn_rwsplit);
+    mysql_close(Test->maxscales->conn_rwsplit[0]);
 
     Test->stop_timeout();
     return global_result;

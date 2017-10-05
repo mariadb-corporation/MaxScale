@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     char str[1024];
 
-    sprintf(str, "php %s/bug729.php %s %d %s %s", test_dir, Test->maxscale_IP, Test->rwsplit_port,
-            Test->maxscale_user, Test->maxscale_password);
+    sprintf(str, "php %s/bug729.php %s %d %s %s", test_dir, Test->maxscales->IP[0], Test->maxscales->rwsplit_port[0],
+            Test->maxscales->user_name, Test->maxscales->password);
 
     Test->tprintf("Executing PHP script: %s\n", str);
     Test->add_result(system(str), "PHP script FAILED!\n");

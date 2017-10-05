@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     Test->add_result(res_d, "num of conn is not 0");
 
     Test->connect_rwsplit();
-    Test->try_query(Test->conn_rwsplit, (char *) "select 1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select 1");
     Test->close_rwsplit();
 
     Test->stop_timeout();

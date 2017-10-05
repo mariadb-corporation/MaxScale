@@ -31,8 +31,8 @@ int main(int argc, char *argv[])
     test.set_timeout(30);
 
     test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "USE test");
-    test.try_query(test.conn_rwsplit, "show processlist;");
+    test.try_query(test.maxscales->conn_rwsplit[0], "USE test");
+    test.try_query(test.maxscales->conn_rwsplit[0], "show processlist;");
     test.close_maxscale_connections();
 
     test.stop_timeout();

@@ -28,10 +28,10 @@ int main(int argc, char *argv[])
         Test->repl->ssh_node(i, (char *) "touch /tmp/t1.csv", true);
     }
 
-    Test->add_result(create_t1(Test->conn_rwsplit), "Error creating t1\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES (0, 0), (1, 0)");
+    Test->add_result(create_t1(Test->maxscales->conn_rwsplit[0]), "Error creating t1\n");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "INSERT INTO t1 (x1, fl) VALUES (0, 0), (1, 0)");
 
-    if ( (execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;")) == 0 )
+    if ( (execute_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;")) == 0 )
     {
         Test->add_result(1, "SELECT INTO OUTFILE epected to fail, but it is OK\n");
     }

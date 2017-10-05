@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     Test->connect_maxscale();
 
-    stmt = mysql_stmt_init(Test->conn_rwsplit);
+    stmt = mysql_stmt_init(Test->maxscales->conn_rwsplit[0]);
 
     for (int i = 0; i < start; i++)
     {
@@ -45,14 +45,14 @@ int main(int argc, char *argv[])
         Test->tprintf("%d\t", i);
         if (mysql_stmt_prepare(stmt, query.c_str(), query.length()))
         {
-            Test->add_result(1, "Error: %s\n", mysql_error(Test->conn_rwsplit));
+            Test->add_result(1, "Error: %s\n", mysql_error(Test->maxscales->conn_rwsplit[0]));
             Test->add_result(1, "Failed at %d\n", i);
 //            delete Test;
 //            return 1;
         }
         if (mysql_stmt_reset(stmt))
         {
-            Test->add_result(1, "Error: %s\n", mysql_error(Test->conn_rwsplit));
+            Test->add_result(1, "Error: %s\n", mysql_error(Test->maxscales->conn_rwsplit[0]));
             Test->add_result(1, "Failed at %d\n", i);
 //            delete Test;
 //            return 1;

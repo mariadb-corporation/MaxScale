@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     int time_to_run = (Test->smoke) ? 10 : 30;
     Test->set_timeout(10);
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
     Test->connect_rwsplit();
 
     Test->repl->connect();
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-    if (execute_query_silent(Test->conn_rwsplit, (char *) "show processlist;") == 0)
+    if (execute_query_silent(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;") == 0)
     {
         Test->add_result(1, "Failure is expected, but query is ok\n");
     }
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Reconnecting to RWSplit ...\n");
     Test->connect_rwsplit();
     Test->tprintf("                        ... and trying query\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;");
     Test->close_rwsplit();
 
     /** Clean up */

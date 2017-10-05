@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(40);
     int i;
 
-    Test->tprintf("Connecting to Maxscale %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to Maxscale %s\n", Test->maxscales->IP[0]);
     Test->connect_maxscale();
 
     printf("Setup firewall to block mysql on master\n");
@@ -41,13 +41,13 @@ int main(int argc, char *argv[])
     sleep(1);
 
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-    execute_query(Test->conn_rwsplit, (char *) "show processlist;");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;");
     fflush(stdout);
     Test->tprintf("Trying query to ReadConn master, expecting failure, but not a crash\n");
-    execute_query(Test->conn_master, (char *) "show processlist;");
+    execute_query(Test->maxscales->conn_master[0], (char *) "show processlist;");
     fflush(stdout);
     Test->tprintf("Trying query to ReadConn slave, expecting failure, but not a crash\n");
-    execute_query(Test->conn_slave, (char *) "show processlist;");
+    execute_query(Test->maxscales->conn_slave[0], (char *) "show processlist;");
     fflush(stdout);
 
     sleep(1);
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(20);
 
     Test->tprintf("Connecting to Maxscale %s to check its behaviour in case of blocking all bacxkends\n",
-                  Test->maxscale_IP);
+                  Test->maxscales->IP[0]);
     Test->connect_maxscale();
 
     if (!Test->smoke)
@@ -77,13 +77,13 @@ int main(int argc, char *argv[])
         sleep(1);
 
         Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-        execute_query(Test->conn_rwsplit, (char *) "show processlist;");
+        execute_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;");
         fflush(stdout);
         Test->tprintf("Trying query to ReadConn master, expecting failure, but not a crash\n");
-        execute_query(Test->conn_master, (char *) "show processlist;");
+        execute_query(Test->maxscales->conn_master[0], (char *) "show processlist;");
         fflush(stdout);
         Test->tprintf("Trying query to ReadConn slave, expecting failure, but not a crash\n");
-        execute_query(Test->conn_slave, (char *) "show processlist;");
+        execute_query(Test->maxscales->conn_slave[0], (char *) "show processlist;");
         fflush(stdout);
 
         sleep(1);

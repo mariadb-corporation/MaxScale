@@ -15,25 +15,25 @@ int main(int argc, char *argv[])
     char sql[10240];
 
     Test->connect_maxscale();
-    create_t1(Test->conn_rwsplit);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
 
     Test->tprintf("INSERTing data");
 
-    Test->try_query(Test->conn_rwsplit, "BEGIN");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "BEGIN");
     for (int i = 0; i < 2000; i++)
     {
         Test->set_timeout(20);
         create_insert_string(sql, 100, i);
-        Test->try_query(Test->conn_rwsplit, sql);
+        Test->try_query(Test->maxscales->conn_rwsplit[0], sql);
     }
-    Test->try_query(Test->conn_rwsplit, "COMMIT");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "COMMIT");
 
     Test->tprintf("done, syncing slaves");
     Test->stop_timeout();
     Test->repl->sync_slaves();
     Test->tprintf("Trying SELECT");
     Test->set_timeout(60);
-    Test->try_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1");
 
     Test->check_maxscale_alive();
     int rval = Test->global_result;

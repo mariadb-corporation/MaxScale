@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     int i, j;
 
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
 
     Test->set_timeout(2000);
 
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         Test->connect_maxscale();
         for (j = 0; j < iter; j++)
         {
-            execute_query_silent(Test->conn_rwsplit, "SELECT 1");
+            execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT 1");
 
         }
         Test->close_maxscale_connections();

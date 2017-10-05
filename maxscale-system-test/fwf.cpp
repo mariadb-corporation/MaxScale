@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
                        "rm -rf rules;"
                        "mkdir rules;"
                        "chown vagrant:vagrant rules",
-                       Test->maxscale_access_homedir);
+                       Test->maxscales->access_homedir[0]);
 
     sprintf(rules_dir, "%s/fw/", test_dir);
     int N = 18;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
                     {
                         Test->tprintf("%s", sql);
                     }
-                    int rv = execute_query(Test->conn_rwsplit, sql);
+                    int rv = execute_query(Test->maxscales->conn_rwsplit[0], sql);
                     Test->add_result(rv, "Query should succeed: %s", sql);
                     local_result += rv;
                 }
@@ -105,11 +105,11 @@ int main(int argc, char *argv[])
                     {
                         Test->tprintf("%s", sql);
                     }
-                    execute_query_silent(Test->conn_rwsplit, sql);
-                    if (mysql_errno(Test->conn_rwsplit) != 1141)
+                    execute_query_silent(Test->maxscales->conn_rwsplit[0], sql);
+                    if (mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141)
                     {
                         Test->tprintf("Expected 1141, Access Denied but got %d, %s instead: %s",
-                                      mysql_errno(Test->conn_rwsplit), mysql_error(Test->conn_rwsplit), sql);
+                                      mysql_errno(Test->maxscales->conn_rwsplit[0]), mysql_error(Test->maxscales->conn_rwsplit[0]), sql);
                         local_result++;
                     }
                 }
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
             Test->tprintf("********** rules%d test PASSED", i);
         }
 
-        mysql_close(Test->conn_rwsplit);
+        mysql_close(Test->maxscales->conn_rwsplit[0]);
     }
 
     Test->set_timeout(180);
@@ -151,17 +151,18 @@ int main(int argc, char *argv[])
     Test->ssh_maxscale(false, "start_time=`date +%%T`;"
                        "stop_time=` date --date \"now +15 secs\" +%%T`;"
                        "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
-                       Test->maxscale_access_sudo, Test->maxscale_access_homedir);
+                       Test->maxscales->access_sudo[0], Test->maxscales->access_homedir[0]);
 
     Test->restart_maxscale();
     Test->connect_rwsplit();
 
     Test->tprintf("Trying 'DELETE FROM t1' and expecting FAILURE");
-    execute_query_silent(Test->conn_rwsplit, "DELETE FROM t1");
+    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
 
-    if (mysql_errno(Test->conn_rwsplit) != 1141)
+    if (mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141)
     {
-        Test->add_result(1, "Query succeded, but fail expected, errono is %d", mysql_errno(Test->conn_rwsplit));
+        Test->add_result(1, "Query succeded, but fail expected, errono is %d",
+                         mysql_errno(Test->maxscales->conn_rwsplit[0]));
     }
 
     Test->tprintf("Waiting 16 seconds and trying 'DELETE FROM t1', expecting OK");
@@ -169,9 +170,9 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
     sleep(16);
     Test->set_timeout(180);
-    Test->try_query(Test->conn_rwsplit, "DELETE FROM t1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
 
-    mysql_close(Test->conn_rwsplit);
+    mysql_close(Test->maxscales->conn_rwsplit[0]);
     Test->stop_maxscale();
 
     Test->tprintf("Trying limit_queries clause");
@@ -184,7 +185,8 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying 10 quries as fast as possible");
     for (i = 0; i < 10; i++)
     {
-        Test->add_result(execute_query_silent(Test->conn_rwsplit, "SELECT * FROM t1"), "%d -query failed", i);
+        Test->add_result(execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT * FROM t1"),
+                         "%d -query failed", i);
     }
 
     Test->tprintf("Expecting failures during next 5 seconds");
@@ -200,7 +202,8 @@ int main(int argc, char *argv[])
         elapsedTime = (t2.tv_sec - t1.tv_sec);
         elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
     }
-    while ((execute_query_silent(Test->conn_rwsplit, "SELECT * FROM t1") != 0) && (elapsedTime < 10));
+    while ((execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT * FROM t1") != 0) &&
+           (elapsedTime < 10));
 
     Test->tprintf("Quries were blocked during %f (using clock_gettime())", elapsedTime);
     Test->tprintf("Quries were blocked during %lu (using time())", time(NULL) - start_time_clock);
@@ -215,7 +218,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < 12; i++)
     {
         sleep(1);
-        Test->add_result(execute_query_silent(Test->conn_rwsplit, "SELECT * FROM t1"), "query failed");
+        Test->add_result(execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT * FROM t1"), "query failed");
         if (Test->verbose)
         {
             Test->tprintf("%d ", i);
@@ -226,5 +229,4 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-
 

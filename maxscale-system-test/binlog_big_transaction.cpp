@@ -51,7 +51,7 @@ void *disconnect_thread( void *ptr )
     MYSQL * conn;
     char cmd[256];
     int i;
-    conn = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password,
+    conn = open_conn(Test->maxscales->binlog_port[0], Test->maxscales->IP[0], Test->repl->user_name, Test->repl->password,
                      Test->repl->ssl);
     Test->add_result(mysql_errno(conn), "Error connecting to Binlog router, error: %s\n", mysql_error(conn));
     i = 3;

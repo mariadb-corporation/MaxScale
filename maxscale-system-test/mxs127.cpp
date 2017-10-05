@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        Test->try_query(Test->conn_rwsplit, sql);
+        Test->try_query(Test->maxscales->conn_rwsplit[0], sql);
     }
     Test->tprintf("done!\n");
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        Test->try_query(Test->conn_master, sql);
+        Test->try_query(Test->maxscales->conn_master[0], sql);
     }
     Test->tprintf("done!\n");
 
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        Test->try_query(Test->conn_slave, sql);
+        Test->try_query(Test->maxscales->conn_slave[0], sql);
     }
     Test->tprintf("done!\n");
 

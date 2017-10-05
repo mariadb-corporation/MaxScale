@@ -61,11 +61,11 @@ int main(int argc, char *argv[])
     test->tprintf("Test `time`. The first SELECT within 10 seconds should go the "
                   "master and all SELECTs after it should go to the slaves.");
 
-    test->try_query(test->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
+    test->try_query(test->maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
     sleep(1);
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the first SELECT");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the first SELECT");
     sleep(11);
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the second SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the second SELECT");
 
 
     test->tprintf("Change test setup for `count`, the first three selects after an "
@@ -77,12 +77,12 @@ int main(int argc, char *argv[])
     test->restart_maxscale();
     test->connect_maxscale();
 
-    test->try_query(test->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the first SELECT");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the second SELECT");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the third SELECT");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the fourth SELECT");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the fifth SELECT");
+    test->try_query(test->maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the first SELECT");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the second SELECT");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the third SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the fourth SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the fifth SELECT");
 
 
     test->tprintf("Change test setup for `count` and `match`, selects after an insert "
@@ -97,18 +97,18 @@ int main(int argc, char *argv[])
 
     test->tprintf("t1 first, should be ignored");
 
-    test->try_query(test->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the first SELECT");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the second SELECT");
+    test->try_query(test->maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the first SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the second SELECT");
 
     test->tprintf("t2 should match and trigger the critical reads");
 
-    test->try_query(test->conn_rwsplit, "INSERT INTO test.t2 VALUES (1)");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the first SELECT");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the second SELECT");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the third SELECT");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the fourth SELECT");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the fifth SELECT");
+    test->try_query(test->maxscales->conn_rwsplit[0], "INSERT INTO test.t2 VALUES (1)");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the first SELECT");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the second SELECT");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the third SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the fourth SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the fifth SELECT");
 
 
     test->tprintf("Change test setup for `count` and `ignore`, expects the same "
@@ -122,18 +122,18 @@ int main(int argc, char *argv[])
 
     test->tprintf("t1 first, should be ignored");
 
-    test->try_query(test->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the first SELECT");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the second SELECT");
+    test->try_query(test->maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the first SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the second SELECT");
 
     test->tprintf("t2 should match and trigger the critical reads");
 
-    test->try_query(test->conn_rwsplit, "INSERT INTO test.t2 VALUES (1)");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the first SELECT");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the second SELECT");
-    test->add_result(!is_master(test->conn_rwsplit), "Master should reply to the third SELECT");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the fourth SELECT");
-    test->add_result(is_master(test->conn_rwsplit), "Master should NOT reply to the fifth SELECT");
+    test->try_query(test->maxscales->conn_rwsplit[0], "INSERT INTO test.t2 VALUES (1)");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the first SELECT");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the second SELECT");
+    test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the third SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the fourth SELECT");
+    test->add_result(is_master(test->maxscales->conn_rwsplit[0]), "Master should NOT reply to the fifth SELECT");
 
     execute_query(test->repl->nodes[0], "DROP TABLE test.t1");
     execute_query(test->repl->nodes[0], "DROP TABLE test.t2");

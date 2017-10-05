@@ -7,7 +7,7 @@ void copy_rules(TestConnections* Test, const char* rules_name, const char* rules
     std::stringstream dest;
 
     src << rules_dir << "/" << rules_name;
-    dest << Test->maxscale_access_homedir << "/rules/rules.txt";
+    dest << Test->maxscales->access_homedir[0] << "/rules/rules.txt";
 
     Test->set_timeout(30);
     Test->copy_to_maxscale(src.str().c_str(), dest.str().c_str());

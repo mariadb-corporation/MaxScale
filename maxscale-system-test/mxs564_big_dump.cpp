@@ -5,7 +5,7 @@
  * - after a while block first slave
  * - after a while block second slave
  * - check that all INSERTs are ok
- * - repeat with both RWSplit and ReadConn master routers
+ * - repeat with both RWSplit and ReadConn master maxscales->routers[0]
  * - check Maxscale is alive
  */
 
@@ -84,12 +84,12 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     Test->connect_maxscale();
     Test->set_timeout(20);
-    create_t1(Test->conn_rwsplit);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 2000;");
 
     Test->set_timeout(20);
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1");
-    Test->try_query(Test->conn_rwsplit, (char *) "CREATE TABLE t1 (x1 int, fl int)");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE IF EXISTS t1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE TABLE t1 (x1 int, fl int)");
 
     for (i = 0; i < threads_num; i++)
     {
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
         Test->tprintf("exit %d\n", i);
     }
 
-    Test->tprintf("all routers are involved, threads are running %d seconds more\n", run_time);
+    Test->tprintf("all maxscales->routers[0] are involved, threads are running %d seconds more\n", run_time);
 
     for (i = 0; i < threads_num; i++)
     {
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
     Test->tprintf("set global max_connections = 100 for all backends\n");
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
     Test->tprintf("Drop t1\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE IF EXISTS t1;");
     Test->close_maxscale_connections();
 
     Test->tprintf("Checking if Maxscale alive\n");

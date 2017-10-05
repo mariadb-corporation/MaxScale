@@ -21,11 +21,11 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Create user with only SELECT priviledge to a table");
 
-    execute_query_silent(Test->conn_rwsplit, "DROP USER 'table_privilege'@'%'");
-    execute_query_silent(Test->conn_rwsplit, "DROP TABLE test.t1");
-    execute_query(Test->conn_rwsplit, "CREATE TABLE test.t1 (id INT)");
-    execute_query(Test->conn_rwsplit, "CREATE USER 'table_privilege'@'%%' IDENTIFIED BY 'pass'");
-    execute_query(Test->conn_rwsplit, "GRANT SELECT ON test.t1 TO 'table_privilege'@'%%'");
+    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP USER 'table_privilege'@'%'");
+    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
+    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE test.t1 (id INT)");
+    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER 'table_privilege'@'%%' IDENTIFIED BY 'pass'");
+    execute_query(Test->maxscales->conn_rwsplit[0], "GRANT SELECT ON test.t1 TO 'table_privilege'@'%%'");
 
     Test->stop_timeout();
     Test->repl->sync_slaves();
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
      */
     for (int i = 0; i < 5; i++)
     {
-        MYSQL *conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "test",
+        MYSQL *conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "test",
                                    (char *) "table_privilege", (char *) "pass", Test->ssl);
         if (mysql_errno(conn) != 0)
         {
@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(20);
-    execute_query_silent(Test->conn_rwsplit, "DROP USER 'table_privilege'@'%'");
-    execute_query_silent(Test->conn_rwsplit, "DROP TABLE test.t1");
+    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP USER 'table_privilege'@'%'");
+    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 
     Test->check_maxscale_alive();
     int rval = Test->global_result;

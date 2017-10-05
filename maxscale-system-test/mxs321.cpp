@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 
     Test->repl->execute_query_all_nodes((char *) "SET GLOBAL max_connections=100");
     Test->connect_maxscale();
-    execute_query(Test->conn_rwsplit, "SET GLOBAL max_connections=100");
+    execute_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_connections=100");
     Test->close_maxscale_connections();
     Test->stop_timeout();
 

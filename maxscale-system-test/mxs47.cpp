@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
         sprintf(str, "SELECT REPEAT('a',%d)", i);
 
         test.set_timeout(15);
-        test.try_query(test.conn_rwsplit, str);
+        test.try_query(test.maxscales->conn_rwsplit[0], str);
     }
 
     test.close_maxscale_connections();

@@ -65,7 +65,8 @@ void check_conn_num(TestConnections* Test, int * Nc, unsigned int conn_num)
 {
     for (int i = 0; i < 4; i++)
     {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0],
+                                (char *) "test");
         Test->tprintf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
         if ((i < 4) && (Nc[i] != conn_num))
         {
@@ -78,14 +79,14 @@ int main(int argc, char *argv[])
 {
     int maxscale_conn_num = 60;
     MYSQL *conn_read[maxscale_conn_num];
-    MYSQL *conn_rwsplit[maxscale_conn_num];
+    MYSQL *conn_rwsplit[0][maxscale_conn_num];
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
     int i;
 
     Test->galera->connect();
 
-    Test->tprintf("Connecting to ReadConnMaster on %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to ReadConnMaster on %s\n", Test->maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
     {
         conn_read[i] = Test->open_readconn_master_connection();
@@ -116,10 +117,10 @@ int main(int argc, char *argv[])
     sleep(15);
 
     Test->set_timeout(30);
-    Test->tprintf("Connecting to RWSplit on %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit on %s\n", Test->maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        conn_rwsplit[i] = Test->open_rwsplit_connection();
+        conn_rwsplit[0][i] = Test->open_rwsplit_connection();
     }
 
     Test->stop_timeout();
@@ -140,7 +141,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        mysql_close(conn_rwsplit[i]);
+        mysql_close(conn_rwsplit[0][i]);
     }
     Test->galera->close_connections();
 

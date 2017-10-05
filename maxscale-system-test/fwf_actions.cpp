@@ -35,31 +35,31 @@ int main(int argc, char** argv)
     /** Test blacklisting functionality */
     test->tprintf("Trying matching query to blacklisted RWSplit, expecting failure\n");
     test->set_timeout(30);
-    test->add_result(!execute_query_silent(test->conn_rwsplit, "select 1"),
+    test->add_result(!execute_query_silent(test->maxscales->conn_rwsplit[0], "select 1"),
                      "Matching query to blacklist service should fail.\n");
     test->tprintf("Trying non-matching query to blacklisted RWSplit, expecting success\n");
     test->set_timeout(30);
-    test->add_result(execute_query_silent(test->conn_rwsplit, "show status"),
+    test->add_result(execute_query_silent(test->maxscales->conn_rwsplit[0], "show status"),
                      "Non-matching query to blacklist service should succeed.\n");
 
     /** Test whitelisting functionality */
     test->tprintf("Trying matching query to whitelisted Conn slave, expecting success\n");
     test->set_timeout(30);
-    test->add_result(execute_query_silent(test->conn_slave, "select 1"),
+    test->add_result(execute_query_silent(test->maxscales->conn_slave[0], "select 1"),
                      "Query to whitelist service should succeed.\n");
     test->tprintf("Trying non-matching query to whitelisted Conn slave, expecting failure\n");
     test->set_timeout(30);
-    test->add_result(!execute_query_silent(test->conn_slave, "show status"),
+    test->add_result(!execute_query_silent(test->maxscales->conn_slave[0], "show status"),
                      "Non-matching query to blacklist service should fail.\n");
 
     /** Testing NO OP mode */
     test->tprintf("Trying matching query to ignoring Conn master, expecting success\n");
     test->set_timeout(30);
-    test->add_result(execute_query_silent(test->conn_master, "select 1"),
+    test->add_result(execute_query_silent(test->maxscales->conn_master[0], "select 1"),
                      "Query to ignoring service should succeed.\n");
     test->tprintf("Trying non-matching query to ignoring Conn master, expecting success\n");
     test->set_timeout(30);
-    test->add_result(execute_query_silent(test->conn_master, "show status"),
+    test->add_result(execute_query_silent(test->maxscales->conn_master[0], "show status"),
                      "Non-matching query to ignoring service should succeed.\n");
 
     test->stop_timeout();

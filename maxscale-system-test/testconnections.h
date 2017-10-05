@@ -2,6 +2,7 @@
 #define TESTCONNECTIONS_H
 
 #include "mariadb_nodes.h"
+#include "maxscales.h"
 #include "templates.h"
 #include <fcntl.h>
 #include <pthread.h>
@@ -57,51 +58,6 @@ public:
     char * test_name;
 
     /**
-     * @brief rwsplit_port RWSplit service port
-     */
-    int rwsplit_port;
-
-    /**
-     * @brief readconn_master_port ReadConnection in master mode service port
-     */
-    int readconn_master_port;
-
-    /**
-     * @brief readconn_slave_port ReadConnection in slave mode service port
-     */
-    int readconn_slave_port;
-
-    /**
-     * @brief binlog_port binlog router service port
-     */
-    int binlog_port;
-
-    /**
-     * @brief conn_rwsplit  MYSQL connection struct to RWSplit service
-     */
-    MYSQL *conn_rwsplit;
-
-    /**
-     * @brief conn_master   MYSQL connection struct to ReadConnection in master mode service
-     */
-    MYSQL *conn_master;
-
-    /**
-     * @brief conn_slave MYSQL connection struct to ReadConnection in slave mode service
-     */
-    MYSQL *conn_slave;
-
-    /**
-     * @brief routers Array of 3 MYSQL handlers which contains copies of conn_rwsplit, conn_master, conn_slave
-     */
-    MYSQL *routers[3];
-
-    /**
-     * @brief ports of 3 int which contains copies of rwsplit_port, readconn_master_port, readconn_slave_port
-     */
-    int ports[3];
-
-    /**
      * @brief galera Mariadb_nodes object containing references to Galera setuo
      */
     Mariadb_nodes * galera;
@@ -112,52 +68,9 @@ public:
     Mariadb_nodes * repl;
 
     /**
-     * @brief Get MaxScale IP address
-     *
-     * @return The current IP address of MaxScale
+     * @brief maxscales Maxscale object containing referebces to all Maxscale machines
      */
-    char* maxscale_ip() const;
-
-    /**
-     * @brief Maxscale_IP   Maxscale machine IP address
-     */
-    char maxscale_IP[1024];
-
-    /**
-     * @brief Maxscale_IP6   Maxscale machine IP address (IPv6)
-     */
-    char maxscale_IP6[1024];
-
-    /**
-     * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
-     * Also IPv6 addresses go to maxscale.cnf
-     */
-    bool use_ipv6;
-
-    /**
-     * @brief maxscale_hostname  Maxscale machine 'hostname' value
-     */
-    char maxscale_hostname[1024];
-
-    /**
-     * @brief Maxscale_User User name to access Maxscale services
-     */
-    char maxscale_user[256];
-
-    /**
-     * @brief Maxscale_Password Password to access Maxscale services
-     */
-    char maxscale_password[256];
-
-    /**
-     * @brief maxadmin_Password Password to access Maxadmin tool
-     */
-    char maxadmin_password[256];
-
-    /**
-     * @brief Maxscale_sshkey   ssh key for Maxscale machine
-     */
-    char maxscale_keyfile[4096];
+    Maxscales * maxscales;
 
     /**
      * @brief GetLogsCommand Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
@@ -183,36 +96,6 @@ public:
      * @brief SysbenchDir   path to SysBench directory (sysbanch should be >= 0.5)
      */
     char sysbench_dir[4096];
-
-    /**
-      * @brief maxscale_cnf full name of Maxscale configuration file
-      */
-    char maxscale_cnf[4096];
-
-    /**
-      * @brief maxscale_log_dir name of log files directory
-      */
-    char maxscale_log_dir[4096];
-
-    /**
-      * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
-      */
-    char maxscale_binlog_dir[4096];
-
-    /**
-     * @brief maxscale_access_user username to access test machines
-     */
-    char maxscale_access_user[256];
-
-    /**
-     * @brief maxscale_access_homedir home directory of access_user
-     */
-    char maxscale_access_homedir[256];
-
-    /**
-     * @brief maxscale_access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
-     */
-    char maxscale_access_sudo[64];
 
     /**
      * @brief copy_mariadb_logs copies MariaDB logs from backend
@@ -315,6 +198,12 @@ public:
      */
     timeval start_time;
 
+    /**
+     * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
+     * Also IPv6 addresses go to maxscale.cnf
+     */
+    bool use_ipv6;
+
     /** Check whether all nodes are in a valid state */
     static void check_nodes(bool value);
 
@@ -353,7 +242,7 @@ public:
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
      * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
-     * Connections stored in conn_rwsplit, conn_master and conn_slave MYSQL structs
+     * Connections stored in maxscales->conn_rwsplit[0], maxscales->conn_master[0] and maxscales->conn_slave[0] MYSQL structs
      * @return 0 in case of success
      */
     int connect_maxscale();
@@ -365,19 +254,19 @@ public:
     int close_maxscale_connections();
 
     /**
-     * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in conn_rwsplit
+     * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in maxscales->conn_rwsplit[0]
      * @return 0 in case of success
      */
     int connect_rwsplit();
 
     /**
-     * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in conn_master
+     * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in maxscales->conn_master[0]
      * @return 0 in case of success
      */
     int connect_readconn_master();
 
     /**
-     * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in conn_slave
+     * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in maxscales->conn_slave[0]
      * @return 0 in case of success
      */
     int connect_readconn_slave();
@@ -389,7 +278,8 @@ public:
      */
     MYSQL * open_rwsplit_connection()
     {
-        return open_conn(rwsplit_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
+        return open_conn(maxscales->rwsplit_port[0], maxscales->IP[0], maxscales->user_name, maxscales->password,
+                         ssl);
     }
 
     /**
@@ -399,7 +289,8 @@ public:
      */
     MYSQL * open_readconn_master_connection()
     {
-        return open_conn(readconn_master_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
+        return open_conn(maxscales->readconn_master_port[0], maxscales->IP[0], maxscales->user_name,
+                         maxscales->password, ssl);
     }
 
     /**
@@ -409,34 +300,35 @@ public:
      */
     MYSQL * open_readconn_slave_connection()
     {
-        return open_conn(readconn_slave_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
+        return open_conn(maxscales->readconn_slave_port[0], maxscales->IP[0], maxscales->user_name,
+                         maxscales->password, ssl);
     }
 
     /**
-     * @brief CloseRWSplit Closes RWplit connections stored in conn_rwsplit
+     * @brief CloseRWSplit Closes RWplit connections stored in maxscales->conn_rwsplit[0]
      */
     void close_rwsplit()
     {
-        mysql_close(conn_rwsplit);
-        conn_rwsplit = NULL;
+        mysql_close(maxscales->conn_rwsplit[0]);
+        maxscales->conn_rwsplit[0] = NULL;
     }
 
     /**
-     * @brief CloseReadMaster Closes ReadConn master connections stored in conn_master
+     * @brief CloseReadMaster Closes ReadConn master connections stored in maxscales->conn_master[0]
      */
     void close_readconn_master()
     {
-        mysql_close(conn_master);
-        conn_master = NULL;
+        mysql_close(maxscales->conn_master[0]);
+        maxscales->conn_master[0] = NULL;
     }
 
     /**
-     * @brief CloseReadSlave Closes ReadConn slave connections stored in conn_slave
+     * @brief CloseReadSlave Closes ReadConn slave connections stored in maxscales->conn_slave[0]
      */
     void close_readconn_slave()
     {
-        mysql_close(conn_slave);
-        conn_slave = NULL;
+        mysql_close(maxscales->conn_slave[0]);
+        maxscales->conn_slave[0] = NULL;
     }
 
     /**

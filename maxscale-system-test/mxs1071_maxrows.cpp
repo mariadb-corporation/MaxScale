@@ -208,7 +208,7 @@ int compare_expected(TestConnections * Test, const char * sql, my_ulonglong exp_
     my_ulonglong i;
 
     Test->set_timeout(30);
-    execute_query_num_of_rows(Test->conn_rwsplit, sql, rows, &i);
+    execute_query_num_of_rows(Test->maxscales->conn_rwsplit[0], sql, rows, &i);
 
     Test->tprintf("Result sets number is %llu\n", i);
 
@@ -275,11 +275,11 @@ int compare_stmt_expected(TestConnections * Test, MYSQL_STMT * stmt, my_ulonglon
  */
 void err_check(TestConnections* Test, unsigned int expected_err)
 {
-    Test->tprintf("Error text '%s'' error code %d\n", mysql_error(Test->conn_rwsplit),
-                  mysql_errno(Test->conn_rwsplit));
-    if (mysql_errno(Test->conn_rwsplit) != expected_err)
+    Test->tprintf("Error text '%s'' error code %d\n", mysql_error(Test->maxscales->conn_rwsplit[0]),
+                  mysql_errno(Test->maxscales->conn_rwsplit[0]));
+    if (mysql_errno(Test->maxscales->conn_rwsplit[0]) != expected_err)
     {
-        Test->add_result(1, "Error code is not %d, it is %d\n", expected_err, mysql_errno(Test->conn_rwsplit));
+        Test->add_result(1, "Error code is not %d, it is %d\n", expected_err, mysql_errno(Test->maxscales->conn_rwsplit[0]));
     }
 }
 
@@ -293,8 +293,8 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     Test->connect_rwsplit();
 
-    create_t1(Test->conn_rwsplit);
-    insert_into_t1(Test->conn_rwsplit, 1);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
+    insert_into_t1(Test->maxscales->conn_rwsplit[0], 1);
     Test->stop_timeout();
     sleep(5);
 
@@ -312,8 +312,8 @@ int main(int argc, char *argv[])
     compare_expected(Test, (char *) "select * from t1 limit 10", 1, exp_rows);
 
     Test->set_timeout(60);
-    create_t1(Test->conn_rwsplit);
-    insert_into_t1(Test->conn_rwsplit, 3);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
+    insert_into_t1(Test->maxscales->conn_rwsplit[0], 3);
     Test->stop_timeout();
     sleep(5);
 
@@ -330,8 +330,8 @@ int main(int argc, char *argv[])
     Test->tprintf("**** Test 3 ****\n");
     exp_rows[0] = 2;
     exp_rows[1] = 0;
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test03_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test03_sql);
     compare_expected(Test, "CALL multi()", 2, exp_rows);
 
     Test->tprintf("**** Test 4 ****\n");
@@ -339,8 +339,8 @@ int main(int argc, char *argv[])
     exp_rows[1] = 2;
     exp_rows[2] = 1;
     exp_rows[3] = 0;
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test04_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test04_sql);
     compare_expected(Test, "CALL multi()", 4, exp_rows);
 
     Test->tprintf("**** Test 5 ****\n");
@@ -349,23 +349,23 @@ int main(int argc, char *argv[])
     exp_rows[2] = 1;
     exp_rows[3] = 1;
     exp_rows[4] = 0;
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test05_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test05_sql);
     compare_expected(Test, "CALL multi()", 5, exp_rows);
 
     Test->tprintf("**** Test 6 ****\n");
     exp_rows[0] = 0;
 
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test06_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test06_sql);
     compare_expected(Test, "CALL multi()", 1, exp_rows);
 
 
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    Test->try_query(Test->conn_rwsplit, "SET GLOBAL max_allowed_packet=10000000000");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
     Test->stop_timeout();
     Test->repl->connect();
-    //test_longblob(Test, Test->conn_rwsplit, (char *) "LONGBLOB", 512 * 1024 / sizeof(long int), 17 * 2, 25);
+    //test_longblob(Test, Test->maxscales->conn_rwsplit[0], (char *) "LONGBLOB", 512 * 1024 / sizeof(long int), 17 * 2, 25);
     test_longblob(Test, Test->repl->nodes[0], (char *) "LONGBLOB", 512 * 1024 / sizeof(long int), 17 * 2, 5);
     Test->repl->close_connections();
 
@@ -380,15 +380,15 @@ int main(int argc, char *argv[])
     exp_rows[6] = 1;
     exp_rows[7] = 0;
 
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test07_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test07_sql);
     compare_expected(Test, "CALL multi()", 8, exp_rows);
 
     Test->tprintf("**** Test 8 ****\n");
     exp_rows[0] = 0;
 
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test08_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test08_sql);
     compare_expected(Test, "CALL multi()", 1, exp_rows);
 
     Test->tprintf("**** Test 9 ****\n");
@@ -401,8 +401,8 @@ int main(int argc, char *argv[])
     exp_rows[0] = 1;
     exp_rows[1] = 4;
 
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test10_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test10_sql);
     compare_expected(Test, "CALL multi()", 2, exp_rows);
 
     err_check(Test, 1096);
@@ -418,7 +418,7 @@ int main(int argc, char *argv[])
     Test->tprintf("**** Test 12 (C++) ****\n");
     exp_rows[0] = 0;
 
-    stmt = mysql_stmt_init(Test->conn_rwsplit);
+    stmt = mysql_stmt_init(Test->maxscales->conn_rwsplit[0]);
     if (stmt == NULL)
     {
         Test->add_result(1, "stmt init error: %s\n", mysql_stmt_error(stmt));
@@ -435,17 +435,17 @@ int main(int argc, char *argv[])
 
     Test->tprintf("**** Test 12 (MariaDB command line client) ****\n");
     exp_rows[0] = 0;
-    Test->try_query(Test->conn_rwsplit, "SET @table = 't1'");
-    Test->try_query(Test->conn_rwsplit, "SET @s = CONCAT('SELECT * FROM ', @table)");
-    Test->try_query(Test->conn_rwsplit, "PREPARE stmt1 FROM @s");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET @table = 't1'");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET @s = CONCAT('SELECT * FROM ', @table)");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "PREPARE stmt1 FROM @s");
     compare_expected(Test, "EXECUTE stmt1", 1, exp_rows);
-    Test->try_query(Test->conn_rwsplit, "DEALLOCATE PREPARE stmt1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DEALLOCATE PREPARE stmt1");
 
 
     Test->tprintf("**** Test 13 (C++)****\n");
     exp_rows[0] = 10;
     exp_rows[1] = 0;
-    stmt = mysql_stmt_init(Test->conn_rwsplit);
+    stmt = mysql_stmt_init(Test->maxscales->conn_rwsplit[0]);
     if (stmt == NULL)
     {
         Test->add_result(1, "stmt init error: %s\n", mysql_stmt_error(stmt));
@@ -457,25 +457,25 @@ int main(int argc, char *argv[])
     mysql_stmt_close(stmt);
 
     Test->tprintf("**** Test 13 (MariaDB command line client) ****\n");
-    Test->try_query(Test->conn_rwsplit, "SET @table = 't1'");
-    Test->try_query(Test->conn_rwsplit, "SET @s = CONCAT('SELECT * FROM ', @table,  ' LIMIT 10')");
-    Test->try_query(Test->conn_rwsplit, "PREPARE stmt1 FROM @s");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET @table = 't1'");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET @s = CONCAT('SELECT * FROM ', @table,  ' LIMIT 10')");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "PREPARE stmt1 FROM @s");
     compare_expected(Test, "EXECUTE stmt1", 1, exp_rows);
-    Test->try_query(Test->conn_rwsplit, "DEALLOCATE PREPARE stmt1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DEALLOCATE PREPARE stmt1");
 
     Test->tprintf("**** Test 14 ****\n");
     exp_rows[0] = 1;
     exp_rows[1] = 18;
     exp_rows[2] = 1;
     exp_rows[3] = 0;
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test14_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test14_sql);
     compare_expected(Test, "CALL multi()", 4, exp_rows);
 
     Test->tprintf("**** Test 15 ****\n");
     exp_rows[0] = 0;
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test15_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test15_sql);
     compare_expected(Test, "CALL multi()", 1, exp_rows);
 
     Test->tprintf("**** Test 16 ****\n");
@@ -488,8 +488,8 @@ int main(int argc, char *argv[])
     exp_rows[1] = 1;
     exp_rows[2] = 1;
     exp_rows[3] = 0;
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test17_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test17_sql);
     compare_expected(Test, "CALL multi()", 4, exp_rows);
 
     Test->tprintf("**** Test 18 ****\n");
@@ -514,21 +514,21 @@ int main(int argc, char *argv[])
     exp_rows[18] = 1;
     exp_rows[19] = 1;
     exp_rows[20] = 0;
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test18_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test18_sql);
     compare_expected(Test, "CALL multi()", 21, exp_rows);
 
     Test->tprintf("**** Test 19 ****\n");
     exp_rows[0] = 0;
 
-    Test->try_query(Test->conn_rwsplit, "DROP PROCEDURE IF EXISTS multi");
-    Test->try_query(Test->conn_rwsplit, test19_sql);
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP PROCEDURE IF EXISTS multi");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], test19_sql);
     compare_expected(Test, "CALL multi()", 1, exp_rows);
 
     Test->tprintf("**** Test 20 ****\n");
     exp_rows[0] = 2;
     exp_rows[1] = 0;
-    Test->try_query(Test->conn_rwsplit, "SET GLOBAL max_allowed_packet=10000000000");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
     compare_expected(Test, "SELECT * FROM long_blob_table limit 2;", 1, exp_rows);
     err_check(Test, 0);
 
@@ -543,7 +543,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("**** Test 21 ****\n");
     exp_rows[0] = 0;
-    Test->try_query(Test->conn_rwsplit, "SET GLOBAL max_allowed_packet=10000000000");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
     compare_expected(Test, "SELECT * FROM long_blob_table limit 1;", 1, exp_rows);
 
     Test->check_maxscale_alive();

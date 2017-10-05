@@ -35,14 +35,14 @@ int main(int argc, char *argv[])
     int TotalConn = 0;
 
     Test->tprintf("Checking connections to Master: should be 0\n");
-    conn_num = get_conn_num(Test->repl->nodes[0], Test->maxscale_ip(), Test->maxscale_hostname, (char *) "test");
+    conn_num = get_conn_num(Test->repl->nodes[0], Test->maxscales->ip(0), Test->maxscales->hostname[0], (char *) "test");
     Test->add_result(conn_num, "number of connections to Master is %d\n", conn_num);
 
     Test->tprintf("Number of connections to each slave should be between %d and %d\n", ConnFloor, ConnCell);
     Test->tprintf("Checking connections to each node\n");
     for (int i = 1; i < Test->repl->N; i++)
     {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_ip(), Test->maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscales->ip(0), Test->maxscales->hostname[0], (char *) "test");
         TotalConn += conn_num;
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if ((conn_num > ConnCell) || (conn_num < ConnFloor))

@@ -26,10 +26,10 @@ int main(int argc, char *argv[])
         for (int i = 0; i < iterations; i++)
         {
             Test->set_timeout(10);
-            Test->try_query(Test->routers[j], (char*) "set autocommit=0;");
-            Test->try_query(Test->routers[j], (char*) "select 1;");
-            Test->try_query(Test->routers[j], (char*) "set autocommit=1;");
-            Test->try_query(Test->routers[j], (char*) "select 2;");
+            Test->try_query(Test->maxscales->routers[0][j], (char*) "set autocommit=0;");
+            Test->try_query(Test->maxscales->routers[0][j], (char*) "select 1;");
+            Test->try_query(Test->maxscales->routers[0][j], (char*) "set autocommit=1;");
+            Test->try_query(Test->maxscales->routers[0][j], (char*) "select 2;");
             if ((i / 1000) * 1000 == i)
             {
                 Test->tprintf("i=%d\n", i);

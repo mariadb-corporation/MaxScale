@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0], (char *) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0], (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0], (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0], (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn != 0))
         {
@@ -235,7 +235,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0], (char *) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn != 0))
         {
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0], (char *) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn != 0))
         {
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         Test->set_timeout(60);
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0], (char *) "test");
         Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn != 0))
         {

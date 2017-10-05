@@ -32,17 +32,17 @@ int main(int argc, char** argv)
 
     test.tprintf("Loading local data file");
 
-    test.try_query(test.conn_rwsplit, "LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE db1.t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE db1.t1");
 
     test.tprintf("Verifying that data was loaded");
 
-    long total = execute_query_count_rows(test.conn_rwsplit, "SELECT * FROM db1.t1");
+    long total = execute_query_count_rows(test.maxscales->conn_rwsplit[0], "SELECT * FROM db1.t1");
     test.add_result(total != 100, "Expected 100 rows, got %ld", total);
 
     test.tprintf("Dropping tables and databases");
 
-    test.try_query(test.conn_rwsplit, "DROP TABLE db1.t1");
-    test.try_query(test.conn_rwsplit, "DROP DATABASE db1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE db1.t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP DATABASE db1");
 
     test.close_maxscale_connections();
 

@@ -20,7 +20,7 @@
  @endverbatim
  * - make script non-executable
  * - block and unblock node1
- * - check error log for 'The file cannot be executed: /home/$maxscale_access_user/script.sh' error
+ * - check error log for 'The file cannot be executed: /home/$maxscales->access_user[0]/script.sh' error
  * - check if Maxscale still alive
  */
 
@@ -34,7 +34,7 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * exp
     Test->ssh_maxscale(true, "cd %s;"
                        "truncate -s 0 script_output;"
                        "chown maxscale:maxscale script_output",
-                       Test->maxscale_access_homedir);
+                       Test->maxscales->access_homedir[0]);
     sleep(10);
 
     Test->tprintf("Block master node");
@@ -63,10 +63,10 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * exp
 
     Test->tprintf("Comparing results");
 
-    if (Test->ssh_maxscale(false, "diff %s/script_output %s", Test->maxscale_access_homedir,
+    if (Test->ssh_maxscale(false, "diff %s/script_output %s", Test->maxscales->access_homedir[0],
                            expected_filename) != 0)
     {
-        Test->ssh_maxscale(true, "cat %s/script_output", Test->maxscale_access_homedir);
+        Test->ssh_maxscale(true, "cat %s/script_output", Test->maxscales->access_homedir[0]);
         Test->add_result(1, "Wrong script output!");
     }
     else
@@ -86,11 +86,11 @@ int main(int argc, char *argv[])
     Test->ssh_maxscale(false,
                        "%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
             chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R",
-                       Test->maxscale_access_sudo, Test->maxscale_access_homedir,
-                       Test->maxscale_access_homedir, Test->maxscale_access_homedir,
-                       Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_homedir,
-                       Test->maxscale_access_sudo,
-                       Test->maxscale_access_homedir);
+                       Test->maxscales->access_sudo[0], Test->maxscales->access_homedir[0],
+                       Test->maxscales->access_homedir[0], Test->maxscales->access_homedir[0],
+                       Test->maxscales->access_homedir[0], Test->maxscales->access_homedir[0], Test->maxscales->access_homedir[0],
+                       Test->maxscales->access_sudo[0],
+                       Test->maxscales->access_homedir[0]);
 
     Test->restart_maxscale();
 
@@ -144,18 +144,19 @@ int main(int argc, char *argv[])
     char str[2048];
     sprintf(str,
             "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet script_output_expected* %s@%s:%s/",
-            Test->maxscale_keyfile, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
+            Test->maxscales->sshkey[0], Test->maxscales->access_user[0], Test->maxscales->IP[0],
+            Test->maxscales->access_homedir[0]);
     system(str);
 
-    sprintf(str, "%s/script_output_expected", Test->maxscale_access_homedir);
+    sprintf(str, "%s/script_output_expected", Test->maxscales->access_homedir[0]);
     test_script_monitor(Test, Test->repl, str);
-    sprintf(str, "%s/script_output_expected_galera", Test->maxscale_access_homedir);
+    sprintf(str, "%s/script_output_expected_galera", Test->maxscales->access_homedir[0]);
     test_script_monitor(Test, Test->galera, str);
 
     Test->set_timeout(200);
 
     Test->tprintf("Making script non-executable");
-    Test->ssh_maxscale(true, "chmod a-x %s/script/script.sh", Test->maxscale_access_homedir);
+    Test->ssh_maxscale(true, "chmod a-x %s/script/script.sh", Test->maxscales->access_homedir[0]);
 
     sleep(3);
 

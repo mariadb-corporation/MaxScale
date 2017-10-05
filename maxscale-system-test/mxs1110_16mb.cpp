@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
                        "rm -rf rules;"
                        "mkdir rules;"
                        "chown vagrant:vagrant rules",
-                       Test->maxscale_access_homedir);
+                       Test->maxscales->access_homedir[0]);
     copy_rules(Test, (char *) "rules2", "./fw/");
 
     Test->start_maxscale();
@@ -37,22 +37,22 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
     Test->repl->connect();
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->conn_rwsplit, (char *) "LONGBLOB", chunk_size, chunk_num, 2);
+    test_longblob(Test, Test->maxscales->conn_rwsplit[0], (char *) "LONGBLOB", chunk_size, chunk_num, 2);
     Test->repl->close_connections();
     Test->close_maxscale_connections();
 
     Test->repl->sync_slaves();
     Test->connect_maxscale();
     Test->tprintf("Checking data via RWSplit\n");
-    check_longblob_data(Test, Test->conn_rwsplit, chunk_size, chunk_num, 2);
+    check_longblob_data(Test, Test->maxscales->conn_rwsplit[0], chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn master\n");
-    check_longblob_data(Test, Test->conn_master, chunk_size, chunk_num, 2);
+    check_longblob_data(Test, Test->maxscales->conn_master[0], chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn slave\n");
-    check_longblob_data(Test, Test->conn_slave, chunk_size, chunk_num, 2);
+    check_longblob_data(Test, Test->maxscales->conn_slave[0], chunk_size, chunk_num, 2);
     Test->close_maxscale_connections();
 
-    MYSQL * conn_galera = open_conn(4016, Test->maxscale_IP, Test->maxscale_user,
-                                    Test->maxscale_password, Test->ssl);
+    MYSQL * conn_galera = open_conn(4016, Test->maxscales->IP[0], Test->maxscales->user_name,
+                                    Test->maxscales->password, Test->ssl);
     mysql_close(conn_galera);
 
     int rval = Test->global_result;

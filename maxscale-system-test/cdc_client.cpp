@@ -38,7 +38,7 @@ bool cdc_com(TestConnections *Test)
 {
     int max_inserted_val = Test->smoke ? 25 : 100;
     int sock = create_tcp_socket();
-    char *ip = get_ip(Test->maxscale_IP);
+    char *ip = get_ip(Test->maxscales->IP[0]);
 
     if (ip == NULL)
     {

@@ -46,7 +46,7 @@ else()
 endif()
 
 # The core library
-add_library(testcore SHARED testconnections.cpp mariadb_nodes.cpp
+add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxscales.cpp
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp

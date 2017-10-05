@@ -75,9 +75,9 @@ int main(int argc, char *argv[])
         Test->add_result(Test->insert_select(N), "insert-select check failed\n");
 
         Test->tprintf("Creating database test1\n");
-        Test->try_query(Test->conn_rwsplit, "DROP TABLE t1");
-        Test->try_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
-        Test->try_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE t1");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS test1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE test1;");
         Test->repl->sync_slaves();
 
         Test->tprintf("Testing with database 'test1'\n");
@@ -90,8 +90,8 @@ int main(int argc, char *argv[])
         Test->tprintf("Trying queries with syntax errors\n");
         for (j = 0; j < 3; j++)
         {
-            execute_query(Test->routers[j], "DROP DATABASE I EXISTS test1;");
-            execute_query(Test->routers[j], "CREATE TABLE ");
+            execute_query(Test->maxscales->routers[0][j], "DROP DATABASE I EXISTS test1;");
+            execute_query(Test->maxscales->routers[0][j], "CREATE TABLE ");
         }
 
         // close connections

@@ -61,27 +61,27 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Trying queries that caused crashes before fix: bug473\n");
 
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =(");
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =)");
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =:");
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =a");
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = a");
-    Test->try_query(Test->conn_rwsplit,
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale route to server =(");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale route to server =)");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale route to server =:");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale route to server =a");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale route to server = a");
+    Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char *) "select @@server_id; -- maxscale route to server = кириллица åäö");
 
     // bug472
     Test->tprintf("Trying queries that caused crashes before fix: bug472\n");
-    Test->try_query(Test->conn_rwsplit,
+    Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char *) "select @@server_id; -- maxscale s1 begin route to server server3");
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale end");
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale s1 begin");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale end");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale s1 begin");
 
     // bug470
     Test->tprintf("Trying queries that caused crashes before fix: bug470\n");
     fflush(stdout);
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale named begin route to master");
-    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id;");
-    Test->try_query(Test->conn_rwsplit,
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale named begin route to master");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char *) "select @@server_id; -- maxscale named begin route to master; select @@server_id;");
 
 

@@ -89,28 +89,28 @@ int main(int argc, char *argv[])
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(5);
-        Test->try_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SHOW VARIABLES;");
     }
     Test->tprintf("ReadConn master\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(5);
-        Test->try_query(Test->conn_master, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_master[0], (char *) "SHOW VARIABLES;");
     }
     Test->tprintf("ReadConn slave\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(5);
-        Test->try_query(Test->conn_slave, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_slave[0], (char *) "SHOW VARIABLES;");
     }
 
     Test->tprintf("All in one loop\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(5);
-        Test->try_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");
-        Test->try_query(Test->conn_master, (char *) "SHOW VARIABLES;");
-        Test->try_query(Test->conn_slave, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_master[0], (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_slave[0], (char *) "SHOW VARIABLES;");
     }
 
     Test->set_timeout(10);

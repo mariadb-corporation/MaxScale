@@ -97,19 +97,19 @@ int main(int argc, char *argv[])
     for (i = 0; i < iterations; i++)
     {
         Test->set_timeout(5);
-        Test->add_result(execute_query(Test->conn_rwsplit, (char *) "show status"),
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], (char *) "show status"),
                          "Query %d agains RWSplit failed\n", i);
     }
     for (i = 0; i < iterations; i++)
     {
         Test->set_timeout(5);
-        Test->add_result(execute_query(Test->conn_slave, (char *) "show status"),
+        Test->add_result(execute_query(Test->maxscales->conn_slave[0], (char *) "show status"),
                          "Query %d agains ReadConn Slave failed\n", i);
     }
     for (i = 0; i < iterations; i++)
     {
         Test->set_timeout(5);
-        Test->add_result(execute_query(Test->conn_master, (char *) "show status"),
+        Test->add_result(execute_query(Test->maxscales->conn_master[0], (char *) "show status"),
                          "Query %d agains ReadConn Master failed\n", i);
     }
     Test->set_timeout(10);

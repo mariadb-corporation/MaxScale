@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
         Test->tprintf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
-        conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "shard_db", user_str, pass_str,
+        conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "shard_db", user_str, pass_str,
                             Test->ssl);
         Test->add_result(execute_query(conn, "CREATE TABLE table%d (x1 int, fl int);", i), "Query should succeed.");
     }
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
         Test->tprintf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
-        conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP,  (char *) "shard_db", user_str, pass_str,
+        conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0],  (char *) "shard_db", user_str, pass_str,
                             Test->ssl);
 
         sprintf(str, "SHOW TABLES;");
@@ -112,17 +112,17 @@ int main(int argc, char *argv[])
     Test->connect_rwsplit();
 
     Test->tprintf("Trying USE shard_db\n");
-    execute_query(Test->conn_rwsplit, "USE shard_db");
+    execute_query(Test->maxscales->conn_rwsplit[0], "USE shard_db");
 
     for (i = 0; i < Test->repl->N; i++)
     {
-        Test->add_result(execute_query(Test->conn_rwsplit, "USE shard_db%d", i), "Query should succeed.");
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], "USE shard_db%d", i), "Query should succeed.");
     }
 
-    mysql_close(Test->conn_rwsplit);
+    mysql_close(Test->maxscales->conn_rwsplit[0]);
 
     Test->tprintf("Trying to connect with empty database name\n");
-    conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "", user_str, pass_str, Test->ssl);
+    conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "", user_str, pass_str, Test->ssl);
     mysql_close(conn);
 
     Test->stop_timeout();

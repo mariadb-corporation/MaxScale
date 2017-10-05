@@ -197,11 +197,11 @@ int main(int argc, char *argv[])
 
     if ( (
                 find_field(
-                    Test->conn_rwsplit, sel3,
+                    Test->maxscales->conn_rwsplit[0], sel3,
                     "@@server_id", &serverid1[0])
                 != 0 ) || (
                 find_field(
-                    Test->conn_rwsplit, sel4,
+                    Test->maxscales->conn_rwsplit[0], sel4,
                     "@@server_id", &serverid2[0])
                 != 0 ))
     {
@@ -219,11 +219,11 @@ int main(int argc, char *argv[])
 
     if ( (
                 find_field(
-                    Test->conn_rwsplit, sel1,
+                    Test->maxscales->conn_rwsplit[0], sel1,
                     "@@hostname", &serverid1[0])
                 != 0 ) || (
                 find_field(
-                    Test->conn_rwsplit, sel2,
+                    Test->maxscales->conn_rwsplit[0], sel2,
                     "@@hostname", &serverid2[0])
                 != 0 ))
     {

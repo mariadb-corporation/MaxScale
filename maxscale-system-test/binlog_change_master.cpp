@@ -95,6 +95,8 @@ int main(int argc, char *argv[])
     Test->repl->execute_query_all_nodes((char *) "RESET SLAVE ALL");
     Test->repl->execute_query_all_nodes((char *) "RESET MASTER");
 
+    Test->repl->verbose = true;
+
     Test->tprintf("Starting binlog configuration\n");
     Test->start_binlog();
 
@@ -214,7 +216,7 @@ int select_new_master(TestConnections * test)
     test->tprintf("Real master pos : %s\n", log_pos);
 
     test->tprintf("Connecting to MaxScale binlog router (with any DB)\n");
-    MYSQL * binlog = open_conn_no_db(test->binlog_port, test->maxscale_IP, test->repl->user_name,
+    MYSQL * binlog = open_conn_no_db(test->maxscales->binlog_port[0], test->maxscales->IP[0], test->repl->user_name,
                                      test->repl->password, test->ssl);
     test->add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
@@ -253,7 +255,7 @@ int select_new_master(TestConnections * test)
 
     test->tprintf("reconnect to binlog\n");
     mysql_close(binlog);
-    binlog = open_conn_no_db(test->binlog_port, test->maxscale_IP, test->repl->user_name, test->repl->password,
+    binlog = open_conn_no_db(test->maxscales->binlog_port[0], test->maxscales->IP[0], test->repl->user_name, test->repl->password,
                              test->ssl);
     test->add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
@@ -287,7 +289,7 @@ void *disconnect_thread( void *ptr )
     MYSQL * conn;
     char cmd[256];
     int i;
-    conn = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password,
+    conn = open_conn(Test->maxscales->binlog_port[0], Test->maxscales->IP[0], Test->repl->user_name, Test->repl->password,
                      Test->repl->ssl);
     Test->add_result(mysql_errno(conn), "Error connecting to Binlog router, error: %s\n", mysql_error(conn));
     i = 3;

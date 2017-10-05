@@ -4,7 +4,7 @@
  * - create 'user' with password 'pass2'
  * - create load on Master (3 threads are inserting data into 't1' in the loop)
  * - in 40 parallel threads open connection, execute change_user to 'user', execute change_user to default user, close connection
- * - repeat test first only for RWSplit and second for all routers
+ * - repeat test first only for RWSplit and second for all maxscales->routers[0]
  * - check logs for lack of "Unable to write to backend 'server2' due to authentication failure" errors
  * - check for lack of crashes in the log
  */
@@ -83,16 +83,16 @@ int main(int argc, char *argv[])
 
     Test->repl->connect();
     Test->connect_maxscale();
-    create_t1(Test->conn_rwsplit);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 2000;");
     Test->repl->sync_slaves();
 
     Test->tprintf("Creating user 'user' \n");
-    execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%%'");
-    execute_query(Test->conn_rwsplit, (char *) "CREATE USER user@'%%' IDENTIFIED BY 'pass2'");
-    execute_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%%'");
-    execute_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS test.t1");
-    execute_query(Test->conn_rwsplit, (char *) "CREATE TABLE test.t1 (x1 int, fl int)");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER user@'%%'");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE USER user@'%%' IDENTIFIED BY 'pass2'");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "GRANT SELECT ON test.* TO user@'%%'");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE IF EXISTS test.t1");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE TABLE test.t1 (x1 int, fl int)");
     Test->repl->sync_slaves();
 
     /* Create independent threads each of them will create some load on Master */
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 
     Test->repl->flush_hosts();
 
-    Test->tprintf("all routers are involved, threads are running %d seconds more\n", run_time);
+    Test->tprintf("all maxscales->routers[0] are involved, threads are running %d seconds more\n", run_time);
     Test->set_timeout(run_time + 100);
 
     for (i = 0; i < threads_num; i++)
@@ -151,8 +151,8 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Dropping tables and users\n");
     Test->set_timeout(60);
-    execute_query(Test->conn_rwsplit, (char *) "DROP TABLE test.t1;");
-    execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%%'");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE test.t1;");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER user@'%%'");
     Test->close_maxscale_connections();
 
     Test->set_timeout(160);

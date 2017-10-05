@@ -79,12 +79,12 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Creating table\n");
     fflush(stdout);
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t2");
-    Test->try_query(Test->conn_rwsplit,
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE IF EXISTS t2");
+    Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char *) "CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));");
     Test->tprintf("Doing INSERTs\n");
     fflush(stdout);
-    Test->try_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "insert into t2 (x) values (1);");
 
     Test->stop_timeout();
     Test->repl->sync_slaves();
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     char last_insert_id2[1024];
     if ( (
                 find_field(
-                    Test->conn_rwsplit, sel1,
+                    Test->maxscales->conn_rwsplit[0], sel1,
                     "@@server_id", &last_insert_id1[0])
                 != 0 ) || (
                 find_field(

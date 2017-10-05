@@ -1,7 +1,7 @@
 /**
  * @file bug519.cpp - Jira task is MAX-345
  * - fill t1 with data
- * - execute SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1; against all routers
+ * - execute SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1; against all maxscales->routers[0]
  * - DROP TABLE t1
  * - LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1; using RWSplit
  * - check if t1 contains right data
@@ -80,10 +80,10 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     Test->tprintf("Create t1\n");
-    create_t1(Test->conn_rwsplit);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
     Test->tprintf("Insert data into t1\n");
     Test->set_timeout(60);
-    insert_into_t1(Test->conn_rwsplit, N);
+    insert_into_t1(Test->maxscales->conn_rwsplit[0], N);
     Test->stop_timeout();
     Test->repl->sync_slaves();
     Test->set_timeout(200);
@@ -99,30 +99,30 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Copying data from t1 to file...\n");
     Test->tprintf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
     Test->tprintf("using ReadConn master: SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;\n");
-    Test->try_query(Test->conn_master, (char *) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
+    Test->try_query(Test->maxscales->conn_master[0], (char *) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
     Test->tprintf("using ReadConn slave: SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;\n");
-    Test->try_query(Test->conn_slave, (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
+    Test->try_query(Test->maxscales->conn_slave[0], (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
     Test->tprintf("Copying t1.cvs from Maxscale machine:\n");
     Test->repl->copy_from_node("/tmp/t1.csv", "./t1.csv", 0);
 
     MYSQL *srv[2];
 
-    srv[0] = Test->conn_rwsplit;
-    srv[1] = Test->conn_master;
+    srv[0] = Test->maxscales->conn_rwsplit[0];
+    srv[1] = Test->maxscales->conn_master[0];
     for (int i = 0; i < iterations; i++)
     {
         Test->set_timeout(100);
         Test->tprintf("Dropping t1 \n");
-        Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE t1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE t1;");
         Test->stop_timeout();
         Test->repl->sync_slaves();
 
         Test->set_timeout(200);
         Test->tprintf("Create t1\n");
-        create_t1(Test->conn_rwsplit);
+        create_t1(Test->maxscales->conn_rwsplit[0]);
         Test->tprintf("Loading data to t1 from file\n");
         Test->try_query(srv[i], (char *) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
         Test->stop_timeout();
@@ -130,11 +130,11 @@ int main(int argc, char *argv[])
 
         Test->set_timeout(100);
         Test->tprintf("SELECT: rwsplitter\n");
-        Test->add_result(select_from_t1(Test->conn_rwsplit, N), "Wrong data in 't1'");
+        Test->add_result(select_from_t1(Test->maxscales->conn_rwsplit[0], N), "Wrong data in 't1'");
         Test->tprintf("SELECT: master\n");
-        Test->add_result(select_from_t1(Test->conn_master, N), "Wrong data in 't1'");
+        Test->add_result(select_from_t1(Test->maxscales->conn_master[0], N), "Wrong data in 't1'");
         Test->tprintf("SELECT: slave\n");
-        Test->add_result(select_from_t1(Test->conn_slave, N), "Wrong data in 't1'");
+        Test->add_result(select_from_t1(Test->maxscales->conn_slave[0], N), "Wrong data in 't1'");
     }
 
     Test->repl->close_connections();

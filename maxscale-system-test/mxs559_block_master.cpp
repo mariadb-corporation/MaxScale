@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
 
     test.set_timeout(60);
     test.connect_maxscale();
-    create_t1(test.conn_rwsplit);
-    execute_query(test.conn_rwsplit, "set global max_connections=1000");
+    create_t1(test.maxscales->conn_rwsplit[0]);
+    execute_query(test.maxscales->conn_rwsplit[0], "set global max_connections=1000");
     test.close_maxscale_connections();
 
     test.tprintf("Create query load");
@@ -48,10 +48,10 @@ int main(int argc, char *argv[])
     for (int i = 0; i < load_threads_num; i++)
     {
         data_master[i].exit_flag = 0;
-        data_master[i].ip = test.maxscale_IP;
-        data_master[i].port = test.rwsplit_port;
-        data_master[i].user = test.maxscale_user;
-        data_master[i].password = test.maxscale_password;
+        data_master[i].ip = test.maxscales->IP[0];
+        data_master[i].port = test.maxscales->rwsplit_port[0];
+        data_master[i].user = test.maxscales->user_name;
+        data_master[i].password = test.maxscales->password;
         data_master[i].ssl = test.ssl;
         pthread_create(&thread_master[i], NULL, disconnect_thread, &data_master[i]);
     }
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
         sleep(1);
     }
 
-    test.try_query(test.conn_rwsplit, "DROP TABLE IF EXISTS t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
     test.close_maxscale_connections();
 
     test.check_maxscale_alive();

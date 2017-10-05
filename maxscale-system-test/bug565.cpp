@@ -64,17 +64,17 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     Test->connect_maxscale();
 
-    conn_found_rows = open_conn_db_flags(Test->rwsplit_port, Test->maxscale_IP, (char *) "test",
-                                         Test->maxscale_user, Test->maxscale_password, CLIENT_FOUND_ROWS, Test->ssl);
+    conn_found_rows = open_conn_db_flags(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "test",
+                                         Test->maxscales->user_name, Test->maxscales->password, CLIENT_FOUND_ROWS, Test->ssl);
 
     Test->set_timeout(30);
-    execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1");
-    execute_query(Test->conn_rwsplit, "CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))");
-    execute_query(Test->conn_rwsplit,
+    execute_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))");
+    execute_query(Test->maxscales->conn_rwsplit[0],
                   "INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')");
 
     Test->set_timeout(30);
-    execute_query_affected_rows(Test->conn_rwsplit, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
+    execute_query_affected_rows(Test->maxscales->conn_rwsplit[0], "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
     Test->tprintf("update #1: %ld (expeced value is 2)\n", (long) rows);
     if (rows != 2)
     {
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(30);
-    execute_query_affected_rows(Test->conn_rwsplit, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
+    execute_query_affected_rows(Test->maxscales->conn_rwsplit[0], "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
     Test->tprintf("update #2: %ld  (expeced value is 0)\n", (long) rows);
     if (rows != 0)
     {

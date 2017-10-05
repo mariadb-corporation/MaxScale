@@ -35,13 +35,13 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
     Test->tprintf("Trying to send query to ReadConn master\n");
     fflush(stdout);
-    Test->try_query(Test->conn_master, (char *) "show processlist");
+    Test->try_query(Test->maxscales->conn_master[0], (char *) "show processlist");
     Test->tprintf("Trying to send query to ReadConn slave\n");
     fflush(stdout);
-    Test->try_query(Test->conn_slave, (char *) "show processlist");
+    Test->try_query(Test->maxscales->conn_slave[0], (char *) "show processlist");
     Test->tprintf("Trying to send query to RWSplit, expecting failure\n");
     fflush(stdout);
-    if (execute_query(Test->conn_rwsplit, (char *) "show processlist") == 0)
+    if (execute_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist") == 0)
     {
         Test->add_result(1, "FAIL: Query to broken service succeeded!\n");
     }

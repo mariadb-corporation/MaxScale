@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
     ss << "CREATE OR REPLACE TABLE test.t1 (id INT)";
     test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, ss.str().c_str());
+    test.try_query(test.maxscales->conn_rwsplit[0], ss.str().c_str());
 
     ss.str("");
     ss << "INSERT INTO test.t1 VALUES (0)";
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     {
         ss << ",(" << i << ")";
     }
-    test.try_query(test.conn_rwsplit, ss.str().c_str());
+    test.try_query(test.maxscales->conn_rwsplit[0], ss.str().c_str());
 
     test.close_maxscale_connections();
 

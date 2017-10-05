@@ -17,6 +17,7 @@
 #include "mariadb_func.h"
 #include <errno.h>
 #include <string>
+#include "nodes.h"
 
 /**
  * @brief A class to handle backend nodes
@@ -28,7 +29,7 @@
  * prefix_User - User name to access backend setup (should have full access to 'test' DB with GRANT OPTION)
  * prefix_Password - Password to access backend setup
  */
-class Mariadb_nodes
+class Mariadb_nodes: public Nodes
 {
 public:
     /**
@@ -46,20 +47,7 @@ public:
     /**
      * @brief  IP address strings for every backend node
      */
-    char IP[256][1024];
-    /**
-     * @brief  private IP address strings for every backend node (for AWS)
-     */
-    char IP_private[256][1024];
-    /**
-     * @brief  IP address strings for every backend node (IPv6)
-     */
-    char IP6[256][1024];
-    /**
-     * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
-     * Also IPv6 addresses go to maxscale.cnf
-     */
-    bool use_ipv6;
+
     /**
      * @brief  MariaDB port for every backend node
      */
@@ -72,14 +60,7 @@ public:
      * @brief 'socket=$socket' line
      */
     char socket_cmd[256][1024];
-    /**
-     * @brief  Path to ssh key for every backend node
-     */
-    char sshkey[256][4096];
-    /**
-     * @brief Number of backend nodes
-     */
-    int N;
+
     /**
      * @brief   User name to access backend nodes
      */
@@ -92,10 +73,7 @@ public:
      * @brief master index of node which was last configured to be Master
      */
     int master;
-    /**
-     * @brief     name of backend setup (like 'repl' or 'galera')
-     */
-    char prefix[16];
+
     /**
      * @brief start_db_command Command to start DB server
      */
@@ -118,30 +96,9 @@ public:
     int ssl;
 
     /**
-     * @brief access_user Unix users name to access nodes via ssh
-     */
-    char access_user[256][256];
-
-    /**
-     * @brief access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
-     */
-    char access_sudo[256][64];
-
-
-    /**
-     * @brief access_homedir home directory of access_user
-     */
-    char access_homedir[256][256];
-
-    /**
      * @brief no_set_pos if set to true setup_binlog function do not set log position
      */
     bool no_set_pos;
-
-    /**
-     * @brief Verbose command output
-     */
-    bool verbose;
 
     /**
      * @brief version Value of @@version
@@ -172,7 +129,6 @@ public:
     * @brief test_dir path to test application
     */
     char test_dir[4096];
-
 
     /**
      * @brief List of blocked nodes
@@ -294,13 +250,6 @@ public:
     int start_node(int node, char * param);
 
     /**
-     * @brief Check node via ssh and restart it if it is not resposible
-     * @param node Node index
-     * @return 0 if node is ok, 1 if start failed
-     */
-    int check_nodes();
-
-    /**
      * @brief Check if all slaves have "Slave_IO_Running" set to "Yes" and master has N-1 slaves
      * @param master Index of master node
      * @return 0 if everything is ok
@@ -333,34 +282,6 @@ public:
     std::string get_server_id_str(int index);
 
     /**
-     * @brief Generate command line to execute command on the node via ssh
-     * @param cmd result
-     * @param index index number of the node (index)
-     * @param ssh command to execute
-     * @param sudo if true the command is executed with root privelegues
-     */
-    void generate_ssh_cmd(char * cmd, int node, const char *ssh, bool sudo);
-
-    /**
-     * @brief executes shell command on the node using ssh
-     * @param index number of the node (index)
-     * @param ssh command to execute
-     * @param sudo if true the command is executed with root privelegues
-     * @param pointer to variable to store process exit code
-     * @return output of the command
-     */
-    char *ssh_node_output(int node, const char *ssh, bool sudo, int *exit_code);
-
-    /**
-     * @brief executes shell command on the node using ssh
-     * @param index number of the node (index)
-     * @param ssh command to execute
-     * @param sudo if true the command is executed with root privelegues
-     * @return exit code of the coomand
-     */
-    int ssh_node(int node, const char *ssh, bool sudo);
-
-    /**
      * @brief Execute 'mysqladmin flush-hosts' on all nodes
      * @return 0 in case of success
      */
@@ -378,7 +299,6 @@ public:
      * @return 0 in case of success
      */
     int get_versions();
-
 
     /**
      * @brief Return lowest server version in the cluster
@@ -405,24 +325,6 @@ public:
     int disable_ssl();
 
     /**
-     * @brief Copy a local file to the Node i machine
-     * @param src Source file on the local filesystem
-     * @param dest Destination file on the remote file system
-     * @param i Node index
-     * @return exit code of the system command or 1 in case of i > N
-     */
-    int copy_to_node(const char* src, const char* dest, int i);
-
-    /**
-     * @brief Copy a local file to the Node i machine
-     * @param src Source file on the remote filesystem
-     * @param dest Destination file on the local file system
-     * @param i Node index
-     * @return exit code of the system command or 1 in case of i > N
-     */
-    int copy_from_node(const char* src, const char* dest, int i);
-
-    /**
      * @brief Synchronize slaves with the master
      *
      * Only works with master-slave replication and should not be used with Galera clusters.
@@ -444,7 +346,6 @@ public:
 
 private:
 
-    int check_node_ssh(int node);
     bool check_master_node(MYSQL *conn);
 };
 

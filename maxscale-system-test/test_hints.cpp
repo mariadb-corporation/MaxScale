@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     for (int i = 0; queries[i].query; i++)
     {
         char str[1024];
-        find_field(test->conn_rwsplit, queries[i].query, "@@server_id", str);
+        find_field(test->maxscales->conn_rwsplit[0], queries[i].query, "@@server_id", str);
         if (strcmp(server_id[queries[i].reply], str) != 0)
         {
             test->add_result(1, "%s: Expected %s but got %s.\n",

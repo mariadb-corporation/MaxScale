@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     TestConnections *Test = new TestConnections(argc, argv);
     Test->set_timeout(200);
 
-    Test->tprintf("Connecting to ReadConn Master %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to ReadConn Master %s\n", Test->maxscales->IP[0]);
     Test->connect_readconn_master();
 
     sleep(1);

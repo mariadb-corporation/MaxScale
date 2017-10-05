@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 
     sprintf(str1,
             "mysqlbinlog -R -h %s -P %d -u%s -p%s mar-bin.000001 --stop-position=60000",
-            Test->maxscale_IP, Test->binlog_port, Test->maxscale_user, Test->maxscale_password);
+            Test->maxscales->IP[0], Test->maxscales->binlog_port[0], Test->maxscales->user_name, Test->maxscales->password);
     Test->tprintf("running mysqlbinlog on node_000 to connecto Maxscale: %s\n", str1);
     int exit_code;
     char * mysql_binlog_connect_output = Test->repl->ssh_node_output(0, str1, false, &exit_code);

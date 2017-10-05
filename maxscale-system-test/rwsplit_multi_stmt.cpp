@@ -26,17 +26,17 @@ int main(int argc, char** argv)
     test.connect_maxscale();
     test.tprintf("Configuration: strict_multi_stmt=true");
 
-    test.add_result(execute_query_check_one(test.conn_rwsplit,
+    test.add_result(execute_query_check_one(test.maxscales->conn_rwsplit[0],
                                             "SELECT @@server_id",
                                             slave_id),
                     "Query should be routed to slave");
 
-    test.add_result(execute_query_check_one(test.conn_rwsplit,
+    test.add_result(execute_query_check_one(test.maxscales->conn_rwsplit[0],
                                             "USE test; SELECT @@server_id",
                                             master_id),
                     "Query should be routed to master");
 
-    test.add_result(execute_query_check_one(test.conn_rwsplit,
+    test.add_result(execute_query_check_one(test.maxscales->conn_rwsplit[0],
                                             "SELECT @@server_id",
                                             master_id),
                     "All queries should be routed to master");
@@ -50,17 +50,17 @@ int main(int argc, char** argv)
     test.connect_maxscale();
     test.tprintf("Configuration: strict_multi_stmt=false");
 
-    test.add_result(execute_query_check_one(test.conn_rwsplit,
+    test.add_result(execute_query_check_one(test.maxscales->conn_rwsplit[0],
                                             "SELECT @@server_id",
                                             slave_id),
                     "Query should be routed to slave");
 
-    test.add_result(execute_query_check_one(test.conn_rwsplit,
+    test.add_result(execute_query_check_one(test.maxscales->conn_rwsplit[0],
                                             "USE test; SELECT @@server_id",
                                             master_id),
                     "Query should be routed to master");
 
-    test.add_result(execute_query_check_one(test.conn_rwsplit,
+    test.add_result(execute_query_check_one(test.maxscales->conn_rwsplit[0],
                                             "SELECT @@server_id",
                                             slave_id),
                     "Query should be routed to slave");

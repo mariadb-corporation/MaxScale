@@ -21,9 +21,9 @@ int check_server_id(TestConnections* test, char *node_id)
 {
     char str[1024];
     int rval = 0;
-    if (execute_query(test->conn_rwsplit, "BEGIN") ||
-            find_field(test->conn_rwsplit, "SELECT @@server_id", "@@server_id", str) ||
-            execute_query(test->conn_rwsplit, "COMMIT"))
+    if (execute_query(test->maxscales->conn_rwsplit[0], "BEGIN") ||
+            find_field(test->maxscales->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", str) ||
+            execute_query(test->maxscales->conn_rwsplit[0], "COMMIT"))
     {
         test->tprintf("Failed to compare @@server_id.\n");
         rval = 1;
@@ -107,11 +107,11 @@ int simple_failover(TestConnections* test)
         /** All nodes blocked, expect failure */
         test->tprintf("Expecting failure...\n");
         int myerrno = 0;
-        if ((myerrno = test->connect_rwsplit()) == 0 && test->conn_rwsplit)
+        if ((myerrno = test->connect_rwsplit()) == 0 && test->maxscales->conn_rwsplit[0])
         {
             test->tprintf("Connecting to rwsplit was expected to fail but it was"
                           " successful. Returned error was %d.\n", myerrno);
-            if (execute_query(test->conn_rwsplit, "SELECT @@server_id") == 0)
+            if (execute_query(test->maxscales->conn_rwsplit[0], "SELECT @@server_id") == 0)
             {
                 test->tprintf("SELECT @@server_id was expected to fail but the query was successful.\n");
             }

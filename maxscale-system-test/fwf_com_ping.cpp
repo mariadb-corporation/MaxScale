@@ -26,7 +26,8 @@ int main(int argc, char** argv)
     test.restart_maxscale();
     test.connect_maxscale();
     test.tprintf("Pinging MaxScale, expecting success");
-    test.add_result(mysql_ping(test.conn_rwsplit), "Ping should not fail: %s", mysql_error(test.conn_rwsplit));
+    test.add_result(mysql_ping(test.maxscales->conn_rwsplit[0]), "Ping should not fail: %s",
+                    mysql_error(test.maxscales->conn_rwsplit[0]));
     test.close_maxscale_connections();
 
     return test.global_result;

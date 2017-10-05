@@ -27,11 +27,11 @@ int main(int argc, char *argv[])
     test.tprintf("Open session, wait %d seconds and execute a query", first_sleep);
     test.connect_maxscale();
     sleep(first_sleep);
-    test.try_query(test.conn_rwsplit, "SELECT 1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "SELECT 1");
 
     test.tprintf("Wait %d seconds and execute query, expecting failure", second_sleep);
     sleep(second_sleep);
-    test.add_result(execute_query(test.conn_rwsplit, "SELECT 1") == 0,
+    test.add_result(execute_query(test.maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                     "Session was not closed after %d seconds",
                     second_sleep);
     test.close_maxscale_connections();
@@ -40,11 +40,11 @@ int main(int argc, char *argv[])
     test.connect_maxscale();
     for (int i = 0; i < 10; i++)
     {
-        test.try_query(test.conn_rwsplit, "set @test=1");
+        test.try_query(test.maxscales->conn_rwsplit[0], "set @test=1");
     }
 
     test.tprintf("Execute one more session command and expect message in error log");
-    execute_query(test.conn_rwsplit, "set @test=1");
+    execute_query(test.maxscales->conn_rwsplit[0], "set @test=1");
     sleep(1);
     test.check_log_err("Router session exceeded session command history limit", true);
     test.close_maxscale_connections();
