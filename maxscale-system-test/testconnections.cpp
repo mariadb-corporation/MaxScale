@@ -170,9 +170,10 @@ TestConnections::TestConnections(int argc, char *argv[]):
     }
 
     repl->use_ipv6 = use_ipv6;
-    maxscales->use_ipv6 = use_ipv6;
 
     maxscales = new Maxscales("maxscale", test_dir, verbose);
+
+    maxscales->use_ipv6 = use_ipv6;
 
     if (maxscale::required_repl_version.length())
     {
@@ -2106,4 +2107,3 @@ int TestConnections::connect_readconn_slave()
 
     return rc;
 }
-
