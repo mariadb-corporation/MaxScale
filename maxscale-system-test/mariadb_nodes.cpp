@@ -1315,18 +1315,26 @@ void Mariadb_nodes::sync_slaves(int node)
         if (res)
         {
             MYSQL_ROW row = mysql_fetch_row(res);
-            if (row && row[node] && row[1])
+            if (row && row[0] && row[1])
             {
-                const char* file_suffix = strchr(row[node], '.') + 1;
-                int filenum = atoi(file_suffix);
-                int pos = atoi(row[1]);
-
-                for (int i = 0; i < this->N; i++)
+                const char* file_suffix = strchr(row[0], '.');
+                if (file_suffix)
                 {
-                    if (i != node)
+                    file_suffix++;
+                    int filenum = atoi(file_suffix);
+                    int pos = atoi(row[1]);
+
+                    for (int i = 0; i < this->N; i++)
                     {
-                        wait_until_pos(this->nodes[i], filenum, pos);
+                        if (i != node)
+                        {
+                            wait_until_pos(this->nodes[i], filenum, pos);
+                        }
                     }
+                }
+                else
+                {
+                    printf("Cannot sync slaves, invalid binlog file name: %s", row[0]);
                 }
             }
             mysql_free_result(res);
