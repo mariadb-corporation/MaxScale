@@ -52,15 +52,15 @@ public:
     bool execute_session_command();
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
 
-    void set_modutil_state(const modutil_state& state);
-    modutil_state get_modutil_state() const;
+    bool is_large_packet() const;
+    void set_large_packet(bool value);
 
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
-    modutil_state    m_modutil_state; /**< Used to store the state of the EOF packet
-                                       * calculation for result sets when the result
-                                       * contains very large rows */
+    bool             m_large_packet; /**< Used to store the state of the EOF packet
+                                      *calculation for result sets when the result
+                                      * contains very large rows */
 };
 
 typedef std::tr1::shared_ptr<RWBackend> SRWBackend;
