@@ -337,6 +337,9 @@ public:
     static void require_repl_version(const char *version);
     static void require_galera_version(const char *version);
 
+    /** Initialize multiple MaxScale instances */
+    void multiple_maxscales(bool value);
+
     /**
      * @brief add_result adds result to global_result and prints error message if result is not 0
      * @param result 0 if step PASSED
