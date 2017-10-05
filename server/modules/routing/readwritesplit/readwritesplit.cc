@@ -508,26 +508,26 @@ static bool route_stored_query(RWSplitSession *rses)
     return rval;
 }
 
-static bool is_eof(GWBUF* buffer)
+static inline bool is_eof(GWBUF* buffer)
 {
     uint8_t* data = GWBUF_DATA(buffer);
     return data[MYSQL_HEADER_LEN] == MYSQL_REPLY_EOF &&
         gw_mysql_get_byte3(data) + MYSQL_HEADER_LEN == MYSQL_EOF_PACKET_LEN;
 }
 
-static bool is_large(GWBUF* buffer)
+static inline bool is_large(GWBUF* buffer)
 {
     return gw_mysql_get_byte3(GWBUF_DATA(buffer)) == GW_MYSQL_MAX_PACKET_LEN;
 }
 
-static bool more_results_exist(GWBUF* buffer)
+static inline bool more_results_exist(GWBUF* buffer)
 {
     ss_dassert(is_eof(buffer) || mxs_mysql_is_ok_packet(buffer));
     uint16_t status = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1 + 2);
     return status & SERVER_MORE_RESULTS_EXIST;
 }
 
-static bool is_result_set(GWBUF *buffer)
+static inline bool is_result_set(GWBUF *buffer)
 {
     bool rval = false;
 
@@ -549,6 +549,11 @@ static bool is_result_set(GWBUF *buffer)
     return rval;
 }
 
+static inline uint8_t get_cmd(SRWBackend& backend)
+{
+    return mxs_mysql_current_command(backend->dcb()->session);
+}
+
 /**
  * @brief Check if we have received a complete reply from the backend
  *
@@ -559,11 +564,9 @@ static bool is_result_set(GWBUF *buffer)
  */
 bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
 {
-    mxs_mysql_cmd_t cmd = mxs_mysql_current_command(backend->dcb()->session);
-
     if (backend->get_reply_state() == REPLY_STATE_START && !is_result_set(buffer))
     {
-        if (cmd == MXS_COM_STMT_PREPARE || !more_results_exist(buffer))
+        if (!more_results_exist(buffer) || get_cmd(backend) == MXS_COM_STMT_PREPARE)
         {
             /** Not a result set, we have the complete response */
             LOG_RS(backend, REPLY_STATE_DONE);
@@ -596,7 +599,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
             LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
             backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
         }
-        else if (n_eof == 1 && cmd != MXS_COM_FIELD_LIST)
+        else if (n_eof == 1 && get_cmd(backend) != MXS_COM_FIELD_LIST)
         {
             /** Waiting for the EOF packet after the rows */
             LOG_RS(backend, REPLY_STATE_RSET_ROWS);
@@ -606,7 +609,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
         {
             /** We either have a complete result set or a response to
              * a COM_FIELD_LIST command */
-            ss_dassert(n_eof == 2 || (n_eof == 1 && cmd == MXS_COM_FIELD_LIST));
+            ss_dassert(n_eof == 2 || (n_eof == 1 && get_cmd(backend) == MXS_COM_FIELD_LIST));
             LOG_RS(backend, REPLY_STATE_DONE);
             backend->set_reply_state(REPLY_STATE_DONE);
 

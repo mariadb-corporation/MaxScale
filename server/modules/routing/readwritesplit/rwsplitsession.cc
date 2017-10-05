@@ -25,26 +25,6 @@ RWBackend::~RWBackend()
 {
 }
 
-reply_state_t RWBackend::get_reply_state() const
-{
-    return m_reply_state;
-}
-
-void RWBackend::set_reply_state(reply_state_t state)
-{
-    m_reply_state = state;
-}
-
-void RWBackend::set_large_packet(bool value)
-{
-    m_large_packet = value;
-}
-
-bool RWBackend::is_large_packet() const
-{
-    return m_large_packet;
-}
-
 bool RWBackend::execute_session_command()
 {
     bool expect_response = mxs_mysql_command_will_respond(next_session_command()->get_command());
