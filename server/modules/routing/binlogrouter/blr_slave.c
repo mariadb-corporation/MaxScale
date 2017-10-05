@@ -1183,7 +1183,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
                             bool all_slaves)
 {
     GWBUF *pkt;
-    char column[251] = "";
+    char column[2048] = "";
     uint8_t *ptr;
     int len, actual_len, col_len, seqno, i;
     char *dyn_column = NULL;
@@ -7484,10 +7484,9 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
                 /* Parse the non empty GTID value */
                 if (heading[0] && !blr_parse_gtid(heading, &gtid_elms))
                 {
-                    static const char *err_fmt = "Invalid format for GTID ('%s')"
-                                                 " set request; use 'X-Y-Z'";
+                    const char err_fmt[] = "Invalid format for GTID ('%s')"
+                                           " set request; use 'X-Y-Z'";
                     char err_msg[sizeof(err_fmt) + GTID_MAX_LEN + 1];
-
                     sprintf(err_msg, err_fmt, heading);
 
                     MXS_ERROR("%s", err_msg);
