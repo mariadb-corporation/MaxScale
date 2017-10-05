@@ -508,6 +508,25 @@ static bool route_stored_query(RWSplitSession *rses)
     return rval;
 }
 
+static bool is_eof(GWBUF* buffer)
+{
+    uint8_t* data = GWBUF_DATA(buffer);
+    return data[MYSQL_HEADER_LEN] == MYSQL_REPLY_EOF &&
+        gw_mysql_get_byte3(data) + MYSQL_HEADER_LEN == MYSQL_EOF_PACKET_LEN;
+}
+
+static bool is_large(GWBUF* buffer)
+{
+    return gw_mysql_get_byte3(GWBUF_DATA(buffer)) == GW_MYSQL_MAX_PACKET_LEN;
+}
+
+static bool more_results_exist(GWBUF* buffer)
+{
+    ss_dassert(is_eof(buffer));
+    uint16_t status = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1 + 2);
+    return status & SERVER_MORE_RESULTS_EXIST;
+}
+
 /**
  * @brief Check if we have received a complete reply from the backend
  *
@@ -531,11 +550,23 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
     }
     else
     {
-        bool more = false;
-        modutil_state state = backend->get_modutil_state();
-        int old_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
-        int n_eof = modutil_count_signal_packets(buffer, old_eof, &more, &state);
-        backend->set_modutil_state(state);
+        bool large = backend->is_large_packet();
+        int n_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
+
+        if (is_large(buffer))
+        {
+            large = true;
+        }
+        else if (large)
+        {
+            large = false;
+        }
+        else if (is_eof(buffer))
+        {
+            n_eof++;
+        }
+
+        backend->set_large_packet(large);
 
         if (n_eof == 0)
         {
@@ -557,7 +588,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
             LOG_RS(backend, REPLY_STATE_DONE);
             backend->set_reply_state(REPLY_STATE_DONE);
 
-            if (more)
+            if (more_results_exist(buffer))
             {
                 /** The server will send more resultsets */
                 LOG_RS(backend, REPLY_STATE_START);
@@ -1116,6 +1147,8 @@ static void clientReply(MXS_ROUTER *instance,
                         GWBUF *writebuf,
                         DCB *backend_dcb)
 {
+    ss_dassert(GWBUF_IS_CONTIGUOUS(writebuf) &&
+        MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(writebuf)) + MYSQL_HEADER_LEN == gwbuf_length(writebuf));
     RWSplitSession *rses = (RWSplitSession *)router_session;
     DCB *client_dcb = backend_dcb->session->client_dcb;
 

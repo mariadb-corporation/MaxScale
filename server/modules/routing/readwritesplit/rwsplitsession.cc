@@ -17,7 +17,7 @@
 RWBackend::RWBackend(SERVER_REF* ref):
     mxs::Backend(ref),
     m_reply_state(REPLY_STATE_DONE),
-    m_modutil_state(MODUTIL_STATE_INIT)
+    m_large_packet(false)
 {
 }
 
@@ -35,14 +35,14 @@ void RWBackend::set_reply_state(reply_state_t state)
     m_reply_state = state;
 }
 
-void RWBackend::set_modutil_state(const modutil_state& state)
+void RWBackend::set_large_packet(bool value)
 {
-    m_modutil_state = state;
+    m_large_packet = value;
 }
 
-modutil_state RWBackend::get_modutil_state() const
+bool RWBackend::is_large_packet() const
 {
-    return m_modutil_state;
+    return m_large_packet;
 }
 
 bool RWBackend::execute_session_command()
