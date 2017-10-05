@@ -1058,14 +1058,14 @@ int TestConnections::start_binlog()
         fflush(stdout);
         tprintf("Maxscale binlog master pos : %s\n", log_pos);
         fflush(stdout);
-    }
 
-    tprintf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");
-    fflush(stdout);
-    for (i = 2; i < repl->N; i++)
-    {
-        try_query(repl->nodes[i], "stop slave;");
-        repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
+        tprintf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");
+        fflush(stdout);
+        for (i = 2; i < repl->N; i++)
+        {
+            try_query(repl->nodes[i], "stop slave;");
+            repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
+        }
     }
 
     repl->close_connections();
