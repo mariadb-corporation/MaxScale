@@ -63,22 +63,28 @@ void TestConnections::require_galera_version(const char *version)
 }
 
 TestConnections::TestConnections(int argc, char *argv[]):
-    no_backend_log_copy(false),
-    use_snapshots(false),
-    verbose(false),
-    smoke(true),
+    enable_timeouts(true),
+    global_result(0),
     rwsplit_port(4006),
     readconn_master_port(4008),
     readconn_slave_port(4009),
     binlog_port(5306),
-    global_result(0),
-    binlog_cmd_option(0),
-    enable_timeouts(true),
+    conn_rwsplit(NULL),
+    conn_master(NULL),
+    conn_slave(NULL),
     use_ipv6(false),
-    no_galera(false),
+    use_snapshots(false),
+    no_backend_log_copy(false),
+    verbose(false),
+    smoke(true),
+    binlog_cmd_option(0),
+    ssl(false),
+    backend_ssl(false),
     binlog_master_gtid(false),
     binlog_slave_gtid(false),
-    no_vm_revert(true)
+    no_galera(false),
+    no_vm_revert(true),
+    threads(4)
 {
     signal_set(SIGSEGV, sigfatal_handler);
     signal_set(SIGABRT, sigfatal_handler);
@@ -484,7 +490,7 @@ int TestConnections::read_env()
     {
         sprintf(maxscale_access_sudo, "%s", env);
     }
-    ssl = false;
+
     env = getenv("ssl");
     if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
     {
@@ -527,10 +533,6 @@ int TestConnections::read_env()
     {
         backend_ssl = true;
     }
-    else
-    {
-        backend_ssl = false;
-    }
 
     if (strcmp(maxscale_access_user, "root") == 0)
     {
@@ -553,19 +555,11 @@ int TestConnections::read_env()
     {
         sscanf(env, "%d", &threads);
     }
-    else
-    {
-        threads = 4;
-    }
 
     env = getenv("use_snapshots");
     if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
     {
         use_snapshots = true;
-    }
-    else
-    {
-        use_snapshots = false;
     }
     env = getenv("take_snapshot_command");
     if (env != NULL)
