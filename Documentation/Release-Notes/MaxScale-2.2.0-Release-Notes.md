@@ -166,6 +166,15 @@ mycommands.txt`).
 
 ## New Features
 
+### MaxCtrl Command Line Client
+
+The MaxCtrl is a new command line intended to replace MaxAdmin. This
+client uses the REST API to communicate with MaxScale in a secure way. The
+client is distributed separately in the `maxscale-client` package.
+
+For more information, refer to the [MaxCtrl](../Reference/MaxCtrl.md)
+documentation.
+
 ### MySQL Monitor Crash Safety
 
 The MySQL monitor keeps a journal of the state of the servers and the currently
