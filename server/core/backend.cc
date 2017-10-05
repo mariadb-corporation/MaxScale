@@ -173,23 +173,6 @@ void Backend::set_state(backend_state state)
     m_state |= state;
 }
 
-SERVER_REF* Backend::backend() const
-{
-    ss_dassert(m_backend);
-    return m_backend;
-}
-
-SERVER* Backend::server() const
-{
-    ss_dassert(m_backend);
-    return m_backend->server;
-}
-
-bool Backend::can_connect() const
-{
-    return !has_failed() && SERVER_IS_RUNNING(m_backend->server);
-}
-
 bool Backend::connect(MXS_SESSION* session)
 {
     bool rval = false;
@@ -207,11 +190,6 @@ bool Backend::connect(MXS_SESSION* session)
     }
 
     return rval;
-}
-
-DCB* Backend::dcb() const
-{
-    return m_dcb;
 }
 
 bool Backend::write(GWBUF* buffer, response_type type)
@@ -265,54 +243,4 @@ bool Backend::write_stored_command()
     }
 
     return rval;
-}
-
-bool Backend::in_use() const
-{
-    return m_state & IN_USE;
-}
-
-bool Backend::is_active() const
-{
-    return SERVER_REF_IS_ACTIVE(m_backend);
-}
-
-bool Backend::is_waiting_result() const
-{
-    return m_state & WAITING_RESULT;
-}
-
-bool Backend::is_closed() const
-{
-    return m_closed;
-}
-
-bool Backend::is_master() const
-{
-    return SERVER_IS_MASTER(m_backend->server);
-}
-
-bool Backend::is_slave() const
-{
-    return SERVER_IS_SLAVE(m_backend->server);
-}
-
-bool Backend::is_relay() const
-{
-    return SERVER_IS_RELAY_SERVER(m_backend->server);
-}
-
-bool Backend::has_failed() const
-{
-    return m_state & FATAL_FAILURE;
-}
-
-const char* Backend::name() const
-{
-    return m_backend->server->unique_name;
-}
-
-const char* Backend::uri() const
-{
-    return m_uri.c_str();
 }

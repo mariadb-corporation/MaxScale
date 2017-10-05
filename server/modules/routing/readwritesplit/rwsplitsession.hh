@@ -43,8 +43,15 @@ public:
     RWBackend(SERVER_REF* ref);
     ~RWBackend();
 
-    reply_state_t get_reply_state() const;
-    void set_reply_state(reply_state_t state);
+    inline reply_state_t get_reply_state() const
+    {
+        return m_reply_state;
+    }
+
+    inline void set_reply_state(reply_state_t state)
+    {
+        m_reply_state = state;
+    }
 
     void add_ps_handle(uint32_t id, uint32_t handle);
     uint32_t get_ps_handle(uint32_t id) const;
@@ -52,8 +59,15 @@ public:
     bool execute_session_command();
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
 
-    bool is_large_packet() const;
-    void set_large_packet(bool value);
+    inline void set_large_packet(bool value)
+    {
+        m_large_packet = value;
+    }
+
+    inline bool is_large_packet() const
+    {
+        return m_large_packet;
+    }
 
 private:
     reply_state_t    m_reply_state;
