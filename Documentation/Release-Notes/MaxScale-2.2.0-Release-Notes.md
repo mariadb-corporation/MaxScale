@@ -223,7 +223,31 @@ with functions. For more information about this new rule, read the
 
 ## Bug fixes
 
-[Here is a list of bugs fixed since the release of MaxScale 2.1.X.]()
+[Here is a list of bugs fixed in MaxScale 2.2.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.0)
+
+* [MXS-1450](https://jira.mariadb.org/browse/MXS-1450) Maxadmin commands with a leading space are silently ignored
+* [MXS-1449](https://jira.mariadb.org/browse/MXS-1449) Database change not allowed
+* [MXS-1405](https://jira.mariadb.org/browse/MXS-1405) Script launched by monitors should run synchronously
+* [MXS-1397](https://jira.mariadb.org/browse/MXS-1397) ReadWriteSplit's master connection can time out if session only issues read-only queries
+* [MXS-1359](https://jira.mariadb.org/browse/MXS-1359) qc_sqlite crashes with a very large compound select
+* [MXS-1351](https://jira.mariadb.org/browse/MXS-1351) Partially authenticated connections are put into the connection pool
+* [MXS-1349](https://jira.mariadb.org/browse/MXS-1349) qc_mysqlembedded accesses wrong preparable statement field
+* [MXS-1346](https://jira.mariadb.org/browse/MXS-1346) Function blocking per column
+* [MXS-1345](https://jira.mariadb.org/browse/MXS-1345) Empty function list is not allowed
+* [MXS-1340](https://jira.mariadb.org/browse/MXS-1340) Report true table and not alias name
+* [MXS-1339](https://jira.mariadb.org/browse/MXS-1339) QC should return a particular table/database just once
+* [MXS-1334](https://jira.mariadb.org/browse/MXS-1334) Build on FreeBSD 11 looks for libdl - how can it be told not to?
+* [MXS-1322](https://jira.mariadb.org/browse/MXS-1322) Flushing log should reopen not reopen and truncate.
+* [MXS-1307](https://jira.mariadb.org/browse/MXS-1307) Add CTE tests
+* [MXS-1265](https://jira.mariadb.org/browse/MXS-1265) strerror_r calls result in compiler warnings
+* [MXS-1262](https://jira.mariadb.org/browse/MXS-1262) Mantenance bit(s) should persist after maxscale restart
+* [MXS-1221](https://jira.mariadb.org/browse/MXS-1221) Nagios plugin scripts does not process -S option properly
+* [MXS-1214](https://jira.mariadb.org/browse/MXS-1214) Streaming Insert Filter gives errors
+* [MXS-1203](https://jira.mariadb.org/browse/MXS-1203)  Batch inserts through Maxscale with C/J stall
+* [MXS-1198](https://jira.mariadb.org/browse/MXS-1198) Interface retry bind interval (of a listener) increases by ten seconds every time it fails (10,20,30,....) it should be a fixed interval (and maybe configurable)
+* [MXS-1160](https://jira.mariadb.org/browse/MXS-1160) Load infile not working on Schemarouter
+* [MXS-1146](https://jira.mariadb.org/browse/MXS-1146) JDBC connection dropping transaction when connecting to MaxScale directly
+* [MXS-959](https://jira.mariadb.org/browse/MXS-959) KILL command on wrong connection ID
 
 ## Known Issues and Limitations
 
