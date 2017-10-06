@@ -103,7 +103,7 @@ int rses_get_max_replication_lag(RWSplitSession *rses)
  * @return backend reference pointer if succeed or NULL
  */
 
-static SRWBackend& get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
+static inline SRWBackend& get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
 {
     ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
@@ -581,7 +581,6 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
     else
     {
         int n_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
-
         size_t len = gw_mysql_get_byte3(GWBUF_DATA(buffer));
 
         if (len == GW_MYSQL_MAX_PACKET_LEN)
