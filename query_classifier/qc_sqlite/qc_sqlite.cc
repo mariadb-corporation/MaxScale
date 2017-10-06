@@ -484,19 +484,27 @@ public:
     // PUBLIC for now at least.
 
     /**
-     * Returns whether a field is sequence related.
+     * Returns whether sequence related functions should be checked for.
      *
-     * @param zDatabase  The database/schema or NULL.
-     * @param zTable     The table or NULL.
-     * @param zColumn    The column.
+     * Only if we are in Oracle mode or parsing as 10.3 we need to check.
      *
-     * @return True, if the field is sequence related, false otherwise.
+     * @return True, if they need to be checked for, false otherwise.
      */
-    bool is_sequence_related_field(const char* zDatabase,
-                                   const char* zTable,
-                                   const char* zColumn) const
+    bool must_check_sequence_related_functions() const
     {
-        return is_sequence_related_function(zColumn);
+        return (m_sql_mode == QC_SQL_MODE_ORACLE) || (this_unit.parse_as == QC_PARSE_AS_103);
+    }
+
+    /**
+     * Returns whether fields should be collected.
+     *
+     * @return True, if should be, false otherwise.
+     */
+    bool must_collect_fields() const
+    {
+        // We must collect if fields should be collected and they have not
+        // been collected yet.
+        return (m_collect & QC_COLLECT_FIELDS) && !(m_collected & QC_COLLECT_FIELDS);
     }
 
     /**
@@ -532,6 +540,22 @@ public:
         }
 
         return rv;
+    }
+
+    /**
+     * Returns whether a field is sequence related.
+     *
+     * @param zDatabase  The database/schema or NULL.
+     * @param zTable     The table or NULL.
+     * @param zColumn    The column.
+     *
+     * @return True, if the field is sequence related, false otherwise.
+     */
+    bool is_sequence_related_field(const char* zDatabase,
+                                   const char* zTable,
+                                   const char* zColumn) const
+    {
+        return is_sequence_related_function(zColumn);
     }
 
     static void honour_aliases(const QcAliases* pAliases,
@@ -614,13 +638,14 @@ public:
 
         // NOTE: This must be first, so that the type mask is properly updated
         // NOTE: in case zColumn is "currval" etc.
-        if (is_sequence_related_field(zDatabase, zTable, zColumn))
+        if (must_check_sequence_related_functions() &&
+            is_sequence_related_field(zDatabase, zTable, zColumn))
         {
             m_type_mask |= QUERY_TYPE_WRITE;
             return;
         }
 
-        if (!(m_collect & QC_COLLECT_FIELDS) || (m_collected & QC_COLLECT_FIELDS))
+        if (!must_collect_fields())
         {
             // If field information should not be collected, or if field information
             // has already been collected, we just return.
@@ -669,42 +694,45 @@ public:
         bool should_collect_database = zDatabase &&
             (should_collect_alias || should_collect(QC_COLLECT_DATABASES));
 
-        const char* zCollected_database = NULL;
-        const char* zCollected_table = NULL;
-
-        size_t nDatabase = zDatabase ? strlen(zDatabase) : 0;
-        size_t nTable = zTable ? strlen(zTable) : 0;
-
-        char database[nDatabase + 1];
-        char table[nTable + 1];
-
-        if (should_collect_database)
+        if (should_collect_table || should_collect_database)
         {
-            strcpy(database, zDatabase);
-            exposed_sqlite3Dequote(database);
-        }
+            const char* zCollected_database = NULL;
+            const char* zCollected_table = NULL;
 
-        if (should_collect_table)
-        {
-            if (strcasecmp(zTable, "DUAL") != 0)
+            size_t nDatabase = zDatabase ? strlen(zDatabase) : 0;
+            size_t nTable = zTable ? strlen(zTable) : 0;
+
+            char database[nDatabase + 1];
+            char table[nTable + 1];
+
+            if (should_collect_database)
             {
-                strcpy(table, zTable);
-                exposed_sqlite3Dequote(table);
-
-                zCollected_table = update_table_names(database, nDatabase, table, nTable);
+                strcpy(database, zDatabase);
+                exposed_sqlite3Dequote(database);
             }
-        }
 
-        if (should_collect_database)
-        {
-            zCollected_database = update_database_names(database);
-        }
+            if (should_collect_table)
+            {
+                if (strcasecmp(zTable, "DUAL") != 0)
+                {
+                    strcpy(table, zTable);
+                    exposed_sqlite3Dequote(table);
 
-        if (pAliases && zCollected_table && zAlias)
-        {
-            QcAliasValue value(zCollected_database, zCollected_table);
+                    zCollected_table = update_table_names(database, nDatabase, table, nTable);
+                }
+            }
 
-            pAliases->insert(QcAliases::value_type(zAlias, value));
+            if (should_collect_database)
+            {
+                zCollected_database = update_database_names(database);
+            }
+
+            if (pAliases && zCollected_table && zAlias)
+            {
+                QcAliasValue value(zCollected_database, zCollected_table);
+
+                pAliases->insert(QcAliases::value_type(zAlias, value));
+            }
         }
     }
 
@@ -1145,9 +1173,12 @@ public:
         const char* zTable;
         const char* zColumn;
 
-        if (get_field_name(pExpr, &zDatabase, &zTable, &zColumn))
+        if (must_check_sequence_related_functions() || must_collect_fields())
         {
-            update_field_info(pAliases, zDatabase, zTable, zColumn, pExclude);
+            if (get_field_name(pExpr, &zDatabase, &zTable, &zColumn))
+            {
+                update_field_info(pAliases, zDatabase, zTable, zColumn, pExclude);
+            }
         }
     }
 
@@ -1167,11 +1198,14 @@ public:
                                         const IdList* pIds,
                                         const ExprList* pExclude)
     {
-        for (int i = 0; i < pIds->nId; ++i)
+        if (must_check_sequence_related_functions() || must_collect_fields())
         {
-            IdList::IdList_item* pItem = &pIds->a[i];
+            for (int i = 0; i < pIds->nId; ++i)
+            {
+                IdList::IdList_item* pItem = &pIds->a[i];
 
-            update_field_info(pAliases, NULL, NULL, pItem->zName, pExclude);
+                update_field_info(pAliases, NULL, NULL, pItem->zName, pExclude);
+            }
         }
     }
 
