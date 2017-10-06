@@ -105,10 +105,10 @@ struct buffer_object_st
  */
 typedef struct
 {
-    unsigned char   *data;     /*< Physical memory that was allocated */
-    int              refcount; /*< Reference count on the buffer */
+    int32_t          refcount; /*< Reference count on the buffer */
     buffer_object_t *bufobj;   /*< List of objects referred to by GWBUF */
     uint32_t         info;     /*< Info bits */
+    unsigned char    data[1];  /*< Actual memory that was allocated */
 } SHARED_BUF;
 
 /**

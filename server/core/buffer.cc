@@ -55,6 +55,7 @@ gwbuf_alloc(unsigned int size)
 {
     GWBUF      *rval;
     SHARED_BUF *sbuf;
+    size_t      sbuf_size = sizeof(SHARED_BUF) + (size ? size - 1 : 0);
 
     /* Allocate the buffer header */
     if ((rval = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
@@ -63,27 +64,19 @@ gwbuf_alloc(unsigned int size)
     }
 
     /* Allocate the shared data buffer */
-    if ((sbuf = (SHARED_BUF *)MXS_MALLOC(sizeof(SHARED_BUF))) == NULL)
+    if ((sbuf = (SHARED_BUF *)MXS_MALLOC(sbuf_size)) == NULL)
     {
         MXS_FREE(rval);
         rval = NULL;
         goto retblock;
     }
 
-    /* Allocate the space for the actual data */
-    if ((sbuf->data = (unsigned char *)MXS_MALLOC(size)) == NULL)
-    {
-        MXS_FREE(rval);
-        MXS_FREE(sbuf);
-        rval = NULL;
-        goto retblock;
-    }
     sbuf->refcount = 1;
     sbuf->info = GWBUF_INFO_NONE;
     sbuf->bufobj = NULL;
 
     spinlock_init(&rval->gwbuf_lock);
-    rval->start = sbuf->data;
+    rval->start = &sbuf->data;
     rval->end = (void *)((char *)rval->start + size);
     rval->sbuf = sbuf;
     rval->next = NULL;
@@ -262,7 +255,6 @@ gwbuf_free_one(GWBUF *buf)
             bo = gwbuf_remove_buffer_object(buf, bo);
         }
 
-        MXS_FREE(buf->sbuf->data);
         MXS_FREE(buf->sbuf);
     }
 
