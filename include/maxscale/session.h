@@ -408,6 +408,18 @@ bool session_store_stmt(MXS_SESSION *session, GWBUF *buf, const struct server *s
 bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const struct server **target);
 
 /**
+ * @brief Check if the session has a stored statement
+ *
+ * @param session Session to check
+ *
+ * @return True if the session has a stored statement
+ */
+static inline bool session_have_stmt(MXS_SESSION *session)
+{
+    return session->stmt.buffer;
+}
+
+/**
  * Clear the stored statement
  *
  * @param session Session to clear
