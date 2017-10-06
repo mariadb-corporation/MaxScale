@@ -514,21 +514,17 @@ static bool route_stored_query(RWSplitSession *rses)
     return rval;
 }
 
-static inline bool is_eof(GWBUF* buffer)
+static inline bool is_eof(GWBUF* buffer, size_t len)
 {
     uint8_t* data = GWBUF_DATA(buffer);
     return data[MYSQL_HEADER_LEN] == MYSQL_REPLY_EOF &&
-        gw_mysql_get_byte3(data) + MYSQL_HEADER_LEN == MYSQL_EOF_PACKET_LEN;
+        len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN;
 }
 
 static inline bool is_ok(GWBUF* buffer)
 {
     uint8_t* data = GWBUF_DATA(buffer);
     return data[MYSQL_HEADER_LEN] == MYSQL_REPLY_OK;
-}
-static inline bool is_large(GWBUF* buffer)
-{
-    return gw_mysql_get_byte3(GWBUF_DATA(buffer)) == GW_MYSQL_MAX_PACKET_LEN;
 }
 
 static inline bool more_results_exist(GWBUF* buffer)
@@ -584,23 +580,22 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
     }
     else
     {
-        bool large = backend->is_large_packet();
         int n_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
 
-        if (is_large(buffer))
+        size_t len = gw_mysql_get_byte3(GWBUF_DATA(buffer));
+
+        if (len == GW_MYSQL_MAX_PACKET_LEN)
         {
-            large = true;
+            backend->set_large_packet(true);
         }
-        else if (large)
+        else if (backend->is_large_packet())
         {
-            large = false;
+            backend->set_large_packet(false);
         }
-        else if (is_eof(buffer))
+        else if (is_eof(buffer, len))
         {
             n_eof++;
         }
-
-        backend->set_large_packet(large);
 
         if (n_eof == 0)
         {
