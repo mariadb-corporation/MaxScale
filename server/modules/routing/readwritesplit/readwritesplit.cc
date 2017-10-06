@@ -1196,8 +1196,11 @@ static void clientReply(MXS_ROUTER *instance,
         return;
     }
 
-    /** Statement was successfully executed, free the stored statement */
-    session_clear_stmt(backend_dcb->session);
+    if (session_have_stmt(backend_dcb->session))
+    {
+        /** Statement was successfully executed, free the stored statement */
+        session_clear_stmt(backend_dcb->session);
+    }
 
     if (reply_is_complete(backend, writebuf))
     {
