@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     char sql[10240];
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     create_t1(Test->maxscales->conn_rwsplit[0]);
 
     Test->tprintf("INSERTing data");
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1");
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

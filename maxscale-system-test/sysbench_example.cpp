@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
         Test->tprintf("Error executing sysbench test\n");
     }
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     printf("Dropping sysbanch tables!\n");
     fflush(stdout);
@@ -56,11 +56,11 @@ int main(int argc, char *argv[])
     printf("closing connections to MaxScale!\n");
     fflush(stdout);
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->tprintf("Checking if MaxScale is still alive!\n");
     fflush(stdout);
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

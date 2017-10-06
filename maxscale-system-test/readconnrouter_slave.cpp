@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Creating %d connections to ReadConnRouter in 'slave' mode\n", TestConnNum);
     for (i = 0; i < TestConnNum; i++)
     {
-        conn[i] = Test->open_readconn_slave_connection();
+        conn[i] = Test->maxscales->open_readconn_slave_connection(0);
     }
     Test->tprintf("Waiting 5 seconds\n");
     sleep(5);

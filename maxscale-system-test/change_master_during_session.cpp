@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     printf("Connecting to RWsplit\n");
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
     Test->set_timeout(30);
     Test->add_result(create_t1(Test->maxscales->conn_rwsplit[0]), "Error creating 't1'\n");
 
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     Test->tprintf("executing SELECT\n");
     execute_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1;");
 
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
 
     /** Sleep for at least one monitor interval */
     Test->tprintf("Waiting for monitor to detect changes\n");
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     sleep(3);
 
     Test->set_timeout(60);
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
     Test->tprintf("Reconnecting and executing SELECT again\n");
     Test->set_timeout(60);
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SELECT * FROM t1;");

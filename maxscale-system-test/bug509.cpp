@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
 
     Test->galera->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     if (Test->galera->N < 3)
     {
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

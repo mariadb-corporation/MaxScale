@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Creating 'root'@'%%'\n");
     //global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE USER 'root'@'%'; SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
@@ -255,13 +255,13 @@ int main(int argc, char *argv[])
     Test->tprintf("Dropping 'root'@'%%'\n");
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER 'root'@'%%';");
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_log_err((char *) "Failed to add user skysql", false);
-    Test->check_log_err((char *) "getaddrinfo failed", false);
-    Test->check_log_err((char *) "Couldn't find suitable Master", false);
+    Test->check_log_err(0, (char *) "Failed to add user skysql", false);
+    Test->check_log_err(0, (char *) "getaddrinfo failed", false);
+    Test->check_log_err(0, (char *) "Couldn't find suitable Master", false);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

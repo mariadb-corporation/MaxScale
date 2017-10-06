@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     if (mysql_errno(Test->maxscales->conn_rwsplit[0]) == 0)
     {
@@ -42,9 +42,9 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying query to ReadConn slave\n");
     Test->try_query(Test->maxscales->conn_slave[0], "show processlist;");
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_log_err("There are too few backend servers configured in", true);
+    Test->check_log_err(0, "There are too few backend servers configured in", true);
 
     int rval = Test->global_result;
     delete Test;

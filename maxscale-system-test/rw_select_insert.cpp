@@ -130,9 +130,9 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
-    Test->execute_maxadmin_command((char *) "shutdown monitor MySQL-Monitor");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "shutdown monitor MySQL-Monitor");
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
 
@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
                                       100),
                      "Wrong check_com_insert result\n");
 
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
 
     int rval = Test->global_result;
     delete Test;

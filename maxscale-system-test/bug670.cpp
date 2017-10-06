@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
     int i;
 
     Test->tprintf("Connecting to all MaxScale services\n");
-    Test->add_result(Test->connect_maxscale(), "Error connecting to Maxscale\n");
+    Test->add_result(Test->maxscales->connect_maxscale(0), "Error connecting to Maxscale\n");
 
     Test->tprintf("executing sql 100 times (ReadConn Slave)\n");
     for (i = 0; i < 100; i++)
@@ -257,9 +257,9 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(10);
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 
     int rc = 0;
 
-    if (test.restart_maxscale() == 0)
+    if (test.maxscales->restart_maxscale(0) == 0)
     {
         test.tprintf("Restarting MaxScale succeeded when it should've failed!");
         rc = 1;

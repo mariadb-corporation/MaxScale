@@ -3,6 +3,7 @@
 
 #include "nodes.h"
 #include "mariadb_func.h"
+#include "mariadb_nodes.h"
 
 class Maxscales: public Nodes
 {
@@ -85,6 +86,135 @@ public:
     * @brief test_dir path to test application
     */
     char test_dir[4096];
+
+    bool ssl;
+
+    /**
+     * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
+     * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
+     * Connections stored in maxscales->conn_rwsplit[0], maxscales->conn_master[0] and maxscales->conn_slave[0] MYSQL structs
+     * @return 0 in case of success
+     */
+    int connect_maxscale(int m);
+
+    /**
+     * @brief CloseMaxscaleConn Closes connection that were opened by ConnectMaxscale()
+     * @return 0
+     */
+    int close_maxscale_connections(int m);
+
+    /**
+     * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in maxscales->conn_rwsplit[0]
+     * @return 0 in case of success
+     */
+    int connect_rwsplit(int m);
+
+    /**
+     * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in maxscales->conn_master[0]
+     * @return 0 in case of success
+     */
+    int connect_readconn_master(int m);
+
+    /**
+     * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in maxscales->conn_slave[0]
+     * @return 0 in case of success
+     */
+    int connect_readconn_slave(int m);
+
+    /**
+     * @brief OpenRWSplitConn   Opens new connections to RWSplit and returns MYSQL struct
+     * To close connection mysql_close() have to be called
+     * @return MYSQL struct
+     */
+    MYSQL * open_rwsplit_connection(int m)
+    {
+        return open_conn(rwsplit_port[m], IP[m], user_name, password, ssl);
+    }
+
+    /**
+     * @brief OpenReadMasterConn    Opens new connections to ReadConn master and returns MYSQL struct
+     * To close connection mysql_close() have to be called
+     * @return MYSQL struct
+     */
+    MYSQL * open_readconn_master_connection(int m)
+    {
+        return open_conn(readconn_master_port[m], IP[m], user_name,
+                         password, ssl);
+    }
+
+    /**
+     * @brief OpenReadSlaveConn    Opens new connections to ReadConn slave and returns MYSQL struct
+     * To close connection mysql_close() have to be called
+     * @return  MYSQL struct
+     */
+    MYSQL * open_readconn_slave_connection(int m)
+    {
+        return open_conn(readconn_slave_port[m], IP[m], user_name,
+                         password, ssl);
+    }
+
+    /**
+     * @brief CloseRWSplit Closes RWplit connections stored in maxscales->conn_rwsplit[0]
+     */
+    void close_rwsplit(int m)
+    {
+        mysql_close(conn_rwsplit[m]);
+        conn_rwsplit[m] = NULL;
+    }
+
+    /**
+     * @brief CloseReadMaster Closes ReadConn master connections stored in maxscales->conn_master[0]
+     */
+    void close_readconn_master(int m)
+    {
+        mysql_close(conn_master[m]);
+        conn_master[m] = NULL;
+    }
+
+    /**
+     * @brief CloseReadSlave Closes ReadConn slave connections stored in maxscales->conn_slave[0]
+     */
+    void close_readconn_slave(int m)
+    {
+        mysql_close(conn_slave[m]);
+        conn_slave[m] = NULL;
+    }
+
+    /**
+     * @brief restart_maxscale Issues 'service maxscale restart' command
+     */
+    int restart_maxscale(int m);
+
+    /**
+     * @brief start_maxscale Issues 'service maxscale start' command
+     */
+    int start_maxscale(int m);
+
+    /**
+     * @brief stop_maxscale Issues 'service maxscale stop' command
+     */
+    int stop_maxscale(int m);
+
+    int execute_maxadmin_command(int m, char * cmd);
+    int execute_maxadmin_command_print(int m, char * cmd);
+    int check_maxadmin_param(int m, const char *command, const  char *param, const  char *value);
+    int get_maxadmin_param(int m, const char *command, const char *param, char *result);
+
+    /**
+     * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
+     * @return memory size in kilobytes
+     */
+    long unsigned get_maxscale_memsize(int m);
+
+    int try_query_all(int m, const char *sql);
+
+    /**
+     * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show server'
+     * @param nodes Mariadb_nodes object
+     * @return node index if one master found, -1 if no master found or several masters found
+     */
+    int find_master_maxadmin(int m, Mariadb_nodes * nodes);
+    int find_slave_maxadmin(int m, Mariadb_nodes * nodes);
 
 };
 

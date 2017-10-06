@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
         for (j = 0; j < Test->maxscales->N_ports[0]; j++)
         {
             Test->tprintf("Executing MaxAdmin command '%s'\n", fail_cmd[i]);
-            if (execute_maxadmin_command(Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0], fail_cmd[i]) != 0)
+            if (maxscales->execute_maxadmin_command(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0], fail_cmd[i]) != 0)
             {
                 Test->add_result(1, "MaxAdmin command failed\n");
             }
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

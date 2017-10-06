@@ -32,7 +32,7 @@ static int inserts = 0;
 
 void check(TestConnections& test)
 {
-    MYSQL *conn = test.open_rwsplit_connection();
+    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
     const char *query1 = "INSERT INTO test.t1 VALUES (%d)";
     const char *query2 = "SELECT * FROM test.t1";
 
@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 
     test.tprintf("Creating table and inserting data");
     get_input();
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
 
     check(test);
@@ -142,10 +142,10 @@ int main(int argc, char** argv)
 
     test.tprintf("Dropping tables");
     get_input();
-    test.close_maxscale_connections();
-    test.connect_maxscale();
+    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->connect_maxscale(0);
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     get_output(test);
 

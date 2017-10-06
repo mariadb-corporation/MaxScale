@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 
     sprintf(server_id, "%d", test->repl->get_server_id(1));
     test->tprintf("Server ID of server2 is: %s\n", server_id);
-    test->add_result(test->connect_rwsplit(), "Test failed to connect to MaxScale.\n");
+    test->add_result(test->maxscales->connect_rwsplit(0), "Test failed to connect to MaxScale.\n");
     test->add_result(compare_server_id(test, server_id), "Test failed, server ID was not correct.\n");
     int rval = test->global_result;
     delete test;

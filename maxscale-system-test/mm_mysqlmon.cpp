@@ -26,7 +26,7 @@ void check_status(TestConnections *Test, const char *server, const char *status)
 
     sprintf(cmd, "show server %s", server);
     Test->set_timeout(120);
-    Test->get_maxadmin_param(cmd, (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, cmd, (char *) "Status:", maxadmin_result);
     if (maxadmin_result == NULL)
     {
         Test->add_result(1, "maxadmin execution error\n");

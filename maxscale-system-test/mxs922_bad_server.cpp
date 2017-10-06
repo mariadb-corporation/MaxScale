@@ -51,7 +51,7 @@ void do_query(TestConnections *test, bool should_fail)
     test->tprintf("Trying to query, expecting %s", should_fail ? "failure" : "success");
     test->set_timeout(120);
 
-    test->connect_maxscale();
+    test->maxscales->connect_maxscale(0);
 
     bool failed = execute_query(test->maxscales->conn_rwsplit[0], "select @@server_id") == 0;
 
@@ -60,7 +60,7 @@ void do_query(TestConnections *test, bool should_fail)
                       "Query failed when success was expected.";
 
     test->add_result(failed == should_fail, msg);
-    test->close_maxscale_connections();
+    test->maxscales->close_maxscale_connections(0);
 
     test->stop_timeout();
 }
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 
     do_query(test, true);
 
-    test->check_maxscale_processes(1);
+    test->check_maxscale_processes(0, 1);
     int rval = test->global_result;
     delete test;
     return rval;

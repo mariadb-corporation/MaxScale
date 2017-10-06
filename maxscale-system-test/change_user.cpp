@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
 
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Creating user 'user' \n");
 
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER user@'%%';");
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

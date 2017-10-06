@@ -237,137 +237,32 @@ public:
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
      * @return 0 if case of success
      */
-    int init_maxscale();
+    int init_maxscale(int m);
 
-    /**
-     * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
-     * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
-     * Connections stored in maxscales->conn_rwsplit[0], maxscales->conn_master[0] and maxscales->conn_slave[0] MYSQL structs
-     * @return 0 in case of success
-     */
-    int connect_maxscale();
 
-    /**
-     * @brief CloseMaxscaleConn Closes connection that were opened by ConnectMaxscale()
-     * @return 0
-     */
-    int close_maxscale_connections();
-
-    /**
-     * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in maxscales->conn_rwsplit[0]
-     * @return 0 in case of success
-     */
-    int connect_rwsplit();
-
-    /**
-     * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in maxscales->conn_master[0]
-     * @return 0 in case of success
-     */
-    int connect_readconn_master();
-
-    /**
-     * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in maxscales->conn_slave[0]
-     * @return 0 in case of success
-     */
-    int connect_readconn_slave();
-
-    /**
-     * @brief OpenRWSplitConn   Opens new connections to RWSplit and returns MYSQL struct
-     * To close connection mysql_close() have to be called
-     * @return MYSQL struct
-     */
-    MYSQL * open_rwsplit_connection()
-    {
-        return open_conn(maxscales->rwsplit_port[0], maxscales->IP[0], maxscales->user_name, maxscales->password,
-                         ssl);
-    }
-
-    /**
-     * @brief OpenReadMasterConn    Opens new connections to ReadConn master and returns MYSQL struct
-     * To close connection mysql_close() have to be called
-     * @return MYSQL struct
-     */
-    MYSQL * open_readconn_master_connection()
-    {
-        return open_conn(maxscales->readconn_master_port[0], maxscales->IP[0], maxscales->user_name,
-                         maxscales->password, ssl);
-    }
-
-    /**
-     * @brief OpenReadSlaveConn    Opens new connections to ReadConn slave and returns MYSQL struct
-     * To close connection mysql_close() have to be called
-     * @return  MYSQL struct
-     */
-    MYSQL * open_readconn_slave_connection()
-    {
-        return open_conn(maxscales->readconn_slave_port[0], maxscales->IP[0], maxscales->user_name,
-                         maxscales->password, ssl);
-    }
-
-    /**
-     * @brief CloseRWSplit Closes RWplit connections stored in maxscales->conn_rwsplit[0]
-     */
-    void close_rwsplit()
-    {
-        mysql_close(maxscales->conn_rwsplit[0]);
-        maxscales->conn_rwsplit[0] = NULL;
-    }
-
-    /**
-     * @brief CloseReadMaster Closes ReadConn master connections stored in maxscales->conn_master[0]
-     */
-    void close_readconn_master()
-    {
-        mysql_close(maxscales->conn_master[0]);
-        maxscales->conn_master[0] = NULL;
-    }
-
-    /**
-     * @brief CloseReadSlave Closes ReadConn slave connections stored in maxscales->conn_slave[0]
-     */
-    void close_readconn_slave()
-    {
-        mysql_close(maxscales->conn_slave[0]);
-        maxscales->conn_slave[0] = NULL;
-    }
-
-    /**
-     * @brief restart_maxscale Issues 'service maxscale restart' command
-     */
-    int restart_maxscale();
-
-    /**
-     * @brief start_maxscale Issues 'service maxscale start' command
-     */
-    int start_maxscale();
-
-    /**
-     * @brief stop_maxscale Issues 'service maxscale stop' command
-     */
-    int stop_maxscale();
 
     /**
      * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
      * @return  0 in case of success
      */
-    int start_binlog();
+    int start_binlog(int m);
 
     /**
      * @brief Start binlogrouter replication from master
      */
-    bool replicate_from_master();
+    bool replicate_from_master(int m);
 
     /**
      * @brief prepare_binlog clean up binlog directory, set proper access rights to it
      * @return 0
      */
-    int prepare_binlog();
+    int prepare_binlog(int m);
 
     /**
      * @brief start_mm configure first node as Master for second, Second as Master for first
      * @return  0 in case of success
      */
-    int start_mm();
+    int start_mm(int m);
 
     /**
      * @brief copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
@@ -388,7 +283,7 @@ public:
      */
     int test_maxscale_connections(bool rw_split,
                                   bool rc_master,
-                                  bool rc_slave);
+                                  bool rc_slave, int m);
 
     /**
      * @brief Create a number of connections to all services, run simple query, close all connections
@@ -399,7 +294,8 @@ public:
      * @param galera_flag if true connections to RWSplit router with Galera backend will be created, if false - no connections to RWSplit with Galera backend
      * @return  0 in case of success
      */
-    int create_connections(int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag, bool galera_flag);
+    int create_connections(int m, int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag,
+                           bool galera_flag);
 
     /**
      * Trying to get client IP address by connection to DB via RWSplit and execution 'show processlist'
@@ -407,7 +303,7 @@ public:
      * @param ip client IP address as it visible by Maxscale
      * @return 0 in case of success
      */
-    int get_client_ip(char * ip);
+    int get_client_ip(int m, char * ip);
 
     /**
      * @brief set_timeout startes timeout thread which terminates test application after timeout_seconds
@@ -442,7 +338,7 @@ public:
      * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4 last INSERT is about 700kb long
      * @return 0 in case of no error and all checks are ok
      */
-    int insert_select(int N);
+    int insert_select(int m, int N);
 
     /**
      * @brief Executes USE command for all Maxscale service and all Master/Slave backend nodes
@@ -450,7 +346,7 @@ public:
      * @param db Name of DB in 'USE' command
      * @return 0 in case of success
      */
-    int use_db(char * db);
+    int use_db(int m, char * db);
 
     /**
      * @brief Checks if table t1 exists in DB
@@ -459,7 +355,7 @@ public:
      * @return 0 if (t1 table exists AND presence=TRUE) OR (t1 table does not exist AND presence=false)
      */
 
-    int check_t1_table(bool presence, char * db);
+    int check_t1_table(int m, bool presence, char * db);
 
     /**
      * @brief CheckLogErr Reads error log and tried to search for given string
@@ -467,7 +363,7 @@ public:
      * @param expected TRUE if err_msg is expedted in the log, false if err_msg should NOT be in the log
      * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected is false)
      */
-    void check_log_err(const char * err_msg, bool expected);
+    void check_log_err(int m, const char * err_msg, bool expected);
 
     /**
      * @brief FindConnectedSlave Finds slave node which has connections from MaxScale
@@ -475,14 +371,14 @@ public:
      * @param global_result pointer to variable which is increased in case of error
      * @return index of found slave node
      */
-    int find_connected_slave(int * global_result);
+    int find_connected_slave(int m, int * global_result);
 
     /**
      * @brief FindConnectedSlave1 same as FindConnectedSlave() but does not increase global_result
      * @param Test  TestConnections object which contains info about test setup
      * @return index of found slave node
      */
-    int find_connected_slave1();
+    int find_connected_slave1(int m);
 
     /**
      * @brief CheckMaxscaleAlive Checks if MaxScale is alive
@@ -490,7 +386,7 @@ public:
      * Also 'show processlist' query is executed using all services
      * @return 0 in case if success
      */
-    int check_maxscale_alive();
+    int check_maxscale_alive(int m);
 
     /**
      * @brief try_query Executes SQL query and repors error
@@ -505,41 +401,22 @@ public:
      * @param sql SQL string
      * @return 0 if ok
      */
-    int try_query_all(const char *sql);
-
-    /**
-     * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show server'
-     * @param nodes Mariadb_nodes object
-     * @return node index if one master found, -1 if no master found or several masters found
-     */
-    int find_master_maxadmin(Mariadb_nodes * nodes);
-    int find_slave_maxadmin(Mariadb_nodes * nodes);
-
-    int execute_maxadmin_command(char * cmd);
-    int execute_maxadmin_command_print(char * cmd);
-    int check_maxadmin_param(const char *command, const  char *param, const  char *value);
-    int get_maxadmin_param(const char *command, const char *param, char *result);
-    void check_current_operations(int value);
-    void check_current_connections(int value);
+    int try_query_all(int m, const char *sql);
 
     /**
      * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'
      * @param expected expected number of Maxscale processes
      * @return 0 if check is done
      */
-    int check_maxscale_processes(int expected);
+    int check_maxscale_processes(int m, int expected);
 
     /**
      * @brief list_dirs Execute 'ls' on binlog directory on all repl nodes and on Maxscale node
      * @return 0
      */
-    int list_dirs();
+    int list_dirs(int m);
 
-    /**
-     * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
-     * @return memory size in kilobytes
-     */
-    long unsigned get_maxscale_memsize();
+
 
     /**
      * @brief make_snapshot Makes a snapshot for all running VMs
@@ -560,14 +437,20 @@ public:
      * @param config Name of the config template
      * @return Always false, the test will time out if the loading is successful
      */
-    bool test_bad_config(const char *config);
+    bool test_bad_config(int m, const char *config);
 
     /**
      * @brief Process a template configuration file
      *
      * @param dest Destination file name for actual configuration file
      */
-    void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
+    void process_template(int m, const char *src, const char *dest = "/etc/maxscale.cnf");
+
+
+    void check_current_operations(int m, int value);
+    void check_current_connections(int m, int value);
+    int stop_maxscale(int m);
+
 };
 
 /**

@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     }
     Test->set_timeout(50);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     stmt = mysql_stmt_init(Test->maxscales->conn_rwsplit[0]);
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     cout << endl;
     Test->set_timeout(20);
     mysql_stmt_close(stmt);
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

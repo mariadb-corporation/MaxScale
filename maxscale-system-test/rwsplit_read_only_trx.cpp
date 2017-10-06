@@ -18,7 +18,7 @@ int main(int argc, char** argv)
     sprintf(master_id, "%d", test.repl->get_server_id(0));
     sprintf(slave_id, "%d", test.repl->get_server_id(1));
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     execute_query_silent(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
     execute_query_silent(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1(id int)");
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     test.try_query(test.maxscales->conn_rwsplit[0], "COMMIT");
 
 
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     return test.global_result;
 }

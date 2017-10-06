@@ -8,8 +8,8 @@
 
 int check_server_id(TestConnections *test, int idx)
 {
-    test->close_maxscale_connections();
-    test->connect_maxscale();
+    test->maxscales->close_maxscale_connections(0);
+    test->maxscales->connect_maxscale(0);
 
     int a = test->repl->get_server_id(idx);
     int b = -1;
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     config.destroy_server(1);
     config.destroy_server(1);
     config.check_server_count(0);
-    test->check_maxscale_processes(1);
+    test->check_maxscale_processes(0, 1);
 
     test->tprintf("Testing adding of server to service");
 
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     config.add_server(1);
     config.check_server_count(1);
     sleep(1);
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
     config.remove_server(1);
     config.destroy_server(1);
     config.check_server_count(0);
@@ -58,10 +58,10 @@ int main(int argc, char *argv[])
     config.add_server(1);
     config.alter_server(1, "address", test->repl->IP[1]);
     sleep(1);
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
     config.alter_server(1, "address", "This-is-not-the-address-you-are-looking-for");
     config.alter_server(1, "port", 12345);
-    test->connect_maxscale();
+    test->maxscales->connect_maxscale(0);
     test->add_result(execute_query_silent(test->maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                      "Query with bad address should fail");
 
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 
     config.reset();
     sleep(1);
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
     int rval = test->global_result;
     delete test;
     return rval;

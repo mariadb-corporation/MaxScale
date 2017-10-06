@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 
     char master_ip[100];
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     for (int i = 0; i < 100; i++)
     {
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
         Test->add_result(strcmp(master_ip, Test->repl->IP_private[0]), "Master IP is wrong\n");
     }
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

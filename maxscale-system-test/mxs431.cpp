@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     Test->repl->stop_slaves();
     Test->set_timeout(30);
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
     Test->set_timeout(30);
     Test->repl->connect();
     Test->stop_timeout();

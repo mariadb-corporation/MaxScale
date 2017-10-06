@@ -32,17 +32,16 @@ int main(int argc, char *argv[])
     Test->binlog_slave_gtid = true;
 //    for (int option = 0; option < options_set; option++)
     //{
-  //      Test->binlog_cmd_option = option;
-        Test->start_binlog();
-        test_binlog(Test);
+    //      Test->binlog_cmd_option = option;
+    Test->start_binlog(0);
+    test_binlog(Test);
     //}
 
-    Test->check_log_err("SET NAMES utf8mb4", false);
-    Test->check_log_err("set autocommit=1", false);
-    Test->check_log_err("select USER()", false);
+    Test->check_log_err(0, "SET NAMES utf8mb4", false);
+    Test->check_log_err(0, "set autocommit=1", false);
+    Test->check_log_err(0, "select USER()", false);
 
     int rval = Test->global_result;
     delete Test;
     return rval;
 }
-

@@ -17,7 +17,7 @@ int main(int argc, char** argv)
         sprintf(server_id[i], "%d", test.repl->get_server_id(i));
     }
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     test.set_timeout(20);
 
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 
     mysql_stmt_close(stmt);
 
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     return test.global_result;
 }

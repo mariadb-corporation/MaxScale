@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->ip(0));
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     unsigned int conn_num;
     unsigned int all_conn = 0;
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
                          all_conn);
     }
 
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
     Test->repl->close_connections();
 
     int rval = Test->global_result;

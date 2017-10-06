@@ -171,8 +171,8 @@ int main(int argc, char *argv[])
 
     execute_query(Test->repl->nodes[0], "DROP USER 'old'@'%%'");
 
-    Test->check_log_err((char *) "MaxScale does not support these old passwords", true);
-    Test->check_maxscale_alive();
+    Test->check_log_err(0, (char *) "MaxScale does not support these old passwords", true);
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

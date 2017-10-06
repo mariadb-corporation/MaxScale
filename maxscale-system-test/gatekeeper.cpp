@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     Test->maxscales->ssh_node_f(0, true, "rm -f /var/lib/maxscale/gatekeeper.data");
     Test->set_timeout(30);
 
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1 (id INT)");
 
@@ -54,15 +54,15 @@ int main(int argc, char *argv[])
         Test->try_query(Test->maxscales->conn_rwsplit[0], training_queries[i]);
     }
 
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
 
     Test->maxscales->ssh_node_f(0, true, "sed -i -e 's/mode=learn/mode=enforce/' /etc/maxscale.cnf");
 
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
 
     sleep(5);
 
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     for (int i = 0; training_queries[i]; i++)
     {

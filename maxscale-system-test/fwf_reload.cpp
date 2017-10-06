@@ -24,11 +24,11 @@ int main(int argc, char *argv[])
     int i;
     int exit_code;
 
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
     char first_rule[] = "rules1";
     copy_rules(Test, first_rule, rules_dir);
-    Test->start_maxscale();
-    Test->connect_rwsplit();
+    Test->maxscales->start_maxscale(0);
+    Test->maxscales->connect_rwsplit(0);
 
 
     for (i = 1; i <= N; i++)
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
                                                     "maxadmin call command dbfwfilter rules/reload Database-Firewall", true, &exit_code);
     Test->add_result(strcasestr(output, "Failed") == NULL, "Reloading rules should fail with syntax errors");
 
-    Test->check_maxscale_processes(1);
+    Test->check_maxscale_processes(0, 1);
     int rval = Test->global_result;
     delete Test;
     return rval;

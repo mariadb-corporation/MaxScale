@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Connecting to Maxscale %s to check its behaviour in case of blocking all backends\n",
                   Test->maxscales->IP[0]);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     for (i = 0; i < Test->repl->N; i++)
     {
@@ -31,10 +31,10 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(200);
     Test->tprintf("Restarting MaxScale");
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
 
     Test->tprintf("Checking if MaxScale is alive by connecting to MaxAdmin\n");
-    Test->add_result(Test->execute_maxadmin_command((char* ) "show servers"), "Maxadmin execution failed.\n");
+    Test->add_result(Test->maxscales->execute_maxadmin_command(0, (char* ) "show servers"), "Maxadmin execution failed.\n");
 
     for (i = 0; i < Test->repl->N; i++)
     {
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Checking Maxscale is alive\n");
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

@@ -60,7 +60,7 @@ void compare_masters(TestConnections* Test, RDS * cluster)
     for (i = 0; i < Test->repl->N; i++)
     {
         sprintf(cmd, "show server server%d", i + 1);
-        Test->get_maxadmin_param(cmd, (char *) "Status:", &maxadmin_status[0]);
+        Test->maxscales->get_maxadmin_param(0, cmd, (char *) "Status:", &maxadmin_status[0]);
         Test->tprintf("Server%d status %s\n", i + 1, maxadmin_status);
         sprintf(cmd, "node%03d", i);
         if (strcmp(aurora_master, cmd) == 0)
@@ -115,12 +115,12 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Executing a query through readwritesplit before failover");
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
     Test->try_query(Test->maxscales->conn_rwsplit[0][0], "show processlist");
     char server_id[1024];
     Test->tprintf("Get aurora_server_id\n");
     find_field(Test->maxscales->conn_rwsplit[0][0], "select @@aurora_server_id;", "server_id", &server_id[0]);
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
     Test->tprintf("server_id before failover: %s\n", server_id);
 
     Test->stop_timeout();
@@ -135,17 +135,17 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Executing a query through readwritesplit after failover");
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
     Test->try_query(Test->maxscales->conn_rwsplit[0][0], "show processlist");
     Test->tprintf("Get aurora_server_id\n");
     find_field(Test->maxscales->conn_rwsplit[0][0], "select @@aurora_server_id;", "server_id", &server_id[0]);
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
     Test->tprintf("server_id after failover: %s\n", server_id);
 
     compare_masters(Test, cluster);
 
 
-    //Test->check_maxscale_alive();
+    //Test->check_maxscale_alive(0);
 
 
     Test->stop_timeout();

@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
         mysql_close(conn);
     }
 
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     Test->tprintf("Trying USE shard_db\n");
     execute_query(Test->maxscales->conn_rwsplit[0], "USE shard_db");
@@ -126,9 +126,9 @@ int main(int argc, char *argv[])
     mysql_close(conn);
 
     Test->stop_timeout();
-    Test->check_log_err((char *) "Length (0) is 0", false);
-    Test->check_log_err((char *) "Unable to parse query", false);
-    Test->check_log_err((char *) "query string allocation failed", false);
+    Test->check_log_err(0, (char *) "Length (0) is 0", false);
+    Test->check_log_err(0, (char *) "Unable to parse query", false);
+    Test->check_log_err(0, (char *) "query string allocation failed", false);
 
     Test->repl->connect();
     /** Cleanup */

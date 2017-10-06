@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     int i;
     char sql[256];
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("RWSplit: Executing set @test=i 10000 times\n");
     for (i = 0; i < 10000; i++)
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     }
     Test->tprintf("done!\n");
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

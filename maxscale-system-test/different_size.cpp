@@ -36,7 +36,7 @@ MYSQL * connect_to_serv(TestConnections* Test, bool binlog)
     }
     else
     {
-        conn = Test->open_rwsplit_connection();
+        conn = Test->maxscales->open_rwsplit_connection(0);
     }
     return conn;
 }
@@ -52,9 +52,9 @@ void set_max_packet(TestConnections* Test, bool binlog, char * cmd)
     }
     else
     {
-        Test->connect_maxscale();
+        Test->maxscales->connect_maxscale(0);
         Test->try_query(Test->maxscales->conn_rwsplit[0], cmd);
-        Test->close_maxscale_connections();
+        Test->maxscales->close_maxscale_connections(0);
     }
     Test->tprintf(".. done\n");
 }

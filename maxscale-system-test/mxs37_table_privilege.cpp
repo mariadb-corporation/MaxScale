@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(60);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Create user with only SELECT priviledge to a table");
 
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP USER 'table_privilege'@'%'");
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
 

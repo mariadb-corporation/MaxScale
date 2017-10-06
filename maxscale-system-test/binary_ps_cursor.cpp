@@ -9,7 +9,7 @@ using std::endl;
 
 void test1(TestConnections& test)
 {
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.set_timeout(20);
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
@@ -43,7 +43,7 @@ void test1(TestConnections& test)
 
     cout << "Close statement" << endl;
     mysql_stmt_close(stmt);
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
 }
 
@@ -120,7 +120,7 @@ void test2(TestConnections& test)
 
 void test3(TestConnections& test)
 {
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.set_timeout(20);
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
@@ -161,7 +161,7 @@ void test3(TestConnections& test)
                     mysql_error(test.maxscales->conn_rwsplit[0]));
 
     mysql_stmt_close(stmt);
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     char server_id[1024];
     test.repl->connect();

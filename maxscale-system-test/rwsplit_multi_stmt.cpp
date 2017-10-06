@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     sprintf(master_id, "%d", test.repl->get_server_id(0));
     sprintf(slave_id, "%d", test.repl->get_server_id(1));
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.tprintf("Configuration: strict_multi_stmt=true");
 
     test.add_result(execute_query_check_one(test.maxscales->conn_rwsplit[0],
@@ -41,14 +41,14 @@ int main(int argc, char** argv)
                                             master_id),
                     "All queries should be routed to master");
 
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     // Reconfigure MaxScale
     test.maxscales->ssh_node(0, "sed -i 's/strict_multi_stmt=true/strict_multi_stmt=false/' /etc/maxscale.cnf",
                              true);
-    test.restart_maxscale();
+    test.maxscales->restart_maxscale(0);
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.tprintf("Configuration: strict_multi_stmt=false");
 
     test.add_result(execute_query_check_one(test.maxscales->conn_rwsplit[0],
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
                                             slave_id),
                     "Query should be routed to slave");
 
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     return test.global_result;
 }

@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
     Test = new TestConnections(argc, argv);
 
     Test->set_timeout(600);
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
 
     // Remove old data files and make sure that port 4001 is open
     Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/avro;"
@@ -198,15 +198,15 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
     sleep(5);
 
-    Test->start_binlog();
+    Test->start_binlog(0);
 
     Test->set_timeout(120);
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
 
     Test->maxscales->ssh_node(0, "rm -rf /var/lib/maxscale/avro", true);
 
     Test->set_timeout(120);
-    Test->start_maxscale();
+    Test->maxscales->start_maxscale(0);
 
     Test->set_timeout(60);
     Test->repl->connect();

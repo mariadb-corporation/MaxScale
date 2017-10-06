@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(60);
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 20;");
-    Test->create_connections(75, true, true, true, true);
+    Test->create_connections(0, 75, true, true, true, true);
 
     Test->stop_timeout();
     Test->repl->stop_nodes();
@@ -32,11 +32,11 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(60);
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 2000;");
-    Test->add_result(Test->create_connections(70 , true, true, true, true),
+    Test->add_result(Test->create_connections(0, 70 , true, true, true, true),
                      "Connections creation error \n");
 
-    Test->check_log_err((char *) "fatal signal 11", false);
-    Test->check_maxscale_alive();
+    Test->check_log_err(0, (char *) "fatal signal 11", false);
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

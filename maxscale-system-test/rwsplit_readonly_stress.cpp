@@ -33,12 +33,12 @@ void* query_thread(void *data)
 
         if (iter % 2 == 0)
         {
-            mysql = Test->open_readconn_slave_connection();
+            mysql = Test->maxscales->open_readconn_slave_connection(0);
             type = "master_failure_mode=error_on_write";
         }
         else
         {
-            mysql = Test->open_readconn_master_connection();
+            mysql = Test->maxscales->open_readconn_master_connection(0);
             type = "master_failure_mode=fail_on_write";
         }
 

@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(10);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     int iterations = Test->smoke ? 100000 : 1000000;
     int r = Test->smoke ? 1 : 3;
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        maxscale_mem = Test->get_maxscale_memsize();
+        maxscale_mem = Test->maxscales->get_maxscale_memsize(0);
         Test->tprintf("Maxscale process uses %lu KBytes\n", maxscale_mem);
 
         if (maxscale_mem > 2000000)
@@ -45,9 +45,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;
 }
-

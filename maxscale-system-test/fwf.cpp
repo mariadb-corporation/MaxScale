@@ -33,10 +33,10 @@ int main(int argc, char *argv[])
     FILE* file;
 
     Test->maxscales->ssh_node_f(0, true, "cd %s;"
-                              "rm -rf rules;"
-                              "mkdir rules;"
-                              "chown vagrant:vagrant rules",
-                              Test->maxscales->access_homedir[0]);
+                                "rm -rf rules;"
+                                "mkdir rules;"
+                                "chown vagrant:vagrant rules",
+                                Test->maxscales->access_homedir[0]);
 
     sprintf(rules_dir, "%s/fw/", test_dir);
     int N = 18;
@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
         sprintf(str, "rules%d", i);
         copy_rules(Test, str, rules_dir);
 
-        Test->restart_maxscale();
-        Test->connect_rwsplit();
+        Test->maxscales->restart_maxscale(0);
+        Test->maxscales->connect_rwsplit(0);
 
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
         sprintf(deny_file, "%s/fw/deny%d", test_dir, i);
@@ -153,8 +153,8 @@ int main(int argc, char *argv[])
                                 "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
                                 Test->maxscales->access_sudo[0], Test->maxscales->access_homedir[0]);
 
-    Test->restart_maxscale();
-    Test->connect_rwsplit();
+    Test->maxscales->restart_maxscale(0);
+    Test->maxscales->connect_rwsplit(0);
 
     Test->tprintf("Trying 'DELETE FROM t1' and expecting FAILURE");
     execute_query_silent(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
@@ -173,14 +173,14 @@ int main(int argc, char *argv[])
     Test->try_query(Test->maxscales->conn_rwsplit[0], "DELETE FROM t1");
 
     mysql_close(Test->maxscales->conn_rwsplit[0]);
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
 
     Test->tprintf("Trying limit_queries clause");
     Test->tprintf("Copying rules to Maxscale machine: %s", str);
     copy_rules(Test, (char *) "rules_limit_queries", rules_dir);
 
-    Test->start_maxscale();
-    Test->connect_rwsplit();
+    Test->maxscales->start_maxscale(0);
+    Test->maxscales->connect_rwsplit(0);
 
     Test->tprintf("Trying 10 quries as fast as possible");
     for (i = 0; i < 10; i++)

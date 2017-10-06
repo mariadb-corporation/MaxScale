@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Connecting to all MaxScale services, expecting error\n");
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->set_timeout(30);
     Test->tprintf("Trying some queries, expecting failure, but not a crash\n");
@@ -51,15 +51,15 @@ int main(int argc, char *argv[])
     execute_query(Test->maxscales->conn_slave[0], "select * from t1");
 
     Test->set_timeout(10);
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->set_timeout(30);
     Test->repl->unblock_all_nodes();
 
     Test->stop_timeout();
     sleep(15);
-    Test->check_log_err("fatal signal 11", false);
-    Test->check_log_err("Failed to create new router session for service", true);
+    Test->check_log_err(0, "fatal signal 11", false);
+    Test->check_log_err(0, "Failed to create new router session for service", true);
 
     int rval = Test->global_result;
     delete Test;

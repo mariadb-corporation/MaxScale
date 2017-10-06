@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     test.maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
 
     /** Start master to binlogrouter replication */
-    if (!test.replicate_from_master())
+    if (!test.replicate_from_master(0))
     {
         return 1;
     }

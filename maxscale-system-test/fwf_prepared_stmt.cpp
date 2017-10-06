@@ -16,9 +16,9 @@ int main(int argc, char** argv)
                                "echo 'users %%@%% match any rules test1' >> /home/vagrant/rules/rules.txt;"
                                "chmod a+r /home/vagrant/rules/rules.txt;");
 
-    test.add_result(test.restart_maxscale(), "Restarting MaxScale failed");
+    test.add_result(test.maxscales->restart_maxscale(0), "Restarting MaxScale failed");
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     execute_query_silent(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
 
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1(a INT, b INT, c INT)");

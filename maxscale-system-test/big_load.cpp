@@ -25,7 +25,7 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
     }
 
     nodes->connect();
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     data.i1 = 0;
     data.i2 = 0;
@@ -53,7 +53,7 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
             Test->add_result(1, "Query %s failed\n", sql);
         }
         // close connections
-        Test->close_rwsplit();
+        Test->maxscales->close_rwsplit(0);
 
         Test->tprintf("Waiting for the table to replicate\n");
         Test->repl->sync_slaves();
@@ -111,14 +111,14 @@ void *query_thread1( void *ptr )
                                  data->Test->maxscales->password,
                                  20,
                                  data->Test->ssl);
-    //conn1 = data->Test->open_rwsplit_connection();
+    //conn1 = data->Test->maxscales->open_rwsplit_connection(0);
     if (mysql_errno(conn1) != 0)
     {
         conn_err++;
     }
     if (data->rwsplit_only == 0)
     {
-        //conn2 = data->Test->open_readconn_master_connection();
+        //conn2 = data->Test->maxscales->open_readconn_master_connection(0);
         conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port[0],
                                      data->Test->maxscales->IP[0],
                                      (char *) "test",
@@ -130,7 +130,7 @@ void *query_thread1( void *ptr )
         {
             conn_err++;
         }
-        //conn3 = data->Test->open_readconn_slave_connection();
+        //conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
         conn3 = open_conn_db_timeout(data->Test->maxscales->readconn_slave_port[0],
                                      data->Test->maxscales->IP[0],
                                      (char *) "test",
@@ -175,7 +175,7 @@ void *query_thread2(void *ptr )
     MYSQL * conn2;
     MYSQL * conn3;
     thread_data * data = (thread_data *) ptr;
-    //conn1 = data->Test->open_rwsplit_connection();
+    //conn1 = data->Test->maxscales->open_rwsplit_connection(0);
     conn1 = open_conn_db_timeout(data->Test->maxscales->rwsplit_port[0],
                                  data->Test->maxscales->IP[0],
                                  (char *) "test",
@@ -185,8 +185,8 @@ void *query_thread2(void *ptr )
                                  data->Test->ssl);
     if (data->rwsplit_only == 0)
     {
-        //conn2 = data->Test->open_readconn_master_connection();
-        //conn3 = data->Test->open_readconn_slave_connection();
+        //conn2 = data->Test->maxscales->open_readconn_master_connection(0);
+        //conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
 
         conn2 = open_conn_db_timeout(data->Test->maxscales->readconn_master_port[0],
                                      data->Test->maxscales->IP[0],

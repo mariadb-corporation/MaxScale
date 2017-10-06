@@ -35,7 +35,7 @@ void* thr(void* data)
 int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     test.tprintf("Connect to MaxScale and continuously execute queries");
     pthread_t thread;
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     test.tprintf("Stop queries and close the connections");
     running = false;
     pthread_join(thread, NULL);
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     test.tprintf("Add all servers to all services");
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
         test.maxscales->ssh_node_f(0, true, "maxadmin add server server%d \"Read Connection Router Master\"", i);
     }
 
-    test.check_maxscale_alive();
+    test.check_maxscale_alive(0);
 
     return test.global_result;
 }

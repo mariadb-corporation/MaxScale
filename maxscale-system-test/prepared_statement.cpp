@@ -22,7 +22,7 @@ void test_basic(TestConnections& test)
     int N = 4;
 
     test.repl->connect();
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     create_t1(test.maxscales->conn_rwsplit[0]);
     insert_into_t1(test.maxscales->conn_rwsplit[0], N);
@@ -34,7 +34,7 @@ void test_basic(TestConnections& test)
     test.try_query(test.maxscales->conn_rwsplit[0], "SET @x = 4;");
     test.try_query(test.maxscales->conn_rwsplit[0], "EXECUTE stmt");
 
-    test.check_maxscale_alive();
+    test.check_maxscale_alive(0);
     test.stop_timeout();
 }
 
@@ -43,7 +43,7 @@ void test_routing(TestConnections& test)
     test.set_timeout(60);
     test.repl->connect();
     int server_id = test.repl->get_server_id(0);
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     // Test that reads are routed to slaves
     char buf[1024] = "-1";
@@ -85,7 +85,7 @@ void test_routing(TestConnections& test)
     test.add_result(res != server_id, "Writes should be routed to the master (got %d, master is %d)", res, server_id);
 
     // Cleanup
-    test.check_maxscale_alive();
+    test.check_maxscale_alive(0);
     test.stop_timeout();
 }
 

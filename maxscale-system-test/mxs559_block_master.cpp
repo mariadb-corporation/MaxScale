@@ -34,10 +34,10 @@ int main(int argc, char *argv[])
                                "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
     test.set_timeout(60);
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     create_t1(test.maxscales->conn_rwsplit[0]);
     execute_query(test.maxscales->conn_rwsplit[0], "set global max_connections=1000");
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     test.tprintf("Create query load");
     int load_threads_num = 10;
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     {
         test.set_timeout(60);
         test.verbose = true;
-        int rc = test.connect_maxscale();
+        int rc = test.maxscales->connect_maxscale(0);
         test.verbose = false;
 
         if (rc == 0)
@@ -111,13 +111,13 @@ int main(int argc, char *argv[])
     }
 
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
-    test.check_maxscale_alive();
-    test.check_log_err("due to authentication failure", false);
-    test.check_log_err("fatal signal 11", false);
-    test.check_log_err("due to handshake failure", false);
-    test.check_log_err("Refresh rate limit exceeded for load of users' table", false);
+    test.check_maxscale_alive(0);
+    test.check_log_err(0, "due to authentication failure", false);
+    test.check_log_err(0, "fatal signal 11", false);
+    test.check_log_err(0, "due to handshake failure", false);
+    test.check_log_err(0, "Refresh rate limit exceeded for load of users' table", false);
 
     return test.global_result;
 }

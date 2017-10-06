@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(200);
 
     Test->tprintf("Connecting to ReadConn Master %s\n", Test->maxscales->IP[0]);
-    Test->connect_readconn_master();
+    Test->maxscales->connect_readconn_master(0);
 
     sleep(1);
 
@@ -60,8 +60,8 @@ int main(int argc, char *argv[])
     sleep(10);
 
     Test->tprintf("Reconnecting to ReadConnMaster\n");
-    Test->close_readconn_master();
-    Test->connect_readconn_master();
+    Test->maxscales->close_readconn_master(0);
+    Test->maxscales->connect_readconn_master(0);
 
     sleep(5);
 
@@ -70,12 +70,12 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Closing connection\n");
 
-    Test->close_readconn_master();
+    Test->maxscales->close_readconn_master(0);
     fflush(stdout);
 
     Test->tprintf("Checking Maxscale is alive\n");
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

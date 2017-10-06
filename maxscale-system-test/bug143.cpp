@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
 
     Test->tprintf("Creating user 'user' with 3 different passwords for different hosts\n");
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER 'user'@'non_existing_host1' IDENTIFIED BY 'pass1'");
     execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER 'user'@'%%' IDENTIFIED BY 'pass2'");
     execute_query(Test->maxscales->conn_rwsplit[0], "CREATE USER 'user'@'non_existing_host2' IDENTIFIED BY 'pass3'");
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     execute_query(Test->maxscales->conn_rwsplit[0], "DROP USER 'user'@'non_existing_host1'");
     execute_query(Test->maxscales->conn_rwsplit[0], "DROP USER 'user'@'%%'");
     execute_query(Test->maxscales->conn_rwsplit[0], "DROP USER 'user'@'non_existing_host2'");
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     int rval = Test->global_result;
     delete Test;

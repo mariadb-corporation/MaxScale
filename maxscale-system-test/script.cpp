@@ -32,9 +32,9 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * exp
 {
     Test->set_timeout(200);
     Test->maxscales->ssh_node_f(0, true, "cd %s;"
-                              "truncate -s 0 script_output;"
-                              "chown maxscale:maxscale script_output",
-                              Test->maxscales->access_homedir[0]);
+                                "truncate -s 0 script_output;"
+                                "chown maxscale:maxscale script_output",
+                                Test->maxscales->access_homedir[0]);
     sleep(10);
 
     Test->tprintf("Block master node");
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
                                 Test->maxscales->access_sudo[0],
                                 Test->maxscales->access_homedir[0]);
 
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
 
     FILE * f;
     f = fopen("script_output_expected", "w");
@@ -172,10 +172,10 @@ int main(int argc, char *argv[])
     sleep(15);
 
     Test->tprintf("Cheching Maxscale logs");
-    Test->check_log_err((char *) "Cannot execute file" , true);
+    Test->check_log_err(0, (char *) "Cannot execute file" , true);
 
     Test->tprintf("checking if Maxscale is alive");
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

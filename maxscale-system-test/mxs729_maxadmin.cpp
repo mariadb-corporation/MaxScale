@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 
     Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/passwd");
     Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/maxadmin-users");
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
 
     Test->tprintf("trying maxadmin without 'root'\n");
     int st1 = Test->maxscales->ssh_node_f(0, false, "maxadmin show users");
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
         Test->add_result(1, "Wrong list of MaxAdmin users\n");
     }*/
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/passwd");
     Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/maxadmin-users");
 

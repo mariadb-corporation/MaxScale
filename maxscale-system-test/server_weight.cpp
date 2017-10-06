@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Connecting to ReadConnMaster on %s\n", Test->maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        conn_read[i] = Test->open_readconn_master_connection();
+        conn_read[i] = Test->maxscales->open_readconn_master_connection(0);
     }
 
     Test->stop_timeout();
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Connecting to RWSplit on %s\n", Test->maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        conn_rwsplit[0][i] = Test->open_rwsplit_connection();
+        conn_rwsplit[0][i] = Test->maxscales->open_rwsplit_connection(0);
     }
 
     Test->stop_timeout();
@@ -145,12 +145,12 @@ int main(int argc, char *argv[])
     }
     Test->galera->close_connections();
 
-    Test->check_log_err((char *) "Unexpected parameter 'weightby'", false);
-    Test->check_log_err((char *)
+    Test->check_log_err(0, (char *) "Unexpected parameter 'weightby'", false);
+    Test->check_log_err(0, (char *)
                         "Weighting parameter 'serversize' with a value of 0 for server 'server4' rounds down to zero", true);
 
     // Pre-1.3.0 failure message
-    //Test->check_log_err((char *) "Server 'server4' has no value for weighting parameter 'serversize', no queries will be routed to this server", true);
+    //Test->check_log_err(0, (char *) "Server 'server4' has no value for weighting parameter 'serversize', no queries will be routed to this server", true);
 
 
     int rval = Test->global_result;

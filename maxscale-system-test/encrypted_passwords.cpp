@@ -37,7 +37,7 @@ int create_key(TestConnections *test)
 /** Hash a new password and start MaxScale */
 int hash_password(TestConnections *test)
 {
-    test->stop_maxscale();
+    test->maxscales->stop_maxscale(0);
     test->stop_timeout();
 
     int res = 0;
@@ -58,10 +58,10 @@ int hash_password(TestConnections *test)
     free(enc_pw);
 
     test->tprintf("Starting MaxScale\n");
-    test->start_maxscale();
+    test->maxscales->start_maxscale(0);
 
     test->tprintf("Checking if MaxScale is alive\n");
-    return test->check_maxscale_alive();
+    return test->check_maxscale_alive(0);
 }
 
 

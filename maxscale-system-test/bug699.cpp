@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Trying \n");
 
@@ -239,8 +239,8 @@ int main(int argc, char *argv[])
                          "hostname are different depending in which order terms are in SELECT\n");
     }
 
-    Test->close_maxscale_connections();
-    Test->check_maxscale_alive();
+    Test->maxscales->close_maxscale_connections(0);
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

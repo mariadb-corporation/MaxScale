@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     /** Set max packet size and create test table */
     test->set_timeout(20);
     test->tprintf("Connect to Maxscale\n");
-    test->connect_maxscale();
+    test->maxscales->connect_maxscale(0);
     test->tprintf("Setting max_allowed_packet, creating table\n");
     test->add_result(execute_query(test->maxscales->conn_rwsplit[0],
                                    "set global max_allowed_packet=(1048576 * 60)"),
@@ -61,12 +61,12 @@ int main(int argc, char *argv[])
                                    "CREATE TABLE test.dump(a int, b varchar(80), c varchar(80))"),
                      "Creating table failed.");
     test->tprintf("Closing connection to Maxscale\n");
-    test->close_maxscale_connections();
+    test->maxscales->close_maxscale_connections(0);
 
     /** Reconnect, load the data and then read it */
     test->tprintf("Re-connect to Maxscale\n");
     test->set_timeout(20);
-    test->connect_maxscale();
+    test->maxscales->connect_maxscale(0);
     char query[1024];
     snprintf(query, sizeof (filename),
              "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.dump FIELDS TERMINATED BY ','",
@@ -78,9 +78,9 @@ int main(int argc, char *argv[])
     test->set_timeout(100);
     test->add_result(execute_query(test->maxscales->conn_rwsplit[0], "SELECT * FROM test.dump"),
                      "Reading data failed.");
-    test->close_maxscale_connections();
+    test->maxscales->close_maxscale_connections(0);
     test->tprintf("Cecking if Maxscale alive\n");
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
     int rval = test->global_result;
     delete test;
     unlink(filename);

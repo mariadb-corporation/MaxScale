@@ -19,7 +19,7 @@ int main(int argc, char** argv)
         for (int i = 0; i < 100; i++)
         {
             Test->set_timeout(30);
-            mysql[i] = Test->open_readconn_master_connection();
+            mysql[i] = Test->maxscales->open_readconn_master_connection(0);
             execute_query_silent(mysql[i], "select 1");
         }
         Test->stop_timeout();
@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     Test->stop_timeout();
     sleep(5);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

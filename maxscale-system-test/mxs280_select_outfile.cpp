@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     int i;
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Create /tmp/t1.csv on all backend nodes\n");
     for (i = 0; i < Test->repl->N; i++)
@@ -47,8 +47,8 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     sleep(5);
-    Test->check_log_err((char *) "Failed to execute session command in", true);
-    Test->check_log_err((char *) "File '/tmp/t1.csv' already exists", true);
+    Test->check_log_err(0, (char *) "Failed to execute session command in", true);
+    Test->check_log_err(0, (char *) "File '/tmp/t1.csv' already exists", true);
 
     int rval = Test->global_result;
     delete Test;

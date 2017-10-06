@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
 
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     if (Test->repl->N < 3)
     {
@@ -115,10 +115,10 @@ int main(int argc, char *argv[])
                          "last_insert_id() are different depending in which order terms are in SELECT\n");
     }
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     Test->repl->close_connections();
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

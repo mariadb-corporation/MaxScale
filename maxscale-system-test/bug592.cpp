@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     int i;
 
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     for (i = 1; i < Test->repl->N; i++)
     {
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER 'test_user'@'%%'");
 
     Test->repl->close_connections();
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     int rval = Test->global_result;
     delete Test;

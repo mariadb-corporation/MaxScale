@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 {
     TestConnections* Test = new TestConnections(argc, argv);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->tprintf("Preparing test");
     Test->set_timeout(180);
     execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS db1");
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Cleaning up...");
     Test->set_timeout(60);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE db1");
     execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE db2");
     execute_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE db3");

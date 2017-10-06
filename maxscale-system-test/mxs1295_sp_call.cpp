@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.repl->connect();
 
     test.tprintf("Create the stored procedure and check that it works");

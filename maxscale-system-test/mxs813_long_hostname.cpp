@@ -20,9 +20,10 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
 
-    Test->start_binlog();
+    Test->start_binlog(0);
 
-    MYSQL * binlog = open_conn_no_db(Test->maxscales->binlog_port[0], Test->maxscales->IP[0], Test->repl->user_name,
+    MYSQL * binlog = open_conn_no_db(Test->maxscales->binlog_port[0], Test->maxscales->IP[0],
+                                     Test->repl->user_name,
                                      Test->repl->password, Test->ssl);
 
     Test->tprintf("stop slave\n");
@@ -40,7 +41,7 @@ int main(int argc, char *argv[])
 
     mysql_close(binlog);
 
-    Test->check_maxscale_processes(1);
+    Test->check_maxscale_processes(0, 1);
     int rval = Test->global_result;
     delete Test;
     return rval;

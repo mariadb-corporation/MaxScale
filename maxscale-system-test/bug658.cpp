@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     int i;
 
     Test->tprintf("Connecting to Maxscale %s\n", Test->maxscales->IP[0]);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     printf("Setup firewall to block mysql on master\n");
     fflush(stdout);
@@ -55,16 +55,16 @@ int main(int argc, char *argv[])
     Test->repl->unblock_node(0);
     sleep(10);
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->tprintf("Checking Maxscale is alive\n");
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     Test->set_timeout(20);
 
     Test->tprintf("Connecting to Maxscale %s to check its behaviour in case of blocking all bacxkends\n",
                   Test->maxscales->IP[0]);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     if (!Test->smoke)
     {
@@ -101,9 +101,9 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(20);
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     Test->tprintf("Checking Maxscale is alive\n");
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

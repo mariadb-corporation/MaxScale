@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE DATABASE db1");
     execute_query(test.repl->nodes[0], "CREATE TABLE db1.t1(id INT)");
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     test.tprintf("Loading local data file");
 
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE db1.t1");
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP DATABASE db1");
 
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     // Remove the test data
     unlink("data.csv");

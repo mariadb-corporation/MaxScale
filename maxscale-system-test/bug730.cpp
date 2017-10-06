@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("RWSplit: \n");
     fflush(stdout);
@@ -57,9 +57,9 @@ int main(int argc, char *argv[])
     fflush(stdout);
     Test->try_query(Test->maxscales->conn_slave[0], (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

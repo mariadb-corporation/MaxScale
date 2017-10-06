@@ -43,7 +43,7 @@ const char* queries[] =
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     for (int i = 0; queries[i]; i++)
     {

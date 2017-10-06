@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 
 
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     conn_found_rows = open_conn_db_flags(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "test",
                                          Test->maxscales->user_name, Test->maxscales->password, CLIENT_FOUND_ROWS, Test->ssl);
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         Test->add_result(1, "Affected rows is not 2\n");
     }
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     int rval = Test->global_result;
     delete Test;

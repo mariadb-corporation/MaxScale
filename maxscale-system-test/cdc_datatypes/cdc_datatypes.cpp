@@ -222,13 +222,13 @@ int main(int argc, char *argv[])
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
-    test.replicate_from_master();
+    test.replicate_from_master(0);
 
     if (!run_test(test))
     {
         test.add_result(1, "Test failed");
     }
 
-    test.check_maxscale_processes(1);
+    test.check_maxscale_processes(0, 1);
     return test.global_result;
 }

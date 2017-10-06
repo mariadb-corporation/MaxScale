@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0);
@@ -30,9 +30,9 @@ int main(int argc, char *argv[])
     Test->repl->unblock_node(0);
     sleep(10);
 
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
 
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     create_t1(Test->maxscales->conn_rwsplit[0]);
     insert_into_t1(Test->maxscales->conn_rwsplit[0], 1);
@@ -533,21 +533,21 @@ int main(int argc, char *argv[])
     compare_expected(Test, "SELECT * FROM long_blob_table limit 2;", 1, exp_rows);
     err_check(Test, 0);
 
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
 
     Test->maxscales->ssh_node(0,
                               "sed -i \"s/max_resultset_size=900000000/max_resultset_size=9000000/\" /etc/maxscale.cnf", true);
     Test->set_timeout(100);
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
 
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     Test->tprintf("**** Test 21 ****\n");
     exp_rows[0] = 0;
     Test->try_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_allowed_packet=10000000000");
     compare_expected(Test, "SELECT * FROM long_blob_table limit 1;", 1, exp_rows);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
 

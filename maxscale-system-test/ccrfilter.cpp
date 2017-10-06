@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     execute_query(test->repl->nodes[0], "CREATE OR REPLACE TABLE test.t1 (id INT);");
     execute_query(test->repl->nodes[0], "CREATE OR REPLACE TABLE test.t2 (id INT);");
 
-    test->connect_maxscale();
+    test->maxscales->connect_maxscale(0);
 
     test->tprintf("Test `time`. The first SELECT within 10 seconds should go the "
                   "master and all SELECTs after it should go to the slaves.");
@@ -71,11 +71,11 @@ int main(int argc, char *argv[])
     test->tprintf("Change test setup for `count`, the first three selects after an "
                   "insert should go to the master.");
 
-    test->close_maxscale_connections();
+    test->maxscales->close_maxscale_connections(0);
     test->maxscales->ssh_node(0, "sed -i -e 's/time.*/time=0/' /etc/maxscale.cnf", true);
     test->maxscales->ssh_node(0, "sed -i -e 's/###count/count/' /etc/maxscale.cnf", true);
-    test->restart_maxscale();
-    test->connect_maxscale();
+    test->maxscales->restart_maxscale(0);
+    test->maxscales->connect_maxscale(0);
 
     test->try_query(test->maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
     test->add_result(!is_master(test->maxscales->conn_rwsplit[0]), "Master should reply to the first SELECT");
@@ -89,10 +89,10 @@ int main(int argc, char *argv[])
                   "to t1 should go to the slaves and selects after an insert to t2 "
                   "should go to the master.");
 
-    test->close_maxscale_connections();
+    test->maxscales->close_maxscale_connections(0);
     test->maxscales->ssh_node(0, "sed -i -e 's/###match/match/' /etc/maxscale.cnf", true);
-    test->restart_maxscale();
-    test->connect_maxscale();
+    test->maxscales->restart_maxscale(0);
+    test->maxscales->connect_maxscale(0);
 
 
     test->tprintf("t1 first, should be ignored");
@@ -114,11 +114,11 @@ int main(int argc, char *argv[])
     test->tprintf("Change test setup for `count` and `ignore`, expects the same "
                   "results as previous test.");
 
-    test->close_maxscale_connections();
+    test->maxscales->close_maxscale_connections(0);
     test->maxscales->ssh_node(0, "sed -i -e 's/match/###match/' /etc/maxscale.cnf", true);
     test->maxscales->ssh_node(0, "sed -i -e 's/###ignore/ignore/' /etc/maxscale.cnf", true);
-    test->restart_maxscale();
-    test->connect_maxscale();
+    test->maxscales->restart_maxscale(0);
+    test->maxscales->connect_maxscale(0);
 
     test->tprintf("t1 first, should be ignored");
 

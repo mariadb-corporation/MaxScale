@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     int i;
 
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Trying SHOW VARIABLES to different Maxscale services\n");
     fflush(stdout);
@@ -114,10 +114,10 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(10);
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     Test->repl->close_connections();
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

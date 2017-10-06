@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         sleep(30);
     }
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     printf("Dropping sysbanch tables!\n");
     fflush(stdout);
@@ -106,11 +106,11 @@ int main(int argc, char *argv[])
     printf("closing connections to MaxScale!\n");
     fflush(stdout);
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->tprintf("Checxking if MaxScale is still alive!\n");
     fflush(stdout);
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;
@@ -124,7 +124,7 @@ void *kill_vm_thread( void *ptr )
     sleep(20);
     printf("Checking current slave\n");
     fflush(stdout);
-    old_slave = Test->find_connected_slave1();
+    old_slave = Test->find_connected_slave1(0);
 
     if ((old_slave >= 1) && (old_slave <= Test->repl->N))
     {

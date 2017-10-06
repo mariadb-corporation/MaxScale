@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     test.set_timeout(20);
     test.repl->connect();
 
-    MYSQL *conn = test.open_rwsplit_connection();
+    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
     execute_query(conn, "USE test;");
     create_t1(conn);
     mysql_close(conn);
@@ -36,13 +36,13 @@ int main(int argc, char *argv[])
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
 
         test.set_timeout(15);
-        conn = test.open_rwsplit_connection();
+        conn = test.maxscales->open_rwsplit_connection(0);
         execute_query(conn, sql);
         mysql_close(conn);
     }
 
     test.set_timeout(20);
-    test.add_result(test.connect_maxscale(), "Failed to connect to MaxScale");
+    test.add_result(test.maxscales->connect_maxscale(0), "Failed to connect to MaxScale");
 
     test.tprintf("Checking t1 table using RWSplit router");
     test.set_timeout(240);
@@ -60,8 +60,8 @@ int main(int argc, char *argv[])
                     "t1 is wrong");
 
     test.set_timeout(20);
-    test.close_maxscale_connections();
-    test.check_maxscale_alive();
+    test.maxscales->close_maxscale_connections(0);
+    test.check_maxscale_alive(0);
 
     return test.global_result;
 }

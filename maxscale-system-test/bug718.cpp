@@ -27,18 +27,18 @@ int main(int argc, char *argv[])
     Test->set_timeout(20);
     int i;
 
-    Test->execute_maxadmin_command((char *) "set server server1 master");
-    Test->execute_maxadmin_command((char *) "set server server2 slave");
-    Test->execute_maxadmin_command((char *) "set server server3 slave");
-    Test->execute_maxadmin_command((char *) "set server server4 slave");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "set server server1 master");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "set server server2 slave");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "set server server3 slave");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "set server server4 slave");
 
-    Test->execute_maxadmin_command((char *) "set server g_server1 master");
-    Test->execute_maxadmin_command((char *) "set server g_server2 slave");
-    Test->execute_maxadmin_command((char *) "set server g_server3 slave");
-    Test->execute_maxadmin_command((char *) "set server g_server4 slave");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "set server g_server1 master");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "set server g_server2 slave");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "set server g_server3 slave");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "set server g_server4 slave");
 
     Test->tprintf("Connecting to all MaxScale services\n");
-    Test->add_result(Test->connect_maxscale(), "Error connection to Maxscale\n");
+    Test->add_result(Test->maxscales->connect_maxscale(0), "Error connection to Maxscale\n");
 
     //MYSQL * galera_rwsplit = open_conn(4016, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
 
@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
         pthread_join(thread_v1[i], NULL);
     }
 
-    Test->close_maxscale_connections();
-    Test->check_maxscale_alive();
+    Test->maxscales->close_maxscale_connections(0);
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

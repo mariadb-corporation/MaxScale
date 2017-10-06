@@ -202,7 +202,7 @@ int main(int argc, char** argv)
 {
     TestConnections::require_repl_version("10.2");
     TestConnections test(argc, argv);
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     test.tprintf("Testing column-wise binding with readwritesplit");
     test.add_result(bind_by_column(test.maxscales->conn_rwsplit[0]), "Bulk inserts with readwritesplit should work");
@@ -214,6 +214,6 @@ int main(int argc, char** argv)
     test.tprintf("Testing row-wise binding with readconnroute");
     test.add_result(bind_by_row(test.maxscales->conn_master[0]), "Bulk inserts with readconnroute should work");
 
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
     return test.global_result;
 }

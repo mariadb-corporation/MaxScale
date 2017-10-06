@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     int iret_master[master_load_threads_num];
 
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     create_t1(Test->maxscales->conn_rwsplit[0]);
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 2000;");
     Test->repl->sync_slaves();
@@ -153,19 +153,19 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
     execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE test.t1;");
     execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER user@'%%'");
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->set_timeout(160);
     Test->tprintf("Trying to connect Maxscale\n");
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->tprintf("Closing Maxscale connections\n");
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     Test->tprintf("Checking if Maxscale alive\n");
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     Test->tprintf("Checking log for unwanted errors\n");
-    Test->check_log_err((char *) "due to authentication failure", false);
-    Test->check_log_err((char *) "fatal signal 11", false);
-    Test->check_log_err((char *) "due to handshake failure", false);
+    Test->check_log_err(0, (char *) "due to authentication failure", false);
+    Test->check_log_err(0, (char *) "fatal signal 11", false);
+    Test->check_log_err(0, (char *) "due to handshake failure", false);
 
     // We need to wait for the TCP connections in TIME_WAIT state so that
     // later tests don't fail due to a lack of file descriptors
@@ -183,7 +183,7 @@ void *query_thread1(void *ptr)
 
     while (data->exit_flag == 0)
     {
-        data->conn1 = data->Test->open_rwsplit_connection();
+        data->conn1 = data->Test->maxscales->open_rwsplit_connection(0);
 
         if (data->conn1 != NULL)
         {
@@ -195,7 +195,7 @@ void *query_thread1(void *ptr)
         }
         if (data->rwsplit_only == 0)
         {
-            data->conn2 = data->Test->open_readconn_master_connection();
+            data->conn2 = data->Test->maxscales->open_readconn_master_connection(0);
 
             if (data->conn2 != NULL)
             {
@@ -206,7 +206,7 @@ void *query_thread1(void *ptr)
                 }
             }
 
-            data->conn3 = data->Test->open_readconn_slave_connection();
+            data->conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
 
             if (data->conn3 != NULL)
             {

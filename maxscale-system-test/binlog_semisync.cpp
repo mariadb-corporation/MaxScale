@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 
     test.repl->connect();
     test.binlog_cmd_option = 1;
-    test.start_binlog();
+    test.start_binlog(0);
     test.repl->connect();
     test.tprintf("install semisync plugin");
     execute_query(test.repl->nodes[0],
@@ -57,4 +57,3 @@ int main(int argc, char *argv[])
 
     return test.global_result;
 }
-

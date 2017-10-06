@@ -21,8 +21,8 @@ int main(int argc, char *argv[])
     test.repl->unblock_node(0);
     sleep(5);
 
-    test.check_maxscale_alive();
-    test.check_log_err("debug assert", false);
+    test.check_maxscale_alive(0);
+    test.check_log_err(0, "debug assert", false);
 
     return test.global_result;
 }

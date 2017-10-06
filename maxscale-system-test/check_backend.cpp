@@ -11,14 +11,14 @@ int main(int argc, char *argv[])
     int exit_code;
     TestConnections * Test = new TestConnections(argc, argv);
 
-    /*Test->restart_maxscale();
+    /*Test->maxscales->restart_maxscale(0);
     sleep(5);*/
     Test->set_timeout(10);
 
     Test->tprintf("Connecting to Maxscale maxscales->routers[0] with Master/Slave backend\n");
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->tprintf("Testing connections\n");
-    Test->add_result(Test->test_maxscale_connections(true, true, true), "Can't connect to backend\n");
+    Test->add_result(Test->test_maxscale_connections(0, true, true, true), "Can't connect to backend\n");
     Test->tprintf("Connecting to Maxscale router with Galera backend\n");
     MYSQL * g_conn = open_conn(4016 , Test->maxscales->IP[0], Test->maxscales->user_name,
                                Test->maxscales->password, Test->ssl);
@@ -29,8 +29,8 @@ int main(int argc, char *argv[])
                          (char *) "Error executing query against RWSplit Galera\n");
     }
     Test->tprintf("Closing connections\n");
-    Test->close_maxscale_connections();
-    Test->check_maxscale_alive();
+    Test->maxscales->close_maxscale_connections(0);
+    Test->check_maxscale_alive(0);
 
     char * ver = Test->maxscales->ssh_node_output(0, "maxscale --version-full", false, &exit_code);
     Test->tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", ver);

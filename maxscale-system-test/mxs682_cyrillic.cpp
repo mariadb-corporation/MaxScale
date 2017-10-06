@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     iconv_close(converter);
     */
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->set_timeout(10);
     nodes->connect();
 
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 
     //execute_query_silent(conn, (char *) "DROP TABLE t2;");
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

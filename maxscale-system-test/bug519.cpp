@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     char str[1024];
     Test->set_timeout(60);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->repl->connect();
 
     Test->tprintf("Create t1\n");
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
     }
 
     Test->repl->close_connections();
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

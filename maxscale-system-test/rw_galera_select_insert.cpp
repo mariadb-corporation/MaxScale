@@ -25,9 +25,9 @@ int main(int argc, char *argv[])
     tolerance = 0;
 
     // connect to the MaxScale server (rwsplit)
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
-    Test->execute_maxadmin_command((char *) "shutdown monitor \"Galera Monitor\"");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "shutdown monitor \"Galera Monitor\"");
 
     if (Test->maxscales->conn_rwsplit[0] == NULL )
     {
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->galera->N);
 
         // close connections
-        Test->close_rwsplit();
+        Test->maxscales->close_rwsplit(0);
     }
     Test->galera->close_connections();
 
