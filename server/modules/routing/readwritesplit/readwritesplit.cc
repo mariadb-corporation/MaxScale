@@ -102,7 +102,8 @@ int rses_get_max_replication_lag(RWSplitSession *rses)
  *
  * @return backend reference pointer if succeed or NULL
  */
-SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
+
+static SRWBackend& get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
 {
     ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
@@ -119,33 +120,14 @@ SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
         }
     }
 
-    /** We should always have a valid backend reference */
-    ss_dassert(false);
-    return SRWBackend();
-}
+    /** We should always have a valid backend reference and in case we don't,
+     * something is terribly wrong. */
+    MXS_ALERT("No reference to DCB %p found, aborting.", dcb);
+    raise(SIGABRT);
 
-static SRWBackend emptyref;
-
-static SRWBackend& get_backend_ref_from_dcb(RWSplitSession *rses, DCB *dcb)
-{
-    ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-    CHK_DCB(dcb);
-    CHK_CLIENT_RSES(rses);
-
-    for (SRWBackendList::iterator it = rses->backends.begin();
-         it != rses->backends.end(); it++)
-    {
-        SRWBackend& backend = *it;
-
-        if (backend->dcb() == dcb)
-        {
-            return backend;
-        }
-    }
-
-    /** We should always have a valid backend reference */
-    ss_dassert(false);
-    return emptyref;
+    // To make the compiler happy, we a reference to a static value.
+    static SRWBackend this_should_not_happen;
+    return this_should_not_happen;
 }
 
 /**
@@ -300,7 +282,7 @@ static void handle_error_reply_client(MXS_SESSION *ses, RWSplitSession *rses,
     mxs_session_state_t sesstate = ses->state;
     DCB *client_dcb = ses->client_dcb;
 
-    SRWBackend backend = get_backend_from_dcb(rses, backend_dcb);
+    SRWBackend& backend = get_backend_from_dcb(rses, backend_dcb);
 
     backend->close();
 
@@ -385,7 +367,7 @@ static bool handle_error_new_connection(RWSplit *inst,
                                         DCB *backend_dcb, GWBUF *errmsg)
 {
     RWSplitSession *myrses = *rses;
-    SRWBackend backend = get_backend_from_dcb(myrses, backend_dcb);
+    SRWBackend& backend = get_backend_from_dcb(myrses, backend_dcb);
 
     MXS_SESSION* ses = backend_dcb->session;
     bool route_stored = false;
@@ -1208,7 +1190,7 @@ static void clientReply(MXS_ROUTER *instance,
     CHK_CLIENT_RSES(rses);
     ss_dassert(!rses->rses_closed);
 
-    SRWBackend& backend = get_backend_ref_from_dcb(rses, backend_dcb);
+    SRWBackend& backend = get_backend_from_dcb(rses, backend_dcb);
 
     if (backend->get_reply_state() == REPLY_STATE_DONE)
     {
@@ -1333,7 +1315,7 @@ static void handleError(MXS_ROUTER *instance,
     MXS_SESSION *session = problem_dcb->session;
     ss_dassert(session);
 
-    SRWBackend backend = get_backend_from_dcb(rses, problem_dcb);
+    SRWBackend& backend = get_backend_from_dcb(rses, problem_dcb);
 
     switch (action)
     {
