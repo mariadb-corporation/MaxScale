@@ -758,14 +758,16 @@ gw_read_and_write(DCB *dcb)
 
             if (collecting_resultset(proto, capabilities))
             {
-                if (expecting_resultset(proto) &&
-                    mxs_mysql_is_result_set(read_buffer))
+                if (expecting_resultset(proto))
                 {
-                    bool more = false;
-                    if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
+                    if (mxs_mysql_is_result_set(read_buffer))
                     {
-                        dcb_readq_prepend(dcb, read_buffer);
-                        return 0;
+                        bool more = false;
+                        if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
+                        {
+                            dcb_readq_prepend(dcb, read_buffer);
+                            return 0;
+                        }
                     }
 
                     // Collected the complete result
@@ -937,6 +939,12 @@ gw_read_and_write(DCB *dcb)
 
         if (session_ok_to_route(dcb))
         {
+            if (result_collected)
+            {
+                // Mark that this is a buffer containing a collected result
+                gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
+            }
+
             session->service->router->clientReply(session->service->router_instance,
                                                   session->router_session,
                                                   stmt, dcb);
