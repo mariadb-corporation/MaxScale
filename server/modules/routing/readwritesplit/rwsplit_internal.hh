@@ -47,7 +47,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf);
 void closed_session_reply(GWBUF *querybuf);
 void print_error_packet(RWSplitSession *rses, GWBUF *buf, DCB *dcb);
-void check_session_command_reply(GWBUF *writebuf, SRWBackend bref);
+void check_session_command_reply(GWBUF *buffer, SRWBackend& backend);
 bool execute_sescmd_in_backend(SRWBackend& backend_ref);
 bool handle_target_is_all(route_target_t route_target,
                           RWSplit *inst, RWSplitSession *rses,

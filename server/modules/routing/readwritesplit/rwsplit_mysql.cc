@@ -291,7 +291,7 @@ void closed_session_reply(GWBUF *querybuf)
  * @param buffer  Query buffer containing reply data
  * @param backend Router session data for a backend server
  */
-void check_session_command_reply(GWBUF *buffer, SRWBackend backend)
+void check_session_command_reply(GWBUF *buffer, SRWBackend& backend)
 {
     if (MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(buffer))))
     {
