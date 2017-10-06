@@ -290,7 +290,7 @@ int Nodes::read_basic_env()
 
             sprintf(env_name, "%s_%03d_access_sudo", prefix, i);
             env = getenv(env_name);
-            if (env != NULL)
+            if (env == NULL)
             {
                 sprintf(env_name, "%s_access_sudo", prefix);
                 env = getenv(env_name);
