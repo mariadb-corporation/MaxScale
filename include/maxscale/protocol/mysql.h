@@ -36,6 +36,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
 #include <maxscale/session.h>
 #include <maxscale/version.h>
@@ -591,7 +592,19 @@ void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db);
  *
  * @return The command byte
  */
-uint8_t mxs_mysql_get_command(GWBUF* buffer);
+static inline uint8_t mxs_mysql_get_command(GWBUF* buffer)
+{
+    if (GWBUF_LENGTH(buffer) > MYSQL_HEADER_LEN)
+    {
+        return GWBUF_DATA(buffer)[4];
+    }
+    else
+    {
+        uint8_t command = 0;
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &command);
+        return command;
+    }
+}
 
 /**
  * @brief Extract PS response values

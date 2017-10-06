@@ -1616,20 +1616,6 @@ void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
     snprintf(data->db, sizeof(data->db), "%s", db);
 }
 
-uint8_t mxs_mysql_get_command(GWBUF* buffer)
-{
-    if (GWBUF_LENGTH(buffer) > MYSQL_HEADER_LEN)
-    {
-        return GWBUF_DATA(buffer)[4];
-    }
-    else
-    {
-        uint8_t command = 0;
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &command);
-        return command;
-    }
-}
-
 bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
 {
     bool rval = false;
