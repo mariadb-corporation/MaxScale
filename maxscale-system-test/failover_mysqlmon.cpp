@@ -15,6 +15,7 @@
 
 int main(int argc, char *argv[])
 {
+    int exit_code;
     TestConnections * test = new TestConnections(argc, argv);
 
     test->tprintf(" Create the test table and insert some data ");
@@ -34,7 +35,7 @@ int main(int argc, char *argv[])
     sleep(15);
 
     test->tprintf(" Connect and insert should work ");
-    char *output = test->ssh_maxscale_output(true, "maxadmin list servers");
+    char *output = test->maxscales->ssh_node_output(0, "maxadmin list servers", true, &exit_code);
     test->tprintf("%s", output);
     free(output);
     test->connect_maxscale();

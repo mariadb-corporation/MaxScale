@@ -380,45 +380,6 @@ public:
     int copy_all_logs_periodic();
 
     /**
-     * @brief Generate command line to execute command on the Maxscale ode via ssh
-     * @param cmd result
-     * @param ssh command to execute
-     * @param sudo if true the command is executed with root privelegues
-     */
-    void generate_ssh_cmd(char * cmd, char * ssh, bool sudo);
-
-    /**
-     * @brief Execute a command via ssh on the MaxScale machine
-     * @param ssh ssh command to execute on the MaxScale machine
-     * @return Output of the command or NULL if the command failed to execute
-     */
-    char* ssh_maxscale_output(bool sudo, const char* format, ...);
-
-    /**
-     * @brief Execute a shell command on Maxscale
-     * @param sudo Use root
-     * @param format printf style format string
-     * @return 0 on success
-     */
-    int ssh_maxscale(bool sudo, const char* format, ...);
-
-    /**
-     * @brief Copy a local file to the MaxScale machine
-     * @param src Source file on the local filesystem
-     * @param dest Destination file on the MaxScale machine's file system
-     * @return exit code of the system command
-     */
-    int copy_to_maxscale(const char* src, const char* dest);
-
-    /**
-     * @brief Copy a remote file from the MaxScale machine
-     * @param src Source file on the remote filesystem
-     * @param dest Destination file on the local file system
-     * @return exit code of the system command
-     */
-    int copy_from_maxscale(char* src, char* dest);
-
-    /**
      * @brief Test that connections to MaxScale are in the expected state
      * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false for no connection.
      * @param rc_master State of the MaxScale connection to Readconnroute Master. True for working connection, false for no connection.

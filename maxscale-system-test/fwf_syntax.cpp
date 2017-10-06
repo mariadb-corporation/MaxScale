@@ -43,7 +43,7 @@ const char *rules_failure[] =
 
 void truncate_maxscale_logs(TestConnections& test)
 {
-    test.ssh_maxscale(true, "truncate -s 0 /var/log/maxscale/*");
+    test.maxscales->ssh_node(0, "truncate -s 0 /var/log/maxscale/*", true);
 }
 
 void create_rule(const char *rule, const char* user)

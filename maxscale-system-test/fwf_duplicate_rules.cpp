@@ -20,9 +20,10 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.ssh_maxscale(true, "mkdir -p /home/vagrant/rules/; chown -R vagrant:vagrant /home/vagrant/rules/");
-    test.copy_to_maxscale((char*)"rules.txt", (char*)"~/rules/rules.txt");
-    test.ssh_maxscale(true, "chmod a+r /home/vagrant/rules/rules.txt;");
+    test.maxscales->ssh_node(0, "mkdir -p /home/vagrant/rules/; chown -R vagrant:vagrant /home/vagrant/rules/",
+                             true);
+    test.maxscales->copy_to_node((char*)"rules.txt", (char*)"~/rules/rules.txt", 0);
+    test.maxscales->ssh_node(0, "chmod a+r /home/vagrant/rules/rules.txt;", true);
 
     int rc = 0;
 

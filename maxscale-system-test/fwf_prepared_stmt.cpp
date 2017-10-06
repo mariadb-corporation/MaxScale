@@ -11,10 +11,10 @@ int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
-    test.ssh_maxscale(true, "mkdir -p /home/vagrant/rules/;"
-                      "echo 'rule test1 deny columns c on_queries select' > /home/vagrant/rules/rules.txt;"
-                      "echo 'users %%@%% match any rules test1' >> /home/vagrant/rules/rules.txt;"
-                      "chmod a+r /home/vagrant/rules/rules.txt;");
+    test.maxscales->ssh_node_f(0, true, "mkdir -p /home/vagrant/rules/;"
+                               "echo 'rule test1 deny columns c on_queries select' > /home/vagrant/rules/rules.txt;"
+                               "echo 'users %%@%% match any rules test1' >> /home/vagrant/rules/rules.txt;"
+                               "chmod a+r /home/vagrant/rules/rules.txt;");
 
     test.add_result(test.restart_maxscale(), "Restarting MaxScale failed");
 
@@ -24,12 +24,14 @@ int main(int argc, char** argv)
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1(a INT, b INT, c INT)");
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1, 1, 1)");
 
-    test.add_result(execute_query(test.maxscales->conn_rwsplit[0], "PREPARE my_ps FROM 'SELECT a, b FROM test.t1'"),
+    test.add_result(execute_query(test.maxscales->conn_rwsplit[0],
+                                  "PREPARE my_ps FROM 'SELECT a, b FROM test.t1'"),
                     "Text protocol preparation should succeed");
     test.add_result(execute_query(test.maxscales->conn_rwsplit[0], "EXECUTE my_ps"),
                     "Text protocol execution should succeed");
 
-    test.add_result(execute_query(test.maxscales->conn_rwsplit[0], "PREPARE my_ps2 FROM 'SELECT c FROM test.t1'") == 0,
+    test.add_result(execute_query(test.maxscales->conn_rwsplit[0],
+                                  "PREPARE my_ps2 FROM 'SELECT c FROM test.t1'") == 0,
                     "Text protocol preparation should fail");
     test.add_result(execute_query(test.maxscales->conn_rwsplit[0], "EXECUTE my_ps2") == 0,
                     "Text protocol execution should fail");

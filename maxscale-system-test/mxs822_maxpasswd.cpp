@@ -31,14 +31,15 @@ void try_password(TestConnections* Test, char * pass)
      */
     Test->tprintf("Encrypting password: %s", pass);
     Test->set_timeout(30);
-    int rc = Test->ssh_maxscale(true, "maxpasswd /var/lib/maxscale/ '%s' | tr -dc '[:xdigit:]' > /tmp/pw.txt && "
-                                "sed -i 's/user=.*/user=test/' /etc/maxscale.cnf && "
-                                "sed -i \"s/passwd=.*/passwd=$(cat /tmp/pw.txt)/\" /etc/maxscale.cnf && "
-                                "service maxscale restart && "
-                                "sleep 3 && "
-                                "sed -i 's/user=.*/user=maxskysql/' /etc/maxscale.cnf && "
-                                "sed -i 's/passwd=.*/passwd=skysql/' /etc/maxscale.cnf && "
-                                "service maxscale restart", pass);
+    int rc = Test->maxscales->ssh_node_f(0, true,
+                                         "maxpasswd /var/lib/maxscale/ '%s' | tr -dc '[:xdigit:]' > /tmp/pw.txt && "
+                                         "sed -i 's/user=.*/user=test/' /etc/maxscale.cnf && "
+                                         "sed -i \"s/passwd=.*/passwd=$(cat /tmp/pw.txt)/\" /etc/maxscale.cnf && "
+                                         "service maxscale restart && "
+                                         "sleep 3 && "
+                                         "sed -i 's/user=.*/user=maxskysql/' /etc/maxscale.cnf && "
+                                         "sed -i 's/passwd=.*/passwd=skysql/' /etc/maxscale.cnf && "
+                                         "service maxscale restart", pass);
 
     Test->add_result(rc, "Failed to encrypt password '%s'", pass);
     sleep(3);
@@ -49,8 +50,8 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
-    Test->ssh_maxscale(true, "maxkeys");
-    Test->ssh_maxscale(true, "sudo chown maxscale:maxscale /var/lib/maxscale/.secrets");
+    Test->maxscales->ssh_node_f(0, true, "maxkeys");
+    Test->maxscales->ssh_node_f(0, true, "sudo chown maxscale:maxscale /var/lib/maxscale/.secrets");
 
     try_password(Test, (char *) "aaa$aaa");
     try_password(Test, (char *) "#¤&");

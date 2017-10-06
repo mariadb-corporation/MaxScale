@@ -279,7 +279,8 @@ void err_check(TestConnections* Test, unsigned int expected_err)
                   mysql_errno(Test->maxscales->conn_rwsplit[0]));
     if (mysql_errno(Test->maxscales->conn_rwsplit[0]) != expected_err)
     {
-        Test->add_result(1, "Error code is not %d, it is %d\n", expected_err, mysql_errno(Test->maxscales->conn_rwsplit[0]));
+        Test->add_result(1, "Error code is not %d, it is %d\n", expected_err,
+                         mysql_errno(Test->maxscales->conn_rwsplit[0]));
     }
 }
 
@@ -534,8 +535,8 @@ int main(int argc, char *argv[])
 
     Test->close_rwsplit();
 
-    Test->ssh_maxscale(true,
-                       "sed -i \"s/max_resultset_size=900000000/max_resultset_size=9000000/\" /etc/maxscale.cnf");
+    Test->maxscales->ssh_node(0,
+                              "sed -i \"s/max_resultset_size=900000000/max_resultset_size=9000000/\" /etc/maxscale.cnf", true);
     Test->set_timeout(100);
     Test->restart_maxscale();
 

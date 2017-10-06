@@ -30,7 +30,7 @@ void check_slave(TestConnections& test)
 void kill_maxscale(TestConnections& test)
 {
     test.tprintf("Killing and restarting MaxScale");
-    test.ssh_maxscale(true, "pkill -9 maxscale");
+    test.maxscales->ssh_node_f(0, true, "pkill -9 maxscale");
     test.start_maxscale();
 
     test.tprintf("Waiting for MaxScale to start");

@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 
     char sys1[4096];
 
-    Test->ssh_maxscale(false, "maxscale --version-full");
+    Test->maxscales->ssh_node(0, "maxscale --version-full", false);
     fflush(stdout);
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
 
@@ -66,4 +66,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

@@ -42,7 +42,8 @@ void check_status(TestConnections *Test, const char *server, const char *status)
 void check_group(TestConnections *Test, const char *server, const char *group)
 {
 
-    char *output = Test->ssh_maxscale_output(true, "maxadmin show monitor MySQL-Monitor");
+    int exit_code;
+    char *output = Test->maxscales->ssh_node_output(0, "maxadmin show monitor MySQL-Monitor", true, &exit_code);
 
     if (output == NULL)
     {

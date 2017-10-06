@@ -531,39 +531,42 @@ void TestConnections::process_template(const char *template_name, const char *de
     {
         system("sed -i \"s/###repl51###/mysql51_replication=true/g\" maxscale.cnf");
     }
-    copy_to_maxscale((char *) "maxscale.cnf", (char *) dest);
+    maxscales->copy_to_node((char *) "maxscale.cnf", (char *) dest, 0);
 }
 
 int TestConnections::init_maxscale()
 {
     const char * template_name = get_template_name(test_name);
     tprintf("Template is %s\n", template_name);
-
     process_template(template_name, maxscales->access_homedir[0]);
 
-    ssh_maxscale(true, "cp maxscale.cnf %s;rm -rf %s/certs;mkdir -m a+wrx %s/certs;", maxscales->maxscale_cnf[0],
-                 maxscales->access_homedir[0], maxscales->access_homedir[0]);
+    maxscales->ssh_node_f(0, true,
+                          "cp maxscale.cnf %s;rm -rf %s/certs;mkdir -m a+wrx %s/certs;",
+                          maxscales->maxscale_cnf[0],
+                          maxscales->access_homedir[0], maxscales->access_homedir[0]);
 
     char str[4096];
     char dtr[4096];
     sprintf(str, "%s/ssl-cert/*", test_dir);
     sprintf(dtr, "%s/certs/", maxscales->access_homedir[0]);
-    copy_to_maxscale(str, dtr);
+    maxscales->copy_to_node(str, dtr, 0);
     sprintf(str, "cp %s/ssl-cert/* .", test_dir);
     system(str);
 
-    ssh_maxscale(true, "chown maxscale:maxscale -R %s/certs;"
-                 "chmod 664 %s/certs/*.pem;"
-                 " chmod a+x %s;"
-                 "%s"
-                 "iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;"
-                 "rm -f %s/maxscale.log %s/maxscale1.log;"
-                 "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
-                 "%s",
-                 maxscales->access_homedir[0], maxscales->access_homedir[0], maxscales->access_homedir[0],
-                 maxscale::start ? "killall -9 maxscale;" : "",
-                 maxscales->maxscale_log_dir[0], maxscales->maxscale_log_dir[0],
-                 maxscale::start ? "service maxscale restart" : "");
+
+    maxscales->ssh_node_f(0, true,
+                          "chown maxscale:maxscale -R %s/certs;"
+                          "chmod 664 %s/certs/*.pem;"
+                          " chmod a+x %s;"
+                          "%s"
+                          "iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;"
+                          "rm -f %s/maxscale.log %s/maxscale1.log;"
+                          "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
+                          "%s",
+                          maxscales->access_homedir[0], maxscales->access_homedir[0], maxscales->access_homedir[0],
+                          maxscale::start ? "killall -9 maxscale;" : "",
+                          maxscales->maxscale_log_dir[0], maxscales->maxscale_log_dir[0],
+                          maxscale::start ? "service maxscale restart" : "");
 
     fflush(stdout);
 
@@ -573,7 +576,7 @@ int TestConnections::init_maxscale()
 
         for (waits = 0; waits < 15; waits++)
         {
-            if (ssh_maxscale(true, "/bin/sh -c \"maxadmin help > /dev/null || exit 1\"") == 0)
+            if (maxscales->ssh_node(0, "/bin/sh -c \"maxadmin help > /dev/null || exit 1\"", true) == 0);
             {
                 break;
             }
@@ -603,21 +606,21 @@ int TestConnections::close_maxscale_connections()
 
 int TestConnections::restart_maxscale()
 {
-    int res = ssh_maxscale(true, "service maxscale restart");
+    int res = maxscales->ssh_node(0, "service maxscale restart", true);
     fflush(stdout);
     return res;
 }
 
 int TestConnections::start_maxscale()
 {
-    int res = ssh_maxscale(true, "service maxscale start");
+    int res = maxscales->ssh_node(0, "service maxscale start", true);
     fflush(stdout);
     return res;
 }
 
 int TestConnections::stop_maxscale()
 {
-    int res = ssh_maxscale(true, "service maxscale stop");
+    int res = maxscales->ssh_node(0, "service maxscale stop", true);
     check_maxscale_processes(0);
     fflush(stdout);
     return res;
@@ -719,23 +722,23 @@ int TestConnections::prepare_binlog()
         strstr(version_str, "10.1") == NULL &&
         strstr(version_str, "10.2") == NULL)
     {
-        add_result(ssh_maxscale(true,
-                                "sed -i \"s/,mariadb10-compatibility=1//\" %s",
-                                maxscales->maxscale_cnf[0]), "Error editing maxscale.cnf");
+        add_result(maxscales->ssh_node_f(0, true,
+                                         "sed -i \"s/,mariadb10-compatibility=1//\" %s",
+                                         maxscales->maxscale_cnf[0]), "Error editing maxscale.cnf");
     }
 
     tprintf("Removing all binlog data from Maxscale node");
-    add_result(ssh_maxscale(true, "rm -rf %s", maxscales->maxscale_binlog_dir[0]),
+    add_result(maxscales->ssh_node_f(0, true, "rm -rf %s", maxscales->maxscale_binlog_dir[0]),
                "Removing binlog data failed");
 
     tprintf("Creating binlog dir");
-    add_result(ssh_maxscale(true, "mkdir -p %s", maxscales->maxscale_binlog_dir[0]),
+    add_result(maxscales->ssh_node_f(0, true, "mkdir -p %s", maxscales->maxscale_binlog_dir[0]),
                "Creating binlog data dir failed");
     tprintf("Set 'maxscale' as a owner of binlog dir");
-    add_result(ssh_maxscale(false,
-                            "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
-                            maxscales->access_sudo[0], maxscales->maxscale_binlog_dir[0],
-                            maxscales->access_sudo[0], maxscales->maxscale_binlog_dir[0]),
+    add_result(maxscales->ssh_node_f(0, false,
+                                     "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
+                                     maxscales->access_sudo[0], maxscales->maxscale_binlog_dir[0],
+                                     maxscales->access_sudo[0], maxscales->maxscale_binlog_dir[0]),
                "directory ownership change failed");
     return 0;
 }
@@ -799,7 +802,7 @@ int TestConnections::start_binlog()
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
 
     tprintf("ls binlog data dir on Maxscale node\n");
-    add_result(ssh_maxscale(true, "ls -la %s/", maxscales->maxscale_binlog_dir[0]), "ls failed\n");
+    add_result(maxscales->ssh_node_f(0, true, "ls -la %s/", maxscales->maxscale_binlog_dir[0]), "ls failed\n");
 
     if (binlog_master_gtid)
     {
@@ -932,9 +935,9 @@ bool TestConnections::replicate_from_master()
     repl->execute_query_all_nodes("STOP SLAVE");
 
     /** Clean up MaxScale directories */
-    ssh_maxscale(true, "service maxscale stop");
+    maxscales->ssh_node(0, "service maxscale stop", true);
     prepare_binlog();
-    ssh_maxscale(true, "service maxscale start");
+    maxscales->ssh_node(0, "service maxscale start", true);
 
     char log_file[256] = "";
     char log_pos[256] = "4";
@@ -1112,8 +1115,10 @@ int TestConnections::find_connected_slave1()
 
 int TestConnections::check_maxscale_processes(int expected)
 {
-    char* maxscale_num = ssh_maxscale_output(false, "ps -C maxscale | grep maxscale | wc -l");
-    if (maxscale_num == NULL)
+    int exit_code;
+    char* maxscale_num = maxscales->ssh_node_output(0, "ps -C maxscale | grep maxscale | wc -l", false,
+                                                    &exit_code);
+    if ((maxscale_num == NULL) || (exit_code != 0))
     {
         return -1;
     }
@@ -1127,14 +1132,14 @@ int TestConnections::check_maxscale_processes(int expected)
     {
         tprintf("%s maxscale processes detected, trying agin in 5 seconds\n", maxscale_num);
         sleep(5);
-        maxscale_num = ssh_maxscale_output(false, "ps -C maxscale | grep maxscale | wc -l");
+        maxscale_num = maxscales->ssh_node_output(0, "ps -C maxscale | grep maxscale | wc -l", false, &exit_code);
         if (atoi(maxscale_num) != expected)
         {
             add_result(1, "Number of MaxScale processes is not %d, it is %s\n", expected, maxscale_num);
         }
     }
 
-    return 0;
+    return exit_code;
 }
 
 int TestConnections::check_maxscale_alive()
@@ -1194,175 +1199,6 @@ int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bo
     return rval;
 }
 
-void TestConnections::generate_ssh_cmd(char * cmd, char * ssh, bool sudo)
-{
-    if (strcmp(maxscales->IP[0], "127.0.0.1") == 0)
-    {
-        if (sudo)
-        {
-            sprintf(cmd,
-                    "%s %s",
-                    maxscales->access_sudo[0], ssh);
-        }
-        else
-        {
-            sprintf(cmd,
-                    "%s",
-                    ssh);
-        }
-
-    }
-    else
-    {
-        if (sudo)
-        {
-            sprintf(cmd,
-                    "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s '%s %s'",
-                    maxscales->sshkey[0], maxscales->access_user[0], maxscales->IP[0], maxscales->access_sudo[0], ssh);
-        }
-        else
-        {
-            sprintf(cmd,
-                    "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s '%s\'",
-                    maxscales->sshkey[0], maxscales->access_user[0], maxscales->IP[0], ssh);
-        }
-    }
-}
-
-
-char* TestConnections::ssh_maxscale_output(bool sudo, const char* format, ...)
-{
-    va_list valist;
-
-    va_start(valist, format);
-    int message_len = vsnprintf(NULL, 0, format, valist);
-    va_end(valist);
-
-    if (message_len < 0)
-    {
-        return NULL;
-    }
-
-    char *sys = (char*)malloc(message_len + 1);
-
-    va_start(valist, format);
-    vsnprintf(sys, message_len + 1, format, valist);
-    va_end(valist);
-
-    char *cmd = (char*)malloc(message_len + 1024);
-    generate_ssh_cmd(cmd, sys, sudo);
-//tprintf("############ssh smd %s\n:", cmd);
-    FILE *output = popen(cmd, "r");
-    if (output == NULL)
-    {
-        printf("Error opening ssh %s\n", strerror(errno));
-        return NULL;
-    }
-    char buffer[1024];
-    size_t rsize = sizeof(buffer);
-    char* result = (char*)calloc(rsize, sizeof(char));
-
-    while (fgets(buffer, sizeof(buffer), output))
-    {
-        result = (char*)realloc(result, sizeof(buffer) + rsize);
-        rsize += sizeof(buffer);
-        strcat(result, buffer);
-    }
-
-    free(sys);
-    free(cmd);
-    pclose(output);
-
-    return result;
-}
-
-int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
-{
-    va_list valist;
-
-    va_start(valist, format);
-    int message_len = vsnprintf(NULL, 0, format, valist);
-    va_end(valist);
-
-    if (message_len < 0)
-    {
-        return -1;
-    }
-
-    char *sys = (char*)malloc(message_len + 1);
-
-    va_start(valist, format);
-    vsnprintf(sys, message_len + 1, format, valist);
-    va_end(valist);
-
-    char *cmd = (char*)malloc(message_len + 1024);
-
-    if (strcmp(maxscales->IP[0], "127.0.0.1") == 0)
-    {
-        tprintf("starting bash\n");
-        sprintf(cmd, "bash");
-    }
-    else
-    {
-        sprintf(cmd,
-                "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s%s",
-                maxscales->sshkey[0], maxscales->access_user[0], maxscales->IP[0], verbose ? "" :  " > /dev/null");
-    }
-    int rc = 1;
-    FILE *in = popen(cmd, "w");
-
-    if (in)
-    {
-        if (sudo)
-        {
-            fprintf(in, "sudo su -\n");
-            fprintf(in, "cd /home/%s\n", maxscales->access_user[0]);
-        }
-
-        fprintf(in, "%s\n", sys);
-        rc = pclose(in);
-    }
-
-    free(sys);
-    free(cmd);
-    return rc;
-}
-
-int TestConnections::copy_to_maxscale(const char* src, const char* dest)
-{
-    char sys[strlen(src) + strlen(dest) + 1024];
-    if (strcmp(maxscales->IP[0], "127.0.0.1") == 0)
-    {
-        sprintf(sys, "cp %s %s",
-                src, dest);
-    }
-    else
-    {
-
-        sprintf(sys, "scp -q -i %s -o UserKnownHostsFile=/dev/null "
-                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
-                maxscales->sshkey[0], src, maxscales->access_user[0], maxscales->IP[0], dest);
-    }
-    return system(sys);
-}
-
-
-int TestConnections::copy_from_maxscale(char* src, char* dest)
-{
-    char sys[strlen(src) + strlen(dest) + 1024];
-    if (strcmp(maxscales->IP[0], "127.0.0.1") == 0)
-    {
-        sprintf(sys, "cp %s %s",
-                src, dest);
-    }
-    else
-    {
-        sprintf(sys, "scp -i %s -o UserKnownHostsFile=/dev/null "
-                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
-                maxscales->sshkey[0], maxscales->access_user[0], maxscales->IP[0], src, dest);
-    }
-    return system(sys);
-}
 
 int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag,
                                         bool galera_flag)
@@ -1859,12 +1695,13 @@ int TestConnections::find_slave_maxadmin(Mariadb_nodes * nodes)
 
 int TestConnections::execute_maxadmin_command(char * cmd)
 {
-    return ssh_maxscale(true, "maxadmin %s", cmd);
+    return maxscales->ssh_node_f(0, true, "maxadmin %s", cmd);
 }
 int TestConnections::execute_maxadmin_command_print(char * cmd)
 {
-    printf("%s\n", ssh_maxscale_output(true, "maxadmin %s", cmd));
-    return 0;
+    int exit_code;
+    printf("%s\n", maxscales->ssh_node_output_f(0, true, &exit_code,  "maxadmin %s", cmd));
+    return exit_code;
 }
 
 int TestConnections::check_maxadmin_param(const char *command, const char *param, const char *value)
@@ -1904,8 +1741,9 @@ int TestConnections::check_maxadmin_param(const char *command, const char *param
 int TestConnections::get_maxadmin_param(const char *command, const char *param, char *result)
 {
     char        * buf;
+    int exit_code;
 
-    buf = ssh_maxscale_output(true, "maxadmin %s", command);
+    buf = maxscales->ssh_node_output_f(0, true, &exit_code, "maxadmin %s", command);
 
     //printf("%s\n", buf);
 
@@ -1940,7 +1778,7 @@ int TestConnections::get_maxadmin_param(const char *command, const char *param, 
 
     strcpy(result, x);
 
-    return 0;
+    return exit_code;
 }
 
 int TestConnections::list_dirs()
@@ -1952,14 +1790,15 @@ int TestConnections::list_dirs()
         fflush(stdout);
     }
     tprintf("ls maxscale \n");
-    ssh_maxscale(true, "ls -la /var/lib/maxscale/");
+    maxscales->ssh_node(0, "ls -la /var/lib/maxscale/", true);
     fflush(stdout);
     return 0;
 }
 
 long unsigned TestConnections::get_maxscale_memsize()
 {
-    char * ps_out = ssh_maxscale_output(false, "ps -e -o pid,vsz,comm= | grep maxscale");
+    int exit_code;
+    char * ps_out = maxscales->ssh_node_output(0, "ps -e -o pid,vsz,comm= | grep maxscale", false, &exit_code);
     long unsigned mem = 0;
     pid_t pid;
     sscanf(ps_out, "%d %lu", &pid, &mem);
@@ -2017,8 +1856,8 @@ bool TestConnections::test_bad_config(const char *config)
     // Set the timeout to prevent hangs with configurations that work
     set_timeout(20);
 
-    return ssh_maxscale(true, "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
-                        "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale") == 0;
+    return maxscales->ssh_node(0, "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
+                               "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale", false) == 0;
 }
 
 int TestConnections::connect_rwsplit()

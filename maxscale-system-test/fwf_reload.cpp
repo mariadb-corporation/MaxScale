@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
     sprintf(rules_dir, "%s/fw/", test_dir);
     int N = 13;
     int i;
+    int exit_code;
 
     Test->stop_maxscale();
     char first_rule[] = "rules1";
@@ -36,7 +37,7 @@ int main(int argc, char *argv[])
         sprintf(str, "rules%d", i);
         Test->set_timeout(180);
         copy_rules(Test, str, rules_dir);
-        Test->ssh_maxscale(true, "maxadmin call command dbfwfilter rules/reload Database-Firewall");
+        Test->maxscales->ssh_node(0, "maxadmin call command dbfwfilter rules/reload Database-Firewall", true);
 
         int local_result = 0;
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
@@ -99,8 +100,8 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying rules with syntax error\n");
     copy_rules(Test, (char *) "rules_syntax_error", rules_dir);
 
-    char *output = Test->ssh_maxscale_output(true,
-                   "maxadmin call command dbfwfilter rules/reload Database-Firewall");
+    char *output = Test->maxscales->ssh_node_output(0,
+                                                    "maxadmin call command dbfwfilter rules/reload Database-Firewall", true, &exit_code);
     Test->add_result(strcasestr(output, "Failed") == NULL, "Reloading rules should fail with syntax errors");
 
     Test->check_maxscale_processes(1);
@@ -108,5 +109,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-
-

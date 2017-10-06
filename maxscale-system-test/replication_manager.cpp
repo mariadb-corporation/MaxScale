@@ -17,12 +17,12 @@ void prepare()
 void get_output(TestConnections& test)
 {
     test.tprintf("Maxadmin output:");
-    char *output = test.ssh_maxscale_output(true, "maxadmin list servers");
+    char *output = test.maxscales->ssh_node_f(0, true, "maxadmin list servers");
     test.tprintf("%s", output);
     free(output);
 
     test.tprintf("replication-manager output:");
-    output = test.ssh_maxscale_output(true,
+    output = test.maxscales->ssh_node_f(0, true,
                                       "cat /var/log/replication-manager.log && sudo truncate -s 0 /var/log/replication-manager.log");
     test.tprintf("%s", output);
     free(output);

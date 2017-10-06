@@ -72,8 +72,8 @@ int main(int argc, char *argv[])
                   "insert should go to the master.");
 
     test->close_maxscale_connections();
-    test->ssh_maxscale(true, "sed -i -e 's/time.*/time=0/' /etc/maxscale.cnf");
-    test->ssh_maxscale(true, "sed -i -e 's/###count/count/' /etc/maxscale.cnf");
+    test->maxscales->ssh_node(0, "sed -i -e 's/time.*/time=0/' /etc/maxscale.cnf", true);
+    test->maxscales->ssh_node(0, "sed -i -e 's/###count/count/' /etc/maxscale.cnf", true);
     test->restart_maxscale();
     test->connect_maxscale();
 
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
                   "should go to the master.");
 
     test->close_maxscale_connections();
-    test->ssh_maxscale(true, "sed -i -e 's/###match/match/' /etc/maxscale.cnf");
+    test->maxscales->ssh_node(0, "sed -i -e 's/###match/match/' /etc/maxscale.cnf", true);
     test->restart_maxscale();
     test->connect_maxscale();
 
@@ -115,8 +115,8 @@ int main(int argc, char *argv[])
                   "results as previous test.");
 
     test->close_maxscale_connections();
-    test->ssh_maxscale(true, "sed -i -e 's/match/###match/' /etc/maxscale.cnf");
-    test->ssh_maxscale(true, "sed -i -e 's/###ignore/ignore/' /etc/maxscale.cnf");
+    test->maxscales->ssh_node(0, "sed -i -e 's/match/###match/' /etc/maxscale.cnf", true);
+    test->maxscales->ssh_node(0, "sed -i -e 's/###ignore/ignore/' /etc/maxscale.cnf", true);
     test->restart_maxscale();
     test->connect_maxscale();
 

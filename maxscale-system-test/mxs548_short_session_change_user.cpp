@@ -31,8 +31,8 @@ void *query_thread_master(void *ptr);
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->ssh_maxscale(true, "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
-                       "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
+    Test->maxscales->ssh_node_f(0, true, "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
+                                "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
     Test->set_timeout(20);
 
     int threads_num = 40;

@@ -11,9 +11,11 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
+    int exit_code;
 
     Test->set_timeout(50);
-    char *user = Test->ssh_maxscale_output(false, "ps -FC maxscale|tail -n 1|cut -f 1 -d \" \"");
+    char *user = Test->maxscales->ssh_node_output(0, "ps -FC maxscale|tail -n 1|cut -f 1 -d \" \"", false,
+                                                  &exit_code);
     char *nl = user ? strchr(user, '\n') : NULL;
 
     if (nl)

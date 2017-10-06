@@ -46,9 +46,9 @@ int main(int argc, char *argv[])
 
     for (int i = 3; i > -1; i--)
     {
-        test.ssh_maxscale(true, "maxadmin remove server server%d \"RW Split Router\"", i);
-        test.ssh_maxscale(true, "maxadmin remove server server%d \"Read Connection Router Slave\"", i);
-        test.ssh_maxscale(true, "maxadmin remove server server%d \"Read Connection Router Master\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin remove server server%d \"RW Split Router\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin remove server server%d \"Read Connection Router Slave\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin remove server server%d \"Read Connection Router Master\"", i);
     }
 
     sleep(5);
@@ -62,9 +62,9 @@ int main(int argc, char *argv[])
 
     for (int i = 3; i > -1; i--)
     {
-        test.ssh_maxscale(true, "maxadmin add server server%d \"RW Split Router\"", i);
-        test.ssh_maxscale(true, "maxadmin add server server%d \"Read Connection Router Slave\"", i);
-        test.ssh_maxscale(true, "maxadmin add server server%d \"Read Connection Router Master\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin add server server%d \"RW Split Router\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin add server server%d \"Read Connection Router Slave\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin add server server%d \"Read Connection Router Master\"", i);
     }
 
     test.check_maxscale_alive();

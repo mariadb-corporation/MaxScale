@@ -15,8 +15,8 @@ void add_servers(TestConnections *test)
 
     for (int i = 0; i < 4; i++)
     {
-        test->ssh_maxscale(true, "maxadmin add server server%d " MONITOR_NAME, i + 1);
-        test->ssh_maxscale(true, "maxadmin add server server%d " SERVICE_NAME, i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " MONITOR_NAME, i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " SERVICE_NAME, i + 1);
     }
     test->stop_timeout();
 }
@@ -28,8 +28,8 @@ void remove_servers(TestConnections *test)
 
     for (int i = 0; i < 4; i++)
     {
-        test->ssh_maxscale(true, "maxadmin remove server server%d " MONITOR_NAME, i + 1);
-        test->ssh_maxscale(true, "maxadmin remove server server%d " SERVICE_NAME, i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin remove server server%d " MONITOR_NAME, i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin remove server server%d " SERVICE_NAME, i + 1);
     }
     test->stop_timeout();
 }
@@ -41,7 +41,7 @@ void destroy_servers(TestConnections *test)
 
     for (int i = 0; i < 4; i++)
     {
-        test->ssh_maxscale(true, "maxadmin destroy server server%d", i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin destroy server server%d", i + 1);
     }
     test->stop_timeout();
 }
@@ -73,8 +73,8 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < 4; i++)
     {
-        test->ssh_maxscale(true, "maxadmin create server server%d 3306 %s",
-                           i + 1, test->repl->IP[i]);
+        test->maxscales->ssh_node_f(0, true, "maxadmin create server server%d 3306 %s",
+                                    i + 1, test->repl->IP[i]);
     }
 
     /** Add the servers to the monitor and service */
@@ -89,7 +89,8 @@ int main(int argc, char *argv[])
     test->tprintf("Create the servers with correct parameters");
     for (int i = 0; i < 4; i++)
     {
-        test->ssh_maxscale(true, "maxadmin create server server%d %s %d", i + 1, test->repl->IP[i], test->repl->port[i]);
+        test->maxscales->ssh_node_f(0, true, "maxadmin create server server%d %s %d", i + 1, test->repl->IP[i],
+                                    test->repl->port[i]);
     }
 
     /**  Add the servers again */

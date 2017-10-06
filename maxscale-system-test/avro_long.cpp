@@ -18,9 +18,9 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(600);
     Test->stop_maxscale();
-    Test->ssh_maxscale(true, (char *) "rm -rf /var/lib/maxscale/avro");
+    Test->maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
 
-    //Test->ssh_maxscale(true, (char *) "mkdir /var/lib/maxscale/avro; chown -R maxscale:maxscale /var/lib/maxscale/avro");
+    //Test->maxscales->ssh_node(0, (char *) "mkdir /var/lib/maxscale/avro; chown -R maxscale:maxscale /var/lib/maxscale/avro", true);
 
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1;");
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
     Test->stop_maxscale();
 
-    Test->ssh_maxscale(true, (char *) "rm -rf /var/lib/maxscale/avro");
+    Test->maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
 
     Test->set_timeout(120);
 

@@ -32,11 +32,11 @@ int main(int argc, char *argv[])
     char rules_dir[4096];
     FILE* file;
 
-    Test->ssh_maxscale(true, "cd %s;"
-                       "rm -rf rules;"
-                       "mkdir rules;"
-                       "chown vagrant:vagrant rules",
-                       Test->maxscales->access_homedir[0]);
+    Test->maxscales->ssh_node_f(0, true, "cd %s;"
+                              "rm -rf rules;"
+                              "mkdir rules;"
+                              "chown vagrant:vagrant rules",
+                              Test->maxscales->access_homedir[0]);
 
     sprintf(rules_dir, "%s/fw/", test_dir);
     int N = 18;
@@ -148,10 +148,10 @@ int main(int argc, char *argv[])
         Test->tprintf("DELETE quries without WHERE clause will be blocked during the 15 seconds");
         Test->tprintf("Put time to rules.txt: %s", str);
     }
-    Test->ssh_maxscale(false, "start_time=`date +%%T`;"
-                       "stop_time=` date --date \"now +15 secs\" +%%T`;"
-                       "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
-                       Test->maxscales->access_sudo[0], Test->maxscales->access_homedir[0]);
+    Test->maxscales->ssh_node_f(0, false, "start_time=`date +%%T`;"
+                                "stop_time=` date --date \"now +15 secs\" +%%T`;"
+                                "%s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
+                                Test->maxscales->access_sudo[0], Test->maxscales->access_homedir[0]);
 
     Test->restart_maxscale();
     Test->connect_rwsplit();
@@ -229,4 +229,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

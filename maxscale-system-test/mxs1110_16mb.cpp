@@ -18,11 +18,11 @@ int main(int argc, char *argv[])
     int chunk_size = 2500000;
     int chunk_num = 5;
 
-    Test->copy_to_maxscale("./masking/masking_user/masking_rules.json", "~/");
+    Test->maxscales->copy_to_node("./masking/masking_user/masking_rules.json", "~/", 0);
 
-    Test->copy_to_maxscale("./cache/cache_basic/cache_rules.json", "~/");
+    Test->maxscales->copy_to_node("./cache/cache_basic/cache_rules.json", "~/", 0);
 
-    Test->ssh_maxscale(true, "cd %s;"
+    Test->maxscales->ssh_node_f(0, true, "cd %s;"
                        "rm -rf rules;"
                        "mkdir rules;"
                        "chown vagrant:vagrant rules",
@@ -59,4 +59,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

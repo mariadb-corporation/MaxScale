@@ -190,8 +190,8 @@ int main(int argc, char *argv[])
     Test->stop_maxscale();
 
     // Remove old data files and make sure that port 4001 is open
-    Test->ssh_maxscale(true, "rm -rf /var/lib/maxscale/avro;"
-                       "iptables -n -L INPUT|grep 4001 || iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;");
+    Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/avro;"
+                                "iptables -n -L INPUT|grep 4001 || iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;");
 
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(120);
     Test->stop_maxscale();
 
-    Test->ssh_maxscale(true, "rm -rf /var/lib/maxscale/avro");
+    Test->maxscales->ssh_node(0, "rm -rf /var/lib/maxscale/avro", true);
 
     Test->set_timeout(120);
     Test->start_maxscale();

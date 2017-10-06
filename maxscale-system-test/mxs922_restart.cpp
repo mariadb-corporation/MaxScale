@@ -17,10 +17,10 @@ void add_servers(TestConnections *test)
     for (int i = 0; i < 4; i++)
     {
         test->set_timeout(120);
-        test->ssh_maxscale(true, "maxadmin add server server%d " MONITOR_NAME, i + 1);
-        test->ssh_maxscale(true, "maxadmin add server server%d " SERVICE_NAME1, i + 1);
-        test->ssh_maxscale(true, "maxadmin add server server%d " SERVICE_NAME2, i + 1);
-        test->ssh_maxscale(true, "maxadmin add server server%d " SERVICE_NAME3, i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " MONITOR_NAME, i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " SERVICE_NAME1, i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " SERVICE_NAME2, i + 1);
+        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " SERVICE_NAME3, i + 1);
         test->stop_timeout();
     }
 }
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < 4; i++)
     {
-        test->ssh_maxscale(true, "maxadmin create server server%d %s", i + 1, test->repl->IP[i]);
+        test->maxscales->ssh_node_f(0, true, "maxadmin create server server%d %s", i + 1, test->repl->IP[i]);
     }
 
     /**  Add the servers again */

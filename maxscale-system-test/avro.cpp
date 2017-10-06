@@ -23,10 +23,10 @@ using std::endl;
 
 int main(int argc, char *argv[])
 {
-
+    int exit_code;
     TestConnections test(argc, argv);
     test.set_timeout(600);
-    test.ssh_maxscale(true, (char *) "rm -rf /var/lib/maxscale/avro");
+    test.maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
 
     /** Start master to binlogrouter replication */
     if (!test.replicate_from_master())
@@ -48,7 +48,9 @@ int main(int argc, char *argv[])
     sleep(10);
     test.set_timeout(120);
 
-    char * output = test.ssh_maxscale_output(true, "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro");
+    char * output = test.maxscales->ssh_node_output(0,
+                                                    "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro",
+                                                    true, &exit_code);
 
     std::istringstream iss;
     iss.str(output);

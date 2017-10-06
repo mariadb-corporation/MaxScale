@@ -8,6 +8,7 @@
 
 int main(int argc, char *argv[])
 {
+    int exit_code;
     TestConnections * Test = new TestConnections(argc, argv);
 
     /*Test->restart_maxscale();
@@ -19,7 +20,8 @@ int main(int argc, char *argv[])
     Test->tprintf("Testing connections\n");
     Test->add_result(Test->test_maxscale_connections(true, true, true), "Can't connect to backend\n");
     Test->tprintf("Connecting to Maxscale router with Galera backend\n");
-    MYSQL * g_conn = open_conn(4016 , Test->maxscales->IP[0], Test->maxscales->user_name, Test->maxscales->password, Test->ssl);
+    MYSQL * g_conn = open_conn(4016 , Test->maxscales->IP[0], Test->maxscales->user_name,
+                               Test->maxscales->password, Test->ssl);
     if (g_conn != NULL )
     {
         Test->tprintf("Testing connection\n");
@@ -30,7 +32,7 @@ int main(int argc, char *argv[])
     Test->close_maxscale_connections();
     Test->check_maxscale_alive();
 
-    char * ver = Test->ssh_maxscale_output(false, "maxscale --version-full");
+    char * ver = Test->maxscales->ssh_node_output(0, "maxscale --version-full", false, &exit_code);
     Test->tprintf("Maxscale_full_version_start:\n%s\nMaxscale_full_version_end\n", ver);
 
     if ((Test->global_result == 0) && (Test->use_snapshots))

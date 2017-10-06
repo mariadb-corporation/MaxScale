@@ -70,11 +70,40 @@ void Nodes::generate_ssh_cmd(char *cmd, int node, const char *ssh, bool sudo)
     }
 }
 
+
+char* Nodes::ssh_node_output_f(int node, bool sudo, int * exit_code, const char* format, ...)
+{
+    va_list valist;
+
+    va_start(valist, format);
+    int message_len = vsnprintf(NULL, 0, format, valist);
+    va_end(valist);
+
+    if (message_len < 0)
+    {
+        return NULL;
+    }
+
+    char *sys = (char*)malloc(message_len + 1);
+
+    va_start(valist, format);
+    vsnprintf(sys, message_len + 1, format, valist);
+    va_end(valist);
+
+    char * result = ssh_node_output(node, sys, sudo, exit_code);
+    free(sys);
+
+    return result;
+}
+
+
 char * Nodes::ssh_node_output(int node, const char *ssh, bool sudo, int *exit_code)
 {
-    char sys[strlen(ssh) + 1024];
-    generate_ssh_cmd(sys, node, ssh, sudo);
-    FILE *output = popen(sys, "r");
+    char *cmd = (char*)malloc(strlen(ssh) + 1024);
+
+    generate_ssh_cmd(cmd, node, ssh, sudo);
+//tprintf("############ssh smd %s\n:", cmd);
+    FILE *output = popen(cmd, "r");
     if (output == NULL)
     {
         printf("Error opening ssh %s\n", strerror(errno));
@@ -90,6 +119,8 @@ char * Nodes::ssh_node_output(int node, const char *ssh, bool sudo, int *exit_co
         rsize += sizeof(buffer);
         strcat(result, buffer);
     }
+
+    free(cmd);
     int code = pclose(output);
     if (WIFEXITED(code))
     {
@@ -102,19 +133,76 @@ char * Nodes::ssh_node_output(int node, const char *ssh, bool sudo, int *exit_co
     return result;
 }
 
+
 int Nodes::ssh_node(int node, const char *ssh, bool sudo)
 {
-    char sys[strlen(ssh) + 1024];
-    generate_ssh_cmd(sys, node, ssh, sudo);
-    int return_code = system(sys);
-    if (WIFEXITED(return_code))
+    char *cmd = (char*)malloc(strlen(ssh) + 1024);
+
+    if (strcmp(IP[0], "127.0.0.1") == 0)
     {
-        return WEXITSTATUS(return_code);
+        printf("starting bash\n");
+        sprintf(cmd, "bash");
+    }
+    else
+    {
+        sprintf(cmd,
+                "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s%s",
+                sshkey[node], access_user[node], IP[node], verbose ? "" :  " > /dev/null");
+    }
+    int rc = 1;
+    FILE *in = popen(cmd, "w");
+
+    if (in)
+    {
+        if (sudo)
+        {
+            fprintf(in, "sudo su -\n");
+            fprintf(in, "cd /home/%s\n", access_user[node]);
+        }
+
+        fprintf(in, "%s\n", ssh);
+        rc = pclose(in);
+    }
+
+
+    free(cmd);
+    return rc;
+
+
+    if (WIFEXITED(rc))
+    {
+        return WEXITSTATUS(rc);
     }
     else
     {
         return 256;
     }
+}
+
+int  Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
+{
+    va_list valist;
+
+    va_start(valist, format);
+    int message_len = vsnprintf(NULL, 0, format, valist);
+    va_end(valist);
+
+    if (message_len < 0)
+    {
+        return -1;
+    }
+
+    char *sys = (char*)malloc(message_len + 1);
+
+    va_start(valist, format);
+    vsnprintf(sys, message_len + 1, format, valist);
+    va_end(valist);
+
+    int result = ssh_node(node, sys, sudo);
+    free(sys);
+    return (result);
+
+
 }
 
 int Nodes::copy_to_node(const char* src, const char* dest, int i)
@@ -133,7 +221,7 @@ int Nodes::copy_to_node(const char* src, const char* dest, int i)
     else
     {
         sprintf(sys, "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
-                     "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
+                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
                 sshkey[i], src, access_user[i], IP[i], dest);
     }
     if (verbose)
@@ -160,7 +248,7 @@ int Nodes::copy_from_node(const char* src, const char* dest, int i)
     else
     {
         sprintf(sys, "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
-                     "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
+                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
                 sshkey[i], access_user[i], IP[i], src, dest);
     }
     if (verbose)
