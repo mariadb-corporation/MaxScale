@@ -1648,23 +1648,6 @@ bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
         out->parameters = gw_mysql_get_byte2(params);
         out->warnings = gw_mysql_get_byte2(warnings);
         rval = true;
-
-#ifdef SS_DEBUG
-        // Make sure that the PS response contains the whole response
-        bool more;
-        modutil_state state;
-        int n_eof = modutil_count_signal_packets(buffer, 0, &more, &state);
-        int n_expected = 0;
-        if (out->columns)
-        {
-            n_expected++;
-        }
-        if (out->parameters)
-        {
-            n_expected++;
-        }
-        ss_dassert(n_eof == n_expected);
-#endif
     }
 
     return rval;

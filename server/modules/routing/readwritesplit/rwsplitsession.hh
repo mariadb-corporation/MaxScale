@@ -69,12 +69,18 @@ public:
         return m_large_packet;
     }
 
+    inline uint8_t current_command() const
+    {
+        return m_command;
+    }
+
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
     bool             m_large_packet; /**< Used to store the state of the EOF packet
                                       *calculation for result sets when the result
                                       * contains very large rows */
+    uint8_t          m_command;
 };
 
 typedef std::tr1::shared_ptr<RWBackend> SRWBackend;

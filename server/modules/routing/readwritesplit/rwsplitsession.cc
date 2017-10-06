@@ -60,6 +60,8 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
 {
     uint8_t cmd = mxs_mysql_get_command(buffer);
 
+    m_command = cmd;
+
     if (is_ps_command(cmd))
     {
         uint32_t id = mxs_mysql_extract_ps_id(buffer);
