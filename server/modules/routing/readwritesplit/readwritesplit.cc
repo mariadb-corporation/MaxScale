@@ -529,7 +529,8 @@ static inline bool is_ok(GWBUF* buffer)
 
 static inline bool more_results_exist(GWBUF* buffer)
 {
-    ss_dassert(is_eof(buffer) || mxs_mysql_is_ok_packet(buffer));
+    ss_dassert(is_eof(buffer, gw_mysql_get_byte3(GWBUF_DATA(buffer))) ||
+               mxs_mysql_is_ok_packet(buffer));
     uint16_t status = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1 + 2);
     return status & SERVER_MORE_RESULTS_EXIST;
 }
