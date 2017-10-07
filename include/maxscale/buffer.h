@@ -105,8 +105,8 @@ struct buffer_object_st
  */
 typedef struct
 {
-    int32_t          refcount; /*< Reference count on the buffer */
     buffer_object_t *bufobj;   /*< List of objects referred to by GWBUF */
+    int32_t          refcount; /*< Reference count on the buffer */
     uint32_t         info;     /*< Info bits */
     unsigned char    data[1];  /*< Actual memory that was allocated */
 } SHARED_BUF;
