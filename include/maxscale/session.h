@@ -199,6 +199,11 @@ MXS_SESSION *session_alloc_with_id(struct service *, struct dcb *, uint64_t);
 
 MXS_SESSION *session_set_dummy(struct dcb *);
 
+static inline bool session_is_dummy(MXS_SESSION* session)
+{
+    return session->state == SESSION_STATE_DUMMY;
+}
+
 const char *session_get_remote(const MXS_SESSION *);
 const char *session_get_user(const MXS_SESSION *);
 
