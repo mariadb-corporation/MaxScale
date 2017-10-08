@@ -1299,14 +1299,15 @@ static void wait_until_pos(MYSQL *mysql, int filenum, int pos)
 
 void Mariadb_nodes::sync_slaves(int node)
 {
-    if (this->nodes[node] == NULL)
+    if (this->nodes[node] == NULL && this->connect())
     {
-        this->connect();
+        printf("Failed to connect to all nodes.\n");
+        return;
     }
 
     if (mysql_query(this->nodes[node], "SHOW MASTER STATUS"))
     {
-        printf("Failed to execute SHOW MASTER STATUS: %s", mysql_error(this->nodes[node]));
+        printf("Failed to execute SHOW MASTER STATUS: %s\n", mysql_error(this->nodes[node]));
     }
     else
     {
@@ -1334,7 +1335,7 @@ void Mariadb_nodes::sync_slaves(int node)
                 }
                 else
                 {
-                    printf("Cannot sync slaves, invalid binlog file name: %s", row[0]);
+                    printf("Cannot sync slaves, invalid binlog file name: %s\n", row[0]);
                 }
             }
             mysql_free_result(res);
