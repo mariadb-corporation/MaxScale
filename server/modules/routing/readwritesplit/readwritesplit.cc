@@ -125,7 +125,7 @@ static inline SRWBackend& get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
     MXS_ALERT("No reference to DCB %p found, aborting.", dcb);
     raise(SIGABRT);
 
-    // To make the compiler happy, we a reference to a static value.
+    // To make the compiler happy, we return a reference to a static value.
     static SRWBackend this_should_not_happen;
     return this_should_not_happen;
 }
