@@ -377,23 +377,32 @@ mxs_auth_state_t handle_server_response(DCB *dcb, GWBUF *buffer)
 static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
 {
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-    uint64_t capabilities = service_get_capabilities(dcb->session->service);
 
     /**
-     * Copy the current command being executed to this backend. For statement
-     * based routers, this is tracked by using the current command being executed.
-     * For routers that stream data, the client protocol command tracking data
-     * is used which does not guarantee that the correct command is tracked if
-     * something queues commands internally.
+     * The DCB's session is set to the dummy session when it is put into the
+     * persistent connection pool. If this is not the dummy session, track
+     * the current command being executed.
      */
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
+    if (!session_is_dummy(dcb->session))
     {
-        proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(GWBUF_DATA(buffer));
-    }
-    else if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
-    {
-        MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
-        proto->current_command = client_proto->current_command;
+        uint64_t capabilities = service_get_capabilities(dcb->session->service);
+
+        /**
+         * Copy the current command being executed to this backend. For statement
+         * based routers, this is tracked by using the current command being executed.
+         * For routers that stream data, the client protocol command tracking data
+         * is used which does not guarantee that the correct command is tracked if
+         * something queues commands internally.
+         */
+        if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
+        {
+            proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(GWBUF_DATA(buffer));
+        }
+        else if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
+        {
+            MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
+            proto->current_command = client_proto->current_command;
+        }
     }
 
     if (GWBUF_IS_TYPE_SESCMD(buffer))
