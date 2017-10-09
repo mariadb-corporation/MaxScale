@@ -229,6 +229,9 @@ typedef enum
 #define BLR_MASTER_CONNECT_RETRY    "60"
 #define BLR_MASTER_RETRY_COUNT     "1000"
 
+/* Default value for @@max_connections SQL var */
+#define BLR_DEFAULT_MAX_CONNS   151
+
 /* max size for error message returned to client */
 #define BINLOG_ERROR_MSG_LEN    700
 
