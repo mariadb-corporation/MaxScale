@@ -281,9 +281,9 @@ public:
      * @param rc_slave State of the MaxScale connection to Readconnroute Slave. True for working connection, false for no connection.
      * @return  0 if connections are in the expected state
      */
-    int test_maxscale_connections(bool rw_split,
+    int test_maxscale_connections(int m, bool rw_split,
                                   bool rc_master,
-                                  bool rc_slave, int m);
+                                  bool rc_slave);
 
     /**
      * @brief Create a number of connections to all services, run simple query, close all connections
