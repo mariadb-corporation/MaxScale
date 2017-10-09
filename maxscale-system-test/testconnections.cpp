@@ -1134,7 +1134,7 @@ int TestConnections::check_maxscale_alive(int m)
     return global_result - gr;
 }
 
-int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bool rc_slave, int m)
+int TestConnections::test_maxscale_connections(int m, bool rw_split, bool rc_master, bool rc_slave)
 {
     int rval = 0;
     int rc;
