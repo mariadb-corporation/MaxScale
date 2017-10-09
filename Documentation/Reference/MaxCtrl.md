@@ -73,55 +73,55 @@ Commands:
 
 ### list servers
 
-Usage: `maxctrl.js list servers`
+`Usage: list servers`
 
 List all servers in MaxScale.
 
 ### list services
 
-Usage: `maxctrl.js list services`
+`Usage: list services`
 
 List all services and the servers they use.
 
 ### list listeners
 
-Usage: `maxctrl.js list listeners <service>`
+`Usage: list listeners <service>`
 
 List listeners for a service.
 
 ### list monitors
 
-Usage: `maxctrl.js list monitors`
+`Usage: list monitors`
 
 List all monitors in MaxScale.
 
 ### list sessions
 
-Usage: `maxctrl.js list sessions`
+`Usage: list sessions`
 
 List all client sessions.
 
 ### list filters
 
-Usage: `maxctrl.js list filters`
+`Usage: list filters`
 
 List all filters in MaxScale.
 
 ### list modules
 
-Usage: `maxctrl.js list modules`
+`Usage: list modules`
 
 List all currently loaded modules.
 
 ### list users
 
-Usage: `maxctrl.js list users`
+`Usage: list users`
 
 List the users that can be used to connect to the MaxScale REST API.
 
 ### list commands
 
-Usage: `maxctrl.js list commands`
+`Usage: list commands`
 
 List all available module commands.
 
@@ -145,7 +145,7 @@ Commands:
 
 ### show server
 
-Usage: `maxctrl.js show server <server>`
+`Usage: show server <server>`
 
 Show detailed information about a server. The `Parameters` field contains the
 currently configured parameters for this server. See `help alter server` for
@@ -153,7 +153,7 @@ more details about altering server parameters.
 
 ### show service
 
-Usage: `maxctrl.js show service <service>`
+`Usage: show service <service>`
 
 Show detailed information about a service. The `Parameters` field contains the
 currently configured parameters for this service. See `help alter service` for
@@ -161,7 +161,7 @@ more details about altering service parameters.
 
 ### show monitor
 
-Usage: `maxctrl.js show monitor <monitor>`
+`Usage: show monitor <monitor>`
 
 Show detailed information about a monitor. The `Parameters` field contains the
 currently configured parameters for this monitor. See `help alter monitor` for
@@ -169,7 +169,7 @@ more details about altering monitor parameters.
 
 ### show session
 
-Usage: `maxctrl.js show session <session>`
+`Usage: show session <session>`
 
 Show detailed information about a single session. The list of sessions can be
 retrieved with the `list sessions` command. The <session> is the session ID of a
@@ -177,32 +177,32 @@ particular session.
 
 ### show filter
 
-Usage: `maxctrl.js show filter <filter>`
+`Usage: show filter <filter>`
 
 The list of services that use this filter is show in the `Services` field.
 
 ### show module
 
-Usage: `maxctrl.js show module <module>`
+`Usage: show module <module>`
 
 This command shows all available parameters as well as detailed version
 information of a loaded module.
 
 ### show maxscale
 
-Usage: `maxctrl.js show maxscale`
+`Usage: show maxscale`
 
 See `help alter maxscale` for more details about altering MaxScale parameters.
 
 ### show logging
 
-Usage: `maxctrl.js show logging`
+`Usage: show logging`
 
 See `help alter logging` for more details about altering logging parameters.
 
 ### show commands
 
-Usage: `maxctrl.js show commands <module>`
+`Usage: show commands <module>`
 
 This command shows the parameters the command expects with the parameter
 descriptions.
@@ -219,7 +219,7 @@ Commands:
 
 ### set server
 
-Usage: `maxctrl.js set server <server> <state>`
+`Usage: set server <server> <state>`
 
 If <server> is monitored by a monitor, this command should only be used to set
 the server into the `maintenance` state. Any other states will be overridden by
@@ -239,7 +239,7 @@ Commands:
 
 ### clear server
 
-Usage: `maxctrl.js clear server <server> <state>`
+`Usage: clear server <server> <state>`
 
 This command clears a server state set by the `set server <server> <state>`
 command
@@ -261,13 +261,13 @@ Enable account options:
 
 ### enable log-priority
 
-Usage: `maxctrl.js enable log-priority <log>`
+`Usage: enable log-priority <log>`
 
 The `debug` log priority is only available for debug builds of MaxScale.
 
 ### enable account
 
-Usage: `maxctrl.js enable account <name>`
+`Usage: enable account <name>`
 
 The Linux user accounts are used by the MaxAdmin UNIX Domain Socket interface
 
@@ -284,13 +284,13 @@ Commands:
 
 ### disable log-priority
 
-Usage: `maxctrl.js disable log-priority <log>`
+`Usage: disable log-priority <log>`
 
 The `debug` log priority is only available for debug builds of MaxScale.
 
 ### disable account
 
-Usage: `maxctrl.js disable account <name>`
+`Usage: disable account <name>`
 
 The Linux user accounts are used by the MaxAdmin UNIX Domain Socket interface
 
@@ -335,7 +335,7 @@ Create user options:
 
 ### create server
 
-Usage: `maxctrl.js create server <name> <host> <port>`
+`Usage: create server <name> <host> <port>`
 
 The created server will not be used by any services or monitors unless the
 --services or --monitors options are given. The list of servers a service or a
@@ -343,20 +343,20 @@ monitor uses can be altered with the `link` and `unlink` commands.
 
 ### create monitor
 
-Usage: `maxctrl.js create monitor <name> <module>`
+`Usage: create monitor <name> <module>`
 
 The list of servers given with the --servers option should not contain any
 servers that are already monitored by another monitor.
 
 ### create listener
 
-Usage: `maxctrl.js create listener <service> <name> <port>`
+`Usage: create listener <service> <name> <port>`
 
 The new listener will be taken into use immediately.
 
 ### create user
 
-Usage: `maxctrl.js create user <name> <password>`
+`Usage: create user <name> <password>`
 
 The created user can be used with the MaxScale REST API as well as the MaxAdmin
 network interface. By default the created user will have read-only privileges.
@@ -377,20 +377,20 @@ Commands:
 
 ### destroy server
 
-Usage: `maxctrl.js destroy server <name>`
+`Usage: destroy server <name>`
 
 The server must be unlinked from all services and monitor before it can be
 destroyed.
 
 ### destroy monitor
 
-Usage: `maxctrl.js destroy monitor <name>`
+`Usage: destroy monitor <name>`
 
 The monitor must be unlinked from all servers before it can be destroyed.
 
 ### destroy listener
 
-Usage: `maxctrl.js destroy listener <service> <name>`
+`Usage: destroy listener <service> <name>`
 
 Destroying a monitor causes it to be removed on the next restart. Destroying a
 listener at runtime stops it from accepting new connections but it will still be
@@ -399,7 +399,7 @@ to replace destroyed listeners without restarting MaxScale.
 
 ### destroy user
 
-Usage: `maxctrl.js destroy user <name>`
+`Usage: destroy user <name>`
 
 The last remaining administrative user cannot be removed. Create a replacement
 administrative user before attempting to remove the last administrative user.
@@ -417,7 +417,7 @@ Commands:
 
 ### link service
 
-Usage: `maxctrl.js link service <name> <server...>`
+`Usage: link service <name> <server...>`
 
 This command links servers to a service, making them available for any
 connections that use the service. Before a server is linked to a service, it
@@ -427,7 +427,7 @@ use the old list of servers.
 
 ### link monitor
 
-Usage: `maxctrl.js link monitor <name> <server...>`
+`Usage: link monitor <name> <server...>`
 
 Linking a server to a monitor will add it to the list of servers that are
 monitored by that monitor. A server can be monitored by only one monitor at a
@@ -446,7 +446,7 @@ Commands:
 
 ### unlink service
 
-Usage: `maxctrl.js unlink service <name> <server...>`
+`Usage: unlink service <name> <server...>`
 
 This command unlinks servers from a service, removing them from the list of
 available servers for that service. New connections to the service will not use
@@ -454,7 +454,7 @@ the unlinked servers but existing connections can still use the servers.
 
 ### unlink monitor
 
-Usage: `maxctrl.js unlink monitor <name> <server...>`
+`Usage: unlink monitor <name> <server...>`
 
 This command unlinks servers from a monitor, removing them from the list of
 monitored servers. The servers will be left in their current state when they are
@@ -474,19 +474,19 @@ Commands:
 
 ### start service
 
-Usage: `maxctrl.js start service <name>`
+`Usage: start service <name>`
 
 This starts a service stopped by `stop service <name>`
 
 ### start monitor
 
-Usage: `maxctrl.js start monitor <name>`
+`Usage: start monitor <name>`
 
 This starts a monitor stopped by `stop monitor <name>`
 
 ### start maxscale
 
-Usage: `maxctrl.js start maxscale`
+`Usage: start maxscale`
 
 This command will execute the `start service` command for all services in
 MaxScale.
@@ -505,7 +505,7 @@ Commands:
 
 ### stop service
 
-Usage: `maxctrl.js stop service <name>`
+`Usage: stop service <name>`
 
 Stopping a service will prevent all the listeners for that service from
 accepting new connections. Existing connections will still be handled normally
@@ -513,14 +513,14 @@ until they are closed.
 
 ### stop monitor
 
-Usage: `maxctrl.js stop monitor <name>`
+`Usage: stop monitor <name>`
 
 Stopping a monitor will pause the monitoring of the servers. This can be used to
 manually control server states with the `set server` command.
 
 ### stop maxscale
 
-Usage: `maxctrl.js stop maxscale`
+`Usage: stop maxscale`
 
 This command will execute the `stop service` command for all services in
 MaxScale.
@@ -541,19 +541,19 @@ Commands:
 
 ### alter server
 
-Usage: `maxctrl.js alter server <server> <key> <value>`
+`Usage: alter server <server> <key> <value>`
 
 To display the server parameters, execute `show server <server>`
 
 ### alter monitor
 
-Usage: `maxctrl.js alter monitor <monitor> <key> <value>`
+`Usage: alter monitor <monitor> <key> <value>`
 
 To display the monitor parameters, execute `show monitor <monitor>`
 
 ### alter service
 
-Usage: `maxctrl.js alter service <service> <key> <value>`
+`Usage: alter service <service> <key> <value>`
 
 To display the service parameters, execute `show service <service>`. The
 following list of parameters can be altered at runtime:
@@ -574,13 +574,13 @@ following list of parameters can be altered at runtime:
 
 ### alter logging
 
-Usage: `maxctrl.js alter logging <key> <value>`
+`Usage: alter logging <key> <value>`
 
 To display the logging parameters, execute `show logging`
 
 ### alter maxscale
 
-Usage: `maxctrl.js alter maxscale <key> <value>`
+`Usage: alter maxscale <key> <value>`
 
 To display the MaxScale parameters, execute `show maxscale`. The following list
 of parameters can be altered at runtime:
@@ -589,7 +589,8 @@ of parameters can be altered at runtime:
     "auth_connect_timeout",
     "auth_read_timeout",
     "auth_write_timeout",
-    "admin_auth"
+    "admin_auth",
+    "admin_log_auth_failures"
 ]
 
 ## rotate
@@ -604,7 +605,7 @@ Commands:
 
 ### rotate logs
 
-Usage: `maxctrl.js rotate logs`
+`Usage: rotate logs`
 
 This command is intended to be used with the `logrotate` command.
 
@@ -620,7 +621,7 @@ Commands:
 
 ### call command
 
-Usage: `maxctrl.js call command <module> <command> [params...]`
+`Usage: call command <module> <command> [params...]`
 
 To inspect the list of module commands, execute `list commands`
 
@@ -637,7 +638,7 @@ Commands:
 
 ### cluster diff
 
-Usage: `maxctrl.js cluster diff <target>`
+`Usage: cluster diff <target>`
 
 The list of host servers is controlled with the --hosts option. The target
 server should not be in the host list. Value of <target> must be in HOST:PORT
@@ -645,7 +646,7 @@ format
 
 ### cluster sync
 
-Usage: `maxctrl.js cluster sync <target>`
+`Usage: cluster sync <target>`
 
 This command will alter all MaxScale instances given in the --hosts option to
 represent the <target> MaxScale. If the synchronization of a MaxScale instance

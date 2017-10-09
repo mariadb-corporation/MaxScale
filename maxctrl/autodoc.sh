@@ -23,7 +23,7 @@ do
         echo "### $i $j"
         echo
         USAGE=`node maxctrl.js help $i $j|head -n 1`
-        echo "Usage: \`$USAGE\`"
+        echo "\`$USAGE\`"
         echo ""
 
         # Print the detailed command explanation if it has one
