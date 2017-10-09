@@ -30,6 +30,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/mysql_utils.h>
 
 #include "rwsplit_internal.hh"
 #include "rwsplitsession.hh"
@@ -531,7 +532,13 @@ static inline bool more_results_exist(GWBUF* buffer)
 {
     ss_dassert(is_eof(buffer, gw_mysql_get_byte3(GWBUF_DATA(buffer))) ||
                mxs_mysql_is_ok_packet(buffer));
-    uint16_t status = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1 + 2);
+    ss_dassert(GWBUF_IS_CONTIGUOUS(buffer));
+
+    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
+    ptr += mxs_leint_bytes(ptr);
+    ptr += mxs_leint_bytes(ptr);
+
+    uint16_t status = gw_mysql_get_byte2(ptr);
     return status & SERVER_MORE_RESULTS_EXIST;
 }
 
