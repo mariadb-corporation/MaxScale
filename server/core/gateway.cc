@@ -2617,6 +2617,24 @@ void set_log_augmentation(const char* value)
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value)
 {
     MXS_CONFIG* cnf = config_get_global_options();
+
+    if (cnf->substitute_variables)
+    {
+        if (*value == '$')
+        {
+            char* env_value = getenv(value + 1);
+
+            if (!env_value)
+            {
+                MXS_ERROR("The environment variable %s, used as value for parameter %s "
+                          "in section %s, does not exist.", value, name, section);
+                return 0;
+            }
+
+            value = env_value;
+        }
+    }
+
     char *tmp;
     /** These are read from the configuration file. These will not override
      * command line parameters but will override default values. */
@@ -2789,6 +2807,10 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
             {
                 cnf->log_to_shm = config_truth_value((char*)value);
             }
+        }
+        else if (strcmp(name, CN_SUBSTITUTE_VARIABLES) == 0)
+        {
+            cnf->substitute_variables = config_truth_value(value);
         }
     }
 

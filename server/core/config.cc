@@ -135,6 +135,7 @@ const char CN_SSL_CERT_VERIFY_DEPTH[]         = "ssl_cert_verify_depth";
 const char CN_SSL_KEY[]                       = "ssl_key";
 const char CN_SSL_VERSION[]                   = "ssl_version";
 const char CN_STRIP_DB_ESC[]                  = "strip_db_esc";
+const char CN_SUBSTITUTE_VARIABLES[]          = "substitute_variables";
 const char CN_THREADS[]                       = "threads";
 const char CN_THREAD_STACK_SIZE[]             = "thread_stack_size";
 const char CN_TYPE[]                          = "type";
@@ -457,8 +458,7 @@ void fix_section_name(char *section)
  * @param value         The Parameter value
  * @return zero on error
  */
-static int
-ini_handler(void *userdata, const char *section, const char *name, const char *value)
+static int ini_handler(void *userdata, const char *section, const char *name, const char *value)
 {
     CONFIG_CONTEXT   *cntxt = (CONFIG_CONTEXT *)userdata;
     CONFIG_CONTEXT   *ptr = cntxt;
