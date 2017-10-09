@@ -460,8 +460,25 @@ void fix_section_name(char *section)
  */
 static int ini_handler(void *userdata, const char *section, const char *name, const char *value)
 {
-    CONFIG_CONTEXT   *cntxt = (CONFIG_CONTEXT *)userdata;
-    CONFIG_CONTEXT   *ptr = cntxt;
+    CONFIG_CONTEXT *cntxt = (CONFIG_CONTEXT *)userdata;
+    CONFIG_CONTEXT *ptr = cntxt;
+
+    if (config_get_global_options()->substitute_variables)
+    {
+        if (*value == '$')
+        {
+            char* env_value = getenv(value + 1);
+
+            if (!env_value)
+            {
+                MXS_ERROR("The environment variable %s, used as value for parameter %s "
+                          "in section %s, does not exist.", value, name, section);
+                return 0;
+            }
+
+            value = env_value;
+        }
+    }
 
     if (strcmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0)
     {
