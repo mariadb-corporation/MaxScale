@@ -472,7 +472,7 @@ static int ini_handler(void *userdata, const char *section, const char *name, co
             if (!env_value)
             {
                 MXS_ERROR("The environment variable %s, used as value for parameter %s "
-                          "in section %s, does not exist.", value, name, section);
+                          "in section %s, does not exist.", value + 1, name, section);
                 return 0;
             }
 
