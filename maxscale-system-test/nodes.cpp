@@ -12,7 +12,7 @@ int Nodes::check_node_ssh(int node)
     printf("Checking node %d\n", node);
     fflush(stdout);
 
-    if (ssh_node(0, (char *) "ls > /dev/null", false) != 0)
+    if (ssh_node(node, (char *) "ls > /dev/null", false) != 0)
     {
         printf("Node %d is not available\n", node);
         fflush(stdout);

@@ -47,8 +47,6 @@ TestConnections::TestConnections(int argc, char *argv[]):
     chdir(test_dir);
     gettimeofday(&start_time, NULL);
 
-
-
     read_env();
 
     char * gal_env = getenv("galera_000_network");
@@ -1127,11 +1125,11 @@ int TestConnections::check_maxscale_alive(int m)
     set_timeout(10);
     try_query(maxscales->conn_slave[m], (char *) "show databases;");
     set_timeout(10);
-    maxscales->close_maxscale_connections(m)    ;
+    maxscales->close_maxscale_connections(m);
     add_result(global_result - gr, "Maxscale is not alive\n");
     stop_timeout();
 
-    check_maxscale_processes(1, m);
+    check_maxscale_processes(m, 1);
 
     return global_result - gr;
 }
@@ -1605,7 +1603,6 @@ int TestConnections::try_query(MYSQL *conn, const char *format, ...)
                message_len < 100 ? "" : "...");
     return res;
 }
-
 
 int TestConnections::try_query_all(int m, const char *sql)
 {
