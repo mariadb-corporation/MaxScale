@@ -676,6 +676,11 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_
         }
 
         offset += pktlen;
+        if (offset >= GWBUF_LENGTH(reply) && reply->next)
+        {
+            offset -= GWBUF_LENGTH(reply);
+            reply = reply->next;
+        }
     }
 
     int total = err + eof + n_found;

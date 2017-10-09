@@ -42,6 +42,8 @@ typedef enum routing_capability
     RCAP_TYPE_CONTIGUOUS_OUTPUT     = 0x0030, /* 0b0000000000110000 */
     /** Result sets are delivered in one buffer; implies RCAP_TYPE_STMT_OUTPUT. */
     RCAP_TYPE_RESULTSET_OUTPUT      = 0x0050, /* 0b0000000001110000 */
+    /** Results are delivered as a set of complete packets */
+    RCAP_TYPE_PACKET_OUTPUT         = 0x0080, /* 0b0000000010000000 */
 
 } mxs_routing_capability_t;
 
