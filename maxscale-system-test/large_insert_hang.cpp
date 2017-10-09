@@ -3,11 +3,12 @@
  */
 
 #include "testconnections.h"
+#include <sstream>
 
 int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
-    test.set_timeout(60);
+    test.set_timeout(30);
 
     test.connect_maxscale();
     test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id int)");
@@ -20,7 +21,7 @@ int main(int argc, char *argv[])
         ss << ",(" << i << ")";
     }
 
-    test.try_query(test.conn_rwsplit, query.str().c_str());
+    test.try_query(test.conn_rwsplit, ss.str().c_str());
     test.try_query(test.conn_rwsplit, "DROP TABLE test.t1");
     test.close_maxscale_connections();
 
