@@ -745,8 +745,9 @@ gw_read_and_write(DCB *dcb)
     bool result_collected = false;
     MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
-        proto->collect_result || proto->ignore_replies != 0)
+    if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) ||
+        rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
+        proto->ignore_replies != 0)
     {
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
@@ -761,48 +762,53 @@ gw_read_and_write(DCB *dcb)
 
         read_buffer = tmp;
 
-        if ((tmp = gwbuf_make_contiguous(read_buffer)))
+        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
+            proto->collect_result ||
+            proto->ignore_replies != 0)
         {
-            read_buffer = tmp;
-        }
-        else
-        {
-            /** Failed to make the buffer contiguous */
-            gwbuf_free(read_buffer);
-            poll_fake_hangup_event(dcb);
-            return 0;
-        }
-
-        if (collecting_resultset(proto, capabilities))
-        {
-            if (expecting_resultset(proto))
+            if ((tmp = gwbuf_make_contiguous(read_buffer)))
             {
-                if (mxs_mysql_is_result_set(read_buffer))
+                read_buffer = tmp;
+            }
+            else
+            {
+                /** Failed to make the buffer contiguous */
+                gwbuf_free(read_buffer);
+                poll_fake_hangup_event(dcb);
+                return 0;
+            }
+
+            if (collecting_resultset(proto, capabilities))
+            {
+                if (expecting_resultset(proto))
                 {
-                    bool more = false;
-                    if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
+                    if (mxs_mysql_is_result_set(read_buffer))
+                    {
+                        bool more = false;
+                        if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
+                        {
+                            dcb_readq_prepend(dcb, read_buffer);
+                            return 0;
+                        }
+                    }
+
+                    // Collected the complete result
+                    proto->collect_result = false;
+                    result_collected = true;
+                }
+                else if (expecting_ps_response(proto) &&
+                         mxs_mysql_is_prep_stmt_ok(read_buffer))
+                {
+                    if (!complete_ps_response(read_buffer))
                     {
                         dcb_readq_prepend(dcb, read_buffer);
                         return 0;
                     }
-                }
 
-                // Collected the complete result
-                proto->collect_result = false;
-                result_collected = true;
-            }
-            else if (expecting_ps_response(proto) &&
-                     mxs_mysql_is_prep_stmt_ok(read_buffer))
-            {
-                if (!complete_ps_response(read_buffer))
-                {
-                    dcb_readq_prepend(dcb, read_buffer);
-                    return 0;
+                    // Collected the complete result
+                    proto->collect_result = false;
+                    result_collected = true;
                 }
-
-                // Collected the complete result
-                proto->collect_result = false;
-                result_collected = true;
             }
         }
     }
@@ -905,8 +911,7 @@ gw_read_and_write(DCB *dcb)
          * If protocol has session command set, concatenate whole
          * response into one buffer.
          */
-        if (proto->protocol_command.scom_cmd != MXS_COM_UNDEFINED &&
-            protocol_get_srv_command(proto, true) != MXS_COM_UNDEFINED)
+        if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, true) != MXS_COM_UNDEFINED)
         {
             if (result_collected)
             {
@@ -940,23 +945,12 @@ gw_read_and_write(DCB *dcb)
                  !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) &&
                  !result_collected)
         {
-            if ((stmt = modutil_get_next_MySQL_packet(&read_buffer)))
-            {
-                if (!GWBUF_IS_CONTIGUOUS(stmt))
-                {
-                    // Make sure the buffer is contiguous
-                    stmt = gwbuf_make_contiguous(stmt);
-                }
-            }
-            else
-            {
-                // All complete packets are processed, store partial packets for later use
-                if (read_buffer)
-                {
-                    dcb_readq_prepend(dcb, read_buffer);
-                }
+            stmt = modutil_get_next_MySQL_packet(&read_buffer);
 
-                return return_code;
+            if (!GWBUF_IS_CONTIGUOUS(stmt))
+            {
+                // Make sure the buffer is contiguous
+                stmt = gwbuf_make_contiguous(stmt);
             }
         }
         else
