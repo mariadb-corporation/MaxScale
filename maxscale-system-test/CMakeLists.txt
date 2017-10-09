@@ -295,6 +295,9 @@ add_test_script(load_balancing_pers10 load_balancing load_pers10 LABELS readwrit
 # Test with extremely big blob inserting
 add_test_executable(longblob.cpp longblob longblob LABELS readwritesplit readconnroute UNSTABLE HEAVY REPL_BACKEND)
 
+# Check that inserts of specific size don't cause a hang
+add_test_executable(large_insert_hang.cpp large_insert_hang replication LABELS readwritesplit REPL_BACKEND)
+
 # Test with extremely big blob inserting/selecting with > 16 mb data blocks
 add_test_executable(mxs1110_16mb.cpp mxs1110_16mb longblob_filters LABELS readwritesplit readconnroute HEAVY REPL_BACKEND)
 
