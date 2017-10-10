@@ -231,6 +231,8 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
             MXS_INFO("replication lag : %d in \t[%s]:%d %s",
                      b->server->rlag, b->server->name,
                      b->server->port, STRSRVSTATUS(b->server));
+            break;
+
         default:
             ss_dassert(!true);
             break;
