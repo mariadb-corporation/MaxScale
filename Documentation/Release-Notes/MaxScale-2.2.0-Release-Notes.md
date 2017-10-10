@@ -3,7 +3,7 @@
 Release 2.2.0 is a Beta release.
 
 This document describes the changes in release 2.2.0, when compared to
-release 2.1.X.
+release 2.1.
 
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
@@ -215,10 +215,19 @@ executed directly on the relevant backend server. In addition to this, there are
 minor limitations to the `KILL` command handling. See
 [Limitations](../About/Limitations.md) for more information.
 
-### New `uses_function` rule for dbfwfilter
+### Obfuscation and partial masking added to the masking filter.
+
+A value can now be obfuscated instead of just masked. Further, it is
+possible to specify with a regular expression that only a specific part
+of a value should be masked. For more information, please read the
+[masking filter](../Filters/Masking.md) documentation.
+
+### New rules for dbfwfilter
 
 The `uses_function` type rule prevents certain columns from being used
-with functions. For more information about this new rule, read the
+with functions. It is now also possible to match a function if it is
+used in conjunction with specific columns. For more information about
+the new rules, read the
 [dbfwfilter](../Filters/Database-Firewall-Filter.md) documentation.
 
 ## Bug fixes
