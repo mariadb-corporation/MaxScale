@@ -631,6 +631,7 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
 int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_dest, modutil_state* state)
 {
     unsigned int len = gwbuf_length(reply);
+    ss_debug(int real_offset = 0);
     int eof = 0;
     int err = 0;
     size_t offset = 0;
@@ -669,7 +670,8 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_dest, mod
             else if (more && command == MYSQL_REPLY_OK)
             {
                 // This should not be the first packet
-                ss_dassert(pktlen >= MYSQL_OK_PACKET_MIN_LEN && offset > 0);
+                ss_dassert(pktlen >= MYSQL_OK_PACKET_MIN_LEN);
+                ss_dassert(real_offset > 0);
 
                 uint8_t data[payloadlen - 1];
                 gwbuf_copy_data(reply, offset + MYSQL_HEADER_LEN + 1, sizeof(data), data);
@@ -691,6 +693,8 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_dest, mod
         }
 
         offset += pktlen;
+        ss_debug(real_offset += pktlen);
+
         if (offset >= GWBUF_LENGTH(reply) && reply->next)
         {
             offset -= GWBUF_LENGTH(reply);
