@@ -25,6 +25,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
+#include <maxscale/mysql_utils.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
 static SPINLOCK re_lock = SPINLOCK_INIT;
@@ -627,13 +628,14 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
     return complete;
 }
 
-int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_state* state)
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_dest, modutil_state* state)
 {
     unsigned int len = gwbuf_length(reply);
     int eof = 0;
     int err = 0;
     size_t offset = 0;
     bool skip_next = state ? state->state : false;
+    bool more = false;
 
     while (offset < len)
     {
@@ -664,15 +666,28 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_
             {
                 eof++;
             }
+            else if (more && command == MYSQL_REPLY_OK)
+            {
+                // This should not be the first packet
+                ss_dassert(pktlen >= MYSQL_OK_PACKET_MIN_LEN && offset > 0);
+
+                uint8_t data[payloadlen - 1];
+                gwbuf_copy_data(reply, offset + MYSQL_HEADER_LEN + 1, sizeof(data), data);
+
+                uint8_t* ptr = data;
+                ptr += mxs_leint_bytes(ptr);
+                ptr += mxs_leint_bytes(ptr);
+
+                uint16_t* status = (uint16_t*)ptr;
+                more = (*status) & SERVER_MORE_RESULTS_EXIST;
+            }
         }
 
         if (offset + pktlen >= len || (eof + err + n_found) >= 2)
         {
             gwbuf_copy_data(reply, offset, sizeof(header), header);
             uint16_t* status = (uint16_t*)(header + MYSQL_HEADER_LEN + 1 + 2); // Skip command and warning count
-            *more = ((*status) & SERVER_MORE_RESULTS_EXIST);
-            offset += pktlen;
-            break;
+            more = ((*status) & SERVER_MORE_RESULTS_EXIST);
         }
 
         offset += pktlen;
@@ -690,6 +705,7 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_
         state->state = skip_next;
     }
 
+    *more_dest = more;
     return total;
 }
 
