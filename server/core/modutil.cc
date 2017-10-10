@@ -649,10 +649,12 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
 
         if (payloadlen == GW_MYSQL_MAX_PACKET_LEN)
         {
+            only_ok = false;
             skip_next = true;
         }
         else if (skip_next)
         {
+            only_ok = false;
             skip_next = false;
         }
         else
@@ -670,9 +672,12 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
             else if (command == MYSQL_REPLY_EOF && pktlen == MYSQL_EOF_PACKET_LEN)
             {
                 eof++;
+                only_ok = false;
             }
-            else if (command == MYSQL_REPLY_OK && pktlen >= MYSQL_OK_PACKET_MIN_LEN)
+            else if (command == MYSQL_REPLY_OK && pktlen >= MYSQL_OK_PACKET_MIN_LEN &&
+                     (eof + n_found) % 2 == 0)
             {
+                // An OK packet that is not in the middle of a resultset stream
                 uint8_t data[payloadlen - 1];
                 gwbuf_copy_data(reply, offset + MYSQL_HEADER_LEN + 1, sizeof(data), data);
 
