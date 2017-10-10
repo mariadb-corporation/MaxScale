@@ -537,6 +537,16 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
             LOG_RS(backend, REPLY_STATE_DONE);
             backend->set_reply_state(REPLY_STATE_DONE);
         }
+        else
+        {
+            // This is an OK packet and more results will follow
+            ss_dassert(mxs_mysql_is_ok_packet(buffer) &&
+                mxs_mysql_more_results_after_ok(buffer));
+
+            LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
+            backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
+            return reply_is_complete(backend, buffer);
+        }
     }
     else
     {
@@ -545,6 +555,16 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
         int n_old_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
         int n_eof = modutil_count_signal_packets(buffer, n_old_eof, &more, &state);
         backend->set_large_packet(state.state);
+
+        if (n_eof > 2)
+        {
+            /**
+             * We have multiple results in the buffer, we only care about
+             * the state of the last one. Skip the complete result sets and act
+             * like we're processing a single result set.
+             */
+            n_eof = n_eof % 2 ? 1 : 2;
+        }
 
         if (n_eof == 0)
         {
