@@ -515,6 +515,12 @@ static bool route_stored_query(RWSplitSession *rses)
     return rval;
 }
 
+static inline bool have_next_packet(GWBUF* buffer)
+{
+    uint32_t len = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
+    return gwbuf_length(buffer) > len;
+}
+
 /**
  * @brief Check if we have received a complete reply from the backend
  *
@@ -545,7 +551,11 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
 
             LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
             backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
-            return reply_is_complete(backend, buffer);
+
+            if (have_next_packet(buffer))
+            {
+                return reply_is_complete(backend, buffer);
+            }
         }
     }
     else
