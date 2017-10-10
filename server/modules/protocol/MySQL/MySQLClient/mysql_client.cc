@@ -494,12 +494,12 @@ int gw_read_client_event(DCB* dcb)
         dcb_readq_set(dcb, read_buffer);
         if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
                                 (int)(MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
-            (0 != max_bytes && nbytes_read < max_bytes))
+            (0 != max_bytes && nbytes_read < max_bytes) ||
+            (read_buffer = modutil_get_next_MySQL_packet(&dcb->readq)) == NULL)
         {
             return 0;
         }
 
-        read_buffer = modutil_get_next_MySQL_packet(&dcb->readq);
         ss_dassert(read_buffer);
         nbytes_read = gwbuf_length(read_buffer);
 
