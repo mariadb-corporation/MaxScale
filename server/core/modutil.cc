@@ -695,6 +695,7 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
 
         if (offset >= GWBUF_LENGTH(reply) && reply->next)
         {
+            len -= GWBUF_LENGTH(reply);
             offset -= GWBUF_LENGTH(reply);
             reply = reply->next;
         }
