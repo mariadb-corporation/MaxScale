@@ -636,6 +636,7 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
     size_t offset = 0;
     bool skip_next = state ? state->state : false;
     bool more = false;
+    bool only_ok = true;
 
     while (offset < len)
     {
@@ -682,6 +683,10 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
                 uint16_t* status = (uint16_t*)ptr;
                 more = (*status) & SERVER_MORE_RESULTS_EXIST;
             }
+            else
+            {
+                only_ok = false;
+            }
         }
 
         if (offset + pktlen >= len || (eof + err + n_found) >= 2)
@@ -709,6 +714,12 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
     }
 
     *more_out = more;
+
+    if (only_ok && !more)
+    {
+        total = 2;
+    }
+
     return total;
 }
 
