@@ -403,7 +403,7 @@ int Nodes::read_basic_env()
 
             sprintf(env_name, "%s_%03d_hostname", prefix, i);
             env = getenv(env_name);
-            if (env != NULL)
+            if (env == NULL)
             {
                 sprintf(env_name, "%s_hostname", prefix);
                 env = getenv(env_name);
