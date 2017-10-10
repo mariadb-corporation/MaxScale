@@ -12,14 +12,18 @@
  */
 
 #include <maxscale/buffer.h>
+
 #include <errno.h>
 #include <stdlib.h>
+#include <sstream>
+
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/debug.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/hint.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/utils.h>
 
 #if defined(BUFFER_TRACE)
 #include <maxscale/hashtable.h>
@@ -878,4 +882,53 @@ size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t
     }
 
     return bytes_read;
+}
+
+static std::string dump_one_buffer(GWBUF* buffer)
+{
+    std::string rval;
+    int len = GWBUF_LENGTH(buffer);
+    uint8_t* data = GWBUF_DATA(buffer);
+
+    while (len > 0)
+    {
+        // Process the buffer in 40 byte chunks
+        int n = MXS_MIN(40, len);
+        char output[n * 2 + 1];
+        gw_bin2hex(output, data, n);
+        char* ptr = output;
+
+        while (ptr < output + n * 2)
+        {
+            rval.append(ptr, 2);
+            rval += " ";
+            ptr += 2;
+        }
+        len -= n;
+        data += n;
+        rval += "\n";
+    }
+
+    return rval;
+}
+
+void gwbuf_hexdump(GWBUF* buffer)
+{
+    std::stringstream ss;
+
+    ss << "Buffer " << buffer << ":\n";
+
+    for (GWBUF* b = buffer; b; b = b->next)
+    {
+        ss << dump_one_buffer(b);
+    }
+
+    int n = ss.str().length();
+
+    if (n > 1024)
+    {
+        n = 1024;
+    }
+
+    MXS_INFO("%.*s", n, ss.str().c_str());
 }

@@ -414,4 +414,11 @@ void *gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
 extern void dprintAllBuffers(void *pdcb);
 #endif
 
+/**
+ * Debug function for dumping buffer contents to INFO log
+ *
+ * @param buffer Buffer to dump
+ */
+void gwbuf_hexdump(GWBUF* buffer);
+
 MXS_END_DECLS
