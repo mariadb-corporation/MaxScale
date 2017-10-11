@@ -157,14 +157,14 @@ describe('Cluster Sync', function() {
     before(startDoubleMaxScale)
 
     it('sync after server creation', function() {
-        return doCommand('create server server5 127.0.0.1 3003 --hosts 127.0.0.1:8990')
-            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+        return doCommand('create server server5 127.0.0.1 3003 --hosts ' + secondary_host)
+            .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
                                       'servers/server5'))
     })
 
     it('sync after server alteration', function() {
-        return doCommand('alter server server2 port 3000 --hosts 127.0.0.1:8990')
-            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+        return doCommand('alter server server2 port 3000 --hosts ' + secondary_host)
+            .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
                                       'servers/server2'))
             .then(function(res) {
                 res.data.attributes.parameters.port.should.equal(3000)
@@ -172,21 +172,21 @@ describe('Cluster Sync', function() {
     })
 
     it('sync after server deletion', function() {
-        return doCommand('destroy server server5 --hosts 127.0.0.1:8990')
-            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+        return doCommand('destroy server server5 --hosts ' + secondary_host)
+            .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
                                       'servers/server5'))
             .should.be.rejected
     })
 
     it('sync after monitor creation', function() {
-        return doCommand('create monitor my-monitor-2 mysqlmon --hosts 127.0.0.1:8990')
-            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+        return doCommand('create monitor my-monitor-2 mysqlmon --hosts ' + secondary_host)
+            .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
                                       'monitors/my-monitor-2'))
     })
 
     it('sync after monitor alteration', function() {
-        return doCommand('alter monitor MySQL-Monitor monitor_interval 12345 --hosts 127.0.0.1:8990')
-            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+        return doCommand('alter monitor MySQL-Monitor monitor_interval 12345 --hosts ' + secondary_host)
+            .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
                                       'monitors/MySQL-Monitor'))
             .then(function(res) {
                 res.data.attributes.parameters.monitor_interval.should.equal(12345)
@@ -194,17 +194,17 @@ describe('Cluster Sync', function() {
     })
 
     it('sync after monitor deletion', function() {
-        return doCommand('destroy monitor my-monitor-2 --hosts 127.0.0.1:8990')
-            .then(() => doCommand('show monitor my-monitor-2  --hosts 127.0.0.1:8989'))
-            .then(() => doCommand('show monitor my-monitor-2  --hosts 127.0.0.1:8990').should.be.rejected)
-            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
-            .then(() => doCommand('show monitor my-monitor-2  --hosts 127.0.0.1:8989').should.be.rejected)
-            .then(() => doCommand('show monitor my-monitor-2  --hosts 127.0.0.1:8990').should.be.rejected)
+        return doCommand('destroy monitor my-monitor-2 --hosts ' + secondary_host)
+            .then(() => doCommand('show monitor my-monitor-2  --hosts ' + primary_host))
+            .then(() => doCommand('show monitor my-monitor-2  --hosts ' + secondary_host).should.be.rejected)
+            .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
+            .then(() => doCommand('show monitor my-monitor-2  --hosts ' + primary_host).should.be.rejected)
+            .then(() => doCommand('show monitor my-monitor-2  --hosts ' + secondary_host).should.be.rejected)
     })
 
     it('sync after service alteration', function() {
-        return doCommand('alter service RW-Split-Router enable_root_user true --hosts 127.0.0.1:8990')
-            .then(() => verifyCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989',
+        return doCommand('alter service RW-Split-Router enable_root_user true --hosts ' + secondary_host)
+            .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
                                       'services/RW-Split-Router'))
             .then(function(res) {
                 res.data.attributes.parameters.enable_root_user.should.be.true
@@ -214,16 +214,28 @@ describe('Cluster Sync', function() {
     // As the listeners cannot be truly deleted, since there's no code for actually closing a socket at runtime,
     // we do the listener tests last
     it('sync listener creation/deletion', function() {
-        return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts 127.0.0.1:8990')
-        // As both MaxScales are on the same machine, both can't listen on the same port. The sync should fail due to this
-            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989').should.be.rejected)
-        // Create the listener on the second MaxScale to avoid it being synced later on
-            .then(() => doCommand('create listener RW-Split-Router my-listener-2 5998 --hosts 127.0.0.1:8989'))
-        // Sync after creation should succeed
-            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
-        // Destroy the created server, should succeed
-            .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
-            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+        if (primary_host == '127.0.0.1:8989' && secondary_host == '127.0.0.1:8990') {
+            // Test with both MaxScales on the same machine
+
+            return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts ' + secondary_host)
+            // As both MaxScales are on the same machine, both can't listen on the same port. The sync should fail due to this
+                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host).should.be.rejected)
+            // Create the listener on the second MaxScale to avoid it being synced later on
+                .then(() => doCommand('create listener RW-Split-Router my-listener-2 5998 --hosts ' + primary_host))
+            // Sync after creation should succeed
+                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
+            // Destroy the created server, should succeed
+                .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
+                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
+        } else {
+            // MaxScales are on different machines
+
+            return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts ' + secondary_host)
+            // As both MaxScales are on the same machine, both can't listen on the same port. The sync should fail due to this
+                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
+                .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
+                .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
+        }
     })
 
     after(stopDoubleMaxScale)
@@ -273,36 +285,36 @@ describe('Cluster Diff', function() {
     before(startDoubleMaxScale)
 
     it('diff after server creation', function() {
-        return doCommand('create server server5 127.0.0.1 3003 --hosts 127.0.0.1:8990')
-            .then(() => doCommand('cluster diff 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+        return doCommand('create server server5 127.0.0.1 3003 --hosts ' + secondary_host)
+            .then(() => doCommand('cluster diff ' + secondary_host + ' --hosts ' + primary_host))
             .then(function(res) {
                 var d = parseDiff(res)
                 d.removed.servers.length.should.equal(1)
                 d.removed.servers[0].id.should.equal('server5')
             })
-            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+            .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
     })
 
     it('diff after server alteration', function() {
-        return doCommand('alter server server2 port 3000 --hosts 127.0.0.1:8990')
-            .then(() => doCommand('cluster diff 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+        return doCommand('alter server server2 port 3000 --hosts ' + secondary_host)
+            .then(() => doCommand('cluster diff ' + secondary_host + ' --hosts ' + primary_host))
             .then(function(res) {
                 var d = parseDiff(res)
                 d.changed.servers.length.should.equal(1)
                 d.changed.servers[0].id.should.equal('server2')
             })
-            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+            .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
     })
 
     it('diff after server deletion', function() {
-        return doCommand('destroy server server5 --hosts 127.0.0.1:8990')
-            .then(() => doCommand('cluster diff 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+        return doCommand('destroy server server5 --hosts ' + secondary_host)
+            .then(() => doCommand('cluster diff ' + secondary_host + ' --hosts ' + primary_host))
             .then(function(res) {
                 var d = parseDiff(res)
                 d.added.servers.length.should.equal(1)
                 d.added.servers[0].id.should.equal('server5')
             })
-            .then(() => doCommand('cluster sync 127.0.0.1:8990 --hosts 127.0.0.1:8989'))
+            .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
     })
 
     after(stopDoubleMaxScale)

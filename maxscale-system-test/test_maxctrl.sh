@@ -12,11 +12,12 @@ fi
 if [ ! -d MaxScale ]
 then
     git clone https://www.github.com/mariadb-corporation/MaxScale.git
+    cd MaxScale
+    git checkout $ref
+    cd ..
 fi
 
-cd MaxScale
-git checkout $ref
-cd maxctrl
+cd MaxScale/maxctrl
 
 # Create the scripts that start and stop MaxScale
 ~/maxctrl_scripts.sh

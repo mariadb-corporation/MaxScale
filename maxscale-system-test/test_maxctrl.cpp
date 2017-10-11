@@ -18,7 +18,8 @@ int main(int argc, char *argv[])
     test.ssh_maxscale(true,"ssh-keygen -f maxscale_key -P \"\"");
     test.copy_from_maxscale((char*)"~/maxscale_key.pub", (char*)".");
     test.galera->copy_to_node("./maxscale_key.pub", "~", 3);
-    test.galera->ssh_node(3, false, "cat ~/maxscale_key.pub >> ~/.ssh/authorized_keys");
+    test.galera->ssh_node(3, false, "cat ~/maxscale_key.pub >> ~/.ssh/authorized_keys;"
+                          "sudo iptables -I INPUT -p tcp --dport 8989 -j ACCEPT;");
 
     // TODO: Don't handle test dependencies in tests
     test.tprintf("Installing NPM");
@@ -26,7 +27,7 @@ int main(int argc, char *argv[])
 
     test.tprintf("Starting test");
     test.verbose = true;
-    int rv = test.ssh_maxscale(false, "./test_maxctrl.sh");
+    int rv = test.ssh_maxscale(false, "export maxscale2_API=%s:8989; ./test_maxctrl.sh", test.galera->IP[3]);
     test.verbose = false;
 
     test.tprintf("Removing NPM");
