@@ -636,6 +636,9 @@ add_test_executable(temporal_tables.cpp temporal_tables replication LABELS readw
 # Test routing hints
 add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter LIGHT REPL_BACKEND)
 
+# Run MaxCtrl test suite
+add_test_executable(test_maxctrl.cpp test_maxctrl maxctrl LABELS REPL_BACKEND)
+
 # Binlogrouter tests, these heavily alter the replication so they are run last
 add_test_executable(avro.cpp avro avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)
 add_test_executable(avro_alter.cpp avro_alter avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)

@@ -1484,7 +1484,7 @@ int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
 
     free(sys);
     free(cmd);
-    return rc;
+    return WEXITSTATUS(rc);
 }
 
 int TestConnections::copy_to_maxscale(const char* src, const char* dest)
