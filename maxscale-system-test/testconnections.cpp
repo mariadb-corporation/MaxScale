@@ -172,6 +172,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
     maxscales = new Maxscales("maxscale", test_dir, verbose);
 
     maxscales->use_ipv6 = use_ipv6;
+    maxscales->ssl = ssl;
 
     if (maxscale::required_repl_version.length())
     {
