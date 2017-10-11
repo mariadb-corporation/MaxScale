@@ -45,7 +45,7 @@ bool runtime_link_server(SERVER *server, const char *target)
     {
         if (monitorAddServer(monitor, server))
         {
-            monitor_serialize_servers(monitor);
+            monitor_serialize(monitor);
             rval = true;
         }
     }
@@ -80,7 +80,7 @@ bool runtime_unlink_server(SERVER *server, const char *target)
         else if (monitor)
         {
             monitorRemoveServer(monitor, server);
-            monitor_serialize_servers(monitor);
+            monitor_serialize(monitor);
         }
 
         const char *type = service ? "service" : "monitor";
