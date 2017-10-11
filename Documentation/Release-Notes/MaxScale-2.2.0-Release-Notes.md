@@ -166,6 +166,12 @@ mycommands.txt`).
 
 ## New Features
 
+### REST API
+
+MariaDB MaxScale now exposes a REST-API for obtaining information about
+and for manipulating the resources of MaxScale. For more information please
+refer to the [REST API](../REST-API/API.md) documentation.
+
 ### MaxCtrl Command Line Client
 
 The MaxCtrl is a new command line intended to replace MaxAdmin. This
@@ -174,6 +180,13 @@ client is distributed separately in the `maxscale-client` package.
 
 For more information, refer to the [MaxCtrl](../Reference/MaxCtrl.md)
 documentation.
+
+### Limited support from Pluggable Authentication Modules (PAM).
+
+Pluggable authentication module (PAM) is a general purpose authentication API.
+An application using PAM can authenticate a user without knowledge about the
+underlying authentication implementation. For more information please refer to
+the [PAM Authenticator](../Authenticators/PAM-Authenticator.md) documentation.
 
 ### MySQL Monitor Crash Safety
 
