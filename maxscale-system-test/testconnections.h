@@ -338,7 +338,10 @@ public:
     static void require_galera_version(const char *version);
 
     /** Initialize multiple MaxScale instances */
-    void multiple_maxscales(bool value);
+    static void multiple_maxscales(bool value);
+
+    /** Set secondary MaxScale address */
+    static void set_secondary_maxscale(const char* ip_var, const char* ip6_var);
 
     /**
      * @brief add_result adds result to global_result and prints error message if result is not 0

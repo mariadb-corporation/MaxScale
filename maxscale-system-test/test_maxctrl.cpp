@@ -6,9 +6,19 @@
 
 int main(int argc, char *argv[])
 {
+    // Use galera_003 as the secondary MaxScale node
+    TestConnections::set_secondary_maxscale("galera_003_network", "galera_003_network6");
     TestConnections test(argc, argv);
 
+    // This is not very nice as it's a bit too intrusive
+    system("envsubst < maxctrl_scripts.sh.in > maxctrl_scripts.sh");
+    system("chmod +x maxctrl_scripts.sh");
     test.copy_to_maxscale("test_maxctrl.sh", "~");
+    test.copy_to_maxscale("maxctrl_scripts.sh", "~");
+    test.ssh_maxscale(true,"ssh-keygen -f maxscale_key -P \"\"");
+    test.copy_from_maxscale((char*)"~/maxscale_key.pub", (char*)".");
+    test.galera->copy_to_node("./maxscale_key.pub", "~", 3);
+    test.galera->ssh_node(3, false, "cat ~/maxscale_key.pub >> ~/.ssh/authorized_keys");
 
     // TODO: Don't handle test dependencies in tests
     test.tprintf("Installing NPM");

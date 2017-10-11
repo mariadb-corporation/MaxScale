@@ -20,7 +20,7 @@ module.exports = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./start_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve()
                 }
@@ -33,7 +33,7 @@ module.exports = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./start_double_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve()
                 }
@@ -46,7 +46,7 @@ module.exports = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./stop_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve()
                 }
@@ -59,7 +59,7 @@ module.exports = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./stop_double_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve()
                 }
