@@ -7,6 +7,12 @@
 #include <pthread.h>
 #include <sys/time.h>
 
+enum test_target
+{
+    MXS_PRIMARY,
+    MXS_SECONDARY
+};
+
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
  * Test setup should consist of two setups: one Master/Slave and one Galera.
@@ -122,6 +128,12 @@ public:
      * @brief Maxscale_IP   Maxscale machine IP address
      */
     char maxscale_IP[1024];
+
+    /** IPv4 and IPv6 addresses for the primary and secondary instances */
+    std::string primary_maxscale_IP;
+    std::string primary_maxscale_IP6;
+    std::string secondary_maxscale_IP;
+    std::string secondary_maxscale_IP6;
 
     /**
      * @brief Maxscale_IP6   Maxscale machine IP address (IPv6)
@@ -245,7 +257,7 @@ public:
     /**
      * @brief ssl if true ssl will be used
      */
-    int ssl;
+    bool ssl;
 
     /**
      * @brief backend_ssl if true ssl configuratio for all servers will be added
@@ -324,6 +336,9 @@ public:
     /** Test requires a certain backend version  */
     static void require_repl_version(const char *version);
     static void require_galera_version(const char *version);
+
+    /** Initialize multiple MaxScale instances */
+    void multiple_maxscales(bool value);
 
     /**
      * @brief add_result adds result to global_result and prints error message if result is not 0
@@ -715,6 +730,13 @@ public:
      * @param dest Destination file name for actual configuration file
      */
     void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
+
+    /**
+     * @brief Change the target MaxScale
+     *
+     * @param target Either MXS_PRIMARY or MXS_SECONDARY
+     */
+    void set_active_maxscale(enum test_target target);
 };
 
 /**

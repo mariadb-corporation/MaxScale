@@ -57,7 +57,8 @@ typedef enum
     GWBUF_TYPE_SESCMD          = 0x04,
     GWBUF_TYPE_HTTP            = 0x08,
     GWBUF_TYPE_IGNORABLE       = 0x10,
-    GWBUF_TYPE_COLLECT_RESULT  = 0x20
+    GWBUF_TYPE_COLLECT_RESULT  = 0x20,
+    GWBUF_TYPE_RESULT          = 0x40,
 } gwbuf_type_t;
 
 #define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
@@ -65,6 +66,7 @@ typedef enum
 #define GWBUF_IS_TYPE_RESPONSE_END(b)    (b->gwbuf_type & GWBUF_TYPE_RESPONSE_END)
 #define GWBUF_IS_TYPE_SESCMD(b)          (b->gwbuf_type & GWBUF_TYPE_SESCMD)
 #define GWBUF_IS_IGNORABLE(b)            (b->gwbuf_type & GWBUF_TYPE_IGNORABLE)
+#define GWBUF_IS_COLLECTED_RESULT(b)     (b->gwbuf_type & GWBUF_TYPE_RESULT)
 #define GWBUF_SHOULD_COLLECT_RESULT(b)   (b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
 
 typedef enum
@@ -103,10 +105,10 @@ struct buffer_object_st
  */
 typedef struct
 {
-    unsigned char   *data;     /*< Physical memory that was allocated */
-    int              refcount; /*< Reference count on the buffer */
     buffer_object_t *bufobj;   /*< List of objects referred to by GWBUF */
+    int32_t          refcount; /*< Reference count on the buffer */
     uint32_t         info;     /*< Info bits */
+    unsigned char    data[1];  /*< Actual memory that was allocated */
 } SHARED_BUF;
 
 /**
@@ -411,5 +413,12 @@ void *gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
 #if defined(BUFFER_TRACE)
 extern void dprintAllBuffers(void *pdcb);
 #endif
+
+/**
+ * Debug function for dumping buffer contents to INFO log
+ *
+ * @param buffer Buffer to dump
+ */
+void gwbuf_hexdump(GWBUF* buffer);
 
 MXS_END_DECLS

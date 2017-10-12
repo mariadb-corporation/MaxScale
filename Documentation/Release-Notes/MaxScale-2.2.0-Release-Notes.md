@@ -1,9 +1,9 @@
-# MariaDB MaxScale 2.2.0 Release Notes
+# MariaDB MaxScale 2.2.0 Release Notes -- 2017-10-12
 
 Release 2.2.0 is a Beta release.
 
 This document describes the changes in release 2.2.0, when compared to
-release 2.1.X.
+release 2.1.
 
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
@@ -166,6 +166,28 @@ mycommands.txt`).
 
 ## New Features
 
+### REST API
+
+MariaDB MaxScale now exposes a REST-API for obtaining information about
+and for manipulating the resources of MaxScale. For more information please
+refer to the [REST API](../REST-API/API.md) documentation.
+
+### MaxCtrl Command Line Client
+
+The MaxCtrl is a new command line intended to replace MaxAdmin. This
+client uses the REST API to communicate with MaxScale in a secure way. The
+client is distributed separately in the `maxscale-client` package.
+
+For more information, refer to the [MaxCtrl](../Reference/MaxCtrl.md)
+documentation.
+
+### Limited support from Pluggable Authentication Modules (PAM).
+
+Pluggable authentication module (PAM) is a general purpose authentication API.
+An application using PAM can authenticate a user without knowledge about the
+underlying authentication implementation. For more information please refer to
+the [PAM Authenticator](../Authenticators/PAM-Authenticator.md) documentation.
+
 ### MySQL Monitor Crash Safety
 
 The MySQL monitor keeps a journal of the state of the servers and the currently
@@ -206,15 +228,48 @@ executed directly on the relevant backend server. In addition to this, there are
 minor limitations to the `KILL` command handling. See
 [Limitations](../About/Limitations.md) for more information.
 
-### New `uses_function` rule for dbfwfilter
+### Obfuscation and partial masking added to the masking filter.
+
+A value can now be obfuscated instead of just masked. Further, it is
+possible to specify with a regular expression that only a specific part
+of a value should be masked. For more information, please read the
+[masking filter](../Filters/Masking.md) documentation.
+
+### New rules for dbfwfilter
 
 The `uses_function` type rule prevents certain columns from being used
-with functions. For more information about this new rule, read the
+with functions. It is now also possible to match a function if it is
+used in conjunction with specific columns. For more information about
+the new rules, read the
 [dbfwfilter](../Filters/Database-Firewall-Filter.md) documentation.
 
 ## Bug fixes
 
-[Here is a list of bugs fixed since the release of MaxScale 2.1.X.]()
+[Here is a list of bugs fixed in MaxScale 2.2.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.0)
+
+* [MXS-1450](https://jira.mariadb.org/browse/MXS-1450) Maxadmin commands with a leading space are silently ignored
+* [MXS-1449](https://jira.mariadb.org/browse/MXS-1449) Database change not allowed
+* [MXS-1405](https://jira.mariadb.org/browse/MXS-1405) Script launched by monitors should run synchronously
+* [MXS-1397](https://jira.mariadb.org/browse/MXS-1397) ReadWriteSplit's master connection can time out if session only issues read-only queries
+* [MXS-1359](https://jira.mariadb.org/browse/MXS-1359) qc_sqlite crashes with a very large compound select
+* [MXS-1351](https://jira.mariadb.org/browse/MXS-1351) Partially authenticated connections are put into the connection pool
+* [MXS-1349](https://jira.mariadb.org/browse/MXS-1349) qc_mysqlembedded accesses wrong preparable statement field
+* [MXS-1346](https://jira.mariadb.org/browse/MXS-1346) Function blocking per column
+* [MXS-1345](https://jira.mariadb.org/browse/MXS-1345) Empty function list is not allowed
+* [MXS-1340](https://jira.mariadb.org/browse/MXS-1340) Report true table and not alias name
+* [MXS-1339](https://jira.mariadb.org/browse/MXS-1339) QC should return a particular table/database just once
+* [MXS-1334](https://jira.mariadb.org/browse/MXS-1334) Build on FreeBSD 11 looks for libdl - how can it be told not to?
+* [MXS-1322](https://jira.mariadb.org/browse/MXS-1322) Flushing log should reopen not reopen and truncate.
+* [MXS-1307](https://jira.mariadb.org/browse/MXS-1307) Add CTE tests
+* [MXS-1265](https://jira.mariadb.org/browse/MXS-1265) strerror_r calls result in compiler warnings
+* [MXS-1262](https://jira.mariadb.org/browse/MXS-1262) Mantenance bit(s) should persist after maxscale restart
+* [MXS-1221](https://jira.mariadb.org/browse/MXS-1221) Nagios plugin scripts does not process -S option properly
+* [MXS-1214](https://jira.mariadb.org/browse/MXS-1214) Streaming Insert Filter gives errors
+* [MXS-1203](https://jira.mariadb.org/browse/MXS-1203)  Batch inserts through Maxscale with C/J stall
+* [MXS-1198](https://jira.mariadb.org/browse/MXS-1198) Interface retry bind interval (of a listener) increases by ten seconds every time it fails (10,20,30,....) it should be a fixed interval (and maybe configurable)
+* [MXS-1160](https://jira.mariadb.org/browse/MXS-1160) Load infile not working on Schemarouter
+* [MXS-1146](https://jira.mariadb.org/browse/MXS-1146) JDBC connection dropping transaction when connecting to MaxScale directly
+* [MXS-959](https://jira.mariadb.org/browse/MXS-959) KILL command on wrong connection ID
 
 ## Known Issues and Limitations
 

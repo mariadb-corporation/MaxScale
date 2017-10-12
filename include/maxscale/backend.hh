@@ -112,21 +112,32 @@ public:
      *
      * @return Pointer to server reference
      */
-    SERVER_REF* backend() const;
+    inline SERVER_REF* backend() const
+    {
+        ss_dassert(m_backend);
+        return m_backend;
+    }
 
     /**
      * @brief Get pointer to server
      *
      * @return Pointer to server
      */
-    SERVER* server() const;
+    inline SERVER* server() const
+    {
+        ss_dassert(m_backend);
+        return m_backend->server;
+    }
 
     /**
      * @brief Check if a connection to this backend can be made
      *
      * @return True if the backend has not failed and a connection can be attempted
      */
-    bool can_connect() const;
+    inline bool can_connect() const
+    {
+        return !has_failed() && SERVER_IS_RUNNING(m_backend->server);
+    }
 
     /**
      * @brief Create a new connection
@@ -149,7 +160,10 @@ public:
      *
      * @return Pointer to internal DCB
      */
-    DCB* dcb() const;
+    inline DCB* dcb() const
+    {
+        return m_dcb;
+    }
 
     /**
      * @brief Write data to the backend server
@@ -197,49 +211,70 @@ public:
      *
      * @return True if backend is in use
      */
-    bool in_use() const;
+    inline bool in_use() const
+    {
+        return m_state & IN_USE;
+    }
 
     /**
      * @brief Check if the backend server reference is active
      *
      * @return True if the server reference is active
      */
-    bool is_active() const;
+    inline bool is_active() const
+    {
+        return SERVER_REF_IS_ACTIVE(m_backend);
+    }
 
     /**
      * @brief Check if backend is waiting for a result
      *
      * @return True if backend is waiting for a result
      */
-    bool is_waiting_result() const;
+    inline bool is_waiting_result() const
+    {
+        return m_state & WAITING_RESULT;
+    }
 
     /**
      * @brief Check if the backend is closed
      *
      * @return True if the backend is closed
      */
-    bool is_closed() const;
+    inline bool is_closed() const
+    {
+        return m_closed;
+    }
 
     /**
      * @brief Check if the server is a master
      *
      * @return True if server is a master
      */
-    bool is_master() const;
+    inline bool is_master() const
+    {
+        return SERVER_IS_MASTER(m_backend->server);
+    }
 
     /**
      * @brief Check if the server is a slave
      *
      * @return True if the server is a slave
      */
-    bool is_slave() const;
+    inline bool is_slave() const
+    {
+        return SERVER_IS_SLAVE(m_backend->server);
+    }
 
     /**
      * @brief Check if the server is a relay server
      *
      * @return True if the server is a relay server
      */
-    bool is_relay() const;
+    inline bool is_relay() const
+    {
+        return SERVER_IS_RELAY_SERVER(m_backend->server);
+    }
 
     /**
      * @brief Check if the backend has failed fatally
@@ -250,7 +285,10 @@ public:
      *
      * @return True if a fatal failure has occurred in the backend server
      */
-    bool has_failed() const;
+    inline bool has_failed() const
+    {
+        return m_state & FATAL_FAILURE;
+    }
 
 
     /**
@@ -258,14 +296,20 @@ public:
      *
      * @return The unique object name of this server
      */
-    const char* name() const;
+    inline const char* name() const
+    {
+        return m_backend->server->unique_name;
+    }
 
     /**
      * @brief Get the address and port as a string
      *
      * @return The address and port combined into one string
      */
-    const char* uri() const;
+    inline const char* uri() const
+    {
+        return m_uri.c_str();
+    }
 
 private:
     /**

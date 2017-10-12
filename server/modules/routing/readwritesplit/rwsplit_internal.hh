@@ -47,7 +47,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses,
                        GWBUF *querybuf);
 void closed_session_reply(GWBUF *querybuf);
 void print_error_packet(RWSplitSession *rses, GWBUF *buf, DCB *dcb);
-void check_session_command_reply(GWBUF *writebuf, SRWBackend bref);
+void check_session_command_reply(GWBUF *buffer, SRWBackend& backend);
 bool execute_sescmd_in_backend(SRWBackend& backend_ref);
 bool handle_target_is_all(route_target_t route_target,
                           RWSplit *inst, RWSplitSession *rses,
@@ -60,7 +60,6 @@ bool send_readonly_error(DCB *dcb);
  * The following are implemented in readwritesplit.c
  */
 int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data);
-SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb);
 int rses_get_max_replication_lag(RWSplitSession *rses);
 
 /*

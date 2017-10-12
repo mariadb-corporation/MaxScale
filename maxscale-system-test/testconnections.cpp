@@ -16,6 +16,7 @@ namespace maxscale
 {
 static bool start = true;
 static bool check_nodes = true;
+static bool multiple_maxscales = false;
 static std::string required_repl_version;
 static std::string required_galera_version;
 }
@@ -62,12 +63,34 @@ void TestConnections::require_galera_version(const char *version)
     maxscale::required_galera_version = version;
 }
 
+void TestConnections::multiple_maxscales(bool value)
+{
+    maxscale::multiple_maxscales = value;
+}
+
 TestConnections::TestConnections(int argc, char *argv[]):
-    no_backend_log_copy(false), use_snapshots(false), verbose(false), rwsplit_port(4006),
-    readconn_master_port(4008), readconn_slave_port(4009), binlog_port(5306),
-    global_result(0), binlog_cmd_option(0), enable_timeouts(true), use_ipv6(false),
-    no_galera(false), binlog_master_gtid(false), binlog_slave_gtid(false),
-    no_vm_revert(true)
+    enable_timeouts(true),
+    global_result(0),
+    rwsplit_port(4006),
+    readconn_master_port(4008),
+    readconn_slave_port(4009),
+    binlog_port(5306),
+    conn_rwsplit(NULL),
+    conn_master(NULL),
+    conn_slave(NULL),
+    use_ipv6(false),
+    use_snapshots(false),
+    no_backend_log_copy(false),
+    verbose(false),
+    smoke(true),
+    binlog_cmd_option(0),
+    ssl(false),
+    backend_ssl(false),
+    binlog_master_gtid(false),
+    binlog_slave_gtid(false),
+    no_galera(false),
+    no_vm_revert(true),
+    threads(4)
 {
     signal_set(SIGSEGV, sigfatal_handler);
     signal_set(SIGABRT, sigfatal_handler);
@@ -267,6 +290,13 @@ TestConnections::TestConnections(int argc, char *argv[]):
     if (maxscale_init)
     {
         init_maxscale();
+
+        if (maxscale::multiple_maxscales && !secondary_maxscale_IP.empty())
+        {
+            set_active_maxscale(MXS_SECONDARY);
+            init_maxscale();
+            set_active_maxscale(MXS_PRIMARY);
+        }
     }
 
     if (backend_ssl)
@@ -361,12 +391,28 @@ int TestConnections::read_env()
     if (env != NULL)
     {
         sprintf(maxscale_IP, "%s", env);
+        primary_maxscale_IP = env;
     }
+
     env = getenv("maxscale_network6");
     if (env != NULL)
     {
         sprintf(maxscale_IP6, "%s", env);
+        primary_maxscale_IP6 = env;
     }
+
+    env = getenv("maxscale2_IP");
+    if (env != NULL)
+    {
+        secondary_maxscale_IP = env;
+    }
+
+    env = getenv("maxscale2_network6");
+    if (env != NULL)
+    {
+        secondary_maxscale_IP = env;
+    }
+
     env = getenv("maxscale_user");
     if (env != NULL)
     {
@@ -450,7 +496,7 @@ int TestConnections::read_env()
     {
         sprintf(maxscale_access_sudo, "%s", env);
     }
-    ssl = false;
+
     env = getenv("ssl");
     if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
     {
@@ -493,10 +539,6 @@ int TestConnections::read_env()
     {
         backend_ssl = true;
     }
-    else
-    {
-        backend_ssl = false;
-    }
 
     if (strcmp(maxscale_access_user, "root") == 0)
     {
@@ -508,32 +550,22 @@ int TestConnections::read_env()
     }
 
     env = getenv("smoke");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if (env)
     {
-        smoke = true;
+        smoke = strcasecmp(env, "yes") == 0 || strcasecmp(env, "true") == 0 ||
+                strcasecmp(env, "1") == 0 || strcasecmp(env, "on") == 0;
     }
-    else
-    {
-        smoke = false;
-    }
+
     env = getenv("threads");
     if ((env != NULL))
     {
         sscanf(env, "%d", &threads);
-    }
-    else
-    {
-        threads = 4;
     }
 
     env = getenv("use_snapshots");
     if (env != NULL && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
     {
         use_snapshots = true;
-    }
-    else
-    {
-        use_snapshots = false;
     }
     env = getenv("take_snapshot_command");
     if (env != NULL)
@@ -1026,14 +1058,14 @@ int TestConnections::start_binlog()
         fflush(stdout);
         tprintf("Maxscale binlog master pos : %s\n", log_pos);
         fflush(stdout);
-    }
 
-    tprintf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");
-    fflush(stdout);
-    for (i = 2; i < repl->N; i++)
-    {
-        try_query(repl->nodes[i], "stop slave;");
-        repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
+        tprintf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");
+        fflush(stdout);
+        for (i = 2; i < repl->N; i++)
+        {
+            try_query(repl->nodes[i], "stop slave;");
+            repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
+        }
     }
 
     repl->close_connections();
@@ -1652,12 +1684,12 @@ int TestConnections::get_client_ip(char * ip)
     unsigned int conn_num = 0;
 
     connect_rwsplit();
-    if (execute_query(conn_rwsplit, "CREATE DATABASE IF NOT EXISTS db_to_check_clent_ip") != 0 )
+    if (execute_query(conn_rwsplit, "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0 )
     {
         return ret;
     }
     close_rwsplit();
-    conn = open_conn_db(rwsplit_port, maxscale_IP, "db_to_check_clent_ip", maxscale_user,
+    conn = open_conn_db(rwsplit_port, maxscale_IP, "db_to_check_client_ip", maxscale_user,
                         maxscale_password, ssl);
 
     if (conn != NULL)
@@ -2225,4 +2257,25 @@ int TestConnections::connect_readconn_slave()
 char* TestConnections::maxscale_ip() const
 {
     return use_ipv6 ?  (char*)maxscale_IP6 : (char*)maxscale_IP;
+}
+
+void TestConnections::set_active_maxscale(enum test_target target)
+{
+    switch (target)
+    {
+        case MXS_PRIMARY:
+            strcpy(maxscale_IP, primary_maxscale_IP.c_str());
+            strcpy(maxscale_IP6, primary_maxscale_IP6.c_str());
+            break;
+
+        case MXS_SECONDARY:
+            strcpy(maxscale_IP, secondary_maxscale_IP.c_str());
+            strcpy(maxscale_IP6, secondary_maxscale_IP6.c_str());
+            break;
+
+        default:
+            tprintf("Wrong enum value for 'set_active_maxscale': 0x%02x", target);
+            exit(1);
+            break;
+    }
 }

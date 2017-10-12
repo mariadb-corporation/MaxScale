@@ -25,9 +25,10 @@ int main(int argc, char *argv[])
     Test->create_connections(75, true, true, true, true);
 
     Test->stop_timeout();
+    Test->repl->close_connections();
     Test->repl->stop_nodes();
     Test->repl->start_replication();
-    Test->repl->close_connections();
+    Test->repl->connect();
     Test->repl->sync_slaves();
 
     Test->set_timeout(60);

@@ -12,14 +12,18 @@
  */
 
 #include <maxscale/buffer.h>
+
 #include <errno.h>
 #include <stdlib.h>
+#include <sstream>
+
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/debug.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/hint.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/utils.h>
 
 #if defined(BUFFER_TRACE)
 #include <maxscale/hashtable.h>
@@ -55,6 +59,7 @@ gwbuf_alloc(unsigned int size)
 {
     GWBUF      *rval;
     SHARED_BUF *sbuf;
+    size_t      sbuf_size = sizeof(SHARED_BUF) + (size ? size - 1 : 0);
 
     /* Allocate the buffer header */
     if ((rval = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
@@ -63,27 +68,19 @@ gwbuf_alloc(unsigned int size)
     }
 
     /* Allocate the shared data buffer */
-    if ((sbuf = (SHARED_BUF *)MXS_MALLOC(sizeof(SHARED_BUF))) == NULL)
+    if ((sbuf = (SHARED_BUF *)MXS_MALLOC(sbuf_size)) == NULL)
     {
         MXS_FREE(rval);
         rval = NULL;
         goto retblock;
     }
 
-    /* Allocate the space for the actual data */
-    if ((sbuf->data = (unsigned char *)MXS_MALLOC(size)) == NULL)
-    {
-        MXS_FREE(rval);
-        MXS_FREE(sbuf);
-        rval = NULL;
-        goto retblock;
-    }
     sbuf->refcount = 1;
     sbuf->info = GWBUF_INFO_NONE;
     sbuf->bufobj = NULL;
 
     spinlock_init(&rval->gwbuf_lock);
-    rval->start = sbuf->data;
+    rval->start = &sbuf->data;
     rval->end = (void *)((char *)rval->start + size);
     rval->sbuf = sbuf;
     rval->next = NULL;
@@ -262,7 +259,6 @@ gwbuf_free_one(GWBUF *buf)
             bo = gwbuf_remove_buffer_object(buf, bo);
         }
 
-        MXS_FREE(buf->sbuf->data);
         MXS_FREE(buf->sbuf);
     }
 
@@ -886,4 +882,53 @@ size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t
     }
 
     return bytes_read;
+}
+
+static std::string dump_one_buffer(GWBUF* buffer)
+{
+    std::string rval;
+    int len = GWBUF_LENGTH(buffer);
+    uint8_t* data = GWBUF_DATA(buffer);
+
+    while (len > 0)
+    {
+        // Process the buffer in 40 byte chunks
+        int n = MXS_MIN(40, len);
+        char output[n * 2 + 1];
+        gw_bin2hex(output, data, n);
+        char* ptr = output;
+
+        while (ptr < output + n * 2)
+        {
+            rval.append(ptr, 2);
+            rval += " ";
+            ptr += 2;
+        }
+        len -= n;
+        data += n;
+        rval += "\n";
+    }
+
+    return rval;
+}
+
+void gwbuf_hexdump(GWBUF* buffer)
+{
+    std::stringstream ss;
+
+    ss << "Buffer " << buffer << ":\n";
+
+    for (GWBUF* b = buffer; b; b = b->next)
+    {
+        ss << dump_one_buffer(b);
+    }
+
+    int n = ss.str().length();
+
+    if (n > 1024)
+    {
+        n = 1024;
+    }
+
+    MXS_INFO("%.*s", n, ss.str().c_str());
 }

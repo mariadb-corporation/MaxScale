@@ -179,6 +179,19 @@ void check_create_tmp_table(RWSplitSession *router_cli_ses,
     }
 }
 
+inline bool have_semicolon(const char* ptr, int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        if (ptr[i] == ';')
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * @brief Detect multi-statement queries
  *
@@ -203,7 +216,7 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, uint8_t packet_type)
         /** Payload size without command byte */
         int buflen = gw_mysql_get_byte3((uint8_t *)GWBUF_DATA(buf)) - 1;
 
-        if ((ptr = strnchr_esc_mysql(data, ';', buflen)))
+        if (have_semicolon(data, buflen) && (ptr = strnchr_esc_mysql(data, ';', buflen)))
         {
             /** Skip stored procedures etc. */
             while (ptr && is_mysql_sp_end(ptr, buflen - (ptr - data)))

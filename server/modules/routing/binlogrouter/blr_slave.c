@@ -1183,7 +1183,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
                             bool all_slaves)
 {
     GWBUF *pkt;
-    char column[251] = "";
+    char column[2048] = "";
     uint8_t *ptr;
     int len, actual_len, col_len, seqno, i;
     char *dyn_column = NULL;
@@ -6393,12 +6393,17 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
                                  BLR_TYPE_INT);
         return true;
     }
+    /* Handle MariaDB 10 GTID vars */
     else if ((strcasecmp(word, "@@gtid_current_pos") == 0) ||
-             (strcasecmp(word, "@@global.gtid_current_pos") == 0))
+             (strcasecmp(word, "@@global.gtid_current_pos") == 0) ||
+             (strcasecmp(word, "@@gtid_binlog_pos") == 0) ||
+             (strcasecmp(word, "@@global.gtid_binlog_pos") == 0) ||
+             (strcasecmp(word, "@@gtid_slave_pos") == 0) ||
+             (strcasecmp(word, "@@global.gtid_slave_pos") == 0))
     {
         char    heading[40];
         char mariadb_gtid[GTID_MAX_LEN + 1];
-        mariadb_gtid[0] = '\0';
+        mariadb_gtid[0] = 0;
         strcpy(heading, word);
 
         if (router->mariadb10_compat &&
@@ -6407,6 +6412,13 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
             spinlock_acquire(&router->binlog_lock);
             strcpy(mariadb_gtid, router->last_mariadb_gtid);
             spinlock_release(&router->binlog_lock);
+        }
+
+        /* Return empty gtid_slave_pos if master GTID registration is off */
+        if (!router->mariadb10_master_gtid &&
+            strcasestr(word, "gtid_slave_pos" ) != NULL)
+        {
+            mariadb_gtid[0] = 0;
         }
 
         blr_slave_send_var_value(router,
@@ -6436,6 +6448,50 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE *router,
                                      BLR_TYPE_INT);
             return true;
         }
+    }
+    else if ((strcasecmp(word, "@@global.max_connections") == 0) ||
+             (strcasecmp(word, "@@max_connections") == 0))
+    {
+        char    max_conns[40];
+        /* to ensure we match the case in query and response */
+        char    heading[40];
+
+        sprintf(max_conns, "%d", !router->service->max_connections ?
+                BLR_DEFAULT_MAX_CONNS :
+                router->service->max_connections);
+        strcpy(heading, word);
+
+        blr_slave_send_var_value(router,
+                                 slave,
+                                 heading,
+                                 max_conns,
+                                 BLR_TYPE_INT);
+    }
+    else if ((strcasecmp(word, "@@global.read_only") == 0) ||
+             (strcasecmp(word, "@@read_only") == 0))
+    {
+        /* to ensure we match the case in query and response */
+        char    heading[40];
+        strcpy(heading, word);
+
+        blr_slave_send_var_value(router,
+                                 slave,
+                                 heading,
+                                 "0",
+                                 BLR_TYPE_INT);
+    }
+    else if ((strcasecmp(word, "@@global.log_bin") == 0) ||
+             (strcasecmp(word, "@@log_bin") == 0))
+    {
+        /* to ensure we match the case in query and response */
+        char    heading[40];
+        strcpy(heading, word);
+
+        blr_slave_send_var_value(router,
+                                 slave,
+                                 heading,
+                                 "1",
+                                 BLR_TYPE_INT);
     }
 
     return false;
@@ -7428,10 +7484,9 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
                 /* Parse the non empty GTID value */
                 if (heading[0] && !blr_parse_gtid(heading, &gtid_elms))
                 {
-                    static const char *err_fmt = "Invalid format for GTID ('%s')"
-                                                 " set request; use 'X-Y-Z'";
+                    const char err_fmt[] = "Invalid format for GTID ('%s')"
+                                           " set request; use 'X-Y-Z'";
                     char err_msg[sizeof(err_fmt) + GTID_MAX_LEN + 1];
-
                     sprintf(err_msg, err_fmt, heading);
 
                     MXS_ERROR("%s", err_msg);
@@ -7463,7 +7518,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
             return true;
         }
     }
-    else if (strstr(word, "@slave_connect_state") != NULL)
+    else if (strcasestr(word, "@slave_connect_state") != NULL)
     {
         /* If not mariadb an error message will be returned */
         if (slave->mariadb10_compat &&

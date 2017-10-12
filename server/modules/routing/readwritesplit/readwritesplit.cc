@@ -30,6 +30,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/router.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/mysql_utils.h>
 
 #include "rwsplit_internal.hh"
 #include "rwsplitsession.hh"
@@ -102,7 +103,8 @@ int rses_get_max_replication_lag(RWSplitSession *rses)
  *
  * @return backend reference pointer if succeed or NULL
  */
-SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
+
+static inline SRWBackend& get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
 {
     ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
@@ -119,9 +121,14 @@ SRWBackend get_backend_from_dcb(RWSplitSession *rses, DCB *dcb)
         }
     }
 
-    /** We should always have a valid backend reference */
-    ss_dassert(false);
-    return SRWBackend();
+    /** We should always have a valid backend reference and in case we don't,
+     * something is terribly wrong. */
+    MXS_ALERT("No reference to DCB %p found, aborting.", dcb);
+    raise(SIGABRT);
+
+    // To make the compiler happy, we return a reference to a static value.
+    static SRWBackend this_should_not_happen;
+    return this_should_not_happen;
 }
 
 /**
@@ -276,7 +283,7 @@ static void handle_error_reply_client(MXS_SESSION *ses, RWSplitSession *rses,
     mxs_session_state_t sesstate = ses->state;
     DCB *client_dcb = ses->client_dcb;
 
-    SRWBackend backend = get_backend_from_dcb(rses, backend_dcb);
+    SRWBackend& backend = get_backend_from_dcb(rses, backend_dcb);
 
     backend->close();
 
@@ -361,7 +368,7 @@ static bool handle_error_new_connection(RWSplit *inst,
                                         DCB *backend_dcb, GWBUF *errmsg)
 {
     RWSplitSession *myrses = *rses;
-    SRWBackend backend = get_backend_from_dcb(myrses, backend_dcb);
+    SRWBackend& backend = get_backend_from_dcb(myrses, backend_dcb);
 
     MXS_SESSION* ses = backend_dcb->session;
     bool route_stored = false;
@@ -508,6 +515,12 @@ static bool route_stored_query(RWSplitSession *rses)
     return rval;
 }
 
+static inline bool have_next_packet(GWBUF* buffer)
+{
+    uint32_t len = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
+    return gwbuf_length(buffer) > len;
+}
+
 /**
  * @brief Check if we have received a complete reply from the backend
  *
@@ -516,26 +529,52 @@ static bool route_stored_query(RWSplitSession *rses)
  *
  * @return True if the complete response has been received
  */
-bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
+bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
 {
-    mxs_mysql_cmd_t cmd = mxs_mysql_current_command(backend->dcb()->session);
-
-    if (backend->get_reply_state() == REPLY_STATE_START && !mxs_mysql_is_result_set(buffer))
+    if (backend->get_reply_state() == REPLY_STATE_START &&
+        (!mxs_mysql_is_result_set(buffer) || GWBUF_IS_COLLECTED_RESULT(buffer)))
     {
-        if (cmd == MXS_COM_STMT_PREPARE || !mxs_mysql_more_results_after_ok(buffer))
+        if (GWBUF_IS_COLLECTED_RESULT(buffer) ||
+            backend->current_command() == MXS_COM_STMT_PREPARE ||
+            !mxs_mysql_is_ok_packet(buffer) ||
+            !mxs_mysql_more_results_after_ok(buffer))
         {
             /** Not a result set, we have the complete response */
             LOG_RS(backend, REPLY_STATE_DONE);
             backend->set_reply_state(REPLY_STATE_DONE);
         }
+        else
+        {
+            // This is an OK packet and more results will follow
+            ss_dassert(mxs_mysql_is_ok_packet(buffer) &&
+                mxs_mysql_more_results_after_ok(buffer));
+
+            LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
+            backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
+
+            if (have_next_packet(buffer))
+            {
+                return reply_is_complete(backend, buffer);
+            }
+        }
     }
     else
     {
         bool more = false;
-        modutil_state state = backend->get_modutil_state();
-        int old_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
-        int n_eof = modutil_count_signal_packets(buffer, old_eof, &more, &state);
-        backend->set_modutil_state(state);
+        modutil_state state = {backend->is_large_packet()};
+        int n_old_eof = backend->get_reply_state() == REPLY_STATE_RSET_ROWS ? 1 : 0;
+        int n_eof = modutil_count_signal_packets(buffer, n_old_eof, &more, &state);
+        backend->set_large_packet(state.state);
+
+        if (n_eof > 2)
+        {
+            /**
+             * We have multiple results in the buffer, we only care about
+             * the state of the last one. Skip the complete result sets and act
+             * like we're processing a single result set.
+             */
+            n_eof = n_eof % 2 ? 1 : 2;
+        }
 
         if (n_eof == 0)
         {
@@ -543,7 +582,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
             LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
             backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
         }
-        else if (n_eof == 1 && cmd != MXS_COM_FIELD_LIST)
+        else if (n_eof == 1 && backend->current_command() != MXS_COM_FIELD_LIST)
         {
             /** Waiting for the EOF packet after the rows */
             LOG_RS(backend, REPLY_STATE_RSET_ROWS);
@@ -553,7 +592,7 @@ bool reply_is_complete(SRWBackend backend, GWBUF *buffer)
         {
             /** We either have a complete result set or a response to
              * a COM_FIELD_LIST command */
-            ss_dassert(n_eof == 2 || (n_eof == 1 && cmd == MXS_COM_FIELD_LIST));
+            ss_dassert(n_eof == 2 || (n_eof == 1 && backend->current_command() == MXS_COM_FIELD_LIST));
             LOG_RS(backend, REPLY_STATE_DONE);
             backend->set_reply_state(REPLY_STATE_DONE);
 
@@ -1118,16 +1157,10 @@ static void clientReply(MXS_ROUTER *instance,
 {
     RWSplitSession *rses = (RWSplitSession *)router_session;
     DCB *client_dcb = backend_dcb->session->client_dcb;
-
     CHK_CLIENT_RSES(rses);
+    ss_dassert(!rses->rses_closed);
 
-    if (rses->rses_closed)
-    {
-        gwbuf_free(writebuf);
-        return;
-    }
-
-    SRWBackend backend = get_backend_from_dcb(rses, backend_dcb);
+    SRWBackend& backend = get_backend_from_dcb(rses, backend_dcb);
 
     if (backend->get_reply_state() == REPLY_STATE_DONE)
     {
@@ -1139,8 +1172,11 @@ static void clientReply(MXS_ROUTER *instance,
         return;
     }
 
-    /** Statement was successfully executed, free the stored statement */
-    session_clear_stmt(backend_dcb->session);
+    if (session_have_stmt(backend_dcb->session))
+    {
+        /** Statement was successfully executed, free the stored statement */
+        session_clear_stmt(backend_dcb->session);
+    }
 
     if (reply_is_complete(backend, writebuf))
     {
@@ -1181,32 +1217,23 @@ static void clientReply(MXS_ROUTER *instance,
 
     bool queue_routed = false;
 
-    if (rses->expected_responses == 0)
+    if (rses->expected_responses == 0 && rses->query_queue)
     {
-        for (SRWBackendList::iterator it = rses->backends.begin();
-             it != rses->backends.end(); it++)
-        {
-            ss_dassert((*it)->get_reply_state() == REPLY_STATE_DONE || (*it)->is_closed());
-        }
-
-        queue_routed = rses->query_queue != NULL;
+        queue_routed = true;
         route_stored_query(rses);
     }
-    else
-    {
-        ss_dassert(rses->expected_responses > 0);
-    }
 
-    if (writebuf && client_dcb)
+    if (writebuf)
     {
+        ss_dassert(client_dcb);
         /** Write reply to client DCB */
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }
     /** Check pending session commands */
     else if (!queue_routed && backend->session_command_count())
     {
-        MXS_INFO("Backend %s processed reply and starts to execute active cursor.",
-                 backend->uri());
+        MXS_DEBUG("Backend %s processed reply and starts to execute active cursor.",
+                  backend->uri());
 
         if (backend->execute_session_command())
         {
@@ -1221,7 +1248,7 @@ static void clientReply(MXS_ROUTER *instance,
  */
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_OUTPUT;
+    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_PACKET_OUTPUT;
 }
 
 /**
@@ -1261,7 +1288,7 @@ static void handleError(MXS_ROUTER *instance,
     MXS_SESSION *session = problem_dcb->session;
     ss_dassert(session);
 
-    SRWBackend backend = get_backend_from_dcb(rses, problem_dcb);
+    SRWBackend& backend = get_backend_from_dcb(rses, problem_dcb);
 
     switch (action)
     {
@@ -1372,7 +1399,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
         MXS_MODULE_API_ROUTER, MXS_MODULE_GA, MXS_ROUTER_VERSION,
         "A Read/Write splitting router for enhancement read scalability",
         "V1.1.0",
-        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_OUTPUT,
+        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_PACKET_OUTPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

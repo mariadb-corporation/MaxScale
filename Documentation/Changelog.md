@@ -1,5 +1,29 @@
 # Changelog
 
+## MariaDB MaxScale 2.2
+
+* Limited support from Pluggable Authentication Modules (PAM).
+* Proxy protocol support for backend connections.
+* REST-API for obtaining information about and for manipulating the
+  resources of MaxScale.
+* MaxCtrl, a new command line client for administering MaxScale
+  implemented in terms of the REST-API.
+* Firewall can now prevent the use of functions in conjunction with
+  certain columns.
+* Parser of MaxScale extended to support window functions and CTEs.
+* Prepared statements are now parsed and the execution of read only
+  ones will be routed to slaves.
+* Server states are persisted, so in case of crash and restart MaxScale
+  has the correct server state quicker.
+* Monitor scripts are executed synchronously, so they can safely perform
+  actions that change the server states.
+* The Masking filter can now both obfuscate and partially mask columns.
+* Binlog router supports MariaDB 10 GTID at both ends.
+* KILL CONNECTION can now be used through MaxScale.
+
+For more details, please refer to:
+* [MariaDB MaxScale 2.2.0 Release Notes](Release-Notes/MaxScale-2.2.0-Release-Notes.md)
+
 ## MariaDB MaxScale 2.1
 * MariaDB MaxScale is licensed under MariaDB BSL 1.1.
 * Hierarchical configuration files are now supported.

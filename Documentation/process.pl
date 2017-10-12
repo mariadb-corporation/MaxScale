@@ -6,10 +6,12 @@
 while (<>)
 {
     # Replace commas that are inside double quotes
-    s/("[^"]*),([^"]*")/$1$2/g;
-
+    while (s/("[^"]*),([^"]*")/$1$2/g)
+    {
+        ;
+    }
     # Replace the double quotes themselves
-    s/"([^"]*)"/$1/g;
+    s/"//g;
 
     # Split the line and grab the issue number and description
     my @parts = split(/,/);

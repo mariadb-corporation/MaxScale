@@ -378,11 +378,31 @@ static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
 {
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
 
-    /** Copy the current command being executed to this backend */
-    if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
+    /**
+     * The DCB's session is set to the dummy session when it is put into the
+     * persistent connection pool. If this is not the dummy session, track
+     * the current command being executed.
+     */
+    if (!session_is_dummy(dcb->session))
     {
-        MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
-        proto->current_command = client_proto->current_command;
+        uint64_t capabilities = service_get_capabilities(dcb->session->service);
+
+        /**
+         * Copy the current command being executed to this backend. For statement
+         * based routers, this is tracked by using the current command being executed.
+         * For routers that stream data, the client protocol command tracking data
+         * is used which does not guarantee that the correct command is tracked if
+         * something queues commands internally.
+         */
+        if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
+        {
+            proto->current_command = (mxs_mysql_cmd_t)MYSQL_GET_COMMAND(GWBUF_DATA(buffer));
+        }
+        else if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
+        {
+            MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
+            proto->current_command = client_proto->current_command;
+        }
     }
 
     if (GWBUF_IS_TYPE_SESCMD(buffer))
@@ -725,7 +745,9 @@ gw_read_and_write(DCB *dcb)
     bool result_collected = false;
     MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT) || (proto->ignore_replies != 0))
+    if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) ||
+        rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
+        proto->ignore_replies != 0)
     {
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
@@ -758,14 +780,16 @@ gw_read_and_write(DCB *dcb)
 
             if (collecting_resultset(proto, capabilities))
             {
-                if (expecting_resultset(proto) &&
-                    mxs_mysql_is_result_set(read_buffer))
+                if (expecting_resultset(proto))
                 {
-                    bool more = false;
-                    if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
+                    if (mxs_mysql_is_result_set(read_buffer))
                     {
-                        dcb_readq_prepend(dcb, read_buffer);
-                        return 0;
+                        bool more = false;
+                        if (modutil_count_signal_packets(read_buffer, 0, &more, NULL) != 2)
+                        {
+                            dcb_readq_prepend(dcb, read_buffer);
+                            return 0;
+                        }
                     }
 
                     // Collected the complete result
@@ -922,6 +946,12 @@ gw_read_and_write(DCB *dcb)
                  !result_collected)
         {
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
+
+            if (!GWBUF_IS_CONTIGUOUS(stmt))
+            {
+                // Make sure the buffer is contiguous
+                stmt = gwbuf_make_contiguous(stmt);
+            }
         }
         else
         {
@@ -931,6 +961,12 @@ gw_read_and_write(DCB *dcb)
 
         if (session_ok_to_route(dcb))
         {
+            if (result_collected)
+            {
+                // Mark that this is a buffer containing a collected result
+                gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
+            }
+
             session->service->router->clientReply(session->service->router_instance,
                                                   session->router_session,
                                                   stmt, dcb);

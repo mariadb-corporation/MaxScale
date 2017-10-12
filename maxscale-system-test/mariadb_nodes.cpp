@@ -1299,14 +1299,15 @@ static void wait_until_pos(MYSQL *mysql, int filenum, int pos)
 
 void Mariadb_nodes::sync_slaves(int node)
 {
-    if (this->nodes[node] == NULL)
+    if (this->nodes[node] == NULL && this->connect())
     {
-        this->connect();
+        printf("Failed to connect to all nodes.\n");
+        return;
     }
 
     if (mysql_query(this->nodes[node], "SHOW MASTER STATUS"))
     {
-        printf("Failed to execute SHOW MASTER STATUS: %s", mysql_error(this->nodes[node]));
+        printf("Failed to execute SHOW MASTER STATUS: %s\n", mysql_error(this->nodes[node]));
     }
     else
     {
@@ -1315,18 +1316,26 @@ void Mariadb_nodes::sync_slaves(int node)
         if (res)
         {
             MYSQL_ROW row = mysql_fetch_row(res);
-            if (row && row[node] && row[1])
+            if (row && row[0] && row[1])
             {
-                const char* file_suffix = strchr(row[node], '.') + 1;
-                int filenum = atoi(file_suffix);
-                int pos = atoi(row[1]);
-
-                for (int i = 0; i < this->N; i++)
+                const char* file_suffix = strchr(row[0], '.');
+                if (file_suffix)
                 {
-                    if (i != node)
+                    file_suffix++;
+                    int filenum = atoi(file_suffix);
+                    int pos = atoi(row[1]);
+
+                    for (int i = 0; i < this->N; i++)
                     {
-                        wait_until_pos(this->nodes[i], filenum, pos);
+                        if (i != node)
+                        {
+                            wait_until_pos(this->nodes[i], filenum, pos);
+                        }
                     }
+                }
+                else
+                {
+                    printf("Cannot sync slaves, invalid binlog file name: %s\n", row[0]);
                 }
             }
             mysql_free_result(res);

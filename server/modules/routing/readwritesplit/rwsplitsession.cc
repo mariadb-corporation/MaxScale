@@ -17,32 +17,12 @@
 RWBackend::RWBackend(SERVER_REF* ref):
     mxs::Backend(ref),
     m_reply_state(REPLY_STATE_DONE),
-    m_modutil_state(MODUTIL_STATE_INIT)
+    m_large_packet(false)
 {
 }
 
 RWBackend::~RWBackend()
 {
-}
-
-reply_state_t RWBackend::get_reply_state() const
-{
-    return m_reply_state;
-}
-
-void RWBackend::set_reply_state(reply_state_t state)
-{
-    m_reply_state = state;
-}
-
-void RWBackend::set_modutil_state(const modutil_state& state)
-{
-    m_modutil_state = state;
-}
-
-modutil_state RWBackend::get_modutil_state() const
-{
-    return m_modutil_state;
 }
 
 bool RWBackend::execute_session_command()
@@ -79,6 +59,8 @@ uint32_t RWBackend::get_ps_handle(uint32_t id) const
 bool RWBackend::write(GWBUF* buffer, response_type type)
 {
     uint8_t cmd = mxs_mysql_get_command(buffer);
+
+    m_command = cmd;
 
     if (is_ps_command(cmd))
     {

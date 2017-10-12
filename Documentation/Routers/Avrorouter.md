@@ -144,6 +144,11 @@ If you need to start from a binlog file other than 1, you need to set the value
 of this option to the correct index. The avrorouter will always start from the
 beginning of the binary log file.
 
+**Note**: MaxScale version 2.2 introduces MariaDB GTID support
+in Binlog Server: currently, if used with Avrorouter, the option `mariadb10_master_gtid`
+must be set to off in the Binlog Server configuration in order to correclty
+read the binlog files.
+
 ### Avro file options
 
 These options control how large the Avro file data blocks can get.

@@ -199,6 +199,11 @@ MXS_SESSION *session_alloc_with_id(struct service *, struct dcb *, uint64_t);
 
 MXS_SESSION *session_set_dummy(struct dcb *);
 
+static inline bool session_is_dummy(MXS_SESSION* session)
+{
+    return session->state == SESSION_STATE_DUMMY;
+}
+
 const char *session_get_remote(const MXS_SESSION *);
 const char *session_get_user(const MXS_SESSION *);
 
@@ -406,6 +411,18 @@ bool session_store_stmt(MXS_SESSION *session, GWBUF *buf, const struct server *s
  * @return True if a statement was stored
  */
 bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const struct server **target);
+
+/**
+ * @brief Check if the session has a stored statement
+ *
+ * @param session Session to check
+ *
+ * @return True if the session has a stored statement
+ */
+static inline bool session_have_stmt(MXS_SESSION *session)
+{
+    return session->stmt.buffer;
+}
 
 /**
  * Clear the stored statement

@@ -70,6 +70,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->stored_query = NULL;
     p->extra_capabilities = 0;
     p->ignore_replies = 0;
+    p->collect_result = false;
 #if defined(SS_DEBUG)
     p->protocol_chk_top = CHK_NUM_PROTOCOL;
     p->protocol_chk_tail = CHK_NUM_PROTOCOL;
@@ -1616,20 +1617,6 @@ void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
     snprintf(data->db, sizeof(data->db), "%s", db);
 }
 
-uint8_t mxs_mysql_get_command(GWBUF* buffer)
-{
-    if (GWBUF_LENGTH(buffer) > MYSQL_HEADER_LEN)
-    {
-        return GWBUF_DATA(buffer)[4];
-    }
-    else
-    {
-        uint8_t command = 0;
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &command);
-        return command;
-    }
-}
-
 bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
 {
     bool rval = false;
@@ -1648,23 +1635,6 @@ bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
         out->parameters = gw_mysql_get_byte2(params);
         out->warnings = gw_mysql_get_byte2(warnings);
         rval = true;
-
-#ifdef SS_DEBUG
-        // Make sure that the PS response contains the whole response
-        bool more;
-        modutil_state state;
-        int n_eof = modutil_count_signal_packets(buffer, 0, &more, &state);
-        int n_expected = 0;
-        if (out->columns)
-        {
-            n_expected++;
-        }
-        if (out->parameters)
-        {
-            n_expected++;
-        }
-        ss_dassert(n_eof == n_expected);
-#endif
     }
 
     return rval;

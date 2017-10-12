@@ -783,7 +783,6 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
             rses->target_node = rses->current_master;
             MXS_INFO("Multi-statement query or stored procedure call, routing "
                      "all future queries to master.");
-
         }
         else
         {

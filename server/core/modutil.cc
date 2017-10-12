@@ -25,6 +25,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/utils.h>
+#include <maxscale/mysql_utils.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
 static SPINLOCK re_lock = SPINLOCK_INIT;
@@ -627,13 +628,15 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
     return complete;
 }
 
-int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_state* state)
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modutil_state* state)
 {
     unsigned int len = gwbuf_length(reply);
     int eof = 0;
     int err = 0;
     size_t offset = 0;
     bool skip_next = state ? state->state : false;
+    bool more = false;
+    bool only_ok = true;
 
     while (offset < len)
     {
@@ -646,10 +649,12 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_
 
         if (payloadlen == GW_MYSQL_MAX_PACKET_LEN)
         {
+            only_ok = false;
             skip_next = true;
         }
         else if (skip_next)
         {
+            only_ok = false;
             skip_next = false;
         }
         else
@@ -658,11 +663,34 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_
 
             if (command == MYSQL_REPLY_ERR)
             {
-                err++;
+                /** Any errors in the packet stream mean that the result set
+                 * generation was aborted due to an error. No more results will
+                 * follow after this. */
+                *more_out = false;
+                return 2;
             }
             else if (command == MYSQL_REPLY_EOF && pktlen == MYSQL_EOF_PACKET_LEN)
             {
                 eof++;
+                only_ok = false;
+            }
+            else if (command == MYSQL_REPLY_OK && pktlen >= MYSQL_OK_PACKET_MIN_LEN &&
+                     (eof + n_found) % 2 == 0)
+            {
+                // An OK packet that is not in the middle of a resultset stream
+                uint8_t data[payloadlen - 1];
+                gwbuf_copy_data(reply, offset + MYSQL_HEADER_LEN + 1, sizeof(data), data);
+
+                uint8_t* ptr = data;
+                ptr += mxs_leint_bytes(ptr);
+                ptr += mxs_leint_bytes(ptr);
+
+                uint16_t* status = (uint16_t*)ptr;
+                more = (*status) & SERVER_MORE_RESULTS_EXIST;
+            }
+            else
+            {
+                only_ok = false;
             }
         }
 
@@ -670,12 +698,17 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_
         {
             gwbuf_copy_data(reply, offset, sizeof(header), header);
             uint16_t* status = (uint16_t*)(header + MYSQL_HEADER_LEN + 1 + 2); // Skip command and warning count
-            *more = ((*status) & SERVER_MORE_RESULTS_EXIST);
-            offset += pktlen;
-            break;
+            more = ((*status) & SERVER_MORE_RESULTS_EXIST);
         }
 
         offset += pktlen;
+
+        if (offset >= GWBUF_LENGTH(reply) && reply->next)
+        {
+            len -= GWBUF_LENGTH(reply);
+            offset -= GWBUF_LENGTH(reply);
+            reply = reply->next;
+        }
     }
 
     int total = err + eof + n_found;
@@ -683,6 +716,13 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, modutil_
     if (state)
     {
         state->state = skip_next;
+    }
+
+    *more_out = more;
+
+    if (only_ok && !more)
+    {
+        total = 2;
     }
 
     return total;

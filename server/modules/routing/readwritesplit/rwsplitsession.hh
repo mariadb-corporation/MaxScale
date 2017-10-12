@@ -43,8 +43,15 @@ public:
     RWBackend(SERVER_REF* ref);
     ~RWBackend();
 
-    reply_state_t get_reply_state() const;
-    void set_reply_state(reply_state_t state);
+    inline reply_state_t get_reply_state() const
+    {
+        return m_reply_state;
+    }
+
+    inline void set_reply_state(reply_state_t state)
+    {
+        m_reply_state = state;
+    }
 
     void add_ps_handle(uint32_t id, uint32_t handle);
     uint32_t get_ps_handle(uint32_t id) const;
@@ -52,15 +59,28 @@ public:
     bool execute_session_command();
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
 
-    void set_modutil_state(const modutil_state& state);
-    modutil_state get_modutil_state() const;
+    inline void set_large_packet(bool value)
+    {
+        m_large_packet = value;
+    }
+
+    inline bool is_large_packet() const
+    {
+        return m_large_packet;
+    }
+
+    inline uint8_t current_command() const
+    {
+        return m_command;
+    }
 
 private:
     reply_state_t    m_reply_state;
     BackendHandleMap m_ps_handles; /**< Internal ID to backend PS handle mapping */
-    modutil_state    m_modutil_state; /**< Used to store the state of the EOF packet
-                                       * calculation for result sets when the result
-                                       * contains very large rows */
+    bool             m_large_packet; /**< Used to store the state of the EOF packet
+                                      *calculation for result sets when the result
+                                      * contains very large rows */
+    uint8_t          m_command;
 };
 
 typedef std::tr1::shared_ptr<RWBackend> SRWBackend;
