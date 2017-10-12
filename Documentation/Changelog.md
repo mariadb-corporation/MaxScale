@@ -20,8 +20,10 @@
 * The Masking filter can now both obfuscate and partially mask columns.
 * Binlog router supports MariaDB 10 GTID at both ends.
 * KILL CONNECTION can now be used through MaxScale.
+* Environment variables can now be used in the MaxScale configuration file.
 
 For more details, please refer to:
+* [MariaDB MaxScale 2.2.1 Release Notes](Release-Notes/MaxScale-2.2.1-Release-Notes.md)
 * [MariaDB MaxScale 2.2.0 Release Notes](Release-Notes/MaxScale-2.2.0-Release-Notes.md)
 
 ## MariaDB MaxScale 2.1
