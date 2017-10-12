@@ -39,21 +39,21 @@ int main(int argc, char *argv[])
                              "yum clean all", true);
         Test->repl->ssh_node(i, (char *)
                              "yum install -y MariaDB-gssapi-server MariaDB-gssapi-client krb5-workstation pam_krb5", true);
-        Test->repl->copy_to_node(str, (char *) "~/", i);
+        Test->repl->copy_to_node(str, Test->repl->access_homedir[i], i);
         sprintf(str1, "cp %s/krb5.conf /etc/", Test->repl->access_homedir[i]);
         Test->repl->ssh_node(i, str1, true);
 
-        Test->repl->copy_to_node((char *) "hosts", (char *) "~/", i);
+        Test->repl->copy_to_node((char *) "hosts", Test->repl->access_homedir[i], i);
         sprintf(str1, "cp %s/hosts /etc/", Test->repl->access_homedir[i]);
         Test->repl->ssh_node(i, str1, true);
     }
 
     Test->tprintf("Copying 'hosts' and krb5.conf files to Maxscale node\n");
 
-    Test->maxscales->copy_to_node((char *) "hosts", (char *) "~/", 0);
+    Test->maxscales->copy_to_node((char *) "hosts", Test->maxscales->access_homedir[0], 0);
     Test->maxscales->ssh_node_f(0, true,  (char *) "cp %s/hosts /etc/", Test->maxscales->access_homedir[0]);
 
-    Test->maxscales->copy_to_node(str, (char *) "~/", 0);
+    Test->maxscales->copy_to_node(str, Test->maxscales->access_homedir[0], 0);
     Test->maxscales->ssh_node_f(0, true,  (char *) "cp %s/krb5.conf /etc/", Test->maxscales->access_homedir[0]);
 
     Test->tprintf("Instaling Kerberos server packages to Maxscale node\n");
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     Test->maxscales->ssh_node(0, (char *) "kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab",
                               false);
     Test->maxscales->ssh_node(0, (char *)
-                              "mkdir /home/maxscale", true);
+                              "mkdir -p /home/maxscale", true);
     Test->maxscales->ssh_node(0, (char *)
                               "su maxscale --login -s /bin/sh -c \"kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab\"",
                               true);
@@ -108,11 +108,12 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++)
     {
         sprintf(str, "%s/kerb.cnf", test_dir);
-        Test->repl->copy_to_node(str, (char *) "~/", i);
-        Test->repl->ssh_node(i, (char *) "cp ~/kerb.cnf /etc/my.cnf.d/", true);
+        Test->repl->copy_to_node(str,  Test->repl->access_homedir[i], i);
+        Test->repl->ssh_node_f(i, true, "cp %s/kerb.cnf /etc/my.cnf.d/", Test->repl->access_homedir[i]);
 
-        Test->repl->copy_to_node((char *) "krb5.keytab", (char *) "~/", i);
+        Test->repl->copy_to_node((char *) "krb5.keytab",  Test->repl->access_homedir[i], i);
         Test->repl->ssh_node(i, (char *) "cp ~/krb5.keytab /etc/", true);
+        Test->repl->ssh_node_f(i, true, "cp %s/krb5.keytab /etc/", Test->repl->access_homedir[i]);
 
         Test->repl->ssh_node(i, (char *) "kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab", false);
     }
