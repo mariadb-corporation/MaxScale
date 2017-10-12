@@ -96,6 +96,8 @@ int main(int argc, char *argv[])
     Test->maxscales->ssh_node(0, (char *) "kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab",
                               false);
     Test->maxscales->ssh_node(0, (char *)
+                              "mkdir /home/maxscale", true);
+    Test->maxscales->ssh_node(0, (char *)
                               "su maxscale --login -s /bin/sh -c \"kinit mariadb/maxscale.test@MAXSCALE.TEST -k -t /etc/krb5.keytab\"",
                               true);
 
