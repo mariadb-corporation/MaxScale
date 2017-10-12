@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     sprintf(cmd, "%s/utf64.cnf", test_dir);
     for (int i = 0; i < Test->repl->N; i++)
     {
-        Test->repl->copy_to_node(cmd, (char *) "./", i);
+        Test->repl->copy_to_node_legacy(cmd, (char *) "./", i);
         Test->repl->ssh_node(i, (char *) "cp ./utf64.cnf /etc/my.cnf.d/", true);
     }
 

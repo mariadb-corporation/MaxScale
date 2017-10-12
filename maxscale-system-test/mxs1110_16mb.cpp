@@ -18,9 +18,9 @@ int main(int argc, char *argv[])
     int chunk_size = 2500000;
     int chunk_num = 5;
 
-    Test->maxscales->copy_to_node("./masking/masking_user/masking_rules.json", "~/", 0);
+    Test->maxscales->copy_to_node_legacy("./masking/masking_user/masking_rules.json", "~/", 0);
 
-    Test->maxscales->copy_to_node("./cache/cache_basic/cache_rules.json", "~/", 0);
+    Test->maxscales->copy_to_node_legacy("./cache/cache_basic/cache_rules.json", "~/", 0);
 
     Test->maxscales->ssh_node_f(0, true, "cd %s;"
                        "rm -rf rules;"

@@ -530,7 +530,7 @@ void TestConnections::process_template(int m, const char *template_name, const c
     {
         system("sed -i \"s/###repl51###/mysql51_replication=true/g\" maxscale.cnf");
     }
-    maxscales->copy_to_node((char *) "maxscale.cnf", (char *) dest, m);
+    maxscales->copy_to_node_legacy((char *) "maxscale.cnf", (char *) dest, m);
 }
 
 int TestConnections::init_maxscale(int m)
@@ -548,7 +548,7 @@ int TestConnections::init_maxscale(int m)
     char dtr[4096];
     sprintf(str, "%s/ssl-cert/*", test_dir);
     sprintf(dtr, "%s/certs/", maxscales->access_homedir[m]);
-    maxscales->copy_to_node(str, dtr, m);
+    maxscales->copy_to_node_legacy(str, dtr, m);
     sprintf(str, "cp %s/ssl-cert/* .", test_dir);
     system(str);
 
@@ -626,7 +626,6 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
 
 int TestConnections::copy_all_logs()
 {
-    char str[4096];
     set_timeout(300);
 
     if (!no_backend_log_copy)
@@ -635,18 +634,51 @@ int TestConnections::copy_all_logs()
         copy_mariadb_logs(galera, (char *) "galera");
     }
 
-    sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
-    tprintf("Executing %s\n", str);
-    if (system(str) != 0)
+    return (copy_maxscale_logs(0));
+}
+int TestConnections::copy_maxscale_logs(double timestamp)
+{
+    char log_dir[1024];
+    char log_dir_i[1024];
+    char sys[1024];
+    if (timestamp == 0)
     {
-        tprintf("copy_logs.sh executing FAILED!\n");
-        return 1;
+        sprintf(log_dir, "LOGS/%s", test_name);
     }
     else
     {
-        tprintf("copy_logs.sh OK!\n");
-        return 0;
+        sprintf(log_dir, "LOGS/%s/%04f", test_name, timestamp);
     }
+    for (int i = 0; i < maxscales->N; i++)
+    {
+        sprintf(log_dir_i, "%s/%03d", log_dir, i);
+        sprintf(sys, "mkdir -p %s", log_dir_i);
+        system(sys);
+        if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
+        {
+            maxscales->ssh_node_f(i, true,
+                                  "rm -rf %s/logs; mkdir %s/logs; \
+                                  %s cp %s/*.log %s/logs/; \
+                                  %s cp /tmp/core* %s/logs;\
+                                  %s cp %s %s/logs;\
+                                  %s chmod 777 -R %s/logs",
+                                  maxscales->access_homedir[i], maxscales->access_homedir[i],
+                                  maxscales->access_sudo[i], maxscales->maxscale_log_dir[i], maxscales->access_homedir[i],
+                                  maxscales->access_sudo[i], maxscales->access_homedir[i],
+                                  maxscales->access_sudo[i], maxscales->maxscale_cnf[i], maxscales->access_homedir[i],
+                                  maxscales->access_homedir[i]);
+            sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
+            maxscales->copy_from_node(i, sys, log_dir_i);
+        }
+        else
+        {
+            maxscales->ssh_node_f(i, true, "cp %s/*.logs %s", maxscales->maxscale_log_dir[i], log_dir_i);
+            maxscales->ssh_node_f(i, true, "cp /tmp/core* %s", log_dir_i);
+            maxscales->ssh_node_f(i, true, "cp %s %s", maxscales->maxscale_cnf[i], log_dir_i);
+            maxscales->ssh_node_f(i, true, "chmod a+r %s", log_dir_i);
+        }
+    }
+    return 0;
 }
 
 int TestConnections::copy_all_logs_periodic()
@@ -659,18 +691,7 @@ int TestConnections::copy_all_logs_periodic()
     double elapsedTime = (t2.tv_sec - start_time.tv_sec);
     elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
 
-    sprintf(str, "%s/copy_logs.sh %s %04f", test_dir, test_name, elapsedTime);
-    tprintf("Executing %s\n", str);
-    if (system(str) != 0)
-    {
-        tprintf("copy_logs.sh executing FAILED!\n");
-        return 1;
-    }
-    else
-    {
-        tprintf("copy_logs.sh OK!\n");
-        return 0;
-    }
+    return (copy_maxscale_logs(elapsedTime));
 }
 
 int TestConnections::prepare_binlog(int m)
@@ -973,18 +994,26 @@ void TestConnections::check_log_err(int m, const char * err_msg, bool expected)
 
     tprintf("Getting logs\n");
     char sys1[4096];
+    char dest[1024];
+    char log_file[64];
     set_timeout(100);
-    sprintf(&sys1[0], "rm -f *.log; %s %s", get_logs_command, maxscales->IP[m]);
+    sprintf(dest, "maxscale_log_%03d/", m);
+    sprintf(&sys1[0], "mkdir -p maxscale_log_%03d; rm -f %s*.log",
+            m, dest);
     //tprintf("Executing: %s\n", sys1);
     system(sys1);
     set_timeout(50);
+    sprintf(sys1, "%s/*", maxscales->maxscale_log_dir[m]);
+    maxscales->copy_from_node(m, sys1, dest);
 
     tprintf("Reading maxscale.log\n");
-    if ( ( read_log((char *) "maxscale.log", &err_log_content) != 0) || (strlen(err_log_content) < 2) )
+    sprintf(log_file, "maxscale_log_%03d/maxscale.log", m);
+    if ( ( read_log(log_file, &err_log_content) != 0) || (strlen(err_log_content) < 2) )
     {
         tprintf("Reading maxscale1.log\n");
+        sprintf(log_file, "maxscale_log_%03d/maxscale1.log", m);
         free(err_log_content);
-        if (read_log((char *) "maxscale1.log", &err_log_content) != 0)
+        if (read_log(log_file, &err_log_content) != 0)
         {
             add_result(1, "Error reading log\n");
         }

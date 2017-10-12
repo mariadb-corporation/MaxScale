@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 
     test.maxscales->ssh_node(0, "mkdir -p /home/vagrant/rules/; chown -R vagrant:vagrant /home/vagrant/rules/",
                              true);
-    test.maxscales->copy_to_node((char*)"rules.txt", (char*)"~/rules/rules.txt", 0);
+    test.maxscales->copy_to_node_legacy((char*)"rules.txt", (char*)"~/rules/rules.txt", 0);
     test.maxscales->ssh_node(0, "chmod a+r /home/vagrant/rules/rules.txt;", true);
 
     test.maxscales->restart_maxscale(0);

@@ -117,7 +117,8 @@ public:
      * @param i Node index
      * @return exit code of the system command or 1 in case of i > N
      */
-    int copy_to_node(const char* src, const char* dest, int i);
+    int copy_to_node_legacy(const char* src, const char* dest, int i);
+    int copy_to_node(int i, const char* src, const char* dest);
 
     /**
      * @brief Copy a local file to the Node i machine
@@ -126,7 +127,8 @@ public:
      * @param i Node index
      * @return exit code of the system command or 1 in case of i > N
      */
-    int copy_from_node(const char* src, const char* dest, int i);
+    int copy_from_node_legacy(const char* src, const char* dest, int i);
+    int copy_from_node(int i, const char* src, const char* dest);
 
     /**
      * @brief Check node via ssh and restart it if it is not resposible

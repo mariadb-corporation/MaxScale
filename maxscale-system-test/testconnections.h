@@ -275,6 +275,13 @@ public:
     int copy_all_logs_periodic();
 
     /**
+     * @brief copy_maxscale_logs Copies logs from all Maxscale nodes
+     * @param timestamp
+     * @return 0
+     */
+    int copy_maxscale_logs(double timestamp);
+
+    /**
      * @brief Test that connections to MaxScale are in the expected state
      * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false for no connection.
      * @param rc_master State of the MaxScale connection to Readconnroute Master. True for working connection, false for no connection.

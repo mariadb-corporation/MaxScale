@@ -205,7 +205,7 @@ int  Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
 
 }
 
-int Nodes::copy_to_node(const char* src, const char* dest, int i)
+int Nodes::copy_to_node(int i, const char* src, const char* dest)
 {
     if (i >= N)
     {
@@ -233,7 +233,13 @@ int Nodes::copy_to_node(const char* src, const char* dest, int i)
 }
 
 
-int Nodes::copy_from_node(const char* src, const char* dest, int i)
+int Nodes::copy_to_node_legacy(const char* src, const char* dest, int i)
+{
+
+    return copy_to_node(i, src, dest);
+}
+
+int Nodes::copy_from_node(int i,  const char* src, const char* dest)
 {
     if (i >= N)
     {
@@ -257,6 +263,11 @@ int Nodes::copy_from_node(const char* src, const char* dest, int i)
     }
 
     return system(sys);
+}
+
+int Nodes::copy_from_node_legacy(const char* src, const char* dest, int i)
+{
+    return copy_from_node(i, src, dest);
 }
 
 int Nodes::read_basic_env()

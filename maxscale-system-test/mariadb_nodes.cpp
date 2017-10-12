@@ -354,7 +354,7 @@ int Mariadb_nodes::start_replication()
 
     sprintf(str, "%s/create_user.sh", test_dir);
     sprintf(dtr, "%s", access_homedir[0]);
-    copy_to_node(str, dtr , 0);
+    copy_to_node_legacy(str, dtr , 0);
     sprintf(str, "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
             user_name, password, access_homedir[0], socket_cmd[0]);
     printf("cmd: %s\n", str);
@@ -366,14 +366,14 @@ int Mariadb_nodes::start_replication()
             socket_cmd[0]);
     ssh_node(0, str, true);
     sprintf(str, "%s/master_backup.sql", test_dir);
-    copy_from_node("/tmp/master_backup.sql", str, 0);
+    copy_from_node_legacy("/tmp/master_backup.sql", str, 0);
 
     for (int i = 1; i < N; i++)
     {
         // Reset all nodes by first loading the dump and then starting the replication
         printf("Starting node %d\n", i);
         fflush(stdout);
-        copy_to_node(str, "/tmp/master_backup.sql", i);
+        copy_to_node_legacy(str, "/tmp/master_backup.sql", i);
         sprintf(dtr,
                 "mysql -u root %s < /tmp/master_backup.sql",
                 socket_cmd[i]);
@@ -408,7 +408,7 @@ int Galera_nodes::start_galera()
     local_result += start_node(0, (char *) " --wsrep-cluster-address=gcomm://");
 
     sprintf(str, "%s/create_user_galera.sh", test_dir);
-    copy_to_node(str, "~/", 0);
+    copy_to_node_legacy(str, "~/", 0);
 
     sprintf(str, "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh %s",
             user_name,
@@ -983,9 +983,9 @@ int Mariadb_nodes::configure_ssl(bool require)
         printf("Node %d\n", i);
         stop_node(i);
         sprintf(str, "%s/ssl-cert", test_dir);
-        local_result += copy_to_node(str, (char *) "~/", i);
+        local_result += copy_to_node_legacy(str, (char *) "~/", i);
         sprintf(str, "%s/ssl.cnf", test_dir);
-        local_result += copy_to_node(str, (char *) "~/", i);
+        local_result += copy_to_node_legacy(str, (char *) "~/", i);
         local_result += ssh_node(i, (char *) "cp ~/ssl.cnf /etc/my.cnf.d/", true);
         local_result += ssh_node(i, (char *) "cp -r ~/ssl-cert /etc/", true);
         local_result += ssh_node(i,  (char *) "chown mysql:mysql -R /etc/ssl-cert", true);
@@ -997,7 +997,7 @@ int Mariadb_nodes::configure_ssl(bool require)
         // Create DB user on first node
         printf("Set user to require ssl: %s\n", str);
         sprintf(str, "%s/create_user_ssl.sh", test_dir);
-        copy_to_node(str, (char *) "~/", 0);
+        copy_to_node_legacy(str, (char *) "~/", 0);
 
         sprintf(str, "export node_user=\"%s\"; export node_password=\"%s\"; ./create_user_ssl.sh %s",
                 user_name,
