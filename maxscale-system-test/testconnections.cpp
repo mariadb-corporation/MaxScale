@@ -659,8 +659,8 @@ int TestConnections::copy_maxscale_logs(double timestamp)
             maxscales->ssh_node_f(i, true,
                                   "rm -rf %s/logs; mkdir %s/logs; \
                                   %s cp %s/*.log %s/logs/; \
-                                  %s cp /tmp/core* %s/logs;\
-                                  %s cp %s %s/logs;\
+                                  %s cp /tmp/core* %s/logs/;\
+                                  %s cp %s %s/logs/;\
                                   %s chmod 777 -R %s/logs",
                                   maxscales->access_homedir[i], maxscales->access_homedir[i],
                                   maxscales->access_sudo[i], maxscales->maxscale_log_dir[i], maxscales->access_homedir[i],
@@ -672,10 +672,10 @@ int TestConnections::copy_maxscale_logs(double timestamp)
         }
         else
         {
-            maxscales->ssh_node_f(i, true, "cp %s/*.logs %s", maxscales->maxscale_log_dir[i], log_dir_i);
-            maxscales->ssh_node_f(i, true, "cp /tmp/core* %s", log_dir_i);
-            maxscales->ssh_node_f(i, true, "cp %s %s", maxscales->maxscale_cnf[i], log_dir_i);
-            maxscales->ssh_node_f(i, true, "chmod a+r %s", log_dir_i);
+            maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i], log_dir_i);
+            maxscales->ssh_node_f(i, true, "cp /tmp/core* %s/", log_dir_i);
+            maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i], log_dir_i);
+            maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
         }
     }
     return 0;
@@ -683,9 +683,6 @@ int TestConnections::copy_maxscale_logs(double timestamp)
 
 int TestConnections::copy_all_logs_periodic()
 {
-    char str[4096];
-    //set_timeout(300);
-
     timeval t2;
     gettimeofday(&t2, NULL);
     double elapsedTime = (t2.tv_sec - start_time.tv_sec);
