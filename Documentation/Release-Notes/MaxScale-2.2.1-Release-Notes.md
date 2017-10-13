@@ -14,6 +14,15 @@ report at [Jira](https://jira.mariadb.org).
 
 ## New Features
 
+### PL/SQL Comaptibility
+
+The parser of MaxScale has been extended to support the PL/SQL compatibility
+features of the upcoming 10.3 release. For more information on how to enable
+this mode, please refer to the
+[configuration guide](../Getting-Started/Configuration-Guide.md#sql_mode).
+
+This functionality was available already in MaxScale 2.2.0.
+
 ### Environment Variables in the configuration file
 
 If the global configuration entry `substitute_variables` is set to true,

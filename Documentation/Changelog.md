@@ -11,6 +11,8 @@
 * Firewall can now prevent the use of functions in conjunction with
   certain columns.
 * Parser of MaxScale extended to support window functions and CTEs.
+* Parser of MaxScale extended to support PL/SQL compatibility features
+  of upcoming 10.3 release.
 * Prepared statements are now parsed and the execution of read only
   ones will be routed to slaves.
 * Server states are persisted, so in case of crash and restart MaxScale
