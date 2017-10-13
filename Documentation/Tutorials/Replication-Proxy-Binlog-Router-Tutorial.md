@@ -458,12 +458,12 @@ error logs and in *SHOW SLAVE STATUS*,
 ##### MariaDB 10 GTID
 
 If _mariadb10_master_gtid_ is On changing the master doesn't require the setting of a
-new _file_ and _pos_, just specify new host and port with CHANGE MASTER; depending on the _binlog_structure_ values some additional steps migth be required.
+new _file_ and _pos_, just specify new host and port with CHANGE MASTER; depending on the _binlog_structure_ values some additional steps might be required.
 
 If _binlog_structure=flat_, in order to keep previous binlog files untouched in MaxScale _binlogdir_ (no overwriting),
 the next in sequence file must exist in the Master server, as per above scenario _file and pos_ (2).
 
-It migth also happen that each server in the replication setup has its own binlog file name
+It might also happen that each server in the replication setup has its own binlog file name
 convention (server1_bin, server2_bin etc) or the user doesn't want to care at all about
 name and sequence. The _binlog_structure_ option set to _tree_ value simplifies the change
 master process: as the binlog files are saved using a hierarchy model
