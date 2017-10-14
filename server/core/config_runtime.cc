@@ -1661,7 +1661,22 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                 }
                 else
                 {
-                    runtime_error("Parameter '%s' cannot be modified", key);
+                    const MXS_MODULE *mod = get_module(service->routerModule, MODULE_ROUTER);
+                    std::string v = mxs::json_to_string(value);
+
+                    if (config_param_is_valid(mod->parameters, key, v.c_str(), NULL))
+                    {
+                        runtime_error("Runtime modifications to router parameters is not supported: %s=%s", key, v.c_str());
+                    }
+                    else if (!is_dynamic_param(key))
+                    {
+                        runtime_error("Runtime modifications to static service parameters is not supported: %s=%s", key, v.c_str());
+                    }
+                    else
+                    {
+                        runtime_error("Parameter '%s' cannot be modified at runtime", key);
+                    }
+
                     rval = false;
                 }
             }
