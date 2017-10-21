@@ -961,7 +961,8 @@ static void usage(void)
             "if '--basedir /path/maxscale' is specified, then, for instance, the log\n"
             "dir will be '/path/maxscale/var/log/maxscale', the config dir will be\n"
             "'/path/maxscale/etc' and the default config file will be\n"
-            "'/path/maxscale/etc/maxscale.cnf'.\n",
+            "'/path/maxscale/etc/maxscale.cnf'.\n\n"
+            "MaxScale documentation: https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-21/ \n",
             progname,
             get_configdir(), default_cnf_fname,
             get_configdir(), get_logdir(), get_cachedir(), get_libdir(),
