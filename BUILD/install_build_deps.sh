@@ -109,22 +109,6 @@ cd tcl8.6.5/unix
 sudo make install
 cd ../../..
 
-
-# Jansson
-git clone https://github.com/akheron/jansson.git
-if [ $? != 0 ]
-then
-    echo "Error cloning jansson"
-    exit 1
-fi
-
-mkdir -p jansson/build
-pushd jansson/build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DJANSSON_INSTALL_LIB_DIR=$install_libdir
-make
-sudo make install
-popd
-
 # Avro C API
 wget -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories http://mirror.netinch.com/pub/apache/avro/stable/c
 if [ $? != 0 ]
