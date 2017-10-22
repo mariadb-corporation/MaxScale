@@ -32,7 +32,7 @@ MXS_BEGIN_DECLS
 
 /** Default port where the REST API listens */
 #define DEFAULT_ADMIN_HTTP_PORT 8989
-#define DEFAULT_ADMIN_HOST      "::"
+#define DEFAULT_ADMIN_HOST      "127.0.0.1"
 
 #define RELEASE_STR_LENGTH      256
 #define SYSNAME_LEN             256

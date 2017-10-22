@@ -2,6 +2,7 @@
 threads=4
 admin_auth=false
 log_info=1
+admin_host=::
 
 [MySQL Monitor]
 type=monitor
