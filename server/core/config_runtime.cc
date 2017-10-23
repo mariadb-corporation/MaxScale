@@ -1415,11 +1415,46 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
     return rval;
 }
 
-const char* object_relation_types[] =
+static bool is_valid_relationship_body(json_t* json)
 {
-    MXS_JSON_PTR_RELATIONSHIPS_SERVERS,
-    NULL
-};
+    bool rval = true;
+
+    json_t* obj = mxs_json_pointer(json, MXS_JSON_PTR_DATA);
+
+    if (!obj)
+    {
+        runtime_error("Field '%s' is not defined", MXS_JSON_PTR_DATA);
+        rval = false;
+    }
+    else if (!json_is_array(obj))
+    {
+        runtime_error("Field '%s' is not an array", MXS_JSON_PTR_DATA);
+        rval = false;
+    }
+
+    return rval;
+}
+
+bool runtime_alter_server_relationships_from_json(SERVER* server, const char* type, json_t* json)
+{
+    bool rval = false;
+    mxs::Closer<json_t*> old_json(server_to_json(server, ""));
+    ss_dassert(old_json.get());
+
+    if (is_valid_relationship_body(json))
+    {
+        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                         "relationships", type, "data",
+                                         json_object_get(json, "data")));
+
+        if (server_to_object_relations(server, old_json.get(), j.get()))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
 
 static bool object_relation_is_valid(const std::string& type, const std::string& value)
 {
@@ -1618,6 +1653,48 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
             /** A configuration change was made, restart the monitor */
             monitorStop(monitor);
             monitorStart(monitor, monitor->parameters);
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t* json)
+{
+    bool rval = false;
+    mxs::Closer<json_t*> old_json(monitor_to_json(monitor, ""));
+    ss_dassert(old_json.get());
+
+    if (is_valid_relationship_body(json))
+    {
+        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                         "relationships", "servers", "data",
+                                         json_object_get(json, "data")));
+
+        if (object_to_server_relations(monitor->name, old_json.get(), j.get()))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_alter_service_relationships_from_json(SERVICE* service, json_t* json)
+{
+    bool rval = false;
+    mxs::Closer<json_t*> old_json(service_to_json(service, ""));
+    ss_dassert(old_json.get());
+
+    if (is_valid_relationship_body(json))
+    {
+        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                         "relationships", "servers", "data",
+                                         json_object_get(json, "data")));
+
+        if (object_to_server_relations(service->name, old_json.get(), j.get()))
+        {
+            rval = true;
         }
     }
 

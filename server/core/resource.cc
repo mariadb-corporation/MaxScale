@@ -285,6 +285,29 @@ HttpResponse cb_alter_server(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse do_alter_server_relationship(const HttpRequest& request, const char* type)
+{
+    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+    ss_dassert(server && request.get_json());
+
+    if (runtime_alter_server_relationships_from_json(server, type, request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_alter_server_service_relationship(const HttpRequest& request)
+{
+    return do_alter_server_relationship(request, "services");
+}
+
+HttpResponse cb_alter_server_monitor_relationship(const HttpRequest& request)
+{
+    return do_alter_server_relationship(request, "monitors");
+}
+
 HttpResponse cb_create_monitor(const HttpRequest& request)
 {
     ss_dassert(request.get_json());
@@ -323,12 +346,38 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
+{
+    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    ss_dassert(monitor && request.get_json());
+
+    if (runtime_alter_monitor_relationships_from_json(monitor, request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_alter_service(const HttpRequest& request)
 {
     SERVICE* service = service_find(request.uri_part(1).c_str());
     ss_dassert(service && request.get_json());
 
     if (runtime_alter_service_from_json(service, request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
+{
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+    ss_dassert(service && request.get_json());
+
+    if (runtime_alter_service_relationships_from_json(service, request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -791,6 +840,16 @@ public:
         m_patch.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
         m_patch.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
         m_patch.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
+
+        /** Update resource relationships directly */
+        m_patch.push_back(SResource(new Resource(cb_alter_server_service_relationship, 4,
+                                                 "servers", ":server", "relationships", "services")));
+        m_patch.push_back(SResource(new Resource(cb_alter_server_monitor_relationship, 4,
+                                                 "servers", ":server", "relationships", "monitors")));
+        m_patch.push_back(SResource(new Resource(cb_alter_monitor_server_relationship, 4,
+                                                 "monitors", ":monitor", "relationships", "servers")));
+        m_patch.push_back(SResource(new Resource(cb_alter_service_server_relationship, 4,
+                                                 "services", ":service", "relationships", "servers")));
 
         /** All patch resources require a request body */
         for (ResourceList::iterator it = m_patch.begin(); it != m_patch.end(); it++)

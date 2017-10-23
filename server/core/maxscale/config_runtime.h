@@ -221,6 +221,17 @@ SERVER* runtime_create_server_from_json(json_t* json);
 bool runtime_alter_server_from_json(SERVER* server, json_t* new_json);
 
 /**
+ * @brief Alter server relationships
+ *
+ * @param server Server to alter
+ * @param type Type of the relation, either @c services or @c monitors
+ * @param json JSON that defines the relationship data
+ *
+ * @return True if the relationships were successfully modified
+ */
+bool runtime_alter_server_relationships_from_json(SERVER* server, const char* type, json_t* json);
+
+/**
  * @brief Create a new monitor from JSON
  *
  * @param json JSON defining the monitor
@@ -240,6 +251,16 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
 bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json);
 
 /**
+ * @brief Alter monitor relationships
+ *
+ * @param monitor Monitor to alter
+ * @param json JSON that defines the new relationships
+ *
+ * @return True if the relationships were successfully modified
+ */
+bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t* json);
+
+/**
  * @brief Alter a service using JSON
  *
  * @param service Service to alter
@@ -248,6 +269,16 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json);
  * @return True if the service was successfully modified to represent @c new_json
  */
 bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json);
+
+/**
+ * @brief Alter service relationships
+ *
+ * @param service Service to alter
+ * @param json JSON that defines the new relationships
+ *
+ * @return True if the relationships were successfully modified
+ */
+bool runtime_alter_service_relationships_from_json(SERVICE* service, json_t* json);
 
 /**
  * @brief Create a listener from JSON
