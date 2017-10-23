@@ -66,7 +66,6 @@ A **complete example** of a service entry for a binlog router service would be a
                    encrypt_binlog=On,
                    encryption_algorithm=aes_ctr,
                    encryption_key_file=/var/binlogs/enc_key.txt,
-                   mariadb10_slave_gtid=On,
                    mariadb10_master_gtid=Off,
                    slave_hostname=maxscale-blr-1,
                    master_retry_count=1000,
@@ -198,7 +197,7 @@ If a slave is connected to MaxScale with SSL, an entry will be present in the Sl
 		Slave connected with SSL:                Established
 ```
 
-If option `mariadb10_slave_gtid=On` last seen GTID is shown:
+If option `mariadb10-compatibility=On` last seen GTID is shown:
 
 ```
 Last seen MariaDB GTID:                      0-10124-282
@@ -253,7 +252,7 @@ Master_SSL_Verify_Server_Cert: No
              Master_Info_File: /home/maxscale/binlog/first/binlogs/master.ini
 ```
 
-If the option `mariadb10_slave_gtid` is set to On, the last seen GTID is shown:
+If the option `mariadb10-compatibility` is set to On, the last seen GTID is shown:
 
 ```
 Using_Gtid: No
@@ -277,11 +276,8 @@ slaves must not use *MASTER_AUTO_POSITION = 1* option.
 
 It also works with a MariaDB 10.X setup (master and slaves).
 
-Starting from MaxScale 2.2 the slave connections may include **GTID** feature
-`MASTER_USE_GTID=Slave_pos` if option *mariadb10_slave_gtid* has been set.
-
-The default is that a slave connection must not include any GTID
-feature: `MASTER_USE_GTID=no`
+Starting from MaxScale 2.2.1 the slave connections might optionally include
+**GTID** feature `MASTER_USE_GTID=Slave_pos`: only option *mariadb10-compatibility* is required.
 
 Starting from MaxScale 2.2 it's also possible to register to MariaDB 10.X master using
 **GTID** using the new option *mariadb10_master_gtid*.
@@ -545,8 +541,8 @@ be issued for the new configuration.
 
 ### Removing binary logs from binlogdir
 
-Since version 2.2, if `mariadb10_slave_gtid` or `mariadb10_master_gtid`
-are set to On, it's possible to remove the binlog files from _binlogdir_
+Since version 2.2.1, if `mariadb10-compatibility`is set to On,
+it's possible to remove the binlog files from _binlogdir_
 and delete related entries in GTID repository using the admin
 command `PURGE BINARY LOGS TO 'file'`
 
@@ -653,8 +649,8 @@ Example:
 ```
 
 ##### MariaDB 10 GTID
-If connecting slaves are MariaDB 10.x it's also possible to connect with GTID,
-*mariadb10_slave_gtid=On* has to be set in configuration before starting MaxScale.
+Since MaxScale 2.2.1 the MariaDB 10.x connecting slaves can optionally connect with GTID,
+*mariadb10-compatibility=On* has to be set in configuration before starting MaxScale.
 
 ```
 SET @@global.gtid_slave_pos='';
@@ -688,7 +684,7 @@ MariaDB> CHANGE MASTER TO
 MariaDB> START SLAVE;
 ```
 
-Additionally, if *mariadb10_slave_gtid=On*, it's also possible to retrieve the list of binlog files downloaded from the master with the new admin command _SHOW BINARY LOGS_:
+Additionally it's also possible to retrieve the list of binlog files downloaded from the master with the new admin command _SHOW BINARY LOGS_:
 
 ```
 MariaDB> SHOW BINARY LOGS;

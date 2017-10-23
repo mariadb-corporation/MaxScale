@@ -159,14 +159,38 @@ the router options.
 ### `mariadb10-compatibility`
 
 This parameter allows binlogrouter to replicate from a MariaDB 10.0 master
-server. If `mariadb10_slave_gtid` is not enabled GTID will not be used in the
-replication. This parameter is enabled by default since MaxScale 2.2.0. In
-earlier versions the parameter was disabled by default.
+server: this parameter is enabled by default since MaxScale 2.2.0.
+In earlier versions the parameter was disabled by default.
 
 ```
 # Example
 router_options=mariadb10-compatibility=1
 ```
+
+
+Additionally, since MaxScale 2.2.1, MariaDB 10.x slave servers
+can connect to binlog server using GTID value instead of binlog name and position.
+
+Example of a MariaDB 10.x slave connection to MaxScale
+
+```
+MariaDB> SET @@global.gtid_slave_pos='0-10122-230';
+MariaDB> CHANGE MASTER TO
+         MASTER_HOST='192.168.10.8',
+         MASTER_PORT=5306,
+         MASTER_USE_GTID=Slave_pos;
+MariaDB> START SLAVE;
+```
+
+**Note:**
+
+- Slave servers can connect either with _file_ and _pos_ or GTID.
+
+- MaxScale saves all the incoming MariaDB GTIDs (DDLs and DMLs)
+in a sqlite3 database located in _binlogdir_ (`gtid_maps.db`).
+When a slave server connects with a GTID request a lookup is made for
+the value match and following binlog events will be sent.
+
 
 ### `transaction_safety`
 
@@ -271,29 +295,6 @@ Example:
 3;bbbbbbbbbaaaaaaabbbbbccccceeeddddd3333333ddddaaaaffffffeeeeecccd
 ```
 
-
-### `mariadb10_slave_gtid`
-If enabled this option allows MariaDB 10.x slave servers to connect to binlog
-server using GTID value instead of binlog_file name and position.
-MaxScale saves all the incoming MariaDB GTIDs (DDLs and DMLs)
-in a sqlite3 database located in _binlogdir_ (`gtid_maps.db`).
-When a slave server connects with a GTID request a lookup is made for
-the value match and following binlog events will be sent.
-Default option value is _off_.
-
-Example of a MariaDB 10.x slave connection to MaxScale
-
-```
-MariaDB> SET @@global.gtid_slave_pos='0-10122-230';
-MariaDB> CHANGE MASTER TO
-         MASTER_HOST='192.168.10.8',
-         MASTER_PORT=5306,
-         MASTER_USE_GTID=Slave_pos;
-MariaDB> START SLAVE;
-```
-
-**Note:** Slave servers can connect either with _file_ and _pos_ or GTID.
-
 ### `mariadb10_master_gtid`
 This option allows MaxScale binlog router to register
 with MariaDB 10.X master using GTID instead of _binlog_file_ name
@@ -374,7 +375,6 @@ follows.
                    encrypt_binlog=1,
                    encryption_algorithm=aes_ctr,
                    encryption_key_file=/var/binlogs/enc_key.txt,
-                   mariadb10_slave_gtid=On,
                    mariadb10_master_gtid=Off,
                    slave_hostname=maxscale-blr-1,
                    master_retry_count=1000,

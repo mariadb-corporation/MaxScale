@@ -190,7 +190,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_NONE, enc_algo_values
             },
             {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"mariadb10_slave_gtid", MXS_MODULE_PARAM_BOOL, "false"},
             {"mariadb10_master_gtid", MXS_MODULE_PARAM_BOOL, "false"},
             {
                 "binlog_structure", MXS_MODULE_PARAM_ENUM, "flat",
@@ -359,8 +358,8 @@ createInstance(SERVICE *service, char **options)
     inst->request_semi_sync = config_get_bool(params, "semisync");
     inst->master_semi_sync = 0;
 
-    /* Enable MariaDB GTID tracking for slaves */
-    inst->mariadb10_gtid = config_get_bool(params, "mariadb10_slave_gtid");
+    /* Enable MariaDB GTID tracking for slaves if MariaDB 10 compat is set */
+    inst->mariadb10_gtid = inst->mariadb10_compat;
 
     /* Enable MariaDB GTID registration to master */
     inst->mariadb10_master_gtid = config_get_bool(params, "mariadb10_master_gtid");
@@ -538,10 +537,6 @@ createInstance(SERVICE *service, char **options)
                 else if (strcmp(options[i], "encrypt_binlog") == 0)
                 {
                     inst->encryption.enabled = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "mariadb10_slave_gtid") == 0)
-                {
-                    inst->mariadb10_gtid = config_truth_value(value);
                 }
                 else if (strcmp(options[i], "mariadb10_master_gtid") == 0)
                 {
