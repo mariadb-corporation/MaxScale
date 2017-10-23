@@ -467,6 +467,55 @@ Invalid JSON body:
 
 `Status: 403 Forbidden`
 
+### Update server relationships
+
+```
+PATCH /v1/servers/:name/relationships/:type
+```
+
+The _:name_ in the URI must map to a server name with all whitespace replaced
+with hyphens. The _:type_ in the URI must be either _services_, for service
+relationships, or _monitors_, for monitor relationships.
+
+The request body must be a JSON object that defines only the _data_ field. The
+value of the _data_ field must be an array of relationship objects that define
+the _id_ and _type_ fields of the relationship. This object will replace the
+existing relationships of the particular type from the server.
+
+The following is an example request and request body that defines a single
+service relationship for a server.
+
+```
+PATCH /v1/servers/my-db-server/relationships/services
+
+{
+    data: [
+          { "id": "my-rwsplit-service", "type": "services" }
+    ]
+}
+```
+
+All relationships for a server can be deleted by sending an empty array as the
+_data_ field value. The following example removes the server from all services.
+
+```
+PATCH /v1/servers/my-db-server/relationships/services
+
+{
+    data: []
+}
+```
+
+#### Response
+
+Server relationships modified:
+
+`Status: 204 No Content`
+
+Invalid JSON body:
+
+`Status: 403 Forbidden`
+
 ### Destroy a server
 
 ```

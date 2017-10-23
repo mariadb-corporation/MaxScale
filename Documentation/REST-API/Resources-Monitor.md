@@ -298,6 +298,54 @@ Invalid request body:
 
 `Status: 403 Forbidden`
 
+### Update monitor relationships
+
+```
+PATCH /v1/monitors/:name/relationships/servers
+```
+
+The _:name_ in the URI must map to a monitor name with all whitespace replaced
+with hyphens.
+
+The request body must be a JSON object that defines only the _data_ field. The
+value of the _data_ field must be an array of relationship objects that define
+the _id_ and _type_ fields of the relationship. This object will replace the
+existing relationships of the monitor.
+
+The following is an example request and request body that defines a single
+server relationship for a monitor.
+
+```
+PATCH /v1/monitors/my-monitor/relationships/servers
+
+{
+    data: [
+          { "id": "my-server", "type": "servers" }
+    ]
+}
+```
+
+All relationships for a monitor can be deleted by sending an empty array as the
+_data_ field value. The following example removes all servers from a monitor.
+
+```
+PATCH /v1/monitors/my-monitor/relationships/servers
+
+{
+    data: []
+}
+```
+
+#### Response
+
+Monitor relationships modified:
+
+`Status: 204 No Content`
+
+Invalid JSON body:
+
+`Status: 403 Forbidden`
+
 ### Destroy a monitor
 
 Destroy a created monitor. The monitor must not have relationships to any
