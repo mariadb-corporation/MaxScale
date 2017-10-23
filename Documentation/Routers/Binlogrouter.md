@@ -336,22 +336,6 @@ in the binlog files with ignorable events.
 - It's not possible to specify the GTID _domain_id: the master one
 is being used for all operations. All slave servers must use the same replication domain as the master server.
 
-### `binlog_structure`
-
-This option controls the way binlog file are saved in the _binlogdir_:
-there are two possible values, `flat | tree`
-
-The `tree` mode can only be set with `mariadb10_master_gtid=On`
-
-- `flat` is the default value, files are saved as usual.
-- `tree` enables the saving of files using this hierarchy model:
-_binlogdir_/_domain_id_/_server_id_/_filename_
-
-The _tree_ structure easily allows the changing of the master server
-without caring about binlog filename and sequence:
-just change _host_ and _port_, the replication will
-resume from last GTID MaxScale has seen.
-
 ### `master_retry_count`
 
 This option sets the maximum number of connection retries when the master server is disconnected or not reachable.
@@ -392,7 +376,6 @@ follows.
                    encryption_key_file=/var/binlogs/enc_key.txt,
                    mariadb10_slave_gtid=On,
                    mariadb10_master_gtid=Off,
-                   binlog_structure=flat,
                    slave_hostname=maxscale-blr-1,
                    master_retry_count=1000,
                    connect_retry=60

@@ -379,10 +379,8 @@ createInstance(SERVICE *service, char **options)
     /* Set router uuid */
     inst->uuid = config_copy_string(params, "uuid");
 
-    /* Enable Flat or Tree storage of binlog files */
-    inst->storage_type = config_get_enum(params,
-                                         "binlog_structure",
-                                         binlog_storage_values);
+    /* Set Flat storage of binlog files as default */
+    inst->storage_type = BLR_BINLOG_STORAGE_FLAT;
 
     if (inst->uuid == NULL)
     {
@@ -548,13 +546,6 @@ createInstance(SERVICE *service, char **options)
                 else if (strcmp(options[i], "mariadb10_master_gtid") == 0)
                 {
                     inst->mariadb10_master_gtid = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "binlog_structure") == 0)
-                {
-                    /* Enable Flat or Tree storage of binlog files */
-                    inst->storage_type = strcasecmp(value, "tree") == 0 ?
-                                         BLR_BINLOG_STORAGE_TREE :
-                                         BLR_BINLOG_STORAGE_FLAT;
                 }
                 else if (strcmp(options[i], "encryption_algorithm") == 0)
                 {
@@ -780,24 +771,12 @@ createInstance(SERVICE *service, char **options)
         inst->mariadb10_compat = true;
     }
 
-    /**
-     * Force GTID slave request handling if GTID Master registration is On
-     */
     if (inst->mariadb10_master_gtid)
     {
+        /* Force GTID slave request handling */
         inst->mariadb10_gtid = true;
-    }
-
-    if (!inst->mariadb10_master_gtid &&
-        inst->storage_type == BLR_BINLOG_STORAGE_TREE)
-    {
-        MXS_ERROR("%s: binlog_structure 'tree' mode can be enabled only"
-                  " with MariaDB Master GTID registration feature."
-                  " Please enable it with option"
-                  " 'mariadb10_master_gtid = on'",
-                  service->name);
-        free_instance(inst);
-        return NULL;
+        /* Force binlog storage as tree */
+        inst->storage_type = BLR_BINLOG_STORAGE_TREE;
     }
 
     /* Log binlog structure storage mode */
@@ -806,6 +785,7 @@ createInstance(SERVICE *service, char **options)
                inst->storage_type == BLR_BINLOG_STORAGE_FLAT ?
                "'flat' mode" :
                "'tree' mode using GTID domain_id and server_id");
+
     /* Enable MariaDB the GTID maps store */
     if (inst->mariadb10_compat &&
         inst->mariadb10_gtid)

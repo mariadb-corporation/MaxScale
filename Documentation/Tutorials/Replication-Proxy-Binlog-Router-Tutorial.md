@@ -68,7 +68,6 @@ A **complete example** of a service entry for a binlog router service would be a
                    encryption_key_file=/var/binlogs/enc_key.txt,
                    mariadb10_slave_gtid=On,
                    mariadb10_master_gtid=Off,
-                   binlog_structure=flat,
                    slave_hostname=maxscale-blr-1,
                    master_retry_count=1000,
                    connect_retry=60
@@ -285,7 +284,7 @@ The default is that a slave connection must not include any GTID
 feature: `MASTER_USE_GTID=no`
 
 Starting from MaxScale 2.2 it's also possible to register to MariaDB 10.X master using
-**GTID** using the two new options *mariadb10_master_gtid* and *binlog_structure*.
+**GTID** using the new option *mariadb10_master_gtid*.
 
 Current GTID implementation limitations:
 
@@ -458,18 +457,11 @@ error logs and in *SHOW SLAVE STATUS*,
 ##### MariaDB 10 GTID
 
 If _mariadb10_master_gtid_ is On changing the master doesn't require the setting of a
-new _file_ and _pos_, just specify new host and port with CHANGE MASTER; depending on the _binlog_structure_ values some additional steps might be required.
+new _file_ and _pos_, just specify new host and port with CHANGE MASTER.
 
-If _binlog_structure=flat_, in order to keep previous binlog files untouched in MaxScale _binlogdir_ (no overwriting),
-the next in sequence file must exist in the Master server, as per above scenario _file and pos_ (2).
-
-It might also happen that each server in the replication setup has its own binlog file name
-convention (server1_bin, server2_bin etc) or the user doesn't want to care at all about
-name and sequence. The _binlog_structure_ option set to _tree_ value simplifies the change
-master process: as the binlog files are saved using a hierarchy model
+As the binlog files will be automatically saved using a hierarchy model
 (_binlogdir/domain_id/server_id/_filename_), MaxScale can work with any filename and any
 sequence and no binlog file will be overwritten by accident.
-
 
 **Scenario** example:
 
@@ -508,38 +500,17 @@ MariaDB> SELECT @@global.gtid_current_pos;
 ```
 
 Starting the replication in MaxScale, `START SLAVE`,
-will result in new events being downloaded and stored.
-
-If _binlog_structure=flat_ (default), the binlog events are saved in the new file
-`mysql-bin.000061`, which should have been created in the Master before starting
-replication from MaxScale, see above scenario (2)
-
-If _binlog_structure=tree_, the binlog events are saved in the new file
-`0/10333/mysql-bin.000001` (which is the current file in the new master)
-
-The latter example clearly shows that the binlog file has a different sequence number
-(1 instead of 61) and possibly a new name.
+will result in new events being downloaded and stored in the new file
+`0/10333/mysql-bin.000001` (which should be the current file in the new master)
 
 As usual, check for any error in log files and with
 
 	MariaDB> SHOW SLAVE STATUS;
 
 Issuing the admin command `SHOW BINARY LOGS` it's possible to see the list
-of log files which have been downloaded:
-
-```
-MariaDB> SHOW BINARY LOGS;
-+------------------+-----------+
-| Log_name         | File_size |
-+------------------+-----------+
-| mysql-bin.000113 |      2214 |
-...
-| mysql-bin.000117 |       535 |
-+------------------+-----------+
-```
-
-It's possible to follow the _master change_ history if option `binlog_structure=tree`:
-the displayed log file names have a prefix with replication domain_id and server_id.
+of log files which have been downloaded and to follow the _master change_
+history: the displayed log file names have a prefix with
+replication domain_id and server_id.
 
 ```
 MariaDB> SHOW BINARY LOGS;
