@@ -14,6 +14,16 @@ report at [Jira](https://jira.mariadb.org).
 
 ## New Features
 
+### REST API Relationship Endpoints
+
+The _servers_, _monitors_ and _services_ types now support direct updating of
+relationships via the `relationships` endpoints. This conforms to the JSON API
+specification on updating resource relationships.
+
+For more information, refer to the REST API documentation. An example of this
+can be found in the
+[Server Resource documentation](../REST-API/Resources-Server.md#update-server-relationships).
+
 ### PL/SQL Comaptibility
 
 The parser of MaxScale has been extended to support the PL/SQL compatibility
