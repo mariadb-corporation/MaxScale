@@ -69,6 +69,33 @@ describe("Server Relationships", function() {
             })
     });
 
+    it("add relationships with `relationships` endpoint", function() {
+        return request.patch(base_url + "/servers/" + rel_server.data.id + "/relationships/monitors",
+                             { json: { data: [ { "id": "MySQL-Monitor", "type": "monitors" }]}})
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then((res) => {
+                res.data.relationships.monitors.data.should.have.lengthOf(1)
+                    .that.has.deep.include({ "id": "MySQL-Monitor", "type": "monitors" })
+            })
+    });
+
+    it("bad request body with `relationships` endpoint should be rejected", function() {
+        var body = {data: null}
+        return request.patch(base_url + "/servers/" + rel_server.data.id + "/relationships/monitors", { json: body })
+            .should.be.rejected
+    });
+
+    it("remove relationships with `relationships` endpoint", function() {
+        var body = {data: []}
+        return request.patch(base_url + "/servers/" + rel_server.data.id + "/relationships/monitors", { json: body })
+            .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
+            .then((res) => {
+                // Only monitor relationship should be undefined
+                res.data.relationships.should.not.have.keys("monitors")
+                res.data.relationships.should.have.keys("services")
+            })
+    });
+
     it("remove relationships", function() {
         rel_server.data.relationships["services"] = null
         rel_server.data.relationships["monitors"] = null

@@ -101,6 +101,54 @@ describe("Monitor Relationships", function() {
             })
     });
 
+    it("add relationships via `relationships` endpoint", function() {
+        var old = { data: [
+            { id: "server2", type: "servers" },
+            { id: "server3", type: "servers" },
+            { id: "server4", type: "servers" }
+        ]}
+        var created = { data: [
+            { id: "server1", type: "servers" }
+        ]}
+
+        return request.patch(base_url + "/monitors/MySQL-Monitor/relationships/servers", {json: old})
+        .then(() => request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: created}))
+        .then(() => request.get(base_url + "/monitors/MySQL-Monitor", { json: true }))
+        .then((res) => {
+            res.data.relationships.servers.data.should.have.lengthOf(3)
+        })
+        .then(() => request.get(base_url + "/monitors/" + monitor.data.id , { json: true }))
+        .then((res) => {
+            res.data.relationships.servers.data.should.have.lengthOf(1)
+                .that.deep.includes({ id: "server1", type: "servers" })
+        })
+    });
+
+    it("bad request body with `relationships` endpoint should be rejected", function() {
+        return request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: {data: null}})
+            .should.be.rejected
+    })
+
+    it("remove relationships via `relationships` endpoint", function() {
+        var old = { data: [
+            { id: "server1", type: "servers" },
+            { id: "server2", type: "servers" },
+            { id: "server3", type: "servers" },
+            { id: "server4", type: "servers" }
+        ]}
+
+        return request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: {data: []}})
+        .then(() => request.patch(base_url + "/monitors/MySQL-Monitor/relationships/servers", {json: old}))
+        .then(() => request.get(base_url + "/monitors/MySQL-Monitor", { json: true }))
+        .then((res) => {
+            res.data.relationships.servers.data.should.have.lengthOf(4)
+        })
+        .then(() => request.get(base_url + "/monitors/" + monitor.data.id , { json: true }))
+        .then((res) => {
+            res.data.relationships.should.not.have.keys("servers")
+        })
+    });
+
     it("destroy created monitor", function() {
         return request.delete(base_url + "/monitors/" + monitor.data.id)
             .should.be.fulfilled
