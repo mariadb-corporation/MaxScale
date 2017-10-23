@@ -23,11 +23,11 @@ int main(int argc, char *argv[])
 
     // TODO: Don't handle test dependencies in tests
     test.tprintf("Installing NPM");
-    test.ssh_maxscale(true,"yum -y install epel-release;yum -y install npm;");
+    test.ssh_maxscale(true,"yum -y install epel-release;yum -y install npm git;");
 
     test.tprintf("Starting test");
     test.verbose = true;
-    int rv = test.ssh_maxscale(false, "export maxscale2_API=%s:8989; ./test_maxctrl.sh", test.galera->IP[3]);
+    int rv = test.ssh_maxscale(true, "export maxscale2_API=%s:8989; ./test_maxctrl.sh", test.galera->IP[3]);
     test.verbose = false;
 
     test.tprintf("Removing NPM");
