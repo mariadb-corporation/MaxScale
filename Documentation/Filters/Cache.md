@@ -10,7 +10,7 @@ The cache filter is a simple cache that is capable of caching the result of
 SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
 without the queries being routed to any server.
 
-The cache will be used and populated in the following circumstances:
+By _default_ the cache will be used and populated in the following circumstances:
 * There is _no_ explicit transaction active, that is, _autocommit_ is used,
 * there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
   READ ONLY`) active, or
@@ -21,6 +21,9 @@ In practice, the last bullet point basically means that if a transaction has
 been started with `BEGIN`, `START TRANSACTION` or `START TRANSACTION READ
 WRITE`, then the cache will be used and populated until the first `UPDATE`,
 `INSERT` or `DELETE` statement is encountered.
+
+The default behaviour can be altered using the configuration parameter
+[cache_inside_transactions](#cache_inside_transactions).
 
 By default, it is *ensured* that the cache is **not** used in the following
 circumstances:
@@ -250,6 +253,31 @@ subject to caching.
 If `assume_cacheable` is specified, then all `SELECT` statements are
 assumed to be cacheable and will be parsed *only* if some specific rule
 requires that.
+
+#### `cache_inside_transactions`
+
+An enumeration option specifying how the cache should behave when there
+are active transactions:
+
+   * `never`: When there is an active transaction, no data will be returned
+     from the cache, but all requests will always be sent to the backend.
+     The cache will be populated if the transaction is explicitly read only
+     or if no non-SELECT statement has been encounted.
+   * `read_only_transactions`: The cache will be used and populated inside
+     _explicitly_ read-only transactions. If the transaction is not explicitly
+     read only, the cache will be populated (but not used) until the first
+     non-SELECT statement.
+   * `all_transactions`: The cache will be used and populated inside
+     explicitly read-only transactions. Inside transactions that are not
+     explicitly read-only, the cache will be used and populated _until_ the
+     first non-SELECT statement.
+```
+cache_inside_transactions=never
+```
+Default is `all_transactions`.
+
+The values `read_only_transactions` and `all_transactions` have roughly the
+same effect as changing the isolation level of the backend to `read_committed`.
 
 #### `debug`
 
