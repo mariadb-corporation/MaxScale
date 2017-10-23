@@ -1502,8 +1502,19 @@ static json_t* server_to_json_data(const SERVER* server, const char* host)
 
     /** Relationships */
     json_t* rel = json_object();
-    json_object_set_new(rel, CN_SERVICES, service_relations_to_server(server, host));
-    json_object_set_new(rel, CN_MONITORS, monitor_relations_to_server(server, host));
+    json_t* service_rel = service_relations_to_server(server, host);
+    json_t* monitor_rel = monitor_relations_to_server(server, host);
+
+    if (service_rel)
+    {
+        json_object_set_new(rel, CN_SERVICES, service_rel);
+    }
+
+    if (monitor_rel)
+    {
+        json_object_set_new(rel, CN_MONITORS, monitor_rel);
+    }
+
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     /** Attributes */
     json_object_set_new(rval, CN_ATTRIBUTES, server_json_attributes(server));
