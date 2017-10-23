@@ -138,6 +138,15 @@ static const MXS_ENUM_VALUE parameter_selects_values[] =
     {NULL}
 };
 
+// Enumeration values for `cache_in_transaction`
+static const MXS_ENUM_VALUE parameter_cache_in_trxs_values[] =
+{
+    {"never",                  CACHE_IN_TRXS_NEVER},
+    {"read_only_transactions", CACHE_IN_TRXS_READ_ONLY},
+    {"all_transactions",       CACHE_IN_TRXS_ALL},
+    {NULL}
+};
+
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t show_argv[] =
@@ -226,6 +235,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CACHE_DEFAULT_SELECTS,
                 MXS_MODULE_OPT_NONE,
                 parameter_selects_values
+            },
+            {
+                "cache_in_transactions",
+                MXS_MODULE_PARAM_ENUM,
+                CACHE_DEFAULT_CACHE_IN_TRXS,
+                MXS_MODULE_OPT_NONE,
+                parameter_cache_in_trxs_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -332,6 +348,9 @@ bool CacheFilter::process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParam
     config.selects = static_cast<cache_selects_t>(config_get_enum(ppParams,
                                                                   "selects",
                                                                   parameter_selects_values));
+    config.cache_in_trxs = static_cast<cache_in_trxs_t>(config_get_enum(ppParams,
+                                                                        "cache_in_transaction",
+                                                                        parameter_cache_in_trxs_values));
 
     if (!config.storage)
     {

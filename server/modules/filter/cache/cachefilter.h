@@ -58,12 +58,21 @@
 #define CACHE_DEFAULT_SELECTS            "verify_cacheable"
 // Storage
 #define CACHE_DEFAULT_STORAGE            "storage_inmemory"
+// Transaction behaviour
+#define CACHE_DEFAULT_CACHE_IN_TRXS      "read_only_transactions"
 
 typedef enum cache_selects
 {
     CACHE_SELECTS_ASSUME_CACHEABLE,
     CACHE_SELECTS_VERIFY_CACHEABLE,
 } cache_selects_t;
+
+typedef enum cache_in_trxs
+{
+    CACHE_IN_TRXS_NEVER,
+    CACHE_IN_TRXS_READ_ONLY,
+    CACHE_IN_TRXS_ALL,
+} cache_in_trxs_t;
 
 typedef struct cache_config
 {
@@ -81,4 +90,5 @@ typedef struct cache_config
     uint32_t debug;                    /**< Debug settings. */
     cache_thread_model_t thread_model; /**< Thread model. */
     cache_selects_t selects;           /**< Assume/verify that selects are cacheable. */
+    cache_in_trxs_t cache_in_trxs;     /**< To cache or not to cache inside transactions. */
 } CACHE_CONFIG;
