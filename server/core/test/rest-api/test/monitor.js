@@ -48,30 +48,32 @@ describe("Monitor Relationships", function() {
     })
 
     it("remove relationships from old monitor", function() {
-
-        return request.get(base_url + "/monitors/MySQL-Monitor")
-            .then(function(resp) {
-                var mon = JSON.parse(resp)
-                delete mon.data.relationships.servers
-                return request.patch(base_url + "/monitors/MySQL-Monitor", {json: mon})
-            })
-            .should.be.fulfilled
+        var mon = { data: {
+            relationships: {
+                servers: null
+            }}}
+        return request.patch(base_url + "/monitors/MySQL-Monitor", {body: mon})
+        .then(() => request.get(base_url + "/monitors/MySQL-Monitor", { json: true }))
+        .then((res) => {
+            res.data.relationships.servers.should.be.undefined
+        })
     });
 
     it("add relationships to new monitor", function() {
-
-        return request.get(base_url + "/monitors/" + monitor.data.id)
-            .then(function(resp) {
-                var mon = JSON.parse(resp)
-                mon.data.relationships.servers = [
+        var mon = { data: {
+            relationships: {
+                servers: [
                     {id: "server1", type: "servers"},
                     {id: "server2", type: "servers"},
                     {id: "server3", type: "servers"},
                     {id: "server4", type: "servers"},
                 ]
-                return request.patch(base_url + "/monitors/" + monitor.data.id, {json: mon})
+            }}}
+        return request.patch(base_url + "/monitors/" + monitor.data.id, {body: mon})
+            .then(() => request.get(base_url + "/monitors/" + monitor.data.id, { json: true }))
+            .then((res) => {
+                res.data.relationships.servers.data.should.have.lengthOf(4)
             })
-            .should.be.fulfilled
     });
 
     it("move relationships back to old monitor", function() {

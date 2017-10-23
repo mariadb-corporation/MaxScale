@@ -57,14 +57,16 @@ describe("Server Relationships", function() {
     var rel_server = JSON.parse(JSON.stringify(server))
     rel_server.data.relationships = rel
 
-    it("create new server", function() {
+    it("create new server with relationships", function() {
         return request.post(base_url + "/servers/", {json: rel_server})
             .should.be.fulfilled
     });
 
     it("request server", function() {
-        return request.get(base_url + "/servers/" + rel_server.data.id)
-            .should.be.fulfilled
+        return request.get(base_url + "/servers/" + rel_server.data.id, { json: true })
+            .then((res) => {
+                res.data.relationships.services.data.should.have.lengthOf(2)
+            })
     });
 
     it("remove relationships", function() {
