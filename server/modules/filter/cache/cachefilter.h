@@ -69,6 +69,7 @@ typedef enum cache_selects
 
 typedef enum cache_in_trxs
 {
+    // Do NOT change the order. Code relies upon NEVER < READ_ONLY < ALL.
     CACHE_IN_TRXS_NEVER,
     CACHE_IN_TRXS_READ_ONLY,
     CACHE_IN_TRXS_ALL,

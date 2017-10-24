@@ -848,6 +848,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
     uint32_t type_mask = qc_get_trx_type_mask(pPacket); // Note, only trx-related type mask
 
     const char* zReason = NULL;
+    const CACHE_CONFIG& config = m_pCache->config();
 
     if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
     {
@@ -869,19 +870,47 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
     }
     else if (session_trx_is_read_only(m_pSession))
     {
-        if (log_decisions())
+        if (config.cache_in_trxs >= CACHE_IN_TRXS_READ_ONLY)
         {
-            zReason = "explicitly read-only transaction";
+            if (log_decisions())
+            {
+                zReason = "explicitly read-only transaction";
+            }
+            consult_cache = true;
         }
-        consult_cache = true;
+        else
+        {
+            ss_dassert(config.cache_in_trxs == CACHE_IN_TRXS_NEVER);
+
+            if (log_decisions())
+            {
+                zReason = "no caching inside transactions";
+            }
+        }
     }
     else if (m_is_read_only)
     {
-        if (log_decisions())
+        // There is a transaction and it is *not* explicitly read-only,
+        // although so far there has only been SELECTs.
+
+        if (config.cache_in_trxs >= CACHE_IN_TRXS_ALL)
         {
-            zReason = "ordinary transaction that has so far been read-only";
+            if (log_decisions())
+            {
+                zReason = "ordinary transaction that has so far been read-only";
+            }
+            consult_cache = true;
         }
-        consult_cache = true;
+        else
+        {
+            ss_dassert((config.cache_in_trxs == CACHE_IN_TRXS_NEVER) ||
+                       (config.cache_in_trxs == CACHE_IN_TRXS_READ_ONLY));
+
+            if (log_decisions())
+            {
+                zReason = "no caching inside not explicitly read-only transactions";
+            }
+        }
     }
     else
     {
@@ -895,7 +924,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
     {
         if (is_select_statement(pPacket))
         {
-            if (m_pCache->config().selects == CACHE_SELECTS_VERIFY_CACHEABLE)
+            if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
             {
                 // Note that the type mask must be obtained a new. A few lines
                 // above we only got the transaction state related type mask.
