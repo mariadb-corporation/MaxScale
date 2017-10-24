@@ -1664,6 +1664,25 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
     }
 }
 
+bool failover_not_possible(MYSQL_MONITOR* handle)
+{
+    bool rval = false;
+
+    for (MXS_MONITORED_SERVER* s = handle->monitor->monitored_servers; s; s = s->next)
+    {
+        MYSQL_SERVER_INFO* info = get_server_info(handle, s);
+
+        if (info->n_slaves_configured > 1)
+        {
+            MXS_ERROR("Server '%s' is configured to replicate from multiple "
+                      "masters, failover is not possible.", s->server->unique_name);
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * The entry point for the monitoring module thread
  *
@@ -1966,7 +1985,17 @@ monitorMain(void *arg)
                 failover_script = DEFAULT_FAILOVER_SCRIPT;
             }
 
-            if (!mon_process_failover(mon, failover_script, handle->failover_timeout))
+            if (failover_not_possible(handle))
+            {
+                MXS_ERROR("Failover is not possible due to one or more problems in "
+                          "the replication configuration, disabling failover. "
+                          "Failover should only be enabled after the replication "
+                          "configuration  has been fixed. To re-enable failover "
+                          "functionality, manually set '%s' to 'true' for monitor "
+                          "'%s' via MaxAdmin or the REST API.", CN_FAILOVER, mon->name);
+                handle->failover = false;
+            }
+            else if (!mon_process_failover(mon, failover_script, handle->failover_timeout))
             {
                 MXS_ALERT("Failed to perform failover, disabling failover functionality. "
                           "To enable failover functionality, manually set 'failover' to "
