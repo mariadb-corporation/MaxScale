@@ -99,18 +99,16 @@ int main(int argc, char** argv)
 
     TestConnections test(argc, argv);
 
-    // TODO: Figure out how to do this without having replication-manager pre-installed on the system
-    //
-    // test.tprintf("Installing replication-manager");
-    // int rc = system("./manage_mrm.sh install > manage_mrm.log");
-    // if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0)
-    // {
-    //     test.tprintf("Failed to install replication-manager, see manage_mrm.log for more details");
-    //     return -1;
-    // }
+    test.tprintf("Installing replication-manager");
+    int rc = system("new_replication_manager=yes ./manage_mrm.sh install > manage_mrm.log");
+    if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0)
+    {
+        test.tprintf("Failed to install replication-manager, see manage_mrm.log for more details");
+        return -1;
+    }
 
-    // // Wait a few seconds
-    // sleep(5);
+    // Wait a few seconds
+    sleep(5);
 
     test.tprintf("Creating table and inserting data");
     get_input();
