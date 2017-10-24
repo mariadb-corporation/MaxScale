@@ -74,6 +74,10 @@ static const char CN_SWITCHOVER[]         = "switchover";
 static const char CN_SWITCHOVER_SCRIPT[]  = "switchover_script";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 
+// Replication credentials parameters for failover
+static const char CN_REPLICATION_USER[]     = "replication_user";
+static const char CN_REPLICATION_PASSWORD[] = "replication_password";
+
 /** Default failover timeout */
 #define DEFAULT_FAILOVER_TIMEOUT "90"
 /** Default switchover timeout */
@@ -630,6 +634,29 @@ bool init_server_info(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database)
     return rval;
 }
 
+static bool set_replication_credentials(MYSQL_MONITOR *handle, const MXS_CONFIG_PARAMETER* params)
+{
+    bool rval = false;
+    const char* repl_user = config_get_string(params, CN_REPLICATION_USER);
+    const char* repl_pw = config_get_string(params, CN_REPLICATION_PASSWORD);
+
+    if (!*repl_user && !*repl_pw)
+    {
+        // No replication credentials defined, use monitor credentials
+        repl_user = handle->monitor->user;
+        repl_pw = handle->monitor->password;
+    }
+
+    if (*repl_user && *repl_pw)
+    {
+        handle->replication_user = MXS_STRDUP_A(repl_user);
+        handle->replication_password = decrypt_password(repl_pw);
+        rval = true;
+    }
+
+    return rval;
+}
+
 /*lint +e14 */
 
 /**
@@ -651,6 +678,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->shutdown = 0;
         MXS_FREE(handle->script);
         MXS_FREE(handle->switchover_script);
+        MXS_FREE(handle->replication_user);
+        MXS_FREE(handle->replication_password);
     }
     else
     {
@@ -695,6 +724,12 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
 
     bool error = false;
+
+    if (!set_replication_credentials(handle, params))
+    {
+        MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
+        error = true;
+    }
 
     if (!check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
     {

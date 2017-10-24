@@ -69,6 +69,8 @@ typedef struct
     bool switchover;               /**< If master switchover is enabled */
     char* switchover_script;       /**< Script to call for performing master switchover */
     uint32_t switchover_timeout;   /**< Timeout in seconds for the master switchover */
+    char* replication_user;        /**< Replication user for failover */
+    char* replication_password;    /**< Replication password for failover*/
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
 
