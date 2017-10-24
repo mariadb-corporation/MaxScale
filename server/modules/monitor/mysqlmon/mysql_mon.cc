@@ -546,6 +546,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 /**
  * Monitor specific information about a server
+ *
+ * Note: These are initialized in @c init_server_info
  */
 typedef struct mysql_server_info
 {
@@ -560,6 +562,8 @@ typedef struct mysql_server_info
     uint64_t         binlog_pos; /**< Binlog position from SHOW SLAVE STATUS */
     char            *binlog_name; /**< Binlog name from SHOW SLAVE STATUS */
     bool             binlog_relay; /** Server is a Binlog Relay */
+    int              n_slaves_configured; /**< Number of configured slave connections*/
+    int              n_slaves_running;    /**< Number of running slave connections */
 } MYSQL_SERVER_INFO;
 
 void* info_copy_func(const void *val)
@@ -888,9 +892,24 @@ enum mysql_server_version
     MYSQL_SERVER_VERSION_51
 };
 
+static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
+{
+    unsigned long server_version = mysql_get_server_version(db->con);
+
+    if (server_version >= 100000)
+    {
+        return MYSQL_SERVER_VERSION_100;
+    }
+    else if (server_version >= 5 * 10000 + 5 * 100)
+    {
+        return MYSQL_SERVER_VERSION_55;
+    }
+
+    return MYSQL_SERVER_VERSION_51;
+}
+
 static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SERVER* database,
-                                 enum mysql_server_version server_version,
-                                 int* o_n_configured, int* o_n_running, int* o_master_id)
+                                 enum mysql_server_version server_version)
 {
     bool rval = true;
     unsigned int columns;
@@ -1002,11 +1021,19 @@ static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SER
         mon_report_query_error(database);
     }
 
-    *o_n_configured = nconfigured;
-    *o_n_running = nrunning;
-    *o_master_id = master_id;
+    serv_info->n_slaves_configured = nconfigured;
+    serv_info->n_slaves_running = nrunning;
 
     return rval;
+}
+
+static bool update_slave_status(MYSQL_MONITOR* handle, MXS_MONITORED_SERVER* db)
+{
+    void* value = hashtable_fetch(handle->server_info,db->server->unique_name);
+    ss_dassert(value);
+    MYSQL_SERVER_INFO* info = static_cast<MYSQL_SERVER_INFO*>(value);
+    enum mysql_server_version version = get_server_version(db);
+    return do_show_slave_status(info, db, version);
 }
 
 static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER_INFO *serv_info,
@@ -1015,21 +1042,18 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
     /** Clear old states */
     monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
                                  SERVER_STALE_STATUS | SERVER_SLAVE_OF_EXTERNAL_MASTER);
-    int master_id = -1;
-    int nconfigured = 0;
-    int nrunning = 0;
 
-    if (do_show_slave_status(serv_info, database, server_version,
-                             &nconfigured, &nrunning, &master_id))
+    if (do_show_slave_status(serv_info, database, server_version))
     {
         /* If all configured slaves are running set this node as slave */
-        if (serv_info->slave_configured && nrunning > 0 && nrunning == nconfigured)
+        if (serv_info->slave_configured && serv_info->n_slaves_running > 0 &&
+            serv_info->n_slaves_running == serv_info->n_slaves_configured)
         {
             monitor_set_pending_status(database, SERVER_SLAVE);
         }
 
         /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
-        database->server->master_id = master_id;
+        database->server->master_id = serv_info->master_id;
     }
 }
 
