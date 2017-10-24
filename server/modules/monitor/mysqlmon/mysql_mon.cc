@@ -888,9 +888,11 @@ enum mysql_server_version
     MYSQL_SERVER_VERSION_51
 };
 
-static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER_INFO *serv_info,
-                                    enum mysql_server_version server_version)
+static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SERVER* database,
+                                 enum mysql_server_version server_version,
+                                 int* o_n_configured, int* o_n_running, int* o_master_id)
 {
+    bool rval = true;
     unsigned int columns;
     int i_io_thread, i_sql_thread, i_binlog_pos, i_master_id, i_binlog_name;
     const char *query;
@@ -916,11 +918,10 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
         i_master_id = MYSQL55_STATUS_MASTER_ID;
     }
 
-    /** Clear old states */
-    monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
-                                 SERVER_STALE_STATUS | SERVER_SLAVE_OF_EXTERNAL_MASTER);
-
     MYSQL_RES* result;
+    int master_id = -1;
+    int nconfigured = 0;
+    int nrunning = 0;
 
     if (mxs_mysql_query(database->con, query) == 0
         && (result = mysql_store_result(database->con)) != NULL)
@@ -930,17 +931,14 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
             mysql_free_result(result);
             MXS_ERROR("\"%s\" returned less than the expected amount of columns. "
                       "Expected %u columns.", query, columns);
-            return;
+            return false;
         }
 
         MYSQL_ROW row = mysql_fetch_row(result);
-        long master_id = -1;
 
         if (row)
         {
             serv_info->slave_configured = true;
-            int nconfigured = 0;
-            int nrunning = 0;
 
             do
             {
@@ -974,7 +972,7 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
                 if (serv_info->slave_io && server_version != MYSQL_SERVER_VERSION_51)
                 {
                     /* Get Master_Server_Id */
-                    master_id = atol(row[i_master_id]);
+                    master_id = atoi(row[i_master_id]);
                     if (master_id == 0)
                     {
                         master_id = -1;
@@ -985,13 +983,6 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
                 row = mysql_fetch_row(result);
             }
             while (row);
-
-
-            /* If all configured slaves are running set this node as slave */
-            if (nrunning > 0 && nrunning == nconfigured)
-            {
-                monitor_set_pending_status(database, SERVER_SLAVE);
-            }
         }
         else
         {
@@ -1003,15 +994,42 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
             serv_info->binlog_name[0] = '\0';
         }
 
-        /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
-        database->server->master_id = master_id;
         serv_info->master_id = master_id;
-
         mysql_free_result(result);
     }
     else
     {
         mon_report_query_error(database);
+    }
+
+    *o_n_configured = nconfigured;
+    *o_n_running = nrunning;
+    *o_master_id = master_id;
+
+    return rval;
+}
+
+static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER_INFO *serv_info,
+                                    enum mysql_server_version server_version)
+{
+    /** Clear old states */
+    monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
+                                 SERVER_STALE_STATUS | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+    int master_id = -1;
+    int nconfigured = 0;
+    int nrunning = 0;
+
+    if (do_show_slave_status(serv_info, database, server_version,
+                             &nconfigured, &nrunning, &master_id))
+    {
+        /* If all configured slaves are running set this node as slave */
+        if (serv_info->slave_configured && nrunning > 0 && nrunning == nconfigured)
+        {
+            monitor_set_pending_status(database, SERVER_SLAVE);
+        }
+
+        /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
+        database->server->master_id = master_id;
     }
 }
 
