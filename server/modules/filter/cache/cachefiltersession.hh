@@ -102,8 +102,6 @@ private:
 
     void reset_response_state();
 
-    cache_result_t get_cached_response(const GWBUF *pQuery, GWBUF **ppResponse);
-
     bool log_decisions() const
     {
         return m_pCache->config().debug & CACHE_DEBUG_DECISIONS ? true : false;
