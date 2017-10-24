@@ -9,6 +9,12 @@ For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
+### Binlog server
+
+- MariaDB 10 GTID is always enabled for slave connections.
+- Automatically set binlog storage to 'tree' mode when
+_mariadb10_master_gtid_ option is on.
+
 
 ## Dropped Features
 
