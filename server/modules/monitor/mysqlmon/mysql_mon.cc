@@ -634,6 +634,13 @@ bool init_server_info(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database)
     return rval;
 }
 
+static MYSQL_SERVER_INFO* get_server_info(const MYSQL_MONITOR* handle, const  MXS_MONITORED_SERVER* db)
+{
+    void* value = hashtable_fetch(handle->server_info, db->server->unique_name);
+    ss_dassert(value);
+    return static_cast<MYSQL_SERVER_INFO*>(value);
+}
+
 static bool set_replication_credentials(MYSQL_MONITOR *handle, const MXS_CONFIG_PARAMETER* params)
 {
     bool rval = false;
@@ -829,8 +836,7 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 
     for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
     {
-        MYSQL_SERVER_INFO *serv_info =
-            static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info, db->server->unique_name));
+        MYSQL_SERVER_INFO *serv_info = get_server_info(handle, db);
         dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
         dcb_printf(dcb, "Server ID: %d\n", serv_info->server_id);
         dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
@@ -891,9 +897,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
         for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
         {
             json_t* srv = json_object();
-            MYSQL_SERVER_INFO *serv_info =
-                static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                db->server->unique_name));
+            MYSQL_SERVER_INFO *serv_info = get_server_info(handle, db);
             json_object_set_new(srv, "name", json_string(db->server->unique_name));
             json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
             json_object_set_new(srv, "master_id", json_integer(serv_info->master_id));
@@ -1289,9 +1293,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     mxs_mysql_set_server_version(database->con, database->server);
     server_string = database->server->version_string;
 
-    MYSQL_SERVER_INFO *serv_info =
-        static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info, database->server->unique_name));
-    ss_dassert(serv_info);
+    MYSQL_SERVER_INFO *serv_info = get_server_info(handle, database);
 
     /* Check whether current server is MaxScale Binlog Server */
     if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
@@ -1497,10 +1499,8 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, in
 
     for (MXS_MONITORED_SERVER *db = database; db; db = db->next)
     {
-        graph[nodes].info =
-            static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info, db->server->unique_name));
+        graph[nodes].info = get_server_info(handle, db);
         graph[nodes].db = db;
-        ss_dassert(graph[nodes].info);
         graph[nodes].index = graph[nodes].lowest_index = 0;
         graph[nodes].cycle = 0;
         graph[nodes].active = false;
@@ -1606,9 +1606,7 @@ bool failover_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
         if (SERVER_IS_RUNNING(db->server))
         {
             candidates++;
-            MYSQL_SERVER_INFO *server_info =
-                static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                db->server->unique_name));
+            MYSQL_SERVER_INFO *server_info = get_server_info(handle, db);
 
             if (server_info->read_only || server_info->slave_configured || candidates > 1)
             {
@@ -1835,9 +1833,7 @@ monitorMain(void *arg)
         ptr = mon->monitored_servers;
         while (ptr)
         {
-            MYSQL_SERVER_INFO *serv_info =
-                static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                ptr->server->unique_name));
+            MYSQL_SERVER_INFO *serv_info = get_server_info(handle, ptr);
             ss_dassert(serv_info);
 
             if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
@@ -1866,10 +1862,7 @@ monitorMain(void *arg)
         {
             if (!SERVER_IN_MAINT(ptr->server))
             {
-                MYSQL_SERVER_INFO *serv_info =
-                    static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                    ptr->server->unique_name));
-                ss_dassert(serv_info);
+                MYSQL_SERVER_INFO *serv_info = get_server_info(handle, ptr);
 
                 /** If "detect_stale_master" option is On, let's use the previous master.
                  *
@@ -2027,10 +2020,7 @@ monitorMain(void *arg)
 
             while (ptr)
             {
-                MYSQL_SERVER_INFO *serv_info =
-                    static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                    ptr->server->unique_name));
-                ss_dassert(serv_info);
+                MYSQL_SERVER_INFO *serv_info = get_server_info(handle, ptr);
 
                 if ((!SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
                 {
@@ -2446,10 +2436,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
                         monitor_clear_pending_status(handle->master, SERVER_MASTER);
                     }
 
-                    MYSQL_SERVER_INFO* info =
-                        static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                        master->server->unique_name));
-                    ss_dassert(info);
+                    MYSQL_SERVER_INFO* info = get_server_info(handle, master);
 
                     if (SERVER_IS_RUNNING(master->server))
                     {
