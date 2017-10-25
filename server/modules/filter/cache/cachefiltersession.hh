@@ -118,6 +118,7 @@ private:
     };
 
     routing_action_t route_COM_QUERY(GWBUF* pPacket);
+    routing_action_t route_SELECT(GWBUF* pPacket);
 
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
