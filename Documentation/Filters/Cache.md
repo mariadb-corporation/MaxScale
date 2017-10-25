@@ -22,6 +22,10 @@ been started with `BEGIN`, `START TRANSACTION` or `START TRANSACTION READ
 WRITE`, then the cache will be used and populated until the first `UPDATE`,
 `INSERT` or `DELETE` statement is encountered.
 
+That is, in default mode the cache effectively causes the system to behave
+as if the _isolation level_ would be `READ COMMITTED`, irrespective of what
+the isolation level of the backends actually is.
+
 The default behaviour can be altered using the configuration parameter
 [cache_inside_transactions](#cache_inside_transactions).
 
@@ -264,11 +268,9 @@ are active transactions:
      The cache will be populated if the transaction is explicitly read only
      or if no non-SELECT statement has been encounted.
    * `read_only_transactions`: The cache will be used and populated inside
-     _explicitly_ read-only transactions. If the transaction is not explicitly
-     read only, the cache will be populated (but not used) until the first
-     non-SELECT statement.
+     _explicitly_ read-only transactions.
    * `all_transactions`: The cache will be used and populated inside
-     explicitly read-only transactions. Inside transactions that are not
+     _explicitly_ read-only transactions. Inside transactions that are not
      explicitly read-only, the cache will be used and populated _until_ the
      first non-SELECT statement.
 ```
