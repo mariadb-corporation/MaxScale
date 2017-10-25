@@ -111,6 +111,8 @@ private:
 
     bool should_consult_cache(GWBUF* pPacket);
 
+    bool route_COM_QUERY(GWBUF* pPacket);
+
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
 
