@@ -547,7 +547,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SELECT @@[GLOBAL].gtid_current_pos
  *  SELECT @@[global.]server_id, @@[global.]read_only
  *
- * 9 show commands are supported:
+ * 10 show commands are supported:
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_UUID'
  *  SHOW [GLOBAL] VARIABLES LIKE 'MAXSCALE%'
@@ -556,6 +556,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SHOW SLAVE HOSTS
  *  SHOW WARNINGS
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
+ *  SHOW [GLOBAL] STATUS LIKE 'slave_received_heartbeats'
  *  SHOW BINARY LOGS
  *
  * 13 set commands are supported:
@@ -5551,6 +5552,16 @@ blr_slave_handle_status_variables(ROUTER_INSTANCE *router,
                                                   slave,
                                                   "Uptime",
                                                   uptime,
+                                                  BLR_TYPE_INT);
+        }
+        else if (strcasecmp(word, "'slave_received_heartbeats'") == 0)
+        {
+            char hkbeats[41] = "";
+            snprintf(hkbeats, 40, "%d", router->stats.n_heartbeats);
+            return blr_slave_send_status_variable(router,
+                                                  slave,
+                                                  "Slave_received_heartbeats",
+                                                  hkbeats,
                                                   BLR_TYPE_INT);
         }
         else
