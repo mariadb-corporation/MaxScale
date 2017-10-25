@@ -111,7 +111,13 @@ private:
 
     bool should_consult_cache(GWBUF* pPacket);
 
-    bool route_COM_QUERY(GWBUF* pPacket);
+    enum routing_action_t
+    {
+        ROUTING_ABORT,    /**< Abort normal routing activity, data is coming from cache. */
+        ROUTING_CONTINUE, /**< Continue normal routing activity. */
+    };
+
+    routing_action_t route_COM_QUERY(GWBUF* pPacket);
 
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);

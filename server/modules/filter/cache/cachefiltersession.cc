@@ -239,7 +239,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     ss_dassert(GWBUF_LENGTH(pPacket) >= MYSQL_HEADER_LEN + 1);
     ss_dassert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == GWBUF_LENGTH(pPacket));
 
-    bool fetch_from_server = true;
+    routing_action_t action = ROUTING_CONTINUE;
 
     reset_response_state();
     m_state = CACHE_IGNORING_RESPONSE;
@@ -287,14 +287,14 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_QUERY:
-        fetch_from_server = route_COM_QUERY(pPacket);
+        action = route_COM_QUERY(pPacket);
         break;
 
     default:
         break;
     }
 
-    if (fetch_from_server)
+    if (action == ROUTING_CONTINUE)
     {
         rv = m_down.routeQuery(pPacket);
     }
@@ -899,15 +899,16 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
  *
  * @param pPacket  A contiguousCOM_QUERY packet.
  *
- * @return True if the data should be fetched from the backend,
- *         false otherwise.
+ * @return ROUTING_ABORT if the processing of the packet should be aborted
+ *         (as the data is obtained from the cache) or
+ *         ROUTING_CONTINUE if the normal processing should continue.
  */
-bool CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
+CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
 {
     ss_debug(uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
     ss_dassert((int)MYSQL_GET_COMMAND(pData) == MXS_COM_QUERY);
 
-    bool fetch_from_server = true;
+    routing_action_t action = ROUTING_CONTINUE;
 
     if (should_consult_cache(pPacket))
     {
@@ -943,7 +944,7 @@ bool CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
                                 gwbuf_free(pResponse);
 
                                 m_refreshing = true;
-                                fetch_from_server = true;
+                                action = ROUTING_CONTINUE;
                             }
                             else
                             {
@@ -954,7 +955,7 @@ bool CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
                                     MXS_NOTICE("Cache data is stale but returning it, fresh "
                                                "data is being fetched already.");
                                 }
-                                fetch_from_server = false;
+                                action = ROUTING_ABORT;
                             }
                         }
                         else
@@ -963,15 +964,15 @@ bool CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
                             {
                                 MXS_NOTICE("Using fresh data from cache.");
                             }
-                            fetch_from_server = false;
+                            action = ROUTING_ABORT;
                         }
                     }
                     else
                     {
-                        fetch_from_server = true;
+                        action = ROUTING_CONTINUE;
                     }
 
-                    if (fetch_from_server)
+                    if (action == ROUTING_CONTINUE)
                     {
                         m_state = CACHE_EXPECTING_RESPONSE;
                     }
@@ -1010,5 +1011,5 @@ bool CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
         }
     }
 
-    return fetch_from_server;
+    return action;
 }
