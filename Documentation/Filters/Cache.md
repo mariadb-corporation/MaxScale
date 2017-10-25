@@ -265,10 +265,13 @@ are active transactions:
 
    * `never`: When there is an active transaction, no data will be returned
      from the cache, but all requests will always be sent to the backend.
-     The cache will be populated if the transaction is explicitly read only
-     or if no non-SELECT statement has been encounted.
+     The cache will be populated inside _explicitly_ read-only transactions.
+     Inside transactions that are not explicitly read-only, the cache will
+     be populated _until_ the first non-SELECT statement.
    * `read_only_transactions`: The cache will be used and populated inside
-     _explicitly_ read-only transactions.
+     _explicitly_ read-only transactions. Inside transactions that are not
+     explicitly read-only, the cache will be populated, but not used
+     _until_ the first non-SELECT statement.
    * `all_transactions`: The cache will be used and populated inside
      _explicitly_ read-only transactions. Inside transactions that are not
      explicitly read-only, the cache will be used and populated _until_ the

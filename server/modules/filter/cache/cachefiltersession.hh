@@ -109,7 +109,25 @@ private:
 
     void store_result();
 
-    bool should_consult_cache(GWBUF* pPacket);
+    enum cache_action_t
+    {
+        CACHE_IGNORE           = 0,
+        CACHE_USE              = 1,
+        CACHE_POPULATE         = 2,
+        CACHE_USE_AND_POPULATE = (CACHE_USE | CACHE_POPULATE)
+    };
+
+    static bool should_use(cache_action_t action)
+    {
+        return action & CACHE_USE ? true : false;
+    }
+
+    static bool should_populate(cache_action_t action)
+    {
+        return action & CACHE_POPULATE ? true : false;
+    }
+
+    cache_action_t get_cache_action(GWBUF* pPacket);
 
     enum routing_action_t
     {
@@ -118,7 +136,7 @@ private:
     };
 
     routing_action_t route_COM_QUERY(GWBUF* pPacket);
-    routing_action_t route_SELECT(GWBUF* pPacket);
+    routing_action_t route_SELECT(cache_action_t action, GWBUF* pPacket);
 
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);

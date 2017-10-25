@@ -740,11 +740,11 @@ void CacheFilterSession::store_result()
  *
  * @param pParam The GWBUF being handled.
  *
- * @return True, if the cache should be consulted, false otherwise.
+ * @return Enum value indicating appropriate action.
  */
-bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
+CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* pPacket)
 {
-    bool consult_cache = false;
+    cache_action_t action = CACHE_IGNORE;
 
     uint32_t type_mask = qc_get_trx_type_mask(pPacket); // Note, only trx-related type mask
 
@@ -767,7 +767,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
         {
             zReason = "no transaction";
         }
-        consult_cache = true;
+        action = CACHE_USE_AND_POPULATE;
     }
     else if (session_trx_is_read_only(m_pSession))
     {
@@ -777,7 +777,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
             {
                 zReason = "explicitly read-only transaction";
             }
-            consult_cache = true;
+            action = CACHE_USE_AND_POPULATE;
         }
         else
         {
@@ -785,8 +785,9 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
 
             if (log_decisions())
             {
-                zReason = "no caching inside transactions";
+                zReason = "populating but not using cache inside read-only transactions";
             }
+            action = CACHE_POPULATE;
         }
     }
     else if (m_is_read_only)
@@ -800,7 +801,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
             {
                 zReason = "ordinary transaction that has so far been read-only";
             }
-            consult_cache = true;
+            action = CACHE_USE_AND_POPULATE;
         }
         else
         {
@@ -809,8 +810,11 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
 
             if (log_decisions())
             {
-                zReason = "no caching inside not explicitly read-only transactions";
+                zReason =
+                    "populating but not using cache inside transaction that is not "
+                    "explicitly read-only, but that has used only SELECTs sofar";
             }
+            action = CACHE_POPULATE;
         }
     }
     else
@@ -821,7 +825,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
         }
     }
 
-    if (consult_cache)
+    if (action != CACHE_IGNORE)
     {
         if (is_select_statement(pPacket))
         {
@@ -833,22 +837,22 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
 
                 if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
                 {
-                    consult_cache = false;
+                    action = CACHE_IGNORE;
                     zReason = "user variables are read";
                 }
                 else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
                 {
-                    consult_cache = false;
+                    action = CACHE_IGNORE;
                     zReason = "system variables are read";
                 }
                 else if (uses_non_cacheable_function(pPacket))
                 {
-                    consult_cache = false;
+                    action = CACHE_IGNORE;
                     zReason = "uses non-cacheable function";
                 }
                 else if (uses_non_cacheable_variable(pPacket))
                 {
-                    consult_cache = false;
+                    action = CACHE_IGNORE;
                     zReason = "uses non-cacheable variable";
                 }
             }
@@ -857,9 +861,11 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
         {
             // A bit broad, as e.g. SHOW will cause the read only state to be turned
             // off. However, during normal use this will always be an UPDATE, INSERT
-            // or DELETE.
+            // or DELETE. Note that 'm_is_read_only' only affects transactions that
+            // are not explicitly read-only.
             m_is_read_only = false;
-            consult_cache = false;
+
+            action = CACHE_IGNORE;
             zReason = "statement is not SELECT";
         }
     }
@@ -885,13 +891,13 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
             length = max_length - 3; // strlen("...");
         }
 
-        const char* zDecision = (consult_cache ? "CONSULT" : "IGNORE ");
+        const char* zDecision = (action == CACHE_IGNORE) ? "IGNORE" : "CONSULT";
 
         ss_dassert(zReason);
         MXS_NOTICE(zFormat, zDecision, length, pSql, zReason);
     }
 
-    return consult_cache;
+    return action;
 }
 
 /**
@@ -908,9 +914,10 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
     ss_debug(uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
     ss_dassert((int)MYSQL_GET_COMMAND(pData) == MXS_COM_QUERY);
 
-    routing_action_t action = ROUTING_CONTINUE;
+    routing_action_t routing_action = ROUTING_CONTINUE;
+    cache_action_t cache_action = get_cache_action(pPacket);
 
-    if (should_consult_cache(pPacket))
+    if (cache_action != CACHE_IGNORE)
     {
         if (m_pCache->should_store(m_zDefaultDb, pPacket))
         {
@@ -918,7 +925,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
             if (CACHE_RESULT_IS_OK(result))
             {
-                action = route_SELECT(pPacket);
+                routing_action = route_SELECT(cache_action, pPacket);
             }
             else
             {
@@ -932,24 +939,25 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
         }
     }
 
-    return action;
+    return routing_action;
 }
 
 
 /**
  * Routes a SELECT packet.
  *
- * @param pPacket  A contiguous COM_QUERY packet containing a SELECT.
+ * @param cache_action  The desired action.
+ * @param pPacket       A contiguous COM_QUERY packet containing a SELECT.
  *
  * @return ROUTING_ABORT if the processing of the packet should be aborted
  *         (as the data is obtained from the cache) or
  *         ROUTING_CONTINUE if the normal processing should continue.
  */
-CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(GWBUF* pPacket)
+CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_action_t cache_action, GWBUF* pPacket)
 {
-    routing_action_t action = ROUTING_CONTINUE;
+    routing_action_t routing_action = ROUTING_CONTINUE;
 
-    if (m_pCache->should_use(m_pSession))
+    if (should_use(cache_action) && m_pCache->should_use(m_pSession))
     {
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
         GWBUF* pResponse;
@@ -975,7 +983,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(GWBUF* pPa
                     gwbuf_free(pResponse);
 
                     m_refreshing = true;
-                    action = ROUTING_CONTINUE;
+                    routing_action = ROUTING_CONTINUE;
                 }
                 else
                 {
@@ -986,7 +994,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(GWBUF* pPa
                         MXS_NOTICE("Cache data is stale but returning it, fresh "
                                    "data is being fetched already.");
                     }
-                    action = ROUTING_ABORT;
+                    routing_action = ROUTING_ABORT;
                 }
             }
             else
@@ -995,15 +1003,15 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(GWBUF* pPa
                 {
                     MXS_NOTICE("Using fresh data from cache.");
                 }
-                action = ROUTING_ABORT;
+                routing_action = ROUTING_ABORT;
             }
         }
         else
         {
-            action = ROUTING_CONTINUE;
+            routing_action = ROUTING_CONTINUE;
         }
 
-        if (action == ROUTING_CONTINUE)
+        if (routing_action == ROUTING_CONTINUE)
         {
             m_state = CACHE_EXPECTING_RESPONSE;
         }
@@ -1020,6 +1028,8 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(GWBUF* pPa
     }
     else
     {
+        ss_dassert(should_populate(cache_action));
+
         // We will not use any value in the cache, but we will update
         // the existing value.
         if (log_decisions())
@@ -1030,5 +1040,5 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(GWBUF* pPa
         m_state = CACHE_EXPECTING_RESPONSE;
     }
 
-    return action;
+    return routing_action;
 }
