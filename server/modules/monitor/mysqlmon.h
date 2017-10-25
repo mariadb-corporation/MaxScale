@@ -61,7 +61,7 @@ typedef struct
     int failcount;                 /**< How many monitoring cycles servers must be
                                       down before failover is initiated */
     bool allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
-    bool warn_failover;            /**< Log a warning when failover happens */
+    bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
     bool allow_external_slaves;    /**< Whether to allow usage of external slave servers */
     bool failover;                 /**< If master failover is enabled */
     char* failover_script;         /**< Script to call for performing master failover */

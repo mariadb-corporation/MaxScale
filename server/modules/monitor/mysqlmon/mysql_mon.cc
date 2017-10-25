@@ -22,6 +22,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/debug.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/json_api.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
@@ -64,6 +65,8 @@ static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
 static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
+static bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, uint32_t failover_timeout);
+static bool do_failover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* failed_master);
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
@@ -705,7 +708,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->server_info = server_info;
         handle->shutdown = 0;
         handle->id = config_get_global_options()->id;
-        handle->warn_failover = true;
+        handle->warn_set_standalone_master = true;
         handle->monitor = monitor;
     }
 
@@ -1586,18 +1589,18 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, in
 }
 
 /**
- * @brief Check whether failover conditions have been met
+ * @brief Check whether standalone master conditions have been met
  *
- * This function checks whether all the conditions to trigger a failover have
- * been met. For a failover to happen, only one server must be available and
+ * This function checks whether all the conditions to use a standalone master have
+ * been met. For this to happen, only one server must be available and
  * other servers must have passed the configured tolerance level of failures.
  *
  * @param handle Monitor instance
  * @param db     Monitor servers
  *
- * @return True if failover is required
+ * @return True if standalone master should be used
  */
-bool failover_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
+bool standalone_master_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 {
     int candidates = 0;
 
@@ -1625,29 +1628,28 @@ bool failover_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 }
 
 /**
- * @brief Initiate simple failover
+ * @brief Use standalone master
  *
- * This function does the actual failover by assigning the last remaining server
- * the master status and setting all other servers into maintenance mode. By
- * setting the servers into maintenance mode, we prevent any possible conflicts
- * when the failed servers come back up.
+ * This function assigns the last remaining server the master status and sets all other
+ * servers into maintenance mode. By setting the servers into maintenance mode, we
+ * prevent any possible conflicts when the failed servers come back up.
  *
  * @param handle Monitor instance
  * @param db     Monitor servers
  */
-void do_failover(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
+void set_standalone_master(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 {
     while (db)
     {
         if (SERVER_IS_RUNNING(db->server))
         {
-            if (!SERVER_IS_MASTER(db->server) && handle->warn_failover)
+            if (!SERVER_IS_MASTER(db->server) && handle->warn_set_standalone_master)
             {
-                MXS_WARNING("Failover initiated, server '%s' is now the master.%s",
+                MXS_WARNING("Setting standalone master, server '%s' is now the master.%s",
                             db->server->unique_name,
                             handle->allow_cluster_recovery ?
                             "" : " All other servers are set into maintenance mode.");
-                handle->warn_failover = false;
+                handle->warn_set_standalone_master = false;
             }
 
             server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
@@ -1956,17 +1958,17 @@ monitorMain(void *arg)
         }
 
         /** Now that all servers have their status correctly set, we can check
-            if we need to do a failover */
+            if we need to use standalone master. */
         if (handle->detect_standalone_master)
         {
-            if (failover_required(handle, mon->monitored_servers))
+            if (standalone_master_required(handle, mon->monitored_servers))
             {
-                /** Other servers have died, initiate a failover to the last remaining server */
-                do_failover(handle, mon->monitored_servers);
+                /** Other servers have died, set last remaining server as master */
+                set_standalone_master(handle, mon->monitored_servers);
             }
             else
             {
-                handle->warn_failover = true;
+                handle->warn_set_standalone_master = true;
             }
         }
 
@@ -1995,7 +1997,7 @@ monitorMain(void *arg)
                           "'%s' via MaxAdmin or the REST API.", CN_FAILOVER, mon->name);
                 handle->failover = false;
             }
-            else if (!mon_process_failover(mon, failover_script, handle->failover_timeout))
+            else if (!mon_process_failover(handle, failover_script, handle->failover_timeout))
             {
                 MXS_ALERT("Failed to perform failover, disabling failover functionality. "
                           "To enable failover functionality, manually set 'failover' to "
@@ -2758,4 +2760,97 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
         MXS_WARNING("Problems were encountered when checking if '%s' is replicated. Make sure that "
                     "the table is replicated to all slaves.", hb_table_name);
     }
+}
+
+/**
+ * @brief Process possible failover event
+ *
+ * If a master failure has occurred and MaxScale is configured with failover
+ * functionality, this fuction executes an external failover program to elect
+ * a new master server.
+ *
+ * This function should be called immediately after @c mon_process_state_changes.
+ *
+ * @param monitor          Monitor whose cluster is processed
+ * @param failover_script  The script to be used for performing the failover.
+ * @param failover_timeout Timeout in seconds for the failover
+ *
+ * @return True on success, false on error
+ *
+ * @todo Currently this only works with flat replication topologies and
+ *       needs to be moved inside mysqlmon as it is MariaDB specific code.
+ */
+bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, uint32_t failover_timeout)
+{
+    bool rval = true;
+    MXS_CONFIG* cnf = config_get_global_options();
+    MXS_MONITORED_SERVER* failed_master = NULL;
+
+    for (MXS_MONITORED_SERVER *ptr = monitor->monitor->monitored_servers; ptr; ptr = ptr->next)
+    {
+        if (mon_status_changed(ptr))
+        {
+            if (ptr->server->last_event == MASTER_DOWN_EVENT)
+            {
+                if (!cnf->passive)
+                {
+                    if (failed_master)
+                    {
+                        MXS_ALERT("Multiple failed master servers detected: "
+                                  "'%s' is the first master to fail but server "
+                                  "'%s' has also triggered a master_down event.",
+                                  failed_master->server->unique_name,
+                                  ptr->server->unique_name);
+                        return false;
+                    }
+                    else
+                    {
+                        failed_master = ptr;
+                    }
+                }
+            }
+        }
+        else
+        {
+            /**
+             * If a master_down event was triggered when this MaxScale was
+             * passive, we need to execute the failover script again if no new
+             * masters have appeared and this MaxScale has been set as active
+             * since the event took place.
+             */
+
+            if (!cnf->passive && // This is not a passive MaxScale
+                ptr->server->last_event == MASTER_DOWN_EVENT && // This is a master that went down
+                cnf->promoted_at >= ptr->server->triggered_at && // Promoted to active after the event took place
+                ptr->new_event && // Event has not yet been processed
+                monitor->monitor->last_master_down > monitor->monitor->last_master_up) // Latest relevant event
+            {
+                int64_t timeout = SEC_TO_HB(failover_timeout);
+                int64_t t = hkheartbeat - ptr->server->triggered_at;
+
+                if (t > timeout)
+                {
+                    MXS_WARNING("Failover of server '%s' did not take place within "
+                                "%u seconds, failover needs to be re-triggered",
+                                ptr->server->unique_name, failover_timeout);
+                    failed_master = ptr;
+                    ptr->new_event = false;
+                }
+            }
+        }
+    }
+
+    if (failed_master)
+    {
+        MXS_NOTICE("Performing failover of server '%s'", failed_master->server->unique_name);
+        rval = do_failover(monitor, failed_master);
+    }
+
+    return rval;
+}
+
+bool do_failover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* failed_master)
+{
+    // Implement here a simple failover script
+    return false;
 }
