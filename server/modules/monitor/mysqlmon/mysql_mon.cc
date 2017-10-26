@@ -21,6 +21,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <inttypes.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/debug.h>
@@ -48,6 +49,7 @@
 #define MARIA10_STATUS_MASTER_ID 41
 #define MARIA10_STATUS_HEARTBEATS 55
 #define MARIA10_STATUS_HEARTBEAT_PERIOD 56
+#define MARIA10_STATUS_SLAVE_GTID 57
 
 /** Column positions for SHOW SLAVE HOSTS */
 #define SLAVE_HOSTS_SERVER_ID 0
@@ -592,6 +594,14 @@ typedef struct mysql_server_info
     int              slave_heartbeats; /**< Number of received heartbeats*/
     double           heartbeat_period; /**< The time interval between heartbeats */
     time_t           latest_event; /**< Time when latest event was received from the master */
+
+    struct
+    {
+        uint32_t domain;
+        uint32_t server_id;
+        uint64_t sequence;
+    } slave_gtid;
+
 } MYSQL_SERVER_INFO;
 
 void* info_copy_func(const void *val)
@@ -973,6 +983,12 @@ static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
     return MYSQL_SERVER_VERSION_51;
 }
 
+static void extract_slave_gtid(MYSQL_SERVER_INFO* info, const char* str)
+{
+    sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &info->slave_gtid.domain,
+           &info->slave_gtid.server_id, &info->slave_gtid.sequence);
+}
+
 static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SERVER* database,
                                  enum mysql_server_version server_version)
 {
@@ -1076,6 +1092,7 @@ static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SER
                     ss_debug(MYSQL_FIELD* f = mysql_fetch_fields(result));
                     ss_dassert(strcmp(f[MARIA10_STATUS_HEARTBEATS].name, "Slave_received_heartbeats") == 0);
                     ss_dassert(strcmp(f[MARIA10_STATUS_HEARTBEAT_PERIOD].name, "Slave_heartbeat_period") == 0);
+                    ss_dassert(strcmp(f[MARIA10_STATUS_SLAVE_GTID].name, "Gtid_Slave_Pos") == 0);
 
                     int heartbeats = atoi(row[MARIA10_STATUS_HEARTBEATS]);
                     if (serv_info->slave_heartbeats < heartbeats)
@@ -1083,6 +1100,11 @@ static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SER
                         serv_info->latest_event = time(NULL);
                         serv_info->slave_heartbeats = heartbeats;
                         serv_info->heartbeat_period = atof(row[MARIA10_STATUS_HEARTBEAT_PERIOD]);
+                    }
+
+                    if (row[MARIA10_STATUS_SLAVE_GTID])
+                    {
+                        extract_slave_gtid(serv_info, row[MARIA10_STATUS_SLAVE_GTID]);
                     }
                 }
 
@@ -1100,6 +1122,7 @@ static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SER
             serv_info->binlog_pos = 0;
             serv_info->binlog_name[0] = '\0';
             serv_info->slave_heartbeats = 0;
+            serv_info->slave_gtid = {};
         }
 
         serv_info->master_id = master_id;
