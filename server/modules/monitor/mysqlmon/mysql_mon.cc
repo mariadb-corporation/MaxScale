@@ -81,16 +81,25 @@ static const char CN_SWITCHOVER[]         = "switchover";
 static const char CN_SWITCHOVER_SCRIPT[]  = "switchover_script";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 
+// Parameters for master failure verification and timeout
+static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
+static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
+
 // Replication credentials parameters for failover
 static const char CN_REPLICATION_USER[]     = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 
 /** Default failover timeout */
 #define DEFAULT_FAILOVER_TIMEOUT "90"
+
 /** Default switchover timeout */
 #define DEFAULT_SWITCHOVER_TIMEOUT "90"
 
+/** Default master failure verification timeout */
+#define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
+
 typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
+
 // TODO: Specify the real default failover script.
 static const char DEFAULT_FAILOVER_SCRIPT[] =
     "/usr/bin/echo INITIATOR=$INITIATOR "
@@ -549,6 +558,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
             {CN_REPLICATION_USER, MXS_MODULE_PARAM_STRING},
             {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
+            {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
+            {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -742,6 +753,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->switchover = config_get_bool(params, CN_SWITCHOVER);
     handle->switchover_script = config_copy_string(params, CN_SWITCHOVER_SCRIPT);
     handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
+    handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
+    handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
 
     bool error = false;
 
@@ -1110,6 +1123,36 @@ static bool update_slave_status(MYSQL_MONITOR* handle, MXS_MONITORED_SERVER* db)
     MYSQL_SERVER_INFO* info = static_cast<MYSQL_SERVER_INFO*>(value);
     enum mysql_server_version version = get_server_version(db);
     return do_show_slave_status(info, db, version);
+}
+
+static bool master_still_alive(MYSQL_MONITOR* handle)
+{
+    bool rval = true;
+
+    if (handle->master && SERVER_IS_DOWN(handle->master->server))
+    {
+        // We have a master and it appears to be dead
+        rval = false;
+
+        for (MXS_MONITORED_SERVER* s = handle->monitor->monitored_servers; s; s = s->next)
+        {
+            MYSQL_SERVER_INFO* info = get_server_info(handle, s);
+
+            if (info->slave_configured && info->master_id == handle->master->server->node_id &&
+                difftime(time(NULL), info->latest_event) < handle->master_failure_timeout)
+            {
+                /**
+                 * The slave is still connected to the correct master and has
+                 * received events. This means that the master is not dead, but
+                 * we just can't connect to it.
+                 */
+                rval = true;
+                break;
+            }
+        }
+    }
+
+    return rval;
 }
 
 static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER_INFO *serv_info,
@@ -2030,6 +2073,10 @@ monitorMain(void *arg)
                           "functionality, manually set '%s' to 'true' for monitor "
                           "'%s' via MaxAdmin or the REST API.", CN_FAILOVER, mon->name);
                 handle->failover = false;
+            }
+            else if (handle->verify_master_failure && master_still_alive(handle))
+            {
+                MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
             }
             else if (!mon_process_failover(handle, failover_script, handle->failover_timeout))
             {

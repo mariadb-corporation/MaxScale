@@ -358,6 +358,35 @@ The password of the replication user. This is given as the value for
 See `replication_user` parameter documentation for details about the use of this
 parameter.
 
+### `verify_master_failure`
+
+Enable master failure verification for failover. This parameter expects a
+boolean value and the feature is enabled by default.
+
+The failure of a master can be verified by checking whether the slaves are still
+connected to the master. The timeout for master failure verification is
+controlled by the `master_failure_timeout` parameter.
+
+### `master_failure_timeout`
+
+This parameter controls the period of time, in seconds, that the monitor must
+wait before it can declare that the master has failed. The default value is 10
+seconds.
+
+The failure of a master is verified by tracking when the last change to the
+relay log was done and when the last replication heartbeat was received. If the
+period of time between the last received event and the time of the check exceeds
+the configured value, the slave's connection to the master is considered to be
+broken.
+
+When all slaves of a failed master are no longer connected to the master, the
+master failure is verified and the failover can be safely performed.
+
+If the slaves lose their connections to the master before the configured timeout
+is exceeded, the failover is performed immediately. This allows a faster
+failover when the master server crashes causing immediate disconnection of the
+the network connections.
+
 ## Using the MySQL Monitor With Binlogrouter
 
 Since MaxScale 2.2 it's possible to detect a replication setup

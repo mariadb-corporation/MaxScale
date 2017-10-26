@@ -71,6 +71,8 @@ typedef struct
     uint32_t switchover_timeout;   /**< Timeout in seconds for the master switchover */
     char* replication_user;        /**< Replication user for failover */
     char* replication_password;    /**< Replication password for failover*/
+    bool verify_master_failure;    /**< Whether master failure is verified via slaves */
+    int master_failure_timeout;    /**< Time in seconds to wait before doing failover */
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
 
