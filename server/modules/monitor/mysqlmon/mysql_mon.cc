@@ -46,6 +46,8 @@
 #define MARIA10_STATUS_IO_RUNNING 12
 #define MARIA10_STATUS_SQL_RUNNING 13
 #define MARIA10_STATUS_MASTER_ID 41
+#define MARIA10_STATUS_HEARTBEATS 55
+#define MARIA10_STATUS_HEARTBEAT_PERIOD 56
 
 /** Column positions for SHOW SLAVE HOSTS */
 #define SLAVE_HOSTS_SERVER_ID 0
@@ -575,7 +577,10 @@ typedef struct mysql_server_info
     char            *binlog_name; /**< Binlog name from SHOW SLAVE STATUS */
     bool             binlog_relay; /** Server is a Binlog Relay */
     int              n_slaves_configured; /**< Number of configured slave connections*/
-    int              n_slaves_running;    /**< Number of running slave connections */
+    int              n_slaves_running; /**< Number of running slave connections */
+    int              slave_heartbeats; /**< Number of received heartbeats*/
+    double           heartbeat_period; /**< The time interval between heartbeats */
+    time_t           latest_event; /**< Time when latest event was received from the master */
 } MYSQL_SERVER_INFO;
 
 void* info_copy_func(const void *val)
@@ -1018,12 +1023,20 @@ static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SER
                     {
                         /** Only check binlog name for the first running slave */
                         char *binlog_name = MXS_STRDUP(row[i_binlog_name]);
+                        uint64_t binlog_pos = atol(row[i_binlog_pos]);
 
                         if (binlog_name)
                         {
+                            if (strcmp(binlog_name, serv_info->binlog_name) != 0 ||
+                                binlog_pos != serv_info->binlog_pos)
+                            {
+                                // IO thread is reading events from the master
+                                serv_info->latest_event = time(NULL);
+                            }
+
                             MXS_FREE(serv_info->binlog_name);
                             serv_info->binlog_name = binlog_name;
-                            serv_info->binlog_pos = atol(row[i_binlog_pos]);
+                            serv_info->binlog_pos = binlog_pos;
                         }
                     }
 
@@ -1045,6 +1058,21 @@ static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SER
                     }
                 }
 
+                if (server_version == MYSQL_SERVER_VERSION_100)
+                {
+                    ss_debug(MYSQL_FIELD* f = mysql_fetch_fields(result));
+                    ss_dassert(strcmp(f[MARIA10_STATUS_HEARTBEATS].name, "Slave_received_heartbeats") == 0);
+                    ss_dassert(strcmp(f[MARIA10_STATUS_HEARTBEAT_PERIOD].name, "Slave_heartbeat_period") == 0);
+
+                    int heartbeats = atoi(row[MARIA10_STATUS_HEARTBEATS]);
+                    if (serv_info->slave_heartbeats < heartbeats)
+                    {
+                        serv_info->latest_event = time(NULL);
+                        serv_info->slave_heartbeats = heartbeats;
+                        serv_info->heartbeat_period = atof(row[MARIA10_STATUS_HEARTBEAT_PERIOD]);
+                    }
+                }
+
                 nconfigured++;
                 row = mysql_fetch_row(result);
             }
@@ -1058,6 +1086,7 @@ static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SER
             serv_info->slave_sql = false;
             serv_info->binlog_pos = 0;
             serv_info->binlog_name[0] = '\0';
+            serv_info->slave_heartbeats = 0;
         }
 
         serv_info->master_id = master_id;
