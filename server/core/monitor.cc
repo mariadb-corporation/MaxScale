@@ -1758,7 +1758,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             mxs_monitor_event_t event = mon_get_event_type(ptr);
             ptr->server->last_event = event;
             ptr->server->triggered_at = hkheartbeat;
-            ptr->server->active_event = !atomic_load_int32(&config_get_global_options()->passive);
+            ptr->server->active_event = !config_get_global_options()->passive;
             ptr->new_event = true;
             mon_log_state_change(ptr);
 
