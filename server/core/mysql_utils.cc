@@ -23,6 +23,7 @@
 #include <maxscale/mysql_utils.h>
 
 #include <string.h>
+#include <strings.h>
 #include <stdbool.h>
 #include <errmsg.h>
 
@@ -208,6 +209,22 @@ int mxs_mysql_query(MYSQL* conn, const char* query)
     }
 
     return rc;
+}
+
+const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* key)
+{
+    MYSQL_FIELD* f = mysql_fetch_fields(result);
+    int nfields = mysql_num_fields(result);
+
+    for (int i = 0; i < nfields; i++)
+    {
+        if (strcasecmp(f[i].name, key) == 0)
+        {
+            return row[i];
+        }
+    }
+
+    return NULL;
 }
 
 bool mxs_mysql_trim_quotes(char *s)

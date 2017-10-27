@@ -1089,22 +1089,22 @@ static bool do_show_slave_status(MYSQL_SERVER_INFO* serv_info, MXS_MONITORED_SER
 
                 if (server_version == MYSQL_SERVER_VERSION_100)
                 {
-                    ss_debug(MYSQL_FIELD* f = mysql_fetch_fields(result));
-                    ss_dassert(strcmp(f[MARIA10_STATUS_HEARTBEATS].name, "Slave_received_heartbeats") == 0);
-                    ss_dassert(strcmp(f[MARIA10_STATUS_HEARTBEAT_PERIOD].name, "Slave_heartbeat_period") == 0);
-                    ss_dassert(strcmp(f[MARIA10_STATUS_SLAVE_GTID].name, "Gtid_Slave_Pos") == 0);
+                    const char* beats = mxs_mysql_get_value(result, row, "Slave_received_heartbeats");
+                    const char* period = mxs_mysql_get_value(result, row, "Slave_heartbeat_period");
+                    const char* gtid = mxs_mysql_get_value(result, row, "Gtid_Slave_Pos");
+                    ss_dassert(beats && period);
 
-                    int heartbeats = atoi(row[MARIA10_STATUS_HEARTBEATS]);
+                    int heartbeats = atoi(beats);
                     if (serv_info->slave_heartbeats < heartbeats)
                     {
                         serv_info->latest_event = time(NULL);
                         serv_info->slave_heartbeats = heartbeats;
-                        serv_info->heartbeat_period = atof(row[MARIA10_STATUS_HEARTBEAT_PERIOD]);
+                        serv_info->heartbeat_period = atof(period);
                     }
 
-                    if (row[MARIA10_STATUS_SLAVE_GTID])
+                    if (gtid)
                     {
-                        extract_slave_gtid(serv_info, row[MARIA10_STATUS_SLAVE_GTID]);
+                        extract_slave_gtid(serv_info, gtid);
                     }
                 }
 
