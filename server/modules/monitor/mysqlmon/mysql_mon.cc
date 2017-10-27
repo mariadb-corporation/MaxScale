@@ -1148,6 +1148,12 @@ static bool update_slave_status(MYSQL_MONITOR* handle, MXS_MONITORED_SERVER* db)
     return do_show_slave_status(info, db, version);
 }
 
+static inline bool master_maybe_dead(MYSQL_MONITOR* handle)
+{
+    return handle->verify_master_failure && handle->master &&
+        SERVER_IS_DOWN(handle->master->server);
+}
+
 static bool master_still_alive(MYSQL_MONITOR* handle)
 {
     bool rval = true;
@@ -2097,7 +2103,7 @@ monitorMain(void *arg)
                           "'%s' via MaxAdmin or the REST API.", CN_FAILOVER, mon->name);
                 handle->failover = false;
             }
-            else if (handle->verify_master_failure && master_still_alive(handle))
+            else if (master_maybe_dead(handle) && master_still_alive(handle))
             {
                 MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
             }
