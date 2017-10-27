@@ -763,10 +763,10 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             if (cnf.passive && !boolval)
             {
                 // This MaxScale is being promoted to the active instance
-                cnf.promoted_at = hkheartbeat;
+                atomic_store_int64(&cnf.promoted_at, hkheartbeat);
             }
 
-            cnf.passive = boolval;
+            atomic_store_int32(&cnf.passive, boolval);
             rval = true;
         }
         else

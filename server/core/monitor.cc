@@ -1755,16 +1755,17 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             mxs_monitor_event_t event = mon_get_event_type(ptr);
             ptr->server->last_event = event;
             ptr->server->triggered_at = hkheartbeat;
+            ptr->server->active_event = !atomic_load_int32(&config_get_global_options()->passive);
             ptr->new_event = true;
             mon_log_state_change(ptr);
 
             if (event == MASTER_DOWN_EVENT)
             {
-                monitor->last_master_down = hkheartbeat;
+                monitor->master_has_failed = true;
             }
             else if (event == MASTER_UP_EVENT || event == NEW_MASTER_EVENT)
             {
-                monitor->last_master_up = hkheartbeat;
+                monitor->master_has_failed = false;
             }
 
             if (script && (events & event))

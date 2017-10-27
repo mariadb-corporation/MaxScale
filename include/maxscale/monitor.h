@@ -205,8 +205,7 @@ struct mxs_monitor
     bool active; /**< True if monitor is active */
     time_t journal_max_age; /**< Maximum age of journal file */
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
-    int64_t last_master_up; /**< Time when the last master_up event was triggered */
-    int64_t last_master_down; /**< Time when the last master_down event was triggered */
+    bool master_has_failed; /**< Set to true when the latest event is a master_down event */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 

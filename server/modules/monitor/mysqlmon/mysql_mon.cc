@@ -2892,43 +2892,32 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, u
 
     for (MXS_MONITORED_SERVER *ptr = monitor->monitor->monitored_servers; ptr; ptr = ptr->next)
     {
-        if (mon_status_changed(ptr))
+        if (ptr->new_event && !cnf->passive &&
+            ptr->server->last_event == MASTER_DOWN_EVENT)
         {
-            if (ptr->server->last_event == MASTER_DOWN_EVENT)
+            if (failed_master)
             {
-                if (!cnf->passive)
-                {
-                    if (failed_master)
-                    {
-                        MXS_ALERT("Multiple failed master servers detected: "
-                                  "'%s' is the first master to fail but server "
-                                  "'%s' has also triggered a master_down event.",
-                                  failed_master->server->unique_name,
-                                  ptr->server->unique_name);
-                        return false;
-                    }
-                    else
-                    {
-                        failed_master = ptr;
-                    }
-                }
+                MXS_ALERT("Multiple failed master servers detected: "
+                          "'%s' is the first master to fail but server "
+                          "'%s' has also triggered a master_down event.",
+                          failed_master->server->unique_name,
+                          ptr->server->unique_name);
+                return false;
             }
-        }
-        else
-        {
-            /**
-             * If a master_down event was triggered when this MaxScale was
-             * passive, we need to execute the failover script again if no new
-             * masters have appeared and this MaxScale has been set as active
-             * since the event took place.
-             */
 
-            if (!cnf->passive && // This is not a passive MaxScale
-                ptr->server->last_event == MASTER_DOWN_EVENT && // This is a master that went down
-                cnf->promoted_at >= ptr->server->triggered_at && // Promoted to active after the event took place
-                ptr->new_event && // Event has not yet been processed
-                monitor->monitor->last_master_down > monitor->monitor->last_master_up) // Latest relevant event
+            if (ptr->server->active_event)
             {
+                // MaxScale was active when the event took place
+                failed_master = ptr;
+                ptr->new_event = false;
+            }
+            else if (monitor->monitor->master_has_failed)
+            {
+                /**
+                 * If a master_down event was triggered when this MaxScale was
+                 * passive, we need to execute the failover script again if no new
+                 * masters have appeared.
+                 */
                 int64_t timeout = SEC_TO_HB(failover_timeout);
                 int64_t t = hkheartbeat - ptr->server->triggered_at;
 

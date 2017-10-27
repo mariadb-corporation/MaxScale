@@ -136,6 +136,7 @@ typedef struct server
     bool           is_active;      /**< Server is active and has not been "destroyed" */
     bool           proxy_protocol; /**< Send proxy-protocol header to backend when connecting client sessions. */
     int            last_event;     /**< The last event that occurred on this server */
+    bool           active_event;   /**< Event observed when MaxScale was active */
     int64_t        triggered_at;   /**< Time when the last event was triggered */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
