@@ -501,6 +501,10 @@ add_test_executable(mxs1451_skip_auth.cpp mxs1451_skip_auth mxs1451_skip_auth LA
 # https://jira.mariadb.org/browse/MXS-1457
 add_test_executable(mxs1457_ignore_deleted.cpp mxs1457_ignore_deleted mxs1457_ignore_deleted LABELS REPL_BACKEND)
 
+# MXS-1493: Use replication heartbeat in mysqlmon
+# https://jira.mariadb.org/browse/MXS-1493
+add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
