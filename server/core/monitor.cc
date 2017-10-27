@@ -1740,6 +1740,9 @@ void servers_status_current_to_pending(MXS_MONITOR *monitor)
 
 void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_t events)
 {
+    bool master_down = false;
+    bool master_up = false;
+
     for (MXS_MONITORED_SERVER *ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
     {
         if (mon_status_changed(ptr))
@@ -1761,11 +1764,11 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
 
             if (event == MASTER_DOWN_EVENT)
             {
-                monitor->master_has_failed = true;
+                master_down = true;
             }
             else if (event == MASTER_UP_EVENT || event == NEW_MASTER_EVENT)
             {
-                monitor->master_has_failed = false;
+                master_up = true;
             }
 
             if (script && (events & event))
@@ -1773,6 +1776,23 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
                 monitor_launch_script(monitor, ptr, script, monitor->script_timeout);
             }
         }
+    }
+
+    if (master_down != master_up)
+    {
+        // We either lost the master or gained a new one
+        if (master_down)
+        {
+            monitor->master_has_failed = true;
+        }
+        else if (master_up)
+        {
+            monitor->master_has_failed = false;
+        }
+    }
+    else if (master_down && master_up)
+    {
+        MXS_INFO("Master switch detected: lost a master and gained a new one");
     }
 }
 
