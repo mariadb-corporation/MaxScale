@@ -89,6 +89,7 @@
 #include <zlib.h>
 #include <maxscale/alloc.h>
 #include <inttypes.h>
+#include <maxscale/utils.h>
 
 /**
  * This struct is used by sqlite3_exec callback routine
@@ -1168,6 +1169,20 @@ static const char *mariadb10_gtid_status_columns[] =
     NULL
 };
 
+/*
+ * Extra Columns to send in "SHOW ALL SLAVES STATUS" MariaDB 10 command
+ */
+static const char *mariadb10_extra_status_columns[] =
+{
+    "Retried_transactions",
+    "Max_relay_log_size",
+    "Executed_log_entries",
+    "Slave_received_heartbeats",
+    "Slave_heartbeat_period",
+    "Gtid_Slave_Pos",
+    NULL
+};
+
 /**
  * Send the response to the SQL command "SHOW SLAVE STATUS" or
  * SHOW ALL SLAVES STATUS
@@ -1192,19 +1207,13 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     int gtid_cols = 0;
 
     /* Count SHOW SLAVE STATUS the columns */
-    while (slave_status_columns[ncols])
-    {
-        ncols++;
-    }
+    ncols += MXS_ARRAY_NELEMS(slave_status_columns) - 1;
 
     /* Add the new SHOW ALL SLAVES STATUS columns */
     if (all_slaves)
     {
-        int k = 0;
-        while (all_slaves_status_columns[k++])
-        {
-            ncols++;
-        }
+        ncols += MXS_ARRAY_NELEMS(all_slaves_status_columns) - 1;
+        ncols += MXS_ARRAY_NELEMS(mariadb10_extra_status_columns) - 1;
     }
 
     /* Get the right GTID columns array */
@@ -1255,6 +1264,20 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
                                  BLR_TYPE_STRING,
                                  40,
                                  seqno++);
+    }
+
+    /* Send extra columns for SHOW ALL SLAVES STATUS */
+    if (all_slaves)
+    {
+        for (i = 0; mariadb10_extra_status_columns[i]; i++)
+        {
+            blr_slave_send_columndef(router,
+                                     slave,
+                                     mariadb10_extra_status_columns[i],
+                                     BLR_TYPE_STRING,
+                                     40,
+                                     seqno++);
+        }
     }
 
     /* Send EOF for columns def */
@@ -1647,6 +1670,50 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
         *ptr++ = col_len;                // Length of result string
         memcpy(ptr, column, col_len);    // Result string
         ptr += col_len;
+    }
+
+    if (all_slaves)
+    {
+        // Retried_transactions
+        sprintf(column, "%d", 0);
+        col_len = strlen(column);
+        *ptr++ = col_len;                        // Length of result string
+        memcpy((char *)ptr, column, col_len);    // Result string
+        ptr += col_len;
+
+        *ptr++ = 0;    // Max_relay_log_size
+        *ptr++ = 0;    // Executed_log_entries
+
+        // Slave_received_heartbeats
+        sprintf(column, "%d", router->stats.n_heartbeats);
+        col_len = strlen(column);
+        *ptr++ = col_len;                        // Length of result string
+        memcpy((char *)ptr, column, col_len);    // Result string
+        ptr += col_len;
+
+        // Slave_heartbeat_period
+        sprintf(column, "%lu", router->heartbeat);
+        col_len = strlen(column);
+        *ptr++ = col_len;                        // Length of result string
+        memcpy((char *)ptr, column, col_len);    // Result string
+        ptr += col_len;
+
+        //Gtid_Slave_Pos
+        if (!router->mariadb10_gtid)
+        {
+            // No GTID support send empty values
+            *ptr++ = 0;
+        }
+        else
+        {
+            sprintf(column,
+                    "%s",
+                    router->last_mariadb_gtid);
+            col_len = strlen(column);
+            *ptr++ = col_len;                // Length of result string
+            memcpy(ptr, column, col_len);    // Result string
+            ptr += col_len;
+        }
     }
 
     *ptr++ = 0;
@@ -7462,7 +7529,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
             return true;
         }
     }
-    else if (strstr(word, "@slave_connect_state") != NULL)
+    else if (strcasestr(word, "@slave_connect_state") != NULL)
     {
         /* If not mariadb an error message will be returned */
         if (slave->mariadb10_compat &&
