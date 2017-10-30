@@ -35,15 +35,15 @@
 #include "../../../core/maxscale/monitor.h"
 
 /** Column positions for SHOW SLAVE STATUS */
-#define MYSQL55_STATUS_BINLOG_POS 5
-#define MYSQL55_STATUS_BINLOG_NAME 6
+#define MYSQL55_STATUS_MASTER_LOG_POS 5
+#define MYSQL55_STATUS_MASTER_LOG_FILE 6
 #define MYSQL55_STATUS_IO_RUNNING 10
 #define MYSQL55_STATUS_SQL_RUNNING 11
 #define MYSQL55_STATUS_MASTER_ID 39
 
 /** Column positions for SHOW SLAVE STATUS */
-#define MARIA10_STATUS_BINLOG_NAME 7
-#define MARIA10_STATUS_BINLOG_POS 8
+#define MARIA10_STATUS_MASTER_LOG_FILE 7
+#define MARIA10_STATUS_MASTER_LOG_POS 8
 #define MARIA10_STATUS_IO_RUNNING 12
 #define MARIA10_STATUS_SQL_RUNNING 13
 #define MARIA10_STATUS_MASTER_ID 41
@@ -572,20 +572,45 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 }
 
+class Gtid
+{
+public:
+    uint32_t domain;
+    uint32_t server_id;
+    uint64_t sequence;
+    Gtid()
+       :    domain(0),
+            server_id(0),
+            sequence(0)
+    {}
+
+    Gtid(const char* str)
+    {
+        if (sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &domain, &server_id, &sequence) != 3)
+        {
+            domain = 0;
+            server_id = 0;
+            sequence = 0;
+        }
+    }
+};
 // Contains data returned by one row of SHOW ALL SLAVES STATUS
 class SlaveStatusInfo
 {
 public:
-    int master_id; /**< Master server id */
-    bool slave_io;  /**< If Slave IO thread is running  */
-    bool slave_sql; /**< If Slave SQL thread is running */
-    uint64_t binlog_pos; /**< Binlog position */
-    string binlog_name; /**< Binlog name */
+    int master_server_id;   /**< The master's server_id value. */
+    bool slave_io_running;  /**< Whether the slave I/O thread is running and connected. */
+    bool slave_sql_running; /**< Whether or not the SQL thread is running. */
+    string master_log_file; /**< Name of the master binary log file that the I/O thread is currently reading from. */
+    uint64_t read_master_log_pos; /**< Position up to which the I/O thread has read in the current master
+                                   * binary log file. */
+    Gtid gtid_io_pos; /**< Gtid I/O position of the slave thread. */
+
     SlaveStatusInfo()
-        :   master_id(0),
-            slave_io(false),
-            slave_sql(false),
-            binlog_pos(0)
+        :   master_server_id(0),
+            slave_io_running(false),
+            slave_sql_running(false),
+            read_master_log_pos(0)
     {}
 };
 
@@ -606,14 +631,9 @@ public:
     int              n_slaves_running; /**< Number of running slave connections */
     int              slave_heartbeats; /**< Number of received heartbeats*/
     double           heartbeat_period; /**< The time interval between heartbeats */
-    time_t           latest_event; /**< Time when latest event was received from the master */
-    struct
-    {
-        uint32_t domain;
-        uint32_t server_id;
-        uint64_t sequence;
-    } slave_gtid;
-    SlaveStatusInfo  slave_status;        /**< Data returned from SHOW SLAVE STATUS */
+    time_t           latest_event;     /**< Time when latest event was received from the master */
+    Gtid             gtid_slave_pos;   /**< Gtid of latest replicated event */
+    SlaveStatusInfo  slave_status;     /**< Data returned from SHOW SLAVE STATUS */
 
     MySqlServerInfo()
         :   server_id(0),
@@ -625,9 +645,18 @@ public:
             n_slaves_running(0),
             slave_heartbeats(0),
             heartbeat_period(0),
-            latest_event(0),
-            slave_gtid({0, 0, 0})
+            latest_event(0)
     {}
+
+    /**
+     * Calculate how many events are left in relay log.
+     *
+     * @return Number of events in relay log according to latest queried info.
+     */
+    int64_t relay_log_events()
+    {
+        return slave_status.gtid_io_pos.sequence - gtid_slave_pos.sequence;
+    }
 };
 
 void* info_copy_func(const void *val)
@@ -892,11 +921,11 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
         dcb_printf(dcb, "Server ID: %d\n", serv_info->server_id);
         dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
         dcb_printf(dcb, "Slave configured: %s\n", serv_info->slave_configured ? "YES" : "NO");
-        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_status.slave_io ? "YES" : "NO");
-        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_status.slave_sql ? "YES" : "NO");
-        dcb_printf(dcb, "Master ID: %d\n", serv_info->slave_status.master_id);
-        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->slave_status.binlog_name.c_str());
-        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->slave_status.binlog_pos);
+        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_status.slave_io_running ? "YES" : "NO");
+        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_status.slave_sql_running ? "YES" : "NO");
+        dcb_printf(dcb, "Master ID: %d\n", serv_info->slave_status.master_server_id);
+        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->slave_status.master_log_file.c_str());
+        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->slave_status.read_master_log_pos);
 
         if (handle->multimaster)
         {
@@ -951,15 +980,15 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
             MySqlServerInfo *serv_info = get_server_info(handle, db);
             json_object_set_new(srv, "name", json_string(db->server->unique_name));
             json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
-            json_object_set_new(srv, "master_id", json_integer(serv_info->slave_status.master_id));
+            json_object_set_new(srv, "master_id", json_integer(serv_info->slave_status.master_server_id));
 
             json_object_set_new(srv, "read_only", json_boolean(serv_info->read_only));
             json_object_set_new(srv, "slave_configured", json_boolean(serv_info->slave_configured));
-            json_object_set_new(srv, "slave_io_running", json_boolean(serv_info->slave_status.slave_io));
-            json_object_set_new(srv, "slave_sql_running", json_boolean(serv_info->slave_status.slave_sql));
+            json_object_set_new(srv, "slave_io_running", json_boolean(serv_info->slave_status.slave_io_running));
+            json_object_set_new(srv, "slave_sql_running", json_boolean(serv_info->slave_status.slave_sql_running));
 
-            json_object_set_new(srv, "master_binlog_file", json_string(serv_info->slave_status.binlog_name.c_str()));
-            json_object_set_new(srv, "master_binlog_position", json_integer(serv_info->slave_status.binlog_pos));
+            json_object_set_new(srv, "master_binlog_file", json_string(serv_info->slave_status.master_log_file.c_str()));
+            json_object_set_new(srv, "master_binlog_position", json_integer(serv_info->slave_status.read_master_log_pos));
 
             if (handle->multimaster)
             {
@@ -998,43 +1027,37 @@ static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
     return MYSQL_SERVER_VERSION_51;
 }
 
-static void extract_slave_gtid(MySqlServerInfo* info, const char* str)
-{
-    sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &info->slave_gtid.domain,
-           &info->slave_gtid.server_id, &info->slave_gtid.sequence);
-}
-
 static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database,
                                  enum mysql_server_version server_version)
 {
     bool rval = true;
     unsigned int columns;
-    int i_io_thread, i_sql_thread, i_binlog_pos, i_master_id, i_binlog_name;
+    int i_slave_io_running, i_slave_sql_running, i_read_master_log_pos, i_master_server_id, i_master_log_file;
     const char *query;
 
     if (server_version == MYSQL_SERVER_VERSION_100)
     {
         columns = 42;
         query = "SHOW ALL SLAVES STATUS";
-        i_io_thread = MARIA10_STATUS_IO_RUNNING;
-        i_sql_thread = MARIA10_STATUS_SQL_RUNNING;
-        i_binlog_name = MARIA10_STATUS_BINLOG_NAME;
-        i_binlog_pos = MARIA10_STATUS_BINLOG_POS;
-        i_master_id = MARIA10_STATUS_MASTER_ID;
+        i_slave_io_running = MARIA10_STATUS_IO_RUNNING;
+        i_slave_sql_running = MARIA10_STATUS_SQL_RUNNING;
+        i_master_log_file = MARIA10_STATUS_MASTER_LOG_FILE;
+        i_read_master_log_pos = MARIA10_STATUS_MASTER_LOG_POS;
+        i_master_server_id = MARIA10_STATUS_MASTER_ID;
     }
     else
     {
         columns = server_version == MYSQL_SERVER_VERSION_55 ? 40 : 38;
         query = "SHOW SLAVE STATUS";
-        i_io_thread = MYSQL55_STATUS_IO_RUNNING;
-        i_sql_thread = MYSQL55_STATUS_SQL_RUNNING;
-        i_binlog_name = MYSQL55_STATUS_BINLOG_NAME;
-        i_binlog_pos = MYSQL55_STATUS_BINLOG_POS;
-        i_master_id = MYSQL55_STATUS_MASTER_ID;
+        i_slave_io_running = MYSQL55_STATUS_IO_RUNNING;
+        i_slave_sql_running = MYSQL55_STATUS_SQL_RUNNING;
+        i_master_log_file = MYSQL55_STATUS_MASTER_LOG_FILE;
+        i_read_master_log_pos = MYSQL55_STATUS_MASTER_LOG_POS;
+        i_master_server_id = MYSQL55_STATUS_MASTER_ID;
     }
 
     MYSQL_RES* result;
-    int master_id = -1;
+    int master_server_id = -1;
     int nconfigured = 0;
     int nrunning = 0;
 
@@ -1058,25 +1081,25 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
             do
             {
                 /* get Slave_IO_Running and Slave_SQL_Running values*/
-                serv_info->slave_status.slave_io = strncmp(row[i_io_thread], "Yes", 3) == 0;
-                serv_info->slave_status.slave_sql = strncmp(row[i_sql_thread], "Yes", 3) == 0;
+                serv_info->slave_status.slave_io_running = strncmp(row[i_slave_io_running], "Yes", 3) == 0;
+                serv_info->slave_status.slave_sql_running = strncmp(row[i_slave_sql_running], "Yes", 3) == 0;
 
-                if (serv_info->slave_status.slave_io && serv_info->slave_status.slave_sql)
+                if (serv_info->slave_status.slave_io_running && serv_info->slave_status.slave_sql_running)
                 {
                     if (nrunning == 0)
                     {
                         /** Only check binlog name for the first running slave */
-                        uint64_t binlog_pos = atol(row[i_binlog_pos]);
-                        char* binlog_name = row[i_binlog_name];
-                        if (serv_info->slave_status.binlog_name != binlog_name ||
-                            binlog_pos != serv_info->slave_status.binlog_pos)
+                        uint64_t read_master_log_pos = atol(row[i_read_master_log_pos]);
+                        char* master_log_file = row[i_master_log_file];
+                        if (serv_info->slave_status.master_log_file != master_log_file ||
+                            read_master_log_pos != serv_info->slave_status.read_master_log_pos)
                         {
                             // IO thread is reading events from the master
                             serv_info->latest_event = time(NULL);
                         }
 
-                        serv_info->slave_status.binlog_name = binlog_name;
-                        serv_info->slave_status.binlog_pos = binlog_pos;
+                        serv_info->slave_status.master_log_file = master_log_file;
+                        serv_info->slave_status.read_master_log_pos = read_master_log_pos;
                     }
 
                     nrunning++;
@@ -1087,13 +1110,13 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                  * root master server.
                  * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
                  */
-                if (serv_info->slave_status.slave_io && server_version != MYSQL_SERVER_VERSION_51)
+                if (serv_info->slave_status.slave_io_running && server_version != MYSQL_SERVER_VERSION_51)
                 {
                     /* Get Master_Server_Id */
-                    master_id = atoi(row[i_master_id]);
-                    if (master_id == 0)
+                    master_server_id = atoi(row[i_master_server_id]);
+                    if (master_server_id == 0)
                     {
-                        master_id = -1;
+                        master_server_id = -1;
                     }
                 }
 
@@ -1101,7 +1124,8 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                 {
                     const char* beats = mxs_mysql_get_value(result, row, "Slave_received_heartbeats");
                     const char* period = mxs_mysql_get_value(result, row, "Slave_heartbeat_period");
-                    const char* gtid = mxs_mysql_get_value(result, row, "Gtid_Slave_Pos");
+                    const char* gtid_slave_pos = mxs_mysql_get_value(result, row, "Gtid_Slave_Pos");
+                    const char* gtid_io_pos = mxs_mysql_get_value(result, row, "Gtid_IO_Pos");
                     ss_dassert(beats && period);
 
                     int heartbeats = atoi(beats);
@@ -1112,9 +1136,13 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                         serv_info->heartbeat_period = atof(period);
                     }
 
-                    if (gtid)
+                    if (gtid_slave_pos)
                     {
-                        extract_slave_gtid(serv_info, gtid);
+                        serv_info->gtid_slave_pos = Gtid(gtid_slave_pos);
+                    }
+                    if (gtid_io_pos)
+                    {
+                        serv_info->slave_status.gtid_io_pos = Gtid(gtid_io_pos);
                     }
                 }
 
@@ -1127,15 +1155,12 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
         {
             /** Query returned no rows, replication is not configured */
             serv_info->slave_configured = false;
-            serv_info->slave_status.slave_io = false;
-            serv_info->slave_status.slave_sql = false;
-            serv_info->slave_status.binlog_pos = 0;
-            serv_info->slave_status.binlog_name = "";
             serv_info->slave_heartbeats = 0;
-            serv_info->slave_gtid = {};
+            serv_info->gtid_slave_pos = Gtid();
+            serv_info->slave_status = SlaveStatusInfo();
         }
 
-        serv_info->slave_status.master_id = master_id;
+        serv_info->slave_status.master_server_id = master_server_id;
         mysql_free_result(result);
     }
     else
@@ -1177,7 +1202,7 @@ static bool master_still_alive(MYSQL_MONITOR* handle)
         {
             MySqlServerInfo* info = get_server_info(handle, s);
 
-            if (info->slave_configured && info->slave_status.master_id == handle->master->server->node_id &&
+            if (info->slave_configured && info->slave_status.master_server_id == handle->master->server->node_id &&
                 difftime(time(NULL), info->latest_event) < handle->master_failure_timeout)
             {
                 /**
@@ -1211,7 +1236,7 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerI
         }
 
         /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
-        database->server->master_id = serv_info->slave_status.master_id;
+        database->server->master_id = serv_info->slave_status.master_server_id;
     }
 }
 
@@ -1630,12 +1655,12 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, in
     /** Build the graph */
     for (int i = 0; i < nservers; i++)
     {
-        if (graph[i].info->slave_status.master_id > 0)
+        if (graph[i].info->slave_status.master_server_id > 0)
         {
             /** Found a connected node */
             for (int k = 0; k < nservers; k++)
             {
-                if (graph[k].info->server_id == graph[i].info->slave_status.master_id)
+                if (graph[k].info->server_id == graph[i].info->slave_status.master_server_id)
                 {
                     graph[i].parent = &graph[k];
                     break;
@@ -2967,33 +2992,27 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, u
  */
 MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon, ServerVector* out_slaves)
 {
-    // Select a new master candidate. Currently does not properly wait for relay logs to clear. Requires that
-    // "detect_stale_slave" is on.
+    /* Select a new master candidate. Selects the one with the latest event in relay log. If multiple slaves have same
+     * number of events, select the one with most processed events. */
     MXS_MONITORED_SERVER* new_master = NULL;
     MySqlServerInfo* new_master_info = NULL;
     int master_vector_index = -1;
     for (MXS_MONITORED_SERVER *mon_server = mon->monitor->monitored_servers; mon_server; mon_server = mon_server->next)
     {
         MySqlServerInfo* cand_info = get_server_info(mon, mon_server);
-        if (cand_info->slave_status.slave_sql) // Assumed to be a valid slave.
+        if (cand_info->slave_status.slave_sql_running) // Assumed to be a valid slave.
         {
             if (out_slaves)
             {
                 out_slaves->push_back(mon_server);
             }
-            bool set_master = false;
-            // Accept any candidate at this point.
-            if (new_master == NULL)
-            {
-                set_master = true;
-            }
-            // TODO: Add more checks here, this may give wrong result if filenames are different
-            else if (cand_info->slave_status.binlog_pos > new_master_info->slave_status.binlog_pos)
-            {
-                set_master = true;
-            }
-
-            if (set_master)
+            // If no candidate yet, accept any.
+            if (new_master == NULL ||
+                // Otherwise accept a slave with a later event in relay log.
+                cand_info->slave_status.gtid_io_pos.sequence > new_master_info->slave_status.gtid_io_pos.sequence ||
+                // If io sequences are identical, the slave with more events processed wins.
+                (cand_info->slave_status.gtid_io_pos.sequence == new_master_info->slave_status.gtid_io_pos.sequence &&
+                cand_info->gtid_slave_pos.sequence > new_master_info->gtid_slave_pos.sequence))
             {
                 new_master = mon_server;
                 new_master_info = cand_info;
@@ -3013,6 +3032,42 @@ MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon, ServerVecto
         out_slaves->erase(remove_this);
     }
     return new_master;
+}
+
+/**
+ * Waits until the new master has processed all its relay log, or time is up.
+ *
+ * @param mon The monitor
+ * @param new_master The new master
+ * @return True if relay log was processed within time limit, or false if time ran out or an error occurred.
+ */
+bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master)
+{
+    MySqlServerInfo* master_info = get_server_info(mon, new_master);
+    time_t begin = time(NULL);
+    bool query_ok = true;
+    while (master_info->relay_log_events() > 0 && query_ok && difftime(time(NULL), begin) < mon->failover_timeout)
+    {
+        MXS_NOTICE("Failover: Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
+                new_master->server->unique_name, master_info->relay_log_events());
+        thread_millisleep(1000); // Sleep for a while before querying server again.
+        // Todo: check server version before entering failover.
+        query_ok = do_show_slave_status(master_info, new_master, MYSQL_SERVER_VERSION_100);
+    }
+
+    bool rval = false;
+    if (master_info->relay_log_events() == 0)
+    {
+        rval = true;
+    }
+    else
+    {
+        MXS_ALERT("Failover: %s while waiting for server '%s' to process relay log.",
+                query_ok ? "Timeout" : "Status query error",
+                new_master->server->unique_name);
+        rval = false;
+    }
+    return rval;
 }
 
 /**
@@ -3100,16 +3155,17 @@ bool do_failover(MYSQL_MONITOR* mon)
     MXS_MONITORED_SERVER* new_master = failover_select_new_master(mon, &redirect_slaves);
     if (new_master == NULL)
     {
-        MXS_ERROR("Failover: No suitable promotion candidates found, cancelling.");
+        MXS_ERROR("Failover: No suitable promotion candidate found, cancelling.");
         return false;
     }
-
-    bool rval = false;
-    // Step 2: Stop and reset slave, set read-only to 0.
-    if (failover_promote_new_master(mon, new_master))
+    // Step 2: Wait until relay log consumed.
+    if (failover_wait_relay_log(mon, new_master) &&
+        // Step 3: Stop and reset slave, set read-only to 0.
+        failover_promote_new_master(mon, new_master) &&
+        // Step 4: Redirect slaves.
+        failover_redirect_slaves(mon, redirect_slaves, new_master))
     {
-        // Step 3: Redirect slaves.
-        rval = failover_redirect_slaves(mon, redirect_slaves, new_master);
+        return true;
     }
-    return rval;
+    return false;
 }
