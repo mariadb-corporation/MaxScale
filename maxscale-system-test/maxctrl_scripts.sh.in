@@ -1,0 +1,47 @@
+#!/bin/bash
+
+cat <<EOF > start_maxscale.sh
+#!/bin/bash
+sudo systemctl start maxscale
+EOF
+
+cat <<EOF >stop_maxscale.sh
+#!/bin/bash
+
+sudo systemctl stop maxscale
+
+sudo rm -rf /var/lib/maxscale/*
+sudo rm -rf /var/cache/maxscale/*
+sudo rm -rf /var/run/maxscale/*
+
+if [ -f /tmp/maxadmin.sock ]
+then
+    sudo rm /tmp/maxadmin.sock
+fi
+
+EOF
+
+cat <<EOF >start_double_maxscale.sh
+#!/bin/bash
+sudo systemctl start maxscale
+ssh -i ~/maxscale_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $galera_003_whoami@$galera_003_network "sudo systemctl start maxscale"
+EOF
+
+cat <<EOF >stop_double_maxscale.sh
+#!/bin/bash
+
+sudo systemctl stop maxscale
+sudo rm -rf /var/lib/maxscale/*
+sudo rm -rf /var/cache/maxscale/*
+sudo rm -rf /var/run/maxscale/*
+test ! -f /tmp/maxadmin.sock || sudo rm /tmp/maxadmin.sock
+
+ssh -i ~/maxscale_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $galera_003_whoami@$galera_003_network "sudo systemctl stop maxscale"
+ssh -i ~/maxscale_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $galera_003_whoami@$galera_003_network "sudo rm -rf /var/lib/maxscale/*"
+ssh -i ~/maxscale_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $galera_003_whoami@$galera_003_network "sudo rm -rf /var/cache/maxscale/*"
+ssh -i ~/maxscale_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $galera_003_whoami@$galera_003_network "sudo rm -rf /var/run/maxscale/*"
+ssh -i ~/maxscale_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $galera_003_whoami@$galera_003_network "sudo rm -rf /tmp/maxadmin.sock"
+
+EOF
+
+chmod +x *.sh

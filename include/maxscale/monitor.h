@@ -340,7 +340,7 @@ json_t* monitor_list_to_json(const char* host);
  * @param server Server to inspect
  * @param host   Hostname of this server
  *
- * @return Array of monitor links
+ * @return Array of monitor links or NULL if no relations exist
  */
 json_t* monitor_relations_to_server(const SERVER* server, const char* host);
 

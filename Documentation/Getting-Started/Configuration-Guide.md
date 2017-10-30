@@ -570,6 +570,32 @@ This will log all statements that cannot be parsed completely. This may be
 useful if you suspect that MariaDB MaxScale routes statements to the wrong
 server (e.g. to a slave instead of to a master).
 
+#### `substitute_variables`
+
+Enable or disable the substitution of environment variables in the MaxScale
+configuration file. If the substitution of variables is enabled and a
+configuration line like
+```
+some_parameter=$SOME_VALUE
+```
+is encountered, then `$SOME_VALUE` will be replaced with the actual value
+of the environment variable `SOME_VALUE`. Note:
+* Variable substitution will be made _only_ if '$' is the first character
+  of the value.
+* _Everything_ following '$' is interpreted as the name of the environment
+  variable.
+* Referring to a non-existing environment variable is a fatal error.
+
+By default, the value of `substitute_variables` is `false`.
+```
+substitute_variables=true
+```
+The setting of `substitute_variables` will have an effect on all parameters
+in the all other sections, irrespective of where the `[maxscale]` section
+is placed in the configuration file. However, in the `[maxscale]` section,
+to ensure that substitution will take place, place the
+`substitute_variables=true` line first.
+
 ### REST API Configuration
 
 The MaxScale REST API is an HTTP interface that provides JSON format data
@@ -581,8 +607,7 @@ configuration file.
 #### `admin_host`
 
 The network interface where the HTTP admin interface listens on. The default
-value is the IPv6 address `::` which listens on all available network
-interfaces.
+value is the IPv4 address `127.0.0.1` which only listens for local connections.
 
 #### `admin_port`
 

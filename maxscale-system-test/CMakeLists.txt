@@ -501,6 +501,10 @@ add_test_executable(mxs1451_skip_auth.cpp mxs1451_skip_auth mxs1451_skip_auth LA
 # https://jira.mariadb.org/browse/MXS-1457
 add_test_executable(mxs1457_ignore_deleted.cpp mxs1457_ignore_deleted mxs1457_ignore_deleted LABELS REPL_BACKEND)
 
+# MXS-1468: Using dynamic commands to create readwritesplit configs fail after restart
+# https://jira.mariadb.org/browse/MXS-1468
+add_test_executable(mxs1468.cpp mxs1468 mxs1468 LABELS REPL_BACKEND)
+
 # MXS-1493: Use replication heartbeat in mysqlmon
 # https://jira.mariadb.org/browse/MXS-1493
 add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS REPL_BACKEND)
@@ -567,7 +571,7 @@ add_test_executable(rwsplit_multi_stmt.cpp rwsplit_multi_stmt rwsplit_multi_stmt
 add_test_executable(rwsplit_read_only_trx.cpp rwsplit_read_only_trx rwsplit_read_only_trx LABELS readwritesplit REPL_BACKEND)
 
 # Test replication-manager with MaxScale
-#add_test_executable(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
+add_test_executable_notest(replication_manager.cpp replication_manager replication_manager LABELS maxscale REPL_BACKEND)
 #add_test_executable_notest(replication_manager_2nodes.cpp replication_manager_2nodes replication_manager_2nodes LABELS maxscale REPL_BACKEND)
 #add_test_executable_notest(replication_manager_3nodes.cpp replication_manager_3nodes replication_manager_3nodes LABELS maxscale REPL_BACKEND)
 
@@ -639,6 +643,9 @@ add_test_executable(temporal_tables.cpp temporal_tables replication LABELS readw
 
 # Test routing hints
 add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter LIGHT REPL_BACKEND)
+
+# Run MaxCtrl test suite
+add_test_executable(test_maxctrl.cpp test_maxctrl maxctrl LABELS REPL_BACKEND)
 
 # Binlogrouter tests, these heavily alter the replication so they are run last
 add_test_executable(avro.cpp avro avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL)

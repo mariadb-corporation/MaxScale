@@ -1,4 +1,4 @@
-# REST API design document
+# REST API
 
 This document describes the version 1 of the MaxScale REST API.
 

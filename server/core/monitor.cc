@@ -25,6 +25,7 @@
 #include <set>
 #include <zlib.h>
 #include <sys/stat.h>
+#include <vector>
 
 #include <maxscale/alloc.h>
 #include <maxscale/hk_heartbeat.h>
@@ -1929,8 +1930,7 @@ json_t* monitor_list_to_json(const char* host)
 
 json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 {
-    json_t* rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
-
+    std::vector<std::string> names;
     spinlock_acquire(&monLock);
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
@@ -1943,7 +1943,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
             {
                 if (db->server == server)
                 {
-                    mxs_json_add_relation(rel, mon->name, CN_MONITORS);
+                    names.push_back(mon->name);
                     break;
                 }
             }
@@ -1953,6 +1953,19 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
     }
 
     spinlock_release(&monLock);
+
+    json_t* rel = NULL;
+
+    if (!names.empty())
+    {
+        rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
+
+        for (std::vector<std::string>::iterator it = names.begin();
+             it != names.end(); it++)
+        {
+            mxs_json_add_relation(rel, it->c_str(), CN_MONITORS);
+        }
+    }
 
     return rel;
 }

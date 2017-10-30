@@ -2511,6 +2511,14 @@ static void enable_log_priority(DCB *dcb, char *arg1)
     if (priority != -1)
     {
         mxs_log_set_priority_enabled(priority, true);
+
+#if !defined(SS_DEBUG)
+        if (priority == LOG_DEBUG)
+        {
+            dcb_printf(dcb,
+                       "Enabling '%s' has no effect, as MaxScale has been built in release mode.\n", arg1);
+        }
+#endif
     }
     else
     {

@@ -136,12 +136,14 @@ then
     exit 1
 fi
 
-mkdir -p jansson/build
-pushd jansson/build
+cd jansson
+git checkout v2.9
+mkdir build
+cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DJANSSON_INSTALL_LIB_DIR=$install_libdir
 make
 sudo make install
-popd
+cd ../../
 
 # Avro C API
 wget -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories http://mirror.netinch.com/pub/apache/avro/stable/c

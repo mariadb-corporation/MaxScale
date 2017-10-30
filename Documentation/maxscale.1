@@ -1,115 +1,35 @@
 .TH maxscale 1
 .SH NAME
 maxscale - An intelligent database proxy
-.SH SYNOPSIS
-.B maxscale
-[\fIOPTIONS...\fR]
 .SH DESCRIPTION
-MariaDB MaxScale is a database proxy that forwards database statements to one or
-more database servers.
+MariaDB MaxScale is an intelligent database proxy that allows the forwarding
+of database statements to one or more database servers using complex rules, a
+semantic understanding of the database statements and the roles of the various
+servers within the backend cluster of databases.
 
-The forwarding is performed using rules based on the semantic understanding of
-the database statements and on the roles of the servers within the backend
-cluster of databases.
+MariaDB MaxScale is designed to provide load balancing and high availability
+functionality transparently to the applications. In addition it provides
+a highly scalable and flexible architecture, with plugin components to
+support different protocols and routing decisions.
 
-MariaDB MaxScale is designed to provide, transparently to applications, load
-balancing and high availability functionality. MariaDB MaxScale has a scalable
-and flexible architecture, with plugin components to support different protocols
-and routing approaches.
-
-.SH OPTIONS
-.TP
-.BR "-c, --config-check"
-Validate configuration file and exit.
-.TP
-.BR "-d, --nodaemon"
-Run MaxScale in the terminal process.
-.TP
-.BR -f " \fIFILE\fB, --config=\fIFILE\fR"
-Relative or absolute pathname of MaxScale configuration file to load.
-.TP
-.BR -l "[\fIfile|shm|stdout\fB], --log=[\fIfile|shm|stdout\fB]"
-Log to file, shared memory or standard output. The default is to log to file.
-.TP
-.BR -L " \fIPATH\fB, --logdir=\fIPATH\fB"
-Path to log file directory.
-.TP
-.BR -A " \fIPATH\fB, --cachedir=\fIPATH\fB"
-Path to cache directory. This is where MaxScale stores cached authentication data.
-.TP
-.BR -B " \fIPATH\fB, --libdir=\fIPATH\fB"
-Path to module directory. Modules are only searched from this folder.
-.TP
-.BR -C " \fIPATH\fB, --configdir=\fIPATH\fB"
-Path to configuration file directory. MaxScale will look for the \fImaxscale.cnf\fR file from this folder.
-.TP
-.BR -D " \fIPATH\fB, --datadir=\fIPATH\fB"
-Path to data directory. This is where the embedded mysql tables are stored in addition to other MaxScale specific data.
-.TP
-.BR -E " \fIPATH\fB, --execdir=\fIPATH\fB"
-Location of the executable files. When internal processes are launched from within MaxScale the binaries are assumed to be in this directory. If you have a custom location for binary executable files you need to add this parameter.
-.TP
-.BR -F " \fIPATH\fB, --persistdir=\fIPATH\fB"
-Location of persisted configuration files. These files are created when configuration is changed during runtime so that the changes may be reapplied at startup.
-.TP
-.BR -M " \fIPATH\fB, --module_configdir=\fIPATH\fB"
-Location of module configuration files.
-.TP
-.BR -H " \fIPATH\fB, --connector_plugindir=\fIPATH\fB"
-Location of MariaDB Connector-C plugin.
-.TP
-.BR -N " \fIPATH\fB, --language=\fIPATH\fB"
-Location of errmsg.sys file.
-.TP
-.BR -P " \fIPATH\fB, --piddir=\fIPATH\fB"
-Location of MaxScale's PID file.
-.TP
-.BR -R " \fIPATH\fB, --basedir=\fIPATH\fB"
-Base path for all other paths.
-.TP
-.BR -U " \fIUSER\fB, --user=\fIUSER\fB"
-Run MaxScale as another user. The user ID and group ID of this user are used to run MaxScale.
-.TP
-.BR -s " [\fIyes\fB|\fIno\fB], --syslog=[\fIyes\fB|\fIno\fB]"
-Log messages to syslog.
-.TP
-.BR -S " [\fIyes\fB|\fIno\fB], \fB--maxlog=[\fIyes\fB|\fIno\fB]"
-Log messages to MaxScale's own log files.
-.TP
-.BR -G " [\fIyes\fB|\fIno\fB], \fB--log_augmentation=[\fI0\fB|\fI1\fB]"
-Augment messages with the name of the function where the message was logged (default: 0)"
-.TP
-.BR -g " [\fIyes\fB|\fIno\fB], \fB--debug=[\fIArg1\fB,\fIArg2,...\fB]"
-Enable or disable debug features. Supported arguments:
-    \fBdisable-module-unloading \fRShared libraries are not unloaded on exit, may give better Valgrind leak reports.
-    \fBenable-module-unloading \fREnable unloading. Default setting.
-.TP
-.BR "-v, --version"
-Print version information and exit.
-.TP
-.BR "-V, --version-full"
-Print full version information including the Git commit the binary was built from and exit.
-.TP
-.BR "-?, --help"
-Show the help information for MaxScale and exit.
-.SH EXAMPLES
-Tutorials on GitHub:
+Quickstart Guide:
 
 .RS
-.I https://github.com/mariadb-corporation/MaxScale/blob/2.1/Documentation/Documentation-Contents.md#tutorials
+.I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-setting-up-mariadb-maxscale/
 .RE
-.SH SEE ALSO
-The MariaDB MaxScale documentation on the MariaDB Knowledge Base:
+
+Installation Guide:
 
 .RS
-.I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale/
+.I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-mariadb-maxscale-installation-guide/
 .RE
 
-The MariaDB MaxScale documentation on GitHub:
+MaxScale Documentation:
 
 .RS
-.I https://github.com/mariadb-corporation/MaxScale/blob/2.1/Documentation/Documentation-Contents.md
+.I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-contents/
 .RE
+
 .SH BUGS
 You can see a list of known bugs and report new bugs at:
 

@@ -32,7 +32,7 @@ MXS_BEGIN_DECLS
 
 /** Default port where the REST API listens */
 #define DEFAULT_ADMIN_HTTP_PORT 8989
-#define DEFAULT_ADMIN_HOST      "::"
+#define DEFAULT_ADMIN_HOST      "127.0.0.1"
 
 #define RELEASE_STR_LENGTH      256
 #define SYSNAME_LEN             256
@@ -158,6 +158,7 @@ extern const char CN_SSL_CERT_VERIFY_DEPTH[];
 extern const char CN_SSL_KEY[];
 extern const char CN_SSL_VERSION[];
 extern const char CN_STRIP_DB_ESC[];
+extern const char CN_SUBSTITUTE_VARIABLES[];
 extern const char CN_THREADS[];
 extern const char CN_THREAD_STACK_SIZE[];
 extern const char CN_TYPE[];
@@ -228,6 +229,7 @@ typedef struct
     char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */
     int           query_retries;                       /**< Number of times a interrupted query is retried */
     time_t        query_retry_timeout;                 /**< Timeout for query retries */
+    bool          substitute_variables;                /**< Should environment variables be substituted */
 } MXS_CONFIG;
 
 /**

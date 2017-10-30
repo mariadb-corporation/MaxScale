@@ -1045,7 +1045,8 @@ static void usage(void)
             "if '--basedir /path/maxscale' is specified, then, for instance, the log\n"
             "dir will be '/path/maxscale/var/log/maxscale', the config dir will be\n"
             "'/path/maxscale/etc' and the default config file will be\n"
-            "'/path/maxscale/etc/maxscale.cnf'.\n",
+            "'/path/maxscale/etc/maxscale.cnf'.\n\n"
+            "MaxScale documentation: https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-21/ \n",
             get_configdir(), default_cnf_fname,
             get_configdir(), get_logdir(), get_cachedir(), get_libdir(),
             get_datadir(), get_execdir(), get_langdir(), get_piddir(),
@@ -2609,20 +2610,47 @@ void set_log_augmentation(const char* value)
 
 /**
  * Pre-parse the configuration file for various directory paths.
- * @param data Parameter passed by inih
+ * @param data    Pointer to variable where custom dynamically allocated
+ *                error message can be stored.
  * @param section Section name
- * @param name Parameter name
- * @param value Parameter value
+ * @param name    Parameter name
+ * @param value   Parameter value
  * @return 0 on error, 1 when successful
  */
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value)
 {
     MXS_CONFIG* cnf = config_get_global_options();
+
     char *tmp;
     /** These are read from the configuration file. These will not override
      * command line parameters but will override default values. */
     if (strcasecmp(section, "maxscale") == 0)
     {
+        if (cnf->substitute_variables)
+        {
+            if (*value == '$')
+            {
+                char* env_value = getenv(value + 1);
+
+                if (!env_value)
+                {
+                    char** s = (char**)data;
+
+                    static const char FORMAT[] = "The environment variable %s does not exist.";
+                    *s = (char*)MXS_MALLOC(sizeof(FORMAT) + strlen(value));
+
+                    if (*s)
+                    {
+                        sprintf(*s, FORMAT, value + 1);
+                    }
+
+                    return 0;
+                }
+
+                value = env_value;
+            }
+        }
+
         if (strcmp(name, "logdir") == 0)
         {
             if (strcmp(get_logdir(), default_logdir) == 0)
@@ -2790,6 +2818,10 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
             {
                 cnf->log_to_shm = config_truth_value((char*)value);
             }
+        }
+        else if (strcmp(name, CN_SUBSTITUTE_VARIABLES) == 0)
+        {
+            cnf->substitute_variables = config_truth_value(value);
         }
     }
 
@@ -2960,23 +2992,36 @@ static bool daemonize(void)
  */
 static bool sniff_configuration(const char* filepath)
 {
-    int rv = ini_parse(filepath, cnf_preparser, NULL);
+    char* s = NULL;
+
+    int rv = ini_parse(filepath, cnf_preparser, &s);
 
     if (rv != 0)
     {
+        const char FORMAT_CUSTOM[] =
+            "Failed to pre-parse configuration file %s. Error on line %d. %s";
         const char FORMAT_SYNTAX[] =
-            "Error: Failed to pre-parse configuration file %s. Error on line %d.";
+            "Failed to pre-parse configuration file %s. Error on line %d.";
         const char FORMAT_OPEN[] =
-            "Error: Failed to pre-parse configuration file %s. Failed to open file.";
+            "Failed to pre-parse configuration file %s. Failed to open file.";
         const char FORMAT_MALLOC[] =
-            "Error: Failed to pre-parse configuration file %s. Memory allocation failed.";
+            "Failed to pre-parse configuration file %s. Memory allocation failed.";
 
+        size_t extra = strlen(filepath) + UINTLEN(abs(rv)) + (s ? strlen(s) : 0);
         // We just use the largest one.
-        char errorbuffer[sizeof(FORMAT_MALLOC) + strlen(filepath) + UINTLEN(abs(rv))];
+        char errorbuffer[sizeof(FORMAT_MALLOC) + extra];
 
         if (rv > 0)
         {
-            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_SYNTAX, filepath, rv);
+            if (s)
+            {
+                snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_CUSTOM, filepath, rv, s);
+                MXS_FREE(s);
+            }
+            else
+            {
+                snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_SYNTAX, filepath, rv);
+            }
         }
         else if (rv == -1)
         {

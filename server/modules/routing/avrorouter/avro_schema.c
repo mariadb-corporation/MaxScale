@@ -569,7 +569,7 @@ int extract_type_length(const char* ptr, char *dest)
 
     /** Skip characters until we either hit a whitespace character or the start
      * of the length definition. */
-    while (*ptr && !isspace(*ptr) && *ptr != '(')
+    while (*ptr && isalpha(*ptr))
     {
         ptr++;
     }

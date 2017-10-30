@@ -239,7 +239,7 @@ respect to `SELECT` statements. The allowed values are:
      statements are cacheable, but must verify that.
 
 ```
-select=assume_cacheable
+selects=assume_cacheable
 ```
 
 Default is `verify_cacheable`. In this case, the `SELECT` statements will be

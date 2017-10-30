@@ -1270,6 +1270,7 @@ static void wait_until_pos(MYSQL *mysql, int filenum, int pos)
 {
     int slave_filenum = 0;
     int slave_pos = 0;
+    bool error = false;
 
     do
     {
@@ -1284,17 +1285,23 @@ static void wait_until_pos(MYSQL *mysql, int filenum, int pos)
         if (res)
         {
             MYSQL_ROW row = mysql_fetch_row(res);
+            error = true;
 
-            if (row && row[6] && row[21])
+            if (row && row[5] && row[21])
             {
-                char *file_suffix = strchr(row[5], '.') + 1;
-                slave_filenum = atoi(file_suffix);
-                slave_pos = atoi(row[21]);
+                char *file_suffix = strchr(row[5], '.');
+                if (file_suffix)
+                {
+                    file_suffix++;
+                    slave_filenum = atoi(file_suffix);
+                    slave_pos = atoi(row[21]);
+                    error = false;
+                }
             }
             mysql_free_result(res);
         }
     }
-    while (slave_filenum < filenum || slave_pos < pos);
+    while ((slave_filenum < filenum || slave_pos < pos) && !error);
 }
 
 void Mariadb_nodes::sync_slaves(int node)
