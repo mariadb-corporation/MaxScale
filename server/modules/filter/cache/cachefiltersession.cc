@@ -291,73 +291,95 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
         {
             if (m_pCache->should_store(m_zDefaultDb, pPacket))
             {
-                if (m_pCache->should_use(m_pSession))
+                cache_result_t result = m_pCache->get_key(m_zDefaultDb, pPacket, &m_key);
+
+                if (CACHE_RESULT_IS_OK(result))
                 {
-                    GWBUF* pResponse;
-                    cache_result_t result = get_cached_response(pPacket, &pResponse);
-
-                    if (CACHE_RESULT_IS_OK(result))
+                    if (m_pCache->should_use(m_pSession))
                     {
-                        if (CACHE_RESULT_IS_STALE(result))
+                        uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
+                        GWBUF* pResponse;
+                        result = m_pCache->get_value(m_key, flags, &pResponse);
+
+                        if (CACHE_RESULT_IS_OK(result))
                         {
-                            // The value was found, but it was stale. Now we need to
-                            // figure out whether somebody else is already fetching it.
-
-                            if (m_pCache->must_refresh(m_key, this))
+                            if (CACHE_RESULT_IS_STALE(result))
                             {
-                                // We were the first ones who hit the stale item. It's
-                                // our responsibility now to fetch it.
-                                if (log_decisions())
+                                // The value was found, but it was stale. Now we need to
+                                // figure out whether somebody else is already fetching it.
+
+                                if (m_pCache->must_refresh(m_key, this))
                                 {
-                                    MXS_NOTICE("Cache data is stale, fetching fresh from server.");
+                                    // We were the first ones who hit the stale item. It's
+                                    // our responsibility now to fetch it.
+                                    if (log_decisions())
+                                    {
+                                        MXS_NOTICE("Cache data is stale, fetching fresh from server.");
+                                    }
+
+                                    // As we don't use the response it must be freed.
+                                    gwbuf_free(pResponse);
+
+                                    m_refreshing = true;
+                                    fetch_from_server = true;
                                 }
-
-                                // As we don't use the response it must be freed.
-                                gwbuf_free(pResponse);
-
-                                m_refreshing = true;
-                                fetch_from_server = true;
+                                else
+                                {
+                                    // Somebody is already fetching the new value. So, let's
+                                    // use the stale value. No point in hitting the server twice.
+                                    if (log_decisions())
+                                    {
+                                        MXS_NOTICE("Cache data is stale but returning it, fresh "
+                                                   "data is being fetched already.");
+                                    }
+                                    fetch_from_server = false;
+                                }
                             }
                             else
                             {
-                                // Somebody is already fetching the new value. So, let's
-                                // use the stale value. No point in hitting the server twice.
                                 if (log_decisions())
                                 {
-                                    MXS_NOTICE("Cache data is stale but returning it, fresh "
-                                               "data is being fetched already.");
+                                    MXS_NOTICE("Using fresh data from cache.");
                                 }
                                 fetch_from_server = false;
                             }
                         }
                         else
                         {
-                            if (log_decisions())
-                            {
-                                MXS_NOTICE("Using fresh data from cache.");
-                            }
-                            fetch_from_server = false;
+                            fetch_from_server = true;
+                        }
+
+                        if (fetch_from_server)
+                        {
+                            m_state = CACHE_EXPECTING_RESPONSE;
+                        }
+                        else
+                        {
+                            m_state = CACHE_EXPECTING_NOTHING;
+                            gwbuf_free(pPacket);
+                            DCB *dcb = m_pSession->client_dcb;
+
+                            // TODO: This is not ok. Any filters before this filter, will not
+                            // TODO: see this data.
+                            rv = dcb->func.write(dcb, pResponse);
                         }
                     }
                     else
                     {
-                        fetch_from_server = true;
-                    }
-
-                    if (fetch_from_server)
-                    {
+                        // We will not use any value in the cache, but we will update
+                        // the existing value.
+                        if (log_decisions())
+                        {
+                            MXS_NOTICE("Unconditionally fetching data from the server, "
+                                       "refreshing cache entry.");
+                        }
                         m_state = CACHE_EXPECTING_RESPONSE;
                     }
-                    else
-                    {
-                        m_state = CACHE_EXPECTING_NOTHING;
-                        gwbuf_free(pPacket);
-                        DCB *dcb = m_pSession->client_dcb;
-
-                        // TODO: This is not ok. Any filters before this filter, will not
-                        // TODO: see this data.
-                        rv = dcb->func.write(dcb, pResponse);
-                    }
+                }
+                else
+                {
+                    MXS_ERROR("Could not create cache key.");
+                    m_state = CACHE_IGNORING_RESPONSE;
                 }
             }
             else
@@ -773,31 +795,6 @@ void CacheFilterSession::reset_response_state()
     m_res.nFields = 0;
     m_res.nRows = 0;
     m_res.offset = 0;
-}
-
-/**
- * Route a query via the cache.
- *
- * @param key A SELECT packet.
- * @param value The result.
- * @return True if the query was satisfied from the query.
- */
-cache_result_t CacheFilterSession::get_cached_response(const GWBUF *pQuery, GWBUF **ppResponse)
-{
-    cache_result_t result = m_pCache->get_key(m_zDefaultDb, pQuery, &m_key);
-
-    if (CACHE_RESULT_IS_OK(result))
-    {
-        uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
-
-        result = m_pCache->get_value(m_key, flags, ppResponse);
-    }
-    else
-    {
-        MXS_ERROR("Could not create cache key.");
-    }
-
-    return result;
 }
 
 /**

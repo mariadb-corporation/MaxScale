@@ -15,12 +15,19 @@ module.exports = function() {
     this.expect = chai.expect
     this.host = 'http://localhost:8989/v1/'
 
+    this.primary_host = '127.0.0.1:8989'
+    this.secondary_host = '127.0.0.1:8990'
+
+    if (process.env.maxscale2_API) {
+        this.secondary_host = process.env.maxscale2_API
+    }
+
     // Start MaxScale, this should be called in the `before` handler of each test unit
     this.startMaxScale = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./start_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve()
                 }
@@ -33,7 +40,7 @@ module.exports = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./start_double_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve()
                 }
@@ -46,7 +53,7 @@ module.exports = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./stop_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve()
                 }
@@ -59,7 +66,7 @@ module.exports = function() {
         return new Promise(function(resolve, reject) {
             child_process.execFile("./stop_double_maxscale.sh", function(err, stdout, stderr) {
                 if (err) {
-                    reject()
+                    reject(err)
                 } else {
                     resolve()
                 }

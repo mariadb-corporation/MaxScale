@@ -68,6 +68,25 @@ void TestConnections::multiple_maxscales(bool value)
     maxscale::multiple_maxscales = value;
 }
 
+void TestConnections::set_secondary_maxscale(const char* ip_var, const char* ip6_var)
+{
+    const char* ip = getenv(ip_var);
+    const char* ip6 = getenv(ip6_var);
+
+    if (ip || ip6)
+    {
+        TestConnections::multiple_maxscales(true);
+        if (ip)
+        {
+            setenv("maxscale2_IP", ip, 1);
+        }
+        if (ip6)
+        {
+            setenv("maxscale2_network6", ip6, 1);
+        }
+    }
+}
+
 TestConnections::TestConnections(int argc, char *argv[]):
     enable_timeouts(true),
     global_result(0),
@@ -1484,7 +1503,7 @@ int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
 
     free(sys);
     free(cmd);
-    return rc;
+    return WEXITSTATUS(rc);
 }
 
 int TestConnections::copy_to_maxscale(const char* src, const char* dest)

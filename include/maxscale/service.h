@@ -341,7 +341,7 @@ json_t* service_listener_to_json(const SERVICE* service, const char* name, const
  * @param server Server to inspect
  * @param host   Hostname of this server
  *
- * @return Array of service links
+ * @return Array of service links or NULL if no relations exist
  */
 json_t* service_relations_to_server(const SERVER* server, const char* host);
 

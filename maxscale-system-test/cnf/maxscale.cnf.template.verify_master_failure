@@ -5,15 +5,12 @@ log_info=1
 [MySQL Monitor]
 type=monitor
 module=mysqlmon
+###repl51###
 servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
 monitor_interval=1000
-detect_standalone_master=true
-failcount=2
-allow_cluster_recovery=true
-events=master_down
-script=/home/vagrant/replication-manager --hosts=$LIST --user=skysql:skysql --rpluser=skysql:skysql --switchover-at-sync=false --log-level=3 --logfile=/tmp/mrm.log switchover
+failover=true
 
 [RW Split Router]
 type=service
@@ -21,7 +18,6 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
-master_failure_mode=fail_on_write
 
 [RW Split Listener]
 type=listener
@@ -38,13 +34,6 @@ type=listener
 service=CLI
 protocol=maxscaled
 socket=default
-
-[CLI Network Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-address=127.0.0.1
-port=6603
 
 [server1]
 type=server

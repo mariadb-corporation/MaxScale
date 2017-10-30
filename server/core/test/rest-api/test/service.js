@@ -63,6 +63,33 @@ describe("Service", function() {
             })
     });
 
+    it("bad request body with `relationships` endpoint should be rejected", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", {json: {data: null}})
+            .should.be.rejected
+    })
+
+    it("remove service relationship via `relationships` endpoint", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", { json: {data: []}})
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
+            .then((res) => {
+                res.data.relationships.should.not.have.keys("servers")
+            })
+    });
+
+    it("add service relationship via `relationships` endpoint", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/servers",
+                             { json: { data: [
+                                 {id: "server1", type: "servers"},
+                                 {id: "server2", type: "servers"},
+                                 {id: "server3", type: "servers"},
+                                 {id: "server4", type: "servers"},
+                             ]}})
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then((res) => {
+                res.data.relationships.servers.data.should.have.lengthOf(4)
+            })
+    });
+
     const listener = {
         "links": {
             "self": "http://localhost:8989/v1/services/RW-Split-Router/listeners"

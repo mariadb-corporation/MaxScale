@@ -230,6 +230,9 @@ error is logged and the failover functionality is disabled. If this happens, the
 cluster must be fixed manually and the failover needs to be re-enabled via the
 REST API or MaxAdmin.
 
+**Note:** The monitor user must have the SUPER privilege if the failover feature
+  is enabled.
+
 ### `failover_script`
 
 *NOTE* By default, MariaDB MaxScale uses the MariaDB provided failover
@@ -296,6 +299,9 @@ path for making `server4` the new master would be:
 /v1/maxscale/mysqlmon/switchover?Cluster1&server4&server2
 ```
 
+**Note:** The monitor user must have the SUPER privilege if the switchover
+  feature is enabled.
+
 ### `switchover_script`
 
 *NOTE* By default, MariaDB MaxScale uses the MariaDB provided switchover
@@ -330,6 +336,56 @@ seconds.
 If no successful switchover takes place within the configured time period,
 a message is logged and the failover (not switchover) functionality will not
 be enabled, even if it was enabled before the switchover attempt.
+
+### `replication_user`
+
+The username of the replication user. This is given as the value for
+`MASTER_USER` whenever a `CHANGE_MASTER_TO` command is executed.
+
+Both `replication_user` and `replication_password` parameters must be defined if
+a custom replication user is used. If neither of the parameters is defined, the
+`CHANGE MASTER TO` command will use the monitor credentials for the replication
+user.
+
+The credentials used for replication must have the `REPLICATION SLAVE`
+privilege.
+
+### `replication_password`
+
+The password of the replication user. This is given as the value for
+`MASTER_USER` whenever a `CHANGE_MASTER_TO` command is executed.
+
+See `replication_user` parameter documentation for details about the use of this
+parameter.
+
+### `verify_master_failure`
+
+Enable master failure verification for failover. This parameter expects a
+boolean value and the feature is enabled by default.
+
+The failure of a master can be verified by checking whether the slaves are still
+connected to the master. The timeout for master failure verification is
+controlled by the `master_failure_timeout` parameter.
+
+### `master_failure_timeout`
+
+This parameter controls the period of time, in seconds, that the monitor must
+wait before it can declare that the master has failed. The default value is 10
+seconds.
+
+The failure of a master is verified by tracking when the last change to the
+relay log was done and when the last replication heartbeat was received. If the
+period of time between the last received event and the time of the check exceeds
+the configured value, the slave's connection to the master is considered to be
+broken.
+
+When all slaves of a failed master are no longer connected to the master, the
+master failure is verified and the failover can be safely performed.
+
+If the slaves lose their connections to the master before the configured timeout
+is exceeded, the failover is performed immediately. This allows a faster
+failover when the master server crashes causing immediate disconnection of the
+the network connections.
 
 ## Using the MySQL Monitor With Binlogrouter
 

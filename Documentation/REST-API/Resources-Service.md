@@ -420,6 +420,54 @@ Service is modified:
 
 `Status: 204 No Content`
 
+### Update service relationships
+
+```
+PATCH /v1/services/:name/relationships/servers
+```
+
+The _:name_ in the URI must map to a service name with all whitespace replaced
+with hyphens.
+
+The request body must be a JSON object that defines only the _data_ field. The
+value of the _data_ field must be an array of relationship objects that define
+the _id_ and _type_ fields of the relationship. This object will replace the
+existing relationships of the service.
+
+The following is an example request and request body that defines a single
+server relationship for a service.
+
+```
+PATCH /v1/services/my-rw-service/relationships/servers
+
+{
+    data: [
+          { "id": "my-server", "type": "servers" }
+    ]
+}
+```
+
+All relationships for a service can be deleted by sending an empty array as the
+_data_ field value. The following example removes all servers from a service.
+
+```
+PATCH /v1/services/my-rw-service/relationships/servers
+
+{
+    data: []
+}
+```
+
+#### Response
+
+Service relationships modified:
+
+`Status: 204 No Content`
+
+Invalid JSON body:
+
+`Status: 403 Forbidden`
+
 ### Stop a service
 
 Stops a started service.

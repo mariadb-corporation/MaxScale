@@ -66,9 +66,7 @@ A **complete example** of a service entry for a binlog router service would be a
                    encrypt_binlog=On,
                    encryption_algorithm=aes_ctr,
                    encryption_key_file=/var/binlogs/enc_key.txt,
-                   mariadb10_slave_gtid=On,
                    mariadb10_master_gtid=Off,
-                   binlog_structure=flat,
                    slave_hostname=maxscale-blr-1,
                    master_retry_count=1000,
                    connect_retry=60
@@ -199,7 +197,7 @@ If a slave is connected to MaxScale with SSL, an entry will be present in the Sl
 		Slave connected with SSL:                Established
 ```
 
-If option `mariadb10_slave_gtid=On` last seen GTID is shown:
+If option `mariadb10-compatibility=On` last seen GTID is shown:
 
 ```
 Last seen MariaDB GTID:                      0-10124-282
@@ -254,7 +252,7 @@ Master_SSL_Verify_Server_Cert: No
              Master_Info_File: /home/maxscale/binlog/first/binlogs/master.ini
 ```
 
-If the option `mariadb10_slave_gtid` is set to On, the last seen GTID is shown:
+If the option `mariadb10-compatibility` is set to On, the last seen GTID is shown:
 
 ```
 Using_Gtid: No
@@ -278,14 +276,11 @@ slaves must not use *MASTER_AUTO_POSITION = 1* option.
 
 It also works with a MariaDB 10.X setup (master and slaves).
 
-Starting from MaxScale 2.2 the slave connections may include **GTID** feature
-`MASTER_USE_GTID=Slave_pos` if option *mariadb10_slave_gtid* has been set.
-
-The default is that a slave connection must not include any GTID
-feature: `MASTER_USE_GTID=no`
+Starting from MaxScale 2.2.1 the slave connections might optionally include
+**GTID** feature `MASTER_USE_GTID=Slave_pos`: only option *mariadb10-compatibility* is required.
 
 Starting from MaxScale 2.2 it's also possible to register to MariaDB 10.X master using
-**GTID** using the two new options *mariadb10_master_gtid* and *binlog_structure*.
+**GTID** using the new option *mariadb10_master_gtid*.
 
 Current GTID implementation limitations:
 
@@ -458,18 +453,11 @@ error logs and in *SHOW SLAVE STATUS*,
 ##### MariaDB 10 GTID
 
 If _mariadb10_master_gtid_ is On changing the master doesn't require the setting of a
-new _file_ and _pos_, just specify new host and port with CHANGE MASTER; depending on the _binlog_structure_ values some additional steps migth be required.
+new _file_ and _pos_, just specify new host and port with CHANGE MASTER.
 
-If _binlog_structure=flat_, in order to keep previous binlog files untouched in MaxScale _binlogdir_ (no overwriting),
-the next in sequence file must exist in the Master server, as per above scenario _file and pos_ (2).
-
-It migth also happen that each server in the replication setup has its own binlog file name
-convention (server1_bin, server2_bin etc) or the user doesn't want to care at all about
-name and sequence. The _binlog_structure_ option set to _tree_ value simplifies the change
-master process: as the binlog files are saved using a hierarchy model
+As the binlog files will be automatically saved using a hierarchy model
 (_binlogdir/domain_id/server_id/_filename_), MaxScale can work with any filename and any
 sequence and no binlog file will be overwritten by accident.
-
 
 **Scenario** example:
 
@@ -508,38 +496,17 @@ MariaDB> SELECT @@global.gtid_current_pos;
 ```
 
 Starting the replication in MaxScale, `START SLAVE`,
-will result in new events being downloaded and stored.
-
-If _binlog_structure=flat_ (default), the binlog events are saved in the new file
-`mysql-bin.000061`, which should have been created in the Master before starting
-replication from MaxScale, see above scenario (2)
-
-If _binlog_structure=tree_, the binlog events are saved in the new file
-`0/10333/mysql-bin.000001` (which is the current file in the new master)
-
-The latter example clearly shows that the binlog file has a different sequence number
-(1 instead of 61) and possibly a new name.
+will result in new events being downloaded and stored in the new file
+`0/10333/mysql-bin.000001` (which should be the current file in the new master)
 
 As usual, check for any error in log files and with
 
 	MariaDB> SHOW SLAVE STATUS;
 
 Issuing the admin command `SHOW BINARY LOGS` it's possible to see the list
-of log files which have been downloaded:
-
-```
-MariaDB> SHOW BINARY LOGS;
-+------------------+-----------+
-| Log_name         | File_size |
-+------------------+-----------+
-| mysql-bin.000113 |      2214 |
-...
-| mysql-bin.000117 |       535 |
-+------------------+-----------+
-```
-
-It's possible to follow the _master change_ history if option `binlog_structure=tree`:
-the displayed log file names have a prefix with replication domain_id and server_id.
+of log files which have been downloaded and to follow the _master change_
+history: the displayed log file names have a prefix with
+replication domain_id and server_id.
 
 ```
 MariaDB> SHOW BINARY LOGS;
@@ -574,8 +541,8 @@ be issued for the new configuration.
 
 ### Removing binary logs from binlogdir
 
-Since version 2.2, if `mariadb10_slave_gtid` or `mariadb10_master_gtid`
-are set to On, it's possible to remove the binlog files from _binlogdir_
+Since version 2.2.1, if `mariadb10-compatibility`is set to On,
+it's possible to remove the binlog files from _binlogdir_
 and delete related entries in GTID repository using the admin
 command `PURGE BINARY LOGS TO 'file'`
 
@@ -682,8 +649,8 @@ Example:
 ```
 
 ##### MariaDB 10 GTID
-If connecting slaves are MariaDB 10.x it's also possible to connect with GTID,
-*mariadb10_slave_gtid=On* has to be set in configuration before starting MaxScale.
+Since MaxScale 2.2.1 the MariaDB 10.x connecting slaves can optionally connect with GTID,
+*mariadb10-compatibility=On* has to be set in configuration before starting MaxScale.
 
 ```
 SET @@global.gtid_slave_pos='';
@@ -717,7 +684,7 @@ MariaDB> CHANGE MASTER TO
 MariaDB> START SLAVE;
 ```
 
-Additionally, if *mariadb10_slave_gtid=On*, it's also possible to retrieve the list of binlog files downloaded from the master with the new admin command _SHOW BINARY LOGS_:
+Additionally it's also possible to retrieve the list of binlog files downloaded from the master with the new admin command _SHOW BINARY LOGS_:
 
 ```
 MariaDB> SHOW BINARY LOGS;

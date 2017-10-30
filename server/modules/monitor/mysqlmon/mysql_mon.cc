@@ -19,9 +19,13 @@
 
 #include "../mysqlmon.h"
 #include <string>
+#include <sstream>
+#include <vector>
+#include <inttypes.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/debug.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/json_api.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
@@ -43,12 +47,16 @@
 #define MARIA10_STATUS_IO_RUNNING 12
 #define MARIA10_STATUS_SQL_RUNNING 13
 #define MARIA10_STATUS_MASTER_ID 41
+#define MARIA10_STATUS_HEARTBEATS 55
+#define MARIA10_STATUS_HEARTBEAT_PERIOD 56
+#define MARIA10_STATUS_SLAVE_GTID 57
 
 /** Column positions for SHOW SLAVE HOSTS */
 #define SLAVE_HOSTS_SERVER_ID 0
 #define SLAVE_HOSTS_HOSTNAME 1
 #define SLAVE_HOSTS_PORT 2
 
+using std::string;
 static void monitorMain(void *);
 
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
@@ -64,6 +72,8 @@ static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
 static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
+static bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, uint32_t failover_timeout);
+static bool do_failover(MYSQL_MONITOR* mon);
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
@@ -74,10 +84,24 @@ static const char CN_SWITCHOVER[]         = "switchover";
 static const char CN_SWITCHOVER_SCRIPT[]  = "switchover_script";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 
+// Parameters for master failure verification and timeout
+static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
+static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
+
+// Replication credentials parameters for failover
+static const char CN_REPLICATION_USER[]     = "replication_user";
+static const char CN_REPLICATION_PASSWORD[] = "replication_password";
+
 /** Default failover timeout */
 #define DEFAULT_FAILOVER_TIMEOUT "90"
+
 /** Default switchover timeout */
 #define DEFAULT_SWITCHOVER_TIMEOUT "90"
+
+/** Default master failure verification timeout */
+#define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
+
+typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
 
 // TODO: Specify the real default failover script.
 static const char DEFAULT_FAILOVER_SCRIPT[] =
@@ -535,6 +559,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_PATH_X_OK
             },
             {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
+            {CN_REPLICATION_USER, MXS_MODULE_PARAM_STRING},
+            {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
+            {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
+            {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -544,43 +572,74 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 }
 
+// Contains data returned by one row of SHOW ALL SLAVES STATUS
+class SlaveStatusInfo
+{
+public:
+    int master_id; /**< Master server id */
+    bool slave_io;  /**< If Slave IO thread is running  */
+    bool slave_sql; /**< If Slave SQL thread is running */
+    uint64_t binlog_pos; /**< Binlog position */
+    string binlog_name; /**< Binlog name */
+    SlaveStatusInfo()
+        :   master_id(0),
+            slave_io(false),
+            slave_sql(false),
+            binlog_pos(0)
+    {}
+};
+
 /**
  * Monitor specific information about a server
+ *
+ * Note: These are initialized in @c init_server_info
  */
-typedef struct mysql_server_info
+class MySqlServerInfo
 {
+public:
     int              server_id; /**< Value of @@server_id */
-    int              master_id; /**< Master server id from SHOW SLAVE STATUS*/
-    int              group;     /**< Multi-master group where this server
-                                   belongs, 0 for servers not in groups */
+    int              group;     /**< Multi-master group where this server belongs, 0 for servers not in groups */
     bool             read_only; /**< Value of @@read_only */
-    bool             slave_configured; /**< Whether SHOW SLAVE STATUS returned rows */
-    bool             slave_io;  /**< If Slave IO thread is running  */
-    bool             slave_sql; /**< If Slave SQL thread is running */
-    uint64_t         binlog_pos; /**< Binlog position from SHOW SLAVE STATUS */
-    char            *binlog_name; /**< Binlog name from SHOW SLAVE STATUS */
-    bool             binlog_relay; /** Server is a Binlog Relay */
-} MYSQL_SERVER_INFO;
+    bool             slave_configured;    /**< Whether SHOW SLAVE STATUS returned rows */
+    bool             binlog_relay;        /** Server is a Binlog Relay */
+    int              n_slaves_configured; /**< Number of configured slave connections*/
+    int              n_slaves_running; /**< Number of running slave connections */
+    int              slave_heartbeats; /**< Number of received heartbeats*/
+    double           heartbeat_period; /**< The time interval between heartbeats */
+    time_t           latest_event; /**< Time when latest event was received from the master */
+    struct
+    {
+        uint32_t domain;
+        uint32_t server_id;
+        uint64_t sequence;
+    } slave_gtid;
+    SlaveStatusInfo  slave_status;        /**< Data returned from SHOW SLAVE STATUS */
+
+    MySqlServerInfo()
+        :   server_id(0),
+            group(0),
+            read_only(false),
+            slave_configured(false),
+            binlog_relay(false),
+            n_slaves_configured(0),
+            n_slaves_running(0),
+            slave_heartbeats(0),
+            heartbeat_period(0),
+            latest_event(0),
+            slave_gtid({0, 0, 0})
+    {}
+};
 
 void* info_copy_func(const void *val)
 {
     ss_dassert(val);
-    MYSQL_SERVER_INFO *old_val = (MYSQL_SERVER_INFO*)val;
-    MYSQL_SERVER_INFO *new_val = static_cast<MYSQL_SERVER_INFO*>(MXS_MALLOC(sizeof(MYSQL_SERVER_INFO)));
-    char *binlog_name = MXS_STRDUP(old_val->binlog_name);
+    MySqlServerInfo *old_val = (MySqlServerInfo*)val;
+    MySqlServerInfo *new_val = new (std::nothrow) MySqlServerInfo;
 
-    if (new_val && binlog_name)
+    if (new_val)
     {
         *new_val = *old_val;
-        new_val->binlog_name = binlog_name;
     }
-    else
-    {
-        MXS_FREE(new_val);
-        MXS_FREE(binlog_name);
-        new_val = NULL;
-    }
-
     return new_val;
 }
 
@@ -588,9 +647,8 @@ void info_free_func(void *val)
 {
     if (val)
     {
-        MYSQL_SERVER_INFO *old_val = (MYSQL_SERVER_INFO*)val;
-        MXS_FREE(old_val->binlog_name);
-        MXS_FREE(old_val);
+        MySqlServerInfo *old_val = (MySqlServerInfo*)val;
+        delete old_val;
     }
 }
 
@@ -606,8 +664,7 @@ bool init_server_info(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database)
 {
     bool rval = true;
 
-    MYSQL_SERVER_INFO info = {};
-    info.binlog_name = const_cast<char*>("");
+    MySqlServerInfo info;
 
     while (database)
     {
@@ -621,6 +678,36 @@ bool init_server_info(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database)
         }
 
         database = database->next;
+    }
+
+    return rval;
+}
+
+static MySqlServerInfo* get_server_info(const MYSQL_MONITOR* handle, const  MXS_MONITORED_SERVER* db)
+{
+    void* value = hashtable_fetch(handle->server_info, db->server->unique_name);
+    ss_dassert(value);
+    return static_cast<MySqlServerInfo*>(value);
+}
+
+static bool set_replication_credentials(MYSQL_MONITOR *handle, const MXS_CONFIG_PARAMETER* params)
+{
+    bool rval = false;
+    const char* repl_user = config_get_string(params, CN_REPLICATION_USER);
+    const char* repl_pw = config_get_string(params, CN_REPLICATION_PASSWORD);
+
+    if (!*repl_user && !*repl_pw)
+    {
+        // No replication credentials defined, use monitor credentials
+        repl_user = handle->monitor->user;
+        repl_pw = handle->monitor->password;
+    }
+
+    if (*repl_user && *repl_pw)
+    {
+        handle->replication_user = MXS_STRDUP_A(repl_user);
+        handle->replication_password = decrypt_password(repl_pw);
+        rval = true;
     }
 
     return rval;
@@ -647,6 +734,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->shutdown = 0;
         MXS_FREE(handle->script);
         MXS_FREE(handle->switchover_script);
+        MXS_FREE(handle->replication_user);
+        MXS_FREE(handle->replication_password);
     }
     else
     {
@@ -665,7 +754,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->server_info = server_info;
         handle->shutdown = 0;
         handle->id = config_get_global_options()->id;
-        handle->warn_failover = true;
+        handle->warn_set_standalone_master = true;
         handle->monitor = monitor;
     }
 
@@ -689,8 +778,16 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->switchover = config_get_bool(params, CN_SWITCHOVER);
     handle->switchover_script = config_copy_string(params, CN_SWITCHOVER_SCRIPT);
     handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
+    handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
+    handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
 
     bool error = false;
+
+    if (!set_replication_credentials(handle, params))
+    {
+        MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
+        error = true;
+    }
 
     if (!check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
     {
@@ -790,17 +887,16 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 
     for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
     {
-        MYSQL_SERVER_INFO *serv_info =
-            static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info, db->server->unique_name));
+        MySqlServerInfo *serv_info = get_server_info(handle, db);
         dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
         dcb_printf(dcb, "Server ID: %d\n", serv_info->server_id);
         dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
         dcb_printf(dcb, "Slave configured: %s\n", serv_info->slave_configured ? "YES" : "NO");
-        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_io ? "YES" : "NO");
-        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_sql ? "YES" : "NO");
-        dcb_printf(dcb, "Master ID: %d\n", serv_info->master_id);
-        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->binlog_name);
-        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->binlog_pos);
+        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_status.slave_io ? "YES" : "NO");
+        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_status.slave_sql ? "YES" : "NO");
+        dcb_printf(dcb, "Master ID: %d\n", serv_info->slave_status.master_id);
+        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->slave_status.binlog_name.c_str());
+        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->slave_status.binlog_pos);
 
         if (handle->multimaster)
         {
@@ -852,20 +948,18 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
         for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
         {
             json_t* srv = json_object();
-            MYSQL_SERVER_INFO *serv_info =
-                static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                db->server->unique_name));
+            MySqlServerInfo *serv_info = get_server_info(handle, db);
             json_object_set_new(srv, "name", json_string(db->server->unique_name));
             json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
-            json_object_set_new(srv, "master_id", json_integer(serv_info->master_id));
+            json_object_set_new(srv, "master_id", json_integer(serv_info->slave_status.master_id));
 
             json_object_set_new(srv, "read_only", json_boolean(serv_info->read_only));
             json_object_set_new(srv, "slave_configured", json_boolean(serv_info->slave_configured));
-            json_object_set_new(srv, "slave_io_running", json_boolean(serv_info->slave_io));
-            json_object_set_new(srv, "slave_sql_running", json_boolean(serv_info->slave_sql));
+            json_object_set_new(srv, "slave_io_running", json_boolean(serv_info->slave_status.slave_io));
+            json_object_set_new(srv, "slave_sql_running", json_boolean(serv_info->slave_status.slave_sql));
 
-            json_object_set_new(srv, "master_binlog_file", json_string(serv_info->binlog_name));
-            json_object_set_new(srv, "master_binlog_position", json_integer(serv_info->binlog_pos));
+            json_object_set_new(srv, "master_binlog_file", json_string(serv_info->slave_status.binlog_name.c_str()));
+            json_object_set_new(srv, "master_binlog_position", json_integer(serv_info->slave_status.binlog_pos));
 
             if (handle->multimaster)
             {
@@ -888,9 +982,32 @@ enum mysql_server_version
     MYSQL_SERVER_VERSION_51
 };
 
-static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER_INFO *serv_info,
-                                    enum mysql_server_version server_version)
+static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
 {
+    unsigned long server_version = mysql_get_server_version(db->con);
+
+    if (server_version >= 100000)
+    {
+        return MYSQL_SERVER_VERSION_100;
+    }
+    else if (server_version >= 5 * 10000 + 5 * 100)
+    {
+        return MYSQL_SERVER_VERSION_55;
+    }
+
+    return MYSQL_SERVER_VERSION_51;
+}
+
+static void extract_slave_gtid(MySqlServerInfo* info, const char* str)
+{
+    sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &info->slave_gtid.domain,
+           &info->slave_gtid.server_id, &info->slave_gtid.sequence);
+}
+
+static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database,
+                                 enum mysql_server_version server_version)
+{
+    bool rval = true;
     unsigned int columns;
     int i_io_thread, i_sql_thread, i_binlog_pos, i_master_id, i_binlog_name;
     const char *query;
@@ -916,11 +1033,10 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
         i_master_id = MYSQL55_STATUS_MASTER_ID;
     }
 
-    /** Clear old states */
-    monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
-                                 SERVER_STALE_STATUS | SERVER_SLAVE_OF_EXTERNAL_MASTER);
-
     MYSQL_RES* result;
+    int master_id = -1;
+    int nconfigured = 0;
+    int nrunning = 0;
 
     if (mxs_mysql_query(database->con, query) == 0
         && (result = mysql_store_result(database->con)) != NULL)
@@ -930,37 +1046,37 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
             mysql_free_result(result);
             MXS_ERROR("\"%s\" returned less than the expected amount of columns. "
                       "Expected %u columns.", query, columns);
-            return;
+            return false;
         }
 
         MYSQL_ROW row = mysql_fetch_row(result);
-        long master_id = -1;
 
         if (row)
         {
             serv_info->slave_configured = true;
-            int nconfigured = 0;
-            int nrunning = 0;
 
             do
             {
                 /* get Slave_IO_Running and Slave_SQL_Running values*/
-                serv_info->slave_io = strncmp(row[i_io_thread], "Yes", 3) == 0;
-                serv_info->slave_sql = strncmp(row[i_sql_thread], "Yes", 3) == 0;
+                serv_info->slave_status.slave_io = strncmp(row[i_io_thread], "Yes", 3) == 0;
+                serv_info->slave_status.slave_sql = strncmp(row[i_sql_thread], "Yes", 3) == 0;
 
-                if (serv_info->slave_io && serv_info->slave_sql)
+                if (serv_info->slave_status.slave_io && serv_info->slave_status.slave_sql)
                 {
                     if (nrunning == 0)
                     {
                         /** Only check binlog name for the first running slave */
-                        char *binlog_name = MXS_STRDUP(row[i_binlog_name]);
-
-                        if (binlog_name)
+                        uint64_t binlog_pos = atol(row[i_binlog_pos]);
+                        char* binlog_name = row[i_binlog_name];
+                        if (serv_info->slave_status.binlog_name != binlog_name ||
+                            binlog_pos != serv_info->slave_status.binlog_pos)
                         {
-                            MXS_FREE(serv_info->binlog_name);
-                            serv_info->binlog_name = binlog_name;
-                            serv_info->binlog_pos = atol(row[i_binlog_pos]);
+                            // IO thread is reading events from the master
+                            serv_info->latest_event = time(NULL);
                         }
+
+                        serv_info->slave_status.binlog_name = binlog_name;
+                        serv_info->slave_status.binlog_pos = binlog_pos;
                     }
 
                     nrunning++;
@@ -971,13 +1087,34 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
                  * root master server.
                  * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
                  */
-                if (serv_info->slave_io && server_version != MYSQL_SERVER_VERSION_51)
+                if (serv_info->slave_status.slave_io && server_version != MYSQL_SERVER_VERSION_51)
                 {
                     /* Get Master_Server_Id */
-                    master_id = atol(row[i_master_id]);
+                    master_id = atoi(row[i_master_id]);
                     if (master_id == 0)
                     {
                         master_id = -1;
+                    }
+                }
+
+                if (server_version == MYSQL_SERVER_VERSION_100)
+                {
+                    const char* beats = mxs_mysql_get_value(result, row, "Slave_received_heartbeats");
+                    const char* period = mxs_mysql_get_value(result, row, "Slave_heartbeat_period");
+                    const char* gtid = mxs_mysql_get_value(result, row, "Gtid_Slave_Pos");
+                    ss_dassert(beats && period);
+
+                    int heartbeats = atoi(beats);
+                    if (serv_info->slave_heartbeats < heartbeats)
+                    {
+                        serv_info->latest_event = time(NULL);
+                        serv_info->slave_heartbeats = heartbeats;
+                        serv_info->heartbeat_period = atof(period);
+                    }
+
+                    if (gtid)
+                    {
+                        extract_slave_gtid(serv_info, gtid);
                     }
                 }
 
@@ -985,33 +1122,96 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MYSQL_SERVER
                 row = mysql_fetch_row(result);
             }
             while (row);
-
-
-            /* If all configured slaves are running set this node as slave */
-            if (nrunning > 0 && nrunning == nconfigured)
-            {
-                monitor_set_pending_status(database, SERVER_SLAVE);
-            }
         }
         else
         {
             /** Query returned no rows, replication is not configured */
             serv_info->slave_configured = false;
-            serv_info->slave_io = false;
-            serv_info->slave_sql = false;
-            serv_info->binlog_pos = 0;
-            serv_info->binlog_name[0] = '\0';
+            serv_info->slave_status.slave_io = false;
+            serv_info->slave_status.slave_sql = false;
+            serv_info->slave_status.binlog_pos = 0;
+            serv_info->slave_status.binlog_name = "";
+            serv_info->slave_heartbeats = 0;
+            serv_info->slave_gtid = {};
         }
 
-        /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
-        database->server->master_id = master_id;
-        serv_info->master_id = master_id;
-
+        serv_info->slave_status.master_id = master_id;
         mysql_free_result(result);
     }
     else
     {
         mon_report_query_error(database);
+    }
+
+    serv_info->n_slaves_configured = nconfigured;
+    serv_info->n_slaves_running = nrunning;
+
+    return rval;
+}
+
+static bool update_slave_status(MYSQL_MONITOR* handle, MXS_MONITORED_SERVER* db)
+{
+    void* value = hashtable_fetch(handle->server_info,db->server->unique_name);
+    ss_dassert(value);
+    MySqlServerInfo* info = static_cast<MySqlServerInfo*>(value);
+    enum mysql_server_version version = get_server_version(db);
+    return do_show_slave_status(info, db, version);
+}
+
+static inline bool master_maybe_dead(MYSQL_MONITOR* handle)
+{
+    return handle->verify_master_failure && handle->master &&
+        SERVER_IS_DOWN(handle->master->server);
+}
+
+static bool master_still_alive(MYSQL_MONITOR* handle)
+{
+    bool rval = true;
+
+    if (handle->master && SERVER_IS_DOWN(handle->master->server))
+    {
+        // We have a master and it appears to be dead
+        rval = false;
+
+        for (MXS_MONITORED_SERVER* s = handle->monitor->monitored_servers; s; s = s->next)
+        {
+            MySqlServerInfo* info = get_server_info(handle, s);
+
+            if (info->slave_configured && info->slave_status.master_id == handle->master->server->node_id &&
+                difftime(time(NULL), info->latest_event) < handle->master_failure_timeout)
+            {
+                /**
+                 * The slave is still connected to the correct master and has
+                 * received events. This means that the master is not dead, but
+                 * we just can't connect to it.
+                 */
+                rval = true;
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
+static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info,
+                                    enum mysql_server_version server_version)
+{
+    /** Clear old states */
+    monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
+                                 SERVER_STALE_STATUS | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+
+    if (do_show_slave_status(serv_info, database, server_version))
+    {
+        /* If all configured slaves are running set this node as slave */
+        if (serv_info->slave_configured && serv_info->n_slaves_running > 0 &&
+            serv_info->n_slaves_running == serv_info->n_slaves_configured)
+        {
+            monitor_set_pending_status(database, SERVER_SLAVE);
+        }
+
+        /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
+        database->server->master_id = serv_info->slave_status.master_id;
     }
 }
 
@@ -1212,9 +1412,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     mxs_mysql_set_server_version(database->con, database->server);
     server_string = database->server->version_string;
 
-    MYSQL_SERVER_INFO *serv_info =
-        static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info, database->server->unique_name));
-    ss_dassert(serv_info);
+    MySqlServerInfo *serv_info = get_server_info(handle, database);
 
     /* Check whether current server is MaxScale Binlog Server */
     if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
@@ -1298,7 +1496,7 @@ struct graph_node
     int cycle;
     bool active;
     struct graph_node *parent;
-    MYSQL_SERVER_INFO *info;
+    MySqlServerInfo *info;
     MXS_MONITORED_SERVER *db;
 };
 
@@ -1420,10 +1618,8 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, in
 
     for (MXS_MONITORED_SERVER *db = database; db; db = db->next)
     {
-        graph[nodes].info =
-            static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info, db->server->unique_name));
+        graph[nodes].info = get_server_info(handle, db);
         graph[nodes].db = db;
-        ss_dassert(graph[nodes].info);
         graph[nodes].index = graph[nodes].lowest_index = 0;
         graph[nodes].cycle = 0;
         graph[nodes].active = false;
@@ -1434,12 +1630,12 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, in
     /** Build the graph */
     for (int i = 0; i < nservers; i++)
     {
-        if (graph[i].info->master_id > 0)
+        if (graph[i].info->slave_status.master_id > 0)
         {
             /** Found a connected node */
             for (int k = 0; k < nservers; k++)
             {
-                if (graph[k].info->server_id == graph[i].info->master_id)
+                if (graph[k].info->server_id == graph[i].info->slave_status.master_id)
                 {
                     graph[i].parent = &graph[k];
                     break;
@@ -1509,18 +1705,18 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, in
 }
 
 /**
- * @brief Check whether failover conditions have been met
+ * @brief Check whether standalone master conditions have been met
  *
- * This function checks whether all the conditions to trigger a failover have
- * been met. For a failover to happen, only one server must be available and
+ * This function checks whether all the conditions to use a standalone master have
+ * been met. For this to happen, only one server must be available and
  * other servers must have passed the configured tolerance level of failures.
  *
  * @param handle Monitor instance
  * @param db     Monitor servers
  *
- * @return True if failover is required
+ * @return True if standalone master should be used
  */
-bool failover_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
+bool standalone_master_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 {
     int candidates = 0;
 
@@ -1529,9 +1725,7 @@ bool failover_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
         if (SERVER_IS_RUNNING(db->server))
         {
             candidates++;
-            MYSQL_SERVER_INFO *server_info =
-                static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                db->server->unique_name));
+            MySqlServerInfo *server_info = get_server_info(handle, db);
 
             if (server_info->read_only || server_info->slave_configured || candidates > 1)
             {
@@ -1550,29 +1744,28 @@ bool failover_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 }
 
 /**
- * @brief Initiate simple failover
+ * @brief Use standalone master
  *
- * This function does the actual failover by assigning the last remaining server
- * the master status and setting all other servers into maintenance mode. By
- * setting the servers into maintenance mode, we prevent any possible conflicts
- * when the failed servers come back up.
+ * This function assigns the last remaining server the master status and sets all other
+ * servers into maintenance mode. By setting the servers into maintenance mode, we
+ * prevent any possible conflicts when the failed servers come back up.
  *
  * @param handle Monitor instance
  * @param db     Monitor servers
  */
-void do_failover(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
+void set_standalone_master(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 {
     while (db)
     {
         if (SERVER_IS_RUNNING(db->server))
         {
-            if (!SERVER_IS_MASTER(db->server) && handle->warn_failover)
+            if (!SERVER_IS_MASTER(db->server) && handle->warn_set_standalone_master)
             {
-                MXS_WARNING("Failover initiated, server '%s' is now the master.%s",
+                MXS_WARNING("Setting standalone master, server '%s' is now the master.%s",
                             db->server->unique_name,
                             handle->allow_cluster_recovery ?
                             "" : " All other servers are set into maintenance mode.");
-                handle->warn_failover = false;
+                handle->warn_set_standalone_master = false;
             }
 
             server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
@@ -1587,6 +1780,25 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
         }
         db = db->next;
     }
+}
+
+bool failover_not_possible(MYSQL_MONITOR* handle)
+{
+    bool rval = false;
+
+    for (MXS_MONITORED_SERVER* s = handle->monitor->monitored_servers; s; s = s->next)
+    {
+        MySqlServerInfo* info = get_server_info(handle, s);
+
+        if (info->n_slaves_configured > 1)
+        {
+            MXS_ERROR("Server '%s' is configured to replicate from multiple "
+                      "masters, failover is not possible.", s->server->unique_name);
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 /**
@@ -1758,9 +1970,7 @@ monitorMain(void *arg)
         ptr = mon->monitored_servers;
         while (ptr)
         {
-            MYSQL_SERVER_INFO *serv_info =
-                static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                ptr->server->unique_name));
+            MySqlServerInfo *serv_info = get_server_info(handle, ptr);
             ss_dassert(serv_info);
 
             if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
@@ -1789,10 +1999,7 @@ monitorMain(void *arg)
         {
             if (!SERVER_IN_MAINT(ptr->server))
             {
-                MYSQL_SERVER_INFO *serv_info =
-                    static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                    ptr->server->unique_name));
-                ss_dassert(serv_info);
+                MySqlServerInfo *serv_info = get_server_info(handle, ptr);
 
                 /** If "detect_stale_master" option is On, let's use the previous master.
                  *
@@ -1867,17 +2074,17 @@ monitorMain(void *arg)
         }
 
         /** Now that all servers have their status correctly set, we can check
-            if we need to do a failover */
+            if we need to use standalone master. */
         if (handle->detect_standalone_master)
         {
-            if (failover_required(handle, mon->monitored_servers))
+            if (standalone_master_required(handle, mon->monitored_servers))
             {
-                /** Other servers have died, initiate a failover to the last remaining server */
-                do_failover(handle, mon->monitored_servers);
+                /** Other servers have died, set last remaining server as master */
+                set_standalone_master(handle, mon->monitored_servers);
             }
             else
             {
-                handle->warn_failover = true;
+                handle->warn_set_standalone_master = true;
             }
         }
 
@@ -1896,7 +2103,21 @@ monitorMain(void *arg)
                 failover_script = DEFAULT_FAILOVER_SCRIPT;
             }
 
-            if (!mon_process_failover(mon, failover_script, handle->failover_timeout))
+            if (failover_not_possible(handle))
+            {
+                MXS_ERROR("Failover is not possible due to one or more problems in "
+                          "the replication configuration, disabling failover. "
+                          "Failover should only be enabled after the replication "
+                          "configuration  has been fixed. To re-enable failover "
+                          "functionality, manually set '%s' to 'true' for monitor "
+                          "'%s' via MaxAdmin or the REST API.", CN_FAILOVER, mon->name);
+                handle->failover = false;
+            }
+            else if (master_maybe_dead(handle) && master_still_alive(handle))
+            {
+                MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
+            }
+            else if (!mon_process_failover(handle, failover_script, handle->failover_timeout))
             {
                 MXS_ALERT("Failed to perform failover, disabling failover functionality. "
                           "To enable failover functionality, manually set 'failover' to "
@@ -1950,10 +2171,7 @@ monitorMain(void *arg)
 
             while (ptr)
             {
-                MYSQL_SERVER_INFO *serv_info =
-                    static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                    ptr->server->unique_name));
-                ss_dassert(serv_info);
+                MySqlServerInfo *serv_info = get_server_info(handle, ptr);
 
                 if ((!SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
                 {
@@ -2369,10 +2587,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
                         monitor_clear_pending_status(handle->master, SERVER_MASTER);
                     }
 
-                    MYSQL_SERVER_INFO* info =
-                        static_cast<MYSQL_SERVER_INFO*>(hashtable_fetch(handle->server_info,
-                                                                        master->server->unique_name));
-                    ss_dassert(info);
+                    MySqlServerInfo* info = get_server_info(handle, master);
 
                     if (SERVER_IS_RUNNING(master->server))
                     {
@@ -2665,4 +2880,236 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
         MXS_WARNING("Problems were encountered when checking if '%s' is replicated. Make sure that "
                     "the table is replicated to all slaves.", hb_table_name);
     }
+}
+
+/**
+ * @brief Process possible failover event
+ *
+ * If a master failure has occurred and MaxScale is configured with failover
+ * functionality, this fuction executes an external failover program to elect
+ * a new master server.
+ *
+ * This function should be called immediately after @c mon_process_state_changes.
+ *
+ * @param monitor          Monitor whose cluster is processed
+ * @param failover_script  The script to be used for performing the failover.
+ * @param failover_timeout Timeout in seconds for the failover
+ *
+ * @return True on success, false on error
+ *
+ * @todo Currently this only works with flat replication topologies and
+ *       needs to be moved inside mysqlmon as it is MariaDB specific code.
+ */
+bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, uint32_t failover_timeout)
+{
+    bool rval = true;
+    MXS_CONFIG* cnf = config_get_global_options();
+    MXS_MONITORED_SERVER* failed_master = NULL;
+
+    for (MXS_MONITORED_SERVER *ptr = monitor->monitor->monitored_servers; ptr; ptr = ptr->next)
+    {
+        if (ptr->new_event && !cnf->passive &&
+            ptr->server->last_event == MASTER_DOWN_EVENT)
+        {
+            if (failed_master)
+            {
+                MXS_ALERT("Multiple failed master servers detected: "
+                          "'%s' is the first master to fail but server "
+                          "'%s' has also triggered a master_down event.",
+                          failed_master->server->unique_name,
+                          ptr->server->unique_name);
+                return false;
+            }
+
+            if (ptr->server->active_event)
+            {
+                // MaxScale was active when the event took place
+                failed_master = ptr;
+                ptr->new_event = false;
+            }
+            else if (monitor->monitor->master_has_failed)
+            {
+                /**
+                 * If a master_down event was triggered when this MaxScale was
+                 * passive, we need to execute the failover script again if no new
+                 * masters have appeared.
+                 */
+                int64_t timeout = SEC_TO_HB(failover_timeout);
+                int64_t t = hkheartbeat - ptr->server->triggered_at;
+
+                if (t > timeout)
+                {
+                    MXS_WARNING("Failover of server '%s' did not take place within "
+                                "%u seconds, failover needs to be re-triggered",
+                                ptr->server->unique_name, failover_timeout);
+                    failed_master = ptr;
+                    ptr->new_event = false;
+                }
+            }
+        }
+    }
+
+    if (failed_master)
+    {
+        MXS_NOTICE("Performing automatic failover to replace failed master '%s'.", failed_master->server->unique_name);
+        rval = do_failover(monitor);
+    }
+
+    return rval;
+}
+
+/**
+ * Selects a new master. Also adds slaves which should be redirected to an array.
+ *
+ * @param mon The monitor
+ * @param out_slaves Vector for storing slave servers, can be NULL
+ * @return The found master, or NULL if not found
+ */
+MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon, ServerVector* out_slaves)
+{
+    // Select a new master candidate. Currently does not properly wait for relay logs to clear. Requires that
+    // "detect_stale_slave" is on.
+    MXS_MONITORED_SERVER* new_master = NULL;
+    MySqlServerInfo* new_master_info = NULL;
+    int master_vector_index = -1;
+    for (MXS_MONITORED_SERVER *mon_server = mon->monitor->monitored_servers; mon_server; mon_server = mon_server->next)
+    {
+        MySqlServerInfo* cand_info = get_server_info(mon, mon_server);
+        if (cand_info->slave_status.slave_sql) // Assumed to be a valid slave.
+        {
+            if (out_slaves)
+            {
+                out_slaves->push_back(mon_server);
+            }
+            bool set_master = false;
+            // Accept any candidate at this point.
+            if (new_master == NULL)
+            {
+                set_master = true;
+            }
+            // TODO: Add more checks here, this may give wrong result if filenames are different
+            else if (cand_info->slave_status.binlog_pos > new_master_info->slave_status.binlog_pos)
+            {
+                set_master = true;
+            }
+
+            if (set_master)
+            {
+                new_master = mon_server;
+                new_master_info = cand_info;
+                if (out_slaves)
+                {
+                    master_vector_index = out_slaves->size() - 1;
+                }
+            }
+        }
+    }
+
+    if (new_master && out_slaves)
+    {
+        // Remove the selected master from the vector.
+        ServerVector::iterator remove_this = out_slaves->begin();
+        remove_this += master_vector_index;
+        out_slaves->erase(remove_this);
+    }
+    return new_master;
+}
+
+/**
+ * Prepares a server for the replication master role.
+ *
+ * @param mon The monitor
+ * @param new_master The new master server
+ * @return True if successful
+ */
+bool failover_promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master)
+{
+    MXS_NOTICE("Failover: Promoting server '%s' to master.", new_master->server->unique_name);
+    if (mxs_mysql_query(new_master->con, "STOP SLAVE;") == 0 &&
+        mxs_mysql_query(new_master->con, "RESET SLAVE ALL;") == 0  &&
+        mxs_mysql_query(new_master->con, "SET GLOBAL read_only=0;") == 0)
+    {
+        return true;
+    }
+    else
+    {
+        MXS_WARNING("Failover: Promotion failed: '%s'.", mysql_error(new_master->con));
+        return false;
+    }
+}
+
+/**
+ * Redirects slaves to replicate from another master server.
+ *
+ * @param mon The monitor
+ * @param slaves An array of slaves
+ * @param new_master The replication master
+ * @return True, if even one slave was redirected, or if there was none to redirect
+ */
+bool failover_redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONITORED_SERVER* new_master)
+{
+    MXS_NOTICE("Failover: Redirecting slaves to new master.");
+    std::stringstream change_cmd_temp;
+    change_cmd_temp << "CHANGE MASTER TO MASTER_HOST = '" << new_master->server->name << "', ";
+    change_cmd_temp << "MASTER_PORT = " <<  new_master->server->port << ", ";
+    change_cmd_temp << "MASTER_USE_GTID = slave_pos, ";
+    change_cmd_temp << "MASTER_USER = '" << mon->replication_user << "', ";
+    const char MASTER_PW[] = "MASTER_PASSWORD = '";
+    const char END[] = "';";
+#if defined(SS_DEBUG)
+    std::stringstream change_cmd_nopw;
+    change_cmd_nopw << change_cmd_temp.str();
+    change_cmd_nopw << MASTER_PW << "******" << END;;
+    MXS_DEBUG("Failover: Change master command is '%s'.", change_cmd_nopw.str().c_str());
+#endif
+    change_cmd_temp << MASTER_PW << mon->replication_password << END;
+    std::string change_cmd = change_cmd_temp.str();
+    int fails = 0;
+    int successes = 0;
+    for (ServerVector::const_iterator iter = slaves.begin(); iter != slaves.end(); iter++)
+    {
+        MXS_MONITORED_SERVER* mon_server = *iter;
+        if (mxs_mysql_query(mon_server->con, "STOP SLAVE;") == 0 &&
+            mxs_mysql_query(mon_server->con, change_cmd.c_str()) == 0 &&
+            mxs_mysql_query(mon_server->con, "START SLAVE;") == 0)
+        {
+            successes++;
+            MXS_NOTICE("Failover: Slave '%s' redirected to new master.", mon_server->server->unique_name);
+        }
+        else
+        {
+            fails++;
+            MXS_ERROR("Failover: Slave '%s' redirection failed: '%s'.", mon_server->server->unique_name,
+                    mysql_error(mon_server->con));
+        }
+    }
+    return (successes + fails) == 0 || successes > 0;
+}
+
+/**
+ * Performs failover for a simple topology (1 master, N slaves, no intermediate masters).
+ *
+ * @param mon Server cluster monitor
+ * @return True if successful
+ */
+bool do_failover(MYSQL_MONITOR* mon)
+{
+    // Topology has already been tested to be simple.
+    // Step 1: Select new master. Also populate a vector with all slaves not the selected master.
+    ServerVector redirect_slaves;
+    MXS_MONITORED_SERVER* new_master = failover_select_new_master(mon, &redirect_slaves);
+    if (new_master == NULL)
+    {
+        MXS_ERROR("Failover: No suitable promotion candidates found, cancelling.");
+        return false;
+    }
+
+    bool rval = false;
+    // Step 2: Stop and reset slave, set read-only to 0.
+    if (failover_promote_new_master(mon, new_master))
+    {
+        // Step 3: Redirect slaves.
+        rval = failover_redirect_slaves(mon, redirect_slaves, new_master);
+    }
+    return rval;
 }

@@ -62,8 +62,7 @@
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  * 24/08/2016   Massimiliano Pinto  Added slave notification via CS_WAIT_DATA
  * 16/09/2016   Massimiliano Pinto  Special events created by MaxScale are not sent to slaves:
- *                                  MARIADB10_START_ENCRYPTION_EVENT or IGNORABLE_EVENT
- *                                  Events with LOG_EVENT_IGNORABLE_F are skipped as well.
+ *                                  MARIADB10_START_ENCRYPTION_EVENT or IGNORABLE_EVENT.
  *
  * @endverbatim
  */
@@ -89,6 +88,7 @@
 #include <zlib.h>
 #include <maxscale/alloc.h>
 #include <inttypes.h>
+#include <maxscale/utils.h>
 
 /**
  * This struct is used by sqlite3_exec callback routine
@@ -547,7 +547,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SELECT @@[GLOBAL].gtid_current_pos
  *  SELECT @@[global.]server_id, @@[global.]read_only
  *
- * 9 show commands are supported:
+ * 10 show commands are supported:
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_UUID'
  *  SHOW [GLOBAL] VARIABLES LIKE 'MAXSCALE%'
@@ -556,6 +556,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SHOW SLAVE HOSTS
  *  SHOW WARNINGS
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
+ *  SHOW [GLOBAL] STATUS LIKE 'slave_received_heartbeats'
  *  SHOW BINARY LOGS
  *
  * 13 set commands are supported:
@@ -1168,6 +1169,20 @@ static const char *mariadb10_gtid_status_columns[] =
     NULL
 };
 
+/*
+ * Extra Columns to send in "SHOW ALL SLAVES STATUS" MariaDB 10 command
+ */
+static const char *mariadb10_extra_status_columns[] =
+{
+    "Retried_transactions",
+    "Max_relay_log_size",
+    "Executed_log_entries",
+    "Slave_received_heartbeats",
+    "Slave_heartbeat_period",
+    "Gtid_Slave_Pos",
+    NULL
+};
+
 /**
  * Send the response to the SQL command "SHOW SLAVE STATUS" or
  * SHOW ALL SLAVES STATUS
@@ -1192,19 +1207,13 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
     int gtid_cols = 0;
 
     /* Count SHOW SLAVE STATUS the columns */
-    while (slave_status_columns[ncols])
-    {
-        ncols++;
-    }
+    ncols += MXS_ARRAY_NELEMS(slave_status_columns) - 1;
 
     /* Add the new SHOW ALL SLAVES STATUS columns */
     if (all_slaves)
     {
-        int k = 0;
-        while (all_slaves_status_columns[k++])
-        {
-            ncols++;
-        }
+        ncols += MXS_ARRAY_NELEMS(all_slaves_status_columns) - 1;
+        ncols += MXS_ARRAY_NELEMS(mariadb10_extra_status_columns) - 1;
     }
 
     /* Get the right GTID columns array */
@@ -1255,6 +1264,20 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
                                  BLR_TYPE_STRING,
                                  40,
                                  seqno++);
+    }
+
+    /* Send extra columns for SHOW ALL SLAVES STATUS */
+    if (all_slaves)
+    {
+        for (i = 0; mariadb10_extra_status_columns[i]; i++)
+        {
+            blr_slave_send_columndef(router,
+                                     slave,
+                                     mariadb10_extra_status_columns[i],
+                                     BLR_TYPE_STRING,
+                                     40,
+                                     seqno++);
+        }
     }
 
     /* Send EOF for columns def */
@@ -1647,6 +1670,50 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router,
         *ptr++ = col_len;                // Length of result string
         memcpy(ptr, column, col_len);    // Result string
         ptr += col_len;
+    }
+
+    if (all_slaves)
+    {
+        // Retried_transactions
+        sprintf(column, "%d", 0);
+        col_len = strlen(column);
+        *ptr++ = col_len;                        // Length of result string
+        memcpy((char *)ptr, column, col_len);    // Result string
+        ptr += col_len;
+
+        *ptr++ = 0;    // Max_relay_log_size
+        *ptr++ = 0;    // Executed_log_entries
+
+        // Slave_received_heartbeats
+        sprintf(column, "%d", router->stats.n_heartbeats);
+        col_len = strlen(column);
+        *ptr++ = col_len;                        // Length of result string
+        memcpy((char *)ptr, column, col_len);    // Result string
+        ptr += col_len;
+
+        // Slave_heartbeat_period
+        sprintf(column, "%lu", router->heartbeat);
+        col_len = strlen(column);
+        *ptr++ = col_len;                        // Length of result string
+        memcpy((char *)ptr, column, col_len);    // Result string
+        ptr += col_len;
+
+        //Gtid_Slave_Pos
+        if (!router->mariadb10_gtid)
+        {
+            // No GTID support send empty values
+            *ptr++ = 0;
+        }
+        else
+        {
+            sprintf(column,
+                    "%s",
+                    router->last_mariadb_gtid);
+            col_len = strlen(column);
+            *ptr++ = col_len;                // Length of result string
+            memcpy(ptr, column, col_len);    // Result string
+            ptr += col_len;
+        }
     }
 
     *ptr++ = 0;
@@ -2307,8 +2374,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 
         /* Don't sent special events generated by MaxScale */
         if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT ||
-            hdr.event_type == IGNORABLE_EVENT ||
-            (hdr.flags & LOG_EVENT_IGNORABLE_F))
+            hdr.event_type == IGNORABLE_EVENT)
         {
             /* In case of file rotation or pos = 4 the events
              * are sent from position 4 and the new FDE at pos 4 is read.
@@ -5551,6 +5617,16 @@ blr_slave_handle_status_variables(ROUTER_INSTANCE *router,
                                                   slave,
                                                   "Uptime",
                                                   uptime,
+                                                  BLR_TYPE_INT);
+        }
+        else if (strcasecmp(word, "'slave_received_heartbeats'") == 0)
+        {
+            char hkbeats[41] = "";
+            snprintf(hkbeats, 40, "%d", router->stats.n_heartbeats);
+            return blr_slave_send_status_variable(router,
+                                                  slave,
+                                                  "Slave_received_heartbeats",
+                                                  hkbeats,
                                                   BLR_TYPE_INT);
         }
         else

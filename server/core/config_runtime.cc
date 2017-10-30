@@ -998,49 +998,59 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
 }
 
 static bool extract_relations(json_t* json, StringSet& relations,
-                              const char** relation_types,
+                              const char* relation_type,
                               bool (*relation_check)(const std::string&, const std::string&))
 {
     bool rval = true;
+    json_t* arr = mxs_json_pointer(json, relation_type);
 
-    for (int i = 0; relation_types[i]; i++)
+    if (arr && json_is_array(arr))
     {
-        json_t* arr = mxs_json_pointer(json, relation_types[i]);
+        size_t size = json_array_size(arr);
 
-        if (arr && json_is_array(arr))
+        for (size_t j = 0; j < size; j++)
         {
-            size_t size = json_array_size(arr);
+            json_t* obj = json_array_get(arr, j);
+            json_t* id = json_object_get(obj, CN_ID);
+            json_t* type = mxs_json_pointer(obj, CN_TYPE);
 
-            for (size_t j = 0; j < size; j++)
+            if (id && json_is_string(id) &&
+                type && json_is_string(type))
             {
-                json_t* obj = json_array_get(arr, j);
-                json_t* id = json_object_get(obj, CN_ID);
-                json_t* type = mxs_json_pointer(obj, CN_TYPE);
+                std::string id_value = json_string_value(id);
+                std::string type_value = json_string_value(type);
 
-                if (id && json_is_string(id) &&
-                    type && json_is_string(type))
+                if (relation_check(type_value, id_value))
                 {
-                    std::string id_value = json_string_value(id);
-                    std::string type_value = json_string_value(type);
-
-                    if (relation_check(type_value, id_value))
-                    {
-                        relations.insert(id_value);
-                    }
-                    else
-                    {
-                        rval = false;
-                    }
+                    relations.insert(id_value);
                 }
                 else
                 {
                     rval = false;
                 }
             }
+            else
+            {
+                rval = false;
+            }
         }
     }
 
     return rval;
+}
+
+static inline bool is_null_relation(json_t* json, const char* relation)
+{
+    std::string str(relation);
+    size_t pos = str.rfind("/data");
+
+    ss_dassert(pos != std::string::npos);
+    str = str.substr(0, pos);
+
+    json_t* data = mxs_json_pointer(json, relation);
+    json_t* base = mxs_json_pointer(json, str.c_str());
+
+    return (data && json_is_null(data)) || (base && json_is_null(base));
 }
 
 static inline const char* get_string_or_null(json_t* json, const char* path)
@@ -1157,13 +1167,6 @@ static bool server_contains_required_fields(json_t* json)
 
     return rval;
 }
-
-const char* server_relation_types[] =
-{
-    MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
-    MXS_JSON_PTR_RELATIONSHIPS_MONITORS,
-    NULL
-};
 
 static bool server_relation_is_valid(const std::string& type, const std::string& value)
 {
@@ -1314,7 +1317,8 @@ SERVER* runtime_create_server_from_json(json_t* json)
 
         StringSet relations;
 
-        if (extract_relations(json, relations, server_relation_types, server_relation_is_valid))
+        if (extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_SERVICES, server_relation_is_valid) &&
+            extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_MONITORS, server_relation_is_valid))
         {
             if (runtime_create_server(name, address, port.c_str(), protocol, authenticator, authenticator_options))
             {
@@ -1347,12 +1351,33 @@ bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_js
         return true;
     }
 
-    bool rval = false;
+    const char* server_relation_types[] =
+    {
+        MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
+        MXS_JSON_PTR_RELATIONSHIPS_MONITORS,
+        NULL
+    };
+
+    bool rval = true;
     StringSet old_relations;
     StringSet new_relations;
 
-    if (extract_relations(old_json, old_relations, server_relation_types, server_relation_is_valid) &&
-        extract_relations(new_json, new_relations, server_relation_types, server_relation_is_valid))
+    for (int i = 0; server_relation_types[i]; i++)
+    {
+        // Extract only changed or deleted relationships
+        if (is_null_relation(new_json, server_relation_types[i]) ||
+            mxs_json_pointer(new_json, server_relation_types[i]))
+        {
+            if (!extract_relations(new_json, new_relations, server_relation_types[i], server_relation_is_valid) ||
+                !extract_relations(old_json, old_relations, server_relation_types[i], server_relation_is_valid))
+            {
+                rval = false;
+                break;
+            }
+        }
+    }
+
+    if (rval)
     {
         StringSet removed_relations;
         StringSet added_relations;
@@ -1365,10 +1390,10 @@ bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_js
                             old_relations.begin(), old_relations.end(),
                             std::inserter(added_relations, added_relations.begin()));
 
-        if (unlink_server_from_objects(server, removed_relations) &&
-            link_server_to_objects(server, added_relations))
+        if (!unlink_server_from_objects(server, removed_relations) ||
+            !link_server_to_objects(server, added_relations))
         {
-            rval = true;
+            rval = false;
         }
     }
 
@@ -1415,11 +1440,46 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
     return rval;
 }
 
-const char* object_relation_types[] =
+static bool is_valid_relationship_body(json_t* json)
 {
-    MXS_JSON_PTR_RELATIONSHIPS_SERVERS,
-    NULL
-};
+    bool rval = true;
+
+    json_t* obj = mxs_json_pointer(json, MXS_JSON_PTR_DATA);
+
+    if (!obj)
+    {
+        runtime_error("Field '%s' is not defined", MXS_JSON_PTR_DATA);
+        rval = false;
+    }
+    else if (!json_is_array(obj))
+    {
+        runtime_error("Field '%s' is not an array", MXS_JSON_PTR_DATA);
+        rval = false;
+    }
+
+    return rval;
+}
+
+bool runtime_alter_server_relationships_from_json(SERVER* server, const char* type, json_t* json)
+{
+    bool rval = false;
+    mxs::Closer<json_t*> old_json(server_to_json(server, ""));
+    ss_dassert(old_json.get());
+
+    if (is_valid_relationship_body(json))
+    {
+        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                         "relationships", type, "data",
+                                         json_object_get(json, "data")));
+
+        if (server_to_object_relations(server, old_json.get(), j.get()))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
 
 static bool object_relation_is_valid(const std::string& type, const std::string& value)
 {
@@ -1459,7 +1519,7 @@ static bool validate_monitor_json(json_t* json)
         else
         {
             StringSet relations;
-            if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
+            if (extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_SERVERS, object_relation_is_valid))
             {
                 rval = true;
             }
@@ -1542,9 +1602,10 @@ bool object_to_server_relations(const char* target, json_t* old_json, json_t* ne
     bool rval = false;
     StringSet old_relations;
     StringSet new_relations;
+    const char* object_relation = MXS_JSON_PTR_RELATIONSHIPS_SERVERS;
 
-    if (extract_relations(old_json, old_relations, object_relation_types, object_relation_is_valid) &&
-        extract_relations(new_json, new_relations, object_relation_types, object_relation_is_valid))
+    if (extract_relations(old_json, old_relations, object_relation, object_relation_is_valid) &&
+        extract_relations(new_json, new_relations, object_relation, object_relation_is_valid))
     {
         StringSet removed_relations;
         StringSet added_relations;
@@ -1623,6 +1684,48 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
     return rval;
 }
 
+bool runtime_alter_monitor_relationships_from_json(MXS_MONITOR* monitor, json_t* json)
+{
+    bool rval = false;
+    mxs::Closer<json_t*> old_json(monitor_to_json(monitor, ""));
+    ss_dassert(old_json.get());
+
+    if (is_valid_relationship_body(json))
+    {
+        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                         "relationships", "servers", "data",
+                                         json_object_get(json, "data")));
+
+        if (object_to_server_relations(monitor->name, old_json.get(), j.get()))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_alter_service_relationships_from_json(SERVICE* service, json_t* json)
+{
+    bool rval = false;
+    mxs::Closer<json_t*> old_json(service_to_json(service, ""));
+    ss_dassert(old_json.get());
+
+    if (is_valid_relationship_body(json))
+    {
+        mxs::Closer<json_t*> j(json_pack("{s: {s: {s: {s: O}}}}", "data",
+                                         "relationships", "servers", "data",
+                                         json_object_get(json, "data")));
+
+        if (object_to_server_relations(service->name, old_json.get(), j.get()))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * @brief Check if the service parameter can be altered at runtime
  *
@@ -1686,7 +1789,22 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                 }
                 else
                 {
-                    runtime_error("Parameter '%s' cannot be modified", key);
+                    const MXS_MODULE *mod = get_module(service->routerModule, MODULE_ROUTER);
+                    std::string v = mxs::json_to_string(value);
+
+                    if (config_param_is_valid(mod->parameters, key, v.c_str(), NULL))
+                    {
+                        runtime_error("Runtime modifications to router parameters is not supported: %s=%s", key, v.c_str());
+                    }
+                    else if (!is_dynamic_param(key))
+                    {
+                        runtime_error("Runtime modifications to static service parameters is not supported: %s=%s", key, v.c_str());
+                    }
+                    else
+                    {
+                        runtime_error("Parameter '%s' cannot be modified at runtime", key);
+                    }
+
                     rval = false;
                 }
             }

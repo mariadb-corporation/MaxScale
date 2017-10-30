@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <string>
 #include <set>
+#include <vector>
 
 #include <maxscale/service.h>
 #include <maxscale/alloc.h>
@@ -2700,8 +2701,7 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
 
 json_t* service_relations_to_server(const SERVER* server, const char* host)
 {
-    json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
-
+    std::vector<std::string> names;
     spinlock_acquire(&service_spin);
 
     for (SERVICE *service = allServices; service; service = service->next)
@@ -2712,7 +2712,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
         {
             if (ref->server == server && SERVER_REF_IS_ACTIVE(ref))
             {
-                mxs_json_add_relation(rel, service->name, CN_SERVICES);
+                names.push_back(service->name);
             }
         }
 
@@ -2720,6 +2720,19 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     }
 
     spinlock_release(&service_spin);
+
+    json_t* rel = NULL;
+
+    if (!names.empty())
+    {
+        rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+
+        for (std::vector<std::string>::iterator it = names.begin();
+             it != names.end(); it++)
+        {
+            mxs_json_add_relation(rel, it->c_str(), CN_SERVICES);
+        }
+    }
 
     return rel;
 }

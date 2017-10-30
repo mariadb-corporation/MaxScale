@@ -25,6 +25,7 @@
 #include <set>
 #include <zlib.h>
 #include <sys/stat.h>
+#include <vector>
 
 #include <maxscale/alloc.h>
 #include <maxscale/hk_heartbeat.h>
@@ -1740,6 +1741,9 @@ void servers_status_current_to_pending(MXS_MONITOR *monitor)
 
 void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_t events)
 {
+    bool master_down = false;
+    bool master_up = false;
+
     for (MXS_MONITORED_SERVER *ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
     {
         if (mon_status_changed(ptr))
@@ -1755,16 +1759,17 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             mxs_monitor_event_t event = mon_get_event_type(ptr);
             ptr->server->last_event = event;
             ptr->server->triggered_at = hkheartbeat;
+            ptr->server->active_event = !config_get_global_options()->passive;
             ptr->new_event = true;
             mon_log_state_change(ptr);
 
             if (event == MASTER_DOWN_EVENT)
             {
-                monitor->last_master_down = hkheartbeat;
+                master_down = true;
             }
             else if (event == MASTER_UP_EVENT || event == NEW_MASTER_EVENT)
             {
-                monitor->last_master_up = hkheartbeat;
+                master_up = true;
             }
 
             if (script && (events & event))
@@ -1773,79 +1778,23 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             }
         }
     }
-}
 
-bool mon_process_failover(MXS_MONITOR *monitor, const char* failover_script, uint32_t failover_timeout)
-{
-    bool rval = true;
-    MXS_CONFIG* cnf = config_get_global_options();
-    MXS_MONITORED_SERVER* failed_master = NULL;
-
-    for (MXS_MONITORED_SERVER *ptr = monitor->monitored_servers; ptr; ptr = ptr->next)
+    if (master_down != master_up)
     {
-        if (mon_status_changed(ptr))
+        // We either lost the master or gained a new one
+        if (master_down)
         {
-            if (ptr->server->last_event == MASTER_DOWN_EVENT)
-            {
-                if (!cnf->passive)
-                {
-                    if (failed_master)
-                    {
-                        MXS_ALERT("Multiple failed master servers detected: "
-                                  "'%s' is the first master to fail but server "
-                                  "'%s' has also triggered a master_down event.",
-                                  failed_master->server->unique_name,
-                                  ptr->server->unique_name);
-                        return false;
-                    }
-                    else
-                    {
-                        failed_master = ptr;
-                    }
-                }
-            }
+            monitor->master_has_failed = true;
         }
-        else
+        else if (master_up)
         {
-            /**
-             * If a master_down event was triggered when this MaxScale was
-             * passive, we need to execute the failover script again if no new
-             * masters have appeared and this MaxScale has been set as active
-             * since the event took place.
-             */
-
-            if (!cnf->passive && // This is not a passive MaxScale
-                ptr->server->last_event == MASTER_DOWN_EVENT && // This is a master that went down
-                cnf->promoted_at >= ptr->server->triggered_at && // Promoted to active after the event took place
-                ptr->new_event && // Event has not yet been processed
-                monitor->last_master_down > monitor->last_master_up) // Latest relevant event
-            {
-                int64_t timeout = SEC_TO_HB(failover_timeout);
-                int64_t t = hkheartbeat - ptr->server->triggered_at;
-
-                if (t > timeout)
-                {
-                    MXS_WARNING("Failover of server '%s' did not take place within "
-                                "%u seconds, failover needs to be re-triggered",
-                                ptr->server->unique_name, failover_timeout);
-                    failed_master = ptr;
-                    ptr->new_event = false;
-                }
-            }
+            monitor->master_has_failed = false;
         }
     }
-
-    if (failed_master)
+    else if (master_down && master_up)
     {
-        MXS_NOTICE("Performing failover of server '%s'", failed_master->server->unique_name);
-
-        if (monitor_launch_script(monitor, failed_master, failover_script, failover_timeout))
-        {
-            rval = false;
-        }
+        MXS_INFO("Master switch detected: lost a master and gained a new one");
     }
-
-    return rval;
 }
 
 static const char* monitor_state_to_string(int state)
@@ -1981,8 +1930,7 @@ json_t* monitor_list_to_json(const char* host)
 
 json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 {
-    json_t* rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
-
+    std::vector<std::string> names;
     spinlock_acquire(&monLock);
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
@@ -1995,7 +1943,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
             {
                 if (db->server == server)
                 {
-                    mxs_json_add_relation(rel, mon->name, CN_MONITORS);
+                    names.push_back(mon->name);
                     break;
                 }
             }
@@ -2005,6 +1953,19 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
     }
 
     spinlock_release(&monLock);
+
+    json_t* rel = NULL;
+
+    if (!names.empty())
+    {
+        rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
+
+        for (std::vector<std::string>::iterator it = names.begin();
+             it != names.end(); it++)
+        {
+            mxs_json_add_relation(rel, it->c_str(), CN_MONITORS);
+        }
+    }
 
     return rel;
 }
