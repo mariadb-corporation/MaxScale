@@ -579,19 +579,49 @@ public:
     uint32_t server_id;
     uint64_t sequence;
     Gtid()
-       :    domain(0),
-            server_id(0),
-            sequence(0)
+       : domain(0)
+       , server_id(0)
+       , sequence(0)
     {}
 
-    Gtid(const char* str)
+    /**
+     * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with the given domain
+     * is returned.
+     *
+     * @param str Gtid string
+     * @param search_domain The Gtid domain whose triplet should be returned. Negative domain means autoselect,
+     * which is only allowed when the string contains one triplet.
+     */
+    Gtid(const char* str, int64_t search_domain = -1)
+       : domain(0)
+       , server_id(0)
+       , sequence(0)
     {
-        if (sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &domain, &server_id, &sequence) != 3)
+        // Autoselect only allowed with one triplet
+        ss_dassert(search_domain >= 0 || strchr(str, ',') == NULL);
+        parse_triplet(str);
+        if (search_domain >= 0 && domain != search_domain)
         {
-            domain = 0;
-            server_id = 0;
-            sequence = 0;
+            // Search for the correct triplet.
+            bool found = false;
+            for (const char* next_triplet = strchr(str, ',');
+                    next_triplet != NULL && !found;
+                    next_triplet = strchr(next_triplet, ','))
+            {
+                parse_triplet(++next_triplet);
+                if (domain == search_domain)
+                {
+                    found = true;
+                }
+            }
+            ss_dassert(found);
         }
+    }
+private:
+    void parse_triplet(const char* str)
+    {
+        ss_debug(int rv =) sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &domain, &server_id, &sequence);
+        ss_dassert(rv == 3);
     }
 };
 // Contains data returned by one row of SHOW ALL SLAVES STATUS
@@ -629,10 +659,11 @@ public:
     bool             binlog_relay;        /** Server is a Binlog Relay */
     int              n_slaves_configured; /**< Number of configured slave connections*/
     int              n_slaves_running; /**< Number of running slave connections */
-    int              slave_heartbeats; /**< Number of received heartbeats*/
+    int              slave_heartbeats; /**< Number of received heartbeats */
     double           heartbeat_period; /**< The time interval between heartbeats */
     time_t           latest_event;     /**< Time when latest event was received from the master */
-    Gtid             gtid_slave_pos;   /**< Gtid of latest replicated event */
+    Gtid             gtid_slave_pos;   /**< Gtid of latest replicated event. Only shows the triplet with the same
+                                        * domain as Gtid_IO_Pos. */
     SlaveStatusInfo  slave_status;     /**< Data returned from SHOW SLAVE STATUS */
 
     MySqlServerInfo()
@@ -1136,13 +1167,15 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                         serv_info->heartbeat_period = atof(period);
                     }
 
-                    if (gtid_slave_pos)
-                    {
-                        serv_info->gtid_slave_pos = Gtid(gtid_slave_pos);
-                    }
-                    if (gtid_io_pos)
+                    if (serv_info->slave_status.slave_sql_running && gtid_io_pos && gtid_slave_pos)
                     {
                         serv_info->slave_status.gtid_io_pos = Gtid(gtid_io_pos);
+                        serv_info->gtid_slave_pos = Gtid(gtid_slave_pos, serv_info->slave_status.gtid_io_pos.domain);
+                    }
+                    else
+                    {
+                        serv_info->slave_status.gtid_io_pos = Gtid();
+                        serv_info->gtid_slave_pos = Gtid();
                     }
                 }
 
