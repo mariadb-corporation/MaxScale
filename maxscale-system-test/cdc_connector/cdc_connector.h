@@ -2,6 +2,7 @@
 #include <string>
 #include <tr1/memory>
 #include <vector>
+#include <map>
 #include <algorithm>
 #include <jansson.h>
 
@@ -17,6 +18,7 @@ class InternalRow;
 typedef std::tr1::shared_ptr<InternalRow> Row;
 
 typedef std::vector<std::string> ValueList;
+typedef std::map<std::string, std::string> ValueMap;
 
 // A class that represents a CDC connection
 class Connection
@@ -40,6 +42,21 @@ public:
     {
         return m_error;
     }
+    ValueMap getFields() const
+    {
+        ValueMap fields;
+
+        for (size_t i = 0; i < m_keys.size(); i++)
+        {
+            fields[m_keys[i]] = m_types[i];
+        }
+
+        return fields;
+    }
+    void abort()
+    {
+        m_running = false;
+    }
 
 private:
     int m_fd;
@@ -52,13 +69,17 @@ private:
     std::string m_schema;
     ValueList m_keys;
     ValueList m_types;
-    Row       m_first_row;
+    bool m_running;
 
     bool doAuth();
     bool doRegistration();
     bool readRow(std::string& dest);
     void processSchema(json_t* json);
     Row processRow(json_t*);
+
+    // Lower-level functions
+    int nointr_read(void *dest, size_t size);
+    int nointr_write(const void *src, size_t size);
 };
 
 // Internal representation of a row, used via the Row type
@@ -80,6 +101,17 @@ public:
     {
         ValueList::const_iterator it = std::find(m_keys.begin(), m_keys.end(), str);
         return m_values[it - m_keys.begin()];
+    }
+
+    const std::string gtid() const
+    {
+        std::string s;
+        s += value("domain");
+        s += "-";
+        s += value("server_id");
+        s +=  "-";
+        s += value("sequence");
+        return s;
     }
 
     const std::string& key(size_t i) const
