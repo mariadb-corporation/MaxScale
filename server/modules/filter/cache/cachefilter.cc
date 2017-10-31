@@ -349,7 +349,7 @@ bool CacheFilter::process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParam
                                                                   "selects",
                                                                   parameter_selects_values));
     config.cache_in_trxs = static_cast<cache_in_trxs_t>(config_get_enum(ppParams,
-                                                                        "cache_in_transaction",
+                                                                        "cache_in_transactions",
                                                                         parameter_cache_in_trxs_values));
 
     if (!config.storage)

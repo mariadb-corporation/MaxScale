@@ -59,7 +59,7 @@
 // Storage
 #define CACHE_DEFAULT_STORAGE            "storage_inmemory"
 // Transaction behaviour
-#define CACHE_DEFAULT_CACHE_IN_TRXS      "read_only_transactions"
+#define CACHE_DEFAULT_CACHE_IN_TRXS      "all_transactions"
 
 typedef enum cache_selects
 {
