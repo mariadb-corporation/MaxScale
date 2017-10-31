@@ -46,7 +46,7 @@ then if the first character of a value in the configuration file is a `$`
 then everything following that is interpreted as an environment variable
 and the configuration value is replaced with the value of the environment
 variable. For more information please consult the
-[Configuration Guide](Getting-Started/Configuration-Guide.md).
+[Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
 ## Bug fixes
 

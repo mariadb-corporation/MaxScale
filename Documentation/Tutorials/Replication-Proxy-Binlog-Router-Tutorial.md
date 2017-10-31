@@ -269,12 +269,14 @@ Gtid_IO_Pos: 0-10116-196
 
 # Binlog router compatibility
 
-Binlog Router Plugin is compatible with MariaDB 5.5 and MySQL 5.6, the current default.
+Binlog Router Plugin is compatible with MariaDB 5.5 and MySQL 5.6/5.7.
 
-In order to use it with MySQL 5.6, the *GTID_MODE* setting must be OFF and connecting
-slaves must not use *MASTER_AUTO_POSITION = 1* option.
+In order to use it with MySQL 5.6/5.7, the *GTID_MODE* setting must be OFF
+and connecting slaves must not use *MASTER_AUTO_POSITION = 1* option.
+Additionally with MySQL 5.7 slaves the `send_slave_heartbeat` option must be set to on.
 
-It also works with a MariaDB 10.X setup (master and slaves).
+It’s also works with a MariaDB 10.X setup (master and slaves).
+Slave connection must not include any GTID feature if MaxScale version is less than 2.2.
 
 Starting from MaxScale 2.2.1 the slave connections might optionally include
 **GTID** feature `MASTER_USE_GTID=Slave_pos`: only option *mariadb10-compatibility* is required.
@@ -292,6 +294,8 @@ all operations. All slave servers must use the same replication domain as the ma
 
 **Note:** Binlog Router currently does not work for MySQL 5.5 due to
 missing *@@global.binlog_checksum* variable.
+
+The default compatibility is MariaDB 10 since MaxScale 2.2.
 
 # Master server setup/change
 
