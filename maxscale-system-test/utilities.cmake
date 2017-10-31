@@ -94,6 +94,8 @@ add_test_executable_notest(sysbench_example.cpp sysbench_example replication)
 set(CONNECTOR_C_VERSION "3.0" CACHE STRING "The Connector-C version to use")
 
 include(ExternalProject)
+include(GNUInstallDirs)
+
 ExternalProject_Add(connector-c
   GIT_REPOSITORY "https://github.com/MariaDB/mariadb-connector-c.git"
   GIT_TAG ${CONNECTOR_C_VERSION}
@@ -103,13 +105,18 @@ ExternalProject_Add(connector-c
 include_directories(${CMAKE_BINARY_DIR}/include)
 set(MYSQL_CLIENT ${CMAKE_BINARY_DIR}/lib/mariadb/libmariadbclient.a CACHE INTERNAL "")
 
+# Build Jansson
+include(cmake/BuildJansson.cmake)
+include_directories(${JANSSON_INCLUDE_DIR})
+
 # Build the CDC connector
 ExternalProject_Add(cdc_connector
   SOURCE_DIR ${CMAKE_SOURCE_DIR}/cdc_connector/
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cdc_connector/
   BUILD_COMMAND make
   INSTALL_COMMAND make install)
+add_dependencies(cdc_connector jansson)
 
 set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/include/ CACHE INTERNAL "")
-set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/lib/libcdc_connector.so CACHE INTERNAL "")
+set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_LIBDIR}/libcdc_connector.a CACHE INTERNAL "")
 include_directories(${CMAKE_BINARY_DIR}/cdc_connector/include)
