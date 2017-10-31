@@ -40,6 +40,7 @@ To enable this functionality, add `query_retries=<number-of-retries>` under the
 
 [Here is a list of bugs fixed in MaxScale 2.1.10.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.10)
 
+* [MXS-1497](https://jira.mariadb.org/browse/MXS-1497) Don't skip events with LOG_EVENT_IGNORABLE_F flag
 * [MXS-1468](https://jira.mariadb.org/browse/MXS-1468) Using dynamic commands to create readwritesplit configs fail after restart
 * [MXS-1459](https://jira.mariadb.org/browse/MXS-1459) Binlog checksum default value is wrong if a slave connects with checksum = NONE before master registration or master is not accessible at startup
 * [MXS-1457](https://jira.mariadb.org/browse/MXS-1457) Deleted servers are not ignored when users are loaded
