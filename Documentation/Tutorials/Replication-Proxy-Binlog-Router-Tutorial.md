@@ -236,13 +236,18 @@ Master_SSL_Verify_Server_Cert: No
 
 # Binlog router compatibility
 
-Binlog Router Plugin is compatible with MariaDB 5.5 and MySQL 5.6, the current default.
+Binlog Router Plugin is compatible with MariaDB 5.5 and MySQL 5.6/5.7.
 
-In order to use it with MySQL 5.6, the *GTID_MODE* setting must be OFF and connecting slaves must not use *MASTER_AUTO_POSITION = 1* option.
+In order to use it with MySQL 5.6/5.7, the *GTID_MODE* setting must be OFF
+and connecting slaves must not use *MASTER_AUTO_POSITION = 1* option.
+Additionally with MySQL 5.7 slaves the `send_slave_heartbeat` option must be set to on.
 
-It’s also works with a MariaDB 10.0 setup (master and slaves) but slave connection must not include any GTID feature.
+It’s also works with a MariaDB 10.X setup (master and slaves).
+Slave connection must not include any GTID feature if MaxScale version is less than 2.2.
 
 Binlog Router currently does not work for MySQL 5.5 due to missing *@@global.binlog_checksum* variable.
+
+The default compatibility is MariaDB 10 since MaxScale 2.2.
 
 # Master server setup/change
 
