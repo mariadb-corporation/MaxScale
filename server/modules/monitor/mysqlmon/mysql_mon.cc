@@ -72,7 +72,9 @@ static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
 static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
-static bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, uint32_t failover_timeout);
+static bool mon_process_failover(MYSQL_MONITOR* monitor,
+                                 const char* failover_script,
+                                 uint32_t failover_timeout);
 static bool do_failover(MYSQL_MONITOR* mon);
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -653,7 +655,7 @@ class MySqlServerInfo
 {
 public:
     int              server_id; /**< Value of @@server_id */
-    int              group;     /**< Multi-master group where this server belongs, 0 for servers not in groups */
+    int              group; /**< Multi-master group where this server belongs, 0 for servers not in groups */
     bool             read_only; /**< Value of @@read_only */
     bool             slave_configured;    /**< Whether SHOW SLAVE STATUS returned rows */
     bool             binlog_relay;        /** Server is a Binlog Relay */
@@ -800,7 +802,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     else
     {
         handle = (MYSQL_MONITOR *) MXS_MALLOC(sizeof(MYSQL_MONITOR));
-        HASHTABLE *server_info = hashtable_alloc(MAX_NUM_SLAVES, hashtable_item_strhash, hashtable_item_strcmp);
+        HASHTABLE *server_info = hashtable_alloc(MAX_NUM_SLAVES,
+                                                 hashtable_item_strhash, hashtable_item_strcmp);
 
         if (handle == NULL || server_info == NULL)
         {
@@ -1015,11 +1018,15 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
 
             json_object_set_new(srv, "read_only", json_boolean(serv_info->read_only));
             json_object_set_new(srv, "slave_configured", json_boolean(serv_info->slave_configured));
-            json_object_set_new(srv, "slave_io_running", json_boolean(serv_info->slave_status.slave_io_running));
-            json_object_set_new(srv, "slave_sql_running", json_boolean(serv_info->slave_status.slave_sql_running));
+            json_object_set_new(srv, "slave_io_running",
+                                json_boolean(serv_info->slave_status.slave_io_running));
+            json_object_set_new(srv, "slave_sql_running",
+                                json_boolean(serv_info->slave_status.slave_sql_running));
 
-            json_object_set_new(srv, "master_binlog_file", json_string(serv_info->slave_status.master_log_file.c_str()));
-            json_object_set_new(srv, "master_binlog_position", json_integer(serv_info->slave_status.read_master_log_pos));
+            json_object_set_new(srv, "master_binlog_file",
+                                json_string(serv_info->slave_status.master_log_file.c_str()));
+            json_object_set_new(srv, "master_binlog_position",
+                                json_integer(serv_info->slave_status.read_master_log_pos));
 
             if (handle->multimaster)
             {
@@ -1235,7 +1242,8 @@ static bool master_still_alive(MYSQL_MONITOR* handle)
         {
             MySqlServerInfo* info = get_server_info(handle, s);
 
-            if (info->slave_configured && info->slave_status.master_server_id == handle->master->server->node_id &&
+            if (info->slave_configured &&
+                info->slave_status.master_server_id == handle->master->server->node_id &&
                 difftime(time(NULL), info->latest_event) < handle->master_failure_timeout)
             {
                 /**
@@ -2380,7 +2388,8 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
     database->server->node_ts = heartbeat;
 
     sprintf(heartbeat_insert_query,
-            "UPDATE maxscale_schema.replication_heartbeat SET master_timestamp = %lu WHERE master_server_id = %li AND maxscale_id = %lu",
+            "UPDATE maxscale_schema.replication_heartbeat "
+            "SET master_timestamp = %lu WHERE master_server_id = %li AND maxscale_id = %lu",
             heartbeat, handle->master->server->node_id, id);
 
     /* Try to insert MaxScale timestamp into master */
@@ -2399,7 +2408,8 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
         {
             heartbeat = time(0);
             sprintf(heartbeat_insert_query,
-                    "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)",
+                    "REPLACE INTO maxscale_schema.replication_heartbeat "
+                    "(master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)",
                     handle->master->server->node_id, id, heartbeat);
 
             if (mxs_mysql_query(database->con, heartbeat_insert_query))
@@ -2478,8 +2488,8 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database
             heartbeat = time(0);
             slave_read = strtoul(row[0], NULL, 10);
 
-            if ((errno == ERANGE && (slave_read == LONG_MAX || slave_read == LONG_MIN)) || (errno != 0 &&
-                                                                                            slave_read == 0))
+            if ((errno == ERANGE && (slave_read == LONG_MAX || slave_read == LONG_MIN)) ||
+                (errno != 0 && slave_read == 0))
             {
                 slave_read = 0;
             }
@@ -3009,7 +3019,8 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, u
 
     if (failed_master)
     {
-        MXS_NOTICE("Performing automatic failover to replace failed master '%s'.", failed_master->server->unique_name);
+        MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                   failed_master->server->unique_name);
         rval = do_failover(monitor);
     }
 
@@ -3025,12 +3036,14 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, u
  */
 MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon, ServerVector* out_slaves)
 {
-    /* Select a new master candidate. Selects the one with the latest event in relay log. If multiple slaves have same
-     * number of events, select the one with most processed events. */
+    /* Select a new master candidate. Selects the one with the latest event in relay log.
+     * If multiple slaves have same number of events, select the one with most processed events. */
     MXS_MONITORED_SERVER* new_master = NULL;
     MySqlServerInfo* new_master_info = NULL;
     int master_vector_index = -1;
-    for (MXS_MONITORED_SERVER *mon_server = mon->monitor->monitored_servers; mon_server; mon_server = mon_server->next)
+    for (MXS_MONITORED_SERVER *mon_server = mon->monitor->monitored_servers;
+         mon_server;
+         mon_server = mon_server->next)
     {
         MySqlServerInfo* cand_info = get_server_info(mon, mon_server);
         if (cand_info->slave_status.slave_sql_running) // Assumed to be a valid slave.
@@ -3042,10 +3055,12 @@ MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon, ServerVecto
             // If no candidate yet, accept any.
             if (new_master == NULL ||
                 // Otherwise accept a slave with a later event in relay log.
-                cand_info->slave_status.gtid_io_pos.sequence > new_master_info->slave_status.gtid_io_pos.sequence ||
+                cand_info->slave_status.gtid_io_pos.sequence >
+                new_master_info->slave_status.gtid_io_pos.sequence ||
                 // If io sequences are identical, the slave with more events processed wins.
-                (cand_info->slave_status.gtid_io_pos.sequence == new_master_info->slave_status.gtid_io_pos.sequence &&
-                cand_info->gtid_slave_pos.sequence > new_master_info->gtid_slave_pos.sequence))
+                (cand_info->slave_status.gtid_io_pos.sequence ==
+                 new_master_info->slave_status.gtid_io_pos.sequence &&
+                 cand_info->gtid_slave_pos.sequence > new_master_info->gtid_slave_pos.sequence))
             {
                 new_master = mon_server;
                 new_master_info = cand_info;
@@ -3079,7 +3094,9 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
     MySqlServerInfo* master_info = get_server_info(mon, new_master);
     time_t begin = time(NULL);
     bool query_ok = true;
-    while (master_info->relay_log_events() > 0 && query_ok && difftime(time(NULL), begin) < mon->failover_timeout)
+    while (master_info->relay_log_events() > 0 &&
+           query_ok &&
+           difftime(time(NULL), begin) < mon->failover_timeout)
     {
         MXS_NOTICE("Failover: Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
                 new_master->server->unique_name, master_info->relay_log_events());
