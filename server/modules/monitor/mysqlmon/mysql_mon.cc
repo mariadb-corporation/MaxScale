@@ -57,8 +57,11 @@
 #define SLAVE_HOSTS_PORT 2
 
 using std::string;
-static void monitorMain(void *);
+typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
+typedef std::vector<string> StringVector;
+class MySqlServerInfo;
 
+static void monitorMain(void *);
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 static void stopMonitor(MXS_MONITOR *);
 static bool stop_monitor(MXS_MONITOR *);
@@ -76,6 +79,9 @@ static bool mon_process_failover(MYSQL_MONITOR* monitor,
                                  const char* failover_script,
                                  uint32_t failover_timeout);
 static bool do_failover(MYSQL_MONITOR* mon);
+static void update_gtid_slave_pos(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info);
+static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
+
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
@@ -102,8 +108,6 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 
 /** Default master failure verification timeout */
 #define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
-
-typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
 
 // TODO: Specify the real default failover script.
 static const char DEFAULT_FAILOVER_SCRIPT[] =
@@ -646,6 +650,20 @@ public:
     {}
 };
 
+// This class groups some miscellaneous replication related settings together.
+class ReplicationSettings
+{
+public:
+    bool             gtid_strict_mode; /**< Enable additional checks for replication */
+    bool             log_bin;          /**< Is binary logging enabled */
+    bool             log_slave_updates;/**< Does the slave log replicated events to binlog */
+    ReplicationSettings()
+    :   gtid_strict_mode(false)
+    ,   log_bin(false)
+    ,   log_slave_updates(false)
+    {}
+};
+
 /**
  * Monitor specific information about a server
  *
@@ -664,9 +682,10 @@ public:
     int              slave_heartbeats; /**< Number of received heartbeats */
     double           heartbeat_period; /**< The time interval between heartbeats */
     time_t           latest_event;     /**< Time when latest event was received from the master */
-    Gtid             gtid_slave_pos;   /**< Gtid of latest replicated event. Only shows the triplet with the same
-                                        * domain as Gtid_IO_Pos. */
+    Gtid             gtid_slave_pos;   /**< Gtid of latest replicated event. Only shows the triplet with the
+                                        * same domain as Gtid_IO_Pos. */
     SlaveStatusInfo  slave_status;     /**< Data returned from SHOW SLAVE STATUS */
+    ReplicationSettings rpl_settings;  /**< Miscellaneous replication related settings */
 
     MySqlServerInfo()
         :   server_id(0),
@@ -1162,7 +1181,6 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                 {
                     const char* beats = mxs_mysql_get_value(result, row, "Slave_received_heartbeats");
                     const char* period = mxs_mysql_get_value(result, row, "Slave_heartbeat_period");
-                    const char* gtid_slave_pos = mxs_mysql_get_value(result, row, "Gtid_Slave_Pos");
                     const char* gtid_io_pos = mxs_mysql_get_value(result, row, "Gtid_IO_Pos");
                     ss_dassert(beats && period);
 
@@ -1174,10 +1192,11 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                         serv_info->heartbeat_period = atof(period);
                     }
 
-                    if (serv_info->slave_status.slave_sql_running && gtid_io_pos && gtid_slave_pos)
+                    if (serv_info->slave_status.slave_sql_running && gtid_io_pos)
                     {
-                        serv_info->slave_status.gtid_io_pos = Gtid(gtid_io_pos);
-                        serv_info->gtid_slave_pos = Gtid(gtid_slave_pos, serv_info->slave_status.gtid_io_pos.domain);
+                        Gtid io_pos = Gtid(gtid_io_pos);
+                        serv_info->slave_status.gtid_io_pos = io_pos;
+                        update_gtid_slave_pos(database, io_pos.domain, serv_info);
                     }
                     else
                     {
@@ -3046,21 +3065,57 @@ MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon, ServerVecto
          mon_server = mon_server->next)
     {
         MySqlServerInfo* cand_info = get_server_info(mon, mon_server);
-        if (cand_info->slave_status.slave_sql_running) // Assumed to be a valid slave.
+        if (cand_info->slave_status.slave_sql_running && update_replication_settings(mon_server, cand_info))
         {
             if (out_slaves)
             {
                 out_slaves->push_back(mon_server);
             }
+            if (cand_info->rpl_settings.log_bin == false)
+            {
+                MXS_WARNING("Failover: Slave '%s' has binary log disabled and is not a valid promotion "
+                        "candidate.", mon_server->server->unique_name);
+                continue;
+            }
+            if (cand_info->rpl_settings.gtid_strict_mode == false)
+            {
+                MXS_WARNING("Failover: Slave '%s' has gtid_strict_mode disabled. Enabling this setting is "
+                        "recommended. For more information, see "
+                        "https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode",
+                        mon_server->server->unique_name);
+            }
+            if (cand_info->rpl_settings.log_slave_updates == false)
+            {
+                MXS_WARNING("Failover: Slave '%s' has log_slave_updates disabled. It is a valid candidate "
+                        "but replication will break for lagging slaves if '%s' is promoted.",
+                        mon_server->server->unique_name, mon_server->server->unique_name);
+            }
+            bool select_this = false;
             // If no candidate yet, accept any.
-            if (new_master == NULL ||
+            if (new_master == NULL)
+            {
+                select_this = true;
+            }
+            else
+            {
+                uint64_t cand_io = cand_info->slave_status.gtid_io_pos.sequence;
+                uint64_t cand_processed = cand_info->gtid_slave_pos.sequence;
+                uint64_t master_io = new_master_info->slave_status.gtid_io_pos.sequence;
+                uint64_t master_processed = new_master_info->gtid_slave_pos.sequence;
+                bool cand_updates = cand_info->rpl_settings.log_slave_updates;
+                bool master_updates = new_master_info->rpl_settings.log_slave_updates;
                 // Otherwise accept a slave with a later event in relay log.
-                cand_info->slave_status.gtid_io_pos.sequence >
-                new_master_info->slave_status.gtid_io_pos.sequence ||
-                // If io sequences are identical, the slave with more events processed wins.
-                (cand_info->slave_status.gtid_io_pos.sequence ==
-                 new_master_info->slave_status.gtid_io_pos.sequence &&
-                 cand_info->gtid_slave_pos.sequence > new_master_info->gtid_slave_pos.sequence))
+                if (cand_io > master_io ||
+                        // If io sequences are identical, the slave with more events processed wins.
+                        (cand_io == master_io && (cand_processed > master_processed ||
+                        // Finally, if binlog positions are identical, prefer a slave with log_slave_updates.
+                        (cand_processed == master_processed && cand_updates && !master_updates))))
+                {
+                    select_this = true;
+                }
+            }
+
+            if (select_this)
             {
                 new_master = mon_server;
                 new_master_info = cand_info;
@@ -3197,7 +3252,7 @@ bool failover_redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONI
  * @param mon Server cluster monitor
  * @return True if successful
  */
-bool do_failover(MYSQL_MONITOR* mon)
+static bool do_failover(MYSQL_MONITOR* mon)
 {
     // Topology has already been tested to be simple.
     // Step 1: Select new master. Also populate a vector with all slaves not the selected master.
@@ -3218,4 +3273,88 @@ bool do_failover(MYSQL_MONITOR* mon)
         return true;
     }
     return false;
+}
+
+/**
+ * Query one row of results, save strings to array. Any additional rows are ignored.
+ *
+ * @param database The database to query.
+ * @param query The query to execute.
+ * @param expected_cols How many columns the result should have.
+ * @param output The output array to populate.
+ * @return True on success.
+ */
+static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
+        StringVector* output)
+{
+    bool rval = false;
+    MYSQL_RES *result;
+    if (mxs_mysql_query(database->con, query) == 0 && (result = mysql_store_result(database->con)) != NULL)
+    {
+        unsigned int columns = mysql_field_count(database->con);
+        if (columns != expected_cols)
+        {
+            mysql_free_result(result);
+            MXS_ERROR("Unexpected result for '%s'. Expected %d columns, got %d. MySQL Version: %s",
+                    query, expected_cols, columns, database->server->version_string);
+        }
+        else
+        {
+            MYSQL_ROW row = mysql_fetch_row(result);
+            if (row)
+            {
+                for (unsigned int i = 0; i < columns; i++)
+                {
+                    output->push_back((row[i] != NULL) ? row[i] : "");
+                }
+                rval = true;
+            }
+            else
+            {
+                MXS_ERROR("Query '%s' returned no rows.", query);
+            }
+            mysql_free_result(result);
+        }
+    }
+    else
+    {
+        mon_report_query_error(database);
+    }
+    return rval;
+}
+
+/**
+ * Query a few miscellaneous replication settings.
+ *
+ * @param database The slave server to query
+ * @param info Where to save results
+ * @return True on success
+ */
+static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
+{
+    StringVector row;
+    bool ok = query_one_row(database, "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;", 3, &row);
+    if (ok)
+    {
+        info->rpl_settings.gtid_strict_mode = (row[0] == "1");
+        info->rpl_settings.log_bin = (row[1] == "1");
+        info->rpl_settings.log_slave_updates = (row[2] == "1");
+    }
+    return ok;
+}
+
+/**
+ * Query gtid_slave_pos and save it to the server info object.
+ *
+ * @param database The server to query.
+ * @param domain Which gtid domain should be saved.
+ * @param info Server info structure for saving result.
+ */
+static void update_gtid_slave_pos(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info)
+{
+    StringVector row;
+    if (query_one_row(database, "SELECT @@gtid_slave_pos;", 1, &row))
+    {
+        info->gtid_slave_pos = Gtid(row.front().c_str(), domain);
+    }
 }
