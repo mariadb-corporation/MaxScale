@@ -11,5 +11,5 @@ src=$1
 cp -r -t $PWD/maxctrl $src/maxctrl/* && cd $PWD/maxctrl
 
 npm install
-npm install pkg
+npm install pkg@4.2.3
 node_modules/pkg/lib-es5/bin.js -t node6-linux-x64 .
