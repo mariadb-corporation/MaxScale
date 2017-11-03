@@ -111,10 +111,11 @@ include_directories(${JANSSON_INCLUDE_DIR})
 
 # Build the CDC connector
 ExternalProject_Add(cdc_connector
-  SOURCE_DIR ${CMAKE_SOURCE_DIR}/cdc_connector/
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cdc_connector/
+  GIT_REPOSITORY "https://github.com/mariadb-corporation/maxscale-cdc-connector"
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cdc_connector/ -DJANSSON_INCLUDE_DIR=${JANSSON_INCLUDE_DIR}
   BUILD_COMMAND make
-  INSTALL_COMMAND make install)
+  INSTALL_COMMAND make install
+  UPDATE_COMMAND "")
 add_dependencies(cdc_connector jansson)
 
 set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/include/ CACHE INTERNAL "")
