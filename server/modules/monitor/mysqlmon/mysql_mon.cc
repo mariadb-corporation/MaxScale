@@ -79,7 +79,7 @@ static bool mon_process_failover(MYSQL_MONITOR* monitor,
                                  const char* failover_script,
                                  uint32_t failover_timeout);
 static bool do_failover(MYSQL_MONITOR* mon);
-static void update_gtid_slave_pos(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info);
+static bool update_gtid_slave_pos(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info);
 static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 
 static bool report_version_err = true;
@@ -622,6 +622,10 @@ public:
             }
             ss_dassert(found);
         }
+    }
+    bool operator == (const Gtid& rhs) const
+    {
+        return domain == rhs.domain && server_id == rhs.server_id && sequence == rhs.sequence;
     }
 private:
     void parse_triplet(const char* str)
@@ -1192,17 +1196,8 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                         serv_info->heartbeat_period = atof(period);
                     }
 
-                    if (serv_info->slave_status.slave_sql_running && gtid_io_pos)
-                    {
-                        Gtid io_pos = Gtid(gtid_io_pos);
-                        serv_info->slave_status.gtid_io_pos = io_pos;
-                        update_gtid_slave_pos(database, io_pos.domain, serv_info);
-                    }
-                    else
-                    {
-                        serv_info->slave_status.gtid_io_pos = Gtid();
-                        serv_info->gtid_slave_pos = Gtid();
-                    }
+                    serv_info->slave_status.gtid_io_pos = (serv_info->slave_status.slave_sql_running &&
+                            gtid_io_pos) ? Gtid(gtid_io_pos) : Gtid();
                 }
 
                 nconfigured++;
@@ -1215,7 +1210,6 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
             /** Query returned no rows, replication is not configured */
             serv_info->slave_configured = false;
             serv_info->slave_heartbeats = 0;
-            serv_info->gtid_slave_pos = Gtid();
             serv_info->slave_status = SlaveStatusInfo();
         }
 
@@ -3065,7 +3059,9 @@ MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon, ServerVecto
          mon_server = mon_server->next)
     {
         MySqlServerInfo* cand_info = get_server_info(mon, mon_server);
-        if (cand_info->slave_status.slave_sql_running && update_replication_settings(mon_server, cand_info))
+        if (cand_info->slave_status.slave_sql_running &&
+                update_replication_settings(mon_server, cand_info) &&
+                update_gtid_slave_pos(mon_server, cand_info->slave_status.gtid_io_pos.domain, cand_info))
         {
             if (out_slaves)
             {
@@ -3149,15 +3145,20 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
     MySqlServerInfo* master_info = get_server_info(mon, new_master);
     time_t begin = time(NULL);
     bool query_ok = true;
+    bool io_pos_changed = false;
     while (master_info->relay_log_events() > 0 &&
            query_ok &&
+           !io_pos_changed &&
            difftime(time(NULL), begin) < mon->failover_timeout)
     {
         MXS_NOTICE("Failover: Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
                 new_master->server->unique_name, master_info->relay_log_events());
         thread_millisleep(1000); // Sleep for a while before querying server again.
         // Todo: check server version before entering failover.
-        query_ok = do_show_slave_status(master_info, new_master, MYSQL_SERVER_VERSION_100);
+        Gtid old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
+        query_ok = do_show_slave_status(master_info, new_master, MYSQL_SERVER_VERSION_100) &&
+                update_gtid_slave_pos(new_master, old_gtid_io_pos.domain, master_info);
+        io_pos_changed = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
 
     bool rval = false;
@@ -3167,9 +3168,17 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
     }
     else
     {
-        MXS_ALERT("Failover: %s while waiting for server '%s' to process relay log.",
-                query_ok ? "Timeout" : "Status query error",
-                new_master->server->unique_name);
+        const char* reason = "Timeout";
+        if (!query_ok)
+        {
+            reason = "Query error";
+        }
+        else if (io_pos_changed)
+        {
+            reason = "Old master sent new event(s)";
+        }
+        MXS_ERROR("Failover: %s while waiting for server '%s' to process relay log. Cancelling failover.",
+                reason, new_master->server->unique_name);
         rval = false;
     }
     return rval;
@@ -3349,12 +3358,15 @@ static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlSer
  * @param database The server to query.
  * @param domain Which gtid domain should be saved.
  * @param info Server info structure for saving result.
+ * @return True if successful
  */
-static void update_gtid_slave_pos(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info)
+static bool update_gtid_slave_pos(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info)
 {
     StringVector row;
-    if (query_one_row(database, "SELECT @@gtid_slave_pos;", 1, &row))
+    bool rval = query_one_row(database, "SELECT @@gtid_slave_pos;", 1, &row);
+    if (rval)
     {
         info->gtid_slave_pos = Gtid(row.front().c_str(), domain);
     }
+    return rval;
 }
