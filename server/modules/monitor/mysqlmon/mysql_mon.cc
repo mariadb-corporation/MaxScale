@@ -3129,10 +3129,10 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
     MySqlServerInfo* master_info = get_server_info(mon, new_master);
     time_t begin = time(NULL);
     bool query_ok = true;
-    bool io_pos_changed = false;
+    bool io_pos_stable = true;
     while (master_info->relay_log_events() > 0 &&
            query_ok &&
-           !io_pos_changed &&
+           io_pos_stable &&
            difftime(time(NULL), begin) < mon->failover_timeout)
     {
         MXS_NOTICE("Failover: Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
@@ -3142,7 +3142,7 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
         Gtid old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
         query_ok = do_show_slave_status(master_info, new_master, MYSQL_SERVER_VERSION_100) &&
                 update_gtid_slave_pos(new_master, old_gtid_io_pos.domain, master_info);
-        io_pos_changed = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
+        io_pos_stable = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
 
     bool rval = false;
@@ -3157,7 +3157,7 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
         {
             reason = "Query error";
         }
-        else if (io_pos_changed)
+        else if (!io_pos_stable)
         {
             reason = "Old master sent new event(s)";
         }
