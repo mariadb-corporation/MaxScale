@@ -15,6 +15,10 @@ target_link_libraries(testfilter maxscale-common)
 set_target_properties(testfilter PROPERTIES VERSION "1.0.0")
 install_module(testfilter core)
 
+add_library(examplecppfilter SHARED examplefilter.cc examplefiltersession.cc)
+set_target_properties(examplecppfilter PROPERTIES VERSION "1.0.0")
+install_module(examplecppfilter core)
+
 add_library(testprotocol SHARED testprotocol.c)
 set_target_properties(testprotocol PROPERTIES VERSION "1.0.0")
 install_module(testprotocol core)

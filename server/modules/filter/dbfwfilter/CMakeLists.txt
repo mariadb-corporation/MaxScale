@@ -7,6 +7,10 @@ if(BISON_FOUND AND FLEX_FOUND)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   add_library(dbfwfilter-core STATIC ${BISON_ruleparser_OUTPUTS} ${FLEX_token_OUTPUTS} rules.cc user.cc)
+
+  # Depends on PCRE2
+  add_dependencies(dbfwfilter-core pcre2 connector-c)
+
   add_library(dbfwfilter SHARED dbfwfilter.cc)
   target_link_libraries(dbfwfilter maxscale-common MySQLCommon dbfwfilter-core)
   set_target_properties(dbfwfilter PROPERTIES VERSION "1.0.0")

@@ -9,6 +9,9 @@ add_library(cachetester
   ../../../../../query_classifier/test/testreader.cc
   )
 
+# Depends on C/C
+add_dependencies(cachetester connector-c)
+
 add_executable(testrules testrules.cc ../rules.cc)
 target_link_libraries(testrules maxscale-common ${JANSSON_LIBRARIES})
 
