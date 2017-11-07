@@ -9,12 +9,18 @@ For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
+
 ### Binlog server
 
-- MariaDB 10 GTID is always enabled for slave connections.
-- Automatically set binlog storage to 'tree' mode when
-_mariadb10_master_gtid_ option is on.
+* The `mariadb10_slave_gtid` parameter was removed and slave connections can now
+  always register with MariaDB 10 GTID.
 
+* The `binlog_structure` parameter was removed and the binlogs are stored
+  automatically in 'tree' mode when `mariadb10_master_gtid` is enabled.
+
+* If `mariadb10_master_gtid` is enabled, the `transaction_safety` is
+  automatically enabled. In MaxScale 2.2.0, if `transaction_safety` was disabled
+  when `mariadb10_master_gtid` was enabled MaxScale would refuse to start.
 
 ## Dropped Features
 

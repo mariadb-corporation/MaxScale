@@ -319,10 +319,9 @@ MariaDB> START SLAVE;
 If using GTID request then it's no longer possible to use MASTER_LOG_FILE and
 MASTER_LOG_POS in `CHANGE MASTER TO` command: an error will be reported.
 
-If this feature is enabled, the _mariadb10_slave_gtid_ and
-_transaction_safety_ features will be automatically enabled. The binlog
-files will also be stored in a hierarchical directory tree instead of a
-single directory.
+If this feature is enabled, the _transaction_safety_ option will be
+automatically enabled. The binlog files will also be stored in a
+hierarchical directory tree instead of a single directory.
 
 **Note:**
 
