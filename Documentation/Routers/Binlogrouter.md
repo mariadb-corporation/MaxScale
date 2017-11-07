@@ -296,13 +296,13 @@ Example:
 ```
 
 ### `mariadb10_master_gtid`
-This option allows MaxScale binlog router to register
-with MariaDB 10.X master using GTID instead of _binlog_file_ name
-and _position_ in CHANGE MASTER TO admin command.
 
-The user can set a known GTID or an empty value
-(in this case the Master server will send events
-from it's first available binlog file).
+This option allows MaxScale binlog router to register with MariaDB 10.X master
+using GTID instead of _binlog_file_ name and _position_ in CHANGE MASTER TO
+admin command. This feature is disabled by default.
+
+The user can set a known GTID or an empty value (in this case the Master server
+will send events from it's first available binlog file).
 
 Example of MaxScale connection to a MariaDB 10.X Master
 
@@ -316,13 +316,13 @@ MariaDB> CHANGE MASTER TO
 MariaDB> START SLAVE;
 ```
 
-If using GTID request then it's no longer possible to use
-MASTER_LOG_FILE and MASTER_LOG_POS in `CHANGE MASTER TO`
-command: an error will be reported.
+If using GTID request then it's no longer possible to use MASTER_LOG_FILE and
+MASTER_LOG_POS in `CHANGE MASTER TO` command: an error will be reported.
 
-The default option value is _Off_, setting it to _On_
-automatically sets _mariadb10_slave_gtid_ to _On_
-(which enables GTID storage and GTID slave connections)
+If this feature is enabled, the _mariadb10_slave_gtid_ and
+_transaction_safety_ features will be automatically enabled. The binlog
+files will also be stored in a hierarchical directory tree instead of a
+single directory.
 
 **Note:**
 
