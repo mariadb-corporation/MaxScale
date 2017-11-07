@@ -75,9 +75,7 @@ static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
 static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
-static bool mon_process_failover(MYSQL_MONITOR* monitor,
-                                 const char* failover_script,
-                                 uint32_t failover_timeout);
+static bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout);
 static bool do_failover(MYSQL_MONITOR* mon);
 static bool update_gtid_slave_pos(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info);
 static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
@@ -86,7 +84,6 @@ static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
 static const char CN_FAILOVER[]           = "failover";
-static const char CN_FAILOVER_SCRIPT[]    = "failover_script";
 static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
 static const char CN_SWITCHOVER[]         = "switchover";
 static const char CN_SWITCHOVER_SCRIPT[]  = "switchover_script";
@@ -108,14 +105,6 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 
 /** Default master failure verification timeout */
 #define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
-
-// TODO: Specify the real default failover script.
-static const char DEFAULT_FAILOVER_SCRIPT[] =
-    "/usr/bin/echo INITIATOR=$INITIATOR "
-    "PARENT=$PARENT CHILDREN=$CHILDREN EVENT=$EVENT "
-    "CREDENTIALS=$CREDENTIALS NODELIST=$NODELIST "
-    "LIST=$LIST MASTERLIST=$MASTERLIST "
-    "SLAVELIST=$SLAVELIST SYNCEDLIST=$SYNCEDLIST";
 
 // TODO: Specify the real default switchover script.
 static const char DEFAULT_SWITCHOVER_SCRIPT[] =
@@ -550,12 +539,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 mxs_monitor_event_enum_values
             },
             {CN_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
-            {
-                CN_FAILOVER_SCRIPT,
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_X_OK
-            },
             {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
             {CN_SWITCHOVER, MXS_MODULE_PARAM_BOOL, "false"},
             {
@@ -859,7 +842,6 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     handle->allow_external_slaves = config_get_bool(params, "allow_external_slaves");
     handle->failover = config_get_bool(params, CN_FAILOVER);
-    handle->failover_script = config_copy_string(params, CN_FAILOVER_SCRIPT);
     handle->failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
     handle->switchover = config_get_bool(params, CN_SWITCHOVER);
     handle->switchover_script = config_copy_string(params, CN_SWITCHOVER_SCRIPT);
@@ -2181,13 +2163,6 @@ monitorMain(void *arg)
 
         if (handle->failover)
         {
-            const char* failover_script = handle->failover_script;
-
-            if (!failover_script)
-            {
-                failover_script = DEFAULT_FAILOVER_SCRIPT;
-            }
-
             if (failover_not_possible(handle))
             {
                 MXS_ERROR("Failover is not possible due to one or more problems in "
@@ -2202,7 +2177,7 @@ monitorMain(void *arg)
             {
                 MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
             }
-            else if (!mon_process_failover(handle, failover_script, handle->failover_timeout))
+            else if (!mon_process_failover(handle, handle->failover_timeout))
             {
                 MXS_ALERT("Failed to perform failover, disabling failover functionality. "
                           "To enable failover functionality, manually set 'failover' to "
@@ -2979,7 +2954,6 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
  * This function should be called immediately after @c mon_process_state_changes.
  *
  * @param monitor          Monitor whose cluster is processed
- * @param failover_script  The script to be used for performing the failover.
  * @param failover_timeout Timeout in seconds for the failover
  *
  * @return True on success, false on error
@@ -2987,7 +2961,7 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
  * @todo Currently this only works with flat replication topologies and
  *       needs to be moved inside mysqlmon as it is MariaDB specific code.
  */
-bool mon_process_failover(MYSQL_MONITOR* monitor, const char* failover_script, uint32_t failover_timeout)
+bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout)
 {
     bool rval = true;
     MXS_CONFIG* cnf = config_get_global_options();

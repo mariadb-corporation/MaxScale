@@ -64,7 +64,6 @@ typedef struct
     bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
     bool allow_external_slaves;    /**< Whether to allow usage of external slave servers */
     bool failover;                 /**< If master failover is enabled */
-    char* failover_script;         /**< Script to call for performing master failover */
     uint32_t failover_timeout;     /**< Timeout in seconds for the master failover */
     bool switchover;               /**< If master switchover is enabled */
     char* switchover_script;       /**< Script to call for performing master switchover */
