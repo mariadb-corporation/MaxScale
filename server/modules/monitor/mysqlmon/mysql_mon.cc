@@ -1745,13 +1745,13 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, in
             /** We have at least one cycle in the graph */
             if (graph[i].info->read_only)
             {
-                monitor_set_pending_status(graph[i].db, SERVER_SLAVE);
+                monitor_set_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
                 monitor_clear_pending_status(graph[i].db, SERVER_MASTER);
             }
             else
             {
                 monitor_set_pending_status(graph[i].db, SERVER_MASTER);
-                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
+                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
             }
         }
         else if (handle->detectStaleMaster && cycle == 0 &&
@@ -1771,13 +1771,13 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, in
             if (graph[i].info->read_only)
             {
                 /** The master is in read-only mode, set it into Slave state */
-                monitor_set_pending_status(graph[i].db, SERVER_SLAVE);
+                monitor_set_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
                 monitor_clear_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
             }
             else
             {
                 monitor_set_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
-                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
+                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE | SERVER_STALE_SLAVE);
             }
         }
     }
@@ -2120,13 +2120,13 @@ monitorMain(void *arg)
                         /** Slave with a running master, assign stale slave candidacy */
                         if ((ptr->pending_status & bits) == bits)
                         {
-                            ptr->pending_status |= SERVER_STALE_SLAVE;
+                            monitor_set_pending_status(ptr, SERVER_STALE_SLAVE);
                         }
                         /** Server lost slave when a master is available, remove
                          * stale slave candidacy */
                         else if ((ptr->pending_status & bits) == SERVER_RUNNING)
                         {
-                            ptr->pending_status &= ~SERVER_STALE_SLAVE;
+                            monitor_clear_pending_status(ptr, SERVER_STALE_SLAVE);
                         }
                     }
                     /** If this server was a stale slave candidate, assign
@@ -2139,11 +2139,11 @@ monitorMain(void *arg)
                               (SERVER_IS_MASTER(root_master->server) &&
                                (root_master->mon_prev_status & SERVER_MASTER) == 0)))
                     {
-                        ptr->pending_status |= SERVER_SLAVE;
+                        monitor_set_pending_status(ptr, SERVER_SLAVE);
                     }
                     else if (root_master == NULL && serv_info->slave_configured)
                     {
-                        ptr->pending_status |= SERVER_SLAVE;
+                        monitor_set_pending_status(ptr, SERVER_SLAVE);
                     }
                 }
 
@@ -2165,6 +2165,12 @@ monitorMain(void *arg)
             {
                 handle->warn_set_standalone_master = true;
             }
+        }
+
+        if (root_master)
+        {
+            // Clear slave and stale slave status bits from current master
+            monitor_clear_pending_status(root_master, SERVER_SLAVE | SERVER_STALE_SLAVE);
         }
 
         /**
