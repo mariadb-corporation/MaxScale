@@ -1167,8 +1167,8 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                 {
                     const char* beats = mxs_mysql_get_value(result, row, "Slave_received_heartbeats");
                     const char* period = mxs_mysql_get_value(result, row, "Slave_heartbeat_period");
-                    const char* gtid_io_pos = mxs_mysql_get_value(result, row, "Gtid_IO_Pos");
-                    ss_dassert(beats && period);
+                    const char* using_gtid = mxs_mysql_get_value(result, row, "Using_Gtid");
+                    ss_dassert(beats && period && using_gtid);
 
                     int heartbeats = atoi(beats);
                     if (serv_info->slave_heartbeats < heartbeats)
@@ -1177,9 +1177,13 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                         serv_info->slave_heartbeats = heartbeats;
                         serv_info->heartbeat_period = atof(period);
                     }
-
-                    serv_info->slave_status.gtid_io_pos = (serv_info->slave_status.slave_sql_running &&
-                            gtid_io_pos) ? Gtid(gtid_io_pos) : Gtid();
+                    if (strcmp(using_gtid, "Slave_Pos") == 0)
+                    {
+                        const char* gtid_io_pos = mxs_mysql_get_value(result, row, "Gtid_IO_Pos");
+                        ss_dassert(gtid_io_pos);
+                        serv_info->slave_status.gtid_io_pos = gtid_io_pos[0] != '\0' ?
+                            Gtid(gtid_io_pos) : Gtid();
+                    }
                 }
 
                 nconfigured++;
