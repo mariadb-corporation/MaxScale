@@ -107,6 +107,7 @@ const char *progname = NULL;
 static struct option long_options[] =
 {
     {"config-check",     no_argument,       0, 'c'},
+    {"daemon",           no_argument,       0, 'n'},
     {"nodaemon",         no_argument,       0, 'd'},
     {"config",           required_argument, 0, 'f'},
     {"log",              required_argument, 0, 'l'},
@@ -1403,18 +1404,23 @@ int main(int argc, char **argv)
     }
 
 #ifdef HAVE_GLIBC
-    while ((opt = getopt_long(argc, argv, "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:",
+    while ((opt = getopt_long(argc, argv, "dncf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:",
                               long_options, &option_index)) != -1)
 #else
-    while ((opt = getopt(argc, argv, "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:")) != -1)
+    while ((opt = getopt(argc, argv, "dncf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:")) != -1)
 #endif
     {
         bool succp = true;
 
         switch (opt)
         {
+        case 'n':
+            /*< Daemon mode, MaxScale forks and parent exits. */
+            daemon_mode = true;
+            break;
+
         case 'd':
-            /*< Debug mode, maxscale runs in this same process */
+            /*< Non-daemon mode, MaxScale does not fork. */
             daemon_mode = false;
             break;
 
