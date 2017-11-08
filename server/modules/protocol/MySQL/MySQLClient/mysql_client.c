@@ -502,11 +502,22 @@ int gw_read_client_event(DCB* dcb)
      *
      */
     case MXS_AUTH_STATE_MESSAGE_READ:
-        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-
-        if ((read_buffer = modutil_get_next_MySQL_packet(&dcb->dcb_readqueue)))
+        if (nbytes_read < 3 ||
+            (0 == max_bytes && nbytes_read < MYSQL_GET_PACKET_LEN(read_buffer)) ||
+            (0 != max_bytes && nbytes_read < max_bytes))
         {
-            return_code = gw_read_do_authentication(dcb, read_buffer, gwbuf_length(read_buffer));
+            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+        }
+        else
+        {
+            if (nbytes_read > MYSQL_GET_PACKET_LEN(read_buffer))
+            {
+                // We read more data than was needed
+                dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                read_buffer = modutil_get_next_MySQL_packet(&dcb->dcb_readqueue);
+            }
+
+            return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
         }
         break;
 
