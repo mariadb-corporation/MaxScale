@@ -56,7 +56,6 @@
 #include <maxscale/utils.h>
 
 #include "maxscale/modules.h"
-#include "maxscale/queuemanager.h"
 #include "maxscale/semaphore.hh"
 #include "maxscale/session.h"
 #include "maxscale/worker.hh"
@@ -2435,14 +2434,13 @@ dcb_accept(DCB *listener)
             if (client_dcb->service->max_connections &&
                 client_dcb->service->client_count >= client_dcb->service->max_connections)
             {
-                if (!mxs_enqueue(client_dcb->service->queued_connections, client_dcb))
+                // TODO: If connections can be queued, this is the place to put the
+                // TODO: connection on that queue.
+                if (client_dcb->func.connlimit)
                 {
-                    if (client_dcb->func.connlimit)
-                    {
-                        client_dcb->func.connlimit(client_dcb, client_dcb->service->max_connections);
-                    }
-                    dcb_close(client_dcb);
+                    client_dcb->func.connlimit(client_dcb, client_dcb->service->max_connections);
                 }
+                dcb_close(client_dcb);
                 client_dcb = NULL;
             }
         }

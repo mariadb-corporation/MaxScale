@@ -596,7 +596,9 @@ bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValu
         {
             valid = true;
             // TODO: Once connection queues are implemented, use correct values
-            serviceSetConnectionLimits(service, i, 0, 0);
+            const int queued_connections = 0; // At most this many pending connections.
+            const int timeout = 0;            // Wait at most this much for a connection.
+            serviceSetConnectionLimits(service, i, queued_connections, timeout);
         }
     }
     else if (key == CN_CONNECTION_TIMEOUT)

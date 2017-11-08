@@ -39,7 +39,6 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/poll.h>
 #include <maxscale/protocol.h>
-#include <maxscale/queuemanager.h>
 #include <maxscale/resultset.h>
 #include <maxscale/router.h>
 #include <maxscale/server.h>
@@ -54,7 +53,6 @@
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
 #include "maxscale/modules.h"
-#include "maxscale/queuemanager.h"
 #include "maxscale/service.h"
 
 /** This define is needed in CentOS 6 systems */
@@ -97,7 +95,6 @@ static int find_type(typelib_t* tl, const char* needle, int maxlen);
 static void service_add_qualified_param(SERVICE*          svc,
                                         MXS_CONFIG_PARAMETER* param);
 static void service_internal_restart(void *data);
-static void service_queue_check(void *data);
 static void service_calculate_weights(SERVICE *service);
 
 SERVICE* service_alloc(const char *name, const char *router)
@@ -145,7 +142,6 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->name = my_name;
     service->routerModule = my_router;
     service->users_from_all = false;
-    service->queued_connections = NULL;
     service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
     service->retry_start = true;
     service->conn_idle_timeout = SERVICE_NO_SESSION_TIMEOUT;
@@ -1157,6 +1153,8 @@ void serviceSetVersionString(SERVICE *service, const char* value)
  * @param max The maximum number of client connections at any one time
  * @param queued    The maximum number of connections to queue up when
  *                  max_connections clients are already connected
+ * @param timeout   Maximum amount of time to wait for a connection to
+ *                  become available.
  * @return 1 on success, 0 when the values are invalid
  */
 int
@@ -1169,43 +1167,11 @@ serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout)
     }
 
     service->max_connections = max;
-    if (queued && timeout)
-    {
-        char callback_name[100];
-        sprintf(callback_name, "Check queued connections %p", service);
-        /* If memory allocation fails, result will be null so no queue */
-        service->queued_connections = mxs_queue_alloc(queued, timeout);
-        if (service->queued_connections)
-        {
-            hktask_add(callback_name, service_queue_check, (void *)service->queued_connections, 1);
-        }
-    }
+
+    ss_info_dassert(queued == 0, "Queued connections not implemented.");
+    ss_info_dassert(timeout == 0, "Queued connections not implemented.");
 
     return 1;
-}
-
-/*
- * @brief The callback function triggered by housekeeping every second
- *
- * This function removes any expired connection requests from the queue, and
- * sends an error message "too many connections" for them.
- *
- * @param   The parameter provided by the callback is the queue config
- */
-static void
-service_queue_check(void *data)
-{
-    QUEUE_ENTRY expired;
-    QUEUE_CONFIG *queue_config = (QUEUE_CONFIG *)data;
-    /* The queued connections are in a FIFO queue, so we only look at the */
-    /* start of the queue, and remove any expired entries. As soon as this */
-    /* returns nothing, we stop. */
-    while ((mxs_dequeue_if_expired(queue_config, &expired)))
-    {
-        DCB *dcb = (DCB *)expired.queued_object;
-        dcb->func.connlimit(dcb, queue_config->queue_limit);
-        dcb_close(dcb);
-    }
 }
 
 /**
