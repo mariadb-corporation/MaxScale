@@ -23,6 +23,7 @@
 * Binlog router supports MariaDB 10 GTID at both ends.
 * KILL CONNECTION can now be used through MaxScale.
 * Environment variables can now be used in the MaxScale configuration file.
+* By default, MaxScale can no longer be run as root.
 
 For more details, please refer to:
 * [MariaDB MaxScale 2.2.1 Release Notes](Release-Notes/MaxScale-2.2.1-Release-Notes.md)

@@ -185,6 +185,7 @@ static void modules_process_finish();
 static void disable_module_unloading(const char* arg);
 static void enable_module_unloading(const char* arg);
 static void redirect_output_to_file(const char* arg);
+static bool user_is_acceptable(const char* specified_user);
 
 struct DEBUG_ARGUMENT
 {
@@ -1371,6 +1372,7 @@ int main(int argc, char **argv)
     int numlocks = 0;
     bool pid_file_created = false;
     Worker* worker;
+    const char* specified_user = NULL;
 
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
@@ -1653,7 +1655,8 @@ int main(int argc, char **argv)
             }
             break;
         case 'U':
-            if (set_user(optarg) != 0)
+            specified_user = optarg;
+            if (set_user(specified_user) != 0)
             {
                 succp = false;
             }
@@ -1688,6 +1691,13 @@ int main(int argc, char **argv)
             rc = MAXSCALE_BADARG;
             goto return_main;
         }
+    }
+
+    if (!user_is_acceptable(specified_user))
+    {
+        // Error was logged in user_is_acceptable().
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
     }
 
     if (config_check)
@@ -3202,4 +3212,42 @@ static bool handle_debug_args(char* args)
         print_log_n_stderr(true, true, arg_error_msg, arg_error_msg, 0);
     }
     return !arg_error;
+}
+
+static bool user_is_acceptable(const char* specified_user)
+{
+    bool acceptable = false;
+
+    // This is very early, so we do not have logging available, but write to stderr.
+    // As this is security related, we want to do as little as possible.
+
+    uid_t uid = getuid(); // Always succeeds
+    errno = 0;
+    struct passwd *pw = getpwuid(uid);
+    if (pw)
+    {
+        if (strcmp(pw->pw_name, "root") == 0)
+        {
+            if (specified_user && (strcmp(specified_user, "root") == 0))
+            {
+                // MaxScale was invoked as root and with --user=root.
+                acceptable = true;
+            }
+            else
+            {
+                fprintf(stderr, "Error: MaxScale cannot be run as root.\n");
+            }
+        }
+        else
+        {
+            acceptable = true;
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Error: Could not obtain user information, MaxScale will not run: %s",
+                strerror(errno));
+    }
+
+    return acceptable;
 }
