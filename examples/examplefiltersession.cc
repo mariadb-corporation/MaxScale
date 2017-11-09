@@ -32,6 +32,10 @@ ExampleFilterSession* ExampleFilterSession::create(MXS_SESSION* pSession, const 
     return new ExampleFilterSession(pSession);
 }
 
+void ExampleFilterSession::close()
+{
+}
+
 int ExampleFilterSession::routeQuery(GWBUF* pPacket)
 {
     return mxs::FilterSession::routeQuery(pPacket);
