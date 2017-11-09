@@ -10,6 +10,21 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### Process identity
+
+By default, MaxScale can no longer be run as `root`, but must be run as some
+other user. However, it is possible to start MaxScale as `root`, as long as
+the user to run MaxScale as is provided as a command line argument:
+```
+root@host:~# maxscale --user=maxuser ...
+```
+If it is imperative to run MaxScale as root, e.g. in a Docker container, it
+can be achieved by invoking MaxScale as root and by explicitly specifying
+the user to also be root:
+```
+root@host:~# maxscale --user=root ...
+```
+
 ### Binlog server
 
 * The `mariadb10_slave_gtid` parameter was removed and slave connections can now

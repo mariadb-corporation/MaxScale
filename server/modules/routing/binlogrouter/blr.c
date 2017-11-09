@@ -784,7 +784,7 @@ createInstance(SERVICE *service, char **options)
                "'tree' mode using GTID domain_id and server_id");
 
     /* Enable MariaDB the GTID maps store */
-    if (inst->mariadb10_compat && inst->mariadb10_master_gtid)
+    if (inst->mariadb10_compat)
     {
         /* Create/Open R/W GTID sqlite3 storage */
         if (!blr_open_gtid_maps_storage(inst))

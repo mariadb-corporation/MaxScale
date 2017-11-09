@@ -107,6 +107,7 @@ const char *progname = NULL;
 static struct option long_options[] =
 {
     {"config-check",     no_argument,       0, 'c'},
+    {"daemon",           no_argument,       0, 'n'},
     {"nodaemon",         no_argument,       0, 'd'},
     {"config",           required_argument, 0, 'f'},
     {"log",              required_argument, 0, 'l'},
@@ -186,6 +187,7 @@ static void modules_process_finish();
 static void disable_module_unloading(const char* arg);
 static void enable_module_unloading(const char* arg);
 static void redirect_output_to_file(const char* arg);
+static bool user_is_acceptable(const char* specified_user);
 
 struct DEBUG_ARGUMENT
 {
@@ -1367,6 +1369,7 @@ int main(int argc, char **argv)
     int numlocks = 0;
     bool pid_file_created = false;
     Worker* worker;
+    const char* specified_user = NULL;
 
     config_set_global_defaults();
     MXS_CONFIG* cnf = config_get_global_options();
@@ -1382,7 +1385,7 @@ int main(int argc, char **argv)
     file_write_header(stderr);
 
     // Option string for getopt
-    const char accepted_opts[] = "dcf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
+    const char accepted_opts[] = "dncf:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
 
     /*<
      * Register functions which are called at exit.
@@ -1411,8 +1414,13 @@ int main(int argc, char **argv)
 
         switch (opt)
         {
+        case 'n':
+            /*< Daemon mode, MaxScale forks and parent exits. */
+            daemon_mode = true;
+            break;
+
         case 'd':
-            /*< Debug mode, maxscale runs in this same process */
+            /*< Non-daemon mode, MaxScale does not fork. */
             daemon_mode = false;
             break;
 
@@ -1653,7 +1661,8 @@ int main(int argc, char **argv)
             }
             break;
         case 'U':
-            if (set_user(optarg) != 0)
+            specified_user = optarg;
+            if (set_user(specified_user) != 0)
             {
                 succp = false;
             }
@@ -1692,6 +1701,13 @@ int main(int argc, char **argv)
             rc = MAXSCALE_BADARG;
             goto return_main;
         }
+    }
+
+    if (!user_is_acceptable(specified_user))
+    {
+        // Error was logged in user_is_acceptable().
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
     }
 
     if (config_check)
@@ -3203,4 +3219,42 @@ static bool handle_debug_args(char* args)
         print_log_n_stderr(true, true, arg_error_msg, arg_error_msg, 0);
     }
     return !arg_error;
+}
+
+static bool user_is_acceptable(const char* specified_user)
+{
+    bool acceptable = false;
+
+    // This is very early, so we do not have logging available, but write to stderr.
+    // As this is security related, we want to do as little as possible.
+
+    uid_t uid = getuid(); // Always succeeds
+    errno = 0;
+    struct passwd *pw = getpwuid(uid);
+    if (pw)
+    {
+        if (strcmp(pw->pw_name, "root") == 0)
+        {
+            if (specified_user && (strcmp(specified_user, "root") == 0))
+            {
+                // MaxScale was invoked as root and with --user=root.
+                acceptable = true;
+            }
+            else
+            {
+                fprintf(stderr, "Error: MaxScale cannot be run as root.\n");
+            }
+        }
+        else
+        {
+            acceptable = true;
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Error: Could not obtain user information, MaxScale will not run: %s",
+                strerror(errno));
+    }
+
+    return acceptable;
 }
