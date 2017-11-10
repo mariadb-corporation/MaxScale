@@ -190,7 +190,8 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
             std::transform(tok.begin(), tok.end(), tok.begin(), ::tolower);
             ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
 
-            if (it != m_values.end())
+            if ((!m_inverted && (it != m_values.end())) ||
+                (m_inverted && (it == m_values.end())))
             {
                 MXS_NOTICE("rule '%s': query uses forbidden function: %s",
                            name().c_str(), tok.c_str());
@@ -251,7 +252,8 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
                                                           m_values.end(),
                                                           func);
 
-            if (func_it != m_values.end())
+            if ((!m_inverted && (func_it != m_values.end())) ||
+                (m_inverted && (func_it == m_values.end())))
             {
                 /** The function matches, now check if the column matches */
 
