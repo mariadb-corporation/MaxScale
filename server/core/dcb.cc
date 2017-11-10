@@ -1295,7 +1295,7 @@ dcb_maybe_add_persistent(DCB *dcb)
     {
         MXS_DEBUG("Not adding DCB %p to persistent pool, "
                   "user %s, max for pool %ld, error handle called %s, hung flag %s, "
-                  "server status %d, pool count %d.",
+                  "server status %lu, pool count %d.",
                   dcb, dcb->user ? dcb->user : "",
                   dcb->server->persistpoolmax,
                   dcb->dcb_errhandle_called ? "true" : "false",

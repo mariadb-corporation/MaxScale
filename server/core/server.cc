@@ -672,7 +672,7 @@ server_status(const SERVER *server)
         return NULL;
     }
 
-    unsigned int server_status = server->status;
+    uint64_t server_status = server->status;
     status[0] = 0;
     if (server_status & SERVER_MAINT)
     {
@@ -732,7 +732,7 @@ server_status(const SERVER *server)
  * @param bit           The bit to set for the server
  */
 void
-server_set_status_nolock(SERVER *server, unsigned bit)
+server_set_status_nolock(SERVER *server, uint64_t bit)
 {
     server->status |= bit;
 
@@ -753,7 +753,7 @@ server_set_status_nolock(SERVER *server, unsigned bit)
  * @param bit           The bit to set for the server
  */
 void
-server_clear_set_status(SERVER *server, unsigned specified_bits, unsigned bits_to_set)
+server_clear_set_status(SERVER *server, uint64_t specified_bits, uint64_t bits_to_set)
 {
     /** clear error logged flag before the next failure */
     if ((bits_to_set & SERVER_MASTER) && ((server->status & SERVER_MASTER) == 0))
@@ -774,7 +774,7 @@ server_clear_set_status(SERVER *server, unsigned specified_bits, unsigned bits_t
  * @param bit           The bit to clear for the server
  */
 void
-server_clear_status_nolock(SERVER *server, unsigned bit)
+server_clear_status_nolock(SERVER *server, uint64_t bit)
 {
     server->status &= ~bit;
 }
@@ -1052,8 +1052,8 @@ server_update_port(SERVER *server, unsigned short port)
 
 static struct
 {
-    const char     *str;
-    unsigned int    bit;
+    const char* str;
+    uint64_t    bit;
 } ServerBits[] =
 {
     { "running",     SERVER_RUNNING },
@@ -1073,7 +1073,7 @@ static struct
  * @param str   String representation
  * @return bit value or 0 on error
  */
-unsigned int
+uint64_t
 server_map_status(const char *str)
 {
     int i;

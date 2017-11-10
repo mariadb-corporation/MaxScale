@@ -111,8 +111,8 @@ typedef struct server
     void           *auth_instance; /**< Authenticator instance */
     char           *auth_options;  /**< Authenticator options */
     SSL_LISTENER   *server_ssl;    /**< SSL data structure for server, if any */
-    unsigned int   status;         /**< Status flag bitmap for the server */
-    unsigned int   status_pending; /**< Pending status flag bitmap for the server */
+    uint64_t       status;         /**< Status flag bitmap for the server */
+    uint64_t       status_pending; /**< Pending status flag bitmap for the server */
     char           monuser[MAX_SERVER_MONUSER_LEN]; /**< User name to use to monitor the db */
     char           monpw[MAX_SERVER_MONPW_LEN]; /**< Password to use to monitor the db */
     SERVER_STATS   stats;          /**< The server statistics */
@@ -334,9 +334,9 @@ extern SERVER *server_find_by_unique_name(const char *name);
 extern int server_find_by_unique_names(char **server_names, int size, SERVER*** output);
 extern SERVER *server_find(const char *servname, unsigned short port);
 extern char *server_status(const SERVER *);
-extern void server_clear_set_status(SERVER *server, unsigned specified_bits, unsigned bits_to_set);
-extern void server_set_status_nolock(SERVER *server, unsigned bit);
-extern void server_clear_status_nolock(SERVER *server, unsigned bit);
+extern void server_clear_set_status(SERVER *server, uint64_t specified_bits, uint64_t bits_to_set);
+extern void server_set_status_nolock(SERVER *server, uint64_t bit);
+extern void server_clear_status_nolock(SERVER *server, uint64_t bit);
 extern void server_transfer_status(SERVER *dest_server, const SERVER *source_server);
 extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
 extern const char *server_get_parameter(const SERVER *server, const char *name);
@@ -344,7 +344,7 @@ extern void server_update_credentials(SERVER *server, const char *user, const ch
 extern DCB  *server_get_persistent(SERVER *server, const char *user, const char *protocol, int id);
 extern void server_update_address(SERVER *server, const char *address);
 extern void server_update_port(SERVER *server,  unsigned short port);
-extern unsigned int server_map_status(const char *str);
+extern uint64_t server_map_status(const char *str);
 extern void server_set_version_string(SERVER* server, const char* version_string);
 extern void server_set_version(SERVER* server, const char* version_string, uint64_t version);
 extern uint64_t server_get_version(const SERVER* server);
