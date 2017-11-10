@@ -1264,7 +1264,7 @@ static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerI
 {
     /** Clear old states */
     monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
-                                 SERVER_STALE_STATUS | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                                 SERVER_SLAVE_OF_EXTERNAL_MASTER);
 
     if (do_show_slave_status(serv_info, database, server_version))
     {
@@ -1428,34 +1428,19 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     }
     else
     {
-        /* The current server is not running
-         *
-         * Store server NOT running in server and monitor server pending struct
-         *
+        /**
+         * The current server is not running. Clear all but the stale master bit
+         * as it is used to detect masters that went down but came up.
          */
+        unsigned int all_bits = ~SERVER_STALE_STATUS;
+        server_clear_status_nolock(database->server, all_bits);
+        monitor_clear_pending_status(database, all_bits);
+
         if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
         {
             server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
             monitor_set_pending_status(database, SERVER_AUTH_ERROR);
         }
-        server_clear_status_nolock(database->server, SERVER_RUNNING);
-        monitor_clear_pending_status(database, SERVER_RUNNING);
-
-        /* Also clear M/S state in both server and monitor server pending struct */
-        server_clear_status_nolock(database->server, SERVER_SLAVE);
-        server_clear_status_nolock(database->server, SERVER_MASTER);
-        server_clear_status_nolock(database->server, SERVER_RELAY_MASTER);
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
-        monitor_clear_pending_status(database, SERVER_RELAY_MASTER);
-
-        /* Clean addition status too */
-        server_clear_status_nolock(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-        server_clear_status_nolock(database->server, SERVER_STALE_STATUS);
-        server_clear_status_nolock(database->server, SERVER_STALE_SLAVE);
-        monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-        monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-        monitor_clear_pending_status(database, SERVER_STALE_SLAVE);
 
         /* Log connect failure only once */
         if (mon_status_changed(database) && mon_print_fail_status(database))
@@ -2069,6 +2054,10 @@ monitorMain(void *arg)
                 /** If "detect_stale_master" option is On, let's use the previous master.
                  *
                  * Multi-master mode detects the stale masters in find_graph_cycles().
+                 *
+                 * TODO: If a stale master goes down and comes back up, it loses
+                 * the master status. An adequate solution would be to promote
+                 * the stale master as a real master if it is the last running server.
                  */
                 if (detect_stale_master && root_master && !handle->multimaster &&
                     (strcmp(ptr->server->name, root_master->server->name) == 0 &&
@@ -2082,7 +2071,7 @@ monitorMain(void *arg)
                      * Set the STALE bit for this server in server struct
                      */
                     server_set_status_nolock(ptr->server, SERVER_STALE_STATUS | SERVER_MASTER);
-                    ptr->pending_status |= SERVER_STALE_STATUS | SERVER_MASTER;
+                    monitor_set_pending_status(ptr, SERVER_STALE_STATUS | SERVER_MASTER);
 
                     /** Log the message only if the master server didn't have
                      * the stale master bit set */
@@ -2098,7 +2087,7 @@ monitorMain(void *arg)
 
                 if (handle->detectStaleSlave)
                 {
-                    unsigned bits = SERVER_SLAVE | SERVER_RUNNING;
+                    unsigned int bits = SERVER_SLAVE | SERVER_RUNNING;
 
                     if ((ptr->mon_prev_status & bits) == bits &&
                         root_master && SERVER_IS_MASTER(root_master->server))
