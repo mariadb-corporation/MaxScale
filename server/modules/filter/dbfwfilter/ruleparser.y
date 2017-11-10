@@ -37,7 +37,7 @@
 %token FWTOK_RULE FWTOK_USERS FWTOK_RULES FWTOK_ANY FWTOK_ALL
 %token FWTOK_STRICT_ALL FWTOK_MATCH FWTOK_WILDCARD FWTOK_COLUMNS FWTOK_REGEX
 %token FWTOK_LIMIT_QUERIES FWTOK_WHERE_CLAUSE FWTOK_AT_TIMES FWTOK_ON_QUERIES
-%token FWTOK_FUNCTION FWTOK_USES_FUNCTION FWTOK_COMMENT FWTOK_PIPE
+%token FWTOK_FUNCTION FWTOK_USES_FUNCTION FWTOK_COMMENT FWTOK_PIPE FWTOK_NOT_FUNCTION
 
 /** Terminal typed symbols */
 %token <floatval>FWTOK_FLOAT <strval>FWTOK_TIME <strval>FWTOK_BTSTR
@@ -124,9 +124,15 @@ mandatory
         {define_limit_queries_rule(scanner, $2, $3, $4);}
     | FWTOK_REGEX FWTOK_QUOTEDSTR {define_regex_rule(scanner, $2);}
     | FWTOK_COLUMNS valuelist {define_columns_rule(scanner);}
-    | FWTOK_FUNCTION valuelist {define_function_rule(scanner);}
-    | FWTOK_FUNCTION {define_function_rule(scanner);}
-    | FWTOK_FUNCTION valuelist FWTOK_COLUMNS auxiliaryvaluelist {define_column_function_rule(scanner);}
+    | FWTOK_FUNCTION valuelist {define_function_rule(scanner, false);}
+    | FWTOK_NOT_FUNCTION valuelist {define_function_rule(scanner, true);}
+    | FWTOK_NOT_FUNCTION {define_function_rule(scanner, true);}
+    | FWTOK_FUNCTION valuelist FWTOK_COLUMNS auxiliaryvaluelist
+      {define_column_function_rule(scanner, false);}
+    | FWTOK_NOT_FUNCTION valuelist FWTOK_COLUMNS auxiliaryvaluelist
+      {define_column_function_rule(scanner, true);}
+    | FWTOK_NOT_FUNCTION FWTOK_COLUMNS auxiliaryvaluelist
+      {define_column_function_rule(scanner, true);}
     | FWTOK_USES_FUNCTION valuelist {define_function_usage_rule(scanner);}
     ;
 

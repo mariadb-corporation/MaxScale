@@ -180,12 +180,16 @@ class FunctionRule: public ValueListRule
     FunctionRule& operator=(const FunctionRule&);
 
 public:
-    FunctionRule(std::string name, const ValueList& values):
-        ValueListRule(name, "FUNCTION", values)
+    FunctionRule(std::string name, const ValueList& values, bool inverted):
+        ValueListRule(name, inverted ? "NOT_FUNCTION" : "FUNCTION", values),
+        m_inverted(inverted)
     {
     }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
+
+private:
+    bool m_inverted; /*< Should the match be inverted. */
 };
 
 /**
@@ -214,16 +218,18 @@ class ColumnFunctionRule: public ValueListRule
     ColumnFunctionRule& operator=(const ColumnFunctionRule&);
 
 public:
-    ColumnFunctionRule(std::string name, const ValueList& values, const ValueList& columns):
-        ValueListRule(name, "COLUMN_FUNCTION", values),
-        m_columns(columns)
+    ColumnFunctionRule(std::string name, const ValueList& values, const ValueList& columns, bool inverted):
+        ValueListRule(name, inverted ? "NOT_COLUMN_FUNCTION" : "COLUMN_FUNCTION", values),
+        m_columns(columns),
+        m_inverted(inverted)
     {
     }
 
     bool matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const;
 
 private:
-    ValueList m_columns; /*< List of columns to match */
+    ValueList m_columns;  /*< List of columns to match */
+    bool      m_inverted; /*< Should the match be inverted. */
 };
 
 /**

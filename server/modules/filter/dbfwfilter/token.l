@@ -40,6 +40,7 @@ CMP         [=<>!]+
 deny|allow      MXS_WARNING("Use of '%s' is deprecated, use 'match' instead", yytext);return FWTOK_MATCH;
 rule            return FWTOK_RULE;
 function        return FWTOK_FUNCTION;
+not_function    return FWTOK_NOT_FUNCTION;
 uses_function   return FWTOK_USES_FUNCTION;
 no_where_clause return FWTOK_WHERE_CLAUSE;
 wildcard        return FWTOK_WILDCARD;

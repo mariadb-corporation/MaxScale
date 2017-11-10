@@ -870,11 +870,11 @@ void define_columns_rule(void* scanner)
  *
  * @param scanner Current scanner
  */
-void define_function_rule(void* scanner)
+void define_function_rule(void* scanner, bool inverted)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->add(new FunctionRule(rstack->name, rstack->values));
+    rstack->add(new FunctionRule(rstack->name, rstack->values, inverted));
 }
 
 /**
@@ -894,11 +894,11 @@ void define_function_usage_rule(void* scanner)
  *
  * @param scanner Current scanner
  */
-void define_column_function_rule(void* scanner)
+void define_column_function_rule(void* scanner, bool inverted)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->add(new ColumnFunctionRule(rstack->name, rstack->values, rstack->auxiliary_values));
+    rstack->add(new ColumnFunctionRule(rstack->name, rstack->values, rstack->auxiliary_values, inverted));
 }
 
 /**

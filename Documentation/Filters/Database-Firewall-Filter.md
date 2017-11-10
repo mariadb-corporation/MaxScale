@@ -161,22 +161,34 @@ matched. The symbolic comparison operators (`<`, `>`, `>=` etc.) are also
 considered functions whereas the text versions (`NOT`, `IS`, `IS NOT` etc.) are
 not considered functions.
 
-If the rule is given no values then the rule will match any query which does not
-use functions. By combining this with the `action=allow` parameter, it is
-possible to enable whitelisting of all queries which do not use functions. One
-such use case is preventing functions from being used to circumvent masking done
-by the masking filter.
-
-When the filter is in whitelist mode (`action=allow`) the function rule
-will match any query that does not use a function. This means that queries
-that do not use functions will be allowed through a function type rule.
-
 ##### Example
 
-Deny SUM and COUNT functions:
+Match queries using the _sum_ and _count_ functions:
 
 ```
 rule examplerule match function sum count
+```
+
+#### `not_function`
+
+This rule expects a list of values after the `not_function` keyword. These values
+are interpreted as function names and if a query uses any function other than these,
+it is matched. The symbolic comparison operators (`<`, `>`, `>=` etc.) are also
+considered functions whereas the text versions (`NOT`, `IS`, `IS NOT` etc.) are
+not considered functions.
+
+If the rule is given no values, then the rule will match a query using any function.
+
+#### Example
+
+Match queries using other functions but the _length_ function:
+```
+rule examplerule match not_function length
+```
+
+Match queries using functions:
+```
+rule examplerule match not_function
 ```
 
 #### `uses_function`
@@ -205,6 +217,31 @@ Deny use of the _sum_ function with _name_ or _address_ columns:
 
 ```
 rule examplerule match function sum columns name address
+```
+
+#### `not_function` and `columns`
+
+This rule combines the `not_function` and `columns` type rules to match if
+one of the listed columns is used in conjunction with functions other than
+the listed ones. The rule expects the `not_function` and `columns` keywords
+both followed by a list of values.
+
+If `not_function` is not provided with a list of values, then the rule
+matches if any of the columns is used with any function.
+
+##### Example
+
+Match if any other function but _length_ is used with the _name_ or _address_
+columns:
+
+```
+rule examplerule match not_function length columns name address
+```
+
+Match if any function is used with the _ssn_column:
+
+```
+rule examplerule match not_function columns ssn
 ```
 
 #### `regex`
