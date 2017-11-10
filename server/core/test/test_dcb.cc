@@ -37,6 +37,8 @@
 #include <maxscale/config.h>
 #include <maxscale/listener.h>
 
+#include "../maxscale/messagequeue.hh"
+#include "../maxscale/worker.hh"
 #include "../dcb.cc"
 
 /**
@@ -66,12 +68,20 @@ test1()
 
 int main(int argc, char **argv)
 {
-    int result = 0;
+    int result = 1;
     MXS_CONFIG* glob_conf = config_get_global_options();
     glob_conf->n_threads = 1;
     dcb_global_init();
-
-    result += test1();
+    if (maxscale::MessageQueue::init())
+    {
+        if (maxscale::Worker::init())
+        {
+            result = 0;
+            result += test1();
+            maxscale::Worker::finish();
+        }
+        maxscale::MessageQueue::finish();
+    }
 
     exit(result);
 }
