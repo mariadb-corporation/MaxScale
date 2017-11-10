@@ -42,7 +42,10 @@ Rule::~Rule()
 bool Rule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
     MXS_NOTICE("rule '%s': query matches at this time.", name().c_str());
-    *msg = create_error("Permission denied at this time.");
+    if (session->get_action() == FW_ACTION_BLOCK)
+    {
+        *msg = create_error("Permission denied at this time.");
+    }
     return true;
 }
 
@@ -92,7 +95,10 @@ bool WildCardRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
             if (strcmp(infos[i].column, "*") == 0)
             {
                 MXS_NOTICE("rule '%s': query contains a wildcard.", name().c_str());
-                *msg = create_error("Usage of wildcard denied.");
+                if (session->get_action() == FW_ACTION_BLOCK)
+                {
+                    *msg = create_error("Usage of wildcard denied.");
+                }
                 rval = true;
             }
         }
@@ -108,7 +114,10 @@ bool NoWhereClauseRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
     if (query_is_sql(buffer) && !qc_query_has_clause(buffer))
     {
         MXS_NOTICE("rule '%s': query has no where/having clause.", name().c_str());
-        *msg = create_error("Required WHERE/HAVING clause is missing.");
+        if (session->get_action() == FW_ACTION_BLOCK)
+        {
+            *msg = create_error("Required WHERE/HAVING clause is missing.");
+        }
         rval = true;
     }
 
@@ -132,7 +141,10 @@ bool RegexRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) c
         if (pcre2_match(re, (PCRE2_SPTR)sql, (size_t)len, 0, 0, mdata, NULL) > 0)
         {
             MXS_NOTICE("rule '%s': regex matched on query", name().c_str());
-            *msg = create_error("Permission denied, query matched regular expression.");
+            if (session->get_action() == FW_ACTION_BLOCK)
+            {
+                *msg = create_error("Permission denied, query matched regular expression.");
+            }
             rval = true;
         }
 
@@ -162,7 +174,10 @@ bool ColumnsRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg)
             {
                 MXS_NOTICE("rule '%s': query targets specified column: %s",
                            name().c_str(), tok.c_str());
-                *msg = create_error("Permission denied to column '%s'.", tok.c_str());
+                if (session->get_action() == FW_ACTION_BLOCK)
+                {
+                    *msg = create_error("Permission denied to column '%s'.", tok.c_str());
+                }
                 rval = true;
                 break;
             }
@@ -194,7 +209,10 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
             {
                 MXS_NOTICE("rule '%s': query matches function: %s",
                            name().c_str(), tok.c_str());
-                *msg = create_error("Permission denied to function '%s'.", tok.c_str());
+                if (session->get_action() == FW_ACTION_BLOCK)
+                {
+                    *msg = create_error("Permission denied to function '%s'.", tok.c_str());
+                }
                 rval = true;
                 break;
             }
@@ -224,7 +242,10 @@ bool FunctionUsageRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
                 {
                     MXS_NOTICE("rule '%s': query uses a function with specified column: %s",
                                name().c_str(), tok.c_str());
-                    *msg = create_error("Permission denied to column '%s' with function.", tok.c_str());
+                    if (session->get_action() == FW_ACTION_BLOCK)
+                    {
+                        *msg = create_error("Permission denied to column '%s' with function.", tok.c_str());
+                    }
                     return true;
                 }
             }
@@ -268,12 +289,14 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
                     {
                         MXS_NOTICE("rule '%s': query uses function '%s' with specified column: %s",
                                    name().c_str(), col.c_str(), func.c_str());
-                        *msg = create_error("Permission denied to column '%s' with function '%s'.",
-                                            col.c_str(), func.c_str());
+                        if (session->get_action() == FW_ACTION_BLOCK)
+                        {
+                            *msg = create_error("Permission denied to column '%s' with function '%s'.",
+                                                col.c_str(), func.c_str());
+                        }
                         return true;
                     }
                 }
-
             }
         }
     }
