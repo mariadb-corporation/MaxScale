@@ -184,7 +184,9 @@ int main(int argc, char* argv[])
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
             // We have to setup something in order for the regexes to be compiled.
-            if (qc_setup("qc_sqlite", QC_SQL_MODE_DEFAULT, NULL) && qc_process_init(QC_INIT_BOTH))
+            if (qc_setup("qc_sqlite", QC_SQL_MODE_DEFAULT, NULL) &&
+                qc_process_init(QC_INIT_BOTH) &&
+                qc_thread_init(QC_INIT_BOTH))
             {
                 Tester tester(verbosity);
 
