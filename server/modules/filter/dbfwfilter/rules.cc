@@ -184,27 +184,19 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
         size_t n_infos;
         qc_get_function_info(buffer, &infos, &n_infos);
 
-        if (n_infos == 0 && session->get_action() == FW_ACTION_ALLOW)
+        for (size_t i = 0; i < n_infos; ++i)
         {
-            rval = true;
-        }
-        else
-        {
-            for (size_t i = 0; i < n_infos; ++i)
+            std::string tok = infos[i].name;
+            std::transform(tok.begin(), tok.end(), tok.begin(), ::tolower);
+            ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
+
+            if (it != m_values.end())
             {
-                std::string tok = infos[i].name;
-                std::transform(tok.begin(), tok.end(), tok.begin(), ::tolower);
-                ValueList::const_iterator it = std::find(m_values.begin(), m_values.end(), tok);
-
-                if (it != m_values.end())
-                {
-                    MXS_NOTICE("rule '%s': query uses forbidden function: %s",
-                               name().c_str(), tok.c_str());
-                    *msg = create_error("Permission denied to function '%s'.", tok.c_str());
-                    rval = true;
-                    break;
-                }
-
+                MXS_NOTICE("rule '%s': query uses forbidden function: %s",
+                           name().c_str(), tok.c_str());
+                *msg = create_error("Permission denied to function '%s'.", tok.c_str());
+                rval = true;
+                break;
             }
         }
     }
