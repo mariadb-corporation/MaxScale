@@ -41,8 +41,8 @@ Rule::~Rule()
 
 bool Rule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) const
 {
+    MXS_NOTICE("rule '%s': query matches at this time.", name().c_str());
     *msg = create_error("Permission denied at this time.");
-    MXS_NOTICE("rule '%s': query denied at this time.", name().c_str());
     return true;
 }
 
@@ -92,8 +92,8 @@ bool WildCardRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
             if (strcmp(infos[i].column, "*") == 0)
             {
                 MXS_NOTICE("rule '%s': query contains a wildcard.", name().c_str());
-                rval = true;
                 *msg = create_error("Usage of wildcard denied.");
+                rval = true;
             }
         }
     }
@@ -107,10 +107,9 @@ bool NoWhereClauseRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
 
     if (query_is_sql(buffer) && !qc_query_has_clause(buffer))
     {
-        rval = true;
+        MXS_NOTICE("rule '%s': query has no where/having clause.", name().c_str());
         *msg = create_error("Required WHERE/HAVING clause is missing.");
-        MXS_NOTICE("rule '%s': query has no where/having "
-                   "clause, query is denied.", name().c_str());
+        rval = true;
     }
 
     return rval;
@@ -133,8 +132,8 @@ bool RegexRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg) c
         if (pcre2_match(re, (PCRE2_SPTR)sql, (size_t)len, 0, 0, mdata, NULL) > 0)
         {
             MXS_NOTICE("rule '%s': regex matched on query", name().c_str());
-            rval = true;
             *msg = create_error("Permission denied, query matched regular expression.");
+            rval = true;
         }
 
         pcre2_match_data_free(mdata);
@@ -161,7 +160,7 @@ bool ColumnsRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg)
 
             if (it != m_values.end())
             {
-                MXS_NOTICE("rule '%s': query targets forbidden column: %s",
+                MXS_NOTICE("rule '%s': query targets specified column: %s",
                            name().c_str(), tok.c_str());
                 *msg = create_error("Permission denied to column '%s'.", tok.c_str());
                 rval = true;
@@ -193,7 +192,7 @@ bool FunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char** msg
             if ((!m_inverted && (it != m_values.end())) ||
                 (m_inverted && (it == m_values.end())))
             {
-                MXS_NOTICE("rule '%s': query uses forbidden function: %s",
+                MXS_NOTICE("rule '%s': query matches function: %s",
                            name().c_str(), tok.c_str());
                 *msg = create_error("Permission denied to function '%s'.", tok.c_str());
                 rval = true;
@@ -223,7 +222,7 @@ bool FunctionUsageRule::matches_query(DbfwSession* session, GWBUF* buffer, char*
 
                 if (it != m_values.end())
                 {
-                    MXS_NOTICE("rule '%s': query uses a function with forbidden column: %s",
+                    MXS_NOTICE("rule '%s': query uses a function with specified column: %s",
                                name().c_str(), tok.c_str());
                     *msg = create_error("Permission denied to column '%s' with function.", tok.c_str());
                     return true;
@@ -267,7 +266,7 @@ bool ColumnFunctionRule::matches_query(DbfwSession* session, GWBUF* buffer, char
 
                     if (col_it != m_columns.end())
                     {
-                        MXS_NOTICE("rule '%s': query uses function '%s' with forbidden column: %s",
+                        MXS_NOTICE("rule '%s': query uses function '%s' with specified column: %s",
                                    name().c_str(), col.c_str(), func.c_str());
                         *msg = create_error("Permission denied to column '%s' with function '%s'.",
                                             col.c_str(), func.c_str());
