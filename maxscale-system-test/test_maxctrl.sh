@@ -20,7 +20,7 @@ fi
 cd MaxScale/maxctrl
 
 # Create the scripts that start and stop MaxScale
-~/maxctrl_scripts.sh
+$maxscale_access_homedir/maxctrl_scripts.sh
 chmod +x *.sh
 
 npm i

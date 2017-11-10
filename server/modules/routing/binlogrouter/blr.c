@@ -770,6 +770,8 @@ createInstance(SERVICE *service, char **options)
     {
         /* Force GTID slave request handling */
         inst->mariadb10_gtid = true;
+        /* Force transaction safety */
+        inst->trx_safe = true;
         /* Force binlog storage as tree */
         inst->storage_type = BLR_BINLOG_STORAGE_TREE;
     }
@@ -782,18 +784,8 @@ createInstance(SERVICE *service, char **options)
                "'tree' mode using GTID domain_id and server_id");
 
     /* Enable MariaDB the GTID maps store */
-    if (inst->mariadb10_compat &&
-        inst->mariadb10_gtid)
+    if (inst->mariadb10_compat)
     {
-        if (!inst->trx_safe)
-        {
-            MXS_ERROR("MariaDB GTID can be enabled only"
-                      " with Transaction Safety feature."
-                      " Please enable it with option 'transaction_safety = on'");
-            free_instance(inst);
-            return NULL;
-        }
-
         /* Create/Open R/W GTID sqlite3 storage */
         if (!blr_open_gtid_maps_storage(inst))
         {

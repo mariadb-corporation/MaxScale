@@ -35,7 +35,6 @@
 #include <maxscale/hashtable.h>
 #include <maxscale/resultset.h>
 #include <maxscale/config.h>
-#include <maxscale/queuemanager.h>
 #include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
@@ -128,7 +127,6 @@ typedef struct service
     int state;                         /**< The service state */
     int client_count;                  /**< Number of connected clients */
     int max_connections;               /**< Maximum client connections */
-    QUEUE_CONFIG *queued_connections;  /**< Queued connections, if set */
     SERV_LISTENER *ports;              /**< Linked list of ports and protocols
                                         * that this service will listen on */
     char *routerModule;                /**< Name of router module to use */

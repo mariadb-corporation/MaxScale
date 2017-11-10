@@ -33,7 +33,6 @@ add_library(maxscale-common SHARED
   paths.cc
   poll.cc
   query_classifier.cc
-  queuemanager.cc
   random_jkiss.cc
   resultset.cc
   resource.cc

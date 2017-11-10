@@ -27,7 +27,8 @@ int main(int argc, char *argv[])
 
     test.tprintf("Starting test");
     test.verbose = true;
-    int rv = test.ssh_maxscale(true, "export maxscale2_API=%s:8989; ./test_maxctrl.sh", test.galera->IP[3]);
+    int rv = test.ssh_maxscale(true, "export maxscale_access_homedir=%s; export maxscale2_API=%s:8989; ./test_maxctrl.sh",
+                               test.maxscale_access_homedir, test.galera->IP[3]);
     test.verbose = false;
 
     test.tprintf("Removing NPM");
