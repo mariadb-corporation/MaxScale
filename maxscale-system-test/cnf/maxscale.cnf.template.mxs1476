@@ -1,0 +1,52 @@
+[maxscale]
+threads=###threads###
+retry_queries=1
+
+[Galera Monitor]
+type=monitor
+module=galeramon
+servers=server1,server2
+user=maxskysql
+passwd=skysql
+monitor_interval=1000
+root_node_as_master=false
+use_priority=true
+backend_connect_timeout=1
+backend_read_timeout=1
+
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1,server2
+user=maxskysql
+passwd=skysql
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+socket=default
+
+[server1]
+type=server
+address=###galera_server_IP_1###
+port=###galera_server_port_1###
+protocol=MySQLBackend
+priority=2
+
+[server2]
+type=server
+address=###galera_server_IP_2###
+port=###galera_server_port_2###
+protocol=MySQLBackend
+priority=1
