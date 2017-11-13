@@ -43,6 +43,7 @@ class TestConnections
 private:
     /** Whether timeouts are enabled or not */
     bool enable_timeouts;
+    bool log_matches(const char* pattern);
 public:
     /**
      * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale machine
@@ -633,6 +634,22 @@ public:
      * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected is false)
      */
     void check_log_err(const char * err_msg, bool expected);
+
+    /**
+     * @brief Check whether logs match a pattern
+     *
+     * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
+     * log file does not match the pattern, it is considered an error.
+     */
+    void log_includes(const char* pattern);
+
+    /**
+     * @brief Check whether logs do not match a pattern
+     *
+     * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
+     * log file match the pattern, it is considered an error.
+     */
+    void log_excludes(const char* pattern);
 
     /**
      * @brief FindConnectedSlave Finds slave node which has connections from MaxScale

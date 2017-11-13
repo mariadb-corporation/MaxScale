@@ -13,11 +13,12 @@ int main(int argc, char *argv[])
     test.tprintf("Blocking master and checking that master failure is delayed at least once.");
     test.repl->block_node(0);
     sleep(5);
-    test.check_log_err("delaying failover", true);
+    test.log_includes("delaying.*failover");
 
     test.tprintf("Waiting to see if failover is performed.");
     sleep(10);
-    test.check_log_err("Performing failover", true);
+
+    test.log_includes("Performing.*failover");
 
     // TODO: Extend the test
 

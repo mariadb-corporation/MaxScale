@@ -1183,6 +1183,21 @@ int TestConnections::start_mm()
     return global_result;
 }
 
+bool TestConnections::log_matches(const char* pattern)
+{
+    return ssh_maxscale(true, "grep '%s' /var/log/maxscale/maxscale*.log", pattern) == 0;
+}
+
+void TestConnections::log_includes(const char* pattern)
+{
+    add_result(!log_matches(pattern), "Log does not match pattern '%s'", pattern);
+}
+
+void TestConnections::log_excludes(const char* pattern)
+{
+    add_result(log_matches(pattern), "Log matches pattern '%s'", pattern);
+}
+
 void TestConnections::check_log_err(const char * err_msg, bool expected)
 {
 
