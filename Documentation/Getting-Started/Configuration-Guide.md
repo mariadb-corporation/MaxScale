@@ -1048,6 +1048,14 @@ value is specified, the default is 9.
 ssl_cert_verify_depth=5
 ```
 
+#### `ssl_verify_peer_certificate`
+
+Peer certificate verification. This functionality is enabled by default.
+
+When this feature is enabled, the certificate sent by the peer is verified
+against the configured Certificate Authority. If you are using self-signed
+certificates, disable this feature.
+
 **Example SSL enabled server configuration:**
 
 ```
@@ -1250,6 +1258,14 @@ value is specified, the default is 9.
 # Example
 ssl_cert_verify_depth=5
 ```
+
+#### `ssl_verify_peer_certificate`
+
+Peer certificate verification. This functionality is enabled by default.
+
+When this feature is enabled, the certificate sent by the peer is verified
+against the configured Certificate Authority. If you are using self-signed
+certificates, disable this feature.
 
 **Example SSL enabled listener configuration:**
 
