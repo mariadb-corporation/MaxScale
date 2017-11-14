@@ -1036,16 +1036,16 @@ layer encryption.
 **Note:** It is highly recommended to leave this parameter to the default value
   of _MAX_. This will guarantee that the strongest available encryption is used.
 
-#### `ssl_cert_verification_depth`
+#### `ssl_cert_verify_depth`
 
 The maximum length of the certificate authority chain that will be accepted.
 Legal values are positive integers. Note that if the client is to submit an SSL
-certificate, the `ssl_cert_verification_depth` parameter must not be 0. If no
+certificate, the `ssl_cert_verify_depth` parameter must not be 0. If no
 value is specified, the default is 9.
 
 ```
 # Example
-ssl_cert_verification_depth=5
+ssl_cert_verify_depth=5
 ```
 
 **Example SSL enabled server configuration:**
@@ -1239,16 +1239,16 @@ MaxScale on a system that does not have OpenSSL with support for this should
 earlier versions be used. It is unlikely that TLS 1.1 will be available unless
 TLS 1.2 is also available. MAX will use the best available version.
 
-#### `ssl_cert_verification_depth`
+#### `ssl_cert_verify_depth`
 
 The maximum length of the certificate authority chain that will be accepted.
 Legal values are positive integers. Note that if the client is to submit an SSL
-certificate, the `ssl_cert_verification_depth` parameter must not be 0. If no
+certificate, the `ssl_cert_verify_depth` parameter must not be 0. If no
 value is specified, the default is 9.
 
 ```
 # Example
-ssl_cert_verification_depth=5
+ssl_cert_verify_depth=5
 ```
 
 **Example SSL enabled listener configuration:**
