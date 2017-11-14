@@ -214,3 +214,64 @@ const char* ssl_method_type_to_string(ssl_method_type_t method_type)
         return "Unknown";
     }
 }
+
+void write_ssl_config(int fd, SSL_LISTENER* ssl)
+{
+    if (ssl)
+    {
+        dprintf(fd, "ssl=required\n");
+
+        if (ssl->ssl_cert)
+        {
+            dprintf(fd, "ssl_cert=%s\n", ssl->ssl_cert);
+        }
+
+        if (ssl->ssl_key)
+        {
+            dprintf(fd, "ssl_key=%s\n", ssl->ssl_key);
+        }
+
+        if (ssl->ssl_ca_cert)
+        {
+            dprintf(fd, "ssl_ca_cert=%s\n", ssl->ssl_ca_cert);
+        }
+        if (ssl->ssl_cert_verify_depth)
+        {
+            dprintf(fd, "ssl_cert_verify_depth=%d\n", ssl->ssl_cert_verify_depth);
+        }
+
+        dprintf(fd, "ssl_verify_peer_certificate=%s\n",
+                ssl->ssl_verify_peer_certificate ? "true" : "false");
+
+        const char *version = NULL;
+
+        switch (ssl->ssl_method_type)
+        {
+#ifndef OPENSSL_1_1
+        case SERVICE_TLS10:
+            version = "TLSV10";
+            break;
+#endif
+#ifdef OPENSSL_1_0
+        case SERVICE_TLS11:
+            version = "TLSV11";
+            break;
+
+        case SERVICE_TLS12:
+            version = "TLSV12";
+            break;
+#endif
+        case SERVICE_SSL_TLS_MAX:
+            version = "MAX";
+            break;
+
+        default:
+            break;
+        }
+
+        if (version)
+        {
+            dprintf(fd, "ssl_version=%s\n", version);
+        }
+    }
+}

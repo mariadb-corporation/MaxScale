@@ -712,6 +712,7 @@ createInstance(SERVICE *service, char **options)
         ssl_cfg->ssl_init_done = false;
         ssl_cfg->ssl_method_type = SERVICE_SSL_TLS_MAX;
         ssl_cfg->ssl_cert_verify_depth = 9;
+        ssl_cfg->ssl_verify_peer_certificate = true;
 
         /** Set SSL pointer in in server struct */
         server->server_ssl = ssl_cfg;

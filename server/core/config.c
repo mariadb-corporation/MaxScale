@@ -154,6 +154,7 @@ static const char *listener_params[] =
     "ssl_key",
     "ssl_version",
     "ssl_cert_verify_depth",
+    "ssl_verify_peer_certificate",
     NULL
 };
 
@@ -199,6 +200,7 @@ static const char *server_params[] =
     "ssl_key",
     "ssl_version",
     "ssl_cert_verify_depth",
+    "ssl_verify_peer_certificate",
     NULL
 };
 
@@ -1466,8 +1468,11 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
             ssl_key = config_get_value(obj->parameters, "ssl_key");
             ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
             ssl_version = config_get_value(obj->parameters, "ssl_version");
+            char* ssl_verify_peer_certificate = config_get_value(obj->parameters, "ssl_verify_peer_certificate");
             ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
             new_ssl->ssl_init_done = false;
+            new_ssl->ssl_cert_verify_depth = 9; // Default of 9 as per Linux man page
+            new_ssl->ssl_verify_peer_certificate = true;
 
             if (ssl_version)
             {
@@ -1490,12 +1495,20 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
                     local_errors++;
                 }
             }
-            else
+
+            if (ssl_verify_peer_certificate)
             {
-                /**
-                 * Default of 9 as per Linux man page
-                 */
-                new_ssl->ssl_cert_verify_depth = 9;
+                int rv = config_truth_value(ssl_verify_peer_certificate);
+                if (rv == -1)
+                {
+                    MXS_ERROR("Invalid parameter value for 'ssl_verify_peer_certificate"
+                              " for service '%s': %s", obj->object, ssl_verify_peer_certificate);
+                    local_errors++;
+                }
+                else
+                {
+                    new_ssl->ssl_verify_peer_certificate = rv;
+                }
             }
 
             listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);

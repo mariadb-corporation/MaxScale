@@ -65,6 +65,7 @@ typedef struct ssl_listener
     char *ssl_key;                      /*< SSL private key */
     char *ssl_ca_cert;                  /*< SSL CA certificate */
     bool ssl_init_done;                 /*< If SSL has already been initialized for this service */
+    bool ssl_verify_peer_certificate;   /*< Enable peer certificate verification */
     struct ssl_listener
         *next;          /*< Next SSL configuration, currently used to store obsolete configurations */
 } SSL_LISTENER;
@@ -75,5 +76,6 @@ bool ssl_check_data_to_process(struct dcb *dcb);
 bool ssl_required_by_dcb(struct dcb *dcb);
 bool ssl_required_but_not_negotiated(struct dcb *dcb);
 const char* ssl_method_type_to_string(ssl_method_type_t method_type);
+void write_ssl_config(int fd, SSL_LISTENER* ssl);
 
 MXS_END_DECLS

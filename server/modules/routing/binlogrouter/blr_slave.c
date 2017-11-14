@@ -5766,6 +5766,7 @@ blr_set_master_ssl(ROUTER_INSTANCE *router, CHANGE_MASTER_OPTIONS config, char *
             server_ssl->ssl_init_done = false;
             server_ssl->ssl_method_type = SERVICE_SSL_TLS_MAX;
             server_ssl->ssl_cert_verify_depth = 9;
+            server_ssl->ssl_verify_peer_certificate = true;
 
             /* Set the pointer */
             router->service->dbref->server->server_ssl = server_ssl;
