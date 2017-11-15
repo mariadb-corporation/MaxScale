@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxscale/mock/upstream.hh"
+#include "maxscale/mock/client.hh"
 
 namespace maxscale
 {
@@ -20,31 +20,31 @@ namespace mock
 {
 
 //
-// Upstream
+// Client
 //
-Upstream::Upstream(Handler* pHandler)
+Client::Client(Handler* pHandler)
     : m_pHandler(pHandler)
     , m_n_responses(0)
 {
 }
 
-Upstream::~Upstream()
+Client::~Client()
 {
 }
 
-size_t Upstream::n_responses() const
+size_t Client::n_responses() const
 {
     return m_n_responses;
 }
 
-Upstream::Handler* Upstream::set_handler(Handler* pHandler)
+Client::Handler* Client::set_handler(Handler* pHandler)
 {
     Handler* pH = m_pHandler;
     m_pHandler = pHandler;
     return pH;
 }
 
-void Upstream::reset()
+void Client::reset()
 {
     m_n_responses = 0;
 
@@ -54,18 +54,18 @@ void Upstream::reset()
     }
 }
 
-void Upstream::set_as_upstream_on(FilterModule::Session& filter_session)
+void Client::set_as_upstream_on(FilterModule::Session& filter_session)
 {
     MXS_UPSTREAM upstream;
     upstream.instance = &m_instance;
     upstream.session = this;
-    upstream.clientReply = &Upstream::clientReply;
+    upstream.clientReply = &Client::clientReply;
     upstream.error = NULL;
 
     filter_session.setUpstream(&upstream);
 }
 
-int32_t Upstream::clientReply(GWBUF* pResponse)
+int32_t Client::clientReply(GWBUF* pResponse)
 {
     int32_t rv = 1;
 
@@ -83,7 +83,7 @@ int32_t Upstream::clientReply(GWBUF* pResponse)
     return rv;
 }
 
-int32_t Upstream::write(GWBUF* pResponse)
+int32_t Client::write(GWBUF* pResponse)
 {
     int32_t rv = 1;
 
@@ -102,25 +102,25 @@ int32_t Upstream::write(GWBUF* pResponse)
 }
 
 //static
-int32_t Upstream::clientReply(MXS_FILTER* pInstance,
-                              MXS_FILTER_SESSION* pSession,
-                              GWBUF* pResponse)
+int32_t Client::clientReply(MXS_FILTER* pInstance,
+                            MXS_FILTER_SESSION* pSession,
+                            GWBUF* pResponse)
 {
-    Upstream* pUpstream = reinterpret_cast<Upstream*>(pSession);
-    ss_dassert(pInstance == &pUpstream->m_instance);
+    Client* pClient = reinterpret_cast<Client*>(pSession);
+    ss_dassert(pInstance == &pClient->m_instance);
 
-    return pUpstream->clientReply(pResponse);
+    return pClient->clientReply(pResponse);
 }
 
 //
-// Upstream::Handler
+// Client::Handler
 //
 
-Upstream::Handler::~Handler()
+Client::Handler::~Handler()
 {
 }
 
-void Upstream::Handler::reset()
+void Client::Handler::reset()
 {
 }
 

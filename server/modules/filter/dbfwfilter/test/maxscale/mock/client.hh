@@ -25,13 +25,14 @@ namespace mock
 {
 
 /**
- * An instance of Upstream represents an upstream object of a filter.
+ * An instance of Client represents a client. It can be used as the
+ * upstream filter of another filter.
  */
-class Upstream : public MXS_FILTER_SESSION
-               , public Dcb::Handler
+class Client : public MXS_FILTER_SESSION
+             , public Dcb::Handler
 {
-    Upstream(const Upstream&);
-    Upstream& operator = (const Upstream&);
+    Client(const Client&);
+    Client& operator = (const Client&);
 
 public:
     /**
@@ -61,7 +62,7 @@ public:
         virtual int32_t maxscale_reply(GWBUF* pResponse) = 0;
 
         /**
-         * Called when @reset is called on the @c Upstream instance.
+         * Called when @reset is called on the @c Client instance.
          */
         virtual void reset();
     };
@@ -71,8 +72,8 @@ public:
      *
      * @param pHandler  Optional response handler.
      */
-    Upstream(Handler* pHandler = NULL);
-    ~Upstream();
+    Client(Handler* pHandler = NULL);
+    ~Client();
 
     /**
      * Set a response handler
@@ -91,14 +92,14 @@ public:
     size_t n_responses() const;
 
     /**
-     * Reset the Upstream object. The number of counted responsed will
-     * be set to 0. If the Upstream object has a handler, then its @c reset
+     * Reset the Client object. The number of counted responsed will
+     * be set to 0. If the Client object has a handler, then its @c reset
      * function will be called as well.
      */
     void reset();
 
     /**
-     * Set this object as upstream filter of provided filter.
+     * Set this object as client filter of provided filter.
      *
      * @param session  The filter session whose upstream filter should be set.
      */

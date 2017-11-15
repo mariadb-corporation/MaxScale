@@ -4,10 +4,10 @@ add_executable(test_dbfwfilter
   filtermodule.cc
   mock.cc
   mock_backend.cc
+  mock_client.cc
   mock_dcb.cc
   mock_routersession.cc
   mock_session.cc
-  mock_upstream.cc
   module.cc
   tempfile.cc
 )

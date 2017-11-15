@@ -20,7 +20,7 @@
 #include "maxscale/mock/backend.hh"
 #include "maxscale/mock/routersession.hh"
 #include "maxscale/mock/session.hh"
-#include "maxscale/mock/upstream.hh"
+#include "maxscale/mock/client.hh"
 #include "tempfile.hh"
 
 using namespace std;
@@ -177,8 +177,8 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
 
         if (c.zStatement)
         {
-            mock::Upstream upstream;
-            mock::Session session(c.zUser, c.zHost, &upstream);
+            mock::Client client;
+            mock::Session session(c.zUser, c.zHost, &client);
 
             auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session);
 
@@ -186,7 +186,7 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             {
                 router_session.set_as_downstream_on(sFilter_session.get());
 
-                upstream.set_as_upstream_on(*sFilter_session.get());
+                client.set_as_upstream_on(*sFilter_session.get());
 
                 rv += test(*sFilter_session.get(), router_session, c);
             }
