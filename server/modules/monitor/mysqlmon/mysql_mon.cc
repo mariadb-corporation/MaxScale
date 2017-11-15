@@ -2884,53 +2884,54 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout)
     MXS_CONFIG* cnf = config_get_global_options();
     MXS_MONITORED_SERVER* failed_master = NULL;
 
-    for (MXS_MONITORED_SERVER *ptr = monitor->monitor->monitored_servers; ptr; ptr = ptr->next)
+    if (!cnf->passive)
     {
-        if (ptr->new_event && !cnf->passive &&
-            ptr->server->last_event == MASTER_DOWN_EVENT)
+        for (MXS_MONITORED_SERVER *ptr = monitor->monitor->monitored_servers; ptr; ptr = ptr->next)
         {
-            if (failed_master)
+            if (ptr->new_event && ptr->server->last_event == MASTER_DOWN_EVENT)
             {
-                MXS_ALERT("Multiple failed master servers detected: "
-                          "'%s' is the first master to fail but server "
-                          "'%s' has also triggered a master_down event.",
-                          failed_master->server->unique_name,
-                          ptr->server->unique_name);
-                return false;
-            }
-
-            if (ptr->server->active_event)
-            {
-                // MaxScale was active when the event took place
-                failed_master = ptr;
-                ptr->new_event = false;
-            }
-            else if (monitor->monitor->master_has_failed)
-            {
-                /**
-                 * If a master_down event was triggered when this MaxScale was
-                 * passive, we need to execute the failover script again if no new
-                 * masters have appeared.
-                 */
-                int64_t timeout = SEC_TO_HB(failover_timeout);
-                int64_t t = hkheartbeat - ptr->server->triggered_at;
-
-                if (t > timeout)
+                if (failed_master)
                 {
-                    MXS_WARNING("Failover of server '%s' did not take place within "
-                                "%u seconds, failover needs to be re-triggered",
-                                ptr->server->unique_name, failover_timeout);
+                    MXS_ALERT("Multiple failed master servers detected: "
+                              "'%s' is the first master to fail but server "
+                              "'%s' has also triggered a master_down event.",
+                              failed_master->server->unique_name,
+                              ptr->server->unique_name);
+                    return false;
+                }
+
+                if (ptr->server->active_event)
+                {
+                    // MaxScale was active when the event took place
                     failed_master = ptr;
-                    ptr->new_event = false;
+                }
+                else if (monitor->monitor->master_has_failed)
+                {
+                    /**
+                     * If a master_down event was triggered when this MaxScale was
+                     * passive, we need to execute the failover script again if no new
+                     * masters have appeared.
+                     */
+                    int64_t timeout = SEC_TO_HB(failover_timeout);
+                    int64_t t = hkheartbeat - ptr->server->triggered_at;
+
+                    if (t > timeout)
+                    {
+                        MXS_WARNING("Failover of server '%s' did not take place within "
+                                    "%u seconds, failover needs to be re-triggered",
+                                    ptr->server->unique_name, failover_timeout);
+                        failed_master = ptr;
+                    }
                 }
             }
         }
     }
 
-    if (failed_master)
+    if (failed_master && failed_master->mon_err_count >= monitor->failcount)
     {
         MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
                    failed_master->server->unique_name);
+        failed_master->new_event = false;
         rval = do_failover(monitor);
     }
 
