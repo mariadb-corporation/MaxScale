@@ -19,6 +19,7 @@
 #include <maxscale/cdefs.h>
 
 #include <mysql.h>
+#include <openssl/sha.h>
 
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
@@ -206,6 +207,7 @@ struct mxs_monitor
     time_t journal_max_age; /**< Maximum age of journal file */
     uint32_t script_timeout; /**< Timeout in seconds for the monitor scripts */
     bool master_has_failed; /**< Set to true when the latest event is a master_down event */
+    uint8_t journal_hash[SHA_DIGEST_LENGTH]; /**< SHA1 hash of the latest written journal */
     struct mxs_monitor *next;     /**< Next monitor in the linked list */
 };
 
