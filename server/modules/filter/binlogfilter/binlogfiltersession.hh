@@ -1,6 +1,6 @@
 #pragma once
 /*
- * Copyright (c) 2016 MariaDB Corporation Ab
+ * Copyright (c) 2017 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
@@ -62,15 +62,6 @@ public:
     // Handle a reply from server
     int clientReply(GWBUF* pPacket);
 
-    // Whether to skip current event
-    bool skipEvent(GWBUF* data);
-
-    // Skip database/table events in current trasaction
-    void skipDatabaseTable(const uint8_t* data, const REP_HEADER& hdr);
-
-    // Filter the replication event
-    void filterEvent(GWBUF* data);
-
 private:
     // Used in the create function
     BinlogFilterSession(MXS_SESSION* pSession, const BinlogFilter* pFilter);
@@ -78,10 +69,29 @@ private:
     // Reference to Filter instance
     const BinlogFilter& m_filter;
 
+    // Skip database/table events in current trasaction
+    void skipDatabaseTable(const uint8_t* data, const REP_HEADER& hdr);
+
+    // Get Replication Checksum from registration query
+    bool getReplicationChecksum(GWBUF* pPacket);
+
+    // Abort filter operations
+    void filterError(GWBUF* pPacket);
+
+    // Fix event: set next pos to 0 and set new CRC32
+    void fixEvent(uint8_t* data, uint32_t event_size);
+
+    // Whether to skip current event
+    bool skipEvent(GWBUF* data);
+
+    // Filter the replication event
+    void filterEvent(GWBUF* data);
+
 private:
     // Internal states for filter operations
     enum state_t
     {
+        ERRORED,         // A blocking error occurred
         INACTIVE,        // Fitering is not active
         COMMAND_MODE,    // Connected client in SQL mode: no filtering
         BINLOG_MODE      // Connected client in BINLOG_MODE: filter events
@@ -95,4 +105,5 @@ private:
     bool      m_complete_packet;    // A complete received. Not implemented
     bool      m_crc;                // CRC32 for events. Not implemented
     bool      m_large_payload;      // Packet bigger than 16MB. Not implemented
+    GWBUF*    m_sql_query;          // SQL query buffer
 };

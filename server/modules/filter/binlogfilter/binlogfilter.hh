@@ -1,6 +1,6 @@
 #pragma once
 /*
- * Copyright (c) 2016 MariaDB Corporation Ab
+ * Copyright (c) 2017 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
@@ -18,18 +18,19 @@
 #include "binlogfiltersession.hh"
 
 // Binlog Filter configuration
-struct BinlogConfig
+class BinlogConfig
 {
+public:
     // Constructor
     BinlogConfig(const MXS_CONFIG_PARAMETER* pParams)
         : active(config_get_bool(pParams, "filter_events"))
         , dbname(config_get_string(pParams, "skip_db"))
         , table(config_get_string(pParams, "skip_table"))
     {
-    };
+    }
 
     // Destructor
-    ~BinlogConfig() {};
+    ~BinlogConfig() {}
 
     // Members mapped to config options
     bool active;

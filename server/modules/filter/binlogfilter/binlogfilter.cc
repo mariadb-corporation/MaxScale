@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 MariaDB Corporation Ab
+ * Copyright (c) 2017 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
