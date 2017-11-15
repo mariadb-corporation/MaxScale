@@ -177,8 +177,8 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
 
         if (c.zStatement)
         {
-            mock::Client client;
-            mock::Session session(c.zUser, c.zHost, &client);
+            mock::Client client(c.zUser, c.zHost);
+            mock::Session session(&client);
 
             auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session);
 

@@ -15,7 +15,7 @@
 #include "mock.hh"
 #include <maxscale/session.h>
 #include <maxscale/protocol/mysql.h>
-#include "dcb.hh"
+#include "client.hh"
 
 namespace maxscale
 {
@@ -36,16 +36,16 @@ public:
     /**
      * Constructor
      *
-     * @param zUser    The client of the session,
-     * @param zHost    The host of the client.
-     * @param pHandler Handler for the client Dcb.
+     * @param pClient  The client of the session. Must remain valid for
+     *                 the lifetime of the Session.
      */
-    Session(const char*   zUser,
-            const char*   zHost,
-            Dcb::Handler* pHandler = NULL);
+    Session(Client* pClient);
     ~Session();
 
+    Client& client() const;
+
 private:
+    Client&       m_client;
     Dcb           m_client_dcb;
     MYSQL_session m_mysql_session;
 };

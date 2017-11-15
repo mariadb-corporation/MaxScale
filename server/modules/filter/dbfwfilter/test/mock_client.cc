@@ -22,14 +22,28 @@ namespace mock
 //
 // Client
 //
-Client::Client(Handler* pHandler)
-    : m_pHandler(pHandler)
+Client::Client(const char* zUser,
+               const char* zHost,
+               Handler*    pHandler)
+    : m_user(zUser)
+    , m_host(zHost)
+    , m_pHandler(pHandler)
     , m_n_responses(0)
 {
 }
 
 Client::~Client()
 {
+}
+
+const char* Client::user() const
+{
+    return m_user.c_str();
+}
+
+const char* Client::host() const
+{
+    return m_host.c_str();
 }
 
 size_t Client::n_responses() const

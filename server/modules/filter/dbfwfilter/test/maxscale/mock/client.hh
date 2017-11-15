@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <memory>
+#include <string>
 #include <maxscale/filter.h>
 #include "../filtermodule.hh"
 #include "dcb.hh"
@@ -70,10 +71,24 @@ public:
     /**
      * Constructor
      *
+     * @param zUser     The client of the session,
+     * @param zHost     The host of the client.
      * @param pHandler  Optional response handler.
      */
-    Client(Handler* pHandler = NULL);
+    Client(const char* zUser,
+           const char* zHost,
+           Handler* pHandler = NULL);
     ~Client();
+
+    /**
+     * @return The name of the client.
+     */
+    const char* user() const;
+
+    /**
+     * @return The name of the host.
+     */
+    const char* host() const;
 
     /**
      * Set a response handler
@@ -114,9 +129,11 @@ private:
     int32_t write(GWBUF* pBuffer);
 
 private:
-    MXS_FILTER m_instance;
-    Handler*   m_pHandler;
-    size_t     m_n_responses;
+    MXS_FILTER  m_instance;
+    std::string m_user;
+    std::string m_host;
+    Handler*    m_pHandler;
+    size_t      m_n_responses;
 };
 
 }
