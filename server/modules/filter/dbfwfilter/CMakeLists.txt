@@ -21,6 +21,10 @@ if(BISON_FOUND AND FLEX_FOUND)
   target_link_libraries(dbfwchk maxscale-common MySQLCommon dbfwfilter-core)
   install_executable(dbfwchk core)
 
+  if(BUILD_TESTS)
+    add_subdirectory(test)
+  endif()
 else()
     message(FATAL_ERROR "Could not find Bison or Flex: ${BISON_EXECUTABLE} ${FLEX_EXECUTABLE}")
 endif()
+
