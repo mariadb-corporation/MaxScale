@@ -16,6 +16,7 @@
 #include <memory>
 #include <maxscale/filter.h>
 #include "../filtermodule.hh"
+#include "dcb.hh"
 
 namespace maxscale
 {
@@ -27,6 +28,7 @@ namespace mock
  * An instance of Upstream represents an upstream object of a filter.
  */
 class Upstream : public MXS_FILTER_SESSION
+               , public Dcb::Handler
 {
     Upstream(const Upstream&);
     Upstream& operator = (const Upstream&);
@@ -47,7 +49,16 @@ public:
          *
          * @return 1 if processing should continue, 0 otherwise.
          */
-        virtual int32_t clientReply(GWBUF* pResponse) = 0;
+        virtual int32_t backend_reply(GWBUF* pResponse) = 0;
+
+        /**
+         * Called when a response is sent directly by a filter.
+         *
+         * @param pResponse The response packet.
+         *
+         * @return 1 if processing should continue, 0 otherwise.
+         */
+        virtual int32_t maxscale_reply(GWBUF* pResponse) = 0;
 
         /**
          * Called when @reset is called on the @c Upstream instance.
@@ -97,6 +108,9 @@ private:
     int32_t clientReply(GWBUF* pResponse);
 
     static int32_t clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pSession, GWBUF* pResponse);
+
+    // Dcb::Handler
+    int32_t write(GWBUF* pBuffer);
 
 private:
     MXS_FILTER m_instance;

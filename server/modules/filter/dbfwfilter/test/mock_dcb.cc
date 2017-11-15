@@ -37,9 +37,11 @@ namespace mock
 
 Dcb::Dcb(MXS_SESSION* pSession,
          const char* zUser,
-         const char* zHost)
+         const char* zHost,
+         Handler*    pHandler)
     : m_user(zUser)
     , m_host(zHost)
+    , m_pHandler(pHandler)
 {
     DCB* pDcb = this;
     initialize_dcb(this);
@@ -55,11 +57,32 @@ Dcb::~Dcb()
 {
 }
 
+Dcb::Handler* Dcb::handler() const
+{
+    return m_pHandler;
+}
+
+Dcb::Handler* Dcb::set_handler(Handler* pHandler)
+{
+    Handler* p = m_pHandler;
+    m_pHandler = pHandler;
+    return p;
+}
+
 int32_t Dcb::write(GWBUF* pData)
 {
-    // TODO: Should be routed somewhere
-    gwbuf_free(pData);
-    return 1;
+    int32_t rv = 1;
+
+    if (m_pHandler)
+    {
+        rv = m_pHandler->write(pData);
+    }
+    else
+    {
+        gwbuf_free(pData);
+    }
+
+    return rv;
 }
 
 //static

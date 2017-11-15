@@ -136,7 +136,7 @@ int test(FilterModule::Session& filter_session,
     {
         if (!router_session.idle()) // Statement reached backend
         {
-            router_session.respond(); // To discard. TODO: Provide router_session.discard().
+            router_session.discard_one_response();
             log_success(c);
         }
         else
@@ -155,7 +155,7 @@ int test(FilterModule::Session& filter_session,
         }
         else
         {
-            router_session.respond();
+            router_session.discard_one_response();
             log_error(c);
             rv = 1;
         }
@@ -177,15 +177,14 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
 
         if (c.zStatement)
         {
-            mock::Session session(c.zUser, c.zHost);
+            mock::Upstream upstream;
+            mock::Session session(c.zUser, c.zHost, &upstream);
 
             auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session);
 
             if (sFilter_session.get())
             {
                 router_session.set_as_downstream_on(sFilter_session.get());
-
-                mock::Upstream upstream;
 
                 upstream.set_as_upstream_on(*sFilter_session.get());
 

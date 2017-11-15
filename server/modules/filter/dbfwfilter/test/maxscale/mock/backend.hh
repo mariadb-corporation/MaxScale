@@ -59,6 +59,22 @@ public:
      */
     virtual bool idle(const RouterSession* pSession) const = 0;
 
+    /**
+     * Discards an available response.
+     *
+     * @param pSession  A router session.
+     *
+     * @return True if there are additional responses for the router session.
+     */
+    virtual bool discard_one_response(const RouterSession* pSession) = 0;
+
+    /**
+     * Discards all available responses.
+     *
+     * @param pSession  A router session.
+     */
+    virtual void discard_all_responses(const RouterSession* pSession) = 0;
+
 protected:
     Backend();
 };
@@ -79,6 +95,10 @@ public:
 
     bool idle(const RouterSession* pSession) const;
 
+    bool discard_one_response(const RouterSession* pSession);
+
+    void discard_all_responses(const RouterSession* pSession);
+
 protected:
     BufferBackend();
 
@@ -88,7 +108,10 @@ protected:
      * @param pSession   The session to enqueue the response for.
      * @param pResponse  The response.
      */
-    void enqueue_response(RouterSession* pSession, GWBUF* pResponse);
+    void enqueue_response(const RouterSession* pSession, GWBUF* pResponse);
+
+private:
+    GWBUF* dequeue_response(const RouterSession* pSession, bool* pEmpty);
 
 private:
     typedef std::deque<GWBUF*> Responses;

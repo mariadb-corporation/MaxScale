@@ -12,6 +12,7 @@
  */
 
 #include "maxscale/mock/backend.hh"
+#include <algorithm>
 #include <maxscale/protocol/mysql.h>
 #include <iostream>
 
@@ -48,24 +49,15 @@ BufferBackend::~BufferBackend()
 
 bool BufferBackend::respond(RouterSession* pSession)
 {
-    ss_dassert(!idle(pSession));
+    bool empty = false;
+    GWBUF* pResponse = dequeue_response(pSession, &empty);
 
-    bool rv = false;
-
-    if (!idle(pSession))
+    if (pResponse)
     {
-        Responses& responses = m_session_responses[pSession];
-        ss_dassert(!responses.empty());
-
-        GWBUF* pResponse = responses.front();
-        responses.pop_front();
-
         pSession->clientReply(pResponse);
-
-        rv = !responses.empty();
     }
 
-    return rv;
+    return !empty;
 }
 
 bool BufferBackend::idle(const RouterSession* pSession) const
@@ -83,12 +75,58 @@ bool BufferBackend::idle(const RouterSession* pSession) const
     return rv;
 }
 
-void BufferBackend::enqueue_response(RouterSession* pSession, GWBUF* pResponse)
+bool BufferBackend::discard_one_response(const RouterSession* pSession)
+{
+    bool empty = false;
+    gwbuf_free(dequeue_response(pSession, &empty));
+
+    return !empty;
+}
+
+void BufferBackend::discard_all_responses(const RouterSession* pSession)
+{
+    ss_dassert(!idle(pSession));
+
+    if (!idle(pSession))
+    {
+        Responses& responses = m_session_responses[pSession];
+        ss_dassert(!responses.empty());
+
+        std::for_each(responses.begin(), responses.end(), gwbuf_free);
+        responses.clear();
+    }
+}
+
+void BufferBackend::enqueue_response(const RouterSession* pSession, GWBUF* pResponse)
 {
     Responses& responses = m_session_responses[pSession];
 
     responses.push_back(pResponse);
 }
+
+GWBUF* BufferBackend::dequeue_response(const RouterSession* pSession, bool* pEmpty)
+{
+    ss_dassert(!idle(pSession));
+    GWBUF* pResponse = NULL;
+    *pEmpty = true;
+
+    if (!idle(pSession))
+    {
+        Responses& responses = m_session_responses[pSession];
+        ss_dassert(!responses.empty());
+
+        if (!responses.empty())
+        {
+            pResponse = responses.front();
+            responses.pop_front();
+        }
+
+        *pEmpty = responses.empty();
+    }
+
+    return pResponse;
+}
+
 
 //
 // OkBackend

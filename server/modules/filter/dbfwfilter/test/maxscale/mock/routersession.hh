@@ -78,6 +78,18 @@ public:
      */
     bool idle() const;
 
+    /**
+     * Discards one response.
+     *
+     * @return True, if there are additional responses.
+     */
+    bool discard_one_response();
+
+    /**
+     * Discards all responses.
+     */
+    void discard_all_responses();
+
 private:
     int32_t routeQuery(MXS_ROUTER* pInstance, GWBUF* pStatement);
 

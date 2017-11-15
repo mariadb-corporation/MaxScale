@@ -19,9 +19,10 @@ namespace maxscale
 namespace mock
 {
 
-Session::Session(const char* zUser,
-                 const char* zHost)
-    : m_client_dcb(this, zUser, zHost)
+Session::Session(const char*   zUser,
+                 const char*   zHost,
+                 Dcb::Handler* pHandler)
+    : m_client_dcb(this, zUser, zHost, pHandler)
 {
     MXS_SESSION* pSession = this;
 

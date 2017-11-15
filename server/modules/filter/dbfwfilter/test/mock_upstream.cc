@@ -67,13 +67,31 @@ void Upstream::set_as_upstream_on(FilterModule::Session& filter_session)
 
 int32_t Upstream::clientReply(GWBUF* pResponse)
 {
-    int rv = 1;
+    int32_t rv = 1;
 
     ++m_n_responses;
 
     if (m_pHandler)
     {
-        rv = m_pHandler->clientReply(pResponse);
+        rv = m_pHandler->backend_reply(pResponse);
+    }
+    else
+    {
+        gwbuf_free(pResponse);
+    }
+
+    return rv;
+}
+
+int32_t Upstream::write(GWBUF* pResponse)
+{
+    int32_t rv = 1;
+
+    ++m_n_responses;
+
+    if (m_pHandler)
+    {
+        rv = m_pHandler->maxscale_reply(pResponse);
     }
     else
     {

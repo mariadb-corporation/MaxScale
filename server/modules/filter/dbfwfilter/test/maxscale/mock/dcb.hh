@@ -31,17 +31,41 @@ class Dcb : public DCB
     Dcb& operator = (const Dcb&);
 
 public:
+    class Handler
+    {
+    public:
+        virtual int32_t write(GWBUF* pBuffer) = 0;
+    };
+
     /**
      * Constructor
      *
      * @param pSession  The session object of the DCB.
      * @param zUser     The client of the connection.
      * @param zHost     The host of the connection.
+     * @param pHandler  Optional handler.
      */
     Dcb(MXS_SESSION* pSession,
         const char* zUser,
-        const char* zHost);
+        const char* zHost,
+        Handler*    pHandler = NULL);
     ~Dcb();
+
+    /**
+     * Get the current handler of the Dcb.
+     *
+     * @return A Handler or NULL.
+     */
+    Handler* handler() const;
+
+    /**
+     * Set the current handler of the Dcb.
+     *
+     * @param pHandler  The new handler.
+     *
+     * @return  The previous handler or NULL.
+     */
+    Handler* set_handler(Handler* pHandler);
 
 private:
     int32_t write(GWBUF* pData);
@@ -51,6 +75,7 @@ private:
 private:
     std::string m_user;
     std::string m_host;
+    Handler*    m_pHandler;
 };
 
 }

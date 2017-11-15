@@ -36,11 +36,13 @@ public:
     /**
      * Constructor
      *
-     * @param zUser  The client of the session,
-     * @param zHost  The host of the client.
+     * @param zUser    The client of the session,
+     * @param zHost    The host of the client.
+     * @param pHandler Handler for the client Dcb.
      */
-    Session(const char* zUser,
-            const char* zHost = "127.0.0.1");
+    Session(const char*   zUser,
+            const char*   zHost,
+            Dcb::Handler* pHandler = NULL);
     ~Session();
 
 private:

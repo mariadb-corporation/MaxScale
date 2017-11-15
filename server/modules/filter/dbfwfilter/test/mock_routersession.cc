@@ -52,6 +52,16 @@ bool RouterSession::idle() const
     return m_pBackend->idle(this);
 }
 
+bool RouterSession::discard_one_response()
+{
+    return m_pBackend->discard_one_response(this);
+}
+
+void RouterSession::discard_all_responses()
+{
+    return m_pBackend->discard_all_responses(this);
+}
+
 int32_t RouterSession::routeQuery(MXS_ROUTER* pInstance, GWBUF* pStatement)
 {
     ss_dassert(pInstance == &m_instance);
