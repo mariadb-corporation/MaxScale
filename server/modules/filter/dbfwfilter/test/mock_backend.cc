@@ -73,7 +73,6 @@ bool BufferBackend::idle(const RouterSession* pSession) const
     bool rv = true;
 
     SessionResponses::const_iterator i = m_session_responses.find(pSession);
-    ss_dassert(i != m_session_responses.end());
 
     if (i != m_session_responses.end())
     {

@@ -47,10 +47,25 @@ Dcb::Dcb(MXS_SESSION* pSession,
     pDcb->session = pSession;
     pDcb->remote = const_cast<char*>(zHost);
     pDcb->user = const_cast<char*>(zUser);
+
+    pDcb->func.write = &Dcb::write;
 }
 
 Dcb::~Dcb()
 {
+}
+
+int32_t Dcb::write(GWBUF* pData)
+{
+    // TODO: Should be routed somewhere
+    gwbuf_free(pData);
+    return 1;
+}
+
+//static
+int32_t Dcb::write(DCB* pDcb, GWBUF* pData)
+{
+    return static_cast<Dcb*>(pDcb)->write(pData);
 }
 
 }

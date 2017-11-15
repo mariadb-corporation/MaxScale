@@ -14,6 +14,7 @@
 
 #include "mock.hh"
 #include <maxscale/session.h>
+#include <maxscale/protocol/mysql.h>
 #include "dcb.hh"
 
 namespace maxscale
@@ -43,7 +44,8 @@ public:
     ~Session();
 
 private:
-    Dcb m_client_dcb;
+    Dcb           m_client_dcb;
+    MYSQL_session m_mysql_session;
 };
 
 }

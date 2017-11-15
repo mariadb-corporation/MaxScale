@@ -32,6 +32,12 @@ Session::Session(const char* zUser,
     pSession->ses_chk_tail = CHK_NUM_SESSION;
 
     pSession->client_dcb = &m_client_dcb;
+
+    memset(&m_mysql_session, 0, sizeof(m_mysql_session));
+
+    strcpy(m_mysql_session.db, "dummy");
+
+    m_client_dcb.data = &m_mysql_session;
 }
 
 Session::~Session()

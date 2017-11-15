@@ -44,6 +44,11 @@ public:
     ~Dcb();
 
 private:
+    int32_t write(GWBUF* pData);
+
+    static int32_t write(DCB* pDcb, GWBUF* pData);
+
+private:
     std::string m_user;
     std::string m_host;
 };
