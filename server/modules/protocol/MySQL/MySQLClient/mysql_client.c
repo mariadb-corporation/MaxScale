@@ -1424,7 +1424,7 @@ gw_client_close(DCB *dcb)
 /**
  * Handle a hangup event on the client side descriptor.
  *
- * We simply close the DCB, this will propogate the closure to any
+ * We simply close the DCB, this will propagate the closure to any
  * backend descriptors and perform the session cleanup.
  *
  * @param dcb           The DCB of the connection
@@ -1446,6 +1446,7 @@ static int gw_client_hangup_event(DCB *dcb)
         goto retblock;
     }
 
+    modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "70100", "Connection killed by MaxScale");
     dcb_close(dcb);
 
 retblock:
