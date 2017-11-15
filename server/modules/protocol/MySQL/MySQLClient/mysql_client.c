@@ -1446,7 +1446,7 @@ static int gw_client_hangup_event(DCB *dcb)
         goto retblock;
     }
 
-    modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "70100", "Connection killed by MaxScale");
+    modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
     dcb_close(dcb);
 
 retblock:
