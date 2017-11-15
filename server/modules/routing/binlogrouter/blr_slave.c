@@ -3061,7 +3061,7 @@ blr_slave_read_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 static uint32_t
 blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *fde)
 {
-    GWBUF *head;
+    GWBUF *event;
     uint8_t *ptr;
     uint32_t chksum;
     uint32_t event_size;
@@ -3072,12 +3072,14 @@ blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *fde)
         return 0;
     }
 
-    event_ptr = GWBUF_DATA(fde);
-    if ((head = gwbuf_alloc(MYSQL_HEADER_LEN + 1)) == NULL)
+    event_size = GWBUF_LENGTH(fde);
+
+    if ((event = gwbuf_alloc(MYSQL_HEADER_LEN + 1 + event_size)) == NULL)
     {
         return 0;
     }
-    ptr = GWBUF_DATA(head);
+
+    ptr = GWBUF_DATA(event);
 
     event_size = GWBUF_LENGTH(fde);
 
@@ -3086,13 +3088,15 @@ blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *fde)
     ptr += 3;
     *ptr++ = slave->seqno++;
     *ptr++ = 0;     // OK/ERR byte
-    head = gwbuf_append(head, fde);
-    event_ptr = GWBUF_DATA(fde);
-    encode_value(event_ptr, time(0), 32); // Overwrite timestamp
-    event_ptr += 13; // 4 time + 1 type + 4 server_id + 4 event_size
+
+    // Copy FDE data
+    memcpy(ptr, GWBUF_DATA(fde), event_size);
+
+    encode_value(ptr, time(0), 32); // Overwrite timestamp
+    ptr += 13; // 4 time + 1 type + 4 server_id + 4 event_size
 
     /* event_ptr points to position of the next event */
-    encode_value(event_ptr, 0, 32);       // Set next position to 0
+    encode_value(ptr, 0, 32);       // Set next position to 0
 
     /*
      * Since we have changed the timestamp we must recalculate the CRC
@@ -3101,14 +3105,14 @@ blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *fde)
      * calculate a new checksum
      * and write it into the header
      */
-    ptr = GWBUF_DATA(fde) + event_size - BINLOG_EVENT_CRC_SIZE;
+    ptr = GWBUF_DATA(event) + MYSQL_HEADER_LEN + 1 + event_size - BINLOG_EVENT_CRC_SIZE;
     chksum = crc32(0L, NULL, 0);
     chksum = crc32(chksum,
-                   GWBUF_DATA(fde),
+                   GWBUF_DATA(event) + MYSQL_HEADER_LEN + 1,
                    event_size - BINLOG_EVENT_CRC_SIZE);
     encode_value(ptr, chksum, 32);
 
-    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, head);
+    return MXS_SESSION_ROUTE_REPLY(slave->dcb->session, event);
 }
 
 
