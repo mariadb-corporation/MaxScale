@@ -13,9 +13,8 @@ plugin modules that tailor the behavior of the program.
   * [Global Settings](#global-settings)
   * [Service](#service)
   * [Server](#server)
-  * [Server and SSL](#server-and-ssl)
   * [Listener](#listener)
-  * [Listener and SSL](#listener-and-ssl)
+  * [TLS/SSL Encryption](#tlsssl-encryption)
 * [Router Modules](#routing-modules)
 * [Diagnostic Modules](#diagnostic-modules)
 * [Monitor Modules](#monitor-modules)
@@ -977,108 +976,6 @@ closed.
 For more information about persistent connections, please read the
 [Administration Tutorial](../Tutorials/Administration-Tutorial.md).
 
-### Server and SSL
-
-This section describes configuration parameters for servers that control the
-SSL/TLS encryption method and the various certificate files involved in it when
-applied to back end servers. To enable SSL between MaxScale and a back end
-server, you must configure the `ssl` parameter in the relevant server section to
-the value `required` and provide the three files for `ssl_cert`, `ssl_key` and
-`ssl_ca_cert`. After this, MaxScale connections to this server will be encrypted
-with SSL. Attempts to connect to the server without using SSL will cause
-failures. Hence, the database server in question must have been configured to be
-able to accept SSL connections.
-
-#### `ssl`
-
-This enables SSL connections to the server, when set to `required`. If that is
-done, the three certificate files mentioned below must also be supplied.
-MaxScale connections to this server will then be encrypted with SSL. If this is
-not possible, client connection attempts that rely on the server will fail.
-
-#### `ssl_key`
-
-A string giving a file path that identifies an existing readable file. The file
-must be the SSL client private key MaxScale should use with the server. This
-will be the private key that is used as the client side private key during a
-MaxScale-server SSL handshake. This is currently a required parameter for SSL
-enabled servers.
-
-#### `ssl_cert`
-
-A string giving a file path that identifies an existing readable file. The file
-must be the SSL client certificate MaxScale should use with the server. This
-will be the public certificate that is used as the client side certificate
-during a MaxScale-server SSL handshake. This is a required parameter for SSL
-enabled servers. The certificate must be compatible with the key defined above.
-
-#### `ssl_ca_cert`
-
-A string giving a file path that identifies an existing readable file. The file
-must be the SSL Certificate Authority (CA) certificate for the CA that signed
-the client certificate referred to in the previous parameter. It will be used to
-verify that the client certificate is valid. This is a required parameter for
-SSL enabled listeners.
-
-#### `ssl_version`
-
-This parameter controls the level of encryption used. Accepted values are:
-
- * TLSv10
- * TLSv11
- * TLSv12
- * MAX
-
-The default is to use the highest level of encryption available. For OpenSSL 1.0
-and newer this is TLSv1.2. Older versions use TLSv1.0 as the default transport
-layer encryption.
-
-**Note:** It is highly recommended to leave this parameter to the default value
-  of _MAX_. This will guarantee that the strongest available encryption is used.
-
-#### `ssl_cert_verify_depth`
-
-The maximum length of the certificate authority chain that will be accepted.
-Legal values are positive integers. Note that if the client is to submit an SSL
-certificate, the `ssl_cert_verify_depth` parameter must not be 0. If no
-value is specified, the default is 9.
-
-```
-# Example
-ssl_cert_verify_depth=5
-```
-
-#### `ssl_verify_peer_certificate`
-
-Peer certificate verification. This functionality is enabled by default.
-
-When this feature is enabled, the certificate sent by the peer is verified
-against the configured Certificate Authority. If you are using self-signed
-certificates, disable this feature.
-
-**Example SSL enabled server configuration:**
-
-```
-[server1]
-type=server
-address=10.131.24.62
-port=3306
-protocol=MySQLBackend
-#persistpoolmax=200
-persistmaxtime=3000
-ssl=required
-ssl_version=TLSv10
-ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.max-client.pem
-ssl_key=/usr/local/mariadb/maxscale/ssl/key.max-client.pem
-ssl_ca_cert=/usr/local/mariadb/maxscale/ssl/crt.ca.maxscale.pem
-
-```
-
-This example configuration requires all connections to this server to be
-encrypted with SSL. It also specifies that TLSv1.0 should be used as the
-encryption method. The paths to the server certificate files and the Certificate
-Authority file are also provided.
-
 ### Listener
 
 The listener defines a port and protocol pair that is used to listen for
@@ -1192,60 +1089,63 @@ This protocol module is currently still under development, it provides a means
 to create HTTP connections to MariaDB MaxScale for use by web browsers or
 RESTful API clients.
 
-### Listener and SSL
+### TLS/SSL encryption
 
-This section describes configuration parameters for listeners that control the
-SSL/TLS encryption method and the various certificate files involved in it. To
-enable SSL from client to MaxScale, you must configure the `ssl` parameter to
-the value `required` and provide the three files for `ssl_cert`, `ssl_key` and
-`ssl_ca_cert`. After this, MySQL connections to this listener will be encrypted
-with SSL. Attempts to connect to the listener with a non-SSL client will fail.
-Note that the same service can have an SSL listener and a non-SSL listener if
-you wish, although they must be on different ports.
+This section describes configuration parameters for both servers and listeners
+that control the TLS/SSL encryption method and the various certificate files
+involved in it.
+
+To enable TLS/SSL for a listener or a server, you must set the `ssl` parameter
+to `required` and provide the three files for `ssl_cert`, `ssl_key` and
+`ssl_ca_cert`.
+
+After this, MaxScale connections between the server and/or the client will be
+encrypted. Note that the database must be configured to use TLS/SSL connections
+if backend connection encryption is used. When client-side encryption is
+enabled, only encrypted connections to MaxScale can be created.
 
 #### `ssl`
 
-This enables SSL connections to the listener, when set to `required`. If that is
-done, the three certificate files mentioned below must also be supplied. Client
-connections to this listener will then be encrypted with SSL. Non-SSL
-connections will get an error when they try to connect to the listener.
+This enables SSL connections when set to `required`. If enabled, the three
+certificate files mentioned below must also be supplied. MaxScale connections
+to will then be encrypted with TLS/SSL.
 
 #### `ssl_key`
 
 A string giving a file path that identifies an existing readable file. The file
-must be the SSL private key the listener should use. This will be the private
-key that is used as the server side private key during a client-server SSL
-handshake. This is a required parameter for SSL enabled listeners.
+must be the SSL client private key MaxScale should use. This is a required
+parameter for SSL enabled configurations.
 
 #### `ssl_cert`
 
 A string giving a file path that identifies an existing readable file. The file
-must be the SSL certificate the listener should use. This will be the public
-certificate that is used as the server side certificate during a client-server
-SSL handshake. This is a required parameter for SSL enabled listeners. The
-certificate must be compatible with the key defined above.
+must be the SSL client certificate MaxScale should use with the server. This is
+a required parameter for SSL enabled configurations. The certificate must match
+the key defined in `ssl_key`.
 
 #### `ssl_ca_cert`
 
 A string giving a file path that identifies an existing readable file. The file
-must be the SSL Certificate Authority (CA) certificate for the CA that signed
-the server certificate referred to in the previous parameter. It will be used to
-verify that the server certificate is valid. This is a required parameter for
-SSL enabled listeners.
+must be the Certificate Authority (CA) certificate for the CA that signed the
+certificate referred to in the previous parameter. It will be used to verify
+that the certificate is valid. This is a required parameter for SSL enabled
+configurations.
 
 #### `ssl_version`
 
 This parameter controls the level of encryption used. Accepted values are:
+
  * TLSv10
  * TLSv11
  * TLSv12
  * MAX
 
-If possible, use TLSv12 for best security. Recent Linux systems will include a
-version of OpenSSL that supports TLS version 1.2.  Only if you are using
-MaxScale on a system that does not have OpenSSL with support for this should
-earlier versions be used. It is unlikely that TLS 1.1 will be available unless
-TLS 1.2 is also available. MAX will use the best available version.
+The default is to use the highest level of encryption available. For OpenSSL 1.0
+and newer this is TLSv1.2. Older versions use TLSv1.0 as the default transport
+layer encryption.
+
+**Note:** It is highly recommended to leave this parameter to the default value
+  of _MAX_. This will guarantee that the strongest available encryption is used.
 
 #### `ssl_cert_verify_depth`
 
@@ -1253,11 +1153,6 @@ The maximum length of the certificate authority chain that will be accepted.
 Legal values are positive integers. Note that if the client is to submit an SSL
 certificate, the `ssl_cert_verify_depth` parameter must not be 0. If no
 value is specified, the default is 9.
-
-```
-# Example
-ssl_cert_verify_depth=5
-```
 
 #### `ssl_verify_peer_certificate`
 
@@ -1267,6 +1162,25 @@ When this feature is enabled, the certificate sent by the peer is verified
 against the configured Certificate Authority. If you are using self-signed
 certificates, disable this feature.
 
+**Example SSL enabled server configuration:**
+
+```
+[server1]
+type=server
+address=10.131.24.62
+port=3306
+protocol=MySQLBackend
+ssl=required
+ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.max-client.pem
+ssl_key=/usr/local/mariadb/maxscale/ssl/key.max-client.pem
+ssl_ca_cert=/usr/local/mariadb/maxscale/ssl/crt.ca.maxscale.pem
+
+```
+
+This example configuration requires all connections to this server to be
+encrypted with SSL. The paths to the certificate files and the Certificate
+Authority file are also provided.
+
 **Example SSL enabled listener configuration:**
 
 ```
@@ -1274,21 +1188,16 @@ certificates, disable this feature.
 type=listener
 service=RW Split Router
 protocol=MySQLClient
-address=10.131.218.83
 port=3306
-authenticator=MySQL
 ssl=required
 ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.maxscale.pem
 ssl_key=/usr/local/mariadb/maxscale/ssl/key.csr.maxscale.pem
 ssl_ca_cert=/usr/local/mariadb/maxscale/ssl/crt.ca.maxscale.pem
-ssl_version=TLSv12
-ssl_cert_verify_depth=9
 ```
 
-This example configuration requires all connections to be encrypted with SSL. It
-also specifies that TLSv1.2 should be used as the encryption method. The paths
-to the server certificate files and the Certificate Authority file are also
-provided.
+This example configuration requires all connections to be encrypted with
+SSL. The paths to the certificate files and the Certificate Authority file are
+also provided.
 
 ## Routing Modules
 
