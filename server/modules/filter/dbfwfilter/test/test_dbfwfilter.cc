@@ -40,11 +40,12 @@ enum fw_action_t
 struct FW_TEST_CASE
 {
     const char* zStatement; /* The statement to test. */
+    fw_action_t result;     /* The expected outcome. */
     const char* zUser;      /* The user to test as. */
     const char* zHost;      /* The host of the user. */
-    fw_action_t result;     /* The expected outcome. */
 };
 
+const char DEFAULT_USER[] = "bob";
 const char DEFAULT_HOST[] = "127.0.0.1";
 
 const size_t N_MAX_CASES = 10;
@@ -63,8 +64,6 @@ struct FW_TEST
         {
             {
                 "SELECT a FROM t",
-                "bob",
-                DEFAULT_HOST,
                 FW_ACTION_BLOCK
             }
         }
@@ -76,8 +75,6 @@ struct FW_TEST
         {
             {
                 "SELECT a FROM t",
-                "bob",
-                DEFAULT_HOST,
                 FW_ACTION_ALLOW
             }
         }
@@ -119,14 +116,15 @@ void log_error(const FW_TEST_CASE& c)
     }
 }
 
-int test(FilterModule::Session& filter_session,
+int test(mock::Client& client,
+         FilterModule::Session& filter_session,
          mock::RouterSession& router_session,
          const FW_TEST_CASE& c)
 {
     int rv = 0;
 
     cout << "STATEMENT: " << c.zStatement << endl;
-    cout << "CLIENT   : " << c.zUser << "@" << c.zHost << endl;
+    cout << "CLIENT   : " << client.user() << "@" << client.host() << endl;
 
     GWBUF* pStatement = mock::create_com_query(c.zStatement);
 
@@ -177,7 +175,10 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
 
         if (c.zStatement)
         {
-            mock::Client client(c.zUser, c.zHost);
+            const char* zUser = c.zUser ? c.zUser : DEFAULT_USER;
+            const char* zHost = c.zHost ? c.zHost : DEFAULT_HOST;
+
+            mock::Client client(zUser, zHost);
             mock::Session session(&client);
 
             auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session);
@@ -188,7 +189,7 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
 
                 client.set_as_upstream_on(*sFilter_session.get());
 
-                rv += test(*sFilter_session.get(), router_session, c);
+                rv += test(client, *sFilter_session.get(), router_session, c);
             }
             else
             {
