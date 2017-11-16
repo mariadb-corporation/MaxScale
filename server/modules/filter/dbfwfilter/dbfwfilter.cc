@@ -1272,11 +1272,16 @@ static SUser find_user_data(const UserMap& users, std::string name, std::string 
         if (it == users.end())
         {
             snprintf(nameaddr, sizeof(nameaddr), "%%@%s", remote.c_str());
-            ip_start = strchr(nameaddr, '@') + 1;
+            it = users.find(nameaddr);
 
-            while (it == users.end() && next_ip_class(ip_start))
+            if (it == users.end())
             {
-                it = users.find(nameaddr);
+                ip_start = strchr(nameaddr, '@') + 1;
+
+                while (it == users.end() && next_ip_class(ip_start))
+                {
+                    it = users.find(nameaddr);
+                }
             }
         }
     }
