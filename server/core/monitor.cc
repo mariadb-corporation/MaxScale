@@ -668,8 +668,7 @@ void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value)
  * @param type          The timeout handling type
  * @param value         The timeout to set
  */
-bool
-monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value)
+bool monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value, const char* key)
 {
     bool rval = true;
 
@@ -695,13 +694,14 @@ monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value)
 
         default:
             MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
+            ss_dassert(!true);
             rval = false;
             break;
         }
     }
     else
     {
-        MXS_ERROR("Negative value for monitor timeout.");
+        MXS_ERROR("Value '%s' for monitor '%s' is not a positive integer: %d", key, mon->name, value);
         rval = false;
     }
     return rval;

@@ -3239,7 +3239,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *connect_timeout = config_get_value(obj->parameters, CN_BACKEND_CONNECT_TIMEOUT);
         if (connect_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, atoi(connect_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT,
+                                          atoi(connect_timeout), CN_BACKEND_CONNECT_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_TIMEOUT);
                 error_count++;
@@ -3249,7 +3250,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *read_timeout = config_get_value(obj->parameters, CN_BACKEND_READ_TIMEOUT);
         if (read_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, atoi(read_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT,
+                                          atoi(read_timeout), CN_BACKEND_READ_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_READ_TIMEOUT);
                 error_count++;
@@ -3259,7 +3261,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *write_timeout = config_get_value(obj->parameters, CN_BACKEND_WRITE_TIMEOUT);
         if (write_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, atoi(write_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT,
+                                          atoi(write_timeout), CN_BACKEND_WRITE_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_WRITE_TIMEOUT);
                 error_count++;
@@ -3269,7 +3272,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *connect_attempts = config_get_value(obj->parameters, CN_BACKEND_CONNECT_ATTEMPTS);
         if (connect_attempts)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS, atoi(connect_attempts)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS,
+                                          atoi(connect_attempts), CN_BACKEND_CONNECT_ATTEMPTS))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_ATTEMPTS);
                 error_count++;
