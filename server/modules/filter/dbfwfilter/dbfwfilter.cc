@@ -1147,12 +1147,27 @@ static bool update_rules(Dbfw* my_instance)
     return rval;
 }
 
+namespace
+{
+
+/**
+ * Global rule version. Every time a Dbfw instance is created, its rule version will
+ * be the value of this variable, which is then incremented by one.
+ *
+ * This is to ensure that each created Dbfw instance  will have a unique set of rules,
+ * irrespective of whether a new instance is created in exactly the same memory location
+ * where an earlier, now deleted instance existed.
+ */
+int global_version = 1;
+
+};
+
 Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params):
     m_action((enum fw_actions)config_get_enum(params, "action", action_values)),
     m_log_match(0),
     m_lock(SPINLOCK_INIT),
     m_filename(config_get_string(params, "rules")),
-    m_version(1)
+    m_version(atomic_add(&global_version, 1))
 {
     if (config_get_bool(params, "log_match"))
     {
