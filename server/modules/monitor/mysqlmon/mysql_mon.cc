@@ -87,7 +87,8 @@ static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
 static bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout);
 static bool do_failover(MYSQL_MONITOR* mon);
-static bool do_switchover(MYSQL_MONITOR* mon, json_t** err_out);
+static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
+                          MXS_MONITORED_SERVER* new_master,json_t** err_out);
 static bool update_gtids(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info);
 static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 
@@ -304,7 +305,7 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
     if (rv)
     {
         bool failover = config_get_bool(mon->parameters, CN_FAILOVER);
-        rv = do_switchover(handle, output);
+        rv = do_switchover(handle, monitored_current_master, monitored_new_master, output);
 
         if (rv)
         {
@@ -2949,7 +2950,103 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout)
 }
 
 /**
- * Selects a new master. Also adds slaves which should be redirected to an array.
+ * Update replication settings and gtid:s of the slave server.
+ *
+ * @param mon Cluster monitor
+ * @param server Slave to update
+ * @return Slave server info. NULL on error, or if server is not a slave.
+ */
+static MySqlServerInfo* update_slave_info(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server)
+{
+    MySqlServerInfo* info = get_server_info(mon, server);
+    if (info->slave_status.slave_sql_running &&
+        update_replication_settings(server, info) &&
+        update_gtids(server, info->slave_status.gtid_io_pos.domain, info))
+    {
+        return info;
+    }
+    return NULL;
+}
+
+/**
+ * Check if server has binary log enabled. Print warnings if gtid_strict_mode or log_slave_updates is off.
+ *
+ * @param server Server to check
+ * @param server_info Server info
+ * @return True if log_bin is on
+ */
+static bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info)
+{
+    bool rval = true;
+    const char* servername = server->server->unique_name;
+    if (server_info->rpl_settings.log_bin == false)
+    {
+        const char NO_BINLOG[] =
+            "Slave '%s' has binary log disabled and is not a valid promotion candidate.";
+        MXS_WARNING(NO_BINLOG, servername);
+        rval = false;
+    }
+    else
+    {
+        if (server_info->rpl_settings.gtid_strict_mode == false)
+        {
+            const char NO_STRICT[] =
+                "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+                "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
+            MXS_WARNING(NO_STRICT, servername);
+        }
+        if (server_info->rpl_settings.log_slave_updates == false)
+        {
+            const char NO_SLAVE_UPDATES[] =
+                "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+                "will break for lagging slaves if '%s' is promoted.";
+            MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
+        }
+    }
+    return rval;
+}
+
+/**
+ * Check that the given slave is a valid promotion candidate. Update the server info structs of all slaves.
+ * Also populate the output vector with other slave servers.
+ *
+ * @param mon Cluster monitor
+ * @param preferred Preferred new master
+ * @param slaves_out Output array for other slaves. These should be redirected to the new master. Can be NULL.
+ * @param err_out Json object for error printing. Can be NULL.
+ * @return True, if given slave is a valid promotion candidate.
+ */
+bool switchover_check_preferred_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* preferred,
+                                       ServerVector* slaves_out, json_t** err_out)
+{
+    ss_dassert(preferred);
+    bool rval = true;
+    MySqlServerInfo* preferred_info = update_slave_info(mon, preferred);
+    if (preferred_info == NULL || !check_replication_settings(preferred, preferred_info))
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "The requested server '%s' is not a valid promotion candidate.",
+                             preferred->server->unique_name);
+        rval = false;
+    }
+    for (MXS_MONITORED_SERVER *slave = mon->monitor->monitored_servers; slave; slave = slave->next)
+    {
+        if (slave != preferred)
+        {
+            // The update_slave_info()-call is not strictly necessary here, but it should be ran to keep this
+            // function analogous with failover_select_new_master(). The later functions can then assume that
+            // slave server info is up to date.
+            MySqlServerInfo* slave_info = update_slave_info(mon, slave);
+            if (slave_info && slaves_out)
+            {
+                slaves_out->push_back(slave);
+            }
+        }
+    }
+    return rval;
+}
+
+/**
+ * Select a new master. Also add slaves which should be redirected to an array.
  *
  * @param mon The monitor
  * @param out_slaves Vector for storing slave servers, can be NULL
@@ -2957,7 +3054,7 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout)
  * @return The found master, or NULL if not found
  */
 MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon,
-                                                 ServerVector* out_slaves,
+                                                 ServerVector* slaves_out,
                                                  json_t** err_out)
 {
     /* Select a new master candidate. Selects the one with the latest event in relay log.
@@ -2965,84 +3062,62 @@ MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon,
     MXS_MONITORED_SERVER* new_master = NULL;
     MySqlServerInfo* new_master_info = NULL;
     int master_vector_index = -1;
-    for (MXS_MONITORED_SERVER *mon_server = mon->monitor->monitored_servers;
-         mon_server;
-         mon_server = mon_server->next)
+    for (MXS_MONITORED_SERVER *cand = mon->monitor->monitored_servers; cand; cand = cand->next)
     {
-        MySqlServerInfo* cand_info = get_server_info(mon, mon_server);
-        if (cand_info->slave_status.slave_sql_running &&
-                update_replication_settings(mon_server, cand_info) &&
-                update_gtids(mon_server, cand_info->slave_status.gtid_io_pos.domain, cand_info))
+        MySqlServerInfo* cand_info = update_slave_info(mon, cand);
+        if (cand_info)
         {
-            if (out_slaves)
+            if (slaves_out)
             {
-                out_slaves->push_back(mon_server);
+                slaves_out->push_back(cand);
             }
-            char* servername = mon_server->server->unique_name;
-            if (cand_info->rpl_settings.log_bin == false)
+            if (check_replication_settings(cand, cand_info))
             {
-                const char NO_BINLOG[] = "Slave '%s' has binary log disabled and is not a valid promotion "
-                                         "candidate.";
-                MXS_WARNING(NO_BINLOG, servername);
-                continue;
-            }
-            if (cand_info->rpl_settings.gtid_strict_mode == false)
-            {
-                const char NO_STRICT[] = "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is "
-                                         "recommended. For more information, see "
-                                         "https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
-                MXS_WARNING(NO_STRICT, servername);
-            }
-            if (cand_info->rpl_settings.log_slave_updates == false)
-            {
-                const char NO_SLAVE_UPDATES[] = "Slave '%s' has log_slave_updates disabled. It is a valid "
-                                                "candidate but replication will break for lagging slaves if "
-                                                "'%s' is promoted.";
-                MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
-            }
-            bool select_this = false;
-            // If no candidate yet, accept any.
-            if (new_master == NULL)
-            {
-                select_this = true;
-            }
-            else
-            {
-                uint64_t cand_io = cand_info->slave_status.gtid_io_pos.sequence;
-                uint64_t cand_processed = cand_info->gtid_slave_pos.sequence;
-                uint64_t master_io = new_master_info->slave_status.gtid_io_pos.sequence;
-                uint64_t master_processed = new_master_info->gtid_slave_pos.sequence;
-                bool cand_updates = cand_info->rpl_settings.log_slave_updates;
-                bool master_updates = new_master_info->rpl_settings.log_slave_updates;
-                // Otherwise accept a slave with a later event in relay log.
-                if (cand_io > master_io ||
-                        // If io sequences are identical, the slave with more events processed wins.
-                        (cand_io == master_io && (cand_processed > master_processed ||
-                        // Finally, if binlog positions are identical, prefer a slave with log_slave_updates.
-                        (cand_processed == master_processed && cand_updates && !master_updates))))
+                bool select_this = false;
+                // If no candidate yet, accept any.
+                if (new_master == NULL)
                 {
                     select_this = true;
                 }
-            }
-
-            if (select_this)
-            {
-                new_master = mon_server;
-                new_master_info = cand_info;
-                if (out_slaves)
+                else
                 {
-                    master_vector_index = out_slaves->size() - 1;
+                    uint64_t cand_io = cand_info->slave_status.gtid_io_pos.sequence;
+                    uint64_t cand_processed = cand_info->gtid_slave_pos.sequence;
+                    uint64_t master_io = new_master_info->slave_status.gtid_io_pos.sequence;
+                    uint64_t master_processed = new_master_info->gtid_slave_pos.sequence;
+                    bool cand_updates = cand_info->rpl_settings.log_slave_updates;
+                    bool master_updates = new_master_info->rpl_settings.log_slave_updates;
+                    // Otherwise accept a slave with a later event in relay log.
+                    if (cand_io > master_io ||
+                            // If io sequences are identical, the slave with more events processed wins.
+                            (cand_io == master_io && (cand_processed > master_processed ||
+                            // Finally, if binlog positions are identical, prefer a slave with
+                            // log_slave_updates.
+                            (cand_processed == master_processed && cand_updates && !master_updates))))
+                    {
+                        select_this = true;
+                    }
+                }
+
+                if (select_this)
+                {
+                    new_master = cand;
+                    new_master_info = cand_info;
+                    if (slaves_out)
+                    {
+                        master_vector_index = slaves_out->size() - 1;
+                    }
                 }
             }
         }
     }
 
-    if (new_master && out_slaves)
+    if (new_master && slaves_out)
     {
         // Remove the selected master from the vector.
-        ServerVector::iterator remove_this = out_slaves->begin();
+        ServerVector::iterator remove_this = slaves_out->begin();
         remove_this += master_vector_index;
-        out_slaves->erase(remove_this);
+        slaves_out->erase(remove_this);
     }
     if (new_master == NULL)
     {
@@ -3481,21 +3556,35 @@ static string get_connection_errors(ServerVector& slaves, MXS_MONITORED_SERVER* 
  * @return True if successful. If false, the cluster can be in various situations depending on which step
  * failed. In practice, manual intervention is usually required on failure.
  */
-static bool do_switchover(MYSQL_MONITOR* mon, json_t** err_out)
+static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
+                          MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
-    MXS_MONITORED_SERVER* demotion_target = mon->master;
+    MXS_MONITORED_SERVER* demotion_target = current_master ? current_master : mon->master;
     if (demotion_target == NULL)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Cluster does not have a running master. Run failover instead.");
         return false;
     }
+    // Step 1: Select promotion candidate, save all slaves except promotion target to an array. If we have a
+    // user-defined master candidate, check it. Otherwise, autoselect.
+    MXS_MONITORED_SERVER* promotion_target = NULL;
     ServerVector slaves;
-    // Step 1: Select promotion candidate, save all slaves except promotion target to an array.
-    MXS_MONITORED_SERVER* promotion_target = failover_select_new_master(mon, &slaves, err_out);
+    if (new_master)
+    {
+        if (switchover_check_preferred_master(mon, new_master, &slaves, err_out))
+        {
+            promotion_target = new_master;
+        }
+    }
+    else
+    {
+        promotion_target = failover_select_new_master(mon, &slaves, err_out);
+    }
     if (promotion_target == NULL)
     {
         return false;
     }
+
     bool rval = false;
     MySqlServerInfo* curr_master_info = get_server_info(mon, demotion_target);
     uint32_t repl_domain = get_server_info(mon, promotion_target)->slave_status.gtid_io_pos.domain;
