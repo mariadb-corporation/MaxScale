@@ -3346,49 +3346,72 @@ static bool switchover_demote_master(MXS_MONITORED_SERVER* current_master,
     return rval;
 }
 
+static string generate_master_gtid_wait_cmd(const Gtid& gtid, double timeout)
+{
+    std::stringstream query_ss;
+    query_ss << "SELECT MASTER_GTID_WAIT(\"" << gtid.to_string() << "\", " << timeout << ");";
+    return query_ss.str();
+}
+
 /**
  * Wait until slave replication catches up with the master gtid
  *
  * @param slave Slave to wait on
- * @param master_binlog_pos Which gtid must be reached
- * @param timeout Maximum wait time in seconds
+ * @param gtid Which gtid must be reached
+ * @param total_timeout Maximum wait time in seconds
+ * @param read_timeout The value of read_timeout for the connection
  * @param err_out json object for error printing. Can be NULL.
  * @return True, if target gtid was reached within allotted time
  */
-static bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave,
-                                          const Gtid& master_binlog_pos, int timeout,
+static bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gtid& gtid,
+                                          int total_timeout, int read_timeout,
                                           json_t** err_out)
 {
-    /*
-     * TODO: The MASTER_GTID_WAIT()-call is currently buggy, as the connection read timeout prematurely
-     * stops the wait in an error. Possibilities: wait in a loop for small intervals (how small?) or modify
-     * connection settings (can they be modified on a living connection? Seems so) to remove the timeout for
-     * the call, then set it back.
-     */
-    std::stringstream query_ss;
-    query_ss << "SELECT MASTER_GTID_WAIT(\"" << master_binlog_pos.to_string() << "\", " << timeout << ");";
-    string query = query_ss.str();
-    bool rval = false;
+    ss_dassert(read_timeout > 0);
     StringVector output;
-    if (query_one_row(slave, query.c_str(), 1, &output))
+    bool gtid_reached = false;
+    bool error = false;
+    double seconds_remaining = total_timeout > 0 ? total_timeout : 0.01;
+
+    // Determine a reasonable timeout for the MASTER_GTID_WAIT-function depending on the
+    // backend_read_timeout setting (should be >= 1) and time remaining.
+    double loop_timeout = double(read_timeout) - 0.5;
+    string cmd = generate_master_gtid_wait_cmd(gtid, loop_timeout);
+
+    while (seconds_remaining > 0 && !gtid_reached && !error)
     {
-        long int result = strtol(output[0].c_str(), NULL, 0);
-        if (result == 0)
+        if (loop_timeout > seconds_remaining)
         {
-            rval = true;
+            // For the last iteration, change the wait timeout.
+            cmd = generate_master_gtid_wait_cmd(gtid, seconds_remaining);
+        }
+        seconds_remaining -= loop_timeout;
+
+        if (query_one_row(slave, cmd.c_str(), 1, &output))
+        {
+            if (output[0] == "0")
+            {
+                gtid_reached = true;
+            }
+            output.clear();
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(err_out, "MASTER_GTID_WAIT() timed out on slave '%s'.",
-                                 slave->server->unique_name);
-	}
+            error = true;
+        }
     }
-    else
+
+    if (error)
     {
         PRINT_MXS_JSON_ERROR(err_out, "MASTER_GTID_WAIT() query error on slave '%s'.",
                              slave->server->unique_name);
     }
-    return rval;
+    else if (!gtid_reached)
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "MASTER_GTID_WAIT() timed out on slave '%s'.",
+                             slave->server->unique_name);
+    }
+    return gtid_reached;
 }
 
 /**
@@ -3480,7 +3503,7 @@ static bool do_switchover(MYSQL_MONITOR* mon, json_t** err_out)
     if (switchover_demote_master(demotion_target, curr_master_info, repl_domain, err_out) &&
         // Step 3: Wait for the selected slave to catch up with master.
         switchover_wait_slave_catchup(promotion_target, curr_master_info->gtid_binlog_pos,
-                                      mon->switchover_timeout, err_out) &&
+                                      mon->switchover_timeout, mon->monitor->read_timeout, err_out) &&
         // Step 4: Stop and reset slave, set read-only to 0.
         failover_promote_new_master(mon, promotion_target, err_out))
     {
