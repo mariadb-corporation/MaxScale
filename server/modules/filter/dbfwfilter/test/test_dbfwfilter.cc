@@ -31,6 +31,14 @@ namespace mock = maxscale::mock;
 namespace
 {
 
+struct CONFIG
+{
+    bool stop_at_first_error;
+} config =
+{
+    true, // stop_at_first_error
+};
+
 enum fw_action_t
 {
     FW_ACTION_ALLOW,
@@ -48,40 +56,622 @@ struct FW_TEST_CASE
 const char DEFAULT_USER[] = "bob";
 const char DEFAULT_HOST[] = "127.0.0.1";
 
-const size_t N_MAX_CASES = 10;
+const size_t N_MAX_CASES = 20;
 
 struct FW_TEST
 {
     const char*  zRules;             /* The firewall rules. */
     fw_action_t  action;             /* The firewall action. */
     FW_TEST_CASE cases[N_MAX_CASES]; /* The test cases to execute using the above settings. */
-} FIREWALL_TESTS[] =
+};
+
+FW_TEST FIREWALL_TESTS[] =
 {
+    //
+    // wildcard
+    //
     {
-        "rule no_select_a match columns a\n"
-        "users bob@% match any rules no_select_a\n",
+        "rule wildcard_used match wildcard\n"
+        "users %@127.0.0.1 match any rules wildcard_used\n",
         FW_ACTION_BLOCK,
         {
+            {
+                "SELECT * FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT * FROM t",
+                FW_ACTION_ALLOW,
+                DEFAULT_USER,
+                "allowed_host"
+            },
+            {
+                "SELECT a FROM t",
+                FW_ACTION_ALLOW
+            }
+        }
+    },
+    {
+        "rule wildcard_used match wildcard\n"
+        "users %@127.0.0.1 match any rules wildcard_used\n",
+        FW_ACTION_ALLOW,
+        {
+            {
+                "SELECT * FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT * FROM t",
+                FW_ACTION_BLOCK,
+                DEFAULT_USER,
+                "allowed_host"
+            },
             {
                 "SELECT a FROM t",
                 FW_ACTION_BLOCK
             }
         }
     },
+    //
+    // columns
+    //
     {
-        "rule only_length_on_a match not_function length columns a\n"
-        "users bob@% match any rules only_length_on_a\n",
+        "rule specific_column match columns a\n"
+        "users bob@% match any rules specific_column\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT a, b FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT b, a FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT b FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT a FROM t",
+                FW_ACTION_ALLOW,
+                "alice"
+            }
+        }
+    },
+    //
+    // function
+    //
+    {
+        "rule specific_function match function sum count\n"
+        "users %@% match any rules specific_function\n",
         FW_ACTION_BLOCK,
         {
             {
                 "SELECT a FROM t",
                 FW_ACTION_ALLOW
+            },
+            {
+                "SELECT sum(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(a), count(b) FROM t",
+                FW_ACTION_BLOCK
             }
+        }
+    },
+    {
+        "rule specific_function match function sum count\n"
+        "users %@% match any rules specific_function\n",
+        FW_ACTION_ALLOW,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT sum(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(a), count(b) FROM t",
+                FW_ACTION_ALLOW
+            }
+        }
+    },
+    //
+    // not_function
+    //
+    {
+        "rule other_functions_than match not_function length <\n"
+        "users bob@% match any rules other_functions_than\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT a FROM t WHERE a < b",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT concat(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT * FROM t WHERE a > b",
+                FW_ACTION_BLOCK
+            },
+        }
+    },
+    {
+        "rule other_functions_than match not_function length <\n"
+        "users bob@% match any rules other_functions_than\n",
+        FW_ACTION_ALLOW,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT a FROM t WHERE a < b",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT concat(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT * FROM t WHERE a > b",
+                FW_ACTION_ALLOW
+            },
+        }
+    },
+    //
+    // uses_function
+    //
+    {
+        "rule specific_column_used_with_function match uses_function a b\n"
+        "users bob@% match any rules specific_column_used_with_function\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT a b FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(b) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(c) FROM t",
+                FW_ACTION_ALLOW
+            },
+        }
+    },
+    {
+        "rule specific_column_used_with_function match uses_function a b\n"
+        "users bob@% match any rules specific_column_used_with_function\n",
+        FW_ACTION_ALLOW,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT a b FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(b) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(c) FROM t",
+                FW_ACTION_BLOCK
+            },
+        }
+    },
+    //
+    // function and columns
+    //
+    {
+        "rule specific_columns_used_with_function match function concat columns a b\n"
+        "users bob@% match any rules specific_columns_used_with_function\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT concat(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT concat(c) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT a, concat(b) FROM t",
+                FW_ACTION_BLOCK
+            },
+        }
+    },
+    {
+        "rule specific_columns_used_with_function match function concat columns a b\n"
+        "users bob@% match any rules specific_columns_used_with_function\n",
+        FW_ACTION_ALLOW,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT concat(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT concat(c) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT a, concat(b) FROM t",
+                FW_ACTION_ALLOW
+            },
+        }
+    },
+    //
+    // not_function and columns
+    //
+    {
+        "rule specific_columns_used_with_other_function match not_function length columns a b\n"
+        "users bob@% match any rules specific_columns_used_with_other_function\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT concat(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT concat(c) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT a, concat(b) FROM t",
+                FW_ACTION_BLOCK
+            },
+        }
+    },
+    {
+        "rule specific_columns_used_with_other_function match not_function length columns a b\n"
+        "users bob@% match any rules specific_columns_used_with_other_function\n",
+        FW_ACTION_ALLOW,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(a) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT concat(a) FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT concat(c) FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT a, concat(b) FROM t",
+                FW_ACTION_ALLOW
+            },
+        }
+    },
+    //
+    // regex
+    //
+    {
+        "rule regex_match match regex '(?i).*select.*from.*account.*'\n"
+        "users bob@% match any rules regex_match\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_ALLOW
+            },
+            {
+                "select * FROM accounts",
+                FW_ACTION_BLOCK
+            }
+        }
+    },
+    {
+        "rule regex_match match regex '(?i).*select.*from.*account.*'\n"
+        "users bob@% match any rules regex_match\n",
+        FW_ACTION_ALLOW,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "select * FROM accounts",
+                FW_ACTION_ALLOW
+            }
+        }
+    },
+    //
+    // no_where_clause
+    //
+    {
+        "rule rule1 match no_where_clause\n"
+        "users bob@% match any rules rule1\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_BLOCK,
+            },
+            {
+                "SELECT a FROM t WHERE b > c",
+                FW_ACTION_ALLOW
+            },
+            {
+                "DELETE FROM t",
+                FW_ACTION_BLOCK,
+            },
+            {
+                "DELETE FROM t WHERE a < b",
+                FW_ACTION_ALLOW,
+            }
+        }
+    },
+    {
+        "rule rule1 match no_where_clause\n"
+        "users bob@% match any rules rule1\n",
+        FW_ACTION_ALLOW,
+        {
+            {
+                "SELECT a FROM t",
+                FW_ACTION_ALLOW,
+            },
+            {
+                "SELECT a FROM t WHERE b > c",
+                FW_ACTION_BLOCK
+            },
+            {
+                "DELETE FROM t",
+                FW_ACTION_ALLOW,
+            },
+            {
+                "DELETE FROM t WHERE a < b",
+                FW_ACTION_BLOCK,
+            }
+        }
+    },
+    //
+    // on_queries (some)
+    //
+    {
+        "rule rule1 match regex '(?i).*xyz.*' on_queries select|delete|drop\n"
+        "users bob@% match any rules rule1\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT xyz FROM t",
+                FW_ACTION_BLOCK
+            },
+            {
+                "INSERT INTO xyz VALUES (1)",
+                FW_ACTION_ALLOW
+            },
+            {
+                "UPDATE xyz SET a = 1",
+                FW_ACTION_ALLOW,
+            },
+            {
+                "DELETE FROM xyz",
+                FW_ACTION_BLOCK
+            },
+            {
+                "GRANT SELECT ON *.* TO 'xyz'@'localhost'",
+                FW_ACTION_ALLOW
+            },
+            {
+                "REVOKE INSERT ON *.* FROM 'xyz'@'localhost'",
+                FW_ACTION_ALLOW
+            },
+            {
+                "CREATE TABLE xyz (a INT)",
+                FW_ACTION_ALLOW
+            },
+            {
+                "ALTER TABLE xyz ADD (b INT)",
+                FW_ACTION_ALLOW
+            },
+            {
+                "DROP TABLE xyz",
+                FW_ACTION_BLOCK
+            },
+            {
+                "USE xyz",
+                FW_ACTION_ALLOW
+            },
+            {
+                "LOAD DATA INFILE 'data.txt' INTO TABLE db.xyz",
+                FW_ACTION_ALLOW
+            },
+        }
+    },
+    //
+    // any
+    //
+    {
+        "rule rule1 match columns a\n"
+        "rule rule2 match columns b\n"
+        "rule rule3 match function length\n"
+        "users bob@% match any rules rule1 rule2 rule3\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t\n",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT b FROM t\n",
+                FW_ACTION_BLOCK
+            },
+            {
+                "SELECT length(c) FROM t\n",
+                FW_ACTION_BLOCK
+            },
+        }
+    },
+    //
+    // all
+    //
+    {
+        "rule rule1 match columns a\n"
+        "rule rule2 match columns b\n"
+        "rule rule3 match function length\n"
+        "users bob@% match all rules rule1 rule2 rule3\n",
+        FW_ACTION_BLOCK,
+        {
+            {
+                "SELECT a FROM t\n",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT b FROM t\n",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT length(c) FROM t\n",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT a, length(c) FROM t\n",
+                FW_ACTION_ALLOW
+            },
+            {
+                "SELECT a, b, length(c) FROM t\n",
+                FW_ACTION_BLOCK
+            },
         }
     }
 };
 
 const size_t N_FIREWALL_TESTS = sizeof(FIREWALL_TESTS) / sizeof(FIREWALL_TESTS[0]);
+
+FW_TEST ON_QUERIES_TEST =
+{
+    "rule rule1 match regex '.*' on_queries %s\n"
+    "users bob@%% match any rules rule1\n",
+    FW_ACTION_BLOCK,
+    {
+        {
+            "SELECT a FROM t",
+            FW_ACTION_BLOCK
+        },
+        {
+            "INSERT INTO t VALUES (1)",
+            FW_ACTION_ALLOW
+        },
+        {
+            "UPDATE t SET a = 1",
+            FW_ACTION_ALLOW,
+        },
+        {
+            "DELETE FROM a",
+            FW_ACTION_ALLOW
+        },
+        {
+            "GRANT SELECT ON *.* TO 'skysql'@'localhost'",
+            FW_ACTION_ALLOW
+        },
+        {
+            "REVOKE INSERT ON *.* FROM 'jeffrey'@'localhost'",
+            FW_ACTION_ALLOW
+        },
+        {
+            "CREATE TABLE t (a INT)",
+            FW_ACTION_ALLOW
+        },
+        {
+            "ALTER TABLE t ADD (b INT)",
+            FW_ACTION_ALLOW
+        },
+        {
+            "DROP TABLE t",
+            FW_ACTION_ALLOW
+        },
+        {
+            "USE d",
+            FW_ACTION_ALLOW
+        },
+        {
+            "LOAD DATA INFILE 'data.txt' INTO TABLE db.table",
+            FW_ACTION_ALLOW
+        },
+    }
+};
 
 }
 
@@ -159,6 +749,8 @@ int test(mock::Client& client,
         }
     }
 
+    cout << endl;
+
     return rv;
 }
 
@@ -195,12 +787,49 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             {
                 ++rv;
             }
+
+            if ((rv != 0) && config.stop_at_first_error)
+            {
+                break;
+            }
         }
         else
         {
+            // No more test cases.
             break;
         }
     }
+
+    return rv;
+}
+
+int test(FilterModule& filter_module, const FW_TEST& t)
+{
+    int rv = 0;
+
+    const char* zAction = (t.action == FW_ACTION_ALLOW) ? "allow" : "block";
+
+    cout << "ACTION: " << zAction << endl;
+    cout << "RULES :\n" << t.zRules << endl;
+
+    TempFile file;
+    file.write(t.zRules);
+
+    MXS_CONFIG_PARAMETER action { (char*)"action", (char*)zAction, NULL };
+    MXS_CONFIG_PARAMETER rules = { (char*)"rules", (char*)file.name().c_str(), &action };
+
+    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", NULL, &rules);
+
+    if (sInstance.get())
+    {
+        rv += test(*sInstance.get(), t);
+    }
+    else
+    {
+        ++rv;
+    }
+
+    cout << "---------\n" << endl;
 
     return rv;
 }
@@ -213,29 +842,78 @@ int test(FilterModule& filter_module)
     {
         const FW_TEST& t = FIREWALL_TESTS[i];
 
-        const char* zAction = (t.action == FW_ACTION_ALLOW) ? "allow" : "block";
+        rv += test(filter_module, t);
 
-        cout << "ACTION: " << zAction << endl;
-        cout << "RULES :\n" << t.zRules << endl;
-
-        TempFile file;
-        file.write(t.zRules);
-
-        MXS_CONFIG_PARAMETER action { (char*)"action", (char*)zAction, NULL };
-        MXS_CONFIG_PARAMETER rules = { (char*)"rules", (char*)file.name().c_str(), &action };
-
-        auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", NULL, &rules);
-
-        if (sInstance.get())
+        if ((rv != 0) && config.stop_at_first_error)
         {
-            rv += test(*sInstance.get(), t);
+            break;
         }
-        else
+    }
+
+    return rv;
+}
+
+int test_on_queries(FilterModule& filter_module, fw_action_t action)
+{
+    int rv = 0;
+
+    static const char* OPERATIONS[] =
+    {
+        "select", "insert", "update", "delete", "grant", "revoke", "create", "alter", "drop", "use", "load"
+    };
+    static const size_t N_OPERATIONS = sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);
+
+    FW_TEST t = ON_QUERIES_TEST;
+
+    t.action = action;
+    fw_action_t result_match = action;
+    fw_action_t result_not_match = (action == FW_ACTION_BLOCK) ? FW_ACTION_ALLOW : FW_ACTION_BLOCK;
+
+    char rules[strlen(t.zRules) + 32]; // Enough
+    const char* zFormat = t.zRules;
+
+    for (size_t i = 0; i < N_OPERATIONS; ++i)
+    {
+        FW_TEST_CASE& c = t.cases[i];
+
+        sprintf(rules, zFormat, OPERATIONS[i]);
+
+        t.zRules = rules;
+
+        for (size_t j = 0; j < N_OPERATIONS; ++j)
         {
-            ++rv;
+            if (j == i)
+            {
+                t.cases[j].result = result_match;
+            }
+            else
+            {
+                t.cases[j].result = result_not_match;
+            }
         }
 
-        cout << "---------\n" << endl;
+        rv += test(filter_module, t);
+
+        if ((rv != 0) && config.stop_at_first_error)
+        {
+            break;
+        }
+    }
+
+    t.zRules = zFormat;
+
+    return rv;
+}
+
+int test_on_queries(FilterModule& filter_module)
+{
+    int rv = 0;
+
+    rv += test_on_queries(filter_module, FW_ACTION_BLOCK);
+
+    if ((rv == 0) && !config.stop_at_first_error)
+    {
+        rv += test_on_queries(filter_module, FW_ACTION_ALLOW);
     }
 
     return rv;
@@ -243,7 +921,7 @@ int test(FilterModule& filter_module)
 
 int run()
 {
-    int rc = EXIT_FAILURE;
+    int rv = 1;
 
     auto_ptr<FilterModule> sModule = FilterModule::load("dbfwfilter");
 
@@ -253,7 +931,13 @@ int run()
         {
             if (maxscale::Module<void>::thread_init())
             {
-                rc = test(*sModule.get());
+                rv = 0;
+                rv += test(*sModule.get());
+
+                if ((rv == 0) || !config.stop_at_first_error)
+                {
+                    rv += test_on_queries(*sModule.get());
+                }
 
                 maxscale::Module<void>::thread_finish();
             }
@@ -274,35 +958,67 @@ int run()
         cerr << "error: Could not load filter module." << endl;
     }
 
-    return rc;
+    return rv;
 }
 
+}
+
+namespace
+{
+
+char USAGE[] =
+    "usage: test_dbfwfilter [-d]\n"
+    "\n"
+    "-d    don't stop at first error\n";
 }
 
 int main(int argc, char* argv[])
 {
-    int rc = EXIT_FAILURE;
+    int rv = 0;
 
-    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_STDOUT))
+    int c;
+    while ((c = getopt(argc, argv, "d")) != -1)
     {
-        if (qc_setup("qc_sqlite", QC_SQL_MODE_DEFAULT, NULL))
+        switch (c)
         {
-            if (qc_process_init(QC_INIT_SELF))
-            {
-                rc = run();
+        case 'd':
+            config.stop_at_first_error = false;
+            break;
 
-                qc_process_end(QC_INIT_SELF);
-            }
-            else
-            {
-                cerr << "error: Could not initialize query classifier." << endl;
-            }
-        }
-        else
-        {
-            cerr << "error: Could not setup query classifier." << endl;
+        default:
+            rv = 1;
         }
     }
 
-    return rc;
+    if (rv == 0)
+    {
+        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_STDOUT))
+        {
+            if (qc_setup("qc_sqlite", QC_SQL_MODE_DEFAULT, NULL))
+            {
+                if (qc_process_init(QC_INIT_SELF))
+                {
+                    rv = run();
+
+                    cout << rv << " failures." << endl;
+
+                    qc_process_end(QC_INIT_SELF);
+                }
+                else
+                {
+                    cerr << "error: Could not initialize query classifier." << endl;
+                }
+            }
+            else
+            {
+                cerr << "error: Could not setup query classifier." << endl;
+            }
+        }
+    }
+    else
+    {
+        cout << USAGE << endl;
+    }
+
+    return rv;
 }
