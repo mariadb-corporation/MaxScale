@@ -118,7 +118,7 @@ chop($resource_type);
 my $resource_match = ucfirst("$resource_type Name");
 
 if ($resource_type eq "listener") {
-        $resource_match = "Service Name";
+        $resource_match = "Name";
 }
 if ($resource_type eq "filter") {
         $resource_match = "Filter";
