@@ -15,12 +15,12 @@
 #include <memory>
 #include <iostream>
 #include <maxscale/log_manager.h>
-#include "maxscale/filtermodule.hh"
-#include "maxscale/queryclassifiermodule.hh"
-#include "maxscale/mock/backend.hh"
-#include "maxscale/mock/routersession.hh"
-#include "maxscale/mock/session.hh"
-#include "maxscale/mock/client.hh"
+#include <maxscale/filtermodule.hh>
+#include <maxscale/queryclassifiermodule.hh>
+#include <maxscale/mock/backend.hh>
+#include <maxscale/mock/routersession.hh>
+#include <maxscale/mock/session.hh>
+#include <maxscale/mock/client.hh>
 #include "tempfile.hh"
 
 using namespace std;

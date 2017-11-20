@@ -12,8 +12,8 @@
  */
 
 #include <maxscale/cppdefs.hh>
-#include "maxscale/filtermodule.hh"
-#include "../../../../core/maxscale/modules.h"
+#include <maxscale/filtermodule.hh>
+#include "../../../core/maxscale/modules.h"
 
 using std::auto_ptr;
 
