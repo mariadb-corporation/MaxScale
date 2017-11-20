@@ -203,6 +203,25 @@ and a short usage description of the client program.
 
 # Avro Schema Generator
 
+If the CREATE TABLE statements for the tables aren't present in the current
+binary logs, the schema files must be generated with a schema file
+generator. There are currently two methods to generate the .avsc schema files.
+
+## Python Schema Generator
+
+```
+usage: cdc_schema.py [--help] [-h HOST] [-P PORT] [-u USER] [-p PASSWORD] DATABASE
+```
+
+The _cdc_schema.py_ executable is installed as a part of MaxScale. This is a
+Python 3 script that generates Avro schema files from an existing database.
+
+The script will generate the .avsc schema files into the current directory. Run
+the script for all required databases copy the generated .avsc files to the
+directory where the avrorouter stores the .avro files (the value of `avrodir`).
+
+## Go Schema Generator
+
 The _cdc_schema.go_ example Go program is provided with MaxScale. This file
 can be used to create Avro schemas for the avrorouter by connecting to a
 database and reading the table definitions. You can find the file in MaxScale's
