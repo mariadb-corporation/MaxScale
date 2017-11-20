@@ -927,9 +927,9 @@ int run()
 
     if (sModule.get())
     {
-        if (maxscale::Module<void>::process_init())
+        if (maxscale::Module::process_init())
         {
-            if (maxscale::Module<void>::thread_init())
+            if (maxscale::Module::thread_init())
             {
                 rv = 0;
                 rv += test(*sModule.get());
@@ -939,14 +939,14 @@ int run()
                     rv += test_on_queries(*sModule.get());
                 }
 
-                maxscale::Module<void>::thread_finish();
+                maxscale::Module::thread_finish();
             }
             else
             {
                 cerr << "error: Could not perform thread initialization." << endl;
             }
 
-            maxscale::Module<void>::process_finish();
+            maxscale::Module::process_finish();
         }
         else
         {

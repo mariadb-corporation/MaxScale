@@ -24,7 +24,7 @@ namespace maxscale
  * A QueryClassfierModule instance is an abstraction for a query
  * classifier module.
  */
-class QueryClassifierModule : public Module<QueryClassifierModule>
+class QueryClassifierModule : public SpecificModule<QueryClassifierModule>
 {
     QueryClassifierModule(const QueryClassifierModule&);
     QueryClassifierModule& operator = (const QueryClassifierModule&);
@@ -34,7 +34,7 @@ public:
     typedef QUERY_CLASSIFIER type_t; /*< The type of the module object. */
 
 private:
-    friend class Module<QueryClassifierModule>;
+    friend class SpecificModule<QueryClassifierModule>;
 
     QueryClassifierModule(QUERY_CLASSIFIER* pApi)
         : m_pApi(pApi)

@@ -23,7 +23,7 @@ namespace maxscale
 /**
  * An instance of FilterModule represents a filter module.
  */
-class FilterModule : public Module<FilterModule>
+class FilterModule : public SpecificModule<FilterModule>
 {
     FilterModule(const FilterModule&);
     FilterModule& operator = (const FilterModule&);
@@ -184,7 +184,7 @@ private:
     }
 
 private:
-    friend class Module<FilterModule>;
+    friend class SpecificModule<FilterModule>;
 
     FilterModule(MXS_FILTER_OBJECT* pApi)
         : m_pApi(pApi)

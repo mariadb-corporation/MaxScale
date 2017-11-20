@@ -19,18 +19,10 @@ namespace maxscale
 {
 
 /**
- * The template Module is an abstraction for a MaxScale module, to
- * be used as the base class of a concrete module.
+ * The class Module is an abstraction for a MaxScale module, to
+ * be used as the base class of a specific module.
  */
-template<class T>
-class Module;
-
-/**
- * The template specialization Module<void> provides functionality common
- * to all modules.
- */
-template <>
-class Module<void>
+class Module
 {
 public:
     /**
@@ -74,7 +66,7 @@ public:
  * The template Module is intended to be derived from using the derived
  * class as template argument.
  *
- *    class XyzModule : public Module<XyzModule> { ... }
+ *    class XyzModule : public SpecificModule<XyzModule> { ... }
  *
  * @param zFile_name  The name of the module.
  *
@@ -82,14 +74,14 @@ public:
  *         the expected type.
  */
 template<class T>
-class Module
+class SpecificModule : public Module
 {
 public:
     static std::auto_ptr<T> load(const char* zFile_name)
     {
         std::auto_ptr<T> sT;
 
-        void* pApi = Module<void>::load(zFile_name, T::zName);
+        void* pApi = Module::load(zFile_name, T::zName);
 
         if (pApi)
         {
@@ -97,6 +89,11 @@ public:
         }
 
         return sT;
+    }
+
+protected:
+    SpecificModule()
+    {
     }
 };
 

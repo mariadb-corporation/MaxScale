@@ -18,13 +18,13 @@ namespace maxscale
 {
 
 //static
-void* Module<void>::load(const char* zName, const char* zType)
+void* Module::load(const char* zName, const char* zType)
 {
     return load_module(zName, zType);
 }
 
 //static
-bool Module<void>::process_init()
+bool Module::process_init()
 {
     bool initialized = false;
 
@@ -69,7 +69,7 @@ bool Module<void>::process_init()
 }
 
 //static
-void Module<void>::process_finish()
+void Module::process_finish()
 {
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
     MXS_MODULE* module = NULL;
@@ -84,7 +84,7 @@ void Module<void>::process_finish()
 }
 
 //static
-bool Module<void>::thread_init()
+bool Module::thread_init()
 {
     bool initialized = false;
 
@@ -129,7 +129,7 @@ bool Module<void>::thread_init()
 }
 
 //static
-void Module<void>::thread_finish()
+void Module::thread_finish()
 {
     MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
     MXS_MODULE* module = NULL;
