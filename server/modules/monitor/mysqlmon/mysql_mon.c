@@ -129,6 +129,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
             {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
+            {"ignore_external_masters", MXS_MODULE_PARAM_BOOL, "false"},
             {
                 "script",
                 MXS_MODULE_PARAM_PATH,
@@ -280,6 +281,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->detectStaleSlave = config_get_bool(params, "detect_stale_slave");
     handle->replicationHeartbeat = config_get_bool(params, "detect_replication_lag");
     handle->multimaster = config_get_bool(params, "multimaster");
+    handle->ignore_external_masters = config_get_bool(params, "ignore_external_masters");
     handle->detect_standalone_master = config_get_bool(params, "detect_standalone_master");
     handle->failcount = config_get_integer(params, "failcount");
     handle->allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
@@ -1336,6 +1338,19 @@ monitorMain(void *arg)
             {
                 handle->warn_failover = true;
             }
+        }
+
+        /**
+         * Clear external slave status from master if configured to do so.
+         * This allows parts of a multi-tiered replication setup to be used
+         * in MaxScale.
+         */
+        if (root_master && SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(root_master->server) &&
+            SERVER_IS_MASTER(root_master->server) && handle->ignore_external_masters)
+        {
+            monitor_clear_pending_status(root_master,
+                                         SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+            server_clear_status_nolock(root_master->server, SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
         }
 
         /**
