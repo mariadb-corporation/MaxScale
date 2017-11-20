@@ -173,8 +173,9 @@ const struct store_test_case store_test_cases[] =
     STORE_TEST_CASE("query", "!=", "SELECT a FROM tbl", false, NULL, "SELECT a FROM tbl"),
     STORE_TEST_CASE("query", "=",  "SELECT b FROM tbl", false, NULL, "SELECT a FROM tbl"),
     STORE_TEST_CASE("query", "!=", "SELECT b FROM tbl", true,  NULL, "SELECT a FROM tbl"),
-
-    STORE_TEST_CASE("column", "=", "a", false, NULL, "SELECT b FROM tbl WHERE a = 5"),
+    // We are no longer able to distinguish selected columns
+    // from one used in the WHERE-clause.
+    STORE_TEST_CASE("column", "=", "a", true, NULL, "SELECT b FROM tbl WHERE a = 5"),
     STORE_TEST_CASE("column", "=", "a", true,  NULL, "SELECT a, b FROM tbl WHERE a = 5"),
 };
 
