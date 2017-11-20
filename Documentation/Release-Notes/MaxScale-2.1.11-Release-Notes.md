@@ -35,6 +35,7 @@ definitions.
 
 [Here is a list of bugs fixed in MaxScale 2.1.11.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.11)
 
+* [MXS-1518](https://jira.mariadb.org/browse/MXS-1518) Wrong parameter name for ssl_cert_verify_depth
 * [MXS-1500](https://jira.mariadb.org/browse/MXS-1500) Invalid characters in real_type schema field
 
 ## Packaging
