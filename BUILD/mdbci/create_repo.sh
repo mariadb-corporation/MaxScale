@@ -62,9 +62,13 @@ if [ $z_res -eq 127 ] && [ $y_res -eq 127 ] ; then
 	fi
 else
 # RPM-based system
-	sudo yum install -y createrepo
-	sudo zypper -n remove patterns-openSUSE-minimal_base-conflicts
-	sudo zypper -n install createrepo
+	if [ ${y_res} == 0 ]; then
+		sudo yum install -y createrepo
+	fi
+	if [ ${z_res} == 0 ]; then
+		sudo zypper -n remove patterns-openSUSE-minimal_base-conflicts
+		sudo zypper -n install createrepo
+	fi
 	echo "%_signature gpg" >> ~/.rpmmacros
         echo "%_gpg_name  MariaDB Maxscale" >>  ~/.rpmmacros
 #	echo "%_gpg_name  MariaDBManager" >>  ~/.rpmmacros
@@ -74,7 +78,7 @@ else
                 echo "Package signing failed!"
                 exit 1
         fi
-	gpg --output repomd.xml.key --sign $sourcedir/repodata/repomd.xml
+	
 	cp $sourcedir/* $destdir/
 	pushd ${destdir} >/dev/null 2>&1
 	    createrepo -d -s sha .
@@ -84,6 +88,7 @@ else
 	        fi	
 
 	popd >/dev/null 2>&1
+	gpg --output repomd.xml.key --sign $destdir/repodata/repomd.xml
 	gpg -a --detach-sign $destdir/repodata/repomd.xml
         if [ $? != 0 ] ; then
                 echo "Package signing failed!"
