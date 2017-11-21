@@ -71,3 +71,8 @@ export repo_path=${repo_path:-$HOME/repository}
 
 export path_prefix="$repo_path/$repo_name/mariadb-$product_name/"
 
+export ci_url=${ci_url:-"http://max-tst-01.mariadb.com/ci-repository/"}
+
+export deb_repo_key=${deb_repo_key:-"135659e928c12247"}
+
+export rpm_repo_key=${rpm_repo_key:-"$ci_url/MariaDBMaxscale-GPG-KEY.public"}
