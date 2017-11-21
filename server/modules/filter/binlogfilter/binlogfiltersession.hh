@@ -22,6 +22,7 @@
 #define RAND_EVENT                              0x000D
 #define TABLE_MAP_EVENT                         0x0013
 #define XID_EVENT                               0x0010
+#define QUERY_EVENT                             0x0002
 #define BINLOG_EVENT_HDR_LEN                        19
 
 typedef struct rep_header_t
@@ -82,10 +83,16 @@ private:
     void fixEvent(uint8_t* data, uint32_t event_size);
 
     // Whether to skip current event
-    bool skipEvent(GWBUF* data);
+    bool checkEvent(GWBUF* data, const REP_HEADER& hdr);
 
     // Filter the replication event
-    void filterEvent(GWBUF* data);
+    void replaceEvent(GWBUF** data);
+
+    // Handle event size
+    void handlePackets(uint32_t len, const REP_HEADER& hdr);
+
+    // Handle event data
+    void handleEventData(uint32_t len, const uint8_t seqno);
 
 private:
     // Internal states for filter operations
@@ -102,8 +109,8 @@ private:
     uint32_t  m_serverid;           // server-id of connected slave
     state_t   m_state;              // Internal state
     bool      m_skip;               // Mark event skipping
-    bool      m_complete_packet;    // A complete received. Not implemented
     bool      m_crc;                // CRC32 for events. Not implemented
-    bool      m_large_payload;      // Packet bigger than 16MB. Not implemented
+    uint32_t  m_large_left;         // Remaining bytes of a large event
+    bool      m_is_large;           // Large Event indicator
     GWBUF*    m_sql_query;          // SQL query buffer
 };
