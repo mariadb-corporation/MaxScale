@@ -374,6 +374,11 @@ static inline uint32_t MYSQL_GET_PAYLOAD_LEN(const uint8_t* header)
     return gw_mysql_get_byte3(header);
 }
 
+static inline uint32_t MYSQL_GET_PACKET_LEN(const GWBUF* buffer)
+{
+    return MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
+}
+
 #define MYSQL_GET_ERRCODE(payload)              (gw_mysql_get_byte2(&payload[5]))
 #define MYSQL_GET_STMTOK_NPARAM(payload)        (gw_mysql_get_byte2(&payload[9]))
 #define MYSQL_GET_STMTOK_NATTR(payload)         (gw_mysql_get_byte2(&payload[11]))

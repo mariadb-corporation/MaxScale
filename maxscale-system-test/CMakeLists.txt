@@ -512,6 +512,10 @@ add_test_executable(mxs1468.cpp mxs1468 mxs1468 LABELS REPL_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1493
 add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS REPL_BACKEND)
 
+# MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current master
+# https://jira.mariadb.org/browse/MXS-1476
+add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS GALERA_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 

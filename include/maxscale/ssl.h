@@ -66,6 +66,7 @@ typedef struct ssl_listener
     char *ssl_key;                      /*< SSL private key */
     char *ssl_ca_cert;                  /*< SSL CA certificate */
     bool ssl_init_done;                 /*< If SSL has already been initialized for this service */
+    bool ssl_verify_peer_certificate;   /*< Enable peer certificate verification */
     struct ssl_listener
         *next;          /*< Next SSL configuration, currently used to store obsolete configurations */
 } SSL_LISTENER;
@@ -89,5 +90,8 @@ ssl_method_type_t string_to_ssl_method_type(const char* str);
  * if ssl authentication is complete or not required.
  */
 int ssl_authenticate_check_status(struct dcb *dcb);
+
+// TODO: Move this to an internal ssl.h header
+void write_ssl_config(int fd, SSL_LISTENER* ssl);
 
 MXS_END_DECLS

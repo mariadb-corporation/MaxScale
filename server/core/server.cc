@@ -578,6 +578,7 @@ dprintServer(DCB *dcb, const SERVER *server)
         dcb_printf(dcb, "\tSSL method type:                     %s\n",
                    ssl_method_type_to_string(l->ssl_method_type));
         dcb_printf(dcb, "\tSSL certificate verification depth:  %d\n", l->ssl_cert_verify_depth);
+        dcb_printf(dcb, "\tSSL peer verification :  %s\n", l->ssl_verify_peer_certificate ? "true" : "false");
         dcb_printf(dcb, "\tSSL certificate:                     %s\n",
                    l->ssl_cert ? l->ssl_cert : "null");
         dcb_printf(dcb, "\tSSL key:                             %s\n",
@@ -1203,57 +1204,7 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
     if (server->server_ssl)
     {
-        dprintf(file, "%s=required\n", CN_SSL);
-
-        if (server->server_ssl->ssl_cert)
-        {
-            dprintf(file, "%s=%s\n", CN_SSL_CERT, server->server_ssl->ssl_cert);
-        }
-
-        if (server->server_ssl->ssl_key)
-        {
-            dprintf(file, "%s=%s\n", CN_SSL_KEY, server->server_ssl->ssl_key);
-        }
-
-        if (server->server_ssl->ssl_ca_cert)
-        {
-            dprintf(file, "%s=%s\n", CN_SSL_CA_CERT, server->server_ssl->ssl_ca_cert);
-        }
-        if (server->server_ssl->ssl_cert_verify_depth)
-        {
-            dprintf(file, "%s=%d\n", CN_SSL_CERT_VERIFY_DEPTH, server->server_ssl->ssl_cert_verify_depth);
-        }
-
-        const char *version = NULL;
-
-        switch (server->server_ssl->ssl_method_type)
-        {
-#ifndef OPENSSL_1_1
-        case SERVICE_TLS10:
-            version = "TLSV10";
-            break;
-#endif
-#ifdef OPENSSL_1_0
-        case SERVICE_TLS11:
-            version = "TLSV11";
-            break;
-
-        case SERVICE_TLS12:
-            version = "TLSV12";
-            break;
-#endif
-        case SERVICE_SSL_TLS_MAX:
-            version = "MAX";
-            break;
-
-        default:
-            break;
-        }
-
-        if (version)
-        {
-            dprintf(file, "%s=%s\n", CN_SSL_VERSION, version);
-        }
+        write_ssl_config(file, server->server_ssl);
     }
 
     close(file);
