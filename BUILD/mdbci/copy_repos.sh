@@ -15,6 +15,11 @@ if [ "$box_type" == "RPM" ] ; then
         ln -s $platform_version "$platform_version"server
         ln -s $platform_version "$platform_version"Server
 
+  eval "cat <<EOF
+$(<${script_dir}/templates/repository-config/rpm.json.template)
+" 2> /dev/null > ${path_prefix}/${platform}_${platform_version}.json
+
+
         echo "copying done"
 else
         export arch=`ssh $sshopt "dpkg --print-architecture"`
@@ -24,5 +29,8 @@ else
         mkdir -p $path_prefix/$platform_family/
         cp -r ${unsorted_repo_dir}/$repo_name/$box/* $path_prefix/$platform_family/
         env > $build_info_path
+  eval "cat <<EOF
+$(<${script_dir}/templates/repository-config/deb.json.template)
+" 2> /dev/null > ${path_prefix}/${platform}_${platform_version}.json
 fi
 cd $dir
