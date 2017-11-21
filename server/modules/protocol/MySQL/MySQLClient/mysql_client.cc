@@ -426,8 +426,8 @@ int gw_read_client_event(DCB* dcb)
     MySQLProtocol *protocol;
     GWBUF *read_buffer = NULL;
     int return_code = 0;
-    int nbytes_read = 0;
-    int max_bytes = 0;
+    uint32_t nbytes_read = 0;
+    uint32_t max_bytes = 0;
 
     CHK_DCB(dcb);
     if (dcb->dcb_role != DCB_ROLE_CLIENT_HANDLER)

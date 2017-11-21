@@ -1690,6 +1690,7 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
             ssl_ca_cert = config_get_value(obj->parameters, CN_SSL_CA_CERT);
             ssl_version = config_get_value(obj->parameters, CN_SSL_VERSION);
             ssl_cert_verify_depth = config_get_value(obj->parameters, CN_SSL_CERT_VERIFY_DEPTH);
+            const char* ssl_verify_peer_certificate = config_get_value(obj->parameters, CN_SSL_VERIFY_PEER_CERTIFICATE);
             new_ssl->ssl_init_done = false;
             new_ssl->ssl_cert_verify_depth = 9; // Default of 9 as per Linux man page
             new_ssl->ssl_verify_peer_certificate = true;
