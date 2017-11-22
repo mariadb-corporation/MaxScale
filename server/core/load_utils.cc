@@ -15,7 +15,7 @@
  * @file load_utils.c Utility functions for loading of modules
  */
 
-#include "maxscale/modules.h"
+#include "internal/modules.h"
 
 #include <sys/param.h>
 #include <stdio.h>
@@ -32,8 +32,8 @@
 #include <maxscale/json_api.h>
 #include <maxscale/modulecmd.h>
 
-#include "maxscale/modules.h"
-#include "maxscale/config.h"
+#include "internal/modules.h"
+#include "internal/config.h"
 
 typedef struct loaded_module
 {

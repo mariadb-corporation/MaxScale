@@ -36,7 +36,7 @@
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
-#include "maxscale/mlist.h"
+#include "internal/mlist.h"
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250

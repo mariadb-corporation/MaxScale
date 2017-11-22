@@ -37,13 +37,13 @@
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/json_api.h>
 #include <mysqld_error.h>
 
-#include "maxscale/config.h"
-#include "maxscale/externcmd.h"
-#include "maxscale/monitor.h"
-#include "maxscale/modules.h"
-#include "maxscale/json_api.h"
+#include "internal/config.h"
+#include "internal/externcmd.h"
+#include "internal/monitor.h"
+#include "internal/modules.h"
 
 /** Schema version, journals must have a matching version */
 #define MMB_SCHEMA_VERSION     1

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxscale/httpresponse.hh"
+#include "internal/httpresponse.hh"
 
 #include <string>
 #include <sstream>
@@ -19,7 +19,7 @@
 #include <maxscale/alloc.h>
 #include <sys/time.h>
 
-#include "maxscale/admin.hh"
+#include "internal/admin.hh"
 
 using std::string;
 using std::stringstream;

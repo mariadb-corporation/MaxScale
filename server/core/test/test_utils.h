@@ -21,9 +21,9 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/config.h>
 
-#include "../maxscale/poll.h"
-#include "../maxscale/statistics.h"
-#include "../maxscale/worker.hh"
+#include "../internal/poll.h"
+#include "../internal/statistics.h"
+#include "../internal/worker.hh"
 
 
 void init_test_env(char *path)

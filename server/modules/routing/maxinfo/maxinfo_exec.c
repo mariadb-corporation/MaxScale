@@ -45,11 +45,11 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/version.h>
 
-#include "../../../core/maxscale/maxscale.h"
-#include "../../../core/maxscale/modules.h"
-#include "../../../core/maxscale/monitor.h"
-#include "../../../core/maxscale/poll.h"
-#include "../../../core/maxscale/session.h"
+#include "../../../core/internal/maxscale.h"
+#include "../../../core/internal/modules.h"
+#include "../../../core/internal/monitor.h"
+#include "../../../core/internal/poll.h"
+#include "../../../core/internal/session.h"
 
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);

@@ -21,8 +21,8 @@
 #include <maxscale/platform.h>
 #include <maxscale/spinlock.h>
 
-#include "maxscale/filter.h"
-#include "maxscale/monitor.h"
+#include "internal/filter.h"
+#include "internal/monitor.h"
 
 /** Size of the error buffer */
 #define MODULECMD_ERRBUF_SIZE 512

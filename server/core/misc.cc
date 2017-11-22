@@ -14,7 +14,7 @@
 #include <maxscale/maxscale.h>
 
 #include <time.h>
-#include "maxscale/maxscale.h"
+#include "internal/maxscale.h"
 
 static time_t started;
 

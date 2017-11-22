@@ -37,11 +37,11 @@
 #include <maxscale/utils.h>
 #include <maxscale/json_api.h>
 
-#include "maxscale/dcb.h"
-#include "maxscale/session.h"
-#include "maxscale/filter.h"
-#include "maxscale/worker.hh"
-#include "maxscale/workertask.hh"
+#include "internal/dcb.h"
+#include "internal/session.h"
+#include "internal/filter.h"
+#include "internal/worker.hh"
+#include "internal/workertask.hh"
 
 using std::string;
 using std::stringstream;

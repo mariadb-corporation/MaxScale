@@ -22,7 +22,7 @@
  *
  * @endverbatim
  */
-#include "maxscale/secrets.h"
+#include "internal/secrets.h"
 
 #include <getopt.h>
 #include <stdio.h>

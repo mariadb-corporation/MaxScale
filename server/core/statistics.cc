@@ -23,7 +23,7 @@
  * @endverbatim
  */
 
-#include "maxscale/statistics.h"
+#include "internal/statistics.h"
 #include <string.h>
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>

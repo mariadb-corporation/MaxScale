@@ -39,18 +39,18 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/paths.h>
+#include <maxscale/router.h>
 #include <maxscale/json_api.h>
 #include <maxscale/http.hh>
 #include <maxscale/version.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/hk_heartbeat.h>
 
-#include "maxscale/config.h"
-#include "maxscale/filter.h"
-#include "maxscale/service.h"
-#include "maxscale/monitor.h"
-#include "maxscale/modules.h"
-#include "maxscale/router.h"
+#include "internal/config.h"
+#include "internal/filter.h"
+#include "internal/service.h"
+#include "internal/monitor.h"
+#include "internal/modules.h"
 
 using std::set;
 using std::string;

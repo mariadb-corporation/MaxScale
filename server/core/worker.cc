@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxscale/worker.hh"
+#include "internal/worker.hh"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -31,11 +31,11 @@
 #include <maxscale/json_api.h>
 #include <maxscale/utils.hh>
 
-#include "maxscale/dcb.h"
-#include "maxscale/modules.h"
-#include "maxscale/poll.h"
-#include "maxscale/statistics.h"
-#include "maxscale/workertask.hh"
+#include "internal/dcb.h"
+#include "internal/modules.h"
+#include "internal/poll.h"
+#include "internal/statistics.h"
+#include "internal/workertask.hh"
 
 #define WORKER_ABSENT_ID -1
 

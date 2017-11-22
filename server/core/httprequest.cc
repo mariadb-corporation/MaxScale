@@ -11,8 +11,8 @@
  * Public License.
  */
 
-#include "maxscale/httprequest.hh"
-#include "maxscale/admin.hh"
+#include "internal/httprequest.hh"
+#include "internal/admin.hh"
 
 #include <ctype.h>
 #include <string.h>

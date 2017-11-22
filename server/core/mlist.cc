@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxscale/mlist.h"
+#include "internal/mlist.h"
 #include <maxscale/alloc.h>
 
 static void mlist_free_memory(mlist_t* ml, char* name);

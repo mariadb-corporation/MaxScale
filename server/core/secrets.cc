@@ -25,7 +25,7 @@
 #include <maxscale/random_jkiss.h>
 #include <maxscale/utils.h>
 
-#include "maxscale/secrets.h"
+#include "internal/secrets.h"
 
 /**
  * Generate a random printable character

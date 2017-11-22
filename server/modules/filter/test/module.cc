@@ -11,8 +11,8 @@
  * Public License.
  */
 
-#include <maxscale/module.hh>
-#include "../../../core/maxscale/modules.h"
+#include "maxscale/module.hh"
+#include "../../../core/internal/modules.h"
 
 namespace maxscale
 {

@@ -32,7 +32,7 @@
 #include <maxscale/mysql_utils.h>
 #include <maxscale/utils.h>
 // TODO: For monitorAddParameters
-#include "../../../core/maxscale/monitor.h"
+#include "../../../core/internal/monitor.h"
 
 /** Column positions for SHOW SLAVE STATUS */
 #define MYSQL55_STATUS_MASTER_LOG_POS 5

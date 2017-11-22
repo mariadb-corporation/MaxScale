@@ -16,7 +16,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include "../maxscale/query_classifier.h"
+#include "../internal/query_classifier.h"
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>

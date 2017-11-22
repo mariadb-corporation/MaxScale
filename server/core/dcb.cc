@@ -20,7 +20,7 @@
  * the state data and pointers to other components that relate to the
  * use of a file descriptor.
  */
-#include "maxscale/dcb.h"
+#include "internal/dcb.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -54,12 +54,12 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/semaphore.hh>
 
-#include "maxscale/modules.h"
-#include "maxscale/semaphore.hh"
-#include "maxscale/session.h"
-#include "maxscale/worker.hh"
-#include "maxscale/workertask.hh"
+#include "internal/modules.h"
+#include "internal/session.h"
+#include "internal/worker.hh"
+#include "internal/workertask.hh"
 
 using maxscale::Worker;
 using maxscale::WorkerTask;

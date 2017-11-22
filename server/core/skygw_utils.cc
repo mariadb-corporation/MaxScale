@@ -27,7 +27,7 @@
 #include <regex.h>
 #include <maxscale/debug.h>
 #include <sys/time.h>
-#include "maxscale/skygw_utils.h"
+#include "internal/skygw_utils.h"
 #include <maxscale/atomic.h>
 #include <maxscale/random_jkiss.h>
 #include <pcre2.h>

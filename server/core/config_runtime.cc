@@ -13,7 +13,7 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include "maxscale/config_runtime.h"
+#include "internal/config_runtime.h"
 
 #include <strings.h>
 #include <string>
@@ -31,10 +31,10 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/users.h>
 
-#include "maxscale/config.h"
-#include "maxscale/monitor.h"
-#include "maxscale/modules.h"
-#include "maxscale/service.h"
+#include "internal/config.h"
+#include "internal/monitor.h"
+#include "internal/modules.h"
+#include "internal/service.h"
 
 typedef std::set<std::string> StringSet;
 

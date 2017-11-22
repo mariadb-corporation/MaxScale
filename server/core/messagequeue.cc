@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxscale/messagequeue.hh"
+#include "internal/messagequeue.hh"
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -19,7 +19,7 @@
 #include <sys/utsname.h>
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
-#include "maxscale/worker.hh"
+#include "internal/worker.hh"
 
 namespace
 {

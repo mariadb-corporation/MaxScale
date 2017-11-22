@@ -41,10 +41,10 @@
 #include <maxscale/http.hh>
 #include <maxscale/maxscale.h>
 
-#include "maxscale/monitor.h"
-#include "maxscale/poll.h"
-#include "maxscale/workertask.hh"
-#include "maxscale/worker.hh"
+#include "internal/monitor.h"
+#include "internal/poll.h"
+#include "internal/workertask.hh"
+#include "internal/worker.hh"
 
 using maxscale::Semaphore;
 using maxscale::Worker;
