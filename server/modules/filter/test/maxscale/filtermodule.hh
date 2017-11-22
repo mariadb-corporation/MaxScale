@@ -140,6 +140,10 @@ public:
                                            char** pzOptions,
                                            MXS_CONFIG_PARAMETER* pParameters);
 
+    std::auto_ptr<Instance> createInstance(const char* zName,
+                                           char** pzOptions,
+                                           std::auto_ptr<ConfigParameters> sParameters);
+
 private:
     friend class Instance;
 
