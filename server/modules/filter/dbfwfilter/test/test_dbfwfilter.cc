@@ -815,10 +815,11 @@ int test(FilterModule& filter_module, const FW_TEST& t)
     TempFile file;
     file.write(t.zRules);
 
-    MXS_CONFIG_PARAMETER action { (char*)"action", (char*)zAction, NULL };
-    MXS_CONFIG_PARAMETER rules = { (char*)"rules", (char*)file.name().c_str(), &action };
+    auto_ptr<FilterModule::ConfigParameters> sParameters = filter_module.create_default_parameters();
+    sParameters->set_value("action", zAction);
+    sParameters->set_value("rules", file.name());
 
-    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", NULL, &rules);
+    auto_ptr<FilterModule::Instance> sInstance = filter_module.createInstance("test", NULL, sParameters);
 
     if (sInstance.get())
     {
