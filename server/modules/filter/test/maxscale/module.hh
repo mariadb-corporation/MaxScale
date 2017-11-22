@@ -31,9 +31,19 @@ public:
      * @param zFile_name  The name of the module.
      * @param zType_name  The expected type of the module.
      *
-     * @return The module object, if the module could be loaded, otherwise NULL.
+     * @return The module specific entry point structure or NULL.
      */
     static void* load(const char *zFile_name, const char *zType_name);
+
+    /**
+     * Get a module with a specific name, assumed to be of a specific type.
+     *
+     * @param zFile_name  The name of the module.
+     * @param zType_name  The expected type of the module.
+     *
+     * @return The loaded module, if the module could be loaded, otherwise NULL.
+     */
+    static const MXS_MODULE* get(const char *zFile_name, const char *zType_name);
 
     /**
      * Perform process initialization of all modules. Should be called only
@@ -60,41 +70,55 @@ public:
      * Perform thread finalization of all modules.
      */
     static void thread_finish();
+
+protected:
+    Module(const MXS_MODULE* pModule)
+        : m_module(*pModule)
+    {
+    }
+
+    const MXS_MODULE& m_module;
 };
 
 /**
  * The template Module is intended to be derived from using the derived
  * class as template argument.
  *
- *    class XyzModule : public SpecificModule<XyzModule> { ... }
+ *    class XyzModule : public SpecificModule<XyzModule, XYZ_MODULE_OBJECT> { ... }
  *
  * @param zFile_name  The name of the module.
  *
  * @return A module instance if the module could be loaded and it was of
  *         the expected type.
  */
-template<class T>
+template<class T, class API>
 class SpecificModule : public Module
 {
 public:
+    typedef SpecificModule<T, API> Base;
+
     static std::auto_ptr<T> load(const char* zFile_name)
     {
         std::auto_ptr<T> sT;
 
-        void* pApi = Module::load(zFile_name, T::zName);
+        const MXS_MODULE* pModule = Module::get(zFile_name, T::zName);
 
-        if (pApi)
+        if (pModule)
         {
-            sT.reset(new T(static_cast<typename T::type_t*>(pApi)));
+            sT.reset(new T(pModule));
         }
 
         return sT;
     }
 
 protected:
-    SpecificModule()
+    SpecificModule(const MXS_MODULE* pModule)
+        : Module(pModule)
+        , m_pApi(static_cast<API*>(pModule->module_object))
     {
     }
+
+    API* m_pApi;
 };
 
 }

@@ -24,6 +24,12 @@ void* Module::load(const char* zName, const char* zType)
 }
 
 //static
+const MXS_MODULE* Module::get(const char* zName, const char* zType)
+{
+    return get_module(zName, zType);
+}
+
+//static
 bool Module::process_init()
 {
     bool initialized = false;

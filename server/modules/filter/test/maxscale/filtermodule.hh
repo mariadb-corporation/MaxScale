@@ -23,14 +23,13 @@ namespace maxscale
 /**
  * An instance of FilterModule represents a filter module.
  */
-class FilterModule : public SpecificModule<FilterModule>
+class FilterModule : public SpecificModule<FilterModule, MXS_FILTER_OBJECT>
 {
     FilterModule(const FilterModule&);
     FilterModule& operator = (const FilterModule&);
 
 public:
-    static const char*        zName;  /*< The name describing the module type. */
-    typedef MXS_FILTER_OBJECT type_t; /*< The type of the module object. */
+    static const char* zName;  /*< The name describing the module type. */
 
     class Session;
     class Instance
@@ -184,15 +183,12 @@ private:
     }
 
 private:
-    friend class SpecificModule<FilterModule>;
+    friend Base;
 
-    FilterModule(MXS_FILTER_OBJECT* pApi)
-        : m_pApi(pApi)
+    FilterModule(const MXS_MODULE* pModule)
+        : Base(pModule)
     {
     }
-
-private:
-    MXS_FILTER_OBJECT* m_pApi;
 };
 
 }
