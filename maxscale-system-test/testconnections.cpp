@@ -1918,6 +1918,46 @@ int TestConnections::find_master_maxadmin(Mariadb_nodes * nodes)
     return master;
 }
 
+StringSet TestConnections::get_server_status(const char* name)
+{
+    std::set<std::string> rval;
+    char* res = ssh_maxscale_output(true, "maxadmin list servers|grep \'%s\'", name);
+    char* pipe = strrchr(res, '|');
+
+    if (res && pipe)
+    {
+        pipe++;
+        char* tok = strtok(pipe, ",");
+
+        while (tok)
+        {
+            char* p = tok;
+            char *end = strchr(tok, '\n');
+            if (!end)
+                end = strchr(tok, '\0');
+
+            // Trim leading whitespace
+            while (p < end && isspace(*p))
+            {
+                p++;
+            }
+
+            // Trim trailing whitespace
+            while (end > tok && isspace(*end))
+            {
+                *end-- = '\0';
+            }
+
+            rval.insert(p);
+            tok = strtok(NULL, ",\n");
+        }
+
+        free(res);
+    }
+
+    return rval;
+}
+
 int TestConnections::find_slave_maxadmin(Mariadb_nodes * nodes)
 {
     int slave = -1;

@@ -6,6 +6,10 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <set>
+#include <string>
+
+typedef std::set<std::string> StringSet;
 
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
@@ -656,6 +660,15 @@ public:
     int get_maxadmin_param(const char* command, const char* param, char* result);
     void check_current_operations(int value);
     void check_current_connections(int value);
+
+    /**
+     * @brief Get the set of labels that are assigned to server @c name
+     *
+     * @param name The name of the server that must be present in the output `maxadmin list servers`
+     *
+     * @return A set of string labels assigned to this server
+     */
+    StringSet get_server_status(const char* name);
 
     /**
      * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'

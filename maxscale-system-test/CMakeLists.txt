@@ -510,6 +510,10 @@ add_test_executable(mxs1468.cpp mxs1468 mxs1468 LABELS REPL_BACKEND)
  # https://jira.mariadb.org/browse/MXS-1476
 add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS GALERA_BACKEND)
 
+ # MXS-1509: Show correct server state for multisource replication
+ # https://jira.mariadb.org/browse/MXS-1509
+add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 

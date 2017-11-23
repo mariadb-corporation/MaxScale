@@ -375,9 +375,8 @@ int Mariadb_nodes::stop_nodes()
         printf("Stopping node %d\n", i);
         fflush(stdout);
         local_result += execute_query(nodes[i], "stop slave;");
-        fflush(stdout);
         local_result += stop_node(i);
-        fflush(stdout);
+        local_result += ssh_node(i, true, "rm -f /var/lib/mysql/*master*.info");
     }
     return local_result;
 }
@@ -428,12 +427,12 @@ int Mariadb_nodes::start_replication()
     {
         local_result += start_node(i, "");
         ssh_node(i, true,
-                 "mysql -u root %s -e \"STOP SLAVE; RESET SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only=OFF;\"",
+                 "mysql --force -u root %s -e \"STOP SLAVE; STOP ALL SLAVES; RESET SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only=OFF;\"",
                  socket_cmd[i]);
         ssh_node(i, true, "sudo rm -f /etc/my.cnf.d/kerb.cnf");
         ssh_node(i, true,
-                 "for i in `mysql  -ss -u root %s -e \"SHOW DATABASES\"|grep -iv 'mysql\\|information_schema\\|performance_schema'`; "
-                 "do mysql -u root %s -e \"DROP DATABASE $i\";"
+                 "for i in `mysql -ss --force -u root %s -e \"SHOW DATABASES\"|grep -iv 'mysql\\|information_schema\\|performance_schema'`; "
+                 "do mysql --force -u root %s -e \"DROP DATABASE $i\";"
                  "done", socket_cmd[i], socket_cmd[i]);
     }
 
@@ -444,7 +443,7 @@ int Mariadb_nodes::start_replication()
              user_name, password, access_homedir[0], socket_cmd[0]);
 
     // Create a database dump from the master and distribute it to the slaves
-    ssh_node(0, true, "mysql -u root %s -e \"CREATE DATABASE test\"; "
+    ssh_node(0, true, "mysql --force -u root %s -e \"CREATE DATABASE test\"; "
              "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 --gtid %s > /tmp/master_backup.sql",
              socket_cmd[0], socket_cmd[0]);
     sprintf(str, "%s/master_backup.sql", test_dir);
@@ -456,9 +455,9 @@ int Mariadb_nodes::start_replication()
         printf("Starting node %d\n", i);
         fflush(stdout);
         copy_to_node(str, "/tmp/master_backup.sql", i);
-        ssh_node(i, true, "mysql -u root %s < /tmp/master_backup.sql",
+        ssh_node(i, true, "mysql --force -u root %s < /tmp/master_backup.sql",
                  socket_cmd[i]);
-        ssh_node(i, true, "mysql -u root %s -e \"CHANGE MASTER TO MASTER_HOST=\\\"%s\\\", MASTER_PORT=%d, "
+        ssh_node(i, true, "mysql --force -u root %s -e \"CHANGE MASTER TO MASTER_HOST=\\\"%s\\\", MASTER_PORT=%d, "
                  "MASTER_USER=\\\"repl\\\", MASTER_PASSWORD=\\\"repl\\\";"
                  "START SLAVE;\"", socket_cmd[i], IP_private[0], port[0]);
     }
@@ -565,8 +564,11 @@ int Mariadb_nodes::unblock_all_nodes()
 int Mariadb_nodes::check_node_ssh(int node)
 {
     int res = 0;
-    printf("Checking node %d\n", node);
-    fflush(stdout);
+    if (verbose)
+    {
+        printf("Checking node %d\n", node);
+        fflush(stdout);
+    }
 
     if (ssh_node(0, false, "ls > /dev/null") != 0)
     {
@@ -574,7 +576,7 @@ int Mariadb_nodes::check_node_ssh(int node)
         fflush(stdout);
         res = 1;
     }
-    else
+    else if (verbose)
     {
         printf("Node %d is OK\n", node);
         fflush(stdout);
@@ -684,6 +686,28 @@ static bool bad_slave_thread_status(MYSQL *conn, const char *field, int node)
     return rval;
 }
 
+static bool multi_source_replication(MYSQL *conn, int node)
+{
+    bool rval = true;
+    MYSQL_RES *res;
+
+    if (mysql_query(conn, "SHOW ALL SLAVES STATUS") == 0 &&
+        (res = mysql_store_result(conn)))
+    {
+        if (mysql_num_rows(res) == 1)
+        {
+            rval = false;
+        }
+        else
+        {
+            printf("Node %d: More than one configured slave\n", node);
+            fflush(stdout);
+        }
+    }
+
+    return rval;
+}
+
 int Mariadb_nodes::check_replication()
 {
     int master = 0;
@@ -713,7 +737,8 @@ int Mariadb_nodes::check_replication()
             }
         }
         else if (bad_slave_thread_status(nodes[i], "Slave_IO_Running", i) ||
-                 bad_slave_thread_status(nodes[i], "Slave_SQL_Running", i))
+                 bad_slave_thread_status(nodes[i], "Slave_SQL_Running", i) ||
+                 multi_source_replication(nodes[i], i))
         {
             res = 1;
         }
