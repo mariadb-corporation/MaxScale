@@ -78,12 +78,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_AUTHENTICATOR MyObject =
     {
         mysql_auth_init,                  /* Initialize the authenticator */
-        mysql_auth_create,                /* Create entry point */
+        NULL,                             /* Create entry point */
         mysql_auth_set_protocol_data,     /* Extract data into structure   */
         mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
         mysql_auth_authenticate,          /* Authenticate user credentials */
         mysql_auth_free_client_data,      /* Free the client data held in DCB */
-        mysql_auth_destroy,               /* Destroy entry point */
+        NULL,                             /* Destroy entry point */
         mysql_auth_load_users,            /* Load users from backend databases */
         mysql_auth_diagnostic,
         mysql_auth_diagnostic_json,
@@ -236,28 +236,6 @@ static void* mysql_auth_init(char **options)
     return instance;
 }
 
-static void* mysql_auth_create(void *instance)
-{
-    mysql_auth_t *rval = MXS_MALLOC(sizeof(*rval));
-
-    if (rval)
-    {
-        rval->handle = NULL;
-    }
-
-    return rval;
-}
-
-static void mysql_auth_destroy(void *data)
-{
-    mysql_auth_t *auth = (mysql_auth_t*)data;
-    if (auth)
-    {
-        sqlite3_close_v2(auth->handle);
-        MXS_FREE(auth);
-    }
-}
-
 static bool is_localhost_address(struct sockaddr_storage *addr)
 {
     bool rval = false;
@@ -366,19 +344,6 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     MySQLProtocol *protocol = NULL;
     MYSQL_session *client_data = NULL;
     int client_auth_packet_size = 0;
-    mysql_auth_t *auth_ses = (mysql_auth_t*)dcb->authenticator_data;
-
-    if (auth_ses->handle == NULL)
-    {
-        char path[PATH_MAX];
-        get_database_path(dcb->listener, path, sizeof(path));
-
-        if (!open_client_database(path, &auth_ses->handle))
-        {
-            return false;
-        }
-    }
-
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     CHK_PROTOCOL(protocol);
 

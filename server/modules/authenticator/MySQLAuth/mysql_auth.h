@@ -112,12 +112,6 @@ typedef struct mysql_auth
     bool skip_auth;           /**< Authentication will always be successful */
 } MYSQL_AUTH;
 
-/** Common structure for both backend and client authenticators */
-typedef struct gssapi_auth
-{
-    sqlite3 *handle;              /**< SQLite3 database handle */
-} mysql_auth_t;
-
 /**
  * MySQL user and host data structure
  */
