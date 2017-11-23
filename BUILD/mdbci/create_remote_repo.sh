@@ -23,7 +23,7 @@ ssh $sshopt "key=\`ls ~/gpg_keys/*.public -1\` ; gpg --import \$key"
 ssh $sshopt "key=\`ls ~/gpg_keys/*.private -1\` ; gpg --allow-secret-key-import --import \$key"
 
 echo "executing create_repo.sh on VM"
-ssh $sshopt "export platform=$platform; export platform_version=$platform_version; $work_dir/BUILD/mdbci/create_repo.sh dest/ src/"
+ssh $sshopt "export platform=$platform; export platform_version=$platform_version; ./$work_dir/BUILD/mdbci/create_repo.sh dest/ src/"
 if [ $? != 0 ] ; then
 	echo "Repo creation failed!"
 	exit 1
