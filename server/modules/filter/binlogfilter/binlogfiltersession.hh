@@ -23,7 +23,11 @@
 #define TABLE_MAP_EVENT                         0x0013
 #define XID_EVENT                               0x0010
 #define QUERY_EVENT                             0x0002
+#define MARIADB10_GTID_EVENT                    0x00a2
+#define MARIADB_ANNOTATE_ROWS_EVENT             0x00a0
 #define BINLOG_EVENT_HDR_LEN                        19
+
+class BinlogConfig;
 
 typedef struct rep_header_t
 {
@@ -93,6 +97,18 @@ private:
 
     // Handle event data
     void handleEventData(uint32_t len, const uint8_t seqno);
+
+    // Check SQL statement in QUERY_EVENT
+    bool checkStatement(const uint8_t* event,
+                        const uint32_t event_size);
+
+    // Check Default DB name extracted from QUERY_EVENT
+    bool checkUseDB(const std::string& db_name,
+                    const BinlogConfig& config);
+
+    // Check DB.TABLE in ANNOTATE_ROWS event
+    void checkAnnotate(const uint8_t* event,
+                       const uint32_t event_size);
 
 private:
     // Internal states for filter operations
