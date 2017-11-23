@@ -136,3 +136,7 @@ if [ $build_result -ne 0 ] ; then
         exit $build_result
 fi
 
+if [ ${run_upgrade_test} == "yes" ] ; then
+	${script_dir}/upgrade_test.sh
+fi
+
