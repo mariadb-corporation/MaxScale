@@ -71,6 +71,7 @@ typedef struct
     char* replication_password;    /**< Replication password for failover*/
     bool verify_master_failure;    /**< Whether master failure is verified via slaves */
     int master_failure_timeout;    /**< Time in seconds to wait before doing failover */
+    int64_t master_gtid_domain;    /**< Gtid domain currently used by the master */
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
 

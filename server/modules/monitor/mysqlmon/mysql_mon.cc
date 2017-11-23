@@ -96,7 +96,7 @@ static bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeo
 static bool do_failover(MYSQL_MONITOR* mon);
 static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
                           MXS_MONITORED_SERVER* new_master,json_t** err_out);
-static bool update_gtids(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info);
+static bool update_gtids(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
                           StringVector* output);
@@ -578,8 +578,9 @@ public:
     bool slave_sql_running; /**< Whether or not the SQL thread is running. */
     string master_log_file; /**< Name of the master binary log file that the I/O thread is currently reading from. */
     uint64_t read_master_log_pos; /**< Position up to which the I/O thread has read in the current master
-                                   * binary log file. */
-    Gtid gtid_io_pos; /**< Gtid I/O position of the slave thread. */
+                                   *   binary log file. */
+    Gtid gtid_io_pos;       /**< Gtid I/O position of the slave thread. Only shows the triplet with
+                             *   the current master domain. */
 
     SlaveStatusInfo()
         :   master_server_id(0),
@@ -623,10 +624,10 @@ public:
     time_t           latest_event;     /**< Time when latest event was received from the master */
     int64_t          gtid_domain_id;   /**< The value of gtid_domain_id, the domain which is used for new non-
                                         *   replicated events. */
-    Gtid             gtid_slave_pos;   /**< Gtid of latest replicated event. Only shows the triplet with the
-                                        * same domain as Gtid_IO_Pos. */
-    Gtid             gtid_binlog_pos;  /**< Gtid of latest event written to binlog. Only shows a specific
-                                        * domain triplet. */
+    Gtid             gtid_current_pos; /**< Gtid of latest event. Only shows the triplet
+                                        *   with the current master domain. */
+    Gtid             gtid_binlog_pos;  /**< Gtid of latest event written to binlog. Only shows the triplet
+                                        *   with the current master domain. */
     SlaveStatusInfo  slave_status;     /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings rpl_settings;  /**< Miscellaneous replication related settings */
     mysql_server_version version;      /**< Server version, 10.X, 5.5 or 5.1 */
@@ -647,13 +648,21 @@ public:
     {}
 
     /**
-     * Calculate how many events are left in relay log.
+     * Calculate how many events are left in the relay log. If gtid_current_pos is ahead of Gtid_IO_Pos,
+     * or a server_id is zero, an error value is returned.
      *
-     * @return Number of events in relay log according to latest queried info.
+     * @return Number of events in relay log according to latest queried info. A negative value signifies
+     * an error in the gtid-values.
      */
     int64_t relay_log_events()
     {
-        return slave_status.gtid_io_pos.sequence - gtid_slave_pos.sequence;
+        if (slave_status.gtid_io_pos.server_id != 0 && gtid_current_pos.server_id != 0 &&
+            slave_status.gtid_io_pos.domain == gtid_current_pos.domain &&
+            slave_status.gtid_io_pos.sequence >= gtid_current_pos.sequence)
+        {
+            return slave_status.gtid_io_pos.sequence - gtid_current_pos.sequence;
+        }
+        return -1;
     }
 };
 
@@ -782,6 +791,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->shutdown = 0;
         handle->id = config_get_global_options()->id;
         handle->warn_set_standalone_master = true;
+        handle->master_gtid_domain = -1;
         handle->monitor = monitor;
     }
 
@@ -1013,7 +1023,9 @@ static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
     return MYSQL_SERVER_VERSION_51;
 }
 
-static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database)
+static bool do_show_slave_status(MYSQL_MONITOR* mon,
+                                 MySqlServerInfo* serv_info,
+                                 MXS_MONITORED_SERVER* database)
 {
     bool rval = true;
     unsigned int columns;
@@ -1120,12 +1132,17 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
                         serv_info->slave_heartbeats = heartbeats;
                         serv_info->heartbeat_period = atof(period);
                     }
-                    if (strcmp(using_gtid, "Slave_Pos") == 0)
+                    if (mon->master_gtid_domain >= 0 &&
+                        (strcmp(using_gtid, "Current_Pos") == 0 || strcmp(using_gtid, "Slave_Pos") == 0))
                     {
                         const char* gtid_io_pos = mxs_mysql_get_value(result, row, "Gtid_IO_Pos");
                         ss_dassert(gtid_io_pos);
                         serv_info->slave_status.gtid_io_pos = gtid_io_pos[0] != '\0' ?
-                            Gtid(gtid_io_pos) : Gtid();
+                            Gtid(gtid_io_pos, mon->master_gtid_domain) : Gtid();
+                    }
+                    else
+                    {
+                        serv_info->slave_status.gtid_io_pos = Gtid();
                     }
                 }
 
@@ -1193,13 +1210,15 @@ static bool master_still_alive(MYSQL_MONITOR* handle)
     return rval;
 }
 
-static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info)
+static inline void monitor_mysql_db(MYSQL_MONITOR* mon,
+                                    MXS_MONITORED_SERVER* database,
+                                    MySqlServerInfo *serv_info)
 {
     /** Clear old states */
     monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
                                  SERVER_SLAVE_OF_EXTERNAL_MASTER);
 
-    if (do_show_slave_status(serv_info, database))
+    if (do_show_slave_status(mon, serv_info, database))
     {
         /* If all configured slaves are running set this node as slave */
         if (serv_info->slave_configured && serv_info->n_slaves_running > 0 &&
@@ -1419,13 +1438,13 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     /* Check for MariaDB 10.x.x and get status for multi-master replication */
     if (serv_info->version == MYSQL_SERVER_VERSION_100 || serv_info->version == MYSQL_SERVER_VERSION_55)
     {
-        monitor_mysql_db(database, serv_info);
+        monitor_mysql_db(handle, database, serv_info);
     }
     else
     {
         if (handle->mysql51_replication)
         {
-            monitor_mysql_db(database, serv_info);
+            monitor_mysql_db(handle, database, serv_info);
         }
         else if (report_version_err)
         {
@@ -1916,6 +1935,17 @@ monitorMain(void *arg)
                 multiple masters are found, the servers with the read_only
                 variable set to ON will be assigned the slave status. */
             find_graph_cycles(handle, mon->monitored_servers, num_servers);
+        }
+
+        if (handle->master != NULL && SERVER_IS_MASTER(handle->master->server))
+        {
+            int64_t domain = get_server_info(handle, handle->master)->gtid_domain_id;
+            if (handle->master_gtid_domain >= 0 && domain != handle->master_gtid_domain)
+            {
+                MXS_INFO("gtid_domain_id of master has changed: %" PRId64 " -> %" PRId64 ".",
+                         handle->master_gtid_domain, domain);
+            }
+            handle->master_gtid_domain = domain;
         }
 
         ptr = mon->monitored_servers;
@@ -2927,7 +2957,8 @@ static MySqlServerInfo* update_slave_info(MYSQL_MONITOR* mon, MXS_MONITORED_SERV
     MySqlServerInfo* info = get_server_info(mon, server);
     if (info->slave_status.slave_sql_running &&
         update_replication_settings(server, info) &&
-        update_gtids(server, info->slave_status.gtid_io_pos.domain, info))
+        update_gtids(mon, server, info) &&
+        do_show_slave_status(mon, info, server))
     {
         return info;
     }
@@ -3048,9 +3079,9 @@ MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon,
                 else
                 {
                     uint64_t cand_io = cand_info->slave_status.gtid_io_pos.sequence;
-                    uint64_t cand_processed = cand_info->gtid_slave_pos.sequence;
+                    uint64_t cand_processed = cand_info->gtid_current_pos.sequence;
                     uint64_t master_io = new_master_info->slave_status.gtid_io_pos.sequence;
-                    uint64_t master_processed = new_master_info->gtid_slave_pos.sequence;
+                    uint64_t master_processed = new_master_info->gtid_current_pos.sequence;
                     bool cand_updates = cand_info->rpl_settings.log_slave_updates;
                     bool master_updates = new_master_info->rpl_settings.log_slave_updates;
                     // Otherwise accept a slave with a later event in relay log.
@@ -3110,13 +3141,15 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
            io_pos_stable &&
            difftime(time(NULL), begin) < mon->failover_timeout)
     {
-        MXS_NOTICE("Failover: Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
-                new_master->server->unique_name, master_info->relay_log_events());
+        MXS_INFO("Failover: Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
+                 new_master->server->unique_name, master_info->relay_log_events());
         thread_millisleep(1000); // Sleep for a while before querying server again.
         // Todo: check server version before entering failover.
         Gtid old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
-        query_ok = do_show_slave_status(master_info, new_master) &&
-            update_gtids(new_master, old_gtid_io_pos.domain, master_info);
+        // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
+        // It doesn't matter here, but is a general rule.
+        query_ok = update_gtids(mon, new_master, master_info) &&
+            do_show_slave_status(mon, master_info, new_master);
         io_pos_stable = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
 
@@ -3127,7 +3160,7 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
     }
     else
     {
-        const char* reason = "Timeout";
+        string reason = "Timeout";
         if (!query_ok)
         {
             reason = "Query error";
@@ -3136,8 +3169,13 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
         {
             reason = "Old master sent new event(s)";
         }
+        else if(master_info->relay_log_events() < 0)
+        {
+            reason = "Invalid Gtid(s) (current_pos: " + master_info->gtid_current_pos.to_string() +
+                ", io_pos: " + master_info->slave_status.gtid_io_pos.to_string() + ")";
+        }
         MXS_ERROR("Failover: %s while waiting for server '%s' to process relay log. Cancelling failover.",
-                reason, new_master->server->unique_name);
+                  reason.c_str(), new_master->server->unique_name);
         rval = false;
     }
     return rval;
@@ -3167,12 +3205,12 @@ bool failover_promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_m
     }
 }
 
-string generate_change_master_cmd(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, bool use_current_pos)
+string generate_change_master_cmd(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master)
 {
     std::stringstream change_cmd;
     change_cmd << "CHANGE MASTER TO MASTER_HOST = '" << new_master->server->name << "', ";
     change_cmd << "MASTER_PORT = " <<  new_master->server->port << ", ";
-    change_cmd << "MASTER_USE_GTID = " << (use_current_pos ? "current_pos" : "slave_pos") << ", ";
+    change_cmd << "MASTER_USE_GTID = current_pos, ";
     change_cmd << "MASTER_USER = '" << mon->replication_user << "', ";
     const char MASTER_PW[] = "MASTER_PASSWORD = '";
     const char END[] = "';";
@@ -3197,7 +3235,7 @@ string generate_change_master_cmd(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_
 int failover_redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONITORED_SERVER* new_master)
 {
     MXS_NOTICE("Redirecting slaves to new master.");
-    std::string change_cmd = generate_change_master_cmd(mon, new_master, false);
+    std::string change_cmd = generate_change_master_cmd(mon, new_master);
     int successes = 0;
     for (ServerVector::const_iterator iter = slaves.begin(); iter != slaves.end(); iter++)
     {
@@ -3227,6 +3265,11 @@ int failover_redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONIT
 static bool do_failover(MYSQL_MONITOR* mon)
 {
     // Topology has already been tested to be simple.
+    if (mon->master_gtid_domain < 0)
+    {
+        MXS_ERROR("Cluster gtid domain is unknown. Cannot failover.");
+        return false;
+    }
     // Step 1: Select new master. Also populate a vector with all slaves not the selected master.
     ServerVector slaves;
     MXS_MONITORED_SERVER* new_master = failover_select_new_master(mon, &slaves, NULL);
@@ -3316,21 +3359,30 @@ static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlSer
 }
 
 /**
- * Query gtid_slave_pos and save it to the server info object.
+ * Query gtid_current_pos and gtid_binlog_pos and save the values to the server info object.
+ * Only the cluster master domain is parsed.
  *
- * @param database The server to query.
- * @param domain Which gtid domain should be saved.
- * @param info Server info structure for saving result.
+ * @param mon Cluster monitor
+ * @param database The server to query
+ * @param info Server info structure for saving result
  * @return True if successful
  */
-static bool update_gtids(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info)
+static bool update_gtids(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
 {
     StringVector row;
-    bool rval = query_one_row(database, "SELECT @@gtid_slave_pos, @@gtid_binlog_pos;", 2, &row);
-    if (rval)
+    const char query[] = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
+    const int ind_current_pos = 0;
+    const int ind_binlog_pos = 1;
+    int64_t domain = mon->master_gtid_domain;
+    ss_dassert(domain >= 0);
+    bool rval = false;
+    if (query_one_row(database, query, 2, &row))
     {
-        info->gtid_slave_pos = (row[0] != "") ? Gtid(row[0].c_str(), domain) : Gtid();
-        info->gtid_binlog_pos = (row[1] != "") ? Gtid(row[1].c_str(), domain) : Gtid();
+        info->gtid_current_pos = (row[ind_current_pos] != "") ?
+            Gtid(row[ind_current_pos].c_str(), domain) : Gtid();
+        info->gtid_binlog_pos = (row[ind_binlog_pos] != "") ?
+            Gtid(row[ind_binlog_pos].c_str(), domain) : Gtid();
+        rval = true;
     }
     return rval;
 }
@@ -3339,15 +3391,16 @@ static bool update_gtids(MXS_MONITORED_SERVER *database, int64_t domain, MySqlSe
  * Demotes the current master server, preparing it for replicating from another server. This step can take a
  * while if long writes are running on the server.
  *
+ * @param mon Cluster monitor
  * @param current_master Server to demote
  * @param info Current master info. Will be written to.
- * @param domain Replication gtid domain.
  * @param err_out json object for error printing. Can be NULL.
  * @return True if successful.
  */
-static bool switchover_demote_master(MXS_MONITORED_SERVER* current_master,
+static bool switchover_demote_master(MYSQL_MONITOR* mon,
+                                     MXS_MONITORED_SERVER* current_master,
                                      MySqlServerInfo* info,
-                                     int32_t domain, json_t** err_out)
+                                     json_t** err_out)
 {
     MXS_NOTICE("Demoting server '%s'.", current_master->server->unique_name);
     string error;
@@ -3355,8 +3408,8 @@ static bool switchover_demote_master(MXS_MONITORED_SERVER* current_master,
     if (mxs_mysql_query(current_master->con, "SET GLOBAL read_only=1;") == 0)
     {
         if (mxs_mysql_query(current_master->con, "FLUSH TABLES;") == 0 &&
-                mxs_mysql_query(current_master->con, "FLUSH LOGS;") == 0 &&
-                update_gtids(current_master, domain, info))
+            mxs_mysql_query(current_master->con, "FLUSH LOGS;") == 0 &&
+            update_gtids(mon, current_master, info))
         {
             rval = true;
         }
@@ -3468,7 +3521,7 @@ static bool switchover_start_slave(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* old
         MXS_MONITORED_SERVER* new_master)
 {
     bool rval = false;
-    std::string change_cmd = generate_change_master_cmd(mon, new_master, true);
+    std::string change_cmd = generate_change_master_cmd(mon, new_master);
     if (mxs_mysql_query(old_master->con, change_cmd.c_str()) == 0 &&
             mxs_mysql_query(old_master->con, "START SLAVE;") == 0)
     {
@@ -3531,6 +3584,11 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
         PRINT_MXS_JSON_ERROR(err_out, "Cluster does not have a running master. Run failover instead.");
         return false;
     }
+    if (mon->master_gtid_domain < 0)
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot switchover.");
+        return false;
+    }
     // Step 1: Select promotion candidate, save all slaves except promotion target to an array. If we have a
     // user-defined master candidate, check it. Otherwise, autoselect.
     MXS_MONITORED_SERVER* promotion_target = NULL;
@@ -3553,9 +3611,8 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
 
     bool rval = false;
     MySqlServerInfo* curr_master_info = get_server_info(mon, demotion_target);
-    uint32_t repl_domain = get_server_info(mon, promotion_target)->slave_status.gtid_io_pos.domain;
     // Step 2: Set read-only to 1, flush logs.
-    if (switchover_demote_master(demotion_target, curr_master_info, repl_domain, err_out) &&
+    if (switchover_demote_master(mon, demotion_target, curr_master_info, err_out) &&
         // Step 3: Wait for the selected slave to catch up with master.
         switchover_wait_slave_catchup(promotion_target, curr_master_info->gtid_binlog_pos,
                                       mon->switchover_timeout, mon->monitor->read_timeout, err_out) &&
