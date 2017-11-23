@@ -76,3 +76,7 @@ export ci_url=${ci_url:-"http://max-tst-01.mariadb.com/ci-repository/"}
 export deb_repo_key=${deb_repo_key:-"135659e928c12247"}
 
 export rpm_repo_key=${rpm_repo_key:-"$ci_url/MariaDBMaxscale-GPG-KEY.public"}
+
+export run_upgrade_test=${run_upgrade_test:-"no"}
+
+export production_url=${production_url:-"https://downloads.mariadb.com/MaxScale/"}
