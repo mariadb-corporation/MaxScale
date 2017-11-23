@@ -74,9 +74,7 @@ static char* get_new_users_query(const char *server_version, bool include_root)
 
 int replace_mysql_users(SERV_LISTENER *listener, bool skip_local)
 {
-    spinlock_acquire(&listener->lock);
     int i = get_users(listener, skip_local);
-    spinlock_release(&listener->lock);
     return i;
 }
 
@@ -185,7 +183,7 @@ static int auth_cb(void *data, int columns, char** rows, char** row_names)
 int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
                         uint8_t *scramble, size_t scramble_len)
 {
-    sqlite3 *handle = instance->handle;
+    sqlite3 *handle = get_handle(instance);
     size_t len = sizeof(mysqlauth_validate_user_query) + strlen(session->user) * 2 +
                  strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
     char sql[len + 1];
@@ -713,26 +711,6 @@ static bool get_hostname(DCB *dcb, char *client_hostname, size_t size)
     return lookup_result == 0;
 }
 
-void start_sqlite_transaction(sqlite3 *handle)
-{
-    char *err;
-    if (sqlite3_exec(handle, "BEGIN", NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to start transaction: %s", err);
-        sqlite3_free(err);
-    }
-}
-
-void commit_sqlite_transaction(sqlite3 *handle)
-{
-    char *err;
-    if (sqlite3_exec(handle, "COMMIT", NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to commit transaction: %s", err);
-        sqlite3_free(err);
-    }
-}
-
 int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, SERV_LISTENER *listener)
 {
     if (server_ref->server->version_string[0] == 0)
@@ -742,6 +720,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
 
     char *query = get_new_users_query(server_ref->server->version_string, service->enable_root);
     MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
+    sqlite3* handle = get_handle(instance);
     bool anon_user = false;
     int users = 0;
 
@@ -753,8 +732,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
 
             if (result)
             {
-                start_sqlite_transaction(instance->handle);
-
                 MYSQL_ROW row;
 
                 while ((row = mysql_fetch_row(result)))
@@ -769,7 +746,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
                         merge_netmask(row[1]);
                     }
 
-                    add_mysql_user(instance->handle, row[0], row[1], row[2],
+                    add_mysql_user(handle, row[0], row[1], row[2],
                                    row[3] && strcmp(row[3], "Y") == 0, row[4]);
                     users++;
 
@@ -780,8 +757,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
                         anon_user = true;
                     }
                 }
-
-                commit_sqlite_transaction(instance->handle);
 
                 mysql_free_result(result);
             }
@@ -809,7 +784,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server_ref, SERVICE *service, 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(result)))
             {
-                add_database(instance->handle, row[0]);
+                add_database(handle, row[0]);
             }
 
             mysql_free_result(result);
@@ -851,7 +826,8 @@ static int get_users(SERV_LISTENER *listener, bool skip_local)
 
     /** Delete the old users */
     MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
-    delete_mysql_users(instance->handle);
+    sqlite3* handle = get_handle(instance);
+    delete_mysql_users(handle);
 
     SERVER_REF *server = service->dbref;
     int total_users = -1;
