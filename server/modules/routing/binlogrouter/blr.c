@@ -242,13 +242,6 @@ createInstance(SERVICE *service, char **options)
         return NULL;
     }
 
-    if (options == NULL || options[0] == NULL)
-    {
-        MXS_ERROR("%s: Error: No router options supplied for binlogrouter",
-                  service->name);
-        return NULL;
-    }
-
     /*
      * We only support one server behind this router, since the server is
      * the master from which we replicate binlog records. Therefore check
@@ -623,10 +616,6 @@ createInstance(SERVICE *service, char **options)
             }
         }
     }
-    else
-    {
-        MXS_ERROR("%s: Error: No router options supplied for binlogrouter", service->name);
-    }
 
     if (inst->masterid)
     {
@@ -754,10 +743,10 @@ createInstance(SERVICE *service, char **options)
     {
         if (rc == -1)
         {
-            MXS_ERROR("%s: master.ini file not found in %s."
-                      " Master registration cannot be started."
-                      " Configure with CHANGE MASTER TO ...",
-                      inst->service->name, inst->binlogdir);
+            MXS_WARNING("%s: master.ini file not found in %s."
+                        " Master registration cannot be started."
+                        " Configure with CHANGE MASTER TO ...",
+                        inst->service->name, inst->binlogdir);
         }
         else
         {
