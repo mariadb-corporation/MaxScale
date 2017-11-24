@@ -440,6 +440,7 @@ typedef struct router_slave
     char              lsi_binlog_name[BINLOG_FNAMELEN + 1]; /*< Which binlog file */
     uint32_t          lsi_binlog_pos; /*< What position */
     void              *encryption_ctx;      /*< Encryption context */
+    bool              annotate_rows;  /*< MariaDB 10 Slave requests ANNOTATE_ROWS */
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
