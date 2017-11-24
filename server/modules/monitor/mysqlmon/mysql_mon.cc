@@ -71,6 +71,13 @@ typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
 typedef std::vector<string> StringVector;
 class MySqlServerInfo;
 
+enum mysql_server_version
+{
+    MYSQL_SERVER_VERSION_100,
+    MYSQL_SERVER_VERSION_55,
+    MYSQL_SERVER_VERSION_51
+};
+
 static void monitorMain(void *);
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 static void stopMonitor(MXS_MONITOR *);
@@ -91,6 +98,9 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
                           MXS_MONITORED_SERVER* new_master,json_t** err_out);
 static bool update_gtids(MXS_MONITORED_SERVER *database, int64_t domain, MySqlServerInfo* info);
 static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
+static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
+                          StringVector* output);
+static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -611,12 +621,15 @@ public:
     int              slave_heartbeats; /**< Number of received heartbeats */
     double           heartbeat_period; /**< The time interval between heartbeats */
     time_t           latest_event;     /**< Time when latest event was received from the master */
+    int64_t          gtid_domain_id;   /**< The value of gtid_domain_id, the domain which is used for new non-
+                                        *   replicated events. */
     Gtid             gtid_slave_pos;   /**< Gtid of latest replicated event. Only shows the triplet with the
                                         * same domain as Gtid_IO_Pos. */
     Gtid             gtid_binlog_pos;  /**< Gtid of latest event written to binlog. Only shows a specific
                                         * domain triplet. */
     SlaveStatusInfo  slave_status;     /**< Data returned from SHOW SLAVE STATUS */
     ReplicationSettings rpl_settings;  /**< Miscellaneous replication related settings */
+    mysql_server_version version;      /**< Server version, 10.X, 5.5 or 5.1 */
 
     MySqlServerInfo()
         :   server_id(0),
@@ -628,7 +641,9 @@ public:
             n_slaves_running(0),
             slave_heartbeats(0),
             heartbeat_period(0),
-            latest_event(0)
+            latest_event(0),
+            gtid_domain_id(-1),
+            version(MYSQL_SERVER_VERSION_51)
     {}
 
     /**
@@ -982,13 +997,6 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     return rval;
 }
 
-enum mysql_server_version
-{
-    MYSQL_SERVER_VERSION_100,
-    MYSQL_SERVER_VERSION_55,
-    MYSQL_SERVER_VERSION_51
-};
-
 static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
 {
     unsigned long server_version = mysql_get_server_version(db->con);
@@ -1005,13 +1013,13 @@ static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
     return MYSQL_SERVER_VERSION_51;
 }
 
-static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database,
-                                 enum mysql_server_version server_version)
+static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database)
 {
     bool rval = true;
     unsigned int columns;
     int i_slave_io_running, i_slave_sql_running, i_read_master_log_pos, i_master_server_id, i_master_log_file;
     const char *query;
+    mysql_server_version server_version = serv_info->version;
 
     if (server_version == MYSQL_SERVER_VERSION_100)
     {
@@ -1148,15 +1156,6 @@ static bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVE
     return rval;
 }
 
-static bool update_slave_status(MYSQL_MONITOR* handle, MXS_MONITORED_SERVER* db)
-{
-    void* value = hashtable_fetch(handle->server_info,db->server->unique_name);
-    ss_dassert(value);
-    MySqlServerInfo* info = static_cast<MySqlServerInfo*>(value);
-    enum mysql_server_version version = get_server_version(db);
-    return do_show_slave_status(info, db, version);
-}
-
 static inline bool master_maybe_dead(MYSQL_MONITOR* handle)
 {
     return handle->verify_master_failure && handle->master &&
@@ -1194,14 +1193,13 @@ static bool master_still_alive(MYSQL_MONITOR* handle)
     return rval;
 }
 
-static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info,
-                                    enum mysql_server_version server_version)
+static inline void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info)
 {
     /** Clear old states */
     monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
                                  SERVER_SLAVE_OF_EXTERNAL_MASTER);
 
-    if (do_show_slave_status(serv_info, database, server_version))
+    if (do_show_slave_status(serv_info, database))
     {
         /* If all configured slaves are running set this node as slave */
         if (serv_info->slave_configured && serv_info->n_slaves_running > 0 &&
@@ -1341,10 +1339,6 @@ static void
 monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
 {
     MYSQL_MONITOR* handle = static_cast<MYSQL_MONITOR*>(mon->handle);
-    MYSQL_ROW row;
-    MYSQL_RES *result;
-    unsigned long int server_version = 0;
-    char *server_string;
 
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))
@@ -1390,16 +1384,9 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     server_set_status_nolock(database->server, SERVER_RUNNING);
     monitor_set_pending_status(database, SERVER_RUNNING);
 
-    /* get server version from current server */
-    server_version = mysql_get_server_version(database->con);
-
-    /* get server version string */
-    mxs_mysql_set_server_version(database->con, database->server);
-    server_string = database->server->version_string;
-
     MySqlServerInfo *serv_info = get_server_info(handle, database);
-
     /* Check whether current server is MaxScale Binlog Server */
+    MYSQL_RES *result;
     if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
         (result = mysql_store_result(database->con)) != NULL)
     {
@@ -1411,54 +1398,34 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
         serv_info->binlog_relay = false;
     }
 
-    /* Get server_id and read_only from current node */
-    if (mxs_mysql_query(database->con, "SELECT @@server_id, @@read_only") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
+    /* Get server version string, also get/set numeric representation. */
+    mxs_mysql_set_server_version(database->con, database->server);
+    /* Set monitor version enum. */
+    uint64_t version_num = server_get_version(database->server);
+    if (version_num >= 100000)
     {
-        long server_id = -1;
-
-        if (mysql_field_count(database->con) != 2)
-        {
-            mysql_free_result(result);
-            MXS_ERROR("Unexpected result for 'SELECT @@server_id, @@read_only'. Expected 2 columns."
-                      " MySQL Version: %s", server_string);
-            return;
-        }
-
-        while ((row = mysql_fetch_row(result)))
-        {
-            server_id = strtol(row[0], NULL, 10);
-            if ((errno == ERANGE && (server_id == LONG_MAX
-                                     || server_id == LONG_MIN)) || (errno != 0 && server_id == 0))
-            {
-                server_id = -1;
-            }
-
-            database->server->node_id = server_id;
-            serv_info->server_id = server_id;
-            serv_info->read_only = (row[1] && strcmp(row[1], "1") == 0);
-        }
-        mysql_free_result(result);
+        serv_info->version = MYSQL_SERVER_VERSION_100;
+    }
+    else if (version_num >= 5 * 10000 + 5 * 100)
+    {
+        serv_info->version = MYSQL_SERVER_VERSION_55;
     }
     else
     {
-        mon_report_query_error(database);
+        serv_info->version = MYSQL_SERVER_VERSION_51;
     }
-
-    /* Check first for MariaDB 10.x.x and get status for multi-master replication */
-    if (server_version >= 100000)
+    /* Query a few settings. */
+    read_server_variables(database, serv_info);
+    /* Check for MariaDB 10.x.x and get status for multi-master replication */
+    if (serv_info->version == MYSQL_SERVER_VERSION_100 || serv_info->version == MYSQL_SERVER_VERSION_55)
     {
-        monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_100);
-    }
-    else if (server_version >= 5 * 10000 + 5 * 100)
-    {
-        monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_55);
+        monitor_mysql_db(database, serv_info);
     }
     else
     {
         if (handle->mysql51_replication)
         {
-            monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_51);
+            monitor_mysql_db(database, serv_info);
         }
         else if (report_version_err)
         {
@@ -1468,7 +1435,6 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
                       "detection, add 'mysql51_replication=true' to the monitor section.");
         }
     }
-
 }
 
 /**
@@ -3149,8 +3115,8 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
         thread_millisleep(1000); // Sleep for a while before querying server again.
         // Todo: check server version before entering failover.
         Gtid old_gtid_io_pos = master_info->slave_status.gtid_io_pos;
-        query_ok = do_show_slave_status(master_info, new_master, MYSQL_SERVER_VERSION_100) &&
-                update_gtids(new_master, old_gtid_io_pos.domain, master_info);
+        query_ok = do_show_slave_status(master_info, new_master) &&
+            update_gtids(new_master, old_gtid_io_pos.domain, master_info);
         io_pos_stable = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
 
@@ -3615,4 +3581,43 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
         }
     }
     return rval;
+}
+
+/**
+ * Read server_id, read_only and (if 10.X) gtid_domain_id.
+ *
+ * @param database Database to update
+ * @param serv_info Where to save results
+ */
+static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info)
+{
+    string query = "SELECT @@server_id, @@read_only;";
+    int columns = 2;
+    if (serv_info->version ==  MYSQL_SERVER_VERSION_100)
+    {
+        query.erase(query.end() - 1);
+        query += ", @@gtid_domain_id;";
+        columns = 3;
+    }
+
+    int ind_id = 0;
+    int ind_ro = 1;
+    int ind_domain = 2;
+    StringVector row;
+    if (query_one_row(database, query.c_str(), columns, &row))
+    {
+        uint32_t server_id = 0;
+        ss_debug(int rv =) sscanf(row[ind_id].c_str(), "%" PRIu32, &server_id);
+        ss_dassert(rv == 1 && (row[ind_ro] == "0" || row[ind_ro] == "1"));
+        database->server->node_id = server_id;
+        serv_info->server_id = server_id;
+        serv_info->read_only = (row[ind_ro] == "1");
+        if (columns == 3)
+        {
+            uint32_t domain = 0;
+            ss_debug(rv =) sscanf(row[ind_domain].c_str(), "%" PRIu32, &domain);
+            ss_dassert(rv == 1);
+            serv_info->gtid_domain_id = domain;
+        }
+    }
 }
