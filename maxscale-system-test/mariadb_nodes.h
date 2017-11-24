@@ -291,7 +291,7 @@ public:
      * @param param command line parameters for DB server start command
      * @return 0 if success
      */
-    int start_node(int node, const char* param);
+    int start_node(int node, const char* param = "");
 
     /**
      * @brief Check node via ssh and restart it if it is not resposible
