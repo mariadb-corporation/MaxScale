@@ -367,11 +367,13 @@ blr_file_init(ROUTER_INSTANCE *router)
     /* - 2 - Get last file in GTID maps repo */
     else
     {
-        MARIADB_GTID_INFO last_gtid = {};
         char f_prefix[BINLOG_FILE_EXTRA_INFO] = "";
+        MARIADB_GTID_INFO last_gtid;
+
+        memset(&last_gtid, 0, sizeof(last_gtid));
         // SELECT LAST FILE
         if (!blr_get_last_file(router, &last_gtid) ||
-            last_gtid.gtid == NULL)
+            !last_gtid.gtid[0])
         {
             MXS_INFO("%s: cannot find any GTID in GTID maps repo",
                      router->service->name);
@@ -411,9 +413,6 @@ blr_file_init(ROUTER_INSTANCE *router)
         {
             ret = blr_file_create(router, last_gtid.file);
         }
-
-        MXS_FREE(last_gtid.gtid);
-        MXS_FREE(last_gtid.file);
 
         return ret;
     }
@@ -1597,8 +1596,9 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
                               "rep_domain = %" PRIu32 " AND "
                               "server_id = %" PRIu32 ")) + 1;";
 
-    MARIADB_GTID_INFO result = {};
     MARIADB_GTID_ELEMS gtid_elms = {};
+    MARIADB_GTID_INFO result;
+    memset(&result, 0, sizeof(result));
 
     if ((sptr = strrchr(slave->binlogfile, '.')) == NULL)
     {
@@ -1675,16 +1675,10 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
              * Update GTID elems in the slave->f_info struct:
              * file and domain_id / server_id
              */
-            if (slave->f_info.file)
-            {
-                MXS_FREE(slave->f_info.file);
-                slave->f_info.file = MXS_STRDUP_A(result.file);
-            }
 
+            strcpy(slave->f_info.file, result.file);
             slave->f_info.gtid_elms.domain_id = result.gtid_elms.domain_id;
             slave->f_info.gtid_elms.server_id = result.gtid_elms.server_id;
-
-            MXS_FREE(result.file);
         }
         else
         {
@@ -2572,9 +2566,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             char f_prefix[BINLOG_FILE_EXTRA_INFO] = "";
             if (hdr.event_type == MARIADB10_GTID_GTID_LIST_EVENT)
             {
-                char mariadb_gtid[GTID_MAX_LEN + 1] = "";
-                MARIADB_GTID_INFO gtid_info = {};
                 unsigned long n_gtids;
+                char mariadb_gtid[GTID_MAX_LEN + 1] = "";
+                MARIADB_GTID_INFO gtid_info;
+                memset(&gtid_info, 0, sizeof(gtid_info));
 
                 n_gtids = extract_field(ptr, 32);
                 /* The lower 28 bits are the number of GTIDs */
@@ -2621,7 +2616,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     /* Try loading last found GTID */
                     if (router->mariadb10_gtid &&
                         blr_load_last_mariadb_gtid(router, &gtid_info) &&
-                        gtid_info.gtid != NULL)
+                        gtid_info.gtid[0])
                     {
                         snprintf(mariadb_gtid,
                                  GTID_MAX_LEN,
@@ -3971,8 +3966,8 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
     MARIADB_GTID_INFO gtid_info;
     MARIADB_GTID_ELEMS gtid_elms;
 
-    gtid_info.gtid = inst->pending_transaction.gtid;
-    gtid_info.file = inst->binlog_name;
+    strcpy(gtid_info.gtid, inst->pending_transaction.gtid);
+    strcpy(gtid_info.file, inst->binlog_name);
     gtid_info.start = inst->pending_transaction.start_pos;
     gtid_info.end = inst->pending_transaction.end_pos;
     memcpy(&gtid_elms,
@@ -4080,8 +4075,8 @@ static int gtid_select_cb(void *data,
         values[2] &&
         values[3])
     {
-        result->gtid = MXS_STRDUP_A(values[0]);
-        result->file = MXS_STRDUP_A(values[1]);
+        strcpy(result->gtid, values[0]);
+        strcpy(result->file, values[1]);
         result->start = atoll(values[2]);
         result->end = atoll(values[3]);
 
@@ -4177,7 +4172,7 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
     }
     else
     {
-        if (result->gtid)
+        if (result->gtid[0])
         {
             MXS_INFO("Binlog file to read from is %" PRIu32 "/%" PRIu32 "/%s",
                      result->gtid_elms.domain_id,
@@ -4185,7 +4180,7 @@ bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
                      result->file);
         }
     }
-    return result->gtid ? true : false;
+    return result->gtid[0] ? true : false;
 }
 
 /**
@@ -4352,7 +4347,7 @@ static int gtid_file_select_cb(void *data,
         values[2] &&
         values[3])
     {
-        result->file = MXS_STRDUP_A(values[3]);
+        strcpy(result->file, values[3]);
         result->gtid_elms.domain_id = atoll(values[1]);
         result->gtid_elms.server_id = atoll(values[2]);
     }

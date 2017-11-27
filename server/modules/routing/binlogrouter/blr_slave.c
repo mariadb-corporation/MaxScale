@@ -6742,6 +6742,8 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
     char router_curr_file[BINLOG_FNAMELEN + 1];
     char last_gtid[GTID_MAX_LEN + 1];
 
+    memset(&f_gtid, 0, sizeof(f_gtid));
+
     spinlock_acquire(&router->binlog_lock);
     // Set gtid as current router gtid
     strcpy(last_gtid, router->last_mariadb_gtid);
@@ -6800,9 +6802,6 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
         snprintf(dbpath, sizeof(dbpath), "/%s/%s",
                  router->binlogdir, GTID_MAPS_DB);
 
-        /* Result set init */
-        f_gtid.gtid = NULL;
-
         /* Open GTID maps read-only database */
         if (sqlite3_open_v2(dbpath,
                             &slave->gtid_maps,
@@ -6842,7 +6841,7 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
         }
 
         /* Requested GTID Not Found */
-        if (!f_gtid.gtid)
+        if (!f_gtid.gtid[0])
         {
             char errmsg[BINLOG_ERROR_MSG_LEN + 1];
             snprintf(errmsg,
@@ -6961,10 +6960,6 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
 
             /* Set GTID details in f_info*/
             memcpy(&slave->f_info, &f_gtid, sizeof(MARIADB_GTID_INFO));
-
-            /* Free gtid and file from result */
-            MXS_FREE(f_gtid.gtid);
-            MXS_FREE(f_gtid.file);
         }
     }
 
