@@ -1,0 +1,11 @@
+{
+  "maxscale" :
+  {
+        "hostname" : "maxscale",
+        "box" : "$box",
+        "product" : {
+                "name": "maxscale"
+        }
+
+  }
+}

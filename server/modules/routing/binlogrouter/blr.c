@@ -646,11 +646,6 @@ createInstance(SERVICE *service, char **options)
             }
         }
     }
-    else
-    {
-        MXS_ERROR("%s: Error: No router options supplied for binlogrouter",
-                  service->name);
-    }
 
     inst->orig_masterid = 0;
     inst->mariadb10_gtid_domain = BLR_DEFAULT_GTID_DOMAIN_ID;
@@ -873,10 +868,10 @@ createInstance(SERVICE *service, char **options)
     {
         if (rc == -1)
         {
-            MXS_ERROR("%s: master.ini file not found in %s."
-                      " Master registration cannot be started."
-                      " Configure with CHANGE MASTER TO ...",
-                      inst->service->name, inst->binlogdir);
+            MXS_WARNING("%s: master.ini file not found in %s."
+                        " Master registration cannot be started."
+                        " Configure with CHANGE MASTER TO ...",
+                        inst->service->name, inst->binlogdir);
         }
         else
         {
