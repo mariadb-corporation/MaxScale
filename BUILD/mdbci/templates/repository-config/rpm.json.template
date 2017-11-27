@@ -1,0 +1,10 @@
+[
+{
+   "product":		"maxscale",
+   "version":		"default",
+   "repo":		"${ci_url}/$web_prefix/centos/${platform_version}/\$basearch",
+   "repo_key":		"${rpm_repo_key}",
+   "platform":		"$platform",
+   "platform_version":	"${platform_version}"
+}
+]
