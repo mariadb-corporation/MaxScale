@@ -25,6 +25,7 @@
 #define QUERY_EVENT                             0x0002
 #define MARIADB10_GTID_EVENT                    0x00a2
 #define MARIADB_ANNOTATE_ROWS_EVENT             0x00a0
+#define HEARTBEAT_EVENT                         0x001B
 #define BINLOG_EVENT_HDR_LEN                        19
 
 class BinlogConfig;

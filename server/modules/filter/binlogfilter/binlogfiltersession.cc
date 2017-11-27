@@ -105,7 +105,7 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
             break;
 
         case COM_BINLOG_DUMP:
-            // Connected Slave server waits for binlog events
+            // Connected Slave server is waiting for binlog events
             m_state = BINLOG_MODE;
             MXS_INFO("Slave server %" PRIu32 " is waiting for binlog events.",
                      m_serverid);
@@ -188,7 +188,8 @@ int BinlogFilterSession::clientReply(GWBUF* pPacket)
             }
             else
             {
-                // Handle data part of a large event
+                // Handle data part of a large event:
+                // Packet sequence is at offset 3
                 handleEventData(len, event[3]);
             }
 
@@ -233,14 +234,21 @@ static void extract_header(register const uint8_t *event,
     hdr->seqno = event[3];
     hdr->payload_len = gw_mysql_get_byte3(event);
     hdr->ok = event[MYSQL_HEADER_LEN];
-    event++;
-    hdr->timestamp = gw_mysql_get_byte4(event + MYSQL_HEADER_LEN);
-    hdr->event_type = event[MYSQL_HEADER_LEN + 4];
+    if (hdr->ok != 0)
+    {
+        // Don't parse data in case of Error in Replication Stream
+        return;
+    }
+
+    // event points to Event Header (19 bytes)
+    event += MYSQL_HEADER_LEN + 1;
+    hdr->timestamp = gw_mysql_get_byte4(event);
+    hdr->event_type = event[4];
     // TODO: add offsets in order to facilitate reading
-    hdr->serverid = gw_mysql_get_byte4(event + MYSQL_HEADER_LEN  + 4 + 1);
-    hdr->event_size = gw_mysql_get_byte4(event + MYSQL_HEADER_LEN + 4 + 1 + 4);
-    hdr->next_pos = gw_mysql_get_byte4(event + MYSQL_HEADER_LEN + 4 + 1 + 4 + 4);
-    hdr->flags = gw_mysql_get_byte2(event + MYSQL_HEADER_LEN + 4 + 1 + 4 + 4 + 4);
+    hdr->serverid = gw_mysql_get_byte4(event + 4 + 1);
+    hdr->event_size = gw_mysql_get_byte4(event + 4 + 1 + 4);
+    hdr->next_pos = gw_mysql_get_byte4(event + 4 + 1 + 4 + 4);
+    hdr->flags = gw_mysql_get_byte2(event + 4 + 1 + 4 + 4 + 4);
 
     MXS_INFO("Binlog Event, Header: pkt #%d, "
              "serverId %" PRIu32 ", event_type [%d], "
@@ -269,21 +277,30 @@ static void extract_header(register const uint8_t *event,
 bool BinlogFilterSession::checkEvent(GWBUF* buffer,
                                      const REP_HEADER& hdr)
 {
+    ss_dassert(!m_is_large);
+
     uint8_t *event = GWBUF_DATA(buffer);
 
     if (hdr.ok != 0)
     {
         // Error in binlog stream: no filter
+        m_state = ERRORED;
         m_skip = false;
-        return m_skip;
+        MXS_ERROR("Slave server %" PRIu32 " received error "
+                  "in replication stream, packet #%u",
+                  m_serverid,
+                  event[3]);
     }
-
-    if (!m_is_large)
+    else
     {
         // Current event size is less than MYSQL_PACKET_LENGTH_MAX
-        // or is the begiining of large event.
+        // or is the beginning of large event.
         switch(hdr.event_type)
         {
+           case HEARTBEAT_EVENT:
+               // Set m_skip = false anyway: cannot alter this event
+               m_skip = false;
+               break;
            case MARIADB10_GTID_EVENT:
                // New transaction, reset m_skip anyway
                m_skip = false;
