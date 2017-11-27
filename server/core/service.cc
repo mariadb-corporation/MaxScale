@@ -103,8 +103,8 @@ SERVICE* service_alloc(const char *name, const char *router)
     char *my_name = MXS_STRDUP(name);
     char *my_router = MXS_STRDUP(router);
     SERVICE *service = (SERVICE *)MXS_CALLOC(1, sizeof(*service));
-    SERVICE_REFRESH_RATE* rate_limit = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
-                                                                         sizeof(*rate_limit));
+    SERVICE_REFRESH_RATE* rate_limits = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
+                                                                         sizeof(*rate_limits));
     if (!my_name || !my_router || !service)
     {
         MXS_FREE(my_name);
@@ -151,6 +151,7 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->routerOptions = NULL;
     service->log_auth_warnings = true;
     service->strip_db_esc = true;
+    service->rate_limits = rate_limits;
     if (service->name == NULL || service->routerModule == NULL)
     {
         if (service->name)
@@ -1608,7 +1609,7 @@ int service_refresh_users(SERVICE *service)
 {
     int ret = 1;
     int self = mxs_worker_get_current_id();
-    ss_dassert(self);
+    ss_dassert(self >= 0);
     time_t now = time(NULL);
 
     /* Check if refresh rate limit has been exceeded */
