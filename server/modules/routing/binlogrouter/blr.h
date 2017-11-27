@@ -1020,7 +1020,7 @@ extern bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *,
                                    MARIADB_GTID_INFO *);
 extern void blr_start_master_in_main(void* data);
 extern bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
-                                   const char *log_name);
+                                   const MARIADB_GTID_INFO *info_file);
 
 MXS_END_DECLS
 

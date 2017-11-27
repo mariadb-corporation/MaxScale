@@ -2036,7 +2036,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
               (unsigned long)slave->binlog_pos);
 
     /* Check first the requested file exists */
-    if (!blr_binlog_file_exists(router, slave->binlogfile))
+    if (!blr_binlog_file_exists(router, &slave->f_info))
     {
         char errmsg[BINLOG_ERROR_MSG_LEN + 1];
 

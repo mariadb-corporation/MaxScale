@@ -4471,7 +4471,7 @@ bool blr_is_current_binlog(ROUTER_INSTANCE *router,
  *
  */
 bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
-                            const char *log_file)
+                            const MARIADB_GTID_INFO *info_file)
 {
     bool ret = true;
     char path[PATH_MAX + 1] = "";
@@ -4487,7 +4487,11 @@ bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
         // Add prefix
         sprintf(prefix,
                 "%" PRIu32 "/%" PRIu32 "/",
+                info_file ?
+                info_file->gtid_elms.domain_id :
                 router->mariadb10_gtid_domain,
+                info_file ?
+                info_file->gtid_elms.server_id :
                 router->orig_masterid);
         strcat(path, prefix);
     }
