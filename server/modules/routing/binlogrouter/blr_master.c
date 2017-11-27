@@ -1430,13 +1430,50 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     }
                 }
 
-                /** Gather statistics about the replication event types */
+               /**
+                 * Check Event Type limit:
+                 * If supported, gather statistics about
+                 * the replication event types
+                 * else stop replication from master
+                 */
                 int event_limit = router->mariadb10_compat ?
                                   MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 
                 if (hdr.event_type <= event_limit)
                 {
                     router->stats.events[hdr.event_type]++;
+                }
+                else
+                {
+                    char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+                    sprintf(errmsg,
+                            "Event type [%d] not supported yet. "
+                            "Check master server configuration and "
+                            "disable any new feature. "
+                            "Replication from master has been stopped.",
+                            hdr.event_type);
+                    MXS_ERROR(errmsg);
+                    gwbuf_free(pkt);
+                    pkt = NULL;
+
+                    spinlock_acquire(&router->lock);
+
+                    /* Handle error messages */
+                    char* old_errmsg = router->m_errmsg;
+                    router->m_errmsg = MXS_STRDUP_A(errmsg);
+                    router->m_errno = 1235;
+
+                    /* Set state to stopped */
+                    router->master_state = BLRM_SLAVE_STOPPED;
+                    router->stats.n_binlog_errors++;
+
+                    spinlock_release(&router->lock);
+
+                    MXS_FREE(old_errmsg);
+
+                    /* Stop replication */
+                    blr_master_close(router);
+                    return;
                 }
 
                 if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
