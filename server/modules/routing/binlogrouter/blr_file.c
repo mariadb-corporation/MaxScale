@@ -4508,7 +4508,7 @@ bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
         // No file found
         MXS_WARNING("%s: %s, missing binlog file '%s'",
                     router->service->name,
-                    log_file == NULL ?
+                    info_file == NULL ?
                     "ROTATE_EVENT" :
                     "Slave request",
                     path);

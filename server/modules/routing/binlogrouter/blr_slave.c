@@ -2096,6 +2096,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
     GWBUF *fde = blr_slave_read_fde(router, slave);
     if (fde == NULL)
     {
+        char errmsg[BINLOG_ERROR_MSG_LEN + 1];
         snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                  "Cannot read FDE event from file '%s'",
                  slave->binlogfile);
