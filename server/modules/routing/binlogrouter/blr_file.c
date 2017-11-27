@@ -4498,9 +4498,9 @@ bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
 
     // Set final file name full path
     strcat(path,
-           log_file == NULL ?
+           info_file == NULL ?
            router->binlog_name :
-           log_file);
+           info_file->file);
 
     // Check file
     if (access(path, F_OK) == -1 && errno == ENOENT)
