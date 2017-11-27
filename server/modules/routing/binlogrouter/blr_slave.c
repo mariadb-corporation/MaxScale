@@ -1944,6 +1944,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
             errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
             // ERROR
+            slave->seqno++;
             blr_slave_abort_dump_request(slave, errmsg);
 
             slave->state = BLRS_ERRORED;
@@ -2046,6 +2047,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
         errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
         // ERROR
+        slave->seqno++;
         blr_slave_abort_dump_request(slave, errmsg);
 
         slave->state = BLRS_ERRORED;
@@ -2069,7 +2071,13 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
     /* Build and send Fake Rotate Event */
     if (!blr_send_connect_fake_rotate(router, slave))
     {
+        char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+        snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                 "Cannot send Fake Rotate Event for '%s'",
+                 slave->binlogfile);
+        errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
         // ERROR
+        blr_slave_abort_dump_request(slave, errmsg);
         slave->state = BLRS_ERRORED;
         dcb_close(slave->dcb);
         return 1;
@@ -2088,7 +2096,12 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
     GWBUF *fde = blr_slave_read_fde(router, slave);
     if (fde == NULL)
     {
+        snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                 "Cannot read FDE event from file '%s'",
+                 slave->binlogfile);
+        errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
         // ERROR
+        blr_slave_abort_dump_request(slave, errmsg);
         slave->state = BLRS_ERRORED;
         dcb_close(slave->dcb);
         return 1;
@@ -2102,7 +2115,13 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
     {
         if (!blr_slave_send_fde(router, slave, fde))
         {
+            char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                     "Cannot send FDE for file '%s'",
+                     slave->binlogfile);
+            errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
             // ERROR
+            blr_slave_abort_dump_request(slave, errmsg);
             slave->state = BLRS_ERRORED;
             dcb_close(slave->dcb);
             return 1;
@@ -2139,7 +2158,13 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
                                      slave->mariadb_gtid,
                                      router->masterid))
         {
+            char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                     "Cannot send Fake GTID List Event for '%s'",
+                     slave->binlogfile);
+            errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
             // ERROR
+            blr_slave_abort_dump_request(slave, errmsg);
             slave->state = BLRS_ERRORED;
             dcb_close(slave->dcb);
             return 1;
@@ -6783,10 +6808,24 @@ static bool blr_slave_gtid_request(ROUTER_INSTANCE *router,
                             SQLITE_OPEN_READONLY,
                             NULL) != SQLITE_OK)
         {
-            MXS_ERROR("Slave %lu: failed to open GTID maps db '%s': %s",
+            char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+            snprintf(errmsg,
+                     BINLOG_ERROR_MSG_LEN,
+                     "Slave %lu: failed to open GTID maps db '%s': %s",
                       (unsigned long)slave->serverid,
                       dbpath,
                       sqlite3_errmsg(slave->gtid_maps));
+            errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
+
+            MXS_ERROR("%s", errmsg);
+            strcpy(slave->binlogfile, "");
+            slave->binlog_pos = 0;
+            blr_send_custom_error(slave->dcb,
+                                  slave->seqno + 1,
+                                  0,
+                                  "Cannot open GTID maps storage.",
+                                  "HY000",
+                                  BINLOG_FATAL_ERROR_READING);
 
             slave->gtid_maps = NULL;
             return false;
@@ -9077,7 +9116,7 @@ static void blr_slave_abort_dump_request(ROUTER_SLAVE *slave,
               errmsg);
 
     blr_send_custom_error(slave->dcb,
-                          slave->seqno + 1,
+                          slave->seqno++,
                           0,
                           errmsg,
                           "HY000",
