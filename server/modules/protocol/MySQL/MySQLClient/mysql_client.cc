@@ -426,8 +426,8 @@ int gw_read_client_event(DCB* dcb)
     MySQLProtocol *protocol;
     GWBUF *read_buffer = NULL;
     int return_code = 0;
-    int nbytes_read = 0;
-    int max_bytes = 0;
+    uint32_t nbytes_read = 0;
+    uint32_t max_bytes = 0;
 
     CHK_DCB(dcb);
     if (dcb->dcb_role != DCB_ROLE_CLIENT_HANDLER)
@@ -490,20 +490,23 @@ int gw_read_client_event(DCB* dcb)
      *
      */
     case MXS_AUTH_STATE_MESSAGE_READ:
-        /* After this call read_buffer will point to freed data */
-        dcb_readq_set(dcb, read_buffer);
-        if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
-                                (int)(MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
-            (0 != max_bytes && nbytes_read < max_bytes) ||
-            (read_buffer = modutil_get_next_MySQL_packet(&dcb->readq)) == NULL)
+        if (nbytes_read < 3 ||
+            (0 == max_bytes && nbytes_read < MYSQL_GET_PACKET_LEN(read_buffer)) ||
+            (0 != max_bytes && nbytes_read < max_bytes))
         {
-            return 0;
+            dcb_readq_append(dcb, read_buffer);
         }
+        else
+        {
+            if (nbytes_read > MYSQL_GET_PACKET_LEN(read_buffer))
+            {
+                // We read more data than was needed
+                dcb_readq_append(dcb, read_buffer);
+                read_buffer = modutil_get_next_MySQL_packet(&dcb->readq);
+            }
 
-        ss_dassert(read_buffer);
-        nbytes_read = gwbuf_length(read_buffer);
-
-        return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
+            return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
+        }
         break;
 
     /**
@@ -1399,7 +1402,7 @@ static int gw_client_close(DCB *dcb)
 /**
  * Handle a hangup event on the client side descriptor.
  *
- * We simply close the DCB, this will propogate the closure to any
+ * We simply close the DCB, this will propagate the closure to any
  * backend descriptors and perform the session cleanup.
  *
  * @param dcb           The DCB of the connection
@@ -1421,6 +1424,7 @@ static int gw_client_hangup_event(DCB *dcb)
         goto retblock;
     }
 
+    modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
     dcb_close(dcb);
 
 retblock:

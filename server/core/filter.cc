@@ -15,7 +15,7 @@
  * @file filter.c  - A representation of a filter within MaxScale.
  */
 
-#include "maxscale/filter.h"
+#include "internal/filter.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,8 +32,8 @@
 #include <maxscale/filter.hh>
 #include <maxscale/json_api.h>
 
-#include "maxscale/config.h"
-#include "maxscale/modules.h"
+#include "internal/config.h"
+#include "internal/modules.h"
 
 using std::string;
 using std::set;

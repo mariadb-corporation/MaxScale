@@ -82,6 +82,8 @@ static bool admin_dump_users(USERS* users, const char* fname)
         rval = false;
     }
 
+    json_decref(json);
+
     return rval;
 }
 

@@ -366,7 +366,7 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         }
 
         /* Set to require peer (client) certificate verification */
-        if (ssl_listener->ssl_cert_verify_depth)
+        if (ssl_listener->ssl_verify_peer_certificate)
         {
             SSL_CTX_set_verify(ssl_listener->ctx, SSL_VERIFY_PEER, NULL);
         }
@@ -458,57 +458,7 @@ static bool create_listener_config(const SERV_LISTENER *listener, const char *fi
 
     if (listener->ssl)
     {
-        dprintf(file, "ssl=required\n");
-
-        if (listener->ssl->ssl_cert)
-        {
-            dprintf(file, "ssl_cert=%s\n", listener->ssl->ssl_cert);
-        }
-
-        if (listener->ssl->ssl_key)
-        {
-            dprintf(file, "ssl_key=%s\n", listener->ssl->ssl_key);
-        }
-
-        if (listener->ssl->ssl_ca_cert)
-        {
-            dprintf(file, "ssl_ca_cert=%s\n", listener->ssl->ssl_ca_cert);
-        }
-        if (listener->ssl->ssl_cert_verify_depth)
-        {
-            dprintf(file, "ssl_cert_verify_depth=%d\n", listener->ssl->ssl_cert_verify_depth);
-        }
-
-        const char *version = NULL;
-
-        switch (listener->ssl->ssl_method_type)
-        {
-#ifndef OPENSSL_1_1
-        case SERVICE_TLS10:
-            version = "TLSV10";
-            break;
-#endif
-#ifdef OPENSSL_1_0
-        case SERVICE_TLS11:
-            version = "TLSV11";
-            break;
-
-        case SERVICE_TLS12:
-            version = "TLSV12";
-            break;
-#endif
-        case SERVICE_SSL_TLS_MAX:
-            version = "MAX";
-            break;
-
-        default:
-            break;
-        }
-
-        if (version)
-        {
-            dprintf(file, "ssl_version=%s\n", version);
-        }
+        write_ssl_config(file, listener->ssl);
     }
 
     close(file);

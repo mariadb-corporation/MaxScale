@@ -49,7 +49,7 @@
 #include <maxscale/version.h>
 
 // This isn't really a clean way of testing
-#include "../../../../core/maxscale/service.h"
+#include "../../../../core/internal/service.h"
 
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);

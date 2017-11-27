@@ -1380,3 +1380,26 @@ void Mariadb_nodes::close_active_connections()
         }
     }
 }
+
+void Mariadb_nodes::stash_server_settings(int node)
+{
+    ssh_node(node, true, "sudo mkdir /etc/my.cnf.d.backup");
+    ssh_node(node, true, "sudo cp -r /etc/my.cnf.d/* /etc/my.cnf.d.backup/");
+}
+
+void Mariadb_nodes::restore_server_settings(int node)
+{
+     ssh_node(node, true, "sudo mv -f /etc/my.cnf.d.backup/* /etc/my.cnf.d/");
+}
+
+void Mariadb_nodes::disable_server_setting(int node, const char* setting)
+{
+    ssh_node(node, true, "sudo sed -i 's/%s/#%s/' /etc/my.cnf.d/*", setting, setting);
+}
+
+void Mariadb_nodes::add_server_setting(int node, const char* setting)
+{
+    ssh_node(node, true, "sudo sed -i '$a [server]' /etc/my.cnf.d/server.cnf", setting);
+    ssh_node(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/server.cnf", setting);
+}
+

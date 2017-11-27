@@ -155,6 +155,7 @@ extern const char CN_SSL[];
 extern const char CN_SSL_CA_CERT[];
 extern const char CN_SSL_CERT[];
 extern const char CN_SSL_CERT_VERIFY_DEPTH[];
+extern const char CN_SSL_VERIFY_PEER_CERTIFICATE[];
 extern const char CN_SSL_KEY[];
 extern const char CN_SSL_VERSION[];
 extern const char CN_STRIP_DB_ESC[];

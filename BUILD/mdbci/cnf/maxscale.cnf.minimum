@@ -1,0 +1,15 @@
+[maxscale]
+threads=4
+log_warning=1
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+#address=localhost
+socket=default
+

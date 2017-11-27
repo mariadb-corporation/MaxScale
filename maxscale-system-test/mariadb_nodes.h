@@ -442,6 +442,38 @@ public:
      */
     bool fix_replication();
 
+    /**
+     * Copy current server settings to a backup directory. Any old backups are overwritten.
+     *
+     * @param node Node to modify
+     */
+    void stash_server_settings(int node);
+
+    /**
+     * Restore server settings from a backup directory. Current settings files are overwritten and
+     * backup settings files are removed.
+     *
+     * @param node Node to modify
+     */
+    void restore_server_settings(int node);
+
+    /**
+     * Comment any line starting with the given setting name in server settings files.
+     *
+     * @param node Node to modify
+     * @param setting Setting to remove
+     */
+    void disable_server_setting(int node, const char* setting);
+
+    /**
+     * Add the following lines to the /etc/mysql.cnf.d/server.cnf-file:
+     * [server]
+     * parameter
+     *
+     * @param node Node to modify
+     * @param setting Line to add
+     */
+    void add_server_setting(int node, const char* setting);
 private:
 
     int check_node_ssh(int node);

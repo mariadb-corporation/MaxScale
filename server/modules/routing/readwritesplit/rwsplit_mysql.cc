@@ -160,8 +160,11 @@ log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
         unsigned char command = packet[4];
         int len = 0;
         char* sql;
-        modutil_extract_SQL(querybuf, &sql, &len);
         char *qtypestr = qc_typemask_to_string(qtype);
+        if (!modutil_extract_SQL(querybuf, &sql, &len))
+        {
+            sql = (char*)"<non-SQL>";
+        }
 
         if (len > RWSPLIT_TRACE_MSG_LEN)
         {

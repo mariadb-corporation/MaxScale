@@ -116,17 +116,21 @@ Type of data to log in the log files. Parameter value is a comma separated list
 of the following values. By default the _date_, _user_ and _query_ options are
 enabled.
 
-|Value   | Description                                       |
-|--------|---------------------------------------------------|
-|service | Log service name                                  |
-|session | Log unique session id (ignored for session-files) |
-|date    | Log timestamp                                     |
-|user    | Log user and hostname of client                   |
-|query   | Log the actual query                              |
+| Value       | Description                                      |
+| --------    |--------------------------------------------------|
+| service     | Service name                                     |
+| session     | Unique session id (ignored for session files)    |
+| date        | Timestamp                                        |
+| user        | User and hostname of client                      |
+| reply_time  | Response time (ms until first reply from server) |
+| query       | Query                                            |
 
 ```
 log_data=date, user, query
 ```
+
+If *reply_time* is enabled, the log entry is written when the first reply from server is received.
+Otherwise, the entry is written when receiving query from client.
 
 ### `flush`
 

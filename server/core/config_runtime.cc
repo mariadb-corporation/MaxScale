@@ -13,7 +13,7 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include "maxscale/config_runtime.h"
+#include "internal/config_runtime.h"
 
 #include <strings.h>
 #include <string>
@@ -31,10 +31,10 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/users.h>
 
-#include "maxscale/config.h"
-#include "maxscale/monitor.h"
-#include "maxscale/modules.h"
-#include "maxscale/service.h"
+#include "internal/config.h"
+#include "internal/monitor.h"
+#include "internal/modules.h"
+#include "internal/service.h"
 
 typedef std::set<std::string> StringSet;
 
@@ -474,7 +474,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival);
+            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival, CN_BACKEND_CONNECT_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_WRITE_TIMEOUT) == 0)
@@ -483,7 +483,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
+            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival, CN_BACKEND_WRITE_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_READ_TIMEOUT) == 0)
@@ -492,7 +492,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
+            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival, CN_BACKEND_READ_TIMEOUT);
         }
     }
     else if (strcmp(key, CN_BACKEND_CONNECT_ATTEMPTS) == 0)
@@ -501,7 +501,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
         if (ival)
         {
             valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS, ival);
+            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS, ival, CN_BACKEND_CONNECT_ATTEMPTS);
         }
     }
     else if (strcmp(key, CN_JOURNAL_MAX_AGE) == 0)

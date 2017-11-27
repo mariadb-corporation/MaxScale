@@ -252,6 +252,9 @@ add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABE
 # MySQL Monitor Failover Test
 add_test_executable(failover_mysqlmon.cpp failover_mysqlmon failover_mysqlmon LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor Real Failover Test
+add_test_executable(failover_mysqlmon_mrm.cpp failover_mysqlmon_mrm failover_mysqlmon_mrm LABELS mysqlmon REPL_BACKEND)
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
@@ -508,6 +511,10 @@ add_test_executable(mxs1468.cpp mxs1468 mxs1468 LABELS REPL_BACKEND)
 # MXS-1493: Use replication heartbeat in mysqlmon
 # https://jira.mariadb.org/browse/MXS-1493
 add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS REPL_BACKEND)
+
+# MXS-1476: priority value ignored when a Galera node rejoins with a lower wsrep_local_index than current master
+# https://jira.mariadb.org/browse/MXS-1476
+add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS GALERA_BACKEND)
 
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)

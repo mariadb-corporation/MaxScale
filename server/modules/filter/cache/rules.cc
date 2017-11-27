@@ -1352,9 +1352,9 @@ static bool cache_rule_matches_column_simple(CACHE_RULE *self, const char *defau
         {
             matches = !matches;
         }
-    }
 
-    ++i;
+        ++i;
+    }
 
     if (tables)
     {

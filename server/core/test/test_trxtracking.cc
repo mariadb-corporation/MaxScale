@@ -17,7 +17,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
-#include "../core/maxscale/query_classifier.h"
+#include "../core/internal/query_classifier.h"
 
 using namespace std;
 

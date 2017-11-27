@@ -14,7 +14,7 @@
 /**
  * @file The embedded HTTP protocol administrative interface
  */
-#include "maxscale/admin.hh"
+#include "internal/admin.hh"
 
 #include <climits>
 #include <new>
@@ -35,7 +35,7 @@
 #include <maxscale/http.hh>
 #include <maxscale/adminusers.h>
 
-#include "maxscale/resource.hh"
+#include "internal/resource.hh"
 
 using std::string;
 using std::ifstream;

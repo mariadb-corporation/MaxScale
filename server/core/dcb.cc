@@ -20,7 +20,7 @@
  * the state data and pointers to other components that relate to the
  * use of a file descriptor.
  */
-#include "maxscale/dcb.h"
+#include "internal/dcb.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -54,12 +54,12 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/semaphore.hh>
 
-#include "maxscale/modules.h"
-#include "maxscale/semaphore.hh"
-#include "maxscale/session.h"
-#include "maxscale/worker.hh"
-#include "maxscale/workertask.hh"
+#include "internal/modules.h"
+#include "internal/session.h"
+#include "internal/worker.hh"
+#include "internal/workertask.hh"
 
 using maxscale::Worker;
 using maxscale::WorkerTask;
@@ -1295,7 +1295,7 @@ dcb_maybe_add_persistent(DCB *dcb)
     {
         MXS_DEBUG("Not adding DCB %p to persistent pool, "
                   "user %s, max for pool %ld, error handle called %s, hung flag %s, "
-                  "server status %d, pool count %d.",
+                  "server status %lu, pool count %d.",
                   dcb, dcb->user ? dcb->user : "",
                   dcb->server->persistpoolmax,
                   dcb->dcb_errhandle_called ? "true" : "false",

@@ -705,7 +705,7 @@ public:
             char database[nDatabase + 1];
             char table[nTable + 1];
 
-            if (should_collect_database)
+            if (zDatabase)
             {
                 strcpy(database, zDatabase);
                 exposed_sqlite3Dequote(database);

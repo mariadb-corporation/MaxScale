@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include "maxscale/resource.hh"
+#include "internal/resource.hh"
 
 #include <list>
 #include <sstream>
@@ -25,15 +25,15 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/modulecmd.h>
 
-#include "maxscale/httprequest.hh"
-#include "maxscale/httpresponse.hh"
-#include "maxscale/session.h"
-#include "maxscale/filter.h"
-#include "maxscale/monitor.h"
-#include "maxscale/service.h"
-#include "maxscale/config_runtime.h"
-#include "maxscale/modules.h"
-#include "maxscale/worker.h"
+#include "internal/httprequest.hh"
+#include "internal/httpresponse.hh"
+#include "internal/session.h"
+#include "internal/filter.h"
+#include "internal/monitor.h"
+#include "internal/service.h"
+#include "internal/config_runtime.h"
+#include "internal/modules.h"
+#include "internal/worker.h"
 
 using std::list;
 using std::map;

@@ -646,11 +646,6 @@ createInstance(SERVICE *service, char **options)
             }
         }
     }
-    else
-    {
-        MXS_ERROR("%s: Error: No router options supplied for binlogrouter",
-                  service->name);
-    }
 
     inst->orig_masterid = 0;
     inst->mariadb10_gtid_domain = BLR_DEFAULT_GTID_DOMAIN_ID;
@@ -831,6 +826,7 @@ createInstance(SERVICE *service, char **options)
         ssl_cfg->ssl_init_done = false;
         ssl_cfg->ssl_method_type = SERVICE_SSL_TLS_MAX;
         ssl_cfg->ssl_cert_verify_depth = 9;
+        ssl_cfg->ssl_verify_peer_certificate = true;
 
         /** Set SSL pointer in in server struct */
         server->server_ssl = ssl_cfg;
@@ -872,10 +868,10 @@ createInstance(SERVICE *service, char **options)
     {
         if (rc == -1)
         {
-            MXS_ERROR("%s: master.ini file not found in %s."
-                      " Master registration cannot be started."
-                      " Configure with CHANGE MASTER TO ...",
-                      inst->service->name, inst->binlogdir);
+            MXS_WARNING("%s: master.ini file not found in %s."
+                        " Master registration cannot be started."
+                        " Configure with CHANGE MASTER TO ...",
+                        inst->service->name, inst->binlogdir);
         }
         else
         {

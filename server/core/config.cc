@@ -39,18 +39,18 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/paths.h>
+#include <maxscale/router.h>
 #include <maxscale/json_api.h>
 #include <maxscale/http.hh>
 #include <maxscale/version.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/hk_heartbeat.h>
 
-#include "maxscale/config.h"
-#include "maxscale/filter.h"
-#include "maxscale/service.h"
-#include "maxscale/monitor.h"
-#include "maxscale/modules.h"
-#include "maxscale/router.h"
+#include "internal/config.h"
+#include "internal/filter.h"
+#include "internal/service.h"
+#include "internal/monitor.h"
+#include "internal/modules.h"
 
 using std::set;
 using std::string;
@@ -134,6 +134,7 @@ const char CN_SSL[]                           = "ssl";
 const char CN_SSL_CA_CERT[]                   = "ssl_ca_cert";
 const char CN_SSL_CERT[]                      = "ssl_cert";
 const char CN_SSL_CERT_VERIFY_DEPTH[]         = "ssl_cert_verify_depth";
+const char CN_SSL_VERIFY_PEER_CERTIFICATE[]   = "ssl_verify_peer_certificate";
 const char CN_SSL_KEY[]                       = "ssl_key";
 const char CN_SSL_VERSION[]                   = "ssl_version";
 const char CN_STRIP_DB_ESC[]                  = "strip_db_esc";
@@ -231,6 +232,7 @@ const char *config_listener_params[] =
     CN_SSL_KEY,
     CN_SSL_VERSION,
     CN_SSL_CERT_VERIFY_DEPTH,
+    CN_SSL_VERIFY_PEER_CERTIFICATE,
     NULL
 };
 
@@ -279,6 +281,7 @@ const char *server_params[] =
     CN_SSL_KEY,
     CN_SSL_VERSION,
     CN_SSL_CERT_VERIFY_DEPTH,
+    CN_SSL_VERIFY_PEER_CERTIFICATE,
     CN_PROXY_PROTOCOL,
     NULL
 };
@@ -1687,7 +1690,10 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
             ssl_ca_cert = config_get_value(obj->parameters, CN_SSL_CA_CERT);
             ssl_version = config_get_value(obj->parameters, CN_SSL_VERSION);
             ssl_cert_verify_depth = config_get_value(obj->parameters, CN_SSL_CERT_VERIFY_DEPTH);
+            const char* ssl_verify_peer_certificate = config_get_value(obj->parameters, CN_SSL_VERIFY_PEER_CERTIFICATE);
             new_ssl->ssl_init_done = false;
+            new_ssl->ssl_cert_verify_depth = 9; // Default of 9 as per Linux man page
+            new_ssl->ssl_verify_peer_certificate = true;
 
             if (ssl_version)
             {
@@ -1710,12 +1716,20 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
                     local_errors++;
                 }
             }
-            else
+
+            if (ssl_verify_peer_certificate)
             {
-                /**
-                 * Default of 9 as per Linux man page
-                 */
-                new_ssl->ssl_cert_verify_depth = 9;
+                int rv = config_truth_value(ssl_verify_peer_certificate);
+                if (rv == -1)
+                {
+                    MXS_ERROR("Invalid parameter value for 'ssl_verify_peer_certificate"
+                              " for service '%s': %s", obj->object, ssl_verify_peer_certificate);
+                    local_errors++;
+                }
+                else
+                {
+                    new_ssl->ssl_verify_peer_certificate = rv;
+                }
             }
 
             listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);
@@ -3239,7 +3253,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *connect_timeout = config_get_value(obj->parameters, CN_BACKEND_CONNECT_TIMEOUT);
         if (connect_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, atoi(connect_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT,
+                                          atoi(connect_timeout), CN_BACKEND_CONNECT_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_TIMEOUT);
                 error_count++;
@@ -3249,7 +3264,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *read_timeout = config_get_value(obj->parameters, CN_BACKEND_READ_TIMEOUT);
         if (read_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, atoi(read_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT,
+                                          atoi(read_timeout), CN_BACKEND_READ_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_READ_TIMEOUT);
                 error_count++;
@@ -3259,7 +3275,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *write_timeout = config_get_value(obj->parameters, CN_BACKEND_WRITE_TIMEOUT);
         if (write_timeout)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, atoi(write_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT,
+                                          atoi(write_timeout), CN_BACKEND_WRITE_TIMEOUT))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_WRITE_TIMEOUT);
                 error_count++;
@@ -3269,7 +3286,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *connect_attempts = config_get_value(obj->parameters, CN_BACKEND_CONNECT_ATTEMPTS);
         if (connect_attempts)
         {
-            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS, atoi(connect_attempts)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS,
+                                          atoi(connect_attempts), CN_BACKEND_CONNECT_ATTEMPTS))
             {
                 MXS_ERROR("Failed to set '%s'", CN_BACKEND_CONNECT_ATTEMPTS);
                 error_count++;
@@ -3489,6 +3507,7 @@ bool config_is_ssl_parameter(const char *key)
         CN_SSL_KEY,
         CN_SSL_VERSION,
         CN_SSL_CERT_VERIFY_DEPTH,
+        CN_SSL_VERIFY_PEER_CERTIFICATE,
         NULL
     };
 

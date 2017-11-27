@@ -532,6 +532,7 @@ typedef struct router_slave
     char              *mariadb_gtid;  /*< MariaDB 10 Slave connects with GTID */
     sqlite3           *gtid_maps;     /*< GTID storage client handle, read only*/
     MARIADB_GTID_INFO f_info;         /*< GTID info for file name prefix */
+    bool              annotate_rows;  /*< MariaDB 10 Slave requests ANNOTATE_ROWS */
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif

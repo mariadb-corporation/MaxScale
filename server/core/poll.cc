@@ -35,8 +35,8 @@
 #include <maxscale/platform.h>
 #include <maxscale/server.h>
 #include <maxscale/statistics.h>
-#include "maxscale/poll.h"
-#include "maxscale/worker.hh"
+#include "internal/poll.h"
+#include "internal/worker.hh"
 
 using maxscale::Worker;
 

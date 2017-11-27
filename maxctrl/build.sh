@@ -6,9 +6,15 @@ then
     exit 1
 fi
 
-# Copy sources to working directory
 src=$1
-cp -r -t $PWD/maxctrl $src/maxctrl/* && cd $PWD/maxctrl
+
+if [ "$PWD" != "$src" ]
+then
+    # Copy sources to working directory
+    cp -r -t $PWD/maxctrl $src/maxctrl/*
+fi
+
+cd $PWD/maxctrl
 
 npm install
 npm install pkg@4.2.3

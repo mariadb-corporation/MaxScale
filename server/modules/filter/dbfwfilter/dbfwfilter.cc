@@ -67,6 +67,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <sstream>
+#include <map>
 
 #include <maxscale/atomic.h>
 #include <maxscale/modulecmd.h>
@@ -97,16 +98,27 @@ namespace
 {
 
 /** The rules and users for each thread */
-struct DbfwThread
+class DbfwThread
 {
-    DbfwThread():
-        rule_version(0)
-    {
-    }
+public:
+    int&      rule_version(const Dbfw* d) { return m_instance_data[d].rule_version; }
+    RuleList& rules(const Dbfw* d) { return m_instance_data[d].rules; }
+    UserMap&  users(const Dbfw* d) { return m_instance_data[d].users; }
 
-    int        rule_version;
-    RuleList   rules;
-    UserMap    users;
+private:
+    class Data
+    {
+    public:
+        Data()
+            : rule_version(0)
+        {}
+
+        int      rule_version;
+        RuleList rules;
+        UserMap  users;
+    };
+
+    std::map<const Dbfw*, Data> m_instance_data;
 };
 
 thread_local DbfwThread* this_thread = NULL;
@@ -140,7 +152,7 @@ static json_t* rules_to_json(const RuleList& rules)
 {
     json_t* rval = json_array();
 
-    for (RuleList::const_iterator it = this_thread->rules.begin(); it != this_thread->rules.end(); it++)
+    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
         const SRule& rule = *it;
         json_array_append_new(rval, rule_to_json(rule));
@@ -410,7 +422,10 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
 
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
-    if (this_thread->rules.empty() || this_thread->users.empty())
+    RuleList& rules = this_thread->rules(inst);
+    UserMap& users = this_thread->users(inst);
+
+    if (rules.empty() || users.empty())
     {
         if (!replace_rules(inst))
         {
@@ -418,7 +433,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv, json_t** output)
         }
     }
 
-    for (RuleList::const_iterator it = this_thread->rules.begin(); it != this_thread->rules.end(); it++)
+    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
         const SRule& rule = *it;
         char buf[rule->name().length() + 200]; // Some extra space
@@ -436,7 +451,10 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
 
     json_t* arr = json_array();
 
-    if (this_thread->rules.empty() || this_thread->users.empty())
+    RuleList& rules = this_thread->rules(inst);
+    UserMap& users = this_thread->users(inst);
+
+    if (rules.empty() || users.empty())
     {
         if (!replace_rules(inst))
         {
@@ -444,7 +462,7 @@ bool dbfw_show_rules_json(const MODULECMD_ARG *argv, json_t** output)
         }
     }
 
-    for (RuleList::const_iterator it = this_thread->rules.begin(); it != this_thread->rules.end(); it++)
+    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
         const SRule& rule = *it;
         json_array_append_new(arr, rule_to_json(rule));
@@ -870,11 +888,11 @@ void define_columns_rule(void* scanner)
  *
  * @param scanner Current scanner
  */
-void define_function_rule(void* scanner)
+void define_function_rule(void* scanner, bool inverted)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->add(new FunctionRule(rstack->name, rstack->values));
+    rstack->add(new FunctionRule(rstack->name, rstack->values, inverted));
 }
 
 /**
@@ -894,11 +912,11 @@ void define_function_usage_rule(void* scanner)
  *
  * @param scanner Current scanner
  */
-void define_column_function_rule(void* scanner)
+void define_column_function_rule(void* scanner, bool inverted)
 {
     struct parser_stack* rstack = (struct parser_stack*)dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    rstack->add(new ColumnFunctionRule(rstack->name, rstack->values, rstack->auxiliary_values));
+    rstack->add(new ColumnFunctionRule(rstack->name, rstack->values, rstack->auxiliary_values, inverted));
 }
 
 /**
@@ -1092,11 +1110,11 @@ bool replace_rules(Dbfw* instance)
 
     if (process_rule_file(filename, &rules, &users))
     {
-        this_thread->rules.swap(rules);
-        this_thread->users.swap(users);
+        this_thread->rules(instance).swap(rules);
+        this_thread->users(instance).swap(users);
         rval = true;
     }
-    else if (!this_thread->rules.empty() && !this_thread->users.empty())
+    else if (!this_thread->rules(instance).empty() && !this_thread->users(instance).empty())
     {
         MXS_ERROR("Failed to parse rules at '%s'. Old rules are still used.",
                   filename.c_str());
@@ -1116,25 +1134,40 @@ static bool update_rules(Dbfw* my_instance)
     bool rval = true;
     int rule_version = my_instance->get_rule_version();
 
-    if (this_thread->rule_version < rule_version)
+    if (this_thread->rule_version(my_instance) < rule_version)
     {
         if (!replace_rules(my_instance))
         {
             rval = false;
         }
 
-        this_thread->rule_version = rule_version;
+        this_thread->rule_version(my_instance) = rule_version;
     }
 
     return rval;
 }
+
+namespace
+{
+
+/**
+ * Global rule version. Every time a Dbfw instance is created, its rule version will
+ * be the value of this variable, which is then incremented by one.
+ *
+ * This is to ensure that each created Dbfw instance  will have a unique set of rules,
+ * irrespective of whether a new instance is created in exactly the same memory location
+ * where an earlier, now deleted instance existed.
+ */
+int global_version = 1;
+
+};
 
 Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params):
     m_action((enum fw_actions)config_get_enum(params, "action", action_values)),
     m_log_match(0),
     m_lock(SPINLOCK_INIT),
     m_filename(config_get_string(params, "rules")),
-    m_version(1)
+    m_version(atomic_add(&global_version, 1))
 {
     if (config_get_bool(params, "log_match"))
     {
@@ -1254,11 +1287,16 @@ static SUser find_user_data(const UserMap& users, std::string name, std::string 
         if (it == users.end())
         {
             snprintf(nameaddr, sizeof(nameaddr), "%%@%s", remote.c_str());
-            ip_start = strchr(nameaddr, '@') + 1;
+            it = users.find(nameaddr);
 
-            while (it == users.end() && next_ip_class(ip_start))
+            if (it == users.end())
             {
-                it = users.find(nameaddr);
+                ip_start = strchr(nameaddr, '@') + 1;
+
+                while (it == users.end() && next_ip_class(ip_start))
+                {
+                    it = users.find(nameaddr);
+                }
             }
         }
     }
@@ -1409,7 +1447,7 @@ int DbfwSession::routeQuery(GWBUF* buffer)
             ss_dassert(analyzed_queue);
         }
 
-        SUser suser = find_user_data(this_thread->users, user(), remote());
+        SUser suser = find_user_data(this_thread->users(m_instance), user(), remote());
         bool query_ok = false;
 
         if (command_is_mandatory(buffer))
@@ -1673,7 +1711,9 @@ void Dbfw::diagnostics(DCB *dcb) const
     dcb_printf(dcb, "Firewall Filter\n");
     dcb_printf(dcb, "Rule, Type, Times Matched\n");
 
-    for (RuleList::const_iterator it = this_thread->rules.begin(); it != this_thread->rules.end(); it++)
+    RuleList& rules = this_thread->rules(this);
+
+    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
     {
         const SRule& rule = *it;
         char buf[rule->name().length() + 200];
@@ -1694,5 +1734,5 @@ void Dbfw::diagnostics(DCB *dcb) const
  */
 json_t* Dbfw::diagnostics_json() const
 {
-    return rules_to_json(this_thread->rules);
+    return rules_to_json(this_thread->rules(this));
 }

@@ -56,12 +56,12 @@
 
 #include <debugcli.h>
 
-#include "../../../core/maxscale/config_runtime.h"
-#include "../../../core/maxscale/maxscale.h"
-#include "../../../core/maxscale/modules.h"
-#include "../../../core/maxscale/monitor.h"
-#include "../../../core/maxscale/poll.h"
-#include "../../../core/maxscale/session.h"
+#include "../../../core/internal/config_runtime.h"
+#include "../../../core/internal/maxscale.h"
+#include "../../../core/internal/modules.h"
+#include "../../../core/internal/monitor.h"
+#include "../../../core/internal/poll.h"
+#include "../../../core/internal/session.h"
 
 #define MAXARGS 12
 

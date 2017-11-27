@@ -72,7 +72,7 @@ void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params);
 bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
 
 void monitorSetInterval (MXS_MONITOR *, unsigned long);
-bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
+bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int, const char*);
 void monitorSetJournalMaxAge(MXS_MONITOR *mon, time_t value);
 void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value);
 

@@ -36,7 +36,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
 
-#include "../maxscale/service.h"
+#include "../internal/service.h"
 #include "test_utils.h"
 
 /**

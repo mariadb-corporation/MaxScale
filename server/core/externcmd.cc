@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxscale/externcmd.h"
+#include "internal/externcmd.h"
 
 #include <ctype.h>
 #include <errno.h>

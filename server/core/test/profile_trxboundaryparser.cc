@@ -15,7 +15,7 @@
 #include <iomanip>
 #include <iostream>
 #include <maxscale/paths.h>
-#include "../maxscale/trxboundaryparser.hh"
+#include "../internal/trxboundaryparser.hh"
 
 using namespace std;
 

@@ -34,7 +34,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/random_jkiss.h>
 
-#include "maxscale/secrets.h"
+#include "internal/secrets.h"
 
 #ifdef HAVE_GLIBC
 struct option options[] =

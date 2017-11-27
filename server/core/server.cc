@@ -41,10 +41,10 @@
 #include <maxscale/http.hh>
 #include <maxscale/maxscale.h>
 
-#include "maxscale/monitor.h"
-#include "maxscale/poll.h"
-#include "maxscale/workertask.hh"
-#include "maxscale/worker.hh"
+#include "internal/monitor.h"
+#include "internal/poll.h"
+#include "internal/workertask.hh"
+#include "internal/worker.hh"
 
 using maxscale::Semaphore;
 using maxscale::Worker;
@@ -578,6 +578,7 @@ dprintServer(DCB *dcb, const SERVER *server)
         dcb_printf(dcb, "\tSSL method type:                     %s\n",
                    ssl_method_type_to_string(l->ssl_method_type));
         dcb_printf(dcb, "\tSSL certificate verification depth:  %d\n", l->ssl_cert_verify_depth);
+        dcb_printf(dcb, "\tSSL peer verification :  %s\n", l->ssl_verify_peer_certificate ? "true" : "false");
         dcb_printf(dcb, "\tSSL certificate:                     %s\n",
                    l->ssl_cert ? l->ssl_cert : "null");
         dcb_printf(dcb, "\tSSL key:                             %s\n",
@@ -672,7 +673,7 @@ server_status(const SERVER *server)
         return NULL;
     }
 
-    unsigned int server_status = server->status;
+    uint64_t server_status = server->status;
     status[0] = 0;
     if (server_status & SERVER_MAINT)
     {
@@ -732,7 +733,7 @@ server_status(const SERVER *server)
  * @param bit           The bit to set for the server
  */
 void
-server_set_status_nolock(SERVER *server, unsigned bit)
+server_set_status_nolock(SERVER *server, uint64_t bit)
 {
     server->status |= bit;
 
@@ -753,7 +754,7 @@ server_set_status_nolock(SERVER *server, unsigned bit)
  * @param bit           The bit to set for the server
  */
 void
-server_clear_set_status(SERVER *server, unsigned specified_bits, unsigned bits_to_set)
+server_clear_set_status(SERVER *server, uint64_t specified_bits, uint64_t bits_to_set)
 {
     /** clear error logged flag before the next failure */
     if ((bits_to_set & SERVER_MASTER) && ((server->status & SERVER_MASTER) == 0))
@@ -774,7 +775,7 @@ server_clear_set_status(SERVER *server, unsigned specified_bits, unsigned bits_t
  * @param bit           The bit to clear for the server
  */
 void
-server_clear_status_nolock(SERVER *server, unsigned bit)
+server_clear_status_nolock(SERVER *server, uint64_t bit)
 {
     server->status &= ~bit;
 }
@@ -1052,8 +1053,8 @@ server_update_port(SERVER *server, unsigned short port)
 
 static struct
 {
-    const char     *str;
-    unsigned int    bit;
+    const char* str;
+    uint64_t    bit;
 } ServerBits[] =
 {
     { "running",     SERVER_RUNNING },
@@ -1073,7 +1074,7 @@ static struct
  * @param str   String representation
  * @return bit value or 0 on error
  */
-unsigned int
+uint64_t
 server_map_status(const char *str)
 {
     int i;
@@ -1203,57 +1204,7 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
     if (server->server_ssl)
     {
-        dprintf(file, "%s=required\n", CN_SSL);
-
-        if (server->server_ssl->ssl_cert)
-        {
-            dprintf(file, "%s=%s\n", CN_SSL_CERT, server->server_ssl->ssl_cert);
-        }
-
-        if (server->server_ssl->ssl_key)
-        {
-            dprintf(file, "%s=%s\n", CN_SSL_KEY, server->server_ssl->ssl_key);
-        }
-
-        if (server->server_ssl->ssl_ca_cert)
-        {
-            dprintf(file, "%s=%s\n", CN_SSL_CA_CERT, server->server_ssl->ssl_ca_cert);
-        }
-        if (server->server_ssl->ssl_cert_verify_depth)
-        {
-            dprintf(file, "%s=%d\n", CN_SSL_CERT_VERIFY_DEPTH, server->server_ssl->ssl_cert_verify_depth);
-        }
-
-        const char *version = NULL;
-
-        switch (server->server_ssl->ssl_method_type)
-        {
-#ifndef OPENSSL_1_1
-        case SERVICE_TLS10:
-            version = "TLSV10";
-            break;
-#endif
-#ifdef OPENSSL_1_0
-        case SERVICE_TLS11:
-            version = "TLSV11";
-            break;
-
-        case SERVICE_TLS12:
-            version = "TLSV12";
-            break;
-#endif
-        case SERVICE_SSL_TLS_MAX:
-            version = "MAX";
-            break;
-
-        default:
-            break;
-        }
-
-        if (version)
-        {
-            dprintf(file, "%s=%s\n", CN_SSL_VERSION, version);
-        }
+        write_ssl_config(file, server->server_ssl);
     }
 
     close(file);

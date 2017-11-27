@@ -37,13 +37,13 @@
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/json_api.h>
 #include <mysqld_error.h>
 
-#include "maxscale/config.h"
-#include "maxscale/externcmd.h"
-#include "maxscale/monitor.h"
-#include "maxscale/modules.h"
-#include "maxscale/json_api.h"
+#include "internal/config.h"
+#include "internal/externcmd.h"
+#include "internal/monitor.h"
+#include "internal/modules.h"
 
 /** Schema version, journals must have a matching version */
 #define MMB_SCHEMA_VERSION     1
@@ -137,6 +137,7 @@ MXS_MONITOR* monitor_alloc(const char *name, const char *module)
     mon->script_timeout = DEFAULT_SCRIPT_TIMEOUT;
     mon->parameters = NULL;
     mon->server_pending_changes = false;
+    memset(mon->journal_hash, 0, sizeof(mon->journal_hash));
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
     mon->next = allMonitors;
@@ -667,8 +668,7 @@ void monitorSetScriptTimeout(MXS_MONITOR *mon, uint32_t value)
  * @param type          The timeout handling type
  * @param value         The timeout to set
  */
-bool
-monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value)
+bool monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value, const char* key)
 {
     bool rval = true;
 
@@ -694,13 +694,14 @@ monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value)
 
         default:
             MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
+            ss_dassert(!true);
             rval = false;
             break;
         }
     }
     else
     {
-        MXS_ERROR("Negative value for monitor timeout.");
+        MXS_ERROR("Value '%s' for monitor '%s' is not a positive integer: %d", key, mon->name, value);
         rval = false;
     }
     return rval;
@@ -2262,27 +2263,39 @@ void store_server_journal(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master)
 
     if (data)
     {
-        /** Store the data in memory first */
+        /** Store the data in memory first and compare the current hash to
+         * the hash of the last stored journal. This isn't a fool-proof
+         * method of detecting changes but any failures are mainly of
+         * theoretical nature. */
         store_data(monitor, master, data, size);
+        uint8_t hash[SHA_DIGEST_LENGTH];
+        SHA1(data, size, hash);
 
-        FILE *file = open_tmp_file(monitor, path);
-
-        if (file)
+        if (memcmp(monitor->journal_hash, hash, sizeof(hash)) != 0)
         {
-            /** Write the data to a temp file and rename it to the final name */
-            if (fwrite(data, 1, buffer_size, file) == buffer_size && fflush(file) == 0)
+            FILE *file = open_tmp_file(monitor, path);
+
+            if (file)
             {
-                if (!rename_tmp_file(monitor, path))
+                /** Write the data to a temp file and rename it to the final name */
+                if (fwrite(data, 1, buffer_size, file) == buffer_size && fflush(file) == 0)
                 {
-                    unlink(path);
+                    if (!rename_tmp_file(monitor, path))
+                    {
+                        unlink(path);
+                    }
+                    else
+                    {
+                        memcpy(monitor->journal_hash, hash, sizeof(hash));
+                    }
                 }
+                else
+                {
+                    MXS_ERROR("Failed to write journal data to disk: %d, %s",
+                              errno, mxs_strerror(errno));
+                }
+                fclose(file);
             }
-            else
-            {
-                MXS_ERROR("Failed to write journal data to disk: %d, %s",
-                          errno, mxs_strerror(errno));
-            }
-            fclose(file);
         }
     }
     MXS_FREE(data);

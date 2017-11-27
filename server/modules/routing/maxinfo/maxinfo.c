@@ -52,10 +52,10 @@
 #include <maxscale/users.h>
 #include <maxscale/protocol/mysql.h>
 
-#include "../../../core/maxscale/modules.h"
-#include "../../../core/maxscale/monitor.h"
-#include "../../../core/maxscale/session.h"
-#include "../../../core/maxscale/poll.h"
+#include "../../../core/internal/modules.h"
+#include "../../../core/internal/monitor.h"
+#include "../../../core/internal/session.h"
+#include "../../../core/internal/poll.h"
 
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 

@@ -50,10 +50,10 @@
 #include <maxscale/jansson.h>
 #include <maxscale/json_api.h>
 
-#include "maxscale/config.h"
-#include "maxscale/filter.h"
-#include "maxscale/modules.h"
-#include "maxscale/service.h"
+#include "internal/config.h"
+#include "internal/filter.h"
+#include "internal/modules.h"
+#include "internal/service.h"
 
 /** This define is needed in CentOS 6 systems */
 #if !defined(UINT64_MAX)

@@ -15,7 +15,7 @@
 #include <maxscale/utils.h>
 
 // TODO: Find a way to cleanly expose this
-#include "../../../core/maxscale/worker.hh"
+#include "../../../core/internal/worker.hh"
 
 #ifdef EPOLLRDHUP
 #define ERROR_EVENTS (EPOLLRDHUP | EPOLLHUP | EPOLLERR)
