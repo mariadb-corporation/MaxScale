@@ -156,8 +156,8 @@ static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
 static void write_footer(void);
 static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
-static bool file_is_readable(const char* absolute_pathname);
-static bool file_is_writable(const char* absolute_pathname);
+static bool path_is_readable(const char* absolute_pathname);
+static bool path_is_writable(const char* absolute_pathname);
 bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr);
 static void set_log_augmentation(const char* value);
 static void usage(void);
@@ -654,7 +654,7 @@ static bool resolve_maxscale_conf_fname(char** cnf_full_path,
         *cnf_full_path = get_expanded_pathname(NULL, home_dir, default_cnf_fname);
     }
 
-    return *cnf_full_path && file_is_readable(*cnf_full_path);
+    return *cnf_full_path && path_is_readable(*cnf_full_path);
 }
 
 /**
@@ -683,7 +683,7 @@ static char* check_dir_access(char* dirname, bool rd, bool wr)
         goto retblock;
     }
 
-    if (rd && !file_is_readable(dirname))
+    if (rd && !path_is_readable(dirname))
     {
         snprintf(errbuf, PATH_MAX * 2 - 1, "MaxScale doesn't have read permission "
                  "to '%s'.", dirname);
@@ -692,7 +692,7 @@ static char* check_dir_access(char* dirname, bool rd, bool wr)
         goto retblock;
     }
 
-    if (wr && !file_is_writable(dirname))
+    if (wr && !path_is_writable(dirname))
     {
         snprintf(errbuf, PATH_MAX * 2 - 1, "MaxScale doesn't have write permission "
                  "to '%s'.", dirname);
@@ -755,7 +755,7 @@ static void print_log_n_stderr(
  * @param absolute_pathname Path of the file or directory to check
  * @return True if file is readable
  */
-static bool file_is_readable(const char* absolute_pathname)
+static bool path_is_readable(const char* absolute_pathname)
 {
     bool succp = true;
 
@@ -776,7 +776,7 @@ static bool file_is_readable(const char* absolute_pathname)
  * @param absolute_pathname Path of the file or directory to check
  * @return True if file is writable
  */
-static bool file_is_writable(const char* absolute_pathname)
+static bool path_is_writable(const char* absolute_pathname)
 {
     bool succp = true;
 
@@ -872,7 +872,7 @@ static char* get_expanded_pathname(char** output_path,
         }
         snprintf(cnf_file_buf, pathlen, "%s/%s", expanded_path, fname);
 
-        if (!file_is_readable(cnf_file_buf))
+        if (!path_is_readable(cnf_file_buf))
         {
             MXS_FREE(expanded_path);
             MXS_FREE(cnf_file_buf);
@@ -887,7 +887,7 @@ static char* get_expanded_pathname(char** output_path,
          * If only directory was provided, check that it is
          * readable.
          */
-        if (!file_is_readable(expanded_path))
+        if (!path_is_readable(expanded_path))
         {
             MXS_FREE(expanded_path);
             expanded_path = NULL;
