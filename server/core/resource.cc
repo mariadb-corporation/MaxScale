@@ -24,6 +24,7 @@
 #include <maxscale/http.hh>
 #include <maxscale/adminusers.h>
 #include <maxscale/modulecmd.h>
+#include <maxscale/semaphore.hh>
 
 #include "internal/httprequest.hh"
 #include "internal/httpresponse.hh"
@@ -34,6 +35,7 @@
 #include "internal/config_runtime.h"
 #include "internal/modules.h"
 #include "internal/worker.h"
+#include "internal/worker.hh"
 
 using std::list;
 using std::map;
@@ -1074,12 +1076,11 @@ bool request_precondition_met(const HttpRequest& request, HttpResponse& response
     return rval;
 }
 
-HttpResponse resource_handle_request(const HttpRequest& request)
+static HttpResponse handle_request(const HttpRequest& request)
 {
     MXS_DEBUG("%s %s %s", request.get_verb().c_str(), request.get_uri().c_str(),
               request.get_json_str().c_str());
 
-    SpinLockGuard guard(resource_lock);
     HttpResponse rval;
 
     if (request_precondition_met(request, rval))
@@ -1114,4 +1115,39 @@ HttpResponse resource_handle_request(const HttpRequest& request)
     }
 
     return rval;
+}
+
+class ResourceTask: public mxs::Worker::Task
+{
+public:
+    ResourceTask(const HttpRequest& request):
+        m_request(request)
+    {
+    }
+
+    void execute(mxs::Worker& worker)
+    {
+        m_response = handle_request(m_request);
+    }
+
+    HttpResponse result()
+    {
+        return m_response;
+    }
+
+private:
+    const HttpRequest& m_request;
+    HttpResponse m_response;
+};
+
+HttpResponse resource_handle_request(const HttpRequest& request)
+{
+    mxs::Worker* worker = mxs::Worker::get(0);
+    mxs::Semaphore sem;
+    ResourceTask task(request);
+
+    worker->post(&task, &sem);
+    sem.wait();
+
+    return task.result();
 }
