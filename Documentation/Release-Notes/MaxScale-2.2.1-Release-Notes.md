@@ -69,6 +69,12 @@ and the configuration value is replaced with the value of the environment
 variable. For more information please consult the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
+### Cache behaviour in transactions
+
+It can now be specified how the cache should be behave when a transaction
+is active. Please refer to the [documentation](../Filters/Cache.md)
+for details.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.2.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.1)
