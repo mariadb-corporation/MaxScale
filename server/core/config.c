@@ -2448,7 +2448,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     char* destptr = *dest;
     int offset = 0;
 
-    if (feof(file))
+    if (feof(file) || ferror(file))
     {
         return 0;
     }
@@ -2471,11 +2471,18 @@ int maxscale_getline(char** dest, int* size, FILE* file)
             }
         }
 
-        if ((destptr[offset] = fgetc(file)) == '\n' || feof(file))
+        int c = fgetc(file);
+
+        if ((c == '\n') || (c == EOF))
         {
             destptr[offset] = '\0';
             break;
         }
+        else
+        {
+            destptr[offset] = c;
+        }
+
         offset++;
     }
 
