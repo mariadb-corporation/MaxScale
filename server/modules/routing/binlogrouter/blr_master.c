@@ -1452,7 +1452,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                             "disable any new feature. "
                             "Replication from master has been stopped.",
                             hdr.event_type);
-                    MXS_ERROR(errmsg);
+                    MXS_ERROR("%s", errmsg);
                     gwbuf_free(pkt);
                     pkt = NULL;
 
