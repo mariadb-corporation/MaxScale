@@ -33,6 +33,8 @@ class Session : public MXS_SESSION
     Session& operator = (Session&);
 
 public:
+    typedef mxs_session_trx_state_t trx_state_t;
+
     /**
      * Constructor
      *
@@ -43,6 +45,26 @@ public:
     ~Session();
 
     Client& client() const;
+
+    bool is_autocommit() const
+    {
+        return session_is_autocommit(this);
+    }
+
+    void set_autocommit(bool autocommit)
+    {
+        session_set_autocommit(this, autocommit);
+    }
+
+    trx_state_t trx_state() const
+    {
+        return session_get_trx_state(this);
+    }
+
+    void set_trx_state(trx_state_t state)
+    {
+        session_set_trx_state(this, state);
+    }
 
 private:
     Client&       m_client;
