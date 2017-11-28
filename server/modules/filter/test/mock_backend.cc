@@ -13,6 +13,7 @@
 
 #include "maxscale/mock/backend.hh"
 #include <algorithm>
+#include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 #include <iostream>
 
@@ -34,6 +35,19 @@ Backend::Backend()
 
 Backend::~Backend()
 {
+}
+
+//static
+GWBUF* Backend::create_ok_response()
+{
+    /* Note: sequence id is always 01 (4th byte) */
+    const static uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] =
+        { 07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00 };
+
+    GWBUF* pResponse = gwbuf_alloc_and_load(sizeof(ok), &ok);
+    ss_dassert(pResponse);
+
+    return pResponse;
 }
 
 //
@@ -138,16 +152,106 @@ OkBackend::OkBackend()
 
 void OkBackend::handle_statement(RouterSession* pSession, GWBUF* pStatement)
 {
-    /* Note: sequence id is always 01 (4th byte) */
-    const static uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] =
-        { 07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00 };
-
-    GWBUF* pResponse = gwbuf_alloc_and_load(sizeof(ok), &ok);
-    ss_dassert(pResponse);
-
-    enqueue_response(pSession, pResponse);
+    enqueue_response(pSession, create_ok_response());
 
     gwbuf_free(pStatement);
+}
+
+//
+// ResultSetBackend
+//
+ResultSetBackend::ResultSetBackend()
+    : m_counter(0)
+    , m_created(false)
+{
+}
+
+namespace
+{
+
+class ResultSetDCB : public DCB
+{
+public:
+    ResultSetDCB()
+    {
+        DCB* pDcb = this;
+        memset(pDcb, 0, sizeof(*pDcb));
+
+        pDcb->func.write = &ResultSetDCB::write;
+    }
+
+    GWBUF* create_response() const
+    {
+        return gwbuf_alloc_and_load(m_response.size(), &m_response.front());
+    }
+
+private:
+    int32_t write(GWBUF* pBuffer)
+    {
+        pBuffer = gwbuf_make_contiguous(pBuffer);
+        ss_dassert(pBuffer);
+
+        unsigned char* begin = GWBUF_DATA(pBuffer);
+        unsigned char* end = begin + GWBUF_LENGTH(pBuffer);
+
+        m_response.insert(m_response.end(), begin, end);
+
+        gwbuf_free(pBuffer);
+        return 1;
+    }
+
+    static int32_t write(DCB* pDcb, GWBUF* pBuffer)
+    {
+        return static_cast<ResultSetDCB*>(pDcb)->write(pBuffer);
+    }
+
+    std::vector<char> m_response;
+};
+
+}
+
+void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStatement)
+{
+    qc_query_op_t op = qc_get_operation(pStatement);
+
+    if (op == QUERY_OP_SELECT)
+    {
+        RESULTSET* pResult_set = resultset_create(ResultSetBackend::create_row, this);
+        resultset_add_column(pResult_set, "a", 4, COL_TYPE_VARCHAR);
+
+        ResultSetDCB dcb;
+
+        resultset_stream_mysql(pResult_set, &dcb);
+
+        enqueue_response(pSession, dcb.create_response());
+    }
+    else
+    {
+        enqueue_response(pSession, create_ok_response());
+    }
+}
+
+RESULT_ROW* ResultSetBackend::create_row(RESULTSET* pResult_set)
+{
+    RESULT_ROW* pRow = NULL;
+
+    if (!m_created)
+    {
+        pRow = resultset_make_row(pResult_set);
+        char buffer[32];
+        sprintf(buffer, "%d", ++m_counter);
+        resultset_row_set(pRow, 0, buffer);
+
+        m_created = true;
+    }
+
+    return pRow;
+}
+
+//static
+RESULT_ROW* ResultSetBackend::create_row(RESULTSET* pResult_set, void* pThis)
+{
+    return static_cast<ResultSetBackend*>(pThis)->create_row(pResult_set);
 }
 
 } // mock
