@@ -1585,8 +1585,6 @@ struct subcommand alteroptions[] =
         "backend_connect_attempts Number of re-connection attempts\n"
         "journal_max_age          Maximum age of server state journal\n"
         "script_timeout           Timeout in seconds for monitor scripts\n"
-        "failover                 Enable or disable failover\n"
-        "failover_timeout         Failover timeout in seconds\n"
         "\n"
         "This will alter an existing parameter of a monitor. To remove parameters,\n"
         "pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='\n"

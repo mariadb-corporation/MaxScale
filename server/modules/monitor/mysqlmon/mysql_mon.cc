@@ -99,7 +99,7 @@ static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
 static bool mon_process_failover(MYSQL_MONITOR*, uint32_t, bool*);
-static bool do_failover(MYSQL_MONITOR* mon);
+static bool do_failover(MYSQL_MONITOR* mon, json_t** output);
 static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
                           MXS_MONITORED_SERVER* new_master,json_t** err_out);
 static bool update_gtids(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
@@ -114,9 +114,8 @@ static void disable_setting(MYSQL_MONITOR* mon, const char* setting);
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
-static const char CN_FAILOVER[]           = "failover";
+static const char CN_AUTO_FAILOVER[]      = "auto_failover";
 static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
-static const char CN_SWITCHOVER[]         = "switchover";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_AUTO_JOIN[]          = "auto_join";
 
@@ -124,7 +123,7 @@ static const char CN_AUTO_JOIN[]          = "auto_join";
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
 static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
 
-// Replication credentials parameters for failover
+// Replication credentials parameters for failover/switchover/join
 static const char CN_REPLICATION_USER[]     = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 
@@ -286,6 +285,47 @@ bool mysql_switchover_check(MXS_MONITOR* mon,
 }
 
 /**
+ * Check that preconditions for a failover are met.
+ *
+ * @param mon Cluster monitor
+ * @param error_out JSON error out
+ * @return True if failover may proceed
+ */
+bool mysql_failover_check(MYSQL_MONITOR* mon, json_t** error_out)
+{
+    // Check that there is no running master and that there is at least one running server in the cluster.
+    int slaves = 0;
+    for (MXS_MONITORED_SERVER* mon_server = mon->monitor->monitored_servers;
+         mon_server != NULL;
+         mon_server = mon_server->next)
+    {
+        uint64_t status_bits = mon_server->server->status;
+        uint64_t master_up = (SERVER_MASTER | SERVER_RUNNING);
+        if ((status_bits & master_up) == master_up)
+        {
+            string master_up_msg = string("Master server '") + mon_server->server->unique_name +
+                "' is running";
+            if (status_bits & SERVER_MAINT)
+            {
+                master_up_msg += ", although in maintenance mode";
+            }
+            master_up_msg += ".";
+            PRINT_MXS_JSON_ERROR(error_out, "%s Failover not allowed.", master_up_msg.c_str());
+            return false;
+        }
+        else if (SERVER_IS_SLAVE(mon_server->server))
+        {
+            slaves++;
+        }
+    }
+    if (slaves == 0)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "No running slaves, cannot failover.");
+    }
+    return slaves > 0;
+}
+
+/**
  * Handle switchover
  *
  * @mon             The monitor.
@@ -324,7 +364,7 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
 
     if (rv)
     {
-        bool failover = config_get_bool(mon->parameters, CN_FAILOVER);
+        bool failover = config_get_bool(mon->parameters, CN_AUTO_FAILOVER);
         rv = do_switchover(handle, monitored_current_master, monitored_new_master, output);
 
         if (rv)
@@ -344,7 +384,7 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
             {
                 // TODO: There could be a more convenient way for this.
                 MXS_CONFIG_PARAMETER p = {};
-                p.name = const_cast<char*>(CN_FAILOVER);
+                p.name = const_cast<char*>(CN_AUTO_FAILOVER);
                 p.value = const_cast<char*>("false");
 
                 monitorAddParameters(mon, &p);
@@ -397,21 +437,7 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** output)
 
     if (!config_get_global_options()->passive)
     {
-        if (mysql_mon->switchover)
-        {
-            rv = mysql_switchover(mon, new_master, current_master, output);
-        }
-        else
-        {
-            MXS_WARNING("Attempt to perform switchover %s -> %s, even though "
-                        "switchover is not enabled.",
-                        current_master ? current_master->unique_name : "none",
-                        new_master->unique_name);
-
-            *output = mxs_json_error("Switchover %s -> %s not performed, as switchover is not enabled.",
-                                     current_master ? current_master->unique_name : "none",
-                                     new_master->unique_name);
-        }
+        rv = mysql_switchover(mon, new_master, current_master, output);
     }
     else
     {
@@ -424,6 +450,80 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** output)
                                  new_master->unique_name);
     }
 
+    return rv;
+}
+
+/**
+ * Perform user-activated failover
+ *
+ * @param mon     Cluster monitor
+ * @param output  Json error output
+ * @return True on success
+ */
+bool mysql_failover(MXS_MONITOR* mon, json_t** output)
+{
+    bool rv = true;
+    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
+    bool stopped = stop_monitor(mon);
+    if (stopped)
+    {
+        MXS_NOTICE("Stopped monitor %s for the duration of failover.", mon->name);
+    }
+    else
+    {
+        MXS_NOTICE("Monitor %s already stopped, failover can proceed.", mon->name);
+    }
+
+    rv = mysql_failover_check(handle, output);
+    if (rv)
+    {
+        rv = do_failover(handle, output);
+        if (rv)
+        {
+            MXS_NOTICE("Failover performed.");
+            if (stopped)
+            {
+                startMonitor(mon, mon->parameters);
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(output, "Failover failed.");
+        }
+    }
+    else
+    {
+        if (stopped)
+        {
+            startMonitor(mon, mon->parameters);
+        }
+    }
+    return rv;
+}
+
+/**
+ * Command handler for 'failover'
+ *
+ * @param args Arguments given by user
+ * @param output Json error output
+ * @return True on success
+ */
+bool mysql_handle_failover(const MODULECMD_ARG* args, json_t** output)
+{
+    ss_dassert(args->argc == 1);
+    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    MXS_MONITOR* mon = args->argv[0].value.monitor;
+
+    bool rv = false;
+    if (!config_get_global_options()->passive)
+    {
+        rv = mysql_failover(mon, output);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(output, "Failover attempted but not performed, as MaxScale is in passive mode.");
+    }
     return rv;
 }
 
@@ -441,20 +541,32 @@ extern "C"
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Monitor module.");
-
+    const char ARG_MONITOR_DESC[] = "MySQL Monitor name (from configuration file)";
     static modulecmd_arg_type_t switchover_argv[] =
     {
         {
             MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            "MySQL Monitor name (from configuration file)"
+            ARG_MONITOR_DESC
         },
-        { MODULECMD_ARG_SERVER,  "New master" },
+        { MODULECMD_ARG_SERVER, "New master" },
         { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (obligatory if exists)" }
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
                                mysql_handle_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
                                "Perform master switchover");
+
+    static modulecmd_arg_type_t failover_argv[] =
+    {
+        {
+            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            ARG_MONITOR_DESC
+        },
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
+                               mysql_handle_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
+                               "Perform master failover");
 
     static MXS_MONITOR_OBJECT MyObject =
     {
@@ -500,9 +612,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_NONE,
                 mxs_monitor_event_enum_values
             },
-            {CN_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_AUTO_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
             {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
-            {CN_SWITCHOVER, MXS_MODULE_PARAM_BOOL, "false"},
             {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
             {CN_REPLICATION_USER, MXS_MODULE_PARAM_STRING},
             {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
@@ -820,9 +931,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     handle->allow_external_slaves = config_get_bool(params, "allow_external_slaves");
-    handle->failover = config_get_bool(params, CN_FAILOVER);
+    handle->auto_failover = config_get_bool(params, CN_AUTO_FAILOVER);
     handle->failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
-    handle->switchover = config_get_bool(params, CN_SWITCHOVER);
     handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
     handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
     handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
@@ -921,9 +1031,8 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
     const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
 
-    dcb_printf(dcb, "Failover:\t%s\n", handle->failover ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Automatic failover:\t%s\n", handle->auto_failover ? "Enabled" : "Disabled");
     dcb_printf(dcb, "Failover Timeout:\t%u\n", handle->failover_timeout);
-    dcb_printf(dcb, "Switchover:\t%s\n", handle->switchover ? "Enabled" : "Disabled");
     dcb_printf(dcb, "Switchover Timeout:\t%u\n", handle->switchover_timeout);
     dcb_printf(dcb, "Auto join:\t%s\n", handle->auto_join_cluster ? "Enabled" : "Disabled");
     dcb_printf(dcb, "MaxScale MonitorId:\t%lu\n", handle->id);
@@ -972,9 +1081,8 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     json_object_set_new(rval, "failcount", json_integer(handle->failcount));
     json_object_set_new(rval, "allow_cluster_recovery", json_boolean(handle->allow_cluster_recovery));
     json_object_set_new(rval, "mysql51_replication", json_boolean(handle->mysql51_replication));
-    json_object_set_new(rval, CN_FAILOVER, json_boolean(handle->failover));
+    json_object_set_new(rval, CN_AUTO_FAILOVER, json_boolean(handle->auto_failover));
     json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(handle->failover_timeout));
-    json_object_set_new(rval, CN_SWITCHOVER, json_boolean(handle->switchover));
     json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(handle->switchover_timeout));
     json_object_set_new(rval, CN_AUTO_JOIN, json_boolean(handle->auto_join_cluster));
 
@@ -2100,17 +2208,18 @@ monitorMain(void *arg)
         mon_process_state_changes(mon, handle->script, handle->events);
         bool failover_performed = false; // Has an automatic failover been performed this loop?
 
-        if (handle->failover)
+        if (handle->auto_failover)
         {
+            const char RE_ENABLE_FMT[] = "%s To re-enable failover, manually set '%s' to 'true' for monitor "
+                                         "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
             if (failover_not_possible(handle))
             {
-                MXS_ERROR("Failover is not possible due to one or more problems in "
-                          "the replication configuration, disabling failover. "
-                          "Failover should only be enabled after the replication "
-                          "configuration  has been fixed. To re-enable failover "
-                          "functionality, manually set '%s' to 'true' for monitor "
-                          "'%s' via MaxAdmin or the REST API.", CN_FAILOVER, mon->name);
-                handle->failover = false;
+                const char PROBLEMS[] = "Failover is not possible due to one or more problems in the "
+                    "replication configuration, disabling automatic failover. Failover should only be "
+                    "enabled after the replication configuration has been fixed.";
+                MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, mon->name);
+                handle->auto_failover = false;
+                disable_setting(handle, CN_AUTO_FAILOVER);
             }
             else if (master_maybe_dead(handle) && master_still_alive(handle))
             {
@@ -2118,12 +2227,10 @@ monitorMain(void *arg)
             }
             else if (!mon_process_failover(handle, handle->failover_timeout, &failover_performed))
             {
-                MXS_ALERT("Failed to perform failover, disabling failover functionality. "
-                          "To enable failover functionality, manually set 'failover' to "
-                          "'true' for monitor '%s' via MaxAdmin or the REST API.", mon->name);
-
-                mon_alter_parameter(handle->monitor, CN_FAILOVER, "false");
-                handle->failover = false;
+                const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
+                MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, mon->name);
+                handle->auto_failover = false;
+                disable_setting(handle, CN_AUTO_FAILOVER);
             }
         }
 
@@ -2977,7 +3084,7 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
         MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
                    failed_master->server->unique_name);
         failed_master->new_event = false;
-        rval = do_failover(monitor);
+        rval = mysql_failover_check(monitor, NULL) && do_failover(monitor, NULL);
         if (rval)
         {
             *cluster_modified_out = true;
@@ -3170,9 +3277,10 @@ MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon,
  *
  * @param mon The monitor
  * @param new_master The new master
+ * @param err_out Json error output
  * @return True if relay log was processed within time limit, or false if time ran out or an error occurred.
  */
-bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master)
+bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
     MySqlServerInfo* master_info = get_server_info(mon, new_master);
     time_t begin = time(NULL);
@@ -3216,8 +3324,9 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
             reason = "Invalid Gtid(s) (current_pos: " + master_info->gtid_current_pos.to_string() +
                 ", io_pos: " + master_info->slave_status.gtid_io_pos.to_string() + ")";
         }
-        MXS_ERROR("Failover: %s while waiting for server '%s' to process relay log. Cancelling failover.",
-                  reason.c_str(), new_master->server->unique_name);
+        PRINT_MXS_JSON_ERROR(err_out, "Failover: %s while waiting for server '%s' to process relay log. "
+                             "Cancelling failover.",
+                             reason.c_str(), new_master->server->unique_name);
         rval = false;
     }
     return rval;
@@ -3318,28 +3427,29 @@ int failover_redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONIT
  * Performs failover for a simple topology (1 master, N slaves, no intermediate masters).
  *
  * @param mon Server cluster monitor
+ * @param err_out Json output
  * @return True if successful
  */
-static bool do_failover(MYSQL_MONITOR* mon)
+static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
 {
     // Topology has already been tested to be simple.
     if (mon->master_gtid_domain < 0)
     {
-        MXS_ERROR("Cluster gtid domain is unknown. Cannot failover.");
+        PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot failover.");
         return false;
     }
     // Step 1: Select new master. Also populate a vector with all slaves not the selected master.
     ServerVector slaves;
-    MXS_MONITORED_SERVER* new_master = failover_select_new_master(mon, &slaves, NULL);
+    MXS_MONITORED_SERVER* new_master = failover_select_new_master(mon, &slaves, err_out);
     if (new_master == NULL)
     {
         return false;
     }
     bool rval = false;
     // Step 2: Wait until relay log consumed.
-    if (failover_wait_relay_log(mon, new_master) &&
+    if (failover_wait_relay_log(mon, new_master, err_out) &&
         // Step 3: Stop and reset slave, set read-only to 0.
-        failover_promote_new_master(mon, new_master, NULL))
+        failover_promote_new_master(mon, new_master, err_out))
     {
         // Step 4: Redirect slaves.
         int redirects = failover_redirect_slaves(mon, slaves, new_master);
