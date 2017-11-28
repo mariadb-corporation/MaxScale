@@ -156,6 +156,7 @@ static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
 static void write_footer(void);
 static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
+static bool is_file_and_readable(const char* absolute_pathname);
 static bool path_is_readable(const char* absolute_pathname);
 static bool path_is_writable(const char* absolute_pathname);
 bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr);
@@ -654,7 +655,7 @@ static bool resolve_maxscale_conf_fname(char** cnf_full_path,
         *cnf_full_path = get_expanded_pathname(NULL, home_dir, default_cnf_fname);
     }
 
-    return *cnf_full_path && path_is_readable(*cnf_full_path);
+    return *cnf_full_path && is_file_and_readable(*cnf_full_path);
 }
 
 /**
@@ -748,6 +749,48 @@ static void print_log_n_stderr(
                 eno == 0 ? "" : strerror_r(eno, errbuf, sizeof(errbuf)),
                 eno == 0 ? "" : ")");
     }
+}
+
+/**
+ * Check that a path refers to a readable file.
+ *
+ * @param absolute_pathname The path to check.
+ * @return True if the path refers to a readable file. is readable
+ */
+static bool is_file_and_readable(const char* absolute_pathname)
+{
+    bool rv = false;
+
+    struct stat info;
+
+    if (stat(absolute_pathname, &info) == 0)
+    {
+        if ((info.st_mode & S_IFMT) == S_IFREG)
+        {
+            // There is a race here as the file can be deleted and a directory
+            // created in its stead between the stat() call here and the access()
+            // call in file_is_readable().
+            rv = path_is_readable(absolute_pathname);
+        }
+        else
+        {
+            const char FORMAT[] = "'%s' does not refer to a regular file.";
+            char buff[sizeof(FORMAT) + strlen(absolute_pathname)];
+            snprintf(buff, sizeof(buff), FORMAT, absolute_pathname);
+            print_log_n_stderr(true, true, buff, buff, 0);
+        }
+    }
+    else
+    {
+        int eno = errno;
+        errno = 0;
+        const char FORMAT[] = "Could not access '%s'.";
+        char buff[sizeof(FORMAT) + strlen(absolute_pathname)];
+        snprintf(buff, sizeof(buff), FORMAT, absolute_pathname);
+        print_log_n_stderr(true, true, buff, buff, eno);
+    }
+
+    return rv;
 }
 
 /**
