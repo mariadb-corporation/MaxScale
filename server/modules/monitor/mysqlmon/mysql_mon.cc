@@ -78,6 +78,12 @@ enum mysql_server_version
     MYSQL_SERVER_VERSION_51
 };
 
+enum slave_down_setting_t
+{
+    ACCEPT_DOWN,
+    REJECT_DOWN
+};
+
 static void monitorMain(void *);
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 static void stopMonitor(MXS_MONITOR *);
@@ -85,7 +91,7 @@ static bool stop_monitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 static json_t* diagnostics_json(const MXS_MONITOR *);
 static MXS_MONITORED_SERVER *getServerByNodeId(MXS_MONITORED_SERVER *, long);
-static MXS_MONITORED_SERVER *getSlaveOfNodeId(MXS_MONITORED_SERVER *, long);
+static MXS_MONITORED_SERVER *getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
 static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *, int);
 static void set_master_heartbeat(MYSQL_MONITOR *, MXS_MONITORED_SERVER *);
 static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
@@ -1955,7 +1961,7 @@ monitorMain(void *arg)
             ss_dassert(serv_info);
 
             if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
-                getSlaveOfNodeId(mon->monitored_servers, ptr->server->node_id) &&
+                getSlaveOfNodeId(mon->monitored_servers, ptr->server->node_id, REJECT_DOWN) &&
                 getServerByNodeId(mon->monitored_servers, ptr->server->master_id) &&
                 (!handle->multimaster || serv_info->group == 0))
             {
@@ -2204,18 +2210,19 @@ getServerByNodeId(MXS_MONITORED_SERVER *ptr, long node_id)
 /**
  * Fetch a MySQL slave node from a node_id
  *
- * @param ptr           The list of servers to monitor
- * @param node_id   The MySQL server_id to fetch
- * @return      The slave server of this node_id
+ * @param ptr                The list of servers to monitor
+ * @param node_id            The MySQL server_id to fetch
+ * @param slave_down_setting Whether to accept or reject slaves which are down
+ * @return                   The slave server of this node_id
  */
 static MXS_MONITORED_SERVER *
-getSlaveOfNodeId(MXS_MONITORED_SERVER *ptr, long node_id)
+getSlaveOfNodeId(MXS_MONITORED_SERVER *ptr, long node_id, slave_down_setting_t slave_down_setting)
 {
     SERVER *current;
     while (ptr)
     {
         current = ptr->server;
-        if (current->master_id == node_id)
+        if (current->master_id == node_id && (slave_down_setting == ACCEPT_DOWN || !SERVER_IS_DOWN(current)))
         {
             return ptr;
         }
@@ -2510,7 +2517,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
         if (node_id < 1)
         {
             MXS_MONITORED_SERVER *find_slave;
-            find_slave = getSlaveOfNodeId(mon->monitored_servers, current->node_id);
+            find_slave = getSlaveOfNodeId(mon->monitored_servers, current->node_id, ACCEPT_DOWN);
 
             if (find_slave == NULL)
             {
@@ -2571,6 +2578,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
                         /** A master with a lower depth was found, remove
                             the master status from the previous master. */
                         monitor_clear_pending_status(handle->master, SERVER_MASTER);
+                        handle->master = master;
                     }
 
                     MySqlServerInfo* info = get_server_info(handle, master);
@@ -2580,8 +2588,6 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
                         /** Only set the Master status if read_only is disabled */
                         monitor_set_pending_status(master, info->read_only ? SERVER_SLAVE : SERVER_MASTER);
                     }
-
-                    handle->master = master;
                 }
                 else
                 {
