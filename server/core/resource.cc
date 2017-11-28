@@ -44,87 +44,6 @@ using std::stringstream;
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
 
-static bool drop_path_part(std::string& path)
-{
-    size_t pos = path.find_last_of('/');
-    bool rval = false;
-
-    if (pos != std::string::npos)
-    {
-        path.erase(pos);
-        rval = true;
-    }
-
-    return rval && path.length();
-}
-
-/**
- * Class that keeps track of resource modification times
- */
-class ResourceWatcher
-{
-public:
-
-    ResourceWatcher() :
-        m_init(time(NULL))
-    {
-    }
-
-    void modify(const std::string& orig_path)
-    {
-        std::string path = orig_path;
-
-        do
-        {
-            map<std::string, uint64_t>::iterator it = m_etag.find(path);
-
-            if (it != m_etag.end())
-            {
-                it->second++;
-            }
-            else
-            {
-                // First modification
-                m_etag[path] = 1;
-            }
-
-            m_last_modified[path] = time(NULL);
-        }
-        while (drop_path_part(path));
-    }
-
-    time_t last_modified(const string& path) const
-    {
-        map<string, time_t>::const_iterator it = m_last_modified.find(path);
-
-        if (it != m_last_modified.end())
-        {
-            return it->second;
-        }
-
-        // Resource has not yet been updated
-        return m_init;
-    }
-
-    time_t etag(const string& path) const
-    {
-        map<string, uint64_t>::const_iterator it = m_etag.find(path);
-
-        if (it != m_etag.end())
-        {
-            return it->second;
-        }
-
-        // Resource has not yet been updated
-        return 0;
-    }
-
-private:
-    time_t m_init;
-    map<string, time_t> m_last_modified;
-    map<string, uint64_t> m_etag;
-};
-
 Resource::Resource(ResourceCallback cb, int components, ...) :
     m_cb(cb),
     m_is_glob(false),
@@ -233,6 +152,90 @@ bool Resource::requires_body() const
 {
     return m_constraints & REQUIRE_BODY;
 }
+
+namespace
+{
+
+static bool drop_path_part(std::string& path)
+{
+    size_t pos = path.find_last_of('/');
+    bool rval = false;
+
+    if (pos != std::string::npos)
+    {
+        path.erase(pos);
+        rval = true;
+    }
+
+    return rval && path.length();
+}
+
+/**
+ * Class that keeps track of resource modification times
+ */
+class ResourceWatcher
+{
+public:
+
+    ResourceWatcher() :
+        m_init(time(NULL))
+    {
+    }
+
+    void modify(const std::string& orig_path)
+    {
+        std::string path = orig_path;
+
+        do
+        {
+            map<std::string, uint64_t>::iterator it = m_etag.find(path);
+
+            if (it != m_etag.end())
+            {
+                it->second++;
+            }
+            else
+            {
+                // First modification
+                m_etag[path] = 1;
+            }
+
+            m_last_modified[path] = time(NULL);
+        }
+        while (drop_path_part(path));
+    }
+
+    time_t last_modified(const string& path) const
+    {
+        map<string, time_t>::const_iterator it = m_last_modified.find(path);
+
+        if (it != m_last_modified.end())
+        {
+            return it->second;
+        }
+
+        // Resource has not yet been updated
+        return m_init;
+    }
+
+    uint64_t etag(const string& path) const
+    {
+        map<string, uint64_t>::const_iterator it = m_etag.find(path);
+
+        if (it != m_etag.end())
+        {
+            return it->second;
+        }
+
+        // Resource has not yet been updated
+        return 0;
+    }
+
+private:
+    time_t m_init;
+    map<string, time_t> m_last_modified;
+    map<string, uint64_t> m_etag;
+};
 
 HttpResponse cb_stop_monitor(const HttpRequest& request)
 {
@@ -1030,7 +1033,7 @@ static bool request_reads_data(const string& verb)
            verb == MHD_HTTP_METHOD_HEAD;
 }
 
-bool request_precondition_met(const HttpRequest& request, HttpResponse& response)
+static bool request_precondition_met(const HttpRequest& request, HttpResponse& response)
 {
     bool rval = true;
     string str;
@@ -1056,7 +1059,7 @@ bool request_precondition_met(const HttpRequest& request, HttpResponse& response
     {
         str = str.substr(1, str.length() - 2);
 
-        if (watcher.etag(uri) != strtol(str.c_str(), NULL, 10))
+        if (watcher.etag(uri) != strtoul(str.c_str(), NULL, 10))
         {
             rval = false;
             response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
@@ -1066,7 +1069,7 @@ bool request_precondition_met(const HttpRequest& request, HttpResponse& response
     {
         str = str.substr(1, str.length() - 2);
 
-        if (watcher.etag(uri) == strtol(str.c_str(), NULL, 10))
+        if (watcher.etag(uri) == strtoul(str.c_str(), NULL, 10))
         {
             rval = false;
             response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
@@ -1139,6 +1142,8 @@ private:
     const HttpRequest& m_request;
     HttpResponse m_response;
 };
+
+}
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
