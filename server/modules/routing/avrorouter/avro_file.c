@@ -665,6 +665,13 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             snprintf(next_file, sizeof(next_file), BINLOG_NAMEFMT, router->fileroot,
                      blr_file_get_next_binlogname(router->binlog_name));
         }
+        else if (hdr.event_type == MARIADB_ANNOTATE_ROWS_EVENT)
+        {
+            MXS_INFO("Annotate_rows_event: %.*s", hdr.event_size - BINLOG_EVENT_HDR_LEN, ptr);
+            pos += original_size;
+            router->current_pos = pos;
+            continue;
+        }
         else if (hdr.event_type == TABLE_MAP_EVENT)
         {
             handle_table_map_event(router, &hdr, ptr);

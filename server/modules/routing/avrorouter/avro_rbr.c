@@ -588,7 +588,6 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     }
 
                     MXS_INFO("[%ld] CHAR: field: %d bytes, data: %d bytes", i, field_length, bytes);
-                    ss_dassert(bytes || *ptr == '\0');
                     char str[bytes + 1];
                     memcpy(str, ptr, bytes);
                     str[bytes] = '\0';
