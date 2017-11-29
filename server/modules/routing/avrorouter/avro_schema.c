@@ -321,11 +321,11 @@ void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map)
  * @return Pointer to the start of the definition of NULL if the query is
  * malformed.
  */
-static const char* get_table_definition(const char *sql, int* size)
+static const char* get_table_definition(const char *sql, int len, int* size)
 {
     const char *rval = NULL;
     const char *ptr = sql;
-    const char *end = strchr(sql, '\0');
+    const char *end = sql + len;
     while (ptr < end && *ptr != '(')
     {
         ptr++;
@@ -512,12 +512,16 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
         }
     }
 
-    if (strncasecmp(ptr, "constraint", 10) == 0 || strncasecmp(ptr, "index", 5) == 0 ||
-        strncasecmp(ptr, "key", 3) == 0 || strncasecmp(ptr, "fulltext", 8) == 0 ||
-        strncasecmp(ptr, "spatial", 7) == 0 || strncasecmp(ptr, "foreign", 7) == 0 ||
-        strncasecmp(ptr, "unique", 6) == 0 || strncasecmp(ptr, "primary", 7) == 0)
+    if (!bt)
     {
-        return NULL;
+        if (strncasecmp(ptr, "constraint", 10) == 0 || strncasecmp(ptr, "index", 5) == 0 ||
+            strncasecmp(ptr, "key", 3) == 0 || strncasecmp(ptr, "fulltext", 8) == 0 ||
+            strncasecmp(ptr, "spatial", 7) == 0 || strncasecmp(ptr, "foreign", 7) == 0 ||
+            strncasecmp(ptr, "unique", 6) == 0 || strncasecmp(ptr, "primary", 7) == 0)
+        {
+            // Found a keyword
+            return NULL;
+        }
     }
 
     const char *start = ptr;
@@ -698,30 +702,39 @@ TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* event_db)
 {
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
-    const char* statement_sql = get_table_definition(sql, &stmt_len);
+    const char* statement_sql = get_table_definition(sql, len, &stmt_len);
     ss_dassert(statement_sql);
     char table[MYSQL_TABLE_MAXLEN + 1];
     char database[MYSQL_DATABASE_MAXLEN + 1];
-    const char *db = event_db;
-
+    const char* db = event_db;
+    const char* err = NULL;
     MXS_INFO("Create table: %.*s", len, sql);
 
-    if (!get_table_name(sql, table))
+    if (!statement_sql)
     {
-        MXS_ERROR("Malformed CREATE TABLE statement, could not extract table name: %s", sql);
-        return NULL;
+        err = "table definition";
+    }
+    else if (!get_table_name(sql, table))
+    {
+        err = "table name";
+    }
+        /** The CREATE statement contains the database name */
+    else if (strlen(db) == 0)
+    {
+        if (get_database_name(sql, database))
+        {
+            db = database;
+        }
+        else
+        {
+            err = "database name";
+        }
     }
 
-    /** The CREATE statement contains the database name */
-    if (strlen(db) == 0)
+    if (err)
     {
-        if (!get_database_name(sql, database))
-        {
-            MXS_ERROR("Malformed CREATE TABLE statement, could not extract "
-                      "database name: %s", sql);
-            return NULL;
-        }
-        db = database;
+        MXS_ERROR("Malformed CREATE TABLE statement, could not extract %s: %.*s", err, len, sql);
+        return NULL;
     }
 
     int* lengths = NULL;

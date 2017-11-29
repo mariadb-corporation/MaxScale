@@ -1008,13 +1008,13 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     memcpy(db, (char*) ptr + PHDR_OFF + vblklen, dblen);
     db[dblen] = 0;
 
-    unify_whitespace(sql, len);
     size_t sqlsz = len, tmpsz = len;
     char *tmp = MXS_MALLOC(len);
     MXS_ABORT_IF_NULL(tmp);
     remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
     sql = tmp;
     len = tmpsz;
+    unify_whitespace(sql, len);
 
     if (is_create_table_statement(router, sql, len))
     {
