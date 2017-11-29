@@ -2658,30 +2658,6 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
         /* force slave to read events via catchup routine */
         poll_fake_write_event(slave->dcb);
     }
-    /**
-     * Handle Heartbeat: don't check anything else
-     * set CS_WAIT_DATA and return
-     */
-    else if (hdr.ok == SLAVE_POS_READ_OK &&
-             slave->lastEventReceived == HEARTBEAT_EVENT)
-    {
-#ifndef BLFILE_IN_SLAVE
-        blr_close_binlog(router, file);
-#endif
-        spinlock_acquire(&router->binlog_lock);
-        spinlock_acquire(&slave->catch_lock);
-
-        /**
-         * Set the CS_WAIT_DATA that allows notification
-         * of new events after HEARTBEAT_EVENT
-         */
-        slave->cstate |= CS_WAIT_DATA;
-
-        spinlock_release(&slave->catch_lock);
-        spinlock_release(&router->binlog_lock);
-
-        return 1;
-    }
     else if (slave->binlog_pos == router->binlog_position &&
              strcmp(slave->binlogfile, router->binlog_name) == 0)
     {
