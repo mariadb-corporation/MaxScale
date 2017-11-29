@@ -698,7 +698,7 @@ TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
  * @param db Database where this query was executed
  * @return New CREATE_TABLE object or NULL if an error occurred
  */
-TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* event_db)
+TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* db)
 {
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
@@ -706,7 +706,6 @@ TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* event_db)
     ss_dassert(statement_sql);
     char table[MYSQL_TABLE_MAXLEN + 1];
     char database[MYSQL_DATABASE_MAXLEN + 1];
-    const char* db = event_db;
     const char* err = NULL;
     MXS_INFO("Create table: %.*s", len, sql);
 
@@ -719,16 +718,13 @@ TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* event_db)
         err = "table name";
     }
         /** The CREATE statement contains the database name */
-    else if (strlen(db) == 0)
+    if (get_database_name(sql, database))
     {
-        if (get_database_name(sql, database))
-        {
-            db = database;
-        }
-        else
-        {
-            err = "database name";
-        }
+        db = database;
+    }
+    else if (*db == '\0')
+    {
+        err = "database name";
     }
 
     if (err)
@@ -904,6 +900,27 @@ static void remove_extras(char* str)
     str[len] = '\0';
 
     ss_dassert(strlen(str) == len);
+}
+
+
+static void remove_backticks(char* src)
+{
+    char* dest = src;
+
+    while (*src)
+    {
+        if (*src != '`')
+        {
+            // Non-backtick character, keep it
+            *dest = *src;
+            dest++;
+        }
+
+        src++;
+    }
+
+    ss_dassert(dest == src || (*dest != '\0' && dest < src));
+    *dest = '\0';
 }
 
 /**
@@ -1108,10 +1125,12 @@ static bool tok_eq(const char *a, const char *b, size_t len)
 void read_alter_identifier(const char *sql, const char *end, char *dest, int size)
 {
     int len = 0;
-    const char *tok = get_tok(sql, &len, end);
-    if (tok && (tok = get_tok(tok + len, &len, end)) && (tok = get_tok(tok + len, &len, end)))
+    const char *tok = get_tok(sql, &len, end); // ALTER
+    if (tok && (tok = get_tok(tok + len, &len, end)) // TABLE
+                && (tok = get_tok(tok + len, &len, end))) // Table identifier
     {
         snprintf(dest, size, "%.*s", len, tok);
+        remove_backticks(dest);
     }
 }
 
