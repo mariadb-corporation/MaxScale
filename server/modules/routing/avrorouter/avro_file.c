@@ -971,6 +971,8 @@ bool save_and_replace_table_create(AVRO_INSTANCE *router, TABLE_CREATE *created)
         {
             if (strcmp(key, table_ident) == 0)
             {
+                TABLE_MAP* map = hashtable_fetch(router->table_maps, key);
+                router->active_maps[map->id % MAX_MAPPED_TABLES] = NULL;
                 hashtable_delete(router->table_maps, key);
             }
         }

@@ -1206,20 +1206,33 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 if (tok_eq(ptok, "add", plen) && tok_eq(tok, "column", len))
                 {
                     tok = get_tok(tok + len, &len, end);
-
-                    create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * (create->columns + 1));
-                    create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * (create->columns + 1));
-                    create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * (create->columns + 1));
-
                     char avro_token[len + 1];
                     make_avro_token(avro_token, tok, len);
-                    char field_type[200] = ""; // Enough to hold all types
-                    int field_length = extract_type_length(tok + len, field_type);
-                    create->column_names[create->columns] = MXS_STRDUP_A(avro_token);
-                    create->column_types[create->columns] = MXS_STRDUP_A(field_type);
-                    create->column_lengths[create->columns] = field_length;
-                    create->columns++;
-                    updates++;
+                    bool is_new = true;
+
+                    for (uint64_t i = 0; i < create->columns; i++)
+                    {
+                        if (strcmp(avro_token, create->column_names[i]) == 0)
+                        {
+                            is_new = false;
+                            break;
+                        }
+                    }
+
+                    if (is_new)
+                    {
+                        create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * (create->columns + 1));
+                        create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * (create->columns + 1));
+                        create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * (create->columns + 1));
+
+                        char field_type[200] = ""; // Enough to hold all types
+                        int field_length = extract_type_length(tok + len, field_type);
+                        create->column_names[create->columns] = MXS_STRDUP_A(avro_token);
+                        create->column_types[create->columns] = MXS_STRDUP_A(field_type);
+                        create->column_lengths[create->columns] = field_length;
+                        create->columns++;
+                        updates++;
+                    }
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
@@ -1424,21 +1437,4 @@ void table_map_free(TABLE_MAP *map)
         MXS_FREE(map->table);
         MXS_FREE(map);
     }
-}
-
-/**
- * @brief Map a table to a different ID
- *
- * This updates the table ID that the @c TABLE_MAP object is assigned with
- *
- * @param ptr Pointer to the start of a table map event
- * @param hdr_len Post-header length
- * @param map Table map to remap
- */
-void table_map_remap(uint8_t *ptr, uint8_t hdr_len, TABLE_MAP *map)
-{
-    uint64_t table_id = 0;
-    size_t id_size = hdr_len == 6 ? 4 : 6;
-    memcpy(&table_id, ptr, id_size);
-    map->id = table_id;
 }
