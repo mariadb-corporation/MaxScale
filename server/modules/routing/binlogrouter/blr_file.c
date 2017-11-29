@@ -1980,10 +1980,12 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 router->current_pos = pos;
 
                 MXS_WARNING("an error has been found in %s. "
-                            "Setting safe pos to %lu, current pos %lu",
+                            "Setting safe pos to %lu, current pos %lu. "
+                            "ErrMsg [%s]",
                             router->binlog_name,
                             router->binlog_position,
-                            router->current_pos);
+                            router->current_pos,
+                            errmsg);
 
                 if (fix)
                 {

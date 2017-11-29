@@ -2692,6 +2692,30 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
     ss_dassert(hdr.ok == SLAVE_POS_READ_OK);
 
     /**
+     * Handle Heartbeat: don't check anything else
+     * set CS_WAIT_DATA and return
+     */
+    if (slave->lastEventReceived == HEARTBEAT_EVENT)
+    {
+#ifndef BLFILE_IN_SLAVE
+        blr_close_binlog(router, file);
+#endif
+        spinlock_acquire(&router->binlog_lock);
+        spinlock_acquire(&slave->catch_lock);
+
+        /**
+         * Set the CS_WAIT_DATA that allows notification
+         * of new events after HEARTBEAT_EVENT
+         */
+        slave->cstate |= CS_WAIT_DATA;
+
+        spinlock_release(&slave->catch_lock);
+        spinlock_release(&router->binlog_lock);
+
+        return 1;
+    }
+
+    /**
      * Check now slave position with read indicator = SLAVE_POS_READ_OK
      *
      * 1) Same name and pos as current router file: aka Up To Date
@@ -5878,7 +5902,6 @@ blr_send_slave_heartbeat(void *inst)
 
     while (sptr)
     {
-
         /* skip servers with state = 0 */
         if ( (sptr->state == BLRS_DUMPING) && (sptr->heartbeat > 0) &&
              ((t_now + 1 - sptr->lastReply) >= sptr->heartbeat) )
@@ -5888,7 +5911,13 @@ blr_send_slave_heartbeat(void *inst)
                        sptr->serverid, sptr->heartbeat,
                        (unsigned long)sptr->lastReply);
 
-            blr_slave_send_heartbeat(router, sptr);
+            if (blr_slave_send_heartbeat(router, sptr))
+            {
+                /* Set last event */
+                sptr->lastEventReceived = HEARTBEAT_EVENT;
+                /* Set last time */
+                sptr->lastReply = t_now;
+            }
 
             sptr->lastReply = t_now;
 
