@@ -200,7 +200,7 @@ static int gtid_file_select_cb(void *data,
                                int cols,
                                char** values,
                                char** names);
-bool blr_compare_binlogs(ROUTER_INSTANCE *router,
+bool blr_compare_binlogs(const ROUTER_INSTANCE *router,
                          const MARIADB_GTID_ELEMS *info,
                          const char *r_file,
                          const char *s_file);
@@ -369,8 +369,8 @@ blr_file_init(ROUTER_INSTANCE *router)
     {
         char f_prefix[BINLOG_FILE_EXTRA_INFO] = "";
         MARIADB_GTID_INFO last_gtid;
-
         memset(&last_gtid, 0, sizeof(last_gtid));
+
         // SELECT LAST FILE
         if (!blr_get_last_file(router, &last_gtid) ||
             !last_gtid.gtid[0])
@@ -803,6 +803,40 @@ blr_file_flush(ROUTER_INSTANCE *router)
 }
 
 /**
+ * Checks if the BLFILE file pointer has same informations
+ * as in MARIADB_GTID_INFO pointer
+ * and if binlog files are the same.
+ *
+ * This routine is used in blr_open_binlog()
+ * in order to use an already opened BLFILE file
+ * or open a new one.
+ *
+ * @param file       Pointer to a BLFILE opened file
+ * @param binlog     The slave binlog name
+ * @param info       The MARIADB_GTID_INFO GTID info of
+ *                   current slave file
+ * @param s_tree     Whether to use MARIADB_GTID_INFO info
+ * @return           True if BLFILE can be reused, false otherwise
+ */
+static bool inline blr_is_same_slave_file(const BLFILE *file,
+                                          const char *binlog,
+                                          const MARIADB_GTID_INFO *info,
+                                          bool s_tree)
+{
+    if (s_tree)
+    {
+        return (file->info.domain_id == info->gtid_elms.domain_id) &&
+               (file->info.server_id == info->gtid_elms.server_id) &&
+               (strcmp(file->binlogname, binlog) == 0);
+    }
+    else
+    {
+        return strcmp(file->binlogname, binlog) == 0;
+
+    }
+}
+
+/**
  * Open a binlog file for reading binlog records
  *
  * @param router    The router instance
@@ -847,13 +881,20 @@ blr_open_binlog(ROUTER_INSTANCE *router,
 
     spinlock_acquire(&router->fileslock);
     file = router->files;
-    while (file && strcmp(file->binlogname, binlog) != 0)
+
+    while (file &&
+           /* Check whether 'file' can be reused */
+           !blr_is_same_slave_file(file,
+                                   binlog,
+                                   info,
+                                   router->storage_type == BLR_BINLOG_STORAGE_TREE))
     {
         file = file->next;
     }
 
     if (file)
     {
+        /* Reuse 'file' */
         file->refcnt++;
         spinlock_release(&router->fileslock);
         return file;
@@ -881,7 +922,7 @@ blr_open_binlog(ROUTER_INSTANCE *router,
     strcpy(path, router->binlogdir);
     strcat(path, "/");
 
-    // Add tree prefix: "domain_id/server_id"
+    /* Add tree prefix: "domain_id/server_id" */
     if (info)
     {
         char t_prefix[BINLOG_FILE_EXTRA_INFO];
@@ -892,7 +933,7 @@ blr_open_binlog(ROUTER_INSTANCE *router,
         strcat(path, t_prefix);
     }
 
-    // Add file name
+    /* Add file name */
     strcat(path, binlog);
 
     if ((file->fd = open(path, O_RDONLY, 0666)) == -1)
@@ -1056,12 +1097,8 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         switch (n)
         {
         case 0:
-            MXS_INFO("Reached end of binlog file '%s' at %lu.",
-                     file->binlogname, pos);
-
-            /* set ok indicator */
+            /* Just set ok indicator: nothing to log*/
             hdr->ok = SLAVE_POS_READ_OK;
-
             break;
         case -1:
             {
@@ -1569,6 +1606,15 @@ blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 /**
  * Does the next binlog file in the sequence for the slave exist.
  *
+ * If the next file exists in the GTID maps_repo,
+ * no matter if it's not readable in the filesystem,
+ * the GTID elems in the slave->f_info struct will be overwritten.
+ * - file
+ * - domain_id
+ * - server_id
+ *
+ * Note: slave->binlogfile is always untouched
+ *
  * @param router       The router instance
  * @param slave        The slave in question
  * @param next_file    The next_file buffer
@@ -1654,11 +1700,8 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
             return 0;
         }
 
-        MXS_INFO("The next Binlog file from GTID maps repo is %s",
-                 result.file);
-
         // Check whether the query has a result
-        if (result.file)
+        if (result.file[0])
         {
             // Full filename path
             sprintf(bigbuf,
@@ -1671,17 +1714,32 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
             strncpy(next_file, result.file, BINLOG_FNAMELEN);
             next_file[BINLOG_FNAMELEN] = '\0';
 
+            MXS_INFO("The next Binlog file from GTID maps repo is [%s]",
+                     bigbuf);
+
+            spinlock_acquire(&slave->catch_lock);
+
             /**
              * Update GTID elems in the slave->f_info struct:
              * file and domain_id / server_id
+             * Note: slave->binlogfile is untouched
              */
-
             strcpy(slave->f_info.file, result.file);
             slave->f_info.gtid_elms.domain_id = result.gtid_elms.domain_id;
             slave->f_info.gtid_elms.server_id = result.gtid_elms.server_id;
+
+            spinlock_release(&slave->catch_lock);
         }
         else
         {
+            MXS_WARNING("The next Binlog file from GTID maps repo "
+                        "of current slave file [%" PRIu32 "/%" PRIu32 "/%s] "
+                        "has not been found. Router state is [%s]",
+                        slave->f_info.gtid_elms.domain_id,
+                        slave->f_info.gtid_elms.server_id,
+                        slave->binlogfile,
+                        blrm_states[router->master_state]);
+
             next_file[0] = '\0';
             return 0;
         }
@@ -1690,6 +1748,9 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
     // Check whether the new file exists
     if (access(bigbuf, R_OK) == -1)
     {
+        MXS_ERROR("The next Binlog file [%s] from GTID maps repo "
+                  "cannot be read or accessed.",
+                  bigbuf);
         return 0;
     }
     return 1;
@@ -2641,9 +2702,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                                      f_prefix,
                                      gtid_info.file);
                         }
-
-                        MXS_FREE(gtid_info.gtid);
-                        MXS_FREE(gtid_info.file);
                     }
                 }
 
@@ -4413,7 +4471,7 @@ bool blr_get_last_file(ROUTER_INSTANCE *router,
  * @param    s_file    The slave file
  * @return             True or false
  */
-bool blr_compare_binlogs(ROUTER_INSTANCE *router,
+bool blr_compare_binlogs(const ROUTER_INSTANCE *router,
                          const MARIADB_GTID_ELEMS *info,
                          const char *r_file,
                          const char *s_file)
@@ -4462,9 +4520,9 @@ bool blr_is_current_binlog(ROUTER_INSTANCE *router,
  * is checked.
  *
  *
- * @param router      The router instance
- * @param log_file    The file name to check
- * @return            True if file exists, false otherwise.
+ * @param router       The router instance
+ * @param info_file    The GTID info file name to check
+ * @return             True if file exists, false otherwise.
  *
  */
 bool blr_binlog_file_exists(ROUTER_INSTANCE *router,

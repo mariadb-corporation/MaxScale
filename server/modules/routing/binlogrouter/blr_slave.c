@@ -340,8 +340,8 @@ static bool blr_handle_complex_select(ROUTER_INSTANCE *router,
                                       const char *coln);
 extern bool blr_is_current_binlog(ROUTER_INSTANCE *router,
                                   ROUTER_SLAVE *slave);
-extern bool blr_compare_binlogs(ROUTER_INSTANCE *router,
-                                MARIADB_GTID_INFO *slave,
+extern bool blr_compare_binlogs(const ROUTER_INSTANCE *router,
+                                const MARIADB_GTID_INFO *slave,
                                 const char *r_file,
                                 const char *s_file);
 static bool blr_purge_binary_logs(ROUTER_INSTANCE *router,
