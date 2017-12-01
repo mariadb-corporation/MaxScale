@@ -71,7 +71,7 @@ typedef struct
     bool verify_master_failure;    /**< Whether master failure is verified via slaves */
     int master_failure_timeout;    /**< Time in seconds to wait before doing failover */
     int64_t master_gtid_domain;    /**< Gtid domain currently used by the master */
-    bool auto_join_cluster;        /**< Attempt to start slave replication on standalone servers or servers
+    bool auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
                                         replicating from the wrong master. */
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;

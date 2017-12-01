@@ -117,7 +117,7 @@ static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 static const char CN_AUTO_FAILOVER[]      = "auto_failover";
 static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
-static const char CN_AUTO_JOIN[]          = "auto_join";
+static const char CN_AUTO_REJOIN[]        = "auto_rejoin";
 
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
@@ -619,7 +619,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
             {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
             {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
-            {CN_AUTO_JOIN, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -936,7 +936,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
     handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
     handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
-    handle->auto_join_cluster = config_get_bool(params, CN_AUTO_JOIN);
+    handle->auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
 
     bool error = false;
 
@@ -1034,7 +1034,7 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     dcb_printf(dcb, "Automatic failover:\t%s\n", handle->auto_failover ? "Enabled" : "Disabled");
     dcb_printf(dcb, "Failover Timeout:\t%u\n", handle->failover_timeout);
     dcb_printf(dcb, "Switchover Timeout:\t%u\n", handle->switchover_timeout);
-    dcb_printf(dcb, "Auto join:\t%s\n", handle->auto_join_cluster ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Auto rejoin:\t%s\n", handle->auto_rejoin ? "Enabled" : "Disabled");
     dcb_printf(dcb, "MaxScale MonitorId:\t%lu\n", handle->id);
     dcb_printf(dcb, "Replication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
@@ -1084,7 +1084,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     json_object_set_new(rval, CN_AUTO_FAILOVER, json_boolean(handle->auto_failover));
     json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(handle->failover_timeout));
     json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(handle->switchover_timeout));
-    json_object_set_new(rval, CN_AUTO_JOIN, json_boolean(handle->auto_join_cluster));
+    json_object_set_new(rval, CN_AUTO_REJOIN, json_boolean(handle->auto_rejoin));
 
     if (handle->script)
     {
@@ -2295,7 +2295,7 @@ monitorMain(void *arg)
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (handle->auto_join_cluster && !failover_performed &&
+        if (handle->auto_rejoin && !failover_performed &&
             handle->master != NULL && SERVER_IS_MASTER(handle->master->server) &&
             handle->master_gtid_domain >= 0)
         {
@@ -2303,15 +2303,15 @@ monitorMain(void *arg)
             int joins = check_and_join_cluster(handle);
             if (joins < 0)
             {
-                MXS_ERROR("A cluster join operation failed, disabling automatic joining function. "
-                          "To enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
-                          "the REST API.", CN_AUTO_JOIN, mon->name);
-                handle->auto_join_cluster = false;
-                disable_setting(handle, CN_AUTO_JOIN);
+                MXS_ERROR("A cluster join operation failed, disabling automatic rejoining. "
+                          "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
+                          "the REST API.", CN_AUTO_REJOIN, mon->name);
+                handle->auto_rejoin = false;
+                disable_setting(handle, CN_AUTO_REJOIN);
             }
             else if (joins > 0)
             {
-                MXS_NOTICE("%d server(s) redirected or joined.", joins);
+                MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
             }
         }
 
