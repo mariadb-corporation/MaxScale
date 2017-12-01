@@ -112,9 +112,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 static bool open_instance_database(const char *path, sqlite3 **handle)
 {
-    if (sqlite3_open_v2(path, handle, db_flags, NULL) != SQLITE_OK)
+    int rc = sqlite3_open_v2(path, handle, db_flags, NULL);
+
+    if (rc != SQLITE_OK)
     {
-        MXS_ERROR("Failed to open SQLite3 handle.");
+        MXS_ERROR("Failed to open SQLite3 handle: %d, %s", rc, sqlite3_errstr(rc));
         return false;
     }
 
@@ -140,7 +142,7 @@ sqlite3* get_handle(MYSQL_AUTH* instance)
 
     if (instance->handles[i] == NULL)
     {
-        ss_debug(bool rval = )open_instance_database(":memory", &instance->handles[i]);
+        ss_debug(bool rval = )open_instance_database(":memory:", &instance->handles[i]);
         ss_dassert(rval);
     }
 
