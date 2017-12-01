@@ -329,7 +329,7 @@ bool is_error_response(GWBUF *buffer)
  * @param dcb Backend DCB where authentication failed
  * @param buffer Buffer containing the response from the backend
  */
-void log_error_response(DCB *dcb, GWBUF *buffer)
+static void handle_error_response(DCB *dcb, GWBUF *buffer)
 {
     uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
     size_t len = MYSQL_GET_PAYLOAD_LEN(data);
@@ -353,6 +353,13 @@ void log_error_response(DCB *dcb, GWBUF *buffer)
                   dcb->server->name, dcb->server->port);
 
         server_set_status(dcb->server, SERVER_MAINT);
+    }
+    else if (errcode == ER_ACCESS_DENIED_ERROR ||
+             errcode == ER_DBACCESS_DENIED_ERROR ||
+             errcode == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+    {
+        // Authentication failed, reload users
+        service_refresh_users(dcb->service);
     }
 }
 
@@ -474,7 +481,7 @@ gw_read_backend_event(DCB *dcb)
             {
                 /** The server responded with an error */
                 proto->protocol_auth_state = MXS_AUTH_STATE_FAILED;
-                log_error_response(dcb, readbuf);
+                handle_error_response(dcb, readbuf);
             }
 
             if (proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED)
@@ -540,15 +547,6 @@ gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
 {
     MXS_SESSION *session = dcb->session;
     CHK_SESSION(session);
-
-    /* Only reload the users table if authentication failed and the
-     * client session is not stopping. It is possible that authentication
-     * fails because the client has closed the connection before all
-     * backends have done authentication. */
-    if (state == MXS_AUTH_STATE_FAILED && session->state != SESSION_STATE_STOPPING)
-    {
-        service_refresh_users(session->service);
-    }
 
     GWBUF* errbuf = mysql_create_custom_error(1, 0, "Authentication with backend "
                                               "failed. Session will be closed.");
@@ -809,7 +807,7 @@ gw_read_and_write(DCB *dcb)
             {
                 /** The COM_CHANGE USER failed, generate a fake hangup event to
                  * close the DCB and send an error to the client. */
-                log_error_response(dcb, reply);
+                handle_error_response(dcb, reply);
             }
             else
             {
