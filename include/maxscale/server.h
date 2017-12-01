@@ -96,6 +96,10 @@ typedef struct server
     uint8_t        charset;        /**< Default server character set */
     bool           is_active;      /**< Server is active and has not been "destroyed" */
     bool           created_online; /**< Whether this server was created after startup */
+    struct
+    {
+        bool ssl_not_enabled; /**< SSL not used for an SSL enabled server */
+    } log_warning; /**< Whether a specific warning was logged */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif
