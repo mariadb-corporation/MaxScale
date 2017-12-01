@@ -12,6 +12,7 @@
  */
 
 #include "maxscale/module.hh"
+#include <string>
 #include "../../../core/internal/modules.h"
 
 using std::auto_ptr;
@@ -78,7 +79,7 @@ const char* Module::ConfigParameters::get(const char* zName) const
 
 void Module::ConfigParameters::set_value(const char* zName, const char* zValue)
 {
-    return set_value(zName, std::string(zValue));
+    set_value(zName, std::string(zValue));
 }
 
 void Module::ConfigParameters::set_value(const char* zName, const std::string& value)

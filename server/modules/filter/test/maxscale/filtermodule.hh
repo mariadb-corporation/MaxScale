@@ -187,10 +187,11 @@ private:
     }
 
 private:
-    friend Base;
+    // Not accepted by CentOS6: friend Base;
+    friend class SpecificModule<FilterModule, MXS_FILTER_OBJECT>;
 
     FilterModule(const MXS_MODULE* pModule)
-        : Base(pModule)
+        : SpecificModule<FilterModule, MXS_FILTER_OBJECT>(pModule)
     {
     }
 };

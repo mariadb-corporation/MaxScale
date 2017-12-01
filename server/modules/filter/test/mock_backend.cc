@@ -13,6 +13,7 @@
 
 #include "maxscale/mock/backend.hh"
 #include <algorithm>
+#include <vector>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 #include <iostream>
