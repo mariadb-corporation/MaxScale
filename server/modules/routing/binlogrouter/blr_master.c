@@ -1299,11 +1299,11 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 }
 
                /**
-                 * Check Event Type limit:
-                 * If supported, gather statistics about
-                 * the replication event types
-                 * else stop replication from master
-                 */
+                * Check Event Type limit:
+                * If supported, gather statistics about
+                * the replication event types
+                * else stop replication from master
+                */
                 int event_limit = router->mariadb10_compat ?
                                   MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 

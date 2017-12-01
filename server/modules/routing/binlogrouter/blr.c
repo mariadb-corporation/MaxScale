@@ -1063,7 +1063,7 @@ createInstance(SERVICE *service, char **options)
         if (inst->mariadb10_master_gtid &&
             inst->current_pos <= 4)
         {
-            MARIADB_GTID_INFO last_gtid = {};
+            MARIADB_GTID_INFO last_gtid;
             memset(&last_gtid, 0, sizeof(last_gtid));
 
             /* Get last MariaDB GTID from repo */
@@ -1224,6 +1224,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     slave->mariadb_gtid = NULL;
     slave->gtid_maps = NULL;
     memset(&slave->f_info, 0, sizeof (MARIADB_GTID_INFO));
+    slave->annotate_rows = false;
 
     /**
      * Add this session to the list of active sessions.

@@ -1714,8 +1714,8 @@ blr_file_next_exists(ROUTER_INSTANCE *router,
             strncpy(next_file, result.file, BINLOG_FNAMELEN);
             next_file[BINLOG_FNAMELEN] = '\0';
 
-            MXS_INFO("The next Binlog file from GTID maps repo is [%s]",
-                     bigbuf);
+            MXS_DEBUG("The next Binlog file from GTID maps repo is [%s]",
+                      bigbuf);
 
             spinlock_acquire(&slave->catch_lock);
 
