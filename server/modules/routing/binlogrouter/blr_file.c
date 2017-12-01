@@ -2682,7 +2682,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                         gtid_info.gtid[0])
                     {
                         snprintf(mariadb_gtid,
-                                 GTID_MAX_LEN,
+                                 GTID_MAX_LEN + 1,
                                  "%s",
                                  gtid_info.gtid);
 
