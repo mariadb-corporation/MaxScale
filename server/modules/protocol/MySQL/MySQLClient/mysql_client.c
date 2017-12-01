@@ -853,11 +853,11 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
                  * If we an empty packet or have at least 5 bytes of data, we can start
                  * sending the data to the router.
                  */
-                if (pktlen && gwbuf_copy_data(queue, MYSQL_HEADER_LEN, 1, &cmd) != 1)
+                if (pktlen && gwbuf_copy_data(queue, offset + MYSQL_HEADER_LEN, 1, &cmd) != 1)
                 {
                     if ((queue = split_and_store(dcb, queue, offset)) == NULL)
                     {
-                        ss_dassert(bytes_available == MYSQL_HEADER_LEN);
+                        ss_dassert(bytes_available - offset == MYSQL_HEADER_LEN);
                         return false;
                     }
                     ss_dassert(offset > 0);
