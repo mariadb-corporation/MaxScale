@@ -101,7 +101,7 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor);
 static bool mon_process_failover(MYSQL_MONITOR*, uint32_t, bool*);
 static bool do_failover(MYSQL_MONITOR* mon, json_t** output);
 static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
-                          MXS_MONITORED_SERVER* new_master,json_t** err_out);
+                          MXS_MONITORED_SERVER* new_master, json_t** err_out);
 static bool update_gtids(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
@@ -304,7 +304,7 @@ bool mysql_failover_check(MYSQL_MONITOR* mon, json_t** error_out)
         if ((status_bits & master_up) == master_up)
         {
             string master_up_msg = string("Master server '") + mon_server->server->unique_name +
-                "' is running";
+                                   "' is running";
             if (status_bits & SERVER_MAINT)
             {
                 master_up_msg += ", although in maintenance mode";
@@ -538,94 +538,94 @@ bool mysql_handle_failover(const MODULECMD_ARG* args, json_t** output)
 extern "C"
 {
 
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    MXS_NOTICE("Initialise the MySQL Monitor module.");
-    const char ARG_MONITOR_DESC[] = "MySQL Monitor name (from configuration file)";
-    static modulecmd_arg_type_t switchover_argv[] =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
+        MXS_NOTICE("Initialise the MySQL Monitor module.");
+        const char ARG_MONITOR_DESC[] = "MySQL Monitor name (from configuration file)";
+        static modulecmd_arg_type_t switchover_argv[] =
         {
-            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            ARG_MONITOR_DESC
-        },
-        { MODULECMD_ARG_SERVER, "New master" },
-        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (obligatory if exists)" }
-    };
-
-    modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
-                               mysql_handle_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
-                               "Perform master switchover");
-
-    static modulecmd_arg_type_t failover_argv[] =
-    {
-        {
-            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            ARG_MONITOR_DESC
-        },
-    };
-
-    modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
-                               mysql_handle_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
-                               "Perform master failover");
-
-    static MXS_MONITOR_OBJECT MyObject =
-    {
-        startMonitor,
-        stopMonitor,
-        diagnostics,
-        diagnostics_json
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_MONITOR,
-        MXS_MODULE_GA,
-        MXS_MONITOR_VERSION,
-        "A MySQL Master/Slave replication monitor",
-        "V1.5.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        {
-            {"detect_replication_lag", MXS_MODULE_PARAM_BOOL, "false"},
-            {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "true"},
-            {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
-            {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
-            {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
-            {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
-            {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
-            {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
-            {"allow_external_slaves", MXS_MODULE_PARAM_BOOL, "true"},
             {
-                "script",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_PATH_X_OK
+                MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+                ARG_MONITOR_DESC
             },
-            {
-                "events",
-                MXS_MODULE_PARAM_ENUM,
-                MXS_MONITOR_EVENT_DEFAULT_VALUE,
-                MXS_MODULE_OPT_NONE,
-                mxs_monitor_event_enum_values
-            },
-            {CN_AUTO_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
-            {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
-            {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
-            {CN_REPLICATION_USER, MXS_MODULE_PARAM_STRING},
-            {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
-            {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
-            {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
-            {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            { MODULECMD_ARG_SERVER, "New master" },
+            { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (obligatory if exists)" }
+        };
 
-    return &info;
-}
+        modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
+                                   mysql_handle_switchover, MXS_ARRAY_NELEMS(switchover_argv),
+                                   switchover_argv, "Perform master switchover");
+
+        static modulecmd_arg_type_t failover_argv[] =
+        {
+            {
+                MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+                ARG_MONITOR_DESC
+            },
+        };
+
+        modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
+                                   mysql_handle_failover, MXS_ARRAY_NELEMS(failover_argv),
+                                   failover_argv, "Perform master failover");
+
+        static MXS_MONITOR_OBJECT MyObject =
+        {
+            startMonitor,
+            stopMonitor,
+            diagnostics,
+            diagnostics_json
+        };
+
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_MONITOR,
+            MXS_MODULE_GA,
+            MXS_MONITOR_VERSION,
+            "A MySQL Master/Slave replication monitor",
+            "V1.5.0",
+            MXS_NO_MODULE_CAPABILITIES,
+            &MyObject,
+            NULL, /* Process init. */
+            NULL, /* Process finish. */
+            NULL, /* Thread init. */
+            NULL, /* Thread finish. */
+            {
+                {"detect_replication_lag", MXS_MODULE_PARAM_BOOL, "false"},
+                {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "true"},
+                {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
+                {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
+                {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
+                {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
+                {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
+                {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
+                {"allow_external_slaves", MXS_MODULE_PARAM_BOOL, "true"},
+                {
+                    "script",
+                    MXS_MODULE_PARAM_PATH,
+                    NULL,
+                    MXS_MODULE_OPT_PATH_X_OK
+                },
+                {
+                    "events",
+                    MXS_MODULE_PARAM_ENUM,
+                    MXS_MONITOR_EVENT_DEFAULT_VALUE,
+                    MXS_MODULE_OPT_NONE,
+                    mxs_monitor_event_enum_values
+                },
+                {CN_AUTO_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
+                {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
+                {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
+                {CN_REPLICATION_USER, MXS_MODULE_PARAM_STRING},
+                {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
+                {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
+                {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
+                {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
+
+        return &info;
+    }
 
 }
 
@@ -636,23 +636,23 @@ public:
     uint32_t server_id;
     uint64_t sequence;
     Gtid()
-       : domain(0)
-       , server_id(0)
-       , sequence(0)
+        : domain(0)
+        , server_id(0)
+        , sequence(0)
     {}
 
     /**
-     * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with the given domain
-     * is returned.
+     * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with
+     * the given domain is returned.
      *
      * @param str Gtid string
-     * @param search_domain The Gtid domain whose triplet should be returned. Negative domain means autoselect,
-     * which is only allowed when the string contains one triplet.
+     * @param search_domain The Gtid domain whose triplet should be returned. Negative domain stands for
+     * autoselect, which is only allowed when the string contains one triplet.
      */
     Gtid(const char* str, int64_t search_domain = -1)
-       : domain(0)
-       , server_id(0)
-       , sequence(0)
+        : domain(0)
+        , server_id(0)
+        , sequence(0)
     {
         // Autoselect only allowed with one triplet
         ss_dassert(search_domain >= 0 || strchr(str, ',') == NULL);
@@ -662,8 +662,8 @@ public:
             // Search for the correct triplet.
             bool found = false;
             for (const char* next_triplet = strchr(str, ',');
-                    next_triplet != NULL && !found;
-                    next_triplet = strchr(next_triplet, ','))
+                 next_triplet != NULL && !found;
+                 next_triplet = strchr(next_triplet, ','))
             {
                 parse_triplet(++next_triplet);
                 if (domain == search_domain)
@@ -687,7 +687,7 @@ public:
 private:
     void parse_triplet(const char* str)
     {
-        ss_debug(int rv =) sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &domain, &server_id, &sequence);
+        ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &domain, &server_id, &sequence);
         ss_dassert(rv == 3);
     }
 };
@@ -698,7 +698,8 @@ public:
     int master_server_id;   /**< The master's server_id value. */
     bool slave_io_running;  /**< Whether the slave I/O thread is running and connected. */
     bool slave_sql_running; /**< Whether or not the SQL thread is running. */
-    string master_log_file; /**< Name of the master binary log file that the I/O thread is currently reading from. */
+    string master_log_file; /**< Name of the master binary log file that the I/O thread is currently
+                             *   reading from. */
     uint64_t read_master_log_pos; /**< Position up to which the I/O thread has read in the current master
                                    *   binary log file. */
     Gtid gtid_io_pos;       /**< Gtid I/O position of the slave thread. Only shows the triplet with
@@ -720,9 +721,9 @@ public:
     bool             log_bin;          /**< Is binary logging enabled */
     bool             log_slave_updates;/**< Does the slave log replicated events to binlog */
     ReplicationSettings()
-    :   gtid_strict_mode(false)
-    ,   log_bin(false)
-    ,   log_slave_updates(false)
+        :   gtid_strict_mode(false)
+        ,   log_bin(false)
+        ,   log_slave_updates(false)
     {}
 };
 
@@ -1298,7 +1299,7 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
 static inline bool master_maybe_dead(MYSQL_MONITOR* handle)
 {
     return handle->verify_master_failure && handle->master &&
-        SERVER_IS_DOWN(handle->master->server);
+           SERVER_IS_DOWN(handle->master->server);
 }
 
 static bool master_still_alive(MYSQL_MONITOR* handle)
@@ -2215,8 +2216,9 @@ monitorMain(void *arg)
             if (failover_not_possible(handle))
             {
                 const char PROBLEMS[] = "Failover is not possible due to one or more problems in the "
-                    "replication configuration, disabling automatic failover. Failover should only be "
-                    "enabled after the replication configuration has been fixed.";
+                                        "replication configuration, disabling automatic failover. Failover "
+                                        "should only be enabled after the replication configuration has been "
+                                        "fixed.";
                 MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, mon->name);
                 handle->auto_failover = false;
                 disable_setting(handle, CN_AUTO_FAILOVER);
@@ -2418,11 +2420,11 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
     {
         /* create repl_heartbeat table in maxscale_schema database */
         if (mxs_mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
-                        "maxscale_schema.replication_heartbeat "
-                        "(maxscale_id INT NOT NULL, "
-                        "master_server_id INT NOT NULL, "
-                        "master_timestamp INT UNSIGNED NOT NULL, "
-                        "PRIMARY KEY ( master_server_id, maxscale_id ) )"))
+                            "maxscale_schema.replication_heartbeat "
+                            "(maxscale_id INT NOT NULL, "
+                            "master_server_id INT NOT NULL, "
+                            "master_timestamp INT UNSIGNED NOT NULL, "
+                            "PRIMARY KEY ( master_server_id, maxscale_id ) )"))
         {
             MXS_ERROR("Error creating maxscale_schema.replication_heartbeat "
                       "table in Master server: %s", mysql_error(database->con));
@@ -3200,8 +3202,8 @@ bool switchover_check_preferred_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER*
  * @return The found master, or NULL if not found
  */
 MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon,
-                                                 ServerVector* slaves_out,
-                                                 json_t** err_out)
+                                        ServerVector* slaves_out,
+                                        json_t** err_out)
 {
     /* Select a new master candidate. Selects the one with the latest event in relay log.
      * If multiple slaves have same number of events, select the one with most processed events. */
@@ -3235,11 +3237,11 @@ MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon,
                     bool master_updates = new_master_info->rpl_settings.log_slave_updates;
                     // Otherwise accept a slave with a later event in relay log.
                     if (cand_io > master_io ||
-                            // If io sequences are identical, the slave with more events processed wins.
-                            (cand_io == master_io && (cand_processed > master_processed ||
-                            // Finally, if binlog positions are identical, prefer a slave with
-                            // log_slave_updates.
-                            (cand_processed == master_processed && cand_updates && !master_updates))))
+                        // If io sequences are identical, the slave with more events processed wins.
+                        (cand_io == master_io && (cand_processed > master_processed ||
+                        // Finally, if binlog positions are identical, prefer a slave with
+                        // log_slave_updates.
+                        (cand_processed == master_processed && cand_updates && !master_updates))))
                     {
                         select_this = true;
                     }
@@ -3299,7 +3301,7 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
         // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
         // It doesn't matter here, but is a general rule.
         query_ok = update_gtids(mon, new_master, master_info) &&
-            do_show_slave_status(mon, master_info, new_master);
+                   do_show_slave_status(mon, master_info, new_master);
         io_pos_stable = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
 
@@ -3319,10 +3321,10 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
         {
             reason = "Old master sent new event(s)";
         }
-        else if(master_info->relay_log_events() < 0)
+        else if (master_info->relay_log_events() < 0)
         {
             reason = "Invalid Gtid(s) (current_pos: " + master_info->gtid_current_pos.to_string() +
-                ", io_pos: " + master_info->slave_status.gtid_io_pos.to_string() + ")";
+                     ", io_pos: " + master_info->slave_status.gtid_io_pos.to_string() + ")";
         }
         PRINT_MXS_JSON_ERROR(err_out, "Failover: %s while waiting for server '%s' to process relay log. "
                              "Cancelling failover.",
@@ -3468,7 +3470,7 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
  * @return True on success.
  */
 static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
-        StringVector* output)
+                          StringVector* output)
 {
     bool rval = false;
     MYSQL_RES *result;
@@ -3479,7 +3481,7 @@ static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, uns
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for '%s'. Expected %d columns, got %d. MySQL Version: %s",
-                    query, expected_cols, columns, database->server->version_string);
+                      query, expected_cols, columns, database->server->version_string);
         }
         else
         {
@@ -3547,9 +3549,9 @@ static bool update_gtids(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER *database, MyS
     if (query_one_row(database, query, 2, &row))
     {
         info->gtid_current_pos = (row[ind_current_pos] != "") ?
-            Gtid(row[ind_current_pos].c_str(), domain) : Gtid();
+                                 Gtid(row[ind_current_pos].c_str(), domain) : Gtid();
         info->gtid_binlog_pos = (row[ind_binlog_pos] != "") ?
-            Gtid(row[ind_binlog_pos].c_str(), domain) : Gtid();
+                                Gtid(row[ind_binlog_pos].c_str(), domain) : Gtid();
         rval = true;
     }
     return rval;
@@ -3686,21 +3688,21 @@ static bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gti
  * successfully.
  */
 static bool switchover_start_slave(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* old_master,
-        MXS_MONITORED_SERVER* new_master)
+                                   MXS_MONITORED_SERVER* new_master)
 {
     bool rval = false;
     std::string change_cmd = generate_change_master_cmd(mon, new_master);
     if (mxs_mysql_query(old_master->con, change_cmd.c_str()) == 0 &&
-            mxs_mysql_query(old_master->con, "START SLAVE;") == 0)
+        mxs_mysql_query(old_master->con, "START SLAVE;") == 0)
     {
         MXS_NOTICE("Old master '%s' starting replication from '%s'.",
-                old_master->server->unique_name, new_master->server->unique_name);
+                   old_master->server->unique_name, new_master->server->unique_name);
         rval = true;
     }
     else
     {
         MXS_ERROR("Old master '%s' could not start replication: '%s'.",
-                old_master->server->unique_name, mysql_error(old_master->con));
+                  old_master->server->unique_name, mysql_error(old_master->con));
     }
     return rval;
 }
@@ -3832,7 +3834,7 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
     if (query_one_row(database, query.c_str(), columns, &row))
     {
         uint32_t server_id = 0;
-        ss_debug(int rv =) sscanf(row[ind_id].c_str(), "%" PRIu32, &server_id);
+        ss_debug(int rv = ) sscanf(row[ind_id].c_str(), "%" PRIu32, &server_id);
         ss_dassert(rv == 1 && (row[ind_ro] == "0" || row[ind_ro] == "1"));
         database->server->node_id = server_id;
         serv_info->server_id = server_id;
@@ -3840,7 +3842,7 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
         if (columns == 3)
         {
             uint32_t domain = 0;
-            ss_debug(rv =) sscanf(row[ind_domain].c_str(), "%" PRIu32, &domain);
+            ss_debug(rv = ) sscanf(row[ind_domain].c_str(), "%" PRIu32, &domain);
             ss_dassert(rv == 1);
             serv_info->gtid_domain_id = domain;
         }
@@ -3907,7 +3909,7 @@ static int check_and_join_cluster(MYSQL_MONITOR* mon)
             // Is not a master and has no slave connection, or the slave connection is to the wrong server.
             if (server_info->n_slaves_configured == 0 ||
                 (server_info->n_slaves_configured == 1 && slave_status->slave_io_running == true &&
-                slave_status->master_server_id != master_info->server_id))
+                 slave_status->master_server_id != master_info->server_id))
             {
                 suspects.push_back(server);
                 suspect_infos.push_back(server_info);
