@@ -1,0 +1,135 @@
+[mysqld]
+expire_logs_days=7
+user=mysql
+server_id=1
+
+# Row binary log format is required by Galera
+binlog_format=ROW
+
+log-bin
+
+# InnoDB is currently the only storage engine supported by Galera
+default-storage-engine=innodb
+innodb_file_per_table
+
+# To avoid issues with 'bulk mode inserts' using autoincrement fields
+innodb_autoinc_lock_mode=2
+
+# Required to prevent deadlocks on parallel transaction execution
+innodb_locks_unsafe_for_binlog=1
+
+# Query Cache is not supported by Galera wsrep replication
+query_cache_size=0
+query_cache_type=0
+
+# INITIAL SETUP
+# In some systems bind-address defaults to 127.0.0.1, and with mysqldump SST
+# it will have (most likely) disastrous consequences on donor node
+bind-address=###NODE-ADDRESS###
+
+##
+## WSREP options
+##
+
+# INITIAL SETUP
+# For the initial setup, wsrep should be disabled
+wsrep_provider=none
+# After initial setup, parameter should have full path to wsrep provider library
+wsrep_provider=###GALERA-LIB-PATH###
+
+# Provider specific configuration options
+wsrep_provider_options = "evs.keepalive_period = PT3S; evs.inactive_check_period = PT10S; evs.suspect_timeout = PT30S; evs.inactive_timeout = PT1M; evs.install_timeout = PT1M"
+
+# Logical cluster name. Should be the same for all nodes in the same cluster.
+wsrep_cluster_name=skycluster
+
+# INITIAL SETUP
+# Group communication system handle: for the first node to be launched, the value should be "gcomm://", indicating creation of a new cluster;
+# for the other nodes joining the cluster, the value should be "gcomm://xxx.xxx.xxx.xxx:4567", where xxx.xxx.xxx.xxx should be the ip of a node
+# already on the cluster (usually the first one)
+# DEPRECATED
+# wsrep_cluster_address=gcomm://
+
+# Human-readable node name (non-unique). Hostname by default.
+#wsrep_node_name=###NODE-NAME###
+wsrep_node_name=galera000
+
+# INITIAL SETUP
+# Base replication <address|hostname>[:port] of the node.
+# The values supplied will be used as defaults for state transfer receiving,
+# listening ports and so on. Default: address of the first network interface.
+wsrep_node_address=###NODE-ADDRESS###
+
+# INITIAL SETUP
+# Address for incoming client connections. Autodetect by default.
+wsrep_node_incoming_address=###NODE-ADDRESS###
+
+# Number of threads that will process writesets from other nodes
+wsrep_slave_threads=1
+
+# Generate fake primary keys for non-PK tables (required for multi-master
+# and parallel applying operation)
+wsrep_certify_nonPK=1
+
+# Maximum number of rows in write set
+wsrep_max_ws_rows=131072
+
+# Maximum size of write set
+wsrep_max_ws_size=1073741824
+
+# Debug level logging (1 = enabled)
+wsrep_debug=1
+
+# Convert locking sessions into transactions
+wsrep_convert_LOCK_to_trx=0
+
+# Number of retries for deadlocked autocommits
+wsrep_retry_autocommit=1
+
+# Change auto_increment_increment and auto_increment_offset automatically
+wsrep_auto_increment_control=1
+
+# Retry autoinc insert, when the insert failed for "duplicate key error"
+wsrep_drupal_282555_workaround=0
+
+# Enable "strictly synchronous" semantics for read operations
+wsrep_causal_reads=0
+
+# Command to call when node status or cluster membership changes.
+# Will be passed all or some of the following options:
+# --status  - new status of this node
+# --uuid    - UUID of the cluster
+# --primary - whether the component is primary or not ("yes"/"no")
+# --members - comma-separated list of members
+# --index   - index of this node in the list
+wsrep_notify_cmd=
+
+##
+## WSREP State Transfer options
+##
+
+# State Snapshot Transfer method
+#wsrep_sst_method=mysqldump
+#wsrep_sst_method=xtrabackup
+wsrep_sst_method=rsync
+
+# INITIAL SETUP
+# Address which donor should send State Snapshot to.
+# Should be the address of the CURRENT node. DON'T SET IT TO DONOR ADDRESS!!!
+# (SST method dependent. Defaults to the first IP of the first interface)
+wsrep_sst_receive_address=###NODE-ADDRESS###
+
+# INITIAL SETUP
+# SST authentication string. This will be used to send SST to joining nodes.
+# Depends on SST method. For mysqldump method it is root:<root password>
+#wsrep_sst_auth=###REP-USERNAME###:###REP-PASSWORD###
+wsrep_sst_auth=repl:repl
+
+# Desired SST donor name.
+#wsrep_sst_donor=
+
+# Reject client queries when donating SST (false)
+#wsrep_sst_donor_rejects_queries=0
+
+# Protocol version to use
+# wsrep_protocol_version=
