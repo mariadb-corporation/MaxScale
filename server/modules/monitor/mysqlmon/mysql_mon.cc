@@ -3355,18 +3355,27 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
  */
 bool promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
+    bool success = false;
     MXS_NOTICE("Promoting server '%s' to master.", new_master->server->unique_name);
-    if (mxs_mysql_query(new_master->con, "STOP SLAVE;") == 0 &&
-        mxs_mysql_query(new_master->con, "RESET SLAVE ALL;") == 0  &&
-        mxs_mysql_query(new_master->con, "SET GLOBAL read_only=0;") == 0)
+    const char* query = "STOP SLAVE;";
+    if (mxs_mysql_query(new_master->con, query) == 0)
     {
-        return true;
+        query = "RESET SLAVE ALL;";
+        if (mxs_mysql_query(new_master->con, query) == 0)
+        {
+            query = "SET GLOBAL read_only=0;";
+            if (mxs_mysql_query(new_master->con, query) == 0)
+            {
+                success = true;
+            }
+        }
     }
-    else
+    if (!success)
     {
-        PRINT_MXS_JSON_ERROR(err_out, "Promotion failed: '%s'.", mysql_error(new_master->con));
-        return false;
+        PRINT_MXS_JSON_ERROR(err_out, "Promotion failed: '%s'. Query: '%s'.",
+                             mysql_error(new_master->con), query);
     }
+    return success;
 }
 
 string generate_change_master_cmd(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master)
@@ -3585,16 +3594,24 @@ static bool switchover_demote_master(MYSQL_MONITOR* mon,
 {
     MXS_NOTICE("Demoting server '%s'.", current_master->server->unique_name);
     string error;
-    bool rval = false;
-    if (mxs_mysql_query(current_master->con, "SET GLOBAL read_only=1;") == 0)
+    bool success = false;
+    const char* query = "SET GLOBAL read_only=1;";
+    if (mxs_mysql_query(current_master->con, query) == 0)
     {
-        if (mxs_mysql_query(current_master->con, "FLUSH TABLES;") == 0 &&
-            mxs_mysql_query(current_master->con, "FLUSH LOGS;") == 0 &&
-            update_gtids(mon, current_master, info))
+        query = "FLUSH TABLES;";
+        if (mxs_mysql_query(current_master->con, query) == 0)
         {
-            rval = true;
+            query = "FLUSH LOGS;";
+            if (mxs_mysql_query(current_master->con, query) == 0)
+            {
+                query = "";
+                if (update_gtids(mon, current_master, info))
+                {
+                    success = true;
+                }
+            }
         }
-        else
+        if (!success)
         {
             // Somehow, a step after "SET read_only" failed. Try to set read_only back to 0. It may not
             // work since the connection is likely broken.
@@ -3607,7 +3624,7 @@ static bool switchover_demote_master(MYSQL_MONITOR* mon,
         error = mysql_error(current_master->con);
     }
 
-    if (rval == false)
+    if (!success)
     {
         if (error.empty())
         {
@@ -3615,10 +3632,11 @@ static bool switchover_demote_master(MYSQL_MONITOR* mon,
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(err_out, "Demotion failed due to a query error: '%s'.", error.c_str());
+            PRINT_MXS_JSON_ERROR(err_out, "Demotion failed due to a query error: '%s'. Query: '%s'.",
+                                 error.c_str(), query);
         }
     }
-    return rval;
+    return success;
 }
 
 static string generate_master_gtid_wait_cmd(const Gtid& gtid, double timeout)
