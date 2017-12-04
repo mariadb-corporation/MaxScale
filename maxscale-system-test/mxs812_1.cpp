@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     /** Create test table */
     Test->repl->connect();
     Test->try_query(Test->repl->nodes[0], (char*)"DROP TABLE IF EXISTS long_blob_table");
-    Test->try_query(Test->repl->nodes[0], (char*)"CREATE TABLE long_blob_table(x INT, b BLOB)");
+    Test->try_query(Test->repl->nodes[0], (char*)"CREATE TABLE long_blob_table(x INT, b LONGBLOB)");
 
     Test->connect_maxscale();
     Test->tprintf("Starting test");

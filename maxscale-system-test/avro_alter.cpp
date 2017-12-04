@@ -23,17 +23,23 @@ int main(int argc, char *argv[])
     test.set_timeout(120);
     test.repl->connect();
 
+    // Execute two events for each version of the schema
     execute_query_silent(test.repl->nodes[0], "DROP TABLE test.t1");
     execute_query(test.repl->nodes[0], "CREATE TABLE test.t1(id INT)");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (1)");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
     execute_query(test.repl->nodes[0], "ALTER TABLE test.t1 ADD COLUMN a VARCHAR(100)");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (2, \"a\")");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
     execute_query(test.repl->nodes[0], "ALTER TABLE test.t1 ADD COLUMN b FLOAT");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (3, \"b\", 3.0)");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
     execute_query(test.repl->nodes[0], "ALTER TABLE test.t1 CHANGE COLUMN b c DATETIME(3)");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (4, \"c\", NOW())");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
     execute_query(test.repl->nodes[0], "ALTER TABLE test.t1 DROP COLUMN c");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (5, \"d\")");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
 
     test.repl->close_connections();
 
@@ -61,7 +67,9 @@ int main(int argc, char *argv[])
             nrows++;
         }
 
-        test.add_result(nrows != 1, "Expected 1 line in file number %d, got %d: %s", i, nrows, rows);
+        // The number of changes that are present in each version of the schema
+        const int nchanges = 2;
+        test.add_result(nrows != nchanges, "Expected %d line in file number %d, got %d: %s", nchanges, i, nrows, rows);
         free(rows);
     }
 
