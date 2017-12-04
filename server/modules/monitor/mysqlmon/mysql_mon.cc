@@ -118,6 +118,7 @@ static const char CN_AUTO_FAILOVER[]      = "auto_failover";
 static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_AUTO_REJOIN[]        = "auto_rejoin";
+static const char CN_FAILCOUNT[]          = "failcount";
 
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
@@ -596,7 +597,7 @@ extern "C"
                 {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
                 {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
                 {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
-                {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
+                {CN_FAILCOUNT, MXS_MODULE_PARAM_COUNT, "5"},
                 {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
                 {"allow_external_slaves", MXS_MODULE_PARAM_BOOL, "true"},
                 {
@@ -926,7 +927,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->replicationHeartbeat = config_get_bool(params, "detect_replication_lag");
     handle->multimaster = config_get_bool(params, "multimaster");
     handle->detect_standalone_master = config_get_bool(params, "detect_standalone_master");
-    handle->failcount = config_get_integer(params, "failcount");
+    handle->failcount = config_get_integer(params, CN_FAILCOUNT);
     handle->allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
     handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
     handle->script = config_copy_string(params, "script");
@@ -1033,9 +1034,10 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
 
     dcb_printf(dcb, "Automatic failover:\t%s\n", handle->auto_failover ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Failcount:\t\t%d\n", handle->failcount);
     dcb_printf(dcb, "Failover Timeout:\t%u\n", handle->failover_timeout);
     dcb_printf(dcb, "Switchover Timeout:\t%u\n", handle->switchover_timeout);
-    dcb_printf(dcb, "Auto rejoin:\t%s\n", handle->auto_rejoin ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Auto rejoin:\t\t%s\n", handle->auto_rejoin ? "Enabled" : "Disabled");
     dcb_printf(dcb, "MaxScale MonitorId:\t%lu\n", handle->id);
     dcb_printf(dcb, "Replication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
@@ -1079,7 +1081,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     json_object_set_new(rval, "detect_replication_lag", json_boolean(handle->replicationHeartbeat));
     json_object_set_new(rval, "multimaster", json_boolean(handle->multimaster));
     json_object_set_new(rval, "detect_standalone_master", json_boolean(handle->detect_standalone_master));
-    json_object_set_new(rval, "failcount", json_integer(handle->failcount));
+    json_object_set_new(rval, CN_FAILCOUNT, json_integer(handle->failcount));
     json_object_set_new(rval, "allow_cluster_recovery", json_boolean(handle->allow_cluster_recovery));
     json_object_set_new(rval, "mysql51_replication", json_boolean(handle->mysql51_replication));
     json_object_set_new(rval, CN_AUTO_FAILOVER, json_boolean(handle->auto_failover));
@@ -3081,15 +3083,24 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
         }
     }
 
-    if (failed_master && failed_master->mon_err_count >= monitor->failcount)
+    if (failed_master)
     {
-        MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
-                   failed_master->server->unique_name);
-        failed_master->new_event = false;
-        rval = mysql_failover_check(monitor, NULL) && do_failover(monitor, NULL);
-        if (rval)
+        int failcount = monitor->failcount;
+        if (failcount > 1 && failed_master->mon_err_count == 1)
         {
-            *cluster_modified_out = true;
+            MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
+                        "begins.", failcount - 1);
+        }
+        else if (failed_master->mon_err_count >= failcount)
+        {
+            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                       failed_master->server->unique_name);
+            failed_master->new_event = false;
+            rval = mysql_failover_check(monitor, NULL) && do_failover(monitor, NULL);
+            if (rval)
+            {
+                *cluster_modified_out = true;
+            }
         }
     }
 
