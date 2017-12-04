@@ -322,28 +322,44 @@ TestConnections::~TestConnections()
     }
 }
 
-void TestConnections::add_result(int result, const char *format, ...)
+void TestConnections::report_result(const char *format, va_list argp)
 {
     timeval t2;
     gettimeofday(&t2, NULL);
     double elapsedTime = (t2.tv_sec - start_time.tv_sec);
     elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
 
-    if (result != 0)
+    global_result += 1;
+
+    printf("%04f: TEST_FAILED! ", elapsedTime);
+
+    vprintf(format, argp);
+
+    if (format[strlen(format) - 1] != '\n')
     {
-        global_result += result;
+        printf("\n");
+    }
+}
 
-        printf("%04f: TEST_FAILED! ", elapsedTime);
-
+void TestConnections::add_result(bool result, const char *format, ...)
+{
+    if (result)
+    {
         va_list argp;
         va_start(argp, format);
-        vprintf(format, argp);
+        report_result(format, argp);
         va_end(argp);
+    }
+}
 
-        if (format[strlen(format) - 1] != '\n')
-        {
-            printf("\n");
-        }
+void TestConnections::assert(bool result, const char *format, ...)
+{
+    if (!result)
+    {
+        va_list argp;
+        va_start(argp, format);
+        report_result(format, argp);
+        va_end(argp);
     }
 }
 

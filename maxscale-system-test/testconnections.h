@@ -322,7 +322,10 @@ public:
      * @param result 0 if step PASSED
      * @param format ... message to pring if result is not 0
      */
-    void add_result(int result, const char *format, ...);
+    void add_result(bool result, const char *format, ...);
+
+    /** Same as add_result() but inverted */
+    void assert(bool result, const char *format, ...);
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -716,6 +719,9 @@ public:
      * @param dest Destination file name for actual configuration file
      */
     void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
+
+private:
+    void report_result(const char *format, va_list argp);
 };
 
 /**
