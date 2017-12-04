@@ -3199,7 +3199,7 @@ bool switchover_check_preferred_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER*
  * @param err_out json object for error printing. Can be NULL.
  * @return The found master, or NULL if not found
  */
-MXS_MONITORED_SERVER* failover_select_new_master(MYSQL_MONITOR* mon,
+MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon,
                                                  ServerVector* slaves_out,
                                                  json_t** err_out)
 {
@@ -3291,7 +3291,7 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
            io_pos_stable &&
            difftime(time(NULL), begin) < mon->failover_timeout)
     {
-        MXS_INFO("Failover: Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
+        MXS_INFO("Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
                  new_master->server->unique_name, master_info->relay_log_events());
         thread_millisleep(1000); // Sleep for a while before querying server again.
         // Todo: check server version before entering failover.
@@ -3340,9 +3340,9 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
  * @param err_out json object for error printing. Can be NULL.
  * @return True if successful
  */
-bool failover_promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
+bool promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
-    MXS_NOTICE("Failover: Promoting server '%s' to master.", new_master->server->unique_name);
+    MXS_NOTICE("Promoting server '%s' to master.", new_master->server->unique_name);
     if (mxs_mysql_query(new_master->con, "STOP SLAVE;") == 0 &&
         mxs_mysql_query(new_master->con, "RESET SLAVE ALL;") == 0  &&
         mxs_mysql_query(new_master->con, "SET GLOBAL read_only=0;") == 0)
@@ -3408,7 +3408,7 @@ bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd)
  * @param new_master The replication master
  * @return The number of slaves successfully redirected.
  */
-int failover_redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONITORED_SERVER* new_master)
+int redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONITORED_SERVER* new_master)
 {
     MXS_NOTICE("Redirecting slaves to new master.");
     std::string change_cmd = generate_change_master_cmd(mon, new_master);
@@ -3440,7 +3440,7 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
     }
     // Step 1: Select new master. Also populate a vector with all slaves not the selected master.
     ServerVector slaves;
-    MXS_MONITORED_SERVER* new_master = failover_select_new_master(mon, &slaves, err_out);
+    MXS_MONITORED_SERVER* new_master = select_new_master(mon, &slaves, err_out);
     if (new_master == NULL)
     {
         return false;
@@ -3449,10 +3449,10 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
     // Step 2: Wait until relay log consumed.
     if (failover_wait_relay_log(mon, new_master, err_out) &&
         // Step 3: Stop and reset slave, set read-only to 0.
-        failover_promote_new_master(mon, new_master, err_out))
+        promote_new_master(mon, new_master, err_out))
     {
         // Step 4: Redirect slaves.
-        int redirects = failover_redirect_slaves(mon, slaves, new_master);
+        int redirects = redirect_slaves(mon, slaves, new_master);
         rval = slaves.empty() ? true : redirects > 0;
     }
     return rval;
@@ -3770,7 +3770,7 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
     }
     else
     {
-        promotion_target = failover_select_new_master(mon, &slaves, err_out);
+        promotion_target = select_new_master(mon, &slaves, err_out);
     }
     if (promotion_target == NULL)
     {
@@ -3785,10 +3785,10 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
         switchover_wait_slave_catchup(promotion_target, curr_master_info->gtid_binlog_pos,
                                       mon->switchover_timeout, mon->monitor->read_timeout, err_out) &&
         // Step 4: Stop and reset slave, set read-only to 0.
-        failover_promote_new_master(mon, promotion_target, err_out))
+        promote_new_master(mon, promotion_target, err_out))
     {
         // Step 5: Redirect slaves.
-        int redirects = failover_redirect_slaves(mon, slaves, promotion_target);
+        int redirects = redirect_slaves(mon, slaves, promotion_target);
         // Step 6: Set the old master to replicate from the new.
         bool start_ok = switchover_start_slave(mon, demotion_target, promotion_target);
         rval = slaves.empty() ? start_ok : start_ok || redirects > 0;
