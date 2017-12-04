@@ -818,51 +818,31 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
             int pktlen;
             uint8_t cmd = (uint8_t)MYSQL_COM_QUERY; // Treat empty packets as COM_QUERY
 
-            /**
-             * Buffer has at least 5 bytes, the packet is in contiguous memory
-             * and it's the first packet in the buffer.
-             */
-            if (offset == 0 && GWBUF_LENGTH(queue) >= MYSQL_HEADER_LEN + 1)
+            uint8_t packet_header[MYSQL_HEADER_LEN];
+
+            if (gwbuf_copy_data(queue, offset, MYSQL_HEADER_LEN, packet_header) != MYSQL_HEADER_LEN)
             {
-                uint8_t *data = (uint8_t*)GWBUF_DATA(queue);
-                pktlen = gw_mysql_get_byte3(data);
-                if (pktlen)
-                {
-                    cmd = *(data + MYSQL_HEADER_LEN);
-                }
+                ss_dassert(offset > 0);
+                queue = split_and_store(dcb, queue, offset);
+                break;
             }
+
+            pktlen = gw_mysql_get_byte3(packet_header);
+
             /**
-             * We have more than one packet in the buffer or the first 5 bytes
-             * of a packet are split across two buffers.
+             * Check if the packet is empty, and if not, if we have the command byte.
+             * If we an empty packet or have at least 5 bytes of data, we can start
+             * sending the data to the router.
              */
-            else
+            if (pktlen && gwbuf_copy_data(queue, offset + MYSQL_HEADER_LEN, 1, &cmd) != 1)
             {
-                uint8_t packet_header[MYSQL_HEADER_LEN];
-
-                if (gwbuf_copy_data(queue, offset, MYSQL_HEADER_LEN, packet_header) != MYSQL_HEADER_LEN)
+                if ((queue = split_and_store(dcb, queue, offset)) == NULL)
                 {
-                    ss_dassert(offset > 0);
-                    queue = split_and_store(dcb, queue, offset);
-                    break;
+                    ss_dassert(bytes_available - offset == MYSQL_HEADER_LEN);
+                    return false;
                 }
-
-                pktlen = gw_mysql_get_byte3(packet_header);
-
-                /**
-                 * Check if the packet is empty, and if not, if we have the command byte.
-                 * If we an empty packet or have at least 5 bytes of data, we can start
-                 * sending the data to the router.
-                 */
-                if (pktlen && gwbuf_copy_data(queue, offset + MYSQL_HEADER_LEN, 1, &cmd) != 1)
-                {
-                    if ((queue = split_and_store(dcb, queue, offset)) == NULL)
-                    {
-                        ss_dassert(bytes_available - offset == MYSQL_HEADER_LEN);
-                        return false;
-                    }
-                    ss_dassert(offset > 0);
-                    break;
-                }
+                ss_dassert(offset > 0);
+                break;
             }
 
             MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
@@ -931,14 +911,9 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     /** Ask what type of input the router/filter chain expects */
     capabilities = service_get_capabilities(session->service);
 
-    /** Update the current protocol command being executed */
-    if (!process_client_commands(dcb, nbytes_read, &read_buffer))
-    {
-        return 0;
-    }
-
-    /** If the router requires statement input or we are still authenticating
-     * we need to make sure that a complete SQL packet is read before continuing */
+    /** If the router requires statement input we need to make sure that
+     * a complete SQL packet is read before continuing. The current command
+     * that is tracked by the protocol module is updated in route_by_statement() */
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
         if (nbytes_read < 3 || nbytes_read <
@@ -950,6 +925,11 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             return 0;
         }
         gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
+    }
+    /** Update the current protocol command being executed */
+    else if (!process_client_commands(dcb, nbytes_read, &read_buffer))
+    {
+        return 0;
     }
 
     /**
@@ -1515,6 +1495,13 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
              * sure it is set to each (MySQL) packet.
              */
             gwbuf_set_type(packetbuf, GWBUF_TYPE_SINGLE_STMT);
+
+            /** As we are routing packets, we can extract the command byte here.
+             * Empty packets are treated as COM_QUERY packets by default. */
+            uint8_t cmd = (uint8_t)MYSQL_COM_QUERY;
+            gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, 1, &cmd);
+            MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+            proto->current_command = cmd;
 
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
             {
