@@ -916,12 +916,13 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
      * that is tracked by the protocol module is updated in route_by_statement() */
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
-        if (nbytes_read < 3 || nbytes_read <
-            (MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4))
+        uint8_t pktlen[MYSQL_HEADER_LEN];
+        size_t n_copied = gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, pktlen);
+
+        if (n_copied != sizeof(pktlen) ||
+            nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
         {
-
-            dcb->dcb_readqueue = read_buffer;
-
+            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
             return 0;
         }
         gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
@@ -1623,51 +1624,4 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
 return_rc:
     return rc;
-}
-
-/**
- * if read queue existed appent read to it. if length of read buffer is less
- * than 3 or less than mysql packet then return.  else copy mysql packets to
- * separate buffers from read buffer and continue. else if read queue didn't
- * exist, length of read is less than 3 or less than mysql packet then
- * create read queue and append to it and return. if length read is less than
- * mysql packet length append to read queue append to it and return.
- * else (complete packet was read) continue.
- *
- * @return True if we have a complete packet, otherwise false
- */
-static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read)
-{
-    if (dcb->dcb_readqueue)
-    {
-        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, *read_buffer);
-        nbytes_read = gwbuf_length(dcb->dcb_readqueue);
-        int plen = MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(dcb->dcb_readqueue));
-
-        if (nbytes_read < 3 || nbytes_read < plen + 4)
-        {
-            return false;
-        }
-        else
-        {
-            /**
-             * There is at least one complete mysql packet in
-             * read_buffer.
-             */
-            *read_buffer = dcb->dcb_readqueue;
-            dcb->dcb_readqueue = NULL;
-        }
-    }
-    else
-    {
-        uint8_t* data = (uint8_t *) GWBUF_DATA(*read_buffer);
-
-        if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PAYLOAD_LEN(data) + 4)
-        {
-            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, *read_buffer);
-            return false;
-        }
-    }
-
-    return true;
 }
