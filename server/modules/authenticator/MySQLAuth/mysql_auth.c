@@ -116,7 +116,7 @@ static bool open_instance_database(const char *path, sqlite3 **handle)
 
     if (rc != SQLITE_OK)
     {
-        MXS_ERROR("Failed to open SQLite3 handle: %d, %s", rc, sqlite3_errstr(rc));
+        MXS_ERROR("Failed to open SQLite3 handle: %d", rc);
         return false;
     }
 
