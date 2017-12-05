@@ -958,6 +958,30 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 }
 
 /**
+ * Check if a connection qualifies to be added into the persistent connection pool
+ *
+ * @param dcb The client DCB to check
+ */
+void check_pool_candidate(DCB* dcb)
+{
+    MXS_SESSION *session = dcb->session;
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+
+    if (proto->current_command == MYSQL_COM_QUIT)
+    {
+        /** The client is closing the connection. We know that this will be the
+         * last command the client sends so the backend connections are very likely
+         * to be in an idle state.
+         *
+         * If the client is pipelining the queries (i.e. sending N request as
+         * a batch and then expecting N responses) then it is possible that
+         * the backend connections are not idle when the COM_QUIT is received.
+         * In most cases we can assume that the connections are idle. */
+        session_qualify_for_pool(session);
+    }
+}
+
+/**
  * @brief Client read event, common processing after single statement handling
  *
  * @param dcb           Descriptor control block
@@ -977,25 +1001,10 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     /** Reset error handler when routing of the new query begins */
     dcb->dcb_errhandle_called = false;
 
-    if (proto->current_command == MYSQL_COM_QUIT)
-    {
-        /** The client is closing the connection. We know that this will be the
-         * last command the client sends so the backend connections are very likely
-         * to be in an idle state.
-         *
-         * If the client is pipelining the queries (i.e. sending N request as
-         * a batch and then expecting N responses) then it is possible that
-         * the backend connections are not idle when the COM_QUIT is received.
-         * In most cases we can assume that the connections are idle. */
-        session_qualify_for_pool(session);
-    }
-
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
         /**
-         * Feed each statement completely and separately
-         * to router. The routing functions return 1 for
-         * success or 0 for failure.
+         * Feed each statement completely and separately to router.
          */
         return_code = route_by_statement(session, capabilities, &read_buffer) ? 0 : 1;
 
@@ -1010,9 +1019,10 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     }
     else if (NULL != session->router_session || (rcap_type_required(capabilities, RCAP_TYPE_NO_RSESSION)))
     {
-        /** Feed whole packet to router, which will free it
-         *  and return 1 for success, 0 for failure
-         */
+        /** Check if this connection qualifies for the connection pool */
+        check_pool_candidate(dcb);
+
+        /** Feed the whole buffer to the router */
         return_code = MXS_SESSION_ROUTE_QUERY(session, read_buffer) ? 0 : 1;
     }
     /* else return_code is still 0 from when it was originally set */
@@ -1437,6 +1447,30 @@ retblock:
     return 1;
 }
 
+/**
+ * Update protocol tracking information for an individual statement
+ *
+ * @param dcb    Client DCB
+ * @param buffer Buffer containing a single packet
+ */
+void update_current_command(DCB* dcb, GWBUF* buffer)
+{
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+    uint8_t cmd = (uint8_t)MYSQL_COM_QUERY;
+
+    /**
+     * As we are routing individual packets, we can extract the command byte here.
+     * Empty packets are treated as COM_QUERY packets by default.
+     */
+    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
+    proto->current_command = cmd;
+
+    /**
+     * Now that we have the current command, we can check if this connection
+     * can be a candidate for the connection pool.
+     */
+    check_pool_candidate(dcb);
+}
 
 /**
  * Detect if buffer includes partial mysql packet or multiple packets.
@@ -1496,12 +1530,10 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
              */
             gwbuf_set_type(packetbuf, GWBUF_TYPE_SINGLE_STMT);
 
-            /** As we are routing packets, we can extract the command byte here.
-             * Empty packets are treated as COM_QUERY packets by default. */
-            uint8_t cmd = (uint8_t)MYSQL_COM_QUERY;
-            gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, 1, &cmd);
-            MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-            proto->current_command = cmd;
+            /**
+             * Update the currently command being executed.
+             */
+            update_current_command(session->client_dcb, packetbuf);
 
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
             {
