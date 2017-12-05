@@ -3,8 +3,6 @@ set -x
 echo $*
 export MDBCI_VM_PATH=${MDBCI_VM_PATH:-$HOME/vms}
 export mdbci_dir=${mdbci_dir:-"$HOME/mdbci/"}
-export script_dir="$(dirname `readlink -f -- $0`)"
-
 
 export config_name="$1"
 if [ -z $1 ] ; then
