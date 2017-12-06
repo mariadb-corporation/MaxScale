@@ -403,10 +403,12 @@ static bool get_table_name(const char* sql, char* dest)
 
 /**
  * Extract the database name from a CREATE TABLE statement
+ *
  * @param sql SQL statement
  * @param dest Destination where the database name is extracted. Must be at least
- * MYSQL_DATABASE_MAXLEN bytes long.
- * @return True if extraction was successful
+ *             MYSQL_DATABASE_MAXLEN bytes long.
+ *
+ * @return True if a database name was extracted
  */
 static bool get_database_name(const char* sql, char* dest)
 {
@@ -426,22 +428,27 @@ static bool get_database_name(const char* sql, char* dest)
             ptr--;
         }
 
-        while (*ptr == '`' || *ptr == '.' || isspace(*ptr))
+        if (*ptr == '.')
         {
-            ptr--;
+            // The query defines an explicit database
+
+            while (*ptr == '`' || *ptr == '.' || isspace(*ptr))
+            {
+                ptr--;
+            }
+
+            const char* end = ptr + 1;
+
+            while (*ptr != '`' && *ptr != '.' && !isspace(*ptr))
+            {
+                ptr--;
+            }
+
+            ptr++;
+            memcpy(dest, ptr, end - ptr);
+            dest[end - ptr] = '\0';
+            rval = true;
         }
-
-        const char* end = ptr + 1;
-
-        while (*ptr != '`' && *ptr != '.' && !isspace(*ptr))
-        {
-            ptr--;
-        }
-
-        ptr++;
-        memcpy(dest, ptr, end - ptr);
-        dest[end - ptr] = '\0';
-        rval = true;
     }
 
     return rval;
@@ -717,13 +724,15 @@ TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* db)
     {
         err = "table name";
     }
-        /** The CREATE statement contains the database name */
+
     if (get_database_name(sql, database))
     {
+        // The CREATE statement contains the database name
         db = database;
     }
     else if (*db == '\0')
     {
+        // No explicit or current database
         err = "database name";
     }
 
