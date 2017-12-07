@@ -103,6 +103,14 @@ void fix_replication_create_table(TestConnections& test)
     get_output(test);
 }
 
+void delete_slave_binlogs(TestConnections& test)
+{
+    const char RESET[] = "RESET MASTER;";
+    execute_query(test.repl->nodes[1], RESET);
+    execute_query(test.repl->nodes[2], RESET);
+    execute_query(test.repl->nodes[3], RESET);
+}
+
 int main(int argc, char** argv)
 {
     const char* LINE = "------------------------------------------";
@@ -126,6 +134,7 @@ int main(int argc, char** argv)
     get_output(test);
 
     // Test 1
+    delete_slave_binlogs(test);
     test.tprintf("Test 1: Stopping master and waiting for failover. Check that another server is promoted.\n"
                  "%s", LINE);
     get_input();
@@ -143,6 +152,7 @@ int main(int argc, char** argv)
     test.repl->connect();
 
     // Test 2
+    delete_slave_binlogs(test);
     test.tprintf("Test 2: Disable replication on server 2 and kill master, check that server 3 or 4 is "
                  "promoted.\n%s", LINE);
     get_input();
@@ -164,6 +174,7 @@ int main(int argc, char** argv)
 
 
     // Test 3
+    delete_slave_binlogs(test);
     test.tprintf("Test3: Shutdown two slaves (servers 2 and 4). Disable log_bin on server 2, making it "
                  "invalid for promotion. Enable log-slave-updates on servers 2 and 4. Check that server 4 is "
                  "promoted on master failure.\n%s", LINE);
