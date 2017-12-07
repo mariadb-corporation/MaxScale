@@ -36,6 +36,7 @@ where only parameters are used with the binlogrouter.
 
 [Here is a list of bugs fixed in MaxScale 2.1.12.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.12)
 
+* [MXS-1555](https://jira.mariadb.org/browse/MXS-1555) Protocol command tracking doesn't work with readwritesplit
 * [MXS-1553](https://jira.mariadb.org/browse/MXS-1553) GaleraMon ignores server's SSL configuration
 * [MXS-1540](https://jira.mariadb.org/browse/MXS-1540) Race conditions in Galeramon server parameter handling
 * [MXS-1536](https://jira.mariadb.org/browse/MXS-1536) Fatal: MaxScale 2.1.10 received fatal signal 11. Attempting backtrace. Commit ID: 96c3f0dda3b5a9640c4995f46ac8efec77686269 System name: Linux Release string: NAME=CentOS Linux
