@@ -252,8 +252,11 @@ add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABE
 # MySQL Monitor Failover Test
 add_test_executable(failover_mysqlmon.cpp failover_mysqlmon failover_mysqlmon LABELS mysqlmon REPL_BACKEND)
 
-# MySQL Monitor Real Failover Test
-add_test_executable(failover_mysqlmon_mrm.cpp failover_mysqlmon_mrm failover_mysqlmon_mrm LABELS mysqlmon REPL_BACKEND)
+# MySQL Monitor Failover (automatic) Test
+add_test_executable(mysqlmon_failover_auto.cpp mysqlmon_failover_auto mysqlmon_failover_auto LABELS mysqlmon REPL_BACKEND)
+
+# MySQL Monitor Failover (manual) Test
+add_test_executable(mysqlmon_failover_manual.cpp mysqlmon_failover_manual mysqlmon_failover_manual LABELS mysqlmon REPL_BACKEND)
 
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)

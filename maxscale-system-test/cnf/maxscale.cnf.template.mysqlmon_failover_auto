@@ -1,7 +1,7 @@
 [maxscale]
 threads=###threads###
 
-[MySQL Monitor]
+[MySQL-Monitor]
 type=monitor
 module=mysqlmon
 servers= server1, server2, server3, server4

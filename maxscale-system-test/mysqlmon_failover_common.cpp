@@ -1,8 +1,7 @@
-/**
- * Test replication-manager
- */
-
 #include "testconnections.h"
+
+int inserts = 0;
+bool interactive = false;
 
 void get_output(TestConnections& test)
 {
@@ -19,8 +18,6 @@ void get_output(TestConnections& test)
     test.tprintf("%s", output);
     free(output);
 }
-
-static int inserts = 0;
 
 void check(TestConnections& test)
 {
@@ -78,8 +75,6 @@ int get_server_id(TestConnections& test)
     return id;
 }
 
-static bool interactive = false;
-
 void get_input()
 {
     if (interactive)
@@ -111,19 +106,12 @@ void delete_slave_binlogs(TestConnections& test)
     execute_query(test.repl->nodes[3], RESET);
 }
 
-int main(int argc, char** argv)
+const char LINE[] = "------------------------------------------";
+const char PRINT_ID[] = "Master server id is %d.";
+const char WRONG_SLAVE[] = "Wrong slave was promoted or promotion failed.";
+
+void basic_test(TestConnections& test)
 {
-    const char* LINE = "------------------------------------------";
-    const char* PRINT_ID = "Master server id is %d.";
-    const char* WRONG_SLAVE = "Wrong slave was promoted or promotion failed.";
-
-    interactive = strcmp(argv[argc - 1], "interactive") == 0;
-    int master_id = -1;
-    TestConnections test(argc, argv);
-
-    // Wait a few seconds
-    sleep(5);
-
     test.tprintf("Creating table and inserting data.");
     get_input();
     test.maxscales->connect_maxscale(0);
@@ -132,26 +120,31 @@ int main(int argc, char** argv)
 
     check(test);
     get_output(test);
-
-    // Test 1
+}
+int prepare_test_1(TestConnections& test)
+{
     delete_slave_binlogs(test);
     test.tprintf("Test 1: Stopping master and waiting for failover. Check that another server is promoted.\n"
                  "%s", LINE);
     get_input();
     int node0_id = test.repl->get_server_id(0); // Read master id now before shutdown.
     test.repl->stop_node(0);
-    sleep(10);
+    return node0_id;
+}
 
+void check_test_1(TestConnections& test, int node0_id)
+{
     check(test);
     get_output(test);
-
-    master_id = get_server_id(test);
+    int master_id = get_server_id(test);
     test.tprintf(PRINT_ID, master_id);
     test.add_result(master_id < 1 && master_id == node0_id, "Master did not change or no master detected.");
     fix_replication_create_table(test);
     test.repl->connect();
+}
 
-    // Test 2
+void prepare_test_2(TestConnections& test)
+{
     delete_slave_binlogs(test);
     test.tprintf("Test 2: Disable replication on server 2 and kill master, check that server 3 or 4 is "
                  "promoted.\n%s", LINE);
@@ -159,21 +152,23 @@ int main(int argc, char** argv)
     execute_query(test.repl->nodes[1], "STOP SLAVE; RESET SLAVE ALL;");
     sleep(2);
     test.repl->stop_node(0);
-    sleep(10);
+}
 
+void check_test_2(TestConnections& test)
+{
     check(test);
     get_output(test);
 
-    master_id = get_server_id(test);
+    int master_id = get_server_id(test);
     test.tprintf(PRINT_ID, master_id);
     test.add_result(master_id < 1 ||
                     (master_id != test.repl->get_server_id(2) && master_id != test.repl->get_server_id(3)),
                     WRONG_SLAVE);
     fix_replication_create_table(test);
     test.repl->connect();
-
-
-    // Test 3
+}
+void prepare_test_3(TestConnections& test)
+{
     delete_slave_binlogs(test);
     test.tprintf("Test3: Shutdown two slaves (servers 2 and 4). Disable log_bin on server 2, making it "
                  "invalid for promotion. Enable log-slave-updates on servers 2 and 4. Check that server 4 is "
@@ -195,12 +190,14 @@ int main(int argc, char** argv)
     get_output(test);
     test.tprintf("Stopping master.");
     test.repl->stop_node(0);
-    sleep(10);
+}
 
+void check_test_3(TestConnections& test)
+{
     check(test);
     get_output(test);
 
-    master_id = get_server_id(test);
+    int master_id = get_server_id(test);
     // Because servers have been restarted, redo connections.
     test.repl->connect();
     sleep(2);
@@ -222,8 +219,4 @@ int main(int argc, char** argv)
     test.maxscales->start_maxscale(0);
     sleep(2);
     get_output(test);
-    get_input();
-
-    test.repl->fix_replication();
-    return test.global_result;
 }

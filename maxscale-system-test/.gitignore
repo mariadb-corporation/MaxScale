@@ -154,6 +154,8 @@ mxs922_scaling
 mxs922_server
 mxs951_utfmb4
 mxs957
+mysqlmon_failover_auto
+mysqlmon_failover_manual
 namedserverfilter
 no_password
 non_native_setup
