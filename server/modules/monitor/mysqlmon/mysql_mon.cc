@@ -3598,10 +3598,10 @@ static bool switchover_demote_master(MYSQL_MONITOR* mon,
     const char* query = "SET GLOBAL read_only=1;";
     if (mxs_mysql_query(current_master->con, query) == 0)
     {
-        query = "FLUSH TABLES;";
+        query = "FLUSH LOGS;";
         if (mxs_mysql_query(current_master->con, query) == 0)
         {
-            query = "FLUSH LOGS;";
+            query = "FLUSH TABLES;";
             if (mxs_mysql_query(current_master->con, query) == 0)
             {
                 query = "";
