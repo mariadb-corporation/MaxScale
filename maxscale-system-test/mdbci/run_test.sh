@@ -70,7 +70,7 @@ if [ $res == 0 ] ; then
     . ${script_dir}/configure_backend.sh
     ${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name clean
 
-    if [ -z "${named_test}" ] ; then
+    if [ ! -z "${named_test}" ] ; then
         ./${named_test}
     else
         ./check_backend
