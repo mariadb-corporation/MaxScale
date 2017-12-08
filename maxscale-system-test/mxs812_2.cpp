@@ -45,7 +45,7 @@ void* test_thr(void *data)
 
     while (running)
     {
-        MYSQL *mysql = Test->open_rwsplit_connection();
+        MYSQL *mysql = Test->maxscales->open_rwsplit_connection(0);
 
         for (int i = 0; i < 3; i++)
         {
@@ -91,8 +91,8 @@ int main(int argc, char *argv[])
 
     Test->stop_timeout();
     sleep(5);
-    Test->check_maxscale_alive();
-    Test->check_current_operations(0);
+    Test->check_maxscale_alive(0);
+    Test->check_current_operations(0, 0);
 
     int rval = Test->global_result;
     delete Test;

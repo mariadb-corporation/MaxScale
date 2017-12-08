@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     Test->ConnectMaxscale();
 
 
-    execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- max_slave_replication_lag=120");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- max_slave_replication_lag=120");
 
 
 

@@ -15,14 +15,14 @@ int main(int argc, char *argv[])
     sleep(10);
 
     test.tprintf("Clear master status");
-    test.ssh_maxscale(true, "maxadmin clear server server1 master");
+    test.maxscales->ssh_node(0, "maxadmin clear server server1 master", true);
     sleep(5);
 
     test.repl->unblock_node(0);
     sleep(5);
 
-    test.check_maxscale_alive();
-    test.check_log_err("debug assert", false);
+    test.check_maxscale_alive(0);
+    test.check_log_err(0, "debug assert", false);
 
     return test.global_result;
 }

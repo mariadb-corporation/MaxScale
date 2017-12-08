@@ -1,5 +1,5 @@
 /**
- * @file mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop executed following statements in the loop against all routers:
+ * @file mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop executed following statements in the loop against all maxscales->routers[0]:
  * @verbatim
 SET NAMES "UTF8";
 PREPARE s1 FROM 'SHOW GLOBAL STATUS WHERE variable_name = ?';
@@ -22,11 +22,11 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(5);
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     MYSQL * router[3];
-    router[0] = Test->conn_rwsplit;
-    router[1] = Test->conn_master;
-    router[2] = Test->conn_slave;
+    router[0] = Test->maxscales->conn_rwsplit[0];
+    router[1] = Test->maxscales->conn_master[0];
+    router[2] = Test->maxscales->conn_slave[0];
 
     for (int ir = 0; ir < r; ir++)
     {
@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(20);
 
-    Test->close_maxscale_connections();
-    Test->check_maxscale_alive();
+    Test->maxscales->close_maxscale_connections(0);
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

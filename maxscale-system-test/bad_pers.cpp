@@ -17,9 +17,9 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
-    Test->connect_maxscale();
-    Test->check_log_err((char *) "warning -1", true);
-    Test->check_maxscale_alive();
+    Test->maxscales->connect_maxscale(0);
+    Test->check_log_err(0, (char *) "warning -1", true);
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

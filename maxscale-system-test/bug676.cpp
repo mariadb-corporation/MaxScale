@@ -18,10 +18,10 @@ int main(int argc, char *argv[])
 
     test.set_timeout(30);
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.tprintf("Stopping node 0");
     test.galera->block_node(0);
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     test.stop_timeout();
 
@@ -30,10 +30,10 @@ int main(int argc, char *argv[])
 
     test.set_timeout(30);
 
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "USE test");
-    test.try_query(test.conn_rwsplit, "show processlist;");
-    test.close_maxscale_connections();
+    test.maxscales->connect_maxscale(0);
+    test.try_query(test.maxscales->conn_rwsplit[0], "USE test");
+    test.try_query(test.maxscales->conn_rwsplit[0], "show processlist;");
+    test.maxscales->close_maxscale_connections(0);
 
     test.stop_timeout();
 

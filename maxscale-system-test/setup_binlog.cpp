@@ -41,12 +41,12 @@ int main(int argc, char *argv[])
     TestConnections test(argc, argv);
 
     test.binlog_cmd_option = 1;
-    test.start_binlog();
+    test.start_binlog(0);
     test_binlog(&test);
 
-    test.check_log_err("SET NAMES utf8mb4", false);
-    test.check_log_err("set autocommit=1", false);
-    test.check_log_err("select USER()", false);
+    test.check_log_err(0, "SET NAMES utf8mb4", false);
+    test.check_log_err(0, "set autocommit=1", false);
+    test.check_log_err(0, "select USER()", false);
 
     return test.global_result;
 }

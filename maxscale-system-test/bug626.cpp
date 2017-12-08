@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(20);
     printf("Trying to connect using user with old style password\n");
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "old", (char *)  "old", Test->ssl);
+    MYSQL * conn = open_conn(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "old", (char *)  "old", Test->ssl);
 
     if ( mysql_errno(conn) != 0)
     {
@@ -171,8 +171,8 @@ int main(int argc, char *argv[])
 
     execute_query(Test->repl->nodes[0], "DROP USER 'old'@'%%'");
 
-    Test->check_log_err((char *) "MaxScale does not support these old passwords", true);
-    Test->check_maxscale_alive();
+    Test->check_log_err(0, (char *) "MaxScale does not support these old passwords", true);
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

@@ -9,13 +9,13 @@
 
 int main(int argc, char *argv[])
 {
-
+    int exit_code;
     TestConnections test(argc, argv);
     test.set_timeout(600);
-    test.ssh_maxscale(true, (char *) "rm -rf /var/lib/maxscale/avro");
+    test.maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
 
     /** Start master to binlogrouter replication */
-    if (!test.replicate_from_master())
+    if (!test.replicate_from_master(0))
     {
         return 1;
     }
@@ -48,11 +48,11 @@ int main(int argc, char *argv[])
     sleep(10);
     test.set_timeout(120);
 
-    for (int i = 1; i <=5; i++)
+    for (int i = 1; i <= 5; i++)
     {
         std::stringstream cmd;
         cmd << "maxavrocheck -d /var/lib/maxscale/avro/test.t1.00000" << i << ".avro";
-        char* rows = test.ssh_maxscale_output(true, cmd.str().c_str());
+        char* rows = test.maxscales->ssh_node_output(0, cmd.str().c_str(), true, &exit_code);
         int nrows = 0;
         std::istringstream iss;
         iss.str(rows);

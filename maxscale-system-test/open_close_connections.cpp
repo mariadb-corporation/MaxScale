@@ -34,8 +34,8 @@ int main(int argc, char *argv[])
 
     // Tuning these kernel parameters removes any system limitations on how many
     // connections can be created within a short period
-    Test->ssh_maxscale(true, "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
-                       "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
+    Test->maxscales->ssh_node_f(0, true, "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
+                                "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 50000;");
     Test->repl->sync_slaves();
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
         pthread_join(thread1[i], NULL);
     }
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;
@@ -73,15 +73,15 @@ void *query_thread1( void *ptr )
 
     while (data->exit_flag == 0 && data->Test->global_result == 0)
     {
-        MYSQL *conn1 = data->Test->open_rwsplit_connection();
+        MYSQL *conn1 = data->Test->maxscales->open_rwsplit_connection(0);
         data->Test->add_result(mysql_errno(conn1),
                                "Error opening RWsplit conn, thread num is %d, iteration %d, error is: %s\n",
                                data->thread_id, data->i, mysql_error(conn1));
-        MYSQL *conn2 = data->Test->open_readconn_master_connection();
+        MYSQL *conn2 = data->Test->maxscales->open_readconn_master_connection(0);
         data->Test->add_result(mysql_errno(conn2),
                                "Error opening ReadConn master conn, thread num is %d, iteration %d, error is: %s\n", data->thread_id,
                                data->i, mysql_error(conn2));
-        MYSQL *conn3 = data->Test->open_readconn_slave_connection();
+        MYSQL *conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
         data->Test->add_result(mysql_errno(conn3),
                                "Error opening ReadConn master conn, thread num is %d, iteration %d, error is: %s\n", data->thread_id,
                                data->i, mysql_error(conn3));

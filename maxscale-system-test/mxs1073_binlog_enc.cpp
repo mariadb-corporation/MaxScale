@@ -102,8 +102,8 @@ int main(int argc, char *argv[])
         Test->repl->ssh_node(i, (char *) "cp ~/mariadb_binlog_keys.txt /etc/", true);
     }
 
-    Test->copy_to_maxscale(str2, (char *) "~/");
-    Test->ssh_maxscale(true, "cp ~/mariadb_binlog_keys.txt /etc/");
+    Test->maxscales->copy_to_node(str2, (char *) "~/", 0);
+    Test->maxscales->ssh_node_f(0, true, "cp ~/mariadb_binlog_keys.txt /etc/");
 
     Test->start_binlog();
 
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
 
     Test->tprintf("Running 'maxbinlogcheck' against Maxscale binlog file\n");
-    char * maxscale_binlogcheck_output = Test->ssh_maxscale_output(true,
+    char * maxscale_binlogcheck_output = Test->maxscales->ssh_node_f(0, true,
                                          "maxbinlogcheck -M -K /etc/mariadb_binlog_keys.txt -H /var/lib/maxscale/Binlog_Service/mar-bin.000001 --aes_algo=%s 2> 1",
                                          alg);
     //puts(maxscale_binlogcheck_output);
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 
     sprintf(str1,
             "mysqlbinlog -R -h %s -P %d -u%s -p%s mar-bin.000001 --stop-position=60000",
-            Test->maxscale_IP, Test->binlog_port, Test->maxscale_user, Test->maxscale_password);
+            Test->maxscales->IP[0], Test->maxscales->binlog_port[0], Test->maxscales->user_name, Test->maxscales->password);
     Test->tprintf("running mysqlbinlog on node_000 to connecto Maxscale: %s\n", str1);
     int exit_code;
     char * mysql_binlog_connect_output = Test->repl->ssh_node_output(0, str1, false, &exit_code);
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Copying binlogs from Maxscale to Master\n");
     system("rm -rf binlogs");
     system("mkdir binlogs");
-    Test->copy_from_maxscale((char *) "/var/lib/maxscale/Binlog_Service/*", (char *) "binlogs/");
+    Test->maxscales->copy_from_node((char *) "/var/lib/maxscale/Binlog_Service/*", (char *) "binlogs/", 0);
     Test->repl->ssh_node(0, "rm -rf binlogs", true);
     Test->repl->copy_to_node("-r binlogs", "./", 0);
     Test->repl->ssh_node(0, "chown mysql:mysql binlogs/*", true);

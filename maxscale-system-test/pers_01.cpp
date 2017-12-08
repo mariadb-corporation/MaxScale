@@ -41,7 +41,7 @@ void check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * ser
     for (int i = 0; i < 4; i++)
     {
         sprintf(str, "show server %s%d", server, i + 1);
-        Test->get_maxadmin_param(str, (char *) "Persistent measured pool size:", result);
+        Test->maxscales->get_maxadmin_param(0, str, (char *) "Persistent measured pool size:", result);
         Test->tprintf("%s: %s\n", str, result);
         sscanf(result, "%d", &pers_conn[i]);
         if (pers_conn[i] != pers_conn_expected[i])
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     galera_pers_conn_expected[2] = 0;
     galera_pers_conn_expected[3] = 0;
 
-    Test->add_result(Test->create_connections(70, true, true, true, true),
+    Test->add_result(Test->create_connections(0, 70, true, true, true, true),
                      "Error creating connections");
     sleep(5);
     Test->set_timeout(20);

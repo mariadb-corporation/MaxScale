@@ -13,27 +13,27 @@ void prepare(TestConnections& test)
     t.c_iflag &= ~ECHO;
     tcsetattr(STDIN_FILENO, TCSANOW, &t);
 
-    test.ssh_maxscale(true, "pcs resource disable maxscale-clone; pcs resource disable replication-manager");
+    test.maxscales->ssh_node_f(0, true, "pcs resource disable maxscale-clone; pcs resource disable replication-manager");
 
     test.repl->fix_replication();
     system("./manage_mrm.sh configure 3");
-    test.copy_from_maxscale((char*)"/etc/maxscale.cnf", (char*)".");
-    test.copy_to_maxscale("./config.toml", "~");
-    test.ssh_maxscale(false, "sudo cp ~/maxscale.cnf /etc/; sudo cp ~/config.toml /etc/replication-manager/");
+    test.maxscales->copy_from_node((char*)"/etc/maxscale.cnf", (char*)".", 0);
+    test.maxscales->copy_to_node("./config.toml", "~", 0);
+    test.maxscales->ssh_node_f(0, false, "sudo cp ~/maxscale.cnf /etc/; sudo cp ~/config.toml /etc/replication-manager/");
 
     system("sed -i 's/version_string=.*/version_string=10.1.19-maxscale-standby/' ./maxscale.cnf");
     test.galera->copy_to_node("./maxscale.cnf", "~", 0);
     test.galera->copy_to_node("./config.toml", "~", 0);
     test.galera->ssh_node(0, "sudo cp ~/config.toml /etc/replication-manager", false);
     test.galera->ssh_node(0, "sudo cp ~/maxscale.cnf /etc/", false);
-    test.ssh_maxscale(true, "replication-manager bootstrap --clean-all;pcs resource enable maxscale-clone; pcs resource enable replication-manager");
+    test.maxscales->ssh_node_f(0, true, "replication-manager bootstrap --clean-all;pcs resource enable maxscale-clone; pcs resource enable replication-manager");
     sleep(5);
 }
 
 void get_output(TestConnections& test)
 {
     test.tprintf("Maxadmin output:");
-    char *output = test.ssh_maxscale_output(true, "maxadmin list servers");
+    char *output = test.maxscales->ssh_node_f(0, true, "maxadmin list servers");
     test.tprintf("%s", output);
     free(output);
 }
@@ -42,7 +42,7 @@ static int inserts = 0;
 
 void check(TestConnections& test)
 {
-    MYSQL *conn = test.open_rwsplit_connection();
+    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
     const char *query1 = "INSERT INTO test.t1 VALUES (%d)";
     const char *query2 = "SELECT * FROM test.t1";
 
@@ -146,9 +146,9 @@ int main(int argc, char** argv)
 
     test.tprintf("Creating table and inserting data");
     get_input();
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
-    test.close_maxscale_connections();
+    test.maxscales->connect_maxscale(0);
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.maxscales->close_maxscale_connections(0);
 
     check(test);
 
@@ -216,9 +216,9 @@ int main(int argc, char** argv)
 
     // check(test);
 
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "DROP TABLE test.t1");
-    test.close_maxscale_connections();
+    test.maxscales->connect_maxscale(0);
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.maxscales->close_maxscale_connections(0);
 
     return test.global_result;
 }

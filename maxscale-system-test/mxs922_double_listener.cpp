@@ -13,14 +13,14 @@ int main(int argc, char *argv[])
 
     config.create_all_listeners();
     config.create_all_listeners();
-    test->check_maxscale_processes(1);
+    test->check_maxscale_processes(0, 1);
 
     config.create_monitor("mysql-monitor", "mysqlmon", 500);
     config.reset();
 
     sleep(1);
 
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
     int rval = test->global_result;
     delete test;
     return rval;

@@ -39,27 +39,27 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Connecting to all MaxScale services, expecting error\n");
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->set_timeout(30);
     Test->tprintf("Trying some queries, expecting failure, but not a crash\n");
-    execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1");
-    execute_query(Test->conn_rwsplit, "CREATE TABLE t1 (x INT)");
-    execute_query(Test->conn_rwsplit, "INSERT INTO t1 (x) VALUES (1)");
-    execute_query(Test->conn_rwsplit, "select * from t1");
-    execute_query(Test->conn_master, "select * from t1");
-    execute_query(Test->conn_slave, "select * from t1");
+    execute_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    execute_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE t1 (x INT)");
+    execute_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO t1 (x) VALUES (1)");
+    execute_query(Test->maxscales->conn_rwsplit[0], "select * from t1");
+    execute_query(Test->maxscales->conn_master[0], "select * from t1");
+    execute_query(Test->maxscales->conn_slave[0], "select * from t1");
 
     Test->set_timeout(10);
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->set_timeout(30);
     Test->repl->unblock_all_nodes();
 
     Test->stop_timeout();
     sleep(15);
-    Test->check_log_err("fatal signal 11", false);
-    Test->check_log_err("Failed to create new router session for service", true);
+    Test->check_log_err(0, "fatal signal 11", false);
+    Test->check_log_err(0, "Failed to create new router session for service", true);
 
     int rval = Test->global_result;
     delete Test;

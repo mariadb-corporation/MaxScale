@@ -19,10 +19,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
 
     Test->set_timeout(300);
-    Test->start_binlog();
+    Test->start_binlog(0);
     different_packet_size(Test, true);
 
-    Test->check_maxscale_processes(1);
+    Test->check_maxscale_processes(0, 1);
     int rval = Test->global_result;
     delete Test;
     return rval;

@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     int i;
 
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Trying SHOW VARIABLES to different Maxscale services\n");
     fflush(stdout);
@@ -89,35 +89,35 @@ int main(int argc, char *argv[])
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(5);
-        Test->try_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SHOW VARIABLES;");
     }
     Test->tprintf("ReadConn master\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(5);
-        Test->try_query(Test->conn_master, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_master[0], (char *) "SHOW VARIABLES;");
     }
     Test->tprintf("ReadConn slave\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(5);
-        Test->try_query(Test->conn_slave, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_slave[0], (char *) "SHOW VARIABLES;");
     }
 
     Test->tprintf("All in one loop\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(5);
-        Test->try_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");
-        Test->try_query(Test->conn_master, (char *) "SHOW VARIABLES;");
-        Test->try_query(Test->conn_slave, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_master[0], (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->maxscales->conn_slave[0], (char *) "SHOW VARIABLES;");
     }
 
     Test->set_timeout(10);
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     Test->repl->close_connections();
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

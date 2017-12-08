@@ -13,15 +13,15 @@ void* thr(void* data)
     while (running && test->global_result == 0)
     {
         test->set_timeout(60);
-        if (test->try_query(test->conn_rwsplit, "SELECT 1"))
+        if (test->try_query(test->maxscales->conn_rwsplit[0], "SELECT 1"))
         {
             test->tprintf("Failed to select via readwritesplit");
         }
-        if (test->try_query(test->conn_master, "SELECT 1"))
+        if (test->try_query(test->maxscales->conn_master[0], "SELECT 1"))
         {
             test->tprintf("Failed to select via readconnroute master");
         }
-        if (test->try_query(test->conn_slave, "SELECT 1"))
+        if (test->try_query(test->maxscales->conn_slave[0], "SELECT 1"))
         {
             test->tprintf("Failed to select via readconnroute slave");
         }
@@ -35,7 +35,7 @@ void* thr(void* data)
 int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     test.tprintf("Connect to MaxScale and continuously execute queries");
     pthread_t thread;
@@ -46,9 +46,9 @@ int main(int argc, char *argv[])
 
     for (int i = 3; i > -1; i--)
     {
-        test.ssh_maxscale(true, "maxadmin remove server server%d \"RW Split Router\"", i);
-        test.ssh_maxscale(true, "maxadmin remove server server%d \"Read Connection Router Slave\"", i);
-        test.ssh_maxscale(true, "maxadmin remove server server%d \"Read Connection Router Master\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin remove server server%d \"RW Split Router\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin remove server server%d \"Read Connection Router Slave\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin remove server server%d \"Read Connection Router Master\"", i);
     }
 
     sleep(5);
@@ -56,18 +56,18 @@ int main(int argc, char *argv[])
     test.tprintf("Stop queries and close the connections");
     running = false;
     pthread_join(thread, NULL);
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     test.tprintf("Add all servers to all services");
 
     for (int i = 3; i > -1; i--)
     {
-        test.ssh_maxscale(true, "maxadmin add server server%d \"RW Split Router\"", i);
-        test.ssh_maxscale(true, "maxadmin add server server%d \"Read Connection Router Slave\"", i);
-        test.ssh_maxscale(true, "maxadmin add server server%d \"Read Connection Router Master\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin add server server%d \"RW Split Router\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin add server server%d \"Read Connection Router Slave\"", i);
+        test.maxscales->ssh_node_f(0, true, "maxadmin add server server%d \"Read Connection Router Master\"", i);
     }
 
-    test.check_maxscale_alive();
+    test.check_maxscale_alive(0);
 
     return test.global_result;
 }

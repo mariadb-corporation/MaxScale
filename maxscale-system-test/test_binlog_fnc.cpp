@@ -19,10 +19,10 @@ int check_sha1(TestConnections* Test)
     Test->set_timeout(50);
     Test->tprintf("ls before FLUSH LOGS");
     Test->tprintf("Maxscale");
-    Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
+    Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
     Test->tprintf("Master");
     Test->set_timeout(50);
-    Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
+    Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
 
     Test->tprintf("FLUSH LOGS");
     Test->set_timeout(100);
@@ -33,11 +33,11 @@ int check_sha1(TestConnections* Test)
     Test->tprintf("ls after first FLUSH LOGS");
     Test->tprintf("Maxscale");
     Test->set_timeout(50);
-    Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
+    Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
 
     Test->tprintf("Master");
     Test->set_timeout(50);
-    Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
+    Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
 
     Test->set_timeout(100);
     Test->tprintf("FLUSH LOGS");
@@ -50,18 +50,19 @@ int check_sha1(TestConnections* Test)
     Test->tprintf("ls before FLUSH LOGS");
     Test->tprintf("Maxscale");
 
-    Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
+    Test->maxscales->ssh_node_f(0, true,  "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
 
     Test->tprintf("Master");
     Test->set_timeout(50);
-    Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
+    Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
 
 
     for (i = 1; i < 3; i++)
     {
         Test->tprintf("FILE: 000000%d", i);
         Test->set_timeout(50);
-        s_maxscale = Test->ssh_maxscale_output(true, "sha1sum %s/mar-bin.00000%d", Test->maxscale_binlog_dir, i);
+        s_maxscale = Test->maxscales->ssh_node_output_f(0, true, &exit_code, "sha1sum %s/mar-bin.00000%d",
+                                                        Test->maxscales->maxscale_binlog_dir, i);
         if (s_maxscale != NULL)
         {
             x = strchr(s_maxscale, ' ');
@@ -144,7 +145,7 @@ void test_binlog(TestConnections* Test)
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "111"), "SELECT check failed");
+                                             "111"), "SELECT check failed");
 
 
     Test->tprintf("ROLLBACK");
@@ -158,11 +159,11 @@ void test_binlog(TestConnections* Test)
     Test->set_timeout(20);
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "112"), "SELECT check failed");
+                                             "112"), "SELECT check failed");
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave");
     Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "112"), "SELECT check failed");
+                                             "112"), "SELECT check failed");
     Test->tprintf("DELETE FROM t1 WHERE fl=10");
     Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
     Test->tprintf("Checking t1");
@@ -176,11 +177,11 @@ void test_binlog(TestConnections* Test)
 
     Test->tprintf("SELECT, checking inserted values");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "111"), "SELECT check failed");
+                                             "111"), "SELECT check failed");
 
     Test->tprintf("SELECT, checking inserted values from slave");
     Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10",
-                     "111"), "SELECT check failed");
+                                             "111"), "SELECT check failed");
     Test->tprintf("DELETE FROM t1 WHERE fl=10");
     Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 
@@ -202,7 +203,8 @@ void test_binlog(TestConnections* Test)
     create_t1(Test->repl->nodes[0]);
 
     Test->tprintf("Connecting to MaxScale binlog router");
-    binlog = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password,
+    binlog = open_conn(Test->maxscales->binlog_port[0], Test->maxscales->IP[0], Test->repl->user_name,
+                       Test->repl->password,
                        Test->ssl);
 
     Test->tprintf("STOP SLAVE against Maxscale binlog");
@@ -234,4 +236,3 @@ void test_binlog(TestConnections* Test)
     Test->repl->close_connections();
     Test->stop_timeout();
 }
-

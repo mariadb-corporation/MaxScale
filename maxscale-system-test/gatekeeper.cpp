@@ -42,50 +42,50 @@ const char* denied_queries[] =
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->ssh_maxscale(true, "rm -f /var/lib/maxscale/gatekeeper.data");
+    Test->maxscales->ssh_node_f(0, true, "rm -f /var/lib/maxscale/gatekeeper.data");
     Test->set_timeout(30);
 
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
-    Test->try_query(Test->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1 (id INT)");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1 (id INT)");
 
     for (int i = 0; training_queries[i]; i++)
     {
-        Test->try_query(Test->conn_rwsplit, training_queries[i]);
+        Test->try_query(Test->maxscales->conn_rwsplit[0], training_queries[i]);
     }
 
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
 
-    Test->ssh_maxscale(true, "sed -i -e 's/mode=learn/mode=enforce/' /etc/maxscale.cnf");
+    Test->maxscales->ssh_node_f(0, true, "sed -i -e 's/mode=learn/mode=enforce/' /etc/maxscale.cnf");
 
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
 
     sleep(5);
 
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     for (int i = 0; training_queries[i]; i++)
     {
         Test->set_timeout(30);
-        Test->add_result(execute_query(Test->conn_rwsplit, training_queries[i]), "Query should not fail: %s",
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], training_queries[i]), "Query should not fail: %s",
                          training_queries[i]);
     }
 
     for (int i = 0; allowed_queries[i]; i++)
     {
         Test->set_timeout(30);
-        Test->add_result(execute_query(Test->conn_rwsplit, allowed_queries[i]), "Query should not fail: %s",
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], allowed_queries[i]), "Query should not fail: %s",
                          allowed_queries[i]);
     }
 
     for (int i = 0; denied_queries[i]; i++)
     {
         Test->set_timeout(30);
-        Test->add_result(execute_query(Test->conn_rwsplit, denied_queries[i]) == 0, "Query should fail: %s",
+        Test->add_result(execute_query(Test->maxscales->conn_rwsplit[0], denied_queries[i]) == 0, "Query should fail: %s",
                          denied_queries[i]);
     }
 
-    Test->ssh_maxscale(true, "rm -f /var/lib/maxscale/gatekeeper.data");
+    Test->maxscales->ssh_node_f(0, true, "rm -f /var/lib/maxscale/gatekeeper.data");
     int rval = Test->global_result;
     delete Test;
     return rval;

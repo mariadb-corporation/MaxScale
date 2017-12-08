@@ -38,7 +38,7 @@ bool cdc_com(TestConnections *Test)
 {
     int max_inserted_val = Test->smoke ? 25 : 100;
     int sock = create_tcp_socket();
-    char *ip = get_ip(Test->maxscale_IP);
+    char *ip = get_ip(Test->maxscales->IP[0]);
 
     if (ip == NULL)
     {
@@ -187,26 +187,26 @@ int main(int argc, char *argv[])
     Test = new TestConnections(argc, argv);
 
     Test->set_timeout(600);
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
 
     // Remove old data files and make sure that port 4001 is open
-    Test->ssh_maxscale(true, "rm -rf /var/lib/maxscale/avro;"
-                       "iptables -n -L INPUT|grep 4001 || iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;");
+    Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/avro;"
+                                "iptables -n -L INPUT|grep 4001 || iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;");
 
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
     Test->repl->close_connections();
     sleep(5);
 
-    Test->start_binlog();
+    Test->start_binlog(0);
 
     Test->set_timeout(120);
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
 
-    Test->ssh_maxscale(true, "rm -rf /var/lib/maxscale/avro");
+    Test->maxscales->ssh_node(0, "rm -rf /var/lib/maxscale/avro", true);
 
     Test->set_timeout(120);
-    Test->start_maxscale();
+    Test->maxscales->start_maxscale(0);
 
     Test->set_timeout(60);
     Test->repl->connect();

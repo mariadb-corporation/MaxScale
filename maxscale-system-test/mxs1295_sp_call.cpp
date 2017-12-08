@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.repl->connect();
 
     test.tprintf("Create the stored procedure and check that it works");
@@ -32,12 +32,12 @@ int main(int argc, char *argv[])
 
     int master = get_server_id(test.repl->nodes[0]);
     int slave = get_server_id(test.repl->nodes[1]);
-    int result = get_server_id(test.conn_rwsplit);
+    int result = get_server_id(test.maxscales->conn_rwsplit[0]);
 
     test.add_result(result != slave, "The query should be routed to a slave(%d): %d", slave, result);
-    test.try_query(test.conn_rwsplit, "USE test");
-    test.try_query(test.conn_rwsplit, "CALL multi()");
-    result = get_server_id(test.conn_rwsplit);
+    test.try_query(test.maxscales->conn_rwsplit[0], "USE test");
+    test.try_query(test.maxscales->conn_rwsplit[0], "CALL multi()");
+    result = get_server_id(test.maxscales->conn_rwsplit[0]);
     test.add_result(result != master, "The query should be routed to the master(%d): %d", master, result);
 
     return test.global_result;

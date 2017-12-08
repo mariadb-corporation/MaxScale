@@ -28,23 +28,23 @@ int main(int argc, char** argv)
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE DATABASE db1");
     execute_query(test.repl->nodes[0], "CREATE TABLE db1.t1(id INT)");
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     test.tprintf("Loading local data file");
 
-    test.try_query(test.conn_rwsplit, "LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE db1.t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE db1.t1");
 
     test.tprintf("Verifying that data was loaded");
 
-    long total = execute_query_count_rows(test.conn_rwsplit, "SELECT * FROM db1.t1");
+    long total = execute_query_count_rows(test.maxscales->conn_rwsplit[0], "SELECT * FROM db1.t1");
     test.add_result(total != 100, "Expected 100 rows, got %ld", total);
 
     test.tprintf("Dropping tables and databases");
 
-    test.try_query(test.conn_rwsplit, "DROP TABLE db1.t1");
-    test.try_query(test.conn_rwsplit, "DROP DATABASE db1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE db1.t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP DATABASE db1");
 
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     // Remove the test data
     unlink("data.csv");

@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     char server_id[256];
     char server_id_d[256];
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
             sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j + 1);
             Test->tprintf("%s\n", hint_sql);
 
-            find_field(Test->conn_rwsplit, hint_sql, (char *) "@@server_id", &server_id[0]);
+            find_field(Test->maxscales->conn_rwsplit[0], hint_sql, (char *) "@@server_id", &server_id[0]);
             find_field(Test->repl->nodes[j], (char *) "select @@server_id;", (char *) "@@server_id", &server_id_d[0]);
 
             Test->tprintf("server%d ID from Maxscale: \t%s\n", j + 1, server_id);
@@ -97,10 +97,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     Test->repl->close_connections();
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

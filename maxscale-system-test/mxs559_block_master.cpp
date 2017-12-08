@@ -30,14 +30,14 @@ void *disconnect_thread(void *ptr);
 int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
-    test.ssh_maxscale(true, "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
-                       "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
+    test.maxscales->ssh_node_f(0, true, "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
+                               "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
 
     test.set_timeout(60);
-    test.connect_maxscale();
-    create_t1(test.conn_rwsplit);
-    execute_query(test.conn_rwsplit, "set global max_connections=1000");
-    test.close_maxscale_connections();
+    test.maxscales->connect_maxscale(0);
+    create_t1(test.maxscales->conn_rwsplit[0]);
+    execute_query(test.maxscales->conn_rwsplit[0], "set global max_connections=1000");
+    test.maxscales->close_maxscale_connections(0);
 
     test.tprintf("Create query load");
     int load_threads_num = 10;
@@ -48,10 +48,10 @@ int main(int argc, char *argv[])
     for (int i = 0; i < load_threads_num; i++)
     {
         data_master[i].exit_flag = 0;
-        data_master[i].ip = test.maxscale_IP;
-        data_master[i].port = test.rwsplit_port;
-        data_master[i].user = test.maxscale_user;
-        data_master[i].password = test.maxscale_password;
+        data_master[i].ip = test.maxscales->IP[0];
+        data_master[i].port = test.maxscales->rwsplit_port[0];
+        data_master[i].user = test.maxscales->user_name;
+        data_master[i].password = test.maxscales->password;
         data_master[i].ssl = test.ssl;
         pthread_create(&thread_master[i], NULL, disconnect_thread, &data_master[i]);
     }
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     {
         test.set_timeout(60);
         test.verbose = true;
-        int rc = test.connect_maxscale();
+        int rc = test.maxscales->connect_maxscale(0);
         test.verbose = false;
 
         if (rc == 0)
@@ -110,14 +110,14 @@ int main(int argc, char *argv[])
         sleep(1);
     }
 
-    test.try_query(test.conn_rwsplit, "DROP TABLE IF EXISTS t1");
-    test.close_maxscale_connections();
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");
+    test.maxscales->close_maxscale_connections(0);
 
-    test.check_maxscale_alive();
-    test.check_log_err("due to authentication failure", false);
-    test.check_log_err("fatal signal 11", false);
-    test.check_log_err("due to handshake failure", false);
-    test.check_log_err("Refresh rate limit exceeded for load of users' table", false);
+    test.check_maxscale_alive(0);
+    test.check_log_err(0, "due to authentication failure", false);
+    test.check_log_err(0, "fatal signal 11", false);
+    test.check_log_err(0, "due to handshake failure", false);
+    test.check_log_err(0, "Refresh rate limit exceeded for load of users' table", false);
 
     return test.global_result;
 }
@@ -142,4 +142,3 @@ void *disconnect_thread( void *ptr )
 
     return NULL;
 }
-

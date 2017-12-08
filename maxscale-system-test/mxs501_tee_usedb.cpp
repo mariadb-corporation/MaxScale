@@ -37,7 +37,7 @@ passwd=skysql
 filters=QLA
 @endverbatim
  *
- * try USE test command against all routers
+ * try USE test command against all maxscales->routers[0]
  */
 
 #include <iostream>
@@ -51,25 +51,25 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->set_timeout(10);
     Test->tprintf("Trying USE db against RWSplit\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "USE mysql");
-    Test->try_query(Test->conn_rwsplit, (char *) "USE test");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "USE mysql");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "USE test");
     Test->set_timeout(10);
     Test->tprintf("Trying USE db against ReadConn master\n");
-    Test->try_query(Test->conn_master, (char *) "USE mysql");
-    Test->try_query(Test->conn_master, (char *) "USE test");
+    Test->try_query(Test->maxscales->conn_master[0], (char *) "USE mysql");
+    Test->try_query(Test->maxscales->conn_master[0], (char *) "USE test");
     Test->set_timeout(10);
     Test->tprintf("Trying USE db against ReadConn slave\n");
-    Test->try_query(Test->conn_master, (char *) "USE mysql");
-    Test->try_query(Test->conn_slave, (char *) "USE test");
+    Test->try_query(Test->maxscales->conn_master[0], (char *) "USE mysql");
+    Test->try_query(Test->maxscales->conn_slave[0], (char *) "USE test");
 
     Test->set_timeout(10);
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

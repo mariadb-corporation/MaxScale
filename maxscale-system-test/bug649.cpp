@@ -53,13 +53,21 @@ int main(int argc, char *argv[])
     int check_iret[threads_num];
 
     Test = new TestConnections(argc, argv);
-    int time_to_run = 10;
-    Test->set_timeout(60);
+    int time_to_run = (Test->smoke) ? 10 : 30;
+    Test->set_timeout(10);
+
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
+    Test->maxscales->connect_rwsplit(0);
 
     Test->repl->connect();
-    create_t1(Test->repl->nodes[0]);
-    Test->repl->sync_slaves();
+    Test->tprintf("Drop t1 if exists\n");
+    execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
+    Test->tprintf("Create t1\n");
+    Test->add_result(create_t1(Test->repl->nodes[0]), "t1 creation Failed\n");
     Test->repl->close_connections();
+
+    Test->stop_timeout();
+    sleep(5);
 
     create_insert_string(sql, 65000, 1);
     Test->tprintf("Creating query threads\n", time_to_run);
@@ -82,7 +90,14 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-    Test->add_result(execute_query(Test->conn_rwsplit, "show processlist;") == 0, "Query should fail");
+    if (execute_query_silent(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;") == 0)
+    {
+        Test->add_result(1, "Failure is expected, but query is ok\n");
+    }
+
+    Test->stop_timeout();
+    sleep(time_to_run);
+
     Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0);
     fflush(stdout);
@@ -95,14 +110,23 @@ int main(int argc, char *argv[])
         pthread_join(parall_traffic1[i], NULL);
         Test->tprintf("exit %d\n", i);
     }
+    Test->stop_timeout();
+    sleep(5);
 
     Test->set_timeout(20);
     Test->tprintf("Checking Maxscale is alive\n");
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
+
+    Test->set_timeout(20);
+    Test->tprintf("Reconnecting to RWSplit ...\n");
+    Test->maxscales->connect_rwsplit(0);
+    Test->tprintf("                        ... and trying query\n");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist;");
+    Test->maxscales->close_rwsplit(0);
 
     /** Clean up */
     Test->repl->connect();
-    execute_query(Test->repl->nodes[0], "DROP TABLE t1;");
+    execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
 
     int rval = Test->global_result;
     delete Test;
@@ -114,7 +138,7 @@ void *parall_traffic( void *ptr )
 {
     MYSQL * conn;
     mysql_thread_init();
-    conn = Test->open_rwsplit_connection();
+    conn = Test->maxscales->open_rwsplit_connection(0);
     if ((conn != NULL) && (mysql_errno(conn) == 0))
     {
         while (exit_flag == 0)
