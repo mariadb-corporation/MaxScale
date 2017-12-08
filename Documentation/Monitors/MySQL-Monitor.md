@@ -184,6 +184,10 @@ the master.
 The formula for calculating the actual number of milliseconds before the server
 is labelled as the master is `monitor_interval * failcount`.
 
+If automatic failover is enabled (`auto_failover=true`), this setting also
+controls how many times the master server must fail to respond before failover
+begins.
+
 ### `allow_cluster_recovery`
 
 Allow recovery after the cluster has dropped down to one server. This feature
@@ -214,60 +218,163 @@ assigned the _Slave_ status which allows them to be used like normal slave
 servers. When the option is disabled, the servers will only receive the _Slave
 of External Server_ status and they will not be used.
 
-### `failover`
+## Failover, switchover and auto-rejoin
+
+Starting with MaxScale 2.2.1, MySQL Monitor supports replication cluster
+modification. The operations implemented are: _failover_ (replacing a failed
+master), _switchover_ (swapping a slave with a running master) and _rejoin_
+(joining a standalone server to the cluster). The features and the parameters
+controlling them are presented in this section.
+
+Both failover and switchover can be activated manually through MaxAdmin.
+Failover selects the new master server automatically, switchover requires the
+user to designate the new master as well as the current master. Example commands
+are below:
+
+```
+call command mysqlmon failover MySQL-Monitor
+call command mysqlmon switchover MySQL-Monitor SlaveServ3 MasterServ
+```
+
+Failover can also activate automatically, if `auto_failover` is on. The
+activation begins when the master has been down for a number of monitor
+iterations defined in `failcount`.
+
+When `auto-rejoin` is active, the monitor will try to rejoin standalone servers
+and slaves replicating from the wrong master (any server not the cluster
+master). These servers are redirected to replicate from the correct master
+server, forcing the replication topology to a 1-master-N-slaves configuration.
+
+All of the three features require that the monitor user (`user`) has the SUPER
+privilege. In addition, the monitor needs to know which username and password a
+slave should use when starting replication. These are given in
+`replication_user` and `replication_password`.
+
+### Limitations
+
+Switchover and failover only understand simple topologies. They will not work if
+the cluster has multiple masters, relay masters, or if the topology is circular.
+The server cluster is assumed to be well-behaving with no significant
+replication lag and all commands that modify the cluster complete in a few
+seconds (faster than `backend_read_timeout` and `backend_write_timeout`).
+
+The backends must all use GTID-based replication, and the domain id should not
+change during a switchover or failover. Master and slaves must have
+well-behaving GTIDs: no extra events on slave servers.
+
+### Configuration parameters
+
+#### `auto_failover`
 
 Enable automated master failover. This parameter expects a boolean value and the
 default value is false.
 
-When the failover functionality is enabled, traditional MariaDB Master-Slave
-clusters will automatically elect a new master if the old master goes down. The
-failover functionality will not take place when MaxScale is configured as a
-passive instance. For details on how MaxScale behaves in passive mode, see the
-following documentation of `failover_timeout`.
+When automatic failover is enabled, traditional MariaDB Master-Slave clusters
+will automatically elect a new master if the old master goes down and stays down
+a number of iterations given in `failcount`. Failover will not take place when
+MaxScale is configured as a passive instance. For details on how MaxScale
+behaves in passive mode, see the documentation on `failover_timeout` below.
 
 If an attempt at failover fails or multiple master servers are detected, an
-error is logged and the failover functionality is disabled. If this happens, the
-cluster must be fixed manually and the failover needs to be re-enabled via the
-REST API or MaxAdmin.
+error is logged and automatic failover is disabled. If this happens, the cluster
+must be fixed manually and the failover needs to be re-enabled via the REST API
+or MaxAdmin.
 
-**Note:** The monitor user must have the SUPER privilege if the failover feature
-  is enabled.
+The monitor user must have the SUPER privilege for failover to work.
 
-### `failover_timeout`
+#### `auto_rejoin`
 
-The timeout for the cluster failover in seconds. The default value is 90
+Enable automatic joining of server to the cluster. This parameter expects a
+boolean value and the default value is false.
+
+When enabled, the monitor will attempt to direct standalone servers and servers replicating from a relay master to the main cluster master server, enforcing a 1-master-N-slaves configuration.
+
+For example, consider the following event series.
+
+1. Slave A goes down
+2. Master goes down and a failover is performed, promoting Slave B
+3. Slave A comes back
+
+Slave A is still trying to replicate from the downed master, since it wasn't online during failover. If `auto_rejoin` is on, Slave A will quickly be redirected to Slave B, the current master.
+
+#### `replication_user` and `replication_password`
+
+The username and password of the replication user. These are given as the values
+for `MASTER_USER` and `MASTER_PASSWORD` whenever a `CHANGE MASTER TO` command is
+executed.
+
+Both `replication_user` and `replication_password` parameters must be defined if
+a custom replication user is used. If neither of the parameters is defined, the
+`CHANGE MASTER TO` command will use the monitor credentials for the replication
+user.
+
+The credentials used for replication must have the `REPLICATION SLAVE`
+privilege.
+
+#### `failover_timeout`
+
+Time limit for the cluster failover in seconds. The default value is 90
 seconds.
 
 If no successful failover takes place within the configured time period, a
-message is logged and the failover functionality is disabled.
+message is logged and automatic failover is disabled.
 
 This parameter also controls how long a MaxScale instance that has transitioned
 from passive to active will wait for a failover to take place after an apparent
 loss of a master server. If no new master server is detected within the
-configured time period, the failover will be initiated again.
+configured time period, failover will be initiated again.
 
-### `switchover`
+#### `verify_master_failure`
 
-Enable switchover via MaxScale. This parameter expects a boolean value and
-the default value is false.
+Enable master failure verification for automatic failover. This parameter
+expects a boolean value and the feature is enabled by default.
 
-When the switchover functionality is enabled, a REST API endpoint will be
-made available, using which switchover may be performed. The endpoint will
-be available irrespective of whether MaxScale is in active or passive mode,
-but switchover will only be attempted if MaxScale is in active mode and an
-error logged if an attempt is made when MaxScale is in passive mode.
-Switchover may also be triggered from MaxAdmin and the same rules regarding
-active/passive holds.
+The failure of a master can be verified by checking whether the slaves are still
+connected to the master. The timeout for master failure verification is
+controlled by the `master_failure_timeout` parameter.
 
-It is safe to perform switchover even with the failover functionality
-enabled, as MaxScale will disable the failover behaviour for the duration
-of the switchover.
+#### `master_failure_timeout`
 
-Only if the switchover succeeds, will the failover functionality be re-enabled.
-Otherwise it will remain disabled and must be turned on manually via the REST
-API or MaxAdmin.
+This parameter controls the period of time, in seconds, that the monitor must
+wait before it can declare that the master has failed. The default value is 10
+seconds. For failover to activate, the `failcount` requirement must also be met.
 
-When switchover is iniated via the REST-API, the URL path looks as follows:
+The failure of a master is verified by tracking when the last change to the
+relay log was done and when the last replication heartbeat was received. If the
+period of time between the last received event and the time of the check exceeds
+the configured value, the slave's connection to the master is considered to be
+broken.
+
+When all slaves of a failed master are no longer connected to the master, the
+master failure is verified and the failover can be safely performed.
+
+If the slaves lose their connections to the master before the configured timeout
+is exceeded, the failover is performed immediately. This allows a faster
+failover when the master server crashes causing immediate disconnection of the
+the network connections.
+
+#### `switchover_timeout`
+
+Time limit for cluster switchover in seconds. The default value is 90
+seconds.
+
+If no successful switchover takes place within the configured time period, a
+message is logged and automatic failover is disabled, even if it was enabled
+before the switchover attempt. This prevents further modifications to the
+misbehaving cluster.
+
+### Manual switchover and failover
+
+Both failover and switchover can be activated manually through the REST API or
+MaxAdmin. The commands are only performed when MaxScale is in active mode.
+
+It is safe to perform switchover or failover even with `auto_failover` on, since
+the automatic operation cannot happen simultaneously with the manual one.
+
+If a switchover or failover fails, automatic failover is disabled. It can be
+turned on manually via the REST API or MaxAdmin.
+
+When switchover is iniated via the REST-API, the URL path is:
 ```
 /v1/maxscale/mysqlmon/switchover?<monitor-instance>&<new-master>&<current-master>
 ```
@@ -291,93 +398,11 @@ path for making `server4` the new master would be:
 /v1/maxscale/mysqlmon/switchover?Cluster1&server4&server2
 ```
 
-**Note:** The monitor user must have the SUPER privilege if the switchover
-  feature is enabled.
-
-### `switchover_script`
-
-*NOTE* By default, MariaDB MaxScale uses the MariaDB provided switchover
-script, so `switchover_script` need not be specified.
-
-This command will be executed when MaxScale has been told to perform a
-switchover, either via MaxAdmin or the REST-API. The parameter should be an
-absolute path to a command or the command should be in the executable path.
-The user which is used to run MaxScale should have execution rights to the
-file itself and the directory it resides in.
-
+The REST-API path for manual failover is similar, although the `<new-master>`
+and `<current-master>` fields are left out.
 ```
-script=/home/user/myswitchover.sh current_master=$CURRENT_MASTER new_master=$NEW_MASTER
+/v1/maxscale/mysqlmon/failover?Cluster1
 ```
-
-In addition to the substitutions documented in
-[Common Monitor Parameters](./Monitor-Common.md)
-the following substitutions will be made to the parameter value:
-
-* `$CURRENT_MASTER` will be replaced with the IP and port of the current
-  master. If the is no current master, the value will be `none`.
-* `$NEW_MASTER` will be replaced with the IP and port of the server that
-  should be made into the new master.
-
-The script should return 0 for success and a non-zero value for failure.
-
-### `switchover_timeout`
-
-The timeout for the cluster switchover in seconds. The default value is 90
-seconds.
-
-If no successful switchover takes place within the configured time period,
-a message is logged and the failover (not switchover) functionality will not
-be enabled, even if it was enabled before the switchover attempt.
-
-### `replication_user`
-
-The username of the replication user. This is given as the value for
-`MASTER_USER` whenever a `CHANGE_MASTER_TO` command is executed.
-
-Both `replication_user` and `replication_password` parameters must be defined if
-a custom replication user is used. If neither of the parameters is defined, the
-`CHANGE MASTER TO` command will use the monitor credentials for the replication
-user.
-
-The credentials used for replication must have the `REPLICATION SLAVE`
-privilege.
-
-### `replication_password`
-
-The password of the replication user. This is given as the value for
-`MASTER_USER` whenever a `CHANGE_MASTER_TO` command is executed.
-
-See `replication_user` parameter documentation for details about the use of this
-parameter.
-
-### `verify_master_failure`
-
-Enable master failure verification for failover. This parameter expects a
-boolean value and the feature is enabled by default.
-
-The failure of a master can be verified by checking whether the slaves are still
-connected to the master. The timeout for master failure verification is
-controlled by the `master_failure_timeout` parameter.
-
-### `master_failure_timeout`
-
-This parameter controls the period of time, in seconds, that the monitor must
-wait before it can declare that the master has failed. The default value is 10
-seconds.
-
-The failure of a master is verified by tracking when the last change to the
-relay log was done and when the last replication heartbeat was received. If the
-period of time between the last received event and the time of the check exceeds
-the configured value, the slave's connection to the master is considered to be
-broken.
-
-When all slaves of a failed master are no longer connected to the master, the
-master failure is verified and the failover can be safely performed.
-
-If the slaves lose their connections to the master before the configured timeout
-is exceeded, the failover is performed immediately. This allows a faster
-failover when the master server crashes causing immediate disconnection of the
-the network connections.
 
 ## Using the MySQL Monitor With Binlogrouter
 
