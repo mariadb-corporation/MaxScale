@@ -15,7 +15,7 @@
 void run_test(TestConnections *Test, size_t size, int chunks)
 {
     char *insert_stmt = (char *) "INSERT INTO long_blob_table(x, b) VALUES(1, ?)";
-    MYSQL *conn = Test->conn_rwsplit;
+    MYSQL *conn = Test->maxscales->conn_rwsplit[0];
     MYSQL_STMT * stmt = mysql_stmt_init(conn);
 
     Test->tprintf("Preparing statement");
@@ -51,7 +51,7 @@ void run_test(TestConnections *Test, size_t size, int chunks)
 
     Test->stop_timeout();
     sleep(5);
-    Test->check_current_operations(0);
+    Test->check_current_operations(0, 0);
     Test->tprintf("Closing statement");
     Test->add_result(mysql_stmt_close(stmt), "Error closing stmt\n");
 }
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     Test->try_query(Test->repl->nodes[0], (char*)"DROP TABLE IF EXISTS long_blob_table");
     Test->try_query(Test->repl->nodes[0], (char*)"CREATE TABLE long_blob_table(x INT, b LONGBLOB)");
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->tprintf("Starting test");
     for (int i = 0; i < iter; i++)
     {

@@ -20,13 +20,14 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.ssh_maxscale(true, "mkdir -p /home/vagrant/rules/; chown -R vagrant:vagrant /home/vagrant/rules/");
-    test.copy_to_maxscale((char*)"rules.txt", (char*)"~/rules/rules.txt");
-    test.ssh_maxscale(true, "chmod a+r /home/vagrant/rules/rules.txt;");
+    test.maxscales->ssh_node(0, "mkdir -p /home/vagrant/rules/; chown -R vagrant:vagrant /home/vagrant/rules/",
+                             true);
+    test.maxscales->copy_to_node_legacy((char*)"rules.txt", (char*)"~/rules/rules.txt", 0);
+    test.maxscales->ssh_node(0, "chmod a+r /home/vagrant/rules/rules.txt;", true);
 
     int rc = 0;
 
-    if (test.restart_maxscale() == 0)
+    if (test.maxscales->restart_maxscale(0) == 0)
     {
         test.tprintf("Restarting MaxScale succeeded when it should've failed!");
         rc = 1;

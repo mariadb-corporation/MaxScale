@@ -32,21 +32,21 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Trying to connect to all Maxscale services\n");
     fflush(stdout);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->tprintf("Trying to send query to ReadConn master\n");
     fflush(stdout);
-    Test->try_query(Test->conn_master, (char *) "show processlist");
+    Test->try_query(Test->maxscales->conn_master[0], (char *) "show processlist");
     Test->tprintf("Trying to send query to ReadConn slave\n");
     fflush(stdout);
-    Test->try_query(Test->conn_slave, (char *) "show processlist");
+    Test->try_query(Test->maxscales->conn_slave[0], (char *) "show processlist");
     Test->tprintf("Trying to send query to RWSplit, expecting failure\n");
     fflush(stdout);
-    if (execute_query(Test->conn_rwsplit, (char *) "show processlist") == 0)
+    if (execute_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist") == 0)
     {
         Test->add_result(1, "FAIL: Query to broken service succeeded!\n");
     }
-    Test->close_maxscale_connections();
-    Test->check_log_err("Recursive use of tee filter in service", true);
+    Test->maxscales->close_maxscale_connections(0);
+    Test->check_log_err(0, "Recursive use of tee filter in service", true);
 
     int rval = Test->global_result;
     delete Test;

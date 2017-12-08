@@ -80,8 +80,8 @@ int main(int argc, char *argv[])
 
     sht_rst_service();
 
-    Test->check_maxscale_alive();
-    Test->check_log_err((char *) "received fatal signal", false);
+    Test->check_maxscale_alive(0);
+    Test->check_log_err(0, (char *) "received fatal signal", false);
     int rval = Test->global_result;
     delete Test;
     return rval;
@@ -91,7 +91,7 @@ void *query_thread1( void *ptr )
 {
     while (!exit_flag)
     {
-        Test->execute_maxadmin_command(shutdown_cmd);
-        Test->execute_maxadmin_command(restart_cmd);
+        Test->maxscales->execute_maxadmin_command(0, shutdown_cmd);
+        Test->maxscales->execute_maxadmin_command(0, restart_cmd);
     }
 }

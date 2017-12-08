@@ -42,25 +42,25 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
-    if (Test->connect_rwsplit() == 0)
+    if (Test->maxscales->connect_rwsplit(0) == 0)
     {
         Test->add_result(1, "Filter config is broken, but service is started\n");
     }
-    if (Test->connect_readconn_master() == 0)
+    if (Test->maxscales->connect_readconn_master(0) == 0)
     {
         Test->add_result(1, "Filter config is broken, but Maxscale is started\n");
     }
-    if (Test->connect_readconn_slave() == 0)
+    if (Test->maxscales->connect_readconn_slave(0) == 0)
     {
         Test->add_result(1, "Filter config is broken, but Maxscale is started\n");
     }
 
     //sleep(5);
-    Test->execute_maxadmin_command((char*) "sync logs");
-    Test->check_log_err((char *) "Unable to find library for module: foobar", true);
-    Test->check_log_err((char *) "Failed to load filter module 'foobar'", true);
-    Test->check_log_err((char *) "Failed to load filter 'testfilter' for service 'RW Split Router'", true);
-    Test->check_log_err((char *)
+    Test->maxscales->execute_maxadmin_command(0, (char*) "sync logs");
+    Test->check_log_err(0, (char *) "Unable to find library for module: foobar", true);
+    Test->check_log_err(0, (char *) "Failed to load filter module 'foobar'", true);
+    Test->check_log_err(0, (char *) "Failed to load filter 'testfilter' for service 'RW Split Router'", true);
+    Test->check_log_err(0, (char *)
                         "Failed to open, read or process the MaxScale configuration file /etc/maxscale.cnf. Exiting", true);
 
     int rval = Test->global_result;

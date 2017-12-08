@@ -19,12 +19,12 @@ int main(int argc, char *argv[])
     TestConnections test(argc, argv);
     printf("Connecting to RWSplit");
     test.set_timeout(60);
-    test.add_result(test.connect_rwsplit(), "Error connection to RWSplit! Exiting");
+    test.add_result(test.maxscales->connect_rwsplit(0), "Error connection to RWSplit! Exiting");
     sleep(5);
 
     test.tprintf("Checking current slave");
     int res = 0;
-    int old_slave = test.find_connected_slave(&res);
+    int old_slave = test.find_connected_slave(0, &res);
     test.add_result(res, "no current slave");
 
     test.tprintf("Setup firewall to block mysql on old slave (oldslave is node %d)", old_slave);
@@ -37,14 +37,14 @@ int main(int argc, char *argv[])
     sleep(10);
 
     test.set_timeout(20);
-    int current_slave = test.find_connected_slave(&res);
+    int current_slave = test.find_connected_slave(0, &res);
     test.add_result((current_slave == old_slave) || (current_slave < 0), "No failover happened");
 
     test.tprintf("Unblock old node");
     test.repl->unblock_node(old_slave);
-    test.close_rwsplit();
+    test.maxscales->close_rwsplit(0);
 
-    test.check_maxscale_alive();
+    test.check_maxscale_alive(0);
     test.stop_timeout();
     test.repl->fix_replication();
 

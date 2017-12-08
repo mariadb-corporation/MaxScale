@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->check_maxscale_processes(0);
-    Test->check_log_err("Fatal", false);
+    Test->check_log_err(0, "Fatal", false);
     int rval = Test->global_result;
     delete Test;
     return rval;

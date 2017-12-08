@@ -25,11 +25,11 @@ int main(int argc, char *argv[])
     tolerance = 0;
 
     // connect to the MaxScale server (rwsplit)
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
-    Test->execute_maxadmin_command((char *) "shutdown monitor \"Galera Monitor\"");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "shutdown monitor \"Galera Monitor\"");
 
-    if (Test->conn_rwsplit == NULL )
+    if (Test->maxscales->conn_rwsplit[0] == NULL )
     {
         Test->add_result(1, "Can't connect to MaxScale\n");
         int rval = Test->global_result;
@@ -39,20 +39,20 @@ int main(int argc, char *argv[])
     else
     {
 
-        Test->try_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1;");
-        Test->try_query(Test->conn_rwsplit, "create table t1 (x1 int);");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "create table t1 (x1 int);");
 
         get_global_status_allnodes(&selects[0], &inserts[0], Test->galera, silent);
-        Test->try_query(Test->conn_rwsplit, "select * from t1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "select * from t1;");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->galera, silent);
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->galera->N);
 
-        Test->try_query(Test->conn_rwsplit, "insert into t1 values(1);");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "insert into t1 values(1);");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->galera, silent);
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->galera->N);
 
         // close connections
-        Test->close_rwsplit();
+        Test->maxscales->close_rwsplit(0);
     }
     Test->galera->close_connections();
 

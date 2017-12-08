@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     long int i1, i2;
 
     Test->set_timeout(20);
-    master = Test->find_master_maxadmin(Test->galera);
+    master = Test->maxscales->find_master_maxadmin(0, Test->galera);
 
     if (master >= 0)
     {
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
         }
         Test->galera->close_connections();
 
-        Test->check_maxscale_alive();
+        Test->check_maxscale_alive(0);
     }
     else
     {

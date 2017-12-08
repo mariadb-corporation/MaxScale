@@ -27,9 +27,9 @@ int main(int argc, char **argv)
     test->tprintf("Block the master and try a read query\n");
     test->repl->block_node(0);
     sleep(15);
-    test->connect_readconn_slave();
+    test->maxscales->connect_readconn_slave(0);
     char first_slave[1024];
-    find_field(test->conn_slave, "SELECT @@server_id", "@@server_id", first_slave);
+    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", first_slave);
 
     int found = -1;
 
@@ -49,9 +49,9 @@ int main(int argc, char **argv)
     sleep(15);
 
     test->tprintf("Blocked the slave that replied to us, expecting a different slave\n");
-    test->connect_readconn_slave();
+    test->maxscales->connect_readconn_slave(0);
     char second_slave[1024];
-    find_field(test->conn_slave, "SELECT @@server_id", "@@server_id", second_slave);
+    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
     test->add_result(strcmp(first_slave, second_slave) == 0,
                      "Server IDs match when they shouldn't: %s - %s",
                      first_slave, second_slave);
@@ -61,8 +61,8 @@ int main(int argc, char **argv)
     sleep(15);
 
     test->tprintf("Unblocked the slave, still expecting a different slave\n");
-    test->connect_readconn_slave();
-    find_field(test->conn_slave, "SELECT @@server_id", "@@server_id", second_slave);
+    test->maxscales->connect_readconn_slave(0);
+    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
     test->add_result(strcmp(first_slave, second_slave) == 0,
                      "Server IDs match when they shouldn't: %s - %s",
                      first_slave, second_slave);
@@ -72,8 +72,8 @@ int main(int argc, char **argv)
     sleep(15);
 
     test->tprintf("Unblocked all nodes, expecting the server ID of the first slave server\n");
-    test->connect_readconn_slave();
-    find_field(test->conn_slave, "SELECT @@server_id", "@@server_id", second_slave);
+    test->maxscales->connect_readconn_slave(0);
+    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
     test->add_result(strcmp(first_slave, second_slave) != 0,
                      "Server IDs don't match when they should: %s - %s",
                      first_slave, second_slave);
@@ -83,8 +83,8 @@ int main(int argc, char **argv)
     sleep(15);
 
     test->tprintf("Stopped replication, expecting a different slave\n");
-    test->connect_readconn_slave();
-    find_field(test->conn_slave, "SELECT @@server_id", "@@server_id", second_slave);
+    test->maxscales->connect_readconn_slave(0);
+    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
     test->add_result(strcmp(first_slave, second_slave) == 0,
                      "Server IDs match when they shouldn't: %s - %s",
                      first_slave, second_slave);
@@ -94,8 +94,8 @@ int main(int argc, char **argv)
     sleep(15);
 
     test->tprintf("Started replication, expecting the server ID of the first slave server\n");
-    test->connect_readconn_slave();
-    find_field(test->conn_slave, "SELECT @@server_id", "@@server_id", second_slave);
+    test->maxscales->connect_readconn_slave(0);
+    find_field(test->maxscales->conn_slave[0], "SELECT @@server_id", "@@server_id", second_slave);
     test->add_result(strcmp(first_slave, second_slave) != 0,
                      "Server IDs don't match when they should: %s - %s",
                      first_slave, second_slave);

@@ -65,7 +65,8 @@ void check_conn_num(TestConnections* Test, int * Nc, unsigned int conn_num)
 {
     for (int i = 0; i < 4; i++)
     {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscales->IP[0], Test->maxscales->hostname[0],
+                                (char *) "test");
         Test->tprintf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
         if ((i < 4) && (Nc[i] != conn_num))
         {
@@ -78,17 +79,17 @@ int main(int argc, char *argv[])
 {
     int maxscale_conn_num = 60;
     MYSQL *conn_read[maxscale_conn_num];
-    MYSQL *conn_rwsplit[maxscale_conn_num];
+    MYSQL *conn_rwsplit[0][maxscale_conn_num];
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
     int i;
 
     Test->galera->connect();
 
-    Test->tprintf("Connecting to ReadConnMaster on %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to ReadConnMaster on %s\n", Test->maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        conn_read[i] = Test->open_readconn_master_connection();
+        conn_read[i] = Test->maxscales->open_readconn_master_connection(0);
     }
 
     Test->stop_timeout();
@@ -116,10 +117,10 @@ int main(int argc, char *argv[])
     sleep(15);
 
     Test->set_timeout(30);
-    Test->tprintf("Connecting to RWSplit on %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit on %s\n", Test->maxscales->IP[0]);
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        conn_rwsplit[i] = Test->open_rwsplit_connection();
+        conn_rwsplit[0][i] = Test->maxscales->open_rwsplit_connection(0);
     }
 
     Test->stop_timeout();
@@ -140,16 +141,16 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < maxscale_conn_num; i++)
     {
-        mysql_close(conn_rwsplit[i]);
+        mysql_close(conn_rwsplit[0][i]);
     }
     Test->galera->close_connections();
 
-    Test->check_log_err((char *) "Unexpected parameter 'weightby'", false);
-    Test->check_log_err((char *)
+    Test->check_log_err(0, (char *) "Unexpected parameter 'weightby'", false);
+    Test->check_log_err(0, (char *)
                         "Weighting parameter 'serversize' with a value of 0 for server 'server4' rounds down to zero", true);
 
     // Pre-1.3.0 failure message
-    //Test->check_log_err((char *) "Server 'server4' has no value for weighting parameter 'serversize', no queries will be routed to this server", true);
+    //Test->check_log_err(0, (char *) "Server 'server4' has no value for weighting parameter 'serversize', no queries will be routed to this server", true);
 
 
     int rval = Test->global_result;

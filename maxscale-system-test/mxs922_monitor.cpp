@@ -18,38 +18,38 @@ int main(int argc, char *argv[])
 
     sleep(1);
 
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
 
     config.destroy_monitor("mysql-monitor");
 
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
 
-    test->ssh_maxscale(true, "for i in 0 1 2 3; do maxadmin clear server server$i running; done");
+    test->maxscales->ssh_node(0, "for i in 0 1 2 3; do maxadmin clear server server$i running; done", true);
 
-    test->add_result(test->connect_maxscale() == 0, "Should not be able to connect");
+    test->add_result(test->maxscales->connect_maxscale(0) == 0, "Should not be able to connect");
 
     config.create_monitor("mysql-monitor2", "mysqlmon", 500);
     config.add_created_servers("mysql-monitor2");
 
     sleep(1);
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
 
     /** Try to alter the monitor user */
-    test->connect_maxscale();
-    execute_query(test->conn_rwsplit, "DROP USER 'test'@'%%'");
-    execute_query(test->conn_rwsplit, "CREATE USER 'test'@'%%' IDENTIFIED BY 'test'");
-    execute_query(test->conn_rwsplit, "GRANT ALL ON *.* TO 'test'@'%%'");
-    test->close_maxscale_connections();
+    test->maxscales->connect_maxscale(0);
+    execute_query(test->maxscales->conn_rwsplit[0], "DROP USER 'test'@'%%'");
+    execute_query(test->maxscales->conn_rwsplit[0], "CREATE USER 'test'@'%%' IDENTIFIED BY 'test'");
+    execute_query(test->maxscales->conn_rwsplit[0], "GRANT ALL ON *.* TO 'test'@'%%'");
+    test->maxscales->close_maxscale_connections(0);
 
     config.alter_monitor("mysql-monitor2", "user", "test");
     config.alter_monitor("mysql-monitor2", "password", "test");
 
     sleep(1);
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
 
     /** Remove the user */
-    test->connect_maxscale();
-    execute_query(test->conn_rwsplit, "DROP USER 'test'@'%%'");
+    test->maxscales->connect_maxscale(0);
+    execute_query(test->maxscales->conn_rwsplit[0], "DROP USER 'test'@'%%'");
 
     config.restart_monitors();
 
@@ -58,12 +58,12 @@ int main(int argc, char *argv[])
      * monitor is running if the states have changed and the query is
      * successful.
      */
-    test->ssh_maxscale(true, "for i in 0 1 2 3; do maxadmin clear server server$i running; done");
+    test->maxscales->ssh_node(0, "for i in 0 1 2 3; do maxadmin clear server server$i running; done", true);
 
     sleep(1);
-    test->add_result(execute_query_silent(test->conn_rwsplit, "SELECT 1") == 0,
+    test->add_result(execute_query_silent(test->maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                      "Query should fail when monitor has wrong credentials");
-    test->close_maxscale_connections();
+    test->maxscales->close_maxscale_connections(0);
 
     for (int i = 0; i < test->repl->N; i++)
     {
@@ -73,9 +73,9 @@ int main(int argc, char *argv[])
 
     config.restart_monitors();
     sleep(1);
-    test->check_maxscale_alive();
+    test->check_maxscale_alive(0);
 
-    test->check_log_err("Fatal", false);
+    test->check_log_err(0, "Fatal", false);
     int rval = test->global_result;
     delete test;
     return rval;

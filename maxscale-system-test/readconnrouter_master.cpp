@@ -30,7 +30,7 @@ int check_connnections_only_to_master(TestConnections * Test, int master)
     printf("Checking number of connections to each node\n");
     for (int i = 0; i < Test->repl->N; i++)
     {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_ip(), Test->maxscale_hostname, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscales->ip(0), Test->maxscales->hostname[0], (char *) "test");
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if (((i == master) && (conn_num != 1)) || ((i != master) && (conn_num != 0)))
         {
@@ -49,13 +49,13 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     Test->tprintf("Connecting to ReadConnnRouter in 'master' mode\n");
-    Test->connect_readconn_master();
+    Test->maxscales->connect_readconn_master(0);
     printf("Sleeping 10 seconds\n");
     Test->stop_timeout();
     sleep(10);
     Test->set_timeout(50);
     Test->add_result(check_connnections_only_to_master(Test, 0), "connections are not only to Master\n");
-    Test->close_readconn_master();
+    Test->maxscales->close_readconn_master(0);
     Test->tprintf("Changing master to node 1\n");
     Test->set_timeout(50);
     Test->repl->change_master(1, 0);
@@ -64,18 +64,18 @@ int main(int argc, char *argv[])
     sleep(10);
     Test->set_timeout(50);
     printf("Connecting to ReadConnnRouter in 'master' mode\n");
-    Test->connect_readconn_master();
+    Test->maxscales->connect_readconn_master(0);
     printf("Sleeping 10 seconds\n");
     Test->stop_timeout();
     sleep(10);
     Test->set_timeout(50);
     Test->add_result(check_connnections_only_to_master(Test, 1), "connections are not only to master");
-    Test->close_readconn_master();
+    Test->maxscales->close_readconn_master(0);
     Test->set_timeout(50);
     printf("Changing master back to node 0\n");
     Test->repl->change_master(0, 1);
 
-    Test->check_log_err((char *) "The service 'CLI' is missing a definition of the servers", false);
+    Test->check_log_err(0, (char *) "The service 'CLI' is missing a definition of the servers", false);
 
     int rval = Test->global_result;
     delete Test;

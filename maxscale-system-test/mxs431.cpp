@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     Test->repl->stop_slaves();
     Test->set_timeout(30);
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
     Test->set_timeout(30);
     Test->repl->connect();
     Test->stop_timeout();
@@ -47,9 +47,9 @@ int main(int argc, char *argv[])
         {
             sprintf(str, "shard_db%d", i);
             Test->set_timeout(15);
-            MYSQL *conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP,
-                                       str, Test->maxscale_user,
-                                       Test->maxscale_password, Test->ssl);
+            MYSQL *conn = open_conn_db(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0],
+                                       str, Test->maxscales->user_name,
+                                       Test->maxscales->password, Test->ssl);
             Test->set_timeout(15);
             Test->tprintf("Trying DB %d\n", i);
             if (execute_query(conn, "SELECT 1"))

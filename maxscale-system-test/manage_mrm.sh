@@ -117,6 +117,9 @@ EOF
     do_ssh <<EOF
 sudo mkdir -p /etc/replication-manager/
 sudo cp ./config.toml /etc/replication-manager/config.toml
+sudo systemctl stop replication-manager
+sudo replication-manager bootstrap --clean-all
+sudo systemctl restart replication-manager
 EOF
 }
 

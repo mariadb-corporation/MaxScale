@@ -182,7 +182,7 @@ Comment 3 Vilho Raatikka 2014-12-11 16:35:46 UTC
 Using readconnroute _where_? in tee?
 Comment 4 Vilho Raatikka 2014-12-12 08:27:41 UTC
 gwbuf_type is not set and that is the immediate cause for assertion with Debug version.
-Reason why the type is not set is in the way the packets are first processed in mysql_client.c client protocol module and then passed optionally to filters and router. There is a bug because it is assumed that when client protocol module reads incoming packet it can resolve which router will handle the packet processing. The code doesn't take into account that same packet can be processed by many different routers, like in the case of readconnrouter->tee->readwritesplit.
+Reason why the type is not set is in the way the packets are first processed in mysql_client.c client protocol module and then passed optionally to filters and router. There is a bug because it is assumed that when client protocol module reads incoming packet it can resolve which router will handle the packet processing. The code doesn't take into account that same packet can be processed by many different maxscales->routers[0], like in the case of readconnrouter->tee->readwritesplit.
 Another problem is in readwritesplit where it is assumed that it is the first and the only router that will process tha data. So it includes checks that the buffer has correct type.
 
 Required changes are:
@@ -199,13 +199,13 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
-    Test->connect_maxscale();
-    Test->try_query(Test->conn_master, (char *) "show processlist");
-    Test->try_query(Test->conn_slave, (char *) "show processlist");
-    Test->try_query(Test->conn_rwsplit, (char *) "show processlist");
-    Test->close_maxscale_connections();
+    Test->maxscales->connect_maxscale(0);
+    Test->try_query(Test->maxscales->conn_master[0], (char *) "show processlist");
+    Test->try_query(Test->maxscales->conn_slave[0], (char *) "show processlist");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist");
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

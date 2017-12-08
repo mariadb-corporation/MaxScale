@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     int i, j;
 
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
 
     Test->set_timeout(2000);
 
@@ -44,13 +44,13 @@ int main(int argc, char *argv[])
     for (i = 0; i < iter; i++)
     {
         Test->tprintf("i= %d\n", i);
-        Test->connect_maxscale();
+        Test->maxscales->connect_maxscale(0);
         for (j = 0; j < iter; j++)
         {
-            execute_query_silent(Test->conn_rwsplit, "SELECT 1");
+            execute_query_silent(Test->maxscales->conn_rwsplit[0], "SELECT 1");
 
         }
-        Test->close_maxscale_connections();
+        Test->maxscales->close_maxscale_connections(0);
         if (i > iter)
         {
             restart_flag = 1;
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
     pthread_join(restart_t, NULL);
 
     Test->tprintf("Checxking if MaxScale is still alive!\n");
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;
@@ -109,11 +109,11 @@ void *kill_vm_thread( void *ptr )
         sleep(2);
         if (restart_flag == 0)
         {
-            Test->execute_maxadmin_command((char *  ) "restart service \"RW Split Router\"");
+            Test->maxscales->execute_maxadmin_command(0, (char *  ) "restart service \"RW Split Router\"");
         }
         else
         {
-            Test->restart_maxscale();
+            Test->maxscales->restart_maxscale(0);
         }
     }
 

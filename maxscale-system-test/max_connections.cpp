@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     {
         Test->tprintf("Opening connection %d\n", i + 1);
         Test->set_timeout(30);
-        mysql[i] = Test->open_rwsplit_connection();
+        mysql[i] = Test->maxscales->open_rwsplit_connection(0);
         if (execute_query_silent(mysql[i], "select 1"))
         {
             /** Monitors and such take up some connections so we'll set the
@@ -47,8 +47,8 @@ int main(int argc, char** argv)
     for (int i = 0; i < ITER; i++)
     {
         Test->set_timeout(30);
-        mysql[limit - 1] = Test->open_rwsplit_connection();
-        mysql[limit] = Test->open_rwsplit_connection();
+        mysql[limit - 1] = Test->maxscales->open_rwsplit_connection(0);
+        mysql[limit] = Test->maxscales->open_rwsplit_connection(0);
         Test->add_result(execute_query_silent(mysql[limit - 1], "select 1"), "Query should succeed\n");
         Test->add_result(!execute_query_silent(mysql[limit], "select 1"), "Query should fail\n");
         mysql_close(mysql[limit - 1]);
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 
     sleep(5);
     Test->stop_timeout();
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
     int rval = Test->global_result;
     delete Test;

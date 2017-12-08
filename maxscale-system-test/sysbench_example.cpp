@@ -17,11 +17,11 @@ int main(int argc, char *argv[])
 
     char sys1[4096];
 
-    Test->ssh_maxscale(false, "maxscale --version-full");
+    Test->maxscales->ssh_node(0, "maxscale --version-full", false);
     fflush(stdout);
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
 
-    sprintf(&sys1[0], sysbench_prepare_short, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP);
+    sprintf(&sys1[0], sysbench_prepare_short, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0]);
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
     Test->set_timeout(10000);
@@ -29,8 +29,8 @@ int main(int argc, char *argv[])
 
     Test->stop_timeout();
 
-    sprintf(&sys1[0], sysbench_command_short, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP,
-            Test->rwsplit_port, "off");
+    sprintf(&sys1[0], sysbench_command_short, Test->sysbench_dir, Test->sysbench_dir, Test->maxscales->IP[0],
+            Test->maxscales->rwsplit_port[0], "off");
     Test->set_log_copy_interval(300);
     Test->tprintf("Executing sysbench \n%s\n", sys1);
     if (system(sys1) != 0)
@@ -38,32 +38,31 @@ int main(int argc, char *argv[])
         Test->tprintf("Error executing sysbench test\n");
     }
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     printf("Dropping sysbanch tables!\n");
     fflush(stdout);
 
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest1");
     if (!Test->smoke)
     {
-        Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
-        Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
-        Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest2");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest3");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest4");
     }
 
-    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest");
+    //global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE sbtest");
 
     printf("closing connections to MaxScale!\n");
     fflush(stdout);
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->tprintf("Checking if MaxScale is still alive!\n");
     fflush(stdout);
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;
     return rval;
 }
-

@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
     different_packet_size(Test, false);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

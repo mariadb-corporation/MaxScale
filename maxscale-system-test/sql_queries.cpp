@@ -65,46 +65,46 @@ int main(int argc, char *argv[])
         Test->tprintf("Connection to backend\n");
         Test->repl->connect();
         Test->tprintf("Connection to Maxscale\n");
-        if (Test->connect_maxscale() != 0)
+        if (Test->maxscales->connect_maxscale(0) != 0)
         {
             Test->add_result(1, "Error connecting to MaxScale");
             break;
         }
 
         Test->tprintf("Filling t1 with data\n");
-        Test->add_result(Test->insert_select(N), "insert-select check failed\n");
+        Test->add_result(Test->insert_select(0, N), "insert-select check failed\n");
 
         Test->tprintf("Creating database test1\n");
-        Test->try_query(Test->conn_rwsplit, "DROP TABLE t1");
-        Test->try_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
-        Test->try_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE t1");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP DATABASE IF EXISTS test1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE DATABASE test1;");
         Test->repl->sync_slaves();
 
         Test->tprintf("Testing with database 'test1'\n");
-        Test->add_result(Test->use_db( (char *) "test1"), "use_db failed\n");
-        Test->add_result(Test->insert_select(N), "insert-select check failed\n");
+        Test->add_result(Test->use_db(0, (char *) "test1"), "use_db failed\n");
+        Test->add_result(Test->insert_select(0, N), "insert-select check failed\n");
 
-        Test->add_result(Test->check_t1_table(false, (char *) "test"), "t1 is found in 'test'\n");
-        Test->add_result(Test->check_t1_table(true, (char *) "test1"), "t1 is not found in 'test1'\n");
+        Test->add_result(Test->check_t1_table(0, false, (char *) "test"), "t1 is found in 'test'\n");
+        Test->add_result(Test->check_t1_table(0, true, (char *) "test1"), "t1 is not found in 'test1'\n");
 
         Test->tprintf("Trying queries with syntax errors\n");
         for (j = 0; j < 3; j++)
         {
-            execute_query(Test->routers[j], "DROP DATABASE I EXISTS test1;");
-            execute_query(Test->routers[j], "CREATE TABLE ");
+            execute_query(Test->maxscales->routers[0][j], "DROP DATABASE I EXISTS test1;");
+            execute_query(Test->maxscales->routers[0][j], "CREATE TABLE ");
         }
 
         // close connections
-        Test->close_maxscale_connections();
+        Test->maxscales->close_maxscale_connections(0);
         Test->repl->close_connections();
     }
 
     Test->stop_timeout();
-    Test->check_log_err((char *) "Length (0) is 0", false);
-    Test->check_log_err((char *) "Unable to parse query", false);
-    Test->check_log_err((char *) "query string allocation failed", false);
+    Test->check_log_err(0, (char *) "Length (0) is 0", false);
+    Test->check_log_err(0, (char *) "Unable to parse query", false);
+    Test->check_log_err(0, (char *) "query string allocation failed", false);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

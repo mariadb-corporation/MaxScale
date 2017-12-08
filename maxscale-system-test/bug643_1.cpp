@@ -75,19 +75,19 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Trying to connect to all Maxscale services\n");
     fflush(stdout);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->tprintf("Trying to send query to RWSplit\n");
     fflush(stdout);
-    execute_query(Test->conn_rwsplit, (char *) "show processlist");
+    execute_query(Test->maxscales->conn_rwsplit[0], (char *) "show processlist");
     Test->tprintf("Trying to send query to ReadConn master\n");
     fflush(stdout);
-    execute_query(Test->conn_master, (char *) "show processlist");
+    execute_query(Test->maxscales->conn_master[0], (char *) "show processlist");
     Test->tprintf("Trying to send query to ReadConn slave\n");
     fflush(stdout);
-    execute_query(Test->conn_slave, (char *) "show processlist");
-    Test->close_maxscale_connections();
+    execute_query(Test->maxscales->conn_slave[0], (char *) "show processlist");
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_log_err((char *) "Unable to find filter 'tests' for service 'RW Split2'", true);
+    Test->check_log_err(0, (char *) "Unable to find filter 'tests' for service 'RW Split2'", true);
 
     int rval = Test->global_result;
     delete Test;

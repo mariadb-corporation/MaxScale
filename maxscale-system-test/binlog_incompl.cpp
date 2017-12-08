@@ -14,10 +14,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
 
     Test->set_timeout(60);
-    Test->connect_maxscale();
-    Test->close_maxscale_connections();
+    Test->maxscales->connect_maxscale(0);
+    Test->maxscales->close_maxscale_connections(0);
     sleep(10);
-    Test->check_log_err("fatal signal 11", false);
+    Test->check_log_err(0, "fatal signal 11", false);
 
     int rval = Test->global_result;
     delete Test;

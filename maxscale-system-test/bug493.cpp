@@ -80,10 +80,10 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
-    Test->check_log_err((char *) "Duplicate section found: server2", true);
-    Test->check_log_err((char *)
+    Test->check_log_err(0, (char *) "Duplicate section found: server2", true);
+    Test->check_log_err(0, (char *)
                         "Failed to open, read or process the MaxScale configuration file /etc/maxscale.cnf. Exiting", true);
-    //Test->check_maxscale_alive();
+    //Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

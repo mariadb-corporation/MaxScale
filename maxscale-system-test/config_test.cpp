@@ -28,12 +28,12 @@ int main(int argc, char **argv)
     TestConnections *test = new TestConnections(argc, argv);
     int rval = 0;
 
-    test->stop_maxscale();
+    test->maxscales->stop_maxscale(0);
 
     for (int i = 0; bad_configs[i]; i++)
     {
         printf("Testing %s...\n", bad_configs[i]);
-        if (test->test_bad_config(bad_configs[i]))
+        if (test->test_bad_config(0, bad_configs[i]))
         {
             printf("FAILED\n");
             rval++;

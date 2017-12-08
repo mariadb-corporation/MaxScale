@@ -63,12 +63,12 @@ int main(int argc, char *argv[])
     iconv_close(converter);
     */
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->set_timeout(10);
     nodes->connect();
 
     Test->set_timeout(10);
-    MYSQL * conn = Test->conn_rwsplit;
+    MYSQL * conn = Test->maxscales->conn_rwsplit[0];
 
     //Test->try_query(conn, (char *) "set names utf8mb4;");
     execute_query_silent(conn, (char *) "DROP TABLE t2;");
@@ -79,9 +79,9 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
     sleep(5);
 
-    check_val(Test->conn_rwsplit, Test);
-    check_val(Test->conn_master, Test);
-    check_val(Test->conn_slave, Test);
+    check_val(Test->maxscales->conn_rwsplit[0], Test);
+    check_val(Test->maxscales->conn_master[0], Test);
+    check_val(Test->maxscales->conn_slave[0], Test);
 
     for (int i = 0; i < Test->repl->N; i++)
     {
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 
     //execute_query_silent(conn, (char *) "DROP TABLE t2;");
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

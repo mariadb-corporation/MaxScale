@@ -18,12 +18,12 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(100);
-    Test->execute_maxadmin_command((char *) "show monitors");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show monitors");
     sleep(5);
-    Test->check_log_err((char *) "Failed to start monitor", true);
-    Test->check_log_err((char *) "fatal signal 11", false);
+    Test->check_log_err(0, (char *) "Failed to start monitor", true);
+    Test->check_log_err(0, (char *) "fatal signal 11", false);
 
-    Test->check_maxscale_processes(1);
+    Test->check_maxscale_processes(0, 1);
 
     int rval = Test->global_result;
     delete Test;

@@ -17,13 +17,13 @@ void prepare()
 void get_output(TestConnections& test)
 {
     test.tprintf("Maxadmin output:");
-    char *output = test.ssh_maxscale_output(true, "maxadmin list servers");
+    char *output = test.maxscales->ssh_node_f(0, true, "maxadmin list servers");
     test.tprintf("%s", output);
     free(output);
 
-    test.tprintf("MaxScale output:");
-    output = test.ssh_maxscale_output(true,
-                                      "cat /var/log/maxscale/maxscale.log && sudo truncate -s 0 /var/log/maxscale/maxscale.log");
+    test.tprintf("replication-manager output:");
+    output = test.maxscales->ssh_node_f(0, true,
+                                      "cat /var/log/replication-manager.log && sudo truncate -s 0 /var/log/replication-manager.log");
     test.tprintf("%s", output);
     free(output);
 }
@@ -32,7 +32,7 @@ static int inserts = 0;
 
 void check(TestConnections& test)
 {
-    MYSQL *conn = test.open_rwsplit_connection();
+    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
     const char *query1 = "INSERT INTO test.t1 VALUES (%d)";
     const char *query2 = "SELECT * FROM test.t1";
 
@@ -66,21 +66,6 @@ void check(TestConnections& test)
     mysql_close(conn);
 }
 
-int get_server_id(TestConnections& test)
-{
-    MYSQL *conn = test.open_rwsplit_connection();
-    int id = -1;
-    char str[1024];
-
-    if (find_field(conn, "SELECT @@server_id", "@@server_id", str) == 0)
-    {
-        id = atoi(str);
-    }
-
-    mysql_close(conn);
-    return id;
-}
-
 static bool interactive = false;
 
 void get_input()
@@ -98,9 +83,8 @@ int main(int argc, char** argv)
     prepare();
 
     TestConnections test(argc, argv);
-
     test.tprintf("Installing replication-manager");
-    int rc = system("new_replication_manager=yes ./manage_mrm.sh install > manage_mrm.log");
+    int rc = system("./manage_mrm.sh install > manage_mrm.log");
     if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0)
     {
         test.tprintf("Failed to install replication-manager, see manage_mrm.log for more details");
@@ -112,9 +96,8 @@ int main(int argc, char** argv)
 
     test.tprintf("Creating table and inserting data");
     get_input();
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
-    test.repl->sync_slaves();
+    test.maxscales->connect_maxscale(0);
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
 
     check(test);
     get_output(test);
@@ -144,34 +127,31 @@ int main(int argc, char** argv)
     check(test);
     get_output(test);
 
+    test.tprintf("Starting all nodes and wait for replication-manager to fix the replication");
+    get_input();
 
-    test.tprintf("Fix replication and recreate table");
-    test.close_maxscale_connections();
-    test.repl->fix_replication();
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
-    test.repl->sync_slaves();
-    inserts = 0;
-
-    check(test);
-    get_output(test);
-
-    test.tprintf("Disable replication on a slave and kill master, check that it is not promoted");
-    execute_query(test.repl->nodes[1], "STOP SLAVE; RESET SLAVE; RESET SLAVE ALL;");
-    test.repl->stop_node(0);
-    sleep(10);
+    test.repl->start_node(0, (char*)"");
+    sleep(5);
+    test.repl->start_node(1, (char*)"");
+    sleep(5);
+    test.repl->start_node(2, (char*)"");
+    sleep(5);
 
     check(test);
     get_output(test);
 
-    int id = get_server_id(test);
-    test.add_result(id == test.repl->get_server_id(1), "Invalid slave should not be used");
+    test.tprintf("Dropping tables");
+    get_input();
+    test.maxscales->close_maxscale_connections(0);
+    test.maxscales->connect_maxscale(0);
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
+    test.maxscales->close_maxscale_connections(0);
 
-    // TODO: Figure this also out, remove the component if it's not needed
-    // test.tprintf("Removing replication-manager");
-    // get_input();
-    // system("./manage_mrm.sh remove >> manage_mrm.log");
+    get_output(test);
 
+    test.tprintf("Removing replication-manager");
+    get_input();
+    system("./manage_mrm.sh remove >> manage_mrm.log");
     test.repl->fix_replication();
     return test.global_result;
 }

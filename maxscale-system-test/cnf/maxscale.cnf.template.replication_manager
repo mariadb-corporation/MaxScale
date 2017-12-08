@@ -12,8 +12,6 @@ monitor_interval=1000
 detect_standalone_master=true
 failcount=2
 allow_cluster_recovery=true
-events=master_down
-script=/home/vagrant/replication-manager --hosts=$LIST --user=skysql:skysql --rpluser=skysql:skysql --switchover-at-sync=false --log-level=3 --logfile=/tmp/mrm.log switchover
 
 [RW Split Router]
 type=service

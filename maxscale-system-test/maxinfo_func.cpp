@@ -77,7 +77,7 @@ char * get_maxinfo(const char * page, TestConnections* Test)
     char buf[BUFSIZ + 1];
 
     sock = create_tcp_socket();
-    ip = get_ip(Test->maxscale_IP);
+    ip = get_ip(Test->maxscales->IP[0]);
     if (ip == NULL)
     {
         Test->add_result(1, "Can't get IP\n");
@@ -103,7 +103,7 @@ char * get_maxinfo(const char * page, TestConnections* Test)
         Test->add_result(1, "Could not connect\n");
         return NULL;
     }
-    get = build_get_query(Test->maxscale_IP, page);
+    get = build_get_query(Test->maxscales->IP[0], page);
     //Test->tprintf("Query is:\n<<START>>\n%s<<END>>\n", get);
 
     //Send the query to the server

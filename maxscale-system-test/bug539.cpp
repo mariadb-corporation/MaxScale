@@ -21,35 +21,32 @@ int main(int argc, char *argv[])
     int N_cmd = 2;
     char * fail_cmd[N_cmd - 1];
 
-    int N_ports = 3;
-    int ports[N_ports];
+
+
 
     fail_cmd[0] = (char *) "fail backendfd";
     fail_cmd[1] = (char *) "fail clientfd";
 
-    ports[0] = Test->rwsplit_port;
-    ports[1] = Test->readconn_master_port;
-    ports[2] = Test->readconn_slave_port;
 
     for (i = 0; i < N_cmd; i++)
     {
-        for (j = 0; j < N_ports; j++)
+        for (j = 0; j < Test->maxscales->N_ports[0]; j++)
         {
             Test->tprintf("Executing MaxAdmin command '%s'\n", fail_cmd[i]);
-            if (execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, fail_cmd[i]) != 0)
+            if (maxscales->execute_maxadmin_command(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0], fail_cmd[i]) != 0)
             {
                 Test->add_result(1, "MaxAdmin command failed\n");
             }
             else
             {
-                printf("Trying query against %d\n", ports[j]);
-                conn = open_conn(ports[j], Test->maxscale_IP, Test->maxscale_user, Test->maxscale_user, Test->ssl);
+                printf("Trying query against %d\n", Test->maxscales->ports[0][j]);
+                conn = open_conn(ports[j], Test->maxscales->IP[0], Test->maxscales->user_name, Test->maxscales->password, Test->ssl);
                 Test->try_query(conn, (char *) "show processlist;");
             }
         }
     }
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

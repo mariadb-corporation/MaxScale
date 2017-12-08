@@ -11,7 +11,7 @@
 int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
-    test.check_maxscale_alive();
-    test.check_log_err("Failed to create new router session for service 'RW_Split'", true);
+    test.check_maxscale_alive(0);
+    test.check_log_err(0, "Failed to create new router session for service 'RW_Split'", true);
     return test.global_result;
 }

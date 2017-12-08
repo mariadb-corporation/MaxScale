@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     int iterations = 5000;
 
     test.tprintf("Executing `SELECT REPEAT('a', X );` for X = 0..%d with a stride of 7", iterations);
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     for (int i = 1; i < iterations; i += 7)
     {
@@ -21,10 +21,10 @@ int main(int argc, char *argv[])
         sprintf(str, "SELECT REPEAT('a',%d)", i);
 
         test.set_timeout(15);
-        test.try_query(test.conn_rwsplit, str);
+        test.try_query(test.maxscales->conn_rwsplit[0], str);
     }
 
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     return test.global_result;
 }

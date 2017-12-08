@@ -193,7 +193,7 @@ Comment 3 Vilho Raatikka 2014-12-30 12:05:49 UTC
 Created attachment 173 [details]
 List of statements used by run_setmix.sh
 Comment 4 Vilho Raatikka 2014-12-31 19:13:21 UTC
-tee filter doesn't send reply to client before both routers have replied. This required adding upstream processing to tee filter. First reply is routed to client. By this tee ensures that new query is never sent to either router before they have replied to previous one.
+tee filter doesn't send reply to client before both maxscales->routers[0] have replied. This required adding upstream processing to tee filter. First reply is routed to client. By this tee ensures that new query is never sent to either router before they have replied to previous one.
 Comment 5 Timofey Turenko 2015-01-08 12:40:34 UTC
 test added, closing
 Comment 6 Timofey Turenko 2015-02-28 18:11:16 UTC
@@ -233,33 +233,33 @@ int main(int argc, char *argv[])
     int i;
 
     Test->tprintf("Connecting to all MaxScale services\n");
-    Test->add_result(Test->connect_maxscale(), "Error connecting to Maxscale\n");
+    Test->add_result(Test->maxscales->connect_maxscale(0), "Error connecting to Maxscale\n");
 
     Test->tprintf("executing sql 100 times (ReadConn Slave)\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(15);
-        execute_query_silent(Test->conn_slave, bug670_sql);
+        execute_query_silent(Test->maxscales->conn_slave[0], bug670_sql);
     }
 
     Test->tprintf("executing sql 100 times (ReadConn Master)\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(15);
-        execute_query_silent(Test->conn_master, bug670_sql);
+        execute_query_silent(Test->maxscales->conn_master[0], bug670_sql);
     }
 
     Test->tprintf("executing sql 100 times (RWSplit)\n");
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(15);
-        execute_query_silent(Test->conn_rwsplit, bug670_sql);
+        execute_query_silent(Test->maxscales->conn_rwsplit[0], bug670_sql);
     }
 
     Test->set_timeout(10);
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

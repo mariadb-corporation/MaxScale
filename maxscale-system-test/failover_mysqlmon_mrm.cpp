@@ -6,14 +6,16 @@
 
 void get_output(TestConnections& test)
 {
+    int ec;
     test.tprintf("Maxadmin output:");
-    char *output = test.ssh_maxscale_output(true, "maxadmin list servers");
+    char *output = test.maxscales->ssh_node_output(0, "maxadmin list servers", true, &ec);
     test.tprintf("%s", output);
     free(output);
 
     test.tprintf("MaxScale output:");
-    output = test.ssh_maxscale_output(true, "cat /var/log/maxscale/maxscale.log && "
-                                            "sudo truncate -s 0 /var/log/maxscale/maxscale.log");
+    output = test.maxscales->ssh_node_output(0, "cat /var/log/maxscale/maxscale.log && "
+                                            "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
+                                             true, &ec);
     test.tprintf("%s", output);
     free(output);
 }
@@ -22,7 +24,7 @@ static int inserts = 0;
 
 void check(TestConnections& test)
 {
-    MYSQL *conn = test.open_rwsplit_connection();
+    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
     const char *query1 = "INSERT INTO test.t1 VALUES (%d)";
     const char *query2 = "SELECT * FROM test.t1";
 
@@ -63,7 +65,7 @@ void check(TestConnections& test)
  */
 int get_server_id(TestConnections& test)
 {
-    MYSQL *conn = test.open_rwsplit_connection();
+    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
     int id = -1;
     char str[1024];
 
@@ -90,10 +92,10 @@ void get_input()
 void fix_replication_create_table(TestConnections& test)
 {
     test.tprintf("Fix replication and recreate table.");
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
     test.repl->fix_replication();
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.maxscales->connect_maxscale(0);
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
     inserts = 0;
 
@@ -116,8 +118,8 @@ int main(int argc, char** argv)
 
     test.tprintf("Creating table and inserting data.");
     get_input();
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
+    test.maxscales->connect_maxscale(0);
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
 
     check(test);
@@ -175,8 +177,8 @@ int main(int argc, char** argv)
     const char* log_slave = "log_slave_updates=1";
     test.repl->add_server_setting(1, log_slave);
     test.repl->add_server_setting(3, log_slave);
-    test.repl->start_node(1, "");
-    test.repl->start_node(3, "");
+    test.repl->start_node(1, (char *) "");
+    test.repl->start_node(3, (char *) "");
     sleep(4);
     test.tprintf("Settings changed.");
     get_output(test);
@@ -196,17 +198,17 @@ int main(int argc, char** argv)
     // Restore server 2 and 4 settings. Because server 4 is now the master, shutting it down causes
     // another failover. Prevent this by stopping maxscale.
     test.tprintf("Restoring server settings.");
-    test.stop_maxscale();
+    test.maxscales->stop_maxscale(0);
     test.repl->stop_node(1);
     test.repl->stop_node(3);
     sleep(4);
     test.repl->restore_server_settings(1);
     test.repl->restore_server_settings(3);
-    test.repl->start_node(0, "");
-    test.repl->start_node(1, "");
-    test.repl->start_node(3, "");
+    test.repl->start_node(0, (char *) "");
+    test.repl->start_node(1, (char *) "");
+    test.repl->start_node(3, (char *) "");
     sleep(4);
-    test.start_maxscale();
+    test.maxscales->start_maxscale(0);
     sleep(2);
     get_output(test);
     get_input();

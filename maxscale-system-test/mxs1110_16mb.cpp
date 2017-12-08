@@ -13,50 +13,49 @@ int main(int argc, char *argv[])
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
     Test->set_timeout(60);
     int chunk_size = 2500000;
     int chunk_num = 5;
 
-    Test->copy_to_maxscale("./masking/masking_user/masking_rules.json", "~/");
+    Test->maxscales->copy_to_node_legacy("./masking/masking_user/masking_rules.json", "~/", 0);
 
-    Test->copy_to_maxscale("./cache/cache_basic/cache_rules.json", "~/");
+    Test->maxscales->copy_to_node_legacy("./cache/cache_basic/cache_rules.json", "~/", 0);
 
-    Test->ssh_maxscale(true, "cd %s;"
+    Test->maxscales->ssh_node_f(0, true, "cd %s;"
                        "rm -rf rules;"
                        "mkdir rules;"
                        "chown vagrant:vagrant rules",
-                       Test->maxscale_access_homedir);
+                       Test->maxscales->access_homedir[0]);
     copy_rules(Test, (char *) "rules2", "./fw/");
 
-    Test->start_maxscale();
+    Test->maxscales->start_maxscale(0);
 
     Test->repl->execute_query_all_nodes( (char *) "set global max_allowed_packet=100000000");
     Test->galera->execute_query_all_nodes( (char *) "set global max_allowed_packet=100000000");
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->repl->connect();
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->conn_rwsplit, (char *) "LONGBLOB", chunk_size, chunk_num, 2);
+    test_longblob(Test, Test->maxscales->conn_rwsplit[0], (char *) "LONGBLOB", chunk_size, chunk_num, 2);
     Test->repl->close_connections();
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->repl->sync_slaves();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->tprintf("Checking data via RWSplit\n");
-    check_longblob_data(Test, Test->conn_rwsplit, chunk_size, chunk_num, 2);
+    check_longblob_data(Test, Test->maxscales->conn_rwsplit[0], chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn master\n");
-    check_longblob_data(Test, Test->conn_master, chunk_size, chunk_num, 2);
+    check_longblob_data(Test, Test->maxscales->conn_master[0], chunk_size, chunk_num, 2);
     Test->tprintf("Checking data via ReadConn slave\n");
-    check_longblob_data(Test, Test->conn_slave, chunk_size, chunk_num, 2);
-    Test->close_maxscale_connections();
+    check_longblob_data(Test, Test->maxscales->conn_slave[0], chunk_size, chunk_num, 2);
+    Test->maxscales->close_maxscale_connections(0);
 
-    MYSQL * conn_galera = open_conn(4016, Test->maxscale_IP, Test->maxscale_user,
-                                    Test->maxscale_password, Test->ssl);
+    MYSQL * conn_galera = open_conn(4016, Test->maxscales->IP[0], Test->maxscales->user_name,
+                                    Test->maxscales->password, Test->ssl);
     mysql_close(conn_galera);
 
     int rval = Test->global_result;
     delete Test;
     return rval;
 }
-
