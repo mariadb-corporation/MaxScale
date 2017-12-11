@@ -1310,7 +1310,7 @@ static void wait_until_pos(MYSQL *mysql, int filenum, int pos)
         {
             MYSQL_ROW row = mysql_fetch_row(res);
 
-            if (row && row[6] && row[21])
+            if (row && row[5] && strchr(row[5], '.') && row[21])
             {
                 char *file_suffix = strchr(row[5], '.') + 1;
                 slave_filenum = atoi(file_suffix);
