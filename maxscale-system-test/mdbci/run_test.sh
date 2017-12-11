@@ -58,7 +58,7 @@ export name=`echo $name | sed "s/?//g"`
 
 . ${script_dir}/configure_log_dir.sh
 
-cd maxscale-system-test
+cd ${script_dir}/..
 
 cmake . -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
 make
