@@ -182,6 +182,7 @@ blr_start_master(void* data)
         return;
     }
     client->session = router->session;
+    client->service = router->service;
     if ((router->master = dcb_connect(router->service->dbref->server, router->session, BLR_PROTOCOL)) == NULL)
     {
         char *name = MXS_MALLOC(strlen(router->service->name) + strlen(" Master") + 1);
@@ -202,6 +203,7 @@ blr_start_master(void* data)
         return;
     }
     router->master->remote = MXS_STRDUP_A(router->service->dbref->server->name);
+    router->master->service = router->service;
 
     MXS_NOTICE("%s: attempting to connect to master server [%s]:%d, binlog %s, pos %lu",
                router->service->name, router->service->dbref->server->name,
