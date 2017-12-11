@@ -7,91 +7,99 @@
 
 int check_sha1(TestConnections* Test)
 {
-    char sys[1024];
-    char * x;
-    int local_result = 0;
-    int i;
-    int exit_code;
-
-    char *s_maxscale;
-    char *s;
-
-    Test->set_timeout(50);
-    Test->tprintf("ls before FLUSH LOGS");
-    Test->tprintf("Maxscale");
-    Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
-    Test->tprintf("Master");
-    Test->set_timeout(50);
-    Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
-
-    Test->tprintf("FLUSH LOGS");
-    Test->set_timeout(100);
-    local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-    Test->tprintf("Logs flushed");
-    Test->set_timeout(100);
-    Test->repl->sync_slaves();
-    Test->tprintf("ls after first FLUSH LOGS");
-    Test->tprintf("Maxscale");
-    Test->set_timeout(50);
-    Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
-
-    Test->tprintf("Master");
-    Test->set_timeout(50);
-    Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
-
-    Test->set_timeout(100);
-    Test->tprintf("FLUSH LOGS");
-    local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-    Test->tprintf("Logs flushed");
-
-    Test->set_timeout(50);
-    Test->repl->sync_slaves();
-    Test->set_timeout(50);
-    Test->tprintf("ls before FLUSH LOGS");
-    Test->tprintf("Maxscale");
-
-    Test->maxscales->ssh_node_f(0, true,  "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
-
-    Test->tprintf("Master");
-    Test->set_timeout(50);
-    Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
-
-
-    for (i = 1; i < 3; i++)
+    if (Test->binlog_master_gtid || Test->binlog_slave_gtid)
     {
-        Test->tprintf("FILE: 000000%d", i);
-        Test->set_timeout(50);
-        s_maxscale = Test->maxscales->ssh_node_output_f(0, true, &exit_code, "sha1sum %s/mar-bin.00000%d",
-                                                        Test->maxscales->maxscale_binlog_dir, i);
-        if (s_maxscale != NULL)
-        {
-            x = strchr(s_maxscale, ' ');
-            if (x != NULL )
-            {
-                x[0] = 0;
-            }
-            Test->tprintf("Binlog checksum from Maxscale %s", s_maxscale);
-        }
-
-        sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
-        Test->set_timeout(50);
-        s = Test->repl->ssh_node_output(0, sys, true, &exit_code);
-        if (s != NULL)
-        {
-            x = strchr(s, ' ');
-            if (x != NULL )
-            {
-                x[0] = 0;
-            }
-            Test->tprintf("Binlog checksum from master %s", s);
-        }
-        if (strcmp(s_maxscale, s) != 0)
-        {
-            Test->tprintf("Binlog from master checksum is not equal to binlog checksum from Maxscale node");
-            local_result++;
-        }
+        Test->tprintf("GTID is in use, do not check sha1\n");
+        return 0;
     }
-    return local_result;
+    else
+    {
+        char sys[1024];
+        char * x;
+        int local_result = 0;
+        int i;
+        int exit_code;
+
+        char *s_maxscale;
+        char *s;
+
+        Test->set_timeout(50);
+        Test->tprintf("ls before FLUSH LOGS");
+        Test->tprintf("Maxscale");
+        Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
+        Test->tprintf("Master");
+        Test->set_timeout(50);
+        Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
+
+        Test->tprintf("FLUSH LOGS");
+        Test->set_timeout(100);
+        local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+        Test->tprintf("Logs flushed");
+        Test->set_timeout(100);
+        Test->repl->sync_slaves();
+        Test->tprintf("ls after first FLUSH LOGS");
+        Test->tprintf("Maxscale");
+        Test->set_timeout(50);
+        Test->maxscales->ssh_node_f(0, true, "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
+
+        Test->tprintf("Master");
+        Test->set_timeout(50);
+        Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
+
+        Test->set_timeout(100);
+        Test->tprintf("FLUSH LOGS");
+        local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+        Test->tprintf("Logs flushed");
+
+        Test->set_timeout(50);
+        Test->repl->sync_slaves();
+        Test->set_timeout(50);
+        Test->tprintf("ls before FLUSH LOGS");
+        Test->tprintf("Maxscale");
+
+        Test->maxscales->ssh_node_f(0, true,  "ls -la %s/mar-bin.0000*", Test->maxscales->maxscale_binlog_dir);
+
+        Test->tprintf("Master");
+        Test->set_timeout(50);
+        Test->maxscales->ssh_node(0, "ls -la /var/lib/mysql/mar-bin.0000*", false);
+
+
+        for (i = 1; i < 3; i++)
+        {
+            Test->tprintf("FILE: 000000%d", i);
+            Test->set_timeout(50);
+            s_maxscale = Test->maxscales->ssh_node_output_f(0, true, &exit_code, "sha1sum %s/mar-bin.00000%d",
+                                                            Test->maxscales->maxscale_binlog_dir, i);
+            if (s_maxscale != NULL)
+            {
+                x = strchr(s_maxscale, ' ');
+                if (x != NULL )
+                {
+                    x[0] = 0;
+                }
+                Test->tprintf("Binlog checksum from Maxscale %s", s_maxscale);
+            }
+
+            sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
+            Test->set_timeout(50);
+            s = Test->repl->ssh_node_output(0, sys, true, &exit_code);
+            if (s != NULL)
+            {
+                x = strchr(s, ' ');
+                if (x != NULL )
+                {
+                    x[0] = 0;
+                }
+                Test->tprintf("Binlog checksum from master %s", s);
+            }
+            if (strcmp(s_maxscale, s) != 0)
+            {
+                Test->tprintf("Binlog from master checksum is not equal to binlog checksum from Maxscale node");
+                local_result++;
+            }
+        }
+        return local_result;
+    }
 }
 
 int start_transaction(TestConnections* Test)
