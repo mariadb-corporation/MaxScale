@@ -11,6 +11,36 @@
  * Public License.
  */
 
+/**
+ * This filter replaces binlog events being sent
+ * by binlogrouter module to connected slave server.
+ * The checked binlog events are related to DML
+ * or DDL statements:
+ * if configuration matches, the affected eventa and following ones
+ * are replaced by RAND_EVENT events
+ *
+ * (1) Binlog events being checked
+ *
+ * - HEARTBEAT_EVENT: always skipped
+ * - MARIADB10_GTID_EVENT: just resets filtering process
+ * - MARIADB_ANNOTATE_ROWS_EVENT: filtering is possible
+ * - TABLE_MAP_EVENT: filtering is possible
+ * - QUERY_EVENT: filtering is possible.
+ *   If statement is COMMIT, filtering process stops
+ * - XID_EVENT: filtering process stops.
+ *
+ * (2) Replacing events
+ *
+ * Events are replaced by a RAND_EVENT, which is in details:
+ *
+ * - 19 bytes binlog header
+ * - 8 bytes first seed
+ * - 8 bytes second seed
+ * - 4 bytes CRC32 (if required)
+ *
+ * Number of bytes: 35 without CRC32 ad 39 with it.
+*/
+
 // All log messages from this module are prefixed with this
 #define MXS_MODULE_NAME "binlogfilter"
 
@@ -29,7 +59,6 @@ static char* extract_column(GWBUF *buf, int col);
 static void event_set_crc32(uint8_t* event, uint32_t event_size);
 static void extract_header(register const uint8_t *event,
                            register REP_HEADER *hdr);
-
 /**
  * BinlogFilterSession constructor
  *
@@ -163,7 +192,8 @@ int BinlogFilterSession::clientReply(GWBUF* pPacket)
      * m_crc will be thus set in routeQuery.
      */
         case COMMAND_MODE:
-            if (m_sql_query != NULL && !getReplicationChecksum(pPacket))
+            if (m_sql_query != NULL &&
+                !getReplicationChecksum(pPacket))
             {
                 // Free buffer and close client connection
                 filterError(pPacket);
@@ -193,9 +223,8 @@ int BinlogFilterSession::clientReply(GWBUF* pPacket)
                 handleEventData(len, event[3]);
             }
 
-            // Assuming ROW replication format:
             // If transaction events need to be skipped,
-            // they are replaced by an empty paylod packet
+            // they are replaced by a RAND_EVENT event packet
             if (m_skip)
             {
                 replaceEvent(&pPacket);
