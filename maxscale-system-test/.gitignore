@@ -105,6 +105,9 @@ maxscale_process_user
 mm
 mm_mysqlmon
 mysqlmon_failover_manual
+mysqlmon_failover_manual2_4
+mysqlmon_failover_manual2_3
+mysqlmon_failover_manual2_2
 mxs1045
 mxs1071_maxrows
 mxs1110_16mb

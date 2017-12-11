@@ -259,7 +259,9 @@ add_test_executable(mysqlmon_failover_auto.cpp mysqlmon_failover_auto mysqlmon_f
 add_test_executable(mysqlmon_failover_manual.cpp mysqlmon_failover_manual mysqlmon_failover_manual LABELS mysqlmon REPL_BACKEND)
 
 # MySQL Monitor manual failover with one candidate
-add_test_executable(mysqlmon_failover_manual.cpp mysqlmon_failover_manual LABELS mysqlmon REPL_BACKEND)
+add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_4 mysqlmon_failover_manual2_4 LABELS mysqlmon REPL_BACKEND)
+add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_3 mysqlmon_failover_manual2_3 LABELS mysqlmon REPL_BACKEND)
+add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_2 mysqlmon_failover_manual2_2 LABELS mysqlmon REPL_BACKEND)
 
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
