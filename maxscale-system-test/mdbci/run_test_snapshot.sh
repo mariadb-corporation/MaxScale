@@ -83,8 +83,6 @@ checkExitStatus $? "Failed to check backends" $snapshot_lock_file
 
 ctest $test_set -VV -D Nightly
 
-echo "cd $dir"
-cd $dir
 ${script_dir}/copy_logs.sh
 
 # Removing snapshot_lock
