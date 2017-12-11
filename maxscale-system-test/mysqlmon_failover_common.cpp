@@ -60,7 +60,7 @@ void check(TestConnections& test)
  * @param test Tester object
  * @return Master server id
  */
-int get_server_id(TestConnections& test)
+int get_master_server_id(TestConnections& test)
 {
     MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
     int id = -1;
@@ -136,7 +136,7 @@ void check_test_1(TestConnections& test, int node0_id)
 {
     check(test);
     get_output(test);
-    int master_id = get_server_id(test);
+    int master_id = get_master_server_id(test);
     test.tprintf(PRINT_ID, master_id);
     test.add_result(master_id < 1 && master_id == node0_id, "Master did not change or no master detected.");
     fix_replication_create_table(test);
@@ -159,7 +159,7 @@ void check_test_2(TestConnections& test)
     check(test);
     get_output(test);
 
-    int master_id = get_server_id(test);
+    int master_id = get_master_server_id(test);
     test.tprintf(PRINT_ID, master_id);
     test.add_result(master_id < 1 ||
                     (master_id != test.repl->get_server_id(2) && master_id != test.repl->get_server_id(3)),
@@ -197,7 +197,7 @@ void check_test_3(TestConnections& test)
     check(test);
     get_output(test);
 
-    int master_id = get_server_id(test);
+    int master_id = get_master_server_id(test);
     // Because servers have been restarted, redo connections.
     test.repl->connect();
     sleep(2);
