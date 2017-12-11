@@ -1606,6 +1606,7 @@ service_update(SERVICE *service, char *router, char *user, char *auth)
  */
 int service_refresh_users(SERVICE *service)
 {
+    ss_dassert(service);
     int ret = 1;
 
     if (spinlock_acquire_nowait(&service->spin))

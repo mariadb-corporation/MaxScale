@@ -358,8 +358,11 @@ static void handle_error_response(DCB *dcb, GWBUF *buffer)
              errcode == ER_DBACCESS_DENIED_ERROR ||
              errcode == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
     {
-        // Authentication failed, reload users
-        service_refresh_users(dcb->service);
+        if (dcb->session->state != SESSION_STATE_DUMMY)
+        {
+            // Authentication failed, reload users
+            service_refresh_users(dcb->service);
+        }
     }
 }
 
