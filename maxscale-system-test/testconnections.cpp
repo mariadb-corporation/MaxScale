@@ -1057,6 +1057,51 @@ void TestConnections::log_excludes(int m, const char* pattern)
     add_result(log_matches(m, pattern), "Log matches pattern '%s'", pattern);
 }
 
+static int read_log(const char* name, char **err_log_content_p)
+{
+    FILE *f;
+    *err_log_content_p = NULL;
+    char * err_log_content;
+    f = fopen(name, "rb");
+    if (f != NULL)
+    {
+
+        int prev = ftell(f);
+        fseek(f, 0L, SEEK_END);
+        long int size = ftell(f);
+        fseek(f, prev, SEEK_SET);
+        err_log_content = (char *)malloc(size + 2);
+        if (err_log_content != NULL)
+        {
+            fread(err_log_content, 1, size, f);
+            for (int i = 0; i < size; i++)
+            {
+                if (err_log_content[i] == 0)
+                {
+                    //printf("null detected at position %d\n", i);
+                    err_log_content[i] = '\n';
+                }
+            }
+            //printf("s=%ld\n", strlen(err_log_content));
+            err_log_content[size] = '\0';
+            //printf("s=%ld\n", strlen(err_log_content));
+            * err_log_content_p = err_log_content;
+            return 0;
+        }
+        else
+        {
+            printf("Error allocationg memory for the log\n");
+            return 1;
+        }
+    }
+    else
+    {
+        printf ("Error reading log %s \n", name);
+        return 1;
+    }
+
+}
+
 void TestConnections::check_log_err(int m, const char * err_msg, bool expected)
 {
 
@@ -1698,7 +1743,7 @@ int TestConnections::try_query(MYSQL *conn, const char *format, ...)
     vsnprintf(sql, sizeof(sql), format, valist);
     va_end(valist);
 
-    int res = execute_query1(conn, sql, false);
+    int res = execute_query_silent(conn, sql, false);
     add_result(res, "Query '%.*s%s' failed!\n", message_len < 100 ? message_len : 100, sql,
                message_len < 100 ? "" : "...");
     return res;
