@@ -13,11 +13,11 @@ int main(int argc, char *argv[])
     char str[256];
     int iterations = 100;
     test.repl->execute_query_all_nodes((char *) "set global max_connections = 600;");
-    test.set_timeout(30);
+    test.set_timeout(200);
     test.repl->stop_slaves();
-    test.set_timeout(30);
+    test.set_timeout(200);
     test.restart_maxscale();
-    test.set_timeout(30);
+    test.set_timeout(200);
     test.repl->connect();
     test.stop_timeout();
 
