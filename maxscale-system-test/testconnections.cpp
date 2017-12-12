@@ -724,7 +724,7 @@ int TestConnections::copy_maxscale_logs(double timestamp)
                                   maxscales->access_sudo[i], maxscales->maxscale_log_dir[i], maxscales->access_homedir[i],
                                   maxscales->access_sudo[i], maxscales->access_homedir[i],
                                   maxscales->access_sudo[i], maxscales->maxscale_cnf[i], maxscales->access_homedir[i],
-                                  maxscales->access_homedir[i]);
+                                  maxscales->access_sudo[i], maxscales->access_homedir[i]);
             sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
             maxscales->copy_from_node(i, sys, log_dir_i);
         }
