@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     test.set_timeout(200);
     test.repl->stop_slaves();
     test.set_timeout(200);
-    test.restart_maxscale();
+    test.maxscales->restart_maxscale(0);
     test.set_timeout(200);
     test.repl->connect();
     test.stop_timeout();
@@ -43,9 +43,9 @@ int main(int argc, char *argv[])
         {
             sprintf(str, "shard_db%d", i);
             test.set_timeout(30);
-            MYSQL *conn = open_conn_db(test.rwsplit_port, test.maxscale_IP,
-                                       str, test.maxscale_user,
-                                       test.maxscale_password, test.ssl);
+            MYSQL *conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0],
+                                       str, test.maxscales->user_name,
+                                       test.maxscales->password, test.ssl);
             test.set_timeout(30);
             test.add_result(execute_query(conn, "SELECT 1"), "Trying DB %d failed at %d", i, j);
             mysql_close(conn);
