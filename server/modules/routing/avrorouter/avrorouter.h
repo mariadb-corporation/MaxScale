@@ -328,7 +328,6 @@ extern char* json_new_schema_from_table(TABLE_MAP *map);
 extern void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map);
 extern bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
 extern bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
-extern void table_map_remap(uint8_t *ptr, uint8_t hdr_len, TABLE_MAP *map);
 
 enum avrorouter_file_op
 {

@@ -332,28 +332,44 @@ TestConnections::~TestConnections()
     }
 }
 
-void TestConnections::add_result(int result, const char *format, ...)
+void TestConnections::report_result(const char *format, va_list argp)
 {
     timeval t2;
     gettimeofday(&t2, NULL);
     double elapsedTime = (t2.tv_sec - start_time.tv_sec);
     elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
 
-    if (result != 0)
+    global_result += 1;
+
+    printf("%04f: TEST_FAILED! ", elapsedTime);
+
+    vprintf(format, argp);
+
+    if (format[strlen(format) - 1] != '\n')
     {
-        global_result += result;
+        printf("\n");
+    }
+}
 
-        printf("%04f: TEST_FAILED! ", elapsedTime);
-
+void TestConnections::add_result(bool result, const char *format, ...)
+{
+    if (result)
+    {
         va_list argp;
         va_start(argp, format);
-        vprintf(format, argp);
+        report_result(format, argp);
         va_end(argp);
+    }
+}
 
-        if (format[strlen(format) - 1] != '\n')
-        {
-            printf("\n");
-        }
+void TestConnections::assert(bool result, const char *format, ...)
+{
+    if (!result)
+    {
+        va_list argp;
+        va_start(argp, format);
+        report_result(format, argp);
+        va_end(argp);
     }
 }
 
@@ -1693,6 +1709,47 @@ int TestConnections::try_query_all(int m, const char *sql)
     return try_query(maxscales->conn_rwsplit[m], sql) +
            try_query(maxscales->conn_master[m], sql) +
            try_query(maxscales->conn_slave[m], sql);
+}
+
+StringSet TestConnections::get_server_status(const char* name)
+{
+    std::set<std::string> rval;
+    int rc;
+    char* res = maxscales->ssh_node_output_f(0, true, &rc, "maxadmin list servers|grep \'%s\'", name);
+    char* pipe = strrchr(res, '|');
+
+    if (res && pipe)
+    {
+        pipe++;
+        char* tok = strtok(pipe, ",");
+
+        while (tok)
+        {
+            char* p = tok;
+            char *end = strchr(tok, '\n');
+            if (!end)
+                end = strchr(tok, '\0');
+
+            // Trim leading whitespace
+            while (p < end && isspace(*p))
+            {
+                p++;
+            }
+
+            // Trim trailing whitespace
+            while (end > tok && isspace(*end))
+            {
+                *end-- = '\0';
+            }
+
+            rval.insert(p);
+            tok = strtok(NULL, ",\n");
+        }
+
+        free(res);
+    }
+
+    return rval;
 }
 
 int TestConnections::list_dirs(int m)

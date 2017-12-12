@@ -293,10 +293,9 @@ int Mariadb_nodes::stop_nodes()
     {
         printf("Stopping node %d\n", i);
         fflush(stdout);
-        local_result += execute_query(nodes[i], (char *) "stop slave;");
-        fflush(stdout);
+        local_result += execute_query(nodes[i], "stop slave;");
         local_result += stop_node(i);
-        fflush(stdout);
+        local_result += ssh_node_f(i, true, "rm -f /var/lib/mysql/*master*.info");
     }
     return local_result;
 }
@@ -345,11 +344,15 @@ int Mariadb_nodes::start_replication()
     // Start all nodes
     for (int i = 0; i < N; i++)
     {
-        local_result += start_node(i, (char *) "");
-        sprintf(str,
-                "mysql -u root %s -e \"STOP SLAVE; RESET SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only=OFF;\"",
-                socket_cmd[i]);
-        ssh_node(i, str, true);
+        local_result += start_node(i, (char*)"");
+        ssh_node_f(i, true,
+                 "mysql --force -u root %s -e \"STOP SLAVE; STOP ALL SLAVES; RESET SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only=OFF;\"",
+                 socket_cmd[i]);
+        ssh_node_f(i, true, "sudo rm -f /etc/my.cnf.d/kerb.cnf");
+        ssh_node_f(i, true,
+                 "for i in `mysql -ss --force -u root %s -e \"SHOW DATABASES\"|grep -iv 'mysql\\|information_schema\\|performance_schema'`; "
+                 "do mysql --force -u root %s -e \"DROP DATABASE $i\";"
+                 "done", socket_cmd[i], socket_cmd[i]);
     }
 
     sprintf(str, "%s/create_user.sh", test_dir);
@@ -361,10 +364,9 @@ int Mariadb_nodes::start_replication()
     ssh_node(0, str, false);
 
     // Create a database dump from the master and distribute it to the slaves
-    sprintf(str,
-            "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 --gtid %s > /tmp/master_backup.sql",
-            socket_cmd[0]);
-    ssh_node(0, str, true);
+    ssh_node_f(0, true, "mysql --force -u root %s -e \"CREATE DATABASE test\"; "
+             "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 --gtid %s > /tmp/master_backup.sql",
+             socket_cmd[0], socket_cmd[0]);
     sprintf(str, "%s/master_backup.sql", test_dir);
     copy_from_node_legacy("/tmp/master_backup.sql", str, 0);
 
@@ -374,16 +376,11 @@ int Mariadb_nodes::start_replication()
         printf("Starting node %d\n", i);
         fflush(stdout);
         copy_to_node_legacy(str, "/tmp/master_backup.sql", i);
-        sprintf(dtr,
-                "mysql -u root %s < /tmp/master_backup.sql",
-                socket_cmd[i]);
-        ssh_node(i, dtr, true);
-        char query[512];
-
-        sprintf(query, "mysql -u root %s -e \"CHANGE MASTER TO MASTER_HOST=\\\"%s\\\", MASTER_PORT=%d, "
-                "MASTER_USER=\\\"repl\\\", MASTER_PASSWORD=\\\"repl\\\";"
-                "START SLAVE;\"", socket_cmd[i], IP_private[0], port[0]);
-        ssh_node(i, query, true);
+        ssh_node_f(i, true, "mysql --force -u root %s < /tmp/master_backup.sql",
+                 socket_cmd[i]);
+        ssh_node_f(i, true, "mysql --force -u root %s -e \"CHANGE MASTER TO MASTER_HOST=\\\"%s\\\", MASTER_PORT=%d, "
+                 "MASTER_USER=\\\"repl\\\", MASTER_PASSWORD=\\\"repl\\\";"
+                 "START SLAVE;\"", socket_cmd[i], IP_private[0], port[0]);
     }
 
     return local_result;
@@ -405,7 +402,7 @@ int Galera_nodes::start_galera()
     ssh_node(0, "echo [mysqld] > cluster_address.cnf", false);
     ssh_node(0, "echo wsrep_cluster_address=gcomm:// >>  cluster_address.cnf", false);
     ssh_node(0, "cp cluster_address.cnf /etc/my.cnf.d/", true);
-    local_result += start_node(0, (char *) " --wsrep-cluster-address=gcomm://");
+    local_result += start_node(0, (char*)" --wsrep-cluster-address=gcomm://");
 
     sprintf(str, "%s/create_user_galera.sh", test_dir);
     copy_to_node_legacy(str, "~/", 0);
@@ -614,6 +611,28 @@ static bool bad_slave_thread_status(MYSQL *conn, const char *field, int node)
     return rval;
 }
 
+static bool multi_source_replication(MYSQL *conn, int node)
+{
+    bool rval = true;
+    MYSQL_RES *res;
+
+    if (mysql_query(conn, "SHOW ALL SLAVES STATUS") == 0 &&
+        (res = mysql_store_result(conn)))
+    {
+        if (mysql_num_rows(res) == 1)
+        {
+            rval = false;
+        }
+        else
+        {
+            printf("Node %d: More than one configured slave\n", node);
+            fflush(stdout);
+        }
+    }
+
+    return rval;
+}
+
 int Mariadb_nodes::check_replication()
 {
     int master = 0;
@@ -643,7 +662,8 @@ int Mariadb_nodes::check_replication()
             }
         }
         else if (bad_slave_thread_status(nodes[i], "Slave_IO_Running", i) ||
-                 bad_slave_thread_status(nodes[i], "Slave_SQL_Running", i))
+                 bad_slave_thread_status(nodes[i], "Slave_SQL_Running", i) ||
+                 multi_source_replication(nodes[i], i))
         {
             res = 1;
         }
@@ -1050,7 +1070,7 @@ static void wait_until_pos(MYSQL *mysql, int filenum, int pos)
         {
             MYSQL_ROW row = mysql_fetch_row(res);
 
-            if (row && row[6] && row[21])
+            if (row && row[5] && strchr(row[5], '.') && row[21])
             {
                 char *file_suffix = strchr(row[5], '.') + 1;
                 slave_filenum = atoi(file_suffix);

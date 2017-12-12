@@ -10,6 +10,7 @@
 #include <set>
 #include <string>
 
+typedef std::set<std::string> StringSet;
 
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
@@ -223,7 +224,10 @@ public:
      * @param result 0 if step PASSED
      * @param format ... message to pring if result is not 0
      */
-    void add_result(int result, const char *format, ...);
+    void add_result(bool result, const char *format, ...);
+
+    /** Same as add_result() but inverted */
+    void assert(bool result, const char *format, ...);
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -431,6 +435,15 @@ public:
     int try_query_all(int m, const char *sql);
 
     /**
+     * @brief Get the set of labels that are assigned to server @c name
+     *
+     * @param name The name of the server that must be present in the output `maxadmin list servers`
+     *
+     * @return A set of string labels assigned to this server
+     */
+    StringSet get_server_status(const char* name);
+
+    /**
      * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'
      * @param expected expected number of Maxscale processes
      * @return 0 if check is done
@@ -478,6 +491,10 @@ public:
     void check_current_connections(int m, int value);
     int stop_maxscale(int m);
 
+    void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
+
+private:
+    void report_result(const char *format, va_list argp);
 };
 
 /**

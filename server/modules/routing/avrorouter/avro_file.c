@@ -657,6 +657,13 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             snprintf(next_file, sizeof(next_file), BINLOG_NAMEFMT, router->fileroot,
                      blr_file_get_next_binlogname(router->binlog_name));
         }
+        else if (hdr.event_type == MARIADB_ANNOTATE_ROWS_EVENT)
+        {
+            MXS_INFO("Annotate_rows_event: %.*s", hdr.event_size - BINLOG_EVENT_HDR_LEN, ptr);
+            pos += original_size;
+            router->current_pos = pos;
+            continue;
+        }
         else if (hdr.event_type == TABLE_MAP_EVENT)
         {
             handle_table_map_event(router, &hdr, ptr);
@@ -956,6 +963,8 @@ bool save_and_replace_table_create(AVRO_INSTANCE *router, TABLE_CREATE *created)
         {
             if (strcmp(key, table_ident) == 0)
             {
+                TABLE_MAP* map = hashtable_fetch(router->table_maps, key);
+                router->active_maps[map->id % MAX_MAPPED_TABLES] = NULL;
                 hashtable_delete(router->table_maps, key);
             }
         }
@@ -1000,13 +1009,13 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     memcpy(db, (char*) ptr + PHDR_OFF + vblklen, dblen);
     db[dblen] = 0;
 
-    unify_whitespace(sql, len);
     size_t sqlsz = len, tmpsz = len;
     char *tmp = MXS_MALLOC(len);
     MXS_ABORT_IF_NULL(tmp);
     remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
     sql = tmp;
     len = tmpsz;
+    unify_whitespace(sql, len);
 
     if (is_create_table_statement(router, sql, len))
     {

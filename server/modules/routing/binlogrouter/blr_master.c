@@ -229,6 +229,7 @@ static void blr_start_master(void* data)
         return;
     }
     client->session = router->session;
+    client->service = router->service;
 
     /**
      * 'client' is the fake DCB that emulates a client session:
@@ -265,6 +266,7 @@ static void blr_start_master(void* data)
         return;
     }
     router->master->remote = MXS_STRDUP_A(router->service->dbref->server->name);
+    router->master->service = router->service;
 
     MXS_NOTICE("%s: attempting to connect to master"
                " server [%s]:%d, binlog='%s', pos=%lu%s%s",

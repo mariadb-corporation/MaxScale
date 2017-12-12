@@ -71,7 +71,6 @@ static void mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_
 static int gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities);
-static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read);
 static void gw_process_one_new_client(DCB *client_dcb);
 static spec_com_res_t process_special_commands(DCB *client_dcb, GWBUF *read_buffer, int nbytes_read);
 static spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t current,
@@ -816,51 +815,31 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
             int pktlen;
             uint8_t cmd = (uint8_t)MXS_COM_QUERY; // Treat empty packets as COM_QUERY
 
-            /**
-             * Buffer has at least 5 bytes, the packet is in contiguous memory
-             * and it's the first packet in the buffer.
-             */
-            if (offset == 0 && GWBUF_LENGTH(queue) >= MYSQL_HEADER_LEN + 1)
+            uint8_t packet_header[MYSQL_HEADER_LEN];
+
+            if (gwbuf_copy_data(queue, offset, MYSQL_HEADER_LEN, packet_header) != MYSQL_HEADER_LEN)
             {
-                uint8_t *data = (uint8_t*)GWBUF_DATA(queue);
-                pktlen = gw_mysql_get_byte3(data);
-                if (pktlen)
-                {
-                    cmd = *(data + MYSQL_HEADER_LEN);
-                }
+                ss_dassert(offset > 0);
+                queue = split_and_store(dcb, queue, offset);
+                break;
             }
+
+            pktlen = gw_mysql_get_byte3(packet_header);
+
             /**
-             * We have more than one packet in the buffer or the first 5 bytes
-             * of a packet are split across two buffers.
+             * Check if the packet is empty, and if not, if we have the command byte.
+             * If we an empty packet or have at least 5 bytes of data, we can start
+             * sending the data to the router.
              */
-            else
+            if (pktlen && gwbuf_copy_data(queue, offset + MYSQL_HEADER_LEN, 1, &cmd) != 1)
             {
-                uint8_t packet_header[MYSQL_HEADER_LEN];
-
-                if (gwbuf_copy_data(queue, offset, MYSQL_HEADER_LEN, packet_header) != MYSQL_HEADER_LEN)
+                if ((queue = split_and_store(dcb, queue, offset)) == NULL)
                 {
-                    ss_dassert(offset > 0);
-                    queue = split_and_store(dcb, queue, offset);
-                    break;
+                    ss_dassert(bytes_available - offset == MYSQL_HEADER_LEN);
+                    return false;
                 }
-
-                pktlen = gw_mysql_get_byte3(packet_header);
-
-                /**
-                 * Check if the packet is empty, and if not, if we have the command byte.
-                 * If we an empty packet or have at least 5 bytes of data, we can start
-                 * sending the data to the router.
-                 */
-                if (pktlen && gwbuf_copy_data(queue, MYSQL_HEADER_LEN, 1, &cmd) != 1)
-                {
-                    if ((queue = split_and_store(dcb, queue, offset)) == NULL)
-                    {
-                        ss_dassert(bytes_available == MYSQL_HEADER_LEN);
-                        return false;
-                    }
-                    ss_dassert(offset > 0);
-                    break;
-                }
+                ss_dassert(offset > 0);
+                break;
             }
 
             MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
@@ -978,24 +957,27 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     /** Ask what type of input the router/filter chain expects */
     capabilities = service_get_capabilities(session->service);
 
-    /** Update the current protocol command being executed */
-    if (!process_client_commands(dcb, nbytes_read, &read_buffer))
-    {
-        return 0;
-    }
-
-    /** If the router requires statement input or we are still authenticating
-     * we need to make sure that a complete SQL packet is read before continuing */
+    /** If the router requires statement input we need to make sure that
+     * a complete SQL packet is read before continuing. The current command
+     * that is tracked by the protocol module is updated in route_by_statement() */
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
-        if (nbytes_read < 3 || nbytes_read <
-            (int)(MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4))
+        uint8_t pktlen[MYSQL_HEADER_LEN];
+        size_t n_copied = gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, pktlen);
+
+        if (n_copied != sizeof(pktlen) ||
+            (uint32_t)nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
         {
-            dcb_readq_set(dcb, read_buffer);
+            dcb_readq_append(dcb, read_buffer);
             return 0;
         }
 
         set_qc_mode(session, &read_buffer);
+    }
+    /** Update the current protocol command being executed */
+    else if (!process_client_commands(dcb, nbytes_read, &read_buffer))
+    {
+        return 0;
     }
 
     /** The query classifier classifies according to the service's server that has
@@ -1028,6 +1010,30 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 }
 
 /**
+ * Check if a connection qualifies to be added into the persistent connection pool
+ *
+ * @param dcb The client DCB to check
+ */
+void check_pool_candidate(DCB* dcb)
+{
+    MXS_SESSION *session = dcb->session;
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+
+    if (proto->current_command == MXS_COM_QUIT)
+    {
+        /** The client is closing the connection. We know that this will be the
+         * last command the client sends so the backend connections are very likely
+         * to be in an idle state.
+         *
+         * If the client is pipelining the queries (i.e. sending N request as
+         * a batch and then expecting N responses) then it is possible that
+         * the backend connections are not idle when the COM_QUIT is received.
+         * In most cases we can assume that the connections are idle. */
+        session_qualify_for_pool(session);
+    }
+}
+
+/**
  * @brief Client read event, common processing after single statement handling
  *
  * @param dcb           Descriptor control block
@@ -1047,25 +1053,10 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     /** Reset error handler when routing of the new query begins */
     dcb->dcb_errhandle_called = false;
 
-    if (proto->current_command == MXS_COM_QUIT)
-    {
-        /** The client is closing the connection. We know that this will be the
-         * last command the client sends so the backend connections are very likely
-         * to be in an idle state.
-         *
-         * If the client is pipelining the queries (i.e. sending N request as
-         * a batch and then expecting N responses) then it is possible that
-         * the backend connections are not idle when the COM_QUIT is received.
-         * In most cases we can assume that the connections are idle. */
-        session_qualify_for_pool(session);
-    }
-
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
         /**
-         * Feed each statement completely and separately
-         * to router. The routing functions return 1 for
-         * success or 0 for failure.
+         * Feed each statement completely and separately to router.
          */
         return_code = route_by_statement(session, capabilities, &read_buffer) ? 0 : 1;
 
@@ -1080,9 +1071,10 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     }
     else if (NULL != session->router_session || (rcap_type_required(capabilities, RCAP_TYPE_NO_RSESSION)))
     {
-        /** Feed whole packet to router, which will free it
-         *  and return 1 for success, 0 for failure
-         */
+        /** Check if this connection qualifies for the connection pool */
+        check_pool_candidate(dcb);
+
+        /** Feed the whole buffer to the router */
         return_code = MXS_SESSION_ROUTE_QUERY(session, read_buffer) ? 0 : 1;
     }
     /* else return_code is still 0 from when it was originally set */
@@ -1424,13 +1416,41 @@ static int gw_client_hangup_event(DCB *dcb)
         goto retblock;
     }
 
-    modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
+    if (!session_valid_for_pool(session))
+    {
+        // The client did not send a COM_QUIT packet
+        modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
+    }
     dcb_close(dcb);
 
 retblock:
     return 1;
 }
 
+/**
+ * Update protocol tracking information for an individual statement
+ *
+ * @param dcb    Client DCB
+ * @param buffer Buffer containing a single packet
+ */
+void update_current_command(DCB* dcb, GWBUF* buffer)
+{
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+    uint8_t cmd = (uint8_t)MXS_COM_QUERY;
+
+    /**
+     * As we are routing individual packets, we can extract the command byte here.
+     * Empty packets are treated as COM_QUERY packets by default.
+     */
+    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
+    proto->current_command = (mxs_mysql_cmd_t)cmd;
+
+    /**
+     * Now that we have the current command, we can check if this connection
+     * can be a candidate for the connection pool.
+     */
+    check_pool_candidate(dcb);
+}
 
 /**
  * Detect if buffer includes partial mysql packet or multiple packets.
@@ -1464,21 +1484,11 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
         {
             CHK_GWBUF(packetbuf);
 
-            MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
-            proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(packetbuf);
-
             /**
-             * This means that buffer includes exactly one MySQL
-             * statement.
-             * backend func.write uses the information. MySQL backend
-             * protocol, for example, stores the command identifier
-             * to protocol structure. When some other thread reads
-             * the corresponding response the command tells how to
-             * handle response.
-             *
-             * Set it here instead of gw_read_client_event to make
-             * sure it is set to each (MySQL) packet.
+             * Update the currently command being executed.
              */
+            update_current_command(session->client_dcb, packetbuf);
+
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
             {
                 if (!GWBUF_IS_CONTIGUOUS(packetbuf))
@@ -1565,52 +1575,6 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
 return_rc:
     return rc;
-}
-
-/**
- * if read queue existed appent read to it. if length of read buffer is less
- * than 3 or less than mysql packet then return.  else copy mysql packets to
- * separate buffers from read buffer and continue. else if read queue didn't
- * exist, length of read is less than 3 or less than mysql packet then
- * create read queue and append to it and return. if length read is less than
- * mysql packet length append to read queue append to it and return.
- * else (complete packet was read) continue.
- *
- * @return True if we have a complete packet, otherwise false
- */
-static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read)
-{
-    if (dcb_readq_has(dcb))
-    {
-        dcb_readq_append(dcb, *read_buffer);
-        nbytes_read = dcb_readq_length(dcb);
-        int plen = MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(dcb_readq_get(dcb)));
-
-        if (nbytes_read < 3 || nbytes_read < plen + 4)
-        {
-            return false;
-        }
-        else
-        {
-            /**
-             * There is at least one complete mysql packet in
-             * read_buffer.
-             */
-            *read_buffer = dcb_readq_release(dcb);
-        }
-    }
-    else
-    {
-        uint8_t* data = (uint8_t *) GWBUF_DATA(*read_buffer);
-
-        if (nbytes_read < 3 || nbytes_read < (int)MYSQL_GET_PAYLOAD_LEN(data) + 4)
-        {
-            dcb_readq_append(dcb, *read_buffer);
-            return false;
-        }
-    }
-
-    return true;
 }
 
 /**

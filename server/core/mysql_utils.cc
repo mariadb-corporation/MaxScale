@@ -172,6 +172,19 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
         MY_CHARSET_INFO cs_info;
         mysql_get_character_set_info(mysql, &cs_info);
         server->charset = cs_info.number;
+
+        if (listener && mysql_get_ssl_cipher(con) == NULL)
+        {
+            if (server->log_warning.ssl_not_enabled)
+            {
+                server->log_warning.ssl_not_enabled = false;
+                MXS_ERROR("An encrypted connection to '%s' could not be created, "
+                          "ensure that TLS is enabled on the target server.",
+                          server->unique_name);
+            }
+            // Don't close the connection as it is closed elsewhere, just set to NULL
+            mysql = NULL;
+        }
     }
 
     return mysql;

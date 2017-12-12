@@ -19,7 +19,7 @@ void do_test(TestConnections& test, int master, int slave)
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
 
     test.tprintf("Start the slave node and perform another insert");
-    test.galera->start_node(slave, (char *) "");
+    test.galera->start_node(slave, (char*)"");
     sleep(5);
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
     test.maxscales->close_maxscale_connections(0);
@@ -31,7 +31,7 @@ void do_test(TestConnections& test, int master, int slave)
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
 
     test.tprintf("Start the master node and perform another insert (expecting failure)");
-    test.galera->start_node(master, (char *) "");
+    test.galera->start_node(master, (char*)"");
     sleep(5);
     test.add_result(execute_query_silent(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)") == 0,
                     "Query should fail");

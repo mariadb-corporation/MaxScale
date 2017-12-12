@@ -1607,6 +1607,7 @@ service_update(SERVICE *service, char *router, char *user, char *auth)
  */
 int service_refresh_users(SERVICE *service)
 {
+    ss_dassert(service);
     int ret = 1;
     int self = mxs_worker_get_current_id();
     ss_dassert(self >= 0);

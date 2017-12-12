@@ -372,6 +372,11 @@ Examples with SSL options:
 Binlog Router Plugin is compatible with MariaDB 5.5, 10.0, 10.1 and 10.2 as well
 as MySQL 5.6 and 5.7.
 
+Note: When using MariaDB 10.2 or MySQL 5.7 the `send_slave_heartbeat` option
+must be set to On as the slave servers request the hearbeat to MaxScale.
+As an alternative use `CHANGE MASTER TO MASTER_HEARTBEAT_PERIOD=0` in
+the slave server in order to disable the heartbeat request.
+
 ## Enabling MariaDB 10 compatibility
 
 MariaDB 10 has different slave registration phase so an extra option is required:
@@ -395,6 +400,11 @@ with MySQL 5.7 slaves the `send_slave_heartbeat` option must be set to on.
 
 Binlog Router currently does not work for MySQL 5.5 due to missing
 *@@global.binlog_checksum* variable.
+
+## MariaDB Limitations
+Starting from version 10.2 there are new replication events related
+to binlog event compression: these new events are not supported yet.
+Be sure that `log_bin_compress` is not set in any MariaDB 10.2 server.
 
 #  MariaDB MaxScale Replication Diagnostics
 

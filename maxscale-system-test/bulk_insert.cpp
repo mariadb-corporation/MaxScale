@@ -205,7 +205,6 @@ int main(int argc, char** argv)
     test.maxscales->connect_maxscale(0);
     test.repl->connect();
 
-
     test.tprintf("Testing column-wise binding with a direct connection");
     test.add_result(bind_by_column(test.repl->nodes[0]), "Bulk inserts with a direct connection should work");
     test.tprintf("Testing column-wise binding with readwritesplit");

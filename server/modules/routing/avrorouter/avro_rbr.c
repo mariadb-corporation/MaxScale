@@ -104,72 +104,53 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
     {
         ss_dassert(create->columns > 0);
         TABLE_MAP *old = hashtable_fetch(router->table_maps, table_ident);
+        TABLE_MAP *map = table_map_alloc(ptr, ev_len, create);
+        MXS_ABORT_IF_NULL(map); // Fatal error at this point
+        char* json_schema = json_new_schema_from_table(map);
 
-        if (old == NULL || old->version != create->version)
+        if (json_schema)
         {
-            TABLE_MAP *map = table_map_alloc(ptr, ev_len, create);
+            char filepath[PATH_MAX + 1];
+            snprintf(filepath, sizeof(filepath), "%s/%s.%06d.avro",
+                     router->avrodir, table_ident, map->version);
 
-            if (map)
+            /** Close the file and open a new one */
+            hashtable_delete(router->open_tables, table_ident);
+            AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema,
+                                                      codec_to_string(router->codec),
+                                                      router->block_size);
+
+            if (avro_table)
             {
-                char* json_schema = json_new_schema_from_table(map);
+                bool notify = old != NULL;
 
-                if (json_schema)
+                if (old)
                 {
-                    char filepath[PATH_MAX + 1];
-                    snprintf(filepath, sizeof(filepath), "%s/%s.%06d.avro",
-                             router->avrodir, table_ident, map->version);
-
-                    /** Close the file and open a new one */
-                    hashtable_delete(router->open_tables, table_ident);
-                    AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema,
-                                                              codec_to_string(router->codec),
-                                                              router->block_size);
-
-                    if (avro_table)
-                    {
-                        bool notify = old != NULL;
-
-                        if (old)
-                        {
                             router->active_maps[old->id % MAX_MAPPED_TABLES] = NULL;
                         }
                         hashtable_delete(router->table_maps, table_ident);
-                        hashtable_add(router->table_maps, (void*) table_ident, map);
-                        hashtable_add(router->open_tables, table_ident, avro_table);
-                        save_avro_schema(router->avrodir, json_schema, map);
-                        router->active_maps[map->id % MAX_MAPPED_TABLES] = map;
-                        MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
-                        rval = true;
+                hashtable_add(router->table_maps, (void*)table_ident, map);
+                hashtable_add(router->open_tables, table_ident, avro_table);
+                save_avro_schema(router->avrodir, json_schema, map);
+                router->active_maps[map->id % MAX_MAPPED_TABLES] = map;
+                ss_dassert(router->active_maps[id % MAX_MAPPED_TABLES] == map);
+                MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
+                rval = true;
 
-                        if (notify)
-                        {
-                            notify_all_clients(router);
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("Failed to open new Avro file for writing.");
-                    }
-                    MXS_FREE(json_schema);
-                }
-                else
+                if (notify)
                 {
-                    MXS_ERROR("Failed to create JSON schema.");
+                    notify_all_clients(router);
                 }
             }
             else
             {
-                MXS_ERROR("Failed to allocate new table map.");
+                MXS_ERROR("Failed to open new Avro file for writing.");
             }
+            MXS_FREE(json_schema);
         }
         else
         {
-            router->active_maps[old->id % MAX_MAPPED_TABLES] = NULL;
-            table_map_remap(ptr, ev_len, old);
-            router->active_maps[old->id % MAX_MAPPED_TABLES] = old;
-            MXS_DEBUG("Table %s re-mapped to %lu", table_ident, old->id);
-            /** No changes in the schema */
-            rval = true;
+            MXS_ERROR("Failed to create JSON schema.");
         }
     }
     else
@@ -363,8 +344,9 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
         }
         else
         {
-            MXS_ERROR("Row event and table map event have different column counts."
-                      " Only full row image is currently supported.");
+            MXS_ERROR("Row event and table map event have different column "
+                      "counts for table %s.%s, only full row image is currently "
+                      "supported.", map->database, map->table);
         }
     }
     else
@@ -606,7 +588,6 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     }
 
                     MXS_INFO("[%ld] CHAR: field: %d bytes, data: %d bytes", i, field_length, bytes);
-                    ss_dassert(bytes || *ptr == '\0');
                     char str[bytes + 1];
                     memcpy(str, ptr, bytes);
                     str[bytes] = '\0';

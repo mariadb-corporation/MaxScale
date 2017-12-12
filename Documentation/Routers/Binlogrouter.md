@@ -362,7 +362,6 @@ follows.
 [Replication]
 type=service
 router=binlogrouter
-servers=masterdb
 user=maxscale
 passwd=maxpwd
 server_id=3

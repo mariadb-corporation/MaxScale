@@ -120,6 +120,23 @@ This functionality is similar to the [Multi-Master Monitor](MM-Monitor.md)
 functionality. The only difference is that the MySQL monitor will also detect
 traditional Master-Slave topologies.
 
+### `ignore_external_masters`
+
+Ignore any servers that are not monitored by this monitor but are a part of the
+replication topology. This option was added in MaxScale 2.1.12 and is disabled
+by default.
+
+MaxScale detects if a master server replicates from an external server. When
+this is detected, the server is assigned the `Slave` and `Slave of External
+Server` labels and will be treated as a slave server. Most of the time this
+topology is used when MaxScale is used for read scale-out without master
+servers, a Galera cluster with read replicas being a prime example of this
+setup. Sometimes this is not the desired behavior and the external master server
+should be ignored. Most of the time this is due to multi-source replication.
+
+When this option is enabled, all servers that have the `Master, Slave, Slave of
+External Server, Running` labels will instead get the `Master, Running` labels.
+
 ### `detect_standalone_master`
 
 Detect standalone master servers. This feature takes a boolean parameter and is

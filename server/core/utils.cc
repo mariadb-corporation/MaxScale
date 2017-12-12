@@ -588,7 +588,9 @@ strip_escape_chars(char* val)
 #define BUFFER_GROWTH_RATE 2.0
 static pcre2_code* remove_comments_re = NULL;
 static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
-                                                  "(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
+                                                  "(?:`[^`]*`\\K)|"
+                                                  "(\\/[*](?!(M?!)).*?[*]\\/)|"
+                                                  "([[:space:]](?:#.*|--[[:space:]].*(\\n|\\r\\n)))";
 
 /**
  * Remove SQL comments from the end of a string

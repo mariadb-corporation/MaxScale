@@ -1,0 +1,117 @@
+{
+  "node_000" :
+  {
+        "hostname" : "node000",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+	"product" : {
+      		"name": "${product}",
+		"version": "${version}",
+                "cnf_template" : "server1.cnf",
+                "cnf_template_path": "${cnf_path}"
+	}
+
+  },
+
+  "node_001" :
+  {
+        "hostname" : "node001",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server2.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_002" :
+  {
+        "hostname" : "node002",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server3.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_003" :
+  {
+        "hostname" : "node003",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server4.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "galera_000" :
+  {
+        "hostname" : "galera000",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server1.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "galera_001" :
+  {
+        "hostname" : "galera001",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server2.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "galera_002" :
+  {
+        "hostname" : "galera002",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server3.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "galera_003" :
+  {
+        "hostname" : "galera003",
+        "box" : "${backend_box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server4.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "maxscale" :
+  {
+        "hostname" : "maxscale",
+        "box" : "${box}",
+        "memory_size" : "${vm_memory}",
+        "product" : {
+                "name": "maxscale"
+        }
+
+  }
+}
