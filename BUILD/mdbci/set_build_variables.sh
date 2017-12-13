@@ -19,6 +19,7 @@ echo "commitID $commitID"
 export branch=`git symbolic-ref --short HEAD`
 export curr_date=`date '+%Y-%m-%d_%H-%M'`
 
+export source=${scm_source}
 export source=${source:-"$branch"}
 echo "source=$source"
 
