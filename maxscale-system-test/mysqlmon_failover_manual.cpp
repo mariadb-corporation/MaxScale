@@ -3,7 +3,7 @@
  */
 
 #include "testconnections.h"
-#include "mysqlmon_failover_common.cpp"
+#include "failover_common.cpp"
 
 int main(int argc, char** argv)
 {

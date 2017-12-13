@@ -1259,6 +1259,13 @@ int TestConnections::stop_maxscale(int m)
     return res;
 }
 
+int TestConnections::start_maxscale(int m)
+{
+    int res = maxscales->ssh_node(m, "service maxscale start", true);
+    check_maxscale_processes(m, 1);
+    fflush(stdout);
+    return res;
+}
 
 int TestConnections::check_maxscale_alive(int m)
 {

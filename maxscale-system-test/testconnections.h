@@ -490,7 +490,7 @@ public:
     void check_current_operations(int m, int value);
     void check_current_connections(int m, int value);
     int stop_maxscale(int m);
-
+    int start_maxscale(int m);
     void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
 
 private:

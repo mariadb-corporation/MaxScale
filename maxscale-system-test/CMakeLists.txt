@@ -266,8 +266,11 @@ add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_2 my
 # MySQL Monitor manual failover with bad master
 add_test_executable(mysqlmon_failover_bad_master.cpp mysqlmon_failover_bad_master mysqlmon_failover_bad_master LABELS mysqlmon REPL_BACKEND)
 
-# MySQL Monitor Rejoin Test
+# MySQL Monitor Rejoin (good) Test
 add_test_executable(mysqlmon_rejoin_good.cpp mysqlmon_rejoin_good mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
+
+# MySQL Monitor Rejoin (bad) Test, use template for Rejoin (good)
+add_test_executable(mysqlmon_rejoin_bad.cpp mysqlmon_rejoin_bad mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
 
 # MySQL Monitor rolling master
 add_test_executable(mysqlmon_failover_rolling_master.cpp mysqlmon_failover_rolling_master mysqlmon_failover_rolling_master LABELS mysqlmon REPL_BACKEND)

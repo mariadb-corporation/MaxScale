@@ -11,100 +11,22 @@
  * Public License.
  */
 
-#include <vector>
-
-#include "testconnections.h"
-#include "mysqlmon_failover_common.cpp"
+#include "fail_switch_rejoin_common.cpp"
 
 using std::string;
-typedef std::vector<string> StringVector;
-
-const char GTID_QUERY[] = "SELECT @@gtid_current_pos;";
-const char GTID_FIELD[] = "@@gtid_current_pos";
-const int bufsize = 512;
-/**
- * Do inserts, check that results are as expected.
- *
- * @param test Test connections
- * @paran insert_count
- */
-void generate_traffic_and_check(TestConnections& test, int insert_count)
-{
-    MYSQL *conn = test.maxscales->open_rwsplit_connection(0);
-    const char INSERT[] = "INSERT INTO test.t1 VALUES (%d);";
-    const char SELECT[] = "SELECT * FROM test.t1 ORDER BY id ASC;";
-    for (int i = 0; i < insert_count; i++)
-    {
-        test.try_query(conn, INSERT, inserts++);
-        timespec time;
-        time.tv_sec = 0;
-        time.tv_nsec = 100000000;
-        nanosleep(&time, NULL);
-    }
-
-    mysql_query(conn, SELECT);
-    MYSQL_RES *res = mysql_store_result(conn);
-    test.assert(res != NULL, "Query did not return a result set");
-
-    if (res)
-    {
-        MYSQL_ROW row;
-        // Check all values, they should go from 0 to 'inserts'
-        int expected_val = 0;
-        while ((row = mysql_fetch_row(res)))
-        {
-            int value_read = strtol(row[0], NULL, 0);
-            if (value_read != expected_val)
-            {
-                test.assert(false, "Query returned %d when %d was expected", value_read, expected_val);
-                break;
-            }
-            expected_val++;
-        }
-        int num_rows = expected_val;
-        test.assert(num_rows == inserts, "Query returned %d rows when %d rows were expected",
-                    num_rows, inserts);
-        mysql_free_result(res);
-    }
-    mysql_close(conn);
-}
-
-void print_gtids(TestConnections& test)
-{
-    MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
-    if (maxconn)
-    {
-        char result_tmp[bufsize];
-        if (find_field(maxconn, GTID_QUERY, GTID_FIELD, result_tmp) == 0)
-        {
-            test.tprintf("MaxScale gtid: %s", result_tmp);
-        }
-    }
-    mysql_close(maxconn);
-    test.repl->connect();
-    for (int i = 0; i < test.repl->N; i++)
-    {
-        char result_tmp[bufsize];
-        if (find_field(test.repl->nodes[i], GTID_QUERY, GTID_FIELD, result_tmp) == 0)
-        {
-            test.tprintf("Node %d gtid: %s", i, result_tmp);
-        }
-    }
-}
 
 int main(int argc, char** argv)
 {
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
     TestConnections test(argc, argv);
     MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
-
     // Set up test table
     basic_test(test);
     // Delete binlogs to sync gtid:s
     delete_slave_binlogs(test);
     char result_tmp[bufsize];
     // Advance gtid:s a bit to so gtid variables are updated.
-    generate_traffic_and_check(test, 10);
+    generate_traffic_and_check(test, maxconn, 10);
     sleep(1);
     test.tprintf(LINE);
     print_gtids(test);
@@ -129,7 +51,7 @@ int main(int argc, char** argv)
     if (failover_ok)
     {
         test.tprintf("Sending more inserts.");
-        generate_traffic_and_check(test, 5);
+        generate_traffic_and_check(test, maxconn, 5);
         sleep(1);
         if (find_field(maxconn, GTID_QUERY, GTID_FIELD, result_tmp) == 0)
         {
