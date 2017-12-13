@@ -139,8 +139,9 @@ External Server, Running` labels will instead get the `Master, Running` labels.
 
 ### `detect_standalone_master`
 
-Detect standalone master servers. This feature takes a boolean parameter and is
-disabled by default. In MaxScale 2.1.0, this parameter was called `failover`.
+Detect standalone master servers. This feature takes a boolean parameter and
+from MaxScale 2.2.1 onwards is enabled by default. Up until MaxScale 2.2.0 it
+was disabled by default. In MaxScale 2.1.0, this parameter was called `failover`.
 
 This parameter is intended to be used with simple, two node master-slave pairs
 where the failure of the master can be resolved by "promoting" the slave as the

@@ -126,7 +126,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
             {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
             {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
-            {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
+            {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "true"},
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
             {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
             {"ignore_external_masters", MXS_MODULE_PARAM_BOOL, "false"},

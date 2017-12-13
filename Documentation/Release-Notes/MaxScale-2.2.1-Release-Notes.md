@@ -37,6 +37,11 @@ root@host:~# maxscale --user=root ...
   automatically enabled. In MaxScale 2.2.0, if `transaction_safety` was disabled
   when `mariadb10_master_gtid` was enabled MaxScale would refuse to start.
 
+### MySQL Monitor
+
+The default value of the configuration parameter `detect_standalone_master` has
+been changed from `false` to `true`.
+
 ## Dropped Features
 
 ## New Features
