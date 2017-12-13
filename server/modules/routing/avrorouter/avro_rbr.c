@@ -526,16 +526,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 {
                     uint8_t val[metadata[metadata_offset + 1]];
                     uint64_t bytes = unpack_enum(ptr, &metadata[metadata_offset], val);
-                    char strval[32];
-
-                    /** Right now only ENUMs/SETs with less than 256 values
-                     * are printed correctly */
-                    snprintf(strval, sizeof(strval), "%hhu", val[0]);
-                    if (bytes > 1 && warn_large_enumset)
-                    {
-                        warn_large_enumset = true;
-                        MXS_WARNING("ENUM/SET values larger than 255 values aren't supported.");
-                    }
+                    char strval[bytes * 2 + 1];
+                    gw_bin2hex(strval, val, bytes);
                     avro_value_set_string(&field, strval);
                     MXS_INFO("[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
