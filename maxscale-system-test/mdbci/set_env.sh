@@ -90,8 +90,8 @@ export sysbench_dir=${sysbench_dir:-"$HOME/sysbench_deb7/sysbench/"}
 
 export ssl=true
 
-export take_snapshot_command="${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name "
-export revert_snapshot_command="${mdbci_dir}/mdbci snapshot revert --path-to-nodes $name --snapshot-name "
+export take_snapshot_command="${mdbci_dir}/mdbci snapshot take --path-to-nodes ${config_name} --snapshot-name "
+export revert_snapshot_command="${mdbci_dir}/mdbci snapshot revert --path-to-nodes ${config_name} --snapshot-name "
 #export use_snapshots=yes
 
 set +x
