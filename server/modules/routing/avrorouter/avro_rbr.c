@@ -655,7 +655,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                                              create->column_lengths[i], &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
-                MXS_INFO("[%ld] TEMPORAL: %s", i, buf);
+                MXS_INFO("[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
                 ss_dassert(ptr < end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
