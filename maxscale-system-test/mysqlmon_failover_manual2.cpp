@@ -132,46 +132,50 @@ void run(TestConnections& test)
 {
     sleep(5);
 
-    cout << "Connecting to MaxScale." << endl;
+    cout << "\nConnecting to MaxScale." << endl;
     x::connect_maxscale(test);
 
-    cout << "Creating table." << endl;
+    cout << "\nCreating table." << endl;
     create_table(test);
 
-    cout << "Inserting data." << endl;
+    cout << "\nInserting data." << endl;
     insert_data(test);
 
     list_servers(test);
 
-    cout << "Syncing slaves." << endl;
+    cout << "\nSyncing slaves." << endl;
     test.repl->sync_slaves();
 
-    cout << "Stopping master." << endl;
+    cout << "\nStopping master." << endl;
     x::stop_node(*test.repl, 0);
 
     list_servers(test);
 
-    cout << "Should fail as master is no longer available, but trying to insert data... " << endl;
+    cout << "\nShould fail as master is no longer available, but trying to insert data... " << endl;
     x::fail(insert_data, test);
     cout << "Failed as expected." << endl;
 
     list_servers(test);
 
-    cout << "Performing failover... " << endl;
+    cout << "\nPerforming failover... " << endl;
     test.maxscales->execute_maxadmin_command_print(0, (char*)"call command mysqlmon failover MySQL-Monitor");
 
     list_servers(test);
 
-    cout << "Should still fail as there is not transparent master failover, "
+    cout << "\nShould still fail as there is not transparent master failover, "
          << "but trying to insert data... " << endl;
     x::fail(insert_data, test);
     cout << "Failed as expected." << endl;
 
-    cout << "Closing connection to MaxScale." << endl;
+    cout << "\nClosing connection to MaxScale." << endl;
     test.maxscales->close_maxscale_connections(0);
 
-    cout << "Connecting to MaxScale." << endl;
+    sleep(5);
+
+    cout << "\nConnecting to MaxScale." << endl;
     x::connect_maxscale(test);
+
+    list_servers(test);
 
     cout << "Trying to insert data... " << flush;
     insert_data(test);
