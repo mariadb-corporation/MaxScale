@@ -83,6 +83,7 @@ encrypted_passwords
 failover_mysqlmon
 false_monitor_state_change
 fwf
+fwf2
 fwf_actions
 fwf_com_ping
 fwf_duplicate_rules
@@ -108,6 +109,7 @@ mysqlmon_failover_manual
 mysqlmon_failover_manual2_4
 mysqlmon_failover_manual2_3
 mysqlmon_failover_manual2_2
+mysqlmon_failover_rolling_master
 mxs1045
 mxs1071_maxrows
 mxs1110_16mb
@@ -123,6 +125,8 @@ mxs1418
 mxs1451_skip_auth
 mxs1457_ignore_deleted
 mxs1468
+mxs1476
+mxs1509
 mxs244_prepared_stmt_loop
 mxs280_select_outfile
 mxs314
@@ -201,3 +205,4 @@ templates.h
 temporal_tables
 test_hints
 test_maxctrl
+verify_master_failure
