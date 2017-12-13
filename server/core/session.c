@@ -263,6 +263,7 @@ session_link_dcb(MXS_SESSION *session, DCB *dcb)
     }
     atomic_add(&session->refcount, 1);
     dcb->session = session;
+    dcb->service = session->service;
     /** Move this DCB under the same thread */
     dcb->thread.id = session->client_dcb->thread.id;
     return true;
