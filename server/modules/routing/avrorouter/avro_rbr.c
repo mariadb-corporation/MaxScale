@@ -581,11 +581,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             else if (column_is_bit(map->column_types[i]))
             {
                 uint64_t value = 0;
-                int width = metadata[metadata_offset] + metadata[metadata_offset + 1] * 8;
-                int bits_in_nullmap = MXS_MIN(width, extra_bits);
-                extra_bits -= bits_in_nullmap;
-                width -= bits_in_nullmap;
-                size_t bytes = width / 8;
+                uint8_t len = metadata[metadata_offset + 1];
+                uint8_t bit_len = metadata[metadata_offset] > 0 ? 1 : 0;
+                size_t bytes = len + bit_len;
 
                 // TODO: extract the bytes
                 if (!warn_bit)
