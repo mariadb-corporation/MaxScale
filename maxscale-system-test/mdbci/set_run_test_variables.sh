@@ -27,6 +27,6 @@ export BUILD_NUMBER=${BUILD_NUMBER:-`date '+%Y%m%d%H%M'`}
 export BUILD_TAG=${BUILD_TAG:-jenkins-${JOB_NAME}-${BUILD_NUMBER}}
 export team_keys=${team_keys:-${HOME}/team_keys}
 export galera_version=${galera_version:-$version}
-export do_not_destroy_vm=${do_not_destroy_vm:-"no"}
+export do_not_destroy_vm=${do_not_destroy_vm:-"yes"}
 #export test_set=${test_set:-"-LE UNSTABLE"}
 export test_set=${test_set:-"-I 1,5"}
