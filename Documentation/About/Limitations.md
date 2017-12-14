@@ -122,10 +122,11 @@ can be influenced with the server priority mechanic described in the
 
 ### Avrorouter limitations (avrorouter)
 
-The avrorouter does not support the following data types and conversions:
+The avrorouter does not support the following data types, conversions or SQL statements:
 
 * BIT
 * Fields CAST from integer types to string types
+* [CREATE TABLE ... AS SELECT statements](https://mariadb.com/kb/en/library/create-table/#create-select)
 
 The avrorouter does not do any crash recovery. This means that the avro files
 need to be truncated to valid block lengths before starting the avrorouter.
