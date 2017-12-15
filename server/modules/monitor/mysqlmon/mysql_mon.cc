@@ -697,6 +697,8 @@ class SlaveStatusInfo
 {
 public:
     int master_server_id;   /**< The master's server_id value. */
+    string master_host;     /**< Master server host name. */
+    int master_port;        /**< Master server port. */
     bool slave_io_running;  /**< Whether the slave I/O thread is running and connected. */
     bool slave_sql_running; /**< Whether or not the SQL thread is running. */
     string master_log_file; /**< Name of the master binary log file that the I/O thread is currently
@@ -708,6 +710,7 @@ public:
 
     SlaveStatusInfo()
         :   master_server_id(0),
+            master_port(0),
             slave_io_running(false),
             slave_sql_running(false),
             read_master_log_pos(0)
@@ -1248,7 +1251,11 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
                     const char* beats = mxs_mysql_get_value(result, row, "Slave_received_heartbeats");
                     const char* period = mxs_mysql_get_value(result, row, "Slave_heartbeat_period");
                     const char* using_gtid = mxs_mysql_get_value(result, row, "Using_Gtid");
-                    ss_dassert(beats && period && using_gtid);
+                    const char* master_host = mxs_mysql_get_value(result, row, "Master_Host");
+                    const char* master_port = mxs_mysql_get_value(result, row, "Master_Port");
+                    ss_dassert(beats && period && using_gtid && master_host && master_port);
+                    serv_info->slave_status.master_host = master_host;
+                    serv_info->slave_status.master_port = atoi(master_port);
 
                     int heartbeats = atoi(beats);
                     if (serv_info->slave_heartbeats < heartbeats)
@@ -3935,10 +3942,30 @@ static int check_and_join_cluster(MYSQL_MONITOR* mon)
         {
             MySqlServerInfo* server_info = get_server_info(mon, server);
             SlaveStatusInfo* slave_status = &server_info->slave_status;
-            // Is not a master and has no slave connection, or the slave connection is to the wrong server.
-            if (server_info->n_slaves_configured == 0 ||
-                (server_info->n_slaves_configured == 1 && slave_status->slave_io_running == true &&
-                 slave_status->master_server_id != master_info->server_id))
+            bool is_suspect = false;
+            // Has no slave connection, yet is not a master.
+            if (server_info->n_slaves_configured == 0)
+            {
+                is_suspect = true;
+            }
+            // Or has existing slave connection ...
+            else if (server_info->n_slaves_configured == 1)
+            {
+                // which is connected to master but it's the wrong one
+                if (slave_status->slave_io_running  &&
+                    slave_status->master_server_id != master_info->server_id)
+                {
+                    is_suspect = true;
+                }
+                // or is disconnected but master host or port is wrong
+                else if (!slave_status->slave_io_running && slave_status->slave_sql_running &&
+                         (slave_status->master_host != master->server->name ||
+                         slave_status->master_port != master->server->port))
+                {
+                    is_suspect = true;
+                }
+            }
+            if (is_suspect)
             {
                 suspects.push_back(server);
                 suspect_infos.push_back(server_info);
