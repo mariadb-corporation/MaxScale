@@ -58,17 +58,15 @@ export name=`echo $name | sed "s/?//g"`
 
 . ${script_dir}/configure_log_dir.sh
 
-cd ${script_dir}/..
-
-cmake . -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
-make
-
 ${script_dir}/create_config.sh
 res=$?
 
 if [ $res == 0 ] ; then
-    . ${script_dir}/configure_backend.sh
-    ${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name clean
+#    . ${script_dir}/configure_backend.sh
+    . ${script_dir}/set_env.sh $name
+    cd ${script_dir}/..
+    cmake . -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
+    make
 
     if [ ! -z "${named_test}" ] ; then
         ./${named_test}
@@ -82,6 +80,7 @@ if [ $res == 0 ] ; then
             rm ~/vagrant_lock
             exit 1
         fi
+        ${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name clean
         ctest -VV -D Nightly ${test_set}
     fi
 
