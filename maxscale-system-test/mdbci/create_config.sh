@@ -52,7 +52,7 @@ if [ $? != 0 ]; then
 	exit 1
 fi
 
-cp ~/build-scripts/team_keys .
+#cp ~/build-scripts/team_keys .
 ${mdbci_dir}/mdbci public_keys --key ${team_keys} $name
 
 rm ~/vagrant_lock
