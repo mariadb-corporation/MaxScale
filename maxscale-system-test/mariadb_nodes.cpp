@@ -376,6 +376,8 @@ int Mariadb_nodes::start_replication()
         printf("Starting node %d\n", i);
         fflush(stdout);
         copy_to_node_legacy(str, "/tmp/master_backup.sql", i);
+        ssh_node_f(i, true, "mysql --force -u root %s -e \"STOP SLAVE;\"",
+                   socket_cmd[i]);
         ssh_node_f(i, true, "mysql --force -u root %s < /tmp/master_backup.sql",
                  socket_cmd[i]);
         ssh_node_f(i, true, "mysql --force -u root %s -e \"CHANGE MASTER TO MASTER_HOST=\\\"%s\\\", MASTER_PORT=%d, "
