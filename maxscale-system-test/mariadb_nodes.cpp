@@ -353,12 +353,12 @@ int Mariadb_nodes::start_replication()
   // Start all nodes
     for (int i = 0; i < N; i++)
     {
-        if (start_node(i, ""))
+        if (start_node(i, (char *) ""))
         {
             printf("Start of node %d failed, trying to cleanup and re-initialize node\n", i);
             cleanup_db_node(i);
             prepare_server(i);
-            local_result += start_node(i, "");
+            local_result += start_node(i, (char *) "");
         }
 
         printf("trying to get version\n");
@@ -391,7 +391,7 @@ int Mariadb_nodes::start_replication()
 
     sprintf(str, "%s/create_user.sh", test_dir);
     sprintf(dtr, "%s", access_homedir[0]);
-    copy_to_node(str, dtr, 0);
+    copy_to_node(0, str, dtr);
     ssh_node_f(0, false, "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
              user_name, password, access_homedir[0], socket_cmd[0]);
 
@@ -410,14 +410,14 @@ int Mariadb_nodes::start_replication()
                  socket_cmd[0], socket_cmd[0]);
     }
     sprintf(str, "%s/master_backup.sql", test_dir);
-    copy_from_node("/tmp/master_backup.sql", str, 0);
+    copy_from_node(0, "/tmp/master_backup.sql", str);
 
     for (int i = 1; i < N; i++)
     {
         // Reset all nodes by first loading the dump and then starting the replication
         printf("Setting node %d\n", i);
         fflush(stdout);
-        copy_to_node(str, "/tmp/master_backup.sql", i);
+        copy_to_node(i, str, "/tmp/master_backup.sql");
         ssh_node_f(i, true, "mysql --force -u root %s -e \"STOP SLAVE;\"",
                  socket_cmd[i]);
         ssh_node_f(i, true, "mysql --force -u root %s < /tmp/master_backup.sql",
@@ -434,6 +434,7 @@ int Mariadb_nodes::start_replication()
 int Galera_nodes::start_galera()
 {
     char str[1024];
+    char sys1[1024];
     int i;
     int local_result = 0;
     local_result += stop_nodes();
@@ -448,11 +449,11 @@ int Galera_nodes::start_galera()
     ssh_node(0, "echo wsrep_cluster_address=gcomm:// >>  cluster_address.cnf", false);
     ssh_node(0, "cp cluster_address.cnf /etc/my.cnf.d/", true);
 
-    if (start_node(0, " --wsrep-cluster-address=gcomm://"))
+    if (start_node(0, (char *) " --wsrep-cluster-address=gcomm://") != 0)
     {
         cleanup_db_node(i);
         prepare_server(i);
-        local_result += start_node(0, " --wsrep-cluster-address=gcomm://");
+        local_result += start_node(0, (char *) " --wsrep-cluster-address=gcomm://");
     }
 
     sprintf(str, "%s/create_user_galera.sh", test_dir);
@@ -1342,10 +1343,10 @@ int Mariadb_nodes::prepare_server(int i)
     char str1[1024];
     char str2[1024];
 
-    ssh_node(i, true, stop_db_command[i]);
+    ssh_node(i, stop_db_command[i], true);
     sleep(5);
-    ssh_node(i, true, "sed -i \"s/bind-address/#bind-address/g\" /etc/mysql/my.cnf.d/*.cnf");
-    ssh_node(i, true, "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld; sudo service apparmor restart");
+    ssh_node(i, "sed -i \"s/bind-address/#bind-address/g\" /etc/mysql/my.cnf.d/*.cnf", true);
+    ssh_node(i, "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld; sudo service apparmor restart", true);
     version = ssh_node_output(i, "/usr/sbin/mysqld --version", false, &ec);
     if (ec == 0)
     {
@@ -1354,27 +1355,27 @@ int Mariadb_nodes::prepare_server(int i)
 
         if (memcmp(version_digits, "5.", 2) == 0)
         {
-            ssh_node(i, true, "sed -i \"s/binlog_row_image=full//\" /etc/my.cnf.d/*.cnf");
+            ssh_node(i, "sed -i \"s/binlog_row_image=full//\" /etc/my.cnf.d/*.cnf", true);
         }
         if (memcmp(version_digits, "5.7", 3) == 0)
         {
             // Disable 'validate_password' plugin, searach for random temporal
             // password in the log and reseting passord to empty string
-            ssh_node(i, true, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql");
-            ssh_node(i, true, start_db_command[i]);
+            ssh_node(i, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql", true);
+            ssh_node(i, start_db_command[i], true);
             tmp_pass = ssh_node_output(i, "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'", true, &ec);
-            ssh_node(i, true, "mysqladmin -uroot -p'%s' password '%s'", tmp_pass, tmp_pass);
-            ssh_node(i, false, "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", tmp_pass);
-            ssh_node(i, true, stop_db_command[i]);
-            ssh_node(i, true, start_db_command[i]);
-            ssh_node(i, true, "mysqladmin -uroot -p'%s' password ''", tmp_pass);
+            ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password '%s'", tmp_pass, tmp_pass);
+            ssh_node_f(i, false, "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", tmp_pass);
+            ssh_node(i, stop_db_command[i], true);
+            ssh_node(i, start_db_command[i], true);
+            ssh_node_f(i, true, "mysqladmin -uroot -p'%s' password ''", tmp_pass);
         }
         else
         {
             printf("Executing mysql_install_db on node %d\n", i);
-            ssh_node(i, true, "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql");
+            ssh_node(i, "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql", true);
             printf("Starting server on node %d\n", i);
-            if (ssh_node(i, true, start_db_command[i]))
+            if (ssh_node(i, start_db_command[i], true))
             {
                 printf("Server start on node %d failed\n", i);
             }
@@ -1382,11 +1383,11 @@ int Mariadb_nodes::prepare_server(int i)
         sleep(15);
         sprintf(str1, "%s/mdbci/backend/create_*_user.sql", test_dir);
         sprintf(str2, "%s/", access_homedir[i]);
-        copy_to_node(str1, str2, i);
+        copy_to_node(i, str1, str2);
         sprintf(str1, "mysql < %s/create_repl_user.sql", access_homedir[i]);
-        ssh_node(i, true, str1);
+        ssh_node(i, str1, true);
         sprintf(str1, "mysql < %s/create_skysql_user.sql", access_homedir[i]);
-        ssh_node(i, true, str1);
+        ssh_node(i, str1, true);
 
         free(version);
         return 0;

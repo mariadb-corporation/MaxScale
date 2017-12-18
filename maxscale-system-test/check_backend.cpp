@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     if ((Test->galera != NULL) && (Test->galera->N != 0))
     {
         Test->tprintf("Connecting to Maxscale router with Galera backend\n");
-        MYSQL * g_conn = open_conn(4016 , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
+        MYSQL * g_conn = open_conn(4016 , Test->maxscales->IP[0], Test->maxscales->user_name, Test->maxscales->password, Test->ssl);
         if (g_conn != NULL )
         {
             Test->tprintf("Testing connection\n");
