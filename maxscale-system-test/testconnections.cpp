@@ -208,7 +208,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
     }
     else
     {
-        galera = repl;
+        galera = NULL;
     }
 
     repl->use_ipv6 = use_ipv6;
@@ -555,8 +555,14 @@ void TestConnections::process_template(int m, const char *template_name, const c
     mdn[0] = repl;
     mdn[1] = galera;
     int i, j;
+    int mdn_n = 1;
 
-    for (j = 0; j < 2; j++)
+    if (galera == NULL)
+    {
+        mdn_n =1;
+    }
+
+    for (j = 0; j < mdn_n; j++)
     {
         for (i = 0; i < mdn[j]->N; i++)
         {
@@ -660,6 +666,8 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
     int i;
     int exit_code;
     char str[4096];
+
+    if (repl == NULL) return local_result;
 
     sprintf(str, "mkdir -p LOGS/%s", test_name);
     system(str);

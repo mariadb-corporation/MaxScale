@@ -18,11 +18,12 @@ int main(int argc, char *argv[])
     Test->tprintf("Connecting to Maxscale maxscales->routers[0] with Master/Slave backend\n");
     Test->maxscales->connect_maxscale(0);
     Test->tprintf("Testing connections\n");
-    Test->add_result(Test->test_maxscale_connections(0, true, true, true), "Can't connect to backend\n");
-    Test->tprintf("Connecting to Maxscale router with Galera backend\n");
 
-    if (Test->galera->N > 1)
+    Test->add_result(Test->test_maxscale_connections(0, true, true, true), "Can't connect to backend\n");
+
+    if ((Test->galera != NULL) && (Test->galera->N != 0))
     {
+        Test->tprintf("Connecting to Maxscale router with Galera backend\n");
         MYSQL * g_conn = open_conn(4016 , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
         if (g_conn != NULL )
         {
@@ -30,6 +31,10 @@ int main(int argc, char *argv[])
             Test->add_result(Test->try_query(g_conn, (char *) "SELECT 1"),
                              (char *) "Error executing query against RWSplit Galera\n");
         }
+    }
+    else
+    {
+        Test->tprintf("Galera is not in use\n");
     }
     Test->tprintf("Closing connections\n");
     Test->maxscales->close_maxscale_connections(0);

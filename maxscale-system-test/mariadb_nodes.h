@@ -150,6 +150,7 @@ public:
      */
     char * revert_snapshot_command;
 
+    int connect(int i);
     int connect();
 
     /**
@@ -306,7 +307,14 @@ public:
     int execute_query_all_nodes(const char* sql);
 
     /**
-     * @brief execute 'SELECT @@version' against all nodes and store result in 'version' fied
+     * @brief execute 'SELECT @@version' against one node and store result in 'version' field
+     * @param i Node index
+     * @return 0 in case of success
+     */
+    int get_version(int i);
+
+    /**
+     * @brief execute 'SELECT @@version' against all nodes and store result in 'version' field
      * @return 0 in case of success
      */
     int get_versions();
