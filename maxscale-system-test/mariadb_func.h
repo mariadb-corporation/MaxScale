@@ -105,7 +105,7 @@ static MYSQL* open_conn(int port, std::string ip, std::string user, std::string 
  */
 static MYSQL* open_conn_no_db(int port, std::string ip, std::string user, std::string password, bool ssl)
 {
-    return open_conn_db_flags(port, ip, NULL, user, password, CLIENT_MULTI_STATEMENTS, ssl);
+    return open_conn_db_flags(port, ip, "", user, password, CLIENT_MULTI_STATEMENTS, ssl);
 }
 
 /**
