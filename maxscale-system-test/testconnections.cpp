@@ -203,6 +203,8 @@ TestConnections::TestConnections(int argc, char *argv[]):
         galera = new Galera_nodes("galera", test_dir, verbose);
         //galera->use_ipv6 = use_ipv6;
         galera->use_ipv6 = false;
+        galera->take_snapshot_command = take_snapshot_command;
+        galera->revert_snapshot_command = revert_snapshot_command;
     }
     else
     {
@@ -210,6 +212,8 @@ TestConnections::TestConnections(int argc, char *argv[]):
     }
 
     repl->use_ipv6 = use_ipv6;
+    repl->take_snapshot_command = take_snapshot_command;
+    repl->revert_snapshot_command = revert_snapshot_command;
 
     maxscales = new Maxscales("maxscale", test_dir, verbose);
 
