@@ -131,12 +131,32 @@ copy_logs(true)
     //sprintf(str, "%s/create_user_galera.sh", test_dir);
     //galera->copy_to_node(str, (char *) "~/", 0);
 
+
     //sprintf(str, "export node_user=\"%s\"; export node_password=\"%s\"; ./create_user.sh", repl->user_name, repl->password);
     //tprintf("cmd: %s\n", str);
     //repl->ssh_node(0, str, FALSE);
 
     //sprintf(str, "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh", galera->user_name, galera->password);
     //galera->ssh_node(0, str, FALSE);
+
+    repl = new Mariadb_nodes("node", test_dir, verbose);
+    if (!no_galera)
+    {
+        galera = new Galera_nodes("galera", test_dir, verbose);
+        //galera->use_ipv6 = use_ipv6;
+        galera->use_ipv6 = false;
+        galera->take_snapshot_command = take_snapshot_command;
+        galera->revert_snapshot_command = revert_snapshot_command;
+    }
+    else
+    {
+        galera = NULL;
+    }
+
+    repl->use_ipv6 = use_ipv6;
+    repl->take_snapshot_command = take_snapshot_command;
+    repl->revert_snapshot_command = revert_snapshot_command;
+
 
     repl->flush_hosts();
     galera->flush_hosts();
@@ -367,8 +387,14 @@ int TestConnections::init_maxscale()
     mdn[0] = repl;
     mdn[1] = galera;
     int i, j;
+    int mdn_n = 1;
 
-    for (j = 0; j < 2; j++)
+    if (galera == NULL)
+    {
+        mdn_n =1;
+    }
+
+    for (j = 0; j < mdn_n; j++)
     {
         for (i = 0; i < mdn[j]->N; i++)
         {
@@ -472,6 +498,8 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
     FILE * f;
     int i;
     char str[4096];
+
+    if (repl == NULL) return local_result;
 
     sprintf(str, "mkdir -p LOGS/%s", test_name);
     system(str);

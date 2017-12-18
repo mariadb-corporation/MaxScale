@@ -156,6 +156,24 @@ public:
      * @brief connect Open MariaDB connections to all nodes
      * @return 0 if success
      */
+    bool blocked[256];
+
+    /**
+    * @brief  Open connctions to all backend nodes (to 'test' DB)
+    * @return 0 in case of success
+    */
+
+    /**
+     * @brief make_snapshot_command Command line to create a snapshot of all VMs
+     */
+    char * take_snapshot_command;
+
+    /**
+     * @brief revert_snapshot_command Command line to revert a snapshot of all VMs
+     */
+    char * revert_snapshot_command;
+
+    int connect(int i);
     int connect();
 
     /**
@@ -381,7 +399,14 @@ public:
     int execute_query_all_nodes(const char* sql);
 
     /**
-     * @brief execute 'SELECT @@version' against all nodes and store result in 'vesion' fied
+     * @brief execute 'SELECT @@version' against one node and store result in 'version' field
+     * @param i Node index
+     * @return 0 in case of success
+     */
+    int get_version(int i);
+
+    /**
+     * @brief execute 'SELECT @@version' against all nodes and store result in 'version' field
      * @return 0 in case of success
      */
     int get_versions();
@@ -420,6 +445,67 @@ public:
      * The function expects that the first node, @c nodes[0], is the master.
      */
     void sync_slaves();
+
+    /**
+     * @brief Close all connections to this node
+     *
+     * This will kill all connections that have been created to this node.
+     */
+    void close_active_connections();
+
+    /**
+     * @brief Check and fix replication
+     */
+    bool fix_replication();
+
+    /**
+     * @brief revert_nodes_snapshot Execute MDBCI snapshot revert command for all nodes
+     * @return true in case of success
+     */
+    bool revert_nodes_snapshot();
+
+    /**
+     * @brief prepare_server Initialize MariaDB setup (run mysql_install_db) and create test users
+     * Tries to detect Mysql 5.7 installation and disable 'validate_password' pluging
+     * @param i Node index
+     * @return 0 in case of success
+     */
+    virtual int prepare_server(int i);
+    int prepare_servers();
+
+private:
+
+    int check_node_ssh(int node);
+    bool check_master_node(MYSQL *conn);
+};
+
+class Galera_nodes : public Mariadb_nodes
+{
+public:
+
+    Galera_nodes(const char *pref, const char *test_cwd, bool verbose) :
+        Mariadb_nodes(pref, test_cwd, verbose) { }
+
+    int start_galera();
+
+    virtual int start_replication()
+    {
+        return start_galera();
+    }
+
+    int check_galera();
+
+    virtual int check_replication()
+    {
+        return check_galera();
+    }
+
+    //int prepare_galera_server(int i);
+
+    //virtual int prepare_server(int i)
+    //{
+    //    return prepare_galera_server(i);
+    //}
 };
 
 #endif // MARIADB_NODES_H
