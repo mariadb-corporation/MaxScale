@@ -708,13 +708,13 @@ bool Mariadb_nodes::check_master_node(MYSQL *conn)
 }
 
 /**
- * @brief bad_slave_thread_status Check if filed in the slave status outpur is not 'yes'
+ * @brief bad_slave_thread_status Check if field in the slave status outpur is not 'yes'
  * @param conn MYSQL struct (connection have to be open)
- * @param field Filed to check
+ * @param field Field to check
  * @param node Node index
- * @return false if requested filed is 'Yes'
+ * @return false if requested field is 'Yes'
  */
-static bool bad_slave_thread_status(MYSQL *conn, const char *field, int node)
+bool Mariadb_nodes::bad_slave_thread_status(MYSQL *conn, const char *field, int node)
 {
     char str[1024] = "";
     bool rval = false;
@@ -725,23 +725,29 @@ static bool bad_slave_thread_status(MYSQL *conn, const char *field, int node)
         if (find_field(conn, "SHOW SLAVE STATUS;", field, str) != 0)
         {
             printf("Node %d: %s not found in SHOW SLAVE STATUS\n", node, field);
-            fflush(stdout);
             break;
         }
-        else if (strcmp(str, "Yes") == 0 || strcmp(str, "No") == 0)
+
+        if (verbose)
         {
-            printf("Node %d: filed %s is %s\n", node, field, str);
+            printf("Node %d: field %s is %s\n", node, field, str);
+        }
+
+        if (strcmp(str, "Yes") == 0 || strcmp(str, "No") == 0)
+        {
             break;
         }
-        printf("Node %d: filed %s is %s\n", node, field, str);
+
         /** Any other state is transient and we should try again */
         sleep(1);
     }
 
     if (strcmp(str, "Yes") != 0)
     {
-        printf("Node %d: %s is '%s'\n", node, field, str);
-        fflush(stdout);
+        if (verbose)
+        {
+            printf("Node %d: %s is '%s'\n", node, field, str);
+        }
         rval = true;
     }
 
@@ -835,7 +841,6 @@ int Mariadb_nodes::check_replication()
 
 bool Mariadb_nodes::fix_replication()
 {
-    verbose = true;
     if (check_replication())
     {
         unblock_all_nodes();
