@@ -278,6 +278,9 @@ add_test_executable(mysqlmon_failover_rolling_master.cpp mysqlmon_failover_rolli
 # MySQL Monitor rejoin old slave
 add_test_executable(mysqlmon_failover_rejoin_old_slave.cpp mysqlmon_failover_rejoin_old_slave mysqlmon_failover_rejoin_old_slave LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor rolling restart slaves
+add_test_executable(mysqlmon_failover_rolling_restart_slaves.cpp mysqlmon_failover_rolling_restart_slaves mysqlmon_failover_rolling_restart_slaves LABELS mysqlmon REPL_BACKEND)
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
