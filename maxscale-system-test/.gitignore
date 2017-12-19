@@ -106,6 +106,7 @@ maxscale_process_user
 mm
 mm_mysqlmon
 mysqlmon_failover_bad_master
+mysqlmon_failover_no_slaves
 mysqlmon_failover_manual
 mysqlmon_failover_manual2_4
 mysqlmon_failover_manual2_3

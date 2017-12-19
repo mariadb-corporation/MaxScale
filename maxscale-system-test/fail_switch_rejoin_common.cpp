@@ -130,27 +130,31 @@ void basic_test(TestConnections& test)
  * Do inserts, check that results are as expected.
  *
  * @param test Test connections
- * @paran insert_count
+ * @param conn Which specific connection to use
+ * @param insert_count How many inserts should be done
+ * @return True, if successful
  */
-void generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_count)
+bool generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_count)
 {
     const char INSERT[] = "INSERT INTO test.t1 VALUES (%d);";
     const char SELECT[] = "SELECT * FROM test.t1 ORDER BY id ASC;";
+    timespec short_sleep;
+    short_sleep.tv_sec = 0;
+    short_sleep.tv_nsec = 100000000;
     for (int i = 0; i < insert_count; i++)
     {
         test.try_query(conn, INSERT, inserts++);
-        timespec time;
-        time.tv_sec = 0;
-        time.tv_nsec = 100000000;
-        nanosleep(&time, NULL);
+        nanosleep(&short_sleep, NULL);
     }
-
+    sleep(1);
+    bool rval = false;
     mysql_query(conn, SELECT);
     MYSQL_RES *res = mysql_store_result(conn);
     test.assert(res != NULL, "Query did not return a result set");
 
     if (res)
     {
+        rval = true;
         MYSQL_ROW row;
         // Check all values, they should go from 0 to 'inserts'
         int expected_val = 0;
@@ -160,6 +164,7 @@ void generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
             if (value_read != expected_val)
             {
                 test.assert(false, "Query returned %d when %d was expected", value_read, expected_val);
+                rval = false;
                 break;
             }
             expected_val++;
@@ -167,9 +172,13 @@ void generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
         int num_rows = expected_val;
         test.assert(num_rows == inserts, "Query returned %d rows when %d rows were expected",
                     num_rows, inserts);
+        if (num_rows != inserts)
+        {
+            rval = false;
+        }
         mysql_free_result(res);
     }
-  //  mysql_close(conn);
+    return rval;
 }
 
 void print_gtids(TestConnections& test)
