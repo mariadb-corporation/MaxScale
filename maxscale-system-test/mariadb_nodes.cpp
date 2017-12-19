@@ -17,6 +17,16 @@
 #include <sstream>
 #include <vector>
 
+namespace
+{
+static bool require_gtid = false;
+}
+
+void Mariadb_nodes::require_gtid(bool value)
+{
+    ::require_gtid = value;
+}
+
 Mariadb_nodes::Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose):
     v51(false)
 {
@@ -350,7 +360,7 @@ int Mariadb_nodes::start_replication()
     char dtr[1024];
     int local_result = 0;
 
-  // Start all nodes
+    // Start all nodes
     for (int i = 0; i < N; i++)
     {
         if (start_node(i, (char *) ""))
@@ -361,71 +371,30 @@ int Mariadb_nodes::start_replication()
             local_result += start_node(i, (char *) "");
         }
 
-        printf("trying to get version\n");
-        if (connect(i))
-        {
-            printf("Connect attempt to node %d failed\n", i);
-        }
-        get_version(i);
-        close_connections();
-        printf("Node %d: Version is %s\n", i, version_major[i]);
-        if (strcmp(version_major[i], "5.5") == 0)
-        {
-            ssh_node_f(i, true,
-                     "mysql --force -u root %s -e \"STOP SLAVE; RESET SLAVE; RESET MASTER; SET GLOBAL read_only=OFF;\"",
-                     socket_cmd[i]);
-        }
-        else
-        {
-            ssh_node_f(i, true,
-                     "mysql --force -u root %s -e \"STOP SLAVE; STOP ALL SLAVES; RESET SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only=OFF;\"",
-                     socket_cmd[i]);
-        }
-
         ssh_node_f(i, true, "sudo rm -f /etc/my.cnf.d/kerb.cnf");
-        ssh_node_f(i, true,
-                 "for i in `mysql -ss --force -u root %s -e \"SHOW DATABASES\"|grep -iv 'mysql\\|information_schema\\|performance_schema'`; "
-                 "do mysql --force -u root %s -e \"DROP DATABASE $i\";"
-                 "done", socket_cmd[i], socket_cmd[i]);
+
+        // Create users for replication as well as the users that are used by the tests
+        sprintf(str, "%s/create_user.sh", test_dir);
+        sprintf(dtr, "%s", access_homedir[i]);
+        copy_to_node(i, str, dtr);
+        ssh_node_f(i, false, "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
+                   user_name, password, access_homedir[0], socket_cmd[0]);
     }
 
-    sprintf(str, "%s/create_user.sh", test_dir);
-    sprintf(dtr, "%s", access_homedir[0]);
-    copy_to_node(0, str, dtr);
-    ssh_node_f(0, false, "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
-             user_name, password, access_homedir[0], socket_cmd[0]);
-
-    // Create a database dump from the master and distribute it to the slaves
-    if (version_major[0][0] == '5')
-    {
-        printf("Version 5 on master detected, do not use --gtid flag for mysqldump\n");
-        ssh_node_f(0, true, "mysql --force -u root %s -e \"CREATE DATABASE test\"; "
-                 "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 %s > /tmp/master_backup.sql",
-                 socket_cmd[0], socket_cmd[0]);
-    }
-    else
-    {
-        ssh_node_f(0, true, "mysql --force -u root %s -e \"CREATE DATABASE test\"; "
-                 "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 --gtid %s > /tmp/master_backup.sql",
-                 socket_cmd[0], socket_cmd[0]);
-    }
-    sprintf(str, "%s/master_backup.sql", test_dir);
-    copy_from_node(0, "/tmp/master_backup.sql", str);
+    connect();
 
     for (int i = 1; i < N; i++)
     {
-        // Reset all nodes by first loading the dump and then starting the replication
-        printf("Setting node %d\n", i);
-        fflush(stdout);
-        copy_to_node(i, str, "/tmp/master_backup.sql");
-        ssh_node_f(i, true, "mysql --force -u root %s -e \"STOP SLAVE;\"",
-                 socket_cmd[i]);
-        ssh_node_f(i, true, "mysql --force -u root %s < /tmp/master_backup.sql",
-                 socket_cmd[i]);
-        printf("change master to...\n");
-        ssh_node_f(i, true, "mysql --force -u root %s -e \"CHANGE MASTER TO MASTER_HOST=\\\"%s\\\", MASTER_PORT=%d, "
-                 "MASTER_USER=\\\"repl\\\", MASTER_PASSWORD=\\\"repl\\\";"
-                 "START SLAVE;\"", socket_cmd[i], IP_private[0], port[0]);
+        // TODO: Reuse the code in sync_slaves() to get the actual file name and position
+        execute_query(nodes[i], "STOP SLAVE;"
+                      "CHANGE MASTER TO "
+                      "MASTER_HOST='%s', MASTER_PORT=%d, "
+                      "MASTER_USER='repl', MASTER_PASSWORD='repl', "
+                      "%s;"
+                      "START SLAVE;",
+                      IP_private[0], port[0], require_gtid ?
+                      "MASTER_USE_GTID=slave_pos" :
+                      "MASTER_LOG_FILE='mar-bin.000001', MASTER_LOG_POS=4");
     }
 
     return local_result;

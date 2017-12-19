@@ -30,4 +30,5 @@ DROP USER 'maxskysql'@'localhost';
 CREATE USER 'maxskysql'@'localhost' IDENTIFIED BY 'skysql';
 GRANT ALL ON *.* TO 'maxskysql'@'localhost' WITH GRANT OPTION;
 
+RESET MASTER;
 EOF

@@ -411,6 +411,12 @@ public:
     virtual int prepare_server(int i);
     int prepare_servers();
 
+    /**
+     * Static functions
+     */
+
+    /** Whether to require GTID based replication, defaults to false */
+    static void require_gtid(bool value);
 
 private:
 
