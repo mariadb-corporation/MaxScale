@@ -645,12 +645,7 @@ void TestConnections::process_template(const char *template_name, const char *de
     mdn[0] = repl;
     mdn[1] = galera;
     int i, j;
-    int mdn_n = 1;
-
-    if (galera == NULL)
-    {
-        mdn_n =1;
-    }
+    int mdn_n = galera ? 2 : 1;
 
     for (j = 0; j < mdn_n; j++)
     {
