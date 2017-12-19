@@ -77,24 +77,16 @@ void stop_node(Mariadb_nodes& nodes, int node)
     }
 }
 
-void fail(void (*f)(TestConnections&), TestConnections& test)
+void fail_query(TestConnections& test)
 {
-    bool failed = false;
-    int global_result = test.global_result;
+    int rv = execute_query(test.maxscales->conn_rwsplit[0], "BEGIN");
 
-    try
+    if (rv == 0)
     {
-        f(test);
-    }
-    catch (const std::exception& x)
-    {
-        test.global_result = global_result;
-        failed = true;
-    }
+        const char MESSAGE[] = "A query that was expected to fail, did not fail.";
 
-    if (!failed)
-    {
-        throw std::runtime_error("Function did not fail as expected.");
+        test.add_result(false, "%s", MESSAGE);
+        throw std::runtime_error(MESSAGE);
     }
 }
 
@@ -151,8 +143,8 @@ void run(TestConnections& test)
 
     list_servers(test);
 
-    cout << "\nShould fail as master is no longer available, but trying to insert data... " << endl;
-    x::fail(insert_data, test);
+    cout << "\nShould fail as master is no longer available, but trying to execute a query... " << endl;
+    x::fail_query(test);
     cout << "Failed as expected." << endl;
 
     list_servers(test);
@@ -163,8 +155,8 @@ void run(TestConnections& test)
     list_servers(test);
 
     cout << "\nShould still fail as there is not transparent master failover, "
-         << "but trying to insert data... " << endl;
-    x::fail(insert_data, test);
+         << "but trying to execute a query... " << endl;
+    x::fail_query(test);
     cout << "Failed as expected." << endl;
 
     cout << "\nClosing connection to MaxScale." << endl;
