@@ -46,6 +46,11 @@ been changed from `false` to `true`.
 
 ## New Features
 
+### MySQL Monitor
+
+Esa, add brief notes on failver, switchover and rejoin, with a link to the
+actual documentation.
+
 ### REST API Relationship Endpoints
 
 The _servers_, _monitors_ and _services_ types now support direct updating of
@@ -83,6 +88,16 @@ for details.
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.2.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.1)
+
+* [MXS-1545](https://jira.mariadb.org/browse/MXS-1545) Fix GTID connecting slave error detections
+* [MXS-1525](https://jira.mariadb.org/browse/MXS-1525) Firewall filter does not check exact match for host
+* [MXS-1519](https://jira.mariadb.org/browse/MXS-1519) Firewall instances can interfere with each other
+* [MXS-1517](https://jira.mariadb.org/browse/MXS-1517) Retain stale master status even if the master goes down
+* [MXS-1499](https://jira.mariadb.org/browse/MXS-1499) Add missing fields to SHOW ALL SLAVES STATUS
+* [MXS-1486](https://jira.mariadb.org/browse/MXS-1486) The cache does not always update the cached entry even if it could
+* [MXS-1461](https://jira.mariadb.org/browse/MXS-1461) NOT operation needed for firewall rule
+* [MXS-1408](https://jira.mariadb.org/browse/MXS-1408) maxadmin not working in latest version
+* [MXS-1327](https://jira.mariadb.org/browse/MXS-1327) set   log-priority by  maxadmin
 
 ## Known Issues and Limitations
 

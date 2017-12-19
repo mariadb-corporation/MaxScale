@@ -24,6 +24,8 @@
 * KILL CONNECTION can now be used through MaxScale.
 * Environment variables can now be used in the MaxScale configuration file.
 * By default, MaxScale can no longer be run as root.
+* The MySQL Monitor is now capable of performing failover and switchover of
+  the master. There is also limited capability for rejoining nodes.
 
 For more details, please refer to:
 * [MariaDB MaxScale 2.2.0 Release Notes](Release-Notes/MaxScale-2.2.0-Release-Notes.md)
