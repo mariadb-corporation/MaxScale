@@ -13,7 +13,7 @@ replace=SELECT 0
 type=service
 router=readconnroute
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=regex1
 
@@ -36,7 +36,7 @@ type=service
 router=readconnroute
 router_options=slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=regex2
 
@@ -59,7 +59,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=regex3
 
@@ -74,7 +74,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers= server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 monitor_interval=1000
 

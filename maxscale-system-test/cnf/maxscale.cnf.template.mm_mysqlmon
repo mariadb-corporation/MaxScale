@@ -6,7 +6,7 @@ log_warning=1
 type=monitor
 module=mysqlmon
 servers= server1, server2, server3, server4
-user=maxskysql
+user=skysql
 passwd= skysql
 detect_stale_master=0
 monitor_interval=1000
@@ -16,7 +16,7 @@ multimaster=true
 type=service
 router= readwritesplit
 servers=server1, server2, server3, server4
-user=maxskysql
+user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 
@@ -25,7 +25,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [Read Connection Router Master]
@@ -33,7 +33,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [RW Split Listener]

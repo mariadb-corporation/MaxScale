@@ -30,7 +30,7 @@ module=mysqlmon
 ###repl51###
 servers= server1, server2,server3  ,server4
 detect_replication_lag=1
-user=maxskysql
+user=skysql
 passwd= skysql
 backend_connect_timeout=10
 backend_read_timeout=10
@@ -60,7 +60,7 @@ module=hintfilter
 type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 max_slave_connections=100%
 use_sql_variables_in=all
@@ -74,7 +74,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 
@@ -83,7 +83,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 

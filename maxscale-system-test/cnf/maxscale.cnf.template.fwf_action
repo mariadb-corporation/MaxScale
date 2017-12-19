@@ -6,7 +6,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers=server1
-user=maxskysql
+user=skysql
 passwd=skysql
 monitor_interval=1000
 
@@ -22,7 +22,7 @@ protocol=MySQLBackend
 type=service
 router=readconnroute
 servers=server1
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=blacklist
 
@@ -46,7 +46,7 @@ log_no_match=true
 type=service
 router=readconnroute
 servers=server1
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=whitelist
 
@@ -70,7 +70,7 @@ log_no_match=true
 type=service
 router=readconnroute
 servers=server1
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=ignore
 

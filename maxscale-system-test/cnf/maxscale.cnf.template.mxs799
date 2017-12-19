@@ -28,7 +28,7 @@ log_warning=1
 type=monitor
 module=galeramon
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 
 # A series of service definition
@@ -50,7 +50,7 @@ passwd=skysql
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [Read Connection Router Slave]
@@ -58,7 +58,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 
@@ -67,7 +67,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 

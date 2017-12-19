@@ -8,7 +8,7 @@ log_notice=1
 type=monitor
 module=galeramon
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 use_priority=true
 monitor_interval=1000
@@ -17,7 +17,7 @@ monitor_interval=1000
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [RW Split Listener]

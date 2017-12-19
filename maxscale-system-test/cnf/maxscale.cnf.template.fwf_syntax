@@ -6,7 +6,7 @@ log_warning=1
 type=service
 router=readconnroute
 servers=server1
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=Database Firewall
 

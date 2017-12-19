@@ -139,25 +139,6 @@ copy_logs(true)
     //sprintf(str, "export galera_user=\"%s\"; export galera_password=\"%s\"; ./create_user_galera.sh", galera->user_name, galera->password);
     //galera->ssh_node(0, str, FALSE);
 
-    repl = new Mariadb_nodes("node", test_dir, verbose);
-    if (!no_galera)
-    {
-        galera = new Galera_nodes("galera", test_dir, verbose);
-        //galera->use_ipv6 = use_ipv6;
-        galera->use_ipv6 = false;
-        galera->take_snapshot_command = take_snapshot_command;
-        galera->revert_snapshot_command = revert_snapshot_command;
-    }
-    else
-    {
-        galera = NULL;
-    }
-
-    repl->use_ipv6 = use_ipv6;
-    repl->take_snapshot_command = take_snapshot_command;
-    repl->revert_snapshot_command = revert_snapshot_command;
-
-
     repl->flush_hosts();
     galera->flush_hosts();
 
@@ -441,7 +422,7 @@ int TestConnections::init_maxscale()
 
     for (waits = 0; waits < 15; waits++)
     {
-        if (ssh_maxscale(true, "/bin/sh -c \"maxadmin help > /dev/null || exit 1\"") == 0)
+        if (ssh_maxscale(true, "/bin/sh -c \"maxadmin help > /dev/null 2>&1 || exit 1\"") == 0)
         {
             break;
         }

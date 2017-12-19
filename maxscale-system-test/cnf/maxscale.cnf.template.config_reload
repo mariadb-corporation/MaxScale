@@ -7,7 +7,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers= server1, server2,server3  ,server4
-user=maxskysql
+user=skysql
 passwd= skysql
 
 [CLI]
@@ -24,7 +24,7 @@ port=6603
 type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 

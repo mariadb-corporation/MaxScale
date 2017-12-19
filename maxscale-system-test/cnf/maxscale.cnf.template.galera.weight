@@ -28,7 +28,7 @@ log_warning=1
 type=monitor
 module=galeramon
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 use_priority=true
 
@@ -54,7 +54,7 @@ servers=server1,server2,server3,server4
 weightby=serversize_rws
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 max_slave_connections=1
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [Read Connection Router]
@@ -63,7 +63,7 @@ router=readconnroute
 router_options=synced
 servers=server1,server2,server3,server4
 weightby=serversize
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [Debug Interface]

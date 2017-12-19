@@ -29,7 +29,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers= server1, server2,server3  ,server4
-user=maxskysql
+user=skysql
 passwd= skysql
 monitor_interval=500
 detect_replication_lag=1
@@ -54,7 +54,7 @@ detect_replication_lag=1
 type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 max_slave_replication_lag=1
@@ -65,7 +65,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 
@@ -74,7 +74,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 

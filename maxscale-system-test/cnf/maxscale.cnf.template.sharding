@@ -16,14 +16,14 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers= server1, server2,server3  ,server4
-user=maxskysql
+user=skysql
 passwd= skysql
 
 [Sharding router]
 type=service
 router=schemarouter
 servers=server1,     server2,              server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 auth_all_servers=1
 filters=QLA

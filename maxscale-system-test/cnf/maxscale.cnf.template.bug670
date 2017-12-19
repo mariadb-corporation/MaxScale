@@ -174,7 +174,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 

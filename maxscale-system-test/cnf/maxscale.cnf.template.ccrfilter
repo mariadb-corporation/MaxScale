@@ -6,7 +6,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 monitor_interval=1000
 detect_stale_master=false
@@ -27,7 +27,7 @@ time=10
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS
 max_slave_connections=1
@@ -46,7 +46,7 @@ type=service
 router=readconnroute
 router_options=slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [Read Connection Listener Slave]
@@ -62,7 +62,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [Read Connection Listener Master]

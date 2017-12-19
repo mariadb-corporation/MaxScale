@@ -29,7 +29,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers= server1, server2,server3  ,server4
-user=maxskysql
+user=skysql
 passwd= skysql
 
 # A series of service definition
@@ -52,7 +52,7 @@ passwd= skysql
 type=service
 router=readconnroute
 servers=server1
-user=maxskysql
+user=skysql
 passwd=skysql
 version_string=5.1-OLD-Bored-Mysql
 filters=DuplicaFilter
@@ -61,7 +61,7 @@ filters=DuplicaFilter
 type=service
 router=readwritesplit
 servers=server3,server2
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [DuplicaFilter]
@@ -88,7 +88,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 
@@ -97,7 +97,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 

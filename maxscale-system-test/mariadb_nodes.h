@@ -95,6 +95,13 @@ public:
     char stop_db_command[256][4096];
 
     /**
+     * @brief cleanup_db_command Command to remove all
+     * data files and re-install DB with mysql_install_db
+     */
+    char cleanup_db_command[256][4096];
+
+
+    /**
      * @brief ssl if true ssl  will be used
      */
     int ssl;
@@ -250,6 +257,23 @@ public:
      * @return  0 in case of success
      */
     int start_galera();
+
+    /**
+     * @brief cleanup_db_node Removes all data files and reinstall DB
+     * with mysql_install_db
+     * @param node
+     * @return 0 in case of success
+     */
+    int cleanup_db_node(int node);
+
+    /**
+     * @brief cleanup_db_node Removes all data files and reinstall DB
+     * with mysql_install_db for all nodes
+     * @param node
+     * @return 0 in case of success
+     */
+    int cleanup_db_nodes();
+
 
     /**
      * @brif BlockNode setup firewall on a backend node to block MariaDB port
@@ -438,6 +462,16 @@ public:
      */
     int copy_to_node(char* src, char* dest, int i);
 
+
+    /**
+     * @brief Copy a local file to the Node i machine
+     * @param src Source file on the remote filesystem
+     * @param dest Destination file on the local file system
+     * @param i Node index
+     * @return exit code of the system command or 1 in case of i > N
+     */
+    int copy_from_node(const char* src, const char* dest, int i);
+
     /**
      * @brief Synchronize slaves with the master
      *
@@ -445,13 +479,6 @@ public:
      * The function expects that the first node, @c nodes[0], is the master.
      */
     void sync_slaves();
-
-    /**
-     * @brief Close all connections to this node
-     *
-     * This will kill all connections that have been created to this node.
-     */
-    void close_active_connections();
 
     /**
      * @brief Check and fix replication
@@ -478,7 +505,7 @@ private:
     int check_node_ssh(int node);
     bool check_master_node(MYSQL *conn);
 };
-
+/*
 class Galera_nodes : public Mariadb_nodes
 {
 public:
@@ -506,6 +533,6 @@ public:
     //{
     //    return prepare_galera_server(i);
     //}
-};
+};*/
 
 #endif // MARIADB_NODES_H

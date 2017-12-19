@@ -13,6 +13,7 @@
 
 #include "mariadb_nodes.h"
 #include "sql_const.h"
+#include <ctype.h>
 
 Mariadb_nodes::Mariadb_nodes(char * pref)
 {
@@ -30,7 +31,7 @@ int Mariadb_nodes::connect(int i)
         {
             mysql_close(nodes[i]);
         }
-        nodes[i] = open_conn_db_timeout(port[i], IP[i], "test", user_name, password, 50, ssl);
+        nodes[i] = open_conn_db_timeout(port[i], IP[i], (char *) "test", user_name, password, 50, ssl);
     }
 
     if ((nodes[i] != NULL) && (mysql_errno(nodes[i]) != 0))
@@ -264,6 +265,7 @@ int Mariadb_nodes::stop_slaves()
 int Mariadb_nodes::start_replication()
 {
     char str[1024];
+    char dtr[1024];
     char log_file[256];
     char log_pos[256];
     int i;
@@ -273,12 +275,12 @@ int Mariadb_nodes::start_replication()
     // Start all nodes
     for (int i = 0; i < N; i++)
     {
-        if (start_node(i, ""))
+        if (start_node(i, (char *) ""))
         {
             printf("Start of node %d failed, trying to cleanup and re-initialize node\n", i);
             cleanup_db_node(i);
             prepare_server(i);
-            local_result += start_node(i, "");
+            local_result += start_node(i, (char *) "");
         }
 
         printf("trying to get version\n");
@@ -291,43 +293,45 @@ int Mariadb_nodes::start_replication()
         printf("Node %d: Version is %s\n", i, version_major[i]);
         if (strcmp(version_major[i], "5.5") == 0)
         {
-            ssh_node(i, true,
-                     "mysql --force -u root %s -e \"STOP SLAVE; RESET SLAVE; RESET MASTER; SET GLOBAL read_only=OFF;\"",
-                     socket_cmd[i]);
+            ssh_node(i,
+                     (char *) "mysql --force -u root -e \"STOP SLAVE; RESET SLAVE; RESET MASTER; SET GLOBAL read_only=OFF;\"",
+                     true);
         }
         else
         {
-            ssh_node(i, true,
-                     "mysql --force -u root %s -e \"STOP SLAVE; STOP ALL SLAVES; RESET SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only=OFF;\"",
-                     socket_cmd[i]);
+            ssh_node(i,
+                     (char *) "mysql --force -u root -e \"STOP SLAVE; STOP ALL SLAVES; RESET SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only=OFF;\"",
+                     true
+                     );
         }
 
-        ssh_node(i, true, "sudo rm -f /etc/my.cnf.d/kerb.cnf");
-        ssh_node(i, true,
-                 "for i in `mysql -ss --force -u root %s -e \"SHOW DATABASES\"|grep -iv 'mysql\\|information_schema\\|performance_schema'`; "
-                 "do mysql --force -u root %s -e \"DROP DATABASE $i\";"
-                 "done", socket_cmd[i], socket_cmd[i]);
+        ssh_node(i, (char *) "sudo rm -f /etc/my.cnf.d/kerb.cnf", true);
+        /*ssh_node(i, (char *)
+                 "for i in `sudo mysql -ss --force -u root -e \"SHOW DATABASES\"|grep -iv \"mysql|information_schema|performance_schema\"`; "
+                 "do echo \"DROP DATABASE $i\"| sudo mysql --force -u root ;"
+                 "done", true);*/
     }
 
     sprintf(str, "%s/create_user.sh", test_dir);
     sprintf(dtr, "%s", access_homedir[0]);
     copy_to_node(str, dtr, 0);
-    ssh_node(0, false, "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh %s",
-             user_name, password, access_homedir[0], socket_cmd[0]);
+    sprintf(str, "export node_user=\"%s\"; export node_password=\"%s\"; %s/create_user.sh ",
+            user_name, password, access_homedir[0]);
+    ssh_node(0, str , false);
 
     // Create a database dump from the master and distribute it to the slaves
     if (version_major[0][0] == '5')
     {
         printf("Version 5 on master detected, do not use --gtid flag for mysqldump\n");
-        ssh_node(0, true, "mysql --force -u root %s -e \"CREATE DATABASE test\"; "
-                 "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 %s > /tmp/master_backup.sql",
-                 socket_cmd[0], socket_cmd[0]);
+        ssh_node(0, (char *)  "mysql --force -u root -e \"CREATE DATABASE test\"; "
+                 "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 > /tmp/master_backup.sql", true
+                 );
     }
     else
     {
-        ssh_node(0, true, "mysql --force -u root %s -e \"CREATE DATABASE test\"; "
-                 "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 --gtid %s > /tmp/master_backup.sql",
-                 socket_cmd[0], socket_cmd[0]);
+        ssh_node(0, (char *)  "mysql --force -u root -e \"CREATE DATABASE test\"; "
+                 "mysqldump --all-databases --add-drop-database --flush-privileges --master-data=1 --gtid > /tmp/master_backup.sql",
+                 true);
     }
     sprintf(str, "%s/master_backup.sql", test_dir);
     copy_from_node("/tmp/master_backup.sql", str, 0);
@@ -337,15 +341,16 @@ int Mariadb_nodes::start_replication()
         // Reset all nodes by first loading the dump and then starting the replication
         printf("Setting node %d\n", i);
         fflush(stdout);
-        copy_to_node(str, "/tmp/master_backup.sql", i);
-        ssh_node(i, true, "mysql --force -u root %s -e \"STOP SLAVE;\"",
-                 socket_cmd[i]);
-        ssh_node(i, true, "mysql --force -u root %s < /tmp/master_backup.sql",
-                 socket_cmd[i]);
+        copy_to_node(str, (char *) "/tmp/master_backup.sql", i);
+        ssh_node(i, (char *) "mysql --force -u root -e \"STOP SLAVE;\"",
+                 true);
+        ssh_node(i, (char *) "mysql --force -u root < /tmp/master_backup.sql",
+                 true);
         printf("change master to...\n");
-        ssh_node(i, true, "mysql --force -u root %s -e \"CHANGE MASTER TO MASTER_HOST=\\\"%s\\\", MASTER_PORT=%d, "
+        sprintf(str, "mysql --force -u root -e \"CHANGE MASTER TO MASTER_HOST=\\\"%s\\\", MASTER_PORT=%d, "
                  "MASTER_USER=\\\"repl\\\", MASTER_PASSWORD=\\\"repl\\\";"
-                 "START SLAVE;\"", socket_cmd[i], IP_private[0], port[0]);
+                 "START SLAVE;\"",  IP_private[0], port[0]);
+        ssh_node(i, str, true);
     }
     sleep(5);
 
@@ -369,27 +374,48 @@ int Mariadb_nodes::start_replication()
     return(local_result);
 }
 
+int Mariadb_nodes::cleanup_db_node(int node)
+{
+    return ssh_node(node, cleanup_db_command[node], true);
+}
+
+int Mariadb_nodes::cleanup_db_nodes()
+{
+    int i;
+    int local_result = 0;
+
+    for (i = 0; i < N; i++)
+    {
+        printf("Cleaning node %d\n", i);
+        fflush(stdout);
+        local_result += cleanup_db_node(i);
+        fflush(stdout);
+    }
+    return local_result;
+}
+
 int Mariadb_nodes::start_galera()
 {
     char str[1024];
+    char sys1[1024];
     int i;
     int local_result = 0;
     local_result += stop_nodes();
 
     // Remove the grastate.dat file
-    ssh_node(0, "rm -f /var/lib/mysql/grastate.dat", true);
+    ssh_node(0, (char *) "rm -f /var/lib/mysql/grastate.dat", true);
 
     printf("Starting new Galera cluster\n");
     fflush(stdout);
-    ssh_node(0, false, "echo [mysqld] > cluster_address.cnf");
-    ssh_node(0, false, "echo wsrep_cluster_address=gcomm:// >>  cluster_address.cnf");
-    ssh_node(0, true, "cp cluster_address.cnf /etc/my.cnf.d/");
+    ssh_node(0, (char *) "echo [mysqld] > cluster_address.cnf", false);
+    ssh_node(0, (char *) "echo wsrep_cluster_address=gcomm:// >>  cluster_address.cnf", false);
+    ssh_node(0, (char *) "cp cluster_address.cnf /etc/my.cnf.d/", true);
 
-    if (start_node(0, " --wsrep-cluster-address=gcomm://"))
+    if (start_node(0, (char *) " --wsrep-cluster-address=gcomm://"))
     {
         cleanup_db_node(i);
         prepare_server(i);
-        local_result += start_node(0, " --wsrep-cluster-address=gcomm://");
+        local_result += start_node(0, (char *) " --wsrep-cluster-address=gcomm://");
     }
 
     sprintf(str, "%s/create_user_galera.sh", test_dir);
@@ -751,7 +777,7 @@ void Mariadb_nodes::generate_ssh_cmd(char * cmd, int node, char * ssh, bool sudo
     }
 }
 
-cchar * Mariadb_nodes::ssh_node_output(int node, char * ssh, bool sudo)
+char * Mariadb_nodes::ssh_node_output(int node, char * ssh, bool sudo)
 {
     char sys[strlen(ssh) + 1024];
     generate_ssh_cmd(sys, node, ssh, sudo);
@@ -806,13 +832,13 @@ int Mariadb_nodes::execute_query_all_nodes(const char* sql)
 int Mariadb_nodes::get_version(int i)
 {
     char * str;
-    int ec;
+
     int local_result = 0;
     if (find_field(nodes[i], "SELECT @@version", "@@version", version[i]))
     {
         printf("Failed to get version: %s, trying ssh node and use MariaDB client\n", mysql_error(nodes[i]));
-        str = ssh_node_output(i, "mysql --batch --silent  -e \"select @@version\"", true, &ec);
-        if (ec)
+        str = ssh_node_output(i, (char *) "mysql --batch --silent  -e \"select @@version\"", true);
+        if ((str == NULL) || (strlen(str) < 2))
         {
             local_result++;
             printf("Failed to get version, node %d is broken\n", i);
@@ -946,6 +972,31 @@ int Mariadb_nodes::copy_to_node(char* src, char* dest, int i)
 
     return system(sys);
 }
+int Mariadb_nodes::copy_from_node(const char* src, const char* dest, int i)
+{
+    if (i >= N)
+    {
+        return 1;
+    }
+    char sys[strlen(src) + strlen(dest) + 1024];
+    if (strcmp(IP[i], "127.0.0.1") == 0)
+    {
+        sprintf(sys, "cp %s %s",
+                src, dest);
+    }
+    else
+    {
+        sprintf(sys, "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
+                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
+                sshkey[i], access_user[i], IP[i], src, dest);
+    }
+    if (verbose)
+    {
+        printf("%s\n", sys);
+    }
+
+    return system(sys);
+}
 
 static void wait_until_pos(MYSQL *mysql, int filenum, int pos)
 {
@@ -1012,37 +1063,6 @@ void Mariadb_nodes::sync_slaves()
     }
 }
 
-void Mariadb_nodes::close_active_connections()
-{
-    if (this->nodes[0] == NULL)
-    {
-        this->connect();
-    }
-
-    const char *sql =
-            "select id from information_schema.processlist where id != @@pseudo_thread_id and user not in ('system user', 'repl')";
-
-    for (int i = 0; i < N; i++)
-    {
-        if (!mysql_query(nodes[i], sql))
-        {
-            MYSQL_RES *res = mysql_store_result(nodes[i]);
-            if (res)
-            {
-                MYSQL_ROW row;
-
-                while ((row = mysql_fetch_row(res)))
-                {
-                    std::string q("KILL ");
-                    q += row[0];
-                    execute_query_silent(nodes[i], q.c_str());
-                }
-                mysql_free_result(res);
-            }
-        }
-    }
-}
-
 /**
  * @brief extract_version_from_string Tries to find MariaDB server version number in the output of 'mysqld --version'
  * Function does not allocate any memory
@@ -1077,11 +1097,11 @@ int Mariadb_nodes::prepare_server(int i)
     char str1[1024];
     char str2[1024];
 
-    ssh_node(i, true, stop_db_command[i]);
+    ssh_node(i, stop_db_command[i], true);
     sleep(5);
-    ssh_node(i, true, "sed -i \"s/bind-address/#bind-address/g\" /etc/mysql/my.cnf.d/*.cnf");
-    ssh_node(i, true, "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld; sudo service apparmor restart");
-    version = ssh_node_output(i, "/usr/sbin/mysqld --version", false, &ec);
+    ssh_node(i, (char *) "sed -i \"s/bind-address/#bind-address/g\" /etc/mysql/my.cnf.d/*.cnf", true);
+    ssh_node(i, (char *) "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld; sudo service apparmor restart", true);
+    version = ssh_node_output(i, (char *) "/usr/sbin/mysqld --version", false);
     if (ec == 0)
     {
         version_digits = extract_version_from_string(version);
@@ -1089,27 +1109,31 @@ int Mariadb_nodes::prepare_server(int i)
 
         if (memcmp(version_digits, "5.", 2) == 0)
         {
-            ssh_node(i, true, "sed -i \"s/binlog_row_image=full//\" /etc/my.cnf.d/*.cnf");
+            ssh_node(i, (char *) "sed -i \"s/binlog_row_image=full//\" /etc/my.cnf.d/*.cnf", true);
         }
         if (memcmp(version_digits, "5.7", 3) == 0)
         {
             // Disable 'validate_password' plugin, searach for random temporal
             // password in the log and reseting passord to empty string
-            ssh_node(i, true, "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql");
-            ssh_node(i, true, start_db_command[i]);
-            tmp_pass = ssh_node_output(i, "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'", true, &ec);
-            ssh_node(i, true, "mysqladmin -uroot -p'%s' password '%s'", tmp_pass, tmp_pass);
-            ssh_node(i, false, "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", tmp_pass);
-            ssh_node(i, true, stop_db_command[i]);
-            ssh_node(i, true, start_db_command[i]);
-            ssh_node(i, true, "mysqladmin -uroot -p'%s' password ''", tmp_pass);
+            ssh_node(i, (char *) "/usr/sbin/mysqld --initialize; sudo chown -R mysql:mysql /var/lib/mysql", true);
+            ssh_node(i, start_db_command[i], true);
+
+            tmp_pass = ssh_node_output(i, (char *) "cat /var/log/mysqld.log | grep \"temporary password\" | sed -n -e 's/^.*: //p'", true);
+            sprintf(str1, "mysqladmin -uroot -p'%s' password '%s'", tmp_pass, tmp_pass);
+            ssh_node(i, str1, true);
+            sprintf(str1, "echo \"UNINSTALL PLUGIN validate_password\" | sudo mysql -uroot -p'%s'", tmp_pass);
+            ssh_node(i, str1, false);
+            ssh_node(i, stop_db_command[i], true);
+            ssh_node(i, start_db_command[i], true);
+            sprintf(str1, "mysqladmin -uroot -p'%s' password ''", tmp_pass);
+            ssh_node(i, str1, true);
         }
         else
         {
             printf("Executing mysql_install_db on node %d\n", i);
-            ssh_node(i, true, "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql");
+            ssh_node(i, (char *) "mysql_install_db; sudo chown -R mysql:mysql /var/lib/mysql", true);
             printf("Starting server on node %d\n", i);
-            if (ssh_node(i, true, start_db_command[i]))
+            if (ssh_node(i, start_db_command[i], true))
             {
                 printf("Server start on node %d failed\n", i);
             }
@@ -1119,9 +1143,9 @@ int Mariadb_nodes::prepare_server(int i)
         sprintf(str2, "%s/", access_homedir[i]);
         copy_to_node(str1, str2, i);
         sprintf(str1, "mysql < %s/create_repl_user.sql", access_homedir[i]);
-        ssh_node(i, true, str1);
+        ssh_node(i, str1, true);
         sprintf(str1, "mysql < %s/create_skysql_user.sql", access_homedir[i]);
-        ssh_node(i, true, str1);
+        ssh_node(i, str1, true);
 
         free(version);
         return 0;

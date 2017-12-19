@@ -29,7 +29,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers= server1, server2,server3  ,server4
-user=maxskysql
+user=skysql
 passwd= skysql
 script=/###access_homedir###/script/script.sh --event=$EVENT --initiator=$INITIATOR --nodelist=$NODELIST
 events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave
@@ -42,7 +42,7 @@ servers=gserver1,gserver2,gserver3,gserver4
 script=/###access_homedir###/script/script.sh  --event=$EVENT --initiator=$INITIATOR --nodelist=$NODELIST
 events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave,server_down,server_up,synced_down,synced_up
 disable_master_role_setting=true
-user=maxskysql
+user=skysql
 passwd=skysql
 monitor_interval=1000
 
@@ -65,7 +65,7 @@ monitor_interval=1000
 type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 filters=QLA
@@ -74,7 +74,7 @@ filters=QLA
 type=service
 router= readwritesplit
 servers=gserver1,gserver2,gserver3,gserver4
-user=maxskysql
+user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 filters=QLA
@@ -84,7 +84,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 
@@ -93,7 +93,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 

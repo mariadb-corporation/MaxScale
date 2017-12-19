@@ -33,7 +33,7 @@ monitor_interval=10000
 servers=server1,server2,server3,server4
 detect_replication_lag=1
 detect_stale_master=1
-user=maxskysql
+user=skysql
 passwd= skysql
 
 # A series of service definition
@@ -90,7 +90,7 @@ servers=server1,server2,server3,server4
 max_slave_connections=100%
 use_sql_variables_in=all
 #use_sql_variables_in=master
-user=maxskysql
+user=skysql
 passwd=skysql
 #filters=typo|qla|regex|hints|regex|hints
 #enable_root_user=1
@@ -102,7 +102,7 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 max_slave_connections=100%
 use_sql_variables_in=all
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=qla|tests|hints
 
@@ -112,7 +112,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 
@@ -121,7 +121,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 

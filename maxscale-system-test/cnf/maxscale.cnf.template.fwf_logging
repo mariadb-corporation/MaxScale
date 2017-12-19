@@ -12,7 +12,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers=server1
-user=maxskysql
+user=skysql
 passwd=skysql
 monitor_interval=1000
 
@@ -20,7 +20,7 @@ monitor_interval=1000
 type=service
 router=readconnroute
 servers=server1
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=ignore
 

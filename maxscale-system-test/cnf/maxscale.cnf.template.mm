@@ -28,7 +28,7 @@ log_warning=1
 type=monitor
 module=mmmon
 servers= server1, server2
-user=maxskysql
+user=skysql
 passwd= skysql
 detect_stale_master=0
 monitor_interval=1000
@@ -52,7 +52,7 @@ monitor_interval=1000
 type=service
 router= readwritesplit
 servers=server1,     server2
-user=maxskysql
+user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 filters=QLA
@@ -62,7 +62,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 
@@ -71,7 +71,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2
-user=maxskysql
+user=skysql
 passwd=skysql
 filters=QLA
 

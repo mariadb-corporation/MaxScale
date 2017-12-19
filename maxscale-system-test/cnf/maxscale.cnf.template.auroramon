@@ -8,7 +8,7 @@ log_warning=1
 type=monitor
 module=auroramon
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 monitor_interval=1000
 
@@ -18,7 +18,7 @@ monitor_interval=1000
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 passwd=skysql
 
 [CLI]
