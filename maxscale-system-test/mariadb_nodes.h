@@ -415,6 +415,7 @@ public:
 private:
 
     bool check_master_node(MYSQL *conn);
+    bool bad_slave_thread_status(MYSQL *conn, const char *field, int node);
 };
 
 class Galera_nodes : public Mariadb_nodes
