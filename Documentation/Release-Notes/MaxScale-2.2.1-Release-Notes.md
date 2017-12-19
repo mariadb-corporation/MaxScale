@@ -48,8 +48,13 @@ been changed from `false` to `true`.
 
 ### MySQL Monitor
 
-Esa, add brief notes on failver, switchover and rejoin, with a link to the
-actual documentation.
+MySQL Monitor can now perform *failover* (replace a dead master), *switchover*
+(replace a running master) and *rejoin* (join a standalone node to the
+master-slave cluster). All of these features only work with a simple 1-master
+N-slaves cluster using Gtid replication. Failover and switchover can be
+activated through maxadmin or the REST-API. Failover and rejoin can be set to
+activate automatically. For more information, see the
+[MySQL Monitor documentation](../Monitors/MySQL-Monitor.md).
 
 ### REST API Relationship Endpoints
 
