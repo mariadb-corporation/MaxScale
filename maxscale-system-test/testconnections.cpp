@@ -528,14 +528,11 @@ int TestConnections::read_env()
     }
 
     env = getenv("smoke");
-    if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) ))
+    if (env)
     {
-        smoke = true;
+        smoke = strcasecmp(env, "yes") == 0 || strcasecmp(env, "true") == 0;
     }
-    else
-    {
-        smoke = false;
-    }
+
     env = getenv("threads");
     if ((env != NULL))
     {
