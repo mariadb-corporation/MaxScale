@@ -9,6 +9,7 @@ int main(int argc, char** argv)
 {
     const char FAILOVER_CMD[] = "maxadmin call command mysqlmon failover MySQL-Monitor";
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
+    Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);
     int ec;
     // Wait a few seconds

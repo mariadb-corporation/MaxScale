@@ -18,6 +18,7 @@ using std::string;
 int main(int argc, char** argv)
 {
     interactive = strcmp(argv[argc - 1], "interactive") == 0;
+    Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);
     MYSQL* maxconn = test.maxscales->open_rwsplit_connection(0);
     // Set up test table
