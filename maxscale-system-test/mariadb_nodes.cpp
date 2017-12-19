@@ -19,12 +19,12 @@
 
 namespace
 {
-static bool require_gtid = false;
+static bool g_require_gtid = false;
 }
 
 void Mariadb_nodes::require_gtid(bool value)
 {
-    ::require_gtid = value;
+    g_require_gtid = value;
 }
 
 Mariadb_nodes::Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose):
@@ -385,16 +385,24 @@ int Mariadb_nodes::start_replication()
 
     for (int i = 1; i < N; i++)
     {
+        execute_query(nodes[i], "STOP SLAVE;");
+
+        if (g_require_gtid)
+        {
+            execute_query(nodes[i], "SET GLOBAL gtid_slave_pos='0-1-0'");
+        }
+
         // TODO: Reuse the code in sync_slaves() to get the actual file name and position
-        execute_query(nodes[i], "STOP SLAVE;"
+        execute_query(nodes[i],
                       "CHANGE MASTER TO "
                       "MASTER_HOST='%s', MASTER_PORT=%d, "
                       "MASTER_USER='repl', MASTER_PASSWORD='repl', "
-                      "%s;"
-                      "START SLAVE;",
-                      IP_private[0], port[0], require_gtid ?
+                      "%s",
+                      IP_private[0], port[0], g_require_gtid ?
                       "MASTER_USE_GTID=slave_pos" :
                       "MASTER_LOG_FILE='mar-bin.000001', MASTER_LOG_POS=4");
+
+        execute_query(nodes[i], "START SLAVE");
     }
 
     return local_result;
@@ -648,6 +656,33 @@ bool Mariadb_nodes::bad_slave_thread_status(MYSQL *conn, const char *field, int 
     return rval;
 }
 
+static bool wrong_replication_type(MYSQL *conn)
+{
+    bool rval = true;
+
+    for (int i = 0; i < 2; i++)
+    {
+        char str[1024] = "";
+
+        if (find_field(conn, "SHOW SLAVE STATUS", "Gtid_IO_Pos", str) == 0)
+        {
+            // If the test requires GTID based replication, Gtid_IO_Pos must not be empty
+            if ((rval = (*str != '\0') != g_require_gtid))
+            {
+                printf("Wrong value for 'Gtid_IO_Pos' (%s), expected it to be %s.\n",
+                       str, g_require_gtid ? "not empty" : "empty");
+            }
+            else
+            {
+                break;
+            }
+        }
+        sleep(1);
+    }
+
+    return rval;
+}
+
 /**
  * @brief multi_source_replication Check if slave is connected to more then one master
  * @param conn MYSQL struct (have to be open)
@@ -715,6 +750,7 @@ int Mariadb_nodes::check_replication()
         }
         else if (bad_slave_thread_status(nodes[i], "Slave_IO_Running", i) ||
                  bad_slave_thread_status(nodes[i], "Slave_SQL_Running", i) ||
+                 wrong_replication_type(nodes[i]) ||
                  multi_source_replication(nodes[i], i))
         {
             res = 1;
