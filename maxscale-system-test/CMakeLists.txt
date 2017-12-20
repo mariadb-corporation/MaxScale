@@ -50,7 +50,7 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
-  blob_test.cpp cdc_connector.cpp)
+  blob_test.cpp)
 target_link_libraries(testcore ${MYSQL_CLIENT} ${CDC_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z nsl m pthread ssl dl rt crypto crypt)
 install(TARGETS testcore DESTINATION system-test)
 add_dependencies(testcore connector-c cdc_connector)

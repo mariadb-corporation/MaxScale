@@ -178,7 +178,7 @@ bool run_test(TestConnections& test)
             std::string name = type_to_table_name(test_set[x].types[i]);
             CDC::Connection conn(test.maxscales->IP[0], 4001, "skysql", "skysql");
 
-            if (conn.createConnection() && conn.requestData(name))
+            if (conn.connect(name))
             {
                 for (int j = 0; test_set[x].values[j]; j++)
                 {
@@ -198,14 +198,14 @@ bool run_test(TestConnections& test)
                     }
                     else
                     {
-                        std::string err = conn.getError();
+                        std::string err = conn.error();
                         test.tprintf("Failed to read data: %s", err.c_str());
                     }
                 }
             }
             else
             {
-                std::string err = conn.getError();
+                std::string err = conn.error();
                 test.tprintf("Failed to request data: %s", err.c_str());
                 rval = false;
                 break;

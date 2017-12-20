@@ -105,15 +105,16 @@ set(MYSQL_CLIENT ${CMAKE_BINARY_DIR}/lib/mariadb/libmariadbclient.a CACHE INTERN
 
 # Build the CDC connector
 ExternalProject_Add(cdc_connector
-  SOURCE_DIR ${CMAKE_SOURCE_DIR}/cdc_connector/
+  GIT_REPOSITORY https://github.com/mariadb-corporation/maxscale-cdc-connector.git
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cdc_connector/
   BUILD_COMMAND make
-  INSTALL_COMMAND make install)
+  INSTALL_COMMAND make install
+  UPDATE_COMMAND "")
 
-set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/include/ CACHE INTERNAL "")
-set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/lib/libcdc_connector.so CACHE INTERNAL "")
-include_directories(${CMAKE_BINARY_DIR}/cdc_connector/include)
-
+include(GNUInstallDirs)
+set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_INCLUDEDIR}/ CACHE INTERNAL "")
+set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_LIBDIR}/libcdc_connector.so CACHE INTERNAL "")
+include_directories(${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_INCLUDEDIR})
 
 #
 # Check that all required components are present. To build even without them,
@@ -129,3 +130,23 @@ find_program(HAVE_PHP php)
 if (NOT HAVE_PHP)
   message(FATAL_ERROR "Could not find php.")
 endif()
+
+# Build the Jansson library from source
+set(JANSSON_REPO "https://github.com/akheron/jansson.git" CACHE STRING "Jansson Git repository")
+
+# Release 2.9 of Jansson
+set(JANSSON_TAG "v2.9" CACHE STRING "Jansson Git tag")
+
+ExternalProject_Add(jansson
+  GIT_REPOSITORY ${JANSSON_REPO}
+  GIT_TAG ${JANSSON_TAG}
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/jansson/install -DCMAKE_C_FLAGS=-fPIC -DJANSSON_BUILD_DOCS=OFF
+  BINARY_DIR ${CMAKE_BINARY_DIR}/jansson
+  INSTALL_DIR ${CMAKE_BINARY_DIR}/jansson/install
+  UPDATE_COMMAND "")
+
+set(JANSSON_FOUND TRUE CACHE INTERNAL "")
+set(JANSSON_STATIC_FOUND TRUE CACHE INTERNAL "")
+set(JANSSON_INCLUDE_DIR ${CMAKE_BINARY_DIR}/jansson/install/include CACHE INTERNAL "")
+set(JANSSON_STATIC_LIBRARIES ${CMAKE_BINARY_DIR}/jansson/install/lib/libjansson.a CACHE INTERNAL "")
+set(JANSSON_LIBRARIES ${JANSSON_STATIC_LIBRARIES} CACHE INTERNAL "")
