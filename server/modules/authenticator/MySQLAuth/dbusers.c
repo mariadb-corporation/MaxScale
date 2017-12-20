@@ -700,8 +700,8 @@ static bool get_hostname(DCB *dcb, char *client_hostname, size_t size)
 
     if (lookup_result != 0)
     {
-        MXS_ERROR("Client hostname lookup failed, getnameinfo() returned: '%s'.",
-                  gai_strerror(lookup_result));
+        MXS_ERROR("Client hostname lookup failed for '%s', getnameinfo() returned: '%s'.",
+                  dcb->remote, gai_strerror(lookup_result));
     }
     else
     {
