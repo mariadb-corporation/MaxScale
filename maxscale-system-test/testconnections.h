@@ -245,7 +245,7 @@ public:
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
      * @return 0 if case of success
      */
-    int init_maxscale(int m);
+    int init_maxscale(int m = 0);
 
 
 
@@ -253,24 +253,24 @@ public:
      * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
      * @return  0 in case of success
      */
-    int start_binlog(int m);
+    int start_binlog(int m = 0);
 
     /**
      * @brief Start binlogrouter replication from master
      */
-    bool replicate_from_master(int m);
+    bool replicate_from_master(int m = 0);
 
     /**
      * @brief prepare_binlog clean up binlog directory, set proper access rights to it
      * @return 0
      */
-    int prepare_binlog(int m);
+    int prepare_binlog(int m = 0);
 
     /**
      * @brief start_mm configure first node as Master for second, Second as Master for first
      * @return  0 in case of success
      */
-    int start_mm(int m);
+    int start_mm(int m = 0);
 
     /**
      * @brief copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
@@ -409,7 +409,7 @@ public:
      * @param Test  TestConnections object which contains info about test setup
      * @return index of found slave node
      */
-    int find_connected_slave1(int m);
+    int find_connected_slave1(int m = 0);
 
     /**
      * @brief CheckMaxscaleAlive Checks if MaxScale is alive
@@ -417,7 +417,7 @@ public:
      * Also 'show processlist' query is executed using all services
      * @return 0 in case if success
      */
-    int check_maxscale_alive(int m);
+    int check_maxscale_alive(int m = 0);
 
     /**
      * @brief try_query Executes SQL query and repors error
@@ -454,7 +454,7 @@ public:
      * @brief list_dirs Execute 'ls' on binlog directory on all repl nodes and on Maxscale node
      * @return 0
      */
-    int list_dirs(int m);
+    int list_dirs(int m = 0);
 
 
 
@@ -489,8 +489,8 @@ public:
 
     void check_current_operations(int m, int value);
     void check_current_connections(int m, int value);
-    int stop_maxscale(int m);
-    int start_maxscale(int m);
+    int stop_maxscale(int m = 0);
+    int start_maxscale(int m = 0);
     void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
 
 private:
