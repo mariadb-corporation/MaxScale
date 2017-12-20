@@ -289,7 +289,7 @@ int Mariadb_nodes::stop_node(int node)
     return ssh_node(node, stop_db_command[node], true);
 }
 
-int Mariadb_nodes::start_node(int node, char * param)
+int Mariadb_nodes::start_node(int node, const char* param)
 {
     char cmd[1024];
     if (v51)
