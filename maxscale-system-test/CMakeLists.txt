@@ -625,6 +625,9 @@ add_test_executable(schemarouter_duplicate_db.cpp schemarouter_duplicate_db sche
 # Test of external script execution
 add_test_executable(script.cpp script script LABELS maxscale REPL_BACKEND)
 
+# Test 10.3 SEQUENCE objects
+add_test_executable(sequence.cpp sequence replication LABELS LIGHT)
+
 # Check if 'weightby' parameter works
 add_test_executable(server_weight.cpp server_weight galera.weight LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
 
