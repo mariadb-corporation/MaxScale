@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     test.stop_timeout();
 
     test.tprintf("Waiting until the monitor picks a new master");
-    sleep(20);
+    sleep(5);
 
     test.set_timeout(30);
 

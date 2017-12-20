@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(30);
-    sleep(15);
+    sleep(5);
 
     Test->set_timeout(30);
     Test->tprintf("Connecting to all MaxScale services, expecting error\n");
@@ -57,7 +57,6 @@ int main(int argc, char *argv[])
     Test->repl->unblock_all_nodes();
 
     Test->stop_timeout();
-    sleep(15);
     Test->check_log_err(0, "fatal signal 11", false);
     Test->check_log_err(0, "Failed to create new router session for service", true);
 

@@ -212,8 +212,8 @@ int main(int argc, char *argv[])
     }
 
     Test->stop_timeout();
-    Test->tprintf("Sleeping 15 seconds\n");
-    sleep(15);
+    Test->tprintf("Sleeping");
+    sleep(5);
 
     for (i = 0; i < Test->repl->N; i++)
     {
