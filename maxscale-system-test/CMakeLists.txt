@@ -628,6 +628,9 @@ add_test_executable(script.cpp script script LABELS maxscale REPL_BACKEND)
 # Test 10.3 SEQUENCE objects
 add_test_executable(sequence.cpp sequence replication LABELS LIGHT)
 
+# Test 10.1 compound statements
+add_test_executable(compound_statement.cpp compound_statement replication LABELS LIGHT)
+
 # Check if 'weightby' parameter works
 add_test_executable(server_weight.cpp server_weight galera.weight LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
 
