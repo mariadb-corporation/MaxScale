@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     test.add_result(mysql_errno(conn) == 0, "Connection with users from master should fail");
     mysql_close(conn);
 
-    test.maxscales->ssh_node(0, "maxadmin remove server server1 \"RW Split Router\"", true);
+    test.maxscales->ssh_node(0, "maxadmin remove server server1 \"RW-Split-Router\"", true);
     conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->ip(0), "test", "auth_test", "test",
                         false);
     test.add_result(mysql_errno(conn), "Connection should be OK: %s", mysql_error(conn));
