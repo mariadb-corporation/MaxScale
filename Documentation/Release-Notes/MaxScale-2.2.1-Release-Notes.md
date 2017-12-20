@@ -50,6 +50,21 @@ root@host:~# maxscale --user=root ...
 The default value of the configuration parameter `detect_standalone_master` has
 been changed from `false` to `true`.
 
+### ReadWritesplit
+
+The default value of `strict_multi_stmt` was changed to `false` to make
+usage of atomic compound statements and multi-statement queries less
+restrictive and to align it with the default value of `strict_sp_calls`.
+
+Most cases where the functionality of `strict_multi_stmt` was triggered
+were cases where the added safety of locking a session to the master did
+more harm than it did good.
+
+The only case where `strict_multi_stmt` should be enabled is when a
+multi-statement or a compound statement modifies the state of the
+session. This is not a good practice and a change in the client side
+behavior is advised.
+
 ## Dropped Features
 
 ## New Features

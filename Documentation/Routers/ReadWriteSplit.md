@@ -220,21 +220,23 @@ router_options=master_accept_reads=true
 
 ### `strict_multi_stmt`
 
-When a client executes a multi-statement query, all queries after that will be
-routed to the master to guarantee a consistent session state. This behavior can
-be controlled with the **`strict_multi_stmt`** router option. This option is
-enabled by default.
+This option is disabled by default since MaxScale 2.2.1. In older versions, this
+option was enabled by default.
 
-If set to false, queries are routed normally after a multi-statement query.
+When a client executes a multi-statement query, it will be treated as if it were
+a DML statement and routed to the master. If the option is enabled, all queries
+after a multi-statement query will be routed to the master to guarantee a
+consistent session state.
 
-**Warning:** this can cause false data to be read from the slaves if the
-multi-statement query modifies the session state. Only disable the strict mode
-if you know that no changes to the session state will be made inside the
-multi-statement queries.
+If the feature is disabled, queries are routed normally after a multi-statement
+query.
+
+**Warning:** Enable the strict mode only if you know that the clients will send
+  statements that cause inconsistencies in the session state.
 
 ```
-# Disable strict multi-statement mode
-router_options=strict_multi_stmt=false
+# Enable strict multi-statement mode
+router_options=strict_multi_stmt=true
 ```
 
 ### `strict_sp_calls`
