@@ -10,7 +10,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
 monitor_interval=1000
-failover=true
+auto_failover=true
 
 [RW Split Router]
 type=service
