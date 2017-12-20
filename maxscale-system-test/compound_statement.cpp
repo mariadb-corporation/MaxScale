@@ -22,6 +22,7 @@ int main(int argc, char** argv)
         "END\n";
 
     test.maxscales->connect();
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1(id INT)");
     test.try_query(test.maxscales->conn_rwsplit[0], sql);
 
