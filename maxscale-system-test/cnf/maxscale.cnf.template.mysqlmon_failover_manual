@@ -13,7 +13,9 @@ failcount=1
 allow_cluster_recovery=true
 replication_user=repl
 replication_password=repl
-backend_connect_timeout=1
+backend_connect_timeout=15
+backend_read_timeout=15
+backend_write_timeout=15
 
 [RW Split Router]
 type=service
