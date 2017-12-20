@@ -56,6 +56,7 @@
 
 #include <debugcli.h>
 
+#include "../../../core/internal/config.h"
 #include "../../../core/internal/config_runtime.h"
 #include "../../../core/internal/maxscale.h"
 #include "../../../core/internal/modules.h"
@@ -76,6 +77,7 @@
 #define ARG_TYPE_MONITOR        8
 #define ARG_TYPE_FILTER         9
 #define ARG_TYPE_NUMERIC        10
+#define ARG_TYPE_OBJECT_NAME    11 // A string where whitespace is replaced with hyphens
 
 /**
  * The subcommand structure
@@ -403,7 +405,7 @@ struct subcommand listoptions[] =
         "COMMAND Regular expressions for filtering module command names\n"
         "\n"
         "Example: list commands my-module my-command",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME}
     },
     { EMPTY_OPTION}
 };
@@ -480,7 +482,7 @@ struct subcommand shutdownoptions[] =
         "LISTENER The listener to stop\n"
         "\n"
         "Example: shutdown listener \"RW Service\" \"RW Listener\"",
-        {ARG_TYPE_SERVICE, ARG_TYPE_STRING}
+        {ARG_TYPE_SERVICE, ARG_TYPE_OBJECT_NAME}
     },
     {
         EMPTY_OPTION
@@ -567,7 +569,7 @@ struct subcommand restartoptions[] =
         "NAME Listener to restart\n"
         "\n"
         "Example: restart listener \"RW Service\" \"RW Listener\"",
-        {ARG_TYPE_SERVICE, ARG_TYPE_STRING}
+        {ARG_TYPE_SERVICE, ARG_TYPE_OBJECT_NAME}
     },
     { EMPTY_OPTION }
 };
@@ -591,7 +593,7 @@ struct subcommand setoptions[] =
         "STATUS The status to set\n"
         "\n"
         "Example: set server dbnode4 master",
-        {ARG_TYPE_SERVER, ARG_TYPE_STRING}
+        {ARG_TYPE_SERVER, ARG_TYPE_OBJECT_NAME}
     },
     {
         "pollsleep", 1, 1, set_pollsleep,
@@ -651,7 +653,7 @@ struct subcommand clearoptions[] =
         "STATUS The status to clear\n"
         "\n"
         "Example: clear server dbnode2 master",
-        {ARG_TYPE_SERVER, ARG_TYPE_STRING}
+        {ARG_TYPE_SERVER, ARG_TYPE_OBJECT_NAME}
     },
     { EMPTY_OPTION }
 };
@@ -714,7 +716,7 @@ struct subcommand enableoptions[] =
         "PRIORITY One of 'err', 'warning', 'notice','info' or 'debug'\n"
         "\n"
         "Example: enable log-priority info",
-        {ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME}
     },
     {
         "sessionlog-priority",
@@ -722,7 +724,7 @@ struct subcommand enableoptions[] =
         enable_sess_log_priority,
         "[Deprecated] Enable a logging priority for a session",
         "This command is deprecated",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME}
     },
     {
         "root",
@@ -764,7 +766,7 @@ struct subcommand enableoptions[] =
         "USER The user account to enable\n"
         "\n"
         "Example: enable account alice",
-        {ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME}
     },
     {
         "readonly-account",
@@ -777,7 +779,7 @@ struct subcommand enableoptions[] =
         "USER The user account to enable\n"
         "\n"
         "Example: enable account alice",
-        {ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME}
     },
     {
         EMPTY_OPTION
@@ -802,7 +804,7 @@ struct subcommand disableoptions[] =
         "PRIORITY One of 'err', 'warning', 'notice','info' or 'debug'\n"
         "\n"
         "Example: disable log-priority info",
-        {ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME}
     },
     {
         "sessionlog-priority",
@@ -810,7 +812,7 @@ struct subcommand disableoptions[] =
         disable_sess_log_priority,
         "[Deprecated] Disable a logging priority for a particular session",
         "This command is deprecated",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME}
     },
     {
         "root",
@@ -852,7 +854,7 @@ struct subcommand disableoptions[] =
         "USER The user account to disable\n"
         "\n"
         "Example: disable account alice",
-        {ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME}
     },
     {
         EMPTY_OPTION
@@ -931,7 +933,7 @@ struct subcommand addoptions[] =
         "PASSWORD Password for the user\n"
         "\n"
         "Example: add user bob somepass",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME, ARG_TYPE_STRING}
     },
     {
         "readonly-user", 2, 2, inet_add_user,
@@ -943,7 +945,7 @@ struct subcommand addoptions[] =
         "PASSWORD Password for the user\n"
         "\n"
         "Example: add user bob somepass",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING}
+        {ARG_TYPE_OBJECT_NAME, ARG_TYPE_STRING}
     },
     {
         "server", 2, 12, cmd_AddServer,
@@ -958,9 +960,9 @@ struct subcommand addoptions[] =
         "\n"
         "Example: add server my-db my-service \"Cluster Monitor\"",
         {
-            ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+            ARG_TYPE_SERVER, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME
         }
     },
     { EMPTY_OPTION}
@@ -1005,7 +1007,7 @@ struct subcommand removeoptions[] =
         "USER     User to remove\n"
         "\n"
         "Example: remove user bob",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING}
+        {ARG_TYPE_STRING}
     },
     {
         "server", 2, 12, cmd_RemoveServer,
@@ -1020,9 +1022,9 @@ struct subcommand removeoptions[] =
         "\n"
         "Example: remove server my-db my-service \"Cluster Monitor\"",
         {
-            ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+            ARG_TYPE_SERVER, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME
         }
     },
     {
@@ -1212,8 +1214,8 @@ struct subcommand createoptions[] =
         "\n"
         "Example: create server my-db-1 192.168.0.102 3306",
         {
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME
         }
     },
     {
@@ -1242,8 +1244,9 @@ struct subcommand createoptions[] =
         "\n"
         "Example: create listener my-service my-new-listener 192.168.0.101 4006",
         {
-            ARG_TYPE_SERVICE, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_SERVICE, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME,
+            ARG_TYPE_STRING, // Rest of the arguments are paths which can contain spaces
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
         }
     },
@@ -1258,7 +1261,7 @@ struct subcommand createoptions[] =
         "\n"
         "Example: create monitor my-monitor mysqlmon",
         {
-            ARG_TYPE_STRING, ARG_TYPE_STRING
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME
         }
     },
     {
@@ -1336,7 +1339,7 @@ struct subcommand destroyoptions[] =
         "The listener is stopped and it will be removed on the next restart of MaxScale\n"
         "\n"
         "Example: destroy listener my-listener",
-        {ARG_TYPE_SERVICE, ARG_TYPE_STRING}
+        {ARG_TYPE_SERVICE, ARG_TYPE_OBJECT_NAME}
     },
     {
         "monitor", 1, 1, destroyMonitor,
@@ -1730,7 +1733,7 @@ struct subcommand calloptions[] =
         "\n"
         "Example: call command my-module my-command hello world!",
         {
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_OBJECT_NAME, ARG_TYPE_OBJECT_NAME, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
         }
@@ -1799,11 +1802,18 @@ convert_arg(char *arg, int arg_type)
         rval = (unsigned long)arg;
         break;
 
+    case ARG_TYPE_OBJECT_NAME:
+        fix_section_name(arg);
+        rval = (unsigned long)arg;
+        break;
+
     case ARG_TYPE_SERVICE:
+        fix_section_name(arg);
         rval = (unsigned long)service_find(arg);
         break;
 
     case ARG_TYPE_SERVER:
+        fix_section_name(arg);
         rval = (unsigned long)server_find_by_unique_name(arg);
         break;
 
@@ -1812,10 +1822,12 @@ convert_arg(char *arg, int arg_type)
         break;
 
     case ARG_TYPE_MONITOR:
+        fix_section_name(arg);
         rval = (unsigned long)monitor_find(arg);
         break;
 
     case ARG_TYPE_FILTER:
+        fix_section_name(arg);
         rval = (unsigned long)filter_def_find(arg);
         break;
 

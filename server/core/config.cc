@@ -427,7 +427,7 @@ static std::set<string> warned_whitespace;
  * @brief Fix section names
  *
  * Check that section names contain no whitespace. If the name contains
- * whitespace, trim it, squeeze it and replace the remainig whitespace with
+ * whitespace, trim it, squeeze it and replace the remaining whitespace with
  * hyphens. If a replacement was made, a warning is logged.
  *
  * @param section Section name
