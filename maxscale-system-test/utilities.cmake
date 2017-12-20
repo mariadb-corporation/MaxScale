@@ -113,3 +113,19 @@ ExternalProject_Add(cdc_connector
 set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/include/ CACHE INTERNAL "")
 set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/lib/libcdc_connector.so CACHE INTERNAL "")
 include_directories(${CMAKE_BINARY_DIR}/cdc_connector/include)
+
+
+#
+# Check that all required components are present. To build even without them,
+# add e.g. -DHAVE_PHP=Y to the CMake invocation
+#
+
+find_program(HAVE_MYSQLTEST mysqltest)
+if (NOT HAVE_MYSQLTEST)
+  message(FATAL_ERROR "Could not find mysqltest.")
+endif()
+
+find_program(HAVE_PHP php)
+if (NOT HAVE_PHP)
+  message(FATAL_ERROR "Could not find php.")
+endif()
