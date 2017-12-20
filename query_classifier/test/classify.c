@@ -317,6 +317,11 @@ int main(int argc, char** argv)
                 qc_process_init(QC_INIT_BOTH) &&
                 qc_thread_init(QC_INIT_BOTH))
             {
+                //  Version encoded as MariaDB encodes the version, i.e.:
+                //  version = major * 10000 + minor * 100 + patch
+                uint64_t version = 10 * 10000 + 3 * 100;
+
+                qc_set_server_version(version);
                 rc = run(input_name, expected_name);
                 qc_process_end(QC_INIT_BOTH);
             }

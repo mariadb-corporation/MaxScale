@@ -156,11 +156,14 @@ static thread_local struct
     sqlite3* pDb;                            // Thread specific database handle.
     qc_sql_mode_t sql_mode;                  // What sql_mode is used.
     QcSqliteInfo* pInfo;                     // The information for the current statement being classified.
+    uint64_t version;                        // Encoded version number
     uint32_t version_major;
     uint32_t version_minor;
     uint32_t version_patch;
     QC_NAME_MAPPING* pFunction_name_mappings; // How function names should be mapped.
 } this_thread;
+
+const uint64_t VERSION_103 = 10 * 10000 + 3 * 100;
 
 /**
  * HELPERS
@@ -492,7 +495,10 @@ public:
      */
     bool must_check_sequence_related_functions() const
     {
-        return (m_sql_mode == QC_SQL_MODE_ORACLE) || (this_unit.parse_as == QC_PARSE_AS_103);
+        return
+            (m_sql_mode == QC_SQL_MODE_ORACLE) ||
+            (this_unit.parse_as == QC_PARSE_AS_103) ||
+            (this_thread.version >= VERSION_103);
     }
 
     /**
@@ -530,7 +536,7 @@ public:
             }
         }
 
-        if (!rv && (this_unit.parse_as == QC_PARSE_AS_103))
+        if (!rv && ((this_unit.parse_as == QC_PARSE_AS_103) || (this_thread.version >= VERSION_103)))
         {
             if ((strcasecmp(zFunc_name, "lastval") == 0) ||
                 (strcasecmp(zFunc_name, "nextval") == 0))
@@ -4942,6 +4948,7 @@ static void qc_sqlite_set_server_version(uint64_t version)
     uint32_t minor = (version - major * 10000) / 100;
     uint32_t patch = version - major * 10000 - minor * 100;
 
+    this_thread.version = version;
     this_thread.version_major = major;
     this_thread.version_minor = minor;
     this_thread.version_patch = patch;
@@ -4951,10 +4958,7 @@ static void qc_sqlite_get_server_version(uint64_t* pVersion)
 {
     QC_TRACE();
 
-    *pVersion =
-        this_thread.version_major * 10000 +
-        this_thread.version_minor * 100 +
-        this_thread.version_patch;
+    *pVersion = this_thread.version;
 }
 
 
