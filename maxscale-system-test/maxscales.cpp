@@ -326,7 +326,7 @@ long unsigned Maxscales::get_maxscale_memsize(int m)
 }
 
 
-int Maxscales::find_master_maxadmin(int m, Mariadb_nodes * nodes)
+int Maxscales::find_master_maxadmin(Mariadb_nodes * nodes, int m)
 {
     bool found = false;
     int master = -1;
@@ -355,7 +355,7 @@ int Maxscales::find_master_maxadmin(int m, Mariadb_nodes * nodes)
     return master;
 }
 
-int Maxscales::find_slave_maxadmin(int m, Mariadb_nodes * nodes)
+int Maxscales::find_slave_maxadmin(Mariadb_nodes * nodes, int m)
 {
     int slave = -1;
 
@@ -375,7 +375,7 @@ int Maxscales::find_slave_maxadmin(int m, Mariadb_nodes * nodes)
     return slave;
 }
 
-StringSet Maxscales::get_server_status(int m, const char* name)
+StringSet Maxscales::get_server_status(const char* name, int m)
 {
     std::set<std::string> rval;
     int exit_code;

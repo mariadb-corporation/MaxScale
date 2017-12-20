@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     long int i1, i2;
 
     Test->set_timeout(20);
-    master = Test->maxscales->find_master_maxadmin(0, Test->galera);
+    master = Test->maxscales->find_master_maxadmin(Test->galera);
 
     if (master >= 0)
     {

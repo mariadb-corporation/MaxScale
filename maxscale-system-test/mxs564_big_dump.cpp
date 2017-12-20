@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
     //Test->repl->flush_hosts();
     Test->set_timeout(20);
-    int master = Test->maxscales->find_master_maxadmin(0, Test->galera);
+    int master = Test->maxscales->find_master_maxadmin(Test->galera);
     Test->stop_timeout();
     Test->tprintf(("Master is %d\n"), master);
     int k = 0;

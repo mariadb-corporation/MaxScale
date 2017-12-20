@@ -95,38 +95,46 @@ public:
      * Connections stored in maxscales->conn_rwsplit[0], maxscales->conn_master[0] and maxscales->conn_slave[0] MYSQL structs
      * @return 0 in case of success
      */
-    int connect_maxscale(int m);
+    int connect_maxscale(int m = 0);
+    int connect(int m = 0)
+    {
+        return connect_maxscale(m);
+    }
 
     /**
      * @brief CloseMaxscaleConn Closes connection that were opened by ConnectMaxscale()
      * @return 0
      */
-    int close_maxscale_connections(int m);
+    int close_maxscale_connections(int m = 0);
+    int disconnect(int m = 0)
+    {
+        return close_maxscale_connections(m);
+    }
 
     /**
      * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in maxscales->conn_rwsplit[0]
      * @return 0 in case of success
      */
-    int connect_rwsplit(int m);
+    int connect_rwsplit(int m = 0);
 
     /**
      * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in maxscales->conn_master[0]
      * @return 0 in case of success
      */
-    int connect_readconn_master(int m);
+    int connect_readconn_master(int m = 0);
 
     /**
      * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in maxscales->conn_slave[0]
      * @return 0 in case of success
      */
-    int connect_readconn_slave(int m);
+    int connect_readconn_slave(int m = 0);
 
     /**
      * @brief OpenRWSplitConn   Opens new connections to RWSplit and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL * open_rwsplit_connection(int m)
+    MYSQL * open_rwsplit_connection(int m = 0)
     {
         return open_conn(rwsplit_port[m], IP[m], user_name, password, ssl);
     }
@@ -136,7 +144,7 @@ public:
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL * open_readconn_master_connection(int m)
+    MYSQL * open_readconn_master_connection(int m = 0)
     {
         return open_conn(readconn_master_port[m], IP[m], user_name,
                          password, ssl);
@@ -147,7 +155,7 @@ public:
      * To close connection mysql_close() have to be called
      * @return  MYSQL struct
      */
-    MYSQL * open_readconn_slave_connection(int m)
+    MYSQL * open_readconn_slave_connection(int m = 0)
     {
         return open_conn(readconn_slave_port[m], IP[m], user_name,
                          password, ssl);
@@ -156,7 +164,7 @@ public:
     /**
      * @brief CloseRWSplit Closes RWplit connections stored in maxscales->conn_rwsplit[0]
      */
-    void close_rwsplit(int m)
+    void close_rwsplit(int m = 0)
     {
         mysql_close(conn_rwsplit[m]);
         conn_rwsplit[m] = NULL;
@@ -165,7 +173,7 @@ public:
     /**
      * @brief CloseReadMaster Closes ReadConn master connections stored in maxscales->conn_master[0]
      */
-    void close_readconn_master(int m)
+    void close_readconn_master(int m = 0)
     {
         mysql_close(conn_master[m]);
         conn_master[m] = NULL;
@@ -174,7 +182,7 @@ public:
     /**
      * @brief CloseReadSlave Closes ReadConn slave connections stored in maxscales->conn_slave[0]
      */
-    void close_readconn_slave(int m)
+    void close_readconn_slave(int m = 0)
     {
         mysql_close(conn_slave[m]);
         conn_slave[m] = NULL;
@@ -183,17 +191,29 @@ public:
     /**
      * @brief restart_maxscale Issues 'service maxscale restart' command
      */
-    int restart_maxscale(int m);
+    int restart_maxscale(int m = 0);
+    int restart(int m = 0)
+    {
+        return restart_maxscale(m);
+    }
 
     /**
      * @brief start_maxscale Issues 'service maxscale start' command
      */
-    int start_maxscale(int m);
+    int start_maxscale(int m = 0);
+    int start(int m = 0)
+    {
+        return start_maxscale(m);
+    }
 
     /**
      * @brief stop_maxscale Issues 'service maxscale stop' command
      */
-    int stop_maxscale(int m);
+    int stop_maxscale(int m = 0);
+    int stop(int m = 0)
+    {
+        return stop_maxscale(m);
+    }
 
     int execute_maxadmin_command(int m, char * cmd);
     int execute_maxadmin_command_print(int m, char * cmd);
@@ -204,17 +224,15 @@ public:
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
      * @return memory size in kilobytes
      */
-    long unsigned get_maxscale_memsize(int m);
-
-    int try_query_all(int m, const char *sql);
+    long unsigned get_maxscale_memsize(int m = 0);
 
     /**
      * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show server'
      * @param nodes Mariadb_nodes object
      * @return node index if one master found, -1 if no master found or several masters found
      */
-    int find_master_maxadmin(int m, Mariadb_nodes * nodes);
-    int find_slave_maxadmin(int m, Mariadb_nodes * nodes);
+    int find_master_maxadmin(Mariadb_nodes * nodes, int m = 0);
+    int find_slave_maxadmin(Mariadb_nodes * nodes, int m = 0);
 
     /**
      * @brief Get the set of labels that are assigned to server @c name
@@ -225,7 +243,7 @@ public:
      *
      * @return A set of string labels assigned to this server
      */
-    StringSet get_server_status(int m, const char* name);
+    StringSet get_server_status(const char* name, int m = 0);
 
 };
 
