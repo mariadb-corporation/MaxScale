@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 2; i++)
     {
         char result[1024];
-        test.add_result(test.maxscales->get_maxadmin_param(0, "show dbusers \"RW Split Router\"", "User names:", result) == 0,
-                        "Old style objects in maxadmin commands should fail");
+        test.add_result(test.maxscales->get_maxadmin_param(0, "show dbusers \"RW Split Router\"", "User names:", result),
+                        "Old style objects in maxadmin commands should succeed");
         test.add_result(test.maxscales->get_maxadmin_param(0, "show dbusers RW-Split-Router", "User names:", result),
                         "New style objects in maxadmin commands should succeed");
     }
