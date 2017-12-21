@@ -263,8 +263,8 @@ add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_4 my
 add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_3 mysqlmon_failover_manual2_3 LABELS mysqlmon REPL_BACKEND)
 add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_2 mysqlmon_failover_manual2_2 LABELS mysqlmon REPL_BACKEND)
 
-# MySQL Monitor manual failover with bad master
-add_test_executable(mysqlmon_failover_bad_master.cpp mysqlmon_failover_bad_master mysqlmon_failover_bad_master LABELS mysqlmon REPL_BACKEND)
+# MySQL Monitor switchover with bad master
+add_test_executable(mysqlmon_switchover_bad_master.cpp mysqlmon_switchover_bad_master mysqlmon_switchover_bad_master LABELS mysqlmon REPL_BACKEND)
 
 # MySQL Monitor manual failover with no valid slaves, uses config of mysqlmon_failover_auto
 add_test_executable(mysqlmon_failover_no_slaves.cpp mysqlmon_failover_no_slaves mysqlmon_failover_auto LABELS mysqlmon REPL_BACKEND)
