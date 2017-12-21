@@ -63,7 +63,6 @@ typedef struct
                                       down before failover is initiated */
     bool allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
     bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
-    bool allow_external_slaves;    /**< Whether to allow usage of external slave servers */
     bool auto_failover;            /**< If automatic master failover is enabled */
     uint32_t failover_timeout;     /**< Timeout in seconds for the master failover */
     uint32_t switchover_timeout;   /**< Timeout in seconds for the master switchover */

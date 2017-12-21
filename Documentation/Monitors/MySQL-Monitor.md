@@ -223,19 +223,6 @@ external agent that automatically reintegrates failed servers into the
 cluster. One of these agents is the _replication-manager_ which automatically
 configures the failed servers as new slaves of the current master.
 
-### `allow_external_slaves`
-
-Allow the use of external slaves. This option is enabled by default.
-
-If a slave server is replicating from a master that is not being monitored by
-the MySQL monitor, the slaves will be assigned the _Slave of External Server_
-status (a status mainly for informational purposes).
-
-When the `allow_external_slaves` option is enabled, the server will also be
-assigned the _Slave_ status which allows them to be used like normal slave
-servers. When the option is disabled, the servers will only receive the _Slave
-of External Server_ status and they will not be used.
-
 ## Failover, switchover and auto-rejoin
 
 Starting with MaxScale 2.2.1, MySQL Monitor supports replication cluster
