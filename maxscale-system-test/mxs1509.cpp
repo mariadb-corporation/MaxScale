@@ -23,7 +23,7 @@ void change_master(TestConnections& test, int slave, int master, const char* nam
                   source.c_str(), test.repl->IP[master], test.repl->user_name, test.repl->password, source.c_str());
 }
 
-const char* dump_status(const StringSet& current, const StringSet& expected)
+std::string dump_status(const StringSet& current, const StringSet& expected)
 {
     std::stringstream ss;
     ss << "Current status: (";
@@ -42,8 +42,7 @@ const char* dump_status(const StringSet& current, const StringSet& expected)
 
     ss << ")";
 
-    static std::string res = ss.str();
-    return res.c_str();
+    return ss.str();
 }
 
 void check_status(TestConnections& test, const StringSet& expected_master, const StringSet& expected_slave)
@@ -52,9 +51,9 @@ void check_status(TestConnections& test, const StringSet& expected_master, const
     StringSet master = test.get_server_status("server1");
     StringSet slave = test.get_server_status("server2");
     test.add_result(master != expected_master, "Master status is not what was expected: %s",
-                    dump_status(master, expected_master));
+                    dump_status(master, expected_master).c_str());
     test.add_result(slave != expected_slave, "Slave status is not what was expected: %s",
-                    dump_status(slave, expected_slave));
+                    dump_status(slave, expected_slave).c_str());
 }
 
 int main(int argc, char** argv)
