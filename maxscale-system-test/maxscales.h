@@ -215,8 +215,8 @@ public:
         return stop_maxscale(m);
     }
 
-    int execute_maxadmin_command(int m, char * cmd);
-    int execute_maxadmin_command_print(int m, char * cmd);
+    int execute_maxadmin_command(int m, const char * cmd);
+    int execute_maxadmin_command_print(int m, const char * cmd);
     int check_maxadmin_param(int m, const char *command, const  char *param, const  char *value);
     int get_maxadmin_param(int m, const char *command, const char *param, char *result);
 

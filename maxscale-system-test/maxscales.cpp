@@ -226,11 +226,11 @@ int Maxscales::stop_maxscale(int m)
 }
 
 
-int Maxscales::execute_maxadmin_command(int m, char * cmd)
+int Maxscales::execute_maxadmin_command(int m, const char * cmd)
 {
     return ssh_node_f(m, true, "maxadmin %s", cmd);
 }
-int Maxscales::execute_maxadmin_command_print(int m, char * cmd)
+int Maxscales::execute_maxadmin_command_print(int m, const char * cmd)
 {
     int exit_code;
     printf("%s\n", ssh_node_output_f(m, true, &exit_code,  "maxadmin %s", cmd));
