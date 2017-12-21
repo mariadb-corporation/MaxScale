@@ -1,6 +1,6 @@
 #create user skysql@'%' identified by 'skysql';
 #create user skysql@'localhost' identified by 'skysql';
-GRANT ALL PRIVILEGES ON *.* TO skysql@'%' WITH GRANT OPTION; 
+GRANT ALL PRIVILEGES ON *.* TO skysql@'%' WITH GRANT OPTION;
 GRANT ALL PRIVILEGES ON *.* TO skysql@'localhost' WITH GRANT OPTION;
 
 #create user maxuser@'%' identified by 'maxpwd';

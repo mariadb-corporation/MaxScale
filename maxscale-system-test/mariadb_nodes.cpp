@@ -428,8 +428,8 @@ int Galera_nodes::start_galera()
 
     if (start_node(0, (char *) " --wsrep-cluster-address=gcomm://") != 0)
     {
-        cleanup_db_node(i);
-        prepare_server(i);
+        cleanup_db_node(0);
+        prepare_server(0);
         local_result += start_node(0, (char *) " --wsrep-cluster-address=gcomm://");
     }
 

@@ -21,7 +21,6 @@ export product=${product:-"mariadb"}
 export version=${version:-"10.2"}
 export target=${target:-"develop"}
 export vm_memory=${vm_memory:-"2048"}
-export cnf_path=${script_dir}/cnf
 export JOB_NAME=${JOB_NAME:-"local_test"}
 export BUILD_NUMBER=${BUILD_NUMBER:-`date '+%Y%m%d%H%M'`}
 export BUILD_TAG=${BUILD_TAG:-jenkins-${JOB_NAME}-${BUILD_NUMBER}}

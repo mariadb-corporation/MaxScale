@@ -23,6 +23,10 @@ DROP USER 'maxskysql'@'%';
 CREATE USER 'maxskysql'@'%' IDENTIFIED BY 'skysql';
 GRANT ALL PRIVILEGES ON *.* TO 'maxskysql'@'%' WITH GRANT OPTION;
 
+DROP USER 'maxskysql'@'localhost';
+CREATE USER 'maxskysql'@'localhost' IDENTIFIED BY 'skysql';
+GRANT ALL ON *.* TO 'maxskysql'@'localhost' WITH GRANT OPTION;
+
 DROP USER 'repl'@'%';
 CREATE USER 'repl'@'%' IDENTIFIED BY 'repl';
 GRANT ALL PRIVILEGES ON *.* TO 'repl'@'%' WITH GRANT OPTION;
@@ -35,6 +39,16 @@ DROP USER 'skysql'@'localhost';
 CREATE USER 'skysql'@'localhost' IDENTIFIED BY 'skysql';
 GRANT ALL PRIVILEGES ON *.* TO 'skysql'@'localhost' WITH GRANT OPTION;
 
+DROP USER 'maxuser'@'%';
+CREATE USER 'maxuser'@'%' IDENTIFIED BY 'maxpwd';
+GRANT ALL ON *.* TO 'maxuser'@'%' WITH GRANT OPTION;
+
+DROP USER 'maxuser'@'localhost';
+CREATE USER 'maxuser'@'localhost' IDENTIFIED BY 'maxpwd';
+GRANT ALL ON *.* TO 'maxuser'@'localhost' WITH GRANT OPTION;
+
+
 DROP DATABASE IF EXISTS test;
 CREATE DATABASE test;
+
 EOF

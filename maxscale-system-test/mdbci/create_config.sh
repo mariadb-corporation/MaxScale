@@ -16,24 +16,26 @@ export repo_dir=$dir/repo.d/
 export provider=`${mdbci_dir}/mdbci show provider $box --silent 2> /dev/null`
 export backend_box=${backend_box:-"centos_7_"$provider}
 
-if [ "$product" == "mysql" ] ; then
-  export cnf_path=${script_dir}/cnf/mysql56
-fi
-
 mkdir -p ${MDBCI_VM_PATH}/$name
 cd ${MDBCI_VM_PATH}/$name
 vagrant destroy -f
 cd $dir
 
-mkdir ${MDBCI_VM_PATH}/$name/cnf
-cp -r ${cnf_path}/* ${MDBCI_VM_PATH}/$name/cnf/
-export cnd_path="${MDBCI_VM_PATH}/$name/cnf/"
+export cnf_path="${MDBCI_VM_PATH}/$name/cnf/"
+if [ "$product" == "mysql" ] ; then
+  export cnf_path=${MDBCI_VM_PATH}/$name/cnf/mysql56/
+fi
+
 
   eval "cat <<EOF
 $(<${script_dir}/templates/${template}.json.template)
 " 2> /dev/null > ${MDBCI_VM_PATH}/${name}.json
 
 ${mdbci_dir}/mdbci --override --template  ${MDBCI_VM_PATH}/${name}.json --repo-dir ${repo_dir} generate $name
+
+mkdir ${MDBCI_VM_PATH}/$name/cnf
+cp -r ${script_dir}/cnf/* ${MDBCI_VM_PATH}/$name/cnf/
+
 
 while [ -f ~/vagrant_lock ]
 do

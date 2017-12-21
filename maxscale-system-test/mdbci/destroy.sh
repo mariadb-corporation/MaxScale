@@ -7,4 +7,4 @@ cd $dir
 
 rm -rf 	${MDBCI_VM_PATH}/${name}
 rm -rf 	${MDBCI_VM_PATH}/${name}.json
-rm -rf 	${MDBCI_VM_PATH}/${name}_network_config	
+rm -rf 	${MDBCI_VM_PATH}/${name}_network_config

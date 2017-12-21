@@ -316,6 +316,7 @@ TestConnections::~TestConnections()
 
     copy_all_logs();
 
+/*  Temporary commnted out due to Galera failure in case of revert
     if (global_result != 0 )
     {
         if (no_vm_revert)
@@ -327,7 +328,7 @@ TestConnections::~TestConnections()
             tprintf("Reverting snapshot\n");
             revert_snapshot((char*) "clean");
         }
-    }
+    }*/
 
     delete repl;
     if (!no_galera)
