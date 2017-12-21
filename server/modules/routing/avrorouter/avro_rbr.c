@@ -17,6 +17,7 @@
 #include <jansson.h>
 #include <maxscale/alloc.h>
 #include <strings.h>
+#include <maxscale/utils.h>
 
 #define WRITE_EVENT         0
 #define UPDATE_EVENT        1
