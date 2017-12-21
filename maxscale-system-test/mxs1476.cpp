@@ -55,6 +55,9 @@ int main(int argc, char** argv)
                                "sed -i 's/priority=3/priority=2/' /etc/maxscale.cnf;");
     test.maxscales->restart_maxscale(0);
 
+    // Give the Galera nodes some time to stabilize
+    sleep(5);
+
     do_test(test, 0, 1);
 
     test.galera->start_node(2);
