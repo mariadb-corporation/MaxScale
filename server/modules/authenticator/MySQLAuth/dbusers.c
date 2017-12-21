@@ -698,14 +698,10 @@ static bool get_hostname(DCB *dcb, char *client_hostname, size_t size)
                                     NI_NAMEREQD); // Text address only
     freeaddrinfo(ai);
 
-    if (lookup_result != 0)
+    if (lookup_result != 0 && lookup_result != EAI_NONAME)
     {
         MXS_ERROR("Client hostname lookup failed for '%s', getnameinfo() returned: '%s'.",
                   dcb->remote, gai_strerror(lookup_result));
-    }
-    else
-    {
-        MXS_DEBUG("IP-lookup success, hostname is: '%s'", client_hostname);
     }
 
     return lookup_result == 0;
