@@ -1299,7 +1299,8 @@ void Mariadb_nodes::close_active_connections()
 
 void Mariadb_nodes::stash_server_settings(int node)
 {
-    ssh_node(node, "sudo mkdir /etc/my.cnf.d.backup", true);
+    ssh_node(node, "sudo rm -rf /etc/my.cnf.d.backup/", true);
+    ssh_node(node, "sudo mkdir /etc/my.cnf.d.backup/", true);
     ssh_node(node, "sudo cp -r /etc/my.cnf.d/* /etc/my.cnf.d.backup/", true);
 }
 
