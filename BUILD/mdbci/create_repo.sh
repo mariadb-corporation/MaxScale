@@ -55,7 +55,7 @@ if [ $z_res -eq 127 ] && [ $y_res -eq 127 ] ; then
                 exit 1
         fi
 
-	gpg -abs -o  dists/$dist_name/Release.gpg dists/$dist_name/Release 
+	gpg -abs --digest-algo sha256 -o dists/$dist_name/Release.gpg dists/$dist_name/Release 
 	if [ $? != 0 ] ; then
 		echo "Package signing failed!"
 		exit 1
@@ -70,8 +70,7 @@ else
 		sudo zypper -n install createrepo
 	fi
 	echo "%_signature gpg" >> ~/.rpmmacros
-        echo "%_gpg_name  MariaDB Maxscale" >>  ~/.rpmmacros
-#	echo "%_gpg_name  MariaDBManager" >>  ~/.rpmmacros
+        echo "%_gpg_name MariaDB Maxscale <maxscale@googlegroups.com>" >>  ~/.rpmmacros
 	echo "\r" |  setsid rpm --resign $sourcedir/*.rpm
 	
         if [ $? != 0 ] ; then

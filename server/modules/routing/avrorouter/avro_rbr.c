@@ -544,16 +544,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 {
                     uint8_t val[metadata[metadata_offset + 1]];
                     uint64_t bytes = unpack_enum(ptr, &metadata[metadata_offset], val);
-                    char strval[32];
-
-                    /** Right now only ENUMs/SETs with less than 256 values
-                     * are printed correctly */
-                    snprintf(strval, sizeof(strval), "%hhu", val[0]);
-                    if (bytes > 1 && warn_large_enumset)
-                    {
-                        warn_large_enumset = true;
-                        MXS_WARNING("ENUM/SET values larger than 255 values aren't supported.");
-                    }
+                    char strval[bytes * 2 + 1];
+                    gw_bin2hex(strval, val, bytes);
                     avro_value_set_string(&field, strval);
                     MXS_INFO("[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
@@ -599,11 +591,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             else if (column_is_bit(map->column_types[i]))
             {
                 uint64_t value = 0;
-                int width = metadata[metadata_offset] + metadata[metadata_offset + 1] * 8;
-                int bits_in_nullmap = MXS_MIN(width, extra_bits);
-                extra_bits -= bits_in_nullmap;
-                width -= bits_in_nullmap;
-                size_t bytes = width / 8;
+                uint8_t len = metadata[metadata_offset + 1];
+                uint8_t bit_len = metadata[metadata_offset] > 0 ? 1 : 0;
+                size_t bytes = len + bit_len;
 
                 // TODO: extract the bytes
                 if (!warn_bit)
@@ -675,7 +665,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                                              create->column_lengths[i], &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
-                MXS_INFO("[%ld] TEMPORAL: %s", i, buf);
+                MXS_INFO("[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
                 ss_dassert(ptr < end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */

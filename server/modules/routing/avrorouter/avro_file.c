@@ -909,6 +909,27 @@ bool is_create_like_statement(const char* ptr, size_t len)
     return strcasestr(sql, " like ") || strcasestr(sql, "(like ");
 }
 
+bool is_create_as_statement(const char* ptr, size_t len)
+{
+    int err = 0;
+    char sql[len + 1];
+    memcpy(sql, ptr, len);
+    sql[len] = '\0';
+    const char* pattern =
+        // Case-insensitive mode
+        "(?i)"
+        // Main CREATE TABLE part (the \s is for any whitespace)
+        "create\\stable\\s"
+        // Optional IF NOT EXISTS
+        "(if\\snot\\sexists\\s)?"
+        // The table name with optional database name, both enclosed in optional backticks
+        "(`?\\S+`?.)`?\\S+`?\\s"
+        // And finally the AS keyword
+        "as";
+
+    return mxs_pcre2_simple_match(pattern, sql, 0, &err) == MXS_PCRE2_MATCH;
+}
+
 /**
  * @brief Detection of table alteration statements
  * @param router Avro router instance
@@ -1024,6 +1045,15 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         if (is_create_like_statement(sql, len))
         {
             created = table_create_copy(router, sql, len, db);
+        }
+        else if (is_create_as_statement(sql, len))
+        {
+            static bool warn_create_as = true;
+            if (warn_create_as)
+            {
+                MXS_WARNING("`CREATE TABLE AS` is not yet supported, ignoring events to this table: %.*s", len, sql);
+                warn_create_as = false;
+            }
         }
         else
         {
