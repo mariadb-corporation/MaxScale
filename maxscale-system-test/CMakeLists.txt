@@ -53,7 +53,7 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   blob_test.cpp)
 target_link_libraries(testcore ${MYSQL_CLIENT} ${CDC_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z nsl m pthread ssl dl rt crypto crypt)
 install(TARGETS testcore DESTINATION system-test)
-add_dependencies(testcore connector-c cdc_connector)
+add_dependencies(testcore connector-c cdc_connector jansson)
 
 # Tool used to check backend state
 add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG)
