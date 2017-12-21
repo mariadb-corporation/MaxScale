@@ -8,6 +8,7 @@ servers=server1,server2
 user=maxskysql
 passwd=skysql
 monitor_interval=1000
+ignore_external_masters=true
 
 [RW Split Router]
 type=service
