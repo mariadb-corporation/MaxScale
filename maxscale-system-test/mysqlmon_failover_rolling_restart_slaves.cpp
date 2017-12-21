@@ -188,7 +188,7 @@ void run(TestConnections& test)
         check_server_status(test, N, i);
 
         cout << "\nStarting slave " << slave << endl;
-        test.repl->start_node(i, "");
+        test.repl->start_node(i, (char*)"");
 
         sleep(5);
 

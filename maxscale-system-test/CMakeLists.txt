@@ -21,10 +21,10 @@ set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of
 build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug
 Release RelWithDebInfo MinSizeRel.")
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -ggdb")
-set(CMAKE_CXX_FLAGS_DEBUG "-std=c++11 -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "-std=c++11 -ggdb")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-std=c++11 -ggdb")
+set(CMAKE_CXX_FLAGS "-std=c++11 -ggdb -Werror")
+set(CMAKE_CXX_FLAGS_DEBUG "-std=c++11 -ggdb -Werror")
+set(CMAKE_CXX_FLAGS_RELEASE "-std=c++11 -ggdb -Werror")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-std=c++11 -ggdb -Werror")
 
 enable_testing()
 
