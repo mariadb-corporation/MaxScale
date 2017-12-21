@@ -596,10 +596,10 @@ extern "C"
                 {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
                 {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
                 {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
-                {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
+                {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "true"},
                 {CN_FAILCOUNT, MXS_MODULE_PARAM_COUNT, "5"},
                 {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
-                {"allow_external_slaves", MXS_MODULE_PARAM_BOOL, "true"},
+                {"ignore_external_masters", MXS_MODULE_PARAM_BOOL, "false"},
                 {
                     "script",
                     MXS_MODULE_PARAM_PATH,
@@ -929,13 +929,13 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->detectStaleSlave = config_get_bool(params, "detect_stale_slave");
     handle->replicationHeartbeat = config_get_bool(params, "detect_replication_lag");
     handle->multimaster = config_get_bool(params, "multimaster");
+    handle->ignore_external_masters = config_get_bool(params, "ignore_external_masters");
     handle->detect_standalone_master = config_get_bool(params, "detect_standalone_master");
     handle->failcount = config_get_integer(params, CN_FAILCOUNT);
     handle->allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
     handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-    handle->allow_external_slaves = config_get_bool(params, "allow_external_slaves");
     handle->auto_failover = config_get_bool(params, CN_AUTO_FAILOVER);
     handle->failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
     handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
@@ -1465,14 +1465,8 @@ static MXS_MONITORED_SERVER *build_mysql51_replication_tree(MXS_MONITOR *mon)
             (database->server->master_id <= 0 ||
              database->server->master_id != handle->master->server->node_id))
         {
-            if (handle->allow_external_slaves)
-            {
-                monitor_set_pending_status(database, SERVER_SLAVE);
-            }
-            else
-            {
-                monitor_clear_pending_status(database, SERVER_SLAVE);
-            }
+
+            monitor_set_pending_status(database, SERVER_SLAVE);
             monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
         }
         database = database->next;
@@ -2209,6 +2203,19 @@ monitorMain(void *arg)
         {
             // Clear slave and stale slave status bits from current master
             monitor_clear_pending_status(root_master, SERVER_SLAVE | SERVER_STALE_SLAVE);
+
+            /**
+             * Clear external slave status from master if configured to do so.
+             * This allows parts of a multi-tiered replication setup to be used
+             * in MaxScale.
+             */
+            if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(root_master->server) &&
+                SERVER_IS_MASTER(root_master->server) && handle->ignore_external_masters)
+            {
+                monitor_clear_pending_status(root_master,
+                                             SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                server_clear_status_nolock(root_master->server, SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+            }
         }
 
         /**
@@ -2742,14 +2749,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
                 {
                     if (current->master_id > 0)
                     {
-                        if (handle->allow_external_slaves)
-                        {
-                            monitor_set_pending_status(ptr, SERVER_SLAVE);
-                        }
-                        else
-                        {
-                            monitor_clear_pending_status(ptr, SERVER_SLAVE);
-                        }
+                        monitor_set_pending_status(ptr, SERVER_SLAVE);
                         monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXTERNAL_MASTER);
                     }
                 }
