@@ -85,6 +85,7 @@ if [ $res == 0 ] ; then
         ctest -VV -D Nightly ${test_set}
     fi
     cp core.* ${logs_publish_dir}
+    ${script_dir}/copy_logs.sh
     cd $dir
 else
   echo "Failed to create VMs, exiting"
