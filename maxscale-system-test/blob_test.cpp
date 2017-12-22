@@ -175,9 +175,9 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
         {
             if (data[y] != y)
             {
-                Test->add_result(1, "Data is wrong!\n");
+                Test->add_result(1, "expected %d, got %d", data[y], y);
+                break;
             }
-            //printf("y = %d \t%lu\tid=%d\tx=%d\n", y, data[y], r_id, r_x);
         }
         row++;
     }
