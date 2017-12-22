@@ -70,6 +70,15 @@ void service_destroy_instances(void);
 int service_launch_all(void);
 
 /**
+ * Perform thread-specific initialization
+ *
+ * Currently this function only pre-loads users for all threads.
+ *
+ * @return True on success, false on error (currently always returns true).
+ */
+bool service_thread_init();
+
+/**
  * Creating and adding new components to services
  */
 SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name,

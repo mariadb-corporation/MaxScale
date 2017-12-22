@@ -2773,3 +2773,17 @@ uint64_t service_get_version(const SERVICE *service, service_version_which_t whi
 
     return version;
 }
+
+bool service_thread_init()
+{
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE* service = allServices; service; service = service->next)
+    {
+        service_refresh_users(service);
+    }
+
+    spinlock_release(&service_spin);
+
+    return true;
+}
