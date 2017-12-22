@@ -1,3 +1,11 @@
+*.pem
+jansson
+jansson-prefix
+LOGS
+mdbci/*network_config_export
+mdbci/repo.d
+mdbci/team_keys
+
 CMakeCache.txt
 CTestTestfile.cmake
 DartConfiguration.tcl
@@ -69,6 +77,7 @@ change_master_during_session
 change_user
 check_backend
 cmake_install.cmake
+compound_statement
 config_test
 connect_to_nonexisting_db
 connection_limit
@@ -105,7 +114,6 @@ max_connections
 maxscale_process_user
 mm
 mm_mysqlmon
-mysqlmon_failover_bad_master
 mysqlmon_failover_no_slaves
 mysqlmon_failover_manual
 mysqlmon_failover_manual2_4
@@ -114,6 +122,7 @@ mysqlmon_failover_manual2_2
 mysqlmon_failover_rejoin_old_slave
 mysqlmon_failover_rolling_master
 mysqlmon_failover_rolling_restart_slaves
+mysqlmon_switchover_bad_master
 mxs1045
 mxs1071_maxrows
 mxs1110_16mb
@@ -190,6 +199,7 @@ rwsplit_readonly
 rwsplit_readonly_stress
 schemarouter_duplicate_db
 script
+sequence
 server_weight
 ses_bigmem
 session_limits
