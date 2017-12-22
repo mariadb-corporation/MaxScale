@@ -1,5 +1,0 @@
-add_library(mysqlmon SHARED mysql_mon.cc)
-target_link_libraries(mysqlmon maxscale-common)
-add_dependencies(mysqlmon pcre2)
-set_target_properties(mysqlmon PROPERTIES VERSION "1.4.0")
-install_module(mysqlmon core)
