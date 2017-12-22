@@ -783,7 +783,7 @@ flags; the _set server_ and _clear server_ commands.
 |slave      |The server is a replication slave or is considered as a read only database                 |
 |synced     |The server is a fully fledged member of a Galera cluster                                   |
 |maintenance|The server is in maintenance mode. It won't be used by services or monitored by monitors   |
-|stale      |The server is a [stale master server](../Monitors/MySQL-Monitor.md)                        |
+|stale      |The server is a [stale master server](../Monitors/MariaDB-Monitor.md)                      |
 
 All status flags, with the exception of the maintenance flag, will be set by the
 monitors that are monitoring the server. If manual control is required the

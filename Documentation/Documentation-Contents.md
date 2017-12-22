@@ -104,7 +104,7 @@ Module specific documentation.
  - [Aurora Monitor](Monitors/Aurora-Monitor.md)
  - [Galera Monitor](Monitors/Galera-Monitor.md)
  - [Multi-Master Monitor](Monitors/MM-Monitor.md)
- - [MySQL Monitor](Monitors/MySQL-Monitor.md)
+ - [MariaDB Monitor](Monitors/MariaDB-Monitor.md)
  - [MySQL Cluster Monitor](Monitors/NDB-Cluster-Monitor.md)
 
 ## Protocols

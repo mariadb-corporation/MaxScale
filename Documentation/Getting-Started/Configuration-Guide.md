@@ -1448,7 +1448,7 @@ The use of monitors is highly recommended but it is also possible to run MariaDB
 MaxScale without a monitor module. In this case an external monitoring system
 which sets the status of each server via MaxAdmin is needed.
 
-* [Mysql Monitor](../Monitors/MySQL-Monitor.md)
+* [MariaDB Monitor](../Monitors/MariaDB-Monitor.md)
 * [Galera Monitor](../Monitors/Galera-Monitor.md)
 * [NDBCluster Monitor](../Monitors/NDB-Cluster-Monitor.md)
 * [Multi-Master Monitor](../Monitors/MM-Monitor.md)

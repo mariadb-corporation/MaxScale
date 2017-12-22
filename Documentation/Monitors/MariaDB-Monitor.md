@@ -1,24 +1,33 @@
-# MySQL Monitor
+# MariaDB Monitor
+
+Up until MariaDB MaxScale 2.2.0, this monitor was called _MySQL Monitor_.
 
 ## Overview
 
-The MySQL Monitor is a monitoring module for MaxScale that monitors a Master-Slave replication cluster. It assigns master and slave roles inside MaxScale according to the actual replication tree in the cluster.
+The MariaDB Monitor is a monitoring module for MaxScale that monitors a Master-Slave
+replication cluster. It assigns master and slave roles inside MaxScale according to
+the actual replication tree in the cluster.
 
 ## Configuration
 
-A minimal configuration for a  monitor requires a set of servers for monitoring and a username and a password to connect to these servers.
+A minimal configuration for a  monitor requires a set of servers for monitoring
+and a username and a password to connect to these servers.
 
 ```
-[MySQL Monitor]
+[MyMonitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=server1,server2,server3
 user=myuser
 passwd=mypwd
 
 ```
+Note that from MaxScale 2.2.1 onwards, the module name is `mariadbmon`; up until
+MaxScale 2.2.0 it was `mysqlmon`. The name `mysqlmon` has been deprecated but can
+still be used, although it will cause a warning to be logged.
 
-The user requires the REPLICATION CLIENT privilege to successfully monitor the state of the servers.
+The user requires the REPLICATION CLIENT privilege to successfully monitor the
+state of the servers.
 
 ```
 MariaDB [(none)]> grant replication client on *.* to 'maxscale'@'maxscalehost';
@@ -27,11 +36,12 @@ Query OK, 0 rows affected (0.00 sec)
 
 ## Common Monitor Parameters
 
-For a list of optional parameters that all monitors support, read the [Monitor Common](Monitor-Common.md) document.
+For a list of optional parameters that all monitors support, read the
+[Monitor Common](Monitor-Common.md) document.
 
-## MySQL Monitor optional parameters
+## MariaDB Monitor optional parameters
 
-These are optional parameters specific to the MySQL Monitor.
+These are optional parameters specific to the MariaDB Monitor.
 
 ### `detect_replication_lag`
 
@@ -117,7 +127,7 @@ server receive the master status. To do this:
 - Manually disable `@@read_only` on the server which should be the master
 
 This functionality is similar to the [Multi-Master Monitor](MM-Monitor.md)
-functionality. The only difference is that the MySQL monitor will also detect
+functionality. The only difference is that the MariaDB monitor will also detect
 traditional Master-Slave topologies.
 
 ### `ignore_external_masters`
@@ -225,7 +235,7 @@ configures the failed servers as new slaves of the current master.
 
 ## Failover, switchover and auto-rejoin
 
-Starting with MaxScale 2.2.1, MySQL Monitor supports replication cluster
+Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
 modification. The operations implemented are: _failover_ (replacing a failed
 master), _switchover_ (swapping a slave with a running master) and _rejoin_
 (joining a standalone server to the cluster). The features and the parameters
@@ -237,8 +247,8 @@ user to designate the new master as well as the current master. Example commands
 are below:
 
 ```
-call command mysqlmon failover MySQL-Monitor
-call command mysqlmon switchover MySQL-Monitor SlaveServ3 MasterServ
+call command mysqlmon failover MyMonitor
+call command mysqlmon switchover MyMonitor SlaveServ3 MasterServ
 ```
 
 Failover can also activate automatically, if `auto_failover` is on. The
@@ -292,7 +302,9 @@ The monitor user must have the SUPER privilege for failover to work.
 Enable automatic joining of server to the cluster. This parameter expects a
 boolean value and the default value is false.
 
-When enabled, the monitor will attempt to direct standalone servers and servers replicating from a relay master to the main cluster master server, enforcing a 1-master-N-slaves configuration.
+When enabled, the monitor will attempt to direct standalone servers and servers
+replicating from a relay master to the main cluster master server, enforcing a
+1-master-N-slaves configuration.
 
 For example, consider the following event series.
 
@@ -300,7 +312,9 @@ For example, consider the following event series.
 2. Master goes down and a failover is performed, promoting Slave B
 3. Slave A comes back
 
-Slave A is still trying to replicate from the downed master, since it wasn't online during failover. If `auto_rejoin` is on, Slave A will quickly be redirected to Slave B, the current master.
+Slave A is still trying to replicate from the downed master, since it wasn't
+online during failover. If `auto_rejoin` is on, Slave A will quickly be
+redirected to Slave B, the current master.
 
 #### `replication_user` and `replication_password`
 
@@ -409,7 +423,7 @@ and `<current-master>` fields are left out.
 /v1/maxscale/mysqlmon/failover?Cluster1
 ```
 
-## Using the MySQL Monitor With Binlogrouter
+## Using the MariaDB Monitor With Binlogrouter
 
 Since MaxScale 2.2 it's possible to detect a replication setup
 which includes Binlog Server: the required action is to add the
@@ -436,7 +450,8 @@ echo $message|mail -s "The event was $event for server $server." admin@my.org
 
 ```
 
-Here is a monitor configuration that only triggers the script when a master or a slave server goes down.
+Here is a monitor configuration that only triggers the script when a master
+or a slave server goes down.
 
 ```
 [Database Monitor]

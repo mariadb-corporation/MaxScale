@@ -47,6 +47,28 @@ root@host:~# maxscale --user=root ...
 
 ### MySQL Monitor
 
+Renamed to [MariaDB Monitor](../Monitors/MariaDB-Monitor.md).
+
+Note that this affects the module name as well. Up until MaxScale 2.2.0
+a configuration section referring to this monitor would look like
+```
+[MyMonitor]
+type=monitor
+module=mysqlmon
+...
+```
+but from MaxScale 2.2.1 onwards it should look like
+```
+[MyMonitor]
+type=monitor
+module=mariadbmon
+...
+```
+The name `mysqlmon` has been deprecated but can still be used, although it will
+cause a warning to be logged.
+
+### MariaDB Monitor
+
 The default value of the configuration parameter `detect_standalone_master` has
 been changed from `false` to `true`.
 
@@ -69,15 +91,15 @@ behavior is advised.
 
 ## New Features
 
-### MySQL Monitor
+### MariaDB Monitor
 
-MySQL Monitor can now perform *failover* (replace a dead master), *switchover*
+MariaDB Monitor can now perform *failover* (replace a dead master), *switchover*
 (replace a running master) and *rejoin* (join a standalone node to the
 master-slave cluster). All of these features only work with a simple 1-master
 N-slaves cluster using Gtid replication. Failover and switchover can be
 activated through maxadmin or the REST-API. Failover and rejoin can be set to
 activate automatically. For more information, see the
-[MySQL Monitor documentation](../Monitors/MySQL-Monitor.md).
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md).
 
 ### REST API Relationship Endpoints
 
