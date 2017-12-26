@@ -53,7 +53,7 @@ bool LocalClient::queue_query(GWBUF* buffer)
 {
     GWBUF* my_buf = NULL;
 
-    if (m_state != VC_ERROR && (my_buf = gwbuf_clone(buffer)))
+    if (m_state != VC_ERROR && (my_buf = gwbuf_deep_clone(buffer)))
     {
         m_queue.push_back(my_buf);
 
