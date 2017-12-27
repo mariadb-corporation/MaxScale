@@ -1090,6 +1090,8 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
                                        DCB *master_dcb, DCB *curr_master_dcb)
 {
+    ss_dassert(!master_dcb || master_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    ss_dassert(!curr_master_dcb || curr_master_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     char errmsg[MAX_SERVER_NAME_LEN * 2 + 100]; // Extra space for error message
 
     if (!found)
@@ -1100,6 +1102,7 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
     {
         /** We found a master but it's not the same connection */
         ss_dassert(master_dcb != curr_master_dcb);
+        ss_dassert(master_dcb->server && curr_master_dcb->server);
         if (master_dcb->server != curr_master_dcb->server)
         {
             sprintf(errmsg, "Master server changed from '%s' to '%s'",
