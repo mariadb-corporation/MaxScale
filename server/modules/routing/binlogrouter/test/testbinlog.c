@@ -845,5 +845,6 @@ int main(int argc, char **argv)
     mxs_log_finish();
 
     MXS_FREE(inst);
+    MXS_FREE(roptions);
     return 0;
 }

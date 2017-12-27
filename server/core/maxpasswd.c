@@ -33,6 +33,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/random_jkiss.h>
+#include <maxscale/alloc.h>
 
 #include "internal/secrets.h"
 
@@ -183,6 +184,7 @@ int main(int argc, char **argv)
     if (enc)
     {
         printf("%s\n", enc);
+        MXS_FREE(enc);
     }
     else
     {

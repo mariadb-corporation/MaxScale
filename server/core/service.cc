@@ -105,11 +105,12 @@ SERVICE* service_alloc(const char *name, const char *router)
     SERVICE *service = (SERVICE *)MXS_CALLOC(1, sizeof(*service));
     SERVICE_REFRESH_RATE* rate_limits = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
                                                                          sizeof(*rate_limits));
-    if (!my_name || !my_router || !service)
+    if (!my_name || !my_router || !service || !rate_limits)
     {
         MXS_FREE(my_name);
         MXS_FREE(my_router);
         MXS_FREE(service);
+        MXS_FREE(rate_limits);
         return NULL;
     }
 
@@ -131,6 +132,7 @@ SERVICE* service_alloc(const char *name, const char *router)
         MXS_FREE(my_name);
         MXS_FREE(my_router);
         MXS_FREE(service);
+        MXS_FREE(rate_limits);
         return NULL;
     }
 
