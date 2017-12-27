@@ -1023,7 +1023,10 @@ static void update_field_infos(QC_SQLITE_INFO* info,
             {
                 if (zToken[1] == '@')
                 {
-                    if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
+                    // TODO: This should actually be "... && (info->operation == QUERY_OP_SET)"
+                    // TODO: but there is no QUERY_OP_SET at the moment.
+                    if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT) &&
+                        (info->operation != QUERY_OP_SELECT))
                     {
                         info->type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
                     }
