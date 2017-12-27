@@ -360,31 +360,12 @@ bool monfn(const MODULECMD_ARG *arg, json_t** output)
     return true;
 }
 
-int test_domain_matching()
+int call_module(const MODULECMD* cmd, const char* ns)
 {
-    const char *ns = "mysqlmon";
-    const char *id = "test_domain_matching";
-
-    modulecmd_arg_type_t args[] =
-    {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ""}
-    };
-
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, monfn, 1, args, ""),
-         "Registering a command should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
-
-    const MODULECMD *cmd = modulecmd_find_command(ns, id);
-    TEST(cmd, "The registered command should be found");
-
-    /** Create a monitor */
-    char *libdir = MXS_STRDUP_A("../../modules/monitor/mysqlmon/");
-    set_libdir(libdir);
-    monitor_alloc((char*)ns, (char*)"mysqlmon");
-
     const void* params[] = {ns};
 
     MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, 1, params);
+
     TEST(arg, "Parsing arguments should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
@@ -392,6 +373,55 @@ int test_domain_matching()
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
     modulecmd_arg_free(arg);
+
+    return 0;
+}
+
+/**
+ * Load a module from ../../modules/monitor/mariadbmon and invoke a command.
+ *
+ * @param actual_module   The actual name of the module; the name of the module
+ *                        that exists as a physcal file, i.e. mariadbmon.
+ * @param loaded_module   The name of the module as referred to in the configuration
+ *                        file, i.e. mysqlmon or mariadbmon.
+ * @id                    The id of the command; unique for each invocation.
+ *
+ * @return 0 if successful, 1 otherwise.
+ */
+int test_domain_matching(const char* actual_module,
+                         const char* loaded_module,
+                         const char* id)
+{
+    const char* name = "My-Module";
+
+    modulecmd_arg_type_t args[] =
+    {
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ""}
+    };
+
+    TEST(modulecmd_register_command(actual_module, id, MODULECMD_TYPE_ACTIVE, monfn, 1, args, ""),
+         "Registering a command should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+
+    /** Create a monitor */
+    char *libdir = MXS_STRDUP_A("../../modules/monitor/mariadbmon/");
+    set_libdir(libdir);
+    monitor_alloc(name, actual_module);
+
+    const MODULECMD *cmd;
+
+    // First invoke using the actual module name.
+    cmd = modulecmd_find_command(actual_module, id);
+    TEST(cmd, "The registered command should be found");
+
+    TEST(call_module(cmd, name) == 0, "Invoking command should succeed");
+
+    // Then invoke using the name used when loading.
+    cmd = modulecmd_find_command(loaded_module, id);
+    TEST(cmd, "The registered command should be found");
+
+    TEST(call_module(cmd, name) == 0, "Invoking command should succeed");
+
     return 0;
 }
 
@@ -439,7 +469,8 @@ int main(int argc, char **argv)
     rc += test_module_errors();
     rc += test_map();
     rc += test_pointers();
-    rc += test_domain_matching();
+    rc += test_domain_matching("mariadbmon", "mariadbmon", "test_domain_matching1");
+    rc += test_domain_matching("mariadbmon", "mysqlmon",   "test_domain_matching2");
     rc += test_output();
 
     return rc;
