@@ -853,7 +853,10 @@ public:
                 {
                     if (zToken[1] == '@')
                     {
-                        if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
+                        // TODO: This should actually be "... && (m_operation == QUERY_OP_SET)"
+                        // TODO: but there is no QUERY_OP_SET at the moment.
+                        if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT) &&
+                            (m_operation != QUERY_OP_SELECT))
                         {
                             m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
                         }
