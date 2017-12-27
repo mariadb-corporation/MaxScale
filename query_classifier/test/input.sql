@@ -15,3 +15,4 @@ use X;
 select last_insert_id();
 select @@last_insert_id;
 select @@identity;
+select if(@@hostname='box02','prod_mariadb02','n');
