@@ -183,6 +183,8 @@ int main(int argc, char* argv[])
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
+            set_libdir(strdup("../../../query_classifier/qc_sqlite"));
+
             // We have to setup something in order for the regexes to be compiled.
             if (qc_setup("qc_sqlite", NULL) && qc_process_init(QC_INIT_BOTH))
             {
