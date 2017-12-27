@@ -66,37 +66,6 @@ static NAME_MAPPING name_mappings[] =
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
 
-static const char* get_effective_name(const char* name)
-{
-    const char* effective_name = NULL;
-    size_t i = 0;
-
-    while (!effective_name && (i < N_NAME_MAPPINGS))
-    {
-        NAME_MAPPING& nm = name_mappings[i];
-
-        if (strcasecmp(name, nm.from) == 0)
-        {
-            if (!nm.warned)
-            {
-                MXS_WARNING("%s module '%s' has been deprecated, use '%s' instead.",
-                            nm.type, nm.from, nm.to);
-                nm.warned = true;
-            }
-            effective_name = nm.to;
-        }
-
-        ++i;
-    }
-
-    if (!effective_name)
-    {
-        effective_name = name;
-    }
-
-    return effective_name;
-}
-
 static LOADED_MODULE *registered = NULL;
 
 static LOADED_MODULE *find_module(const char *module);
@@ -166,7 +135,7 @@ void *load_module(const char *module, const char *type)
     ss_dassert(module && type);
     LOADED_MODULE *mod;
 
-    module = get_effective_name(module);
+    module = mxs_module_get_effective_name(module);
 
     if ((mod = find_module(module)) == NULL)
     {
@@ -222,7 +191,7 @@ void *load_module(const char *module, const char *type)
 
 void unload_module(const char *module)
 {
-    module = get_effective_name(module);
+    module = mxs_module_get_effective_name(module);
 
     LOADED_MODULE *mod = find_module(module);
 
@@ -616,7 +585,7 @@ RESULTSET *moduleGetList()
 
 const MXS_MODULE *get_module(const char *name, const char *type)
 {
-    name = get_effective_name(name);
+    name = mxs_module_get_effective_name(name);
 
     LOADED_MODULE *mod = find_module(name);
 
@@ -668,4 +637,35 @@ MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator)
     }
 
     return module;
+}
+
+const char* mxs_module_get_effective_name(const char* name)
+{
+    const char* effective_name = NULL;
+    size_t i = 0;
+
+    while (!effective_name && (i < N_NAME_MAPPINGS))
+    {
+        NAME_MAPPING& nm = name_mappings[i];
+
+        if (strcasecmp(name, nm.from) == 0)
+        {
+            if (!nm.warned)
+            {
+                MXS_WARNING("%s module '%s' has been deprecated, use '%s' instead.",
+                            nm.type, nm.from, nm.to);
+                nm.warned = true;
+            }
+            effective_name = nm.to;
+        }
+
+        ++i;
+    }
+
+    if (!effective_name)
+    {
+        effective_name = name;
+    }
+
+    return effective_name;
 }

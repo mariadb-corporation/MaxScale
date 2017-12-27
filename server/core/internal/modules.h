@@ -151,4 +151,17 @@ json_t* module_to_json(const MXS_MODULE* module, const char* host);
  */
 json_t* module_list_to_json(const char* host);
 
+/**
+ * @brief Return effective module name.
+ *
+ * The effective module name is the actual name of a module. In case
+ * a module has been renamed (and the old name deprecated), the effective
+ * name of a module may be different from the used one.
+ *
+ * @param name  The name of a module.
+ *
+ * @return The effective name (may be the same).
+ */
+const char* mxs_module_get_effective_name(const char* name);
+
 MXS_END_DECLS
