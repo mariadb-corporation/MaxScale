@@ -13,6 +13,8 @@
 
 #include <maxscale/cppdefs.hh>
 #include <iostream>
+#include <maxscale/alloc.h>
+#include <maxscale/paths.h>
 #include "teststorage.hh"
 #include "testerrawstorage.hh"
 
@@ -46,7 +48,13 @@ private:
 
 int main(int argc, char* argv[])
 {
-    TestRawStorage test(&cout);
+    char* libdir = MXS_STRDUP("../../../../../query_classifier/qc_sqlite/");
+    set_libdir(libdir);
 
-    return test.run(argc, argv);
+    TestRawStorage test(&cout);
+    int rv = test.run(argc, argv);
+
+    // TODO: Remove this once globally allocated memory is freed
+    MXS_FREE(libdir);
+    return rv;
 }

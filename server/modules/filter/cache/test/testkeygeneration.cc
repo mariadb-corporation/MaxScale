@@ -15,6 +15,8 @@
 #include <iostream>
 #include <fstream>
 #include <tr1/unordered_map>
+#include <maxscale/alloc.h>
+#include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/log_manager.h>
 #include "storagefactory.hh"
@@ -126,11 +128,16 @@ int main(int argc, char* argv[])
 
     if ((argc == 2) || (argc == 3))
     {
+        char* libdir = MXS_STRDUP("../../../../../query_classifier/qc_sqlite/");
+        set_libdir(libdir);
+
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
             if (qc_setup(NULL, NULL) && qc_process_init(QC_INIT_BOTH))
             {
                 const char* zModule = argv[1];
+                libdir = MXS_STRDUP("../storage/storage_inmemory/");
+                set_libdir(libdir);
 
                 StorageFactory* pFactory = StorageFactory::Open(zModule);
 
@@ -172,6 +179,9 @@ int main(int argc, char* argv[])
         {
             cerr << "error: Could not initialize log." << endl;
         }
+
+        // TODO: Remove this once globally allocated memory is freed
+        MXS_FREE(libdir);
     }
     else
     {
