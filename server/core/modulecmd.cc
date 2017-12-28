@@ -22,6 +22,7 @@
 #include <maxscale/spinlock.h>
 
 #include "internal/filter.h"
+#include "internal/modules.h"
 #include "internal/monitor.h"
 
 /** Size of the error buffer */
@@ -454,12 +455,15 @@ bool modulecmd_register_command(const char *domain, const char *identifier,
 const MODULECMD* modulecmd_find_command(const char *domain, const char *identifier)
 {
     reset_error();
+
+    const char* effective_domain = mxs_module_get_effective_name(domain);
+
     MODULECMD *rval = NULL;
     spinlock_acquire(&modulecmd_lock);
 
     for (MODULECMD_DOMAIN *dm = modulecmd_domains; dm; dm = dm->next)
     {
-        if (strcmp(domain, dm->domain) == 0)
+        if (strcmp(effective_domain, dm->domain) == 0)
         {
             for (MODULECMD *cmd = dm->commands; cmd; cmd = cmd->next)
             {
