@@ -109,7 +109,7 @@ static void dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
 static int gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing);
 static int gw_write_SSL(DCB *dcb, GWBUF *writeq, bool *stop_writing);
 static int dcb_log_errors_SSL (DCB *dcb, int ret);
-static int dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn);
+static int dcb_accept_one_connection(DCB *dcb, struct sockaddr *client_conn);
 static int dcb_listen_create_socket_inet(const char *host, uint16_t port);
 static int dcb_listen_create_socket_unix(const char *path);
 static int dcb_set_socket_option(int sockfd, int level, int optname, void *optval, socklen_t optlen);
@@ -834,7 +834,7 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
  * @return          -1 if an error found, 0 if no error found
  */
 static int
-dcb_log_errors_SSL (DCB *dcb, int ret)
+dcb_log_errors_SSL(DCB *dcb, int ret)
 {
     char errbuf[MXS_STRERROR_BUFLEN];
     unsigned long ssl_errno;
@@ -2346,18 +2346,18 @@ int dcb_connect_SSL(DCB* dcb)
  * @return DCB - The new client DCB for the new connection, or NULL if failed
  */
 DCB *
-dcb_accept(DCB *listener)
+dcb_accept(DCB *dcb)
 {
     DCB *client_dcb = NULL;
-    MXS_PROTOCOL *protocol_funcs = &listener->func;
+    MXS_PROTOCOL *protocol_funcs = &dcb->func;
     int c_sock;
     int sendbuf;
     struct sockaddr_storage client_conn;
     socklen_t optlen = sizeof(sendbuf);
 
-    if ((c_sock = dcb_accept_one_connection(listener, (struct sockaddr *)&client_conn)) >= 0)
+    if ((c_sock = dcb_accept_one_connection(dcb, (struct sockaddr *)&client_conn)) >= 0)
     {
-        listener->stats.n_accepts++;
+        dcb->stats.n_accepts++;
 
         /* set nonblocking  */
         sendbuf = MXS_CLIENT_SO_SNDBUF;
@@ -2375,7 +2375,7 @@ dcb_accept(DCB *listener)
         }
         setnonblocking(c_sock);
 
-        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, listener->listener);
+        client_dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, dcb->listener);
 
         if (client_dcb == NULL)
         {
@@ -2387,7 +2387,7 @@ dcb_accept(DCB *listener)
             const char *authenticator_name = "NullAuthDeny";
             MXS_AUTHENTICATOR *authfuncs;
 
-            client_dcb->service = listener->session->service;
+            client_dcb->service = dcb->session->service;
             client_dcb->session = session_set_dummy(client_dcb);
             client_dcb->fd = c_sock;
 
@@ -2421,9 +2421,9 @@ dcb_accept(DCB *listener)
                 }
             }
             memcpy(&client_dcb->func, protocol_funcs, sizeof(MXS_PROTOCOL));
-            if (listener->listener->authenticator)
+            if (dcb->listener->authenticator)
             {
-                authenticator_name = listener->listener->authenticator;
+                authenticator_name = dcb->listener->authenticator;
             }
             else if (client_dcb->func.auth_default != NULL)
             {
@@ -2480,7 +2480,7 @@ dcb_accept(DCB *listener)
  * @return -1 for failure, or a file descriptor for the new connection
  */
 static int
-dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
+dcb_accept_one_connection(DCB *dcb, struct sockaddr *client_conn)
 {
     int c_sock;
 
@@ -2491,7 +2491,7 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
         int eno = 0;
 
         /* new connection from client */
-        c_sock = accept(listener->fd,
+        c_sock = accept(dcb->fd,
                         client_conn,
                         &client_len);
         eno = errno;
@@ -2558,12 +2558,12 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
  * list.  The protocol name does not affect the logic, but is used in
  * log messages.
  *
- * @param listener Listener DCB that is being created
+ * @param dcb Listener DCB that is being created
  * @param config Configuration for port to listen on
  * @param protocol_name Name of protocol that is listening
  * @return 0 if new listener created successfully, otherwise -1
  */
-int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
+int dcb_listen(DCB *dcb, const char *config, const char *protocol_name)
 {
     char host[strlen(config) + 1];
     strcpy(host, config);
@@ -2584,7 +2584,7 @@ int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
 
         if (listener_socket != -1)
         {
-            listener->path = MXS_STRDUP_A(host);
+            dcb->path = MXS_STRDUP_A(host);
         }
     }
     else if (port > 0)
@@ -2630,10 +2630,10 @@ int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
     MXS_NOTICE("Listening for connections at [%s]:%u with protocol %s", host, port, protocol_name);
 
     // assign listener_socket to dcb
-    listener->fd = listener_socket;
+    dcb->fd = listener_socket;
 
     // add listening socket to poll structure
-    if (poll_add_dcb(listener) != 0)
+    if (poll_add_dcb(dcb) != 0)
     {
         MXS_ERROR("MaxScale encountered system limit while "
                   "attempting to register on an epoll instance.");
@@ -2906,7 +2906,9 @@ public:
     {
         int thread_id = worker.id();
 
-        for (DCB *dcb = this_unit.all_dcbs[thread_id]; dcb && atomic_load_int32(&m_more); dcb = dcb->thread.next)
+        for (DCB *dcb = this_unit.all_dcbs[thread_id];
+             dcb && atomic_load_int32(&m_more);
+             dcb = dcb->thread.next)
         {
             if (!m_func(dcb, m_data))
             {
