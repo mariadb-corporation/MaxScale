@@ -182,6 +182,7 @@ typedef struct dcb
         struct dcb *tail; /**< Last DCB in owning thread's list */
     } thread;
     uint32_t        n_close;         /** How many times dcb_close has been called. */
+    char            *path;           /** If a Unix socket, the path it was bound to. */
     skygw_chk_t     dcb_chk_tail;
 } DCB;
 

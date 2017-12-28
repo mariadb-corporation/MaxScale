@@ -234,6 +234,7 @@ dcb_final_free(DCB *dcb)
         if (SESSION_STATE_DUMMY != local_session->state)
         {
             bool is_client_dcb = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role ||
+                                  DCB_ROLE_SERVICE_LISTENER == dcb->dcb_role ||
                                   DCB_ROLE_INTERNAL == dcb->dcb_role);
 
             session_put_ref(local_session);
@@ -329,6 +330,11 @@ dcb_free_all_memory(DCB *dcb)
     if (dcb->ssl)
     {
         SSL_free(dcb->ssl);
+    }
+
+    if (dcb->path)
+    {
+        MXS_FREE(dcb->path);
     }
 
     // Ensure that id is immediately the wrong one.
@@ -1100,10 +1106,17 @@ void dcb_close(DCB *dcb)
     {
         dcb->n_close = 1;
 
-        Worker* worker = Worker::get(dcb->poll.thread.id);
-        ss_dassert(worker);
+        if (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER)
+        {
+            dcb_final_close(dcb);
+        }
+        else
+        {
+            Worker* worker = Worker::get(dcb->poll.thread.id);
+            ss_dassert(worker);
 
-        worker->register_zombie(dcb);
+            worker->register_zombie(dcb);
+        }
     }
     else
     {
@@ -1219,6 +1232,14 @@ void dcb_final_close(DCB* dcb)
                 dcb->fd = DCBFD_CLOSED;
 
                 MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
+            }
+
+            if (dcb->path)
+            {
+                if (unlink(dcb->path) != 0)
+                {
+                    MXS_ERROR("Could not unlink %s: %s", dcb->path, mxs_strerror(errno));
+                }
             }
         }
 
@@ -2560,6 +2581,11 @@ int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
     if (strchr(host, '/'))
     {
         listener_socket = dcb_listen_create_socket_unix(host);
+
+        if (listener_socket != -1)
+        {
+            listener->path = MXS_STRDUP_A(host);
+        }
     }
     else if (port > 0)
     {
@@ -2776,41 +2802,44 @@ void dcb_add_to_list(DCB *dcb)
  */
 static void dcb_remove_from_list(DCB *dcb)
 {
-    if (dcb == this_unit.all_dcbs[dcb->poll.thread.id])
+    if (dcb->dcb_role != DCB_ROLE_SERVICE_LISTENER)
     {
-        DCB *tail = this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail;
-        this_unit.all_dcbs[dcb->poll.thread.id] = this_unit.all_dcbs[dcb->poll.thread.id]->thread.next;
-
-        if (this_unit.all_dcbs[dcb->poll.thread.id])
+        if (dcb == this_unit.all_dcbs[dcb->poll.thread.id])
         {
-            this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail = tail;
-        }
-    }
-    else
-    {
-        DCB *current = this_unit.all_dcbs[dcb->poll.thread.id]->thread.next;
-        DCB *prev = this_unit.all_dcbs[dcb->poll.thread.id];
+            DCB *tail = this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail;
+            this_unit.all_dcbs[dcb->poll.thread.id] = this_unit.all_dcbs[dcb->poll.thread.id]->thread.next;
 
-        while (current)
-        {
-            if (current == dcb)
+            if (this_unit.all_dcbs[dcb->poll.thread.id])
             {
-                if (current == this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail)
-                {
-                    this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail = prev;
-                }
-                prev->thread.next = current->thread.next;
-                break;
+                this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail = tail;
             }
-            prev = current;
-            current = current->thread.next;
         }
-    }
+        else
+        {
+            DCB *current = this_unit.all_dcbs[dcb->poll.thread.id]->thread.next;
+            DCB *prev = this_unit.all_dcbs[dcb->poll.thread.id];
 
-    /** Reset the next and tail pointers so that if this DCB is added to the list
-     * again, it will be in a clean state. */
-    dcb->thread.next = NULL;
-    dcb->thread.tail = NULL;
+            while (current)
+            {
+                if (current == dcb)
+                {
+                    if (current == this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail)
+                    {
+                        this_unit.all_dcbs[dcb->poll.thread.id]->thread.tail = prev;
+                    }
+                    prev->thread.next = current->thread.next;
+                    break;
+                }
+                prev = current;
+                current = current->thread.next;
+            }
+        }
+
+        /** Reset the next and tail pointers so that if this DCB is added to the list
+         * again, it will be in a clean state. */
+        dcb->thread.next = NULL;
+        dcb->thread.tail = NULL;
+    }
 }
 
 /**

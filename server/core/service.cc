@@ -1843,6 +1843,57 @@ void service_shutdown()
     spinlock_release(&service_spin);
 }
 
+/**
+ * Destroy a listener
+ *
+ * @param sl  The listener to destroy.
+ *
+ * @return The next listener or NULL if there is not one.
+ */
+static SERV_LISTENER* service_destroy_listener(SERV_LISTENER* sl)
+{
+    SERV_LISTENER* next = sl->next;
+
+    dcb_close(sl->listener);
+
+    // TODO: What else should be closed and freed here?
+
+    return next;
+}
+
+/**
+ * Destroy one service instance
+ *
+ * @param svc  The service to destroy.
+ */
+static void service_destroy_instance(SERVICE* svc)
+{
+    SERV_LISTENER* sl = svc->ports;
+
+    while (sl)
+    {
+        sl = service_destroy_listener(sl);
+    }
+
+    /* Call destroyInstance hook for routers */
+    if (svc->router->destroyInstance && svc->router_instance)
+    {
+        svc->router->destroyInstance(svc->router_instance);
+    }
+    if (svc->n_filters)
+    {
+        MXS_FILTER_DEF **filters = svc->filters;
+        for (int i = 0; i < svc->n_filters; i++)
+        {
+            if (filters[i]->obj->destroyInstance && filters[i]->filter)
+            {
+                /* Call destroyInstance hook for filters */
+                filters[i]->obj->destroyInstance(filters[i]->filter);
+            }
+        }
+    }
+}
+
 void service_destroy_instances(void)
 {
     spinlock_acquire(&service_spin);
@@ -1850,23 +1901,8 @@ void service_destroy_instances(void)
     while (svc != NULL)
     {
         ss_dassert(svc->svc_do_shutdown);
-        /* Call destroyInstance hook for routers */
-        if (svc->router->destroyInstance && svc->router_instance)
-        {
-            svc->router->destroyInstance(svc->router_instance);
-        }
-        if (svc->n_filters)
-        {
-            MXS_FILTER_DEF **filters = svc->filters;
-            for (int i = 0; i < svc->n_filters; i++)
-            {
-                if (filters[i]->obj->destroyInstance && filters[i]->filter)
-                {
-                    /* Call destroyInstance hook for filters */
-                    filters[i]->obj->destroyInstance(filters[i]->filter);
-                }
-            }
-        }
+        service_destroy_instance(svc);
+
         svc = svc->next;
     }
     spinlock_release(&service_spin);
