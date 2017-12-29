@@ -51,24 +51,14 @@ int main(int argc, char** argv)
         pthread_create(&a, NULL, query_thr, &test);
     }
 
-    for (int i = 0; i < 15; i++)
+    for (int i = 0; i < 5; i++)
     {
         for (int x = 1; x <= 4; x++)
         {
             test.ssh_maxscale(true, "maxadmin set server server%d maintenance", x);
             sleep(1);
             test.ssh_maxscale(true, "maxadmin clear server server%d maintenance", x);
-            sleep(2);
-
-            test.ssh_maxscale(true, "maxadmin remove server server%d \"RW Split Router\" \"Galera Monitor\"", x);
             sleep(1);
-            test.ssh_maxscale(true, "maxadmin add server server%d \"RW Split Router\" \"Galera Monitor\"", x);
-            sleep(2);
-
-            test.galera->block_node(x - 1);
-            sleep(5);
-            test.galera->unblock_node(x - 1);
-            sleep(5);
         }
     }
 
