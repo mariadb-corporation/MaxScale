@@ -16,7 +16,7 @@ void* query_thr(void* data)
 
     while (running)
     {
-        MYSQL* mysql = test->open_rwsplit_connection();
+        MYSQL* mysql = test->maxscales->open_rwsplit_connection();
 
         while (running)
         {
@@ -38,10 +38,10 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "DROP TABLE IF EXISTS test.mxs1585");
-    test.try_query(test.conn_rwsplit, "CREATE TABLE test.mxs1585(id INT) ENGINE=MEMORY");
-    test.close_maxscale_connections();
+    test.maxscales->connect_maxscale();
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.mxs1585");
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.mxs1585(id INT) ENGINE=MEMORY");
+    test.maxscales->close_maxscale_connections();
 
     std::vector<pthread_t> threads;
     threads.resize(100);
@@ -55,14 +55,18 @@ int main(int argc, char** argv)
     {
         for (int x = 1; x <= 4; x++)
         {
-            test.ssh_maxscale(true, "maxadmin set server server%d maintenance", x);
+            test.maxscales->ssh_node_f(0, true, "maxadmin set server server%d maintenance", x);
             sleep(1);
-            test.ssh_maxscale(true, "maxadmin clear server server%d maintenance", x);
+            test.maxscales->ssh_node_f(0, true, "maxadmin clear server server%d maintenance", x);
             sleep(2);
 
-            test.ssh_maxscale(true, "maxadmin remove server server%d \"RW Split Router\" \"Galera Monitor\"", x);
+            test.maxscales->ssh_node_f(0, true,
+                                       "maxadmin remove server server%d "
+                                       "\"RW Split Router\" \"Galera Monitor\"", x);
             sleep(1);
-            test.ssh_maxscale(true, "maxadmin add server server%d \"RW Split Router\" \"Galera Monitor\"", x);
+            test.maxscales->ssh_node_f(0, true,
+                                       "maxadmin add server server%d "
+                                       "\"RW Split Router\" \"Galera Monitor\"", x);
             sleep(2);
 
             test.galera->block_node(x - 1);
@@ -79,8 +83,8 @@ int main(int argc, char** argv)
         pthread_join(a, NULL);
     }
 
-    test.connect_maxscale();
-    test.try_query(test.conn_rwsplit, "DROP TABLE test.mxs1585");
+    test.maxscales->connect_maxscale(0);
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.mxs1585");
     test.check_maxscale_alive();
 
     return test.global_result;
