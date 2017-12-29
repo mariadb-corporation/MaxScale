@@ -1157,7 +1157,8 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                              DCB **target_dcb)
 {
-    DCB *master_dcb = rses->rses_master_ref ? rses->rses_master_ref->bref_dcb : NULL;
+    DCB *master_dcb = rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref) ?
+        rses->rses_master_ref->bref_dcb : NULL;
     DCB *curr_master_dcb = NULL;
     bool succp = rwsplit_get_dcb(&curr_master_dcb, rses, BE_MASTER, NULL, MAX_RLAG_UNDEFINED);
 
