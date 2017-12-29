@@ -263,6 +263,9 @@ add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_4 my
 add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_3 mysqlmon_failover_manual2_3 LABELS mysqlmon REPL_BACKEND)
 add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_2 mysqlmon_failover_manual2_2 LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor switchover
+add_test_executable(mysqlmon_switchover.cpp mysqlmon_switchover mysqlmon_switchover LABELS mysqlmon REPL_BACKEND)
+
 # MySQL Monitor switchover with bad master
 add_test_executable(mysqlmon_switchover_bad_master.cpp mysqlmon_switchover_bad_master mysqlmon_switchover_bad_master LABELS mysqlmon REPL_BACKEND)
 
