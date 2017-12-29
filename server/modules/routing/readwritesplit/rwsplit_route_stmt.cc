@@ -989,6 +989,8 @@ SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
 static void log_master_routing_failure(RWSplitSession *rses, bool found,
                                        SRWBackend& old_master, SRWBackend& curr_master)
 {
+    ss_dassert(!old_master || old_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    ss_dassert(!curr_master || curr_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100]; // Extra space for error message
 
     if (!found)
@@ -999,6 +1001,8 @@ static void log_master_routing_failure(RWSplitSession *rses, bool found,
     {
         /** We found a master but it's not the same connection */
         ss_dassert(old_master != curr_master);
+        ss_dassert(old_master->dcb()->server && curr_master->dcb()->server);
+
         if (old_master != curr_master)
         {
             sprintf(errmsg, "Master server changed from '%s' to '%s'",

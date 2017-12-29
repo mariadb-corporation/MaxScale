@@ -553,6 +553,10 @@ add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS GALERA_BACKEND)
 # https://jira.mariadb.org/browse/MXS-1509
 add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS REPL_BACKEND)
 
+ # MXS-1585: Crash in MaxScale 2.1.12
+ # https://jira.mariadb.org/browse/MXS-1585
+add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
