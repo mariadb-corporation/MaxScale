@@ -15,7 +15,7 @@
  * @file mysql_mon.c - A MySQL replication cluster monitor
  */
 
-#define MXS_MODULE_NAME "mysqlmon"
+#define MXS_MODULE_NAME "mariadbmon"
 
 #include "../mysqlmon.h"
 #include <string>
