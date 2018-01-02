@@ -292,6 +292,12 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         return 0;
     }
 
+    // Add protocol and authenticator capabilities from the listener
+    const MXS_MODULE* proto_mod = get_module(port->protocol, MODULE_PROTOCOL);
+    const MXS_MODULE* auth_mod = get_module(authenticator_name, MODULE_AUTHENTICATOR);
+    ss_dassert(proto_mod && auth_mod);
+    service->capabilities |= proto_mod->module_capabilities | auth_mod->module_capabilities;
+
     memcpy(&port->listener->authfunc, authfuncs, sizeof(MXS_AUTHENTICATOR));
 
     /**

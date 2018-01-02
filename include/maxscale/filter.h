@@ -286,16 +286,15 @@ void dListFilters(DCB *);
  * Specifies capabilities specific for filters. Common capabilities
  * are defined by @c routing_capability_t.
  *
- * @see routing_capability_t
+ * @see enum routing_capability
  *
- * @note The values of the capabilities here *must* be between 0x000100000000
- *       and 0x800000000000, that is, bits 32 to 47.
+ * @note The values of the capabilities here *must* be between 0x80000000
+ *       and 0x01000000, that is, bits 24 to 31.
  */
 
-/*
 typedef enum filter_capability
 {
+    FCAP_TYPE_NONE = 0x0 // TODO: remove once filter capabilities are defined
 } filter_capability_t;
-*/
 
 MXS_END_DECLS

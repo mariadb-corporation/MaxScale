@@ -156,7 +156,7 @@ typedef struct service
     struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /**< If starting of the service should be retried later */
     bool log_auth_warnings;            /**< Log authentication failures and warnings */
-    uint64_t capabilities;             /**< The capabilities of the service. */
+    uint64_t capabilities;             /**< The capabilities of the service, @see enum routing_capability */
     int max_retry_interval;            /**< Maximum retry interval */
 } SERVICE;
 

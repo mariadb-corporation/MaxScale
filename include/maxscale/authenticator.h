@@ -25,6 +25,19 @@
 
 MXS_BEGIN_DECLS
 
+/**
+ * Specifies capabilities specific for authenticators.
+ *
+ * @see enum routing_capability
+ *
+ * @note The values of the capabilities here *must* be between 0x000100000000
+ *       and 0x008000000000, that is, bits 32 to 39.
+ */
+typedef enum authenticator_capability
+{
+    ACAP_TYPE_ASYNC = 0x000100000000/**< Supports asynchronous access */
+} authenticator_capability_t;
+
 /** Maximum number of authenticator options */
 #define AUTHENTICATOR_MAX_OPTIONS 256
 

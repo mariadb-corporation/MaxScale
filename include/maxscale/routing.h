@@ -24,6 +24,15 @@ MXS_BEGIN_DECLS
  * Routing capability type. Indicates what kind of input a router or
  * a filter accepts.
  *
+ *       The capability bit ranges are:
+ *           0-15:  general capability bits
+ *           16-23: router specific bits
+ *           24-31: filter specific bits
+ *           32-39: authenticator specific bits
+ *           40-47: protocol specific bits
+ *           48-55: monitor specific bits
+ *           56-63: reserved for future use
+ *
  * @note The values of the capabilities here *must* be between 0x0000
  *       and 0x8000, that is, bits 0 to 15.
  */

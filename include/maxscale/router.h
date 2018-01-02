@@ -224,10 +224,10 @@ typedef struct mxs_router_object
  * Specifies capabilities specific for routers. Common capabilities
  * are defined by @c routing_capability_t.
  *
- * @see routing_capability_t
+ * @see enum routing_capability
  *
  * @note The values of the capabilities here *must* be between 0x00010000
- *       and 0x80000000, that is, bits 16 to 31.
+ *       and 0x00800000, that is, bits 16 to 23.
  */
 typedef enum router_capability
 {
