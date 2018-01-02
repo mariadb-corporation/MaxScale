@@ -322,8 +322,8 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
         case MODULECMD_ARG_MONITOR:
             if ((arg->value.monitor = monitor_find((char*)value)))
             {
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
-                    strcmp(cmd->domain, arg->value.monitor->module_name) == 0)
+                const char* eff_name = mxs_module_get_effective_name(arg->value.monitor->module_name);
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcmp(cmd->domain, eff_name) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_MONITOR;
                     rval = true;
@@ -342,8 +342,8 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
         case MODULECMD_ARG_FILTER:
             if ((arg->value.filter = filter_def_find((char*)value)))
             {
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
-                    strcmp(cmd->domain, arg->value.filter->module) == 0)
+                const char* eff_name = mxs_module_get_effective_name(arg->value.filter->module);
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcmp(cmd->domain, eff_name) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_FILTER;
                     rval = true;
