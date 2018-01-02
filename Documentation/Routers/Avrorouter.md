@@ -179,6 +179,18 @@ Start or stop the binary log to Avro conversion. The first parameter is the name
 of the service to stop and the second parameter tells whether to start the
 conversion process or to stop it.
 
+### `avrorouter::purge SERVICE`
+
+This command will delete all files created by the avrorouter. This includes all
+.avsc schema files and .avro data files as well as the internal state tracking
+files. Use this to completely reset the conversion process.
+
+**Note:** Once the command has completed, MaxScale must be restarted to restart
+the conversion process. Issuing a `convert start` command **will not work**.
+
+**WARNING:** You will lose any and all converted data when this command is
+  executed.
+
 # Files Created by the Avrorouter
 
 The avrorouter creates two files in the location pointed by _avrodir_:

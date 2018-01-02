@@ -31,6 +31,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <glob.h>
+#include <ini.h>
+#include <sys/stat.h>
+#include <avro/errors.h>
 #include <maxscale/service.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
@@ -39,20 +43,13 @@
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
-#include <time.h>
-
 #include <maxscale/log_manager.h>
-
 #include <maxscale/protocol/mysql.h>
-#include <ini.h>
-#include <sys/stat.h>
-
-#include <maxscale/random_jkiss.h>
-#include <binlog_common.h>
-#include <avro/errors.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/paths.h>
+#include <maxscale/random_jkiss.h>
+#include <binlog_common.h>
 
 #ifndef BINLOG_NAMEFMT
 #define BINLOG_NAMEFMT      "%s.%06d"
@@ -120,6 +117,70 @@ bool avro_handle_convert(const MODULECMD_ARG *args)
     return rval;
 }
 
+static bool do_unlink(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    char filename[PATH_MAX + 1];
+    vsnprintf(filename, sizeof(filename), format, args);
+
+    va_end(args);
+
+    int rc = unlink(filename);
+    return rc == 0 || rc == ENOENT;
+}
+
+static bool do_unlink_with_pattern(const char* format, ...)
+{
+    bool rval = true;
+    va_list args;
+    va_start(args, format);
+
+    char filename[PATH_MAX + 1];
+    vsnprintf(filename, sizeof(filename), format, args);
+
+    va_end(args);
+
+    glob_t g;
+    int rc = glob(filename, 0, NULL, &g);
+
+    if (rc == 0)
+    {
+        for (size_t i = 0; i < g.gl_pathc; i++)
+        {
+            if (!do_unlink("%s", g.gl_pathv[i]))
+            {
+                rval = false;
+            }
+        }
+    }
+    else if (rc != GLOB_NOMATCH)
+    {
+        modulecmd_set_error("Failed to search '%s': %d, %s",
+                            filename, errno, mxs_strerror(errno));
+        rval = false;
+    }
+
+    globfree(&g);
+
+    return rval;
+}
+
+static bool avro_handle_purge(const MODULECMD_ARG *args)
+{
+    AVRO_INSTANCE* inst = (AVRO_INSTANCE*)args->argv[0].value.service->router_instance;
+
+    // First stop the conversion service
+    conversion_task_ctl(inst, false);
+
+    // Then delete the files
+    return do_unlink("%s/%s", inst->avrodir, AVRO_PROGRESS_FILE) && // State file
+           do_unlink("/%s/%s", inst->avrodir, avro_index_name) &&   // Index database
+           do_unlink_with_pattern("/%s/*.avro", inst->avrodir) &&   // .avro files
+           do_unlink_with_pattern("/%s/*.avsc", inst->avrodir);     // .avsc files
+}
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -133,12 +194,21 @@ MXS_MODULE* MXS_CREATE_MODULE()
     spinlock_init(&instlock);
     instances = NULL;
 
-    static modulecmd_arg_type_t args[] =
+    static modulecmd_arg_type_t args_convert[] =
     {
         { MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "The avrorouter service" },
         { MODULECMD_ARG_STRING, "Action, whether to 'start' or 'stop' the conversion process" }
     };
-    modulecmd_register_command(MXS_MODULE_NAME, "convert", avro_handle_convert, 2, args);
+    modulecmd_register_command(MXS_MODULE_NAME, "convert", avro_handle_convert, 2, args_convert);
+
+    static modulecmd_arg_type_t args_purge[] =
+    {
+        {
+            MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            "The avrorouter service to purge (NOTE: THIS REMOVES ALL CONVERTED FILES)"
+        }
+    };
+    modulecmd_register_command(MXS_MODULE_NAME, "purge", avro_handle_purge, 1, args_purge);
 
     static MXS_ROUTER_OBJECT MyObject =
     {
