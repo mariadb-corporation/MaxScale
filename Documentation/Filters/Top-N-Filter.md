@@ -44,7 +44,7 @@ The top filter has one mandatory parameter, `filebase`, and a number of optional
 
 ### Filebase
 
-The basename of the output file created for each session. A session index is added to the filename for each file written. This is a mandatory parameter.
+The basename of the output file created for each session. The session ID is added to the filename for each file written. This is a mandatory parameter.
 
 ```
 filebase=/tmp/SqlQueryLog

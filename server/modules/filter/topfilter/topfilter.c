@@ -285,9 +285,8 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
             MXS_FREE(my_session);
             return NULL;
         }
-        sprintf(my_session->filename, "%s.%d", my_instance->filebase,
-                my_instance->sessions);
-        atomic_add(&my_instance->sessions, 1);
+        sprintf(my_session->filename, "%s.%lu", my_instance->filebase, session->ses_id);
+
         my_session->top = (TOPNQ **) MXS_CALLOC(my_instance->topN + 1, sizeof(TOPNQ *));
         MXS_ABORT_IF_NULL(my_session->top);
         for (i = 0; i < my_instance->topN; i++)
