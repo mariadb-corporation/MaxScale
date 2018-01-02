@@ -15,7 +15,7 @@ make
 if [[ "$cmake_flags" =~ "BUILD_TESTS" ]]
 then
     # All tests must pass otherwise the build is considered a failure
-    make test || exit 1
+    ctest --output-on-failure || exit 1
 fi
 
 if [ $remove_strip == "yes" ] ; then

@@ -17,7 +17,7 @@ make
 if [[ "$cmake_flags" =~ "BUILD_TESTS" ]]
 then
     # All tests must pass otherwise the build is considered a failure
-    make test || exit 1
+    ctest --output-on-failure || exit 1
 fi
 
 export LD_LIBRARY_PATH=$(for i in `find $PWD/ -name '*.so*'`; do echo $(dirname $i); done|sort|uniq|xargs|sed -e 's/[[:space:]]/:/g')
