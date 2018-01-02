@@ -51,7 +51,7 @@ int main(int argc, char** argv)
         pthread_create(&a, NULL, query_thr, &test);
     }
 
-    for (int i = 0; i < 15; i++)
+    for (int i = 0; i < 5; i++)
     {
         for (int x = 1; x <= 4; x++)
         {
@@ -59,20 +59,6 @@ int main(int argc, char** argv)
             sleep(1);
             test.maxscales->ssh_node_f(0, true, "maxadmin clear server server%d maintenance", x);
             sleep(2);
-
-            test.maxscales->ssh_node_f(0, true,
-                                       "maxadmin remove server server%d "
-                                       "\"RW Split Router\" \"Galera Monitor\"", x);
-            sleep(1);
-            test.maxscales->ssh_node_f(0, true,
-                                       "maxadmin add server server%d "
-                                       "\"RW Split Router\" \"Galera Monitor\"", x);
-            sleep(2);
-
-            test.galera->block_node(x - 1);
-            sleep(5);
-            test.galera->unblock_node(x - 1);
-            sleep(5);
         }
     }
 
