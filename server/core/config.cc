@@ -427,7 +427,7 @@ static std::set<string> warned_whitespace;
  * @brief Fix section names
  *
  * Check that section names contain no whitespace. If the name contains
- * whitespace, trim it, squeeze it and replace the remainig whitespace with
+ * whitespace, trim it, squeeze it and replace the remaining whitespace with
  * hyphens. If a replacement was made, a warning is logged.
  *
  * @param section Section name
@@ -2567,7 +2567,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     char* destptr = *dest;
     int offset = 0;
 
-    if (feof(file))
+    if (feof(file) || ferror(file))
     {
         return 0;
     }
@@ -2590,11 +2590,18 @@ int maxscale_getline(char** dest, int* size, FILE* file)
             }
         }
 
-        if ((destptr[offset] = fgetc(file)) == '\n' || feof(file))
+        int c = fgetc(file);
+
+        if ((c == '\n') || (c == EOF))
         {
             destptr[offset] = '\0';
             break;
         }
+        else
+        {
+            destptr[offset] = c;
+        }
+
         offset++;
     }
 

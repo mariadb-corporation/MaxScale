@@ -34,6 +34,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
+#include <maxscale/worker.h>
 
 static void* mysql_auth_init(char **options);
 static bool mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
@@ -78,12 +79,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_AUTHENTICATOR MyObject =
     {
         mysql_auth_init,                  /* Initialize the authenticator */
-        mysql_auth_create,                /* Create entry point */
+        NULL,                             /* Create entry point */
         mysql_auth_set_protocol_data,     /* Extract data into structure   */
         mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
         mysql_auth_authenticate,          /* Authenticate user credentials */
         mysql_auth_free_client_data,      /* Free the client data held in DCB */
-        mysql_auth_destroy,               /* Destroy entry point */
+        NULL,                             /* Destroy entry point */
         mysql_auth_load_users,            /* Load users from backend databases */
         mysql_auth_diagnostic,
         mysql_auth_diagnostic_json,
@@ -109,32 +110,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-static void get_database_path(SERV_LISTENER *port, char *dest, size_t size)
-{
-    MYSQL_AUTH *instance = port->auth_instance;
-    SERVICE *service = port->service;
-    ss_dassert(size - sizeof(DBUSERS_FILE) - 1 >= 0);
-
-    if (instance->cache_dir)
-    {
-        snprintf(dest, size, "%s/", instance->cache_dir);
-    }
-    else
-    {
-        snprintf(dest, size, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
-    }
-
-    if (mxs_mkdir_all(dest, S_IRWXU))
-    {
-        strcat(dest, DBUSERS_FILE);
-    }
-}
-
 static bool open_instance_database(const char *path, sqlite3 **handle)
 {
-    if (sqlite3_open_v2(path, handle, db_flags, NULL) != SQLITE_OK)
+    int rc = sqlite3_open_v2(path, handle, db_flags, NULL);
+
+    if (rc != SQLITE_OK)
     {
-        MXS_ERROR("Failed to open SQLite3 handle.");
+        MXS_ERROR("Failed to open SQLite3 handle: %d", rc);
         return false;
     }
 
@@ -153,21 +135,31 @@ static bool open_instance_database(const char *path, sqlite3 **handle)
     return true;
 }
 
-static bool open_client_database(const char *path, sqlite3 **handle)
+sqlite3* get_handle(MYSQL_AUTH* instance)
 {
-    bool rval = false;
+    int i = mxs_worker_get_current_id();
+    ss_dassert(i >= 0);
 
-    if (sqlite3_open_v2(path, handle, db_flags, NULL) == SQLITE_OK)
+    if (instance->handles[i] == NULL)
     {
-        sqlite3_busy_timeout(*handle, MXS_SQLITE_BUSY_TIMEOUT);
-        rval = true;
-    }
-    else
-    {
-        MXS_ERROR("Failed to open SQLite3 handle.");
+        ss_debug(bool rval = )open_instance_database(":memory:", &instance->handles[i]);
+        ss_dassert(rval);
     }
 
-    return rval;
+    return instance->handles[i];
+}
+
+/**
+ * @brief Check if service permissions should be checked
+ *
+ * @param instance Authenticator instance
+ *
+ * @return True if permissions should be checked
+ */
+static bool should_check_permissions(MYSQL_AUTH* instance)
+{
+    // Only check permissions when the users are loaded for the first time.
+    return instance->check_permissions;
 }
 
 /**
@@ -180,13 +172,13 @@ static void* mysql_auth_init(char **options)
 {
     MYSQL_AUTH *instance = MXS_MALLOC(sizeof(*instance));
 
-    if (instance)
+    if (instance && (instance->handles = MXS_CALLOC(config_threadcount(), sizeof(sqlite3*))))
     {
         bool error = false;
         instance->cache_dir = NULL;
         instance->inject_service_user = true;
         instance->skip_auth = false;
-        instance->handle = NULL;
+        instance->check_permissions = true;
 
         for (int i = 0; options[i]; i++)
         {
@@ -228,34 +220,18 @@ static void* mysql_auth_init(char **options)
         if (error)
         {
             MXS_FREE(instance->cache_dir);
+            MXS_FREE(instance->handles);
             MXS_FREE(instance);
             instance = NULL;
         }
     }
+    else if (instance)
+    {
+        MXS_FREE(instance);
+        instance = NULL;
+    }
 
     return instance;
-}
-
-static void* mysql_auth_create(void *instance)
-{
-    mysql_auth_t *rval = MXS_MALLOC(sizeof(*rval));
-
-    if (rval)
-    {
-        rval->handle = NULL;
-    }
-
-    return rval;
-}
-
-static void mysql_auth_destroy(void *data)
-{
-    mysql_auth_t *auth = (mysql_auth_t*)data;
-    if (auth)
-    {
-        sqlite3_close_v2(auth->handle);
-        MXS_FREE(auth);
-    }
 }
 
 static bool is_localhost_address(struct sockaddr_storage *addr)
@@ -366,19 +342,6 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     MySQLProtocol *protocol = NULL;
     MYSQL_session *client_data = NULL;
     int client_auth_packet_size = 0;
-    mysql_auth_t *auth_ses = (mysql_auth_t*)dcb->authenticator_data;
-
-    if (auth_ses->handle == NULL)
-    {
-        char path[PATH_MAX];
-        get_database_path(dcb->listener, path, sizeof(path));
-
-        if (!open_client_database(path, &auth_ses->handle))
-        {
-            return false;
-        }
-    }
-
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     CHK_PROTOCOL(protocol);
 
@@ -543,8 +506,9 @@ static bool add_service_user(SERV_LISTENER *port)
             if (newpw)
             {
                 MYSQL_AUTH *inst = (MYSQL_AUTH*)port->auth_instance;
-                add_mysql_user(inst->handle, user, "%", "", "Y", newpw);
-                add_mysql_user(inst->handle, user, "localhost", "", "Y", newpw);
+                sqlite3* handle = get_handle(inst);
+                add_mysql_user(handle, user, "%", "", "Y", newpw);
+                add_mysql_user(handle, user, "localhost", "", "Y", newpw);
                 MXS_FREE(newpw);
                 rval = true;
             }
@@ -577,21 +541,21 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE *service = port->listener->service;
     MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
-    bool skip_local = false;
+    bool first_load = false;
 
-    if (instance->handle == NULL)
+    if (should_check_permissions(instance))
     {
-        skip_local = true;
-        char path[PATH_MAX];
-        get_database_path(port, path, sizeof(path));
-        if (!check_service_permissions(port->service) ||
-            !open_instance_database(path, &instance->handle))
+        if (!check_service_permissions(port->service))
         {
             return MXS_AUTH_LOADUSERS_FATAL;
         }
+
+        // Permissions are OK, no need to check them again
+        instance->check_permissions = false;
+        first_load = true;
     }
 
-    int loaded = replace_mysql_users(port, skip_local);
+    int loaded = replace_mysql_users(port, first_load);
     bool injected = false;
 
     if (loaded <= 0)
@@ -623,12 +587,12 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
                    "Enabling service credentials for authentication until "
                    "database users have been successfully loaded.", service->name);
     }
-    else if (loaded == 0 && !skip_local)
+    else if (loaded == 0 && !first_load)
     {
         MXS_WARNING("[%s]: failed to load any user information. Authentication"
                     " will probably fail as a result.", service->name);
     }
-    else if (loaded > 0)
+    else if (loaded > 0 && first_load)
     {
         MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name);
     }
@@ -675,9 +639,10 @@ void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port)
     dcb_printf(dcb, "User names: ");
 
     MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
+    sqlite3* handle = get_handle(instance);
     char *err;
 
-    if (sqlite3_exec(instance->handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
+    if (sqlite3_exec(handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
                      diag_cb, dcb, &err) != SQLITE_OK)
     {
         dcb_printf(dcb, "Failed to print users: %s\n", err);
@@ -704,8 +669,9 @@ json_t* mysql_auth_diagnostic_json(const SERV_LISTENER *port)
 
     MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
     char *err;
+    sqlite3* handle = get_handle(instance);
 
-    if (sqlite3_exec(instance->handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
+    if (sqlite3_exec(handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
                      diag_cb, rval, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to print users: %s", err);

@@ -42,11 +42,11 @@ int main(int argc, char *argv[])
     }
     Test->galera->close_connections();
 
-    Test->check_log_err((char *) "refresh rate limit exceeded", false);
+    Test->check_log_err(0, (char *) "refresh rate limit exceeded", false);
 
     Test->galera->execute_query_all_nodes((char *) "set global max_connections = 100;");
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

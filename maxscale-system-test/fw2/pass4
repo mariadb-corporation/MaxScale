@@ -1,0 +1,6 @@
+create or replace table test.t1(id int);
+create function my_function (arg int) returns int deterministic return arg * arg;
+select "sum(1)";
+select (1);
+select * from(select 1) as a;
+insert into test.t1 values (1);

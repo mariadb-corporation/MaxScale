@@ -9,13 +9,13 @@
 
 int main(int argc, char *argv[])
 {
-
+    int exit_code;
     TestConnections test(argc, argv);
     test.set_timeout(600);
-    test.ssh_maxscale(true, (char *) "rm -rf /var/lib/maxscale/avro");
+    test.maxscales->ssh_node(0, (char *) "rm -rf /var/lib/maxscale/avro", true);
 
     /** Start master to binlogrouter replication */
-    if (!test.replicate_from_master())
+    if (!test.replicate_from_master(0))
     {
         return 1;
     }
@@ -23,17 +23,23 @@ int main(int argc, char *argv[])
     test.set_timeout(120);
     test.repl->connect();
 
+    // Execute two events for each version of the schema
     execute_query_silent(test.repl->nodes[0], "DROP TABLE test.t1");
     execute_query(test.repl->nodes[0], "CREATE TABLE test.t1(id INT)");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (1)");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
     execute_query(test.repl->nodes[0], "ALTER TABLE test.t1 ADD COLUMN a VARCHAR(100)");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (2, \"a\")");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
     execute_query(test.repl->nodes[0], "ALTER TABLE test.t1 ADD COLUMN b FLOAT");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (3, \"b\", 3.0)");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
     execute_query(test.repl->nodes[0], "ALTER TABLE test.t1 CHANGE COLUMN b c DATETIME(3)");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (4, \"c\", NOW())");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
     execute_query(test.repl->nodes[0], "ALTER TABLE test.t1 DROP COLUMN c");
     execute_query(test.repl->nodes[0], "INSERT INTO test.t1 VALUES (5, \"d\")");
+    execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
 
     test.repl->close_connections();
 
@@ -42,11 +48,11 @@ int main(int argc, char *argv[])
     sleep(10);
     test.set_timeout(120);
 
-    for (int i = 1; i <=5; i++)
+    for (int i = 1; i <= 5; i++)
     {
         std::stringstream cmd;
         cmd << "maxavrocheck -d /var/lib/maxscale/avro/test.t1.00000" << i << ".avro";
-        char* rows = test.ssh_maxscale_output(true, cmd.str().c_str());
+        char* rows = test.maxscales->ssh_node_output(0, cmd.str().c_str(), true, &exit_code);
         int nrows = 0;
         std::istringstream iss;
         iss.str(rows);
@@ -61,7 +67,9 @@ int main(int argc, char *argv[])
             nrows++;
         }
 
-        test.add_result(nrows != 1, "Expected 1 line in file number %d, got %d: %s", i, nrows, rows);
+        // The number of changes that are present in each version of the schema
+        const int nchanges = 2;
+        test.add_result(nrows != nchanges, "Expected %d line in file number %d, got %d: %s", nchanges, i, nrows, rows);
         free(rows);
     }
 

@@ -2,16 +2,15 @@
 #define TESTCONNECTIONS_H
 
 #include "mariadb_nodes.h"
+#include "maxscales.h"
 #include "templates.h"
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <set>
+#include <string>
 
-enum test_target
-{
-    MXS_PRIMARY,
-    MXS_SECONDARY
-};
+typedef std::set<std::string> StringSet;
 
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
@@ -43,7 +42,7 @@ class TestConnections
 private:
     /** Whether timeouts are enabled or not */
     bool enable_timeouts;
-    bool log_matches(const char* pattern);
+    bool log_matches(int m, const char* pattern);
 public:
     /**
      * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale machine
@@ -64,51 +63,6 @@ public:
     char * test_name;
 
     /**
-     * @brief rwsplit_port RWSplit service port
-     */
-    int rwsplit_port;
-
-    /**
-     * @brief readconn_master_port ReadConnection in master mode service port
-     */
-    int readconn_master_port;
-
-    /**
-     * @brief readconn_slave_port ReadConnection in slave mode service port
-     */
-    int readconn_slave_port;
-
-    /**
-     * @brief binlog_port binlog router service port
-     */
-    int binlog_port;
-
-    /**
-     * @brief conn_rwsplit  MYSQL connection struct to RWSplit service
-     */
-    MYSQL *conn_rwsplit;
-
-    /**
-     * @brief conn_master   MYSQL connection struct to ReadConnection in master mode service
-     */
-    MYSQL *conn_master;
-
-    /**
-     * @brief conn_slave MYSQL connection struct to ReadConnection in slave mode service
-     */
-    MYSQL *conn_slave;
-
-    /**
-     * @brief routers Array of 3 MYSQL handlers which contains copies of conn_rwsplit, conn_master, conn_slave
-     */
-    MYSQL *routers[3];
-
-    /**
-     * @brief ports of 3 int which contains copies of rwsplit_port, readconn_master_port, readconn_slave_port
-     */
-    int ports[3];
-
-    /**
      * @brief galera Mariadb_nodes object containing references to Galera setuo
      */
     Mariadb_nodes * galera;
@@ -119,58 +73,9 @@ public:
     Mariadb_nodes * repl;
 
     /**
-     * @brief Get MaxScale IP address
-     *
-     * @return The current IP address of MaxScale
+     * @brief maxscales Maxscale object containing referebces to all Maxscale machines
      */
-    char* maxscale_ip() const;
-
-    /**
-     * @brief Maxscale_IP   Maxscale machine IP address
-     */
-    char maxscale_IP[1024];
-
-    /** IPv4 and IPv6 addresses for the primary and secondary instances */
-    std::string primary_maxscale_IP;
-    std::string primary_maxscale_IP6;
-    std::string secondary_maxscale_IP;
-    std::string secondary_maxscale_IP6;
-
-    /**
-     * @brief Maxscale_IP6   Maxscale machine IP address (IPv6)
-     */
-    char maxscale_IP6[1024];
-
-    /**
-     * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
-     * Also IPv6 addresses go to maxscale.cnf
-     */
-    bool use_ipv6;
-
-    /**
-     * @brief maxscale_hostname  Maxscale machine 'hostname' value
-     */
-    char maxscale_hostname[1024];
-
-    /**
-     * @brief Maxscale_User User name to access Maxscale services
-     */
-    char maxscale_user[256];
-
-    /**
-     * @brief Maxscale_Password Password to access Maxscale services
-     */
-    char maxscale_password[256];
-
-    /**
-     * @brief maxadmin_Password Password to access Maxadmin tool
-     */
-    char maxadmin_password[256];
-
-    /**
-     * @brief Maxscale_sshkey   ssh key for Maxscale machine
-     */
-    char maxscale_keyfile[4096];
+    Maxscales * maxscales;
 
     /**
      * @brief GetLogsCommand Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
@@ -198,42 +103,12 @@ public:
     char sysbench_dir[4096];
 
     /**
-      * @brief maxscale_cnf full name of Maxscale configuration file
-      */
-    char maxscale_cnf[4096];
-
-    /**
-      * @brief maxscale_log_dir name of log files directory
-      */
-    char maxscale_log_dir[4096];
-
-    /**
-      * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
-      */
-    char maxscale_binlog_dir[4096];
-
-    /**
-     * @brief maxscale_access_user username to access test machines
-     */
-    char maxscale_access_user[256];
-
-    /**
-     * @brief maxscale_access_homedir home directory of access_user
-     */
-    char maxscale_access_homedir[256];
-
-    /**
-     * @brief maxscale_access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
-     */
-    char maxscale_access_sudo[64];
-
-    /**
      * @brief copy_mariadb_logs copies MariaDB logs from backend
      * @param repl Mariadb_nodes object
      * @param prefix file name prefix
      * @return 0 if success
      */
-    int copy_mariadb_logs(Mariadb_nodes *repl, const char* prefix);
+    int copy_mariadb_logs(Mariadb_nodes *repl, char * prefix);
 
     /**
      * @brief no_backend_log_copy if true logs from backends are not copied (needed if case of Aurora RDS backend or similar)
@@ -258,7 +133,7 @@ public:
     /**
      * @brief ssl if true ssl will be used
      */
-    bool ssl;
+    int ssl;
 
     /**
      * @brief backend_ssl if true ssl configuratio for all servers will be added
@@ -328,6 +203,12 @@ public:
      */
     timeval start_time;
 
+    /**
+     * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
+     * Also IPv6 addresses go to maxscale.cnf
+     */
+    bool use_ipv6;
+
     /** Check whether all nodes are in a valid state */
     static void check_nodes(bool value);
 
@@ -338,18 +219,15 @@ public:
     static void require_repl_version(const char *version);
     static void require_galera_version(const char *version);
 
-    /** Initialize multiple MaxScale instances */
-    static void multiple_maxscales(bool value);
-
-    /** Set secondary MaxScale address */
-    static void set_secondary_maxscale(const char* ip_var, const char* ip6_var);
-
     /**
      * @brief add_result adds result to global_result and prints error message if result is not 0
      * @param result 0 if step PASSED
      * @param format ... message to pring if result is not 0
      */
-    void add_result(int result, const char *format, ...);
+    void add_result(bool result, const char *format, ...);
+
+    /** Same as add_result() but inverted */
+    void assert(bool result, const char *format, ...);
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -367,134 +245,32 @@ public:
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
      * @return 0 if case of success
      */
-    int init_maxscale();
+    int init_maxscale(int m = 0);
 
-    /**
-     * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
-     * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
-     * Connections stored in conn_rwsplit, conn_master and conn_slave MYSQL structs
-     * @return 0 in case of success
-     */
-    int connect_maxscale();
 
-    /**
-     * @brief CloseMaxscaleConn Closes connection that were opened by ConnectMaxscale()
-     * @return 0
-     */
-    int close_maxscale_connections();
-
-    /**
-     * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in conn_rwsplit
-     * @return 0 in case of success
-     */
-    int connect_rwsplit();
-
-    /**
-     * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in conn_master
-     * @return 0 in case of success
-     */
-    int connect_readconn_master();
-
-    /**
-     * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in conn_slave
-     * @return 0 in case of success
-     */
-    int connect_readconn_slave();
-
-    /**
-     * @brief OpenRWSplitConn   Opens new connections to RWSplit and returns MYSQL struct
-     * To close connection mysql_close() have to be called
-     * @return MYSQL struct
-     */
-    MYSQL * open_rwsplit_connection()
-    {
-        return open_conn(rwsplit_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
-    }
-
-    /**
-     * @brief OpenReadMasterConn    Opens new connections to ReadConn master and returns MYSQL struct
-     * To close connection mysql_close() have to be called
-     * @return MYSQL struct
-     */
-    MYSQL * open_readconn_master_connection()
-    {
-        return open_conn(readconn_master_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
-    }
-
-    /**
-     * @brief OpenReadSlaveConn    Opens new connections to ReadConn slave and returns MYSQL struct
-     * To close connection mysql_close() have to be called
-     * @return  MYSQL struct
-     */
-    MYSQL * open_readconn_slave_connection()
-    {
-        return open_conn(readconn_slave_port, maxscale_IP, maxscale_user, maxscale_password, ssl);
-    }
-
-    /**
-     * @brief CloseRWSplit Closes RWplit connections stored in conn_rwsplit
-     */
-    void close_rwsplit()
-    {
-        mysql_close(conn_rwsplit);
-        conn_rwsplit = NULL;
-    }
-
-    /**
-     * @brief CloseReadMaster Closes ReadConn master connections stored in conn_master
-     */
-    void close_readconn_master()
-    {
-        mysql_close(conn_master);
-        conn_master = NULL;
-    }
-
-    /**
-     * @brief CloseReadSlave Closes ReadConn slave connections stored in conn_slave
-     */
-    void close_readconn_slave()
-    {
-        mysql_close(conn_slave);
-        conn_slave = NULL;
-    }
-
-    /**
-     * @brief restart_maxscale Issues 'service maxscale restart' command
-     */
-    int restart_maxscale();
-
-    /**
-     * @brief start_maxscale Issues 'service maxscale start' command
-     */
-    int start_maxscale();
-
-    /**
-     * @brief stop_maxscale Issues 'service maxscale stop' command
-     */
-    int stop_maxscale();
 
     /**
      * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
      * @return  0 in case of success
      */
-    int start_binlog();
+    int start_binlog(int m = 0);
 
     /**
      * @brief Start binlogrouter replication from master
      */
-    bool replicate_from_master();
+    bool replicate_from_master(int m = 0);
 
     /**
      * @brief prepare_binlog clean up binlog directory, set proper access rights to it
      * @return 0
      */
-    int prepare_binlog();
+    int prepare_binlog(int m = 0);
 
     /**
      * @brief start_mm configure first node as Master for second, Second as Master for first
      * @return  0 in case of success
      */
-    int start_mm();
+    int start_mm(int m = 0);
 
     /**
      * @brief copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
@@ -507,43 +283,11 @@ public:
     int copy_all_logs_periodic();
 
     /**
-     * @brief Generate command line to execute command on the Maxscale ode via ssh
-     * @param cmd result
-     * @param ssh command to execute
-     * @param sudo if true the command is executed with root privelegues
+     * @brief copy_maxscale_logs Copies logs from all Maxscale nodes
+     * @param timestamp
+     * @return 0
      */
-    void generate_ssh_cmd(char * cmd, char * ssh, bool sudo);
-
-    /**
-     * @brief Execute a command via ssh on the MaxScale machine
-     * @param ssh ssh command to execute on the MaxScale machine
-     * @return Output of the command or NULL if the command failed to execute
-     */
-    char* ssh_maxscale_output(bool sudo, const char* format, ...);
-
-    /**
-     * @brief Execute a shell command on Maxscale
-     * @param sudo Use root
-     * @param format printf style format string
-     * @return 0 on success
-     */
-    int ssh_maxscale(bool sudo, const char* format, ...);
-
-    /**
-     * @brief Copy a local file to the MaxScale machine
-     * @param src Source file on the local filesystem
-     * @param dest Destination file on the MaxScale machine's file system
-     * @return exit code of the system command
-     */
-    int copy_to_maxscale(const char* src, const char* dest);
-
-    /**
-     * @brief Copy a remote file from the MaxScale machine
-     * @param src Source file on the remote filesystem
-     * @param dest Destination file on the local file system
-     * @return exit code of the system command
-     */
-    int copy_from_maxscale(char* src, char* dest);
+    int copy_maxscale_logs(double timestamp);
 
     /**
      * @brief Test that connections to MaxScale are in the expected state
@@ -552,7 +296,7 @@ public:
      * @param rc_slave State of the MaxScale connection to Readconnroute Slave. True for working connection, false for no connection.
      * @return  0 if connections are in the expected state
      */
-    int test_maxscale_connections(bool rw_split,
+    int test_maxscale_connections(int m, bool rw_split,
                                   bool rc_master,
                                   bool rc_slave);
 
@@ -565,7 +309,8 @@ public:
      * @param galera_flag if true connections to RWSplit router with Galera backend will be created, if false - no connections to RWSplit with Galera backend
      * @return  0 in case of success
      */
-    int create_connections(int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag, bool galera_flag);
+    int create_connections(int m, int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag,
+                           bool galera_flag);
 
     /**
      * Trying to get client IP address by connection to DB via RWSplit and execution 'show processlist'
@@ -573,7 +318,7 @@ public:
      * @param ip client IP address as it visible by Maxscale
      * @return 0 in case of success
      */
-    int get_client_ip(char * ip);
+    int get_client_ip(int m, char * ip);
 
     /**
      * @brief set_timeout startes timeout thread which terminates test application after timeout_seconds
@@ -608,7 +353,7 @@ public:
      * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4 last INSERT is about 700kb long
      * @return 0 in case of no error and all checks are ok
      */
-    int insert_select(int N);
+    int insert_select(int m, int N);
 
     /**
      * @brief Executes USE command for all Maxscale service and all Master/Slave backend nodes
@@ -616,7 +361,7 @@ public:
      * @param db Name of DB in 'USE' command
      * @return 0 in case of success
      */
-    int use_db(char * db);
+    int use_db(int m, char * db);
 
     /**
      * @brief Checks if table t1 exists in DB
@@ -625,7 +370,7 @@ public:
      * @return 0 if (t1 table exists AND presence=TRUE) OR (t1 table does not exist AND presence=false)
      */
 
-    int check_t1_table(bool presence, char * db);
+    int check_t1_table(int m, bool presence, char * db);
 
     /**
      * @brief CheckLogErr Reads error log and tried to search for given string
@@ -633,23 +378,23 @@ public:
      * @param expected TRUE if err_msg is expedted in the log, false if err_msg should NOT be in the log
      * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected is false)
      */
-    void check_log_err(const char * err_msg, bool expected);
+    void check_log_err(int m, const char * err_msg, bool expected);
 
     /**
-     * @brief Check whether logs match a pattern
-     *
-     * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
-     * log file does not match the pattern, it is considered an error.
-     */
-    void log_includes(const char* pattern);
+    * @brief Check whether logs match a pattern
+    *
+    * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
+    * log file does not match the pattern, it is considered an error.
+    */
+    void log_includes(int m, const char* pattern);
 
     /**
-     * @brief Check whether logs do not match a pattern
-     *
-     * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
-     * log file match the pattern, it is considered an error.
-     */
-    void log_excludes(const char* pattern);
+    * @brief Check whether logs do not match a pattern
+    *
+    * The patterns are interpreted as `grep` compatible patterns (BRE regular expressions). If the
+    * log file match the pattern, it is considered an error.
+    */
+    void log_excludes(int m, const char* pattern);
 
     /**
      * @brief FindConnectedSlave Finds slave node which has connections from MaxScale
@@ -657,14 +402,14 @@ public:
      * @param global_result pointer to variable which is increased in case of error
      * @return index of found slave node
      */
-    int find_connected_slave(int * global_result);
+    int find_connected_slave(int m, int * global_result);
 
     /**
      * @brief FindConnectedSlave1 same as FindConnectedSlave() but does not increase global_result
      * @param Test  TestConnections object which contains info about test setup
      * @return index of found slave node
      */
-    int find_connected_slave1();
+    int find_connected_slave1(int m = 0);
 
     /**
      * @brief CheckMaxscaleAlive Checks if MaxScale is alive
@@ -672,7 +417,7 @@ public:
      * Also 'show processlist' query is executed using all services
      * @return 0 in case if success
      */
-    int check_maxscale_alive();
+    int check_maxscale_alive(int m = 0);
 
     /**
      * @brief try_query Executes SQL query and repors error
@@ -687,41 +432,31 @@ public:
      * @param sql SQL string
      * @return 0 if ok
      */
-    int try_query_all(const char *sql);
+    int try_query_all(int m, const char *sql);
 
     /**
-     * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show server'
-     * @param nodes Mariadb_nodes object
-     * @return node index if one master found, -1 if no master found or several masters found
+     * @brief Get the set of labels that are assigned to server @c name
+     *
+     * @param name The name of the server that must be present in the output `maxadmin list servers`
+     *
+     * @return A set of string labels assigned to this server
      */
-    int find_master_maxadmin(Mariadb_nodes * nodes);
-    int find_slave_maxadmin(Mariadb_nodes * nodes);
-
-    int execute_maxadmin_command(char * cmd);
-    int execute_maxadmin_command_print(char * cmd);
-    int check_maxadmin_param(const char *command, const  char *param, const  char *value);
-    int get_maxadmin_param(const char *command, const char *param, char *result);
-    void check_current_operations(int value);
-    void check_current_connections(int value);
+    StringSet get_server_status(const char* name);
 
     /**
      * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'
      * @param expected expected number of Maxscale processes
      * @return 0 if check is done
      */
-    int check_maxscale_processes(int expected);
+    int check_maxscale_processes(int m, int expected);
 
     /**
      * @brief list_dirs Execute 'ls' on binlog directory on all repl nodes and on Maxscale node
      * @return 0
      */
-    int list_dirs();
+    int list_dirs(int m = 0);
 
-    /**
-     * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
-     * @return memory size in kilobytes
-     */
-    long unsigned get_maxscale_memsize();
+
 
     /**
      * @brief make_snapshot Makes a snapshot for all running VMs
@@ -735,28 +470,31 @@ public:
      * @param snapshot_name name of snapshot to revert
      * @return 0 in case of success or mdbci error code in case of error
      */
-    int revert_snapshot(const char* snapshot_name);
+    int revert_snapshot(char * snapshot_name);
 
     /**
      * @brief Test a bad configuration
      * @param config Name of the config template
      * @return Always false, the test will time out if the loading is successful
      */
-    bool test_bad_config(const char *config);
+    bool test_bad_config(int m, const char *config);
 
     /**
      * @brief Process a template configuration file
      *
      * @param dest Destination file name for actual configuration file
      */
+    void process_template(int m, const char *src, const char *dest = "/etc/maxscale.cnf");
+
+
+    void check_current_operations(int m, int value);
+    void check_current_connections(int m, int value);
+    int stop_maxscale(int m = 0);
+    int start_maxscale(int m = 0);
     void process_template(const char *src, const char *dest = "/etc/maxscale.cnf");
 
-    /**
-     * @brief Change the target MaxScale
-     *
-     * @param target Either MXS_PRIMARY or MXS_SECONDARY
-     */
-    void set_active_maxscale(enum test_target target);
+private:
+    void report_result(const char *format, va_list argp);
 };
 
 /**

@@ -149,6 +149,9 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->last_event = SERVER_UP_EVENT;
     server->triggered_at = 0;
 
+    // Log all warnings once
+    memset(&server->log_warning, 1, sizeof(server->log_warning));
+
     spinlock_acquire(&server_spin);
     server->next = allServers;
     allServers = server;

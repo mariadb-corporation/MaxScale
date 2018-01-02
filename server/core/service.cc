@@ -49,6 +49,7 @@
 #include <maxscale/version.h>
 #include <maxscale/jansson.h>
 #include <maxscale/json_api.h>
+#include <maxscale/worker.h>
 
 #include "internal/config.h"
 #include "internal/filter.h"
@@ -102,12 +103,14 @@ SERVICE* service_alloc(const char *name, const char *router)
     char *my_name = MXS_STRDUP(name);
     char *my_router = MXS_STRDUP(router);
     SERVICE *service = (SERVICE *)MXS_CALLOC(1, sizeof(*service));
-
-    if (!my_name || !my_router || !service)
+    SERVICE_REFRESH_RATE* rate_limits = (SERVICE_REFRESH_RATE*)MXS_CALLOC(config_threadcount(),
+                                                                         sizeof(*rate_limits));
+    if (!my_name || !my_router || !service || !rate_limits)
     {
         MXS_FREE(my_name);
         MXS_FREE(my_router);
         MXS_FREE(service);
+        MXS_FREE(rate_limits);
         return NULL;
     }
 
@@ -129,6 +132,7 @@ SERVICE* service_alloc(const char *name, const char *router)
         MXS_FREE(my_name);
         MXS_FREE(my_router);
         MXS_FREE(service);
+        MXS_FREE(rate_limits);
         return NULL;
     }
 
@@ -149,6 +153,7 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->routerOptions = NULL;
     service->log_auth_warnings = true;
     service->strip_db_esc = true;
+    service->rate_limits = rate_limits;
     if (service->name == NULL || service->routerModule == NULL)
     {
         if (service->name)
@@ -323,13 +328,6 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
             break;
         }
     }
-
-    /**
-     * At service start last update is set to USERS_REFRESH_TIME seconds earlier. This way MaxScale
-     * could try reloading users just after startup.
-     */
-    service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
-    service->rate_limit.nloads = 1;
 
     if (port->listener->func.listen(port->listener, config_bind))
     {
@@ -1611,61 +1609,58 @@ service_update(SERVICE *service, char *router, char *user, char *auth)
  */
 int service_refresh_users(SERVICE *service)
 {
+    ss_dassert(service);
     int ret = 1;
+    int self = mxs_worker_get_current_id();
+    ss_dassert(self >= 0);
+    time_t now = time(NULL);
 
-    if (spinlock_acquire_nowait(&service->spin))
+    /* Check if refresh rate limit has been exceeded */
+    if ((now < service->rate_limits[self].last + USERS_REFRESH_TIME) ||
+        (service->rate_limits[self].nloads >= USERS_REFRESH_MAX_PER_TIME))
     {
-        time_t now = time(NULL);
+        MXS_ERROR("[%s] Refresh rate limit exceeded for load of users' table.", service->name);
+    }
+    else
+    {
+        service->rate_limits[self].nloads++;
 
-        /* Check if refresh rate limit has been exceeded */
-        if ((now < service->rate_limit.last + USERS_REFRESH_TIME) ||
-            (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME))
+        /** If we have reached the limit on users refreshes, reset refresh time and count */
+        if (service->rate_limits[self].nloads >= USERS_REFRESH_MAX_PER_TIME)
         {
-            MXS_ERROR("[%s] Refresh rate limit exceeded for load of users' table.", service->name);
+            service->rate_limits[self].nloads = 0;
+            service->rate_limits[self].last = now;
         }
-        else
+
+        ret = 0;
+        LISTENER_ITERATOR iter;
+
+        for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+             listener; listener = listener_iterator_next(&iter))
         {
-            service->rate_limit.nloads++;
-
-            /** If we have reached the limit on users refreshes, reset refresh time and count */
-            if (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)
+            /** Load the authentication users before before starting the listener */
+            if (listener_is_active(listener) && listener->listener &&
+                listener->listener->authfunc.loadusers)
             {
-                service->rate_limit.nloads = 1;
-                service->rate_limit.last = now;
-            }
-
-            ret = 0;
-            LISTENER_ITERATOR iter;
-
-            for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
-                 listener; listener = listener_iterator_next(&iter))
-            {
-                /** Load the authentication users before before starting the listener */
-                if (listener_is_active(listener) && listener->listener &&
-                    listener->listener->authfunc.loadusers)
+                switch (listener->listener->authfunc.loadusers(listener))
                 {
-                    switch (listener->listener->authfunc.loadusers(listener))
-                    {
-                    case MXS_AUTH_LOADUSERS_FATAL:
-                        MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
-                                  " authentication will not work.", service->name, listener->name);
-                        ret = 1;
-                        break;
+                case MXS_AUTH_LOADUSERS_FATAL:
+                    MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
+                              " authentication will not work.", service->name, listener->name);
+                    ret = 1;
+                    break;
 
-                    case MXS_AUTH_LOADUSERS_ERROR:
-                        MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                                    " might not work.", service->name, listener->name);
-                        ret = 1;
-                        break;
+                case MXS_AUTH_LOADUSERS_ERROR:
+                    MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
+                                " might not work.", service->name, listener->name);
+                    ret = 1;
+                    break;
 
-                    default:
-                        break;
-                    }
+                default:
+                    break;
                 }
             }
         }
-
-        spinlock_release(&service->spin);
     }
 
     return ret;
@@ -1848,6 +1843,57 @@ void service_shutdown()
     spinlock_release(&service_spin);
 }
 
+/**
+ * Destroy a listener
+ *
+ * @param sl  The listener to destroy.
+ *
+ * @return The next listener or NULL if there is not one.
+ */
+static SERV_LISTENER* service_destroy_listener(SERV_LISTENER* sl)
+{
+    SERV_LISTENER* next = sl->next;
+
+    dcb_close(sl->listener);
+
+    // TODO: What else should be closed and freed here?
+
+    return next;
+}
+
+/**
+ * Destroy one service instance
+ *
+ * @param svc  The service to destroy.
+ */
+static void service_destroy_instance(SERVICE* svc)
+{
+    SERV_LISTENER* sl = svc->ports;
+
+    while (sl)
+    {
+        sl = service_destroy_listener(sl);
+    }
+
+    /* Call destroyInstance hook for routers */
+    if (svc->router->destroyInstance && svc->router_instance)
+    {
+        svc->router->destroyInstance(svc->router_instance);
+    }
+    if (svc->n_filters)
+    {
+        MXS_FILTER_DEF **filters = svc->filters;
+        for (int i = 0; i < svc->n_filters; i++)
+        {
+            if (filters[i]->obj->destroyInstance && filters[i]->filter)
+            {
+                /* Call destroyInstance hook for filters */
+                filters[i]->obj->destroyInstance(filters[i]->filter);
+            }
+        }
+    }
+}
+
 void service_destroy_instances(void)
 {
     spinlock_acquire(&service_spin);
@@ -1855,23 +1901,8 @@ void service_destroy_instances(void)
     while (svc != NULL)
     {
         ss_dassert(svc->svc_do_shutdown);
-        /* Call destroyInstance hook for routers */
-        if (svc->router->destroyInstance && svc->router_instance)
-        {
-            svc->router->destroyInstance(svc->router_instance);
-        }
-        if (svc->n_filters)
-        {
-            MXS_FILTER_DEF **filters = svc->filters;
-            for (int i = 0; i < svc->n_filters; i++)
-            {
-                if (filters[i]->obj->destroyInstance && filters[i]->filter)
-                {
-                    /* Call destroyInstance hook for filters */
-                    filters[i]->obj->destroyInstance(filters[i]->filter);
-                }
-            }
-        }
+        service_destroy_instance(svc);
+
         svc = svc->next;
     }
     spinlock_release(&service_spin);
@@ -2779,4 +2810,18 @@ uint64_t service_get_version(const SERVICE *service, service_version_which_t whi
     }
 
     return version;
+}
+
+bool service_thread_init()
+{
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE* service = allServices; service; service = service->next)
+    {
+        service_refresh_users(service);
+    }
+
+    spinlock_release(&service_spin);
+
+    return true;
 }

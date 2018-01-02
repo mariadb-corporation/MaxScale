@@ -102,21 +102,16 @@ static const char null_token[] = "NULL";
 /** Flags for sqlite3_open_v2() */
 static int db_flags = SQLITE_OPEN_READWRITE |
                       SQLITE_OPEN_CREATE |
-                      SQLITE_OPEN_SHAREDCACHE;
+                      SQLITE_OPEN_NOMUTEX;
 
 typedef struct mysql_auth
 {
-    sqlite3 *handle;          /**< SQLite3 database handle */
+    sqlite3 **handles;        /**< SQLite3 database handle */
     char *cache_dir;          /**< Custom cache directory location */
     bool inject_service_user; /**< Inject the service user into the list of users */
     bool skip_auth;           /**< Authentication will always be successful */
+    bool check_permissions;
 } MYSQL_AUTH;
-
-/** Common structure for both backend and client authenticators */
-typedef struct gssapi_auth
-{
-    sqlite3 *handle;              /**< SQLite3 database handle */
-} mysql_auth_t;
 
 /**
  * MySQL user and host data structure
@@ -129,6 +124,15 @@ typedef struct mysql_user_host_key
     char *resource;
     char hostname[MYSQL_HOST_MAXLEN + 1];
 } MYSQL_USER_HOST;
+
+/**
+ * @brief Get the thread-specific SQLite handle
+ *
+ * @param instance Authenticator instance
+ *
+ * @return The thread-specific handle
+ */
+sqlite3* get_handle(MYSQL_AUTH* instance);
 
 /**
  * @brief Add new MySQL user to the internal user database

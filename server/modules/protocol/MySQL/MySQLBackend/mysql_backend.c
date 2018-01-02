@@ -301,7 +301,7 @@ bool is_error_response(GWBUF *buffer)
  * @param dcb Backend DCB where authentication failed
  * @param buffer Buffer containing the response from the backend
  */
-void log_error_response(DCB *dcb, GWBUF *buffer)
+static void handle_error_response(DCB *dcb, GWBUF *buffer)
 {
     uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
     size_t len = MYSQL_GET_PAYLOAD_LEN(data);
@@ -325,6 +325,16 @@ void log_error_response(DCB *dcb, GWBUF *buffer)
                   dcb->server->name, dcb->server->port);
 
         server_set_status(dcb->server, SERVER_MAINT);
+    }
+    else if (errcode == ER_ACCESS_DENIED_ERROR ||
+             errcode == ER_DBACCESS_DENIED_ERROR ||
+             errcode == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+    {
+        if (dcb->session->state != SESSION_STATE_DUMMY)
+        {
+            // Authentication failed, reload users
+            service_refresh_users(dcb->service);
+        }
     }
 }
 
@@ -494,7 +504,7 @@ gw_read_backend_event(DCB *dcb)
             {
                 /** The server responded with an error */
                 proto->protocol_auth_state = MXS_AUTH_STATE_FAILED;
-                log_error_response(dcb, readbuf);
+                handle_error_response(dcb, readbuf);
             }
 
             if (proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED)
@@ -887,7 +897,7 @@ gw_read_and_write(DCB *dcb)
             {
                 /** The COM_CHANGE USER failed, generate a fake hangup event to
                  * close the DCB and send an error to the client. */
-                log_error_response(dcb, reply);
+                handle_error_response(dcb, reply);
             }
             else
             {

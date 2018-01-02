@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Trying \n");
 
@@ -197,11 +197,11 @@ int main(int argc, char *argv[])
 
     if ( (
                 find_field(
-                    Test->conn_rwsplit, sel3,
+                    Test->maxscales->conn_rwsplit[0], sel3,
                     "@@server_id", &serverid1[0])
                 != 0 ) || (
                 find_field(
-                    Test->conn_rwsplit, sel4,
+                    Test->maxscales->conn_rwsplit[0], sel4,
                     "@@server_id", &serverid2[0])
                 != 0 ))
     {
@@ -219,11 +219,11 @@ int main(int argc, char *argv[])
 
     if ( (
                 find_field(
-                    Test->conn_rwsplit, sel1,
+                    Test->maxscales->conn_rwsplit[0], sel1,
                     "@@hostname", &serverid1[0])
                 != 0 ) || (
                 find_field(
-                    Test->conn_rwsplit, sel2,
+                    Test->maxscales->conn_rwsplit[0], sel2,
                     "@@hostname", &serverid2[0])
                 != 0 ))
     {
@@ -239,8 +239,8 @@ int main(int argc, char *argv[])
                          "hostname are different depending in which order terms are in SELECT\n");
     }
 
-    Test->close_maxscale_connections();
-    Test->check_maxscale_alive();
+    Test->maxscales->close_maxscale_connections(0);
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

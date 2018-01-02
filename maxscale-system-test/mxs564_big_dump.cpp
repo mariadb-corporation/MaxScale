@@ -5,7 +5,7 @@
  * - after a while block first slave
  * - after a while block second slave
  * - check that all INSERTs are ok
- * - repeat with both RWSplit and ReadConn master routers
+ * - repeat with both RWSplit and ReadConn master maxscales->routers[0]
  * - check Maxscale is alive
  */
 
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
     //Test->repl->flush_hosts();
     Test->set_timeout(20);
-    int master = Test->find_master_maxadmin(Test->galera);
+    int master = Test->maxscales->find_master_maxadmin(Test->galera);
     Test->stop_timeout();
     Test->tprintf(("Master is %d\n"), master);
     int k = 0;
@@ -82,14 +82,14 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(20);
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->set_timeout(20);
-    create_t1(Test->conn_rwsplit);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 2000;");
 
     Test->set_timeout(20);
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1");
-    Test->try_query(Test->conn_rwsplit, (char *) "CREATE TABLE t1 (x1 int, fl int)");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE IF EXISTS t1");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE TABLE t1 (x1 int, fl int)");
 
     for (i = 0; i < threads_num; i++)
     {
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
         Test->tprintf("exit %d\n", i);
     }
 
-    Test->tprintf("all routers are involved, threads are running %d seconds more\n", run_time);
+    Test->tprintf("all maxscales->routers[0] are involved, threads are running %d seconds more\n", run_time);
 
     for (i = 0; i < threads_num; i++)
     {
@@ -162,16 +162,16 @@ int main(int argc, char *argv[])
     Test->tprintf("set global max_connections = 100 for all backends\n");
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
     Test->tprintf("Drop t1\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1;");
-    Test->close_maxscale_connections();
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP TABLE IF EXISTS t1;");
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->tprintf("Checking if Maxscale alive\n");
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     //Test->tprintf("Checking log for unwanted errors\n");
-    //Test->check_log_err((char *) "due to authentication failure", false);
-    //Test->check_log_err((char *) "fatal signal 11", false);
-    //Test->check_log_err((char *) "due to handshake failure", false);
-    //Test->check_log_err((char *) "Refresh rate limit exceeded for load of users' table", false);
+    //Test->check_log_err(0, (char *) "due to authentication failure", false);
+    //Test->check_log_err(0, (char *) "fatal signal 11", false);
+    //Test->check_log_err(0, (char *) "due to handshake failure", false);
+    //Test->check_log_err(0, (char *) "Refresh rate limit exceeded for load of users' table", false);
 
     int rval = Test->global_result;
     delete Test;
@@ -185,7 +185,7 @@ void *query_thread1( void *ptr )
     sleep(data->thread_id);
     create_insert_string(sql, 1000, 2);
 
-    data->conn1 = data->Test->open_rwsplit_connection();
+    data->conn1 = data->Test->maxscales->open_rwsplit_connection(0);
     if ((data->conn1 == NULL) || (mysql_errno(data->conn1) != 0 ))
     {
         data->Test->add_result(1, "Error connecting to RWSplit\n");
@@ -196,7 +196,7 @@ void *query_thread1( void *ptr )
 
     if (data->rwsplit_only == 0)
     {
-        data->conn2 = data->Test->open_readconn_master_connection();
+        data->conn2 = data->Test->maxscales->open_readconn_master_connection(0);
         if ((data->conn2 == NULL) || (mysql_errno(data->conn2) != 0 ))
         {
             data->Test->add_result(1, "Error connecting to ReadConn Master\n");

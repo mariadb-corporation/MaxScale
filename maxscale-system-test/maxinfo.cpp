@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
         pthread_join(thread1[i], NULL);
     }
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

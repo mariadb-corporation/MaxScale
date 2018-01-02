@@ -42,6 +42,13 @@ auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
     return sInstance;
 }
 
+auto_ptr<FilterModule::Instance> FilterModule::createInstance(const char* zName,
+                                                              char** pzOptions,
+                                                              std::auto_ptr<ConfigParameters> sParameters)
+{
+    return createInstance(zName, pzOptions, sParameters.get());
+}
+
 //
 // FilterModule::Instance
 //

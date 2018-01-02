@@ -321,11 +321,11 @@ void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map)
  * @return Pointer to the start of the definition of NULL if the query is
  * malformed.
  */
-static const char* get_table_definition(const char *sql, int* size)
+static const char* get_table_definition(const char *sql, int len, int* size)
 {
     const char *rval = NULL;
     const char *ptr = sql;
-    const char *end = strchr(sql, '\0');
+    const char *end = sql + len;
     while (ptr < end && *ptr != '(')
     {
         ptr++;
@@ -403,10 +403,12 @@ static bool get_table_name(const char* sql, char* dest)
 
 /**
  * Extract the database name from a CREATE TABLE statement
+ *
  * @param sql SQL statement
  * @param dest Destination where the database name is extracted. Must be at least
- * MYSQL_DATABASE_MAXLEN bytes long.
- * @return True if extraction was successful
+ *             MYSQL_DATABASE_MAXLEN bytes long.
+ *
+ * @return True if a database name was extracted
  */
 static bool get_database_name(const char* sql, char* dest)
 {
@@ -426,22 +428,27 @@ static bool get_database_name(const char* sql, char* dest)
             ptr--;
         }
 
-        while (*ptr == '`' || *ptr == '.' || isspace(*ptr))
+        if (*ptr == '.')
         {
-            ptr--;
+            // The query defines an explicit database
+
+            while (*ptr == '`' || *ptr == '.' || isspace(*ptr))
+            {
+                ptr--;
+            }
+
+            const char* end = ptr + 1;
+
+            while (*ptr != '`' && *ptr != '.' && !isspace(*ptr))
+            {
+                ptr--;
+            }
+
+            ptr++;
+            memcpy(dest, ptr, end - ptr);
+            dest[end - ptr] = '\0';
+            rval = true;
         }
-
-        const char* end = ptr + 1;
-
-        while (*ptr != '`' && *ptr != '.' && !isspace(*ptr))
-        {
-            ptr--;
-        }
-
-        ptr++;
-        memcpy(dest, ptr, end - ptr);
-        dest[end - ptr] = '\0';
-        rval = true;
     }
 
     return rval;
@@ -512,12 +519,16 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
         }
     }
 
-    if (strncasecmp(ptr, "constraint", 10) == 0 || strncasecmp(ptr, "index", 5) == 0 ||
-        strncasecmp(ptr, "key", 3) == 0 || strncasecmp(ptr, "fulltext", 8) == 0 ||
-        strncasecmp(ptr, "spatial", 7) == 0 || strncasecmp(ptr, "foreign", 7) == 0 ||
-        strncasecmp(ptr, "unique", 6) == 0 || strncasecmp(ptr, "primary", 7) == 0)
+    if (!bt)
     {
-        return NULL;
+        if (strncasecmp(ptr, "constraint", 10) == 0 || strncasecmp(ptr, "index", 5) == 0 ||
+            strncasecmp(ptr, "key", 3) == 0 || strncasecmp(ptr, "fulltext", 8) == 0 ||
+            strncasecmp(ptr, "spatial", 7) == 0 || strncasecmp(ptr, "foreign", 7) == 0 ||
+            strncasecmp(ptr, "unique", 6) == 0 || strncasecmp(ptr, "primary", 7) == 0)
+        {
+            // Found a keyword
+            return NULL;
+        }
     }
 
     const char *start = ptr;
@@ -694,34 +705,41 @@ TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
  * @param db Database where this query was executed
  * @return New CREATE_TABLE object or NULL if an error occurred
  */
-TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* event_db)
+TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* db)
 {
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
-    const char* statement_sql = get_table_definition(sql, &stmt_len);
+    const char* statement_sql = get_table_definition(sql, len, &stmt_len);
     ss_dassert(statement_sql);
     char table[MYSQL_TABLE_MAXLEN + 1];
     char database[MYSQL_DATABASE_MAXLEN + 1];
-    const char *db = event_db;
-
+    const char* err = NULL;
     MXS_INFO("Create table: %.*s", len, sql);
 
-    if (!get_table_name(sql, table))
+    if (!statement_sql)
     {
-        MXS_ERROR("Malformed CREATE TABLE statement, could not extract table name: %s", sql);
-        return NULL;
+        err = "table definition";
+    }
+    else if (!get_table_name(sql, table))
+    {
+        err = "table name";
     }
 
-    /** The CREATE statement contains the database name */
-    if (strlen(db) == 0)
+    if (get_database_name(sql, database))
     {
-        if (!get_database_name(sql, database))
-        {
-            MXS_ERROR("Malformed CREATE TABLE statement, could not extract "
-                      "database name: %s", sql);
-            return NULL;
-        }
+        // The CREATE statement contains the database name
         db = database;
+    }
+    else if (*db == '\0')
+    {
+        // No explicit or current database
+        err = "database name";
+    }
+
+    if (err)
+    {
+        MXS_ERROR("Malformed CREATE TABLE statement, could not extract %s: %.*s", err, len, sql);
+        return NULL;
     }
 
     int* lengths = NULL;
@@ -891,6 +909,27 @@ static void remove_extras(char* str)
     str[len] = '\0';
 
     ss_dassert(strlen(str) == len);
+}
+
+
+static void remove_backticks(char* src)
+{
+    char* dest = src;
+
+    while (*src)
+    {
+        if (*src != '`')
+        {
+            // Non-backtick character, keep it
+            *dest = *src;
+            dest++;
+        }
+
+        src++;
+    }
+
+    ss_dassert(dest == src || (*dest != '\0' && dest < src));
+    *dest = '\0';
 }
 
 /**
@@ -1095,10 +1134,12 @@ static bool tok_eq(const char *a, const char *b, size_t len)
 void read_alter_identifier(const char *sql, const char *end, char *dest, int size)
 {
     int len = 0;
-    const char *tok = get_tok(sql, &len, end);
-    if (tok && (tok = get_tok(tok + len, &len, end)) && (tok = get_tok(tok + len, &len, end)))
+    const char *tok = get_tok(sql, &len, end); // ALTER
+    if (tok && (tok = get_tok(tok + len, &len, end)) // TABLE
+                && (tok = get_tok(tok + len, &len, end))) // Table identifier
     {
         snprintf(dest, size, "%.*s", len, tok);
+        remove_backticks(dest);
     }
 }
 
@@ -1174,20 +1215,33 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 if (tok_eq(ptok, "add", plen) && tok_eq(tok, "column", len))
                 {
                     tok = get_tok(tok + len, &len, end);
-
-                    create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * (create->columns + 1));
-                    create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * (create->columns + 1));
-                    create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * (create->columns + 1));
-
                     char avro_token[len + 1];
                     make_avro_token(avro_token, tok, len);
-                    char field_type[200] = ""; // Enough to hold all types
-                    int field_length = extract_type_length(tok + len, field_type);
-                    create->column_names[create->columns] = MXS_STRDUP_A(avro_token);
-                    create->column_types[create->columns] = MXS_STRDUP_A(field_type);
-                    create->column_lengths[create->columns] = field_length;
-                    create->columns++;
-                    updates++;
+                    bool is_new = true;
+
+                    for (uint64_t i = 0; i < create->columns; i++)
+                    {
+                        if (strcmp(avro_token, create->column_names[i]) == 0)
+                        {
+                            is_new = false;
+                            break;
+                        }
+                    }
+
+                    if (is_new)
+                    {
+                        create->column_names = MXS_REALLOC(create->column_names, sizeof(char*) * (create->columns + 1));
+                        create->column_types = MXS_REALLOC(create->column_types, sizeof(char*) * (create->columns + 1));
+                        create->column_lengths = MXS_REALLOC(create->column_lengths, sizeof(int) * (create->columns + 1));
+
+                        char field_type[200] = ""; // Enough to hold all types
+                        int field_length = extract_type_length(tok + len, field_type);
+                        create->column_names[create->columns] = MXS_STRDUP_A(avro_token);
+                        create->column_types[create->columns] = MXS_STRDUP_A(field_type);
+                        create->column_lengths[create->columns] = field_length;
+                        create->columns++;
+                        updates++;
+                    }
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
@@ -1392,21 +1446,4 @@ void table_map_free(TABLE_MAP *map)
         MXS_FREE(map->table);
         MXS_FREE(map);
     }
-}
-
-/**
- * @brief Map a table to a different ID
- *
- * This updates the table ID that the @c TABLE_MAP object is assigned with
- *
- * @param ptr Pointer to the start of a table map event
- * @param hdr_len Post-header length
- * @param map Table map to remap
- */
-void table_map_remap(uint8_t *ptr, uint8_t hdr_len, TABLE_MAP *map)
-{
-    uint64_t table_id = 0;
-    size_t id_size = hdr_len == 6 ? 4 : 6;
-    memcpy(&table_id, ptr, id_size);
-    map->id = table_id;
 }

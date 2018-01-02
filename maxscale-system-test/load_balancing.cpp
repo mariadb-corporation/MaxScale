@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
 
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     Test->repl->start_replication();
 

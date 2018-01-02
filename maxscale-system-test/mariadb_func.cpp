@@ -15,13 +15,13 @@
 #include <ctype.h>
 #include <sstream>
 
-int set_ssl(MYSQL * conn)
+int set_ssl(MYSQL* conn)
 {
     char client_key[1024];
     char client_cert[1024];
     char ca[1024];
-    char * test_dir;
-    test_dir = getenv("test_dir");
+    char* test_dir = getenv("test_dir");
+
     if (test_dir == NULL)
     {
         sprintf(client_key, "./ssl-cert/client-key.pem");
@@ -37,10 +37,10 @@ int set_ssl(MYSQL * conn)
     return mysql_ssl_set(conn, client_key, client_cert, ca, NULL, NULL);
 }
 
-MYSQL * open_conn_db_flags(int port, const char* ip, const char* db, const char* User, const char* Password,
-                           unsigned long flag, bool ssl)
+MYSQL* open_conn_db_flags(int port, std::string ip, std::string db, std::string user, std::string password,
+                          unsigned long flag, bool ssl)
 {
-    MYSQL * conn = mysql_init(NULL);
+    MYSQL* conn = mysql_init(NULL);
 
     if (conn == NULL)
     {
@@ -53,27 +53,15 @@ MYSQL * open_conn_db_flags(int port, const char* ip, const char* db, const char*
         set_ssl(conn);
     }
 
-    if (!mysql_real_connect(conn,
-                            ip,
-                            User,
-                            Password,
-                            db,
-                            port,
-                            NULL,
-                            flag
-                           ))
-    {
-        //printf("Error: can't connect to database, error is %s:\n", mysql_error(conn));
-        return conn;
-    }
-
+    mysql_real_connect(conn, ip.c_str(), user.c_str(), password.c_str(),
+                       db.c_str(), port, NULL, flag);
     return conn;
 }
 
-MYSQL * open_conn_db_timeout(int port, const char* ip, const char* db, const char* User, const char* Password,
-                             unsigned long timeout, bool ssl)
+MYSQL* open_conn_db_timeout(int port, std::string ip, std::string db, std::string user, std::string password,
+                             unsigned int timeout, bool ssl)
 {
-    MYSQL * conn = mysql_init(NULL);
+    MYSQL* conn = mysql_init(NULL);
 
     if (conn == NULL)
     {
@@ -81,61 +69,21 @@ MYSQL * open_conn_db_timeout(int port, const char* ip, const char* db, const cha
         return NULL;
     }
 
-    unsigned int conn_timeout = timeout;
-    unsigned int read_timeout = timeout;
-    unsigned int write_timeout = timeout;
-    mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &conn_timeout);
-    mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &read_timeout);
-    mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout);
+    mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+    mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+    mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
     if (ssl)
     {
-        if (ssl)
-        {
-            set_ssl(conn);
-        }
+        set_ssl(conn);
     }
 
-    if (!mysql_real_connect(conn,
-                            ip,
-                            User,
-                            Password,
-                            db,
-                            port,
-                            NULL,
-                            CLIENT_MULTI_STATEMENTS
-                           ))
-    {
-        //printf("Error: can't connect to database, error is %s:\n", mysql_error(conn));
-        return conn;
-    }
-
+    mysql_real_connect(conn, ip.c_str(), user.c_str(), password.c_str(),
+                       db.c_str(), port, NULL, CLIENT_MULTI_STATEMENTS);
     return conn;
 }
-MYSQL* open_conn_db_timeout(int port, const std::string& ip, const std::string& db,
-                            const std::string& user, const std::string& password,
-                            unsigned long timeout, bool ssl)
-{
-    return open_conn_db_timeout(port, ip.c_str(), db.c_str(), user.c_str(), password.c_str(), timeout, ssl);
-}
 
-MYSQL * open_conn_db(int port, const char* ip, const char* db, const char* User, const char* Password,
-                     bool ssl)
-{
-    return open_conn_db_flags(port, ip, db, User, Password, CLIENT_MULTI_STATEMENTS, ssl);
-}
-
-MYSQL * open_conn(int port, const char* ip, const char* User, const char* Password, bool ssl)
-{
-    return open_conn_db(port, ip, "test", User, Password, ssl);
-}
-
-MYSQL * open_conn_no_db(int port, const char* ip, const char*User, const char*Password, bool ssl)
-{
-    return open_conn_db_flags(port, ip, NULL, User, Password, CLIENT_MULTI_STATEMENTS, ssl);
-}
-
-int execute_query(MYSQL *conn, const char *format, ...)
+int execute_query(MYSQL* conn, const char* format, ...)
 {
     va_list valist;
 
@@ -149,10 +97,10 @@ int execute_query(MYSQL *conn, const char *format, ...)
     vsnprintf(sql, sizeof(sql), format, valist);
     va_end(valist);
 
-    return execute_query1(conn, sql, false);
+    return execute_query_silent(conn, sql, false);
 }
 
-int execute_query_from_file(MYSQL *conn, FILE *file)
+int execute_query_from_file(MYSQL* conn, FILE* file)
 {
     int rc = -1;
     char buf[4096];
@@ -175,7 +123,7 @@ int execute_query_from_file(MYSQL *conn, FILE *file)
 
         if (*ptr)
         {
-            rc = execute_query1(conn, buf, false);
+            rc = execute_query_silent(conn, buf, false);
         }
 
     }
@@ -188,12 +136,7 @@ int execute_query_from_file(MYSQL *conn, FILE *file)
     return rc;
 }
 
-int execute_query_silent(MYSQL *conn, const char *sql)
-{
-    return execute_query1(conn, sql, true);
-}
-
-int execute_query1(MYSQL *conn, const char *sql, bool silent)
+int execute_query_silent(MYSQL* conn, const char* sql, bool silent)
 {
     MYSQL_RES *res;
     if (conn != NULL)
@@ -229,7 +172,7 @@ int execute_query1(MYSQL *conn, const char *sql, bool silent)
     }
 }
 
-int execute_query_check_one(MYSQL *conn, const char *sql, const char *expected)
+int execute_query_check_one(MYSQL* conn, const char* sql, const char* expected)
 {
     int r = 1;
 
@@ -299,7 +242,7 @@ int execute_query_check_one(MYSQL *conn, const char *sql, const char *expected)
     return r;
 }
 
-int execute_query_affected_rows(MYSQL *conn, const char *sql, my_ulonglong * affected_rows)
+int execute_query_affected_rows(MYSQL* conn, const char* sql, my_ulonglong* affected_rows)
 {
     MYSQL_RES *res;
     if (conn != NULL)
@@ -329,8 +272,8 @@ int execute_query_affected_rows(MYSQL *conn, const char *sql, my_ulonglong * aff
     }
 }
 
-int execute_query_num_of_rows(MYSQL *conn, const char *sql, my_ulonglong num_of_rows[],
-                              unsigned long long * i)
+int execute_query_num_of_rows(MYSQL* conn, const char* sql, my_ulonglong* num_of_rows,
+                              unsigned long long* i)
 {
     MYSQL_RES *res;
     my_ulonglong N;
@@ -376,7 +319,7 @@ int execute_query_num_of_rows(MYSQL *conn, const char *sql, my_ulonglong num_of_
     }
 }
 
-int execute_stmt_num_of_rows(MYSQL_STMT * stmt, my_ulonglong num_of_rows[], unsigned long long * i)
+int execute_stmt_num_of_rows(MYSQL_STMT* stmt, my_ulonglong* num_of_rows, unsigned long long* i)
 {
     my_ulonglong N;
 
@@ -436,7 +379,7 @@ int execute_stmt_num_of_rows(MYSQL_STMT * stmt, my_ulonglong num_of_rows[], unsi
     return 1;
 }
 
-int execute_query_count_rows(MYSQL *conn, const char *sql)
+int execute_query_count_rows(MYSQL* conn, const char* sql)
 {
     int rval = -1;
 
@@ -456,7 +399,7 @@ int execute_query_count_rows(MYSQL *conn, const char *sql)
     return rval;
 }
 
-int get_conn_num(MYSQL *conn, const char* ip, const char* hostname, const char* db)
+int get_conn_num(MYSQL* conn, std::string ip, std::string hostname, std::string db)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;
@@ -464,15 +407,15 @@ int get_conn_num(MYSQL *conn, const char* ip, const char* hostname, const char* 
     unsigned long long int rows;
     unsigned long long int i;
     unsigned int conn_num = 0;
-    const char * hostname_internal;
+    const char*  hostname_internal;
 
-    if (strcmp(ip, "127.0.0.1") == 0)
+    if (ip == "127.0.0.1")
     {
         hostname_internal = "localhost";
     }
     else
     {
-        hostname_internal = hostname;
+        hostname_internal = hostname.c_str();
     }
 
     if (conn != NULL)
@@ -500,11 +443,11 @@ int get_conn_num(MYSQL *conn, const char* ip, const char* hostname, const char* 
                     row = mysql_fetch_row(res);
                     if ( (row[2] != NULL ) && (row[3] != NULL) )
                     {
-                        if ((strstr(row[2], ip) != NULL) && (strstr(row[3], db) != NULL))
+                        if ((strstr(row[2], ip.c_str()) != NULL) && (strstr(row[3], db.c_str()) != NULL))
                         {
                             conn_num++;
                         }
-                        if ((strstr(row[2], hostname_internal) != NULL) && (strstr(row[3], db) != NULL))
+                        if ((strstr(row[2], hostname_internal) != NULL) && (strstr(row[3], db.c_str()) != NULL))
                         {
                             conn_num++;
                         }
@@ -514,7 +457,7 @@ int get_conn_num(MYSQL *conn, const char* ip, const char* hostname, const char* 
             mysql_free_result(res);
         }
     }
-    if (strcmp(ip, "127.0.0.1") == 0)
+    if (ip == "127.0.0.1")
     {
         // one extra connection is visible in the process list
         // output in case of local test
@@ -524,7 +467,7 @@ int get_conn_num(MYSQL *conn, const char* ip, const char* hostname, const char* 
     return conn_num;
 }
 
-int find_field(MYSQL *conn, const char *sql, const char *field_name, char * value)
+int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;
@@ -579,66 +522,7 @@ int find_field(MYSQL *conn, const char *sql, const char *field_name, char * valu
     return ret;
 }
 
-unsigned int get_seconds_behind_master(MYSQL *conn)
-{
-    char SBM_str[16];
-    unsigned int SBM = 0;
-    if (find_field(
-            conn, (char *) "show slave status;",
-            (char *) "Seconds_Behind_Master", &SBM_str[0]
-        ) != 1)
-    {
-        sscanf(SBM_str, "%u", &SBM);
-    }
-    return SBM;
-}
-
-int read_log(const char* name, char ** err_log_content_p)
-{
-    FILE *f;
-    *err_log_content_p = NULL;
-    char * err_log_content;
-    f = fopen(name, "rb");
-    if (f != NULL)
-    {
-
-        int prev = ftell(f);
-        fseek(f, 0L, SEEK_END);
-        long int size = ftell(f);
-        fseek(f, prev, SEEK_SET);
-        err_log_content = (char *)malloc(size + 2);
-        if (err_log_content != NULL)
-        {
-            fread(err_log_content, 1, size, f);
-            for (int i = 0; i < size; i++)
-            {
-                if (err_log_content[i] == 0)
-                {
-                    //printf("null detected at position %d\n", i);
-                    err_log_content[i] = '\n';
-                }
-            }
-            //printf("s=%ld\n", strlen(err_log_content));
-            err_log_content[size] = '\0';
-            //printf("s=%ld\n", strlen(err_log_content));
-            * err_log_content_p = err_log_content;
-            return 0;
-        }
-        else
-        {
-            printf("Error allocationg memory for the log\n");
-            return 1;
-        }
-    }
-    else
-    {
-        printf ("Error reading log %s \n", name);
-        return 1;
-    }
-
-}
-
-int get_int_version(const std::string& version)
+int get_int_version(std::string version)
 {
     std::istringstream str(version);
     int major = 0;
@@ -648,9 +532,4 @@ int get_int_version(const std::string& version)
 
     str >> major >> dot >> minor >> dot >> patch;
     return major * 10000 + minor * 100 + patch;
-}
-
-int get_int_version(const char* version)
-{
-    return get_int_version(std::string(version));
 }

@@ -91,10 +91,10 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
 {
     //char *select_stmt = (char *) "SELECT id, x, b FROM long_blob_table WHERE id = ?";
     char *select_stmt = (char *) "SELECT id, x, b FROM long_blob_table ";
-    MYSQL_STMT * stmt = mysql_stmt_init(Test->conn_rwsplit);
+    MYSQL_STMT * stmt = mysql_stmt_init(Test->maxscales->conn_rwsplit[0]);
     if (stmt == NULL)
     {
-        Test->add_result(1, "stmt init error: %s\n", mysql_error(Test->conn_rwsplit));
+        Test->add_result(1, "stmt init error: %s\n", mysql_error(Test->maxscales->conn_rwsplit[0]));
     }
 
     Test->add_result(mysql_stmt_prepare(stmt, select_stmt, strlen(select_stmt)), "Error preparing stmt: %s\n",
@@ -154,7 +154,7 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
 
     if (mysql_stmt_execute(stmt) != 0)
     {
-        Test->tprintf("Error executing stmt %s\n", mysql_error(Test->conn_rwsplit));
+        Test->tprintf("Error executing stmt %s\n", mysql_error(Test->maxscales->conn_rwsplit[0]));
     }
 
     if (mysql_stmt_store_result(stmt) != 0)
@@ -175,9 +175,9 @@ int check_longblob_data(TestConnections* Test, MYSQL * conn, unsigned long chunk
         {
             if (data[y] != y)
             {
-                Test->add_result(1, "Data is wrong!\n");
+                Test->add_result(1, "expected %d, got %d", data[y], y);
+                break;
             }
-            //printf("y = %d \t%lu\tid=%d\tx=%d\n", y, data[y], r_id, r_x);
         }
         row++;
     }

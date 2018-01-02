@@ -403,6 +403,32 @@ static void unpack_time(uint8_t *ptr, struct tm *dest)
 }
 
 /**
+ * @brief Unpack a TIME2
+ *
+ * The TIME2 is stored as a 3 byte value containing the integer parts plus
+ * the additional fractional parts as a trailing value. The
+ * integer parts of the time are extracted with the following algorithm:
+ *
+ * hours   = (value >> 12) % (1 << 10)
+ * minutes = (value >> 6) % (1 << 6)
+ * seconds = value % (1 << 6)
+ *
+ * As the `struct tm` doesn't support fractional seconds, the fractional part
+ * is ignored.
+ *
+ * @param val  Value read from the binary log
+ * @param dest Pointer where the unpacked value is stored
+ */
+static void unpack_time2(uint8_t *ptr, uint8_t decimals, struct tm *dest)
+{
+    uint64_t val = unpack3(ptr) - DATETIME2_OFFSET;
+    memset(dest, 0, sizeof(struct tm));
+    dest->tm_hour = (val >> 12) % (1 << 10);
+    dest->tm_min = (val >> 6) % (1 << 6);
+    dest->tm_sec = val % (1 << 6);
+}
+
+/**
  * @brief Unpack a DATE value
  * @param ptr Pointer to packed value
  * @param dest Pointer where the unpacked value is stored
@@ -522,6 +548,10 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, int 
 
     case TABLE_COL_TYPE_TIME:
         unpack_time(ptr, tm);
+        break;
+
+    case TABLE_COL_TYPE_TIME2:
+        unpack_time2(ptr, *metadata, tm);
         break;
 
     case TABLE_COL_TYPE_DATE:

@@ -221,21 +221,21 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("Creating 'root'@'%%'\n");
-    //global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'root'@'%'; SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
+    //global_result += execute_query(Test->maxscales->conn_rwsplit[0], (char *) "CREATE USER 'root'@'%'; SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
 
-    Test->try_query(Test->conn_rwsplit,
+    Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char *) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%%' IDENTIFIED BY 'skysqlroot';");
-    Test->try_query(Test->conn_rwsplit,
+    Test->try_query(Test->maxscales->conn_rwsplit[0],
                     (char *) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' IDENTIFIED BY 'skysqlroot';");
     sleep(10);
 
     MYSQL * conn;
 
     Test->tprintf("Connecting using 'root'@'%%'\n");
-    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "root", (char *)  "skysqlroot", Test->ssl);
+    conn = open_conn(Test->maxscales->rwsplit_port[0], Test->maxscales->IP[0], (char *) "root", (char *)  "skysqlroot", Test->ssl);
     if (mysql_errno(conn) != 0)
     {
         Test->add_result(1, "Connection using 'root' user failed, error: %s\n", mysql_error(conn));
@@ -253,15 +253,15 @@ int main(int argc, char *argv[])
     }
 
     Test->tprintf("Dropping 'root'@'%%'\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP USER 'root'@'%%';");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], (char *) "DROP USER 'root'@'%%';");
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
-    Test->check_log_err((char *) "Failed to add user skysql", false);
-    Test->check_log_err((char *) "getaddrinfo failed", false);
-    Test->check_log_err((char *) "Couldn't find suitable Master", false);
+    Test->check_log_err(0, (char *) "Failed to add user skysql", false);
+    Test->check_log_err(0, (char *) "getaddrinfo failed", false);
+    Test->check_log_err(0, (char *) "Couldn't find suitable Master", false);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

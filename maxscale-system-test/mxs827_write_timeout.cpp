@@ -16,23 +16,23 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
-    Test->try_query(Test->conn_rwsplit, "SET wait_timeout=20");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "SET wait_timeout=20");
 
-    create_t1(Test->conn_rwsplit);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
 
     for (int i = 0; i < 30; i++)
     {
         Test->tprintf("Trying query %d\n", i);
         Test->set_timeout(10);
-        Test->try_query(Test->conn_rwsplit, "SELECT 1");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "SELECT 1");
         sleep(1);
     }
 
-    Test->try_query(Test->conn_rwsplit, "INSERT INTO t1 VALUES (1, 1)");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "INSERT INTO t1 VALUES (1, 1)");
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

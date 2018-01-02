@@ -229,6 +229,7 @@ static void blr_start_master(void* data)
         return;
     }
     client->session = router->session;
+    client->service = router->service;
 
     /**
      * 'client' is the fake DCB that emulates a client session:
@@ -265,6 +266,7 @@ static void blr_start_master(void* data)
         return;
     }
     router->master->remote = MXS_STRDUP_A(router->service->dbref->server->name);
+    router->master->service = router->service;
 
     MXS_NOTICE("%s: attempting to connect to master"
                " server [%s]:%d, binlog='%s', pos=%lu%s%s",
@@ -1298,13 +1300,50 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     }
                 }
 
-                /** Gather statistics about the replication event types */
+               /**
+                * Check Event Type limit:
+                * If supported, gather statistics about
+                * the replication event types
+                * else stop replication from master
+                */
                 int event_limit = router->mariadb10_compat ?
                                   MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 
                 if (hdr.event_type <= event_limit)
                 {
                     router->stats.events[hdr.event_type]++;
+                }
+                else
+                {
+                    char errmsg[BINLOG_ERROR_MSG_LEN + 1];
+                    sprintf(errmsg,
+                            "Event type [%d] not supported yet. "
+                            "Check master server configuration and "
+                            "disable any new feature. "
+                            "Replication from master has been stopped.",
+                            hdr.event_type);
+                    MXS_ERROR("%s", errmsg);
+                    gwbuf_free(pkt);
+                    pkt = NULL;
+
+                    spinlock_acquire(&router->lock);
+
+                    /* Handle error messages */
+                    char* old_errmsg = router->m_errmsg;
+                    router->m_errmsg = MXS_STRDUP_A(errmsg);
+                    router->m_errno = 1235;
+
+                    /* Set state to stopped */
+                    router->master_state = BLRM_SLAVE_STOPPED;
+                    router->stats.n_binlog_errors++;
+
+                    spinlock_release(&router->lock);
+
+                    MXS_FREE(old_errmsg);
+
+                    /* Stop replication */
+                    blr_master_close(router);
+                    return;
                 }
 
 

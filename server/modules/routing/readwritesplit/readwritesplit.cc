@@ -1432,7 +1432,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"retry_failed_reads", MXS_MODULE_PARAM_BOOL, "true"},
             {"disable_sescmd_history", MXS_MODULE_PARAM_BOOL, "true"},
             {"max_sescmd_history", MXS_MODULE_PARAM_COUNT, "0"},
-            {"strict_multi_stmt",  MXS_MODULE_PARAM_BOOL, "true"},
+            {"strict_multi_stmt",  MXS_MODULE_PARAM_BOOL, "false"},
             {"strict_sp_calls",  MXS_MODULE_PARAM_BOOL, "false"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},

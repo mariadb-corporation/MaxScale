@@ -17,13 +17,9 @@ provider=`${mdbci_dir}/mdbci show provider $box --silent 2> /dev/null`
 name=$box-${JOB_NAME}-${BUILD_NUMBER}_upgradetest
 name=`echo $name | sed "s|/|-|g"`
 
-
-cp ${script_dir}/install.json.template ${MDBCI_VM_PATH}/$name.json
-
-  eval "cat <<EOF
+eval "cat <<EOF
 $(<${script_dir}/templates/install.json.template)
 " 2> /dev/null > $MDBCI_VM_PATH/${name}.json
-
 
 while [ -f ~/vagrant_lock ]
 do
@@ -92,7 +88,7 @@ scp $scpopt ${script_dir}/cnf/$cnf_file $sshuser@$IP:~/
 
 . ${script_dir}/configure_log_dir.sh
 
-${mdbci_dir}/mdbci ssh --command 'service --help' $name/maxscale
+${mdbci_dir}/mdbci ssh --command 'sudo service --help' $name/maxscale
 if [ $? == 0 ] ; then
 	maxscale_start_cmd="sudo service maxscale start"
 else

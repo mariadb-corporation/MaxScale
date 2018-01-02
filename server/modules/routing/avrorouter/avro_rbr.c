@@ -17,6 +17,7 @@
 #include <jansson.h>
 #include <maxscale/alloc.h>
 #include <strings.h>
+#include <maxscale/utils.h>
 
 #define WRITE_EVENT         0
 #define UPDATE_EVENT        1
@@ -104,72 +105,53 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
     {
         ss_dassert(create->columns > 0);
         TABLE_MAP *old = hashtable_fetch(router->table_maps, table_ident);
+        TABLE_MAP *map = table_map_alloc(ptr, ev_len, create);
+        MXS_ABORT_IF_NULL(map); // Fatal error at this point
+        char* json_schema = json_new_schema_from_table(map);
 
-        if (old == NULL || old->version != create->version)
+        if (json_schema)
         {
-            TABLE_MAP *map = table_map_alloc(ptr, ev_len, create);
+            char filepath[PATH_MAX + 1];
+            snprintf(filepath, sizeof(filepath), "%s/%s.%06d.avro",
+                     router->avrodir, table_ident, map->version);
 
-            if (map)
+            /** Close the file and open a new one */
+            hashtable_delete(router->open_tables, table_ident);
+            AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema,
+                                                      codec_to_string(router->codec),
+                                                      router->block_size);
+
+            if (avro_table)
             {
-                char* json_schema = json_new_schema_from_table(map);
+                bool notify = old != NULL;
 
-                if (json_schema)
+                if (old)
                 {
-                    char filepath[PATH_MAX + 1];
-                    snprintf(filepath, sizeof(filepath), "%s/%s.%06d.avro",
-                             router->avrodir, table_ident, map->version);
-
-                    /** Close the file and open a new one */
-                    hashtable_delete(router->open_tables, table_ident);
-                    AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema,
-                                                              codec_to_string(router->codec),
-                                                              router->block_size);
-
-                    if (avro_table)
-                    {
-                        bool notify = old != NULL;
-
-                        if (old)
-                        {
                             router->active_maps[old->id % MAX_MAPPED_TABLES] = NULL;
                         }
                         hashtable_delete(router->table_maps, table_ident);
-                        hashtable_add(router->table_maps, (void*) table_ident, map);
-                        hashtable_add(router->open_tables, table_ident, avro_table);
-                        save_avro_schema(router->avrodir, json_schema, map);
-                        router->active_maps[map->id % MAX_MAPPED_TABLES] = map;
-                        MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
-                        rval = true;
+                hashtable_add(router->table_maps, (void*)table_ident, map);
+                hashtable_add(router->open_tables, table_ident, avro_table);
+                save_avro_schema(router->avrodir, json_schema, map);
+                router->active_maps[map->id % MAX_MAPPED_TABLES] = map;
+                ss_dassert(router->active_maps[id % MAX_MAPPED_TABLES] == map);
+                MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
+                rval = true;
 
-                        if (notify)
-                        {
-                            notify_all_clients(router);
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("Failed to open new Avro file for writing.");
-                    }
-                    MXS_FREE(json_schema);
-                }
-                else
+                if (notify)
                 {
-                    MXS_ERROR("Failed to create JSON schema.");
+                    notify_all_clients(router);
                 }
             }
             else
             {
-                MXS_ERROR("Failed to allocate new table map.");
+                MXS_ERROR("Failed to open new Avro file for writing.");
             }
+            MXS_FREE(json_schema);
         }
         else
         {
-            router->active_maps[old->id % MAX_MAPPED_TABLES] = NULL;
-            table_map_remap(ptr, ev_len, old);
-            router->active_maps[old->id % MAX_MAPPED_TABLES] = old;
-            MXS_DEBUG("Table %s re-mapped to %lu", table_ident, old->id);
-            /** No changes in the schema */
-            rval = true;
+            MXS_ERROR("Failed to create JSON schema.");
         }
     }
     else
@@ -363,8 +345,9 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
         }
         else
         {
-            MXS_ERROR("Row event and table map event have different column counts."
-                      " Only full row image is currently supported.");
+            MXS_ERROR("Row event and table map event have different column "
+                      "counts for table %s.%s, only full row image is currently "
+                      "supported.", map->database, map->table);
         }
     }
     else
@@ -562,16 +545,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 {
                     uint8_t val[metadata[metadata_offset + 1]];
                     uint64_t bytes = unpack_enum(ptr, &metadata[metadata_offset], val);
-                    char strval[32];
-
-                    /** Right now only ENUMs/SETs with less than 256 values
-                     * are printed correctly */
-                    snprintf(strval, sizeof(strval), "%hhu", val[0]);
-                    if (bytes > 1 && warn_large_enumset)
-                    {
-                        warn_large_enumset = true;
-                        MXS_WARNING("ENUM/SET values larger than 255 values aren't supported.");
-                    }
+                    char strval[bytes * 2 + 1];
+                    gw_bin2hex(strval, val, bytes);
                     avro_value_set_string(&field, strval);
                     MXS_INFO("[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
@@ -606,7 +581,6 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     }
 
                     MXS_INFO("[%ld] CHAR: field: %d bytes, data: %d bytes", i, field_length, bytes);
-                    ss_dassert(bytes || *ptr == '\0');
                     char str[bytes + 1];
                     memcpy(str, ptr, bytes);
                     str[bytes] = '\0';
@@ -618,11 +592,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             else if (column_is_bit(map->column_types[i]))
             {
                 uint64_t value = 0;
-                int width = metadata[metadata_offset] + metadata[metadata_offset + 1] * 8;
-                int bits_in_nullmap = MXS_MIN(width, extra_bits);
-                extra_bits -= bits_in_nullmap;
-                width -= bits_in_nullmap;
-                size_t bytes = width / 8;
+                uint8_t len = metadata[metadata_offset + 1];
+                uint8_t bit_len = metadata[metadata_offset] > 0 ? 1 : 0;
+                size_t bytes = len + bit_len;
 
                 // TODO: extract the bytes
                 if (!warn_bit)
@@ -694,7 +666,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                                              create->column_lengths[i], &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
-                MXS_INFO("[%ld] TEMPORAL: %s", i, buf);
+                MXS_INFO("[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
                 ss_dassert(ptr < end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */

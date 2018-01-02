@@ -129,24 +129,24 @@ int main(int argc, char *argv[])
     Test->set_timeout(120);
     Test->repl->connect();
 
-    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
-    Test->connect_rwsplit();
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscales->IP[0]);
+    Test->maxscales->connect_rwsplit(0);
 
-    Test->execute_maxadmin_command((char *) "shutdown monitor MySQL-Monitor");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "shutdown monitor MySQL-Monitor");
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
 
     Test->tprintf("Creating table t1\n");
     fflush(stdout);
-    Test->try_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1;");
-    Test->try_query(Test->conn_rwsplit, "create table t1 (x1 int);");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "create table t1 (x1 int);");
 
     Test->repl->sync_slaves();
 
     printf("Trying SELECT * FROM t1\n");
     fflush(stdout);
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
-    Test->try_query(Test->conn_rwsplit, "select * from t1;");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl, 1),
                      "Wrong check_com_select result\n");
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
     printf("Trying INSERT INTO t1 VALUES(1);\n");
     fflush(stdout);
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
-    Test->try_query(Test->conn_rwsplit, "insert into t1 values(1);");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl, 1),
                      "Wrong check_com_insert result\n");
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
     printf("Trying SELECT * FROM t1\n");
     fflush(stdout);
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
-    execute_query(Test->conn_rwsplit, "select * from t1;");
+    execute_query(Test->maxscales->conn_rwsplit[0], "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl, 1),
                      "Wrong check_com_select result\n");
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
     printf("Trying INSERT INTO t1 VALUES(1);\n");
     fflush(stdout);
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
-    execute_query(Test->conn_rwsplit, "insert into t1 values(1);");
+    execute_query(Test->maxscales->conn_rwsplit[0], "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl, 1),
                      "Wrong check_com_insert result\n");
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(20);
-        Test->try_query(Test->conn_rwsplit, "select * from t1;");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "select * from t1;");
     }
 
     Test->stop_timeout();
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < 100; i++)
     {
         Test->set_timeout(20);
-        Test->try_query(Test->conn_rwsplit, "insert into t1 values(1);");
+        Test->try_query(Test->maxscales->conn_rwsplit[0], "insert into t1 values(1);");
     }
 
     Test->stop_timeout();
@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
                                       100),
                      "Wrong check_com_insert result\n");
 
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
 
     int rval = Test->global_result;
     delete Test;

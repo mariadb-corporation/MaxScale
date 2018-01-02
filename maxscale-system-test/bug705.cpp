@@ -243,10 +243,10 @@ int main(int argc, char *argv[])
     Test->tprintf("Restarting MaxScale\n");
 
     Test->set_timeout(120);
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
 
-    Test->check_log_err((char *) "Loading database names", false);
-    Test->check_log_err((char *) "Unknown column", false);
+    Test->check_log_err(0, (char *) "Loading database names", false);
+    Test->check_log_err(0, (char *) "Unknown column", false);
 
     int rval = Test->global_result;
     delete Test;

@@ -91,11 +91,9 @@ add_test_executable_notest(sysbench_example.cpp sysbench_example replication)
 
 # Build the MariaDB Connector/C 3.0
 
-set(CONNECTOR_C_VERSION "3.0" CACHE STRING "The Connector-C version to use")
+set(CONNECTOR_C_VERSION "v3.0.2" CACHE STRING "The Connector-C version to use")
 
 include(ExternalProject)
-include(GNUInstallDirs)
-
 ExternalProject_Add(connector-c
   GIT_REPOSITORY "https://github.com/MariaDB/mariadb-connector-c.git"
   GIT_TAG ${CONNECTOR_C_VERSION}
@@ -105,19 +103,50 @@ ExternalProject_Add(connector-c
 include_directories(${CMAKE_BINARY_DIR}/include)
 set(MYSQL_CLIENT ${CMAKE_BINARY_DIR}/lib/mariadb/libmariadbclient.a CACHE INTERNAL "")
 
-# Build Jansson
-include(cmake/BuildJansson.cmake)
-include_directories(${JANSSON_INCLUDE_DIR})
-
 # Build the CDC connector
 ExternalProject_Add(cdc_connector
-  GIT_REPOSITORY "https://github.com/mariadb-corporation/maxscale-cdc-connector"
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cdc_connector/ -DJANSSON_INCLUDE_DIR=${JANSSON_INCLUDE_DIR}
+  GIT_REPOSITORY https://github.com/mariadb-corporation/maxscale-cdc-connector.git
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cdc_connector/
   BUILD_COMMAND make
   INSTALL_COMMAND make install
   UPDATE_COMMAND "")
-add_dependencies(cdc_connector jansson)
 
-set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/include/ CACHE INTERNAL "")
-set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_LIBDIR}/libcdc_connector.a CACHE INTERNAL "")
-include_directories(${CMAKE_BINARY_DIR}/cdc_connector/include)
+include(GNUInstallDirs)
+set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_INCLUDEDIR}/ CACHE INTERNAL "")
+set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_LIBDIR}/libcdc_connector.so CACHE INTERNAL "")
+include_directories(${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_INCLUDEDIR})
+
+#
+# Check that all required components are present. To build even without them,
+# add e.g. -DHAVE_PHP=Y to the CMake invocation
+#
+
+find_program(HAVE_MYSQLTEST mysqltest)
+if (NOT HAVE_MYSQLTEST)
+  message(FATAL_ERROR "Could not find mysqltest.")
+endif()
+
+find_program(HAVE_PHP php)
+if (NOT HAVE_PHP)
+  message(FATAL_ERROR "Could not find php.")
+endif()
+
+# Build the Jansson library from source
+set(JANSSON_REPO "https://github.com/akheron/jansson.git" CACHE STRING "Jansson Git repository")
+
+# Release 2.9 of Jansson
+set(JANSSON_TAG "v2.9" CACHE STRING "Jansson Git tag")
+
+ExternalProject_Add(jansson
+  GIT_REPOSITORY ${JANSSON_REPO}
+  GIT_TAG ${JANSSON_TAG}
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/jansson/install -DCMAKE_C_FLAGS=-fPIC -DJANSSON_BUILD_DOCS=OFF
+  BINARY_DIR ${CMAKE_BINARY_DIR}/jansson
+  INSTALL_DIR ${CMAKE_BINARY_DIR}/jansson/install
+  UPDATE_COMMAND "")
+
+set(JANSSON_FOUND TRUE CACHE INTERNAL "")
+set(JANSSON_STATIC_FOUND TRUE CACHE INTERNAL "")
+set(JANSSON_INCLUDE_DIR ${CMAKE_BINARY_DIR}/jansson/install/include CACHE INTERNAL "")
+set(JANSSON_STATIC_LIBRARIES ${CMAKE_BINARY_DIR}/jansson/install/lib/libjansson.a CACHE INTERNAL "")
+set(JANSSON_LIBRARIES ${JANSSON_STATIC_LIBRARIES} CACHE INTERNAL "")

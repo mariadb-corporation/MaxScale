@@ -38,7 +38,7 @@ int check_lag(int * min_lag)
     for (i = 1; i < Test->repl->N; i++ )
     {
         sprintf(ma_cmd, "show server server%d", i + 1);
-        get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, ma_cmd,
+        maxscales->get_maxadmin_param(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0], ma_cmd,
                            (char *) "Slave delay:", result);
         sscanf(result, "%d", &res_d);
         Test->tprintf("server%d lag: %d\n", i + 1, res_d);
@@ -52,10 +52,10 @@ int check_lag(int * min_lag)
         }
     }
     Test->tprintf("Minimum lag: %d\n", *min_lag);
-    Test->connect_rwsplit();
-    find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20",
+    Test->maxscales->connect_rwsplit(0);
+    find_field(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20",
                (char *) "@@server_id", &server_id[0]);
-    Test->close_rwsplit();
+    Test->maxscales->close_rwsplit(0);
     sscanf(server_id, "%d", &server_id_d);
     Test->tprintf("Connected to the server with server_id %d\n", server_id_d);
     if ((server1_id_d == server_id_d))
@@ -84,11 +84,11 @@ int main(int argc, char *argv[])
     Test->set_timeout(2000);
 
     Test->repl->connect();
-    Test->connect_rwsplit();
+    Test->maxscales->connect_rwsplit(0);
 
     // connect to the MaxScale server (rwsplit)
 
-    if (Test->conn_rwsplit == NULL )
+    if (Test->maxscales->conn_rwsplit[0] == NULL )
     {
         printf("Can't connect to MaxScale\n");
         int rval = Test->global_result;
@@ -103,13 +103,13 @@ int main(int argc, char *argv[])
             execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 200;");
         }
 
-        create_t1(Test->conn_rwsplit);
-        create_t2(Test->conn_rwsplit);
+        create_t1(Test->maxscales->conn_rwsplit[0]);
+        create_t2(Test->maxscales->conn_rwsplit[0]);
 
         create_insert_string(sql, 50000, 1);
         Test->tprintf("sql_len=%lu\n", strlen(sql));
         /*      for ( i = 0; i < 100; i++) {
-                    Test->try_query(Test->conn_rwsplit, sql);
+                    Test->try_query(Test->maxscales->conn_rwsplit[0], sql);
                 }*/
 
         pthread_t threads[1000];
@@ -124,13 +124,13 @@ int main(int argc, char *argv[])
             iret[j] = pthread_create( &threads[j], NULL, query_thread, &sql);
         }
 
-        execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=10");
+        execute_query(Test->maxscales->conn_rwsplit[0], (char *) "select @@server_id; -- maxscale max_slave_replication_lag=10");
 
         find_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
         sscanf(server1_id, "%d", &server1_id_d);
         Test->tprintf("Master server_id: %d\n", server1_id_d);
 
-        Test->close_rwsplit();
+        Test->maxscales->close_rwsplit(0);
 
         for (i = 0; i < 1000; i++)
         {
@@ -180,13 +180,13 @@ void *checks_thread( void *ptr )
     char result[1024];
     for (int i = 0; i < 1000; i++)
     {
-        get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password,
+        maxscales->get_maxadmin_param(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0],
                            (char *) "show server server2", (char *) "Slave delay:", result);
         printf("server2: %s\n", result);
-        get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password,
+        maxscales->get_maxadmin_param(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0],
                            (char *) "show server server3", (char *) "Slave delay:", result);
         printf("server3: %s\n", result);
-        get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password,
+        maxscales->get_maxadmin_param(0, Test->maxscales->IP[0], (char *) "admin", Test->maxscales->maxadmin_password[0],
                            (char *) "show server server4", (char *) "Slave delay:", result);
         printf("server4: %s\n", result);
     }

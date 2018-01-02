@@ -32,14 +32,14 @@ int check_conf(TestConnections* Test, int blocked_node)
     Test->set_timeout(60);
 
     Test->repl->connect();
-    Test->connect_rwsplit();
-    create_t1(Test->conn_rwsplit);
-    global_result += insert_into_t1(Test->conn_rwsplit, 3);
+    Test->maxscales->connect_rwsplit(0);
+    create_t1(Test->maxscales->conn_rwsplit[0]);
+    global_result += insert_into_t1(Test->maxscales->conn_rwsplit[0], 4);
 
     printf("Sleeping to let replication happen\n");
     fflush(stdout);
     Test->stop_timeout();
-    sleep(15);
+    sleep(30);
 
     for (int i = 0; i < 2; i++)
     {
@@ -47,17 +47,17 @@ int check_conf(TestConnections* Test, int blocked_node)
         {
             Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
             Test->set_timeout(100);
-            global_result += select_from_t1(Test->repl->nodes[i], 3);
+            global_result += select_from_t1(Test->repl->nodes[i], 4);
         }
     }
     Test->set_timeout(100);
     printf("Checking data from rwsplit\n");
     fflush(stdout);
-    global_result += select_from_t1(Test->conn_rwsplit, 3);
-    global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
+    global_result += select_from_t1(Test->maxscales->conn_rwsplit[0], 4);
+    global_result += execute_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE t1");
 
     Test->repl->close_connections();
-    mysql_close(Test->conn_rwsplit);
+    mysql_close(Test->maxscales->conn_rwsplit[0]);
 
     Test->stop_timeout();
     return global_result;
@@ -72,17 +72,17 @@ int main(int argc, char *argv[])
 
     Test->repl->set_repl_user();
 
-    Test->start_mm(); // first node - slave, second - master
+    Test->start_mm(0); // first node - slave, second - master
 
     Test->set_timeout(120);
-    Test->get_maxadmin_param((char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char *) "show server server1", (char *) "Status:", maxadmin_result);
     Test->tprintf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Slave, Running")  == NULL )
     {
         Test->add_result(1, "Node0 is not slave, status is %s\n", maxadmin_result);
     }
     Test->set_timeout(120);
-    Test->get_maxadmin_param((char *) "show server server2", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     Test->tprintf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running") == NULL )
     {
@@ -95,9 +95,9 @@ int main(int argc, char *argv[])
     Test->tprintf("Block slave\n");
     Test->repl->block_node(0);
     Test->stop_timeout();
-    sleep(10);
+    sleep(15);
     Test->set_timeout(120);
-    Test->get_maxadmin_param((char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char *) "show server server1", (char *) "Status:", maxadmin_result);
     printf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Down")  == NULL )
     {
@@ -110,13 +110,13 @@ int main(int argc, char *argv[])
     Test->set_timeout(120);
     Test->tprintf("Unlock slave\n");
     Test->repl->unblock_node(0);
-    sleep(10);
+    sleep(15);
 
     Test->set_timeout(120);
     Test->tprintf("Block master\n");
     Test->repl->block_node(1);
-    sleep(10);
-    Test->get_maxadmin_param((char *) "show server server2", (char *) "Status:", maxadmin_result);
+    sleep(15);
+    Test->maxscales->get_maxadmin_param(0, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Down")  == NULL )
     {
@@ -129,35 +129,35 @@ int main(int argc, char *argv[])
     execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=OFF");
     Test->repl->close_connections();
 
-    sleep(10);
+    sleep(15);
     Test->set_timeout(120);
     Test->tprintf("Put some data and check\n");
     Test->add_result(check_conf(Test, 1), "configuration broken\n");
 
     printf("Unlock slave\n");
     Test->repl->unblock_node(1);
-    sleep(10);
+    sleep(15);
 
     Test->set_timeout(120);
     printf("Make node 2 slave\n");
     Test->repl->connect();
     execute_query(Test->repl->nodes[1], (char *) "SET GLOBAL READ_ONLY=ON");
     Test->repl->close_connections();
-    sleep(10);
+    sleep(15);
 
     Test->set_timeout(120);
     printf("Put some data and check\n");
     Test->add_result(check_conf(Test, 2), "Configuration broken\n");
 
     Test->set_timeout(60);
-    Test->get_maxadmin_param((char *) "show server server2", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Slave, Running")  == NULL )
     {
         Test->add_result(1, "Node1 is not slave, status is %s\n", maxadmin_result);
     }
     Test->set_timeout(60);
-    Test->get_maxadmin_param((char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->maxscales->get_maxadmin_param(0, (char *) "show server server1", (char *) "Status:", maxadmin_result);
     Test->tprintf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running")  == NULL )
     {

@@ -1,6 +1,6 @@
 add_subdirectory(galeramon)
 add_subdirectory(mmmon)
-add_subdirectory(mysqlmon)
+add_subdirectory(mariadbmon)
 add_subdirectory(ndbclustermon)
 add_subdirectory(auroramon)
 add_subdirectory(grmon)

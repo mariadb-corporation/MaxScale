@@ -24,7 +24,7 @@ int check_connection_count(TestConnections* test, int server)
     char cmd[1024];
     test->set_timeout(30);
     sprintf(cmd, "show server server%d", server);
-    test->add_result(test->get_maxadmin_param(cmd, (char*) "Current no. of conns:", result),
+    test->add_result(test->maxscales->get_maxadmin_param(0, cmd, (char*) "Current no. of conns:", result),
                      "maxadmin command %s failed\n", cmd);
     int result_d = 999;
     sscanf(result, "%d", &result_d);
@@ -46,15 +46,15 @@ void create_and_check_connections(TestConnections* test, int target)
         switch (target)
         {
         case 1:
-            stmt[i] = test->open_rwsplit_connection();
+            stmt[i] = test->maxscales->open_rwsplit_connection(0);
             break;
 
         case 2:
-            stmt[i] = test->open_readconn_master_connection();
+            stmt[i] = test->maxscales->open_readconn_master_connection(0);
             break;
 
         case 3:
-            stmt[i] = test->open_readconn_master_connection();
+            stmt[i] = test->maxscales->open_readconn_master_connection(0);
             break;
         }
     }
@@ -92,9 +92,9 @@ int main(int argc, char *argv[])
     Test->set_timeout(50);
 
     Test->repl->execute_query_all_nodes((char *) "SET GLOBAL max_connections=100");
-    Test->connect_maxscale();
-    execute_query(Test->conn_rwsplit, "SET GLOBAL max_connections=100");
-    Test->close_maxscale_connections();
+    Test->maxscales->connect_maxscale(0);
+    execute_query(Test->maxscales->conn_rwsplit[0], "SET GLOBAL max_connections=100");
+    Test->maxscales->close_maxscale_connections(0);
     Test->stop_timeout();
 
     /** Create connections to readwritesplit */

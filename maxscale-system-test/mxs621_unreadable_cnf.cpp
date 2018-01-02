@@ -18,13 +18,13 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(30);
-    Test->ssh_maxscale(true, "chmod 400 /etc/maxscale.cnf");
+    Test->maxscales->ssh_node_f(0, true, "chmod 400 /etc/maxscale.cnf");
     Test->set_timeout(30);
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
     Test->set_timeout(30);
-    Test->check_log_err((char *) "Opening file '/etc/maxscale.cnf' for reading failed", true);
+    Test->check_log_err(0, (char *) "Opening file '/etc/maxscale.cnf' for reading failed", true);
     Test->set_timeout(30);
-    Test->ssh_maxscale(true, "chmod 777 /etc/maxscale.cnf");
+    Test->maxscales->ssh_node_f(0, true, "chmod 777 /etc/maxscale.cnf");
 
     int rval = Test->global_result;
     delete Test;

@@ -21,10 +21,10 @@ int main(int argc, char *argv[])
     TestConnections test(argc, argv);
     test.set_timeout(10);
 
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
 
     test.set_timeout(10);
-    test.try_query(test.conn_rwsplit, (char *) "SET @a=1");
+    test.try_query(test.maxscales->conn_rwsplit[0], (char *) "SET @a=1");
     test.stop_timeout();
     sleep(1);
     test.set_timeout(20);
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     for (retries = 0; retries < 10; retries++)
     {
         char server1_status[256];
-        test.get_maxadmin_param((char *) "show server server2", (char *) "Status", server1_status);
+        test.maxscales->get_maxadmin_param(0, (char *) "show server server2", (char *) "Status", server1_status);
         if (strstr(server1_status, "Running"))
         {
             break;
@@ -62,20 +62,20 @@ int main(int argc, char *argv[])
     int real_id = test.repl->get_server_id(1);
 
     char server_id[200] = "";
-    find_field(test.conn_rwsplit, "SELECT @@server_id", "@@server_id", server_id);
+    find_field(test.maxscales->conn_rwsplit[0], "SELECT @@server_id", "@@server_id", server_id);
     int queried_id = atoi(server_id);
 
     test.add_result(queried_id != real_id, "The query server ID '%d' does not match the one from server '%d'. "
                      "Slave was not recovered.", queried_id, real_id);
 
     char userval[200] = "";
-    find_field(test.conn_rwsplit, "SELECT @a", "@a", userval);
+    find_field(test.maxscales->conn_rwsplit[0], "SELECT @a", "@a", userval);
 
     test.add_result(atoi(userval) != 1, "User variable @a is not 1, it is '%s'", userval);
 
     test.tprintf("Unblocking second slave\n");
     test.repl->unblock_node(2);
 
-    test.check_maxscale_alive();
+    test.check_maxscale_alive(0);
     return test.global_result;
 }

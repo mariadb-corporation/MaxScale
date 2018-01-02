@@ -275,6 +275,7 @@ void session_link_backend_dcb(MXS_SESSION *session, DCB *dcb)
 
     atomic_add(&session->refcount, 1);
     dcb->session = session;
+    dcb->service = session->service;
     /** Move this DCB under the same thread */
     dcb->poll.thread.id = session->client_dcb->poll.thread.id;
 }

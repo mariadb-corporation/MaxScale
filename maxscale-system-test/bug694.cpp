@@ -41,11 +41,11 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
 
     Test->set_timeout(120);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
-    Test->try_query(Test->conn_rwsplit, "USE test");
-    Test->try_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test");
-    Test->try_query(Test->conn_rwsplit, "CREATE TABLE test (b integer)");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "USE test");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "CREATE TABLE test (b integer)");
 
     const int iter = Test->smoke ? 10 : 100;
     Test->tprintf("Creating and inserting %d rows into a table\n", iter);
@@ -53,34 +53,34 @@ int main(int argc, char *argv[])
     for (int i = 0; i < iter; i++)
     {
         Test->set_timeout(30);
-        execute_query(Test->conn_rwsplit, "insert into test value(2);");
+        execute_query(Test->maxscales->conn_rwsplit[0], "insert into test value(2);");
         Test->stop_timeout();
     }
 
     Test->set_timeout(200);
 
     Test->tprintf("Trying SELECT @a:=@a+1 as a, test.b FROM test\n");
-    if (execute_query(Test->conn_rwsplit, "SELECT @a:=@a+1 as a, test.b FROM test;") == 0)
+    if (execute_query(Test->maxscales->conn_rwsplit[0], "SELECT @a:=@a+1 as a, test.b FROM test;") == 0)
     {
         Test->add_result(1, "Query succeded, but expected to fail.\n");
     }
     Test->tprintf("Trying USE test\n");
-    Test->try_query(Test->conn_rwsplit, "USE test");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "USE test");
 
-    Test->try_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test");
+    Test->try_query(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test");
 
     Test->tprintf("Checking if MaxScale alive\n");
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
 
     Test->tprintf("Checking logs\n");
-    Test->check_log_err((char *)
+    Test->check_log_err(0, (char *)
                         "The query can't be routed to all backend servers because it includes SELECT and SQL variable modifications which is not supported",
                         true);
-    Test->check_log_err((char *)
+    Test->check_log_err(0, (char *)
                         "SELECT with session data modification is not supported if configuration parameter use_sql_variables_in=all",
                         true);
 
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

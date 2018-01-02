@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(30);
     char result[1024];
 
-    Test->get_maxadmin_param((char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:",
+    Test->maxscales->get_maxadmin_param(0, (char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:",
                              result);
     Test->tprintf("result %s\n", result);
 
@@ -71,57 +71,57 @@ int main(int argc, char *argv[])
         Test->add_result(1, "there is NO \"show dbusers expects 1 argument\" message");
     }
     Test->set_timeout(30);
-    Test->get_maxadmin_param((char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
+    Test->maxscales->get_maxadmin_param(0, (char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
     Test->tprintf("result %s\n", result);
 
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "reload dbusers 0x232fed0");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "reload dbusers 0x232fed0");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "reload dbusers Хрен");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "reload dbusers Хрен");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "reload dbusers Хрен моржовый");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "reload dbusers Хрен моржовый");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "Хрен моржовый");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "Хрен моржовый");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "khren morzhovyj");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "khren morzhovyj");
 
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show Хрен");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show Хрен");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show Хрен моржовый");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show Хрен моржовый");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show khren morzhovyj");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show khren morzhovyj");
 
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show dcb Хрен");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show dcb Хрен");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show dcb Хрен моржовый");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show dcb Хрен моржовый");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show dcb khren morzhovyj");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show dcb khren morzhovyj");
 
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show server Хрен");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show server Хрен");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show server Хрен моржовый");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show server Хрен моржовый");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show server khren morzhovyj");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show server khren morzhovyj");
 
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show service Хрен");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show service Хрен");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show service Хрен моржовый");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show service Хрен моржовый");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show service khren morzhovyj");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show service khren morzhovyj");
 
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "show service khren morzhovyj");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "show service khren morzhovyj");
 
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "list listeners");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "list listeners");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "restart monitor");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "restart monitor");
     Test->set_timeout(30);
-    Test->execute_maxadmin_command((char *) "restart service");
+    Test->maxscales->execute_maxadmin_command(0, (char *) "restart service");
 
     if (!Test->smoke)
     {
@@ -186,15 +186,15 @@ int main(int argc, char *argv[])
                 Test->set_timeout(30);
                 sprintf(str1, "%s %s", cmd[i1], garbage[i2]);
                 Test->tprintf("Trying '%s'\n", str1);
-                Test->execute_maxadmin_command(str1);
+                Test->maxscales->execute_maxadmin_command(0, str1);
 
                 sprintf(str1, "%s %s%s%s%s %s ", cmd[i1], garbage[i2], garbage[i2], garbage[i2], garbage[i2], garbage[i2]);
                 Test->tprintf("Trying '%s'\n", str1);
-                Test->execute_maxadmin_command(str1);
+                Test->maxscales->execute_maxadmin_command(0, str1);
             }
         }
     }
-    Test->check_maxscale_alive();
+    Test->check_maxscale_alive(0);
 
     int rval = Test->global_result;
     delete Test;

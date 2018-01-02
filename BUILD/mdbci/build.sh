@@ -25,16 +25,15 @@ export script_dir="$(dirname $(readlink -f $0))"
 # load all needed variables
 . ${script_dir}/set_build_variables.sh
 
-dist_sfx="$platform"."$platform_version"
+export platform=`${mdbci_dir}/mdbci show boxinfo --box-name=$box --field='platform' --silent`
+export platform_version=`${mdbci_dir}/mdbci show boxinfo --box-name=$box --field='platform_version' --silent`
+export dist_sfx="$platform"."$platform_version"
 export cmake_flags="${cmake_flags} -DPACKAGE=Y -DDISTRIB_SUFFIX=${dist_sfx}"
 
 # prerare VM
 export provider=`${mdbci_dir}/mdbci show provider $box --silent 2> /dev/null`
 export name="$box-${JOB_NAME}-${BUILD_NUMBER}"
 export name=`echo $name | sed "s|/|-|g"`
-
-export platform=`${mdbci_dir}/mdbci show boxinfo --box-name=$box --field='platform' --silent`
-export platform_version=`${mdbci_dir}/mdbci show boxinfo --box-name=$box --field='platform_version' --silent`
 
 
 if [ "${try_already_running}" == "yes" ]; then

@@ -34,6 +34,7 @@
 #include "internal/dcb.h"
 #include "internal/modules.h"
 #include "internal/poll.h"
+#include "internal/service.h"
 #include "internal/statistics.h"
 #include "internal/workertask.hh"
 
@@ -857,11 +858,11 @@ void Worker::delete_zombies()
 
 void Worker::run()
 {
-    if (modules_thread_init())
+    this_thread.current_worker_id = m_id;
+
+    if (modules_thread_init() && service_thread_init())
     {
-        this_thread.current_worker_id = m_id;
         poll_waitevents();
-        this_thread.current_worker_id = WORKER_ABSENT_ID;
 
         MXS_NOTICE("Worker %d has shut down.", m_id);
         modules_thread_finish();
@@ -870,6 +871,8 @@ void Worker::run()
     {
         MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
     }
+
+    this_thread.current_worker_id = WORKER_ABSENT_ID;
 }
 
 bool Worker::start(size_t stack_size)

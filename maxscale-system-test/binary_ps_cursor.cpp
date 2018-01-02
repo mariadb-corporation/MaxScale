@@ -9,10 +9,10 @@ using std::endl;
 
 void test1(TestConnections& test)
 {
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.set_timeout(20);
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.conn_rwsplit);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
     const char* query = "SELECT @@server_id";
     char buffer[100] = "";
     my_bool err = false;
@@ -43,7 +43,7 @@ void test1(TestConnections& test)
 
     cout << "Close statement" << endl;
     mysql_stmt_close(stmt);
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
 }
 
@@ -51,8 +51,8 @@ void test2(TestConnections& test)
 {
     test.set_timeout(20);
 
-    MYSQL* conn = open_conn_db_timeout(test.rwsplit_port, test.maxscale_ip(), "test",
-                                       test.maxscale_user, test.maxscale_password, 1, false);
+    MYSQL* conn = open_conn_db_timeout(test.maxscales->rwsplit_port[0], test.maxscales->ip(0), "test",
+                                       test.maxscales->user_name, test.maxscales->password, 1, false);
 
     MYSQL_STMT* stmt1 = mysql_stmt_init(conn);
     MYSQL_STMT* stmt2 = mysql_stmt_init(conn);
@@ -120,10 +120,10 @@ void test2(TestConnections& test)
 
 void test3(TestConnections& test)
 {
-    test.connect_maxscale();
+    test.maxscales->connect_maxscale(0);
     test.set_timeout(20);
 
-    MYSQL_STMT* stmt = mysql_stmt_init(test.conn_rwsplit);
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
     const char* query = "SELECT @@server_id";
     char buffer[100] = "";
     my_bool err = false;
@@ -138,9 +138,9 @@ void test3(TestConnections& test)
     test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)), "Failed to prepare");
 
     cout << "Start transaction" << endl;
-    test.add_result(mysql_query(test.conn_rwsplit, "START TRANSACTION"),
+    test.add_result(mysql_query(test.maxscales->conn_rwsplit[0], "START TRANSACTION"),
                     "START TRANSACTION should succeed: %s",
-                    mysql_error(test.conn_rwsplit));
+                    mysql_error(test.maxscales->conn_rwsplit[0]));
 
 
     unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
@@ -156,12 +156,12 @@ void test3(TestConnections& test)
     test.add_result(strlen(buffer) == 0, "Expected result buffer to not be empty");
 
     cout << "Commit" << endl;
-    test.add_result(mysql_query(test.conn_rwsplit, "COMMIT"),
+    test.add_result(mysql_query(test.maxscales->conn_rwsplit[0], "COMMIT"),
                     "COMMIT should succeed: %s",
-                    mysql_error(test.conn_rwsplit));
+                    mysql_error(test.maxscales->conn_rwsplit[0]));
 
     mysql_stmt_close(stmt);
-    test.close_maxscale_connections();
+    test.maxscales->close_maxscale_connections(0);
 
     char server_id[1024];
     test.repl->connect();

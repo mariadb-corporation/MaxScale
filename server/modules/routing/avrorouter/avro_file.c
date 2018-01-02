@@ -657,6 +657,13 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             snprintf(next_file, sizeof(next_file), BINLOG_NAMEFMT, router->fileroot,
                      blr_file_get_next_binlogname(router->binlog_name));
         }
+        else if (hdr.event_type == MARIADB_ANNOTATE_ROWS_EVENT)
+        {
+            MXS_INFO("Annotate_rows_event: %.*s", hdr.event_size - BINLOG_EVENT_HDR_LEN, ptr);
+            pos += original_size;
+            router->current_pos = pos;
+            continue;
+        }
         else if (hdr.event_type == TABLE_MAP_EVENT)
         {
             handle_table_map_event(router, &hdr, ptr);
@@ -902,6 +909,27 @@ bool is_create_like_statement(const char* ptr, size_t len)
     return strcasestr(sql, " like ") || strcasestr(sql, "(like ");
 }
 
+bool is_create_as_statement(const char* ptr, size_t len)
+{
+    int err = 0;
+    char sql[len + 1];
+    memcpy(sql, ptr, len);
+    sql[len] = '\0';
+    const char* pattern =
+        // Case-insensitive mode
+        "(?i)"
+        // Main CREATE TABLE part (the \s is for any whitespace)
+        "create\\stable\\s"
+        // Optional IF NOT EXISTS
+        "(if\\snot\\sexists\\s)?"
+        // The table name with optional database name, both enclosed in optional backticks
+        "(`?\\S+`?.)`?\\S+`?\\s"
+        // And finally the AS keyword
+        "as";
+
+    return mxs_pcre2_simple_match(pattern, sql, 0, &err) == MXS_PCRE2_MATCH;
+}
+
 /**
  * @brief Detection of table alteration statements
  * @param router Avro router instance
@@ -956,6 +984,8 @@ bool save_and_replace_table_create(AVRO_INSTANCE *router, TABLE_CREATE *created)
         {
             if (strcmp(key, table_ident) == 0)
             {
+                TABLE_MAP* map = hashtable_fetch(router->table_maps, key);
+                router->active_maps[map->id % MAX_MAPPED_TABLES] = NULL;
                 hashtable_delete(router->table_maps, key);
             }
         }
@@ -1000,13 +1030,13 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     memcpy(db, (char*) ptr + PHDR_OFF + vblklen, dblen);
     db[dblen] = 0;
 
-    unify_whitespace(sql, len);
     size_t sqlsz = len, tmpsz = len;
     char *tmp = MXS_MALLOC(len);
     MXS_ABORT_IF_NULL(tmp);
     remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
     sql = tmp;
     len = tmpsz;
+    unify_whitespace(sql, len);
 
     if (is_create_table_statement(router, sql, len))
     {
@@ -1015,6 +1045,15 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         if (is_create_like_statement(sql, len))
         {
             created = table_create_copy(router, sql, len, db);
+        }
+        else if (is_create_as_statement(sql, len))
+        {
+            static bool warn_create_as = true;
+            if (warn_create_as)
+            {
+                MXS_WARNING("`CREATE TABLE AS` is not yet supported, ignoring events to this table: %.*s", len, sql);
+                warn_create_as = false;
+            }
         }
         else
         {

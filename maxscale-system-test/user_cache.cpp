@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->stop_timeout();
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
 
     /** Create the test user and give required grants */
     Test->tprintf("Creating 'testuser'@'%'\n");
@@ -33,8 +33,8 @@ int main(int argc, char *argv[])
 
     /** Test that MaxScale works and initialize the cache */
     Test->tprintf("Test that MaxScale works and initialize the cache\n");
-    Test->start_maxscale();
-    Test->connect_maxscale();
+    Test->maxscales->start_maxscale(0);
+    Test->maxscales->connect_maxscale(0);
     Test->set_timeout(30);
     Test->add_result(Test->try_query_all("SHOW DATABASES"), "Initial query without user cache should work\n");
     Test->stop_timeout();
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
     /** Restart MaxScale and check that the user cache works */
     Test->tprintf("Restarting MaxScale\n");
-    Test->restart_maxscale();
+    Test->maxscales->restart_maxscale(0);
     sleep(5);
 
     Test->tprintf("Unblocking all nodes\n");
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Checking that the user cache works and queries are accepted\n");
     Test->set_timeout(30);
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
     Test->add_result(Test->try_query_all("SHOW DATABASES"), "Second query with user cache should work\n");
     Test->stop_timeout();
 

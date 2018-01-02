@@ -12,7 +12,7 @@ void* query_thread(void *data)
 {
     TestConnections *test = static_cast<TestConnections*>(data);
 
-    MYSQL *mysql = test->open_rwsplit_connection();
+    MYSQL *mysql = test->maxscales->open_rwsplit_connection(0);
     my_bool yes = true;
     mysql_options(mysql, MYSQL_OPT_RECONNECT, &yes);
 
@@ -85,8 +85,8 @@ int main(int argc, char *argv[])
 
     sleep(1);
 
-    test->check_maxscale_alive();
-    test->check_log_err("Fatal", false);
+    test->check_maxscale_alive(0);
+    test->check_log_err(0, "Fatal", false);
     int rval = test->global_result;
     delete test;
     return rval;

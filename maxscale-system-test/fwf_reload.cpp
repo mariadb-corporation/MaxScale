@@ -22,12 +22,13 @@ int main(int argc, char *argv[])
     sprintf(rules_dir, "%s/fw/", test_dir);
     int N = 13;
     int i;
+    int exit_code;
 
-    Test->stop_maxscale();
+    Test->maxscales->stop_maxscale(0);
     char first_rule[] = "rules1";
     copy_rules(Test, first_rule, rules_dir);
-    Test->start_maxscale();
-    Test->connect_rwsplit();
+    Test->maxscales->start_maxscale(0);
+    Test->maxscales->connect_rwsplit(0);
 
 
     for (i = 1; i <= N; i++)
@@ -36,7 +37,7 @@ int main(int argc, char *argv[])
         sprintf(str, "rules%d", i);
         Test->set_timeout(180);
         copy_rules(Test, str, rules_dir);
-        Test->ssh_maxscale(true, "maxadmin call command dbfwfilter rules/reload Database-Firewall");
+        Test->maxscales->ssh_node(0, "maxadmin call command dbfwfilter rules/reload Database-Firewall", true);
 
         int local_result = 0;
         sprintf(pass_file, "%s/fw/pass%d", test_dir, i);
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
             {
                 Test->set_timeout(180);
 
-                if (execute_query_from_file(Test->conn_rwsplit, file) == 1)
+                if (execute_query_from_file(Test->maxscales->conn_rwsplit[0], file) == 1)
                 {
                     Test->tprintf("Query should succeed: %s\n", sql);
                     local_result++;
@@ -75,10 +76,10 @@ int main(int argc, char *argv[])
             {
                 Test->set_timeout(180);
 
-                int rc = execute_query_from_file(Test->conn_rwsplit, file);
+                int rc = execute_query_from_file(Test->maxscales->conn_rwsplit[0], file);
 
                 if (rc != -1 && (rc == 0 ||
-                                 mysql_errno(Test->conn_rwsplit) != 1141))
+                                 mysql_errno(Test->maxscales->conn_rwsplit[0]) != 1141))
                 {
                     Test->tprintf("Query should fail: %s\n", sql);
                     local_result++;
@@ -99,14 +100,12 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying rules with syntax error\n");
     copy_rules(Test, (char *) "rules_syntax_error", rules_dir);
 
-    char *output = Test->ssh_maxscale_output(true,
-                   "maxadmin call command dbfwfilter rules/reload Database-Firewall");
+    char *output = Test->maxscales->ssh_node_output(0,
+                                                    "maxadmin call command dbfwfilter rules/reload Database-Firewall", true, &exit_code);
     Test->add_result(strcasestr(output, "Failed") == NULL, "Reloading rules should fail with syntax errors");
 
-    Test->check_maxscale_processes(1);
+    Test->check_maxscale_processes(0, 1);
     int rval = Test->global_result;
     delete Test;
     return rval;
 }
-
-

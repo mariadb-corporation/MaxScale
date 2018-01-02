@@ -14,14 +14,14 @@ int main(int argc, char *argv[])
     int i;
     char sql[256];
 
-    Test->connect_maxscale();
+    Test->maxscales->connect_maxscale(0);
 
     Test->tprintf("RWSplit: Executing set @test=i 10000 times\n");
     for (i = 0; i < 10000; i++)
     {
         Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        Test->try_query(Test->conn_rwsplit, sql);
+        Test->try_query(Test->maxscales->conn_rwsplit[0], sql);
     }
     Test->tprintf("done!\n");
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        Test->try_query(Test->conn_master, sql);
+        Test->try_query(Test->maxscales->conn_master[0], sql);
     }
     Test->tprintf("done!\n");
 
@@ -39,11 +39,11 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        Test->try_query(Test->conn_slave, sql);
+        Test->try_query(Test->maxscales->conn_slave[0], sql);
     }
     Test->tprintf("done!\n");
 
-    Test->close_maxscale_connections();
+    Test->maxscales->close_maxscale_connections(0);
     int rval = Test->global_result;
     delete Test;
     return rval;

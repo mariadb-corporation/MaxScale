@@ -335,8 +335,8 @@ typedef struct mariadb_gtid_elems
 /** MariaDB GTID info */
 typedef struct mariadb_gtid_info
 {
-    char *gtid;                      /** MariaDB 10.x GTID, string value */
-    char *file;                      /** The binlog file */
+    char gtid[GTID_MAX_LEN + 1];     /** MariaDB 10.x GTID, string value */
+    char file[BINLOG_FNAMELEN + 1];  /** The binlog file */
     uint64_t start;                  /** The BEGIN pos: i.e the GTID event */
     uint64_t end;                    /** The next_pos in COMMIT event */
     MARIADB_GTID_ELEMS gtid_elms;    /** MariaDB 10.x GTID components */
@@ -1020,7 +1020,7 @@ extern bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *,
                                    MARIADB_GTID_INFO *);
 extern void blr_start_master_in_main(void* data);
 extern bool blr_binlog_file_exists(ROUTER_INSTANCE *router,
-                                   const char *log_name);
+                                   const MARIADB_GTID_INFO *info_file);
 
 MXS_END_DECLS
 

@@ -8,6 +8,12 @@ release 2.2.0.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
+## Update from 2.2.0
+
+Since version 2.2.0 MaxScale binlog server can accept GTID
+slave registration from MariaDB 10.X slaves and can also
+register to Master server MariaDB 10.x using GTID.
+
 ## Changed Features
 
 ### Process identity
@@ -29,17 +35,71 @@ root@host:~# maxscale --user=root ...
 
 * The `mariadb10_slave_gtid` parameter was removed and slave connections can now
   always register with MariaDB 10 GTID.
+  This means the gtid_maps SQLite database is always updated.
 
 * The `binlog_structure` parameter was removed and the binlogs are stored
-  automatically in 'tree' mode when `mariadb10_master_gtid` is enabled.
+  automatically in 'tree' mode when `mariadb10_master_gtid` is enabled
+  (GTID registration to master).
 
 * If `mariadb10_master_gtid` is enabled, the `transaction_safety` is
   automatically enabled. In MaxScale 2.2.0, if `transaction_safety` was disabled
   when `mariadb10_master_gtid` was enabled MaxScale would refuse to start.
 
+### MySQL Monitor
+
+Renamed to [MariaDB Monitor](../Monitors/MariaDB-Monitor.md).
+
+Note that this affects the module name as well. Up until MaxScale 2.2.0
+a configuration section referring to this monitor would look like
+```
+[MyMonitor]
+type=monitor
+module=mysqlmon
+...
+```
+but from MaxScale 2.2.1 onwards it should look like
+```
+[MyMonitor]
+type=monitor
+module=mariadbmon
+...
+```
+The name `mysqlmon` has been deprecated but can still be used, although it will
+cause a warning to be logged.
+
+### MariaDB Monitor
+
+The default value of the configuration parameter `detect_standalone_master` has
+been changed from `false` to `true`.
+
+### ReadWritesplit
+
+The default value of `strict_multi_stmt` was changed to `false` to make
+usage of atomic compound statements and multi-statement queries less
+restrictive and to align it with the default value of `strict_sp_calls`.
+
+Most cases where the functionality of `strict_multi_stmt` was triggered
+were cases where the added safety of locking a session to the master did
+more harm than it did good.
+
+The only case where `strict_multi_stmt` should be enabled is when a
+multi-statement or a compound statement modifies the state of the
+session. This is not a good practice and a change in the client side
+behavior is advised.
+
 ## Dropped Features
 
 ## New Features
+
+### MariaDB Monitor
+
+MariaDB Monitor can now perform *failover* (replace a dead master), *switchover*
+(replace a running master) and *rejoin* (join a standalone node to the
+master-slave cluster). All of these features only work with a simple 1-master
+N-slaves cluster using Gtid replication. Failover and switchover can be
+activated through maxadmin or the REST-API. Failover and rejoin can be set to
+activate automatically. For more information, see the
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md).
 
 ### REST API Relationship Endpoints
 
@@ -69,9 +129,25 @@ and the configuration value is replaced with the value of the environment
 variable. For more information please consult the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
+### Cache behaviour in transactions
+
+It can now be specified how the cache should be behave when a transaction
+is active. Please refer to the [documentation](../Filters/Cache.md)
+for details.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.2.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.1)
+
+* [MXS-1545](https://jira.mariadb.org/browse/MXS-1545) Fix GTID connecting slave error detections
+* [MXS-1525](https://jira.mariadb.org/browse/MXS-1525) Firewall filter does not check exact match for host
+* [MXS-1519](https://jira.mariadb.org/browse/MXS-1519) Firewall instances can interfere with each other
+* [MXS-1517](https://jira.mariadb.org/browse/MXS-1517) Retain stale master status even if the master goes down
+* [MXS-1499](https://jira.mariadb.org/browse/MXS-1499) Add missing fields to SHOW ALL SLAVES STATUS
+* [MXS-1486](https://jira.mariadb.org/browse/MXS-1486) The cache does not always update the cached entry even if it could
+* [MXS-1461](https://jira.mariadb.org/browse/MXS-1461) NOT operation needed for firewall rule
+* [MXS-1408](https://jira.mariadb.org/browse/MXS-1408) maxadmin not working in latest version
+* [MXS-1327](https://jira.mariadb.org/browse/MXS-1327) set   log-priority by  maxadmin
 
 ## Known Issues and Limitations
 

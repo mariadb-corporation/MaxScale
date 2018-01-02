@@ -176,7 +176,7 @@ bool run_test(TestConnections& test)
             test.set_timeout(60);
             test.tprintf("Testing type: %s", test_set[x].types[i]);
             std::string name = type_to_table_name(test_set[x].types[i]);
-            CDC::Connection conn(test.maxscale_IP, 4001, "skysql", "skysql");
+            CDC::Connection conn(test.maxscales->IP[0], 4001, "skysql", "skysql");
 
             if (conn.connect(name))
             {
@@ -222,13 +222,13 @@ int main(int argc, char *argv[])
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
-    test.replicate_from_master();
+    test.replicate_from_master(0);
 
     if (!run_test(test))
     {
         test.add_result(1, "Test failed");
     }
 
-    test.check_maxscale_processes(1);
+    test.check_maxscale_processes(0, 1);
     return test.global_result;
 }

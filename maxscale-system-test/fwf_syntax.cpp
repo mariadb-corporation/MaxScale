@@ -43,7 +43,7 @@ const char *rules_failure[] =
 
 void truncate_maxscale_logs(TestConnections& test)
 {
-    test.ssh_maxscale(true, "truncate -s 0 /var/log/maxscale/*");
+    test.maxscales->ssh_node(0, "truncate -s 0 /var/log/maxscale/*", true);
 }
 
 void create_rule(const char *rule, const char* user)
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
-    test.stop_maxscale();
+    test.maxscales->stop_maxscale(0);
 
     for (int i = 0; rules_failure[i]; i++)
     {
@@ -68,12 +68,12 @@ int main(int argc, char** argv)
         copy_rules(&test, (char*)temp_rules, (char*)test_dir);
 
         test.tprintf("Testing rule: %s\n", rules_failure[i]);
-        test.add_result(test.start_maxscale() == 0, "MaxScale should fail to start");
+        test.add_result(test.maxscales->start_maxscale(0) == 0, "MaxScale should fail to start");
 
         /** Check that MaxScale did not start and that the log contains
          * a message about the syntax error. */
-        test.check_maxscale_processes(0);
-        test.check_log_err("syntax error", true);
+        test.check_maxscale_processes(0, 0);
+        test.check_log_err(0, "syntax error", true);
         truncate_maxscale_logs(test);
     }
 

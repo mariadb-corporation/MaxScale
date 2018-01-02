@@ -49,6 +49,7 @@ typedef struct
     bool detectStaleMaster;        /**< Monitor flag for MySQL replication Stale Master detection */
     bool detectStaleSlave;         /**< Monitor flag for MySQL replication Stale Master detection */
     bool multimaster;              /**< Detect and handle multi-master topologies */
+    bool ignore_external_masters;  /**< Ignore masters outside of the monitor configuration */
     int disableMasterFailback;     /**< Monitor flag for Galera Cluster Master failback */
     int availableWhenDonor;        /**< Monitor flag for Galera Cluster Donor availability */
     int disableMasterRoleSetting;  /**< Monitor flag to disable setting master role */
@@ -62,15 +63,16 @@ typedef struct
                                       down before failover is initiated */
     bool allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
     bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
-    bool allow_external_slaves;    /**< Whether to allow usage of external slave servers */
-    bool failover;                 /**< If master failover is enabled */
+    bool auto_failover;            /**< If automatic master failover is enabled */
     uint32_t failover_timeout;     /**< Timeout in seconds for the master failover */
-    bool switchover;               /**< If master switchover is enabled */
     uint32_t switchover_timeout;   /**< Timeout in seconds for the master switchover */
     char* replication_user;        /**< Replication user for failover */
     char* replication_password;    /**< Replication password for failover*/
     bool verify_master_failure;    /**< Whether master failure is verified via slaves */
     int master_failure_timeout;    /**< Time in seconds to wait before doing failover */
+    int64_t master_gtid_domain;    /**< Gtid domain currently used by the master */
+    bool auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
+                                        replicating from the wrong master. */
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
 

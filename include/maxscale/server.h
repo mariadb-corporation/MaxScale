@@ -138,6 +138,10 @@ typedef struct server
     int            last_event;     /**< The last event that occurred on this server */
     bool           active_event;   /**< Event observed when MaxScale was active */
     int64_t        triggered_at;   /**< Time when the last event was triggered */
+    struct
+    {
+        bool ssl_not_enabled; /**< SSL not used for an SSL enabled server */
+    } log_warning; /**< Whether a specific warning was logged */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif
@@ -233,6 +237,10 @@ enum
 #define SERVER_IS_RELAY_SERVER(server)                                  \
     (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
      (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
+
+#define SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(s) (((s)->status & \
+    (SERVER_RUNNING|SERVER_SLAVE_OF_EXTERNAL_MASTER)) == \
+    (SERVER_RUNNING|SERVER_SLAVE_OF_EXTERNAL_MASTER))
 
 /**
  * @brief Allocate a new server

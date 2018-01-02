@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <map>
+#include <maxscale/resultset.h>
 #include "routersession.hh"
 
 namespace maxscale
@@ -32,6 +33,13 @@ class Backend
 
 public:
     virtual ~Backend();
+
+    /**
+     * Create an OK response.
+     *
+     * @return A GWBUF containing an OK response packet.
+     */
+    static GWBUF* create_ok_response();
 
     /**
      * Called to handle a statement from a "client".
@@ -135,6 +143,31 @@ public:
     void handle_statement(RouterSession* pSession, GWBUF* pStatement);
 };
 
+/**
+ * The ResultsetBackend
+ */
+class ResultSetBackend : public BufferBackend
+{
+    ResultSetBackend(const ResultSetBackend&);
+    ResultSetBackend& operator = (const ResultSetBackend&);
+
+public:
+    ResultSetBackend();
+
+    void reset()
+    {
+        m_created = false;
+    }
+
+    void handle_statement(RouterSession* pSession, GWBUF* pStatement);
+
+    virtual RESULT_ROW* create_row(RESULTSET* pResult_set);
+
+    static RESULT_ROW* create_row(RESULTSET* pResult_set, void* pThis);
+
+    int  m_counter;
+    bool m_created;
+};
 }
 
 }

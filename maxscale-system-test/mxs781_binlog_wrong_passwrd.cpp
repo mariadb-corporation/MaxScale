@@ -31,11 +31,12 @@ int main(int argc, char *argv[])
     Test->tprintf("Connecting to all backend nodes\n");
     Test->add_result(Test->repl->connect(), "Connecting to backed failed\n");
 
-    Test->prepare_binlog();
+    Test->prepare_binlog(0);
 
     Test->tprintf("Connecting to MaxScale binlog router (with any DB)\n");
     Test->set_timeout(30);
-    MYSQL * binlog = open_conn_no_db(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name,
+    MYSQL * binlog = open_conn_no_db(Test->maxscales->binlog_port[0], Test->maxscales->IP[0],
+                                     Test->repl->user_name,
                                      Test->repl->password, Test->ssl);
 
     Test->add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
@@ -71,4 +72,3 @@ int main(int argc, char *argv[])
     delete Test;
     return rval;
 }
-

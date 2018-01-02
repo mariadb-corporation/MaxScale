@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
     Test->stop_timeout();
 
-    Test->check_log_err((char *) "refresh rate limit exceeded", false);
-    Test->check_maxscale_alive();
+    Test->check_log_err(0, (char *) "Refresh rate limit exceeded", false);
+    Test->check_maxscale_alive(0);
     int rval = Test->global_result;
     delete Test;
     return rval;
