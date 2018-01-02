@@ -1621,6 +1621,11 @@ int service_refresh_users(SERVICE *service)
     ss_dassert(self >= 0);
     time_t now = time(NULL);
 
+    if ((service->capabilities & ACAP_TYPE_ASYNC) == 0)
+    {
+        spinlock_acquire(&service->spin);
+    }
+
     /* Check if refresh rate limit has been exceeded */
     if ((now < service->rate_limits[self].last + USERS_REFRESH_TIME) ||
         (service->rate_limits[self].nloads >= USERS_REFRESH_MAX_PER_TIME))
@@ -1667,6 +1672,11 @@ int service_refresh_users(SERVICE *service)
                 }
             }
         }
+    }
+
+    if ((service->capabilities & ACAP_TYPE_ASYNC) == 0)
+    {
+        spinlock_release(&service->spin);
     }
 
     return ret;
