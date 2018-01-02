@@ -123,10 +123,13 @@ char* json_new_schema_from_table(TABLE_MAP *map)
     json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:o}", "name", avro_event_type,
                                               "type", event_types));
 
-    for (uint64_t i = 0; i < map->columns; i++)
+    for (uint64_t i = 0; i < map->columns && i < create->columns; i++)
     {
         ss_info_dassert(create->column_names[i] && *create->column_names[i],
                         "Column name should not be empty or NULL");
+        ss_info_dassert(create->column_types[i] && *create->column_types[i],
+                        "Column type should not be empty or NULL");
+
         json_array_append_new(array, json_pack_ex(&err, 0, "{s:s, s:s, s:s, s:i}",
                                                   "name", create->column_names[i],
                                                   "type", column_type_to_avro_type(map->column_types[i]),
