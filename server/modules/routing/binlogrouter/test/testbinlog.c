@@ -40,6 +40,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
 #include <maxscale/alloc.h>
+#include "../../../../core/internal/modules.h"
 
 #include <maxscale/protocol/mysql.h>
 #include <ini.h>
@@ -95,7 +96,12 @@ int main(int argc, char **argv)
     mxs_log_set_priority_enabled(LOG_DEBUG, false);
     mxs_log_set_priority_enabled(LOG_INFO, false);
 
-    char *lib_dir = MXS_STRDUP_A("..");
+    set_libdir(MXS_STRDUP_A(".."));
+    load_module("binlogrouter", MODULE_ROUTER);
+    set_libdir(MXS_STRDUP_A("../../../protocol/MySQL/MySQLBackend/"));
+    load_module("MySQLBackend", MODULE_PROTOCOL);
+    set_libdir(MXS_STRDUP_A("../../../authenticator/MySQLBackendAuth/"));
+    load_module("MySQLBackendAuth", MODULE_AUTHENTICATOR);
 
     if ((service = service_alloc("test_service", "binlogrouter")) == NULL)
     {
