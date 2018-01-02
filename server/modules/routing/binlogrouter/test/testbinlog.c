@@ -95,11 +95,7 @@ int main(int argc, char **argv)
     mxs_log_set_priority_enabled(LOG_DEBUG, false);
     mxs_log_set_priority_enabled(LOG_INFO, false);
 
-    char *lib_dir = getenv("LD_LIBRARY_PATH");
-    if (lib_dir)
-    {
-        set_libdir(MXS_STRDUP_A(lib_dir));
-    }
+    char *lib_dir = MXS_STRDUP_A("..");
 
     if ((service = service_alloc("test_service", "binlogrouter")) == NULL)
     {
