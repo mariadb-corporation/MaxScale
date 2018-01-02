@@ -510,7 +510,7 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 
 /** Log routing failure due to closed session */
 static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
-                               SERVER_REF *ref)
+                               SERVER_REF *ref, bool valid)
 {
     char msg[MAX_SERVER_NAME_LEN + 200] = ""; // Extra space for message
 
@@ -526,9 +526,42 @@ static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
     {
         sprintf(msg, "Server '%s' is in maintenance.", ref->server->unique_name);
     }
+    else if (!valid)
+    {
+        sprintf(msg, "Server '%s' no longer qualifies as a target server.",
+                ref->server->unique_name);
+    }
 
     MXS_ERROR("Failed to route MySQL command %d to backend server. %s",
               mysql_command, msg);
+}
+
+/**
+ * Check if the server we're connected to is still valid
+ *
+ * @param inst           Router instance
+ * @param router_cli_ses Router session
+ *
+ * @return True if the backend connection is still valid
+ */
+static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* router_cli_ses)
+{
+    bool rval = false;
+
+    if (SERVER_IS_RUNNING(router_cli_ses->backend->server) &&
+        (router_cli_ses->backend->server->status & inst->bitmask & inst->bitvalue))
+    {
+        if (inst->bitvalue & SERVER_MASTER)
+        {
+            rval = router_cli_ses->backend == get_root_master(inst->service->dbref);
+        }
+        else
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 /**
@@ -574,10 +607,12 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
         rses_end_locked_router_action(router_cli_ses);
     }
 
+    bool valid;
+
     if (rses_is_closed || backend_dcb == NULL ||
-        !SERVER_IS_RUNNING(router_cli_ses->backend->server))
+        (valid = !connection_is_valid(inst, router_cli_ses)))
     {
-        log_closed_session(mysql_command, rses_is_closed, router_cli_ses->backend);
+        log_closed_session(mysql_command, rses_is_closed, router_cli_ses->backend, valid);
         gwbuf_free(queue);
         goto return_rc;
 
