@@ -154,7 +154,7 @@ typedef struct logmanager  logmanager_t;
  * Global log manager pointer and lock variable.
  * lmlock protects logmanager access.
  */
-static int lmlock;
+static SPINLOCK lmlock = SPINLOCK_INIT;
 static logmanager_t* lm;
 static bool flushall_flag;
 static bool flushall_started_flag;
@@ -370,7 +370,7 @@ struct logfile
     size_t           lf_buf_size;
     bool             lf_flushflag;
     bool             lf_rotateflag;
-    int              lf_spinlock; /**< lf_flushflag & lf_rotateflag */
+    SPINLOCK         lf_spinlock; /**< lf_flushflag & lf_rotateflag */
 #if defined(SS_DEBUG)
     skygw_chk_t      lf_chk_tail;
 #endif
@@ -599,7 +599,7 @@ bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target
 {
     bool succ = false;
 
-    acquire_lock(&lmlock);
+    spinlock_acquire(&lmlock);
 
     if (!lm)
     {
@@ -634,7 +634,7 @@ bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target
         succ = true;
     }
 
-    release_lock(&lmlock);
+    spinlock_release(&lmlock);
 
     return succ;
 }
@@ -693,7 +693,7 @@ static void logmanager_done_nomutex(void)
  */
 void mxs_log_finish(void)
 {
-    acquire_lock(&lmlock);
+    spinlock_acquire(&lmlock);
 
     if (lm)
     {
@@ -706,9 +706,9 @@ void mxs_log_finish(void)
          */
         while (lm != NULL && lm->lm_nlinks != 0)
         {
-            release_lock(&lmlock);
+            spinlock_release(&lmlock);
             sched_yield();
-            acquire_lock(&lmlock);
+            spinlock_acquire(&lmlock);
         }
 
         /** Shut down if not already shutted down. */
@@ -719,7 +719,7 @@ void mxs_log_finish(void)
         }
     }
 
-    release_lock(&lmlock);
+    spinlock_release(&lmlock);
 }
 
 static logfile_t* logmanager_get_logfile(logmanager_t* lmgr)
@@ -1330,7 +1330,7 @@ static bool logmanager_register(bool writep)
 {
     bool succ = true;
 
-    acquire_lock(&lmlock);
+    spinlock_acquire(&lmlock);
 
     if (lm == NULL || !lm->lm_enabled)
     {
@@ -1355,9 +1355,9 @@ static bool logmanager_register(bool writep)
          */
         while (lm != NULL && !lm->lm_enabled)
         {
-            release_lock(&lmlock);
+            spinlock_release(&lmlock);
             sched_yield();
-            acquire_lock(&lmlock);
+            spinlock_acquire(&lmlock);
         }
 
         if (lm == NULL)
@@ -1380,7 +1380,7 @@ return_succ:
     {
         fatal_error = true;
     }
-    release_lock(&lmlock);
+    spinlock_release(&lmlock);
     return succ;
 }
 
@@ -1399,12 +1399,12 @@ return_succ:
  */
 static void logmanager_unregister(void)
 {
-    acquire_lock(&lmlock);
+    spinlock_acquire(&lmlock);
 
     lm->lm_nlinks -= 1;
     ss_dassert(lm->lm_nlinks >= 0);
 
-    release_lock(&lmlock);
+    spinlock_release(&lmlock);
 }
 
 
@@ -1461,9 +1461,9 @@ static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir)
 static void logfile_flush(logfile_t* lf)
 {
     CHK_LOGFILE(lf);
-    acquire_lock(&lf->lf_spinlock);
+    spinlock_acquire(&lf->lf_spinlock);
     lf->lf_flushflag = true;
-    release_lock(&lf->lf_spinlock);
+    spinlock_release(&lf->lf_spinlock);
     skygw_message_send(lf->lf_logmes);
 }
 
@@ -1476,9 +1476,9 @@ static void logfile_flush(logfile_t* lf)
 static void logfile_rotate(logfile_t* lf)
 {
     CHK_LOGFILE(lf);
-    acquire_lock(&lf->lf_spinlock);
+    spinlock_acquire(&lf->lf_spinlock);
     lf->lf_rotateflag = true;
-    release_lock(&lf->lf_spinlock);
+    spinlock_release(&lf->lf_spinlock);
     skygw_message_send(lf->lf_logmes);
 }
 
@@ -1867,7 +1867,7 @@ static bool logfile_init(logfile_t*    logfile,
     logfile->lf_lmgr = logmanager;
     logfile->lf_flushflag = false;
     logfile->lf_rotateflag = false;
-    logfile->lf_spinlock = 0;
+    logfile->lf_spinlock = SPINLOCK_INIT;
     logfile->lf_store_shmem = store_shmem;
     logfile->lf_buf_size = MAX_LOGSTRLEN;
     /**
@@ -2126,12 +2126,12 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
     /**
      * read and reset logfile's flush- and rotateflag
      */
-    acquire_lock(&lf->lf_spinlock);
+    spinlock_acquire(&lf->lf_spinlock);
     bool flush_logfile  = lf->lf_flushflag;
     bool rotate_logfile = lf->lf_rotateflag;
     lf->lf_flushflag  = false;
     lf->lf_rotateflag = false;
-    release_lock(&lf->lf_spinlock);
+    spinlock_release(&lf->lf_spinlock);
 
     // fwr->fwr_file may be NULL if an earlier log-rotation failed.
     if (rotate_logfile || !fwr->fwr_file)

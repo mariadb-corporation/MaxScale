@@ -336,29 +336,6 @@ bool skygw_thread_must_exit(skygw_thread_t* thr)
     return thr->sth_must_exit;
 }
 
-void acquire_lock(int* l)
-{
-    register int misscount = 0;
-    struct timespec ts1;
-    ts1.tv_sec = 0;
-
-    while (atomic_add(l, 1) != 0)
-    {
-        atomic_add(l, -1);
-        misscount += 1;
-        if (misscount > 10)
-        {
-            ts1.tv_nsec = misscount * 1000000;
-            nanosleep(&ts1, NULL);
-        }
-    }
-}
-
-void release_lock(int* l)
-{
-    atomic_add(l, -1);
-}
-
 /**
  * @node Create a simple_mutex structure which encapsulates pthread_mutex.
  *

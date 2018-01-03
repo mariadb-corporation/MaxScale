@@ -131,9 +131,6 @@ int skygw_file_write(skygw_file_t* file,
                      bool          flush);
 /** Skygw file routines */
 
-void acquire_lock(int* l);
-void release_lock(int* l);
-
 simple_mutex_t* simple_mutex_init(simple_mutex_t* mutexptr, const char* name);
 int simple_mutex_done(simple_mutex_t* sm);
 int simple_mutex_lock(simple_mutex_t* sm, bool block);
