@@ -199,6 +199,14 @@ the locations of the GTIDs in the .avro files. The _avro-conversion.ini_ contain
 the last converted position and GTID in the binlogs. If you need to reset the
 conversion process, delete these two files and restart MaxScale.
 
+# Resetting the Conversion Process
+
+To reset the binlog conversion process, issue the `purge` module command by
+executing it via MaxAdmin and stop MaxScale. If manually created schema files
+were used, they need to be recreated once MaxScale is stopped. After stopping
+MaxScale and optionally creating the schema files, the conversion process can be
+started by starting MaxScale.
+
 # Example Client
 
 The avrorouter comes with an example client program, _cdc.py_, written in Python 3.
