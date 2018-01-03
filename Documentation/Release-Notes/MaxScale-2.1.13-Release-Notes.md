@@ -34,6 +34,7 @@ For any problems you encounter, please consider submitting a bug report at
 * [MXS-1581](https://jira.mariadb.org/browse/MXS-1581) CREATE TABLE AS not supported
 * [MXS-1580](https://jira.mariadb.org/browse/MXS-1580) Invalid handling of BIT values
 * [MXS-1527](https://jira.mariadb.org/browse/MXS-1527) SELECT with session var is not supported
+* [MXS-1516](https://jira.mariadb.org/browse/MXS-1516) existing connection don't change routing even if master switched
 
 ## Packaging
 

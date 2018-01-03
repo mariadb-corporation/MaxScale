@@ -29,7 +29,6 @@
 #include <sys/time.h>
 #include "internal/skygw_utils.h"
 #include <maxscale/atomic.h>
-#include <maxscale/random_jkiss.h>
 #include <pcre2.h>
 
 #if !defined(PATH_MAX)
@@ -460,7 +459,7 @@ void acquire_lock(int* l)
         misscount += 1;
         if (misscount > 10)
         {
-            ts1.tv_nsec = (random_jkiss() % misscount) * 1000000;
+            ts1.tv_nsec = misscount * 1000000;
             nanosleep(&ts1, NULL);
         }
     }
