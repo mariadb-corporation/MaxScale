@@ -1624,6 +1624,9 @@ int service_refresh_users(SERVICE *service)
     if ((service->capabilities & ACAP_TYPE_ASYNC) == 0)
     {
         spinlock_acquire(&service->spin);
+        // Use only one rate limitation for synchronous authenticators to keep
+        // rate limitations synchronous as well
+        self = 0;
     }
 
     /* Check if refresh rate limit has been exceeded */
