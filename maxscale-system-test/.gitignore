@@ -180,6 +180,7 @@ mysqlmon_failover_auto
 mysqlmon_failover_manual
 mysqlmon_rejoin_good
 mysqlmon_rejoin_bad
+mysqlmon_rejoin_bad2
 namedserverfilter
 no_password
 non_native_setup
