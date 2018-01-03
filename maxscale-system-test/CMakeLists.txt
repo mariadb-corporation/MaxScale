@@ -263,6 +263,9 @@ add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_4 my
 add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_3 mysqlmon_failover_manual2_3 LABELS mysqlmon REPL_BACKEND)
 add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_2 mysqlmon_failover_manual2_2 LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor switchover
+add_test_executable(mysqlmon_switchover.cpp mysqlmon_switchover mysqlmon_switchover LABELS mysqlmon REPL_BACKEND)
+
 # MySQL Monitor switchover with bad master
 add_test_executable(mysqlmon_switchover_bad_master.cpp mysqlmon_switchover_bad_master mysqlmon_switchover_bad_master LABELS mysqlmon REPL_BACKEND)
 
@@ -552,6 +555,14 @@ add_test_executable(mxs1476.cpp mxs1476 mxs1476 LABELS GALERA_BACKEND)
 # MXS-1509: Show correct server state for multisource replication
 # https://jira.mariadb.org/browse/MXS-1509
 add_test_executable(mxs1509.cpp mxs1509 mxs1509 LABELS REPL_BACKEND)
+
+ # MXS-1516: existing connection don't change routing, even if master switched
+ # https://jira.mariadb.org/browse/MXS-1516
+add_test_executable(mxs1516.cpp mxs1516 replication LABELS REPL_BACKEND)
+
+ # MXS-1542: Check that UTF16 strings work
+ # https://jira.mariadb.org/browse/MXS-1542
+add_test_executable(mxs1542.cpp mxs1542 avro LABELS REPL_BACKEND)
 
  # MXS-1585: Crash in MaxScale 2.1.12
  # https://jira.mariadb.org/browse/MXS-1585

@@ -97,6 +97,19 @@ typedef struct mxs_monitor_object
  */
 #define MXS_MONITOR_VERSION {3, 0, 0}
 
+/**
+ * Specifies capabilities specific for monitor.
+ *
+ * @see enum routing_capability
+ *
+ * @note The values of the capabilities here *must* be between 0x0001 0000 0000 0000
+ *       and 0x0080 0000 0000 0000, that is, bits 48 to 55.
+ */
+typedef enum monitor_capability
+{
+    MCAP_TYPE_NONE = 0x0 // TODO: remove once monitor capabilities are defined
+} monitor_capability_t;
+
 /** Monitor's poll frequency */
 #define MXS_MON_BASE_INTERVAL_MS 100
 

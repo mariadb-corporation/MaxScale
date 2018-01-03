@@ -15,7 +15,7 @@
  * @file mysql_mon.c - A MySQL replication cluster monitor
  */
 
-#define MXS_MODULE_NAME "mysqlmon"
+#define MXS_MODULE_NAME "mariadbmon"
 
 #include "../mysqlmon.h"
 #include <string>
@@ -3360,7 +3360,7 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
  * @param err_out json object for error printing. Can be NULL.
  * @return True if successful
  */
-bool promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
+bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
     bool success = false;
     MXS_NOTICE("Promoting server '%s' to master.", new_master->server->unique_name);
@@ -3478,7 +3478,7 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
     // Step 2: Wait until relay log consumed.
     if (failover_wait_relay_log(mon, new_master, err_out) &&
         // Step 3: Stop and reset slave, set read-only to 0.
-        promote_new_master(mon, new_master, err_out))
+        promote_new_master(new_master, err_out))
     {
         // Step 4: Redirect slaves.
         int redirects = redirect_slaves(mon, slaves, new_master);
@@ -3715,6 +3715,48 @@ static bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gti
 }
 
 /**
+ * Wait until slave replication catches up with the master gtid for all slaves in the vector.
+ *
+ * @param slave Slaves to wait on
+ * @param gtid Which gtid must be reached
+ * @param total_timeout Maximum wait time in seconds
+ * @param read_timeout The value of read_timeout for the connection
+ * @param err_out json object for error printing. Can be NULL.
+ * @return True, if target gtid was reached within allotted time for all servers
+ */
+static bool switchover_wait_slaves_catchup(const ServerVector& slaves, const Gtid& gtid,
+                                           int total_timeout, int read_timeout,
+                                           json_t** err_out)
+{
+    bool success = true;
+    int seconds_remaining = total_timeout;
+
+    for (ServerVector::const_iterator iter = slaves.begin();
+         iter != slaves.end() && success;
+         iter++)
+    {
+        if (seconds_remaining < 0)
+        {
+            success = false;
+        }
+        else
+        {
+            time_t begin = time(NULL);
+            MXS_MONITORED_SERVER* slave = *iter;
+            if (switchover_wait_slave_catchup(slave, gtid, seconds_remaining, read_timeout, err_out))
+            {
+                seconds_remaining -= difftime(time(NULL), begin);
+            }
+            else
+            {
+                success = false;
+            }
+        }
+    }
+    return success;
+}
+
+/**
  * Starts a new slave connection on a server. Should be used on a demoted master server.
  *
  * @param mon Cluster monitor
@@ -3818,28 +3860,48 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
     bool rval = false;
     MySqlServerInfo* curr_master_info = get_server_info(mon, demotion_target);
     // Step 2: Set read-only to 1, flush logs.
-    if (switchover_demote_master(mon, demotion_target, curr_master_info, err_out) &&
-        // Step 3: Wait for the selected slave to catch up with master.
-        switchover_wait_slave_catchup(promotion_target, curr_master_info->gtid_binlog_pos,
-                                      mon->switchover_timeout, mon->monitor->read_timeout, err_out) &&
-        // Step 4: Stop and reset slave, set read-only to 0.
-        promote_new_master(mon, promotion_target, err_out))
+    if (switchover_demote_master(mon, demotion_target, curr_master_info, err_out))
     {
-        // Step 5: Redirect slaves.
-        int redirects = redirect_slaves(mon, slaves, promotion_target);
-        // Step 6: Set the old master to replicate from the new.
-        bool start_ok = switchover_start_slave(mon, demotion_target, promotion_target);
-        rval = slaves.empty() ? start_ok : start_ok || redirects > 0;
-        if (rval == false)
+        // Step 3a: Wait for the selected slave to catch up with master.
+        if (switchover_wait_slave_catchup(promotion_target, curr_master_info->gtid_binlog_pos,
+                                          mon->switchover_timeout, mon->monitor->read_timeout, err_out) &&
+            // Step 3b: Wait for other slaves to catch up with master.
+            switchover_wait_slaves_catchup(slaves, curr_master_info->gtid_binlog_pos,
+                                           mon->switchover_timeout, mon->monitor->read_timeout, err_out) &&
+            // Step 4: Stop and reset slave, set read-only to 0.
+            promote_new_master(promotion_target, err_out))
         {
-            // This is a special case. Individual server errors have already been printed to the log.
-            // For JSON, gather the errors again.
-            const char MSG[] = "Could not redirect any slaves to the new master.";
-            MXS_ERROR(MSG);
-            if (err_out)
+            // Step 5: Redirect slaves.
+            int redirects = redirect_slaves(mon, slaves, promotion_target);
+            // Step 6: Set the old master to replicate from the new.
+            bool start_ok = switchover_start_slave(mon, demotion_target, promotion_target);
+            rval = slaves.empty() ? start_ok : start_ok || redirects > 0;
+            if (rval == false)
             {
-                string combined_error = get_connection_errors(slaves, demotion_target);
-                *err_out = mxs_json_error_append(*err_out, "%s Errors: %s.", MSG, combined_error.c_str());
+                // This is a special case. Individual server errors have already been printed to the log.
+                // For JSON, gather the errors again.
+                const char MSG[] = "Could not redirect any slaves to the new master.";
+                MXS_ERROR(MSG);
+                if (err_out)
+                {
+                    string combined_error = get_connection_errors(slaves, demotion_target);
+                    *err_out = mxs_json_error_append(*err_out, "%s Errors: %s.", MSG, combined_error.c_str());
+                }
+            }
+        }
+        else
+        {
+            // Step 3a, 3b or 4 failed, try to undo step 2.
+            const char QUERY_UNDO[] = "SET GLOBAL read_only=0;";
+            if (mxs_mysql_query(demotion_target->con, QUERY_UNDO) == 0)
+            {
+                PRINT_MXS_JSON_ERROR(err_out, "read_only disabled on server %s.",
+                    demotion_target->server->unique_name);
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(err_out, "Could not disable read_only on server %s: '%s'.",
+                    demotion_target->server->unique_name, mysql_error(demotion_target->con));
             }
         }
     }

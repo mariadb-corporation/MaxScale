@@ -78,4 +78,17 @@ typedef struct mxs_protocol
  */
 #define MXS_PROTOCOL_VERSION      {1, 1, 0}
 
+/**
+ * Specifies capabilities specific for protocol.
+ *
+ * @see enum routing_capability
+ *
+ * @note The values of the capabilities here *must* be between 0x010000000000
+ *       and 0x800000000000, that is, bits 40 to 47.
+ */
+typedef enum protocol_capability
+{
+    PCAP_TYPE_NONE = 0x0 // TODO: remove once protocol capabilities are defined
+} protocol_capability_t;
+
 MXS_END_DECLS

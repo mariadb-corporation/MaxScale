@@ -87,6 +87,11 @@ multi-statement or a compound statement modifies the state of the
 session. This is not a good practice and a change in the client side
 behavior is advised.
 
+### Top Filter
+
+The top filter now uses the session ID instead of an internal counter for the
+names of the log file names.
+
 ## Dropped Features
 
 ## New Features
