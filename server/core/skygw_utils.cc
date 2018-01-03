@@ -436,7 +436,9 @@ bool skygw_thread_set_exitflag(skygw_thread_t* thr, skygw_message_t* sendmes,
         skygw_message_wait(recmes);
     }
 
+    ss_dassert(simple_mutex_lock(thr->sth_mutex, true) == 0);
     ss_dassert(thr->sth_state == THR_STOPPED);
+    ss_dassert(simple_mutex_unlock(thr->sth_mutex) == 0);
 
 return_succp:
     return succp;

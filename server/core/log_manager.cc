@@ -2321,7 +2321,9 @@ static void* thr_filewriter_fun(void* data)
 
     /** Inform log manager about the state. */
     skygw_message_send(fwr->fwr_clientmes);
-    while (!skygw_thread_must_exit(thr))
+    bool running = true;
+
+    do
     {
         /**
          * Wait until new log arrival message appears.
@@ -2347,14 +2349,23 @@ static void* thr_filewriter_fun(void* data)
             }
         }
 
+        bool send_message = false;
+
         if (flushall_done_flag)
         {
             flushall_done_flag = false;
             flushall_logfiles(false);
-            skygw_message_send(fwr->fwr_clientmes);
+            send_message = true;
         }
 
-    } /* while (!skygw_thread_must_exit) */
+        running = !skygw_thread_must_exit(thr);
+
+        if (running && send_message)
+        {
+            skygw_message_send(fwr->fwr_clientmes);
+        }
+    }
+    while (running);
 
     ss_debug(skygw_thread_set_state(thr, THR_STOPPED));
     /** Inform log manager that file writer thread has stopped. */
