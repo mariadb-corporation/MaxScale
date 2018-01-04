@@ -45,6 +45,54 @@ root@host:~# maxscale --user=root ...
   automatically enabled. In MaxScale 2.2.0, if `transaction_safety` was disabled
   when `mariadb10_master_gtid` was enabled MaxScale would refuse to start.
 
+### MySQL Client Protocol
+
+The shared object implementing the client protocol has been renamed
+from `libMySQLClient.so` to `libmaridbclient.so`. In practice this means
+that, in the MaxScale configuration file, `MySQLClient` should be replaced
+with `mariadbclient` or, e.g., `MariaDBClient`, as module names are matched
+in a case insensitive manner.
+
+As an example, a listener section like
+```
+[TheListener]
+type=listener
+...
+protocol=MySQLClient
+```
+should be changed into
+```
+[TheListener]
+type=listener
+...
+protocol=MariaDBClient
+```
+*NOTE* Using `MySQLClient` is still supported, but has been deprecated.
+
+### MySQL Backend Protocol
+
+The shared object implementing the backend protocol has been renamed
+from `libMySQLBackend.so` to `libmaridbbackend.so`. In practice this means
+that, in the MaxScale configuration file, `MySQLBackend` should be replaced
+with `mariadbbackend` or, e.g., `MariaDBBackend`, as module names are matched
+in a case insensitive manner.
+
+As an example, a server section like
+```
+[TheServer]
+type=server
+...
+protocol=MySQLBackend
+```
+should be changed into
+```
+[TheServer]
+type=server
+...
+protocol=MariaDBBackend
+```
+*NOTE* Using `MySQLBackend` is still supported, but has been deprecated.
+
 ### MySQL Monitor
 
 Renamed to [MariaDB Monitor](../Monitors/MariaDB-Monitor.md).
