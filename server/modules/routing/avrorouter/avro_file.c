@@ -31,6 +31,7 @@
  */
 
 #include "avrorouter.h"
+#include <maxscale/query_classifier.h>
 
 #include <binlog_common.h>
 #include <blr_constants.h>
@@ -1045,6 +1046,25 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     sql = tmp;
     len = tmpsz;
     unify_whitespace(sql, len);
+
+    static bool warn_not_row_format = true;
+
+    if (warn_not_row_format)
+    {
+        GWBUF* buffer = gwbuf_alloc(len + 5);
+        gw_mysql_set_byte3(GWBUF_DATA(buffer), len + 1);
+        GWBUF_DATA(buffer)[4] = 0x03;
+        memcpy(GWBUF_DATA(buffer) + 5, sql, len);
+        qc_query_op_t op = qc_get_operation(buffer);
+        gwbuf_free(buffer);
+
+        if (op == QUERY_OP_UPDATE || op == QUERY_OP_INSERT || op == QUERY_OP_DELETE)
+        {
+            MXS_WARNING("Possible STATEMENT or MIXED format binary log. Check that "
+                        "'binlog_format' is set to ROW on the master.");
+            warn_not_row_format = false;
+        }
+    }
 
     if (is_create_table_statement(router, sql, len))
     {
