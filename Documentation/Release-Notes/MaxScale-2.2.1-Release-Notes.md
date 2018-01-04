@@ -45,7 +45,22 @@ root@host:~# maxscale --user=root ...
   automatically enabled. In MaxScale 2.2.0, if `transaction_safety` was disabled
   when `mariadb10_master_gtid` was enabled MaxScale would refuse to start.
 
-### MySQL Client Protocol
+### Module names and case sensitivity
+
+* The filenames of all modules have been made lowercase.
+* When specifying a module, the name matching is case insensitive.
+
+In practice this means that in the configuration file, the following
+are all equivalent:
+```
+router=readwritesplit
+
+router=READWRITESPLIT
+
+router=ReadWriteSplit
+```
+
+### MySQL/MariaDB Client Protocol
 
 The shared object implementing the client protocol has been renamed
 from `libMySQLClient.so` to `libmaridbclient.so`. In practice this means
