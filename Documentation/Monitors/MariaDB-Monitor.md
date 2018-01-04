@@ -275,7 +275,7 @@ seconds (faster than `backend_read_timeout` and `backend_write_timeout`).
 
 The backends must all use GTID-based replication, and the domain id should not
 change during a switchover or failover. Master and slaves must have
-well-behaving GTIDs: no extra events on slave servers.
+well-behaving GTIDs with no extra events on slave servers.
 
 ### Configuration parameters
 
@@ -329,6 +329,10 @@ user.
 
 The credentials used for replication must have the `REPLICATION SLAVE`
 privilege.
+
+`replication_password` uses the same encryption scheme as other password
+parameters. If password encryption is in use, `replication_password` must be
+encrypted with the same key to avoid erroneous decryption.
 
 #### `failover_timeout`
 
