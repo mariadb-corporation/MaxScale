@@ -60,7 +60,7 @@ whitespace replaced with hyphens. The server names are case-insensitive.
             "parameters": { // Server parameters
                 "address": "127.0.0.1",
                 "port": 3000,
-                "protocol": "MySQLBackend",
+                "protocol": "MariaDBBackend",
                 "authenticator": "MySQLBackendAuth",
                 "ssl_key": "/etc/certs/client-key.pem",
                 "ssl_cert": "/etc/certs/client-cert.pem",
@@ -142,7 +142,7 @@ Response contains a resource collection with all servers.
                 "parameters": {
                     "address": "127.0.0.1",
                     "port": 3000,
-                    "protocol": "MySQLBackend",
+                    "protocol": "MariaDBBackend",
                     "authenticator": "MySQLBackendAuth",
                     "ssl_key": "/etc/certs/client-key.pem",
                     "ssl_cert": "/etc/certs/client-cert.pem",
@@ -199,7 +199,7 @@ Response contains a resource collection with all servers.
                 "parameters": {
                     "address": "127.0.0.1",
                     "port": 3001,
-                    "protocol": "MySQLBackend",
+                    "protocol": "MariaDBBackend",
                     "ssl_key": "/etc/certs/client-key.pem",
                     "ssl_cert": "/etc/certs/client-cert.pem",
                     "ssl_ca_cert": "/etc/certs/ca.pem",
@@ -247,7 +247,7 @@ object for defining a new server.
             "parameters": {
                 "address": "127.0.0.1",
                 "port": 3003,
-                "protocol": "MySQLBackend"
+                "protocol": "MariaDBBackend"
             }
         }
     }
@@ -266,7 +266,7 @@ new servers to be created and immediately taken into use.
             "parameters": {
                 "address": "127.0.0.1",
                 "port": 3002,
-                "protocol": "MySQLBackend"
+                "protocol": "MariaDBBackend"
             }
         },
         "relationships": {
@@ -399,7 +399,7 @@ Response to `GET /v1/server/server1`:
             "parameters": {
                 "address": "127.0.0.1",
                 "port": 3000,
-                "protocol": "MySQLBackend"
+                "protocol": "MariaDBBackend"
             },
             "state": "Master, Running",
             "version_string": "10.1.22-MariaDB",

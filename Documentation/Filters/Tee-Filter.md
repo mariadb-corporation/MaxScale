@@ -163,12 +163,12 @@ options=/var/log/DataMart/InsertsLog
 [Orders Listener]
 type=listener
 service=Orders
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4011
 
 [DataMart Listener]
 type=listener
 service=DataMart
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4012
 ```

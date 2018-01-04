@@ -159,12 +159,12 @@ commands on the listener.
 [Replication Listener]
 type=listener
 service=Replication
-protocol=MySQLClient
+protocol=MariaDBClient
 port=3306
 ```
 
 The protocol used by slaves for connection to MariaDB MaxScale is the same
-*MySQLClient* protocol that is used for client applications to connect to
+*MariaDBClient* protocol that is used for client applications to connect to
 databases, therefore the same MariaDB MaxScale protocol module can be used.
 
 It's also possible to enable client side SSL by adding the required SSL options
@@ -174,7 +174,7 @@ in the listener:
 [Replication SSL Listener]
 type=listener
 service=Replication
-protocol=MySQLClient
+protocol=MariaDBClient
 port=3306
 ssl=required
 ssl_key=/path/to/key.pem
@@ -485,7 +485,7 @@ currently connected.
         Started:                Thu Jan 29 16:06:11 2015
         Root user access:           Disabled
         Backend databases
-            178.62.50.70:3306  Protocol: MySQLBackend
+            178.62.50.70:3306  Protocol: MariaDBBackend
         Users data:                     0x156c030
         Total connections:              2
         Currently connected:            2

@@ -57,7 +57,7 @@ GET /v1/services/:name
                     "attributes": {
                         "parameters": {
                             "port": 4008,
-                            "protocol": "MySQLClient",
+                            "protocol": "MariaDBClient",
                             "authenticator": "MySQLAuth"
                         }
                     },
@@ -138,7 +138,7 @@ GET /v1/services
                         "attributes": {
                             "parameters": {
                                 "port": 4008,
-                                "protocol": "MySQLClient",
+                                "protocol": "MariaDBClient",
                                 "authenticator": "MySQLAuth"
                             }
                         },
@@ -247,7 +247,7 @@ GET /v1/services/:name/listeners
             "attributes": {
                 "parameters": {
                     "port": 4008,
-                    "protocol": "MySQLClient",
+                    "protocol": "MariaDBClient",
                     "authenticator": "MySQLAuth"
                 }
             },
@@ -281,7 +281,7 @@ GET /v1/services/:name/listeners
             "attributes": {
                 "parameters": {
                     "port": 4008,
-                    "protocol": "MySQLClient",
+                    "protocol": "MariaDBClient",
                     "authenticator": "MySQLAuth"
                 }
             },
@@ -315,7 +315,7 @@ GET /v1/services/:name/listeners/:listener
         "attributes": {
             "parameters": {
                 "port": 4006,
-                "protocol": "MySQLClient",
+                "protocol": "MariaDBClient",
                 "authenticator": "MySQLAuth"
             }
         },

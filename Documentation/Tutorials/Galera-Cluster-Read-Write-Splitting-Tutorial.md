@@ -71,39 +71,39 @@ type=listener
 service=Splitter Service
 ```
 
-A listener must also define the protocol module it will use for the incoming network protocol, currently this should be the `MySQLClient` protocol for all database listeners. The listener may then supply a network port to listen on and/or a socket within the file system.
+A listener must also define the protocol module it will use for the incoming network protocol, currently this should be the `MariaDBClient` protocol for all database listeners. The listener may then supply a network port to listen on and/or a socket within the file system.
 
 ```
 [Splitter Listener]
 type=listener
 service=Splitter Service
-protocol=MySQLClient
+protocol=MariaDBClient
 port=3306
 socket=/tmp/ClusterMaster
 ```
 
 An address parameter may be given if the listener is required to bind to a particular network address when using hosts with multiple network addresses. The default behavior is to listen on all network interfaces.
 
-The next stage is the configuration is to define the server information. This defines how to connect to each of the servers within the cluster, again a section is created for each server, with the type set to server, the network address and port to connect to and the protocol to use to connect to the server. Currently the protocol module for all database connections in `MySQLBackend`.
+The next stage is the configuration is to define the server information. This defines how to connect to each of the servers within the cluster, again a section is created for each server, with the type set to server, the network address and port to connect to and the protocol to use to connect to the server. Currently the protocol module for all database connections in `MariaDBBackend`.
 
 ```
 [dbserv1]
 type=server
 address=192.168.2.1
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [dbserv2]
 type=server
 address=192.168.2.2
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [dbserv3]
 type=server
 address=192.168.2.3
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 ```
 
 In order for MariaDB MaxScale to monitor the servers using the correct monitoring mechanisms a section should be provided that defines the monitor to use and the servers to monitor. Once again a section is created with a symbolic name for the monitor, with the type set to monitor. Parameters are added for the module to use, the list of servers to monitor and the username and password to use when connecting to the the servers with the monitor.
@@ -194,7 +194,7 @@ Listeners.
 ---------------------+--------------------+-----------------+-------+--------
 Service Name         | Protocol Module    | Address         | Port  | State
 ---------------------+--------------------+-----------------+-------+--------
-Splitter Service     | MySQLClient        | *               |  3306 | Running
+Splitter Service     | MariaDBClient      | *               |  3306 | Running
 CLI                  | maxscaled          | localhost       |  6603 | Running
 ---------------------+--------------------+-----------------+-------+--------
 ```

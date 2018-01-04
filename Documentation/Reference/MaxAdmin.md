@@ -293,10 +293,10 @@ execution of the MariaDB MaxScale command.
             Number of queries forwarded:    0
             Started:                Wed Jun 25 10:08:23 2014
             Backend databases
-                    127.0.0.1:3309  Protocol: MySQLBackend
-                    127.0.0.1:3308  Protocol: MySQLBackend
-                    127.0.0.1:3307  Protocol: MySQLBackend
-                    127.0.0.1:3306  Protocol: MySQLBackend
+                    127.0.0.1:3309  Protocol: MariaDBBackend
+                    127.0.0.1:3308  Protocol: MariaDBBackend
+                    127.0.0.1:3307  Protocol: MariaDBBackend
+                    127.0.0.1:3306  Protocol: MariaDBBackend
             Users data:             0x724340
             Total connections:      1
             Currently connected:    1
@@ -602,10 +602,10 @@ Listeners.
 ----------------------+---------------------+--------------------+-----------------+-------+--------
 Name                  | Service Name        | Protocol Module    | Address         | Port  | State
 ----------------------+---------------------+--------------------+-----------------+-------+--------
-RWSplit-Listener      | RWSplit             | MySQLClient        | *               |  4006 | Running
-SchemaRouter-Listener | SchemaRouter        | MySQLClient        | *               |  4010 | Running
-RWSplit-Hint-Listener | RWSplit-Hint        | MySQLClient        | *               |  4009 | Running
-ReadConn-Listener     | ReadConn            | MySQLClient        | *               |  4008 | Running
+RWSplit-Listener      | RWSplit             | MariaDBClient      | *               |  4006 | Running
+SchemaRouter-Listener | SchemaRouter        | MariaDBClient      | *               |  4010 | Running
+RWSplit-Hint-Listener | RWSplit-Hint        | MariaDBClient      | *               |  4009 | Running
+ReadConn-Listener     | ReadConn            | MariaDBClient      | *               |  4008 | Running
 CLI-Listener          | CLI                 | maxscaled          | default         |     0 | Running
 ----------------------+---------------------+--------------------+-----------------+-------+--------
 MaxScale>
@@ -643,10 +643,10 @@ MaxScale> show service RWSplit
 	Started:                             Thu Apr 20 09:45:13 2017
 	Root user access:                    Disabled
 	Backend databases:
-		[127.0.0.1]:3000    Protocol: MySQLBackend    Name: server1
-		[127.0.0.1]:3001    Protocol: MySQLBackend    Name: server2
-		[127.0.0.1]:3002    Protocol: MySQLBackend    Name: server3
-		[127.0.0.1]:3003    Protocol: MySQLBackend    Name: server4
+		[127.0.0.1]:3000    Protocol: MariaDBBackend    Name: server1
+		[127.0.0.1]:3001    Protocol: MariaDBBackend    Name: server2
+		[127.0.0.1]:3002    Protocol: MariaDBBackend    Name: server3
+		[127.0.0.1]:3003    Protocol: MariaDBBackend    Name: server4
 	Total connections:                   1
 	Currently connected:                 1
 MaxScale>
@@ -740,7 +740,7 @@ MaxScale> show server server2
 Server 0x6501d0 (server2)
 	Server:                              127.0.0.1
 	Status:                              Slave, Running
-	Protocol:                            MySQLBackend
+	Protocol:                            MariaDBBackend
 	Port:                                3001
 	Server Version:                      10.1.22-MariaDB
 	Node Id:                             3001
@@ -935,7 +935,7 @@ DCB: 0x7fffdc014590
 	Service:            RWSplit
 	Server name/IP:     127.0.0.1
 	Port number:        3000
-	Protocol:           MySQLBackend
+	Protocol:           MariaDBBackend
 	Server status:            Master, Running
 	Role:                     Backend Request Handler
 	Statistics:
@@ -1225,11 +1225,11 @@ Module Name     | Module Type     | Version | API   | Status
 ----------------+-----------------+---------+-------+-------------------------
 qc_sqlite       | QueryClassifier | V1.0.0  | 1.1.0 | Beta
 MySQLAuth       | Authenticator   | V1.1.0  | 1.1.0 | GA
-MySQLClient     | Protocol        | V1.1.0  | 1.1.0 | GA
+MariaDBClient   | Protocol        | V1.1.0  | 1.1.0 | GA
 MaxAdminAuth    | Authenticator   | V2.1.0  | 1.1.0 | GA
 maxscaled       | Protocol        | V2.0.0  | 1.1.0 | GA
 MySQLBackendAuth| Authenticator   | V1.0.0  | 1.1.0 | GA
-MySQLBackend    | Protocol        | V2.0.0  | 1.1.0 | GA
+MariaDBBackend  | Protocol        | V2.0.0  | 1.1.0 | GA
 mysqlmon        | Monitor         | V1.5.0  | 3.0.0 | GA
 schemarouter    | Router          | V1.0.0  | 2.0.0 | Beta
 readwritesplit  | Router          | V1.1.0  | 2.0.0 | GA
@@ -1379,7 +1379,7 @@ Parameters:
 NAME          Server name
 HOST          Server host address
 PORT          Server port (default 3306)
-PROTOCOL      Server protocol (default MySQLBackend)
+PROTOCOL      Server protocol (default MariaDBBackend)
 AUTHENTICATOR Authenticator module name (default MySQLAuth)
 OPTIONS       Comma separated list of options for the authenticator
 
@@ -1513,7 +1513,7 @@ SERVICE       Service where this listener is added
 NAME          Listener name
 HOST          Listener host address (default [::])
 PORT          Listener port (default 3306)
-PROTOCOL      Listener protocol (default MySQLClient)
+PROTOCOL      Listener protocol (default MariaDBClient)
 AUTHENTICATOR Authenticator module name (default MySQLAuth)
 OPTIONS       Options for the authenticator module
 SSL_KEY       Path to SSL private key

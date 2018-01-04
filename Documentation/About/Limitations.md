@@ -74,9 +74,9 @@ transaction or change the autocommit mode using a prepared statement.
 
 ## Protocol limitations
 
-### Limitations with MySQL Protocol support (MySQLClient)
+### Limitations with MySQL/MariaDB Protocol support (MariaDBClient)
 
-* Compression is not included in the MySQL server handshake.
+* Compression is not included in the server handshake.
 
 * MariaDB MaxScale does not support `KILL QUERY ID <query_id>` type
   statements. If a query by a query ID is to be killed, it needs to be done

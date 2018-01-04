@@ -229,7 +229,7 @@ version_string=5.5.37-CLUSTER
 [Cluster Listener]
 type=listener
 service=Cluster Service
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4906
 
 [NDB Cluster Monitor]
@@ -246,14 +246,14 @@ monitor_interval=8000
 type=server
 address=127.0.0.1
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [server2]
 #SQL node2
 type=server
 address=162.243.90.81
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 ```
 
 Assuming MariaDB MaxScale is installed in server1, start it.
@@ -283,7 +283,7 @@ Server 0x3873b40 (server1)
 
 Server:						127.0.0.1
 Status:						NDB, Running
-Protocol:					MySQLBackend
+Protocol:					MariaDBBackend
 Port:						3306
 Server Version:				5.5.38-ndb-7.2.17-cluster-gpl
 Node Id:					22
@@ -297,7 +297,7 @@ Server 0x3873a40 (server2)
 
 Server:						162.243.90.81
 Status:						NDB, Running
-Protocol:					MySQLBackend
+Protocol:					MariaDBBackend
 Port:						3306
 Server Version:				5.5.38-ndb-7.2.17-cluster-gpl
 Node Id:					23

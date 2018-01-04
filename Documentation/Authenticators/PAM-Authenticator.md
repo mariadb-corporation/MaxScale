@@ -18,14 +18,14 @@ is to change the listener and backend authenticator modules to `PAMAuth` and
 type=listener
 address=::
 service=Read-Write-Service
-protocol=MySQLClient
+protocol=MariaDBClient
 authenticator=PAMAuth
 
 [Master-Server]
 type=server
 address=123.456.789.10
 port=12345
-protocol=MySQLBackend
+protocol=MariaDBBackend
 authenticator=PAMBackendAuth
 ```
 

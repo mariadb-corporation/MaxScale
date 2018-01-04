@@ -953,14 +953,14 @@ parameter used as the weighting parameter.
 type=server
 address=127.0.0.1
 port=3000
-protocol=MySQLBackend
+protocol=MariaDBBackend
 serv_weight=3
 
 [server2]
 type=server
 address=127.0.0.1
 port=3001
-protocol=MySQLBackend
+protocol=MariaDBBackend
 serv_weight=1
 
 [Read Service]
@@ -1076,7 +1076,7 @@ address port and protocol parameters.
 type=server
 address=127.0.0.1
 port=3000
-protocol=MySQLBackend
+protocol=MariaDBBackend
 ```
 
 #### `address`
@@ -1093,7 +1093,7 @@ MaxScale will use this port to connect to the database server.
 #### `protocol`
 
 The name for the protocol module to use to connect MariaDB MaxScale to the
-database. Currently only one backend protocol is supported, the MySQLBackend
+database. Currently only one backend protocol is supported, the MariaDBBackend
 module.
 
 #### `monitoruser`
@@ -1206,7 +1206,7 @@ sudden connection spikes and rejected connections. For more information see
 [<Listener name>]
 type=listener
 service=<Service name>]
-protocol=[MySQLClient|HTTPD]
+protocol=[MariaDBClient|HTTPD]
 address=[IP|hostname]
 port=<Listen port number>
 socket=<Socket path>
@@ -1265,14 +1265,14 @@ backend side. Each of the protocols can be either a client protocol or a backend
 protocol. Client protocols are used for client-MariaDB MaxScale communication
 and backend protocols are for MariaDB MaxScale-database communication.
 
-##### `MySQLClient`
+##### `MariaDBClient`
 
 This is the implementation of the MySQL protocol that is used by clients of
 MariaDB MaxScale to connect to MariaDB MaxScale.
 
-##### `MySQLBackend`
+##### `MariaDBBackend`
 
-The MySQLBackend protocol module is the implementation of the protocol that
+The MariaDBBackend protocol module is the implementation of the protocol that
 MariaDB MaxScale uses to connect to the backend MariaDB, MySQL and Percona
 Server databases. This implementation is tailored for the MariaDB MaxScale to
 MySQL Database traffic and is not a general purpose implementation of the MySQL
@@ -1376,7 +1376,7 @@ certificates, disable this feature.
 type=server
 address=10.131.24.62
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 ssl=required
 ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.max-client.pem
 ssl_key=/usr/local/mariadb/maxscale/ssl/key.max-client.pem
@@ -1394,7 +1394,7 @@ Authority file are also provided.
 [RW Split Listener]
 type=listener
 service=RW Split Router
-protocol=MySQLClient
+protocol=MariaDBClient
 port=3306
 ssl=required
 ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.maxscale.pem

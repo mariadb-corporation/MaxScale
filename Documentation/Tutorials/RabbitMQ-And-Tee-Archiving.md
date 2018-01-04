@@ -80,13 +80,13 @@ servers to the configuration file.
 type=server
 address=192.168.0.200
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [archive-1]
 type=server
 address=192.168.0.201
 port=3000
-protocol=MySQLBackend
+protocol=MariaDBBackend
 ```
 
 After we have defined the `production-1` and `archive-1` servers, we need a monitor
@@ -145,13 +145,13 @@ Next we will configure the listeners for these two services.
 [Production Listener]
 type=listener
 service=Production
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4000
 
 [Archive Listener]
 type=listener
 service=Archive
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4001
 ```
 
@@ -224,13 +224,13 @@ Here is the complete configuration file.
 type=server
 address=192.168.0.200
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [archive-1]
 type=server
 address=192.168.0.201
 port=3000
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 # MySQL server monitor
 [MySQL Monitor]
@@ -263,13 +263,13 @@ filters=MQ Filter
 [Production Listener]
 type=listener
 service=Production
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4000
 
 [Archive Listener]
 type=listener
 service=Archive
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4001
 
 # Tee filter to duplicate insert, update and delete

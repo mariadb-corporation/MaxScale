@@ -138,7 +138,7 @@ Add this server into the MariaDB MaxScale configuration and create a service tha
 type=server
 address=192.168.4.28
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [Cassandra]
 type=service
