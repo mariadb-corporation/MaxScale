@@ -62,8 +62,9 @@ struct NAME_MAPPING
 
 static NAME_MAPPING name_mappings[] =
 {
-    { MODULE_MONITOR,  "mysqlmon",    "mariadbmon",    false },
-    { MODULE_PROTOCOL, "mysqlclient", "mariadbclient", false }
+    { MODULE_MONITOR,  "mysqlmon",     "mariadbmon",     false },
+    { MODULE_PROTOCOL, "mysqlclient",  "mariadbclient",  false },
+    { MODULE_PROTOCOL, "mysqlbackend", "mariadbbackend", false }
 };
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);

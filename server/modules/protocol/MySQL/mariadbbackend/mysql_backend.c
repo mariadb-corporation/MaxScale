@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "MySQLBackend"
+#define MXS_MODULE_NAME "mariadbbackend"
 
 #include <maxscale/alloc.h>
 #include <maxscale/limits.h>
