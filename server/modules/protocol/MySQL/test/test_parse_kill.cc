@@ -1,6 +1,6 @@
 #include <maxscale/cdefs.h>
 
-#include "../MySQLClient/mysql_client.cc"
+#include "../mariadbclient/mysql_client.cc"
 
 #define NO_THREAD_ID 0
 

@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "MySQLClient"
+#define MXS_MODULE_NAME "mariadbclient"
 
 #include <maxscale/cppdefs.hh>
 
