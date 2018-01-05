@@ -21,6 +21,8 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/config.h>
 #include <maxscale/query_classifier.h>
+#include <maxscale/paths.h>
+#include <maxscale/alloc.h>
 
 #include <sys/stat.h>
 
@@ -38,6 +40,7 @@ void init_test_env(char *path)
         exit(1);
     }
     dcb_global_init();
+    set_libdir(MXS_STRDUP(TEST_DIR "/query_classifier/qc_sqlite/"));
     qc_setup(NULL, NULL);
     qc_process_init(QC_INIT_BOTH);
     poll_init();
