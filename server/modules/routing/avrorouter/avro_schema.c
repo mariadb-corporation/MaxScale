@@ -421,28 +421,33 @@ static bool get_database_name(const char* sql, char* dest)
     if (ptr)
     {
         ptr--;
-        while (*ptr == '`' || isspace(*ptr))
+        while (ptr >= sql && (*ptr == '`' || isspace(*ptr)))
         {
             ptr--;
         }
 
-        while (*ptr != '`' && *ptr != '.' && !isspace(*ptr))
+        while (ptr >= sql && *ptr != '`' && *ptr != '.' && !isspace(*ptr))
         {
             ptr--;
         }
 
-        if (*ptr == '.')
+        while (ptr >= sql && (*ptr == '`' || isspace(*ptr)))
+        {
+            ptr--;
+        }
+
+        if (ptr >= sql && *ptr == '.')
         {
             // The query defines an explicit database
 
-            while (*ptr == '`' || *ptr == '.' || isspace(*ptr))
+            while (ptr >= sql && (*ptr == '`' || *ptr == '.' || isspace(*ptr)))
             {
                 ptr--;
             }
 
             const char* end = ptr + 1;
 
-            while (*ptr != '`' && *ptr != '.' && !isspace(*ptr))
+            while (ptr >= sql && *ptr != '`' && *ptr != '.' && !isspace(*ptr))
             {
                 ptr--;
             }
@@ -1139,7 +1144,7 @@ void read_alter_identifier(const char *sql, const char *end, char *dest, int siz
     int len = 0;
     const char *tok = get_tok(sql, &len, end); // ALTER
     if (tok && (tok = get_tok(tok + len, &len, end)) // TABLE
-                && (tok = get_tok(tok + len, &len, end))) // Table identifier
+        && (tok = get_tok(tok + len, &len, end))) // Table identifier
     {
         snprintf(dest, size, "%.*s", len, tok);
         remove_backticks(dest);
