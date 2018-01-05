@@ -22,20 +22,21 @@
 #include <maxscale/config.h>
 #include <maxscale/query_classifier.h>
 
+#include <sys/stat.h>
+
 #include "../maxscale/poll.h"
 #include "../maxscale/statistics.h"
 
 
 void init_test_env(char *path)
 {
-    int argc = 3;
-
-    const char* logdir = path ? path : TEST_LOG_DIR;
-
     config_get_global_options()->n_threads = 1;
 
     ts_stats_init();
-    mxs_log_init(NULL, logdir, MXS_LOG_TARGET_DEFAULT);
+    if (!mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT))
+    {
+        exit(1);
+    }
     dcb_global_init();
     qc_setup(NULL, NULL);
     qc_process_init(QC_INIT_BOTH);
