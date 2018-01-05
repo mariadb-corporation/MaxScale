@@ -17,6 +17,7 @@
 #include <jansson.h>
 #include <maxscale/alloc.h>
 #include <strings.h>
+#include <signal.h>
 
 #define WRITE_EVENT         0
 #define UPDATE_EVENT        1
@@ -468,6 +469,19 @@ int get_metadata_len(uint8_t type)
     }
 }
 
+// Make sure that both `i` and `trace` are defined before using this macro
+#define check_overflow(t) do \
+    { \
+        if (!(t)) \
+        { \
+            for (long x = 0; x < i;x++) \
+            { \
+                MXS_ALERT("%s", trace[x]); \
+            } \
+            raise(SIGABRT); \
+        } \
+    }while(false)
+
 /**
  * @brief Extract the values from a single row  in a row event
  *
@@ -484,7 +498,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
 {
     int npresent = 0;
     avro_value_t field;
-    long ncolumns = map->columns;
+    long ncolumns = MXS_MIN(map->columns, create->columns);
     uint8_t *metadata = map->column_metadata;
     size_t metadata_offset = 0;
 
@@ -497,7 +511,10 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
     ptr += (ncolumns + 7) / 8;
     ss_dassert(ptr < end);
 
-    for (long i = 0; i < map->columns && i < create->columns && npresent < ncolumns; i++)
+    char trace[ncolumns][768];
+    memset(trace, 0, sizeof(trace));
+
+    for (long i = 0; i < ncolumns && npresent < ncolumns; i++)
     {
         ss_debug(int rc = )avro_value_get_by_name(record, create->column_names[i], &field, NULL);
         ss_dassert(rc == 0);
@@ -507,7 +524,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             npresent++;
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
-                MXS_INFO("[%ld] NULL", i);
+                sprintf(trace[i], "[%ld] NULL", i);
                 if (column_is_blob(map->column_types[i]))
                 {
                     uint8_t nullvalue = 0;
@@ -529,9 +546,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     char strval[bytes * 2 + 1];
                     gw_bin2hex(strval, val, bytes);
                     avro_value_set_string(&field, strval);
-                    MXS_INFO("[%ld] ENUM: %lu bytes", i, bytes);
+                    sprintf(trace[i], "[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
-                    ss_dassert(ptr < end);
+                    check_overflow(ptr < end);
                 }
                 else
                 {
@@ -561,13 +578,13 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                         bytes = *ptr++;
                     }
 
-                    MXS_INFO("[%ld] CHAR: field: %d bytes, data: %d bytes", i, field_length, bytes);
+                    sprintf(trace[i], "[%ld] CHAR: field: %d bytes, data: %d bytes", i, field_length, bytes);
                     char str[bytes + 1];
                     memcpy(str, ptr, bytes);
                     str[bytes] = '\0';
                     avro_value_set_string(&field, str);
                     ptr += bytes;
-                    ss_dassert(ptr < end);
+                    check_overflow(ptr < end);
                 }
             }
             else if (column_is_bit(map->column_types[i]))
@@ -584,17 +601,17 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     MXS_WARNING("BIT is not currently supported, values are stored as 0.");
                 }
                 avro_value_set_int(&field, value);
-                MXS_INFO("[%ld] BIT", i);
+                sprintf(trace[i], "[%ld] BIT", i);
                 ptr += bytes;
-                ss_dassert(ptr < end);
+                check_overflow(ptr < end);
             }
             else if (column_is_decimal(map->column_types[i]))
             {
                 double f_value = 0.0;
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
                 avro_value_set_double(&field, f_value);
-                MXS_INFO("[%ld] DOUBLE", i);
-                ss_dassert(ptr < end);
+                sprintf(trace[i], "[%ld] DECIMAL", i);
+                check_overflow(ptr < end);
             }
             else if (column_is_variable_string(map->column_types[i]))
             {
@@ -611,13 +628,13 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     ptr++;
                 }
 
-                MXS_INFO("[%ld] VARCHAR: field: %d bytes, data: %lu bytes", i, bytes, sz);
+                sprintf(trace[i], "[%ld] VARCHAR: field: %d bytes, data: %lu bytes", i, bytes, sz);
                 char buf[sz + 1];
                 memcpy(buf, ptr, sz);
                 buf[sz] = '\0';
                 ptr += sz;
                 avro_value_set_string(&field, buf);
-                ss_dassert(ptr < end);
+                check_overflow(ptr < end);
             }
             else if (column_is_blob(map->column_types[i]))
             {
@@ -625,7 +642,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 uint64_t len = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
-                MXS_INFO("[%ld] BLOB: field: %d bytes, data: %lu bytes", i, bytes, len);
+                sprintf(trace[i], "[%ld] BLOB: field: %d bytes, data: %lu bytes", i, bytes, len);
                 if (len)
                 {
                     avro_value_set_bytes(&field, ptr, len);
@@ -636,7 +653,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     uint8_t nullvalue = 0;
                     avro_value_set_bytes(&field, &nullvalue, 1);
                 }
-                ss_dassert(ptr < end);
+                check_overflow(ptr < end);
             }
             else if (column_is_temporal(map->column_types[i]))
             {
@@ -647,8 +664,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                                              create->column_lengths[i], &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
-                MXS_INFO("[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
-                ss_dassert(ptr < end);
+                sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
+                check_overflow(ptr < end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
             else
@@ -658,11 +675,18 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 ptr += unpack_numeric_field(ptr, map->column_types[i],
                                             &metadata[metadata_offset], lval);
                 set_numeric_field_value(&field, map->column_types[i], &metadata[metadata_offset], lval);
-                ss_dassert(ptr < end);
+                sprintf(trace[i], "[%ld] %s", i, column_type_to_string(map->column_types[i]));
+                check_overflow(ptr < end);
             }
             ss_dassert(metadata_offset <= map->column_metadata_size);
             metadata_offset += get_metadata_len(map->column_types[i]);
         }
+        else
+        {
+            sprintf(trace[i], "[%ld] %s: Not present", i, column_type_to_string(map->column_types[i]));
+        }
+
+        MXS_INFO("%s", trace[i]);
     }
 
     return ptr;
