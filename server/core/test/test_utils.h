@@ -20,6 +20,7 @@
 #include <maxscale/maxscale_test.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/config.h>
+#include <maxscale/query_classifier.h>
 
 #include "../maxscale/poll.h"
 #include "../maxscale/statistics.h"
@@ -36,6 +37,8 @@ void init_test_env(char *path)
     ts_stats_init();
     mxs_log_init(NULL, logdir, MXS_LOG_TARGET_DEFAULT);
     dcb_global_init();
+    qc_setup(NULL, NULL);
+    qc_process_init(QC_INIT_BOTH);
     poll_init();
     hkinit();
 }
