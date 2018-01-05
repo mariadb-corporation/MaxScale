@@ -131,22 +131,27 @@ void check_test_2(TestConnections& test)
 
 void prepare_test_3(TestConnections& test)
 {
-    cout << LINE << endl;
+    cout << LINE << "\n";
     cout << "Part 3: Disable log_bin on server 2, making it invalid for promotion. Enable log-slave-updates "
-        " on servers 2 and 4. Check that server 4 is promoted on master failure." << endl << LINE << endl;
+        " on servers 2 and 4. Disable log-slave-updates on server 3. Check that server 4 is promoted on"
+        " master failure." << "\n" << LINE << endl;
     get_output(test);
     test.maxscales->stop_maxscale(0);
     test.repl->stop_node(1);
+    test.repl->stop_node(2);
     test.repl->stop_node(3);
     test.repl->stash_server_settings(1);
+    test.repl->stash_server_settings(2);
     test.repl->stash_server_settings(3);
 
     test.repl->disable_server_setting(1, "log-bin");
+    test.repl->disable_server_setting(2, "log_slave_updates");
     const char* log_slave = "log_slave_updates=1";
     test.repl->add_server_setting(1, log_slave);
     test.repl->add_server_setting(3, log_slave);
 
     test.repl->start_node(1, (char *) "");
+    test.repl->start_node(2, (char *) "");
     test.repl->start_node(3, (char *) "");
     test.maxscales->start_maxscale(0);
     sleep(2);
@@ -184,13 +189,16 @@ void check_test_3(TestConnections& test)
     test.tprintf("Restoring server settings.");
     test.maxscales->stop_maxscale(0);
     test.repl->stop_node(1);
+    test.repl->stop_node(2);
     test.repl->stop_node(3);
     sleep(4);
 
     test.repl->restore_server_settings(1);
+    test.repl->restore_server_settings(2);
     test.repl->restore_server_settings(3);
 
     test.repl->start_node(1, (char *) "");
+    test.repl->start_node(2, (char *) "");
     test.repl->start_node(3, (char *) "");
     sleep(2);
     test.maxscales->start_maxscale(0);
