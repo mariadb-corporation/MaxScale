@@ -15,7 +15,7 @@ then
   sudo apt-get install -y --force-yes dpkg-dev git wget \
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
-       uuid-dev libsqlite3-dev liblzma-dev
+       uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev
   ## separatelibgnutls installation process for Ubuntu Trusty
   cat /etc/*release | grep -E "Trusty|wheezy"
   if [ $? == 0 ]
@@ -45,7 +45,7 @@ else
          make libtool libopenssl-devel libaio libaio-devel flex \
          pcre-devel git wget tcl libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls-devel libgcrypt-devel
+         gnutls-devel libgcrypt-devel pam-devel
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
@@ -61,7 +61,7 @@ else
          libedit-devel systemtap-sdt-devel rpm-sign wget \
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         gnutls-devel libgcrypt-devel
+         gnutls-devel libgcrypt-devel pam-devel
 
     cat /etc/redhat-release | grep "release 5"
     if [ $? == 0 ]
