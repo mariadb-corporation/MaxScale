@@ -204,7 +204,7 @@ const DEBUG_ARGUMENT debug_arguments[] =
     {
         "disable-module-unloading", disable_module_unloading,
         "disable module unloading at exit. Will produce better\n"
-        SPACER "Valgring leak reports if leaked memory was allocated in\n"
+        SPACER "Valgrind leak reports if leaked memory was allocated in\n"
         SPACER "a shared library"
     },
     {

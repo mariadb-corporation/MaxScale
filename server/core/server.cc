@@ -706,10 +706,6 @@ server_status(const SERVER *server)
     {
         strcat(status, "Slave of External Server, ");
     }
-    if (server_status & SERVER_STALE_STATUS)
-    {
-        strcat(status, "Stale Status, ");
-    }
     if (server_status & SERVER_MASTER_STICKINESS)
     {
         strcat(status, "Master Stickiness, ");

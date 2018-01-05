@@ -40,15 +40,6 @@ typedef struct simple_mutex_st
     skygw_chk_t     sm_chk_tail;
 } simple_mutex_t;
 
-typedef struct skygw_rwlock_st
-{
-    skygw_chk_t       srw_chk_top;
-    pthread_rwlock_t* srw_rwlock;
-    pthread_t         srw_rwlock_thr;
-    skygw_chk_t       srw_chk_tail;
-} skygw_rwlock_t;
-
-
 typedef enum { THR_INIT, THR_RUNNING, THR_STOPPED, THR_DONE } skygw_thr_state_t;
 typedef enum { MES_RC_FAIL, MES_RC_SUCCESS, MES_RC_TIMEOUT } skygw_mes_rc_t;
 
@@ -140,9 +131,6 @@ int skygw_file_write(skygw_file_t* file,
                      bool          flush);
 /** Skygw file routines */
 
-void acquire_lock(int* l);
-void release_lock(int* l);
-
 simple_mutex_t* simple_mutex_init(simple_mutex_t* mutexptr, const char* name);
 int simple_mutex_done(simple_mutex_t* sm);
 int simple_mutex_lock(simple_mutex_t* sm, bool block);
@@ -157,11 +145,6 @@ skygw_mes_rc_t skygw_message_request(skygw_message_t* mes);
 void skygw_message_reset(skygw_message_t* mes);
 
 /** Skygw message routines */
-
-int skygw_rwlock_wrlock(skygw_rwlock_t* rwlock);
-int skygw_rwlock_rdlock(skygw_rwlock_t* rwlock);
-int skygw_rwlock_unlock(skygw_rwlock_t* rwlock);
-int skygw_rwlock_init(skygw_rwlock_t** rwlock);
 
 size_t get_decimal_len(size_t s);
 

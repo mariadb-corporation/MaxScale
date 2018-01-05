@@ -278,6 +278,9 @@ add_test_executable(mysqlmon_rejoin_good.cpp mysqlmon_rejoin_good mysqlmon_rejoi
 # MySQL Monitor Rejoin (bad) Test, use template for Rejoin (good)
 add_test_executable(mysqlmon_rejoin_bad.cpp mysqlmon_rejoin_bad mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor Rejoin (bad2) Test, use template for Rejoin (good)
+add_test_executable(mysqlmon_rejoin_bad2.cpp mysqlmon_rejoin_bad2 mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
+
 # MySQL Monitor rolling master
 add_test_executable(mysqlmon_failover_rolling_master.cpp mysqlmon_failover_rolling_master mysqlmon_failover_rolling_master LABELS mysqlmon REPL_BACKEND)
 

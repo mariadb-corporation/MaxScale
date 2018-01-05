@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <algorithm>
 
 #include <maxscale/modinfo.h>
 #include <maxscale/log_manager.h>
@@ -139,9 +140,14 @@ void *load_module(const char *module, const char *type)
 
     if ((mod = find_module(module)) == NULL)
     {
+        size_t len = strlen(module);
+        char lc_module[len + 1];
+        lc_module[len] = 0;
+        std::transform(module, module + len, lc_module, tolower);
+
         /** The module is not already loaded, search for the shared object */
         char fname[MAXPATHLEN + 1];
-        snprintf(fname, MAXPATHLEN + 1, "%s/lib%s.so", get_libdir(), module);
+        snprintf(fname, MAXPATHLEN + 1, "%s/lib%s.so", get_libdir(), lc_module);
 
         if (access(fname, F_OK) == -1)
         {
@@ -219,7 +225,7 @@ find_module(const char *module)
     {
         while (mod)
         {
-            if (strcmp(mod->module, module) == 0)
+            if (strcasecmp(mod->module, module) == 0)
             {
                 return mod;
             }

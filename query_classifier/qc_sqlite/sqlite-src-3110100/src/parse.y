@@ -623,7 +623,7 @@ columnid(A) ::= nm(X). {
   /*KEY*/
   /*LIKE_KW*/
   MASTER /*MATCH*/ MERGE
-  NAMES
+  NAMES NEXT
   NO
   OF OFFSET OPEN
   QUICK
@@ -1207,6 +1207,14 @@ selcollist(A) ::= sclp(P) nm(X) DOT STAR(Y). {
   A = sqlite3ExprListAppend(pParse,P, pDot);
 }
 %ifdef MAXSCALE
+selcollist(A) ::= sclp(P) NEXT VALUE FOR nm(X) as(Y).     {
+  Expr* pSeq = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
+  ExprList* pArgs = sqlite3ExprListAppend(pParse, NULL, pSeq);
+  Token nextval = { "nextval", 7 };
+  Expr* pFunc = sqlite3ExprFunction(pParse, pArgs, &nextval);
+  if( Y.n>0 ) sqlite3ExprListSetName(pParse, A, &Y, 1);
+  A = sqlite3ExprListAppend(pParse, P, pFunc);
+}
 selcollist(A) ::= sclp(P) DEFAULT LP nm RP as. {
   A = P;
 }

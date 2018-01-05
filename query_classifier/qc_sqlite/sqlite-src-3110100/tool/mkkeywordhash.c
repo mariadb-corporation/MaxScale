@@ -269,7 +269,11 @@ static Keyword aKeywordTable[] = {
   { "FLUSH",            "TK_FLUSH",        ALWAYS                 },
   { "FOLLOWING",        "TK_FOLLOWING",    ALWAYS                 },
 #endif
+#ifdef MAXSCALE
+  { "FOR",              "TK_FOR",          ALWAYS                 },
+#else
   { "FOR",              "TK_FOR",          TRIGGER                },
+#endif
 #ifdef MAXSCALE
   { "FORCE",            "TK_FORCE",        ALWAYS                 },
 #endif
@@ -342,6 +346,9 @@ static Keyword aKeywordTable[] = {
   { "NAMES",            "TK_NAMES",        ALWAYS                 },
 #endif
   { "NATURAL",          "TK_JOIN_KW",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "NEXT",             "TK_NEXT",         ALWAYS                 },
+#endif
   { "NO",               "TK_NO",           FKEY                   },
   { "NOT",              "TK_NOT",          ALWAYS                 },
   { "NOTNULL",          "TK_NOTNULL",      ALWAYS                 },

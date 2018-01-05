@@ -221,8 +221,6 @@ int main(int argc, char* argv[])
     err = MXS_NOTICE("%s", logstr);
     ss_dassert(err == 0);
 
-    succp = mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
-    ss_dassert(succp);
     skygw_log_enable(LOG_INFO);
     logstr = ("6.\tWrite to ERROR and thus also to MESSAGE and TRACE logs.");
     err = MXS_ERROR("%s", logstr);

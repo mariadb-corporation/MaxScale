@@ -143,18 +143,14 @@ void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *f
 {
     ss_dassert(filename);
     ss_dassert(func_name);
-
-    char errorbuf[100];
-    int err_msg_rval = pcre2_get_error_message(errorcode, (PCRE2_UCHAR*)errorbuf,
-                                               sizeof(errorbuf));
-
-    mxs_log_message(LOG_ERR, module_name, filename, line_num, func_name,
-                    "PCRE2 Error message: '%s'.", errorbuf);
-    if (err_msg_rval == PCRE2_ERROR_NOMEMORY)
+    if (mxs_log_priority_is_enabled(LOG_ERR))
     {
+        // 120 should be enough to contain any error message according to pcre2 manual.
+        const PCRE2_SIZE errbuf_len = 120;
+        PCRE2_UCHAR errorbuf[errbuf_len];
+        pcre2_get_error_message(errorcode, errorbuf, errbuf_len);
         mxs_log_message(LOG_ERR, module_name, filename, line_num, func_name,
-                        "PCRE2 error buffer was too small to contain the complete"
-                        "message.");
+                        "PCRE2 Error message: '%s'.", errorbuf);
     }
 }
 

@@ -1,4 +1,4 @@
 add_executable(test_parse_kill test_parse_kill.cc)
-target_link_libraries(test_parse_kill maxscale-common MySQLCommon)
+target_link_libraries(test_parse_kill maxscale-common mysqlcommon)
 add_test(test_parse_kill test_parse_kill)
 

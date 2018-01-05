@@ -12,13 +12,13 @@ if(BISON_FOUND AND FLEX_FOUND)
   add_dependencies(dbfwfilter-core pcre2 connector-c)
 
   add_library(dbfwfilter SHARED dbfwfilter.cc)
-  target_link_libraries(dbfwfilter maxscale-common MySQLCommon dbfwfilter-core)
+  target_link_libraries(dbfwfilter maxscale-common mysqlcommon dbfwfilter-core)
   set_target_properties(dbfwfilter PROPERTIES VERSION "1.0.0")
   install_module(dbfwfilter core)
 
   # The offline rule check utility
   add_executable(dbfwchk dbfw_rule_check.cc)
-  target_link_libraries(dbfwchk maxscale-common MySQLCommon dbfwfilter-core)
+  target_link_libraries(dbfwchk maxscale-common mysqlcommon dbfwfilter-core)
   install_executable(dbfwchk core)
 
   if(BUILD_TESTS)

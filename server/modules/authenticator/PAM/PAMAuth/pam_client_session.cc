@@ -203,9 +203,9 @@ PamClientSession:: ~PamClientSession()
 
 PamClientSession* PamClientSession::create(const PamInstance& inst)
 {
-    int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE;
+    // This handle is only used from one thread, can define no_mutex.
     sqlite3* dbhandle = NULL;
-    // This handle is only used from one thread
+    int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE |  SQLITE_OPEN_NOMUTEX;
     if (sqlite3_open_v2(inst.m_dbname.c_str(), &dbhandle, db_flags, NULL) == SQLITE_OK)
     {
         sqlite3_busy_timeout(dbhandle, 1000);

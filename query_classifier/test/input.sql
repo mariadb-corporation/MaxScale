@@ -16,3 +16,6 @@ select last_insert_id();
 select @@last_insert_id;
 select @@identity;
 select if(@@hostname='box02','prod_mariadb02','n');
+select next value for seq1;
+select nextval(seq1);
+select seq1.nextval;
