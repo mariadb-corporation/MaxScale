@@ -522,6 +522,10 @@ add_test_executable(mxs1516.cpp mxs1516 replication LABELS REPL_BACKEND)
  # https://jira.mariadb.org/browse/MXS-1542
 add_test_executable(mxs1542.cpp mxs1542 avro LABELS REPL_BACKEND)
 
+# MXS-1543: Avrorouter doesn't detect MIXED or STATEMENT format replication
+# https://jira.mariadb.org/browse/MXS-1543
+add_test_executable(mxs1543.cpp mxs1543 avro LABELS REPL_BACKEND)
+
  # MXS-1585: Crash in MaxScale 2.1.12
  # https://jira.mariadb.org/browse/MXS-1585
 add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS REPL_BACKEND)
