@@ -297,7 +297,7 @@ mysql> show modules;
 | maxscaled      | Protocol    | V1.0.0  | 1.0.0       | GA             |
 | telnetd        | Protocol    | V1.0.1  | 1.0.0       | GA             |
 | MariaDBClient  | Protocol    | V1.0.0  | 1.0.0       | GA             |
-| mysqlmon       | Monitor     | V1.4.0  | 1.0.0       | GA             |
+| mariadbmon     | Monitor     | V1.4.0  | 1.0.0       | GA             |
 | readwritesplit | Router      | V1.0.2  | 1.0.0       | GA             |
 | readconnroute  | Router      | V1.1.0  | 1.0.0       | GA             |
 | debugcli       | Router      | V1.1.1  | 1.0.0       | GA             |
@@ -466,16 +466,14 @@ The /modules URI returns data for each plugin that has been loaded into MariaDB 
 
 ```
 $ curl http://maxscale.mariadb.com:8003/modules
-[ { "Module Name" : "HTTPD", "Module Type" : "Protocol", "Version" : "V1.0.1", "API Version" : "1.0.0", "Status" : "In Development"},
-{ "Module Name" : "maxscaled", "Module Type" : "Protocol", "Version" : "V1.0.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "telnetd", "Module Type" : "Protocol", "Version" : "V1.0.1", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "MariaDBClient", "Module Type" : "Protocol", "Version" : "V1.0.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "mysqlmon", "Module Type" : "Monitor", "Version" : "V1.4.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "readwritesplit", "Module Type" : "Router", "Version" : "V1.0.2", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "readconnroute", "Module Type" : "Router", "Version" : "V1.1.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "debugcli", "Module Type" : "Router", "Version" : "V1.1.1", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "cli", "Module Type" : "Router", "Version" : "V1.0.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "maxinfo", "Module Type" : "Router", "Version" : "V1.0.0", "API Version" : "1.0.0", "Status" : "Alpha"}]
+[ { "Module Name" : "HTTPD", "Module Type" : "Protocol", "Version" : "V1.2.0", "API Version" : "1.1.0", "Status" : "In Development"},
+{ "Module Name" : "maxscaled", "Module Type" : "Protocol", "Version" : "V2.0.0", "API Version" : "1.1.0", "Status" : "GA"},
+{ "Module Name" : "mariadbclient", "Module Type" : "Protocol", "Version" : "V1.1.0", "API Version" : "1.1.0", "Status" : "GA"},
+{ "Module Name" : "mariadbmon", "Module Type" : "Monitor", "Version" : "V1.5.0", "API Version" : "3.0.0", "Status" : "GA"},
+{ "Module Name" : "readwritesplit", "Module Type" : "Router", "Version" : "V1.1.0", "API Version" : "2.0.0", "Status" : "GA"},
+{ "Module Name" : "readconnroute", "Module Type" : "Router", "Version" : "V1.1.0", "API Version" : "2.0.0", "Status" : "GA"},
+{ "Module Name" : "cli", "Module Type" : "Router", "Version" : "V1.0.0", "API Version" : "2.0.0", "Status" : "GA"},
+{ "Module Name" : "maxinfo", "Module Type" : "Router", "Version" : "V1.0.0", "API Version" : "2.0.0", "Status" : "Alpha"}]
 $
 ```
 

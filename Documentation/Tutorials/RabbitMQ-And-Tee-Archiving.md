@@ -96,7 +96,7 @@ is lost and notify MariaDB MaxScale of the changed server states.
 ```
 [MySQL Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=production-1, archive-1
 user=maxuser
 passwd=maxpwd
@@ -235,7 +235,7 @@ protocol=MariaDBBackend
 # MySQL server monitor
 [MySQL Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=production-1, archive-1
 user=maxuser
 passwd=maxpwd

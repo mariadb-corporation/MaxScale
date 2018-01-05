@@ -152,7 +152,7 @@ In order for MariaDB MaxScale to monitor the servers using the correct monitorin
 ```
 [Replication-Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=dbserv1, dbserv2, dbserv3
 user=maxscale
 passwd=96F99AA1315BDC3604B006F427DD9484

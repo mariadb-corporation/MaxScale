@@ -67,7 +67,7 @@ The final step is to configure a monitor which will monitor the state of the ser
 ```
 [MySQL Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=accounts_west,accounts_east
 user=monitoruser
 passwd=7SP1Zcsow8TG+9EkEBVEbaKa

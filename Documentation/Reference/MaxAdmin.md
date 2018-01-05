@@ -1230,7 +1230,7 @@ MaxAdminAuth    | Authenticator   | V2.1.0  | 1.1.0 | GA
 maxscaled       | Protocol        | V2.0.0  | 1.1.0 | GA
 MySQLBackendAuth| Authenticator   | V1.0.0  | 1.1.0 | GA
 MariaDBBackend  | Protocol        | V2.0.0  | 1.1.0 | GA
-mysqlmon        | Monitor         | V1.5.0  | 3.0.0 | GA
+mariadbmon      | Monitor         | V1.5.0  | 3.0.0 | GA
 schemarouter    | Router          | V1.0.0  | 2.0.0 | Beta
 readwritesplit  | Router          | V1.1.0  | 2.0.0 | GA
 topfilter       | Filter          | V1.0.1  | 2.2.0 | GA
@@ -1567,7 +1567,7 @@ Parameters:
 NAME    Monitor name
 MODULE  Monitor module
 
-Example: create monitor my-monitor mysqlmon
+Example: create monitor my-monitor mariadbmon
 ```
 
 ### Altering Monitors
