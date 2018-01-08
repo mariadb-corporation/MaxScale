@@ -250,7 +250,7 @@ add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replicatio
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
 
 # MySQL Monitor Failover Test
-add_test_executable(failover_mysqlmon.cpp failover_mysqlmon failover_mysqlmon LABELS mysqlmon REPL_BACKEND)
+add_test_executable(mysqlmon_detect_standalone_master.cpp mysqlmon_detect_standalone_master mysqlmon_detect_standalone_master LABELS mysqlmon REPL_BACKEND)
 
 # MySQL Monitor Failover (automatic) Test
 add_test_executable(mysqlmon_failover_auto.cpp mysqlmon_failover_auto mysqlmon_failover_auto LABELS mysqlmon REPL_BACKEND)
