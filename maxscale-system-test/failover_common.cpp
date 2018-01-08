@@ -145,8 +145,10 @@ void prepare_test_3(TestConnections& test)
     test.repl->stash_server_settings(3);
 
     test.repl->disable_server_setting(1, "log-bin");
+    test.repl->disable_server_setting(1, "log_bin");
+    test.repl->disable_server_setting(2, "log-slave-updates");
     test.repl->disable_server_setting(2, "log_slave_updates");
-    const char* log_slave = "log_slave_updates=1";
+    const char* log_slave = "log-slave-updates=1";
     test.repl->add_server_setting(1, log_slave);
     test.repl->add_server_setting(3, log_slave);
 
