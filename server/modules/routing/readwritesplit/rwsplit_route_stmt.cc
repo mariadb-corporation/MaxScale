@@ -778,7 +778,7 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
         (check_for_multi_stmt(querybuf, rses->client_dcb->protocol, packet_type) ||
          check_for_sp_call(querybuf, packet_type)))
     {
-        if (rses->current_master)
+        if (rses->current_master && rses->current_master->in_use())
         {
             rses->target_node = rses->current_master;
             MXS_INFO("Multi-statement query or stored procedure call, routing "
@@ -989,7 +989,7 @@ SRWBackend handle_slave_is_target(RWSplit *inst, RWSplitSession *rses,
 static void log_master_routing_failure(RWSplitSession *rses, bool found,
                                        SRWBackend& old_master, SRWBackend& curr_master)
 {
-    ss_dassert(!old_master || old_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+    ss_dassert(!old_master || !old_master->in_use() || old_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     ss_dassert(!curr_master || curr_master->dcb()->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     char errmsg[MAX_SERVER_ADDRESS_LEN * 2 + 100]; // Extra space for error message
 
@@ -997,7 +997,7 @@ static void log_master_routing_failure(RWSplitSession *rses, bool found,
     {
         sprintf(errmsg, "Could not find a valid master connection");
     }
-    else if (old_master && curr_master)
+    else if (old_master && curr_master && old_master->in_use())
     {
         /** We found a master but it's not the same connection */
         ss_dassert(old_master != curr_master);
@@ -1016,7 +1016,7 @@ static void log_master_routing_failure(RWSplitSession *rses, bool found,
                     curr_master->name());
         }
     }
-    else if (old_master)
+    else if (old_master && old_master->in_use())
     {
         /** We have an original master connection but we couldn't find it */
         sprintf(errmsg, "The connection to master server '%s' is not available",
