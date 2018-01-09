@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     Test->tprintf("Connecting to all MaxScale services, expecting error\n");
-    Test->maxscales->connect_maxscale(0);
+    Test->add_result(Test->maxscales->connect_maxscale(0) == 0, "Connection should fail");
 
     Test->set_timeout(30);
     Test->tprintf("Trying some queries, expecting failure, but not a crash\n");
