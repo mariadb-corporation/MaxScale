@@ -2254,6 +2254,8 @@ int main(int argc, char **argv)
         worker->join();
     }
 
+    MXS_NOTICE("All workers have shut down.");
+
     /*<
      * Destroy the router and filter instances of all services.
      */
