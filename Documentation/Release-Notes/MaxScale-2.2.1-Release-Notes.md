@@ -207,7 +207,12 @@ for details.
 
 [Here is a list of bugs fixed in MaxScale 2.2.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.1)
 
+* [MXS-1593](https://jira.mariadb.org/browse/MXS-1593) Servers appearing as Stale out of list servers for a fresh setup
+* [MXS-1588](https://jira.mariadb.org/browse/MXS-1588) Switchover fails randomly
+* [MXS-1582](https://jira.mariadb.org/browse/MXS-1582) Maxscale leaving socket behind after shutdown
 * [MXS-1545](https://jira.mariadb.org/browse/MXS-1545) Fix GTID connecting slave error detections
+* [MXS-1541](https://jira.mariadb.org/browse/MXS-1541) Top filter uses internal ID instead of session ID for file suffix
+* [MXS-1527](https://jira.mariadb.org/browse/MXS-1527) SELECT with session var is not supported
 * [MXS-1525](https://jira.mariadb.org/browse/MXS-1525) Firewall filter does not check exact match for host
 * [MXS-1519](https://jira.mariadb.org/browse/MXS-1519) Firewall instances can interfere with each other
 * [MXS-1517](https://jira.mariadb.org/browse/MXS-1517) Retain stale master status even if the master goes down
