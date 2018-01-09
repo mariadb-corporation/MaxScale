@@ -115,6 +115,13 @@ router.
 The Database Firewall filter does not support multi-statements. Using them will
 result in an error being sent to the client.
 
+### Tee filter limitations (tee)
+
+The Tee filter does not support binary protocol prepared statements. The
+execution of a prepared statements through a service that uses the tee filter is
+not guaranteed to produce the same result on the service where the filter
+branches to as it does on the original service.
+
 ## Monitor limitations
 
 A server can only be monitored by one monitor. If multiple monitors monitor the
