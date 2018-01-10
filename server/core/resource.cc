@@ -717,29 +717,55 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
             int rc;
 
+            if (output && json_object_get(output, "errors") == NULL)
+            {
+                /**
+                 * Store the command output in the meta field. This allows
+                 * all the commands to conform to the JSON API even though
+                 * the content of the field can vary from command to command.
+                 *
+                 * If the output is an JSON API error, we don't do anything to it
+                 */
+                std::string self = "/"; // The uri_segment doesn't have the leading slash
+                self += request.uri_segment(0, request.uri_part_count());
+                output = mxs_json_metadata(request.host(), self.c_str(), output);
+            }
+
             if (rval)
             {
-                if (output)
-                {
-                    /**
-                     * Store the command output in the meta field. This allows
-                     * all the commands to conform to the JSON API even though
-                     * the content of the field can vary from command to command.
-                     */
-                    rc = MHD_HTTP_OK;
-                    std::string self = "/"; // The uri_segment doesn't have the leading slash
-                    self += request.uri_segment(0, request.uri_part_count());
-                    output = mxs_json_metadata(request.host(), self.c_str(), output);
-                }
-                else
-                {
-                    rc = MHD_HTTP_NO_CONTENT;
-                }
+                rc = output ? MHD_HTTP_OK : MHD_HTTP_NO_CONTENT;
             }
             else
             {
                 rc = MHD_HTTP_FORBIDDEN;
-                output = modulecmd_get_json_error();
+                json_t* err = modulecmd_get_json_error();
+
+                if (err)
+                {
+                    if (!output)
+                    {
+                        // No output, only errors
+                        output = err;
+                    }
+                    else
+                    {
+                        // Both output and errors
+                        json_t* output_err = json_object_get(output, "errors");
+
+                        if (output_err)
+                        {
+                            // The output already contains an error array and append to it
+                            json_array_append(output_err, json_object_get(err, "errors"));
+                        }
+                        else
+                        {
+                            // No error, we can just assign the error array
+                            json_object_set(output, "errors", json_object_get(err, "errors"));
+                        }
+
+                        json_decref(err);
+                    }
+                }
             }
 
             return HttpResponse(rc, output);
