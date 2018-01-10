@@ -232,8 +232,9 @@ $ maxctrl list servers
 └─────────┴─────────────────┴──────┴─────────────┴─────────────────┘
 ```
 If `server1` now reappears, the MariaDB Monitor will detect that and
-attempt to rejoin the old master as a slave. Whether rejoining can be
-performed automatically depends upon the actual state of the old
+attempt to rejoin the old master as a slave.
+
+Whether rejoining will succeed depends upon the actual state of the old
 master. For instance, if the old master was modified and the changes had
 not been replicated to the new master, before the old master went down,
 then automatic rejoin will not be possible.
