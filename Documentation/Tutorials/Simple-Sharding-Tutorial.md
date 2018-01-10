@@ -58,7 +58,7 @@ After this we configure a listener for the service. The listener is the actual p
 [Sharded Service Listener]
 type=listener
 service=Sharded Service
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4000
 ```
 
@@ -67,7 +67,7 @@ The final step is to configure a monitor which will monitor the state of the ser
 ```
 [MySQL Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=accounts_west,accounts_east
 user=monitoruser
 passwd=7SP1Zcsow8TG+9EkEBVEbaKa

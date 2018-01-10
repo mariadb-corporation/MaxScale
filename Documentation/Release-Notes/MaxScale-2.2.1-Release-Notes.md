@@ -8,12 +8,6 @@ release 2.2.0.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
-## Update from 2.2.0
-
-Since version 2.2.0 MaxScale binlog server can accept GTID
-slave registration from MariaDB 10.X slaves and can also
-register to Master server MariaDB 10.x using GTID.
-
 ## Changed Features
 
 ### Process identity
@@ -44,6 +38,72 @@ root@host:~# maxscale --user=root ...
 * If `mariadb10_master_gtid` is enabled, the `transaction_safety` is
   automatically enabled. In MaxScale 2.2.0, if `transaction_safety` was disabled
   when `mariadb10_master_gtid` was enabled MaxScale would refuse to start.
+
+* The binlogrouter can accept GTID slave registration from MariaDB 10.X slaves
+  and can also register to Master server MariaDB 10.x using GTID.
+
+### Module names and case sensitivity
+
+* The filenames of all modules have been made lowercase.
+* When specifying a module, the name matching is case insensitive.
+
+In practice this means that in the configuration file, the following
+are all equivalent:
+```
+router=readwritesplit
+
+router=READWRITESPLIT
+
+router=ReadWriteSplit
+```
+
+### MySQL/MariaDB Client Protocol
+
+The shared object implementing the client protocol has been renamed
+from `libMySQLClient.so` to `libmaridbclient.so`. In practice this means
+that, in the MaxScale configuration file, `MySQLClient` should be replaced
+with `mariadbclient` or, e.g., `MariaDBClient`, as module names are matched
+in a case insensitive manner.
+
+As an example, a listener section like
+```
+[TheListener]
+type=listener
+...
+protocol=MySQLClient
+```
+should be changed into
+```
+[TheListener]
+type=listener
+...
+protocol=MariaDBClient
+```
+*NOTE* Using `MySQLClient` is still supported, but has been deprecated.
+
+### MySQL Backend Protocol
+
+The shared object implementing the backend protocol has been renamed
+from `libMySQLBackend.so` to `libmaridbbackend.so`. In practice this means
+that, in the MaxScale configuration file, `MySQLBackend` should be replaced
+with `mariadbbackend` or, e.g., `MariaDBBackend`, as module names are matched
+in a case insensitive manner.
+
+As an example, a server section like
+```
+[TheServer]
+type=server
+...
+protocol=MySQLBackend
+```
+should be changed into
+```
+[TheServer]
+type=server
+...
+protocol=MariaDBBackend
+```
+*NOTE* Using `MySQLBackend` is still supported, but has been deprecated.
 
 ### MySQL Monitor
 
@@ -91,6 +151,12 @@ behavior is advised.
 
 The top filter now uses the session ID instead of an internal counter for the
 names of the log file names.
+
+### MaxCtrl
+
+The `-h, --hosts` argument was changed to accept a list of hostnames separated
+by commas instead of spaces. This prevents commands from accidentally being
+interpreted as hostnames.
 
 ## Dropped Features
 
@@ -144,7 +210,12 @@ for details.
 
 [Here is a list of bugs fixed in MaxScale 2.2.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.1)
 
+* [MXS-1593](https://jira.mariadb.org/browse/MXS-1593) Servers appearing as Stale out of list servers for a fresh setup
+* [MXS-1588](https://jira.mariadb.org/browse/MXS-1588) Switchover fails randomly
+* [MXS-1582](https://jira.mariadb.org/browse/MXS-1582) Maxscale leaving socket behind after shutdown
 * [MXS-1545](https://jira.mariadb.org/browse/MXS-1545) Fix GTID connecting slave error detections
+* [MXS-1541](https://jira.mariadb.org/browse/MXS-1541) Top filter uses internal ID instead of session ID for file suffix
+* [MXS-1527](https://jira.mariadb.org/browse/MXS-1527) SELECT with session var is not supported
 * [MXS-1525](https://jira.mariadb.org/browse/MXS-1525) Firewall filter does not check exact match for host
 * [MXS-1519](https://jira.mariadb.org/browse/MXS-1519) Firewall instances can interfere with each other
 * [MXS-1517](https://jira.mariadb.org/browse/MXS-1517) Retain stale master status even if the master goes down

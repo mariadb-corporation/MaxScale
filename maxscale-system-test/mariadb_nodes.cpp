@@ -383,7 +383,7 @@ int Mariadb_nodes::start_replication()
 
     connect();
 
-    for (int i = 1; i < N; i++)
+    for (int i = 0; i < N; i++)
     {
         execute_query(nodes[i], "STOP SLAVE;");
 
@@ -392,17 +392,20 @@ int Mariadb_nodes::start_replication()
             execute_query(nodes[i], "SET GLOBAL gtid_slave_pos='0-1-0'");
         }
 
-        // TODO: Reuse the code in sync_slaves() to get the actual file name and position
-        execute_query(nodes[i],
-                      "CHANGE MASTER TO "
-                      "MASTER_HOST='%s', MASTER_PORT=%d, "
-                      "MASTER_USER='repl', MASTER_PASSWORD='repl', "
-                      "%s",
-                      IP_private[0], port[0], g_require_gtid ?
-                      "MASTER_USE_GTID=slave_pos" :
-                      "MASTER_LOG_FILE='mar-bin.000001', MASTER_LOG_POS=4");
+        if (i != 0)
+        {
+            // TODO: Reuse the code in sync_slaves() to get the actual file name and position
+            execute_query(nodes[i],
+                          "CHANGE MASTER TO "
+                          "MASTER_HOST='%s', MASTER_PORT=%d, "
+                          "MASTER_USER='repl', MASTER_PASSWORD='repl', "
+                          "%s",
+                          IP_private[0], port[0], g_require_gtid ?
+                          "MASTER_USE_GTID=slave_pos" :
+                          "MASTER_LOG_FILE='mar-bin.000001', MASTER_LOG_POS=4");
 
-        execute_query(nodes[i], "START SLAVE");
+            execute_query(nodes[i], "START SLAVE");
+        }
     }
 
     return local_result;

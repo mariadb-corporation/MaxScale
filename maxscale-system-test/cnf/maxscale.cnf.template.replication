@@ -10,6 +10,7 @@ user=maxskysql
 passwd=skysql
 monitor_interval=1000
 detect_stale_master=false
+detect_standalone_master=false
 
 [RW Split Router]
 type=service

@@ -2837,7 +2837,10 @@ bool service_thread_init()
 
     for (SERVICE* service = allServices; service; service = service->next)
     {
-        service_refresh_users(service);
+        if (service->capabilities & ACAP_TYPE_ASYNC)
+        {
+            service_refresh_users(service);
+        }
     }
 
     spinlock_release(&service_spin);

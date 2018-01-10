@@ -145,13 +145,27 @@ void run(TestConnections& test)
     test.repl->sync_slaves();
 
     cout << "\nTrying to do manual switchover to server2" << endl;
-    const char* zCommand = "call command mysqlmon switchover MySQL-Monitor server2 server1";
+    const char* zCommand;
+    zCommand = "call command mysqlmon switchover MySQL-Monitor server2 server1";
     test.maxscales->execute_maxadmin_command_print(0, (char*)zCommand);
 
     sleep(5);
 
     expect(test, "server1", "Slave",  "Running");
     expect(test, "server2", "Master", "Running");
+    expect(test, "server3", "Slave",  "Running");
+    expect(test, "server4", "Slave",  "Running");
+
+    cout << "\nResetting situation." << endl;
+
+    cout << "\nTrying to do manual switchover to server1" << endl;
+    zCommand = "call command mysqlmon switchover MySQL-Monitor server1 server2";
+    test.maxscales->execute_maxadmin_command_print(0, (char*)zCommand);
+
+    sleep(5);
+
+    expect(test, "server1", "Master", "Running");
+    expect(test, "server2", "Slave",  "Running");
     expect(test, "server3", "Slave",  "Running");
     expect(test, "server4", "Slave",  "Running");
 }

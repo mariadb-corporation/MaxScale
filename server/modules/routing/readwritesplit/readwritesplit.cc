@@ -1294,7 +1294,8 @@ static void handleError(MXS_ROUTER *instance,
     {
     case ERRACT_NEW_CONNECTION:
         {
-            if (rses->current_master && rses->current_master->dcb() == problem_dcb)
+            if (rses->current_master && rses->current_master->in_use() &&
+                rses->current_master->dcb() == problem_dcb)
             {
                 /** The connection to the master has failed */
                 SERVER *srv = rses->current_master->server();

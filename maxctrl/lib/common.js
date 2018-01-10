@@ -26,6 +26,9 @@ module.exports = function() {
     // servers.
     this.maxctrl = function(argv, cb) {
 
+        // Split the hostnames, separated by commas
+        argv.hosts = argv.hosts.split(',')
+
         this.argv = argv
 
         if (!argv.hosts || argv.hosts.length < 1) {

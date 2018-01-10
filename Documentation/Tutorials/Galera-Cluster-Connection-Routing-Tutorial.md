@@ -120,7 +120,7 @@ service=Galera Service
 ```
 
 A listener must also define the protocol module it will use for the incoming
-network protocol, currently this should be the MySQLClient protocol for all
+network protocol, currently this should be the MariaDBClient protocol for all
 database listeners. The listener may then supply a network port to listen on
 and/or a socket within the file system.
 
@@ -128,7 +128,7 @@ and/or a socket within the file system.
 [Galera Listener]
 type=listener
 service=Galera Service
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4306
 socket=/tmp/DB.Cluster
 ```
@@ -141,26 +141,26 @@ The next stage is the configuration is to define the server information.
 This defines how to connect to each of the servers within the cluster, again a section
 is created for each server, with the type set to server, the network address and port to
 connect to and the protocol to use to connect to the server. Currently the protocol for
-all database connections in MySQLBackend.
+all database connections in MariaDBBackend.
 
 ```
 [dbserv1]
 type=server
 address=192.168.2.1
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [dbserv2]
 type=server
 address=192.168.2.2
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [dbserv3]
 type=server
 address=192.168.2.3
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 ```
 
 In order for MariaDB MaxScale to monitor the servers using the correct monitoring
@@ -255,7 +255,7 @@ Listeners.
 ---------------------+--------------------+-----------------+-------+--------
 Service Name         | Protocol Module    | Address         | Port  | State
 ---------------------+--------------------+-----------------+-------+--------
-Galera Service       | MySQLClient        | *               |  4306 | Running
+Galera Service       | MariaDBClient      | *               |  4306 | Running
 CLI                  | maxscaled          | localhost       |  6603 | Running
 ---------------------+--------------------+-----------------+-------+--------
 %

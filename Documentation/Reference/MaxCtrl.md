@@ -41,8 +41,8 @@ All command accept the following global options.
   -u, --user      Username to use                    [string] [default: "admin"]
   -p, --password  Password for the user            [string] [default: "mariadb"]
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
-                  and each value must be separated by spaces.
-                                             [array] [default: "localhost:8989"]
+                  and each value must be separated by a comma.
+                                            [string] [default: "localhost:8989"]
   -s, --secure    Enable HTTPS requests             [boolean] [default: "false"]
   -t, --timeout   Request timeout in milliseconds    [number] [default: "10000"]
   -q, --quiet     Silence all output                [boolean] [default: "false"]

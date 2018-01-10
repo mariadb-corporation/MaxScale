@@ -171,7 +171,7 @@ slave server (controlled by the `detect_stale_slave` parameter). When the
 whether the server can be used as a master server. This is done by checking that
 the server is not in read-only mode and that it is not configured as a slave.
 
-This mode in mysqlmon is completely passive in the sense that it does not modify
+This mode in mariadbmon is completely passive in the sense that it does not modify
 the cluster or any of the servers in it. It only labels the last remaining
 server in a cluster as the master server.
 
@@ -247,8 +247,8 @@ user to designate the new master as well as the current master. Example commands
 are below:
 
 ```
-call command mysqlmon failover MyMonitor
-call command mysqlmon switchover MyMonitor SlaveServ3 MasterServ
+call command mariadbmon failover MyMonitor
+call command mariadbmon switchover MyMonitor SlaveServ3 MasterServ
 ```
 
 Failover can also activate automatically, if `auto_failover` is on. The
@@ -275,7 +275,7 @@ seconds (faster than `backend_read_timeout` and `backend_write_timeout`).
 
 The backends must all use GTID-based replication, and the domain id should not
 change during a switchover or failover. Master and slaves must have
-well-behaving GTIDs: no extra events on slave servers.
+well-behaving GTIDs with no extra events on slave servers.
 
 ### Configuration parameters
 
@@ -329,6 +329,10 @@ user.
 
 The credentials used for replication must have the `REPLICATION SLAVE`
 privilege.
+
+`replication_password` uses the same encryption scheme as other password
+parameters. If password encryption is in use, `replication_password` must be
+encrypted with the same key to avoid erroneous decryption.
 
 #### `failover_timeout`
 
@@ -395,7 +399,7 @@ turned on manually via the REST API or MaxAdmin.
 
 When switchover is iniated via the REST-API, the URL path is:
 ```
-/v1/maxscale/mysqlmon/switchover?<monitor-instance>&<new-master>&<current-master>
+/v1/maxscale/mariadbmon/switchover?<monitor-instance>&<new-master>&<current-master>
 ```
 where `<monitor-instance>` is the monitor section mame from the MaxScale
 configuration file, `<new-master>` the name of the server that should be
@@ -407,20 +411,20 @@ So, given a MaxScale configuration file like
 ```
 [Cluster1]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=server1, server2, server3, server 4
 ...
 ```
 with the assumption that `server2` is the current master, then the URL
 path for making `server4` the new master would be:
 ```
-/v1/maxscale/mysqlmon/switchover?Cluster1&server4&server2
+/v1/maxscale/mariadbmon/switchover?Cluster1&server4&server2
 ```
 
 The REST-API path for manual failover is similar, although the `<new-master>`
 and `<current-master>` fields are left out.
 ```
-/v1/maxscale/mysqlmon/failover?Cluster1
+/v1/maxscale/mariadbmon/failover?Cluster1
 ```
 
 ## Using the MariaDB Monitor With Binlogrouter
@@ -456,7 +460,7 @@ or a slave server goes down.
 ```
 [Database Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=server1,server2
 script=mail_to_admin.sh
 events=master_down,slave_down

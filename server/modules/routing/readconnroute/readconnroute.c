@@ -550,10 +550,25 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
     {
         if (inst->bitvalue & SERVER_MASTER)
         {
-            rval = router_cli_ses->backend == get_root_master(inst->service->dbref);
+            SERVER_REF* master = get_root_master(inst->service->dbref);
+
+            if (master)
+            {
+                /** Check that the master we are connected to and the one we
+                 * determined from the replication topology are one and the same */
+                rval = router_cli_ses->backend == get_root_master(inst->service->dbref);
+            }
+            else
+            {
+                /** No master is available but the one we are connected to is
+                 * still a master. This most likely means that the servers for
+                 * the service have been modified at runtime. */
+                rval = true;
+            }
         }
         else
         {
+            // Not a master and bitmask check is OK, everything is OK
             rval = true;
         }
     }

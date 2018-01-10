@@ -74,9 +74,9 @@ transaction or change the autocommit mode using a prepared statement.
 
 ## Protocol limitations
 
-### Limitations with MySQL Protocol support (MySQLClient)
+### Limitations with MySQL/MariaDB Protocol support (MariaDBClient)
 
-* Compression is not included in the MySQL server handshake.
+* Compression is not included in the server handshake.
 
 * MariaDB MaxScale does not support `KILL QUERY ID <query_id>` type
   statements. If a query by a query ID is to be killed, it needs to be done
@@ -114,6 +114,13 @@ router.
 
 The Database Firewall filter does not support multi-statements. Using them will
 result in an error being sent to the client.
+
+### Tee filter limitations (tee)
+
+The Tee filter does not support binary protocol prepared statements. The
+execution of a prepared statements through a service that uses the tee filter is
+not guaranteed to produce the same result on the service where the filter
+branches to as it does on the original service.
 
 ## Monitor limitations
 

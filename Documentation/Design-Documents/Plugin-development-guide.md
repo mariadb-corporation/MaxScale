@@ -468,7 +468,7 @@ dummy_setting=two
 [RR Listener]
 type=listener
 service=RR Service
-protocol=MySQLClient
+protocol=MariaDBClient
 port=4009
 ```
 
@@ -527,9 +527,9 @@ MaxScale> show service "RR Service"
 	Root user access:                    Disabled
 	Filter chain:                MyLogFilter1
 	Backend databases:
-		127.0.0.1:3001    Protocol: MySQLBackend    Name: LocalMaster1
-		127.0.0.1:3002    Protocol: MySQLBackend    Name: LocalSlave1
-		127.0.0.1:3003    Protocol: MySQLBackend    Name: LocalSlave2
+		127.0.0.1:3001    Protocol: MariaDBBackend    Name: LocalMaster1
+		127.0.0.1:3002    Protocol: MariaDBBackend    Name: LocalSlave1
+		127.0.0.1:3003    Protocol: MariaDBBackend    Name: LocalSlave2
 	Total connections:                   2
 	Currently connected:                 2
 MaxScale> call command rrrouter test_command "one" 0

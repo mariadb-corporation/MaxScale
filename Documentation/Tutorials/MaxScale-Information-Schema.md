@@ -25,7 +25,7 @@ The listener section defines the protocol, port and other information needed to 
 [MaxInfo Listener]
 type=listener
 service=MaxInfo
-protocol=MySQLClient
+protocol=MariaDBClient
 port=9003
 ```
 
@@ -48,7 +48,7 @@ As with any other listeners within MariaDB MaxScale the listeners can be bound t
 [MaxInfo Listener]
 type=listener
 service=MaxInfo
-protocol=MySQLClient
+protocol=MariaDBClient
 address=localhost
 port=9003
 ```
@@ -205,14 +205,14 @@ mysql> show listeners;
 +----------------+-----------------+-----------+------+---------+
 | Service Name   | Protocol Module | Address   | Port | State   |
 +----------------+-----------------+-----------+------+---------+
-| Test Service   | MySQLClient     | *         | 4006 | Running |
-| Split Service  | MySQLClient     | *         | 4007 | Running |
-| Filter Service | MySQLClient     | *         | 4008 | Running |
-| Named Service  | MySQLClient     | *         | 4010 | Running |
-| QLA Service    | MySQLClient     | *         | 4009 | Running |
+| Test Service   | MariaDBClient   | *         | 4006 | Running |
+| Split Service  | MariaDBClient   | *         | 4007 | Running |
+| Filter Service | MariaDBClient   | *         | 4008 | Running |
+| Named Service  | MariaDBClient   | *         | 4010 | Running |
+| QLA Service    | MariaDBClient   | *         | 4009 | Running |
 | Debug Service  | telnetd         | localhost | 4242 | Running |
 | CLI            | maxscaled       | localhost | 6603 | Running |
-| MaxInfo        | MySQLClient     | *         | 9003 | Running |
+| MaxInfo        | MariaDBClient   | *         | 9003 | Running |
 | MaxInfo        | HTTPD           | *         | 8003 | Running |
 +----------------+-----------------+-----------+------+---------+
 9 rows in set (0.02 sec)
@@ -296,8 +296,8 @@ mysql> show modules;
 | HTTPD          | Protocol    | V1.0.1  | 1.0.0       | In Development |
 | maxscaled      | Protocol    | V1.0.0  | 1.0.0       | GA             |
 | telnetd        | Protocol    | V1.0.1  | 1.0.0       | GA             |
-| MySQLClient    | Protocol    | V1.0.0  | 1.0.0       | GA             |
-| mysqlmon       | Monitor     | V1.4.0  | 1.0.0       | GA             |
+| MariaDBClient  | Protocol    | V1.0.0  | 1.0.0       | GA             |
+| mariadbmon     | Monitor     | V1.4.0  | 1.0.0       | GA             |
 | readwritesplit | Router      | V1.0.2  | 1.0.0       | GA             |
 | readconnroute  | Router      | V1.1.0  | 1.0.0       | GA             |
 | debugcli       | Router      | V1.1.1  | 1.0.0       | GA             |
@@ -448,14 +448,14 @@ The /listeners URI will return a JSON array with one entry per listener, each en
 
 ```
 $ curl http://maxscale.mariadb.com:8003/listeners
-[ { "Service Name" : "Test Service", "Protocol Module" : "MySQLClient", "Address" : "*", "Port" : 4006, "State" : "Running"},
-{ "Service Name" : "Split Service", "Protocol Module" : "MySQLClient", "Address" : "*", "Port" : 4007, "State" : "Running"},
-{ "Service Name" : "Filter Service", "Protocol Module" : "MySQLClient", "Address" : "*", "Port" : 4008, "State" : "Running"},
-{ "Service Name" : "Named Service", "Protocol Module" : "MySQLClient", "Address" : "*", "Port" : 4010, "State" : "Running"},
-{ "Service Name" : "QLA Service", "Protocol Module" : "MySQLClient", "Address" : "*", "Port" : 4009, "State" : "Running"},
+[ { "Service Name" : "Test Service", "Protocol Module" : "MariaDBClient", "Address" : "*", "Port" : 4006, "State" : "Running"},
+{ "Service Name" : "Split Service", "Protocol Module" : "MariaDBClient", "Address" : "*", "Port" : 4007, "State" : "Running"},
+{ "Service Name" : "Filter Service", "Protocol Module" : "MariaDBClient", "Address" : "*", "Port" : 4008, "State" : "Running"},
+{ "Service Name" : "Named Service", "Protocol Module" : "MariaDBClient", "Address" : "*", "Port" : 4010, "State" : "Running"},
+{ "Service Name" : "QLA Service", "Protocol Module" : "MariaDBClient", "Address" : "*", "Port" : 4009, "State" : "Running"},
 { "Service Name" : "Debug Service", "Protocol Module" : "telnetd", "Address" : "localhost", "Port" : 4242, "State" : "Running"},
 { "Service Name" : "CLI", "Protocol Module" : "maxscaled", "Address" : "localhost", "Port" : 6603, "State" : "Running"},
-{ "Service Name" : "MaxInfo", "Protocol Module" : "MySQLClient", "Address" : "*", "Port" : 9003, "State" : "Running"},
+{ "Service Name" : "MaxInfo", "Protocol Module" : "MariaDBClient", "Address" : "*", "Port" : 9003, "State" : "Running"},
 { "Service Name" : "MaxInfo", "Protocol Module" : "HTTPD", "Address" : "*", "Port" : 8003, "State" : "Running"}]
 $
 ```
@@ -466,16 +466,14 @@ The /modules URI returns data for each plugin that has been loaded into MariaDB 
 
 ```
 $ curl http://maxscale.mariadb.com:8003/modules
-[ { "Module Name" : "HTTPD", "Module Type" : "Protocol", "Version" : "V1.0.1", "API Version" : "1.0.0", "Status" : "In Development"},
-{ "Module Name" : "maxscaled", "Module Type" : "Protocol", "Version" : "V1.0.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "telnetd", "Module Type" : "Protocol", "Version" : "V1.0.1", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "MySQLClient", "Module Type" : "Protocol", "Version" : "V1.0.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "mysqlmon", "Module Type" : "Monitor", "Version" : "V1.4.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "readwritesplit", "Module Type" : "Router", "Version" : "V1.0.2", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "readconnroute", "Module Type" : "Router", "Version" : "V1.1.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "debugcli", "Module Type" : "Router", "Version" : "V1.1.1", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "cli", "Module Type" : "Router", "Version" : "V1.0.0", "API Version" : "1.0.0", "Status" : "GA"},
-{ "Module Name" : "maxinfo", "Module Type" : "Router", "Version" : "V1.0.0", "API Version" : "1.0.0", "Status" : "Alpha"}]
+[ { "Module Name" : "HTTPD", "Module Type" : "Protocol", "Version" : "V1.2.0", "API Version" : "1.1.0", "Status" : "In Development"},
+{ "Module Name" : "maxscaled", "Module Type" : "Protocol", "Version" : "V2.0.0", "API Version" : "1.1.0", "Status" : "GA"},
+{ "Module Name" : "mariadbclient", "Module Type" : "Protocol", "Version" : "V1.1.0", "API Version" : "1.1.0", "Status" : "GA"},
+{ "Module Name" : "mariadbmon", "Module Type" : "Monitor", "Version" : "V1.5.0", "API Version" : "3.0.0", "Status" : "GA"},
+{ "Module Name" : "readwritesplit", "Module Type" : "Router", "Version" : "V1.1.0", "API Version" : "2.0.0", "Status" : "GA"},
+{ "Module Name" : "readconnroute", "Module Type" : "Router", "Version" : "V1.1.0", "API Version" : "2.0.0", "Status" : "GA"},
+{ "Module Name" : "cli", "Module Type" : "Router", "Version" : "V1.0.0", "API Version" : "2.0.0", "Status" : "GA"},
+{ "Module Name" : "maxinfo", "Module Type" : "Router", "Version" : "V1.0.0", "API Version" : "2.0.0", "Status" : "Alpha"}]
 $
 ```
 

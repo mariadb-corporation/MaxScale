@@ -21,10 +21,10 @@ GET /v1/monitors/:name
 ```javascript
 {
     "links": {
-        "self": "http://localhost:8989/v1/monitors/MySQL-Monitor"
+        "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
     },
     "data": {
-        "id": "MySQL-Monitor",
+        "id": "MariaDB-Monitor",
         "type": "monitors",
         "relationships": {
             "servers": {
@@ -44,7 +44,7 @@ GET /v1/monitors/:name
             }
         },
         "attributes": {
-            "module": "mysqlmon",
+            "module": "mariadbmon",
             "state": "Running",
             "parameters": {
                 "user": "maxuser",
@@ -102,7 +102,7 @@ GET /v1/monitors/:name
             }
         },
         "links": {
-            "self": "http://localhost:8989/v1/monitors/MySQL-Monitor"
+            "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
         }
     }
 }
@@ -127,7 +127,7 @@ GET /v1/monitors
     },
     "data": [
         {
-            "id": "MySQL-Monitor",
+            "id": "MariaDB-Monitor",
             "type": "monitors",
             "relationships": {
                 "servers": {
@@ -147,7 +147,7 @@ GET /v1/monitors
                 }
             },
             "attributes": {
-                "module": "mysqlmon",
+                "module": "mariadbmon",
                 "state": "Running",
                 "parameters": {
                     "user": "maxuser",
@@ -205,7 +205,7 @@ GET /v1/monitors
                 }
             },
             "links": {
-                "self": "http://localhost:8989/v1/monitors/MySQL-Monitor"
+                "self": "http://localhost:8989/v1/monitors/MariaDB-Monitor"
             }
         }
     ]
@@ -234,7 +234,7 @@ a custom value for the _monitor_interval_ parameter.
         "id": "test-monitor", // Name of the monitor
         "type": "monitors",
         "attributes": {
-            "module": "mysqlmon", // The monitor uses the mysqlmon module
+            "module": "mariadbmon", // The monitor uses the mariadbmon module
             "parameters": { // Monitor parameters
                 "monitor_interval": 1000
             }

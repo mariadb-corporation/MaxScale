@@ -106,7 +106,7 @@ service=Splitter Service
 ```
 
 A listener must also define the protocol module it will use for the incoming
-network protocol, currently this should be the `MySQLClient` protocol for all
+network protocol, currently this should be the `MariaDBClient` protocol for all
 database listeners. The listener may then supply a network port to listen on
 and/or a socket within the file system.
 
@@ -114,7 +114,7 @@ and/or a socket within the file system.
 [Splitter Listener]
 type=listener
 service=Splitter Service
-protocol=MySQLClient
+protocol=MariaDBClient
 port=3306
 socket=/tmp/ClusterMaster
 ```
@@ -127,26 +127,26 @@ The next stage in the configuration is to define the backend servers. The
 definitions include how to connect to the servers. A section is created for each
 server and it contains: `type` set to `server`, the network address and port,
 and the protocol to use. Currently, the protocol module for all database
-connections is `MySQLBackend`.
+connections is `MariaDBBackend`.
 
 ```
 [dbserv1]
 type=server
 address=192.168.2.1
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [dbserv2]
 type=server
 address=192.168.2.2
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [dbserv3]
 type=server
 address=192.168.2.3
 port=3306
-protocol=MySQLBackend
+protocol=MariaDBBackend
 ```
 
 For MariaDB MaxScale to monitor the servers using the correct monitoring
@@ -158,7 +158,7 @@ username and password the monitor module should use when connecting.
 ```
 [Replication Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=dbserv1, dbserv2, dbserv3
 user=maxscale
 passwd=96F99AA1315BDC3604B006F427DD9484
@@ -209,51 +209,32 @@ the services, listeners etc have been correctly configured.
 % maxadmin list services
 
 Services.
-
 --------------------------+----------------------+--------+---------------
-
 Service Name              | Router Module        | #Users | Total Sessions
-
 --------------------------+----------------------+--------+---------------
-
 Splitter Service          | readwritesplit       |      1 |     1
-
 CLI                       | cli                  |      2 |     2
-
 --------------------------+----------------------+--------+---------------
 
 % maxadmin list servers
 
 Servers.
-
 -------------------+-----------------+-------+-------------+--------------------
-
 Server             | Address         | Port  | Connections | Status
-
 -------------------+-----------------+-------+-------------+--------------------
-
 dbserv1            | 192.168.2.1     |  3306 |           0 | Running, Slave
-
 dbserv2            | 192.168.2.2     |  3306 |           0 | Running, Master
-
 dbserv3            | 192.168.2.3     |  3306 |           0 | Running, Slave
-
 -------------------+-----------------+-------+-------------+--------------------
 
 % maxadmin list listeners
 
 Listeners.
-
 ---------------------+--------------------+-----------------+-------+--------
-
 Service Name         | Protocol Module    | Address         | Port  | State
-
 ---------------------+--------------------+-----------------+-------+--------
-
-Splitter Service     | MySQLClient        | *               |  3306 | Running
-
+Splitter Service     | MariaDBClient      | *               |  3306 | Running
 CLI                  | maxscaled          | localhost       |  6603 | Running
-
 ---------------------+--------------------+-----------------+-------+--------
 ```
 

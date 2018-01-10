@@ -3020,7 +3020,14 @@ static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t events)
     {
         MXS_WARNING("Events reported for dcb(%p), owned by %d, that has been closed %" PRIu32 " times.",
                     dcb, dcb->poll.thread.id, dcb->n_close);
+        ss_dassert(!true);
+        return rc;
     }
+
+    /**
+     * Any of these callbacks might close the DCB. Hence, the value of 'n_close'
+     * must be checked after each callback invocation.
+     */
 
     if ((events & EPOLLOUT) && (dcb->n_close == 0))
     {

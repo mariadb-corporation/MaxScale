@@ -864,7 +864,7 @@ void Worker::run()
     {
         poll_waitevents();
 
-        MXS_NOTICE("Worker %d has shut down.", m_id);
+        MXS_INFO("Worker %d has shut down.", m_id);
         modules_thread_finish();
     }
     else
@@ -891,9 +891,9 @@ void Worker::join()
 {
     if (m_started)
     {
-        MXS_NOTICE("Waiting for worker %d.", m_id);
+        MXS_INFO("Waiting for worker %d.", m_id);
         thread_wait(m_thread);
-        MXS_NOTICE("Waited for worker %d.", m_id);
+        MXS_INFO("Waited for worker %d.", m_id);
         m_started = false;
     }
 }
@@ -963,7 +963,7 @@ Worker* Worker::create(int worker_id, int epoll_listener_fd)
             // clients that a worker with more load.
             if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, epoll_listener_fd, &ev) == 0)
             {
-                MXS_NOTICE("Epoll instance for listening sockets added to worker epoll instance.");
+                MXS_INFO("Epoll instance for listening sockets added to worker epoll instance.");
 
                 MessageQueue* pQueue = MessageQueue::create(pThis);
 
@@ -1032,7 +1032,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 
     case MXS_WORKER_MSG_SHUTDOWN:
         {
-            MXS_NOTICE("Worker %d received shutdown message.", m_id);
+            MXS_INFO("Worker %d received shutdown message.", m_id);
             m_should_shutdown = true;
         }
         break;

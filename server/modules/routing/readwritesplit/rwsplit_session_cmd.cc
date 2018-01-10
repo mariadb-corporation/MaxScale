@@ -50,7 +50,7 @@ void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
 
             if (rses->recv_sescmd < rses->sent_sescmd &&
                 id == rses->recv_sescmd + 1 &&
-                (!rses->current_master || // Session doesn't have a master
+                (!rses->current_master || !rses->current_master->in_use() || // Session doesn't have a master
                  rses->current_master == backend)) // This is the master's response
             {
                 /** First reply to this session command, route it to the client */

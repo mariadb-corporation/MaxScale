@@ -707,6 +707,7 @@ public:
                                    *   binary log file. */
     Gtid gtid_io_pos;       /**< Gtid I/O position of the slave thread. Only shows the triplet with
                              *   the current master domain. */
+    string last_error;      /**< Last IO or SQL error encountered. */
 
     SlaveStatusInfo()
         :   master_server_id(0),
@@ -1253,9 +1254,14 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
                     const char* using_gtid = mxs_mysql_get_value(result, row, "Using_Gtid");
                     const char* master_host = mxs_mysql_get_value(result, row, "Master_Host");
                     const char* master_port = mxs_mysql_get_value(result, row, "Master_Port");
-                    ss_dassert(beats && period && using_gtid && master_host && master_port);
+                    const char* last_io_error = mxs_mysql_get_value(result, row, "Last_IO_Error");
+                    const char* last_sql_error = mxs_mysql_get_value(result, row, "Last_SQL_Error");
+                    ss_dassert(beats && period && using_gtid && master_host && master_port &&
+                        last_io_error && last_sql_error);
                     serv_info->slave_status.master_host = master_host;
                     serv_info->slave_status.master_port = atoi(master_port);
+                    serv_info->slave_status.last_error = *last_io_error ? last_io_error :
+                        (*last_sql_error ? last_sql_error : "");
 
                     int heartbeats = atoi(beats);
                     if (serv_info->slave_heartbeats < heartbeats)
@@ -3415,6 +3421,7 @@ bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd)
 {
     bool rval = false;
     if (mxs_mysql_query(slave->con, "STOP SLAVE;") == 0 &&
+        mxs_mysql_query(slave->con, "RESET SLAVE;") == 0 && // To erase any old I/O or SQL errors
         mxs_mysql_query(slave->con, change_cmd) == 0 &&
         mxs_mysql_query(slave->con, "START SLAVE;") == 0)
     {
@@ -3435,9 +3442,11 @@ bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd)
  * @param mon The monitor
  * @param slaves An array of slaves
  * @param new_master The replication master
+ * @param redirected_slaves A vector where to insert successfully redirected slaves. Can be NULL.
  * @return The number of slaves successfully redirected.
  */
-int redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONITORED_SERVER* new_master)
+int redirect_slaves(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
+                    ServerVector* redirected_slaves = NULL)
 {
     MXS_NOTICE("Redirecting slaves to new master.");
     std::string change_cmd = generate_change_master_cmd(mon, new_master);
@@ -3447,6 +3456,10 @@ int redirect_slaves(MYSQL_MONITOR* mon, ServerVector& slaves, MXS_MONITORED_SERV
         if (redirect_one_slave(*iter, change_cmd.c_str()))
         {
             successes++;
+            if (redirected_slaves)
+            {
+                redirected_slaves->push_back(*iter);
+            }
         }
     }
     return successes;
@@ -3481,7 +3494,7 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
         promote_new_master(new_master, err_out))
     {
         // Step 4: Redirect slaves.
-        int redirects = redirect_slaves(mon, slaves, new_master);
+        int redirects = redirect_slaves(mon, new_master, slaves);
         rval = slaves.empty() ? true : redirects > 0;
     }
     return rval;
@@ -3671,7 +3684,7 @@ static bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gti
     StringVector output;
     bool gtid_reached = false;
     bool error = false;
-    double seconds_remaining = total_timeout > 0 ? total_timeout : 0.01;
+    double seconds_remaining = total_timeout;
 
     // Determine a reasonable timeout for the MASTER_GTID_WAIT-function depending on the
     // backend_read_timeout setting (should be >= 1) and time remaining.
@@ -3735,7 +3748,7 @@ static bool switchover_wait_slaves_catchup(const ServerVector& slaves, const Gti
          iter != slaves.end() && success;
          iter++)
     {
-        if (seconds_remaining < 0)
+        if (seconds_remaining <= 0)
         {
             success = false;
         }
@@ -3786,25 +3799,19 @@ static bool switchover_start_slave(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* old
 }
 
 /**
- * Get error strings from all MySQL connections, form one string.
+ * Get MySQL connection error strings from all the given servers, form one string.
  *
- * @param slaves Slave servers
- * @param old_master Old master server
+ * @param slaves Servers with errors
  * @return Concatenated string.
  */
-static string get_connection_errors(ServerVector& slaves, MXS_MONITORED_SERVER* old_master)
+static string get_connection_errors(const ServerVector& servers)
 {
     // Get errors from all connections, form a string.
-    ss_dassert(old_master);
-    ServerVector servers;
-    servers.reserve(1 + slaves.size());
-    servers.push_back(old_master);
-    servers.insert(servers.end(), slaves.begin(), slaves.end());
     std::stringstream ss;
     for (ServerVector::const_iterator iter = servers.begin(); iter != servers.end(); iter++)
     {
         const char* error = mysql_error((*iter)->con);
-        ss_dassert(strlen(error) > 0); // Every connection should have an error.
+        ss_dassert(*error); // Every connection should have an error.
         ss << (*iter)->server->unique_name << ": '" << error << "'";
         if (iter + 1 != servers.end())
         {
@@ -3812,6 +3819,100 @@ static string get_connection_errors(ServerVector& slaves, MXS_MONITORED_SERVER* 
         }
     }
     return ss.str();
+}
+
+/**
+ * Send an event to new master and wait for slaves to get the event.
+ *
+ * @param mon Cluster monitor
+ * @param new_master Where to send the event
+ * @param slaves Servers to monitor
+ * @param seconds_remaining How long can we wait
+ * @return True, if at least one slave got the new event within the time limit
+ */
+static bool wait_cluster_stabilization(MYSQL_MONITOR* mon,
+                                       MXS_MONITORED_SERVER* new_master,
+                                       const ServerVector& slaves,
+                                       int seconds_remaining)
+{
+    ss_dassert(!slaves.empty());
+    bool rval = false;
+    time_t begin = time(NULL);
+    MySqlServerInfo* new_master_info = get_server_info(mon, new_master);
+
+    if (mxs_mysql_query(new_master->con, "FLUSH TABLES;") == 0 &&
+        update_gtids(mon, new_master, new_master_info))
+    {
+        int query_fails = 0;
+        int repl_fails = 0;
+        int successes = 0;
+        const Gtid target = new_master_info->gtid_current_pos;
+        ServerVector wait_list = slaves; // Check all the servers in the list
+        bool first_round = true;
+        bool time_is_up = false;
+
+        while (!wait_list.empty() && !time_is_up)
+        {
+            if (!first_round)
+            {
+                thread_millisleep(500);
+            }
+
+            // Erasing elements from an array, so iterate from last to first
+            int i = wait_list.size() - 1;
+            while (i >= 0)
+            {
+                MXS_MONITORED_SERVER* slave = wait_list[i];
+                MySqlServerInfo* slave_info = get_server_info(mon, slave);
+                if (update_gtids(mon, slave, slave_info) && do_show_slave_status(mon, slave_info, slave))
+                {
+                    if (!slave_info->slave_status.last_error.empty())
+                    {
+                        // IO or SQL error on slave, replication is a fail
+                        MXS_WARNING("Slave '%s' cannot start replication: '%s'.",
+                                    slave->server->unique_name,
+                                    slave_info->slave_status.last_error.c_str());
+                        wait_list.erase(wait_list.begin() + i);
+                        repl_fails++;
+                    }
+                    else if (slave_info->gtid_current_pos.sequence >= target.sequence)
+                    {
+                        // This slave has reached the same gtid as master, remove from list
+                        wait_list.erase(wait_list.begin() + i);
+                        successes++;
+                    }
+                }
+                else
+                {
+                    wait_list.erase(wait_list.begin() + i);
+                    query_fails++;
+                }
+                i--;
+            }
+
+            first_round = false; // Sleep at start of next iteration
+            if (difftime(time(NULL), begin) >= seconds_remaining)
+            {
+                time_is_up = true;
+            }
+        }
+
+        ServerVector::size_type fails = repl_fails + query_fails + wait_list.size();
+        if (fails > 0)
+        {
+            const char MSG[] = "Replication from the new master could not be confirmed for %lu slaves. "
+                               "%d encountered an I/O or SQL error, %d failed to reply and %lu did not "
+                               "advance in Gtid until time ran out.";
+            MXS_WARNING(MSG, fails, repl_fails, query_fails, wait_list.size());
+        }
+        rval = (successes > 0);
+    }
+    else
+    {
+        MXS_ERROR("Could not confirm replication after switchover/failover because query to "
+                  "the new master failed.");
+    }
+    return rval;
 }
 
 /**
@@ -3837,20 +3938,24 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
         PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot switchover.");
         return false;
     }
+    // Total time limit on how long this operation may take. Checked and modified after significant steps are
+    // completed.
+    int seconds_remaining = mon->switchover_timeout;
+    time_t start_time = time(NULL);
     // Step 1: Select promotion candidate, save all slaves except promotion target to an array. If we have a
     // user-defined master candidate, check it. Otherwise, autoselect.
     MXS_MONITORED_SERVER* promotion_target = NULL;
-    ServerVector slaves;
+    ServerVector redirectable_slaves;
     if (new_master)
     {
-        if (switchover_check_preferred_master(mon, new_master, &slaves, err_out))
+        if (switchover_check_preferred_master(mon, new_master, &redirectable_slaves, err_out))
         {
             promotion_target = new_master;
         }
     }
     else
     {
-        promotion_target = select_new_master(mon, &slaves, err_out);
+        promotion_target = select_new_master(mon, &redirectable_slaves, err_out);
     }
     if (promotion_target == NULL)
     {
@@ -3859,39 +3964,81 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
 
     bool rval = false;
     MySqlServerInfo* curr_master_info = get_server_info(mon, demotion_target);
-    // Step 2: Set read-only to 1, flush logs.
+
+    // Step 2: Set read-only to on, flush logs.
     if (switchover_demote_master(mon, demotion_target, curr_master_info, err_out))
     {
-        // Step 3a: Wait for the selected slave to catch up with master.
-        if (switchover_wait_slave_catchup(promotion_target, curr_master_info->gtid_binlog_pos,
-                                          mon->switchover_timeout, mon->monitor->read_timeout, err_out) &&
-            // Step 3b: Wait for other slaves to catch up with master.
-            switchover_wait_slaves_catchup(slaves, curr_master_info->gtid_binlog_pos,
-                                           mon->switchover_timeout, mon->monitor->read_timeout, err_out) &&
-            // Step 4: Stop and reset slave, set read-only to 0.
-            promote_new_master(promotion_target, err_out))
+        bool catchup_and_promote_success = false;
+        time_t step2_time = time(NULL);
+        seconds_remaining -= difftime(step2_time, start_time);
+
+        // Step 3: Wait for the slaves (including promotion target) to catch up with master.
+        ServerVector catchup_slaves = redirectable_slaves;
+        catchup_slaves.push_back(promotion_target);
+        if (switchover_wait_slaves_catchup(catchup_slaves, curr_master_info->gtid_binlog_pos,
+                                           seconds_remaining, mon->monitor->read_timeout, err_out))
         {
-            // Step 5: Redirect slaves.
-            int redirects = redirect_slaves(mon, slaves, promotion_target);
-            // Step 6: Set the old master to replicate from the new.
-            bool start_ok = switchover_start_slave(mon, demotion_target, promotion_target);
-            rval = slaves.empty() ? start_ok : start_ok || redirects > 0;
-            if (rval == false)
+            time_t step3_time = time(NULL);
+            int seconds_step3 = difftime(step3_time, step2_time);
+            MXS_DEBUG("Switchover: slave catchup took %d seconds.", seconds_step3);
+            seconds_remaining -= seconds_step3;
+
+            // Step 4: On new master STOP and RESET SLAVE, set read-only to off.
+            if (promote_new_master(promotion_target, err_out))
             {
-                // This is a special case. Individual server errors have already been printed to the log.
-                // For JSON, gather the errors again.
-                const char MSG[] = "Could not redirect any slaves to the new master.";
-                MXS_ERROR(MSG);
-                if (err_out)
+                catchup_and_promote_success = true;
+                // Step 5: Redirect slaves and start replication on old master.
+                ServerVector redirected_slaves;
+                bool start_ok = switchover_start_slave(mon, demotion_target, promotion_target);
+                if (start_ok)
                 {
-                    string combined_error = get_connection_errors(slaves, demotion_target);
-                    *err_out = mxs_json_error_append(*err_out, "%s Errors: %s.", MSG, combined_error.c_str());
+                    redirected_slaves.push_back(demotion_target);
+                }
+                int redirects = redirect_slaves(mon, promotion_target, redirectable_slaves, &redirected_slaves);
+
+                bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
+                if (success == false)
+                {
+                    rval = false;
+                    // This is a special case. Individual server errors have already been printed to the log.
+                    // For JSON, gather the errors again.
+                    const char MSG[] = "Could not redirect any slaves to the new master.";
+                    MXS_ERROR(MSG);
+                    if (err_out)
+                    {
+                        ServerVector failed_slaves;
+                        failed_slaves.push_back(demotion_target);
+                        failed_slaves.insert(failed_slaves.end(),
+                                             redirectable_slaves.begin(), redirectable_slaves.end());
+                        string combined_error = get_connection_errors(failed_slaves);
+                        *err_out = mxs_json_error_append(*err_out,
+                                                         "%s Errors: %s.", MSG, combined_error.c_str());
+                    }
+                }
+                else
+                {
+                    time_t step5_time = time(NULL);
+                    seconds_remaining -= difftime(step5_time, step3_time);
+
+                    // Step 6: Finally, add an event to the new master to advance gtid and wait for the slaves
+                    // to receive it.
+                    if (wait_cluster_stabilization(mon, promotion_target, redirected_slaves,
+                                                   seconds_remaining))
+                    {
+                        rval = true;
+                        time_t step6_time = time(NULL);
+                        int seconds_step6 = difftime(step6_time, step5_time);
+                        seconds_remaining -= seconds_step6;
+                        MXS_DEBUG("Switchover: slave replication confirmation took %d seconds with "
+                                  "%d seconds to spare.", seconds_step6, seconds_remaining);
+                    }
                 }
             }
         }
-        else
+
+        if (!catchup_and_promote_success)
         {
-            // Step 3a, 3b or 4 failed, try to undo step 2.
+            // Step 3 or 4 failed, try to undo step 2.
             const char QUERY_UNDO[] = "SET GLOBAL read_only=0;";
             if (mxs_mysql_query(demotion_target->con, QUERY_UNDO) == 0)
             {

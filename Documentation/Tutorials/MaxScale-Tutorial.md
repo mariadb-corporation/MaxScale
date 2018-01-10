@@ -160,8 +160,8 @@ The configuration file creation is covered in different tutorials.
 
 ### Master-Slave cluster
 
-* [MariaDB Replication Connection Routing Tutorial](MySQL-Replication-Connection-Routing-Tutorial.md)
-* [MariaDB Replication Read-Write Splitting Tutorial](MySQL-Replication-Read-Write-Splitting-Tutorial.md)
+* [MariaDB Replication Connection Routing Tutorial](MariaDB-Replication-Connection-Routing-Tutorial.md)
+* [MariaDB Replication Read-Write Splitting Tutorial](MariaDB-Replication-Read-Write-Splitting-Tutorial.md)
 
 ### Galera cluster
 
