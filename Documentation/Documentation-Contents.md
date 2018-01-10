@@ -44,6 +44,7 @@ These tutorials are for specific use cases and module combinations.
  - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [MariaDB Replication Connection Routing Tutorial](Tutorials/MariaDB-Replication-Connection-Routing-Tutorial.md)
  - [MariaDB Replication Read Write Splitting Tutorial](Tutorials/MariaDB-Replication-Read-Write-Splitting-Tutorial.md)
+ - [MariaDB Monitor Failover Tutorial](Tutorials/MariaDB-Monitor-Failover.md)
  - [MariaDB MaxScale Information Schema Tutorial](Tutorials/MaxScale-Information-Schema.md)
  - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
  - [RabbitMQ Setup and MariaDB MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
