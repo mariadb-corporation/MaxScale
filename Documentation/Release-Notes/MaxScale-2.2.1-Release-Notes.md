@@ -155,6 +155,12 @@ behavior is advised.
 The top filter now uses the session ID instead of an internal counter for the
 names of the log file names.
 
+### MaxCtrl
+
+The `-h, --hosts` argument was changed to accept a list of hostnames separated
+by commas instead of spaces. This prevents commands from accidentally being
+interpreted as hostnames.
+
 ## Dropped Features
 
 ## New Features

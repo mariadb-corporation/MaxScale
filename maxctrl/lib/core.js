@@ -38,9 +38,9 @@ program
     .option('h', {
         alias: 'hosts',
         describe: 'List of MaxScale hosts. The hosts must be in ' +
-            'HOST:PORT format and each value must be separated by spaces.',
+            'HOST:PORT format and each value must be separated by a comma.',
         default: 'localhost:8989',
-        type: 'array'
+        type: 'string'
     })
     .option('s', {
         alias: 'secure',
