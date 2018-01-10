@@ -36,14 +36,12 @@ int transaction(MYSQL * conn, int N)
     int local_result = 0;
     char sql[1000000];
 
-    Test->tprintf("START TRANSACTION\n");
     local_result += execute_query(conn, (char *) "START TRANSACTION");
     if (local_result != 0)
     {
         Test->tprintf("START TRANSACTION Failed\n");
         return local_result;
     }
-    Test->tprintf("SET autocommit = 0\n");
     local_result += execute_query(conn, (char *) "SET autocommit = 0");
     if (local_result != 0)
     {
@@ -52,7 +50,6 @@ int transaction(MYSQL * conn, int N)
     }
 
     create_insert_string(sql, N_INSERTS, N);
-    Test->tprintf("INSERT\n");
     local_result += execute_query(conn, sql);
     if (local_result != 0)
     {
@@ -60,7 +57,6 @@ int transaction(MYSQL * conn, int N)
         return local_result;
     }
 
-    Test->tprintf("COMMIT\n");
     local_result += execute_query(conn, (char *) "COMMIT");
     if (local_result != 0)
     {
@@ -150,8 +146,8 @@ int main(int argc, char *argv[])
         {
             sprintf(sql, "select count(*) from t1 where fl=%d;", j);
             find_field(Test->repl->nodes[i_n], sql, (char *) "count(*)", rep);
-            Test->tprintf("Transaction %d put %s rows\n", j, rep);
             sscanf(rep, "%d", &rep_d);
+
             if ((rep_d != N_INSERTS) && (j != (failed_transaction_num - 1)))
             {
                 Test->add_result(1, "Transaction %d did not put data into slave\n", j);
@@ -325,7 +321,6 @@ void *transaction_thread( void *ptr )
 
     while ((exit_flag == 0) && i_trans < trans_max)
     {
-        Test->tprintf("Transaction %d\n", i_trans);
         trans_result = transaction(conn, i_trans);
         if (trans_result != 0)
         {
