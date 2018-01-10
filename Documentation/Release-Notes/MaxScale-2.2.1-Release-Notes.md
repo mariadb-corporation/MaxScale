@@ -8,12 +8,6 @@ release 2.2.0.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
-## Update from 2.2.0
-
-Since version 2.2.0 MaxScale binlog server can accept GTID
-slave registration from MariaDB 10.X slaves and can also
-register to Master server MariaDB 10.x using GTID.
-
 ## Changed Features
 
 ### Process identity
@@ -44,6 +38,9 @@ root@host:~# maxscale --user=root ...
 * If `mariadb10_master_gtid` is enabled, the `transaction_safety` is
   automatically enabled. In MaxScale 2.2.0, if `transaction_safety` was disabled
   when `mariadb10_master_gtid` was enabled MaxScale would refuse to start.
+
+* The binlogrouter can accept GTID slave registration from MariaDB 10.X slaves
+  and can also register to Master server MariaDB 10.x using GTID.
 
 ### Module names and case sensitivity
 
