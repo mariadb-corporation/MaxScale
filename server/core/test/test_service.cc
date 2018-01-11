@@ -71,7 +71,7 @@ test1()
     ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));
     ss_info_dassert(serviceCreateListener(service, "TestProtocol", "testprotocol",
-                                          "localhost", 9876, "MySQLAuth", NULL, NULL),
+                                          "localhost", 9876, "MySQLAuth", NULL, NULL, false),
                     "Add Protocol should succeed");
     ss_info_dassert(0 != serviceHasListener(service, "TestProtocol", "testprotocol", "localhost", 9876),
                     "Service should have new protocol as requested");

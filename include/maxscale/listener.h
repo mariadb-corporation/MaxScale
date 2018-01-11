@@ -49,6 +49,7 @@ typedef struct servlistener
     SPINLOCK lock;
     int active;                /**< True if the port has not been deleted */
     struct  servlistener *next; /**< Next service protocol */
+    bool session_track_trx_state; /** Get transation state from backend */
 } SERV_LISTENER; // TODO: Rename to LISTENER
 
 typedef struct listener_iterator
@@ -79,7 +80,7 @@ json_t* listener_to_json(const SERV_LISTENER* listener);
 
 SERV_LISTENER* listener_alloc(struct service* service, const char* name, const char *protocol,
                               const char *address, unsigned short port, const char *authenticator,
-                              const char* auth_options, SSL_LISTENER *ssl);
+                              const char* auth_options, SSL_LISTENER *ssl, bool get_trx_state_from_backend);
 void listener_free(SERV_LISTENER* listener);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);

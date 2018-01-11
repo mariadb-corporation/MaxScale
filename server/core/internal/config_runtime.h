@@ -166,7 +166,8 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,
                              const char *ssl_cert, const char *ssl_ca,
-                             const char *ssl_version, const char *ssl_depth);
+                             const char *ssl_version, const char *ssl_depth,
+                             bool session_track_trx_state);
 
 /**
  * @brief Destroy a listener

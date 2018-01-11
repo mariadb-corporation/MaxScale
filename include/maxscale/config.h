@@ -54,16 +54,17 @@ MXS_BEGIN_DECLS
 #define MXS_JSON_PTR_RELATIONSHIPS_FILTERS  "/data/relationships/filters/data"
 
 /** Parameter value JSON Pointers */
-#define MXS_JSON_PTR_PARAM_PORT                  MXS_JSON_PTR_PARAMETERS "/port"
-#define MXS_JSON_PTR_PARAM_ADDRESS               MXS_JSON_PTR_PARAMETERS "/address"
-#define MXS_JSON_PTR_PARAM_PROTOCOL              MXS_JSON_PTR_PARAMETERS "/protocol"
-#define MXS_JSON_PTR_PARAM_AUTHENTICATOR         MXS_JSON_PTR_PARAMETERS "/authenticator"
-#define MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS MXS_JSON_PTR_PARAMETERS "/authenticator_options"
-#define MXS_JSON_PTR_PARAM_SSL_KEY               MXS_JSON_PTR_PARAMETERS "/ssl_key"
-#define MXS_JSON_PTR_PARAM_SSL_CERT              MXS_JSON_PTR_PARAMETERS "/ssl_cert"
-#define MXS_JSON_PTR_PARAM_SSL_CA_CERT           MXS_JSON_PTR_PARAMETERS "/ssl_ca_cert"
-#define MXS_JSON_PTR_PARAM_SSL_VERSION           MXS_JSON_PTR_PARAMETERS "/ssl_version"
-#define MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH MXS_JSON_PTR_PARAMETERS "/ssl_cert_verify_depth"
+#define MXS_JSON_PTR_PARAM_PORT                    MXS_JSON_PTR_PARAMETERS "/port"
+#define MXS_JSON_PTR_PARAM_ADDRESS                 MXS_JSON_PTR_PARAMETERS "/address"
+#define MXS_JSON_PTR_PARAM_PROTOCOL                MXS_JSON_PTR_PARAMETERS "/protocol"
+#define MXS_JSON_PTR_PARAM_AUTHENTICATOR           MXS_JSON_PTR_PARAMETERS "/authenticator"
+#define MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS   MXS_JSON_PTR_PARAMETERS "/authenticator_options"
+#define MXS_JSON_PTR_PARAM_SSL_KEY                 MXS_JSON_PTR_PARAMETERS "/ssl_key"
+#define MXS_JSON_PTR_PARAM_SSL_CERT                MXS_JSON_PTR_PARAMETERS "/ssl_cert"
+#define MXS_JSON_PTR_PARAM_SSL_CA_CERT             MXS_JSON_PTR_PARAMETERS "/ssl_ca_cert"
+#define MXS_JSON_PTR_PARAM_SSL_VERSION             MXS_JSON_PTR_PARAMETERS "/ssl_version"
+#define MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH   MXS_JSON_PTR_PARAMETERS "/ssl_cert_verify_depth"
+#define MXS_JSON_PTR_PARAM_SESSION_TRACK_TRX_STATE MXS_JSON_PTR_PARAMETERS "/session_track_trx_state"
 
 /** Non-parameter JSON pointers */
 #define MXS_JSON_PTR_MODULE   "/data/attributes/module"
