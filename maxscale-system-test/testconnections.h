@@ -53,6 +53,26 @@ public:
     ~TestConnections();
 
     /**
+     * @brief Is the test still ok?
+     *
+     * @return True, if no errors have occurred, false otherwise.
+     */
+    bool ok() const
+    {
+        return global_result == 0;
+    }
+
+    /**
+     * @brief Has the test failed?
+     *
+     * @return True, if errors have occurred, false otherwise.
+     */
+    bool failed() const
+    {
+        return global_result != 0;
+    }
+
+    /**
      * @brief global_result Result of test, 0 if PASSED
      */
     int global_result;
