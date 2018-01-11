@@ -98,6 +98,7 @@ static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
 static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
+static MySqlServerInfo* get_server_info(const MYSQL_MONITOR* handle, const MXS_MONITORED_SERVER* db);
 static bool mon_process_failover(MYSQL_MONITOR*, uint32_t, bool*);
 static bool do_failover(MYSQL_MONITOR* mon, json_t** output);
 static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
@@ -107,9 +108,16 @@ static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlSer
 static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
                           StringVector* output);
 static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info);
-static int check_and_join_cluster(MYSQL_MONITOR* mon);
+static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server,
+                                     MySqlServerInfo* master_info);
+static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output);
+static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& servers);
 static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
 static void disable_setting(MYSQL_MONITOR* mon, const char* setting);
+static bool cluster_can_be_joined(MYSQL_MONITOR* mon);
+static bool can_replicate_from(MYSQL_MONITOR* mon,
+                               MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
+                               MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -529,6 +537,118 @@ bool mysql_handle_failover(const MODULECMD_ARG* args, json_t** output)
 }
 
 /**
+ * Perform user-activated rejoin
+ *
+ * @param mon               Cluster monitor
+ * @param rejoin_server     Server to join
+ * @param output            Json error output
+ * @return True on success
+ */
+bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
+{
+    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
+    bool stopped = stop_monitor(mon);
+    if (stopped)
+    {
+        MXS_NOTICE("Stopped monitor %s for the duration of rejoin.", mon->name);
+    }
+    else
+    {
+        MXS_NOTICE("Monitor %s already stopped, rejoin can proceed.", mon->name);
+    }
+
+    bool rval = false;
+    if (cluster_can_be_joined(handle))
+    {
+        MXS_MONITORED_SERVER* mon_server = NULL;
+        // Search for the MONITORED_SERVER. Could this be a general monitor function?
+        for (MXS_MONITORED_SERVER* iterator = mon->monitored_servers;
+             iterator != NULL && mon_server == NULL;
+             iterator = iterator->next)
+        {
+            if (iterator->server == rejoin_server)
+            {
+                mon_server = iterator;
+            }
+        }
+
+        if (mon_server)
+        {
+            MXS_MONITORED_SERVER* master = handle->master;
+            MySqlServerInfo* master_info = get_server_info(handle, master);
+            MySqlServerInfo* server_info = get_server_info(handle, mon_server);
+
+            if (server_is_rejoin_suspect(handle, mon_server, master_info) &&
+                update_gtids(handle, master, master_info) &&
+                can_replicate_from(handle, mon_server, server_info, master, master_info))
+            {
+                ServerVector joinable_server;
+                joinable_server.push_back(mon_server);
+                if (do_rejoin(handle, joinable_server) == 1)
+                {
+                    rval = true;
+                    MXS_NOTICE("Rejoin performed.");
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but failed.");
+                }
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(output, "Server is not eligible for rejoin or eligibility could not be "
+                                     "ascertained.");
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(output, "The given server '%s' is not monitored by this monitor.",
+                                 rejoin_server->unique_name);
+        }
+    }
+    else
+    {
+        const char BAD_CLUSTER[] = "The server cluster of monitor '%s' is not in a state valid for joining. "
+                                   "Either it has no master or its gtid domain is unknown.";
+        PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, mon->name);
+    }
+
+    if (stopped)
+    {
+        startMonitor(mon, mon->parameters);
+    }
+    return rval;
+}
+
+/**
+ * Command handler for 'rejoin'
+ *
+ * @param args Arguments given by user
+ * @param output Json error output
+ * @return True on success
+ */
+bool mysql_handle_rejoin(const MODULECMD_ARG* args, json_t** output)
+{
+    ss_dassert(args->argc == 2);
+    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
+
+    MXS_MONITOR* mon = args->argv[0].value.monitor;
+    SERVER* server = args->argv[1].value.server;
+
+    bool rv = false;
+    if (!config_get_global_options()->passive)
+    {
+        rv = mysql_rejoin(mon, server, output);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but not performed, as MaxScale is in passive mode.");
+    }
+    return rv;
+}
+
+/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -568,6 +688,19 @@ extern "C"
         modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
                                    mysql_handle_failover, MXS_ARRAY_NELEMS(failover_argv),
                                    failover_argv, "Perform master failover");
+
+        static modulecmd_arg_type_t rejoin_argv[] =
+        {
+            {
+                MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+                ARG_MONITOR_DESC
+            },
+            { MODULECMD_ARG_SERVER, "Joining server" }
+        };
+
+        modulecmd_register_command(MXS_MODULE_NAME, "rejoin", MODULECMD_TYPE_ACTIVE,
+                                   mysql_handle_rejoin, MXS_ARRAY_NELEMS(rejoin_argv),
+                                   rejoin_argv, "Rejoin server to a cluster");
 
         static MXS_MONITOR_OBJECT MyObject =
         {
@@ -2319,23 +2452,30 @@ monitorMain(void *arg)
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (handle->auto_rejoin && !failover_performed &&
-            handle->master != NULL && SERVER_IS_MASTER(handle->master->server) &&
-            handle->master_gtid_domain >= 0)
+        if (handle->auto_rejoin && !failover_performed && cluster_can_be_joined(handle))
         {
             // Check if any servers should be autojoined to the cluster
-            int joins = check_and_join_cluster(handle);
-            if (joins < 0)
+            ServerVector joinable_servers;
+            if (get_joinable_servers(handle, &joinable_servers))
             {
-                MXS_ERROR("A cluster join operation failed, disabling automatic rejoining. "
-                          "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
-                          "the REST API.", CN_AUTO_REJOIN, mon->name);
-                handle->auto_rejoin = false;
-                disable_setting(handle, CN_AUTO_REJOIN);
+                uint32_t joins = do_rejoin(handle, joinable_servers);
+                if (joins > 0)
+                {
+                    MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
+                }
+                if (joins < joinable_servers.size())
+                {
+                    MXS_ERROR("A cluster join operation failed, disabling automatic rejoining. "
+                              "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
+                              "the REST API.", CN_AUTO_REJOIN, mon->name);
+                    handle->auto_rejoin = false;
+                    disable_setting(handle, CN_AUTO_REJOIN);
+                }
             }
-            else if (joins > 0)
+            else
             {
-                MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
+                MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.",
+                          handle->master->server->unique_name);
             }
         }
 
@@ -4128,102 +4268,145 @@ static bool can_replicate_from(MYSQL_MONITOR* mon,
 }
 
 /**
- * Check cluster for servers not replicating from the current master and redirect/join them. If an error
- * occurs, stop and return negative value.
+ * Checks if a server is a possible rejoin candidate. A true result from this function is not yet sufficient
+ * criteria and another call to can_replicate_from() should be made.
  *
  * @param mon Cluster monitor
- * @return The number of servers successfully redirected. Negative on I/O-error.
+ * @param server Server to check.
+ * @param master_info Master server info
+ * @return True, if server is a rejoin suspect.
  */
-static int check_and_join_cluster(MYSQL_MONITOR* mon)
+static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server,
+                                     MySqlServerInfo* master_info)
 {
+    bool is_suspect = false;
+    if (!SERVER_IS_MASTER(server->server) && SERVER_IS_RUNNING(server->server))
+    {
+        MySqlServerInfo* server_info = get_server_info(mon, server);
+        SlaveStatusInfo* slave_status = &server_info->slave_status;
+        // Has no slave connection, yet is not a master.
+        if (server_info->n_slaves_configured == 0)
+        {
+            is_suspect = true;
+        }
+        // Or has existing slave connection ...
+        else if (server_info->n_slaves_configured == 1)
+        {
+            MXS_MONITORED_SERVER* master = mon->master;
+            // which is connected to master but it's the wrong one
+            if (slave_status->slave_io_running  &&
+                slave_status->master_server_id != master_info->server_id)
+            {
+                is_suspect = true;
+            }
+            // or is disconnected but master host or port is wrong.
+            else if (!slave_status->slave_io_running && slave_status->slave_sql_running &&
+                     (slave_status->master_host != master->server->name ||
+                      slave_status->master_port != master->server->port))
+            {
+                is_suspect = true;
+            }
+        }
+    }
+    return is_suspect;
+}
+
+/**
+ * Scan the servers in the cluster and add (re)joinable servers to an array.
+ *
+ * @param mon Cluster monitor
+ * @param output Array to save results to. Each element is a valid (re)joinable server according
+ * to latest data.
+ * @return False, if there were possible rejoinable servers but communications error to master server
+ * prevented final checks.
+ */
+static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output)
+{
+    ss_dassert(output);
     MXS_MONITORED_SERVER* master = mon->master;
     MySqlServerInfo *master_info = get_server_info(mon, master);
 
     // Whether a join operation should be attempted or not depends on several criteria. Start with the ones
     // easiest to test. Go though all slaves and construct a preliminary list.
     ServerVector suspects;
-    std::vector<MySqlServerInfo*> suspect_infos;
     for (MXS_MONITORED_SERVER* server = mon->monitor->monitored_servers;
          server != NULL;
          server = server->next)
     {
-        if (!SERVER_IS_MASTER(server->server) && SERVER_IS_RUNNING(server->server))
+        if (server_is_rejoin_suspect(mon, server, master_info))
         {
-            MySqlServerInfo* server_info = get_server_info(mon, server);
-            SlaveStatusInfo* slave_status = &server_info->slave_status;
-            bool is_suspect = false;
-            // Has no slave connection, yet is not a master.
-            if (server_info->n_slaves_configured == 0)
-            {
-                is_suspect = true;
-            }
-            // Or has existing slave connection ...
-            else if (server_info->n_slaves_configured == 1)
-            {
-                // which is connected to master but it's the wrong one
-                if (slave_status->slave_io_running  &&
-                    slave_status->master_server_id != master_info->server_id)
-                {
-                    is_suspect = true;
-                }
-                // or is disconnected but master host or port is wrong
-                else if (!slave_status->slave_io_running && slave_status->slave_sql_running &&
-                         (slave_status->master_host != master->server->name ||
-                         slave_status->master_port != master->server->port))
-                {
-                    is_suspect = true;
-                }
-            }
-            if (is_suspect)
-            {
-                suspects.push_back(server);
-                suspect_infos.push_back(server_info);
-            }
+            suspects.push_back(server);
         }
     }
 
-    int rval = 0;
+    // Update Gtid of master for better info.
+    bool comm_ok = true;
     if (!suspects.empty())
     {
-        // Update Gtid of master for better info.
-        if (!update_gtids(mon, master, master_info))
+        if (update_gtids(mon, master, master_info))
         {
-            rval = -1;
-        }
-        string change_cmd = generate_change_master_cmd(mon, master);
-        for (size_t i = 0; i < suspects.size() && rval >= 0; i++)
-        {
-            MXS_MONITORED_SERVER* suspect = suspects[i];
-            MySqlServerInfo* suspect_info = suspect_infos[i];
-            if (can_replicate_from(mon, suspect, suspect_info, master, master_info))
+            for (size_t i = 0; i < suspects.size(); i++)
             {
-                bool op_success = true;
-                const char* name = suspect->server->unique_name;
-                const char* master_name = master->server->unique_name;
-                if (suspect_info->n_slaves_configured == 0)
+                MXS_MONITORED_SERVER* suspect = suspects[i];
+                MySqlServerInfo* suspect_info = get_server_info(mon, suspect);
+                if (can_replicate_from(mon, suspect, suspect_info, master, master_info))
                 {
-                    MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
-                    op_success = join_cluster(suspect, change_cmd.c_str());
-                }
-                else
-                {
-                    MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
-                               "redirecting it to '%s'.", name, master_name, master_name);
-                    op_success = redirect_one_slave(suspect, change_cmd.c_str());
-                }
-
-                if (op_success)
-                {
-                    rval++;
-                }
-                else
-                {
-                    rval = -1;
+                    output->push_back(suspect);
                 }
             }
         }
+        else
+        {
+            comm_ok = false;
+        }
     }
-    return rval;
+    return comm_ok;
+}
+
+/**
+ * (Re)join given servers to the cluster. The servers in the array are assumed to be joinable.
+ * Usually the list is created by get_joinable_servers().
+ *
+ * @param mon Cluster monitor
+ * @param joinable_servers Which servers to rejoin
+ * @return The number of servers successfully rejoined
+ */
+static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_servers)
+{
+    MXS_MONITORED_SERVER* master = mon->master;
+    uint32_t servers_joined = 0;
+    if (!joinable_servers.empty())
+    {
+        string change_cmd = generate_change_master_cmd(mon, master);
+        for (ServerVector::const_iterator iter = joinable_servers.begin();
+             iter != joinable_servers.end();
+             iter++)
+        {
+            MXS_MONITORED_SERVER* joinable = *iter;
+            const char* name = joinable->server->unique_name;
+            const char* master_name = master->server->unique_name;
+            MySqlServerInfo* redir_info = get_server_info(mon, joinable);
+
+            bool op_success;
+            if (redir_info->n_slaves_configured == 0)
+            {
+                MXS_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
+                op_success = join_cluster(joinable, change_cmd.c_str());
+            }
+            else
+            {
+                MXS_NOTICE("Server '%s' is replicating from a server other than '%s', "
+                           "redirecting it to '%s'.", name, master_name, master_name);
+                op_success = redirect_one_slave(joinable, change_cmd.c_str());
+            }
+
+            if (op_success)
+            {
+                servers_joined++;
+            }
+        }
+    }
+    return servers_joined;
 }
 
 /**
@@ -4264,4 +4447,15 @@ static void disable_setting(MYSQL_MONITOR* mon, const char* setting)
     p.name = const_cast<char*>(setting);
     p.value = const_cast<char*>("false");
     monitorAddParameters(mon->monitor, &p);
+}
+
+/**
+ * Is the cluster a valid rejoin target
+ *
+ * @param mon Cluster monitor
+ * @return True, if cluster can be joined
+ */
+static bool cluster_can_be_joined(MYSQL_MONITOR* mon)
+{
+    return (mon->master != NULL && SERVER_IS_MASTER(mon->master->server) && mon->master_gtid_domain >= 0);
 }
