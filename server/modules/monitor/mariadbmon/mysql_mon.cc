@@ -1390,11 +1390,11 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
                     const char* last_io_error = mxs_mysql_get_value(result, row, "Last_IO_Error");
                     const char* last_sql_error = mxs_mysql_get_value(result, row, "Last_SQL_Error");
                     ss_dassert(beats && period && using_gtid && master_host && master_port &&
-                        last_io_error && last_sql_error);
+                               last_io_error && last_sql_error);
                     serv_info->slave_status.master_host = master_host;
                     serv_info->slave_status.master_port = atoi(master_port);
                     serv_info->slave_status.last_error = *last_io_error ? last_io_error :
-                        (*last_sql_error ? last_sql_error : "");
+                                                         (*last_sql_error ? last_sql_error : "");
 
                     int heartbeats = atoi(beats);
                     if (serv_info->slave_heartbeats < heartbeats)
@@ -1409,7 +1409,8 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
                         const char* gtid_io_pos = mxs_mysql_get_value(result, row, "Gtid_IO_Pos");
                         ss_dassert(gtid_io_pos);
                         serv_info->slave_status.gtid_io_pos = gtid_io_pos[0] != '\0' ?
-                            Gtid(gtid_io_pos, mon->master_gtid_domain) : Gtid();
+                                                              Gtid(gtid_io_pos, mon->master_gtid_domain) :
+                                                              Gtid();
                     }
                     else
                     {
@@ -2353,7 +2354,8 @@ monitorMain(void *arg)
             {
                 monitor_clear_pending_status(root_master,
                                              SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
-                server_clear_status_nolock(root_master->server, SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                server_clear_status_nolock(root_master->server,
+                                           SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
             }
         }
 
@@ -3403,9 +3405,10 @@ MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon,
                     if (cand_io > master_io ||
                         // If io sequences are identical, the slave with more events processed wins.
                         (cand_io == master_io && (cand_processed > master_processed ||
-                        // Finally, if binlog positions are identical, prefer a slave with
-                        // log_slave_updates.
-                        (cand_processed == master_processed && cand_updates && !master_updates))))
+                                                  // Finally, if binlog positions are identical,
+                                                  // prefer a slave with log_slave_updates.
+                                                  (cand_processed == master_processed &&
+                                                   cand_updates && !master_updates))))
                     {
                         select_this = true;
                     }
@@ -4134,7 +4137,8 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
                 {
                     redirected_slaves.push_back(demotion_target);
                 }
-                int redirects = redirect_slaves(mon, promotion_target, redirectable_slaves, &redirected_slaves);
+                int redirects = redirect_slaves(mon, promotion_target,
+                                                redirectable_slaves, &redirected_slaves);
 
                 bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
                 if (success == false)
@@ -4183,12 +4187,12 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
             if (mxs_mysql_query(demotion_target->con, QUERY_UNDO) == 0)
             {
                 PRINT_MXS_JSON_ERROR(err_out, "read_only disabled on server %s.",
-                    demotion_target->server->unique_name);
+                                     demotion_target->server->unique_name);
             }
             else
             {
                 PRINT_MXS_JSON_ERROR(err_out, "Could not disable read_only on server %s: '%s'.",
-                    demotion_target->server->unique_name, mysql_error(demotion_target->con));
+                                     demotion_target->server->unique_name, mysql_error(demotion_target->con));
             }
         }
     }
