@@ -91,6 +91,15 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
         TABLE_MAP *old = hashtable_fetch(router->table_maps, table_ident);
         TABLE_MAP *map = table_map_alloc(ptr, ev_len, create);
         MXS_ABORT_IF_NULL(map); // Fatal error at this point
+
+        if (old && old->id == map->id && old->version == map->version &&
+            strcmp(old->table, map->table) == 0 &&
+            strcmp(old->database, map->database) == 0)
+        {
+            table_map_free(map);
+            return true;
+        }
+
         char* json_schema = json_new_schema_from_table(map);
 
         if (json_schema)
