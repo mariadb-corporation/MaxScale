@@ -1446,6 +1446,8 @@ void table_map_free(TABLE_MAP *map)
     if (map)
     {
         MXS_FREE(map->column_types);
+        MXS_FREE(map->column_metadata);
+        MXS_FREE(map->null_bitmap);
         MXS_FREE(map->database);
         MXS_FREE(map->table);
         MXS_FREE(map);
