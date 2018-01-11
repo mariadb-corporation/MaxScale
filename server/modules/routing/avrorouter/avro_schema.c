@@ -703,6 +703,21 @@ TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
     return newtable;
 }
 
+int resolve_table_version(const char* db, const char* table)
+{
+    int version = 0;
+    char buf[PATH_MAX + 1];
+
+    do
+    {
+        version++;
+        snprintf(buf, sizeof(buf), "%s.%s.%06d.avsc", db, table, version);
+    }
+    while (access(buf, F_OK) == 0);
+
+    return version;
+}
+
 /**
  * @brief Handle a query event which contains a CREATE TABLE statement
  * @param sql Query SQL
@@ -758,7 +773,7 @@ TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* db)
     {
         if ((rval = MXS_MALLOC(sizeof(TABLE_CREATE))))
         {
-            rval->version = 1;
+            rval->version = resolve_table_version(db, table);
             rval->was_used = false;
             rval->column_names = names;
             rval->column_lengths = lengths;
