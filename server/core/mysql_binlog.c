@@ -259,7 +259,7 @@ size_t datetime_sizes[] =
  */
 static void unpack_datetime(uint8_t *ptr, int length, struct tm *dest)
 {
-    int64_t val = 0;
+    uint64_t val = 0;
     uint32_t second, minute, hour, day, month, year;
 
     if (length == -1)
@@ -717,6 +717,7 @@ size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
     int fpart2 = decimals - fpart1 * dec_dig;
     int ibytes = ipart1 * 4 + dig_bytes[ipart2];
     int fbytes = fpart1 * 4 + dig_bytes[fpart2];
+    int field_size = ibytes + fbytes;
 
     /** Remove the sign bit and store it locally */
     bool negative = (ptr[0] & 0x80) == 0;
@@ -735,7 +736,17 @@ size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
         }
     }
 
-    int64_t val_i = unpack_bytes(ptr, ibytes);
+    int64_t val_i = 0;
+
+    if (ibytes > 8)
+    {
+        int extra = ibytes - 8;
+        ptr += extra;
+        ibytes -= extra;
+        ss_dassert(ibytes == 8);
+    }
+
+    val_i = unpack_bytes(ptr, ibytes);
     int64_t val_f = fbytes ? unpack_bytes(ptr + ibytes, fbytes) : 0;
 
     if (negative)
@@ -746,5 +757,5 @@ size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
 
     *val_float = (double)val_i + ((double)val_f / (pow(10.0, decimals)));
 
-    return ibytes + fbytes;
+    return field_size;
 }
