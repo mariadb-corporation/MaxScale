@@ -118,6 +118,9 @@ static bool cluster_can_be_joined(MYSQL_MONITOR* mon);
 static bool can_replicate_from(MYSQL_MONITOR* mon,
                                MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
                                MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info);
+static bool wait_cluster_stabilization(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master,
+                                       const ServerVector& slaves, int seconds_remaining);
+static string get_connection_errors(const ServerVector& servers);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -3446,10 +3449,12 @@ MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon,
  *
  * @param mon The monitor
  * @param new_master The new master
+ * @param seconds_remaining How much time left
  * @param err_out Json error output
  * @return True if relay log was processed within time limit, or false if time ran out or an error occurred.
  */
-bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
+bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, int seconds_remaining,
+                             json_t** err_out)
 {
     MySqlServerInfo* master_info = get_server_info(mon, new_master);
     time_t begin = time(NULL);
@@ -3458,7 +3463,7 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
     while (master_info->relay_log_events() > 0 &&
            query_ok &&
            io_pos_stable &&
-           difftime(time(NULL), begin) < mon->failover_timeout)
+           difftime(time(NULL), begin) < seconds_remaining)
     {
         MXS_INFO("Relay log of server '%s' not yet empty, waiting to clear %" PRId64 " events.",
                  new_master->server->unique_name, master_info->relay_log_events());
@@ -3609,6 +3614,36 @@ int redirect_slaves(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, const 
 }
 
 /**
+ * Print a redirect error to logs. If err_out exists, generate a combined error message by querying all
+ * the server parameters for connection errors and append these errors to err_out.
+ *
+ * @param demotion_target If not NULL, this is the first server to query.
+ * @param redirectable_slaves Other servers to query for errors.
+ * @param err_out If not null, the error output object.
+ */
+void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers,
+                           json_t** err_out)
+{
+    // Individual server errors have already been printed to the log.
+    // For JSON, gather the errors again.
+    const char MSG[] = "Could not redirect any slaves to the new master.";
+    MXS_ERROR(MSG);
+    if (err_out)
+    {
+        ServerVector failed_slaves;
+        if (first_server)
+        {
+            failed_slaves.push_back(first_server);
+        }
+        failed_slaves.insert(failed_slaves.end(),
+                             servers.begin(), servers.end());
+        string combined_error = get_connection_errors(failed_slaves);
+        *err_out = mxs_json_error_append(*err_out,
+                                         "%s Errors: %s.", MSG, combined_error.c_str());
+    }
+}
+
+/**
  * Performs failover for a simple topology (1 master, N slaves, no intermediate masters).
  *
  * @param mon Server cluster monitor
@@ -3623,23 +3658,61 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
         PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot failover.");
         return false;
     }
+    // Total time limit on how long this operation may take. Checked and modified after significant steps are
+    // completed.
+    int seconds_remaining = mon->failover_timeout;
+    time_t start_time = time(NULL);
     // Step 1: Select new master. Also populate a vector with all slaves not the selected master.
-    ServerVector slaves;
-    MXS_MONITORED_SERVER* new_master = select_new_master(mon, &slaves, err_out);
+    ServerVector redirectable_slaves;
+    MXS_MONITORED_SERVER* new_master = select_new_master(mon, &redirectable_slaves, err_out);
     if (new_master == NULL)
     {
         return false;
     }
+    time_t step1_time = time(NULL);
+    seconds_remaining -= difftime(step1_time, start_time);
+
     bool rval = false;
     // Step 2: Wait until relay log consumed.
-    if (failover_wait_relay_log(mon, new_master, err_out) &&
-        // Step 3: Stop and reset slave, set read-only to 0.
-        promote_new_master(new_master, err_out))
+    if (failover_wait_relay_log(mon, new_master, seconds_remaining, err_out))
     {
-        // Step 4: Redirect slaves.
-        int redirects = redirect_slaves(mon, new_master, slaves);
-        rval = slaves.empty() ? true : redirects > 0;
+        time_t step2_time = time(NULL);
+        int seconds_step2 = difftime(step2_time, step1_time);
+        MXS_DEBUG("Failover: relay log processing took %d seconds.", seconds_step2);
+        seconds_remaining -= seconds_step2;
+
+        // Step 3: Stop and reset slave, set read-only to 0.
+        if (promote_new_master(new_master, err_out))
+        {
+            // Step 4: Redirect slaves.
+            ServerVector redirected_slaves;
+            int redirects = redirect_slaves(mon, new_master, redirectable_slaves, &redirected_slaves);
+            bool success = redirectable_slaves.empty() ? true : redirects > 0;
+            if (success)
+            {
+                time_t step4_time = time(NULL);
+                seconds_remaining -= difftime(step4_time, step2_time);
+
+                // Step 5: Finally, add an event to the new master to advance gtid and wait for the slaves
+                // to receive it. seconds_remaining can be 0 or less at this point. Even in such a case
+                // wait_cluster_stabilization() may succeed if replication is fast enough.
+                if (wait_cluster_stabilization(mon, new_master, redirected_slaves, seconds_remaining))
+                {
+                    rval = true;
+                    time_t step5_time = time(NULL);
+                    int seconds_step5 = difftime(step5_time, step4_time);
+                    seconds_remaining -= seconds_step5;
+                    MXS_DEBUG("Failover: slave replication confirmation took %d seconds with "
+                              "%d seconds to spare.", seconds_step5, seconds_remaining);
+                }
+            }
+            else
+            {
+                print_redirect_errors(NULL, redirectable_slaves, err_out);
+            }
+        }
     }
+
     return rval;
 }
 
@@ -4141,25 +4214,7 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
                                                 redirectable_slaves, &redirected_slaves);
 
                 bool success = redirectable_slaves.empty() ? start_ok : start_ok || redirects > 0;
-                if (success == false)
-                {
-                    rval = false;
-                    // This is a special case. Individual server errors have already been printed to the log.
-                    // For JSON, gather the errors again.
-                    const char MSG[] = "Could not redirect any slaves to the new master.";
-                    MXS_ERROR(MSG);
-                    if (err_out)
-                    {
-                        ServerVector failed_slaves;
-                        failed_slaves.push_back(demotion_target);
-                        failed_slaves.insert(failed_slaves.end(),
-                                             redirectable_slaves.begin(), redirectable_slaves.end());
-                        string combined_error = get_connection_errors(failed_slaves);
-                        *err_out = mxs_json_error_append(*err_out,
-                                                         "%s Errors: %s.", MSG, combined_error.c_str());
-                    }
-                }
-                else
+                if (success)
                 {
                     time_t step5_time = time(NULL);
                     seconds_remaining -= difftime(step5_time, step3_time);
@@ -4176,6 +4231,10 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
                         MXS_DEBUG("Switchover: slave replication confirmation took %d seconds with "
                                   "%d seconds to spare.", seconds_step6, seconds_remaining);
                     }
+                }
+                else
+                {
+                    print_redirect_errors(demotion_target, redirectable_slaves, err_out);
                 }
             }
         }
