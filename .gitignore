@@ -51,3 +51,12 @@ CMakeFiles/*
 */*/*/*/CMakeFiles/*
 Makefile
 /.DS_Store
+
+# Netbeans Project files
+nbproject/
+/build/
+
+# RBCommons
+.reviewboardrc
+# vscode
+.vscode
