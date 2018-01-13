@@ -1228,6 +1228,8 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
         /* Maybe it should depend on whether CA certificate is provided */
         /* final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT; */
     }
+    /** add session track */
+    final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
 
     /* Compression is not currently supported */
     ss_dassert(!compress);
@@ -1459,10 +1461,7 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
 
     mysql_server_capabilities_two = gw_mysql_get_byte2(payload);
 
-    memcpy(capab_ptr, &mysql_server_capabilities_one, 2);
-
-    // get capabilities part 2 (2 bytes)
-    memcpy(&capab_ptr[2], &mysql_server_capabilities_two, 2);
+    conn->server_capabilities = mysql_server_capabilities_one | mysql_server_capabilities_two << 16;
 
     // 2 bytes shift
     payload += 2;
@@ -1767,4 +1766,127 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
     }
 
     mxs_mysql_send_ok(issuer->client_dcb, info.targets.size(), 0, NULL);
+}
+
+/**
+ *  Decode ok packet and get session track info
+ *
+ *  @param buffer               Buffer contain ok packet
+ *  @param server_capabilities  Server capabilities
+ *
+ */
+void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
+{
+    char *trx_info, *var_name, *var_value;
+
+    if (GWBUF_LENGTH(buff) < 9  || !mxs_mysql_is_ok_packet(buff))
+    {
+        return;
+    }
+
+    if (!GWBUF_IS_CONTIGUOUS(buff))
+    {
+        buff = gwbuf_make_contiguous(buff);
+    }
+
+    buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
+
+    uint8_t* ptr = GWBUF_DATA(buff);
+
+    ptr += (MYSQL_COM_OFFSET + 1); // Header and Command type
+
+    mxs_leint_consume(&ptr); // Affected rows
+    mxs_leint_consume(&ptr); // Last insert-id
+
+    uint16_t server_status = gw_mysql_get_byte2(ptr);
+    ptr += 2; // status      
+    ptr += 2; // number of warnings
+
+    if (server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
+    {
+        if (ptr < buff->end) {
+            ptr += mxs_leint_consume(&ptr);  // info
+            if (server_status  & SERVER_SESSION_STATE_CHANGED)
+            {
+                mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
+                while (ptr < buff->end)
+                {
+                    enum_session_state_type type = (enum enum_session_state_type)mxs_leint_consume(&ptr);
+                    switch (type)
+                    {
+                        case SESSION_TRACK_SYSTEM_VARIABLES:
+                        case SESSION_TRACK_SCHEMA:
+                        case SESSION_TRACK_GTIDS:
+                        case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
+                            ptr += mxs_leint_consume(&ptr);
+                            break;
+                        case SESSION_TRACK_STATE_CHANGE:
+                            mxs_leint_consume(&ptr); //lenth 
+                            // system variables like autocommit, schema, charset ... 
+                            var_name = mxs_lestr_consume_dup(&ptr);
+                            var_value = mxs_lestr_consume_dup(&ptr);
+                            gwbuf_add_property(buff, var_name, var_value);
+                            MXS_FREE(var_name);
+                            MXS_FREE(var_value);
+                            break;
+                        case SESSION_TRACK_TRANSACTION_TYPE:
+                            mxs_leint_consume(&ptr); // length
+                            trx_info = mxs_lestr_consume_dup(&ptr);
+                            MXS_INFO("get trx_info:%s", trx_info);
+                            gwbuf_add_property(buff, (char *)"trx_state", trx_info);
+                            MXS_FREE(trx_info);
+                            break;
+                        default:
+                            ptr += mxs_leint_consume(&ptr);
+                            MXS_WARNING("recieved unexpecting session track type:%d", type);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+mysql_tx_state_t parse_trx_state(char *str)
+{
+    int s = TX_EMPTY;
+    assert(str);
+    do
+    {
+        switch (*str)
+        {
+            case 'T':
+                s |= TX_EXPLICIT;
+                break;
+            case 'I':
+                s |= TX_IMPLICIT;
+                break;
+            case 'r':
+                s |= TX_READ_UNSAFE;
+                break;
+            case 'R':
+                s |= TX_READ_TRX;
+                break;
+            case 'w':
+                s |= TX_WRITE_UNSAFE;
+                break;
+            case 'W':
+                s |= TX_WRITE_TRX;
+                break;
+            case 's':
+                s |= TX_STMT_UNSAFE;
+                break;
+            case 'S':
+                s |= TX_RESULT_SET;
+                break;
+            case 'L':
+                s |= TX_LOCKED_TABLES;
+                break;
+            default:
+                break;
+        }
+
+    } while(*(str++) != 0);
+
+    return (mysql_tx_state_t)s;
 }

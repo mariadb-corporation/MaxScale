@@ -977,6 +977,8 @@ gw_read_and_write(DCB *dcb)
                 gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
             }
 
+            mxs_mysql_get_session_track_info(stmt, proto->server_capabilities);
+
             session->service->router->clientReply(session->service->router_instance,
                                                   session->router_session,
                                                   stmt, dcb);

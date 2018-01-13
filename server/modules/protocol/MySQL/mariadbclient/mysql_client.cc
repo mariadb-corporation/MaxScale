@@ -76,7 +76,7 @@ static spec_com_res_t process_special_commands(DCB *client_dcb, GWBUF *read_buff
 static spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_res_t current,
                                         bool is_complete, unsigned int packet_len);
 static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *kt_out, std::string* user);
-
+static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data);
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -411,6 +411,11 @@ int MySQLSendHandshake(DCB* dcb)
  */
 int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 {
+    MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+    if (GWBUF_IS_REPLY_OK(queue) && protocol->session_track_trx_state) 
+    {
+        parse_and_set_trx_state(dcb->session, queue);
+    }
     return dcb_write(dcb, queue);
 }
 
@@ -1266,7 +1271,8 @@ int gw_MySQLListener(DCB *listen_dcb, char *config_bind)
 int gw_MySQLAccept(DCB *listener)
 {
     DCB *client_dcb;
-    MySQLProtocol *protocol;
+    MySQLProtocol *cli_proto;
+    SERV_LISTENER *listener_proto;
 
     CHK_DCB(listener);
 
@@ -1279,6 +1285,9 @@ int gw_MySQLAccept(DCB *listener)
         while ((client_dcb = dcb_accept(listener)) != NULL)
         {
             gw_process_one_new_client(client_dcb);
+            cli_proto = DCB_PROTOCOL(client_dcb, MySQLProtocol);
+            listener_proto = (SERV_LISTENER *)listener->listener;
+            cli_proto->session_track_trx_state = listener_proto->session_track_trx_state;
         } /**< while client_dcb != NULL */
     }
 
@@ -1510,7 +1519,8 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                     }
                 }
 
-                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING))
+                MySQLProtocol *protocol = DCB_PROTOCOL(session->client_dcb, MySQLProtocol);
+                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) && !protocol->session_track_trx_state)
                 {
                     if (session_trx_is_ending(session))
                     {
@@ -1888,4 +1898,42 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
         *user = tmpuser;
         return true;
     }
+}
+
+static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
+{
+    char *autocommit = gwbuf_get_property(data, (char *)"autocommit");
+    if (autocommit)
+    {
+        if (strncasecmp(autocommit, '0', 1) == 0)
+        {
+            session_set_autocommit(ses, true);
+        }
+        if (strncasecmp(autocommit, '1', 1) == 0)
+        {
+            session_set_autocommit(ses, false);
+        }   
+    } 
+    if (gwbuf_get_property(data, (char *)"trx_state")) 
+    {
+        mysql_tx_state_t s = parse_trx_state(trx_state);
+        MXS_DEBUG("parsed tx state:%d", s);
+
+        if (s == TX_EMPTY) 
+        {
+            session_set_trx_state(ses, SESSION_TRX_INACTIVE);
+        }
+        else if(s & TX_READ_TRX)
+        {
+            session_set_trx_state(ses, SESSION_TRX_READ_ONLY);
+        }
+        else if(s & TX_WRITE_TRX)
+        {
+            session_set_trx_state(ses, SESSION_TRX_READ_WRITE);
+        }
+        else if((s & TX_EXPLICIT) |  (s & TX_IMPLICIT))
+        {
+            session_set_trx_state(ses, SESSION_TRX_ACTIVE);
+        }
+    } 
 }
