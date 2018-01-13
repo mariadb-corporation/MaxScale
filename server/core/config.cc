@@ -3370,6 +3370,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
     char *protocol = config_get_value(obj->parameters, CN_PROTOCOL);
     char *socket = config_get_value(obj->parameters, CN_SOCKET);
     char *authenticator = config_get_value(obj->parameters, CN_AUTHENTICATOR);
+    char *authenticator_options = config_get_value(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
     bool session_track_trx_state = config_get_bool(obj->parameters, CN_SESSION_TRACK_TRX_STATE);
     if (raw_service_name && protocol && (socket || port))
     {
