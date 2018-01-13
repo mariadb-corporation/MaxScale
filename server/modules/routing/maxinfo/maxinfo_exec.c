@@ -354,6 +354,13 @@ exec_flush(DCB *dcb, MAXINFO_TREE *tree)
     int i;
     char errmsg[120];
 
+    sprintf(errmsg, "Unsupported flush command '%s'", tree->value);
+    if(!tree)
+    {
+        maxinfo_send_error(dcb, 0, errmsg);
+        MXS_ERROR("%s", errmsg);
+        return;
+    }
     for (i = 0; flush_commands[i].name; i++)
     {
         if (strcasecmp(flush_commands[i].name, tree->value) == 0)
@@ -366,7 +373,6 @@ exec_flush(DCB *dcb, MAXINFO_TREE *tree)
     {
         tree->value[80] = 0;
     }
-    sprintf(errmsg, "Unsupported flush command '%s'", tree->value);
     maxinfo_send_error(dcb, 0, errmsg);
     MXS_ERROR("%s", errmsg);
 }
