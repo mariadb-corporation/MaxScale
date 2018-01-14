@@ -84,7 +84,7 @@ bool service_thread_init();
 SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name,
                                      const char *protocol, const char *address,
                                      unsigned short port, const char *authenticator,
-                                     const char *options, SSL_LISTENER *ssl);
+                                     const char *options, SSL_LISTENER *ssl, bool session_track_trx_state);
 
 void serviceRemoveBackend(SERVICE *service, const SERVER *server);
 

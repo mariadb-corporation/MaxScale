@@ -62,7 +62,7 @@ static RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength);
 SERV_LISTENER *
 listener_alloc(struct service* service, const char* name, const char *protocol,
                const char *address, unsigned short port, const char *authenticator,
-               const char* auth_options, SSL_LISTENER *ssl)
+               const char* auth_options, SSL_LISTENER *ssl, bool session_track_trx_state)
 {
     char *my_address = NULL;
     if (address)
@@ -135,6 +135,7 @@ listener_alloc(struct service* service, const char* name, const char *protocol,
     proto->users = NULL;
     proto->next = NULL;
     proto->auth_instance = auth_instance;
+    proto->session_track_trx_state = session_track_trx_state;
     spinlock_init(&proto->lock);
 
     return proto;
