@@ -199,7 +199,6 @@ typedef enum
 } DCB_USAGE;
 
 /* A few useful macros */
-#define DCB_SERVICE(x, type)            (type *)((x)->service)
 #define DCB_SESSION(x)                  (x)->session
 #define DCB_PROTOCOL(x, type)           (type *)((x)->protocol)
 #define DCB_WRITEQLEN(x)                (x)->writeqlen

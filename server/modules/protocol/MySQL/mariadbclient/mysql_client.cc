@@ -410,10 +410,8 @@ int MySQLSendHandshake(DCB* dcb)
  * @param queue Queue of buffers to write
  */
 int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
-{
-    MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
-    SERVICE *service = DCB_SERVICE(dcb, SERVICE);
-    if (GWBUF_IS_REPLY_OK(queue) && service->session_track_trx_state) 
+{    
+    if (GWBUF_IS_REPLY_OK(queue) && dcb->service->session_track_trx_state) 
     {
         parse_and_set_trx_state(dcb->session, queue);
     }
@@ -1514,9 +1512,8 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                         goto return_rc;
                     }
                 }
-
-                SERVICE *service = DCB_SERVICE(session->client_dcb, SERVICE);
-                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) && service->session_track_trx_state)
+                SERVICE *service = session->client_dcb->service;
+                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) && !service->session_track_trx_state)
                 {
                     if (session_trx_is_ending(session))
                     {
