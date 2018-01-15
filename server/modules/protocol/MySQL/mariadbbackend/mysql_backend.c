@@ -755,6 +755,9 @@ gw_read_and_write(DCB *dcb)
     bool result_collected = false;
     MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
 
+    /** Get sesion track info from ok packet and save it to gwbuf properties */
+    mxs_mysql_get_session_track_info(read_buffer, proto->server_capabilities);
+
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) ||
         rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
         proto->ignore_replies != 0)
@@ -976,8 +979,6 @@ gw_read_and_write(DCB *dcb)
                 // Mark that this is a buffer containing a collected result
                 gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
             }
-
-            mxs_mysql_get_session_track_info(stmt, proto->server_capabilities);
 
             session->service->router->clientReply(session->service->router_instance,
                                                   session->router_session,

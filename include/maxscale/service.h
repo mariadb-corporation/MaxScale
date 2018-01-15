@@ -158,6 +158,7 @@ typedef struct service
     bool log_auth_warnings;            /**< Log authentication failures and warnings */
     uint64_t capabilities;             /**< The capabilities of the service, @see enum routing_capability */
     int max_retry_interval;            /**< Maximum retry interval */
+    bool session_track_trx_state;      /**< Get transaction state via session track mechanism */
 } SERVICE;
 
 typedef enum count_spec_t

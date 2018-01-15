@@ -795,7 +795,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,
                              const char *ssl_cert, const char *ssl_ca,
-                             const char *ssl_version, const char *ssl_depth, bool session_track_trx_state)
+                             const char *ssl_version, const char *ssl_depth)
 {
 
     if (addr == NULL || strcasecmp(addr, CN_DEFAULT) == 0)
@@ -842,7 +842,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
         {
             const char *print_addr = addr ? addr : "::";
             SERV_LISTENER *listener = serviceCreateListener(service, name, proto, addr,
-                                                            u_port, auth, auth_opt, ssl, session_track_trx_state);
+                                                            u_port, auth, auth_opt, ssl);
 
             if (listener && listener_serialize(listener))
             {
@@ -1961,12 +1961,11 @@ bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
         const char* ssl_ca_cert = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
         const char* ssl_version = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
         const char* ssl_cert_verify_depth = get_string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
-        bool session_track_trx_state = is_bool_or_null(json, MXS_JSON_PTR_PARAM_SESSION_TRACK_TRX_STATE);
 
         rval = runtime_create_listener(service, id, address, port.c_str(), protocol,
                                        authenticator, authenticator_options,
                                        ssl_key, ssl_cert, ssl_ca_cert, ssl_version,
-                                       ssl_cert_verify_depth, session_track_trx_state);
+                                       ssl_cert_verify_depth);
     }
 
     return rval;

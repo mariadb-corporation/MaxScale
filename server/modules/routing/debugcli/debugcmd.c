@@ -1169,7 +1169,7 @@ static void createListener(DCB *dcb, SERVICE *service, char *name, char *address
 {
     if (runtime_create_listener(service, name, address, port, protocol,
                                 authenticator, authenticator_options,
-                                key, cert, ca, version, depth, false))
+                                key, cert, ca, version, depth))
     {
         dcb_printf(dcb, "Listener '%s' created\n", name);
     }

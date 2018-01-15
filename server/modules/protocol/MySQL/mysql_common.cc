@@ -1778,33 +1778,28 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
 void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
 {
     char *trx_info, *var_name, *var_value;
-
-    if (GWBUF_LENGTH(buff) < 9  || !mxs_mysql_is_ok_packet(buff))
+    size_t len = GWBUF_LENGTH(buff);
+    uint8_t local_buf[len];
+    uint8_t *ptr = local_buf;
+    
+    if (len < MYSQL_OK_PACKET_MIN_LEN || !mxs_mysql_is_ok_packet(buff))
     {
         return;
     }
 
-    if (!GWBUF_IS_CONTIGUOUS(buff))
-    {
-        buff = gwbuf_make_contiguous(buff);
-    }
-
+    gwbuf_copy_data(buff, 0, len, local_buf);
     buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
-
-    uint8_t* ptr = GWBUF_DATA(buff);
-
-    ptr += (MYSQL_COM_OFFSET + 1); // Header and Command type
-
-    mxs_leint_consume(&ptr); // Affected rows
-    mxs_leint_consume(&ptr); // Last insert-id
-
+    ptr += (MYSQL_HEADER_LEN + 1); // Header and Command type
+    mxs_leint_consume(&ptr);       // Affected rows
+    mxs_leint_consume(&ptr);       // Last insert-id
     uint16_t server_status = gw_mysql_get_byte2(ptr);
     ptr += 2; // status      
     ptr += 2; // number of warnings
 
     if (server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
     {
-        if (ptr < buff->end) {
+        if (ptr < buff->end) 
+        {
             ptr += mxs_leint_consume(&ptr);  // info
             if (server_status  & SERVER_SESSION_STATE_CHANGED)
             {
@@ -1832,7 +1827,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
                         case SESSION_TRACK_TRANSACTION_TYPE:
                             mxs_leint_consume(&ptr); // length
                             trx_info = mxs_lestr_consume_dup(&ptr);
-                            MXS_INFO("get trx_info:%s", trx_info);
+                            MXS_DEBUG("get trx_info:%s", trx_info);
                             gwbuf_add_property(buff, (char *)"trx_state", trx_info);
                             MXS_FREE(trx_info);
                             break;
@@ -1847,10 +1842,16 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
     }
 }
 
-mysql_tx_state_t parse_trx_state(char *str)
+/***
+ * As described in https://dev.mysql.com/worklog/task/?id=6631
+ * When session transation state changed
+ * SESSION_TRACK_TRANSACTION_TYPE (or SESSION_TRACK_TRANSACTION_STATE in MySQL) will
+ * return an 8 bytes string to indicate the transaction state details
+ * */
+mysql_tx_state_t parse_trx_state(const char *str)
 {
     int s = TX_EMPTY;
-    assert(str);
+    ss_dassert(str);
     do
     {
         switch (*str)

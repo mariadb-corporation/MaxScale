@@ -755,10 +755,10 @@ static void service_add_listener(SERVICE* service, SERV_LISTENER* proto)
  */
 SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const char *protocol,
                                      const char *address, unsigned short port, const char *authenticator,
-                                     const char *options, SSL_LISTENER *ssl, bool session_track_trx_state)
+                                     const char *options, SSL_LISTENER *ssl)
 {
     SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
-                                          port, authenticator, options, ssl, session_track_trx_state);
+                                          port, authenticator, options, ssl);
 
     if (proto)
     {

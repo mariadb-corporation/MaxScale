@@ -412,7 +412,8 @@ int MySQLSendHandshake(DCB* dcb)
 int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 {
     MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
-    if (GWBUF_IS_REPLY_OK(queue) && protocol->session_track_trx_state) 
+    SERVICE *service = DCB_SERVICE(dcb, SERVICE);
+    if (GWBUF_IS_REPLY_OK(queue) && service->session_track_trx_state) 
     {
         parse_and_set_trx_state(dcb->session, queue);
     }
@@ -1271,8 +1272,6 @@ int gw_MySQLListener(DCB *listen_dcb, char *config_bind)
 int gw_MySQLAccept(DCB *listener)
 {
     DCB *client_dcb;
-    MySQLProtocol *cli_proto;
-    SERV_LISTENER *listener_proto;
 
     CHK_DCB(listener);
 
@@ -1285,9 +1284,6 @@ int gw_MySQLAccept(DCB *listener)
         while ((client_dcb = dcb_accept(listener)) != NULL)
         {
             gw_process_one_new_client(client_dcb);
-            cli_proto = DCB_PROTOCOL(client_dcb, MySQLProtocol);
-            listener_proto = (SERV_LISTENER *)listener->listener;
-            cli_proto->session_track_trx_state = listener_proto->session_track_trx_state;
         } /**< while client_dcb != NULL */
     }
 
@@ -1519,8 +1515,8 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                     }
                 }
 
-                MySQLProtocol *protocol = DCB_PROTOCOL(session->client_dcb, MySQLProtocol);
-                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) && !protocol->session_track_trx_state)
+                SERVICE *service = DCB_SERVICE(session->client_dcb, SERVICE);
+                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING) && service->session_track_trx_state)
                 {
                     if (session_trx_is_ending(session))
                     {
@@ -1900,9 +1896,23 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
     }
 }
 
+/*
+* Mapping two session tracker's info to mxs_session_trx_state_t
+* SESSION_TRACK_STATE_CHANGE:
+*   When session variable autocommit is changed, it will give a latest value {0|1}
+* SESSION_TRACK_TRANSACTION_TYPE:
+*   TX_EMPTY                  => SESSION_TRX_INACTIVE
+*   TX_WRITE_TRX              => SESSION_TRX_READ_WRITE
+*   TX_READ_TRX               => SESSION_TRX_READ_ONLY
+*   TX_EXPLICIT | TX_IMPLICIT => SESSION_TRX_ACTIVE
+* refs:
+*  1. https://dev.mysql.com/worklog/task/?id=6885
+*  2. https://dev.mysql.com/worklog/task/?id=6631
+*/ 
 static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
 {
     char *autocommit = gwbuf_get_property(data, (char *)"autocommit");
+    
     if (autocommit)
     {
         if (strncasecmp(autocommit, "0", 1) == 0)
@@ -1924,15 +1934,15 @@ static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
         {
             session_set_trx_state(ses, SESSION_TRX_INACTIVE);
         }
-        else if(s & TX_READ_TRX)
+        else if (s & TX_READ_TRX)
         {
             session_set_trx_state(ses, SESSION_TRX_READ_ONLY);
         }
-        else if(s & TX_WRITE_TRX)
+        else if (s & TX_WRITE_TRX)
         {
             session_set_trx_state(ses, SESSION_TRX_READ_WRITE);
         }
-        else if((s & TX_EXPLICIT) |  (s & TX_IMPLICIT))
+        else if ((s & TX_EXPLICIT) ||  (s & TX_IMPLICIT))
         {
             session_set_trx_state(ses, SESSION_TRX_ACTIVE);
         }

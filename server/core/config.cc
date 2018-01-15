@@ -147,7 +147,7 @@ const char CN_USER[]                          = "user";
 const char CN_USERS[]                         = "users";
 const char CN_VERSION_STRING[]                = "version_string";
 const char CN_WEIGHTBY[]                      = "weightby";
-const char CN_SESSION_TRACK_TRX_STATE[]    = "session_track_trx_state";
+const char CN_SESSION_TRACK_TRX_STATE[]       = "session_track_trx_state";
 
 typedef struct duplicate_context
 {
@@ -234,7 +234,6 @@ const char *config_listener_params[] =
     CN_SSL_VERSION,
     CN_SSL_CERT_VERIFY_DEPTH,
     CN_SSL_VERIFY_PEER_CERTIFICATE,
-    CN_SESSION_TRACK_TRX_STATE,
     NULL
 };
 
@@ -2888,7 +2887,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
         serviceSetVersionString(service, gateway.version_string);
     }
 
-
+    service->session_track_trx_state = config_get_bool(obj->parameters, CN_SESSION_TRACK_TRX_STATE);
     /** Store the configuration parameters for the service */
     const MXS_MODULE *mod = get_module(router, MODULE_ROUTER);
 
@@ -3371,7 +3370,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
     char *socket = config_get_value(obj->parameters, CN_SOCKET);
     char *authenticator = config_get_value(obj->parameters, CN_AUTHENTICATOR);
     char *authenticator_options = config_get_value(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
-    bool session_track_trx_state = config_get_bool(obj->parameters, CN_SESSION_TRACK_TRX_STATE);
+
     if (raw_service_name && protocol && (socket || port))
     {
         char service_name[strlen(raw_service_name) + 1];
@@ -3393,7 +3392,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
                 else
                 {
                     serviceCreateListener(service, obj->object, protocol, socket, 0,
-                                          authenticator, authenticator_options, ssl_info, session_track_trx_state);
+                                          authenticator, authenticator_options, ssl_info);
                 }
             }
 
@@ -3410,7 +3409,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
                 else
                 {
                     serviceCreateListener(service, obj->object, protocol, address, atoi(port),
-                                          authenticator, authenticator_options, ssl_info, session_track_trx_state);
+                                          authenticator, authenticator_options, ssl_info);
                 }
             }
 
