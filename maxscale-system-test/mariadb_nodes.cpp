@@ -113,7 +113,7 @@ int Mariadb_nodes::read_env()
 
             //reading stop_db_command
             sprintf(env_name, "%s_%03d_stop_db_command", prefix, i);
-            env = getenv(env_name); if (env != NULL) {sprintf(stop_db_command[i], "%s", env);} else {sprintf(start_db_command[i], "%s", "service mysql stop");}
+            env = getenv(env_name); if (env != NULL) {sprintf(stop_db_command[i], "%s", env);} else {sprintf(stop_db_command[i], "%s", "service mysql stop");}
 
             sprintf(env_name, "%s_%03d_kill_vm_command", prefix, i);
             env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", kill_vm_command[i]); } else {sprintf(kill_vm_command[i], "exit 1"); }

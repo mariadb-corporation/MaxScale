@@ -70,7 +70,7 @@ do
 			else
 				${mdbci_dir}/mdbci ssh --command 'echo \"/usr/sbin/mysqld \$* 2> stderr.log > stdout.log &\" > mysql_start.sh; echo \"sleep 20\" >> mysql_start.sh; echo \"disown\" >> mysql_start.sh; chmod a+x mysql_start.sh' $config_name/node_$num --silent
         	                eval 'export $start_cmd_var="/home/$au/mysql_start.sh "'
-				eval 'export $start_cmd_var="killall mysqld "'
+				eval 'export $stop_cmd_var="killall mysqld "'
 			fi
 		else
 			eval 'export $start_cmd_var="$mysql_exe start "'
