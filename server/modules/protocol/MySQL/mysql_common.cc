@@ -1854,6 +1854,41 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
  * When session transation state changed
  * SESSION_TRACK_TRANSACTION_TYPE (or SESSION_TRACK_TRANSACTION_STATE in MySQL) will
  * return an 8 bytes string to indicate the transaction state details
+ * Place 1: Transaction.
+ * T  explicitly started transaction ongoing
+ * I  implicitly started transaction (@autocommit=0) ongoing
+ * _  no active transaction
+ *
+ * Place 2: unsafe read
+ * r  one/several non-transactional tables were read
+ *    in the context of the current transaction
+ * _  no non-transactional tables were read within
+ *    the current transaction so far
+ * 
+ * Place 3: transactional read
+ * R  one/several transactional tables were read
+ * _  no transactional tables were read yet
+ *
+ * Place 4: unsafe write
+ * w  one/several non-transactional tables were written
+ * _  no non-transactional tables were written yet
+ *
+ * Place 5: transactional write
+ * W  one/several transactional tables were written to
+ * _  no transactional tables were written to yet
+ * 
+ * Place 6: unsafe statements
+ * s  one/several unsafe statements (such as UUID())
+ *    were used.
+ * _  no such statements were used yet.
+ *
+ * Place 7: result-set
+ * S  a result set was sent to the client
+ * _  statement had no result-set
+ * 
+ * Place 8: LOCKed TABLES
+ * L  tables were explicitly locked using LOCK TABLES
+ * _  LOCK TABLES is not active in this session
  * */
 mysql_tx_state_t parse_trx_state(const char *str)
 {
