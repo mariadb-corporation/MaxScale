@@ -1894,17 +1894,18 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
 }
 
 /*
-* Mapping two session tracker's info to mxs_session_trx_state_t
+* Mapping three session tracker's info to mxs_session_trx_state_t
 * SESSION_TRACK_STATE_CHANGE:
-*   When session variable autocommit is changed, it will give a latest value {0|1}
+*   Get lasted autocommit value;
+*   https://dev.mysql.com/worklog/task/?id=6885
 * SESSION_TRACK_TRANSACTION_TYPE:
+*   Get transaction boundaries 
 *   TX_EMPTY                  => SESSION_TRX_INACTIVE
-*   TX_WRITE_TRX              => SESSION_TRX_READ_WRITE
-*   TX_READ_TRX               => SESSION_TRX_READ_ONLY
 *   TX_EXPLICIT | TX_IMPLICIT => SESSION_TRX_ACTIVE
-* refs:
-*  1. https://dev.mysql.com/worklog/task/?id=6885
-*  2. https://dev.mysql.com/worklog/task/?id=6631
+*   https://dev.mysql.com/worklog/task/?id=6885
+* SESSION_TRACK_TRANSACTION_CHARACTERISTICS
+*   Get trx characteristics such as read only, read write, snapshot ...
+*   
 */ 
 static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
 {
@@ -1912,11 +1913,12 @@ static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
     
     if (autocommit)
     {
-        if (strncasecmp(autocommit, "0", 1) == 0)
+        MXS_DEBUG("autocommit:%s", autocommit);
+        if (strncasecmp(autocommit, "ON", 2) == 0)
         {
             session_set_autocommit(ses, true);
         }
-        if (strncasecmp(autocommit, "1", 1) == 0)
+        if (strncasecmp(autocommit, "OFF", 3) == 0)
         {
             session_set_autocommit(ses, false);
         }   
@@ -1925,23 +1927,29 @@ static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
     if (trx_state) 
     {
         mysql_tx_state_t s = parse_trx_state(trx_state);
-        MXS_DEBUG("parsed tx state:%d", s);
 
         if (s == TX_EMPTY) 
         {
             session_set_trx_state(ses, SESSION_TRX_INACTIVE);
         }
-        else if (s & TX_READ_TRX)
-        {
-            session_set_trx_state(ses, SESSION_TRX_READ_ONLY);
-        }
-        else if (s & TX_WRITE_TRX)
-        {
-            session_set_trx_state(ses, SESSION_TRX_READ_WRITE);
-        }
         else if ((s & TX_EXPLICIT) ||  (s & TX_IMPLICIT))
         {
             session_set_trx_state(ses, SESSION_TRX_ACTIVE);
         }
-    } 
+    }
+    char *trx_characteristics = gwbuf_get_property(data, (char *)"trx_characteristics");
+    if (trx_characteristics)
+    {
+        if (strncmp(trx_characteristics, "START TRANSACTION READ ONLY;", 28) == 0)
+        {
+            session_set_trx_state(ses, SESSION_TRX_READ_ONLY);
+        }
+
+        if (strncmp(trx_characteristics, "START TRANSACTION READ WRITE;", 29) == 0)
+        {
+            session_set_trx_state(ses, SESSION_TRX_READ_WRITE);
+        }
+    }
+    MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->trx_state));
+    MXS_DEBUG("autcommit:%s", session_is_autocommit(ses)?"ON":"OFF");
 }

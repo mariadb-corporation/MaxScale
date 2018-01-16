@@ -1777,6 +1777,7 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
  */
 void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
 {
+    ss_dassert(buff);
     char *trx_info, *var_name, *var_value;
     size_t len = GWBUF_LENGTH(buff);
     uint8_t local_buf[len];
@@ -1809,18 +1810,24 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
                     enum_session_state_type type = (enum enum_session_state_type)mxs_leint_consume(&ptr);
                     switch (type)
                     {
-                        case SESSION_TRACK_SYSTEM_VARIABLES:
+                        case SESSION_TRACK_STATE_CHANGE:
                         case SESSION_TRACK_SCHEMA:
                         case SESSION_TRACK_GTIDS:
-                        case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
                             ptr += mxs_leint_consume(&ptr);
                             break;
-                        case SESSION_TRACK_STATE_CHANGE:
+                        case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
+                            mxs_leint_consume(&ptr); //length
+                            var_value = mxs_lestr_consume_dup(&ptr);
+                            gwbuf_add_property(buff, (char *)"trx_characteristics", var_value);
+                            MXS_FREE(var_value);
+                            break;
+                        case SESSION_TRACK_SYSTEM_VARIABLES:
                             mxs_leint_consume(&ptr); //lenth 
                             // system variables like autocommit, schema, charset ... 
                             var_name = mxs_lestr_consume_dup(&ptr);
                             var_value = mxs_lestr_consume_dup(&ptr);
                             gwbuf_add_property(buff, var_name, var_value);
+                            MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
                             MXS_FREE(var_name);
                             MXS_FREE(var_value);
                             break;

@@ -214,6 +214,7 @@ const char *config_service_params[] =
     CN_WEIGHTBY,
     CN_LOG_AUTH_WARNINGS,
     CN_RETRY_ON_FAILURE,
+    CN_SESSION_TRACK_TRX_STATE,
     NULL
 };
 
