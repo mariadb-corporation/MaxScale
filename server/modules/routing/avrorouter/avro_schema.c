@@ -311,10 +311,6 @@ void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map)
             }
         }
     }
-    else
-    {
-        MXS_NOTICE("Schema version %d already exists: %s", map->version, filepath);
-    }
 }
 
 /**
@@ -421,28 +417,33 @@ static bool get_database_name(const char* sql, char* dest)
     if (ptr)
     {
         ptr--;
-        while (*ptr == '`' || isspace(*ptr))
+        while (ptr >= sql && (*ptr == '`' || isspace(*ptr)))
         {
             ptr--;
         }
 
-        while (*ptr != '`' && *ptr != '.' && !isspace(*ptr))
+        while (ptr >= sql && *ptr != '`' && *ptr != '.' && !isspace(*ptr))
         {
             ptr--;
         }
 
-        if (*ptr == '.')
+        while (ptr >= sql && (*ptr == '`' || isspace(*ptr)))
+        {
+            ptr--;
+        }
+
+        if (ptr >= sql && *ptr == '.')
         {
             // The query defines an explicit database
 
-            while (*ptr == '`' || *ptr == '.' || isspace(*ptr))
+            while (ptr >= sql && (*ptr == '`' || *ptr == '.' || isspace(*ptr)))
             {
                 ptr--;
             }
 
             const char* end = ptr + 1;
 
-            while (*ptr != '`' && *ptr != '.' && !isspace(*ptr))
+            while (ptr >= sql && *ptr != '`' && *ptr != '.' && !isspace(*ptr))
             {
                 ptr--;
             }
@@ -702,6 +703,21 @@ TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
     return newtable;
 }
 
+int resolve_table_version(const char* db, const char* table)
+{
+    int version = 0;
+    char buf[PATH_MAX + 1];
+
+    do
+    {
+        version++;
+        snprintf(buf, sizeof(buf), "%s.%s.%06d.avsc", db, table, version);
+    }
+    while (access(buf, F_OK) == 0);
+
+    return version;
+}
+
 /**
  * @brief Handle a query event which contains a CREATE TABLE statement
  * @param sql Query SQL
@@ -757,7 +773,7 @@ TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* db)
     {
         if ((rval = MXS_MALLOC(sizeof(TABLE_CREATE))))
         {
-            rval->version = 1;
+            rval->version = resolve_table_version(db, table);
             rval->was_used = false;
             rval->column_names = names;
             rval->column_lengths = lengths;
@@ -1139,7 +1155,7 @@ void read_alter_identifier(const char *sql, const char *end, char *dest, int siz
     int len = 0;
     const char *tok = get_tok(sql, &len, end); // ALTER
     if (tok && (tok = get_tok(tok + len, &len, end)) // TABLE
-                && (tok = get_tok(tok + len, &len, end))) // Table identifier
+        && (tok = get_tok(tok + len, &len, end))) // Table identifier
     {
         snprintf(dest, size, "%.*s", len, tok);
         remove_backticks(dest);
@@ -1445,6 +1461,8 @@ void table_map_free(TABLE_MAP *map)
     if (map)
     {
         MXS_FREE(map->column_types);
+        MXS_FREE(map->column_metadata);
+        MXS_FREE(map->null_bitmap);
         MXS_FREE(map->database);
         MXS_FREE(map->table);
         MXS_FREE(map);
