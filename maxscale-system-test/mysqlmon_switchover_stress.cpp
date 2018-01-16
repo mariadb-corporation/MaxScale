@@ -33,6 +33,9 @@ const time_t SWITCHOVER_DURATION = 5;
 // How long should we keep in running.
 const time_t TEST_DURATION = 90;
 
+const char* CLIENT_USER = "mysqlmon_switchover_stress";
+const char* CLIENT_PASSWORD = "mysqlmon_switchover_stress";
+
 #define CMESSAGE(msg) \
     do {\
         stringstream ss;\
@@ -478,11 +481,17 @@ void check_server_statuses(TestConnections& test)
 
 int get_next_master_id(TestConnections& test, int current_id)
 {
-    int next_id;
+    int next_id = current_id;
 
     do
     {
-        next_id = (current_id + 1) % 5;
+        next_id = (next_id + 1) % 5;
+        if (next_id == 0)
+        {
+            next_id = 1;
+        }
+        ss_dassert(next_id >= 1);
+        ss_dassert(next_id <= 4);
         string server("server");
         server += std::to_string(next_id);
         StringSet states = test.get_server_status(server.c_str());
@@ -496,6 +505,58 @@ int get_next_master_id(TestConnections& test, int current_id)
     return next_id != current_id ? next_id : -1;
 }
 
+void create_client_user(TestConnections& test)
+{
+    string stmt;
+
+    // Drop user
+    stmt = "DROP USER IF EXISTS ";
+    stmt += "'";
+    stmt += CLIENT_USER;
+    stmt += "'@'%%'";
+    test.try_query(test.maxscales->conn_rwsplit[0], stmt.c_str());
+
+    // Create user
+    stmt = "CREATE USER ";
+    stmt += "'";
+    stmt += CLIENT_USER;
+    stmt += "'@'%%'";
+    stmt += " IDENTIFIED BY ";
+    stmt += "'";
+    stmt += CLIENT_PASSWORD;
+    stmt += "'";
+    test.try_query(test.maxscales->conn_rwsplit[0], stmt.c_str());
+
+    // Grant access
+    stmt = "GRANT SELECT, INSERT, UPDATE ON *.* TO ";
+    stmt += "'";
+    stmt += CLIENT_USER;
+    stmt += "'@'%%'";
+    test.try_query(test.maxscales->conn_rwsplit[0], stmt.c_str());
+
+    test.try_query(test.maxscales->conn_rwsplit[0], "FLUSH PRIVILEGES");
+}
+
+void switchover(TestConnections& test, int next_master_id, int current_master_id)
+{
+    cout << "\nTrying to do manual switchover from server" << current_master_id
+         << " to server" << next_master_id << endl;
+
+    string command("call command mysqlmon switchover MySQL-Monitor ");
+    command += "server";
+    command += std::to_string(next_master_id);
+    command += " ";
+    command += "server";
+    command += std::to_string(current_master_id);
+
+    cout << "\nCommand: " << command << endl;
+
+    test.maxscales->execute_maxadmin_command_print(0, (char*)command.c_str());
+
+    sleep(1);
+    list_servers(test);
+}
+
 void run(TestConnections& test)
 {
     int n_threads = Client::DEFAULT_N_CLIENTS;
@@ -503,14 +564,16 @@ void run(TestConnections& test)
     cout << "\nConnecting to MaxScale." << endl;
     test.maxscales->connect_maxscale();
 
+    create_client_user(test);
+
     Client::init(test, Client::DEFAULT_N_CLIENTS, Client::DEFAULT_N_ROWS);
 
     if (test.ok())
     {
         const char* zHost = test.maxscales->IP[0];
         int port = test.maxscales->rwsplit_port[0];
-        const char* zUser = test.maxscales->user_name;
-        const char* zPassword = test.maxscales->password;
+        const char* zUser = CLIENT_USER;
+        const char* zPassword = CLIENT_PASSWORD;
 
         cout << "Connecting to " << zHost << ":" << port << " as " << zUser << ":" << zPassword << endl;
         cout << "Starting clients." << endl;
@@ -530,26 +593,10 @@ void run(TestConnections& test)
 
             if (next_master_id != -1)
             {
-                cout << "\nTrying to do manual switchover from server" << current_master_id
-                     << " to server" << next_master_id << endl;
-
-                string command("call command mysqlmon switchover MySQL-Monitor ");
-                command += "server";
-                command += std::to_string(next_master_id);
-                command += " ";
-                command += "server";
-                command += std::to_string(current_master_id);
-
-                cout << "\nCommand: " << command << endl;
-
-                test.maxscales->execute_maxadmin_command_print(0, (char*)command.c_str());
-
-                sleep(1);
-                list_servers(test);
+                switchover(test, next_master_id, current_master_id);
+                current_master_id = next_master_id;
 
                 sleep(SWITCHOVER_DURATION);
-
-                current_master_id = next_master_id;
 
                 int master_id = get_master_server_id(test);
 
@@ -574,7 +621,11 @@ void run(TestConnections& test)
         cout << "\nStopping clients.\n" << flush;
         Client::stop();
 
-        sleep(SWITCHOVER_DURATION);
+        // Ensure master is at server1. Shortens startup time for next test.
+        if (current_master_id != 1)
+        {
+            switchover(test, 1, current_master_id);
+        }
 
         test.repl->close_connections();
         test.repl->connect();
