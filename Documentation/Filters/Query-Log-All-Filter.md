@@ -146,6 +146,27 @@ false.
 append=true
 ```
 
+### `separator`
+
+Default value is "," (a comma). Defines the separator string between elements of
+a log entry. The value should be enclosed in quotes.
+
+```
+separator=" | "
+```
+
+### `newline_replacement`
+
+Default value is " " (one space). SQL-queries may include line breaks, which, if
+printed directly to the log, may break automatic parsing. This parameter defines
+what should be written in the place of a newline sequence (\r, \n or \r\n). If
+this is set as the empty string, then newlines are not replaced and printed as
+is to the output. The value should be enclosed in quotes.
+
+```
+newline_replacement=" NL "
+```
+
 ## Examples
 
 ### Example 1 - Query without primary key
