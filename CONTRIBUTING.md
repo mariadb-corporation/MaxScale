@@ -17,9 +17,8 @@ Without this comment, the pull request will not be accepted.
 ## Practicalities
 
 * Please ensure that your pull-request has been made against the correct
-  branch. For bug fixes or minor improvements, use the default branch and for
-  new code, use the `develop` branch (e.g. for a patch to 2.1.x, use the `2.1`
-  branch).
+  branch. For bug fixes or minor improvements, use the default branch (at the
+  time of writing `2.1`).  For new features, use the `develop` branch.
 
 * Please ensure that your code follows our [Coding Style](https://github.com/mariadb-corporation/MaxScale/wiki/Coding-Style-and-Guidelines).
   All new code should be formatted with the
