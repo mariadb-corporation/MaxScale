@@ -280,6 +280,7 @@ RegexHintFilter::create(const char* name, char** options, MXS_CONFIG_PARAMETER* 
     }
     else if (legacy_mode && !mapping.size())
     {
+        MXS_WARNING("Use of legacy parameters 'match' and 'server' is deprecated.");
         /* Using legacy mode and no indexed parameters found. Add the legacy parameters
          * to the mapping. */
         if (!regex_compile_and_add(pcre_ops, true, match_val_legacy, server_val_legacy,

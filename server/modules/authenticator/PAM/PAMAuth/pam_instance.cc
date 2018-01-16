@@ -180,7 +180,7 @@ int PamInstance::load_users(SERVICE* service)
         "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'pam' "
         "ORDER BY user";
 #if defined(SS_DEBUG)
-    const int PAM_USERS_QUERY_NUM_FIELDS  = 5;
+    const unsigned int PAM_USERS_QUERY_NUM_FIELDS  = 5;
 #endif
 
     char *user, *pw;

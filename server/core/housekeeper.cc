@@ -21,6 +21,7 @@
 #include <maxscale/semaphore.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/thread.h>
+#include <maxscale/query_classifier.h>
 #include <maxscale/json_api.h>
 
 /**
@@ -52,20 +53,30 @@ static THREAD hk_thr_handle;
 
 static void hkthread(void *);
 
-bool hkinit()
+struct hkinit_result
 {
-    bool inited = false;
+    sem_t sem;
+    bool ok;
+};
 
-    if (thread_start(&hk_thr_handle, hkthread, NULL, 0) != NULL)
+bool
+hkinit()
+{
+    struct hkinit_result res;
+    sem_init(&res.sem, 0, 0);
+    res.ok = false;
+
+    if (thread_start(&hk_thr_handle, hkthread, &res, 0) != NULL)
     {
-        inited = true;
+        sem_wait(&res.sem);
     }
     else
     {
         MXS_ALERT("Failed to start housekeeper thread.");
     }
 
-    return inited;
+    sem_destroy(&res.sem);
+    return res.ok;
 }
 
 int hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
@@ -214,6 +225,16 @@ void hkthread(void *data)
     void *taskdata;
     int i;
 
+    struct hkinit_result* res = (struct hkinit_result*)data;
+    res->ok = qc_thread_init(QC_INIT_BOTH);
+
+    if (!res->ok)
+    {
+        MXS_ERROR("Could not initialize housekeeper thread.");
+    }
+
+    sem_post(&res->sem);
+
     while (!do_shutdown)
     {
         for (i = 0; i < 10; i++)
@@ -253,6 +274,7 @@ void hkthread(void *data)
         spinlock_release(&tasklock);
     }
 
+    qc_thread_end(QC_INIT_BOTH);
     MXS_NOTICE("Housekeeper shutting down.");
 }
 

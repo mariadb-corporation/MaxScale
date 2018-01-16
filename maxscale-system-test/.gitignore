@@ -122,6 +122,7 @@ mysqlmon_failover_manual2_2
 mysqlmon_failover_rejoin_old_slave
 mysqlmon_failover_rolling_master
 mysqlmon_failover_rolling_restart_slaves
+mysqlmon_failover_stress
 mysqlmon_switchover_bad_master
 mysqlmon_switchover
 mxs1045

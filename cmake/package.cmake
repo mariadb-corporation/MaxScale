@@ -58,19 +58,25 @@ find_program(DEBBUILD dpkg-buildpackage)
 if(TARBALL)
   include(cmake/package_tgz.cmake)
 
-elseif (NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) OR NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ))
-  if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
+elseif(${RPMBUILD} MATCHES "NOTFOUND" AND ${DEBBUILD} MATCHES "NOTFOUND")
+  message(FATAL_ERROR "Could not automatically resolve the package generator and no generators "
+    "defined on the command line. Please install distribution specific packaging software or "
+    "define -DTARBALL=Y to build tar.gz packages.")
+else()
+
+  if(${DEBBUILD} MATCHES "NOTFOUND")
+    # No DEB packaging tools found, must be an RPM system
     include(cmake/package_rpm.cmake)
-  endif()
-  if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
+  else()
+    # We have DEB packaging tools, must be a DEB system
+    if (NOT ${RPMBUILD} MATCHES "NOTFOUND")
+      # Debian based systems can have both RPM and DEB packaging tools
+      message(WARNING "Found both DEB and RPM packaging tools, generating DEB packages. If this is not correct, "
+        "remove the packaging tools for the package type you DO NOT want to create.")
+    endif()
     include(cmake/package_deb.cmake)
   endif()
 
   message(STATUS "You can install startup scripts and system configuration files for MaxScale by running the 'postinst' shell script located at ${CMAKE_INSTALL_PREFIX}.")
   message(STATUS "To remove these installed files, run the 'postrm' shell script located in the same folder.")
-
-else()
-  message(FATAL_ERROR "Could not automatically resolve the package generator and no generators "
-    "defined on the command line. Please install distribution specific packaging software or "
-    "define -DTARBALL=Y to build tar.gz packages.")
 endif()
