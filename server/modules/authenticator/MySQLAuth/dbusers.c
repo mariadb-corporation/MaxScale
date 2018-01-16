@@ -186,7 +186,10 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
                         uint8_t *scramble, size_t scramble_len)
 {
     sqlite3 *handle = instance->handle;
-    size_t len = sizeof(mysqlauth_validate_user_query) + strlen(session->user) * 2 +
+    const char* validate_query = instance->lower_case_table_names ?
+        mysqlauth_validate_user_query_lower :
+        mysqlauth_validate_user_query;
+    size_t len = strlen(validate_query) + 1 + strlen(session->user) * 2 +
                  strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
     char sql[len + 1];
     int rval = MXS_AUTH_FAILED;
@@ -198,7 +201,7 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
     }
     else
     {
-        sprintf(sql, mysqlauth_validate_user_query, session->user, dcb->remote,
+        sprintf(sql, validate_query, session->user, dcb->remote,
                 dcb->remote, session->db, session->db);
     }
 
@@ -214,7 +217,7 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
     if (!res.ok && strchr(dcb->remote, ':') && strchr(dcb->remote, '.'))
     {
         const char *ipv4 = strrchr(dcb->remote, ':') + 1;
-        sprintf(sql, mysqlauth_validate_user_query, session->user, ipv4, ipv4,
+        sprintf(sql, validate_query, session->user, ipv4, ipv4,
                 session->db, session->db);
 
         if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
@@ -233,7 +236,7 @@ int validate_mysql_user(MYSQL_AUTH* instance, DCB *dcb, MYSQL_session *session,
         char client_hostname[MYSQL_HOST_MAXLEN] = "";
         get_hostname(dcb, client_hostname, sizeof(client_hostname) - 1);
 
-        sprintf(sql, mysqlauth_validate_user_query, session->user, client_hostname,
+        sprintf(sql, validate_query, session->user, client_hostname,
                 client_hostname, session->db, session->db);
 
         if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
