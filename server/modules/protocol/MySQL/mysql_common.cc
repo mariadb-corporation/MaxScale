@@ -1799,13 +1799,13 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
 
     if (server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
     {
-        if (ptr < (local_buf+len)) 
+        if (ptr < (local_buf + len)) 
         {
             ptr += mxs_leint_consume(&ptr);  // info
             if (server_status  & SERVER_SESSION_STATE_CHANGED)
             {
                 mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
-                while (ptr < (local_buf+len))
+                while (ptr < (local_buf + len))
                 {
                     enum_session_state_type type = (enum enum_session_state_type)mxs_leint_consume(&ptr);
                     switch (type)
