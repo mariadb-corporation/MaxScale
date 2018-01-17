@@ -485,9 +485,11 @@ MaskingRules::MatchRule::MatchRule(const std::string& column,
                                    const std::vector<SAccount>& applies_to,
                                    const std::vector<SAccount>& exempted,
                                    pcre2_code* regexp,
+                                   const std::string& value,
                                    const std::string& fill)
     : MaskingRules::Rule::Rule(column, table, database, applies_to, exempted)
     , m_regexp(regexp)
+    , m_value(value)
     , m_fill(fill)
 {
 }
@@ -767,13 +769,15 @@ bool rule_get_values(json_t* pRule,
  *
  * @param pRule       The Json rule doc
  * @param pMatch      The string buffer for 'match'value
+ * @param pValue      The string buffer for 'value' value
  * @param pFill       The string buffer for 'fill' value
  *
  * @return            True on success, false on errors
  */
-bool rule_get_match_fill(json_t* pRule,
-                         std::string *pMatch,
-                         std::string* pFill)
+bool rule_get_match_value_fill(json_t* pRule,
+                               std::string *pMatch,
+                               std::string* pValue,
+                               std::string* pFill)
 {
     // Get the 'with' key from the rule
     json_t* pWith = json_object_get(pRule, KEY_WITH);
@@ -794,17 +798,22 @@ bool rule_get_match_fill(json_t* pRule,
 
     // Get fill from 'with' object
     json_t* pTheFill = rule_get_fill(pWith);
+    // Get value from 'with' object
+    json_t* pTheValue = json_object_get(pWith, KEY_VALUE);
     // Get 'match' from 'replace' ojbect
     json_t* pTheMatch = json_object_get(pKeyObj, KEY_MATCH);
 
-    // Check values
+    // Check values: 'match' and 'fill' are mandatory (if not provided, there will be
+    // a default 'fill'), while 'value' is optional, but if provided it must be a string.
     if ((!pTheFill || !json_is_string(pTheFill)) ||
+        (pTheValue && !json_is_string(pTheValue)) ||
         ((!pTheMatch || !json_is_string(pTheMatch))))
     {
-        MXS_ERROR("A masking '%s' rule has '%s' and/or '%s' "
+        MXS_ERROR("A masking '%s' rule has '%s', '%s' and/or '%s' "
                   "invalid Json strings.",
                   KEY_REPLACE,
                   KEY_MATCH,
+                  KEY_VALUE,
                   KEY_FILL);
         return false;
     }
@@ -813,6 +822,11 @@ bool rule_get_match_fill(json_t* pRule,
         // Update the string buffers
         pFill->assign(json_string_value(pTheFill));
         pMatch->assign(json_string_value(pTheMatch));
+
+        if (pTheValue)
+        {
+            pValue->assign(json_string_value(pTheValue));
+        }
 
         return true;
     }
@@ -984,9 +998,10 @@ auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
                         &table,
                         &database,
                         KEY_REPLACE) &&
-        rule_get_match_fill(pRule,  // get match/fill
-                            &match,
-                            &fill))
+        rule_get_match_value_fill(pRule,  // get match/value/fill
+                                  &match,
+                                  &value,
+                                  &fill))
     {
 
         if (!match.empty() && !fill.empty())
@@ -1004,6 +1019,7 @@ auto_ptr<MaskingRules::Rule> MaskingRules::MatchRule::create_from(json_t* pRule)
                                                                                       applies_to,
                                                                                       exempted,
                                                                                       pCode,
+                                                                                      value,
                                                                                       fill));
 
                 // Ownership of pCode has been moved to the MatchRule object.
@@ -1162,7 +1178,14 @@ void MaskingRules::MatchRule::rewrite(LEncString& s) const
             }
 
             // Copy the fill string into substring
-            fill_buffer(m_fill.begin(), m_fill.end(), i, i + substring_len);
+            if (m_value.length() == substring_len)
+            {
+                std::copy(m_value.begin(), m_value.end(), i);
+            }
+            else
+            {
+                fill_buffer(m_fill.begin(), m_fill.end(), i, i + substring_len);
+            }
 
             // Set offset to the end of Full Match substring or break
             startoffset = ovector[1];

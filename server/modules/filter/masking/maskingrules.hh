@@ -268,6 +268,7 @@ public:
                   const std::vector<SAccount>& applies_to,
                   const std::vector<SAccount>& exempted,
                   pcre2_code* regexp,
+                  const std::string& value,
                   const std::string& fill);
 
         ~MatchRule();
@@ -277,6 +278,10 @@ public:
             return *m_regexp;
         }
 
+        const std::string& value() const
+        {
+            return m_value;
+        }
         const std::string& fill() const
         {
             return m_fill;
@@ -301,6 +306,7 @@ public:
 
     private:
         pcre2_code*           m_regexp;
+        std::string           m_value;
         std::string           m_fill;
 
     private:
