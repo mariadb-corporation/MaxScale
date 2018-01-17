@@ -39,9 +39,9 @@ char VERSION_STRING[] = "V1.0.0";
 bool masking_command_reload(const MODULECMD_ARG* pArgs, json_t** output)
 {
     ss_dassert(pArgs->argc == 1);
-    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_FILTER);
+    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_FILTER);
 
-    const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
+    const MXS_FILTER_DEF* pFilterDef = pArgs->argv[0].value.filter;
     ss_dassert(pFilterDef);
     MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(filter_def_get_instance(pFilterDef));
 
@@ -178,8 +178,16 @@ bool MaskingFilter::reload()
 
     if (sRules.get())
     {
+        MXS_NOTICE("Rules for masking filter '%s' were reloaded from '%s'.",
+                   m_config.name().c_str(), m_config.rules().c_str());
+
         m_sRules = sRules;
         rval = true;
+    }
+    else
+    {
+        MXS_ERROR("Rules for masking filter '%s' could not be reloaded from '%s'.",
+                  m_config.name().c_str(), m_config.rules().c_str());
     }
 
     return rval;
