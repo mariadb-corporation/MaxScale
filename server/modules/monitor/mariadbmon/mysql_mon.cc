@@ -665,7 +665,7 @@ extern "C"
     MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_NOTICE("Initialise the MySQL Monitor module.");
-        const char ARG_MONITOR_DESC[] = "MySQL Monitor name (from configuration file)";
+        static const char ARG_MONITOR_DESC[] = "MySQL Monitor name (from configuration file)";
         static modulecmd_arg_type_t switchover_argv[] =
         {
             {
