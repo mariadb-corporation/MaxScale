@@ -1338,8 +1338,6 @@ int main(int argc, char **argv)
     int      rc = MAXSCALE_SHUTDOWN;
     int      l;
     int      i;
-    int      n;
-    int      ini_rval;
     intptr_t thread_id;
     int      n_threads; /*< number of epoll listener threads */
     int      n_services;
@@ -1353,24 +1351,24 @@ int main(int argc, char **argv)
     char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
     THREAD    log_flush_thr;
     char*    tmp_path;
-    char*    tmp_var;
     int      option_index;
-    int      *syslog_enabled = &config_get_global_options()->syslog; /** Log to syslog */
-    int      *maxlog_enabled = &config_get_global_options()->maxlog; /** Log with MaxScale */
-    int      *log_to_shm = &config_get_global_options()->log_to_shm; /** Log to shared memory */
+    MXS_CONFIG* cnf = config_get_global_options();
+    ss_dassert(cnf);
+    int      *syslog_enabled = &cnf->syslog; /** Log to syslog */
+    int      *maxlog_enabled = &cnf->maxlog; /** Log with MaxScale */
+    int      *log_to_shm = &cnf->log_to_shm; /** Log to shared memory */
     ssize_t  log_flush_timeout_ms = 0;
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
-    bool config_check = false;
     bool to_stdout = false;
     void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
-    MXS_CONFIG* cnf = NULL;
-    int numlocks = 0;
     bool pid_file_created = false;
 
+    // NOTE: These are set here since global_defaults() is called inside config_load().
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
     *log_to_shm = 0;
+    cnf->config_check = false;
 
     maxscale_reset_starttime();
 
@@ -1657,7 +1655,7 @@ int main(int argc, char **argv)
             goto return_main;
 
         case 'c':
-            config_check = true;
+            cnf->config_check = true;
             break;
 
         default:
@@ -1673,7 +1671,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (config_check)
+    if (cnf->config_check)
     {
         daemon_mode = false;
         to_stdout = true;
@@ -1838,7 +1836,7 @@ int main(int argc, char **argv)
     {
         bool succp;
 
-        if (mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
+        if (!cnf->config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
         {
             fprintf(stderr,
                     "Error: Cannot create log directory: %s\n",
@@ -1885,20 +1883,23 @@ int main(int argc, char **argv)
     MXS_NOTICE("Commit: %s", MAXSCALE_COMMIT);
 #endif
 
-    /*
-     * Set the data directory. We use a unique directory name to avoid conflicts
-     * if multiple instances of MaxScale are being run on the same machine.
-     */
-    if (create_datadir(get_datadir(), datadir))
+    if (!cnf->config_check)
     {
-        set_process_datadir(datadir);
-    }
-    else
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Cannot create data directory '%s': %d %s\n",
-                  datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
-        goto return_main;
+        /*
+         * Set the data directory. We use a unique directory name to avoid conflicts
+         * if multiple instances of MaxScale are being run on the same machine.
+         */
+        if (create_datadir(get_datadir(), datadir))
+        {
+            set_process_datadir(datadir);
+        }
+        else
+        {
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Cannot create data directory '%s': %d %s\n",
+                      datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+            goto return_main;
+        }
     }
 
     if (!daemon_mode)
@@ -1940,9 +1941,6 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    cnf = config_get_global_options();
-    ss_dassert(cnf);
-
     if (!qc_setup(cnf->qc_name, cnf->qc_args))
     {
         const char* logerr = "Failed to initialise query classifier library.";
@@ -1951,9 +1949,7 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    cnf->config_check = config_check;
-
-    if (!config_check)
+    if (!cnf->config_check)
     {
         /** Check if a MaxScale process is already running */
         if (pid_file_exists())
@@ -2015,7 +2011,7 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if (config_check)
+    if (cnf->config_check)
     {
         MXS_NOTICE("Configuration was successfully verified.");
         rc = MAXSCALE_SHUTDOWN;
