@@ -2538,10 +2538,36 @@ getSlaveOfNodeId(MXS_MONITORED_SERVER *ptr, long node_id, slave_down_setting_t s
     return NULL;
 }
 
+/**
+ * Simple wrapper for mxs_mysql_query and mysql_num_rows
+ *
+ * @param database Database connection
+ * @param query    Query to execute
+ *
+ * @return Number of rows or -1 on error
+ */
+static int get_row_count(MXS_MONITORED_SERVER *database, const char* query)
+{
+    int returned_rows = -1;
+
+    if (mxs_mysql_query(database->con, query) == 0)
+    {
+        MYSQL_RES* result = mysql_store_result(database->con);
+
+        if (result)
+        {
+            returned_rows = mysql_num_rows(result);
+            mysql_free_result(result);
+        }
+    }
+
+    return returned_rows;
+}
+
 /*******
  * This function sets the replication heartbeat
  * into the maxscale_schema.replication_heartbeat table in the current master.
- * The inserted values will be seen from all slaves replication from this master.
+ * The inserted values will be seen from all slaves replicating from this master.
  *
  * @param handle    The monitor handle
  * @param database      The number database server
@@ -2562,42 +2588,25 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *da
         return;
     }
 
-    /* check if the maxscale_schema database and replication_heartbeat table exist */
-    if (mxs_mysql_query(database->con, "SELECT table_name FROM information_schema.tables "
-                        "WHERE table_schema = 'maxscale_schema' AND table_name = 'replication_heartbeat'"))
+    int n_db = get_row_count(database, "SELECT schema_name FROM information_schema.schemata "
+                             "WHERE schema_name = 'maxscale_schema'");
+    int n_tbl = get_row_count(database, "SELECT table_name FROM information_schema.tables "
+                              "WHERE table_schema = 'maxscale_schema' "
+                              "AND table_name = 'replication_heartbeat'");
+
+    if (n_db == -1 || n_tbl == -1 ||
+        (n_db == 0 && mxs_mysql_query(database->con, "CREATE DATABASE maxscale_schema")) ||
+        (n_tbl == 0 && mxs_mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
+                                       "maxscale_schema.replication_heartbeat "
+                                       "(maxscale_id INT NOT NULL, "
+                                       "master_server_id INT NOT NULL, "
+                                       "master_timestamp INT UNSIGNED NOT NULL, "
+                                       "PRIMARY KEY ( master_server_id, maxscale_id ) )")))
     {
-        MXS_ERROR( "Error checking for replication_heartbeat in Master server"
-                   ": %s", mysql_error(database->con));
+        MXS_ERROR("Error creating maxscale_schema.replication_heartbeat "
+                  "table in Master server: %s", mysql_error(database->con));
         database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
-    }
-
-    result = mysql_store_result(database->con);
-
-    if (result == NULL)
-    {
-        returned_rows = 0;
-    }
-    else
-    {
-        returned_rows = mysql_num_rows(result);
-        mysql_free_result(result);
-    }
-
-    if (0 == returned_rows)
-    {
-        /* create repl_heartbeat table in maxscale_schema database */
-        if (mxs_mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
-                            "maxscale_schema.replication_heartbeat "
-                            "(maxscale_id INT NOT NULL, "
-                            "master_server_id INT NOT NULL, "
-                            "master_timestamp INT UNSIGNED NOT NULL, "
-                            "PRIMARY KEY ( master_server_id, maxscale_id ) )"))
-        {
-            MXS_ERROR("Error creating maxscale_schema.replication_heartbeat "
-                      "table in Master server: %s", mysql_error(database->con));
-
-            database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
-        }
+        return;
     }
 
     /* auto purge old values after 48 hours*/
