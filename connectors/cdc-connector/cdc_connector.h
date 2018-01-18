@@ -1,3 +1,4 @@
+#pragma once
 /* Copyright (c) 2017, MariaDB Corporation. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -32,10 +33,11 @@ namespace CDC
 const char* TIMEOUT = "Request timed out";
 
 // The typedef for the Row type
-class InternalRow;
-typedef std::shared_ptr<InternalRow> Row;
+class Row;
+typedef std::shared_ptr<Row> SRow;
 
-typedef std::vector<std::string> ValueList;
+typedef std::vector<std::string> ValueVector;
+typedef std::shared_ptr<ValueVector> SValueVector;
 typedef std::map<std::string, std::string> ValueMap;
 
 // A class that represents a CDC connection
@@ -78,7 +80,7 @@ public:
      *
      * @see InternalRow
      */
-    Row read();
+    SRow read();
 
     /**
      * Explicitly close the connection
@@ -116,9 +118,9 @@ public:
     {
         ValueMap fields;
 
-        for (size_t i = 0; i < m_keys.size(); i++)
+        for (size_t i = 0; i < m_keys->size(); i++)
         {
-            fields[m_keys[i]] = m_types[i];
+            fields[(*m_keys)[i]] = (*m_types)[i];
         }
 
         return fields;
@@ -132,19 +134,19 @@ private:
     std::string m_password;
     std::string m_error;
     std::string m_schema;
-    ValueList m_keys;
-    ValueList m_types;
+    SValueVector m_keys;
+    SValueVector m_types;
     int m_timeout;
     std::vector<char> m_buffer;
     std::vector<char>::iterator m_buf_ptr;
-    Row m_first_row;
+    SRow m_first_row;
     bool m_connected;
 
     bool do_auth();
     bool do_registration();
     bool read_row(std::string& dest);
     void process_schema(json_t* json);
-    Row process_row(json_t*);
+    SRow process_row(json_t*);
     bool is_error(const char* str);
 
     // Lower-level functions
@@ -154,11 +156,11 @@ private:
 };
 
 // Internal representation of a row, used via the Row type
-class InternalRow
+class Row
 {
-    InternalRow(const InternalRow&) = delete;
-    InternalRow& operator=(const InternalRow&) = delete;
-    InternalRow() = delete;
+    Row(const Row&) = delete;
+    Row& operator=(const Row&) = delete;
+    Row() = delete;
 public:
 
     /**
@@ -180,7 +182,7 @@ public:
      */
     const std::string& value(size_t i) const
     {
-        return m_values[i];
+        return m_values.at(i);
     }
 
     /**
@@ -192,8 +194,8 @@ public:
      */
     const std::string& value(const std::string& str) const
     {
-        ValueList::const_iterator it = std::find(m_keys.begin(), m_keys.end(), str);
-        return m_values[it - m_keys.begin()];
+        ValueVector::const_iterator it = std::find(m_keys->begin(), m_keys->end(), str);
+        return m_values.at(it - m_keys->begin());
     }
 
     /**
@@ -219,7 +221,7 @@ public:
      */
     const std::string& key(size_t i) const
     {
-        return m_keys[i];
+        return m_keys->at(i);
     }
 
     /**
@@ -229,24 +231,24 @@ public:
      */
     const std::string& type(size_t i) const
     {
-        return m_types[i];
+        return m_types->at(i);
     }
 
-    ~InternalRow()
+    ~Row()
     {
     }
 
 private:
-    ValueList m_keys;
-    ValueList m_types;
-    ValueList m_values;
+    SValueVector m_keys;
+    SValueVector m_types;
+    ValueVector m_values;
 
     // Only a Connection should construct an InternalRow
     friend class Connection;
 
-    InternalRow(const ValueList& keys,
-                const ValueList& types,
-                ValueList& values):
+    Row(SValueVector& keys,
+        SValueVector& types,
+        ValueVector& values):
         m_keys(keys),
         m_types(types)
     {

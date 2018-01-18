@@ -156,6 +156,7 @@ template <> void Closer<struct addrinfo*>::close(struct addrinfo* ai)
 {
     freeaddrinfo(ai);
 }
+
 template <> void Closer<int>::close(int fd)
 {
     close(fd);
@@ -307,8 +308,8 @@ static inline bool is_schema(json_t* json)
 
 void Connection::process_schema(json_t* json)
 {
-    ValueList keys;
-    ValueList types;
+    SValueVector keys(std::make_shared<ValueVector>());
+    SValueVector types(std::make_shared<ValueVector>());
 
     json_t* arr = json_object_get(json, "fields");
     size_t i;
@@ -338,22 +339,22 @@ void Connection::process_schema(json_t* json)
             }
         }
 
-        keys.push_back(nameval);
-        types.push_back(typeval);
+        keys->push_back(nameval);
+        types->push_back(typeval);
     }
 
-    m_keys.swap(keys);
-    m_types.swap(types);
+    m_keys = keys;
+    m_types = types;
 }
 
-Row Connection::process_row(json_t* js)
+SRow Connection::process_row(json_t* js)
 {
-    ValueList values;
-    values.reserve(m_keys.size());
+    ValueVector values;
+    values.reserve(m_keys->size());
     m_error.clear();
 
-    for (ValueList::iterator it = m_keys.begin();
-         it != m_keys.end(); it++)
+    for (ValueVector::iterator it = m_keys->begin();
+         it != m_keys->end(); it++)
     {
         json_t* v = json_object_get(js, it->c_str());
 
@@ -369,20 +370,20 @@ Row Connection::process_row(json_t* js)
         }
     }
 
-    Row rval;
+    SRow rval;
 
     if (m_error.empty())
     {
-        rval = Row(new InternalRow(m_keys, m_types, values));
+        rval = SRow(new Row(m_keys, m_types, values));
     }
 
     return rval;
 }
 
-Row Connection::read()
+SRow Connection::read()
 {
     m_error.clear();
-    Row rval;
+    SRow rval;
     std::string row;
 
     if (m_first_row)
