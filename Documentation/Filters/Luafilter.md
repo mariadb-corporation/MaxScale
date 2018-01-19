@@ -75,7 +75,7 @@ matching entry point is made.
 
 The luafilter exposes three functions that can be called from the Lua script.
 
-- `string lua_qc_get_type()`
+- `string lua_qc_get_type_mask()`
 
   - Returns the type of the current query being executed as a string. The values
     are the string versions of the query types defined in _query_classifier.h_
@@ -94,3 +94,46 @@ The luafilter exposes three functions that can be called from the Lua script.
 
   - This function generates unique integers that can be used to distinct
     sessions from each other.
+
+## Example Configuration and Script
+
+Here is a minimal configuration entry for a luafilter definition.
+
+```
+[MyLuaFilter]
+type=filter
+module=luafilter
+global_script=/path/to/script.lua
+```
+
+And here is a script that opens a file in `/tmp/` and logs output to it.
+
+```
+f = io.open("/tmp/test.log", "a+")
+
+function createInstance()
+    f:write("createInstance\n")
+end
+
+function newSession(a, b)
+    f:write("newSession for: " .. a .. "@" .. b .. "\n")
+end
+
+function closeSession()
+    f:write("closeSession\n")
+end
+
+function routeQuery(string)
+    f:write("routeQuery: " .. string .. " -- type: " .. lua_qc_get_type_mask() .. " operation: " .. lua_qc_get_operation() .. "\n")
+end
+
+function clientReply()
+    f:write("clientReply\n")
+end
+
+function diagnostic()
+    f:write("diagnostics\n")
+    return "Hello from Lua!"
+end
+
+```

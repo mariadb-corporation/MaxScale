@@ -277,6 +277,18 @@ The backends must all use GTID-based replication, and the domain id should not
 change during a switchover or failover. Master and slaves must have
 well-behaving GTIDs with no extra events on slave servers.
 
+Switchover requires that the cluster is "frozen" for the duration of the
+operation. This means that no data modifying statements such as INSERT or UPDATE
+are executed and the GTID position of the master server is stable. When
+switchover begins, the monitor sets the global *read_only* flag on the old
+master backend to stop any updates. *read_only* does not affect users with the
+SUPER-privilege so any such user can issue writes during a switchover. These
+writes have a high chance to break replication, because the write may not be
+replicated to all slaves before they switch to the new master. To prevent this,
+any users who commonly do updates should not have the SUPER-privilege. For even
+more security, the only SUPER-user session during a switchover should be the
+MaxScale monitor user.
+
 ### Configuration parameters
 
 #### `auto_failover`

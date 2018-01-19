@@ -18,11 +18,11 @@ then
     ctest --output-on-failure || exit 1
 fi
 
-if [ $remove_strip == "yes" ] ; then
-	sudo rm -rf /usr/bin/strip
-	sudo touch /usr/bin/strip
-	sudo chmod a+x /usr/bin/strip
-fi
+# Never strip binaries
+sudo rm -rf /usr/bin/strip
+sudo touch /usr/bin/strip
+sudo chmod a+x /usr/bin/strip
+
 sudo make package
 res=$?
 if [ $res != 0 ] ; then
