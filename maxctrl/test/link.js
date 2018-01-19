@@ -25,8 +25,8 @@ describe("Link/Unlink Commands", function() {
     })
 
     it('unlink servers from a monitor', function() {
-        return verifyCommand('unlink monitor MySQL-Monitor server2 server3 server4',
-                             'monitors/MySQL-Monitor')
+        return verifyCommand('unlink monitor MariaDB-Monitor server2 server3 server4',
+                             'monitors/MariaDB-Monitor')
             .then(function(res) {
                 res.data.relationships.servers.data.length.should.equal(1)
                 res.data.relationships.servers.data[0].id.should.equal("server1")
@@ -34,8 +34,8 @@ describe("Link/Unlink Commands", function() {
     })
 
     it('link servers to a monitor', function() {
-        return verifyCommand('link monitor MySQL-Monitor server1 server2 server3 server4',
-                             'monitors/MySQL-Monitor')
+        return verifyCommand('link monitor MariaDB-Monitor server1 server2 server3 server4',
+                             'monitors/MariaDB-Monitor')
             .then(function(res) {
                 res.data.relationships.servers.data.length.should.equal(4)
                 res.data.relationships.servers.data[0].id.should.equal("server1")

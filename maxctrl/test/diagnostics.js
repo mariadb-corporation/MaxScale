@@ -12,7 +12,7 @@ var tests = [
     'list commands',
     'show server server1',
     'show service RW-Split-Router',
-    'show monitor MySQL-Monitor',
+    'show monitor MariaDB-Monitor',
     'show session 5',
     'show filter Hint',
     'show module readwritesplit',

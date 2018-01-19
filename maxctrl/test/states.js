@@ -4,7 +4,7 @@ describe("Set/Clear Commands", function() {
     before(function() {
         return startMaxScale()
             .then(function() {
-                return request.put(host + 'monitors/MySQL-Monitor/stop')
+                return request.put(host + 'monitors/MariaDB-Monitor/stop')
             })
     })
 

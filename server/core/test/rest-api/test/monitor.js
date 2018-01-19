@@ -52,8 +52,8 @@ describe("Monitor Relationships", function() {
             relationships: {
                 servers: null
             }}}
-        return request.patch(base_url + "/monitors/MySQL-Monitor", {json: mon})
-        .then(() => request.get(base_url + "/monitors/MySQL-Monitor", { json: true }))
+        return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
         .then((res) => {
             res.data.relationships.should.not.have.keys("servers")
         })
@@ -93,9 +93,9 @@ describe("Monitor Relationships", function() {
                         {id: "server3", type: "servers"},
                         {id: "server4", type: "servers"},
                     ]}
-                return request.patch(base_url + "/monitors/MySQL-Monitor", {json: mon})
+                return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
             })
-            .then(() => request.get(base_url + "/monitors/MySQL-Monitor", { json: true }))
+            .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
             .then((res) => {
                 res.data.relationships.servers.data.should.have.lengthOf(4)
             })
@@ -111,9 +111,9 @@ describe("Monitor Relationships", function() {
             { id: "server1", type: "servers" }
         ]}
 
-        return request.patch(base_url + "/monitors/MySQL-Monitor/relationships/servers", {json: old})
+        return request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/servers", {json: old})
         .then(() => request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: created}))
-        .then(() => request.get(base_url + "/monitors/MySQL-Monitor", { json: true }))
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
         .then((res) => {
             res.data.relationships.servers.data.should.have.lengthOf(3)
         })
@@ -138,8 +138,8 @@ describe("Monitor Relationships", function() {
         ]}
 
         return request.patch(base_url + "/monitors/" + monitor.data.id + "/relationships/servers", {json: {data: []}})
-        .then(() => request.patch(base_url + "/monitors/MySQL-Monitor/relationships/servers", {json: old}))
-        .then(() => request.get(base_url + "/monitors/MySQL-Monitor", { json: true }))
+        .then(() => request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/servers", {json: old}))
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
         .then((res) => {
             res.data.relationships.servers.data.should.have.lengthOf(4)
         })
@@ -161,9 +161,9 @@ describe("Monitor Actions", function() {
     before(startMaxScale)
 
     it("stop monitor", function() {
-        return request.put(base_url + "/monitors/MySQL-Monitor/stop")
+        return request.put(base_url + "/monitors/MariaDB-Monitor/stop")
             .then(function() {
-                return request.get(base_url + "/monitors/MySQL-Monitor")
+                return request.get(base_url + "/monitors/MariaDB-Monitor")
             })
             .then(function(resp) {
                 var mon = JSON.parse(resp)
@@ -172,9 +172,9 @@ describe("Monitor Actions", function() {
     });
 
     it("start monitor", function() {
-        return request.put(base_url + "/monitors/MySQL-Monitor/start")
+        return request.put(base_url + "/monitors/MariaDB-Monitor/start")
             .then(function() {
-                return request.get(base_url + "/monitors/MySQL-Monitor")
+                return request.get(base_url + "/monitors/MariaDB-Monitor")
             })
             .then(function(resp) {
                 var mon = JSON.parse(resp)
@@ -199,9 +199,9 @@ describe("Monitor Regressions", function() {
                 }
             }
         }
-        return request.patch(base_url + "/monitors/MySQL-Monitor", {json: b})
+        return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: b})
             .then(function() {
-                return request.get(base_url + "/monitors/MySQL-Monitor")
+                return request.get(base_url + "/monitors/MariaDB-Monitor")
             })
             .then(function(resp) {
                 var mon = JSON.parse(resp)

@@ -8,7 +8,7 @@ var server = {
             parameters: {
                 port: 3003,
                 address: "127.0.0.1",
-                protocol: "MySQLBackend"
+                protocol: "MariaDBBackend"
             }
         }
     }
@@ -71,11 +71,11 @@ describe("Server Relationships", function() {
 
     it("add relationships with `relationships` endpoint", function() {
         return request.patch(base_url + "/servers/" + rel_server.data.id + "/relationships/monitors",
-                             { json: { data: [ { "id": "MySQL-Monitor", "type": "monitors" }]}})
+                             { json: { data: [ { "id": "MariaDB-Monitor", "type": "monitors" }]}})
             .then(() => request.get(base_url + "/servers/" + rel_server.data.id, {json: true}))
             .then((res) => {
                 res.data.relationships.monitors.data.should.have.lengthOf(1)
-                    .that.has.deep.include({ "id": "MySQL-Monitor", "type": "monitors" })
+                    .that.has.deep.include({ "id": "MariaDB-Monitor", "type": "monitors" })
             })
     });
 

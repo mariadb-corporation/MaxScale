@@ -21,14 +21,14 @@ describe("Alter Commands", function() {
     })
 
     it('alter monitor', function() {
-        return verifyCommand('alter monitor MySQL-Monitor monitor_interval 1000', 'monitors/MySQL-Monitor')
+        return verifyCommand('alter monitor MariaDB-Monitor monitor_interval 1000', 'monitors/MariaDB-Monitor')
             .then(function(res) {
                 res.data.attributes.parameters.monitor_interval.should.equal(1000)
             })
     })
 
     it('will not alter monitor with bad parameters', function() {
-        return doCommand('alter monitor MySQL-Monitor monitor_interval not-a-number')
+        return doCommand('alter monitor MariaDB-Monitor monitor_interval not-a-number')
             .should.be.rejected
     })
 

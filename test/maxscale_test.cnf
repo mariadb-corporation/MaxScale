@@ -9,15 +9,15 @@ language=@CMAKE_INSTALL_PREFIX@/lib/maxscale/
 piddir=@CMAKE_INSTALL_PREFIX@/run/maxscale/
 admin_auth=false
 
-[MySQL Monitor]
+[MariaDB-Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
 monitor_interval=10000
 
-[RW Split Router]
+[RW-Split-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -25,7 +25,7 @@ user=maxuser
 passwd=maxpwd
 max_slave_connections=100%
 
-[SchemaRouter Router]
+[SchemaRouter-Router]
 type=service
 router=schemarouter
 servers=server1,server2,server3,server4
@@ -33,7 +33,7 @@ user=maxuser
 passwd=maxpwd
 auth_all_servers=1
 
-[RW Split Hint Router]
+[RW-Split-Hint-Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
@@ -42,7 +42,7 @@ passwd=maxpwd
 max_slave_connections=100%
 filters=Hint
 
-[Read Connection Router]
+[Read-Connection-Router]
 type=service
 router=readconnroute
 router_options=master
@@ -58,17 +58,17 @@ module=hintfilter
 [recurse3]
 type=filter
 module=tee
-service=RW Split Router
+service=RW-Split-Router
 
 [recurse2]
 type=filter
 module=tee
-service=Read Connection Router
+service=Read-Connection-Router
 
 [recurse1]
 type=filter
 module=tee
-service=RW Split Hint Router
+service=RW-Split-Hint-Router
 
 [QLA]
 type=filter
@@ -82,31 +82,31 @@ filebase=/tmp/qla.log
 type=service
 router=cli
 
-[Read Connection Listener]
+[Read-Connection-Listener]
 type=listener
-service=Read Connection Router
-protocol=MySQLClient
+service=Read-Connection-Router
+protocol=MariaDBClient
 port=4008
 
-[RW Split Listener]
+[RW-Split-Listener]
 type=listener
-service=RW Split Router
-protocol=MySQLClient
+service=RW-Split-Router
+protocol=MariaDBClient
 port=4006
 
-[SchemaRouter Listener]
+[SchemaRouter-Listener]
 type=listener
-service=SchemaRouter Router
-protocol=MySQLClient
+service=SchemaRouter-Router
+protocol=MariaDBClient
 port=4010
 
-[RW Split Hint Listener]
+[RW-Split-Hint-Listener]
 type=listener
-service=RW Split Hint Router
-protocol=MySQLClient
+service=RW-Split-Hint-Router
+protocol=MariaDBClient
 port=4009
 
-[CLI Listener]
+[CLI-Listener]
 type=listener
 service=CLI
 protocol=maxscaled
@@ -116,22 +116,22 @@ socket=default
 type=server
 address=127.0.0.1
 port=3000
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [server2]
 type=server
 address=127.0.0.1
 port=3001
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [server3]
 type=server
 address=127.0.0.1
 port=3002
-protocol=MySQLBackend
+protocol=MariaDBBackend
 
 [server4]
 type=server
 address=127.0.0.1
 port=3003
-protocol=MySQLBackend
+protocol=MariaDBBackend

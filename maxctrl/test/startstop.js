@@ -18,14 +18,14 @@ describe('Start/Stop Commands', function() {
     })
 
     it('stop monitor', function() {
-        return verifyCommand('stop monitor MySQL-Monitor', 'monitors/MySQL-Monitor')
+        return verifyCommand('stop monitor MariaDB-Monitor', 'monitors/MariaDB-Monitor')
             .then(function(res) {
                 res.data.attributes.state.should.equal('Stopped')
             })
     })
 
     it('start monitor', function() {
-        return verifyCommand('start monitor MySQL-Monitor', 'monitors/MySQL-Monitor')
+        return verifyCommand('start monitor MariaDB-Monitor', 'monitors/MariaDB-Monitor')
             .then(function(res) {
                 res.data.attributes.state.should.equal('Running')
             })
