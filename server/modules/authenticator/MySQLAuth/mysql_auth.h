@@ -66,6 +66,12 @@ static const char mysqlauth_validate_user_query[] =
     " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host) AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
     " LIMIT 1";
 
+/** Query that checks if there's a grant for the user being authenticated */
+static const char mysqlauth_validate_user_query_lower[] =
+    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
+    " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host) AND (anydb = '1' OR '%s' = '' OR LOWER('%s') LIKE LOWER(db))"
+    " LIMIT 1";
+
 /** Query that only checks if there's a matching user */
 static const char mysqlauth_skip_auth_query[] =
     "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
@@ -111,6 +117,7 @@ typedef struct mysql_auth
     bool inject_service_user; /**< Inject the service user into the list of users */
     bool skip_auth;           /**< Authentication will always be successful */
     bool check_permissions;
+    bool lower_case_table_names; /**< Disable database case-sensitivity */
 } MYSQL_AUTH;
 
 /**

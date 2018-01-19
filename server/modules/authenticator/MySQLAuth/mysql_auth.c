@@ -179,6 +179,7 @@ static void* mysql_auth_init(char **options)
         instance->inject_service_user = true;
         instance->skip_auth = false;
         instance->check_permissions = true;
+        instance->lower_case_table_names = false;
 
         for (int i = 0; options[i]; i++)
         {
@@ -203,6 +204,10 @@ static void* mysql_auth_init(char **options)
                 else if (strcmp(options[i], "skip_authentication") == 0)
                 {
                     instance->skip_auth = config_truth_value(value);
+                }
+                else if (strcmp(options[i], "lower_case_table_names") == 0)
+                {
+                    instance->lower_case_table_names = config_truth_value(value);
                 }
                 else
                 {

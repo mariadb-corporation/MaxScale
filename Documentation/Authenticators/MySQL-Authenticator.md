@@ -67,3 +67,16 @@ injected into the list of users.
 ```
 authenticator_options=inject_service_user=false
 ```
+
+### `lower_case_table_names`
+
+Enable case-insensitive identifier matching for authentication. This parameter
+is disabled by default.
+
+The parameter functions exactly as the MariaDB Server system variable
+[lower_case_table_names](https://mariadb.com/kb/en/library/server-system-variables/#lower_case_table_names).
+This makes the matching done by the authenticator on database names to be
+case-insensitive by converting all names into their lowercase form.
+
+**Note:** The identifier names are converted using an ASCII-only function. This
+  means that non-ASCII characters will retain their case-sensitivity.

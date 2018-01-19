@@ -152,7 +152,7 @@ bool runtime_create_server(const char *name, const char *address, const char *po
         }
         if (protocol == NULL)
         {
-            protocol = "MySQLBackend";
+            protocol = "mariadbbackend";
         }
         if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
         {
@@ -808,7 +808,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
     }
     if (proto == NULL || strcasecmp(proto, CN_DEFAULT) == 0)
     {
-        proto = "MySQLClient";
+        proto = "mariadbclient";
     }
 
     if (auth && strcasecmp(auth, CN_DEFAULT) == 0)

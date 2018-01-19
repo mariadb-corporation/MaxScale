@@ -290,6 +290,12 @@ add_test_executable(mysqlmon_failover_rejoin_old_slave.cpp mysqlmon_failover_rej
 # MySQL Monitor rolling restart slaves
 add_test_executable(mysqlmon_failover_rolling_restart_slaves.cpp mysqlmon_failover_rolling_restart_slaves mysqlmon_failover_rolling_restart_slaves LABELS mysqlmon REPL_BACKEND)
 
+# MySQL Monitor failover stress
+add_test_executable(mysqlmon_failover_stress.cpp mysqlmon_failover_stress mysqlmon_failover_stress LABELS mysqlmon REPL_BACKEND)
+
+# MySQL Monitor switchover stress
+add_test_executable(mysqlmon_switchover_stress.cpp mysqlmon_switchover_stress mysqlmon_switchover_stress LABELS mysqlmon REPL_BACKEND)
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
@@ -566,6 +572,10 @@ add_test_executable(mxs1516.cpp mxs1516 replication LABELS REPL_BACKEND)
  # MXS-1542: Check that UTF16 strings work
  # https://jira.mariadb.org/browse/MXS-1542
 add_test_executable(mxs1542.cpp mxs1542 avro LABELS REPL_BACKEND)
+
+# MXS-1543: Avrorouter doesn't detect MIXED or STATEMENT format replication
+# https://jira.mariadb.org/browse/MXS-1543
+add_test_executable(mxs1543.cpp mxs1543 avro LABELS REPL_BACKEND)
 
  # MXS-1585: Crash in MaxScale 2.1.12
  # https://jira.mariadb.org/browse/MXS-1585

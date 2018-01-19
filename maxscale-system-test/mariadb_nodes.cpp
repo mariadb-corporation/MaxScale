@@ -188,7 +188,7 @@ int Mariadb_nodes::read_env()
             }
             else
             {
-                sprintf(start_db_command[i], "%s", "service mysql stop");
+                sprintf(stop_db_command[i], "%s", "service mysql stop");
             }
 
             //reading cleanup_db_command

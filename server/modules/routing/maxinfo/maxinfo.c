@@ -63,7 +63,7 @@ static int maxinfo_statistics(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_ping(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_execute_query(INFO_INSTANCE *, INFO_SESSION *, char *);
 static int handle_url(INFO_INSTANCE *instance, INFO_SESSION *router_session, GWBUF *queue);
-
+static int maxinfo_send_ok(DCB *dcb);
 
 /* The router entry points */
 static  MXS_ROUTER *createInstance(SERVICE *service, char **options);
@@ -348,7 +348,7 @@ execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
         switch (MYSQL_COMMAND(queue))
         {
         case MXS_COM_PING:
-            rc = maxinfo_ping(instance, session, queue);
+            rc = maxinfo_send_ok(session->dcb);
             break;
         case MXS_COM_STATISTICS:
             rc = maxinfo_statistics(instance, session, queue);
@@ -622,11 +622,15 @@ maxinfo_execute_query(INFO_INSTANCE *instance, INFO_SESSION *session, char *sql)
         respond_starttime(session->dcb);
         return 1;
     }
-    if (strcasecmp(sql, "set names 'utf8'") == 0)
+    if (strncasecmp(sql, "set names", 9) == 0)
     {
         return maxinfo_send_ok(session->dcb);
     }
     if (strncasecmp(sql, "set session", 11) == 0)
+    {
+        return maxinfo_send_ok(session->dcb);
+    }
+    if (strncasecmp(sql, "set @@session", 13) == 0)
     {
         return maxinfo_send_ok(session->dcb);
     }

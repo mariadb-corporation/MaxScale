@@ -1051,8 +1051,8 @@ static int
 blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
     GWBUF *pkt;
-    char file[40];
-    char position[40];
+    char file[BINLOG_FNAMELEN + 1];
+    char position[BINLOG_FNAMELEN + 1];
     uint8_t *ptr;
     int len, file_len;
 
@@ -1069,10 +1069,10 @@ blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
                              BLR_TYPE_STRING, 40, 6);
     blr_slave_send_eof(router, slave, 7);
 
-    sprintf(file, "%s", router->binlog_name);
+    snprintf(file, sizeof(file), "%s", router->binlog_name);
     file_len = strlen(file);
 
-    sprintf(position, "%lu", router->binlog_position);
+    snprintf(position, sizeof(position), "%lu", router->binlog_position);
 
     len = MYSQL_HEADER_LEN + 1 + file_len + strlen(position) + 1 + 3;
     if ((pkt = gwbuf_alloc(len)) == NULL)

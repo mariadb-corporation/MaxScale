@@ -20,6 +20,11 @@
 #include <maxscale/maxscale_test.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/config.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/paths.h>
+#include <maxscale/alloc.h>
+
+#include <sys/stat.h>
 
 #include "../internal/poll.h"
 #include "../internal/statistics.h"
@@ -28,15 +33,17 @@
 
 void init_test_env(char *path)
 {
-    int argc = 3;
-
-    const char* logdir = path ? path : TEST_LOG_DIR;
-
     config_get_global_options()->n_threads = 1;
 
     ts_stats_init();
-    mxs_log_init(NULL, logdir, MXS_LOG_TARGET_DEFAULT);
+    if (!mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT))
+    {
+        exit(1);
+    }
     dcb_global_init();
+    set_libdir(MXS_STRDUP(TEST_DIR "/query_classifier/qc_sqlite/"));
+    qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL);
+    qc_process_init(QC_INIT_BOTH);
     poll_init();
     maxscale::MessageQueue::init();
     maxscale::Worker::init();

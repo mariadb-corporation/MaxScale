@@ -122,8 +122,10 @@ mysqlmon_failover_manual2_2
 mysqlmon_failover_rejoin_old_slave
 mysqlmon_failover_rolling_master
 mysqlmon_failover_rolling_restart_slaves
-mysqlmon_switchover_bad_master
+mysqlmon_failover_stress
 mysqlmon_switchover
+mysqlmon_switchover_bad_master
+mysqlmon_switchover_stress
 mxs1045
 mxs1071_maxrows
 mxs1110_16mb
