@@ -1210,7 +1210,7 @@ void MaskingRules::ObfuscateRule::rewrite(LEncString& s) const
     LEncString::iterator i = s.begin();
     size_t c = *i + i_len;
 
-    for (LEncString::iterator i = s.begin(); i <= s.end(); i++)
+    for (LEncString::iterator i = s.begin(); i != s.end(); i++)
     {
         // ASCII 32 is first printable char
         unsigned char d = abs((char)(*i ^ c)) + 32;
