@@ -1769,27 +1769,21 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
 }
 
 /**
- *  Decode ok packet and get session track info
- *
- *  @param buffer               Buffer contain ok packet
- *  @param server_capabilities  Server capabilities
- *
+ *  Parse ok packet to get session track info, save to buff properties
+ *  @param buff           Buffer contain multi compelte packets
+ *  @param packet_offset  Ok packet offset in this buff
+ *  @param packet_len     Ok packet lengh
  */
-void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
+void mxs_mysql_parse_ok_packet(GWBUF *buff,
+                               size_t packet_offset,
+                               size_t packet_len,
+                               uint32_t server_capabilities)
 {
-    ss_dassert(buff);
-    char *trx_info, *var_name, *var_value;
-    size_t len = GWBUF_LENGTH(buff);
-    uint8_t local_buf[len];
+    uint8_t local_buf[packet_len];
     uint8_t *ptr = local_buf;
-    
-    if (len < MYSQL_OK_PACKET_MIN_LEN || !mxs_mysql_is_ok_packet(buff))
-    {
-        return;
-    }
+    char *trx_info, *var_name, *var_value;
 
-    gwbuf_copy_data(buff, 0, len, local_buf);
-    buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
+    gwbuf_copy_data(buff, packet_offset, packet_len, local_buf);
     ptr += (MYSQL_HEADER_LEN + 1); // Header and Command type
     mxs_leint_consume(&ptr);       // Affected rows
     mxs_leint_consume(&ptr);       // Last insert-id
@@ -1799,15 +1793,19 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
 
     if (server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
     {
-        if (ptr < (local_buf + len)) 
+        if (ptr < (local_buf + packet_len))
         {
             ptr += mxs_leint_consume(&ptr);  // info
             if (server_status  & SERVER_SESSION_STATE_CHANGED)
             {
                 mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
-                while (ptr < (local_buf + len))
+                while (ptr < (local_buf + packet_len))
                 {
-                    enum_session_state_type type = (enum enum_session_state_type)mxs_leint_consume(&ptr);
+                    enum_session_state_type type = 
+                        (enum enum_session_state_type)mxs_leint_consume(&ptr);
+#if defined(SS_DEBUG)
+                    ss_dassert(type <= SESSION_TRACK_TRANSACTION_TYPE);
+#endif
                     switch (type)
                     {
                         case SESSION_TRACK_STATE_CHANGE:
@@ -1846,6 +1844,29 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
                 }
             }
         }
+    }
+}
+
+/**
+ *  Check every packet type, if is ok packet then parse it
+ *  @param buff                 Buffer contain multi compelte packets
+ *  @param server_capabilities  Server capabilities
+ */
+void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
+{
+    size_t offset = 0;
+    uint8_t header_and_command[MYSQL_HEADER_LEN+1];
+
+    while(gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN+1, header_and_command) == (MYSQL_HEADER_LEN+1))
+    {
+        size_t packet_len = gw_mysql_get_byte3(header_and_command) + MYSQL_HEADER_LEN;
+        uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
+        if (packet_len > MYSQL_OK_PACKET_MIN_LEN && cmd == MYSQL_REPLY_OK)
+        {
+            buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
+            mxs_mysql_parse_ok_packet(buff, offset, packet_len, server_capabilities);
+        }
+        offset += packet_len;
     }
 }
 

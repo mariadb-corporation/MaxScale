@@ -25,6 +25,7 @@ add_executable(test_trxcompare test_trxcompare.cc ../../../query_classifier/test
 add_executable(test_trxtracking test_trxtracking.cc)
 add_executable(test_users test_users.cc)
 add_executable(test_utils test_utils.cc)
+add_executable(test_session_track test_session_track.cc)
 
 target_link_libraries(profile_trxboundaryparser maxscale-common)
 target_link_libraries(test_adminusers maxscale-common)
@@ -53,6 +54,7 @@ target_link_libraries(test_trxcompare maxscale-common)
 target_link_libraries(test_trxtracking maxscale-common)
 target_link_libraries(test_users maxscale-common)
 target_link_libraries(test_utils maxscale-common)
+target_link_libraries(test_session_track mysqlcommon)
 
 add_test(test_adminusers test_adminusers)
 add_test(test_atomic test_atomic)
@@ -88,5 +90,6 @@ add_test(test_trxcompare_maxscale test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/..
 add_test(test_trxtracking test_trxtracking)
 add_test(test_users test_users)
 add_test(test_utils test_utils)
+add_test(test_session_track test_session_track)
 
 add_subdirectory(rest-api)
