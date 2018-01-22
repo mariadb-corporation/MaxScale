@@ -1231,6 +1231,8 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
     }
     /** add session track */
     final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    /** support deprecate eof */
+    final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_DEPRECATE_EOF;
 
     /* Compression is not currently supported */
     ss_dassert(!compress);
@@ -1855,30 +1857,30 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
     {
         while (gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN+1, header_and_command) == (MYSQL_HEADER_LEN+1))
         {
-            size_t packet_len = gw_mysql_get_byte3(header_and_command) + MYSQL_HEADER_LEN;
+            size_t packet_len = gw_mysql_get_byte3(header_and_command);
             uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
-            if (packet_len > MYSQL_OK_PACKET_MIN_LEN && cmd == MYSQL_REPLY_OK && proto->num_eof_packets == 0)
-            {
-                buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
-                mxs_mysql_parse_ok_packet(buff, offset, packet_len);
-            }
-            offset += packet_len;
 
-            /* first packet of result set */
             if ((proto->current_command == MXS_COM_QUERY ||
                 proto->current_command == MXS_COM_STMT_FETCH ||
                 proto->current_command == MXS_COM_STMT_EXECUTE) &&
-                proto->num_eof_packets == 0 &&
-                cmd > MYSQL_REPLY_OK &&
-                cmd < MYSQL_REPLY_LOCAL_INFILE)
+                cmd == MYSQL_REPLY_EOF)
             {
-                proto->num_eof_packets = 2;
+                proto->num_eof_packets++;
             }
 
-            if (cmd == MYSQL_REPLY_EOF && proto->num_eof_packets > 0)
+            if (packet_len > MYSQL_OK_PACKET_MIN_LEN && 
+                (proto->num_eof_packets % 2) == 0)
             {
-                proto->num_eof_packets--;
+                /* ok packet or deprecated eof */
+                if (cmd == MYSQL_REPLY_OK || 
+                    (cmd == MYSQL_REPLY_EOF && 
+                     proto->server_capabilities & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF))
+                {
+                    buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
+                    mxs_mysql_parse_ok_packet(buff, offset, packet_len);
+                }
             }
+            offset += (packet_len + + MYSQL_HEADER_LEN);
         }
     }
 }

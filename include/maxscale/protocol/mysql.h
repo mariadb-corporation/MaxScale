@@ -353,7 +353,7 @@ typedef struct
     int                    ignore_replies;               /*< How many replies should be discarded */
     GWBUF*                 stored_query;                 /*< Temporarily stored queries */
     bool                   collect_result;               /*< Collect the next result set as one buffer */
-    int                    num_eof_packets;              /*< Signal number to indicate is current packet is ok packet*/
+    uint32_t               num_eof_packets;              /*< Signal number to indicate is current packet is ok packet*/
 #if defined(SS_DEBUG)
     skygw_chk_t            protocol_chk_tail;
 #endif
