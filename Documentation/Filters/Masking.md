@@ -220,6 +220,12 @@ The obfuscate rule allows the obfuscation of the value
 by passing it through an obfuscation algorithm.
 Current solution uses a nonreversible obfuscation approach.
 
+However, note that although it is in principle impossible to obtain the
+original value from the obfuscated one, if the range of possible original
+values is limited, it is straightforward to figure out the possible
+original values by running all possible values through the obfuscation
+algortihm and then comparing the results.
+
 The minimal configuration is:
 
 ```
