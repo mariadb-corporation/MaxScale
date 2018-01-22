@@ -8,7 +8,6 @@
 set(MARIADB_CONNECTOR_C_REPO "https://github.com/MariaDB/mariadb-connector-c.git"
   CACHE STRING "MariaDB Connector-C Git repository")
 
-
 # Connector-C tag to use
 set(MARIADB_CONNECTOR_C_TAG "v3.0.3"
   CACHE STRING "MariaDB Connector-C Git tag")

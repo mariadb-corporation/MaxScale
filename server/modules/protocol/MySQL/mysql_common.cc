@@ -71,6 +71,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->extra_capabilities = 0;
     p->ignore_replies = 0;
     p->collect_result = false;
+    p->num_eof_packets = 0;
 #if defined(SS_DEBUG)
     p->protocol_chk_top = CHK_NUM_PROTOCOL;
     p->protocol_chk_tail = CHK_NUM_PROTOCOL;
@@ -1774,10 +1775,7 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
  *  @param packet_offset  Ok packet offset in this buff
  *  @param packet_len     Ok packet lengh
  */
-void mxs_mysql_parse_ok_packet(GWBUF *buff,
-                               size_t packet_offset,
-                               size_t packet_len,
-                               uint32_t server_capabilities)
+void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_len)
 {
     uint8_t local_buf[packet_len];
     uint8_t *ptr = local_buf;
@@ -1791,56 +1789,53 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff,
     ptr += 2; // status      
     ptr += 2; // number of warnings
 
-    if (server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
+    if (ptr < (local_buf + packet_len))
     {
-        if (ptr < (local_buf + packet_len))
+        ptr += mxs_leint_consume(&ptr);  // info
+        if (server_status  & SERVER_SESSION_STATE_CHANGED)
         {
-            ptr += mxs_leint_consume(&ptr);  // info
-            if (server_status  & SERVER_SESSION_STATE_CHANGED)
+            mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
+            while (ptr < (local_buf + packet_len))
             {
-                mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
-                while (ptr < (local_buf + packet_len))
-                {
-                    enum_session_state_type type = 
-                        (enum enum_session_state_type)mxs_leint_consume(&ptr);
+                enum_session_state_type type = 
+                    (enum enum_session_state_type)mxs_leint_consume(&ptr);
 #if defined(SS_DEBUG)
-                    ss_dassert(type <= SESSION_TRACK_TRANSACTION_TYPE);
+                ss_dassert(type <= SESSION_TRACK_TRANSACTION_TYPE);
 #endif
-                    switch (type)
-                    {
-                        case SESSION_TRACK_STATE_CHANGE:
-                        case SESSION_TRACK_SCHEMA:
-                        case SESSION_TRACK_GTIDS:
-                            ptr += mxs_leint_consume(&ptr);
-                            break;
-                        case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
-                            mxs_leint_consume(&ptr); //length
-                            var_value = mxs_lestr_consume_dup(&ptr);
-                            gwbuf_add_property(buff, (char *)"trx_characteristics", var_value);
-                            MXS_FREE(var_value);
-                            break;
-                        case SESSION_TRACK_SYSTEM_VARIABLES:
-                            mxs_leint_consume(&ptr); //lenth 
-                            // system variables like autocommit, schema, charset ... 
-                            var_name = mxs_lestr_consume_dup(&ptr);
-                            var_value = mxs_lestr_consume_dup(&ptr);
-                            gwbuf_add_property(buff, var_name, var_value);
-                            MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
-                            MXS_FREE(var_name);
-                            MXS_FREE(var_value);
-                            break;
-                        case SESSION_TRACK_TRANSACTION_TYPE:
-                            mxs_leint_consume(&ptr); // length
-                            trx_info = mxs_lestr_consume_dup(&ptr);
-                            MXS_DEBUG("get trx_info:%s", trx_info);
-                            gwbuf_add_property(buff, (char *)"trx_state", trx_info);
-                            MXS_FREE(trx_info);
-                            break;
-                        default:
-                            ptr += mxs_leint_consume(&ptr);
-                            MXS_WARNING("recieved unexpecting session track type:%d", type);
-                            break;
-                    }
+                switch (type)
+                {
+                    case SESSION_TRACK_STATE_CHANGE:
+                    case SESSION_TRACK_SCHEMA:
+                    case SESSION_TRACK_GTIDS:
+                        ptr += mxs_leint_consume(&ptr);
+                        break;
+                    case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
+                        mxs_leint_consume(&ptr); //length
+                        var_value = mxs_lestr_consume_dup(&ptr);
+                        gwbuf_add_property(buff, (char *)"trx_characteristics", var_value);
+                        MXS_FREE(var_value);
+                        break;
+                    case SESSION_TRACK_SYSTEM_VARIABLES:
+                        mxs_leint_consume(&ptr); //lenth 
+                        // system variables like autocommit, schema, charset ... 
+                        var_name = mxs_lestr_consume_dup(&ptr);
+                        var_value = mxs_lestr_consume_dup(&ptr);
+                        gwbuf_add_property(buff, var_name, var_value);
+                        MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
+                        MXS_FREE(var_name);
+                        MXS_FREE(var_value);
+                        break;
+                    case SESSION_TRACK_TRANSACTION_TYPE:
+                        mxs_leint_consume(&ptr); // length
+                        trx_info = mxs_lestr_consume_dup(&ptr);
+                        MXS_DEBUG("get trx_info:%s", trx_info);
+                        gwbuf_add_property(buff, (char *)"trx_state", trx_info);
+                        MXS_FREE(trx_info);
+                        break;
+                    default:
+                        ptr += mxs_leint_consume(&ptr);
+                        MXS_WARNING("recieved unexpecting session track type:%d", type);
+                        break;
                 }
             }
         }
@@ -1852,21 +1847,39 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff,
  *  @param buff                 Buffer contain multi compelte packets
  *  @param server_capabilities  Server capabilities
  */
-void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities)
+void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
 {
     size_t offset = 0;
     uint8_t header_and_command[MYSQL_HEADER_LEN+1];
-
-    while(gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN+1, header_and_command) == (MYSQL_HEADER_LEN+1))
+    if (proto->server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
     {
-        size_t packet_len = gw_mysql_get_byte3(header_and_command) + MYSQL_HEADER_LEN;
-        uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
-        if (packet_len > MYSQL_OK_PACKET_MIN_LEN && cmd == MYSQL_REPLY_OK)
+        while (gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN+1, header_and_command) == (MYSQL_HEADER_LEN+1))
         {
-            buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
-            mxs_mysql_parse_ok_packet(buff, offset, packet_len, server_capabilities);
+            size_t packet_len = gw_mysql_get_byte3(header_and_command) + MYSQL_HEADER_LEN;
+            uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
+            if (packet_len > MYSQL_OK_PACKET_MIN_LEN && cmd == MYSQL_REPLY_OK && proto->num_eof_packets == 0)
+            {
+                buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
+                mxs_mysql_parse_ok_packet(buff, offset, packet_len);
+            }
+            offset += packet_len;
+
+            /* first packet of result set */
+            if ((proto->current_command == MXS_COM_QUERY ||
+                proto->current_command == MXS_COM_STMT_FETCH ||
+                proto->current_command == MXS_COM_STMT_EXECUTE) &&
+                proto->num_eof_packets == 0 &&
+                cmd > MYSQL_REPLY_OK &&
+                cmd < MYSQL_REPLY_LOCAL_INFILE)
+            {
+                proto->num_eof_packets = 2;
+            }
+
+            if (cmd == MYSQL_REPLY_EOF && proto->num_eof_packets > 0)
+            {
+                proto->num_eof_packets--;
+            }
         }
-        offset += packet_len;
     }
 }
 

@@ -353,6 +353,7 @@ typedef struct
     int                    ignore_replies;               /*< How many replies should be discarded */
     GWBUF*                 stored_query;                 /*< Temporarily stored queries */
     bool                   collect_result;               /*< Collect the next result set as one buffer */
+    int                    num_eof_packets;              /*< Signal number to indicate is current packet is ok packet*/
 #if defined(SS_DEBUG)
     skygw_chk_t            protocol_chk_tail;
 #endif
@@ -492,7 +493,7 @@ char* create_auth_fail_str(char *username, char *hostaddr, bool password, char *
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 bool read_complete_packet(DCB *dcb, GWBUF **readbuf);
 bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
-void mxs_mysql_get_session_track_info(GWBUF *buff, uint32_t server_capabilities);
+void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto);
 mysql_tx_state_t parse_trx_state(const char *str);
 
 /**

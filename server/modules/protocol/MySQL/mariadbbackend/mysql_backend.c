@@ -771,7 +771,7 @@ gw_read_and_write(DCB *dcb)
         }
 
         /** Get sesion track info from ok packet and save it to gwbuf properties */
-        mxs_mysql_get_session_track_info(tmp, proto->server_capabilities);
+        mxs_mysql_get_session_track_info(tmp, proto);
 
         read_buffer = tmp;
 
