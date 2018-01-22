@@ -198,6 +198,12 @@ bool Connection::connect(const std::string& table, const std::string& gtid)
 
     try
     {
+        if (m_connected)
+        {
+            m_error = "Already connected";
+            return false;
+        }
+
         m_error.clear();
 
         struct addrinfo *ai = NULL, hint = {};
