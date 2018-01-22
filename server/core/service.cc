@@ -2460,7 +2460,6 @@ static const char* service_state_to_string(int state)
 json_t* service_parameters_to_json(const SERVICE* service)
 {
     json_t* rval = json_object();
-    json_t* arr = json_array();
 
     string options;
 
