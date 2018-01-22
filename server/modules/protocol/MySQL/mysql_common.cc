@@ -1786,7 +1786,7 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
     mxs_leint_consume(&ptr);       // Affected rows
     mxs_leint_consume(&ptr);       // Last insert-id
     uint16_t server_status = gw_mysql_get_byte2(ptr);
-    ptr += 2; // status      
+    ptr += 2; // status
     ptr += 2; // number of warnings
 
     if (ptr < (local_buf + packet_len))
@@ -1797,7 +1797,7 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
             mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
             while (ptr < (local_buf + packet_len))
             {
-                enum_session_state_type type = 
+                enum_session_state_type type =
                     (enum enum_session_state_type)mxs_leint_consume(&ptr);
 #if defined(SS_DEBUG)
                 ss_dassert(type <= SESSION_TRACK_TRANSACTION_TYPE);
@@ -1816,8 +1816,8 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
                         MXS_FREE(var_value);
                         break;
                     case SESSION_TRACK_SYSTEM_VARIABLES:
-                        mxs_leint_consume(&ptr); //lenth 
-                        // system variables like autocommit, schema, charset ... 
+                        mxs_leint_consume(&ptr); //lenth
+                        // system variables like autocommit, schema, charset ...
                         var_name = mxs_lestr_consume_dup(&ptr);
                         var_value = mxs_lestr_consume_dup(&ptr);
                         gwbuf_add_property(buff, var_name, var_value);
@@ -1851,19 +1851,19 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
 {
     size_t offset = 0;
     uint8_t header_and_command[MYSQL_HEADER_LEN+1];
-    if (proto->server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
+    if (proto->server_capabilities&GW_MYSQL_CAPABILITIES_SESSION_TRACK)
     {
         while (gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN+1, header_and_command) == (MYSQL_HEADER_LEN+1))
         {
             size_t packet_len = gw_mysql_get_byte3(header_and_command);
             uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
 
-            if (packet_len > MYSQL_OK_PACKET_MIN_LEN && 
+            if (packet_len > MYSQL_OK_PACKET_MIN_LEN &&
                 cmd == MYSQL_REPLY_OK &&
                 (proto->num_eof_packets % 2) == 0)
             {
                 buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
-                mxs_mysql_parse_ok_packet(buff, offset, packet_len);
+                mxs_mysql_parse_ok_packet(buff, offset, packet_len + MYSQL_HEADER_LEN);
             }
 
             if ((proto->current_command == MXS_COM_QUERY ||
