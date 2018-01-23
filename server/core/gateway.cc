@@ -1362,6 +1362,7 @@ int main(int argc, char **argv)
     sigset_t saved_mask;
     bool to_stdout = false;
     void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
+    int numlocks = 0;
     bool pid_file_created = false;
 
     // NOTE: These are set here since global_defaults() is called inside config_load().
