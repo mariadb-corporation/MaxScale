@@ -183,6 +183,8 @@ mysqlmon_failover_manual
 mysqlmon_rejoin_good
 mysqlmon_rejoin_bad
 mysqlmon_rejoin_bad2
+mysqlmon_rejoin_manual
+mysqlmon_rejoin_manual2
 namedserverfilter
 no_password
 non_native_setup
