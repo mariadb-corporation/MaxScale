@@ -125,7 +125,7 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
 
         switch (MYSQL_GET_COMMAND(data))
         {
-        case COM_REGISTER_SLAVE:
+        case MXS_COM_REGISTER_SLAVE:
             // Connected client is registering as Slave Server
             m_serverid = gw_mysql_get_byte4(data + MYSQL_HEADER_LEN + 1);
             MXS_INFO("Client is registering as "
@@ -133,7 +133,7 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
                      m_serverid);
             break;
 
-        case COM_BINLOG_DUMP:
+        case MXS_COM_BINLOG_DUMP:
             // Connected Slave server is waiting for binlog events
             m_state = BINLOG_MODE;
             MXS_INFO("Slave server %" PRIu32 " is waiting for binlog events.",
