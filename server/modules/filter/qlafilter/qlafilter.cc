@@ -1166,7 +1166,7 @@ static bool cb_log(const MODULECMD_ARG *argv, json_t** output)
         else
         {
             *output = mxs_json_error("Failed to open file '%s'",
-                                     instance->unified_filename);
+                                     instance->unified_filename.c_str());
         }
     }
     else
