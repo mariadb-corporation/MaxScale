@@ -355,7 +355,7 @@ extern void gwbuf_set_type(GWBUF *head, uint32_t type);
  *
  * @return True on success, false otherwise.
  */
-extern bool gwbuf_add_property(GWBUF *buf, char *name, char *value);
+extern bool gwbuf_add_property(GWBUF *buf, const char *name, const char *value);
 
 /**
  * Return the value of a buffer property
@@ -365,7 +365,7 @@ extern bool gwbuf_add_property(GWBUF *buf, char *name, char *value);
  *
  * @return The property value or NULL if the property was not found.
  */
-extern char *gwbuf_get_property(GWBUF *buf, char *name);
+extern char *gwbuf_get_property(GWBUF *buf, const char *name);
 
 /**
  * Convert a chain of GWBUF structures into a single GWBUF structure

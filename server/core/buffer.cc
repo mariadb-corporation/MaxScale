@@ -738,23 +738,22 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
 }
 
 bool
-gwbuf_add_property(GWBUF *buf, char *name, char *value)
+gwbuf_add_property(GWBUF *buf, const char *name, const char *value)
 {
-    name = MXS_STRDUP(name);
-    value = MXS_STRDUP(value);
-
+    char* my_name = MXS_STRDUP(name);
+    char* my_value = MXS_STRDUP(value);
     BUF_PROPERTY *prop = (BUF_PROPERTY *)MXS_MALLOC(sizeof(BUF_PROPERTY));
 
-    if (!name || !value || !prop)
+    if (!my_name || !my_value || !prop)
     {
-        MXS_FREE(name);
-        MXS_FREE(value);
+        MXS_FREE(my_name);
+        MXS_FREE(my_value);
         MXS_FREE(prop);
         return false;
     }
 
-    prop->name = name;
-    prop->value = value;
+    prop->name = my_name;
+    prop->value = my_value;
     spinlock_acquire(&buf->gwbuf_lock);
     prop->next = buf->properties;
     buf->properties = prop;
@@ -763,7 +762,7 @@ gwbuf_add_property(GWBUF *buf, char *name, char *value)
 }
 
 char *
-gwbuf_get_property(GWBUF *buf, char *name)
+gwbuf_get_property(GWBUF *buf, const char *name)
 {
     BUF_PROPERTY *prop;
 
