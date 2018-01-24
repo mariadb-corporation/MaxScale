@@ -159,7 +159,7 @@ template <> void Closer<struct addrinfo*>::close(struct addrinfo* ai)
 
 template <> void Closer<int>::close(int fd)
 {
-    close(fd);
+    ::close(fd);
 }
 
 }
