@@ -1791,7 +1791,9 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
 
     if (ptr < (local_buf + packet_len))
     {
-        ptr += mxs_leint_consume(&ptr);  // info
+        size_t size;
+        mxs_lestr_consume(&ptr, &size);  // info
+
         if (server_status  & SERVER_SESSION_STATE_CHANGED)
         {
             mxs_leint_consume(&ptr);    // total SERVER_SESSION_STATE_CHANGED length
@@ -1807,7 +1809,7 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
                 case SESSION_TRACK_STATE_CHANGE:
                 case SESSION_TRACK_SCHEMA:
                 case SESSION_TRACK_GTIDS:
-                    ptr += mxs_leint_consume(&ptr);
+                    mxs_lestr_consume(&ptr, &size);
                     break;
                 case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
                     mxs_leint_consume(&ptr); //length
@@ -1833,7 +1835,7 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
                     MXS_FREE(trx_info);
                     break;
                 default:
-                    ptr += mxs_leint_consume(&ptr);
+                    mxs_lestr_consume(&ptr, &size);
                     MXS_WARNING("recieved unexpecting session track type:%d", type);
                     break;
                 }
