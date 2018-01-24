@@ -410,8 +410,8 @@ int MySQLSendHandshake(DCB* dcb)
  * @param queue Queue of buffers to write
  */
 int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
-{    
-    if (GWBUF_IS_REPLY_OK(queue) && dcb->service->session_track_trx_state) 
+{
+    if (GWBUF_IS_REPLY_OK(queue) && dcb->service->session_track_trx_state)
     {
         parse_and_set_trx_state(dcb->session, queue);
     }
@@ -1899,18 +1899,18 @@ static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *
 *   Get lasted autocommit value;
 *   https://dev.mysql.com/worklog/task/?id=6885
 * SESSION_TRACK_TRANSACTION_TYPE:
-*   Get transaction boundaries 
+*   Get transaction boundaries
 *   TX_EMPTY                  => SESSION_TRX_INACTIVE
 *   TX_EXPLICIT | TX_IMPLICIT => SESSION_TRX_ACTIVE
 *   https://dev.mysql.com/worklog/task/?id=6885
 * SESSION_TRACK_TRANSACTION_CHARACTERISTICS
 *   Get trx characteristics such as read only, read write, snapshot ...
-*   
-*/ 
+*
+*/
 static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
 {
     char *autocommit = gwbuf_get_property(data, (char *)"autocommit");
-    
+
     if (autocommit)
     {
         MXS_DEBUG("autocommit:%s", autocommit);
@@ -1921,14 +1921,14 @@ static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
         if (strncasecmp(autocommit, "OFF", 3) == 0)
         {
             session_set_autocommit(ses, false);
-        }   
-    } 
+        }
+    }
     char *trx_state = gwbuf_get_property(data, (char *)"trx_state");
-    if (trx_state) 
+    if (trx_state)
     {
         mysql_tx_state_t s = parse_trx_state(trx_state);
 
-        if (s == TX_EMPTY) 
+        if (s == TX_EMPTY)
         {
             session_set_trx_state(ses, SESSION_TRX_INACTIVE);
         }
@@ -1951,5 +1951,5 @@ static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
         }
     }
     MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->trx_state));
-    MXS_DEBUG("autcommit:%s", session_is_autocommit(ses)?"ON":"OFF");
+    MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
 }

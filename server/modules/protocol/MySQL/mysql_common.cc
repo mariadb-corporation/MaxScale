@@ -1754,7 +1754,7 @@ void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_typ
     {
         LocalClient* client = LocalClient::create(issuer, *it);
         const char* hard = (type & KT_HARD) ? "HARD " :
-            (type & KT_SOFT) ? "SOFT " : "";
+                           (type & KT_SOFT) ? "SOFT " : "";
         const char* query = (type & KT_QUERY) ? "QUERY " : "";
         std::stringstream ss;
         ss << "KILL " << hard << query << "USER " << user;
@@ -1804,38 +1804,38 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
 #endif
                 switch (type)
                 {
-                    case SESSION_TRACK_STATE_CHANGE:
-                    case SESSION_TRACK_SCHEMA:
-                    case SESSION_TRACK_GTIDS:
-                        ptr += mxs_leint_consume(&ptr);
-                        break;
-                    case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
-                        mxs_leint_consume(&ptr); //length
-                        var_value = mxs_lestr_consume_dup(&ptr);
-                        gwbuf_add_property(buff, (char *)"trx_characteristics", var_value);
-                        MXS_FREE(var_value);
-                        break;
-                    case SESSION_TRACK_SYSTEM_VARIABLES:
-                        mxs_leint_consume(&ptr); //lenth
-                        // system variables like autocommit, schema, charset ...
-                        var_name = mxs_lestr_consume_dup(&ptr);
-                        var_value = mxs_lestr_consume_dup(&ptr);
-                        gwbuf_add_property(buff, var_name, var_value);
-                        MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
-                        MXS_FREE(var_name);
-                        MXS_FREE(var_value);
-                        break;
-                    case SESSION_TRACK_TRANSACTION_TYPE:
-                        mxs_leint_consume(&ptr); // length
-                        trx_info = mxs_lestr_consume_dup(&ptr);
-                        MXS_DEBUG("get trx_info:%s", trx_info);
-                        gwbuf_add_property(buff, (char *)"trx_state", trx_info);
-                        MXS_FREE(trx_info);
-                        break;
-                    default:
-                        ptr += mxs_leint_consume(&ptr);
-                        MXS_WARNING("recieved unexpecting session track type:%d", type);
-                        break;
+                case SESSION_TRACK_STATE_CHANGE:
+                case SESSION_TRACK_SCHEMA:
+                case SESSION_TRACK_GTIDS:
+                    ptr += mxs_leint_consume(&ptr);
+                    break;
+                case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
+                    mxs_leint_consume(&ptr); //length
+                    var_value = mxs_lestr_consume_dup(&ptr);
+                    gwbuf_add_property(buff, (char *)"trx_characteristics", var_value);
+                    MXS_FREE(var_value);
+                    break;
+                case SESSION_TRACK_SYSTEM_VARIABLES:
+                    mxs_leint_consume(&ptr); //lenth
+                    // system variables like autocommit, schema, charset ...
+                    var_name = mxs_lestr_consume_dup(&ptr);
+                    var_value = mxs_lestr_consume_dup(&ptr);
+                    gwbuf_add_property(buff, var_name, var_value);
+                    MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
+                    MXS_FREE(var_name);
+                    MXS_FREE(var_value);
+                    break;
+                case SESSION_TRACK_TRANSACTION_TYPE:
+                    mxs_leint_consume(&ptr); // length
+                    trx_info = mxs_lestr_consume_dup(&ptr);
+                    MXS_DEBUG("get trx_info:%s", trx_info);
+                    gwbuf_add_property(buff, (char *)"trx_state", trx_info);
+                    MXS_FREE(trx_info);
+                    break;
+                default:
+                    ptr += mxs_leint_consume(&ptr);
+                    MXS_WARNING("recieved unexpecting session track type:%d", type);
+                    break;
                 }
             }
         }
@@ -1850,10 +1850,10 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
 void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
 {
     size_t offset = 0;
-    uint8_t header_and_command[MYSQL_HEADER_LEN+1];
-    if (proto->server_capabilities&GW_MYSQL_CAPABILITIES_SESSION_TRACK)
+    uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
+    if (proto->server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
     {
-        while (gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN+1, header_and_command) == (MYSQL_HEADER_LEN+1))
+        while (gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN + 1, header_and_command) == (MYSQL_HEADER_LEN + 1))
         {
             size_t packet_len = gw_mysql_get_byte3(header_and_command);
             uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
@@ -1867,8 +1867,8 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
             }
 
             if ((proto->current_command == MXS_COM_QUERY ||
-                proto->current_command == MXS_COM_STMT_FETCH ||
-                proto->current_command == MXS_COM_STMT_EXECUTE) &&
+                 proto->current_command == MXS_COM_STMT_FETCH ||
+                 proto->current_command == MXS_COM_STMT_EXECUTE) &&
                 cmd == MYSQL_REPLY_EOF)
             {
                 proto->num_eof_packets++;
@@ -1893,7 +1893,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
  *    in the context of the current transaction
  * _  no non-transactional tables were read within
  *    the current transaction so far
- * 
+ *
  * Place 3: transactional read
  * R  one/several transactional tables were read
  * _  no transactional tables were read yet
@@ -1905,7 +1905,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
  * Place 5: transactional write
  * W  one/several transactional tables were written to
  * _  no transactional tables were written to yet
- * 
+ *
  * Place 6: unsafe statements
  * s  one/several unsafe statements (such as UUID())
  *    were used.
@@ -1914,7 +1914,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
  * Place 7: result-set
  * S  a result set was sent to the client
  * _  statement had no result-set
- * 
+ *
  * Place 8: LOCKed TABLES
  * L  tables were explicitly locked using LOCK TABLES
  * _  LOCK TABLES is not active in this session
@@ -1927,38 +1927,39 @@ mysql_tx_state_t parse_trx_state(const char *str)
     {
         switch (*str)
         {
-            case 'T':
-                s |= TX_EXPLICIT;
-                break;
-            case 'I':
-                s |= TX_IMPLICIT;
-                break;
-            case 'r':
-                s |= TX_READ_UNSAFE;
-                break;
-            case 'R':
-                s |= TX_READ_TRX;
-                break;
-            case 'w':
-                s |= TX_WRITE_UNSAFE;
-                break;
-            case 'W':
-                s |= TX_WRITE_TRX;
-                break;
-            case 's':
-                s |= TX_STMT_UNSAFE;
-                break;
-            case 'S':
-                s |= TX_RESULT_SET;
-                break;
-            case 'L':
-                s |= TX_LOCKED_TABLES;
-                break;
-            default:
-                break;
+        case 'T':
+            s |= TX_EXPLICIT;
+            break;
+        case 'I':
+            s |= TX_IMPLICIT;
+            break;
+        case 'r':
+            s |= TX_READ_UNSAFE;
+            break;
+        case 'R':
+            s |= TX_READ_TRX;
+            break;
+        case 'w':
+            s |= TX_WRITE_UNSAFE;
+            break;
+        case 'W':
+            s |= TX_WRITE_TRX;
+            break;
+        case 's':
+            s |= TX_STMT_UNSAFE;
+            break;
+        case 'S':
+            s |= TX_RESULT_SET;
+            break;
+        case 'L':
+            s |= TX_LOCKED_TABLES;
+            break;
+        default:
+            break;
         }
 
-    } while(*(str++) != 0);
+    }
+    while (*(str++) != 0);
 
     return (mysql_tx_state_t)s;
 }
