@@ -120,7 +120,8 @@ template <class T> class Closer
 public:
 
     Closer(T t):
-        m_t(t)
+        m_t(t),
+        m_close(false)
     {
     }
 
@@ -147,9 +148,9 @@ public:
 
 private:
     T m_t;
-    bool m_close = true;
+    bool m_close;
 
-    void close(T t) = delete;
+    void close(T t);
 };
 
 template <> void Closer<struct addrinfo*>::close(struct addrinfo* ai)
@@ -314,8 +315,8 @@ static inline bool is_schema(json_t* json)
 
 void Connection::process_schema(json_t* json)
 {
-    SValueVector keys(std::make_shared<ValueVector>());
-    SValueVector types(std::make_shared<ValueVector>());
+    SValueVector keys(new ValueVector);
+    SValueVector types(new ValueVector);
 
     json_t* arr = json_object_get(json, "fields");
     size_t i;
