@@ -162,6 +162,8 @@ Worker::Worker(int id,
     , m_started(false)
     , m_should_shutdown(false)
     , m_shutdown_initiated(false)
+    , m_nCurrent_descriptors(0)
+    , m_nTotal_descriptors(0)
 {
     MXS_POLL_DATA::handler = &Worker::epoll_instance_handler;
     MXS_POLL_DATA::thread.id = id;
@@ -421,6 +423,12 @@ int64_t Worker::get_one_statistic(POLL_STAT what)
     return rv;
 }
 
+void Worker::get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal)
+{
+    *pnCurrent = atomic_load_uint32(&m_nCurrent_descriptors);
+    *pnTotal = atomic_load_uint64(&m_nTotal_descriptors);
+}
+
 bool Worker::add_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
 {
     bool rv = true;
@@ -435,7 +443,12 @@ bool Worker::add_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
 
     pData->thread.id = m_id;
 
-    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev) != 0)
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev) == 0)
+    {
+        atomic_add_uint32(&m_nCurrent_descriptors, 1);
+        atomic_add_uint64(&m_nTotal_descriptors, 1);
+    }
+    else
     {
         poll_resolve_error(fd, errno, EPOLL_CTL_ADD);
         rv = false;
@@ -479,7 +492,11 @@ bool Worker::remove_fd(int fd)
 
     struct epoll_event ev = {};
 
-    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, &ev) != 0)
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, &ev) == 0)
+    {
+        atomic_add_uint32(&m_nCurrent_descriptors, -1);
+    }
+    else
     {
         poll_resolve_error(fd, errno, EPOLL_CTL_DEL);
         rv = false;
