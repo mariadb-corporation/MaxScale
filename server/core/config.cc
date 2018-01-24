@@ -147,6 +147,7 @@ const char CN_USER[]                          = "user";
 const char CN_USERS[]                         = "users";
 const char CN_VERSION_STRING[]                = "version_string";
 const char CN_WEIGHTBY[]                      = "weightby";
+const char CN_SESSION_TRACK_TRX_STATE[]       = "session_track_trx_state";
 
 typedef struct duplicate_context
 {
@@ -213,6 +214,7 @@ const char *config_service_params[] =
     CN_WEIGHTBY,
     CN_LOG_AUTH_WARNINGS,
     CN_RETRY_ON_FAILURE,
+    CN_SESSION_TRACK_TRX_STATE,
     NULL
 };
 
@@ -2886,7 +2888,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
         serviceSetVersionString(service, gateway.version_string);
     }
 
-
+    service->session_track_trx_state = config_get_bool(obj->parameters, CN_SESSION_TRACK_TRX_STATE);
     /** Store the configuration parameters for the service */
     const MXS_MODULE *mod = get_module(router, MODULE_ROUTER);
 

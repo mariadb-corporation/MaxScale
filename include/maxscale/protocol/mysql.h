@@ -118,6 +118,20 @@ MXS_BEGIN_DECLS
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
+typedef enum  
+{
+  TX_EMPTY        =   0,  ///< "none of the below"
+  TX_EXPLICIT     =   1,  ///< an explicit transaction is active
+  TX_IMPLICIT     =   2,  ///< an implicit transaction is active
+  TX_READ_TRX     =   4,  ///<     transactional reads  were done
+  TX_READ_UNSAFE  =   8,  ///< non-transaction   reads  were done
+  TX_WRITE_TRX    =  16,  ///<     transactional writes were done
+  TX_WRITE_UNSAFE =  32,  ///< non-transactional writes were done
+  TX_STMT_UNSAFE  =  64,  ///< "unsafe" (non-deterministic like UUID()) stmts
+  TX_RESULT_SET   = 128,  ///< result-set was sent
+  TX_WITH_SNAPSHOT= 256,  ///< WITH CONSISTENT SNAPSHOT was used
+  TX_LOCKED_TABLES= 512   ///< LOCK TABLES is active
+} mysql_tx_state_t;
 
 typedef enum
 {
@@ -339,6 +353,7 @@ typedef struct
     int                    ignore_replies;               /*< How many replies should be discarded */
     GWBUF*                 stored_query;                 /*< Temporarily stored queries */
     bool                   collect_result;               /*< Collect the next result set as one buffer */
+    uint32_t               num_eof_packets;              /*< Encountered eof packet number, used for check packet type */
 #if defined(SS_DEBUG)
     skygw_chk_t            protocol_chk_tail;
 #endif
@@ -478,6 +493,8 @@ char* create_auth_fail_str(char *username, char *hostaddr, bool password, char *
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 bool read_complete_packet(DCB *dcb, GWBUF **readbuf);
 bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
+void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto);
+mysql_tx_state_t parse_trx_state(const char *str);
 
 /**
  * Decode server handshake

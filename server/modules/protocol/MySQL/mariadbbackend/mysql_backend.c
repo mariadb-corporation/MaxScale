@@ -770,6 +770,9 @@ gw_read_and_write(DCB *dcb)
             return 0;
         }
 
+        /** Get sesion track info from ok packet and save it to gwbuf properties */
+        mxs_mysql_get_session_track_info(tmp, proto);
+
         read_buffer = tmp;
 
         if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
