@@ -19,7 +19,7 @@
 
 #include <cstdint>
 #include <string>
-#include <memory>
+#include <tr1/memory>
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -34,10 +34,10 @@ const char* TIMEOUT = "Request timed out";
 
 // The typedef for the Row type
 class Row;
-typedef std::shared_ptr<Row> SRow;
+typedef std::tr1::shared_ptr<Row> SRow;
 
 typedef std::vector<std::string> ValueVector;
-typedef std::shared_ptr<ValueVector> SValueVector;
+typedef std::tr1::shared_ptr<ValueVector> SValueVector;
 typedef std::map<std::string, std::string> ValueMap;
 
 // A class that represents a CDC connection
