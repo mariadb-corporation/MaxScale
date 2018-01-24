@@ -54,18 +54,20 @@ static void* cas_dest = (void*)1;
 
 void test_cas(void* data)
 {
-    int id = (size_t)data;
+    size_t id = (size_t)data - 1;
     static int loops = 0;
 
     while (atomic_load_int32(&running))
     {
-        intptr_t my_value = (id + 1) % NTHR;
-        intptr_t my_expected = id;
+        void* my_value;
+        void* my_expected;
 
-        while (!atomic_cas_ptr(&cas_dest, (void**)&my_expected, (void*)&my_value))
+        do
         {
-            ;
+            my_value = (void*)((id + 1) % NTHR);
+            my_expected = (void*)id;
         }
+        while (!atomic_cas_ptr(&cas_dest, &my_expected, my_value));
 
         loops++;
     }
@@ -103,8 +105,11 @@ int main(int argc, char** argv)
 {
     int rval = 0;
 
+    printf("test_load_store\n");
     run_test(test_load_store);
+    printf("test_add\n");
     run_test(test_add);
+    printf("test_cas\n");
     run_test(test_cas);
 
     return rval;

@@ -155,6 +155,20 @@ function(install_header header component)
 
 endfunction()
 
+# Install development library
+#
+# @param Target to install
+# @param Component where this library should be included
+function(install_dev_library lib component)
+
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
+    install(TARGETS ${lib} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT "${component}")
+  endif()
+
+endfunction()
+
 
 # Install custom file to a custom destination
 #

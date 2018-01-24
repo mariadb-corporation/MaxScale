@@ -241,29 +241,49 @@ master), _switchover_ (swapping a slave with a running master) and _rejoin_
 (joining a standalone server to the cluster). The features and the parameters
 controlling them are presented in this section.
 
-Both failover and switchover can be activated manually through MaxAdmin.
-Failover selects the new master server automatically, switchover requires the
-user to designate the new master as well as the current master. Example commands
+These features require that the monitor user (`user`) has the SUPER privilege.
+In addition, the monitor needs to know which username and password a slave
+should use when starting replication. These are given in `replication_user` and
+`replication_password`.
+
+All three operations can be activated manually through MaxAdmin. Failover
+selects the new master server automatically, switchover and rejoin require the
+user to designate the new master. Switchover also requires the user to designate
+the current master server which will be replaced by the new. Example commands
 are below:
 
 ```
 call command mariadbmon failover MyMonitor
 call command mariadbmon switchover MyMonitor SlaveServ3 MasterServ
+call command mariadbmon rejoin MyMonitor NewServer2
 ```
+
+The commands follow the standard module command syntax. All require the monitor
+configuration name (MyMonitor) as the first parameter. For switchover, the
+following parameters define the server to promote (SlaveServ3) and the server to
+demote (MasterServ). For rejoin, the server to join (NewServer2) is required.
 
 Failover can also activate automatically, if `auto_failover` is on. The
 activation begins when the master has been down for a number of monitor
 iterations defined in `failcount`.
 
-When `auto-rejoin` is active, the monitor will try to rejoin standalone servers
-and slaves replicating from the wrong master (any server not the cluster
-master). These servers are redirected to replicate from the correct master
-server, forcing the replication topology to a 1-master-N-slaves configuration.
+Rejoin stands for starting replication on a standalone server or redirecting a
+slave replicating from the wrong master (any server that is not the cluster
+master). The rejoined servers are directed to replicate from the current cluster
+master server, forcing the replication topology to a 1-master-N-slaves
+configuration.
 
-All of the three features require that the monitor user (`user`) has the SUPER
-privilege. In addition, the monitor needs to know which username and password a
-slave should use when starting replication. These are given in
-`replication_user` and `replication_password`.
+A server is categorized as standalone if the server has no slave connections,
+not even stopped ones. A server is replicating from the wrong master if the
+slave IO thread is connected but the master server id seen by the slave does not
+match the cluster master id. Alternatively, the IO thread may be stopped or
+connecting but the master server host or port information differs from the
+cluster master info. These criteria mean that a STOP SLAVE does not yet set a
+slave as standalone.
+
+With `auto_rejoin` active, the monitor will try to rejoin any server matching
+the above requirements. When activating rejoin manually, the user-designated
+server must fulfill the same requirements.
 
 ### Limitations
 

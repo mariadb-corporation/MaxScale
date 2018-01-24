@@ -182,7 +182,7 @@ bool run_test(TestConnections& test)
             {
                 for (int j = 0; test_set[x].values[j]; j++)
                 {
-                    CDC::Row row;
+                    CDC::SRow row;
 
                     if ((row = conn.read()))
                     {

@@ -1448,41 +1448,34 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
     return rval;
 }
 
-static inline bool master_maybe_dead(MYSQL_MONITOR* handle)
+/**
+ * Check if a slave is receiving events from master.
+ *
+ * @param handle Cluster monitor
+ * @return True, if a slave has an event more recent than master_failure_timeout.
+ */
+static bool slave_receiving_events(MYSQL_MONITOR* handle)
 {
-    return handle->verify_master_failure && handle->master &&
-           SERVER_IS_DOWN(handle->master->server);
-}
-
-static bool master_still_alive(MYSQL_MONITOR* handle)
-{
-    bool rval = true;
-
-    if (handle->master && SERVER_IS_DOWN(handle->master->server))
+    ss_dassert(handle->master);
+    bool received_event = false;
+    long master_id = handle->master->server->node_id;
+    for (MXS_MONITORED_SERVER* server = handle->monitor->monitored_servers; server; server = server->next)
     {
-        // We have a master and it appears to be dead
-        rval = false;
+        MySqlServerInfo* info = get_server_info(handle, server);
 
-        for (MXS_MONITORED_SERVER* s = handle->monitor->monitored_servers; s; s = s->next)
+        if (info->slave_configured &&
+            info->slave_status.master_server_id == master_id &&
+            difftime(time(NULL), info->latest_event) < handle->master_failure_timeout)
         {
-            MySqlServerInfo* info = get_server_info(handle, s);
-
-            if (info->slave_configured &&
-                info->slave_status.master_server_id == handle->master->server->node_id &&
-                difftime(time(NULL), info->latest_event) < handle->master_failure_timeout)
-            {
-                /**
-                 * The slave is still connected to the correct master and has
-                 * received events. This means that the master is not dead, but
-                 * we just can't connect to it.
-                 */
-                rval = true;
-                break;
-            }
+            /**
+             * The slave is still connected to the correct master and has received events. This means that
+             * while MaxScale can't connect to the master, it's probably still alive.
+             */
+            received_event = true;
+            break;
         }
     }
-
-    return rval;
+    return received_event;
 }
 
 static inline void monitor_mysql_db(MYSQL_MONITOR* mon,
@@ -2383,7 +2376,9 @@ monitorMain(void *arg)
                 handle->auto_failover = false;
                 disable_setting(handle, CN_AUTO_FAILOVER);
             }
-            else if (master_maybe_dead(handle) && master_still_alive(handle))
+            // If master seems to be down, check if slaves are receiving events.
+            else if (handle->verify_master_failure && handle->master &&
+                     SERVER_IS_DOWN(handle->master->server) && slave_receiving_events(handle))
             {
                 MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
             }

@@ -39,7 +39,7 @@ describe("Create/Destroy Commands", function() {
     })
 
     it('create monitor with options', function() {
-        return doCommand('unlink monitor MySQL-Monitor server4')
+        return doCommand('unlink monitor MariaDB-Monitor server4')
             .then(() => verifyCommand('create monitor my-monitor mysqlmon --servers server4 --monitor-user maxuser --monitor-password maxpwd',
                                     'monitors/my-monitor'))
             .then(function(res) {
@@ -84,12 +84,12 @@ describe("Create/Destroy Commands", function() {
     })
 
     it('create server for service and monitor', function() {
-        return verifyCommand('create server server6 127.0.0.1 3005 --services RW-Split-Router --monitors MySQL-Monitor',
+        return verifyCommand('create server server6 127.0.0.1 3005 --services RW-Split-Router --monitors MariaDB-Monitor',
                              'servers/server6')
             .then(function(res) {
                 res.data.relationships.services.data[0].id.should.equal("RW-Split-Router")
                 res.data.relationships.services.data.length.should.equal(1)
-                res.data.relationships.monitors.data[0].id.should.equal("MySQL-Monitor")
+                res.data.relationships.monitors.data[0].id.should.equal("MariaDB-Monitor")
                 res.data.relationships.monitors.data.length.should.equal(1)
             })
     })

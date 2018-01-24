@@ -137,6 +137,19 @@ int simple_failover(TestConnections* test)
         }
         test->maxscales->close_rwsplit(0);
         test->tprintf("OK\n");
+
+        /** Restart MaxScale check that states are the same */
+        test->maxscales->restart();
+        sleep(15);
+        test->tprintf("Expecting '%s'...", server_id[2]);
+        if (test->maxscales->connect_rwsplit(0) || check_server_id(test, server_id[2]))
+        {
+            test->tprintf("Test failed after restarting MaxScale.");
+            rval = 1;
+            break;
+        }
+        test->maxscales->close_rwsplit(0);
+        test->tprintf("OK\n");
     }
     while (false);
 

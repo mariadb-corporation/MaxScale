@@ -104,17 +104,8 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 set(MYSQL_CLIENT ${CMAKE_BINARY_DIR}/lib/mariadb/libmariadbclient.a CACHE INTERNAL "")
 
 # Build the CDC connector
-ExternalProject_Add(cdc_connector
-  GIT_REPOSITORY https://github.com/mariadb-corporation/maxscale-cdc-connector.git
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/cdc_connector/
-  BUILD_COMMAND make
-  INSTALL_COMMAND make install
-  UPDATE_COMMAND "")
-
-include(GNUInstallDirs)
-set(CDC_CONNECTOR_INCLUDE ${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_INCLUDEDIR}/ CACHE INTERNAL "")
-set(CDC_CONNECTOR_LIBRARIES ${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_LIBDIR}/libcdc_connector.so CACHE INTERNAL "")
-include_directories(${CMAKE_BINARY_DIR}/cdc_connector/${CMAKE_INSTALL_INCLUDEDIR})
+add_library(cdc_connector ${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/cdc_connector.cpp)
+include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
 
 #
 # Check that all required components are present. To build even without them,

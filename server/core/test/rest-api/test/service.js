@@ -98,7 +98,7 @@ describe("Service", function() {
             "attributes": {
                 "parameters": {
                     "port": 4012,
-                    "protocol": "MySQLClient",
+                    "protocol": "MariaDBClient",
                     "authenticator": "MySQLAuth",
                     "address": "127.0.0.1"
                 }

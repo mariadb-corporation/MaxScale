@@ -72,7 +72,9 @@ static int test1()
     ss_info_dassert(dump, "Users should be dumped");
     USERS* loaded_users = users_from_json(dump);
     ss_info_dassert(dump, "Users should be loaded");
+    json_decref(dump);
     rv = users_auth(loaded_users, "username2", "authorisation2");
+    users_free(loaded_users);
     ss_info_dassert(rv, "Loaded users should contain users");
 
     ss_dfprintf(stderr, "\t..done\nFree user table.");
