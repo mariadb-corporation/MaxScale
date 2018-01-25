@@ -1334,9 +1334,14 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
 
             if (tok)
             {
-                if (tok_eq(ptok, "add", plen) && tok_eq(tok, "column", len))
+                if (tok_eq(tok, "column", len))
                 {
+                    // Skip the optional COLUMN keyword
                     tok = get_tok(tok + len, &len, end);
+                }
+
+                if (tok_eq(ptok, "add", plen))
+                {
                     char avro_token[len + 1];
                     make_avro_token(avro_token, tok, len);
                     bool is_new = true;
@@ -1367,10 +1372,8 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
-                else if (tok_eq(ptok, "drop", plen) && tok_eq(tok, "column", len))
+                else if (tok_eq(ptok, "drop", plen))
                 {
-                    tok = get_tok(tok + len, &len, end);
-
                     int idx = get_column_index(create, tok, len);
 
                     if (idx != -1)
@@ -1394,10 +1397,8 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
-                else if (tok_eq(ptok, "change", plen) && tok_eq(tok, "column", len))
+                else if (tok_eq(ptok, "change", plen))
                 {
-                    tok = get_tok(tok + len, &len, end);
-
                     int idx = get_column_index(create, tok, len);
 
                     if (idx != -1 && (tok = get_tok(tok + len, &len, end)))
