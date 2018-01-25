@@ -138,15 +138,15 @@ int conversation_func(int num_msg, const struct pam_message **msg,
 }
 
 /**
- * @brief Check if the client token is valid
+ * @brief Check if the client password is correct for the service
  *
- * @param token Client token
- * @param len Length of the token
- * @param output Pointer where the client principal name is stored
- * @return True if client token is valid
+ * @param user Username
+ * @param password Password
+ * @param service Which PAM service is the user logging to
+ * @param client Client DCB
+ * @return True if username & password are ok
  */
-bool validate_pam_password(const string& user, const string& password,
-                           const string& service, DCB* client)
+bool validate_pam_password(const string& user, const string& password, const string& service, DCB* client)
 {
     ConversationData appdata(client, 0, password);
     pam_conv conv_struct = {conversation_func, &appdata};
@@ -164,8 +164,7 @@ bool validate_pam_password(const string& user, const string& password,
             MXS_DEBUG("pam_authenticate returned success.");
             break;
         case PAM_AUTH_ERR:
-            MXS_DEBUG("pam_authenticate returned authentication failure"
-                      " (wrong password).");
+            MXS_DEBUG("pam_authenticate returned authentication failure (wrong password).");
             // Normal failure
             break;
         default:
@@ -223,13 +222,11 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
 }
 
 /**
- * @brief Check which PAM services the session user has access to
+ * Check which PAM services the session user has access to.
  *
- * @param auth Authenticator session
  * @param dcb Client DCB
  * @param session MySQL session
- *
- * @return An array of PAM service names for the session user
+ * @param services_out Output for services
  */
 void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
                                              StringVector* services_out)
@@ -241,28 +238,14 @@ void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session
                             "' LIKE db) ORDER BY authentication_string";
     MXS_DEBUG("PAM services search sql: '%s'.", services_query.c_str());
     char *err;
-    /**
-     * Try search twice: first time with the current users, second
-     * time with fresh users.
-     */
-    for (int i = 0; i < 2; i++)
+    if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb,
+                     services_out, &err) != SQLITE_OK)
     {
-        if (i == 0 || service_refresh_users(dcb->service) == 0)
-        {
-            if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb,
-                             services_out, &err) != SQLITE_OK)
-            {
-                MXS_ERROR("Failed to execute query: '%s'", err);
-                sqlite3_free(err);
-            }
-            else if (!services_out->empty())
-            {
-                MXS_DEBUG("User '%s' matched %lu rows in %s db.", session->user,
-                          services_out->size(), m_instance.m_tablename.c_str());
-                break;
-            }
-        }
+        MXS_ERROR("Failed to execute query: '%s'", err);
+        sqlite3_free(err);
     }
+    MXS_DEBUG("User '%s' matched %lu rows in %s db.", session->user,
+              services_out->size(), m_instance.m_tablename.c_str());
 }
 
 /**
@@ -328,16 +311,51 @@ int PamClientSession::authenticate(DCB* dcb)
              * responded with the password. Try to continue authentication without more
              * messages to client. */
             string password((char*)ses->auth_token, ses->auth_token_len);
-            StringVector services;
-            get_pam_user_services(dcb, ses, &services);
-
-            for (StringVector::const_iterator i = services.begin(); i != services.end(); i++)
+            /*
+             * Authentication may be attempted twice: first with old user account info and then with
+             * updated info. Updating may fail if it has been attempted too often lately. The second password
+             * check is useless if the user services are same as on the first attempt.
+             */
+            bool authenticated = false;
+            StringVector services_old;
+            for (int loop = 0; loop < 2 && !authenticated; loop++)
             {
-                if (validate_pam_password(ses->user, password, *i, dcb))
+                if (loop == 0 || service_refresh_users(dcb->service) == 0)
                 {
-                    rval = MXS_AUTH_SUCCEEDED;
-                    break;
+                    bool try_validate = true;
+                    StringVector services;
+                    get_pam_user_services(dcb, ses, &services);
+                    if (loop == 0)
+                    {
+                        services_old = services;
+                    }
+                    else if (services == services_old)
+                    {
+                        try_validate = false;
+                    }
+                    if (try_validate)
+                    {
+                        for (StringVector::iterator iter = services.begin();
+                             iter != services.end() && !authenticated;
+                             iter++)
+                        {
+                            // The server PAM plugin uses "mysql" as the default service when authenticating
+                            // a user with no service.
+                            if (iter->empty())
+                            {
+                                *iter = "mysql";
+                            }
+                            if (validate_pam_password(ses->user, password, *iter, dcb))
+                            {
+                                authenticated = true;
+                            }
+                        }
+                    }
                 }
+            }
+            if (authenticated)
+            {
+                rval = MXS_AUTH_SUCCEEDED;
             }
         }
     }
