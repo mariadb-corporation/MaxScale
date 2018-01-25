@@ -148,6 +148,172 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 /** Default master failure verification timeout */
 #define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
 
+class Gtid
+{
+public:
+    uint32_t domain;
+    uint32_t server_id;
+    uint64_t sequence;
+    Gtid()
+        : domain(0)
+        , server_id(0)
+        , sequence(0)
+    {}
+
+    /**
+     * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with
+     * the given domain is returned.
+     *
+     * @param str Gtid string
+     * @param search_domain The Gtid domain whose triplet should be returned. Negative domain stands for
+     * autoselect, which is only allowed when the string contains one triplet.
+     */
+    Gtid(const char* str, int64_t search_domain = -1)
+        : domain(0)
+        , server_id(0)
+        , sequence(0)
+    {
+        // Autoselect only allowed with one triplet
+        ss_dassert(search_domain >= 0 || strchr(str, ',') == NULL);
+        parse_triplet(str);
+        if (search_domain >= 0 && domain != search_domain)
+        {
+            // Search for the correct triplet.
+            bool found = false;
+            for (const char* next_triplet = strchr(str, ',');
+                 next_triplet != NULL && !found;
+                 next_triplet = strchr(next_triplet, ','))
+            {
+                parse_triplet(++next_triplet);
+                if (domain == search_domain)
+                {
+                    found = true;
+                }
+            }
+            ss_dassert(found);
+        }
+    }
+    bool operator == (const Gtid& rhs) const
+    {
+        return domain == rhs.domain && server_id == rhs.server_id && sequence == rhs.sequence;
+    }
+    string to_string() const
+    {
+        std::stringstream ss;
+        ss << domain << "-" << server_id << "-" << sequence;
+        return ss.str();
+    }
+private:
+    void parse_triplet(const char* str)
+    {
+        ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &domain, &server_id, &sequence);
+        ss_dassert(rv == 3);
+    }
+};
+
+// Contains data returned by one row of SHOW ALL SLAVES STATUS
+class SlaveStatusInfo
+{
+public:
+    int master_server_id;   /**< The master's server_id value. */
+    string master_host;     /**< Master server host name. */
+    int master_port;        /**< Master server port. */
+    bool slave_io_running;  /**< Whether the slave I/O thread is running and connected. */
+    bool slave_sql_running; /**< Whether or not the SQL thread is running. */
+    string master_log_file; /**< Name of the master binary log file that the I/O thread is currently
+                             *   reading from. */
+    uint64_t read_master_log_pos; /**< Position up to which the I/O thread has read in the current master
+                                   *   binary log file. */
+    Gtid gtid_io_pos;       /**< Gtid I/O position of the slave thread. Only shows the triplet with
+                             *   the current master domain. */
+    string last_error;      /**< Last IO or SQL error encountered. */
+
+    SlaveStatusInfo()
+        : master_server_id(0)
+        , master_port(0)
+        , slave_io_running(false)
+        , slave_sql_running(false)
+        , read_master_log_pos(0)
+    {}
+};
+
+// This class groups some miscellaneous replication related settings together.
+class ReplicationSettings
+{
+public:
+    bool gtid_strict_mode;      /**< Enable additional checks for replication */
+    bool log_bin;               /**< Is binary logging enabled */
+    bool log_slave_updates;     /**< Does the slave log replicated events to binlog */
+    ReplicationSettings()
+        : gtid_strict_mode(false)
+        , log_bin(false)
+        , log_slave_updates(false)
+    {}
+};
+
+/**
+ * Monitor specific information about a server
+ *
+ * Note: These are initialized in @c init_server_info
+ */
+class MySqlServerInfo
+{
+public:
+    int              server_id;             /**< Value of @@server_id */
+    int              group;                 /**< Multi-master group where this server belongs,
+                                             *   0 for servers not in groups */
+    bool             read_only;             /**< Value of @@read_only */
+    bool             slave_configured;      /**< Whether SHOW SLAVE STATUS returned rows */
+    bool             binlog_relay;          /** Server is a Binlog Relay */
+    int              n_slaves_configured;   /**< Number of configured slave connections*/
+    int              n_slaves_running;      /**< Number of running slave connections */
+    int              slave_heartbeats;      /**< Number of received heartbeats */
+    double           heartbeat_period;      /**< The time interval between heartbeats */
+    time_t           latest_event;          /**< Time when latest event was received from the master */
+    int64_t          gtid_domain_id;        /**< The value of gtid_domain_id, the domain which is used for
+                                             *   new non-replicated events. */
+    Gtid             gtid_current_pos;      /**< Gtid of latest event. Only shows the triplet
+                                             *   with the current master domain. */
+    Gtid             gtid_binlog_pos;       /**< Gtid of latest event written to binlog. Only shows
+                                             *   the triplet with the current master domain. */
+    SlaveStatusInfo  slave_status;          /**< Data returned from SHOW SLAVE STATUS */
+    ReplicationSettings rpl_settings;       /**< Miscellaneous replication related settings */
+    mysql_server_version version;           /**< Server version, 10.X, 5.5 or 5.1 */
+
+    MySqlServerInfo()
+        : server_id(0)
+        , group(0)
+        , read_only(false)
+        , slave_configured(false)
+        , binlog_relay(false)
+        , n_slaves_configured(0)
+        , n_slaves_running(0)
+        , slave_heartbeats(0)
+        , heartbeat_period(0)
+        , latest_event(0)
+        , gtid_domain_id(-1)
+        , version(MYSQL_SERVER_VERSION_51)
+    {}
+
+    /**
+     * Calculate how many events are left in the relay log. If gtid_current_pos is ahead of Gtid_IO_Pos,
+     * or a server_id is zero, an error value is returned.
+     *
+     * @return Number of events in relay log according to latest queried info. A negative value signifies
+     * an error in the gtid-values.
+     */
+    int64_t relay_log_events()
+    {
+        if (slave_status.gtid_io_pos.server_id != 0 && gtid_current_pos.server_id != 0 &&
+            slave_status.gtid_io_pos.domain == gtid_current_pos.domain &&
+            slave_status.gtid_io_pos.sequence >= gtid_current_pos.sequence)
+        {
+            return slave_status.gtid_io_pos.sequence - gtid_current_pos.sequence;
+        }
+        return -1;
+    }
+};
+
 /**
  * Check whether specified current master is acceptable.
  *
@@ -303,10 +469,13 @@ bool mysql_switchover_check(MXS_MONITOR* mon,
  * @param error_out JSON error out
  * @return True if failover may proceed
  */
-bool mysql_failover_check(MYSQL_MONITOR* mon, json_t** error_out)
+bool failover_check(MYSQL_MONITOR* mon, json_t** error_out)
 {
     // Check that there is no running master and that there is at least one running server in the cluster.
+    // Also, all slaves must be using gtid-replication.
     int slaves = 0;
+    bool error = false;
+
     for (MXS_MONITORED_SERVER* mon_server = mon->monitor->monitored_servers;
          mon_server != NULL;
          mon_server = mon_server->next)
@@ -322,19 +491,35 @@ bool mysql_failover_check(MYSQL_MONITOR* mon, json_t** error_out)
                 master_up_msg += ", although in maintenance mode";
             }
             master_up_msg += ".";
-            PRINT_MXS_JSON_ERROR(error_out, "%s Failover not allowed.", master_up_msg.c_str());
-            return false;
+            PRINT_MXS_JSON_ERROR(error_out, "%s", master_up_msg.c_str());
+            error = true;
         }
         else if (SERVER_IS_SLAVE(mon_server->server))
         {
-            slaves++;
+            const MySqlServerInfo* info = get_server_info(mon, mon_server);
+            if (info->slave_status.gtid_io_pos.server_id == 0)
+            {
+                string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
+                                            " is not using gtid replication or master server id is 0.";
+                PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
+                error = true;
+            }
+            else
+            {
+                slaves++;
+            }
         }
     }
-    if (slaves == 0)
+
+    if (error)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Failover not allowed due to errors.");
+    }
+    else if (slaves == 0)
     {
         PRINT_MXS_JSON_ERROR(error_out, "No running slaves, cannot failover.");
     }
-    return slaves > 0;
+    return !error && slaves > 0;
 }
 
 /**
@@ -486,7 +671,7 @@ bool mysql_failover(MXS_MONITOR* mon, json_t** output)
         MXS_NOTICE("Monitor %s already stopped, failover can proceed.", mon->name);
     }
 
-    rv = mysql_failover_check(handle, output);
+    rv = failover_check(handle, output);
     if (rv)
     {
         rv = do_failover(handle, output);
@@ -765,170 +950,6 @@ extern "C"
     }
 
 }
-
-class Gtid
-{
-public:
-    uint32_t domain;
-    uint32_t server_id;
-    uint64_t sequence;
-    Gtid()
-        : domain(0)
-        , server_id(0)
-        , sequence(0)
-    {}
-
-    /**
-     * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with
-     * the given domain is returned.
-     *
-     * @param str Gtid string
-     * @param search_domain The Gtid domain whose triplet should be returned. Negative domain stands for
-     * autoselect, which is only allowed when the string contains one triplet.
-     */
-    Gtid(const char* str, int64_t search_domain = -1)
-        : domain(0)
-        , server_id(0)
-        , sequence(0)
-    {
-        // Autoselect only allowed with one triplet
-        ss_dassert(search_domain >= 0 || strchr(str, ',') == NULL);
-        parse_triplet(str);
-        if (search_domain >= 0 && domain != search_domain)
-        {
-            // Search for the correct triplet.
-            bool found = false;
-            for (const char* next_triplet = strchr(str, ',');
-                 next_triplet != NULL && !found;
-                 next_triplet = strchr(next_triplet, ','))
-            {
-                parse_triplet(++next_triplet);
-                if (domain == search_domain)
-                {
-                    found = true;
-                }
-            }
-            ss_dassert(found);
-        }
-    }
-    bool operator == (const Gtid& rhs) const
-    {
-        return domain == rhs.domain && server_id == rhs.server_id && sequence == rhs.sequence;
-    }
-    string to_string() const
-    {
-        std::stringstream ss;
-        ss << domain << "-" << server_id << "-" << sequence;
-        return ss.str();
-    }
-private:
-    void parse_triplet(const char* str)
-    {
-        ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &domain, &server_id, &sequence);
-        ss_dassert(rv == 3);
-    }
-};
-// Contains data returned by one row of SHOW ALL SLAVES STATUS
-class SlaveStatusInfo
-{
-public:
-    int master_server_id;   /**< The master's server_id value. */
-    string master_host;     /**< Master server host name. */
-    int master_port;        /**< Master server port. */
-    bool slave_io_running;  /**< Whether the slave I/O thread is running and connected. */
-    bool slave_sql_running; /**< Whether or not the SQL thread is running. */
-    string master_log_file; /**< Name of the master binary log file that the I/O thread is currently
-                             *   reading from. */
-    uint64_t read_master_log_pos; /**< Position up to which the I/O thread has read in the current master
-                                   *   binary log file. */
-    Gtid gtid_io_pos;       /**< Gtid I/O position of the slave thread. Only shows the triplet with
-                             *   the current master domain. */
-    string last_error;      /**< Last IO or SQL error encountered. */
-
-    SlaveStatusInfo()
-        :   master_server_id(0),
-            master_port(0),
-            slave_io_running(false),
-            slave_sql_running(false),
-            read_master_log_pos(0)
-    {}
-};
-
-// This class groups some miscellaneous replication related settings together.
-class ReplicationSettings
-{
-public:
-    bool             gtid_strict_mode; /**< Enable additional checks for replication */
-    bool             log_bin;          /**< Is binary logging enabled */
-    bool             log_slave_updates;/**< Does the slave log replicated events to binlog */
-    ReplicationSettings()
-        :   gtid_strict_mode(false)
-        ,   log_bin(false)
-        ,   log_slave_updates(false)
-    {}
-};
-
-/**
- * Monitor specific information about a server
- *
- * Note: These are initialized in @c init_server_info
- */
-class MySqlServerInfo
-{
-public:
-    int              server_id; /**< Value of @@server_id */
-    int              group; /**< Multi-master group where this server belongs, 0 for servers not in groups */
-    bool             read_only; /**< Value of @@read_only */
-    bool             slave_configured;    /**< Whether SHOW SLAVE STATUS returned rows */
-    bool             binlog_relay;        /** Server is a Binlog Relay */
-    int              n_slaves_configured; /**< Number of configured slave connections*/
-    int              n_slaves_running; /**< Number of running slave connections */
-    int              slave_heartbeats; /**< Number of received heartbeats */
-    double           heartbeat_period; /**< The time interval between heartbeats */
-    time_t           latest_event;     /**< Time when latest event was received from the master */
-    int64_t          gtid_domain_id;   /**< The value of gtid_domain_id, the domain which is used for new non-
-                                        *   replicated events. */
-    Gtid             gtid_current_pos; /**< Gtid of latest event. Only shows the triplet
-                                        *   with the current master domain. */
-    Gtid             gtid_binlog_pos;  /**< Gtid of latest event written to binlog. Only shows the triplet
-                                        *   with the current master domain. */
-    SlaveStatusInfo  slave_status;     /**< Data returned from SHOW SLAVE STATUS */
-    ReplicationSettings rpl_settings;  /**< Miscellaneous replication related settings */
-    mysql_server_version version;      /**< Server version, 10.X, 5.5 or 5.1 */
-
-    MySqlServerInfo()
-        :   server_id(0),
-            group(0),
-            read_only(false),
-            slave_configured(false),
-            binlog_relay(false),
-            n_slaves_configured(0),
-            n_slaves_running(0),
-            slave_heartbeats(0),
-            heartbeat_period(0),
-            latest_event(0),
-            gtid_domain_id(-1),
-            version(MYSQL_SERVER_VERSION_51)
-    {}
-
-    /**
-     * Calculate how many events are left in the relay log. If gtid_current_pos is ahead of Gtid_IO_Pos,
-     * or a server_id is zero, an error value is returned.
-     *
-     * @return Number of events in relay log according to latest queried info. A negative value signifies
-     * an error in the gtid-values.
-     */
-    int64_t relay_log_events()
-    {
-        if (slave_status.gtid_io_pos.server_id != 0 && gtid_current_pos.server_id != 0 &&
-            slave_status.gtid_io_pos.domain == gtid_current_pos.domain &&
-            slave_status.gtid_io_pos.sequence >= gtid_current_pos.sequence)
-        {
-            return slave_status.gtid_io_pos.sequence - gtid_current_pos.sequence;
-        }
-        return -1;
-    }
-};
 
 void* info_copy_func(const void *val)
 {
@@ -3258,7 +3279,7 @@ bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, boo
             MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
                        failed_master->server->unique_name);
             failed_master->new_event = false;
-            rval = mysql_failover_check(monitor, NULL) && do_failover(monitor, NULL);
+            rval = failover_check(monitor, NULL) && do_failover(monitor, NULL);
             if (rval)
             {
                 *cluster_modified_out = true;
@@ -3395,7 +3416,7 @@ MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon,
             if (check_replication_settings(cand, cand_info))
             {
                 bool select_this = false;
-                // If no candidate yet, accept any.
+                // If no candidate yet, accept any slave. Slaves have already been checked to use gtid.
                 if (new_master == NULL)
                 {
                     select_this = true;
