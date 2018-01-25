@@ -210,6 +210,7 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
 {
     bool rval = false;
     uint8_t *start = ptr;
+    uint8_t *end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
     uint8_t table_id_size = router->event_type_hdr_lens[hdr->event_type] == 6 ? 4 : 6;
     uint64_t table_id = 0;
 
@@ -274,8 +275,9 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
         snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database, map->table);
         AVRO_TABLE* table = hashtable_fetch(router->open_tables, table_ident);
         TABLE_CREATE* create = map->table_create;
+        ss_dassert(hashtable_fetch(router->created_tables, table_ident) == create);
 
-        if (table && create && ncolumns == map->columns)
+        if (table && create && ncolumns == map->columns && create->columns == map->columns)
         {
             avro_value_t record;
             avro_generic_value_new(table->avro_writer_iface, &record);
@@ -292,7 +294,6 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
                 MXS_INFO("Row %lu", total_row_count++);
 
                 /** Add the current GTID and timestamp */
-                uint8_t *end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
                 int event_type = get_event_type(hdr->event_type);
                 prepare_record(router, hdr, event_type, &record);
                 ptr = process_row_event_data(map, create, &record, ptr, col_present, end);
@@ -332,6 +333,12 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
         {
             MXS_ERROR("Create table statement for %s.%s was not found from the "
                       "binary logs or the stored schema was not correct.",
+                      map->database, map->table);
+        }
+        else if (ncolumns == map->columns && create->columns != map->columns)
+        {
+            MXS_ERROR("Table map event has a different column "
+                      "count for table %s.%s than the CREATE TABLE statement.",
                       map->database, map->table);
         }
         else

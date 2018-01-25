@@ -649,6 +649,7 @@ size_t unpack_numeric_field(uint8_t *src, uint8_t type, uint8_t *metadata, uint8
         break;
     }
 
+    ss_dassert(size > 0);
     memcpy(dest, src, size);
     return size;
 }
