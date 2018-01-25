@@ -1040,12 +1040,13 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     db[dblen] = 0;
 
     size_t sqlsz = len, tmpsz = len;
-    char *tmp = MXS_MALLOC(len);
+    char *tmp = MXS_MALLOC(len + 1);
     MXS_ABORT_IF_NULL(tmp);
     remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
     sql = tmp;
     len = tmpsz;
     unify_whitespace(sql, len);
+    sql[len] = '\0';
 
     static bool warn_not_row_format = true;
 

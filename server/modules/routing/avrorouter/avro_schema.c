@@ -930,7 +930,6 @@ static void remove_extras(char* str)
     ss_dassert(strlen(str) == len);
 }
 
-
 static void remove_backticks(char* src)
 {
     char* dest = src;
@@ -1132,6 +1131,110 @@ static const char* get_tok(const char* sql, int* toklen, const char* end)
     }
 
     return NULL;
+}
+
+static void rskip_whitespace(const char* sql, const char** end)
+{
+    const char* ptr = *end;
+
+    while (ptr > sql && isspace(*ptr))
+    {
+        ptr--;
+    }
+
+    *end = ptr;
+}
+
+static void rskip_token(const char* sql, const char** end)
+{
+    const char* ptr = *end;
+
+    while (ptr > sql && !isspace(*ptr))
+    {
+        ptr--;
+    }
+
+    *end = ptr;
+}
+
+static bool get_placement_specifier(const char* sql, const char* end, const char** tgt, int* tgt_len)
+{
+    bool rval = false;
+    ss_dassert(end > sql);
+    end--;
+
+    *tgt = NULL;
+    *tgt_len = 0;
+
+    // Skip any trailing whitespace
+    rskip_whitespace(sql, &end);
+
+    if (*end == '`')
+    {
+        // Identifier, possibly AFTER `column`
+        const char* id_end = end;
+        end--;
+
+        while (end > sql && *end != '`')
+        {
+            end--;
+        }
+
+        const char* id_start = end + 1;
+        ss_dassert(*end == '`' && *id_end == '`');
+
+        end--;
+
+        rskip_whitespace(sql, &end);
+        rskip_token(sql, &end);
+
+        // end points to the character _before_ the token
+        end++;
+
+        if (strncasecmp(end, "AFTER", 5) == 0)
+        {
+            // This column comes after the specified column
+            rval = true;
+            *tgt = id_start;
+            *tgt_len = id_end - id_start;
+        }
+    }
+    else
+    {
+        // Something else, possibly FIRST or un-backtick'd AFTER
+        const char* id_end = end + 1; // Points to either a trailing space or one-after-the-end
+        rskip_token(sql, &end);
+
+        // end points to the character _before_ the token
+        end++;
+
+        if (strncasecmp(end, "FIRST", 5) == 0)
+        {
+            // Put this column first
+            rval = true;
+        }
+        else
+        {
+            const char* id_start = end + 1;
+
+            // Skip the whitespace and until the start of the current token
+            rskip_whitespace(sql, &end);
+            rskip_token(sql, &end);
+
+            // end points to the character _before_ the token
+            end++;
+
+            if (strncasecmp(end, "AFTER", 5) == 0)
+            {
+                // This column comes after the specified column
+                rval = true;
+                *tgt = id_start;
+                *tgt_len = id_end - id_start;
+            }
+        }
+    }
+
+    return rval;
 }
 
 static bool tok_eq(const char *a, const char *b, size_t len)
