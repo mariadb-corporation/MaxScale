@@ -44,11 +44,11 @@
 
 #define NEW_LOAD_DBUSERS_QUERY "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
     FROM mysql.user AS u LEFT JOIN mysql.db AS d \
-    ON (u.user = d.user AND u.host = d.host) %s \
+    ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = '' %s \
     UNION \
     SELECT u.user, u.host, t.db, u.select_priv, u.%s \
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
-    ON (u.user = t.user AND u.host = t.host) %s"
+    ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = '' %s"
 
 static int get_users(SERV_LISTENER *listener, bool skip_local);
 static MYSQL *gw_mysql_init(void);
@@ -59,7 +59,7 @@ static bool get_hostname(DCB *dcb, char *client_hostname, size_t size);
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
     const char* password = strstr(server_version, "5.7.") ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
-    const char *with_root = include_root ? "" : "WHERE u.user NOT IN ('root')";
+    const char *with_root = include_root ? "" : " AND u.user NOT IN ('root')";
 
     size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
     char *rval = MXS_MALLOC(n_bytes + 1);
