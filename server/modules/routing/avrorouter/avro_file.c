@@ -1067,6 +1067,9 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         }
     }
 
+    char ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
+    read_table_identifier(db, sql, sql + len, ident, sizeof(ident));
+
     if (is_create_table_statement(router, sql, len))
     {
         TABLE_CREATE *created = NULL;
@@ -1086,7 +1089,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         }
         else
         {
-            created = table_create_alloc(sql, len, db);
+            created = table_create_alloc(ident, sql, len, db);
         }
 
         if (created && !save_and_replace_table_create(router, created))
@@ -1096,30 +1099,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     }
     else if (is_alter_table_statement(router, sql, len))
     {
-        char ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-        read_alter_identifier(sql, sql + len, ident, sizeof(ident));
-
-        bool combine = (strnlen(db, 1) && strchr(ident, '.') == NULL);
-
-        size_t ident_len = strlen(ident) + 1; // + 1 for the NULL
-
-        if (combine)
-        {
-            ident_len += (strlen(db) + 1); // + 1 for the "."
-        }
-
-        char full_ident[ident_len];
-        full_ident[0] = 0; // Set full_ident to "".
-
-        if (combine)
-        {
-            strcat(full_ident, db);
-            strcat(full_ident, ".");
-        }
-
-        strcat(full_ident, ident);
-
-        TABLE_CREATE *created = hashtable_fetch(router->created_tables, full_ident);
+        TABLE_CREATE *created = hashtable_fetch(router->created_tables, ident);
 
         if (created)
         {
