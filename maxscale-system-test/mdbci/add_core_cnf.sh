@@ -1,4 +1,8 @@
-set -x
+if [ "$1" == "verbose" ]
+then
+    set -x
+fi
+
 chmod 777 /tmp/
 echo 2 > /proc/sys/fs/suid_dumpable
 sed -i "s/start() {/start() { \n export DAEMON_COREFILE_LIMIT='unlimited'; ulimit -c unlimited; /" /etc/init.d/maxscale
