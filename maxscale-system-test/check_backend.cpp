@@ -8,7 +8,20 @@
 
 int main(int argc, char *argv[])
 {
+    char src[1024];
+    char dst[1024];
+  
     TestConnections * Test = new TestConnections(argc, argv);
+
+    for (int i = 0; i < Test->maxscales->N; i++)
+    {
+        sprintf(src, "%s/mdbci/add_core_cnf.sh", test_dir);
+        Test->maxscales->ssh_node_f(i, false, "mkdir %s/ccore", Test->maxscales->access_homedir[i]);
+        sprintf(dst, "%s/ccore/", Test->maxscales->access_homedir[i]);
+        Test->maxscales->copy_to_node(i, src, dst);
+        sprintf(dst, "%s/ccore/", Test->maxscales->access_homedir[i]);
+        Test->maxscales->ssh_node_f(i, true, "%s/ccore/add_core_cnf.sh", Test->maxscales->access_homedir[i]);
+    }
 
     /*Test->restart_maxscale();
     sleep(5);*/
