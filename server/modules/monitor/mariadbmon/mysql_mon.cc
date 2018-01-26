@@ -314,152 +314,95 @@ public:
     }
 };
 
+bool uses_gtid(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* mon_server, json_t** error_out)
+{
+    bool rval = false;
+    const MySqlServerInfo* info = get_server_info(mon, mon_server);
+    if (info->slave_status.gtid_io_pos.server_id == 0)
+    {
+        string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
+                                    " is not using gtid replication or master server id is 0.";
+        PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
+    }
+    else
+    {
+        rval = true;
+    }
+    return rval;
+}
 /**
- * Check whether specified current master is acceptable.
+ * Check that the given server is a master and it's the only master.
  *
- * @param current_master            The specified current master.
- * @param monitored_server          The server to check against.
- * @param monitored_current_master  On output, @c monitored_server, if @c monitored_server
- *                                  is the same server as @c current_master.
- * @param error                     On output, error object if function failed.
+ * @param mon                       Cluster monitor.
+ * @param suggested_curr_master     The server to check, given by user.
+ * @param error_out                 On output, error object if function failed.
  *
  * @return False, if there is some error with the specified current master,
  *         True otherwise.
  */
-bool mysql_switchover_check_current(SERVER* current_master,
-                                    MXS_MONITORED_SERVER* monitored_server,
-                                    MXS_MONITORED_SERVER** monitored_current_master,
-                                    json_t** error)
+bool mysql_switchover_check_current(const MYSQL_MONITOR* mon,
+                                    const MXS_MONITORED_SERVER* suggested_curr_master,
+                                    json_t** error_out)
 {
-    bool rv = true;
-    bool is_master = SERVER_IS_MASTER(monitored_server->server);
-
-    if (current_master == monitored_server->server)
+    bool server_is_master = false;
+    MXS_MONITORED_SERVER* extra_master = NULL; // A master server which is not the suggested one
+    for (MXS_MONITORED_SERVER* mon_serv = mon->monitor->monitored_servers;
+         mon_serv != NULL && extra_master == NULL;
+         mon_serv = mon_serv->next)
     {
-        if (is_master)
+        if (SERVER_IS_MASTER(mon_serv->server))
         {
-            *monitored_current_master = monitored_server;
-        }
-        else
-        {
-            *error = mxs_json_error("Specified %s is a server, but not the current master.",
-                                    current_master->unique_name);
-            rv = false;
+            if (mon_serv == suggested_curr_master)
+            {
+                server_is_master = true;
+            }
+            else
+            {
+                extra_master = mon_serv;
+            }
         }
     }
-    else if (is_master)
-    {
-        *error = mxs_json_error("Current master not specified, even though there is "
-                                "a master (%s).", monitored_server->server->unique_name);
-        rv = false;
-    }
 
-    return rv;
+    if (!server_is_master)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is not the current master or it's in maintenance.",
+                             suggested_curr_master->server->unique_name);
+    }
+    else if (extra_master)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Cluster has an additional master server '%s'.",
+                             extra_master->server->unique_name);
+    }
+    return server_is_master && !extra_master;
 }
 
 /**
  * Check whether specified new master is acceptable.
  *
- * @param new_master            The specified new master.
  * @param monitored_server      The server to check against.
- * @param monitored_new_master  On output, @c monitored_server, if @c monitored_server
- *                              is the same server as @c new_master.
  * @param error                 On output, error object if function failed.
  *
- * @return False, if there is some error with the specified current master,
- *         True otherwise.
+ * @return True, if suggested new master is a viable promotion candidate.
  */
-bool mysql_switchover_check_new(SERVER* new_master,
-                                MXS_MONITORED_SERVER* monitored_server,
-                                MXS_MONITORED_SERVER** monitored_new_master,
-                                json_t** error)
+bool mysql_switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error)
 {
-    bool rv = true;
-    bool is_master = SERVER_IS_MASTER(monitored_server->server);
+    SERVER* server = monitored_server->server;
+    const char* name = server->unique_name;
+    bool is_master = SERVER_IS_MASTER(server);
+    bool is_slave = SERVER_IS_SLAVE(server);
 
-    if (new_master == monitored_server->server)
+    if (is_master)
     {
-        if (!is_master)
-        {
-            *monitored_new_master = monitored_server;
-        }
-        else
-        {
-            *error = mxs_json_error("Specified new master %s is already the current master.",
-                                    new_master->unique_name);
-            rv = false;
-        }
+        const char IS_MASTER[] = "Specified new master '%s' is already the current master.";
+        PRINT_MXS_JSON_ERROR(error, IS_MASTER, name);
+    }
+    else if (!is_slave)
+    {
+        const char NOT_SLAVE[] = "Specified new master '%s' is not a slave.";
+        PRINT_MXS_JSON_ERROR(error, NOT_SLAVE, name);
     }
 
-    return rv;
-}
-
-/**
- * Check whether specified current and new master are acceptable.
- *
- * @param mon                       The monitor.
- * @param new_master                The specified new master.
- * @param current_master            The specifiec current master (may be NULL).
- * @param monitored_new_master      On output, the monitored server corresponding to
- *                                  @c new_master.
- * @param monitored_current_master  On output, the monitored server corresponding to
- *                                  @c current_master.
- * @param error                     On output, error object if function failed.
- *
- * @return True if switchover can proceeed, false otherwise.
- */
-bool mysql_switchover_check(MXS_MONITOR* mon,
-                            SERVER* new_master,
-                            SERVER* current_master,
-                            MXS_MONITORED_SERVER** monitored_new_master,
-                            MXS_MONITORED_SERVER** monitored_current_master,
-                            json_t** error)
-{
-    bool rv = true;
-
-    *monitored_new_master = NULL;
-    *monitored_current_master = NULL;
-    *error = NULL;
-
-    MXS_MONITORED_SERVER* monitored_server = mon->monitored_servers;
-
-    while (rv && monitored_server && (!*monitored_current_master || !*monitored_new_master))
-    {
-        if (!*monitored_current_master)
-        {
-            rv = mysql_switchover_check_current(current_master,
-                                                monitored_server,
-                                                monitored_current_master,
-                                                error);
-        }
-
-        if (rv)
-        {
-            rv = mysql_switchover_check_new(new_master, monitored_server, monitored_new_master, error);
-        }
-
-        monitored_server = monitored_server->next;
-    }
-
-    if (rv && ((current_master && !*monitored_current_master) || !*monitored_new_master))
-    {
-        if (current_master && !*monitored_current_master)
-        {
-            *error = mxs_json_error("Specified current master %s is not found amongst "
-                                    "existing servers.", current_master->unique_name);
-        }
-
-        if (!*monitored_new_master)
-        {
-            *error = mxs_json_error_append(*error,
-                                           "Specified new master %s is not found amongst "
-                                           "existing servers.", new_master->unique_name);
-        }
-
-        rv = false;
-    }
-
-    return rv;
+    return !is_master && is_slave;
 }
 
 /**
@@ -496,17 +439,13 @@ bool failover_check(MYSQL_MONITOR* mon, json_t** error_out)
         }
         else if (SERVER_IS_SLAVE(mon_server->server))
         {
-            const MySqlServerInfo* info = get_server_info(mon, mon_server);
-            if (info->slave_status.gtid_io_pos.server_id == 0)
+            if (uses_gtid(mon, mon_server, error_out))
             {
-                string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
-                                            " is not using gtid replication or master server id is 0.";
-                PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
-                error = true;
+                 slaves++;
             }
             else
             {
-                slaves++;
+                 error = true;
             }
         }
     }
@@ -532,7 +471,7 @@ bool failover_check(MYSQL_MONITOR* mon, json_t** error_out)
  *
  * @return True, if switchover was performed, false otherwise.
  */
-bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_master, json_t** output)
+bool mysql_switchover(MXS_MONITOR* mon, MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master, json_t** error_out)
 {
     bool stopped = stop_monitor(mon);
     if (stopped)
@@ -544,49 +483,47 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
         MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", mon->name);
     }
 
-    bool rv = true;
-    *output = NULL;
-    MXS_MONITORED_SERVER* monitored_new_master = NULL;
-    MXS_MONITORED_SERVER* monitored_current_master = NULL;
+    bool rval = false;
+    MYSQL_MONITOR* handle = static_cast<MYSQL_MONITOR*>(mon->handle);
 
-    rv = mysql_switchover_check(mon,
-                                new_master, current_master,
-                                &monitored_new_master, &monitored_current_master,
-                                output);
-
-    if (rv)
+    bool current_ok = mysql_switchover_check_current(handle, current_master, error_out);
+    bool new_ok = mysql_switchover_check_new(new_master, error_out);
+    // Check that all slaves are using gtid-replication
+    bool gtid_ok = true;
+    for (MXS_MONITORED_SERVER* mon_serv = mon->monitored_servers; mon_serv != NULL; mon_serv = mon_serv->next)
     {
-        bool failover = config_get_bool(mon->parameters, CN_AUTO_FAILOVER);
-        MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
-        rv = do_switchover(handle, monitored_current_master, monitored_new_master, output);
-
-        if (rv)
+        if (SERVER_IS_SLAVE(mon_serv->server))
         {
-            MXS_NOTICE("Switchover %s -> %s performed.",
-                       current_master->unique_name ? current_master->unique_name : "none",
-                       new_master->unique_name);
+            if (!uses_gtid(handle, mon_serv, error_out))
+            {
+                 gtid_ok = false;
+            }
+        }
+    }
+
+    if (current_ok && new_ok && gtid_ok)
+    {
+        bool switched = do_switchover(handle, current_master, new_master, error_out);
+
+        const char* curr_master_name = current_master->server->unique_name;
+        const char* new_master_name = new_master->server->unique_name;
+
+        if (switched)
+        {
+            MXS_NOTICE("Switchover %s -> %s performed.", curr_master_name, new_master_name);
+            rval = true;
         }
         else
         {
+            string format = "Switchover %s -> %s failed";
+            bool failover = config_get_bool(mon->parameters, CN_AUTO_FAILOVER);
             if (failover)
             {
-                // TODO: There could be a more convenient way for this.
-                MXS_CONFIG_PARAMETER p = {};
-                p.name = const_cast<char*>(CN_AUTO_FAILOVER);
-                p.value = const_cast<char*>("false");
-
-                monitorAddParameters(mon, &p);
-
-                MXS_ALERT("Switchover %s -> %s failed, failover has been disabled.",
-                          current_master->unique_name ? current_master->unique_name : "none",
-                          new_master->unique_name);
+                disable_setting(handle, CN_AUTO_FAILOVER);
+                format += ", failover has been disabled.";
             }
-            else
-            {
-                MXS_ERROR("Switchover %s -> %s failed.",
-                          current_master->unique_name ? current_master->unique_name : "none",
-                          new_master->unique_name);
-            }
+            format += ".";
+            PRINT_MXS_JSON_ERROR(error_out, format.c_str(), curr_master_name, new_master_name);
         }
     }
 
@@ -594,7 +531,7 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
     {
         startMonitor(mon, mon->parameters);
     }
-    return rv;
+    return rval;
 }
 
 /**
@@ -605,37 +542,68 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
  *
  * @return True, if the command was executed, false otherwise.
  */
-bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** output)
+bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
 {
     ss_dassert((args->argc == 2) || (args->argc == 3));
     ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
     ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
-    ss_dassert((args->argc == 2) ||
-               (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
+    ss_dassert((args->argc == 2) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
 
     MXS_MONITOR* mon = args->argv[0].value.monitor;
-    MYSQL_MONITOR* mysql_mon = static_cast<MYSQL_MONITOR*>(mon->handle);
     SERVER* new_master = args->argv[1].value.server;
     SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
+    bool error = false;
 
-    bool rv = false;
-
-    if (!config_get_global_options()->passive)
+    const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
+    MXS_MONITORED_SERVER* mon_new_master = mon_get_monitored_server(mon, new_master);
+    if (mon_new_master == NULL)
     {
-        rv = mysql_switchover(mon, new_master, current_master, output);
+        PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->unique_name, mon->name);
+        error = true;
+    }
+
+    MXS_MONITORED_SERVER* mon_curr_master = NULL;
+    if (current_master)
+    {
+        mon_curr_master = mon_get_monitored_server(mon, current_master);
+        if (mon_curr_master == NULL)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name, mon->name);
+             error = true;
+        }
     }
     else
     {
-        MXS_WARNING("Attempt to perform switchover %s -> %s, even though "
-                    "MaxScale is in passive mode.",
-                    current_master ? current_master->unique_name : "none",
-                    new_master->unique_name);
-        *output = mxs_json_error("Switchover %s -> %s not performed, as MaxScale is in passive mode.",
-                                 current_master ? current_master->unique_name : "none",
-                                 new_master->unique_name);
+        // Autoselect current master
+        MYSQL_MONITOR* handle = static_cast<MYSQL_MONITOR*>(mon->handle);
+        if (handle->master)
+        {
+            mon_curr_master = handle->master;
+        }
+        else
+        {
+            const char NO_MASTER[] = "Monitor '%s' has no master server.";
+            PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, mon->name);
+            error = true;
+        }
+    }
+    if (error)
+    {
+        return false;
     }
 
-    return rv;
+    bool rval = false;
+    if (!config_get_global_options()->passive)
+    {
+        rval = mysql_switchover(mon, mon_new_master, mon_curr_master, error_out);
+    }
+    else
+    {
+        const char MSG[] = "Switchover attempted but not performed, as MaxScale is in passive mode.";
+        PRINT_MXS_JSON_ERROR(error_out, MSG);
+    }
+
+    return rval;
 }
 
 /**
@@ -730,18 +698,7 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
     MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
     if (cluster_can_be_joined(handle))
     {
-        MXS_MONITORED_SERVER* mon_server = NULL;
-        // Search for the MONITORED_SERVER. Could this be a general monitor function?
-        for (MXS_MONITORED_SERVER* iterator = mon->monitored_servers;
-             iterator != NULL && mon_server == NULL;
-             iterator = iterator->next)
-        {
-            if (iterator->server == rejoin_server)
-            {
-                mon_server = iterator;
-            }
-        }
-
+        MXS_MONITORED_SERVER* mon_server = mon_get_monitored_server(mon, rejoin_server);
         if (mon_server)
         {
             MXS_MONITORED_SERVER* master = handle->master;
@@ -840,7 +797,7 @@ extern "C"
                 ARG_MONITOR_DESC
             },
             { MODULECMD_ARG_SERVER, "New master" },
-            { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (obligatory if exists)" }
+            { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (optional)" }
         };
 
         modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,

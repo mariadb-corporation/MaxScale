@@ -2427,3 +2427,16 @@ static bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age)
 
     return is_stale;
 }
+
+MXS_MONITORED_SERVER* mon_get_monitored_server(MXS_MONITOR* mon, SERVER* search_server)
+{
+    ss_dassert(mon && search_server);
+    for (MXS_MONITORED_SERVER* iter = mon->monitored_servers; iter != NULL; iter = iter->next)
+    {
+        if (iter->server == search_server)
+        {
+            return iter;
+        }
+    }
+    return NULL;
+}
