@@ -52,6 +52,7 @@ CMakeFiles/*
 */*/*/*/CMakeFiles/*
 Makefile
 /.DS_Store
+.DS_Store
 
 # Netbeans Project files
 nbproject/
