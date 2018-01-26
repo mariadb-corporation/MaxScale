@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 {
     char src[1024];
     char dst[1024];
-  
+
     TestConnections * Test = new TestConnections(argc, argv);
 
     for (int i = 0; i < Test->maxscales->N; i++)
