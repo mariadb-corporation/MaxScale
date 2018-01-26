@@ -1063,6 +1063,19 @@ seconds. The interval is incremented until the value of `max_retry_interval` is
 reached at which point the listener attempts to bind to the interface every
 `max_retry_interval` seconds.
 
+#### `session_track_trx_state`
+
+Enable or disable getting session transation state via session track mechanism. This
+parameter takes a boolean value. Default False.
+
+Get current session transaction state from server side will be more accurate.
+Minimum Server version Mariadb 10.3 or MySQL 5.7 is needed and following server
+config is also needed.
+  ```
+  session_track_state_change = ON
+  session_track_transaction_info = CHARACTERISTICS
+  ```
+
 ### Server
 
 Server sections are used to define the backend database servers that can be

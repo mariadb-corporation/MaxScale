@@ -1857,7 +1857,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
     {
         while (gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN + 1, header_and_command) == (MYSQL_HEADER_LEN + 1))
         {
-            size_t packet_len = gw_mysql_get_byte3(header_and_command);
+            size_t packet_len = gw_mysql_get_byte3(header_and_command) + MYSQL_HEADER_LEN;
             uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
 
             if (packet_len > MYSQL_OK_PACKET_MIN_LEN &&
@@ -1865,7 +1865,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
                 (proto->num_eof_packets % 2) == 0)
             {
                 buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
-                mxs_mysql_parse_ok_packet(buff, offset, packet_len + MYSQL_HEADER_LEN);
+                mxs_mysql_parse_ok_packet(buff, offset, packet_len);
             }
 
             if ((proto->current_command == MXS_COM_QUERY ||
@@ -1875,7 +1875,7 @@ void mxs_mysql_get_session_track_info(GWBUF *buff, MySQLProtocol *proto)
             {
                 proto->num_eof_packets++;
             }
-            offset += (packet_len + MYSQL_HEADER_LEN);
+            offset += packet_len;
         }
     }
 }
