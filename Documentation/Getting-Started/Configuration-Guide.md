@@ -1065,12 +1065,14 @@ reached at which point the listener attempts to bind to the interface every
 
 #### `session_track_trx_state`
 
-Enable or disable getting session transation state via session track mechanism. This
-parameter takes a boolean value. Default False.
+Enable or disable session transaction state tracking by offloading it to the backend servers. 
+Getting current session transaction state from server side will be more accurate for that state 
+inside stored procedures or prepare statments will be handle properly, and that is also faster 
+as no parsing is needed on MaxScale. 
 
-Get current session transaction state from server side will be more accurate.
-Minimum Server version Mariadb 10.3 or MySQL 5.7 is needed and following server
-config is also needed.
+This is only supported by MariaDB versions 10.3 or newer. Default is false.
+The following Server side config is needed too.
+
   ```
   session_track_state_change = ON
   session_track_transaction_info = CHARACTERISTICS
