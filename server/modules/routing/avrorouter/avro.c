@@ -65,7 +65,7 @@ static const char* avro_index_name = "avro.index";
 static const char* create_table_regex =
     "(?i)create[a-z0-9[:space:]_]+table";
 static const char* alter_table_regex =
-    "(?i)alter[[:space:]]+table.*column";
+    "(?i)alter[[:space:]]+table";
 
 /* The router entry points */
 static MXS_ROUTER *createInstance(SERVICE *service, char **options);
