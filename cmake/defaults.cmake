@@ -27,6 +27,9 @@ set(BUILD_CDC TRUE CACHE BOOL "Build Avro router")
 # Build the multimaster monitor
 set(BUILD_MMMON TRUE CACHE BOOL "Build multimaster monitor")
 
+# Build MaxCtrl
+set(BUILD_MAXCTRL TRUE CACHE BOOL "Build MaxCtrl")
+
 # Build Luafilter
 set(BUILD_LUAFILTER FALSE CACHE BOOL "Build Luafilter")
 
