@@ -379,34 +379,24 @@ from passive to active will wait for a failover to take place after an apparent
 loss of a master server. If no new master server is detected within the
 configured time period, failover will be initiated again.
 
-#### `verify_master_failure`
+#### `verify_master_failure` and `master_failure_timeout`
 
-Enable master failure verification for automatic failover. This parameter
-expects a boolean value and the feature is enabled by default.
+Enable additional master failure verification for automatic failover.
+`verify_master_failure` is a boolean value (default: true) which enables this
+feature and `master_failure_timeout` defines the timeout in seconds (default: 10).
 
-The failure of a master can be verified by checking whether the slaves are still
-connected to the master. The timeout for master failure verification is
-controlled by the `master_failure_timeout` parameter.
+The failure verification is performed by checking whether the slaves are still
+connected to the master and receiving events. Effectively, if a slave has
+received an event within `master_failure_timeout` seconds, the master is not
+considered down when deciding whether to auto_failover.
 
-#### `master_failure_timeout`
+If every slave loses its connection to the master (*Slave_IO_Running* is not
+"Yes"), master failure is considered verified regardless of timeout. This allows
+a faster failover when the master server crashes, as that causes immediate
+disconnection.
 
-This parameter controls the period of time, in seconds, that the monitor must
-wait before it can declare that the master has failed. The default value is 10
-seconds. For failover to activate, the `failcount` requirement must also be met.
-
-The failure of a master is verified by tracking when the last change to the
-relay log was done and when the last replication heartbeat was received. If the
-period of time between the last received event and the time of the check exceeds
-the configured value, the slave's connection to the master is considered to be
-broken.
-
-When all slaves of a failed master are no longer connected to the master, the
-master failure is verified and the failover can be safely performed.
-
-If the slaves lose their connections to the master before the configured timeout
-is exceeded, the failover is performed immediately. This allows a faster
-failover when the master server crashes causing immediate disconnection of the
-the network connections.
+For automatic failover to activate, the `failcount` requirement must also be
+met.
 
 #### `switchover_timeout`
 

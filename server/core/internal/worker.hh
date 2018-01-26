@@ -173,6 +173,14 @@ public:
     }
 
     /**
+     * Return the count of descriptors.
+     *
+     * @param pnCurrent  On output the current number of descriptors.
+     * @param pnTotal    On output the total number of descriptors.
+     */
+    void get_descriptor_counts(uint32_t* pnCurrent, uint64_t* pnTotal);
+
+    /**
      * Add a file descriptor to the epoll instance of the worker.
      *
      * @param fd      The file descriptor to be added.
@@ -508,21 +516,23 @@ private:
     uint32_t handle_epoll_events(uint32_t events);
 
 private:
-    int           m_id;                 /*< The id of the worker. */
-    state_t       m_state;              /*< The state of the worker */
-    int           m_epoll_fd;           /*< The epoll file descriptor. */
-    STATISTICS    m_statistics;         /*< Worker statistics. */
-    MessageQueue* m_pQueue;             /*< The message queue of the worker. */
-    THREAD        m_thread;             /*< The thread handle of the worker. */
-    bool          m_started;            /*< Whether the thread has been started or not. */
-    bool          m_should_shutdown;    /*< Whether shutdown should be performed. */
-    bool          m_shutdown_initiated; /*< Whether shutdown has been initated. */
-    SessionsById  m_sessions;           /*< A mapping of session_id->MXS_SESSION. The map
-                                         *  should contain sessions exclusive to this
-                                         *  worker and not e.g. listener sessions. For now,
-                                         *  it's up to the protocol to decide whether a new
-                                         *  session is added to the map. */
-    Zombies       m_zombies;            /*< DCBs to be deleted. */
+    int           m_id;                   /*< The id of the worker. */
+    state_t       m_state;                /*< The state of the worker */
+    int           m_epoll_fd;             /*< The epoll file descriptor. */
+    STATISTICS    m_statistics;           /*< Worker statistics. */
+    MessageQueue* m_pQueue;               /*< The message queue of the worker. */
+    THREAD        m_thread;               /*< The thread handle of the worker. */
+    bool          m_started;              /*< Whether the thread has been started or not. */
+    bool          m_should_shutdown;      /*< Whether shutdown should be performed. */
+    bool          m_shutdown_initiated;   /*< Whether shutdown has been initated. */
+    SessionsById  m_sessions;             /*< A mapping of session_id->MXS_SESSION. The map
+                                           *  should contain sessions exclusive to this
+                                           *  worker and not e.g. listener sessions. For now,
+                                           *  it's up to the protocol to decide whether a new
+                                           *  session is added to the map. */
+    Zombies       m_zombies;              /*< DCBs to be deleted. */
+    uint32_t      m_nCurrent_descriptors; /*< Current number of descriptors. */
+    uint64_t      m_nTotal_descriptors;   /*< Total number of descriptors. */
 };
 
 }

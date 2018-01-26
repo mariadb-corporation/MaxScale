@@ -240,8 +240,8 @@ dShowThreads(DCB *dcb)
 {
     dcb_printf(dcb, "Polling Threads.\n\n");
 
-    dcb_printf(dcb, " ID | State      \n");
-    dcb_printf(dcb, "----+------------\n");
+    dcb_printf(dcb, " ID | State      | #descriptors (curr) | #descriptors (tot)  |\n");
+    dcb_printf(dcb, "----+------------+---------------------+---------------------+\n");
     for (int i = 0; i < n_threads; i++)
     {
         Worker* worker = Worker::get(i);
@@ -271,7 +271,12 @@ dShowThreads(DCB *dcb)
             ss_dassert(!true);
         }
 
-        dcb_printf(dcb, " %2d | %s\n", i, state);
+        uint32_t nCurrent;
+        uint64_t nTotal;
+
+        worker->get_descriptor_counts(&nCurrent, &nTotal);
+
+        dcb_printf(dcb, " %2d | %10s | %19" PRIu32 " | %19" PRIu64 " |\n", i, state, nCurrent, nTotal);
     }
 }
 
