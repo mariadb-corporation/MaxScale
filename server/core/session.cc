@@ -52,8 +52,8 @@ using std::stringstream;
  *  dummy/unused sessions.
  */
 static uint32_t next_session_id = 1;
-static SPINLOCK thread_id_lock = SPINLOCK_INIT;
-static std::tr1::unordered_set<uint32_t> threads = {};
+static SPINLOCK session_id_lock = SPINLOCK_INIT;
+static std::tr1::unordered_set<uint32_t> session_ids = {};
 
 static struct session session_dummy_struct;
 
@@ -396,9 +396,9 @@ static void
 session_final_free(MXS_SESSION *session)
 {
     gwbuf_free(session->stmt.buffer);
-    spinlock_acquire(&thread_id_lock);
-    threads.erase(session->ses_id);
-    spinlock_release(&thread_id_lock);
+    spinlock_acquire(&session_id_lock);
+    session_ids.erase(session->ses_id);
+    spinlock_release(&session_id_lock);
     MXS_FREE(session);
 }
 
@@ -989,15 +989,16 @@ void session_clear_stmt(MXS_SESSION *session)
 uint32_t session_get_next_id()
 {
     uint32_t rval;
-    spinlock_acquire(&thread_id_lock);
+    spinlock_acquire(&session_id_lock);
     do
     {
-        rval = atomic_add_uint32(&next_session_id, 1);
+        next_session_id++;
+        rval = next_session_id;
     }
-    while (threads.find(rval) != threads.end());
-    threads.insert(rval);
-    spinlock_release(&thread_id_lock);
-
+    while (session_ids.find(rval) != session_ids.end());
+    session_ids.insert(rval);
+    spinlock_release(&session_id_lock);
+    
     return rval;
 }
 
