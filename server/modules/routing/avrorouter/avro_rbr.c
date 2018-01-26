@@ -564,7 +564,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     avro_value_set_string(&field, strval);
                     sprintf(trace[i], "[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
-                    check_overflow(ptr < end);
+                    check_overflow(ptr <= end);
                 }
                 else
                 {
@@ -600,7 +600,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     str[bytes] = '\0';
                     avro_value_set_string(&field, str);
                     ptr += bytes;
-                    check_overflow(ptr < end);
+                    check_overflow(ptr <= end);
                 }
             }
             else if (column_is_bit(map->column_types[i]))
@@ -619,7 +619,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 avro_value_set_int(&field, value);
                 sprintf(trace[i], "[%ld] BIT", i);
                 ptr += bytes;
-                check_overflow(ptr < end);
+                check_overflow(ptr <= end);
             }
             else if (column_is_decimal(map->column_types[i]))
             {
@@ -627,7 +627,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
                 avro_value_set_double(&field, f_value);
                 sprintf(trace[i], "[%ld] DECIMAL", i);
-                check_overflow(ptr < end);
+                check_overflow(ptr <= end);
             }
             else if (column_is_variable_string(map->column_types[i]))
             {
@@ -650,7 +650,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 buf[sz] = '\0';
                 ptr += sz;
                 avro_value_set_string(&field, buf);
-                check_overflow(ptr < end);
+                check_overflow(ptr <= end);
             }
             else if (column_is_blob(map->column_types[i]))
             {
@@ -669,7 +669,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     uint8_t nullvalue = 0;
                     avro_value_set_bytes(&field, &nullvalue, 1);
                 }
-                check_overflow(ptr < end);
+                check_overflow(ptr <= end);
             }
             else if (column_is_temporal(map->column_types[i]))
             {
@@ -681,7 +681,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
                 sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
-                check_overflow(ptr < end);
+                check_overflow(ptr <= end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
             else
@@ -692,7 +692,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                                             &metadata[metadata_offset], lval);
                 set_numeric_field_value(&field, map->column_types[i], &metadata[metadata_offset], lval);
                 sprintf(trace[i], "[%ld] %s", i, column_type_to_string(map->column_types[i]));
-                check_overflow(ptr < end);
+                check_overflow(ptr <= end);
             }
             ss_dassert(metadata_offset <= map->column_metadata_size);
             metadata_offset += get_metadata_len(map->column_types[i]);
