@@ -76,7 +76,7 @@ if [ $res == 0 ] ; then
         if [ $? != 0 ]; then
             echo "Backend broken!"
             if [ "${do_not_destroy_vm}" != "yes" ] ; then
-                ${script_dir}/destroy.sh
+                ${mdbci_dir}/mdbci destroy $name
             fi
             rm ~/vagrant_lock
             exit 1
@@ -90,13 +90,13 @@ if [ $res == 0 ] ; then
 else
   echo "Failed to create VMs, exiting"
   if [ "${do_not_destroy_vm}" != "yes" ] ; then
-	${script_dir}/destroy.sh
+	${mdbci_dir}/mdbci destroy $name
   fi
   rm ~/vagrant_lock
   exit 1
 fi
 
 if [ "${do_not_destroy_vm}" != "yes" ] ; then
-	${script_dir}/destroy.sh
+	${mdbci_dir}/mdbci destroy $name
 	echo "clean up done!"
 fi
