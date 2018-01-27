@@ -14,6 +14,7 @@
 
 #include "readwritesplit.hh"
 #include "rwsplit_ps.hh"
+#include <string>
 
 #include <maxscale/modutil.h>
 
@@ -33,6 +34,7 @@ enum reply_state_t
 
 typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
+
 
 class RWBackend: public mxs::Backend
 {
@@ -138,6 +140,7 @@ public:
     PSManager               ps_manager;  /**< Prepared statement manager*/
     ClientHandleMap         ps_handles;  /**< Client PS handle to internal ID mapping */
     ExecMap                 exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
+    std::string             gtid_pos; /**< Gtid position for causal read */
     skygw_chk_t             rses_chk_tail;
 
 private:

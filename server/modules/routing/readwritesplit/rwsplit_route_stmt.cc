@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sstream>
 
 #include <maxscale/alloc.h>
 #include <maxscale/hk_heartbeat.h>
@@ -1134,7 +1135,44 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
     ss_dassert(target->session_command_count() == 0);
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
+    MySQLProtocol *backend_proto = DCB_PROTOCOL(target->dcb(), MySQLProtocol);
+    backend_proto->wait_gtid_state = EXPECTING_NOTHING;
     uint8_t cmd = mxs_mysql_get_command(querybuf);
+    causal_read_t cr = inst->config().causal_read;
+    GWBUF *send_buf;
+    if (cmd == COM_QUERY && cr && rses->gtid_pos != "")
+    {
+        /**
+         * Pack wait function and client query into one multistatments query
+         * will save a round trip latency. Because no matter what the result of
+         * wait function is, the client query will be executed anyway. We don't
+         * want this happen, so use this triky way: encapsulate wait function
+         * as a subquery, when timeout the parent query will produce an error,
+         * then statements behind it will not be executed. For example:
+         * SELECT CASE WHEN MASTER_GTID_WAIT('232-1-1', 0.05) = 0 THEN 1 ELSE
+         * (SELECT ENGINE FROM INFORMATION_SCHEMA.ENGINES) END; SELECT * FROM `city`;
+         * when MASTER_GTID_WAIT('232-1-1', 0.05) == 1 (timeout), it will return
+         * an error, and SELECT * FROM `city` will not be executed, then we can retry
+         * on master;
+         **/
+        const char* wait_func = (cr == CAUSAL_READ_MARIADB) ?
+            MARIADB_WAIT_GTID_FUNC :
+            MYSQL_WAIT_GTID_FUNC;
+        std::stringstream ss;
+        char *origin_sql = modutil_get_SQL(querybuf);
+        ss << "SELECT CASE WHEN " << wait_func << "('" << rses->gtid_pos << "'," <<
+            inst->config().causal_read_timeout << ") = 0 THEN 1 ELSE " <<
+            "(SELECT ENGINE FROM INFORMATION_SCHEMA.ENGINES) END;" <<
+            origin_sql;
+        send_buf = modutil_create_query(ss.str().c_str());
+        MXS_FREE(origin_sql);
+        MXS_DEBUG("send with prefix:%s", ss.str().c_str());
+        backend_proto->wait_gtid_state = EXPECTING_WAIT_GTID_RESULT;
+    }
+    else
+    {
+        send_buf = gwbuf_clone(querybuf);
+    }
 
     if (rses->load_data_state != LOAD_DATA_ACTIVE &&
         query_creates_reply(cmd))
@@ -1144,7 +1182,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
 
     bool large_query = is_large_query(querybuf);
 
-    if (target->write(gwbuf_clone(querybuf), response))
+    if (target->write(send_buf, response))
     {
         if (store && !session_store_stmt(rses->client_dcb->session, querybuf, target->server()))
         {

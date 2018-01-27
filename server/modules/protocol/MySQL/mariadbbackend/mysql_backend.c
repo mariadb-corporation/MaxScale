@@ -714,6 +714,76 @@ static inline bool not_err_packet(const GWBUF* buffer)
 }
 
 /**
+ * @bref discard the result of select master_wait_gtid, expect error packet is received
+ *
+ * @param p_readbuf read buffer, must contain a compelete resultset or more
+ * @param proto     MySQLProtocol
+ *
+ */
+void discard_master_wait_gtid_result(GWBUF **p_readbuf, MySQLProtocol *proto)
+{
+    uint8_t header_and_command[MYSQL_HEADER_LEN+1];
+    uint8_t discard_len = 0;
+    uint8_t packet_len = 0;
+    uint8_t offset = 0;
+    mxs_mysql_cmd_t com;
+    GWBUF *buff = *p_readbuf;
+
+    if (proto->wait_gtid_state == EXPECTING_WAIT_GTID_RESULT)
+    {
+        gwbuf_copy_data(buff, 0, MYSQL_HEADER_LEN+1, header_and_command);
+
+        /* ignore error packet */
+        if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
+        {
+            proto->wait_gtid_state = EXPECTING_NOTHING;
+            return;
+        }
+
+        /* the resultset of select master_wait_gtid contains 5 packets and only 5*/
+        while (gwbuf_copy_data(buff, offset, 4, header_and_command) == 4)
+        {
+            packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
+            discard_len += packet_len;
+            offset += packet_len;
+            if (MYSQL_GET_PACKET_NO(header_and_command) == 5)
+            {
+                proto->wait_gtid_state = EXPECTING_REAL_RESULT;
+                proto->next_seq = 1;
+                break;
+            }
+        }
+
+        *p_readbuf = gwbuf_consume(buff, discard_len);
+    }
+}
+
+/**
+ * @bref After discarded the wait result, we need correct the seqence number of every packet
+ *
+ * @param buf    read buffer, must contain compelete packets
+ * @param proto  MySQLProtocol
+ *
+ */
+void correct_packet_sequence(GWBUF *buf, MySQLProtocol *proto)
+{
+    uint8_t header[3];
+    uint32_t offset = 0;
+    uint32_t packet_len = 0;
+    if (proto->wait_gtid_state == EXPECTING_REAL_RESULT)
+    {
+        while (gwbuf_copy_data(buf, offset, 3, header) == 3)
+        {
+           packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
+           uint8_t *seq = gwbuf_byte_point(buf, offset + MYSQL_SEQ_OFFSET);
+           *seq = proto->next_seq;
+           proto->next_seq++;
+           offset += packet_len;
+        }
+    }
+}
+
+/**
  * @brief With authentication completed, read new data and write to backend
  *
  * @param dcb           Descriptor control block for backend server
@@ -774,6 +844,13 @@ gw_read_and_write(DCB *dcb)
         mxs_mysql_get_session_track_info(tmp, proto);
 
         read_buffer = tmp;
+
+        discard_master_wait_gtid_result(&read_buffer, proto);
+        if (!read_buffer)
+        {
+            return 0;
+        }
+        correct_packet_sequence(read_buffer, proto);
 
         if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
             proto->collect_result ||

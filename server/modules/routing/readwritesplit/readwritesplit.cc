@@ -744,6 +744,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     router(instance),
     sent_sescmd(0),
     recv_sescmd(0),
+    gtid_pos(""),
     rses_chk_tail(CHK_NUM_ROUTER_SES)
 {
     if (rses_config.rw_max_slave_conn_percent)
@@ -1156,11 +1157,24 @@ static void clientReply(MXS_ROUTER *instance,
                         DCB *backend_dcb)
 {
     RWSplitSession *rses = (RWSplitSession *)router_session;
+    RWSplit *inst = (RWSplit *)instance;
     DCB *client_dcb = backend_dcb->session->client_dcb;
     CHK_CLIENT_RSES(rses);
     ss_dassert(!rses->rses_closed);
 
     SRWBackend& backend = get_backend_from_dcb(rses, backend_dcb);
+
+    if (inst->config().causal_read &&
+        GWBUF_IS_REPLY_OK(writebuf) &&
+        backend == rses->current_master)
+    {
+        /** Save gtid position */
+        char *tmp = gwbuf_get_property(writebuf, (char *)"gtid");
+        if (tmp)
+        {
+            rses->gtid_pos = std::string(tmp);
+        }
+    }
 
     if (backend->get_reply_state() == REPLY_STATE_DONE)
     {
@@ -1437,6 +1451,8 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"strict_sp_calls",  MXS_MODULE_PARAM_BOOL, "false"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},
+            {"causal_read", MXS_MODULE_PARAM_ENUM, "none", CAUSAL_READ_NON_SUPPORT, causal_read_values},
+            {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0"},
             {MXS_END_MODULE_PARAMS}
         }
     };

@@ -313,6 +313,13 @@ typedef enum
 
 static const mxs_mysql_cmd_t MXS_COM_UNDEFINED = (mxs_mysql_cmd_t) - 1;
 
+typedef enum
+{
+    EXPECTING_NOTHING = 0,
+    EXPECTING_WAIT_GTID_RESULT,
+    EXPECTING_REAL_RESULT
+} wait_gtid_state_t;
+
 /**
  * List of server commands, and number of response packets are stored here.
  * server_command_t is used in MySQLProtocol structure, so for each DCB there is
@@ -353,6 +360,8 @@ typedef struct
     int                    ignore_replies;               /*< How many replies should be discarded */
     GWBUF*                 stored_query;                 /*< Temporarily stored queries */
     bool                   collect_result;               /*< Collect the next result set as one buffer */
+    wait_gtid_state_t      wait_gtid_state;              /*< Determine boundray of wait gtid result and client query result */
+    uint32_t               next_seq;                     /*< Next packet sequence number */
     uint32_t               num_eof_packets;              /*< Encountered eof packet number, used for check packet type */
 #if defined(SS_DEBUG)
     skygw_chk_t            protocol_chk_tail;
