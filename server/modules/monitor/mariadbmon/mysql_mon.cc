@@ -534,14 +534,7 @@ bool failover_check(MYSQL_MONITOR* mon, json_t** error_out)
  */
 bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_master, json_t** output)
 {
-    bool rv = true;
-
-    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
-
-    *output = NULL;
-
     bool stopped = stop_monitor(mon);
-
     if (stopped)
     {
         MXS_NOTICE("Stopped the monitor %s for the duration of switchover.", mon->name);
@@ -551,6 +544,8 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
         MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", mon->name);
     }
 
+    bool rv = true;
+    *output = NULL;
     MXS_MONITORED_SERVER* monitored_new_master = NULL;
     MXS_MONITORED_SERVER* monitored_current_master = NULL;
 
@@ -562,6 +557,7 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
     if (rv)
     {
         bool failover = config_get_bool(mon->parameters, CN_AUTO_FAILOVER);
+        MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
         rv = do_switchover(handle, monitored_current_master, monitored_new_master, output);
 
         if (rv)
@@ -569,11 +565,6 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
             MXS_NOTICE("Switchover %s -> %s performed.",
                        current_master->unique_name ? current_master->unique_name : "none",
                        new_master->unique_name);
-
-            if (stopped)
-            {
-                startMonitor(mon, mon->parameters);
-            }
         }
         else
         {
@@ -598,14 +589,11 @@ bool mysql_switchover(MXS_MONITOR* mon, SERVER* new_master, SERVER* current_mast
             }
         }
     }
-    else
-    {
-        if (stopped)
-        {
-            startMonitor(mon, mon->parameters);
-        }
-    }
 
+    if (stopped)
+    {
+        startMonitor(mon, mon->parameters);
+    }
     return rv;
 }
 
@@ -659,8 +647,6 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** output)
  */
 bool mysql_failover(MXS_MONITOR* mon, json_t** output)
 {
-    bool rv = true;
-    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
     bool stopped = stop_monitor(mon);
     if (stopped)
     {
@@ -671,6 +657,8 @@ bool mysql_failover(MXS_MONITOR* mon, json_t** output)
         MXS_NOTICE("Monitor %s already stopped, failover can proceed.", mon->name);
     }
 
+    bool rv = true;
+    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
     rv = failover_check(handle, output);
     if (rv)
     {
@@ -678,22 +666,16 @@ bool mysql_failover(MXS_MONITOR* mon, json_t** output)
         if (rv)
         {
             MXS_NOTICE("Failover performed.");
-            if (stopped)
-            {
-                startMonitor(mon, mon->parameters);
-            }
         }
         else
         {
             PRINT_MXS_JSON_ERROR(output, "Failover failed.");
         }
     }
-    else
+
+    if (stopped)
     {
-        if (stopped)
-        {
-            startMonitor(mon, mon->parameters);
-        }
+        startMonitor(mon, mon->parameters);
     }
     return rv;
 }
@@ -734,7 +716,6 @@ bool mysql_handle_failover(const MODULECMD_ARG* args, json_t** output)
  */
 bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
 {
-    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
     bool stopped = stop_monitor(mon);
     if (stopped)
     {
@@ -746,6 +727,7 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
     }
 
     bool rval = false;
+    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
     if (cluster_can_be_joined(handle))
     {
         MXS_MONITORED_SERVER* mon_server = NULL;
