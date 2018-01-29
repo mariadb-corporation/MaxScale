@@ -250,26 +250,32 @@ static const char* BUILTIN_FUNCTIONS[] =
      * https://mariadb.com/kb/en/mariadb/miscellaneous-functions/
      */
     "default",
-    "get_lock",
     "inet6_aton",
     "inet6_ntoa",
     "inet_aton",
     "inet_ntoa",
-    "is_free_lock",
     "is_ipv4",
     "is_ipv4_compat",
     "is_ipv4_mapped",
     "is_ipv6",
-    "is_used_lock",
     "last_value",
     "master_gtid_wait",
     "master_pos_wait",
     "name_const",
-    "release_lock",
     "sleep",
     "uuid",
     "uuid_short",
     "values",
+
+    /**
+     * Although conceptually non-updating, we classify these as WRITE as
+     * that will force them to be sent to _master_ outside transactions.
+     *
+     * "get_lock",
+     * "is_free_lock",
+     * "is_used_lock",
+     * "release_lock",
+     */
 
     /*
      * Numeric Functions

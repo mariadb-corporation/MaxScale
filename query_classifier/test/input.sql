@@ -19,3 +19,7 @@ select if(@@hostname='box02','prod_mariadb02','n');
 select next value for seq1;
 select nextval(seq1);
 select seq1.nextval;
+SELECT GET_LOCK('lock1',10);
+SELECT IS_FREE_LOCK('lock1');
+SELECT IS_USED_LOCK('lock1');
+SELECT RELEASE_LOCK('lock1');
