@@ -313,6 +313,7 @@ add_test_executable(fwf_logging.cpp fwf_logging fwf_logging LABELS dbfwfilter RE
 add_test_executable(fwf_reload.cpp fwf_reload fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_com_ping.cpp fwf_com_ping fwf_com_ping LABELS dbfwfilter REPL_BACKEND)
+add_test_executable(mxs1583_fwf.cpp mxs1583_fwf mxs1583_fwf LABELS dbfwfilter REPL_BACKEND)
 
 # Galera node priority test
 add_test_executable(galera_priority.cpp galera_priority galera_priority LABELS galeramon LIGHT GALERA_BACKEND)
