@@ -755,13 +755,13 @@ TABLE_CREATE* table_create_alloc(const char* ident, const char* sql, int len)
     {
         if ((rval = MXS_MALLOC(sizeof(TABLE_CREATE))))
         {
-            rval->version = resolve_table_version(db, table);
+            rval->version = resolve_table_version(database, table);
             rval->was_used = false;
             rval->column_names = names;
             rval->column_lengths = lengths;
             rval->column_types = types;
             rval->columns = n_columns;
-            rval->database = MXS_STRDUP(db);
+            rval->database = MXS_STRDUP(database);
             rval->table = MXS_STRDUP(table);
         }
 

@@ -288,7 +288,7 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
             int rows = 0;
             MXS_INFO("Row Event for '%s' at %lu", table_ident, router->current_pos);
 
-            while (ptr - start < hdr->event_size - BINLOG_EVENT_HDR_LEN)
+            while (ptr < end)
             {
                 static uint64_t total_row_count = 1;
                 MXS_INFO("Row %lu", total_row_count++);
@@ -514,7 +514,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
 {
     int npresent = 0;
     avro_value_t field;
-    long ncolumns = MXS_MIN(map->columns, create->columns);
+    long ncolumns = map->columns;
     uint8_t *metadata = map->column_metadata;
     size_t metadata_offset = 0;
 
