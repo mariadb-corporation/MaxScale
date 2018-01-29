@@ -1029,7 +1029,7 @@ static bool process_user_templates(UserMap& users, const TemplateList& templates
 
         if (newrules.size() > 0)
         {
-            user->append_rules(ut->type, newrules);
+            user->add_rules(ut->type, newrules);
         }
     }
 

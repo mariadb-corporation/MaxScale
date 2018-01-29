@@ -31,20 +31,20 @@ const char* User::name() const
     return m_name.c_str();
 }
 
-void User::append_rules(match_type mode, const RuleList& rules)
+void User::add_rules(match_type mode, const RuleList& rules)
 {
     switch (mode)
     {
     case FWTOK_MATCH_ANY:
-        rules_or.insert(rules_or.end(), rules.begin(), rules.end());
+        rules_or_vector.push_back(rules);
         break;
 
     case FWTOK_MATCH_ALL:
-        rules_and.insert(rules_and.end(), rules.begin(), rules.end());
+        rules_and_vector.push_back(rules);
         break;
 
     case FWTOK_MATCH_STRICT_ALL:
-        rules_strict_and.insert(rules_strict_and.end(), rules.begin(), rules.end());
+        rules_strict_and_vector.push_back(rules);
         break;
 
     default:
@@ -73,28 +73,39 @@ bool User::match_any(Dbfw* my_instance, DbfwSession* my_session,
 
     bool rval = false;
 
-    if (rules_or.size() > 0 && should_match(queue))
+    for (RuleListVector::iterator i = rules_or_vector.begin(); i != rules_or_vector.end(); ++i)
     {
-        char *fullquery = modutil_get_SQL(queue);
+        RuleList& rules_or = *i;
 
-        if (fullquery)
+        if (rules_or.size() > 0 && should_match(queue))
         {
-            for (RuleList::iterator it = rules_or.begin(); it != rules_or.end(); it++)
+            char *fullquery = modutil_get_SQL(queue);
+
+            if (fullquery)
             {
-                if (rule_is_active(*it))
+                for (RuleList::iterator j = rules_or.begin(); j != rules_or.end(); j++)
                 {
-                    if (rule_matches(my_instance, my_session, queue, *it, fullquery))
+                    if (rule_is_active(*j))
                     {
-                        *rulename = MXS_STRDUP_A((*it)->name().c_str());
-                        rval = true;
-                        break;
+                        if (rule_matches(my_instance, my_session, queue, *j, fullquery))
+                        {
+                            *rulename = MXS_STRDUP_A((*j)->name().c_str());
+                            rval = true;
+                            break;
+                        }
                     }
                 }
-            }
 
-            MXS_FREE(fullquery);
+                MXS_FREE(fullquery);
+            }
+        }
+
+        if (rval)
+        {
+            break;
         }
     }
+
     return rval;
 }
 
@@ -116,44 +127,54 @@ bool User::do_match(Dbfw* my_instance, DbfwSession* my_session,
     bool rval = false;
     bool have_active_rule = false;
     std::string matching_rules;
-    RuleList& rules = mode == User::ALL ? rules_and : rules_strict_and;
+    RuleListVector& rules_vector = (mode == User::ALL ? rules_and_vector : rules_strict_and_vector);
 
-    if (rules.size() > 0 && should_match(queue))
+    for (RuleListVector::iterator i = rules_vector.begin(); i != rules_vector.end(); ++i)
     {
-        char *fullquery = modutil_get_SQL(queue);
+        RuleList& rules = *i;
 
-        if (fullquery)
+        if (rules.size() > 0 && should_match(queue))
         {
-            rval = true;
-            for (RuleList::iterator it = rules.begin(); it != rules.end(); it++)
+            char *fullquery = modutil_get_SQL(queue);
+
+            if (fullquery)
             {
-                if (rule_is_active(*it))
+                rval = true;
+                for (RuleList::iterator j = rules.begin(); j != rules.end(); j++)
                 {
-                    have_active_rule = true;
-
-                    if (rule_matches(my_instance, my_session, queue, *it, fullquery))
+                    if (rule_is_active(*j))
                     {
-                        matching_rules += (*it)->name();
-                        matching_rules += " ";
-                    }
-                    else
-                    {
-                        rval = false;
+                        have_active_rule = true;
 
-                        if (mode == User::STRICT)
+                        if (rule_matches(my_instance, my_session, queue, *j, fullquery))
                         {
-                            break;
+                            matching_rules += (*j)->name();
+                            matching_rules += " ";
+                        }
+                        else
+                        {
+                            rval = false;
+
+                            if (mode == User::STRICT)
+                            {
+                                break;
+                            }
                         }
                     }
                 }
-            }
 
-            if (!have_active_rule)
-            {
-                /** No active rules */
-                rval = false;
+                if (!have_active_rule)
+                {
+                    /** No active rules */
+                    rval = false;
+                }
+                MXS_FREE(fullquery);
             }
-            MXS_FREE(fullquery);
+        }
+
+        if (rval)
+        {
+            break;
         }
     }
 
