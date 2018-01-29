@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <string>
 #include <sstream>
+#include <tr1/unordered_set>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -36,6 +37,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/json_api.h>
+#include <maxscale/spinlock.h>
 
 #include "internal/dcb.h"
 #include "internal/session.h"
@@ -49,7 +51,9 @@ using std::stringstream;
 /** Global session id counter. Must be updated atomically. Value 0 is reserved for
  *  dummy/unused sessions.
  */
-static uint64_t next_session_id = 1;
+static uint32_t next_session_id = 1;
+static SPINLOCK session_id_lock = SPINLOCK_INIT;
+static std::tr1::unordered_set<uint32_t> session_ids = {};
 
 static struct session session_dummy_struct;
 
@@ -392,6 +396,9 @@ static void
 session_final_free(MXS_SESSION *session)
 {
     gwbuf_free(session->stmt.buffer);
+    spinlock_acquire(&session_id_lock);
+    session_ids.erase(session->ses_id);
+    spinlock_release(&session_id_lock);
     MXS_FREE(session);
 }
 
@@ -979,9 +986,20 @@ void session_clear_stmt(MXS_SESSION *session)
     session->stmt.target = NULL;
 }
 
-uint64_t session_get_next_id()
+uint32_t session_get_next_id()
 {
-    return atomic_add_uint64(&next_session_id, 1);
+    uint32_t rval;
+    spinlock_acquire(&session_id_lock);
+    do
+    {
+        next_session_id++;
+        rval = next_session_id;
+    }
+    while (session_ids.find(rval) != session_ids.end());
+    session_ids.insert(rval);
+    spinlock_release(&session_id_lock);
+    
+    return rval;
 }
 
 json_t* session_json_data(const MXS_SESSION *session, const char *host)
@@ -1102,7 +1120,7 @@ MXS_SESSION* session_get_current()
     return dcb ? dcb->session : NULL;
 }
 
-uint64_t session_get_current_id()
+uint32_t session_get_current_id()
 {
     MXS_SESSION* session = session_get_current();
 

@@ -365,7 +365,7 @@ MXS_SESSION* session_get_by_id(uint64_t id);
  *
  * @return An unused session id.
  */
-uint64_t session_get_next_id();
+uint32_t session_get_next_id();
 
 /**
  * @brief Close a session
@@ -479,6 +479,6 @@ MXS_SESSION* session_get_current();
  *
  * @return The id of the current session or 0 if there is no current session.
  **/
-uint64_t session_get_current_id();
+uint32_t session_get_current_id();
 
 MXS_END_DECLS
