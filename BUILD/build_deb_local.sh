@@ -48,7 +48,7 @@ cp _build/*.gz .
 set -x
 if [ "$build_experimental" == "yes" ]
 then
-    for component in experimental devel client
+    for component in experimental devel
     do
         cd _build
         rm CMakeCache.txt
