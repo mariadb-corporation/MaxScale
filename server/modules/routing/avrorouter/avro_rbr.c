@@ -337,9 +337,9 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
         }
         else if (ncolumns == map->columns && create->columns != map->columns)
         {
-            MXS_ERROR("Table map event has a different column "
-                      "count for table %s.%s than the CREATE TABLE statement.",
-                      map->database, map->table);
+            MXS_ERROR("Table map event has a different column count for table "
+                      "%s.%s than the CREATE TABLE statement. Possible "
+                      "unsupported DDL detected.", map->database, map->table);
         }
         else
         {

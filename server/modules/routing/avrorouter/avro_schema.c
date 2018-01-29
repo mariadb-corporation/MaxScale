@@ -1392,6 +1392,14 @@ int get_column_index(TABLE_CREATE *create, const char *tok, int len)
     char safe_tok[len + 2];
     memcpy(safe_tok, tok, len);
     safe_tok[len] = '\0';
+
+    if (*safe_tok == '`')
+    {
+        int toklen = strlen(safe_tok) - 2; // Token length without backticks
+        memmove(safe_tok, safe_tok + 1, toklen); // Overwrite first backtick
+        safe_tok[toklen] = '\0'; // Null-terminate the string before the second backtick
+    }
+
     fix_reserved_word(safe_tok);
 
     for (int x = 0; x < create->columns; x++)
@@ -1404,6 +1412,35 @@ int get_column_index(TABLE_CREATE *create, const char *tok, int len)
     }
 
     return idx;
+}
+
+static bool not_column_operation(const char* tok, int len)
+{
+    const char* keywords[] =
+    {
+        "PRIMARY",
+        "UNIQUE",
+        "FULLTEXT",
+        "SPATIAL",
+        "PERIOD",
+        "PRIMARY",
+        "KEY",
+        "KEYS",
+        "INDEX",
+        "FOREIGN",
+        "CONSTRAINT",
+        NULL
+    };
+
+    for (int i = 0; keywords[i]; i++)
+    {
+        if (tok_eq(tok, keywords[i], strlen(keywords[i])))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
@@ -1431,7 +1468,12 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
 
             if (tok)
             {
-                if (tok_eq(tok, "column", len))
+                if (not_column_operation(tok, len))
+                {
+                    MXS_INFO("Statement doesn't affect columns, not processing: %s", sql);
+                    return true;
+                }
+                else if (tok_eq(tok, "column", len))
                 {
                     // Skip the optional COLUMN keyword
                     tok = get_tok(tok + len, &len, end);

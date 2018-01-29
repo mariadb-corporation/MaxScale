@@ -1022,6 +1022,40 @@ void unify_whitespace(char *sql, int len)
 }
 
 /**
+ * A very simple function for stripping auto-generated executable comments
+ *
+ * Note that the string will not strip the trailing part of the comment, making
+ * the SQL invalid.
+ *
+ * @param sql String to modify
+ * @param len Pointer to current length of string, updated to new length if
+ *            @c sql is modified
+ */
+static void strip_executable_comments(char *sql, int* len)
+{
+    if (strncmp(sql, "/*!", 3) == 0 || strncmp(sql, "/*M!", 4) == 0)
+    {
+        // Executable comment, remove it
+        char* p = sql + 3;
+        if (*p == '!')
+        {
+            p++;
+        }
+
+        // Skip the versioning part
+        while (*p && isdigit(*p))
+        {
+            p++;
+        }
+
+        int n_extra = p - sql;
+        int new_len = *len - n_extra;
+        memmove(sql, sql + n_extra, new_len);
+        *len = new_len;
+    }
+}
+
+/**
  * @brief Handling of query events
  *
  * @param router Avro router instance
@@ -1046,6 +1080,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     sql = tmp;
     len = tmpsz;
     unify_whitespace(sql, len);
+    strip_executable_comments(sql, &len);
     sql[len] = '\0';
 
     static bool warn_not_row_format = true;
@@ -1107,7 +1142,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         }
         else
         {
-            MXS_ERROR("Alter statement to a table with no create statement.");
+            MXS_ERROR("Alter statement to table '%s' has no preceding create statement.", ident);
         }
     }
     /* A transaction starts with this event */
