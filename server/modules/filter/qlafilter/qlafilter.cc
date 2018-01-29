@@ -364,8 +364,8 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
         my_instance->flush_writes = config_get_bool(params, PARAM_FLUSH);
         my_instance->log_file_data_flags = config_get_enum(params, PARAM_LOG_DATA, log_data_values);
         my_instance->log_mode_flags = config_get_enum(params, PARAM_LOG_TYPE, log_type_values);
-        my_instance->query_newline = config_copy_string(params, PARAM_NEWLINE);
-        my_instance->separator = config_copy_string(params, PARAM_SEPARATOR);
+        my_instance->query_newline = MXS_STRDUP_A(config_get_string(params, PARAM_NEWLINE));
+        my_instance->separator = MXS_STRDUP_A(config_get_string(params, PARAM_SEPARATOR));
 
         my_instance->match = config_copy_string(params, PARAM_MATCH);
         my_instance->exclude = config_copy_string(params, PARAM_EXCLUDE);
@@ -768,6 +768,10 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
         dcb_printf(dcb, "\t\tExclude queries that match     %s\n",
                    my_instance->exclude);
     }
+    dcb_printf(dcb, "\t\tColumn separator     %s\n",
+               my_instance->separator);
+    dcb_printf(dcb, "\t\tNewline replacement     %s\n",
+               my_instance->query_newline);
 }
 
 /**
@@ -811,6 +815,8 @@ static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESS
     {
         json_object_set_new(rval, PARAM_EXCLUDE, json_string(my_instance->exclude));
     }
+    json_object_set_new(rval, PARAM_SEPARATOR, json_string(my_instance->separator));
+    json_object_set_new(rval, PARAM_NEWLINE, json_string(my_instance->query_newline));
 
     return rval;
 }
