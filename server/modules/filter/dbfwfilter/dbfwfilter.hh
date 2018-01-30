@@ -18,6 +18,7 @@
 #include <time.h>
 #include <string>
 #include <list>
+#include <vector>
 #include <tr1/memory>
 #include <tr1/unordered_map>
 
