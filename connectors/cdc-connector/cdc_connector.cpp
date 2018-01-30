@@ -460,7 +460,8 @@ bool Connection::do_auth()
         {
             buf[bytes] = '\0';
             m_error = "Authentication failed: ";
-            m_error += buf;
+            m_error += bytes > 0 ? buf : "Request timed out";
+
         }
         else
         {
