@@ -254,6 +254,9 @@ add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replicatio
 # Tries to use 'maxkeys', 'maxpasswrd'
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
 
+# Basic MaxCtrl test
+add_test_executable(maxctrl_basic.cpp maxctrl_basic replication LABELS maxctrl REPL_BACKEND)
+
 # MySQL Monitor Failover Test
 add_test_executable(mysqlmon_detect_standalone_master.cpp mysqlmon_detect_standalone_master mysqlmon_detect_standalone_master LABELS mysqlmon REPL_BACKEND)
 
