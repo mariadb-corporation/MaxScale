@@ -46,6 +46,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/server.h>
+#include <maxscale/sqlite3.h>
 #include <maxscale/session.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
@@ -189,6 +190,7 @@ static void disable_module_unloading(const char* arg);
 static void enable_module_unloading(const char* arg);
 static void redirect_output_to_file(const char* arg);
 static bool user_is_acceptable(const char* specified_user);
+static bool init_sqlite3();
 
 struct DEBUG_ARGUMENT
 {
@@ -1957,6 +1959,13 @@ int main(int argc, char **argv)
         }
     }
 
+    if (!init_sqlite3())
+    {
+        MXS_ERROR("Could not initialize sqlite3, exiting.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     MXS_NOTICE("MariaDB MaxScale %s started", MAXSCALE_VERSION);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
 
@@ -3303,4 +3312,34 @@ static bool user_is_acceptable(const char* specified_user)
     }
 
     return acceptable;
+}
+
+static bool init_sqlite3()
+{
+    bool rv = true;
+
+    // Collecting the memstatus introduces locking that, according to customer reports,
+    // has a significant impact on the performance.
+    if (sqlite3_config(SQLITE_CONFIG_MEMSTATUS, (int)0) == SQLITE_OK) // 0 turns off.
+    {
+        MXS_NOTICE("The collection of SQLite memory allocation statistics turned off.");
+    }
+    else
+    {
+        MXS_WARNING("Could not turn off the collection of SQLite memory allocation statistics.");
+        // Non-fatal, we simply will take a small performance hit.
+    }
+
+    if (sqlite3_config(SQLITE_CONFIG_MULTITHREAD) == SQLITE_OK)
+    {
+        MXS_NOTICE("Threading mode of SQLite set to Multi-thread.");
+    }
+    else
+    {
+        MXS_ERROR("Could not set the threading mode of SQLite to Multi-thread. "
+                  "MaxScale will terminate.");
+        rv = false;
+    }
+
+    return rv;
 }

@@ -73,6 +73,7 @@ target_link_libraries(maxscale-common
   z
   rt
   m
+  sqlite3
   stdc++
   gnutls
   gcrypt
