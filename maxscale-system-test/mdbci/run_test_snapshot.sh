@@ -48,15 +48,14 @@ export repo_dir=$dir/repo.d/
 ${mdbci_dir}/mdbci snapshot revert --path-to-nodes $name --snapshot-name $snapshot_name
 
 if [ $? != 0 ]; then
-	${script_dir}/destroy.sh
+	${mdbci_dir}/mdbci destroy $name
 	${MDBCI_VM_PATH}/scripts/clean_vms.sh $name
 
 	${script_dir}/create_config.sh
-       checkExitStatus $? "Error creating configuration" $snapshot_lock_file
-       . ${script_dir}/configure_backend.sh
-    
+	checkExitStatus $? "Error creating configuration" $snapshot_lock_file
+
 	echo "Creating snapshot from new config"
-	$HOME/mdbci/mdbci snapshot take --path-to-nodes $name --snapshot-name $snapshot_name
+	${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name $snapshot_name
 fi
 
 . ${script_dir}/set_env.sh "$name"

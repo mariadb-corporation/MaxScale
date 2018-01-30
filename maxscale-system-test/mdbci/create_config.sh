@@ -20,10 +20,8 @@ if [ "$product" == "mysql" ] ; then
   export cnf_path=${script_dir}/cnf/mysql56
 fi
 
+${mdbci_dir}/mdbci destroy $name
 mkdir -p ${MDBCI_VM_PATH}/$name
-cd ${MDBCI_VM_PATH}/$name
-vagrant destroy -f
-cd $dir
 
 mkdir ${MDBCI_VM_PATH}/$name/cnf
 cp -r ${cnf_path}/* ${MDBCI_VM_PATH}/$name/cnf/
