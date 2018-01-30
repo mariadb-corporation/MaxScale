@@ -103,10 +103,6 @@ ExternalProject_Add(connector-c
 include_directories(${CMAKE_BINARY_DIR}/include)
 set(MYSQL_CLIENT ${CMAKE_BINARY_DIR}/lib/mariadb/libmariadbclient.a CACHE INTERNAL "")
 
-# Build the CDC connector
-add_library(cdc_connector ${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/cdc_connector.cpp)
-include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
-
 #
 # Check that all required components are present. To build even without them,
 # add e.g. -DHAVE_PHP=Y to the CMake invocation
