@@ -66,7 +66,7 @@ $(<${script_dir}/templates/build.json.template)
 
 	# destroying existing box
 	if [ -d "$MDBCI_VM_PATH/${name}" ]; then
-                ${mdbci_dir}/mdbci destroy $name
+		${mdbci_dir}/mdbci destroy $name
 	fi
 
 	# starting VM for build
