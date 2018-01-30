@@ -36,6 +36,7 @@ static const char* decimal_types[] =
     "FLOAT",
     "DOUBLE",
     "DECIMAL(10, 2)",
+    "DECIMAL(32, 2)",
     NULL
 };
 
@@ -89,16 +90,48 @@ static const char* binary_values[] =
     NULL
 };
 
+static const char* datetime_types[] =
+{
+    "DATETIME(1)",
+    "DATETIME(2)",
+    "DATETIME(3)",
+    "DATETIME(4)",
+    "DATETIME(5)",
+    "DATETIME(6)",
+    "TIMESTAMP",
+    NULL
+};
+
+static const char* datetime_values[] =
+{
+    "'2018-01-01 11:11:11'",
+    NULL
+};
+
+static const char* date_types[] =
+{
+    "DATE",
+    NULL
+};
+
+static const char* date_values[] =
+{
+    "'2018-01-01'",
+    NULL
+};
+
 struct
 {
     const char** types;
     const char** values;
 } test_set[]
 {
-    { integer_types, integer_values },
-    { decimal_types, decimal_values },
-    { string_types,  string_values  },
-    { binary_types,  binary_values  },
+    { integer_types,  integer_values  },
+    { decimal_types,  decimal_values  },
+    { string_types,   string_values   },
+    { binary_types,   binary_values   },
+    { datetime_types, datetime_values },
+    { date_types,     date_values     },
     { 0 }
 };
 

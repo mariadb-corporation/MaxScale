@@ -262,47 +262,18 @@ static void unpack_datetime(uint8_t *ptr, int length, struct tm *dest)
     uint64_t val = 0;
     uint32_t second, minute, hour, day, month, year;
 
-    if (length == -1)
-    {
-        val = gw_mysql_get_byte8(ptr);
-        second = val - ((val / 100) * 100);
-        val /= 100;
-        minute = val - ((val / 100) * 100);
-        val /= 100;
-        hour = val - ((val / 100) * 100);
-        val /= 100;
-        day = val - ((val / 100) * 100);
-        val /= 100;
-        month = val - ((val / 100) * 100);
-        val /= 100;
-        year = val;
-    }
-    else
-    {
-        // TODO: Figure out why DATETIME(0) doesn't work like it others do
-        val = unpack_bytes(ptr, datetime_sizes[length]);
-        val *= log_10_values[6 - length];
-
-        if (val < 0)
-        {
-            val = -val;
-        }
-
-        int subsecond = val % 1000000;
-        val /= 1000000;
-
-        second = val % 60;
-        val /= 60;
-        minute = val % 60;
-        val /= 60;
-        hour = val % 24;
-        val /= 24;
-        day = val % 32;
-        val /= 32;
-        month = val % 13;
-        val /= 13;
-        year = val;
-    }
+    val = gw_mysql_get_byte8(ptr);
+    second = val - ((val / 100) * 100);
+    val /= 100;
+    minute = val - ((val / 100) * 100);
+    val /= 100;
+    hour = val - ((val / 100) * 100);
+    val /= 100;
+    day = val - ((val / 100) * 100);
+    val /= 100;
+    month = val - ((val / 100) * 100);
+    val /= 100;
+    year = val;
 
     memset(dest, 0, sizeof(struct tm));
     dest->tm_year = year - 1900;
@@ -502,7 +473,7 @@ static size_t temporal_field_size(uint8_t type, uint8_t decimals, int length)
         return 3 + ((decimals + 1) / 2);
 
     case TABLE_COL_TYPE_DATETIME:
-        return length < 0 || length > 6 ? 8 : datetime_sizes[length];
+        return 8;
 
     case TABLE_COL_TYPE_TIMESTAMP:
         return 4;
@@ -649,6 +620,7 @@ size_t unpack_numeric_field(uint8_t *src, uint8_t type, uint8_t *metadata, uint8
         break;
     }
 
+    ss_dassert(size > 0);
     memcpy(dest, src, size);
     return size;
 }

@@ -66,9 +66,7 @@ $(<${script_dir}/templates/build.json.template)
 
 	# destroying existing box
 	if [ -d "$MDBCI_VM_PATH/${name}" ]; then
-		cd $MDBCI_VM_PATH/${name}
-		vagrant destroy -f
-		cd ${dir}
+		${mdbci_dir}/mdbci destroy $name
 	fi
 
 	# starting VM for build
@@ -78,9 +76,7 @@ $(<${script_dir}/templates/build.json.template)
 	${mdbci_dir}/mdbci up --attempts=1 $name
 	if [ $? != 0 ] ; then
 		echo "Error starting VM"
-		cd $MDBCI_VM_PATH/${name}
 		rm ~/vagrant_lock
-		cd $dir
 		exit 1
 	fi
 	echo "copying public keys to VM"
@@ -122,11 +118,7 @@ if [ "$try_already_running" == "yes" ] ; then
 fi
 if [[ "$do_not_destroy_vm" != "yes" && "$try_already_running" != "yes" ]] ; then
   echo "Destroying VM"
-  vagrant destroy -f
-  cd ..
-  rm -rf $name
-  rm -rf ${name}.json
-  rm -rf ${name}_netwotk_config
+  ${mdbci_dir}/mdbci destroy $name
 fi
 cd $dir
 
