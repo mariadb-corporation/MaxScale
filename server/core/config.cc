@@ -3643,6 +3643,7 @@ void fix_serverlist(char* value)
         dest += sep;
         dest += start;
         sep = ",";
+        start = strtok_r(NULL, ",", &end);
     }
 
     /** The value will always be smaller than the original one or of equal size */

@@ -2428,7 +2428,7 @@ static bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age)
     return is_stale;
 }
 
-MXS_MONITORED_SERVER* mon_get_monitored_server(MXS_MONITOR* mon, SERVER* search_server)
+MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* search_server)
 {
     ss_dassert(mon && search_server);
     for (MXS_MONITORED_SERVER* iter = mon->monitored_servers; iter != NULL; iter = iter->next)
@@ -2439,4 +2439,45 @@ MXS_MONITORED_SERVER* mon_get_monitored_server(MXS_MONITOR* mon, SERVER* search_
         }
     }
     return NULL;
+}
+
+int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, const MXS_MONITOR* mon,
+                           MXS_MONITORED_SERVER*** monitored_servers_out)
+{
+    ss_dassert(*monitored_servers_out == NULL);
+    SERVER** servers = NULL;
+    int servers_size = config_get_server_list(params, key, &servers);
+    int rval = -1;
+    // All servers in the array must be monitored by the given monitor.
+    if (servers_size > 0)
+    {
+        MXS_MONITORED_SERVER** monitored_array =
+            (MXS_MONITORED_SERVER**)MXS_CALLOC(servers_size, sizeof(MXS_MONITORED_SERVER*));
+        bool error = false;
+        for (int i = 0; i < servers_size && !error; i++)
+        {
+            MXS_MONITORED_SERVER* mon_serv = mon_get_monitored_server(mon, servers[i]);
+            if (mon_serv != NULL)
+            {
+                monitored_array[i] = mon_serv;
+            }
+            else
+            {
+                MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", servers[i]->unique_name, mon->name);
+                error = true;
+            }
+        }
+        MXS_FREE(servers);
+
+        if (error)
+        {
+            MXS_FREE(monitored_array);
+        }
+        else
+        {
+            *monitored_servers_out = monitored_array;
+            rval = servers_size;
+        }
+    }
+    return rval;
 }

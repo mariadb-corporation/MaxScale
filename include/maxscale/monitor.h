@@ -382,6 +382,19 @@ void load_server_journal(MXS_MONITOR *monitor, MXS_MONITORED_SERVER **master);
  * @param search_server Server to search for
  * @return Found monitored server or NULL if not found
  */
-MXS_MONITORED_SERVER* mon_get_monitored_server(MXS_MONITOR* mon, SERVER* search_server);
+MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* search_server);
+
+/**
+ * Get an array of monitored servers. All the servers defined in the config setting must be monitored by
+ * the given monitor.
+ *
+ * @param params Config parameters
+ * @param key Setting name
+ * @param mon Monitor which should monitor the servers
+ * @param monitored_servers_out Where to save output. The caller should free the array, but not the elements.
+ * @return Output array size if successful, negative value otherwise
+ */
+int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, const MXS_MONITOR* mon,
+                           MXS_MONITORED_SERVER*** monitored_array_out);
 
 MXS_END_DECLS
