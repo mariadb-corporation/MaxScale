@@ -52,9 +52,8 @@ if [ $? != 0 ]; then
 	${MDBCI_VM_PATH}/scripts/clean_vms.sh $name
 
 	${script_dir}/create_config.sh
-        checkExitStatus $? "Error creating configuration" $snapshot_lock_file
-        . ${script_dir}/configure_backend.sh
-    
+	checkExitStatus $? "Error creating configuration" $snapshot_lock_file
+
 	echo "Creating snapshot from new config"
 	${mdbci_dir}/mdbci snapshot take --path-to-nodes $name --snapshot-name $snapshot_name
 fi

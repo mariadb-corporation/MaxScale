@@ -63,7 +63,6 @@ res=$?
 
 ulimit -c unlimited
 if [ $res == 0 ] ; then
-#    . ${script_dir}/configure_backend.sh
     . ${script_dir}/set_env.sh $name
     cd ${script_dir}/..
     cmake . -DBUILDNAME=$name -DCMAKE_BUILD_TYPE=Debug
