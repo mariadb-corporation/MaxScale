@@ -537,6 +537,17 @@ This will log all statements that cannot be parsed completely. This may be
 useful if you suspect that MariaDB MaxScale routes statements to the wrong
 server (e.g. to a slave instead of to a master).
 
+#### `local_address`
+
+What specific local address/interface to use when connecting to servers.
+
+This can be used for ensuring that MaxScale uses a particular interface
+when connecting to servers, in case the computer MaxScale is running on
+has multiple interfaces.
+```
+local_address=192.168.1.254
+```
+
 ### Service
 
 A service represents the database service that MariaDB MaxScale offers to the

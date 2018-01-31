@@ -1401,6 +1401,10 @@ handle_global_item(const char *name, const char *value)
             MXS_FREE(v);
         }
     }
+    else if (strcmp(name, "local_address") == 0)
+    {
+        gateway.local_address = MXS_STRDUP_A(value);
+    }
     else
     {
         for (i = 0; lognames[i].name; i++)

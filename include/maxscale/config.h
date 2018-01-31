@@ -77,6 +77,7 @@ typedef struct
     char*         qc_args;                             /**< Arguments for the query classifier */
     int           query_retries;                       /**< Number of times a interrupted query is retried */
     time_t        query_retry_timeout;                 /**< Timeout for query retries */
+    char*         local_address;                       /**< Local address to use when connecting */
 } MXS_CONFIG;
 
 /**
