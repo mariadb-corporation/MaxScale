@@ -1123,6 +1123,7 @@ void dcb_close(DCB *dcb)
         ++dcb->n_close;
         // TODO: Will this happen on a regular basis?
         MXS_WARNING("dcb_close(%p) called %u times.", dcb, dcb->n_close);
+        ss_dassert(!true);
     }
 }
 
