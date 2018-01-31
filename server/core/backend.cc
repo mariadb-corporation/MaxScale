@@ -43,6 +43,8 @@ Backend::~Backend()
 
 void Backend::close(close_type type)
 {
+    ss_dassert(m_dcb->n_close == 0);
+
     if (!m_closed)
     {
         m_closed = true;
