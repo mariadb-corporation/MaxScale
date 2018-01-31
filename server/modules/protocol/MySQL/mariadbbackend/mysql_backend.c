@@ -583,7 +583,7 @@ static void do_handle_error(DCB *dcb, mxs_error_action_t action, const char *err
      */
     if (!succp)
     {
-        session->state = SESSION_STATE_STOPPING;
+        poll_fake_hangup_event(session->client_dcb);
     }
 }
 

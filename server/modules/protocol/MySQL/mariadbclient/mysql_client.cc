@@ -1401,29 +1401,20 @@ static int gw_client_close(DCB *dcb)
  */
 static int gw_client_hangup_event(DCB *dcb)
 {
-    MXS_SESSION* session;
-
     CHK_DCB(dcb);
-    session = dcb->session;
+    MXS_SESSION* session = dcb->session;
 
-    if (session != NULL && session->state == SESSION_STATE_ROUTER_READY)
+    if (session)
     {
         CHK_SESSION(session);
+        if (session->state != SESSION_STATE_DUMMY && !session_valid_for_pool(session))
+        {
+            // The client did not send a COM_QUIT packet
+            modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
+        }
+        dcb_close(dcb);
     }
 
-    if (session != NULL && session->state == SESSION_STATE_STOPPING)
-    {
-        goto retblock;
-    }
-
-    if (session->state != SESSION_STATE_DUMMY && !session_valid_for_pool(session))
-    {
-        // The client did not send a COM_QUIT packet
-        modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
-    }
-    dcb_close(dcb);
-
-retblock:
     return 1;
 }
 
