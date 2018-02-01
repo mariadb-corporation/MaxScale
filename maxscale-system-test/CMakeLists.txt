@@ -483,7 +483,7 @@ add_test_script(mxs791_galera.sh mxs791_galera.sh galera LABELS UNSTABLE HEAVY G
 add_test_executable(mxs812_1.cpp mxs812_1 longblob LABELS readwritesplit REPL_BACKEND)
 
 # Checks "Current no. of conns" maxadmin output after long blob inserting
-add_test_executable(mxs812_2.cpp mxs812_2 longblob LABELS readwritesplit REPL_BACKEND)
+add_test_executable(mxs812_2.cpp mxs812_2 replication LABELS readwritesplit REPL_BACKEND)
 
 # Execute prepared statements while master is blocked, checks "Current no. of conns" after the test
 add_test_executable(mxs822_maxpasswd.cpp mxs822_maxpasswd maxpasswd LABELS maxscale REPL_BACKEND)
