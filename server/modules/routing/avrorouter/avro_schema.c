@@ -1251,7 +1251,7 @@ static void skip_token(const char** saved)
 {
     const char* ptr = *saved;
 
-    while (*ptr && !isspace(*ptr))
+    while (*ptr && !isspace(*ptr) && *ptr != '(' && *ptr != '.')
     {
         ptr++;
     }
