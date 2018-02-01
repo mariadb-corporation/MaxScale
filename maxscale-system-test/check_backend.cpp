@@ -11,6 +11,9 @@ int main(int argc, char *argv[])
 
     TestConnections * Test = new TestConnections(argc, argv);
 
+    // Reset server settings by replacing the config files
+    Test->repl->reset_server_settings();
+
     std::string src = std::string(test_dir) + "/mdbci/add_core_cnf.sh";
     Test->maxscales->copy_to_node(0, src.c_str(), Test->maxscales->access_homedir[0]);
     Test->maxscales->ssh_node_f(0, true, "%s/add_core_cnf.sh %s", Test->maxscales->access_homedir[0],
