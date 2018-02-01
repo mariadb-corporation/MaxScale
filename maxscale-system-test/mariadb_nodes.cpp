@@ -1324,6 +1324,25 @@ void Mariadb_nodes::add_server_setting(int node, const char* setting)
     ssh_node_f(node, true, "sudo sed -i '$a %s' /etc/my.cnf.d/server.cnf", setting);
 }
 
+void Mariadb_nodes::reset_server_settings(int node)
+{
+    std::stringstream ss;
+    ss << test_dir << "/mdbci/cnf/server" << node + 1 << ".cnf";
+
+    // Note: This is a CentOS specific path
+    ssh_node(node, "sudo rm -rf /etc/my.cnf.d/*", true);
+    copy_to_node(node, ss.str().c_str(), "~/");
+    ssh_node_f(node, false, "sudo mv ~/server%d.cnf /etc/my.cnf.d/", node + 1);
+}
+
+void Mariadb_nodes::reset_server_settings()
+{
+    for (int i = 0; i < N; i++)
+    {
+        reset_server_settings(i);
+    }
+}
+
 /**
  * @brief extract_version_from_string Tries to find MariaDB server version number in the output of 'mysqld --version'
  * Function does not allocate any memory
