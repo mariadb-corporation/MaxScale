@@ -1086,8 +1086,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
         dcb_close(dcb);
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
-
-    if (proto->current_command == MXS_COM_QUIT)
+    else if (proto->current_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
         dcb_close(dcb);
