@@ -18,10 +18,11 @@
 #define MXS_MODULE_NAME "mariadbmon"
 
 #include "../mysqlmon.h"
+#include <inttypes.h>
+#include <limits>
 #include <string>
 #include <sstream>
 #include <vector>
-#include <inttypes.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/debug.h>
@@ -121,6 +122,7 @@ static bool can_replicate_from(MYSQL_MONITOR* mon,
 static bool wait_cluster_stabilization(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master,
                                        const ServerVector& slaves, int seconds_remaining);
 static string get_connection_errors(const ServerVector& servers);
+static int64_t scan_server_id(const char* id_string);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -148,15 +150,18 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 /** Default master failure verification timeout */
 #define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
 
+/** Server id default value */
+static const int64_t SERVER_ID_UNKNOWN = -1;
+
 class Gtid
 {
 public:
     uint32_t domain;
-    uint32_t server_id;
+    int64_t server_id; // Is actually 32bit unsigned. 0 is only used by server versions  <= 10.1
     uint64_t sequence;
     Gtid()
         : domain(0)
-        , server_id(0)
+        , server_id(SERVER_ID_UNKNOWN)
         , sequence(0)
     {}
 
@@ -170,7 +175,7 @@ public:
      */
     Gtid(const char* str, int64_t search_domain = -1)
         : domain(0)
-        , server_id(0)
+        , server_id(SERVER_ID_UNKNOWN)
         , sequence(0)
     {
         // Autoselect only allowed with one triplet
@@ -195,18 +200,23 @@ public:
     }
     bool operator == (const Gtid& rhs) const
     {
-        return domain == rhs.domain && server_id == rhs.server_id && sequence == rhs.sequence;
+        return domain == rhs.domain &&
+            server_id != SERVER_ID_UNKNOWN && server_id == rhs.server_id &&
+            sequence == rhs.sequence;
     }
     string to_string() const
     {
         std::stringstream ss;
-        ss << domain << "-" << server_id << "-" << sequence;
+        if (server_id != SERVER_ID_UNKNOWN)
+        {
+            ss << domain << "-" << server_id << "-" << sequence;
+        }
         return ss.str();
     }
 private:
     void parse_triplet(const char* str)
     {
-        ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRIu32 "-%" PRIu64, &domain, &server_id, &sequence);
+        ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRId64 "-%" PRIu64, &domain, &server_id, &sequence);
         ss_dassert(rv == 3);
     }
 };
@@ -215,21 +225,22 @@ private:
 class SlaveStatusInfo
 {
 public:
-    int master_server_id;   /**< The master's server_id value. */
-    string master_host;     /**< Master server host name. */
-    int master_port;        /**< Master server port. */
-    bool slave_io_running;  /**< Whether the slave I/O thread is running and connected. */
-    bool slave_sql_running; /**< Whether or not the SQL thread is running. */
-    string master_log_file; /**< Name of the master binary log file that the I/O thread is currently
-                             *   reading from. */
-    uint64_t read_master_log_pos; /**< Position up to which the I/O thread has read in the current master
-                                   *   binary log file. */
-    Gtid gtid_io_pos;       /**< Gtid I/O position of the slave thread. Only shows the triplet with
-                             *   the current master domain. */
-    string last_error;      /**< Last IO or SQL error encountered. */
+    int64_t master_server_id;       /**< The master's server_id value. Valid ids are 32bit unsigned. -1 is
+                                     *   unread/error. */
+    string master_host;             /**< Master server host name. */
+    int master_port;                /**< Master server port. */
+    bool slave_io_running;          /**< Whether the slave I/O thread is running and connected. */
+    bool slave_sql_running;         /**< Whether or not the SQL thread is running. */
+    string master_log_file;         /**< Name of the master binary log file that the I/O thread is currently
+                                     *   reading from. */
+    uint64_t read_master_log_pos;   /**< Position up to which the I/O thread has read in the current master
+                                     *   binary log file. */
+    Gtid gtid_io_pos;               /**< Gtid I/O position of the slave thread. Only shows the triplet with
+                                     *   the current master domain. */
+    string last_error;              /**< Last IO or SQL error encountered. */
 
     SlaveStatusInfo()
-        : master_server_id(0)
+        : master_server_id(SERVER_ID_UNKNOWN)
         , master_port(0)
         , slave_io_running(false)
         , slave_sql_running(false)
@@ -259,7 +270,7 @@ public:
 class MySqlServerInfo
 {
 public:
-    int              server_id;             /**< Value of @@server_id */
+    int64_t          server_id;             /**< Value of @@server_id. Valid values are 32bit unsigned. */
     int              group;                 /**< Multi-master group where this server belongs,
                                              *   0 for servers not in groups */
     bool             read_only;             /**< Value of @@read_only */
@@ -281,7 +292,7 @@ public:
     mysql_server_version version;           /**< Server version, 10.X, 5.5 or 5.1 */
 
     MySqlServerInfo()
-        : server_id(0)
+        : server_id(SERVER_ID_UNKNOWN)
         , group(0)
         , read_only(false)
         , slave_configured(false)
@@ -297,14 +308,15 @@ public:
 
     /**
      * Calculate how many events are left in the relay log. If gtid_current_pos is ahead of Gtid_IO_Pos,
-     * or a server_id is zero, an error value is returned.
+     * or a server_id is unknown, an error value is returned.
      *
      * @return Number of events in relay log according to latest queried info. A negative value signifies
      * an error in the gtid-values.
      */
     int64_t relay_log_events()
     {
-        if (slave_status.gtid_io_pos.server_id != 0 && gtid_current_pos.server_id != 0 &&
+        if (slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN &&
+            gtid_current_pos.server_id != SERVER_ID_UNKNOWN &&
             slave_status.gtid_io_pos.domain == gtid_current_pos.domain &&
             slave_status.gtid_io_pos.sequence >= gtid_current_pos.sequence)
         {
@@ -318,10 +330,10 @@ bool uses_gtid(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* mon_server, json_t** er
 {
     bool rval = false;
     const MySqlServerInfo* info = get_server_info(mon, mon_server);
-    if (info->slave_status.gtid_io_pos.server_id == 0)
+    if (info->slave_status.gtid_io_pos.server_id == SERVER_ID_UNKNOWN)
     {
         string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
-                                    " is not using gtid replication or master server id is 0.";
+                                    " is not using gtid replication.";
         PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
     }
     else
@@ -1147,12 +1159,12 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     {
         MySqlServerInfo *serv_info = get_server_info(handle, db);
         dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
-        dcb_printf(dcb, "Server ID: %d\n", serv_info->server_id);
+        dcb_printf(dcb, "Server ID: %" PRId64 "\n", serv_info->server_id);
         dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
         dcb_printf(dcb, "Slave configured: %s\n", serv_info->slave_configured ? "YES" : "NO");
         dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_status.slave_io_running ? "YES" : "NO");
         dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_status.slave_sql_running ? "YES" : "NO");
-        dcb_printf(dcb, "Master ID: %d\n", serv_info->slave_status.master_server_id);
+        dcb_printf(dcb, "Master ID: %" PRId64 "\n", serv_info->slave_status.master_server_id);
         dcb_printf(dcb, "Master binlog file: %s\n", serv_info->slave_status.master_log_file.c_str());
         dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->slave_status.read_master_log_pos);
 
@@ -1280,7 +1292,7 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
     }
 
     MYSQL_RES* result;
-    int master_server_id = -1;
+    int64_t master_server_id = SERVER_ID_UNKNOWN;
     int nconfigured = 0;
     int nrunning = 0;
 
@@ -1336,11 +1348,7 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
                 if (serv_info->slave_status.slave_io_running && server_version != MYSQL_SERVER_VERSION_51)
                 {
                     /* Get Master_Server_Id */
-                    master_server_id = atoi(row[i_master_server_id]);
-                    if (master_server_id == 0)
-                    {
-                        master_server_id = -1;
-                    }
+                    master_server_id = scan_server_id(row[i_master_server_id]);
                 }
 
                 if (server_version == MYSQL_SERVER_VERSION_100)
@@ -1418,7 +1426,7 @@ static bool slave_receiving_events(MYSQL_MONITOR* handle)
 {
     ss_dassert(handle->master);
     bool received_event = false;
-    long master_id = handle->master->server->node_id;
+    int64_t master_id = handle->master->server->node_id;
     for (MXS_MONITORED_SERVER* server = handle->monitor->monitored_servers; server; server = server->next)
     {
         MySqlServerInfo* info = get_server_info(handle, server);
@@ -4230,7 +4238,7 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
  */
 static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info)
 {
-    string query = "SELECT @@server_id, @@read_only;";
+    string query = "SELECT @@global.server_id, @@read_only;";
     int columns = 2;
     if (serv_info->version ==  MYSQL_SERVER_VERSION_100)
     {
@@ -4245,16 +4253,16 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
     StringVector row;
     if (query_one_row(database, query.c_str(), columns, &row))
     {
-        uint32_t server_id = 0;
-        ss_debug(int rv = ) sscanf(row[ind_id].c_str(), "%" PRIu32, &server_id);
-        ss_dassert(rv == 1 && (row[ind_ro] == "0" || row[ind_ro] == "1"));
+        int64_t server_id = scan_server_id(row[ind_id].c_str());
         database->server->node_id = server_id;
         serv_info->server_id = server_id;
+
+        ss_dassert(row[ind_ro] == "0" || row[ind_ro] == "1");
         serv_info->read_only = (row[ind_ro] == "1");
         if (columns == 3)
         {
             uint32_t domain = 0;
-            ss_debug(rv = ) sscanf(row[ind_domain].c_str(), "%" PRIu32, &domain);
+            ss_debug(int rv = ) sscanf(row[ind_domain].c_str(), "%" PRIu32, &domain);
             ss_dassert(rv == 1);
             serv_info->gtid_domain_id = domain;
         }
@@ -4284,7 +4292,7 @@ static bool can_replicate_from(MYSQL_MONITOR* mon,
         // The following are not sufficient requirements for replication to work, they only cover the basics.
         // If the servers have diverging histories, the redirection will seem to succeed but the slave IO
         // thread will stop in error.
-        if (slave_gtid.server_id != 0 && master_gtid.server_id != 0 &&
+        if (slave_gtid.server_id != SERVER_ID_UNKNOWN && master_gtid.server_id != SERVER_ID_UNKNOWN &&
             slave_gtid.domain == master_gtid.domain &&
             slave_gtid.sequence <= master_info->gtid_current_pos.sequence)
         {
@@ -4485,4 +4493,26 @@ static void disable_setting(MYSQL_MONITOR* mon, const char* setting)
 static bool cluster_can_be_joined(MYSQL_MONITOR* mon)
 {
     return (mon->master != NULL && SERVER_IS_MASTER(mon->master->server) && mon->master_gtid_domain >= 0);
+}
+
+/**
+ * Scan a server id from a string.
+ *
+ * @param id_string
+ * @return Server id, or -1 if scanning fails
+ */
+static int64_t scan_server_id(const char* id_string)
+{
+    int64_t server_id = SERVER_ID_UNKNOWN;
+    ss_debug(int rv = ) sscanf(id_string, "%" PRId64, &server_id);
+    ss_dassert(rv == 1);
+    // Server id can be 0, which was even the default value until 10.2.1.
+    // KB is a bit hazy on this, but apparently when replicating, the server id should not be 0. Not sure,
+    // so MaxScale allows this.
+#if defined(SS_DEBUG)
+    const int64_t SERVER_ID_MIN = std::numeric_limits<uint32_t>::min();
+    const int64_t SERVER_ID_MAX = std::numeric_limits<uint32_t>::max();
+#endif
+    ss_dassert(server_id >= SERVER_ID_MIN && server_id <= SERVER_ID_MAX);
+    return server_id;
 }
