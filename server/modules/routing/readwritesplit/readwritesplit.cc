@@ -230,6 +230,18 @@ static bool rwsplit_process_router_options(Config& config,
                     success = false;
                 }
             }
+            else if (strcmp(options[i], "enable_causal_read") == 0)
+            {
+                config.enable_causal_read = config_truth_value(value);
+                if (config.enable_causal_read)
+                {
+                    config.retry_failed_reads = true;
+                }
+            }
+            else if (strcmp(options[i], "causal_read_timeout") == 0)
+            {
+                config.causal_read_timeout = value;
+            }
             else
             {
                 MXS_ERROR("Unknown router option \"%s=%s\" for readwritesplit router.",
@@ -1144,6 +1156,62 @@ static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
 }
 
 /**
+ * @bref discard the result of wait gtid statment, the result will be an error
+ * packet or an error packet.
+ * @param buffer origin reply buffer
+ * @param proto  MySQLProtocol
+ * @return reset buffer
+ */
+GWBUF *discard_master_wait_gtid_result(GWBUF *buffer, RWSplitSession *rses)
+{
+    uint8_t header_and_command[MYSQL_HEADER_LEN+1];
+    uint8_t packet_len = 0;
+    uint8_t offset = 0;
+    mxs_mysql_cmd_t com;
+
+    gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN+1, header_and_command);
+    /* ignore error packet */
+    if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
+    {
+        rses->wait_gtid_state = EXPECTING_NOTHING;
+        return buffer;
+    }
+
+    /* this packet must be an ok packet now */
+    ss_dassert(MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_OK);
+    packet_len = MYSQL_GET_PAYLOAD_LEN(header_and_command) + MYSQL_HEADER_LEN;
+    rses->wait_gtid_state = EXPECTING_REAL_RESULT;
+    rses->next_seq = 1;
+
+    return gwbuf_consume(buffer, packet_len);
+}
+
+/**
+ * @bref After discarded the wait result, we need correct the seqence number of every packet
+ *
+ * @param buffer origin reply buffer
+ * @param proto  MySQLProtocol
+ *
+ */
+void correct_packet_sequence(GWBUF *buffer, RWSplitSession *rses)
+{
+    uint8_t header[3];
+    uint32_t offset = 0;
+    uint32_t packet_len = 0;
+    if (rses->wait_gtid_state == EXPECTING_REAL_RESULT)
+    {
+        while (gwbuf_copy_data(buffer, offset, 3, header) == 3)
+        {
+           packet_len = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
+           uint8_t *seq = gwbuf_byte_pointer(buffer, offset + MYSQL_SEQ_OFFSET);
+           *seq = rses->next_seq;
+           rses->next_seq++;
+           offset += packet_len;
+        }
+    }
+}
+
+/**
  * @brief Client Reply routine
  *
  * @param   instance       The router instance
@@ -1164,7 +1232,7 @@ static void clientReply(MXS_ROUTER *instance,
 
     SRWBackend& backend = get_backend_from_dcb(rses, backend_dcb);
 
-    if (inst->config().causal_read &&
+    if (inst->config().enable_causal_read &&
         GWBUF_IS_REPLY_OK(writebuf) &&
         backend == rses->current_master)
     {
@@ -1174,6 +1242,15 @@ static void clientReply(MXS_ROUTER *instance,
         {
             rses->gtid_pos = std::string(tmp);
         }
+    }
+
+    if (rses->wait_gtid_state == EXPECTING_WAIT_GTID_RESULT)
+    {
+        writebuf = discard_master_wait_gtid_result(writebuf, rses);
+    }
+    if (rses->wait_gtid_state == EXPECTING_REAL_RESULT)
+    {
+        correct_packet_sequence(writebuf, rses);
     }
 
     if (backend->get_reply_state() == REPLY_STATE_DONE)
@@ -1451,7 +1528,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"strict_sp_calls",  MXS_MODULE_PARAM_BOOL, "false"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},
-            {"causal_read", MXS_MODULE_PARAM_ENUM, "none", CAUSAL_READ_NON_SUPPORT, causal_read_values},
+            {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false"},
             {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0"},
             {MXS_END_MODULE_PARAMS}
         }

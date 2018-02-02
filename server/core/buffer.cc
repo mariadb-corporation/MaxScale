@@ -883,7 +883,7 @@ size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t
     return bytes_read;
 }
 
-uint8_t *gwbuf_byte_point(GWBUF *buffer, size_t offset)
+uint8_t *gwbuf_byte_pointer(GWBUF *buffer, size_t offset)
 {
     uint8_t *rval = NULL;
     // Ignore NULL buffer and walk past empty or too short buffers.

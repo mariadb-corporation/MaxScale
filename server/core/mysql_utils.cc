@@ -366,5 +366,14 @@ void mxs_mysql_set_server_version(MYSQL* mysql, SERVER* server)
         unsigned long version = mysql_get_server_version(mysql);
 
         server_set_version(server, version_string, version);
+
+        if (strcasestr(version_string, "mariadb") != NULL)
+        {
+            server->server_type = SERVER_TYPE_MARIADB;
+        }
+        else
+        {
+            server->server_type = SERVER_TYPE_MYSQL;
+        }
     }
 }

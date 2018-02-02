@@ -79,15 +79,6 @@ enum failure_mode
     RW_ERROR_ON_WRITE           /**< Don't close the connection but send an error for writes */
 };
 
-enum causal_read_t
-{
-    CAUSAL_READ_NON_SUPPORT = 0,
-    CAUSAL_READ_MARIADB = 1,
-    CAUSAL_READ_MYSQL = 2
-};
-
-#define MARIADB_WAIT_GTID_FUNC "MASTER_GTID_WAIT"
-#define MYSQL_WAIT_GTID_FUNC   "WAIT_FOR_EXECUTED_GTID_SET"
 
 /**
  * Enum values for router parameters
@@ -113,14 +104,6 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
     {"fail_instantly", RW_FAIL_INSTANTLY},
     {"fail_on_write",  RW_FAIL_ON_WRITE},
     {"error_on_write", RW_ERROR_ON_WRITE},
-    {NULL}
-};
-
-static const MXS_ENUM_VALUE causal_read_values[] =
-{
-    {"none", CAUSAL_READ_NON_SUPPORT},
-    {"mysql", CAUSAL_READ_MYSQL},
-    {"mariadb", CAUSAL_READ_MARIADB},
     {NULL}
 };
 
@@ -163,8 +146,12 @@ enum ld_state
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
-const char causal_read_key[] = "causal_read";
-const char causal_read_timeout_key[] = "causal_read_timeout";
+#define MARIADB_WAIT_GTID_FUNC "MASTER_GTID_WAIT"
+#define MYSQL_WAIT_GTID_FUNC   "WAIT_FOR_EXECUTED_GTID_SET"
+static const char gtid_wait_stmt[] =
+    "SET @maxscale_secret_variable=(SELECT CASE WHEN %s('%s', %s) = 0 "
+    "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
+
 struct Config
 {
     Config(MXS_CONFIG_PARAMETER* params):
@@ -187,10 +174,9 @@ struct Config
         max_slave_replication_lag(config_get_integer(params, "max_slave_replication_lag")),
         rw_max_slave_conn_percent(0),
         max_slave_connections(0),
-        causal_read((causal_read_t)config_get_enum(params, causal_read_key, causal_read_values)),
-        causal_read_timeout(config_get_string(params, causal_read_timeout_key))
+        enable_causal_read(config_get_bool(params, "enable_causal_read")),
+        causal_read_timeout(config_get_string(params, "causal_read_timeout"))
     {
-        retry_failed_reads = causal_read != CAUSAL_READ_NON_SUPPORT ? true: false;
     }
 
     select_criteria_t slave_selection_criteria;  /**< The slave selection criteria */
@@ -210,7 +196,7 @@ struct Config
     int               rw_max_slave_conn_percent; /**< Maximum percentage of slaves to use for
                                                   * each connection*/
     int               max_slave_connections;     /**< Maximum number of slaves for each connection*/
-    causal_read_t     causal_read;               /**< Wether support causal read, [None, MySQL, Mariadb]*/
+    bool              enable_causal_read;        /**< Enable causual read */
     std::string       causal_read_timeout;       /**< Timetout, second parameter of function master_wait_gtid */
 
 };

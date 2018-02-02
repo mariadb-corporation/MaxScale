@@ -18,12 +18,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <sstream>
 
 #include <maxscale/alloc.h>
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/modutil.h>
 #include <maxscale/router.h>
+#include <maxscale/server.h>
 
 /**
  * The functions that support the routing of queries to back end
@@ -1108,6 +1108,60 @@ static inline bool is_large_query(GWBUF* buf)
     return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
 }
 
+/*
+ * Add a wait gitd query in front of user's query to achive causal read;
+ *
+ * @param inst   RWSplit
+ * @param rses   RWSplitSession
+ * @param server SERVER
+ * @param origin origin send buffer
+ * @return       A new buffer contains wait statement and origin query
+ */
+GWBUF *add_prefix_wait_gtid(RWSplit *inst, RWSplitSession *rses, SERVER *server, GWBUF *origin)
+{
+
+    /**
+     * Pack wait function and client query into a multistatments will save a round trip latency,
+     * and prevent the client query being executed on timeout.
+     * For example:
+     * SET @maxscale_secret_variable=(SELECT CASE WHEN MASTER_GTID_WAIT('232-1-1', 10) = 0
+     * THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END); SELECT * FROM `city`;
+     * when MASTER_GTID_WAIT('232-1-1', 0.05) == 1 (timeout), it will return
+     * an error, and SELECT * FROM `city` will not be executed, then we can retry
+     * on master;
+     **/
+
+    GWBUF *rval;
+    const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
+            MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
+    const char *gtid_wait_timeout = inst->config().causal_read_timeout.c_str();
+    const char *gtid_pos = rses->gtid_pos.c_str();
+
+    /* Create a new buffer to store prefix sql */
+    size_t prefix_len = strlen(gtid_wait_stmt) + strlen(gtid_pos) +
+        strlen(gtid_wait_timeout) + strlen(wait_func);
+    char prefix_sql[prefix_len];
+    snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_pos, gtid_wait_timeout);
+    GWBUF *prefix_buff = modutil_create_query(prefix_sql);
+
+    /**
+     * Trim origin to sql, Append origin buffer to the prefix buffer
+     **/
+    uint8_t header[MYSQL_HEADER_LEN];
+    gwbuf_copy_data(origin, 0, MYSQL_HEADER_LEN, header);
+    /* Command length = 1 */
+    size_t origin_sql_len = gw_mysql_get_byte3(header) - 1;
+    /* Trim mysql header and command */
+    GWBUF_LTRIM(origin, MYSQL_HEADER_LEN + 1);
+    rval = gwbuf_append(prefix_buff, origin);
+
+    /* Modify totol length: Prefix sql len + origin sql len + command len */
+    size_t new_payload_len = strlen(prefix_sql) + origin_sql_len + 1;
+    gw_mysql_set_byte3(GWBUF_DATA(rval), new_payload_len);
+
+    return rval;
+}
+
 /**
  * @brief Handle writing to a target server
  *
@@ -1135,43 +1189,12 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
     ss_dassert(target->session_command_count() == 0);
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
-    MySQLProtocol *backend_proto = DCB_PROTOCOL(target->dcb(), MySQLProtocol);
-    backend_proto->wait_gtid_state = EXPECTING_NOTHING;
+    rses->wait_gtid_state = EXPECTING_NOTHING;
     uint8_t cmd = mxs_mysql_get_command(querybuf);
-    causal_read_t cr = inst->config().causal_read;
-    GWBUF *send_buf;
-    if (cmd == COM_QUERY && cr && rses->gtid_pos != "")
+    GWBUF *send_buf = gwbuf_clone(querybuf); ;
+    if (cmd == COM_QUERY && inst->config().enable_causal_read && rses->gtid_pos != "")
     {
-        /**
-         * Pack wait function and client query into one multistatments query
-         * will save a round trip latency. Because no matter what the result of
-         * wait function is, the client query will be executed anyway. We don't
-         * want this happen, so use this triky way: encapsulate wait function
-         * as a subquery, when timeout the parent query will produce an error,
-         * then statements behind it will not be executed. For example:
-         * SELECT CASE WHEN MASTER_GTID_WAIT('232-1-1', 0.05) = 0 THEN 1 ELSE
-         * (SELECT ENGINE FROM INFORMATION_SCHEMA.ENGINES) END; SELECT * FROM `city`;
-         * when MASTER_GTID_WAIT('232-1-1', 0.05) == 1 (timeout), it will return
-         * an error, and SELECT * FROM `city` will not be executed, then we can retry
-         * on master;
-         **/
-        const char* wait_func = (cr == CAUSAL_READ_MARIADB) ?
-            MARIADB_WAIT_GTID_FUNC :
-            MYSQL_WAIT_GTID_FUNC;
-        std::stringstream ss;
-        char *origin_sql = modutil_get_SQL(querybuf);
-        ss << "SELECT CASE WHEN " << wait_func << "('" << rses->gtid_pos << "'," <<
-            inst->config().causal_read_timeout << ") = 0 THEN 1 ELSE " <<
-            "(SELECT ENGINE FROM INFORMATION_SCHEMA.ENGINES) END;" <<
-            origin_sql;
-        send_buf = modutil_create_query(ss.str().c_str());
-        MXS_FREE(origin_sql);
-        MXS_DEBUG("send with prefix:%s", ss.str().c_str());
-        backend_proto->wait_gtid_state = EXPECTING_WAIT_GTID_RESULT;
-    }
-    else
-    {
-        send_buf = gwbuf_clone(querybuf);
+        send_buf = add_prefix_wait_gtid(inst, rses, target->server(), send_buf);
     }
 
     if (rses->load_data_state != LOAD_DATA_ACTIVE &&

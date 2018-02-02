@@ -1812,8 +1812,8 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
                 case SESSION_TRACK_STATE_CHANGE:
                 case SESSION_TRACK_SCHEMA:
                 case SESSION_TRACK_GTIDS:
-                    mxs_leint_consume(&ptr);
-                    mxs_leint_consume(&ptr);
+                    mxs_leint_consume(&ptr); // Length of the overall entity.
+                    mxs_leint_consume(&ptr); // encoding specification
                     var_value = mxs_lestr_consume_dup(&ptr);
                     gwbuf_add_property(buff, (char *)"gtid", var_value);
                     MXS_FREE(var_value);
