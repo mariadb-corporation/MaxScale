@@ -170,10 +170,6 @@ typedef struct gwbuf
     ((b)->end = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->start : \
      (void *)((char *)(b)->end - (bytes)));
 
-#define GWBUF_LTRIM(b, bytes)\
-    ((b)->start = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->end : \
-     (void *)((char *)(b)->start + (bytes)));
-
 #define GWBUF_TYPE(b) (b)->gwbuf_type
 /*<
  * Function prototypes for the API to maniplate the buffers

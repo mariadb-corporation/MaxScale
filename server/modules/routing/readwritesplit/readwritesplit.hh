@@ -176,6 +176,10 @@ struct Config
         enable_causal_read(config_get_bool(params, "enable_causal_read")),
         causal_read_timeout(config_get_string(params, "causal_read_timeout"))
     {
+        if (enable_causal_read)
+        {
+            retry_failed_reads = true;
+        }
     }
 
     select_criteria_t slave_selection_criteria;  /**< The slave selection criteria */

@@ -42,7 +42,6 @@ typedef enum
 typedef std::map<uint32_t, uint32_t> BackendHandleMap; /** Internal ID to external ID */
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;  /** External ID to internal ID */
 
-
 class RWBackend: public mxs::Backend
 {
     RWBackend(const RWBackend&);

@@ -1152,7 +1152,7 @@ GWBUF *add_prefix_wait_gtid(RWSplit *inst, RWSplitSession *rses, SERVER *server,
     /* Command length = 1 */
     size_t origin_sql_len = gw_mysql_get_byte3(header) - 1;
     /* Trim mysql header and command */
-    GWBUF_LTRIM(origin, MYSQL_HEADER_LEN + 1);
+    origin = gwbuf_consume(origin, MYSQL_HEADER_LEN + 1);
     rval = gwbuf_append(prefix_buff, origin);
 
     /* Modify totol length: Prefix sql len + origin sql len + command len */
@@ -1195,6 +1195,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
     if (cmd == COM_QUERY && inst->config().enable_causal_read && rses->gtid_pos != "")
     {
         send_buf = add_prefix_wait_gtid(inst, rses, target->server(), send_buf);
+        rses->wait_gtid_state = EXPECTING_WAIT_GTID_RESULT;
     }
 
     if (rses->load_data_state != LOAD_DATA_ACTIVE &&

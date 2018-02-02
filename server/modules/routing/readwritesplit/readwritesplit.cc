@@ -230,18 +230,6 @@ static bool rwsplit_process_router_options(Config& config,
                     success = false;
                 }
             }
-            else if (strcmp(options[i], "enable_causal_read") == 0)
-            {
-                config.enable_causal_read = config_truth_value(value);
-                if (config.enable_causal_read)
-                {
-                    config.retry_failed_reads = true;
-                }
-            }
-            else if (strcmp(options[i], "causal_read_timeout") == 0)
-            {
-                config.causal_read_timeout = value;
-            }
             else
             {
                 MXS_ERROR("Unknown router option \"%s=%s\" for readwritesplit router.",
@@ -1528,8 +1516,8 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"strict_sp_calls",  MXS_MODULE_PARAM_BOOL, "false"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},
-            {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false"},
-            {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0"},
+            {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false", MXS_MODULE_OPT_NONE},
+            {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0", MXS_MODULE_OPT_NONE},
             {MXS_END_MODULE_PARAMS}
         }
     };
