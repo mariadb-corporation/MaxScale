@@ -761,6 +761,9 @@ add_test_executable_notest(create_rds.cpp create_rds replication LABELS EXTERN_B
 # start sysbench ageints RWSplit for infinite execution
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication LABELS readwritesplit REPL_BACKEND)
 
+# test effect of local_address in configuration file
+add_test_executable(local_address.cpp local_address local_address LABELS REPL_BACKEND)
+
 configure_file(templates.h.in templates.h @ONLY)
 
 include(CTest)
