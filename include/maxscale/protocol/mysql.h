@@ -313,7 +313,6 @@ typedef enum
 
 static const mxs_mysql_cmd_t MXS_COM_UNDEFINED = (mxs_mysql_cmd_t) - 1;
 
-
 /**
  * List of server commands, and number of response packets are stored here.
  * server_command_t is used in MySQLProtocol structure, so for each DCB there is

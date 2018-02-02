@@ -79,7 +79,6 @@ enum failure_mode
     RW_ERROR_ON_WRITE           /**< Don't close the connection but send an error for writes */
 };
 
-
 /**
  * Enum values for router parameters
  */
