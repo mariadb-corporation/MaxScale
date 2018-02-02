@@ -116,6 +116,7 @@ const char CN_QUERY_RETRIES[]                 = "query_retries";
 const char CN_QUERY_RETRY_TIMEOUT[]           = "query_retry_timeout";
 const char CN_RELATIONSHIPS[]                 = "relationships";
 const char CN_LINKS[]                         = "links";
+const char CN_LOCAL_ADDRESS[]                 = "local_address";
 const char CN_REQUIRED[]                      = "required";
 const char CN_RETRY_ON_FAILURE[]              = "retry_on_failure";
 const char CN_ROUTER[]                        = "router";
@@ -1621,6 +1622,10 @@ handle_global_item(const char *name, const char *value)
     else if (strcmp(name, CN_PASSIVE) == 0)
     {
         gateway.passive = config_truth_value((char*)value);
+    }
+    else if (strcmp(name, CN_LOCAL_ADDRESS) == 0)
+    {
+        gateway.local_address = MXS_STRDUP_A(value);
     }
     else
     {
