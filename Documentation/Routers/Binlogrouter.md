@@ -187,22 +187,25 @@ transaction_safety=on to enable detection of incomplete transactions.
 ### `send_slave_heartbeat`
 
 This defines whether MariaDB MaxScale sends the heartbeat packet to the slave
-when there are no real binlog events to send. The default value is 'off' and no
-heartbeat events are sent to slave servers.
+when there are no real binlog events to send. This parameter takes a boolean
+value and the default value is false. This means that no heartbeat events are
+sent to slave servers.
 
-If value is 'on' the interval value (requested by the slave during registration)
-is reported in the diagnostic output and the packet is send after the time
-interval without any event to send.
+If value is set to true the interval value (requested by the slave during
+registration) is reported in the diagnostic output and the packet is send after
+the time interval without any event to send.
 
 ### `semisync`
 
 This parameter controls whether binlog server could ask Master server to start
-the Semi-Synchronous replication. In order to get semi-sync working, the Master
-server must have the *rpl_semi_sync_master* plugin installed. The availability
-of the plugin and the value of the GLOBAL VARIABLE
-*rpl_semi_sync_master_enabled* are checked in the Master registration phase: if
-the plugin is installed in the Master database, the binlog server subsequently
-requests the semi-sync option.
+the Semi-Synchronous replication. This parameter takes a boolean value and the
+default value is false.
+
+In order to get semi-sync working, the Master server must have the
+*rpl_semi_sync_master* plugin installed. The availability of the plugin and the
+value of the GLOBAL VARIABLE *rpl_semi_sync_master_enabled* are checked in the
+Master registration phase: if the plugin is installed in the Master database,
+the binlog server subsequently requests the semi-sync option.
 
 Note:
  - the network replication stream from Master has two additional bytes before
