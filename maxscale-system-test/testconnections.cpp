@@ -819,7 +819,6 @@ int TestConnections::start_binlog(int m)
     binlog = open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password, ssl);
     execute_query(binlog, (char *) "stop slave");
     execute_query(binlog, (char *) "reset slave all");
-    execute_query(binlog, (char *) "reset master");
     mysql_close(binlog);
 
     tprintf("Stopping maxscale\n");
