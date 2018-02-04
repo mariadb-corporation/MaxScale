@@ -1516,8 +1516,8 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"strict_sp_calls",  MXS_MODULE_PARAM_BOOL, "false"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},
-            {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false", MXS_MODULE_OPT_NONE},
-            {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0", MXS_MODULE_OPT_NONE},
+            {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false"},
+            {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0"},
             {MXS_END_MODULE_PARAMS}
         }
     };
