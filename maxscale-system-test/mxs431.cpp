@@ -10,37 +10,26 @@
 int main(int argc, char *argv[])
 {
     TestConnections test(argc, argv);
-    char str[256];
-    int iterations = 100;
-    test.repl->execute_query_all_nodes((char *) "set global max_connections = 600;");
-    test.set_timeout(200);
-    test.repl->stop_slaves();
-    test.set_timeout(200);
-    test.maxscales->restart_maxscale(0);
-    test.set_timeout(200);
+
     test.repl->connect();
-    test.stop_timeout();
 
     /** Create a database on each node */
     for (int i = 0; i < test.repl->N; i++)
     {
         test.set_timeout(20);
-        sprintf(str, "DROP DATABASE IF EXISTS shard_db%d", i);
-        test.tprintf("%s\n", str);
-        execute_query(test.repl->nodes[i], str);
-        test.set_timeout(20);
-        sprintf(str, "CREATE DATABASE shard_db%d", i);
-        test.tprintf("%s\n", str);
-        execute_query(test.repl->nodes[i], str);
+        execute_query(test.repl->nodes[i], "set global max_connections = 600");
+        execute_query(test.repl->nodes[i], "DROP DATABASE IF EXISTS shard_db%d", i);
+        execute_query(test.repl->nodes[i], "CREATE DATABASE shard_db%d", i);
         test.stop_timeout();
     }
 
-    test.repl->close_connections();
+    int iterations = 100;
 
     for (int j = 0; j < iterations && test.global_result == 0; j++)
     {
         for (int i = 0; i < test.repl->N && test.global_result == 0; i++)
         {
+            char str[256];
             sprintf(str, "shard_db%d", i);
             test.set_timeout(30);
             MYSQL *conn = open_conn_db(test.maxscales->rwsplit_port[0], test.maxscales->IP[0],
@@ -50,6 +39,14 @@ int main(int argc, char *argv[])
             test.add_result(execute_query(conn, "SELECT 1"), "Trying DB %d failed at %d", i, j);
             mysql_close(conn);
         }
+    }
+
+    /** Create a database on each node */
+    for (int i = 0; i < test.repl->N; i++)
+    {
+        test.set_timeout(20);
+        execute_query(test.repl->nodes[i], "DROP DATABASE shard_db%d", i);
+        test.stop_timeout();
     }
 
     return test.global_result;

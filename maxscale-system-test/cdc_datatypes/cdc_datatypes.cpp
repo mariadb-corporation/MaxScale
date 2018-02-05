@@ -28,6 +28,7 @@ static const char* integer_values[] =
     "-1",
     "20",
     "-20",
+    "NULL",
     NULL
 };
 
@@ -36,6 +37,7 @@ static const char* decimal_types[] =
     "FLOAT",
     "DOUBLE",
     "DECIMAL(10, 2)",
+    "DECIMAL(32, 2)",
     NULL
 };
 
@@ -46,6 +48,7 @@ static const char* decimal_values[] =
     "-1.5",
     "20.5",
     "-20.5",
+    "NULL",
     NULL
 };
 
@@ -64,7 +67,7 @@ static const char* string_values[] =
 {
     "\"Hello world!\"",
     "\"The quick brown fox jumps over the lazy dog\"",
-//    "\"The Unicode should work: äöåǢ\"",
+    "NULL",
     NULL
 };
 
@@ -84,8 +87,59 @@ static const char* binary_values[] =
     "\"Hello world!\"",
     "\"The quick brown fox jumps over the lazy dog\"",
     "NULL",
-//    "\"The Unicode should work: äöåǢ\"",
-//    "\"These should work for binary types: ⦿☏☃☢😤😂\"",
+    NULL
+};
+
+static const char* datetime_types[] =
+{
+    "DATETIME",
+    "DATETIME(1)",
+    "DATETIME(2)",
+    "DATETIME(3)",
+    "DATETIME(4)",
+    "DATETIME(5)",
+    "DATETIME(6)",
+    // TODO: Fix test setup to use same timezone
+    // "TIMESTAMP",
+    NULL
+};
+
+static const char* datetime_values[] =
+{
+    "'2018-01-01 11:11:11'",
+    "NULL",
+    NULL
+};
+
+static const char* date_types[] =
+{
+    "DATE",
+    NULL
+};
+
+static const char* date_values[] =
+{
+    "'2018-01-01'",
+    "NULL",
+    NULL
+};
+
+static const char* time_types[] =
+{
+    "TIME",
+    "TIME(1)",
+    "TIME(2)",
+    "TIME(3)",
+    "TIME(4)",
+    "TIME(5)",
+    "TIME(6)",
+    NULL
+};
+
+static const char* time_values[] =
+{
+    "'12:00:00'",
+    "NULL",
     NULL
 };
 
@@ -95,10 +149,13 @@ struct
     const char** values;
 } test_set[]
 {
-    { integer_types, integer_values },
-    { decimal_types, decimal_values },
-    { string_types,  string_values  },
-    { binary_types,  binary_values  },
+    { integer_types,  integer_values  },
+    { decimal_types,  decimal_values  },
+    { string_types,   string_values   },
+    { binary_types,   binary_values   },
+    { datetime_types, datetime_values },
+    { date_types,     date_values     },
+    { time_types,     time_values     },
     { 0 }
 };
 

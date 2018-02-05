@@ -320,10 +320,7 @@ void session_close(MXS_SESSION *session)
 {
     if (session->router_session)
     {
-        if (session->state != SESSION_STATE_STOPPING)
-        {
-            session->state = SESSION_STATE_STOPPING;
-        }
+        session->state = SESSION_STATE_STOPPING;
 
         MXS_ROUTER_OBJECT* router = session->service->router;
         MXS_ROUTER* router_instance = session->service->router_instance;

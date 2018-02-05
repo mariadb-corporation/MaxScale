@@ -720,46 +720,28 @@ int resolve_table_version(const char* db, const char* table)
 
 /**
  * @brief Handle a query event which contains a CREATE TABLE statement
- * @param sql Query SQL
- * @param db Database where this query was executed
+ *
+ * @param ident Table identifier in database.table format
+ * @param sql   The CREATE TABLE statement
+ * @param len   Length of @c sql
+ *
  * @return New CREATE_TABLE object or NULL if an error occurred
  */
-TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* db)
+TABLE_CREATE* table_create_alloc(const char* ident, const char* sql, int len)
 {
     /** Extract the table definition so we can get the column names from it */
     int stmt_len = 0;
     const char* statement_sql = get_table_definition(sql, len, &stmt_len);
     ss_dassert(statement_sql);
+
+    char* tbl_start = strchr(ident, '.');
+    ss_dassert(tbl_start);
+    *tbl_start++ = '\0';
+
     char table[MYSQL_TABLE_MAXLEN + 1];
     char database[MYSQL_DATABASE_MAXLEN + 1];
-    const char* err = NULL;
-    MXS_INFO("Create table: %.*s", len, sql);
-
-    if (!statement_sql)
-    {
-        err = "table definition";
-    }
-    else if (!get_table_name(sql, table))
-    {
-        err = "table name";
-    }
-
-    if (get_database_name(sql, database))
-    {
-        // The CREATE statement contains the database name
-        db = database;
-    }
-    else if (*db == '\0')
-    {
-        // No explicit or current database
-        err = "database name";
-    }
-
-    if (err)
-    {
-        MXS_ERROR("Malformed CREATE TABLE statement, could not extract %s: %.*s", err, len, sql);
-        return NULL;
-    }
+    strcpy(database, ident);
+    strcpy(table, tbl_start);
 
     int* lengths = NULL;
     char **names = NULL;
@@ -773,13 +755,13 @@ TABLE_CREATE* table_create_alloc(const char* sql, int len, const char* db)
     {
         if ((rval = MXS_MALLOC(sizeof(TABLE_CREATE))))
         {
-            rval->version = resolve_table_version(db, table);
+            rval->version = resolve_table_version(database, table);
             rval->was_used = false;
             rval->column_names = names;
             rval->column_lengths = lengths;
             rval->column_types = types;
             rval->columns = n_columns;
-            rval->database = MXS_STRDUP(db);
+            rval->database = MXS_STRDUP(database);
             rval->table = MXS_STRDUP(table);
         }
 
@@ -929,7 +911,6 @@ static void remove_extras(char* str)
 
     ss_dassert(strlen(str) == len);
 }
-
 
 static void remove_backticks(char* src)
 {
@@ -1134,6 +1115,110 @@ static const char* get_tok(const char* sql, int* toklen, const char* end)
     return NULL;
 }
 
+static void rskip_whitespace(const char* sql, const char** end)
+{
+    const char* ptr = *end;
+
+    while (ptr > sql && isspace(*ptr))
+    {
+        ptr--;
+    }
+
+    *end = ptr;
+}
+
+static void rskip_token(const char* sql, const char** end)
+{
+    const char* ptr = *end;
+
+    while (ptr > sql && !isspace(*ptr))
+    {
+        ptr--;
+    }
+
+    *end = ptr;
+}
+
+static bool get_placement_specifier(const char* sql, const char* end, const char** tgt, int* tgt_len)
+{
+    bool rval = false;
+    ss_dassert(end > sql);
+    end--;
+
+    *tgt = NULL;
+    *tgt_len = 0;
+
+    // Skip any trailing whitespace
+    rskip_whitespace(sql, &end);
+
+    if (*end == '`')
+    {
+        // Identifier, possibly AFTER `column`
+        const char* id_end = end;
+        end--;
+
+        while (end > sql && *end != '`')
+        {
+            end--;
+        }
+
+        const char* id_start = end + 1;
+        ss_dassert(*end == '`' && *id_end == '`');
+
+        end--;
+
+        rskip_whitespace(sql, &end);
+        rskip_token(sql, &end);
+
+        // end points to the character _before_ the token
+        end++;
+
+        if (strncasecmp(end, "AFTER", 5) == 0)
+        {
+            // This column comes after the specified column
+            rval = true;
+            *tgt = id_start;
+            *tgt_len = id_end - id_start;
+        }
+    }
+    else
+    {
+        // Something else, possibly FIRST or un-backtick'd AFTER
+        const char* id_end = end + 1; // Points to either a trailing space or one-after-the-end
+        rskip_token(sql, &end);
+
+        // end points to the character _before_ the token
+        end++;
+
+        if (strncasecmp(end, "FIRST", 5) == 0)
+        {
+            // Put this column first
+            rval = true;
+        }
+        else
+        {
+            const char* id_start = end + 1;
+
+            // Skip the whitespace and until the start of the current token
+            rskip_whitespace(sql, &end);
+            rskip_token(sql, &end);
+
+            // end points to the character _before_ the token
+            end++;
+
+            if (strncasecmp(end, "AFTER", 5) == 0)
+            {
+                // This column comes after the specified column
+                rval = true;
+                *tgt = id_start;
+                *tgt_len = id_end - id_start;
+            }
+        }
+    }
+
+    return rval;
+}
+
 static bool tok_eq(const char *a, const char *b, size_t len)
 {
     size_t i = 0;
@@ -1150,15 +1235,130 @@ static bool tok_eq(const char *a, const char *b, size_t len)
     return true;
 }
 
-void read_alter_identifier(const char *sql, const char *end, char *dest, int size)
+static void skip_whitespace(const char** saved)
 {
-    int len = 0;
-    const char *tok = get_tok(sql, &len, end); // ALTER
-    if (tok && (tok = get_tok(tok + len, &len, end)) // TABLE
-        && (tok = get_tok(tok + len, &len, end))) // Table identifier
+    const char* ptr = *saved;
+
+    while (*ptr && isspace(*ptr))
     {
-        snprintf(dest, size, "%.*s", len, tok);
-        remove_backticks(dest);
+        ptr++;
+    }
+
+    *saved = ptr;
+}
+
+static void skip_token(const char** saved)
+{
+    const char* ptr = *saved;
+
+    while (*ptr && !isspace(*ptr) && *ptr != '(' && *ptr != '.')
+    {
+        ptr++;
+    }
+
+    *saved = ptr;
+}
+
+static void skip_non_backtick(const char** saved)
+{
+    const char* ptr = *saved;
+
+    while (*ptr && *ptr != '`')
+    {
+        ptr++;
+    }
+
+    *saved = ptr;
+}
+
+const char* keywords[] =
+{
+    "CREATE",
+    "DROP",
+    "ALTER",
+    "IF",
+    "EXISTS",
+    "REPLACE",
+    "OR",
+    "TABLE",
+    "NOT",
+    NULL
+};
+
+static bool token_is_keyword(const char* tok, int len)
+{
+    for (int i = 0; keywords[i]; i++)
+    {
+        if (strncasecmp(keywords[i], tok, len) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void read_table_identifier(const char* db, const char *sql, const char *end, char *dest, int size)
+{
+    const char* start;
+    int len = 0;
+    bool is_keyword = true;
+
+    while (is_keyword)
+    {
+        skip_whitespace(&sql); // Leading whitespace
+
+        if (*sql == '`')
+        {
+            // Quoted identifier, not a keyword
+            is_keyword = false;
+            sql++;
+            start = sql;
+            skip_non_backtick(&sql);
+            len = sql - start;
+            sql++;
+        }
+        else
+        {
+            start = sql;
+            skip_token(&sql);
+            len = sql - start;
+            is_keyword = token_is_keyword(start, len);
+        }
+    }
+
+    skip_whitespace(&sql); // Space after first identifier
+
+    if (*sql != '.')
+    {
+        // No explicit database
+        snprintf(dest, size, "%s.%.*s", db, len, start);
+    }
+    else
+    {
+        // Explicit database, skip the period
+        sql++;
+        skip_whitespace(&sql); // Space after first identifier
+
+        const char* id_start;
+        int id_len = 0;
+
+        if (*sql == '`')
+        {
+            sql++;
+            id_start = sql;
+            skip_non_backtick(&sql);
+            id_len = sql - id_start;
+            sql++;
+        }
+        else
+        {
+            id_start = sql;
+            skip_token(&sql);
+            id_len = sql - id_start;
+        }
+
+        snprintf(dest, size, "%.*s.%.*s", len, start, id_len, id_start);
     }
 }
 
@@ -1192,6 +1392,14 @@ int get_column_index(TABLE_CREATE *create, const char *tok, int len)
     char safe_tok[len + 2];
     memcpy(safe_tok, tok, len);
     safe_tok[len] = '\0';
+
+    if (*safe_tok == '`')
+    {
+        int toklen = strlen(safe_tok) - 2; // Token length without backticks
+        memmove(safe_tok, safe_tok + 1, toklen); // Overwrite first backtick
+        safe_tok[toklen] = '\0'; // Null-terminate the string before the second backtick
+    }
+
     fix_reserved_word(safe_tok);
 
     for (int x = 0; x < create->columns; x++)
@@ -1204,6 +1412,35 @@ int get_column_index(TABLE_CREATE *create, const char *tok, int len)
     }
 
     return idx;
+}
+
+static bool not_column_operation(const char* tok, int len)
+{
+    const char* keywords[] =
+    {
+        "PRIMARY",
+        "UNIQUE",
+        "FULLTEXT",
+        "SPATIAL",
+        "PERIOD",
+        "PRIMARY",
+        "KEY",
+        "KEYS",
+        "INDEX",
+        "FOREIGN",
+        "CONSTRAINT",
+        NULL
+    };
+
+    for (int i = 0; keywords[i]; i++)
+    {
+        if (tok_eq(tok, keywords[i], strlen(keywords[i])))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
@@ -1231,9 +1468,19 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
 
             if (tok)
             {
-                if (tok_eq(ptok, "add", plen) && tok_eq(tok, "column", len))
+                if (not_column_operation(tok, len))
                 {
+                    MXS_INFO("Statement doesn't affect columns, not processing: %s", sql);
+                    return true;
+                }
+                else if (tok_eq(tok, "column", len))
+                {
+                    // Skip the optional COLUMN keyword
                     tok = get_tok(tok + len, &len, end);
+                }
+
+                if (tok_eq(ptok, "add", plen))
+                {
                     char avro_token[len + 1];
                     make_avro_token(avro_token, tok, len);
                     bool is_new = true;
@@ -1264,10 +1511,8 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
-                else if (tok_eq(ptok, "drop", plen) && tok_eq(tok, "column", len))
+                else if (tok_eq(ptok, "drop", plen))
                 {
-                    tok = get_tok(tok + len, &len, end);
-
                     int idx = get_column_index(create, tok, len);
 
                     if (idx != -1)
@@ -1291,10 +1536,8 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
-                else if (tok_eq(ptok, "change", plen) && tok_eq(tok, "column", len))
+                else if (tok_eq(ptok, "change", plen))
                 {
-                    tok = get_tok(tok + len, &len, end);
-
                     int idx = get_column_index(create, tok, len);
 
                     if (idx != -1 && (tok = get_tok(tok + len, &len, end)))

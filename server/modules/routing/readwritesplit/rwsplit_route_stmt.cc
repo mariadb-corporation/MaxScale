@@ -97,13 +97,26 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
                                uint8_t* command, uint32_t* type, uint32_t* stmt_id)
 {
     route_target_t route_target = TARGET_MASTER;
+    bool in_read_only_trx = rses->target_node && session_trx_is_read_only(rses->client_dcb->session);
 
     if (gwbuf_length(buffer) > MYSQL_HEADER_LEN)
     {
         *command = mxs_mysql_get_command(buffer);
-        *type = determine_query_type(buffer, *command);
 
-        handle_multi_temp_and_load(rses, buffer, *command, type);
+        /**
+         * If the session is inside a read-only transaction, we trust that the
+         * server acts properly even when non-read-only queries are executed.
+         * For this reason, we can skip the parsing of the statement completely.
+         */
+        if (in_read_only_trx)
+        {
+            *type = QUERY_TYPE_READ;
+        }
+        else
+        {
+            *type = determine_query_type(buffer, *command);
+            handle_multi_temp_and_load(rses, buffer, *command, type);
+        }
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -140,7 +153,8 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
         }
         else
         {
-            if (*command == MXS_COM_QUERY &&
+            if (!in_read_only_trx &&
+                *command == MXS_COM_QUERY &&
                 qc_get_operation(buffer) == QUERY_OP_EXECUTE)
             {
                 std::string id = get_text_ps_id(buffer);

@@ -583,7 +583,7 @@ static void do_handle_error(DCB *dcb, mxs_error_action_t action, const char *err
      */
     if (!succp)
     {
-        session->state = SESSION_STATE_STOPPING;
+        poll_fake_hangup_event(session->client_dcb);
     }
 }
 
@@ -599,13 +599,8 @@ static void gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
     MXS_SESSION *session = dcb->session;
     CHK_SESSION(session);
 
-    if (!dcb->dcb_errhandle_called)
-    {
-        do_handle_error(dcb, ERRACT_REPLY_CLIENT,
-                        "Authentication with backend failed. Session will be closed.");
-        session->state = SESSION_STATE_STOPPING;
-        dcb->dcb_errhandle_called = true;
-    }
+    do_handle_error(dcb, ERRACT_REPLY_CLIENT,
+                    "Authentication with backend failed. Session will be closed.");
 }
 
 /**
@@ -1351,7 +1346,7 @@ static int gw_backend_close(DCB *dcb)
         session->state == SESSION_STATE_STOPPING &&
         session->client_dcb->state == DCB_STATE_POLLING)
     {
-        dcb_close(session->client_dcb);
+        poll_fake_hangup_event(session->client_dcb);
     }
 
     return 1;

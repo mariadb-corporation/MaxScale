@@ -50,10 +50,15 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
-  blob_test.cpp)
-target_link_libraries(testcore ${MYSQL_CLIENT} ${CDC_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z nsl m pthread ssl dl rt crypto crypt)
+  blob_test.cpp
+  # Include the CDC connector in the core library
+  ${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/cdc_connector.cpp)
+target_link_libraries(testcore ${MYSQL_CLIENT} ${JANSSON_LIBRARIES} z nsl m pthread ssl dl rt crypto crypt)
 install(TARGETS testcore DESTINATION system-test)
-add_dependencies(testcore connector-c cdc_connector jansson)
+add_dependencies(testcore connector-c jansson)
+
+# Include the CDC connector headers
+include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
 
 # Tool used to check backend state
 add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG)
@@ -249,6 +254,9 @@ add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replicatio
 # Tries to use 'maxkeys', 'maxpasswrd'
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
 
+# Basic MaxCtrl test
+add_test_executable(maxctrl_basic.cpp maxctrl_basic replication LABELS maxctrl REPL_BACKEND)
+
 # MySQL Monitor Failover Test
 add_test_executable(mysqlmon_detect_standalone_master.cpp mysqlmon_detect_standalone_master mysqlmon_detect_standalone_master LABELS mysqlmon REPL_BACKEND)
 
@@ -313,6 +321,7 @@ add_test_executable(fwf_logging.cpp fwf_logging fwf_logging LABELS dbfwfilter RE
 add_test_executable(fwf_reload.cpp fwf_reload fwf LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax LABELS dbfwfilter REPL_BACKEND)
 add_test_executable(fwf_com_ping.cpp fwf_com_ping fwf_com_ping LABELS dbfwfilter REPL_BACKEND)
+add_test_executable(mxs1583_fwf.cpp mxs1583_fwf mxs1583_fwf LABELS dbfwfilter REPL_BACKEND)
 
 # Galera node priority test
 add_test_executable(galera_priority.cpp galera_priority galera_priority LABELS galeramon LIGHT GALERA_BACKEND)
@@ -474,7 +483,7 @@ add_test_script(mxs791_galera.sh mxs791_galera.sh galera LABELS UNSTABLE HEAVY G
 add_test_executable(mxs812_1.cpp mxs812_1 longblob LABELS readwritesplit REPL_BACKEND)
 
 # Checks "Current no. of conns" maxadmin output after long blob inserting
-add_test_executable(mxs812_2.cpp mxs812_2 longblob LABELS readwritesplit REPL_BACKEND)
+add_test_executable(mxs812_2.cpp mxs812_2 replication LABELS readwritesplit REPL_BACKEND)
 
 # Execute prepared statements while master is blocked, checks "Current no. of conns" after the test
 add_test_executable(mxs822_maxpasswd.cpp mxs822_maxpasswd maxpasswd LABELS maxscale REPL_BACKEND)
@@ -830,6 +839,9 @@ add_test_executable_notest(create_rds.cpp create_rds replication LABELS EXTERN_B
 
 # start sysbench ageints RWSplit for infinite execution
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication LABELS readwritesplit REPL_BACKEND)
+
+# test effect of local_address in configuration file
+add_test_executable(local_address.cpp local_address local_address LABELS REPL_BACKEND)
 
 configure_file(templates.h.in templates.h @ONLY)
 

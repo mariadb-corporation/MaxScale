@@ -397,6 +397,18 @@ public:
     void add_server_setting(int node, const char* setting);
 
     /**
+     * Restore the original configuration for this server
+     *
+     * @param node Node to restore
+     */
+    void reset_server_settings(int node);
+
+    /**
+     * Restore the original configuration for all servers
+     */
+    void reset_server_settings();
+
+    /**
      * @brief revert_nodes_snapshot Execute MDBCI snapshot revert command for all nodes
      * @return true in case of success
      */

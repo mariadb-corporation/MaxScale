@@ -1,0 +1,7 @@
+rule deny_functions_on_a match uses_function a
+
+users %@% match all rules deny_functions_on_a
+
+rule deny_functions_on_b match uses_function b
+
+users %@% match all rules deny_functions_on_b

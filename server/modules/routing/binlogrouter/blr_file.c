@@ -521,9 +521,12 @@ blr_file_create(ROUTER_INSTANCE *router, char *orig_file)
         {
             close(router->binlog_fd);
             spinlock_acquire(&router->binlog_lock);
-            int len = strlen(file);
-            memmove(router->binlog_name, file, len);
-            router->binlog_name[len] = '\0';
+
+            /// Use an intermediate buffer in case the source and destination overlap
+            char new_binlog[strlen(file) + 1];
+            strcpy(new_binlog, file);
+            strcpy(router->binlog_name, new_binlog);
+
             router->binlog_fd = fd;
             /* Initial position after the magic number */
             router->current_pos = BINLOG_MAGIC_SIZE;

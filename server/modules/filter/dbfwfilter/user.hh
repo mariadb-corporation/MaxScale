@@ -57,12 +57,12 @@ public:
     const char* name() const;
 
     /**
-     * Append new rules to existing rules
+     * Add new rules to existing rules
      *
      * @param mode  Matching mode for the rule
      * @param rules Rules to append
      */
-    void append_rules(match_type mode, const RuleList& rules);
+    void add_rules(match_type mode, const RuleList& rules);
 
     /**
      * Check if a query matches some rule
@@ -84,11 +84,13 @@ private:
         STRICT
     };
 
-    RuleList    rules_or;         /*< If any of these rules match the action is triggered */
-    RuleList    rules_and;        /*< All of these rules must match for the action to trigger */
-    RuleList    rules_strict_and; /*< rules that skip the rest of the rules if one of them
-                                   * fails. This is only for rules paired with 'match strict_all'. */
-    std::string m_name;           /*< Name of the user */
+    typedef std::vector<RuleList> RuleListVector;
+
+    RuleListVector rules_or_vector;        /*< If any of these rules match the action is triggered */
+    RuleListVector rules_and_vector;       /*< All of these rules must match for the action to trigger */
+    RuleListVector rules_strict_and_vector;/*< rules that skip the rest of the rules if one of them
+                                            * fails. This is only for rules paired with 'match strict_all'. */
+    std::string m_name;                    /*< Name of the user */
 
     /**
      * Functions for matching rules

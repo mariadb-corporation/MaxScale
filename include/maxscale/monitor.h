@@ -375,4 +375,13 @@ void store_server_journal(MXS_MONITOR *monitor, MXS_MONITORED_SERVER *master);
  */
 void load_server_journal(MXS_MONITOR *monitor, MXS_MONITORED_SERVER **master);
 
+/**
+ * Find the monitored server representing the server.
+ *
+ * @param mon Cluster monitor
+ * @param search_server Server to search for
+ * @return Found monitored server or NULL if not found
+ */
+MXS_MONITORED_SERVER* mon_get_monitored_server(MXS_MONITOR* mon, SERVER* search_server);
+
 MXS_END_DECLS

@@ -30,9 +30,7 @@ echo $JOB_NAME-$BUILD_NUMBER >> ~/vagrant_lock
 
 # destroying existing box
 if [ -d "install_$box" ]; then
-	cd $MDBCI_VM_PATH/$name
-	vagrant destroy -f
-	cd $dir
+        ${mdbci_dir}/mdbci destroy $name
 fi
 
 ${mdbci_dir}/repository-config/generate_all.sh repo.d
@@ -44,11 +42,9 @@ ${mdbci_dir}/mdbci up $name --attempts=1
 if [ $? != 0 ] ; then
         if [ $? != 0 ] ; then
 		echo "Error starting VM"
-		cd ${MDBCI_VM_PATH}/$name
 		if [ "x$do_not_destroy_vm" != "xyes" ] ; then
-			vagrant destroy -f
+                        ${mdbci_dir}/mdbci destroy $name
 		fi
-		cd $dir
 		rm ~/vagrant_lock
 		exit 1
 	fi
@@ -126,9 +122,7 @@ scp $scpopt $sshuser@$IP:/var/log/maxscale/* $logs_publish_dir
 chmod a+r $logs_publish_dir/*
 
 if [ "x$do_not_destroy_vm" != "xyes" ] ; then
-	cd $MDBCI_VM_PATH/$name
-	vagrant destroy -f
-	cd $dir
+        ${mdbci_dir}/mdbci destroy $name
 fi
 kill $pid_to_kill
 exit $res

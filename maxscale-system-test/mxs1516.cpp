@@ -17,7 +17,11 @@ int main(int argc, char** argv)
     test.repl->connect();
     test.repl->change_master(1, 0);
 
-    test.add_result(execute_query_silent(test.maxscales->conn_master[0], "SELECT 1") == 0, "Query should fail");
+    // Give the monitor some time to detect it
+    sleep(5);
+
+    test.add_result(execute_query_silent(test.maxscales->conn_master[0], "SELECT 1") == 0,
+                    "Query should fail");
 
     // Change the master back to the original one
     test.repl->change_master(0, 1);

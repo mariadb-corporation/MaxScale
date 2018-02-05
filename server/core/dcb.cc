@@ -1123,6 +1123,7 @@ void dcb_close(DCB *dcb)
         ++dcb->n_close;
         // TODO: Will this happen on a regular basis?
         MXS_WARNING("dcb_close(%p) called %u times.", dcb, dcb->n_close);
+        ss_dassert(!true);
     }
 }
 
@@ -3208,6 +3209,26 @@ static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t ev
     return dcb_handler(dcb, events);
 }
 
+static bool dcb_is_still_valid(DCB* target, int id)
+{
+    bool rval = false;
+
+    for (DCB *dcb = this_unit.all_dcbs[id];
+         dcb; dcb = dcb->thread.next)
+    {
+        if (target == dcb)
+        {
+            if (dcb->n_close == 0)
+            {
+                rval = true;
+            }
+            break;
+        }
+    }
+
+    return rval;
+}
+
 class FakeEventTask: public mxs::WorkerDisposableTask
 {
     FakeEventTask(const FakeEventTask&);
@@ -3223,8 +3244,15 @@ public:
 
     void execute(Worker& worker)
     {
-        m_dcb->fakeq = m_buffer;
-        dcb_handler(m_dcb, m_ev);
+        if (dcb_is_still_valid(m_dcb, worker.get_current_id()))
+        {
+            m_dcb->fakeq = m_buffer;
+            dcb_handler(m_dcb, m_ev);
+        }
+        else
+        {
+            gwbuf_free(m_buffer);
+        }
     }
 
 private:

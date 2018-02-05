@@ -355,6 +355,12 @@ After the matching part comes the rules keyword after which a list of rule names
 is expected. This allows reusing of the rules and enables varying levels of
 query restriction.
 
+If a particular _NAME_ appears on several `users` lines, then when an
+actual user matches that name, the rules of each line are checked
+independently until there is a match for the statement in question. That
+is, the rules of each `users` line are treated in an _OR_ fashion with
+respect to each other.
+
 ## Module commands
 
 Read [Module Commands](../Reference/Module-Commands.md) documentation for

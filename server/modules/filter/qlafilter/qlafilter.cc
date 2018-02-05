@@ -833,6 +833,10 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
         dcb_printf(dcb, "\t\tExclude queries that match     %s\n",
                    my_instance->exclude.c_str());
     }
+    dcb_printf(dcb, "\t\tColumn separator     %s\n",
+               my_instance->separator.c_str());
+    dcb_printf(dcb, "\t\tNewline replacement     %s\n",
+               my_instance->query_newline.c_str());
 }
 
 /**
@@ -876,6 +880,8 @@ static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESS
     {
         json_object_set_new(rval, PARAM_EXCLUDE, json_string(my_instance->exclude.c_str()));
     }
+    json_object_set_new(rval, PARAM_SEPARATOR, json_string(my_instance->separator.c_str()));
+    json_object_set_new(rval, PARAM_NEWLINE, json_string(my_instance->query_newline.c_str()));
 
     return rval;
 }

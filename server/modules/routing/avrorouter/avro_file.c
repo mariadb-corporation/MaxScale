@@ -1014,6 +1014,40 @@ void unify_whitespace(char *sql, int len)
 }
 
 /**
+ * A very simple function for stripping auto-generated executable comments
+ *
+ * Note that the string will not strip the trailing part of the comment, making
+ * the SQL invalid.
+ *
+ * @param sql String to modify
+ * @param len Pointer to current length of string, updated to new length if
+ *            @c sql is modified
+ */
+static void strip_executable_comments(char *sql, int* len)
+{
+    if (strncmp(sql, "/*!", 3) == 0 || strncmp(sql, "/*M!", 4) == 0)
+    {
+        // Executable comment, remove it
+        char* p = sql + 3;
+        if (*p == '!')
+        {
+            p++;
+        }
+
+        // Skip the versioning part
+        while (*p && isdigit(*p))
+        {
+            p++;
+        }
+
+        int n_extra = p - sql;
+        int new_len = *len - n_extra;
+        memmove(sql, sql + n_extra, new_len);
+        *len = new_len;
+    }
+}
+
+/**
  * @brief Handling of query events
  *
  * @param router Avro router instance
@@ -1032,12 +1066,14 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     db[dblen] = 0;
 
     size_t sqlsz = len, tmpsz = len;
-    char *tmp = MXS_MALLOC(len);
+    char *tmp = MXS_MALLOC(len + 1);
     MXS_ABORT_IF_NULL(tmp);
     remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
     sql = tmp;
     len = tmpsz;
     unify_whitespace(sql, len);
+    strip_executable_comments(sql, &len);
+    sql[len] = '\0';
 
     static bool warn_not_row_format = true;
 
@@ -1058,6 +1094,9 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         }
     }
 
+    char ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
+    read_table_identifier(db, sql, sql + len, ident, sizeof(ident));
+
     if (is_create_table_statement(router, sql, len))
     {
         TABLE_CREATE *created = NULL;
@@ -1077,7 +1116,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         }
         else
         {
-            created = table_create_alloc(sql, len, db);
+            created = table_create_alloc(ident, sql, len);
         }
 
         if (created && !save_and_replace_table_create(router, created))
@@ -1087,30 +1126,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     }
     else if (is_alter_table_statement(router, sql, len))
     {
-        char ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-        read_alter_identifier(sql, sql + len, ident, sizeof(ident));
-
-        bool combine = (strnlen(db, 1) && strchr(ident, '.') == NULL);
-
-        size_t ident_len = strlen(ident) + 1; // + 1 for the NULL
-
-        if (combine)
-        {
-            ident_len += (strlen(db) + 1); // + 1 for the "."
-        }
-
-        char full_ident[ident_len];
-        full_ident[0] = 0; // Set full_ident to "".
-
-        if (combine)
-        {
-            strcat(full_ident, db);
-            strcat(full_ident, ".");
-        }
-
-        strcat(full_ident, ident);
-
-        TABLE_CREATE *created = hashtable_fetch(router->created_tables, full_ident);
+        TABLE_CREATE *created = hashtable_fetch(router->created_tables, ident);
 
         if (created)
         {
@@ -1118,7 +1134,7 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         }
         else
         {
-            MXS_ERROR("Alter statement to a table with no create statement.");
+            MXS_ERROR("Alter statement to table '%s' has no preceding create statement.", ident);
         }
     }
     /* A transaction starts with this event */

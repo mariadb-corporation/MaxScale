@@ -63,6 +63,7 @@ int main(int argc, char** argv)
     }
 
     running = false;
+    test.set_timeout(120);
 
     for (auto& a: threads)
     {
