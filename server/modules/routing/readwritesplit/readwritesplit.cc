@@ -1152,12 +1152,12 @@ static void log_unexpected_response(DCB* dcb, GWBUF* buffer)
  */
 GWBUF *discard_master_wait_gtid_result(GWBUF *buffer, RWSplitSession *rses)
 {
-    uint8_t header_and_command[MYSQL_HEADER_LEN+1];
+    uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
     uint8_t packet_len = 0;
     uint8_t offset = 0;
     mxs_mysql_cmd_t com;
 
-    gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN+1, header_and_command);
+    gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN + 1, header_and_command);
     /* ignore error packet */
     if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
     {
