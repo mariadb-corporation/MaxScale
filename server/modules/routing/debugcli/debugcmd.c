@@ -598,27 +598,13 @@ struct subcommand setoptions[] =
     {
         "pollsleep", 1, 1, set_pollsleep,
         "Set poll sleep period",
-        "Usage: set pollsleep VALUE\n"
-        "\n"
-        "Parameters:\n"
-        "VALUE  Poll sleep in milliseconds\n"
-        "\n"
-        "Sets the maximum poll sleep period in milliseconds\n"
-        "\n"
-        "Example: set pollsleep 100",
+        "Deprecated in 2.3",
         {ARG_TYPE_NUMERIC}
     },
     {
         "nbpolls", 1, 1, set_nbpoll,
         "Set non-blocking polls",
-        "Usage: set nbpolls VALUE\n"
-        "\n"
-        "Parameters:\n"
-        "VALUE  Number of non-blocking polls\n"
-        "\n"
-        "Sets the number of non-blocking polls\n"
-        "\n"
-        "Example: set nbpolls 5",
+        "Deprecated in 2.3",
         {ARG_TYPE_NUMERIC}
     },
     {
@@ -2563,6 +2549,8 @@ static void disable_log_priority(DCB *dcb, char *arg1)
 static void
 set_pollsleep(DCB *dcb, int sleeptime)
 {
+    // DEPRECATED in 2.3, remove in 2.4.
+    dcb_printf(dcb, "The configuration parameter 'pollsleep' has been deprecated in 2.3.");
     poll_set_maxwait(sleeptime);
 }
 
@@ -2575,6 +2563,8 @@ set_pollsleep(DCB *dcb, int sleeptime)
 static void
 set_nbpoll(DCB *dcb, int nb)
 {
+    // DEPRECATED in 2.3, remove in 2.4.
+    dcb_printf(dcb, "The configuration parameter 'nbpoll' has been deprecated in 2.3.");
     poll_set_nonblocking_polls(nb);
 }
 

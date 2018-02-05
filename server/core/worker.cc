@@ -60,7 +60,9 @@ struct this_unit
     bool     initialized;       // Whether the initialization has been performed.
     int      n_workers;         // How many workers there are.
     Worker** ppWorkers;         // Array of worker instances.
+    // DEPRECATED in 2.3, remove in 2.4.
     int      number_poll_spins; // Maximum non-block polls
+    // DEPRECATED in 2.3, remove in 2.4.
     int      max_poll_sleep;    // Maximum block time
     int      epoll_listener_fd; // Shared epoll descriptor for listening descriptors.
 } this_unit =
@@ -1107,8 +1109,6 @@ void Worker::thread_main(void* pArg)
 void Worker::poll_waitevents()
 {
     struct epoll_event events[MAX_EVENTS];
-    int i, nfds, timeout_bias = 1;
-    int poll_spins = 0;
 
     m_state = IDLE;
 
@@ -1117,39 +1117,16 @@ void Worker::poll_waitevents()
         m_state = POLLING;
 
         atomic_add_int64(&m_statistics.n_polls, 1);
-        if ((nfds = epoll_wait(m_epoll_fd, events, MAX_EVENTS, 0)) == -1)
+        int nfds;
+        if ((nfds = epoll_wait(m_epoll_fd, events, MAX_EVENTS, -1)) == -1)
         {
             int eno = errno;
             errno = 0;
-            MXS_DEBUG("%lu [poll_waitevents] epoll_wait returned "
+            MXS_ERROR("%lu [poll_waitevents] epoll_wait returned "
                       "%d, errno %d",
                       pthread_self(),
                       nfds,
                       eno);
-        }
-        /*
-         * If there are no new descriptors from the non-blocking call
-         * and nothing to process on the event queue then for do a
-         * blocking call to epoll_wait.
-         *
-         * We calculate a timeout bias to alter the length of the blocking
-         * call based on the time since we last received an event to process
-         */
-        else if (nfds == 0 && poll_spins++ > this_unit.number_poll_spins)
-        {
-            if (timeout_bias < 10)
-            {
-                timeout_bias++;
-            }
-            atomic_add_int64(&m_statistics.blockingpolls, 1);
-            nfds = epoll_wait(m_epoll_fd,
-                              events,
-                              MAX_EVENTS,
-                              (this_unit.max_poll_sleep * timeout_bias) / 10);
-            if (nfds == 0)
-            {
-                poll_spins = 0;
-            }
         }
 
         if (nfds > 0)
@@ -1160,12 +1137,6 @@ void Worker::poll_waitevents()
                 m_statistics.evq_max = nfds;
             }
 
-            timeout_bias = 1;
-            if (poll_spins <= this_unit.number_poll_spins + 1)
-            {
-                atomic_add_int64(&m_statistics.n_nbpollev, 1);
-            }
-            poll_spins = 0;
             MXS_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
                       pthread_self(),
                       nfds);

@@ -1406,10 +1406,16 @@ handle_global_item(const char *name, const char *value)
     }
     else if (strcmp(name, CN_NON_BLOCKING_POLLS) == 0)
     {
+        // DEPRECATED in 2.3, remove in 2.4
+        MXS_WARNING("The configuration option '%s' has no meaning and has been deprecated.",
+                    CN_NON_BLOCKING_POLLS);
         gateway.n_nbpoll = atoi(value);
     }
     else if (strcmp(name, CN_POLL_SLEEP) == 0)
     {
+        // DEPRECATED in 2.3, remove in 2.4
+        MXS_WARNING("The configuration option '%s' has no meaning and has been deprecated.",
+                    CN_POLL_SLEEP);
         gateway.pollsleep = atoi(value);
     }
     else if (strcmp(name, CN_MS_TIMESTAMP) == 0)
