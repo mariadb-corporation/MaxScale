@@ -75,6 +75,12 @@ typedef struct server_version
     uint32_t patch;
 } SERVER_VERSION;
 
+typedef enum
+{
+    SERVER_TYPE_MARIADB,
+    SERVER_TYPE_MYSQL
+} server_type_t;
+
 static inline void server_decode_version(uint64_t version, SERVER_VERSION* server_version)
 {
     uint32_t major = version / 10000;
@@ -120,6 +126,7 @@ typedef struct server
     struct  server *nextdb;        /**< Next server in list attached to a service */
     char           version_string[MAX_SERVER_VERSION_LEN]; /**< Server version string, i.e. MySQL server version */
     uint64_t       version;        /**< Server version */
+    server_type_t  server_type;    /**< Server type */
     long           node_id;        /**< Node id, server_id for M/S or local_index for Galera */
     int            rlag;           /**< Replication Lag for Master / Slave replication */
     unsigned long  node_ts;        /**< Last timestamp set from M/S monitor module */

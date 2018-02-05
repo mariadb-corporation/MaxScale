@@ -145,6 +145,12 @@ enum ld_state
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
+#define MARIADB_WAIT_GTID_FUNC "MASTER_GTID_WAIT"
+#define MYSQL_WAIT_GTID_FUNC   "WAIT_FOR_EXECUTED_GTID_SET"
+static const char gtid_wait_stmt[] =
+    "SET @maxscale_secret_variable=(SELECT CASE WHEN %s('%s', %s) = 0 "
+    "THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END);";
+
 struct Config
 {
     Config(MXS_CONFIG_PARAMETER* params):
@@ -166,8 +172,14 @@ struct Config
         connection_keepalive(config_get_integer(params, "connection_keepalive")),
         max_slave_replication_lag(config_get_integer(params, "max_slave_replication_lag")),
         rw_max_slave_conn_percent(0),
-        max_slave_connections(0)
+        max_slave_connections(0),
+        enable_causal_read(config_get_bool(params, "enable_causal_read")),
+        causal_read_timeout(config_get_string(params, "causal_read_timeout"))
     {
+        if (enable_causal_read)
+        {
+            retry_failed_reads = true;
+        }
     }
 
     select_criteria_t slave_selection_criteria;  /**< The slave selection criteria */
@@ -187,6 +199,8 @@ struct Config
     int               rw_max_slave_conn_percent; /**< Maximum percentage of slaves to use for
                                                   * each connection*/
     int               max_slave_connections;     /**< Maximum number of slaves for each connection*/
+    bool              enable_causal_read;        /**< Enable causual read */
+    std::string       causal_read_timeout;       /**< Timetout, second parameter of function master_wait_gtid */
 
 };
 

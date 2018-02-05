@@ -1232,6 +1232,9 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
     /** add session track */
     final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
 
+    /** support multi statments  */
+    final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+
     /* Compression is not currently supported */
     ss_dassert(!compress);
     if (compress)
@@ -1809,7 +1812,11 @@ void mxs_mysql_parse_ok_packet(GWBUF *buff, size_t packet_offset, size_t packet_
                 case SESSION_TRACK_STATE_CHANGE:
                 case SESSION_TRACK_SCHEMA:
                 case SESSION_TRACK_GTIDS:
-                    mxs_lestr_consume(&ptr, &size);
+                    mxs_leint_consume(&ptr); // Length of the overall entity.
+                    mxs_leint_consume(&ptr); // encoding specification
+                    var_value = mxs_lestr_consume_dup(&ptr);
+                    gwbuf_add_property(buff, (char *)"gtid", var_value);
+                    MXS_FREE(var_value);
                     break;
                 case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
                     mxs_leint_consume(&ptr); //length

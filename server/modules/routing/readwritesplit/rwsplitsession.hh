@@ -14,6 +14,7 @@
 
 #include "readwritesplit.hh"
 #include "rwsplit_ps.hh"
+#include <string>
 
 #include <maxscale/modutil.h>
 
@@ -26,6 +27,13 @@ enum reply_state_t
     REPLY_STATE_RSET_COLDEF,    /**< Resultset response, waiting for column definitions */
     REPLY_STATE_RSET_ROWS       /**< Resultset response, waiting for rows */
 };
+
+typedef enum
+{
+    EXPECTING_NOTHING = 0,
+    EXPECTING_WAIT_GTID_RESULT,
+    EXPECTING_REAL_RESULT
+} wait_gtid_state_t;
 
 /** Reply state change debug logging */
 #define LOG_RS(a, b) MXS_DEBUG("%s %s -> %s", (a)->uri(), \
@@ -138,6 +146,9 @@ public:
     PSManager               ps_manager;  /**< Prepared statement manager*/
     ClientHandleMap         ps_handles;  /**< Client PS handle to internal ID mapping */
     ExecMap                 exec_map; /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
+    std::string             gtid_pos; /**< Gtid position for causal read */
+    wait_gtid_state_t       wait_gtid_state; /**< Determine boundray of wait gtid result and client query result */
+    uint32_t                next_seq; /**< Next packet'ssequence number */
     skygw_chk_t             rses_chk_tail;
 
 private:

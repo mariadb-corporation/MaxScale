@@ -23,6 +23,7 @@
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/modutil.h>
 #include <maxscale/router.h>
+#include <maxscale/server.h>
 
 /**
  * The functions that support the routing of queries to back end
@@ -1107,6 +1108,58 @@ static inline bool is_large_query(GWBUF* buf)
     return buflen == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
 }
 
+/*
+ * Add a wait gitd query in front of user's query to achive causal read;
+ *
+ * @param inst   RWSplit
+ * @param rses   RWSplitSession
+ * @param server SERVER
+ * @param origin origin send buffer
+ * @return       A new buffer contains wait statement and origin query
+ */
+GWBUF *add_prefix_wait_gtid(RWSplit *inst, RWSplitSession *rses, SERVER *server, GWBUF *origin)
+{
+
+    /**
+     * Pack wait function and client query into a multistatments will save a round trip latency,
+     * and prevent the client query being executed on timeout.
+     * For example:
+     * SET @maxscale_secret_variable=(SELECT CASE WHEN MASTER_GTID_WAIT('232-1-1', 10) = 0
+     * THEN 1 ELSE (SELECT 1 FROM INFORMATION_SCHEMA.ENGINES) END); SELECT * FROM `city`;
+     * when MASTER_GTID_WAIT('232-1-1', 0.05) == 1 (timeout), it will return
+     * an error, and SELECT * FROM `city` will not be executed, then we can retry
+     * on master;
+     **/
+
+    GWBUF *rval;
+    const char* wait_func = (server->server_type == SERVER_TYPE_MARIADB) ?
+            MARIADB_WAIT_GTID_FUNC : MYSQL_WAIT_GTID_FUNC;
+    const char *gtid_wait_timeout = inst->config().causal_read_timeout.c_str();
+    const char *gtid_pos = rses->gtid_pos.c_str();
+
+    /* Create a new buffer to store prefix sql */
+    size_t prefix_len = strlen(gtid_wait_stmt) + strlen(gtid_pos) +
+        strlen(gtid_wait_timeout) + strlen(wait_func);
+    char prefix_sql[prefix_len];
+    snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_pos, gtid_wait_timeout);
+    GWBUF *prefix_buff = modutil_create_query(prefix_sql);
+
+    /* Trim origin to sql, Append origin buffer to the prefix buffer */
+    uint8_t header[MYSQL_HEADER_LEN];
+    gwbuf_copy_data(origin, 0, MYSQL_HEADER_LEN, header);
+    /* Command length = 1 */
+    size_t origin_sql_len = MYSQL_GET_PAYLOAD_LEN(header) - 1;
+    /* Trim mysql header and command */
+    origin = gwbuf_consume(origin, MYSQL_HEADER_LEN + 1);
+    rval = gwbuf_append(prefix_buff, origin);
+
+    /* Modify totol length: Prefix sql len + origin sql len + command len */
+    size_t new_payload_len = strlen(prefix_sql) + origin_sql_len + 1;
+    gw_mysql_set_byte3(GWBUF_DATA(rval), new_payload_len);
+
+    return rval;
+}
+
 /**
  * @brief Handle writing to a target server
  *
@@ -1134,7 +1187,14 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
     ss_dassert(target->session_command_count() == 0);
 
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
+    rses->wait_gtid_state = EXPECTING_NOTHING;
     uint8_t cmd = mxs_mysql_get_command(querybuf);
+    GWBUF *send_buf = gwbuf_clone(querybuf); ;
+    if (cmd == COM_QUERY && inst->config().enable_causal_read && rses->gtid_pos != "")
+    {
+        send_buf = add_prefix_wait_gtid(inst, rses, target->server(), send_buf);
+        rses->wait_gtid_state = EXPECTING_WAIT_GTID_RESULT;
+    }
 
     if (rses->load_data_state != LOAD_DATA_ACTIVE &&
         query_creates_reply(cmd))
@@ -1144,7 +1204,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
 
     bool large_query = is_large_query(querybuf);
 
-    if (target->write(gwbuf_clone(querybuf), response))
+    if (target->write(send_buf, response))
     {
         if (store && !session_store_stmt(rses->client_dcb->session, querybuf, target->server()))
         {

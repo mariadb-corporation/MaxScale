@@ -423,4 +423,16 @@ extern void dprintAllBuffers(void *pdcb);
  */
 void gwbuf_hexdump(GWBUF* buffer);
 
+/**
+ * Return pointer of the byte at offset from start of chained buffer
+ * Warning: It not guaranteed to point to a contiguous segment of memory,
+ * it is only safe to modify the first byte this pointer point to.
+ *
+ * @param buffer  one or more chained buffer
+ * @param offset  Offset into the buffer
+ * @return  if total buffer length is bigger than offset then return
+ *      the offset byte pointer, otherwise return null
+ */
+extern uint8_t *gwbuf_byte_pointer(GWBUF* buffer, size_t offset);
+
 MXS_END_DECLS

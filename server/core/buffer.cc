@@ -883,6 +883,24 @@ size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t
     return bytes_read;
 }
 
+uint8_t *gwbuf_byte_pointer(GWBUF *buffer, size_t offset)
+{
+    uint8_t *rval = NULL;
+    // Ignore NULL buffer and walk past empty or too short buffers.
+    while (buffer && (GWBUF_LENGTH(buffer) <= offset))
+    {
+        offset -= GWBUF_LENGTH(buffer);
+        buffer = buffer->next;
+    }
+
+    if (buffer != NULL)
+    {
+        rval = (GWBUF_DATA(buffer) + offset);
+    }
+
+    return rval;
+}
+
 static std::string dump_one_buffer(GWBUF* buffer)
 {
     std::string rval;
