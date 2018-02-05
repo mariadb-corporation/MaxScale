@@ -2303,9 +2303,10 @@ monitorMain(void *arg)
             }
         }
 
-        if (root_master)
+        if (root_master && SERVER_IS_MASTER(root_master->server))
         {
             // Clear slave and stale slave status bits from current master
+            server_clear_status_nolock(root_master->server, SERVER_SLAVE | SERVER_STALE_SLAVE);
             monitor_clear_pending_status(root_master, SERVER_SLAVE | SERVER_STALE_SLAVE);
 
             /**
@@ -2322,6 +2323,10 @@ monitorMain(void *arg)
                                            SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
             }
         }
+
+        ss_dassert(handle->master == root_master);
+        ss_dassert((root_master->server->status & (SERVER_SLAVE | SERVER_MASTER))
+                   != (SERVER_SLAVE | SERVER_MASTER));
 
         /**
          * After updating the status of all servers, check if monitor events
