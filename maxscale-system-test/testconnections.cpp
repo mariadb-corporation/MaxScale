@@ -1111,55 +1111,63 @@ void TestConnections::check_log_err(int m, const char * err_msg, bool expected)
 
     char * err_log_content;
 
-    tprintf("Getting logs\n");
+    if (verbose)
+    {
+        tprintf("Getting logs");
+    }
     char sys1[4096];
     char dest[1024];
     char log_file[64];
-    set_timeout(100);
+    set_timeout(500);
     sprintf(dest, "maxscale_log_%03d/", m);
     sprintf(&sys1[0], "mkdir -p maxscale_log_%03d; rm -f %s*.log",
             m, dest);
-    //tprintf("Executing: %s\n", sys1);
+
     system(sys1);
-    set_timeout(50);
     sprintf(sys1, "%s/*", maxscales->maxscale_log_dir[m]);
     maxscales->copy_from_node(m, sys1, dest);
 
-    tprintf("Reading maxscale.log\n");
-    sprintf(log_file, "maxscale_log_%03d/maxscale.log", m);
-    if ( ( read_log(log_file, &err_log_content) != 0) || (strlen(err_log_content) < 2) )
+    if (verbose)
     {
-        tprintf("Reading maxscale1.log\n");
+        tprintf("Reading maxscale.log");
+    }
+    sprintf(log_file, "maxscale_log_%03d/maxscale.log", m);
+    if (read_log(log_file, &err_log_content) != 0 || strlen(err_log_content) < 2)
+    {
+        if (verbose)
+        {
+            tprintf("Reading maxscale1.log");
+        }
         sprintf(log_file, "maxscale_log_%03d/maxscale1.log", m);
         free(err_log_content);
         if (read_log(log_file, &err_log_content) != 0)
         {
-            add_result(1, "Error reading log\n");
+            add_result(1, "Error reading log");
         }
     }
-    //printf("\n\n%s\n\n", err_log_content);
+
     if (err_log_content != NULL)
     {
         if (expected)
         {
             if (strstr(err_log_content, err_msg) == NULL)
             {
-                add_result(1, "There is NO \"%s\" error in the log\n", err_msg);
+                add_result(1, "There is NO \"%s\" error in the log", err_msg);
             }
             else
             {
-                tprintf("There is proper \"%s \" error in the log\n", err_msg);
+                tprintf("There is a proper \"%s \" error in the log", err_msg);
             }
         }
         else
         {
             if (strstr(err_log_content, err_msg) != NULL)
             {
-                add_result(1, "There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
+                add_result(1, "There is an UNEXPECTED \"%s\" error in the log", err_msg);
             }
             else
             {
-                tprintf("There are no unxpected errors \"%s \" error in the log\n", err_msg);
+                tprintf("There are no unxpected \"%s \" errors in the log", err_msg);
             }
         }
 

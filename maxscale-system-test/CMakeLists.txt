@@ -594,6 +594,10 @@ add_test_executable(mxs1543.cpp mxs1543 avro LABELS REPL_BACKEND)
  # https://jira.mariadb.org/browse/MXS-1585
 add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS REPL_BACKEND)
 
+ # MXS-1643: Too many monitor events are triggered
+ # https://jira.mariadb.org/browse/MXS-1643
+add_test_executable(mxs1643_extra_events.cpp mxs1643_extra_events mxs1643_extra_events LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
