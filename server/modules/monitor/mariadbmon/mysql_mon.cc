@@ -1167,7 +1167,10 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
         dcb_printf(dcb, "Master ID: %" PRId64 "\n", serv_info->slave_status.master_server_id);
         dcb_printf(dcb, "Master binlog file: %s\n", serv_info->slave_status.master_log_file.c_str());
         dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->slave_status.read_master_log_pos);
-
+        if (serv_info->slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN)
+        {
+            dcb_printf(dcb, "Gtid_IO_Pos: %s\n", serv_info->slave_status.gtid_io_pos.to_string().c_str());
+        }
         if (handle->multimaster)
         {
             dcb_printf(dcb, "Master group: %d\n", serv_info->group);
@@ -1229,7 +1232,11 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
                                 json_string(serv_info->slave_status.master_log_file.c_str()));
             json_object_set_new(srv, "master_binlog_position",
                                 json_integer(serv_info->slave_status.read_master_log_pos));
-
+            if (serv_info->slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN)
+            {
+                json_object_set_new(srv, "gtid_io_pos",
+                                    json_string(serv_info->slave_status.gtid_io_pos.to_string().c_str()));
+            }
             if (handle->multimaster)
             {
                 json_object_set_new(srv, "master_group", json_integer(serv_info->group));
