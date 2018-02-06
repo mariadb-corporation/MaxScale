@@ -71,6 +71,8 @@ typedef struct
     bool verify_master_failure;    /**< Whether master failure is verified via slaves */
     int master_failure_timeout;    /**< Time in seconds to wait before doing failover */
     int64_t master_gtid_domain;    /**< Gtid domain currently used by the master */
+    char external_master_host[MAX_SERVER_ADDRESS_LEN]; /**< External master host, for fail/switchover */
+    int external_master_port;      /**< External master port */
     bool auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
                                         replicating from the wrong master. */
     int n_excluded;                /**< Number of excluded servers */

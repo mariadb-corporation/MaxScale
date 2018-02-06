@@ -129,6 +129,7 @@ static bool wait_cluster_stabilization(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER*
                                        const ServerVector& slaves, int seconds_remaining);
 static string get_connection_errors(const ServerVector& servers);
 static int64_t scan_server_id(const char* id_string);
+static string generate_change_master_cmd(MYSQL_MONITOR* mon, const string& master_host, int master_port);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -159,6 +160,9 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 
 /** Server id default value */
 static const int64_t SERVER_ID_UNKNOWN = -1;
+
+/** Default port */
+static const int PORT_UNKNOWN = 0;
 
 class Gtid
 {
@@ -1056,6 +1060,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->id = config_get_global_options()->id;
         handle->warn_set_standalone_master = true;
         handle->master_gtid_domain = -1;
+        handle->external_master_host[0] = '\0';
+        handle->external_master_port = PORT_UNKNOWN;
         handle->monitor = monitor;
     }
 
@@ -2216,13 +2222,49 @@ monitorMain(void *arg)
 
         if (handle->master != NULL && SERVER_IS_MASTER(handle->master->server))
         {
-            int64_t domain = get_server_info(handle, handle->master)->gtid_domain_id;
+            MySqlServerInfo* master_info = get_server_info(handle, handle->master);
+            // Update cluster gtid domain
+            int64_t domain = master_info->gtid_domain_id;
             if (handle->master_gtid_domain >= 0 && domain != handle->master_gtid_domain)
             {
-                MXS_INFO("gtid_domain_id of master has changed: %" PRId64 " -> %" PRId64 ".",
+                MXS_NOTICE("Gtid domain id of master has changed: %" PRId64 " -> %" PRId64 ".",
                          handle->master_gtid_domain, domain);
             }
             handle->master_gtid_domain = domain;
+
+            // Update cluster external master
+            if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(handle->master->server))
+            {
+                if (master_info->slave_status.master_host != handle->external_master_host ||
+                    master_info->slave_status.master_port != handle->external_master_port)
+                {
+                    const char* new_ext_host =  master_info->slave_status.master_host.c_str();
+                    const int new_ext_port = master_info->slave_status.master_port;
+                    if (handle->external_master_port == PORT_UNKNOWN)
+                    {
+                        MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",
+                                   new_ext_host, new_ext_port);
+                    }
+                    else
+                    {
+                        MXS_NOTICE("The external master of the cluster has changed: %s:%d -> %s:%d.",
+                                   handle->external_master_host, handle->external_master_port,
+                                   new_ext_host, new_ext_port);
+                    }
+                    snprintf(handle->external_master_host, sizeof(handle->external_master_host),
+                             "%s", new_ext_host);
+                    handle->external_master_port = new_ext_port;
+                }
+            }
+            else
+            {
+                if (handle->external_master_port != PORT_UNKNOWN)
+                {
+                    MXS_NOTICE("Cluster lost the external master.");
+                }
+                handle->external_master_host[0] = '\0';
+                handle->external_master_port = PORT_UNKNOWN;
+            }
         }
 
         ptr = mon->monitored_servers;
@@ -3359,17 +3401,14 @@ static bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySql
 }
 
 /**
- * Check that the given slave is a valid promotion candidate. Update the server info structs of all slaves.
- * Also populate the output vector with other slave servers.
+ * Check that the given slave is a valid promotion candidate.
  *
  * @param mon Cluster monitor
  * @param preferred Preferred new master
- * @param slaves_out Output array for other slaves. These should be redirected to the new master. Can be NULL.
  * @param err_out Json object for error printing. Can be NULL.
  * @return True, if given slave is a valid promotion candidate.
  */
-bool switchover_check_preferred_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* preferred,
-                                       ServerVector* slaves_out, json_t** err_out)
+bool switchover_check_preferred_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* preferred, json_t** err_out)
 {
     ss_dassert(preferred);
     bool rval = true;
@@ -3379,20 +3418,6 @@ bool switchover_check_preferred_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER*
         PRINT_MXS_JSON_ERROR(err_out, "The requested server '%s' is not a valid promotion candidate.",
                              preferred->server->unique_name);
         rval = false;
-    }
-    for (MXS_MONITORED_SERVER *slave = mon->monitor->monitored_servers; slave; slave = slave->next)
-    {
-        if (slave != preferred)
-        {
-            // The update_slave_info()-call is not strictly necessary here, but it should be ran to keep this
-            // function analogous with failover_select_new_master(). The later functions can then assume that
-            // slave server info is up to date.
-            MySqlServerInfo* slave_info = update_slave_info(mon, slave);
-            if (slave_info && slaves_out)
-            {
-                slaves_out->push_back(slave);
-            }
-        }
     }
     return rval;
 }
@@ -3459,7 +3484,8 @@ MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon, ServerVector* slaves
         // If a server cannot be connected to, it won't be considered for promotion or redirected.
         // Do not worry about the exclusion list yet, querying the excluded servers is ok.
         MySqlServerInfo* cand_info = update_slave_info(mon, cand);
-        if (cand_info)
+        // If master is replicating from external master, it is updated but not added to array.
+        if (cand_info && cand != mon->master)
         {
             slaves_out->push_back(cand);
             // Check that server is not in the exclusion list while still being a valid choice.
@@ -3587,6 +3613,25 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
     return rval;
 }
 
+bool start_external_replication(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
+{
+    bool rval = false;
+    string change_cmd = generate_change_master_cmd(mon, mon->external_master_host, mon->external_master_port);
+    if (mxs_mysql_query(new_master->con, change_cmd.c_str()) == 0 &&
+        mxs_mysql_query(new_master->con, "START SLAVE;") == 0)
+    {
+        MXS_NOTICE("New master starting replication from external master %s:%d.",
+                   mon->external_master_host, mon->external_master_port);
+        rval = true;
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(err_out, "Could not start replication from external master: '%s'.",
+                             mysql_error(new_master->con));
+    }
+    return rval;
+}
+
 /**
  * Prepares a server for the replication master role.
  *
@@ -3595,7 +3640,7 @@ bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_maste
  * @param err_out json object for error printing. Can be NULL.
  * @return True if successful
  */
-bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out)
+bool promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
     bool success = false;
     MXS_NOTICE("Promoting server '%s' to master.", new_master->server->unique_name);
@@ -3612,19 +3657,35 @@ bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out)
             }
         }
     }
+
     if (!success)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Promotion failed: '%s'. Query: '%s'.",
                              mysql_error(new_master->con), query);
     }
+    // If the previous master was a slave to an external master, start the equivalent slave connection on
+    // the new master. Success of replication is not checked.
+    else if (mon->external_master_port != PORT_UNKNOWN &&
+             !start_external_replication(mon, new_master, err_out))
+    {
+        success = false;
+    }
     return success;
 }
 
-string generate_change_master_cmd(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master)
+/**
+ * Generate a CHANGE MASTER TO-query.
+ *
+ * @param mon Cluster monitor, needed for username & password
+ * @param master_host Master hostname/address
+ * @param master_port Master port
+ * @return Generated query
+ */
+string generate_change_master_cmd(MYSQL_MONITOR* mon, const string& master_host, int master_port)
 {
     std::stringstream change_cmd;
-    change_cmd << "CHANGE MASTER TO MASTER_HOST = '" << new_master->server->name << "', ";
-    change_cmd << "MASTER_PORT = " <<  new_master->server->port << ", ";
+    change_cmd << "CHANGE MASTER TO MASTER_HOST = '" << master_host << "', ";
+    change_cmd << "MASTER_PORT = " <<  master_port << ", ";
     change_cmd << "MASTER_USE_GTID = current_pos, ";
     change_cmd << "MASTER_USER = '" << mon->replication_user << "', ";
     const char MASTER_PW[] = "MASTER_PASSWORD = '";
@@ -3678,7 +3739,8 @@ int redirect_slaves(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, const 
                     ServerVector* redirected_slaves = NULL)
 {
     MXS_NOTICE("Redirecting slaves to new master.");
-    std::string change_cmd = generate_change_master_cmd(mon, new_master);
+    std::string change_cmd = generate_change_master_cmd(mon,
+                                                        new_master->server->name, new_master->server->port);
     int successes = 0;
     for (ServerVector::const_iterator iter = slaves.begin(); iter != slaves.end(); iter++)
     {
@@ -3763,7 +3825,7 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
         seconds_remaining -= seconds_step2;
 
         // Step 3: Stop and reset slave, set read-only to 0.
-        if (promote_new_master(new_master, err_out))
+        if (promote_new_master(mon, new_master, err_out))
         {
             // Step 4: Redirect slaves.
             ServerVector redirected_slaves;
@@ -3776,8 +3838,14 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
 
                 // Step 5: Finally, add an event to the new master to advance gtid and wait for the slaves
                 // to receive it. seconds_remaining can be 0 or less at this point. Even in such a case
-                // wait_cluster_stabilization() may succeed if replication is fast enough.
-                if (wait_cluster_stabilization(mon, new_master, redirected_slaves, seconds_remaining))
+                // wait_cluster_stabilization() may succeed if replication is fast enough. If using external
+                // replication, skip this step. Come up with an alternative later.
+                if (mon->external_master_port != PORT_UNKNOWN)
+                {
+                    MXS_WARNING("Replicating from external master, skipping final check.");
+                    rval = true;
+                }
+                else if (wait_cluster_stabilization(mon, new_master, redirected_slaves, seconds_remaining))
                 {
                     rval = true;
                     time_t step5_time = time(NULL);
@@ -3910,47 +3978,79 @@ static bool switchover_demote_master(MYSQL_MONITOR* mon,
                                      json_t** err_out)
 {
     MXS_NOTICE("Demoting server '%s'.", current_master->server->unique_name);
-    string error;
     bool success = false;
-    const char* query = "SET GLOBAL read_only=1;";
-    if (mxs_mysql_query(current_master->con, query) == 0)
+    bool query_error = false;
+    MYSQL* conn = current_master->con;
+    const char* query = "";
+    // The presence of an external master changes several things.
+    const bool external_master = SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(current_master->server);
+
+    if (external_master)
     {
-        query = "FLUSH TABLES;";
-        if (mxs_mysql_query(current_master->con, query) == 0)
+        // First need to stop slave. read_only is probably on already, although not certain.
+        query = "STOP SLAVE;";
+        query_error = (mxs_mysql_query(conn, query) != 0);
+        if (!query_error)
         {
-            query = "FLUSH LOGS;";
-            if (mxs_mysql_query(current_master->con, query) == 0)
-            {
-                query = "";
-                if (update_gtids(mon, current_master, info))
-                {
-                    success = true;
-                }
-            }
-        }
-        if (!success)
-        {
-            // Somehow, a step after "SET read_only" failed. Try to set read_only back to 0. It may not
-            // work since the connection is likely broken.
-            error = mysql_error(current_master->con);
-            mxs_mysql_query(current_master->con, "SET GLOBAL read_only=0;");
+            query = "RESET SLAVE ALL;";
+            query_error = (mxs_mysql_query(conn, query) != 0);
         }
     }
-    else
+
+    string error_desc;
+    if (!query_error)
     {
-        error = mysql_error(current_master->con);
+        query = "SET GLOBAL read_only=1;";
+        query_error = (mxs_mysql_query(conn, query) != 0);
+        if (!query_error)
+        {
+            // If have external master, no writes are allowed so skip this step. It's not essential, just
+            // adds one to gtid.
+            if (!external_master)
+            {
+                query = "FLUSH TABLES;";
+                query_error = (mxs_mysql_query(conn, query) != 0);
+            }
+
+            if (!query_error)
+            {
+                query = "FLUSH LOGS;";
+                query_error = (mxs_mysql_query(conn, query) != 0);
+                if (!query_error)
+                {
+                    query = "";
+                    if (update_gtids(mon, current_master, info))
+                    {
+                        success = true;
+                    }
+                }
+            }
+
+            if (!success)
+            {
+                // Somehow, a step after "SET read_only" failed. Try to set read_only back to 0. It may not
+                // work since the connection is likely broken.
+                error_desc = mysql_error(conn);
+                mxs_mysql_query(conn, "SET GLOBAL read_only=0;");
+            }
+        }
+    }
+
+    if (query_error)
+    {
+        error_desc = mysql_error(conn);
     }
 
     if (!success)
     {
-        if (error.empty())
+        if (error_desc.empty())
         {
             PRINT_MXS_JSON_ERROR(err_out, "Demotion failed due to an error in updating gtid:s.");
         }
         else
         {
             PRINT_MXS_JSON_ERROR(err_out, "Demotion failed due to a query error: '%s'. Query: '%s'.",
-                                 error.c_str(), query);
+                                 error_desc.c_str(), query);
         }
     }
     return success;
@@ -4075,16 +4175,15 @@ static bool switchover_wait_slaves_catchup(const ServerVector& slaves, const Gti
  * @return True if commands were accepted. This does not guarantee that replication proceeds
  * successfully.
  */
-static bool switchover_start_slave(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* old_master,
-                                   MXS_MONITORED_SERVER* new_master)
+static bool switchover_start_slave(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* old_master, SERVER* new_master)
 {
     bool rval = false;
-    std::string change_cmd = generate_change_master_cmd(mon, new_master);
+    std::string change_cmd = generate_change_master_cmd(mon, new_master->name, new_master->port);
     if (mxs_mysql_query(old_master->con, change_cmd.c_str()) == 0 &&
         mxs_mysql_query(old_master->con, "START SLAVE;") == 0)
     {
         MXS_NOTICE("Old master '%s' starting replication from '%s'.",
-                   old_master->server->unique_name, new_master->server->unique_name);
+                   old_master->server->unique_name, new_master->unique_name);
         rval = true;
     }
     else
@@ -4245,9 +4344,26 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
     ServerVector redirectable_slaves;
     if (new_master)
     {
-        if (switchover_check_preferred_master(mon, new_master, &redirectable_slaves, err_out))
+        if (switchover_check_preferred_master(mon, new_master, err_out))
         {
             promotion_target = new_master;
+            /* User-given candidate is good. Update info on all slave servers.
+             * The update_slave_info()-call is not strictly necessary here, but it should be ran to keep this
+             * path analogous with failover_select_new_master(). The later functions can then assume that
+             * slave server info is up to date.
+             */
+            for (MXS_MONITORED_SERVER* slave = mon->monitor->monitored_servers; slave; slave = slave->next)
+            {
+                if (slave != promotion_target)
+                {
+                    MySqlServerInfo* slave_info = update_slave_info(mon, slave);
+                    // If master is replicating from external master, it is updated but not added to array.
+                    if (slave_info && slave != current_master)
+                    {
+                        redirectable_slaves.push_back(slave);
+                    }
+                }
+            }
         }
     }
     else
@@ -4262,7 +4378,7 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
     bool rval = false;
     MySqlServerInfo* curr_master_info = get_server_info(mon, demotion_target);
 
-    // Step 2: Set read-only to on, flush logs.
+    // Step 2: Set read-only to on, flush logs, update master gtid:s
     if (switchover_demote_master(mon, demotion_target, curr_master_info, err_out))
     {
         bool catchup_and_promote_success = false;
@@ -4281,12 +4397,12 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
             seconds_remaining -= seconds_step3;
 
             // Step 4: On new master STOP and RESET SLAVE, set read-only to off.
-            if (promote_new_master(promotion_target, err_out))
+            if (promote_new_master(mon, promotion_target, err_out))
             {
                 catchup_and_promote_success = true;
                 // Step 5: Redirect slaves and start replication on old master.
                 ServerVector redirected_slaves;
-                bool start_ok = switchover_start_slave(mon, demotion_target, promotion_target);
+                bool start_ok = switchover_start_slave(mon, demotion_target, promotion_target->server);
                 if (start_ok)
                 {
                     redirected_slaves.push_back(demotion_target);
@@ -4301,9 +4417,15 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
                     seconds_remaining -= difftime(step5_time, step3_time);
 
                     // Step 6: Finally, add an event to the new master to advance gtid and wait for the slaves
-                    // to receive it.
-                    if (wait_cluster_stabilization(mon, promotion_target, redirected_slaves,
-                                                   seconds_remaining))
+                    // to receive it. If using external replication, skip this step. Come up with an
+                    // alternative later.
+                    if (mon->external_master_port != PORT_UNKNOWN)
+                    {
+                        MXS_WARNING("Replicating from external master, skipping final check.");
+                        rval = true;
+                    }
+                    else if (wait_cluster_stabilization(mon, promotion_target, redirected_slaves,
+                                                        seconds_remaining))
                     {
                         rval = true;
                         time_t step6_time = time(NULL);
@@ -4333,6 +4455,12 @@ static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_mast
             {
                 PRINT_MXS_JSON_ERROR(err_out, "Could not disable read_only on server %s: '%s'.",
                                      demotion_target->server->unique_name, mysql_error(demotion_target->con));
+            }
+
+            // Try to reactivate external replication if any.
+            if (mon->external_master_port != PORT_UNKNOWN)
+            {
+                start_external_replication(mon, new_master, err_out);
             }
         }
     }
@@ -4517,18 +4645,18 @@ static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output)
  */
 static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_servers)
 {
-    MXS_MONITORED_SERVER* master = mon->master;
+    SERVER* master = mon->master->server;
     uint32_t servers_joined = 0;
     if (!joinable_servers.empty())
     {
-        string change_cmd = generate_change_master_cmd(mon, master);
+        string change_cmd = generate_change_master_cmd(mon, master->name, master->port);
         for (ServerVector::const_iterator iter = joinable_servers.begin();
              iter != joinable_servers.end();
              iter++)
         {
             MXS_MONITORED_SERVER* joinable = *iter;
             const char* name = joinable->server->unique_name;
-            const char* master_name = master->server->unique_name;
+            const char* master_name = master->unique_name;
             MySqlServerInfo* redir_info = get_server_info(mon, joinable);
 
             bool op_success;
