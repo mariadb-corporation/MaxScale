@@ -308,6 +308,9 @@ add_test_executable(mysqlmon_failover_stress.cpp mysqlmon_failover_stress mysqlm
 # MySQL Monitor switchover stress
 add_test_executable(mysqlmon_switchover_stress.cpp mysqlmon_switchover_stress mysqlmon_switchover_stress LABELS mysqlmon REPL_BACKEND)
 
+# Check monitoring and failover when ignore_external_masters is enabled
+add_test_executable(mysqlmon_external_master.cpp mysqlmon_external_master mysqlmon_external_master LABELS mysqlmon REPL_BACKEND)
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 

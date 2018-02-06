@@ -6,6 +6,7 @@
 #include <time.h>
 #include <signal.h>
 #include <execinfo.h>
+#include <sstream>
 
 #include "mariadb_func.h"
 #include "maxadmin_operations.h"
@@ -1883,4 +1884,26 @@ bool TestConnections::test_bad_config(int m, const char *config)
 
     return maxscales->ssh_node(m, "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
                                "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale", false) == 0;
+}
+
+std::string dump_status(const StringSet& current, const StringSet& expected)
+{
+    std::stringstream ss;
+    ss << "Current status: (";
+
+    for (const auto& a: current)
+    {
+        ss << a << ",";
+    }
+
+    ss << ") Expected status: (";
+
+    for (const auto& a: expected)
+    {
+        ss << a << ",";
+    }
+
+    ss << ")";
+
+    return ss.str();
 }

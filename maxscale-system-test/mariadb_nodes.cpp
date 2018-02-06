@@ -15,6 +15,7 @@
 #include <climits>
 #include <string>
 #include <sstream>
+#include <iostream>
 #include <vector>
 
 namespace
@@ -1456,4 +1457,22 @@ int Mariadb_nodes::prepare_servers()
         }
     }
     return rval;
+}
+
+void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
+{
+    std::stringstream change_master;
+    change_master << "CHANGE MASTER TO MASTER_HOST = '" << IP[master]
+        << "', MASTER_PORT = " << port[master] << ", MASTER_USE_GTID = " << type << ", "
+        "MASTER_USER='repl', MASTER_PASSWORD='repl';";
+
+    if (verbose)
+    {
+        std::cout << "Server " << slave + 1 << " starting to replicate from server " << master + 1 << std::endl;
+       std::cout << "Query is '" << change_master.str() << "'" << std::endl;
+    }
+
+    execute_query(nodes[slave], "STOP SLAVE;");
+    execute_query(nodes[slave], change_master.str().c_str());
+    execute_query(nodes[slave], "START SLAVE;");
 }

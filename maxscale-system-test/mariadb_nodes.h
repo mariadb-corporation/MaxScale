@@ -430,6 +430,18 @@ public:
     /** Whether to require GTID based replication, defaults to false */
     static void require_gtid(bool value);
 
+    /**
+     * Configure a server as a slave of another server
+     *
+     * The servers are configured with GTID replicating using the configured
+     * GTID position, either slave_pos or current_pos.
+     *
+     * @param slave  The node index to assign as slave
+     * @param master The node index of the master
+     * @param type   Replication type
+     */
+    void replicate_from(int slave, int master, const char* type = "current_pos");
+
 private:
 
     bool check_master_node(MYSQL *conn);
