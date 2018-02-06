@@ -32,6 +32,12 @@
 #include <maxscale/alloc.h>
 #include <maxscale/json_api.h>
 #include <maxscale/modulecmd.h>
+#include <maxscale/protocol.h>
+#include <maxscale/router.h>
+#include <maxscale/filter.h>
+#include <maxscale/authenticator.h>
+#include <maxscale/monitor.h>
+#include <maxscale/query_classifier.h>
 
 #include "internal/modules.h"
 #include "internal/config.h"
@@ -78,6 +84,56 @@ static LOADED_MODULE* register_module(const char *module,
                                       MXS_MODULE *mod_info);
 static void unregister_module(const char *module);
 
+static bool api_version_mismatch(const MXS_MODULE *mod_info, const char* module)
+{
+    bool rval = false;
+    MXS_MODULE_VERSION api = {};
+
+    switch (mod_info->modapi)
+    {
+        case MXS_MODULE_API_PROTOCOL:
+            api = MXS_PROTOCOL_VERSION;
+            break;
+
+        case MXS_MODULE_API_AUTHENTICATOR:
+            api = MXS_AUTHENTICATOR_VERSION;
+            break;
+
+        case MXS_MODULE_API_ROUTER:
+            api = MXS_ROUTER_VERSION;
+            break;
+
+        case MXS_MODULE_API_MONITOR:
+            api = MXS_MONITOR_VERSION;
+            break;
+
+        case MXS_MODULE_API_FILTER:
+            api = MXS_FILTER_VERSION;
+            break;
+
+        case MXS_MODULE_API_QUERY_CLASSIFIER:
+            api = MXS_QUERY_CLASSIFIER_VERSION;
+            break;
+
+        default:
+            MXS_ERROR("Unknown module type: 0x%02hhx", mod_info->modapi);
+            ss_dassert(!true);
+            break;
+    }
+
+    if (api.major != mod_info->api_version.major ||
+        api.minor != mod_info->api_version.minor ||
+        api.patch != mod_info->api_version.patch)
+    {
+        MXS_ERROR("API version mismatch for '%s': Need version %d.%d.%d, have %d.%d.%d",
+                  module, api.major, api.minor, api.patch, mod_info->api_version.major,
+                  mod_info->api_version.minor, mod_info->api_version.patch);
+        rval = true;
+    }
+
+    return rval;
+}
+
 static bool check_module(const MXS_MODULE *mod_info, const char *type, const char *module)
 {
     bool success = true;
@@ -118,6 +174,12 @@ static bool check_module(const MXS_MODULE *mod_info, const char *type, const cha
         MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
         success = false;
     }
+
+    if (api_version_mismatch(mod_info, module))
+    {
+        success = false;
+    }
+
     if (mod_info->version == NULL)
     {
         MXS_ERROR("Module '%s' does not define a version string", module);

@@ -95,7 +95,7 @@ typedef struct mxs_monitor_object
  * The monitor API version number. Any change to the monitor module API
  * must change these versions using the rules defined in modinfo.h
  */
-#define MXS_MONITOR_VERSION {3, 0, 0}
+#define MXS_MONITOR_VERSION {3, 1, 0}
 
 /**
  * Specifies capabilities specific for monitor.

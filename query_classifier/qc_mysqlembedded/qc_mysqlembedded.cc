@@ -3526,7 +3526,7 @@ extern "C"
         {
             MXS_MODULE_API_QUERY_CLASSIFIER,
             MXS_MODULE_IN_DEVELOPMENT,
-            QUERY_CLASSIFIER_VERSION,
+            MXS_QUERY_CLASSIFIER_VERSION,
             "Query classifier based upon MySQL Embedded",
             "V1.0.0",
             MXS_NO_MODULE_CAPABILITIES,
