@@ -50,12 +50,12 @@ find_package(ASAN)
 include(cmake/BuildPCRE2.cmake)
 
 include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
-include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
 # If the connector was not found, download and build it from source
 if(NOT MARIADB_CONNECTOR_FOUND)
   message(STATUS "Building MariaDB Connector-C from source.")
   include(cmake/BuildMariaDBConnector.cmake)
+  include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 else()
   # This is required as the core depends on the `connector-c` target
   add_custom_target(connector-c)
