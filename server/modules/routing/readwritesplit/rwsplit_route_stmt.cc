@@ -1044,11 +1044,17 @@ static void log_master_routing_failure(RWSplitSession *rses, bool found,
             sprintf(errmsg, "Session is in read-only mode because it was created "
                     "when no master was available");
         }
+        else if (old_master && !old_master->in_use())
+        {
+            sprintf(errmsg, "Was supposed to route to master but the master connection is %s",
+                    old_master->is_closed() ? "closed" : "not in a suitable state");
+            ss_dassert(old_master->is_closed());
+        }
         else
         {
-            ss_dassert(false); // A session should always have a master reference
             sprintf(errmsg, "Was supposed to route to master but couldn't "
-                    "find master in a suitable state");
+                    "find original master connection");
+            ss_dassert(!true);
         }
     }
 
