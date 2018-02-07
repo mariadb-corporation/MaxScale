@@ -50,6 +50,7 @@ find_package(ASAN)
 include(cmake/BuildPCRE2.cmake)
 
 include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
+include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
 # If the connector was not found, download and build it from source
 if(NOT MARIADB_CONNECTOR_FOUND)
