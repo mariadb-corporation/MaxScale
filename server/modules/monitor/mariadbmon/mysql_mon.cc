@@ -1995,8 +1995,10 @@ bool standalone_master_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
  * @param handle Monitor instance
  * @param db     Monitor servers
  */
-void set_standalone_master(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
+bool set_standalone_master(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 {
+    bool rval = false;
+
     while (db)
     {
         if (SERVER_IS_RUNNING(db->server))
@@ -2014,6 +2016,7 @@ void set_standalone_master(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
             monitor_set_pending_status(db, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_clear_pending_status(db, SERVER_SLAVE);
             handle->master = db;
+            rval = true;
         }
         else if (!handle->allow_cluster_recovery)
         {
@@ -2022,6 +2025,8 @@ void set_standalone_master(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
         }
         db = db->next;
     }
+
+    return rval;
 }
 
 bool failover_not_possible(MYSQL_MONITOR* handle)
@@ -2336,8 +2341,12 @@ monitorMain(void *arg)
         {
             if (standalone_master_required(handle, mon->monitored_servers))
             {
-                /** Other servers have died, set last remaining server as master */
-                set_standalone_master(handle, mon->monitored_servers);
+                // Other servers have died, set last remaining server as master
+                if (set_standalone_master(handle, mon->monitored_servers))
+                {
+                    // Update the root_master to point to the standalone master
+                    root_master = handle->master;
+                }
             }
             else
             {
