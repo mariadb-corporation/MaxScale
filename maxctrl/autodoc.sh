@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Install dependencies
+npm i
+
 ITEMS=`node maxctrl.js help|awk '/^$/{p=0} {if(p){print $1}}/Commands:/{p=1}'`
 
 TOC=$(for i in $ITEMS

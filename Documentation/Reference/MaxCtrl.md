@@ -590,7 +590,8 @@ of parameters can be altered at runtime:
     "auth_read_timeout",
     "auth_write_timeout",
     "admin_auth",
-    "admin_log_auth_failures"
+    "admin_log_auth_failures",
+    "passive"
 ]
 
 ## rotate
