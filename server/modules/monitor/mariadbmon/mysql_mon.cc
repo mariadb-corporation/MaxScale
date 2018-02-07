@@ -2372,7 +2372,7 @@ monitorMain(void *arg)
             }
         }
 
-        ss_dassert(handle->master == root_master);
+        ss_dassert(root_master == NULL || handle->master == root_master);
         ss_dassert(!root_master ||
                    ((root_master->server->status & (SERVER_SLAVE | SERVER_MASTER))
                     != (SERVER_SLAVE | SERVER_MASTER)));
