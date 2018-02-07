@@ -3204,9 +3204,24 @@ static uint32_t dcb_handler(DCB* dcb, uint32_t events)
 
 static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events)
 {
+    uint32_t rval = 0;
     DCB *dcb = (DCB*)data;
 
-    return dcb_handler(dcb, events);
+    /**
+     * Fake hangup events (e.g. from monitors) can cause a DCB to be closed
+     * before the real events are processed. This makes it look like a closed
+     * DCB is receiving events when in reality the events were received at the
+     * same time the DCB was closed. If a closed DCB receives events they should
+     * be ignored.
+     *
+     * @see FakeEventTask()
+     */
+    if (dcb->n_close == 0)
+    {
+        rval = dcb_handler(dcb, events);
+    }
+
+    return rval;
 }
 
 static bool dcb_is_still_valid(DCB* target, int id)

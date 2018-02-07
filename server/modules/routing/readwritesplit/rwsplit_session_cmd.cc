@@ -76,9 +76,10 @@ void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
 
                 if (rses->sescmd_responses[id] != cmd)
                 {
-                    MXS_ERROR("Slave server '%s': response differs from master's response. "
-                              "Closing connection due to inconsistent session state.",
-                              backend->name());
+                    MXS_WARNING("Slave server '%s': response (0x%02hhx) differs "
+                                "from master's response(0x%02hhx). Closing slave "
+                                "connection due to inconsistent session state.",
+                                backend->name(), cmd, rses->sescmd_responses[id]);
                     backend->close(mxs::Backend::CLOSE_FATAL);
                     *pReconnect = true;
                 }

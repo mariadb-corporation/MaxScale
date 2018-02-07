@@ -73,6 +73,9 @@ typedef struct
     int64_t master_gtid_domain;    /**< Gtid domain currently used by the master */
     bool auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
                                         replicating from the wrong master. */
+    int n_excluded;                /**< Number of excluded servers */
+    MXS_MONITORED_SERVER** excluded_servers; /**< Servers banned for master promotion during auto-failover. */
+
     MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
 

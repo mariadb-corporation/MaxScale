@@ -517,6 +517,23 @@ int get_metadata_len(uint8_t type)
         } \
     }while(false)
 
+// Debug function for checking whether a row event consists of only NULL values
+static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
+{
+    bool rval = true;
+
+    for (long i = 0; i < ncolumns; i++)
+    {
+        if (!bit_is_set(null_bitmap, ncolumns, i))
+        {
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * @brief Extract the values from a single row  in a row event
  *
@@ -544,7 +561,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
     /** Store the null value bitmap */
     uint8_t *null_bitmap = ptr;
     ptr += (ncolumns + 7) / 8;
-    ss_dassert(ptr < end);
+    ss_dassert(ptr < end || (bit_is_set(null_bitmap, ncolumns, 0)));
 
     char trace[ncolumns][768];
     memset(trace, 0, sizeof(trace));

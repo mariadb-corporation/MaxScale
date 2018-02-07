@@ -283,34 +283,6 @@ void closed_session_reply(GWBUF *querybuf)
     }
 }
 
-/*
- * Uses MySQL specific mechanisms
- */
-/**
- * @brief Check the reply from a backend server to a session command
- *
- * If the reply is an error, a message is logged.
- *
- * @param buffer  Query buffer containing reply data
- * @param backend Router session data for a backend server
- */
-void check_session_command_reply(GWBUF *buffer, SRWBackend& backend)
-{
-    if (MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(buffer))))
-    {
-        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer));
-        char replybuf[replylen];
-        gwbuf_copy_data(buffer, 0, gwbuf_length(buffer), (uint8_t*)replybuf);
-        std::string err;
-        std::string msg;
-        err.append(replybuf + 8, 5);
-        msg.append(replybuf + 13, replylen - 4 - 5);
-
-        MXS_ERROR("Failed to execute session command in %s. Error was: %s %s",
-                  backend->uri(), err.c_str(), msg.c_str());
-    }
-}
-
 /**
  * @brief Send an error message to the client telling that the server is in read only mode
  *

@@ -41,6 +41,7 @@
 #include <openssl/sha.h>
 
 #include <maxscale/alloc.h>
+#include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/limits.h>
@@ -1019,6 +1020,8 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
             memcpy(addr, ai->ai_addr, ai->ai_addrlen);
             set_port(addr, port);
 
+            freeaddrinfo(ai);
+
             if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so)) ||
                 (type == MXS_SOCKET_LISTENER && !configure_listener_socket(so)))
             {
@@ -1032,9 +1035,39 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
                 close(so);
                 so = -1;
             }
-        }
+            else if (type == MXS_SOCKET_NETWORK)
+            {
+                MXS_CONFIG* config = config_get_global_options();
 
-        freeaddrinfo(ai);
+                if (config->local_address)
+                {
+                    if ((rc = getaddrinfo(config->local_address, NULL, &hint, &ai)) == 0)
+                    {
+                        struct sockaddr_storage local_address = {};
+
+                        memcpy(&local_address, ai->ai_addr, ai->ai_addrlen);
+                        freeaddrinfo(ai);
+
+                        if (bind(so, (struct sockaddr*)&local_address, sizeof(local_address)) == 0)
+                        {
+                            MXS_INFO("Bound connecting socket to \"%s\".", config->local_address);
+                        }
+                        else
+                        {
+                            MXS_ERROR("Could not bind connecting socket to local address \"%s\", "
+                                      "connecting to server using default local address: %s",
+                                      config->local_address, mxs_strerror(errno));
+                        }
+                    }
+                    else
+                    {
+                        MXS_ERROR("Could not get address information for local address \"%s\", "
+                                  "connecting to server using default local address: %s",
+                                  config->local_address, mxs_strerror(errno));
+                    }
+                }
+            }
+        }
     }
 
     return so;

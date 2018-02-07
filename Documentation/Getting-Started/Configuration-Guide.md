@@ -688,6 +688,17 @@ Note that MariaDB MaxScale is **not** explicitly aware of the sql mode of
 the server, so the value of `sql_mode` should reflect the sql mode used
 when the server is started.
 
+#### `local_address`
+
+What specific local address/interface to use when connecting to servers.
+
+This can be used for ensuring that MaxScale uses a particular interface
+when connecting to servers, in case the computer MaxScale is running on
+has multiple interfaces.
+```
+local_address=192.168.1.254
+```
+
 ### Service
 
 A service represents the database service that MariaDB MaxScale offers to the

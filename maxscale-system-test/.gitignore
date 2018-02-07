@@ -106,6 +106,7 @@ kill_master
 large_insert_hang
 load_balancing
 load_balancing_galera
+local_address
 long_sysbench
 longblob
 lots_of_rows

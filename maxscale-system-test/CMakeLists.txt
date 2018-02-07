@@ -308,6 +308,9 @@ add_test_executable(mysqlmon_failover_stress.cpp mysqlmon_failover_stress mysqlm
 # MySQL Monitor switchover stress
 add_test_executable(mysqlmon_switchover_stress.cpp mysqlmon_switchover_stress mysqlmon_switchover_stress LABELS mysqlmon REPL_BACKEND)
 
+# Check monitoring and failover when ignore_external_masters is enabled
+add_test_executable(mysqlmon_external_master.cpp mysqlmon_external_master mysqlmon_external_master LABELS mysqlmon REPL_BACKEND)
+
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
 
@@ -594,6 +597,10 @@ add_test_executable(mxs1543.cpp mxs1543 avro LABELS REPL_BACKEND)
  # https://jira.mariadb.org/browse/MXS-1585
 add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS REPL_BACKEND)
 
+ # MXS-1643: Too many monitor events are triggered
+ # https://jira.mariadb.org/browse/MXS-1643
+add_test_executable(mxs1643_extra_events.cpp mxs1643_extra_events mxs1643_extra_events LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
@@ -841,6 +848,9 @@ add_test_executable_notest(create_rds.cpp create_rds replication LABELS EXTERN_B
 
 # start sysbench ageints RWSplit for infinite execution
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication LABELS readwritesplit REPL_BACKEND)
+
+# test effect of local_address in configuration file
+add_test_executable(local_address.cpp local_address local_address LABELS REPL_BACKEND)
 
 configure_file(templates.h.in templates.h @ONLY)
 

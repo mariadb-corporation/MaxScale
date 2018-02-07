@@ -8,18 +8,7 @@ using std::endl;
 
 void replicate_from(TestConnections& test, int server_ind, int target_ind)
 {
-    stringstream change_master;
-    change_master << "CHANGE MASTER TO MASTER_HOST = '" << test.repl->IP[target_ind]
-        << "', MASTER_PORT = " << test.repl->port[target_ind] << ", MASTER_USE_GTID = current_pos, "
-        "MASTER_USER='repl', MASTER_PASSWORD='repl';";
-    cout << "Server " << server_ind + 1 << " starting to replicate from server " << target_ind + 1 << endl;
-    if (test.verbose)
-    {
-       cout << "Query is '" << change_master.str() << "'" << endl;
-    }
-    execute_query(test.repl->nodes[server_ind], "STOP SLAVE;");
-    execute_query(test.repl->nodes[server_ind], change_master.str().c_str());
-    execute_query(test.repl->nodes[server_ind], "START SLAVE;");
+    test.repl->replicate_from(server_ind, target_ind);
 }
 
 void reset_replication(TestConnections& test)

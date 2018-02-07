@@ -32,6 +32,21 @@
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
 
+namespace
+{
+
+struct THIS_UNIT
+{
+    bool log_statements; // Should all statements sent to server be logged?
+};
+
+static THIS_UNIT this_unit =
+{
+    false
+};
+
+}
+
 /**
  * @brief Calculate the length of a length-encoded integer in bytes
  *
@@ -221,6 +236,19 @@ int mxs_mysql_query(MYSQL* conn, const char* query)
         rc = mysql_query(conn, query);
     }
 
+    if (this_unit.log_statements)
+    {
+        const char* host;
+        if (mariadb_get_info(conn, MARIADB_CONNECTION_HOST, &host) != 0)
+        {
+            // No idea about the host, but let's use something that looks like
+            // an IP-address as a placeholder.
+            host = "0.0.0.0";
+        }
+
+        MXS_NOTICE("SQL(%s): %d, \"%s\"", host, rc, query);
+    }
+
     return rc;
 }
 
@@ -367,4 +395,14 @@ void mxs_mysql_set_server_version(MYSQL* mysql, SERVER* server)
 
         server_set_version(server, version_string, version);
     }
+}
+
+void mxs_mysql_set_log_statements(bool enable)
+{
+    this_unit.log_statements = enable;
+}
+
+bool mxs_mysql_get_log_statements()
+{
+    return this_unit.log_statements;
 }
