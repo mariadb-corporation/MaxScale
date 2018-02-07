@@ -2847,7 +2847,11 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
         current = ptr->server;
 
         node_id = current->master_id;
-        if (node_id < 1)
+
+        /** Either this node doesn't replicate from a master or the master
+         * where it replicates from is not configured to this monitor. */
+        if (node_id < 1 ||
+            getServerByNodeId(mon->monitored_servers, node_id) == NULL)
         {
             MXS_MONITORED_SERVER *find_slave;
             find_slave = getSlaveOfNodeId(mon->monitored_servers, current->node_id, ACCEPT_DOWN);
