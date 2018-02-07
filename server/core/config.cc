@@ -609,6 +609,39 @@ int config_cb(const char* fpath, const struct stat *sb, int typeflag, struct FTW
 {
     int rval = 0;
 
+    if (typeflag == FTW_SL) // A symbolic link; let's see what it points to.
+    {
+        struct stat sb;
+
+        if (stat(fpath, &sb) == 0)
+        {
+            int file_type = (sb.st_mode & S_IFMT);
+
+            switch (file_type)
+            {
+            case S_IFREG:
+                // Points to a file; we'll handle that regardless of where the file resides.
+                typeflag = FTW_F;
+                break;
+
+            case S_IFDIR:
+                // Points to a directory; we'll ignore that.
+                MXS_WARNING("Symbolic link %s in configuration directory points to a "
+                            "directory; it will be ignored.", fpath);
+                break;
+
+            default:
+                // Points to something else; we'll silently ignore.
+                ;
+            }
+        }
+        else
+        {
+            MXS_WARNING("Could not get information about the symbolic link %s; "
+                        "it will be ignored.", fpath);
+        }
+    }
+
     if (typeflag == FTW_F) // We are only interested in files,
     {
         const char* filename = fpath + ftwbuf->base;
