@@ -263,11 +263,16 @@ public:
 
     /**
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
+     * @param m Number of Maxscale node
      * @return 0 if case of success
      */
     int init_maxscale(int m = 0);
 
-
+    /**
+     * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale on all Maxscale nodes
+     * @return 0 if case of success
+     */
+    int init_maxscales();
 
     /**
      * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router

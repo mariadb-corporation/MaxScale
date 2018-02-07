@@ -6,6 +6,7 @@
 #include <time.h>
 #include <signal.h>
 #include <execinfo.h>
+#include <sys/stat.h>
 
 #include "mariadb_func.h"
 #include "maxadmin_operations.h"
@@ -280,7 +281,7 @@ TestConnections::TestConnections(int argc, char *argv[]):
 
     if (maxscale_init)
     {
-        init_maxscale(0);
+        init_maxscales();
     }
 
     if (backend_ssl)
@@ -528,11 +529,23 @@ const char * get_template_name(char * test_name)
 
 void TestConnections::process_template(int m, const char *template_name, const char *dest)
 {
+    struct stat stb;
     char str[4096];
     char template_file[1024];
 
+    char extended_template_file[1024];
+
     sprintf(template_file, "%s/cnf/maxscale.cnf.template.%s", test_dir, template_name);
+    sprintf(extended_template_file, "%s.%03d", template_file, m);
+
+    if (stat((char*)extended_template_file, &stb) == 0)
+    {
+        strcpy(template_file, extended_template_file);
+    }
+    tprintf("Template file is %s\n", template_file);
+
     sprintf(str, "cp %s maxscale.cnf", template_file);
+    tprintf("Executing '%s' command\n", str);
     if (system(str) != 0)
     {
         tprintf("Error copying maxscale.cnf template\n");
@@ -594,12 +607,19 @@ void TestConnections::process_template(int m, const char *template_name, const c
     maxscales->copy_to_node_legacy((char *) "maxscale.cnf", (char *) dest, m);
 }
 
+int TestConnections::init_maxscales()
+{
+    for (int i = 0; i < maxscales->N; i++)
+    {
+        init_maxscale(i);
+    }
+}
+
 int TestConnections::init_maxscale(int m)
 {
     const char * template_name = get_template_name(test_name);
-    tprintf("Template is %s\n", template_name);
-    process_template(m, template_name, maxscales->access_homedir[m]);
 
+    process_template(m, template_name, maxscales->access_homedir[m]);
     maxscales->ssh_node_f(m, true,
                           "cp maxscale.cnf %s;rm -rf %s/certs;mkdir -m a+wrx %s/certs;",
                           maxscales->maxscale_cnf[m],
@@ -612,7 +632,6 @@ int TestConnections::init_maxscale(int m)
     maxscales->copy_to_node_legacy(str, dtr, m);
     sprintf(str, "cp %s/ssl-cert/* .", test_dir);
     system(str);
-
 
     maxscales->ssh_node_f(m, true,
                           "chown maxscale:maxscale -R %s/certs;"

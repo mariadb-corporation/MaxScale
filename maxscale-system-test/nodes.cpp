@@ -197,7 +197,6 @@ int  Nodes::ssh_node_f(int node, bool sudo, const char* format, ...)
     va_start(valist, format);
     vsnprintf(sys, message_len + 1, format, valist);
     va_end(valist);
-
     int result = ssh_node(node, sys, sudo);
     free(sys);
     return (result);
@@ -427,6 +426,40 @@ int Nodes::read_basic_env()
             else
             {
                 sprintf(hostname[i], "%s", IP[i]);
+            }
+
+            sprintf(env_name, "%s_%03d_start_vm_command", prefix, i);
+            env = getenv(env_name);
+            if (env == NULL)
+            {
+                sprintf(env_name, "%s_start_vm_command", prefix);
+                env = getenv(env_name);
+            }
+
+            if (env != NULL)
+            {
+                sprintf(start_vm_command[i], "%s", env);
+            }
+            else
+            {
+                sprintf(start_vm_command[i], "exit 0");
+            }
+
+            sprintf(env_name, "%s_%03d_stop_vm_command", prefix, i);
+            env = getenv(env_name);
+            if (env == NULL)
+            {
+                sprintf(env_name, "%s_stop_vm_command", prefix);
+                env = getenv(env_name);
+            }
+
+            if (env != NULL)
+            {
+                sprintf(stop_vm_command[i], "%s", env);
+            }
+            else
+            {
+                sprintf(stop_vm_command[i], "exit 0");
             }
         }
     }

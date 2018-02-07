@@ -811,6 +811,8 @@ add_test_executable(setup_binlog_gtid.cpp setup_binlog_gtid setup_binlog_gtid LA
 # TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
 add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssapi REPL_BACKEND)
 
+add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND)
+
 
 # enable after fixing MXS-419
 # add_test_executable(mxs419_lots_of_connections.cpp mxs419_lots_of_connections replication LABELS REPL_BACKEND)

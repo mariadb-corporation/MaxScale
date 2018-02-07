@@ -65,6 +65,16 @@ public:
     char hostname[256][1024];
 
     /**
+     * @brief stop_vm_command Command to suspend VM
+     */
+    char stop_vm_command[256][1024];
+    /**
+
+     * @brief start_vm_command Command to resume VM
+     */
+    char start_vm_command[256][1024];
+
+    /**
      * @brief   User name to access backend nodes
      */
     char user_name[256];
