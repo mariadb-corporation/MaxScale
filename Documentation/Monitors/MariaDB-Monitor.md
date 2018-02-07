@@ -366,18 +366,19 @@ privilege.
 parameters. If password encryption is in use, `replication_password` must be
 encrypted with the same key to avoid erroneous decryption.
 
-#### `failover_timeout`
+#### `failover_timeout` and `switchover_timeout`
 
-Time limit for the cluster failover in seconds. The default value is 90
-seconds.
+Time limit for the cluster failover and switchover in seconds. The default values
+are 90 seconds.
 
-If no successful failover takes place within the configured time period, a
-message is logged and automatic failover is disabled.
+If no successful failover/switchover takes place within the configured time
+period, a message is logged and automatic failover is disabled. This prevents
+further automatic modifications to the misbehaving cluster.
 
-This parameter also controls how long a MaxScale instance that has transitioned
-from passive to active will wait for a failover to take place after an apparent
-loss of a master server. If no new master server is detected within the
-configured time period, failover will be initiated again.
+`failover_timeout` also controls how long a MaxScale instance that has
+transitioned from passive to active will wait for a failover to take place after
+an apparent loss of a master server. If no new master server is detected within
+the configured time period, failover will be initiated again.
 
 #### `verify_master_failure` and `master_failure_timeout`
 
@@ -397,16 +398,6 @@ disconnection.
 
 For automatic failover to activate, the `failcount` requirement must also be
 met.
-
-#### `switchover_timeout`
-
-Time limit for cluster switchover in seconds. The default value is 90
-seconds.
-
-If no successful switchover takes place within the configured time period, a
-message is logged and automatic failover is disabled, even if it was enabled
-before the switchover attempt. This prevents further modifications to the
-misbehaving cluster.
 
 ### Manual switchover and failover
 
