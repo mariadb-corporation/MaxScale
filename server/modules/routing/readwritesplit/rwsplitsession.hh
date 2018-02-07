@@ -89,6 +89,9 @@ typedef std::list<SRWBackend> SRWBackendList;
 typedef std::tr1::unordered_set<std::string> TableSet;
 typedef std::map<uint64_t, uint8_t>          ResponseMap;
 
+/** List of slave responses that arrived before the master */
+typedef std::list< std::pair<SRWBackend, uint8_t> > SlaveResponseList;
+
 /** Map of COM_STMT_EXECUTE targets by internal ID */
 typedef std::tr1::unordered_map<uint32_t, SRWBackend> ExecMap;
 
@@ -133,6 +136,7 @@ public:
     TableSet                temp_tables; /**< Set of temporary tables */
     mxs::SessionCommandList sescmd_list; /**< List of executed session commands */
     ResponseMap             sescmd_responses; /**< Response to each session command */
+    SlaveResponseList       slave_responses; /**< Slaves that replied before the master */
     uint64_t                sent_sescmd; /**< ID of the last sent session command*/
     uint64_t                recv_sescmd; /**< ID of the most recently completed session command */
     PSManager               ps_manager;  /**< Prepared statement manager*/
