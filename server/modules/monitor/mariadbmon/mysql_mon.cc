@@ -2365,13 +2365,10 @@ monitorMain(void *arg)
              * This allows parts of a multi-tiered replication setup to be used
              * in MaxScale.
              */
-            if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(root_master->server) &&
-                SERVER_IS_MASTER(root_master->server) && handle->ignore_external_masters)
+            if (handle->ignore_external_masters)
             {
-                monitor_clear_pending_status(root_master,
-                                             SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
-                server_clear_status_nolock(root_master->server,
-                                           SERVER_SLAVE | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                monitor_clear_pending_status(root_master, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+                server_clear_status_nolock(root_master->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
             }
         }
 
