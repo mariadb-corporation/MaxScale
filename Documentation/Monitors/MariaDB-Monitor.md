@@ -399,6 +399,18 @@ disconnection.
 For automatic failover to activate, the `failcount` requirement must also be
 met.
 
+#### `servers_no_promotion`
+
+This is a comma-separated list of server names that will not be chosen for
+master promotion during a failover. This does not affect switchover since in
+that case the user selects the server. Using this list can disrupt new master
+selection such that an unoptimal server is chosen. At worst, this will cause
+replication to break.
+
+```
+servers_no_promotion=backup_dc_server1,backup_dc_server2
+```
+
 ### Manual switchover and failover
 
 Both failover and switchover can be activated manually through the REST API or
