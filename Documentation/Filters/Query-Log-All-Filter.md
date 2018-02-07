@@ -14,7 +14,7 @@ module=qlafilter
 
 [MyService]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 passwd=mypasswd
