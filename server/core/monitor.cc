@@ -2447,7 +2447,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, 
     ss_dassert(*monitored_servers_out == NULL);
     SERVER** servers = NULL;
     int servers_size = config_get_server_list(params, key, &servers);
-    int rval = -1;
+    int rval = 0;
     // All servers in the array must be monitored by the given monitor.
     if (servers_size > 0)
     {
@@ -2472,6 +2472,7 @@ int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, 
         if (error)
         {
             MXS_FREE(monitored_array);
+            rval = -1;
         }
         else
         {
