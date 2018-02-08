@@ -1,3 +1,18 @@
+/**
+ * @file keepalived.cpp keepalived Test of two Maxscale + keepalived failover
+ *
+ * - 'version_string' configured to be different for every Maxscale
+ * - configure keepalived for two nodes (uses xxx.xxx.xxx.253 as a virtual IP
+ * where xxx.xxx.xxx. - first 3 numbers from client IP)
+ * - suspend Maxscale 1
+ * - wait and check version_string from Maxscale on virtual IP, expect 10.2-server2
+ * - resume Maxscale 1, suspend Maxscale 2
+ * - wait and check version_string from Maxscale on virtual IP, expect 10.2-server1
+ * - resume Maxscale 2
+ * TODO: replace 'yum' call with executing Chef recipe
+ */
+
+
 #include <iostream>
 #include "testconnections.h"
 
@@ -21,6 +36,11 @@ int main(int argc, char *argv[])
     Test->set_timeout(10);
 
     Test->tprintf("Maxscale_N %d\n", Test->maxscales->N);
+    if (Test->maxscales->N < 2)
+    {
+        Test->tprintf("At least 2 Maxscales are needed for this test. Exiting\n");
+        exit(0);
+    }
 
 
     Test->check_maxscale_alive(0);
