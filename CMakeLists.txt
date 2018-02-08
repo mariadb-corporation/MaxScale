@@ -33,7 +33,6 @@ include(cmake/CheckPlatform.cmake)
 check_dirs()
 find_package(OpenSSL)
 find_package(Valgrind)
-find_package(MariaDBConnector)
 find_package(Pandoc)
 find_package(TCMalloc)
 find_package(Jemalloc)
@@ -51,16 +50,9 @@ include(cmake/BuildPCRE2.cmake)
 
 include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
 
-# If the connector was not found, download and build it from source
-if(NOT MARIADB_CONNECTOR_FOUND)
-  message(STATUS "Building MariaDB Connector-C from source.")
-  include(cmake/BuildMariaDBConnector.cmake)
-  include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
-else()
-  # This is required as the core depends on the `connector-c` target
-  add_custom_target(connector-c)
-  message(STATUS "Using system Connector-C")
-endif()
+# Always build Connector-C from a known good commit
+include(cmake/BuildMariaDBConnector.cmake)
+include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
 include(cmake/BuildJansson.cmake)
 include(cmake/BuildMicroHttpd.cmake)

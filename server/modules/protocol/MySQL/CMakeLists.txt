@@ -5,4 +5,7 @@ install_module(mysqlcommon core)
 
 add_subdirectory(mariadbbackend)
 add_subdirectory(mariadbclient)
-add_subdirectory(test)
+
+if (BUILD_TESTS)
+  add_subdirectory(test)
+endif()

@@ -601,6 +601,10 @@ add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS REPL_BACKEND)
  # https://jira.mariadb.org/browse/MXS-1643
 add_test_executable(mxs1643_extra_events.cpp mxs1643_extra_events mxs1643_extra_events LABELS REPL_BACKEND)
 
+# MXS-1653: sysbench failed to initialize w/ MaxScale read/write splitter
+# https://jira.mariadb.org/browse/MXS-1653
+add_test_executable(mxs1653_ps_hang.cpp mxs1653_ps_hang replication LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 

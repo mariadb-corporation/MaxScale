@@ -73,8 +73,9 @@ string extract_ip(string s)
 
 void get_maxscale_ips(TestConnections& test, vector<string>* pIps)
 {
+    static const char COMMAND[] = "export PATH=$PATH:/sbin:/usr/sbin; ip addr|fgrep inet|fgrep -v ::";
     int exit_code;
-    string output(test.maxscales->ssh_node_output(0, "ip addr|fgrep inet|fgrep -v ::", false, &exit_code));
+    string output(test.maxscales->ssh_node_output(0, COMMAND, false, &exit_code));
 
     to_collection(output, "\n", pIps);
     transform(pIps->begin(), pIps->end(), pIps->begin(), extract_ip);
@@ -258,9 +259,13 @@ void test_connecting(TestConnections& test,
     }
 }
 
-void run_test(TestConnections& test, const string& ip1, const string& ip2)
+void run_test(TestConnections& test, const vector<string>& ips)
 {
     test.maxscales->connect();
+
+    string ip1 = ips[0];
+    // If we do not have a proper second IP-address, we'll use an arbitrary one.
+    string ip2 = (ips.size() > 1) ? ips[1] : string("42.42.42.42");
 
     string local_ip = get_local_ip(test);
 
@@ -297,24 +302,34 @@ void run_test(TestConnections& test, const string& ip1, const string& ip2)
     test.maxscales->disconnect();
     test.stop_maxscale();
 
-    test.tprintf("\n");
-    test.tprintf("WARNING: Other IP-address not tested, as usable IP-address not available.");
-
+    if (ips.size() > 1)
+    {
 #ifdef USABLE_SECOND_IP_ADDRESS_ON_MAXSCALE_NODE_IS_AVAILABLE
-    test.tprintf("\n");
-    test.tprintf("\nTesting with local_address=%s, bob should be able to access, alice not.",
-                 ip2.c_str());
+        test.tprintf("\n");
+        test.tprintf("\nTesting with local_address=%s, bob should be able to access, alice not.",
+                     ip2.c_str());
 
-    string local_address_ip2 = "local_address=" + ip2;
-    start_maxscale_with_local_address(test, local_address_ip1, local_address_ip2);
-    test.connect_maxscale();
+        string local_address_ip2 = "local_address=" + ip2;
+        start_maxscale_with_local_address(test, local_address_ip1, local_address_ip2);
+        test.connect_maxscale();
 
-    test_connecting(test, zUser1, zPassword1, ip1.c_str(), false);
-    test_connecting(test, zUser2, zPassword2, ip2.c_str(), true);
+        test_connecting(test, zUser1, zPassword1, ip1.c_str(), false);
+        test_connecting(test, zUser2, zPassword2, ip2.c_str(), true);
 
-    test.maxscales->disconnect();
-    test.stop_maxscale();
+        test.maxscales->disconnect();
+        test.stop_maxscale();
+#else
+        test.tprintf("\n");
+        test.tprintf("WARNING: Other IP-address (%s) not tested, as IP-address currently "
+                     "not usable on VM.", ip2.c_str());
 #endif
+    }
+    else
+    {
+        test.tprintf("\n");
+        test.tprintf("WARNING: Only one IP-address found on MaxScale node, 'local_address' "
+                     "not properly tested.");
+    }
 }
 
 }
@@ -326,13 +341,13 @@ int main(int argc, char** argv)
     vector<string> ips;
     get_maxscale_ips(test, &ips);
 
-    if (ips.size() >= 2)
+    if (ips.size() >= 1)
     {
-        run_test(test, ips[0], ips[1]);
+        run_test(test, ips);
     }
     else
     {
-        test.assert(false, "MaxScale node does not have at least two IP-addresses.");
+        test.assert(false, "MaxScale node does not have at least one IP-address.");
     }
 
     return test.global_result;

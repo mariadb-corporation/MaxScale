@@ -47,8 +47,6 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     sleep(5);
-    Test->check_log_err(0, (char *) "Failed to execute session command in", true);
-    Test->check_log_err(0, (char *) "File '/tmp/t1.csv' already exists", true);
 
     int rval = Test->global_result;
     delete Test;

@@ -637,9 +637,11 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
     bool skip_next = state ? state->state : false;
     bool more = false;
     bool only_ok = true;
+    uint64_t num_packets = 0;
 
     while (offset < len)
     {
+        num_packets++;
         uint8_t header[MYSQL_HEADER_LEN + 5]; // Maximum size of an EOF packet
 
         gwbuf_copy_data(reply, offset, MYSQL_HEADER_LEN + 1, header);
@@ -720,7 +722,9 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more_out, modu
 
     *more_out = more;
 
-    if (only_ok && !more)
+    // Treat complete multi-statement result sets that consist of only OK packets as a single result set
+    // TODO: Review this, it doesn't look very convincing.
+    if (only_ok && !more && num_packets > 1)
     {
         total = 2;
     }
