@@ -1176,6 +1176,21 @@ static bool stop_monitor(MXS_MONITOR* mon)
     return actually_stopped;
 }
 
+static string monitored_servers_to_string(MXS_MONITORED_SERVER** array, size_t array_size)
+{
+    string rval;
+    if (array_size > 0)
+    {
+        const char* separator = "";
+        for (size_t i = 0; i < array_size; i++)
+        {
+            rval += separator;
+            rval += array[i]->server->unique_name;
+            separator = ",";
+        }
+    }
+    return rval;
+}
 /**
  * Daignostic interface
  *
@@ -1196,8 +1211,14 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
                "Enabled" : "Disabled");
     dcb_printf(dcb, "Detect stale master:    %s\n", (handle->detectStaleMaster == 1) ?
                "Enabled" : "Disabled");
-    dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
+    if (handle->n_excluded > 0)
+    {
+        dcb_printf(dcb, "Non-promotable servers (failover): ");
+        dcb_printf(dcb, "%s\n",
+                   monitored_servers_to_string(handle->excluded_servers, handle->n_excluded).c_str());
+    }
 
+    dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
     for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
     {
         MySqlServerInfo *serv_info = get_server_info(handle, db);
@@ -1265,7 +1286,11 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     {
         json_object_set_new(rval, "script", json_string(handle->script));
     }
-
+    if (handle->n_excluded > 0)
+    {
+        string list = monitored_servers_to_string(handle->excluded_servers, handle->n_excluded);
+        json_object_set_new(rval, CN_NO_PROMOTE_SERVERS, json_string(list.c_str()));
+    }
     if (mon->monitored_servers)
     {
         json_t* arr = json_array();

@@ -2444,41 +2444,41 @@ MXS_MONITORED_SERVER* mon_get_monitored_server(const MXS_MONITOR* mon, SERVER* s
 int mon_config_get_servers(const MXS_CONFIG_PARAMETER* params, const char* key, const MXS_MONITOR* mon,
                            MXS_MONITORED_SERVER*** monitored_servers_out)
 {
-    ss_dassert(*monitored_servers_out == NULL);
+    ss_dassert(monitored_servers_out != NULL && *monitored_servers_out == NULL);
     SERVER** servers = NULL;
     int servers_size = config_get_server_list(params, key, &servers);
-    int rval = 0;
+    int found = 0;
     // All servers in the array must be monitored by the given monitor.
     if (servers_size > 0)
     {
         MXS_MONITORED_SERVER** monitored_array =
             (MXS_MONITORED_SERVER**)MXS_CALLOC(servers_size, sizeof(MXS_MONITORED_SERVER*));
-        bool error = false;
-        for (int i = 0; i < servers_size && !error; i++)
+        for (int i = 0; i < servers_size; i++)
         {
             MXS_MONITORED_SERVER* mon_serv = mon_get_monitored_server(mon, servers[i]);
             if (mon_serv != NULL)
             {
-                monitored_array[i] = mon_serv;
+                monitored_array[found++] = mon_serv;
             }
             else
             {
-                MXS_ERROR("Server '%s' is not monitored by monitor '%s'.", servers[i]->unique_name, mon->name);
-                error = true;
+                MXS_WARNING("Server '%s' is not monitored by monitor '%s'.",
+                            servers[i]->unique_name, mon->name);
             }
         }
         MXS_FREE(servers);
 
-        if (error)
+        ss_dassert(found <= servers_size);
+        if (found == 0)
         {
             MXS_FREE(monitored_array);
-            rval = -1;
+            monitored_array = NULL;
         }
-        else
+        else if (found < servers_size)
         {
-            *monitored_servers_out = monitored_array;
-            rval = servers_size;
+            monitored_array = (MXS_MONITORED_SERVER**)MXS_REALLOC(monitored_array, found);
         }
+        *monitored_servers_out = monitored_array;
     }
-    return rval;
+    return found;
 }
