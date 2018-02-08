@@ -79,7 +79,13 @@ void get_maxscale_ips(TestConnections& test, vector<string>* pIps)
     to_collection(output, "\n", pIps);
     transform(pIps->begin(), pIps->end(), pIps->begin(), extract_ip);
 
-    pIps->erase(find(pIps->begin(), pIps->end(), "127.0.0.1"));
+    // Remove 127.0.0.1 if it is present.
+    auto i = find(pIps->begin(), pIps->end(), "127.0.0.1");
+
+    if (i != pIps->end())
+    {
+        pIps->erase(i);
+    }
 }
 
 }
