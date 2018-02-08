@@ -1186,35 +1186,51 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
     const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
 
-    dcb_printf(dcb, "Automatic failover:\t%s\n", handle->auto_failover ? "Enabled" : "Disabled");
-    dcb_printf(dcb, "Failcount:\t\t%d\n", handle->failcount);
-    dcb_printf(dcb, "Failover Timeout:\t%u\n", handle->failover_timeout);
-    dcb_printf(dcb, "Switchover Timeout:\t%u\n", handle->switchover_timeout);
-    dcb_printf(dcb, "Auto rejoin:\t\t%s\n", handle->auto_rejoin ? "Enabled" : "Disabled");
-    dcb_printf(dcb, "MaxScale MonitorId:\t%lu\n", handle->id);
-    dcb_printf(dcb, "Replication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
-    dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
-    dcb_printf(dcb, "Server information\n\n");
+    dcb_printf(dcb, "Automatic failover:     %s\n", handle->auto_failover ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Failcount:              %d\n", handle->failcount);
+    dcb_printf(dcb, "Failover timeout:       %u\n", handle->failover_timeout);
+    dcb_printf(dcb, "Switchover timeout:     %u\n", handle->switchover_timeout);
+    dcb_printf(dcb, "Automatic rejoin:       %s\n", handle->auto_rejoin ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "MaxScale monitor ID:    %lu\n", handle->id);
+    dcb_printf(dcb, "Detect replication lag: %s\n", (handle->replicationHeartbeat == 1) ?
+               "Enabled" : "Disabled");
+    dcb_printf(dcb, "Detect stale master:    %s\n", (handle->detectStaleMaster == 1) ?
+               "Enabled" : "Disabled");
+    dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
 
     for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
     {
         MySqlServerInfo *serv_info = get_server_info(handle, db);
-        dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
-        dcb_printf(dcb, "Server ID: %" PRId64 "\n", serv_info->server_id);
-        dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
-        dcb_printf(dcb, "Slave configured: %s\n", serv_info->slave_configured ? "YES" : "NO");
-        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_status.slave_io_running ? "YES" : "NO");
-        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_status.slave_sql_running ? "YES" : "NO");
-        dcb_printf(dcb, "Master ID: %" PRId64 "\n", serv_info->slave_status.master_server_id);
-        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->slave_status.master_log_file.c_str());
-        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->slave_status.read_master_log_pos);
+        dcb_printf(dcb, "Server:                 %s\n", db->server->unique_name);
+        dcb_printf(dcb, "Server ID:              %" PRId64 "\n", serv_info->server_id);
+        dcb_printf(dcb, "Read only:              %s\n", serv_info->read_only ? "YES" : "NO");
+        dcb_printf(dcb, "Slave configured:       %s\n", serv_info->slave_configured ? "YES" : "NO");
+        if (serv_info->slave_configured)
+        {
+            dcb_printf(dcb, "Slave IO running:       %s\n", serv_info->slave_status.slave_io_running ? "YES" : "NO");
+            dcb_printf(dcb, "Slave SQL running:      %s\n", serv_info->slave_status.slave_sql_running ? "YES" : "NO");
+            dcb_printf(dcb, "Master ID:              %" PRId64 "\n", serv_info->slave_status.master_server_id);
+            dcb_printf(dcb, "Master binlog file:     %s\n", serv_info->slave_status.master_log_file.c_str());
+            dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->slave_status.read_master_log_pos);
+        }
+        if (serv_info->gtid_current_pos.server_id != SERVER_ID_UNKNOWN)
+        {
+            dcb_printf(dcb, "Gtid current position:  %s\n",
+                       serv_info->gtid_current_pos.to_string().c_str());
+        }
+        if (serv_info->gtid_binlog_pos.server_id != SERVER_ID_UNKNOWN)
+        {
+            dcb_printf(dcb, "Gtid binlog position:   %s\n",
+                       serv_info->gtid_current_pos.to_string().c_str());
+        }
         if (serv_info->slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN)
         {
-            dcb_printf(dcb, "Gtid_IO_Pos: %s\n", serv_info->slave_status.gtid_io_pos.to_string().c_str());
+            dcb_printf(dcb, "Gtid slave IO position: %s\n",
+                       serv_info->slave_status.gtid_io_pos.to_string().c_str());
         }
         if (handle->multimaster)
         {
-            dcb_printf(dcb, "Master group: %d\n", serv_info->group);
+            dcb_printf(dcb, "Master group:           %d\n", serv_info->group);
         }
 
         dcb_printf(dcb, "\n");
@@ -1273,11 +1289,12 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
                                 json_string(serv_info->slave_status.master_log_file.c_str()));
             json_object_set_new(srv, "master_binlog_position",
                                 json_integer(serv_info->slave_status.read_master_log_pos));
-            if (serv_info->slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN)
-            {
-                json_object_set_new(srv, "gtid_io_pos",
+            json_object_set_new(srv, "gtid_current_pos",
+                                json_string(serv_info->gtid_current_pos.to_string().c_str()));
+            json_object_set_new(srv, "gtid_binlog_pos",
+                                json_string(serv_info->gtid_binlog_pos.to_string().c_str()));
+            json_object_set_new(srv, "gtid_io_pos",
                                     json_string(serv_info->slave_status.gtid_io_pos.to_string().c_str()));
-            }
             if (handle->multimaster)
             {
                 json_object_set_new(srv, "master_group", json_integer(serv_info->group));
@@ -1713,6 +1730,11 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     }
     /* Query a few settings. */
     read_server_variables(database, serv_info);
+    /* If gtid domain exists and server is 10.0, update gtid:s */
+    if (handle->master_gtid_domain >= 0 && serv_info->version == MYSQL_SERVER_VERSION_100)
+    {
+        update_gtids(handle, database, serv_info);
+    }
     /* Check for MariaDB 10.x.x and get status for multi-master replication */
     if (serv_info->version == MYSQL_SERVER_VERSION_100 || serv_info->version == MYSQL_SERVER_VERSION_55)
     {

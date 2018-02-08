@@ -515,15 +515,15 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
         break;
     }
 
-    dcb_printf(dcb, "Monitor:           %p\n", monitor);
-    dcb_printf(dcb, "Name:              %s\n", monitor->name);
-    dcb_printf(dcb, "State:             %s\n", state);
-    dcb_printf(dcb, "Sampling interval: %lu milliseconds\n", monitor->interval);
-    dcb_printf(dcb, "Connect Timeout:   %i seconds\n", monitor->connect_timeout);
-    dcb_printf(dcb, "Read Timeout:      %i seconds\n", monitor->read_timeout);
-    dcb_printf(dcb, "Write Timeout:     %i seconds\n", monitor->write_timeout);
-    dcb_printf(dcb, "Connect attempts:  %i \n", monitor->connect_attempts);
-    dcb_printf(dcb, "Monitored servers: ");
+    dcb_printf(dcb, "Monitor:                %p\n", monitor);
+    dcb_printf(dcb, "Name:                   %s\n", monitor->name);
+    dcb_printf(dcb, "State:                  %s\n", state);
+    dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", monitor->interval);
+    dcb_printf(dcb, "Connect Timeout:        %i seconds\n", monitor->connect_timeout);
+    dcb_printf(dcb, "Read Timeout:           %i seconds\n", monitor->read_timeout);
+    dcb_printf(dcb, "Write Timeout:          %i seconds\n", monitor->write_timeout);
+    dcb_printf(dcb, "Connect attempts:       %i \n", monitor->connect_attempts);
+    dcb_printf(dcb, "Monitored servers:      ");
 
     const char *sep = "";
 
@@ -543,12 +543,12 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
         }
         else
         {
-            dcb_printf(dcb, "\t(no diagnostics)\n");
+            dcb_printf(dcb, " (no diagnostics)\n");
         }
     }
     else
     {
-        dcb_printf(dcb, "\tMonitor failed\n");
+        dcb_printf(dcb, " Monitor failed\n");
     }
     dcb_printf(dcb, "\n");
 }
