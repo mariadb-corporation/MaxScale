@@ -198,7 +198,7 @@ std::string type_to_table_name(const char* type)
 
 static std::string unquote(std::string str)
 {
-    if (str[0] == '\"')
+    if (str[0] == '\"' ||str[0] == '\'')
     {
         str = str.substr(1, str.length() - 2);
     }
@@ -246,7 +246,11 @@ bool run_test(TestConnections& test)
                         std::string input = unquote(test_set[x].values[j]);
                         std::string output = row->value(field_name);
 
-                        if (input != output && (input != "NULL" || output != ""))
+                        if (input == output || (input == "NULL" && (output == "" || output == "0")))
+                        {
+                            // Expected result
+                        }
+                        else
                         {
                             test.tprintf("Result mismatch: %s(%s) => %s",
                                          test_set[x].types[i], input.c_str(), output.c_str());
