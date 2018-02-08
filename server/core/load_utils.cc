@@ -24,6 +24,7 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <algorithm>
+#include <string>
 
 #include <maxscale/modinfo.h>
 #include <maxscale/log_manager.h>
