@@ -31,6 +31,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <sstream>
 #include <sys/time.h>
 #include <fstream>
 
