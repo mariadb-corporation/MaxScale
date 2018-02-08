@@ -26,6 +26,26 @@
  * Functions for session command handling
  */
 
+
+static std::string extract_error(GWBUF* buffer)
+{
+    std::string rval;
+
+    if (MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(buffer))))
+    {
+        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer));
+        char replybuf[replylen];
+        gwbuf_copy_data(buffer, 0, gwbuf_length(buffer), (uint8_t*)replybuf);
+        std::string err;
+        std::string msg;
+        err.append(replybuf + 8, 5);
+        msg.append(replybuf + 13, replylen - 4 - 5);
+        rval = err + ": " + msg;
+    }
+
+    return rval;
+}
+
 /**
  * Discards the slave connection if its response differs from the master's response
  *
@@ -88,7 +108,12 @@ void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
                      * be compared to it */
                     rses->sescmd_responses[id] = cmd;
 
-                    if (command == MXS_COM_STMT_PREPARE)
+                    if (cmd == MYSQL_REPLY_ERR)
+                    {
+                        MXS_INFO("Session command no. %lu failed: %s",
+                                 id, extract_error(*ppPacket).c_str());
+                    }
+                    else if (command == MXS_COM_STMT_PREPARE)
                     {
                         /** Map the returned response to the internal ID */
                         MXS_INFO("PS ID %u maps to internal ID %lu", resp.id, id);
