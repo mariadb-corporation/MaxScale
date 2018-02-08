@@ -15,7 +15,7 @@
 #include <maxscale/cdefs.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <mysql.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/server.h>
 
 MXS_BEGIN_DECLS
@@ -123,5 +123,20 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
  * @param server  The server whose version information should be updated.
  */
 void mxs_mysql_set_server_version(MYSQL* mysql, SERVER* server);
+
+/**
+ * Enable/disable the logging of all SQL statements MaxScale sends to
+ * the servers.
+ *
+ * @param enable If true, enable, if false, disable.
+ */
+void mxs_mysql_set_log_statements(bool enable);
+
+/**
+ * Returns whether SQL statements sent to the servers are logged or not.
+ *
+ * @return True, if statements are logged, false otherwise.
+ */
+bool mxs_mysql_get_log_statements();
 
 MXS_END_DECLS

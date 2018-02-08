@@ -1276,8 +1276,6 @@ static void clientReply(MXS_ROUTER *instance,
      */
     if (backend->session_command_count())
     {
-        check_session_command_reply(writebuf, backend);
-
         /** This discards all responses that have already been sent to the client */
         bool rconn = false;
         process_sescmd_response(rses, backend, &writebuf, &rconn);

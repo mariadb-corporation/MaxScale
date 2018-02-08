@@ -17,7 +17,7 @@
 
 MXS_BEGIN_DECLS
 
-#define QUERY_CLASSIFIER_VERSION {1, 1, 0}
+#define MXS_QUERY_CLASSIFIER_VERSION {2, 0, 0}
 
 /**
  * qc_init_kind_t specifies what kind of initialization should be performed.

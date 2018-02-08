@@ -218,7 +218,7 @@ typedef struct mxs_router_object
  * must update these versions numbers in accordance with the rules in
  * modinfo.h.
  */
-#define MXS_ROUTER_VERSION  { 2, 0, 0 }
+#define MXS_ROUTER_VERSION  { 3, 0, 0 }
 
 /**
  * Specifies capabilities specific for routers. Common capabilities

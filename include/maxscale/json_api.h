@@ -18,8 +18,8 @@
  * @see http://jsonapi.org/format/
  */
 
-#include <maxscale/cppdefs.hh>
-#include <maxscale/jansson.hh>
+#include <maxscale/cdefs.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 

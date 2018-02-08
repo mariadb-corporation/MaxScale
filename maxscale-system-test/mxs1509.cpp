@@ -25,28 +25,6 @@ void change_master(TestConnections& test, int slave, int master, const char* nam
                   source.c_str(), test.repl->IP[master], test.repl->user_name, test.repl->password, source.c_str());
 }
 
-std::string dump_status(const StringSet& current, const StringSet& expected)
-{
-    std::stringstream ss;
-    ss << "Current status: (";
-
-    for (const auto& a: current)
-    {
-        ss << a << ",";
-    }
-
-    ss << ") Expected status: (";
-
-    for (const auto& a: expected)
-    {
-        ss << a << ",";
-    }
-
-    ss << ")";
-
-    return ss.str();
-}
-
 void check_status(TestConnections& test, const StringSet& expected_master, const StringSet& expected_slave)
 {
     sleep(2);

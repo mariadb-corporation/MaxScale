@@ -15,6 +15,7 @@
 #include <climits>
 #include <string>
 #include <sstream>
+#include <iostream>
 #include <vector>
 
 namespace
@@ -385,6 +386,7 @@ int Mariadb_nodes::start_replication()
 
     for (int i = 0; i < N; i++)
     {
+        execute_query(nodes[i], "SET GLOBAL read_only=OFF");
         execute_query(nodes[i], "STOP SLAVE;");
 
         if (g_require_gtid)
@@ -551,6 +553,20 @@ int Mariadb_nodes::unblock_all_nodes()
     return rval;
 }
 
+bool is_readonly(MYSQL* conn)
+{
+    bool rval = false;
+    char output[512];
+    find_field(conn, "SHOW VARIABLES LIKE 'read_only'", "Value", output);
+
+    if (strcasecmp(output, "OFF") != 0)
+    {
+        rval = true;
+    }
+
+    return rval;
+}
+
 bool Mariadb_nodes::check_master_node(MYSQL *conn)
 {
     bool rval = true;
@@ -600,10 +616,7 @@ bool Mariadb_nodes::check_master_node(MYSQL *conn)
         }
     }
 
-    char output[512];
-    find_field(conn, "SHOW VARIABLES LIKE 'read_only'", "Value", output);
-
-    if (strcmp(output, "OFF"))
+    if (is_readonly(conn))
     {
         printf("The master is in read-only mode\n");
         rval = false;
@@ -754,7 +767,8 @@ int Mariadb_nodes::check_replication()
         else if (bad_slave_thread_status(nodes[i], "Slave_IO_Running", i) ||
                  bad_slave_thread_status(nodes[i], "Slave_SQL_Running", i) ||
                  wrong_replication_type(nodes[i]) ||
-                 multi_source_replication(nodes[i], i))
+                 multi_source_replication(nodes[i], i) ||
+                 is_readonly(nodes[i]))
         {
             res = 1;
             if (verbose)
@@ -1443,4 +1457,22 @@ int Mariadb_nodes::prepare_servers()
         }
     }
     return rval;
+}
+
+void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
+{
+    std::stringstream change_master;
+    change_master << "CHANGE MASTER TO MASTER_HOST = '" << IP[master]
+        << "', MASTER_PORT = " << port[master] << ", MASTER_USE_GTID = " << type << ", "
+        "MASTER_USER='repl', MASTER_PASSWORD='repl';";
+
+    if (verbose)
+    {
+        std::cout << "Server " << slave + 1 << " starting to replicate from server " << master + 1 << std::endl;
+       std::cout << "Query is '" << change_master.str() << "'" << std::endl;
+    }
+
+    execute_query(nodes[slave], "STOP SLAVE;");
+    execute_query(nodes[slave], change_master.str().c_str());
+    execute_query(nodes[slave], "START SLAVE;");
 }

@@ -35,7 +35,8 @@ const maxscale_params = [
     'auth_read_timeout',
     'auth_write_timeout',
     'admin_auth',
-    'admin_log_auth_failures'
+    'admin_log_auth_failures',
+    'passive'
 ]
 
 exports.command = 'alter <command>'
