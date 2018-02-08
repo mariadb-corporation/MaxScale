@@ -73,7 +73,9 @@ string extract_ip(string s)
 
 void get_maxscale_ips(TestConnections& test, vector<string>* pIps)
 {
-    string output(test.ssh_maxscale_output(false, "ip addr|fgrep inet|fgrep -v ::"));
+    static const char COMMAND[] = "export PATH=$PATH:/sbin:/usr/sbin; ip addr|fgrep inet|fgrep -v ::";
+
+    string output(test.ssh_maxscale_output(false, COMMAND));
 
     to_collection(output, "\n", pIps);
     transform(pIps->begin(), pIps->end(), pIps->begin(), extract_ip);
