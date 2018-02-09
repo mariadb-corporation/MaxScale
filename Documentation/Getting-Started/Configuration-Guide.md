@@ -548,6 +548,22 @@ has multiple interfaces.
 local_address=192.168.1.254
 ```
 
+#### `users_refresh_time`
+
+How often, in seconds, MaxScale at most may refresh the users from the
+backend server.
+
+MaxScale will at startup load the users from the backend server, but if
+the authentication of a user fails, MaxScale assumes it is because a new
+user has been created and will thus refresh the users. By default, MaxScale
+will do that at most once per 30 seconds and with this configuration option
+that can be changed. The minimum allowed value is 10 seconds. A negative
+value disables the refreshing entirelly. Note that using `maxadmin` it is
+possible to explicitly cause the users of a service to be reloaded.
+```
+users_refresh_time=120
+```
+
 ### Service
 
 A service represents the database service that MariaDB MaxScale offers to the

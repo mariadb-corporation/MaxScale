@@ -78,6 +78,7 @@ typedef struct
     int           query_retries;                       /**< Number of times a interrupted query is retried */
     time_t        query_retry_timeout;                 /**< Timeout for query retries */
     char*         local_address;                       /**< Local address to use when connecting */
+    time_t        users_refresh_time;                  /**< How often the users can be refreshed */
 } MXS_CONFIG;
 
 /**

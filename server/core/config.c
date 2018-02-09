@@ -1405,6 +1405,44 @@ handle_global_item(const char *name, const char *value)
     {
         gateway.local_address = MXS_STRDUP_A(value);
     }
+    else if (strcmp(name, "users_refresh_time") == 0)
+    {
+        char* endptr;
+        long users_refresh_time = strtol(value, &endptr, 0);
+        if (*endptr == '\0')
+        {
+            if (users_refresh_time < 0)
+            {
+                MXS_NOTICE("Value of 'users_refresh_time' is less than 0, users will "
+                           "not be automatically refreshed.");
+                // Strictly speaking they will be refreshed once every 68 years,
+                // but I just don't beleave the uptime will be that long.
+                users_refresh_time = INT32_MAX;
+            }
+            else if (users_refresh_time < USERS_REFRESH_TIME_MIN)
+            {
+                MXS_WARNING("%s is less than the allowed minimum value of %d for the "
+                            "configuration option 'users_refresh_time', using the minimum value.",
+                            value, USERS_REFRESH_TIME_MIN);
+                users_refresh_time = USERS_REFRESH_TIME_MIN;
+            }
+
+            if (users_refresh_time > INT32_MAX)
+            {
+                // To ensure that there will be no overflows when
+                // we later do arithmetic.
+                users_refresh_time = INT32_MAX;
+            }
+
+            gateway.users_refresh_time = users_refresh_time;
+        }
+        else
+        {
+            MXS_ERROR("%s is an invalid value for 'users_refresh_time', "
+                      "using default %d instead.", value, USERS_REFRESH_TIME_DEFAULT);
+            gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
+        }
+    }
     else
     {
         for (i = 0; lognames[i].name; i++)

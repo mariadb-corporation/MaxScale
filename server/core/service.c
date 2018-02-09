@@ -337,10 +337,19 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 
     /**
      * At service start last update is set to USERS_REFRESH_TIME seconds earlier. This way MaxScale
-     * could try reloading users just after startup.
+     * could try reloading users just after startup. But only if user refreshing has not been turned off.
      */
-    service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
-    service->rate_limit.warned = false;
+    MXS_CONFIG* config = config_get_global_options();
+    if (config->users_refresh_time == INT32_MAX)
+    {
+        service->rate_limit.last = time(NULL);
+        service->rate_limit.warned = true; // So that there will not be a refresh rate warning.
+    }
+    else
+    {
+        service->rate_limit.last = time(NULL) - config->users_refresh_time;
+        service->rate_limit.warned = false;
+    }
 
     if (port->listener->func.listen(port->listener, config_bind))
     {
@@ -1612,13 +1621,16 @@ int service_refresh_users(SERVICE *service)
     if (spinlock_acquire_nowait(&service->spin))
     {
         time_t now = time(NULL);
+        MXS_CONFIG* config = config_get_global_options();
 
         /* Check if refresh rate limit has been exceeded */
-        if (now < service->rate_limit.last + USERS_REFRESH_TIME)
+        if (now < service->rate_limit.last + config->users_refresh_time)
         {
             if (!service->rate_limit.warned)
             {
-                MXS_WARNING("[%s] Refresh rate limit exceeded for load of users' table.", service->name);
+                MXS_WARNING("[%s] Refresh rate limit (once every %ld seconds) exceeded for "
+                            "load of users' table.",
+                            service->name, config->users_refresh_time);
                 service->rate_limit.warned = true;
             }
         }

@@ -99,7 +99,8 @@ typedef struct server_ref_t
 #define SERVICE_PARAM_UNINIT -1
 
 /* Refresh rate limits for load users from database */
-#define USERS_REFRESH_TIME         30 /* Allowed time interval (in seconds) after last update*/
+#define USERS_REFRESH_TIME_DEFAULT   30 /* Allowed time interval (in seconds) after last update*/
+#define USERS_REFRESH_TIME_MIN       10 /* Minimum allowed time interval (in seconds)*/
 
 /** Default timeout values used by the connections which fetch user authentication data */
 #define DEFAULT_AUTH_CONNECT_TIMEOUT 3
