@@ -318,6 +318,26 @@ moment the rejoining server lost connection, the rejoining server cannot
 continue replication. This is an issue if the master has changed and
 the new master does not have *log_slave_updates* on.
 
+### External master support
+
+The monitor detects if a server in the cluster is replicating from an external
+master (a server that is not monitored by the monitor). If the replicating
+server is the cluster master server, then the cluster itself is considered to
+have an external master.
+
+If a failover/switchover happens, the new master server is set to replicate from
+the cluster external master server. The usename and password for the replication
+are defined in `replication_user` and `replication_password`. The address and
+port used are the ones shown by `SHOW ALL SLAVES STATUS` on the old cluster
+master server. In the case of switchover, the old master also stops replicating
+from the external server to preserve the topology.
+
+After failover the new master is replicating from the external master. If the
+failed old master comes back online, it is also replicating from the external
+server. To normalize the situation, either have *auto_rejoin* on or manually
+execute a rejoin. This will redirect the old master to the current cluster
+master.
+
 ### Configuration parameters
 
 #### `auto_failover`
