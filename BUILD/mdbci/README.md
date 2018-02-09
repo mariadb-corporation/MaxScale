@@ -12,14 +12,14 @@ Installation instructions: [PREPARATION_FOR_MDBCI](https://github.com/mariadb-co
 
 ## Build script
 
-BUILD/mdbci/build.sh prepares VM, executes Maxscale build and creates binary RPM or DEB repository.
+[BUILD/mdbci/build.sh](BUILD/mdbci/build.sh) prepares VM, executes Maxscale build and creates binary RPM or DEB repository.
 
 Build options can be defined in the environmental variables. For variables descriptions and default values see 
-comments in the (BUILD/mdbci/build.sh) and (BUILD/mdbci/set_build_variables.sh)
+comments in the [BUILD/mdbci/build.sh](BUILD/mdbci/build.sh) and [BUILD/mdbci/set_build_variables.sh](set_build_variables.sh)
 
 ## Default build
 
-(BUILD/mdbci/build.sh) can be executed without defining any variable.
+[BUILD/mdbci/build.sh](BUILD/mdbci/build.sh) can be executed without defining any variable.
 
 Prerequirements:
 * MDBCI installed
@@ -31,13 +31,15 @@ By default VM will not stay alive after the build. Please use ```export do_not_d
 to prevent VM from being destroyed. In this case VM have to be destroyed manually by ```mdbci destroy```
 command.
 
-VM will be created in $HOME/vms directory, binary repository will be created the in $HOME/repository/ directory.
-The name of binary repository sub-directory is generated based on source default branch name and current date and time.
+VM will be created in ```$HOME/vms directory```, binary repository will be created the in 
+```$HOME/repository/``` directory.
+The name of binary repository sub-directory is generated based on source default
+branch name and current date and time.
 
 ## Upgrade test
 
 If `run_upgrade_test` variable set to `yes` the upgrade test will be executed after the build.
-Upgrade test includes installation of old version of Maxscale from production repository 
+Upgrade test includes installation of old version of Maxscale from [production repository]
 (https://downloads.mariadb.com/MaxScale/) and upgrading it to recently built version.
 
 The old version can be defined in `old_target` variable.
