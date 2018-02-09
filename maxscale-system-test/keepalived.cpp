@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Stop Maxscale 000 and waiting\n");
     system(Test->maxscales->stop_vm_command[0]);
-    sleep(120);
+    sleep(20);
 
     version = print_version_string(Test);
     if (strcmp(version, "10.2-server2") != 0)
