@@ -30,10 +30,13 @@ Template for this configuration is
 [maxscale-system-test/mdbci/templates/default.json.template](templates/default.json.template)
 
 Another templates:
-| ```nogalera``` |only 1 VM for Maxscale and 4 for Master/Slaves|
-| ```twomaxscales``` |2 VMs for Maxscale and 4 for Master/Slaves|
-| ```big``` |1 VM for Maxscale, 8 for Master/Slaves and 4 for Galera|
-| ```big15``` |1 VM for Maxscale, 15 for Master/Slaves and 4 for Galera|
+
+Template name|Description
+---|---
+ ```nogalera``` |only 1 VM for Maxscale and 4 for Master/Slaves|
+ ```twomaxscales``` |2 VMs for Maxscale and 4 for Master/Slaves|
+ ```big``` |1 VM for Maxscale, 8 for Master/Slaves and 4 for Galera|
+ ```big15``` |1 VM for Maxscale, 15 for Master/Slaves and 4 for Galera|
 
 ```box``` for ```big``` and ```big15``` is hard-coded as ```centos_7_aws_large```
 
@@ -56,16 +59,18 @@ and current date/time
 
 ### Basic run_test.sh parameters
 
-|```target``` |name of binary repository to install Maxscale from|
-|```box``` |Vagrant box to be used to create VMs |
-|```test_set``` |Set of test to be executed in the 'ctest' format|
-|```version```|Version of DB server in Master/Slave backend|
-|```galera_version```|Version of DB server in Galera backend|
-|```product```|Type of backend - 'mariadb' or 'mysql'|
-|```template```|Name of *.json.template file with VMs descriptions in MDBCI format|
-|```team_keys```|Path to the file with public ssh keys - this file is loaded to VMs|
-|```do_not_destroy_vm```|if 'yes' VMs stay alive after test|
-|```name```|The name of test run - any string to identify VMs set|
+Variable name|Meaning
+---|---
+```target``` |name of binary repository to install Maxscale from|
+```box``` |Vagrant box to be used to create VMs |
+```test_set``` |Set of test to be executed in the 'ctest' format|
+```version```|Version of DB server in Master/Slave backend|
+```galera_version```|Version of DB server in Galera backend|
+```product```|Type of backend - 'mariadb' or 'mysql'|
+```template```|Name of *.json.template file with VMs descriptions in MDBCI format|
+```team_keys```|Path to the file with public ssh keys - this file is loaded to VMs|
+```do_not_destroy_vm```|if 'yes' VMs stay alive after test|
+```name```|The name of test run - any string to identify VMs set|
 
 
 For complete list of environmental variables see comments in 
@@ -76,11 +81,14 @@ See [https://github.com/mariadb-corporation/mdbci/tree/integration/BOXES](https:
 for available boxes.
 
 ```test_set``` examples
-|```-I 4,4```|Run single test number 4|
-|```-I 4,4,1,25,30```|Run tests number 4, 25 and 30 (the number '1' is a 'Stride' parameter)|
-|```-I 1,10```|Run tests from 1 to 10|
-|```-L REPL_BACKED```|Run all tests with 'REPL_BACKEND' label|
-|```-LE UNSTABLE```|Run all tests EXCEPT tests with 'UNSTABLE' label|
+
+test_set|Meaning
+---|---
+```-I 4,4```|Run single test number 4|
+```-I 4,4,1,25,30```|Run tests number 4, 25 and 30 (the number '1' is a 'Stride' parameter)|
+```-I 1,10```|Run tests from 1 to 10|
+```-L REPL_BACKED```|Run all tests with 'REPL_BACKEND' label|
+```-LE UNSTABLE```|Run all tests EXCEPT tests with 'UNSTABLE' label|
 
 If ```galera_version``` is not defined the value of ```version``` is used also for Galera backend
 
