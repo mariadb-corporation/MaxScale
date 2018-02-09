@@ -340,7 +340,6 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
      * could try reloading users just after startup.
      */
     service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
-    service->rate_limit.nloads = 1;
     service->rate_limit.warned = false;
 
     if (port->listener->func.listen(port->listener, config_bind))
@@ -1615,8 +1614,7 @@ int service_refresh_users(SERVICE *service)
         time_t now = time(NULL);
 
         /* Check if refresh rate limit has been exceeded */
-        if ((now < service->rate_limit.last + USERS_REFRESH_TIME) ||
-            (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME))
+        if (now < service->rate_limit.last + USERS_REFRESH_TIME)
         {
             if (!service->rate_limit.warned)
             {
@@ -1626,15 +1624,8 @@ int service_refresh_users(SERVICE *service)
         }
         else
         {
-            service->rate_limit.nloads++;
-
-            /** If we have reached the limit on users refreshes, reset refresh time and count */
-            if (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)
-            {
-                service->rate_limit.nloads = 1;
-                service->rate_limit.last = now;
-                service->rate_limit.warned = false;
-            }
+            service->rate_limit.last = now;
+            service->rate_limit.warned = false;
 
             ret = 0;
 
