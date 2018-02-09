@@ -71,8 +71,9 @@ typedef struct
 */
 typedef struct
 {
-    int nloads;
-    time_t last;
+    int    nloads; /*<< How many times have they been loaded. */
+    time_t last;   /*<< When was the users loaded the last time. */
+    bool   warned; /**< Has it been warned that the limit has been exceeded. */
 } SERVICE_REFRESH_RATE;
 
 typedef struct server_ref_t

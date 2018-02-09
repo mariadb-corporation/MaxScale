@@ -341,6 +341,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
      */
     service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
     service->rate_limit.nloads = 1;
+    service->rate_limit.warned = false;
 
     if (port->listener->func.listen(port->listener, config_bind))
     {
@@ -1617,7 +1618,11 @@ int service_refresh_users(SERVICE *service)
         if ((now < service->rate_limit.last + USERS_REFRESH_TIME) ||
             (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME))
         {
-            MXS_ERROR("[%s] Refresh rate limit exceeded for load of users' table.", service->name);
+            if (!service->rate_limit.warned)
+            {
+                MXS_WARNING("[%s] Refresh rate limit exceeded for load of users' table.", service->name);
+                service->rate_limit.warned = true;
+            }
         }
         else
         {
@@ -1628,6 +1633,7 @@ int service_refresh_users(SERVICE *service)
             {
                 service->rate_limit.nloads = 1;
                 service->rate_limit.last = now;
+                service->rate_limit.warned = false;
             }
 
             ret = 0;
