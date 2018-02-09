@@ -8,16 +8,14 @@ System level tests for MaxScale
   - >= 4 machines for Master/Slave
   - >= 4 machines for Galera cluster
 - environmental variables contains all information about backend: IPs, user names, passwords, paths to tools, etc
-- backed can be created with help of [MDBCI tool](https://github.com/OSLL/mdbci)
-- configuring of Master/Slave and Galera can be done with help of [build scripts package](https://github.com/mariadb-corporation/build-scripts-vagrant)
+- backed can be created with help of [MDBCI tool](https://github.com/mariadb-corporation/mdbci)
+- configuring of Master/Slave and Galera can be done with help of [maxscale-system-test/mdbci/run_test.sh script](mdbci/run_test.sh)
 
 ## Manuals
 
-[How to run tests](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/RUN_TEST.md)
+[MDBCI and running tests basics](mdbci/README.md)
 
 [Hints: How to write a test](HOW_TO_WRITE_TEST.md)
-
-[Build and test environment setup (if you want to play with MDBCI and Vagrant on your local machine](ENV_SETUP.md)
 
 [Jenkins instructions](JENKINS.md)
 
