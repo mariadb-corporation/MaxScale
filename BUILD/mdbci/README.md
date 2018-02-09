@@ -17,6 +17,8 @@ Installation instructions: [PREPARATION_FOR_MDBCI](https://github.com/mariadb-co
 Build options can be defined in the environmental variables. For variables descriptions and default values see 
 comments in the [BUILD/mdbci/build.sh](build.sh) and [BUILD/mdbci/set_build_variables.sh](set_build_variables.sh)
 
+Script does not store build log, please use ```stdout``` and ```stderr``` redirection to store log.
+
 ## Default build
 
 [BUILD/mdbci/build.sh](build.sh) can be executed without defining any variable.
