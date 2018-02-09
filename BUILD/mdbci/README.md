@@ -2,7 +2,7 @@
 
 MDBCI is a tool to manage virtual machines (VM). VM can be described in
 the simple JSON format.
-JSON templates can be found in (BUILD/mdbci/templates)
+JSON templates can be found in [BUILD/mdbci/templates](templates)
 
 libvirt/qemu and AWS VMs are supported.
 
@@ -12,14 +12,14 @@ Installation instructions: [PREPARATION_FOR_MDBCI](https://github.com/mariadb-co
 
 ## Build script
 
-[BUILD/mdbci/build.sh](BUILD/mdbci/build.sh) prepares VM, executes Maxscale build and creates binary RPM or DEB repository.
+[BUILD/mdbci/build.sh](build.sh) prepares VM, executes Maxscale build and creates binary RPM or DEB repository.
 
 Build options can be defined in the environmental variables. For variables descriptions and default values see 
 comments in the [BUILD/mdbci/build.sh](BUILD/mdbci/build.sh) and [BUILD/mdbci/set_build_variables.sh](set_build_variables.sh)
 
 ## Default build
 
-[BUILD/mdbci/build.sh](BUILD/mdbci/build.sh) can be executed without defining any variable.
+[BUILD/mdbci/build.sh](build.sh) can be executed without defining any variable.
 
 Prerequirements:
 * MDBCI installed
