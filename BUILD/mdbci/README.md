@@ -4,6 +4,10 @@ MDBCI is a tool to manage virtual machines (VM). VM can be described in
 the simple JSON format.
 JSON templates can be found in [BUILD/mdbci/templates](templates)
 
+MDBCI_VM_PATH have to be set before executing any MDBCI commands. 
+This variable points to the directory to store 'Vagrantfile's
+for all VMs as well as all additional files (e.g. *network_config)
+
 libvirt/qemu and AWS VMs are supported.
 
 See [MDBCI README](https://github.com/mariadb-corporation/mdbci#mariadb-continuous-integration-infrastructure-mdbci) for details.
