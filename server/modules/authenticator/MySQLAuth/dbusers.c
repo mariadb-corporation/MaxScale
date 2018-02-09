@@ -701,8 +701,8 @@ static bool get_hostname(DCB *dcb, char *client_hostname, size_t size)
 
     if (lookup_result != 0)
     {
-        MXS_ERROR("Client hostname lookup failed, getnameinfo() returned: '%s'.",
-                  gai_strerror(lookup_result));
+        MXS_WARNING("Client hostname lookup of '%s' failed, getnameinfo() returned: '%s'.",
+                    client_hostname, gai_strerror(lookup_result));
     }
     else
     {
