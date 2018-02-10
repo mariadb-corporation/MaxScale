@@ -78,8 +78,8 @@ typedef struct
 */
 typedef struct
 {
-    int nloads;
-    time_t last;
+    time_t last;   /*<< When was the users loaded the last time. */
+    bool   warned; /**< Has it been warned that the limit has been exceeded. */
 } SERVICE_REFRESH_RATE;
 
 typedef struct server_ref_t
@@ -106,8 +106,8 @@ typedef struct server_ref_t
 #define SERVICE_PARAM_UNINIT -1
 
 /* Refresh rate limits for load users from database */
-#define USERS_REFRESH_TIME         30 /* Allowed time interval (in seconds) after last update*/
-#define USERS_REFRESH_MAX_PER_TIME 4  /* Max number of load calls within the time interval */
+#define USERS_REFRESH_TIME_DEFAULT   30 /* Allowed time interval (in seconds) after last update*/
+#define USERS_REFRESH_TIME_MIN       10 /* Minimum allowed time interval (in seconds)*/
 
 /** Default timeout values used by the connections which fetch user authentication data */
 #define DEFAULT_AUTH_CONNECT_TIMEOUT 3

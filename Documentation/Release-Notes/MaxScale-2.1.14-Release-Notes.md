@@ -28,6 +28,12 @@ For any problems you encounter, please consider submitting a bug report at
 
 ## New Features
 
+### Users Refresh Time
+
+It is now possible to adjust how frequently MaxScale may refresh
+the users of service. Please refer to the documentation for
+[details](../Getting-Started/Configuration-Guide.md#users_refresh_time).
+
 ### Local Address
 
 It is now possible to specify what local address MaxScale should

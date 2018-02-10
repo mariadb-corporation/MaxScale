@@ -335,6 +335,34 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         }
     }
 
+    MXS_CONFIG* config = config_get_global_options();
+    time_t last;
+    bool warned;
+
+    /**
+     * At service start last update is set to config->users_refresh_time seconds earlier.
+     * This way MaxScale could try reloading users just after startup. But only if user
+     * refreshing has not been turned off.
+     */
+    if (config->users_refresh_time == INT32_MAX)
+    {
+        last = time(NULL);
+        warned = true;  // So that there will not be a refresh rate warning.
+    }
+    else
+    {
+        last = time(NULL) - config->users_refresh_time;
+        warned = false;
+    }
+
+    int nthreads = config_threadcount();
+
+    for (int i = 0; i < nthreads; ++i)
+    {
+        service->rate_limits[i].last = last;
+        service->rate_limits[i].warned = warned;
+    }
+
     if (port->listener->func.listen(port->listener, config_bind))
     {
         port->listener->session = session_alloc(service, port->listener);
@@ -1629,22 +1657,24 @@ int service_refresh_users(SERVICE *service)
         self = 0;
     }
 
+    MXS_CONFIG* config = config_get_global_options();
+
     /* Check if refresh rate limit has been exceeded */
-    if ((now < service->rate_limits[self].last + USERS_REFRESH_TIME) ||
-        (service->rate_limits[self].nloads >= USERS_REFRESH_MAX_PER_TIME))
+    if (now < service->rate_limits[self].last + config->users_refresh_time)
     {
-        MXS_ERROR("[%s] Refresh rate limit exceeded for load of users' table.", service->name);
+        if (!service->rate_limits[self].warned)
+        {
+            MXS_WARNING("[%s] Refresh rate limit (once every %ld seconds) exceeded for "
+                        "load of users' table.",
+                        service->name, config->users_refresh_time);
+            service->rate_limits[self].warned = true;
+        }
     }
     else
     {
-        service->rate_limits[self].nloads++;
+        service->rate_limits[self].last = now;
+        service->rate_limits[self].warned = false;
 
-        /** If we have reached the limit on users refreshes, reset refresh time and count */
-        if (service->rate_limits[self].nloads >= USERS_REFRESH_MAX_PER_TIME)
-        {
-            service->rate_limits[self].nloads = 0;
-            service->rate_limits[self].last = now;
-        }
 
         ret = 0;
         LISTENER_ITERATOR iter;
