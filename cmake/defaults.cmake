@@ -63,8 +63,8 @@ set(INSTALL_EXPERIMENTAL TRUE CACHE BOOL "Install experimental modules")
 # Default package name
 set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
 
-# Which component to build (core, experimental, devel)
-set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel, all)")
+# Which component to build (core, experimental, devel, cdc-connector, all)
+set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel, cdc-connector, all)")
 
 # Enable AddressSanitizer: https://github.com/google/sanitizers/wiki/AddressSanitizer
 set(WITH_ASAN FALSE CACHE BOOL "Enable AddressSanitizer")
