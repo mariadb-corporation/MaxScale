@@ -232,6 +232,7 @@ typedef struct
     time_t        query_retry_timeout;                 /**< Timeout for query retries */
     bool          substitute_variables;                /**< Should environment variables be substituted */
     char*         local_address;                       /**< Local address to use when connecting */
+    time_t        users_refresh_time;                  /**< How often the users can be refreshed */
 } MXS_CONFIG;
 
 /**

@@ -3525,7 +3525,7 @@ extern "C"
         static MXS_MODULE info =
         {
             MXS_MODULE_API_QUERY_CLASSIFIER,
-            MXS_MODULE_IN_DEVELOPMENT,
+            MXS_MODULE_GA,
             MXS_QUERY_CLASSIFIER_VERSION,
             "Query classifier based upon MySQL Embedded",
             "V1.0.0",

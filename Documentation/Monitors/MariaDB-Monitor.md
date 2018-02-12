@@ -246,14 +246,16 @@ In addition, the monitor needs to know which username and password a slave
 should use when starting replication. These are given in `replication_user` and
 `replication_password`.
 
-All three operations can be activated manually through MaxAdmin. Failover
-selects the new master server automatically, switchover and rejoin require the
-user to designate the new master. Switchover also requires the user to designate
-the current master server which will be replaced by the new. Example commands
-are below:
+All three operations can be activated manually through MaxAdmin/MaxCtrl. All
+commands require the monitor instance name as first parameter. Failover selects
+the new master server automatically and does not require additional parameters.
+Switchover requires the new master server name. Additionally, the user may
+designate the current master server in the switchover command. Rejoin requires
+the name of the joining server. Example commands are below:
 
 ```
 call command mariadbmon failover MyMonitor
+call command mariadbmon switchover MyMonitor SlaveServ3
 call command mariadbmon switchover MyMonitor SlaveServ3 MasterServ
 call command mariadbmon rejoin MyMonitor NewServer2
 ```
@@ -285,7 +287,7 @@ With `auto_rejoin` active, the monitor will try to rejoin any server matching
 the above requirements. When activating rejoin manually, the user-designated
 server must fulfill the same requirements.
 
-### Limitations
+### Limitations and requirements
 
 Switchover and failover only understand simple topologies. They will not work if
 the cluster has multiple masters, relay masters, or if the topology is circular.
@@ -308,6 +310,33 @@ replicated to all slaves before they switch to the new master. To prevent this,
 any users who commonly do updates should not have the SUPER-privilege. For even
 more security, the only SUPER-user session during a switchover should be the
 MaxScale monitor user.
+
+When mixing rejoin with failover/switchover, the backends should have
+*log_slave_updates* on. The rejoining server is likely lagging behind the rest
+of the cluster. If the current cluster master does not have binary logs from the
+moment the rejoining server lost connection, the rejoining server cannot
+continue replication. This is an issue if the master has changed and
+the new master does not have *log_slave_updates* on.
+
+### External master support
+
+The monitor detects if a server in the cluster is replicating from an external
+master (a server that is not monitored by the monitor). If the replicating
+server is the cluster master server, then the cluster itself is considered to
+have an external master.
+
+If a failover/switchover happens, the new master server is set to replicate from
+the cluster external master server. The usename and password for the replication
+are defined in `replication_user` and `replication_password`. The address and
+port used are the ones shown by `SHOW ALL SLAVES STATUS` on the old cluster
+master server. In the case of switchover, the old master also stops replicating
+from the external server to preserve the topology.
+
+After failover the new master is replicating from the external master. If the
+failed old master comes back online, it is also replicating from the external
+server. To normalize the situation, either have *auto_rejoin* on or manually
+execute a rejoin. This will redirect the old master to the current cluster
+master.
 
 ### Configuration parameters
 

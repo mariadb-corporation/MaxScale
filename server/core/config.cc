@@ -146,6 +146,7 @@ const char CN_TYPE[]                          = "type";
 const char CN_UNIX[]                          = "unix";
 const char CN_USER[]                          = "user";
 const char CN_USERS[]                         = "users";
+const char CN_USERS_REFRESH_TIME[]            = "users_refresh_time";
 const char CN_VERSION_STRING[]                = "version_string";
 const char CN_WEIGHTBY[]                      = "weightby";
 const char CN_SESSION_TRACK_TRX_STATE[]       = "session_track_trx_state";
@@ -1667,6 +1668,44 @@ handle_global_item(const char *name, const char *value)
     else if (strcmp(name, CN_LOCAL_ADDRESS) == 0)
     {
         gateway.local_address = MXS_STRDUP_A(value);
+    }
+    else if (strcmp(name, CN_USERS_REFRESH_TIME) == 0)
+    {
+        char* endptr;
+        long users_refresh_time = strtol(value, &endptr, 0);
+        if (*endptr == '\0')
+        {
+            if (users_refresh_time < 0)
+            {
+                MXS_NOTICE("Value of '%s' is less than 0, users will "
+                           "not be automatically refreshed.", CN_USERS_REFRESH_TIME);
+                // Strictly speaking they will be refreshed once every 68 years,
+                // but I just don't beleave the uptime will be that long.
+                users_refresh_time = INT32_MAX;
+            }
+            else if (users_refresh_time < USERS_REFRESH_TIME_MIN)
+            {
+                MXS_WARNING("%s is less than the allowed minimum value of %d for the "
+                            "configuration option '%s', using the minimum value.",
+                            value, USERS_REFRESH_TIME_MIN, CN_USERS_REFRESH_TIME);
+                users_refresh_time = USERS_REFRESH_TIME_MIN;
+            }
+
+            if (users_refresh_time > INT32_MAX)
+            {
+                // To ensure that there will be no overflows when
+                // we later do arithmetic.
+                users_refresh_time = INT32_MAX;
+            }
+
+            gateway.users_refresh_time = users_refresh_time;
+        }
+        else
+        {
+            MXS_ERROR("%s is an invalid value for '%s', using default %d instead.",
+                      value, CN_USERS_REFRESH_TIME, USERS_REFRESH_TIME_DEFAULT);
+            gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
+        }
     }
     else
     {

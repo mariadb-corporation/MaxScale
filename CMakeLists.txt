@@ -93,11 +93,6 @@ endif()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBDIR})
 
-# Only do packaging if configured
-if(PACKAGE)
-  include(cmake/package.cmake)
-endif()
-
 # Make sure the release notes for this release are present if it is a stable one
 if(${MAXSCALE_VERSION} MATCHES "-stable")
   file(GLOB ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes RELEASE_NOTES *${MAXSCALE_VERSION_NUMERIC}*.md)
@@ -238,6 +233,8 @@ if(WITH_SCRIPTS)
 endif()
 
 if(PACKAGE)
+  # Configure packaging
+  include(cmake/package.cmake)
 
   # Install the files copied by the postinst script into the share folder
   install_program(${CMAKE_BINARY_DIR}/maxscale core)
@@ -245,7 +242,8 @@ if(PACKAGE)
   install_program(${CMAKE_BINARY_DIR}/postinst core)
   install_program(${CMAKE_BINARY_DIR}/postrm core)
 
-  # CPack needs to be included after everything is configured
+  # The inclusion of CPack needs to be the last effective packaging related command. All
+  # configurations to packaging done after the call will be ignored.
   include(CPack)
 endif()
 
@@ -301,11 +299,6 @@ add_custom_target(generate_html
   -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
   -P generate-html.cmake
   COMMENT "Generating HTML files" VERBATIM)
-
-if(PACKAGE)
-  message(STATUS "You can install startup scripts and system configuration files for MaxScale by running the 'postinst' shell script located at ${CMAKE_INSTALL_PREFIX}.")
-  message(STATUS "To remove these installed files, run the 'postrm' shell script located in the same folder.")
-endif()
 
 # NOTE: If you make changes here, ensure they are compatible with the
 #       situation in paths.h.in.
