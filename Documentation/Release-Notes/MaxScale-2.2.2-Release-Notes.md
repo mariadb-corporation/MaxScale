@@ -26,6 +26,13 @@ It is now possible to specify what local address MaxScale should
 use when connecting to servers. Please refer to the documentation
 for [details](../Getting-Started/Configuration-Guide.md#local_address).
 
+### External master support for failover/switchover
+
+Failover/switchover now tries to preserve replication from an external master
+server. Check
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md#external-master-support)
+for more information.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.2.2.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.2)
