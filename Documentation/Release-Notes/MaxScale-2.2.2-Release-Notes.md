@@ -1,6 +1,6 @@
 # MariaDB MaxScale 2.2.2 Release Notes
 
-Release 2.2.2 is a XXX release.
+Release 2.2.2 is a GA release.
 
 This document describes the changes in release 2.2.2, when compared to
 release 2.2.1.
@@ -14,17 +14,37 @@ report at [Jira](https://jira.mariadb.org).
 
 ## New Features
 
+### Users Refresh Time
+
+It is now possible to adjust how frequently MaxScale may refresh
+the users of service. Please refer to the documentation for
+[details](../Getting-Started/Configuration-Guide.md#users_refresh_time).
+
+### Local Address
+
+It is now possible to specify what local address MaxScale should
+use when connecting to servers. Please refer to the documentation
+for [details](../Getting-Started/Configuration-Guide.md#local_address).
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.2.2.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.2)
 
+* [MXS-1661](https://jira.mariadb.org/browse/MXS-1661) Excessive logging by MySQLAuth at authentication error (was: MySQLAuth SQLite database can be permanently locked)
+* [MXS-1660](https://jira.mariadb.org/browse/MXS-1660) Failure to resolve hostname is considered an error
+* [MXS-1654](https://jira.mariadb.org/browse/MXS-1654) MaxScale crashes if env-variables are used without substitute_variables=1 having been defined
+* [MXS-1641](https://jira.mariadb.org/browse/MXS-1641) Fix overflow in master id
+* [MXS-1633](https://jira.mariadb.org/browse/MXS-1633) Need remove mutex in sqlite
 * [MXS-1630](https://jira.mariadb.org/browse/MXS-1630) MaxCtrl binary are not included by default in MaxScale package
+* [MXS-1628](https://jira.mariadb.org/browse/MXS-1628) Security scanner says MaxScale is vulnerable to ancient MySQL vulnerability
 * [MXS-1620](https://jira.mariadb.org/browse/MXS-1620) CentOS package symbols are stripped
 * [MXS-1615](https://jira.mariadb.org/browse/MXS-1615) Masking filter accesses wrong command argument.
 * [MXS-1614](https://jira.mariadb.org/browse/MXS-1614) MariaDBMon yet adding mysqlbackend as the protocol instead of mariadbbackend
 * [MXS-1606](https://jira.mariadb.org/browse/MXS-1606) After enabling detect_replication_lag MariaDBMon does not create the maxscale_schema.replication_heartbeat database and table
 * [MXS-1604](https://jira.mariadb.org/browse/MXS-1604) PamAuth Default Authentication is Different from MariaDB
 * [MXS-1591](https://jira.mariadb.org/browse/MXS-1591) Adding get_lock and release_lock support
+* [MXS-1586](https://jira.mariadb.org/browse/MXS-1586) Mysqlmon switchover does not immediately detect bad new master
+* [MXS-1583](https://jira.mariadb.org/browse/MXS-1583) Database firewall filter failing with multiple users statements in rules file
 * [MXS-1539](https://jira.mariadb.org/browse/MXS-1539) Authentication data should be thread specific
 
 ## Known Issues and Limitations
