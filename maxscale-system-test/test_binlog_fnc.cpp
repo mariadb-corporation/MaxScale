@@ -134,7 +134,7 @@ void test_binlog(TestConnections* Test)
     Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "Data inserting to t1 failed");
     Test->stop_timeout();
     Test->tprintf("Waiting for replication to catch up");
-    Test->set_timeout(120);
+    Test->set_timeout(500);
     Test->repl->sync_slaves();
 
     for (i = 0; i < Test->repl->N; i++)
