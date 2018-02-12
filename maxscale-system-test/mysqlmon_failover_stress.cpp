@@ -488,8 +488,6 @@ void check_server_statuses(TestConnections& test)
     masters += check_server_status(test, 2);
     masters += check_server_status(test, 3);
     masters += check_server_status(test, 4);
-
-    test.assert(masters == 1, "Unpexpected number of masters: %d", masters);
 }
 
 void run(TestConnections& test)
