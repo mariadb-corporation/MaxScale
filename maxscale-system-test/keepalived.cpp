@@ -16,6 +16,8 @@
 #include <iostream>
 #include "testconnections.h"
 
+#define FAILOVER_WAIT_TIME 5
+
 char virtual_ip[16];
 char * print_version_string(TestConnections * Test)
 {
@@ -74,14 +76,18 @@ int main(int argc, char *argv[])
         Test->maxscales->copy_to_node(i, src.c_str(), Test->maxscales->access_homedir[i]);
         Test->maxscales->ssh_node(i, cp_cmd.c_str(), true);
         Test->maxscales->ssh_node_f(i, true, "sed -i \"s/###virtual_ip###/%s/\" /etc/keepalived/keepalived.conf", virtual_ip);
+        std::string script_src = std::string(test_dir) + "/keepalived_cnf/is_maxscale_running.sh";
+        std::string script_cp_cmd = "cp " + std::string(Test->maxscales->access_homedir[i]) + "is_maxscale_running.sh /usr/bin/";
+        Test->maxscales->copy_to_node(i, script_src.c_str(), Test->maxscales->access_homedir[i]);
+        Test->maxscales->ssh_node(i, script_cp_cmd.c_str(), true);
         Test->maxscales->ssh_node(i, "sudo service keepalived restart", true);
     }
 
     print_version_string(Test);
 
-    Test->tprintf("Stop Maxscale 000 and waiting\n");
+    Test->tprintf("Suspend Maxscale 000 machine and waiting\n");
     system(Test->maxscales->stop_vm_command[0]);
-    sleep(20);
+    sleep(FAILOVER_WAIT_TIME);
 
     version = print_version_string(Test);
     if (strcmp(version, "10.2-server2") != 0)
@@ -90,14 +96,14 @@ int main(int argc, char *argv[])
     }
 
 
-    Test->tprintf("Resume Maxscale 000 and waiting\n");
+    Test->tprintf("Resume Maxscale 000 machine and waiting\n");
     system(Test->maxscales->start_vm_command[0]);
-    sleep(20);
+    sleep(FAILOVER_WAIT_TIME);
     print_version_string(Test);
 
-    Test->tprintf("Stop Maxscale 001 and waiting\n");
+    Test->tprintf("Suspend Maxscale 001 machine and waiting\n");
     system(Test->maxscales->stop_vm_command[1]);
-    sleep(20);
+    sleep(FAILOVER_WAIT_TIME);
 
     version = print_version_string(Test);
     if (strcmp(version, "10.2-server1") != 0)
@@ -106,11 +112,32 @@ int main(int argc, char *argv[])
     }
 
     print_version_string(Test);
-    Test->tprintf("Resume Maxscale 001 and waiting\n");
+    Test->tprintf("Resume Maxscale 001 machine and waiting\n");
     system(Test->maxscales->start_vm_command[1]);
-    sleep(20);
+    sleep(FAILOVER_WAIT_TIME);
     print_version_string(Test);
 
+    Test->tprintf("Stop Maxscale on 000 machine\n");
+    Test->stop_maxscale(0);
+    sleep(FAILOVER_WAIT_TIME);
+    version = print_version_string(Test);
+    if (strcmp(version, "10.2-server2") != 0)
+    {
+        Test->add_result(false, "Failover did not happen");
+    }
+
+    Test->tprintf("Start back Maxscale on 000 machine\n");
+    Test->start_maxscale(0);
+    sleep(FAILOVER_WAIT_TIME);
+
+    Test->tprintf("Stop Maxscale on 001 machine\n");
+    Test->stop_maxscale(1);
+    sleep(FAILOVER_WAIT_TIME);
+    version = print_version_string(Test);
+    if (strcmp(version, "10.2-server1") != 0)
+    {
+        Test->add_result(false, "Failover did not happen");
+    }
 
     int rval = Test->global_result;
     delete Test;
