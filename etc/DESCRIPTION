@@ -1,9 +1,0 @@
-The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
-database statements to one or more database servers using complex rules,
-a semantic understanding of the database statements and the roles of
-the various servers within the backend cluster of databases.
-
-MaxScale is designed to provide load balancing and high availability
-functionality transparently to the applications. In addition it provides
-a highly scalable and flexible architecture, with plugin components to
-support different protocols and routing decisions.

@@ -19,22 +19,49 @@ endif()
 set(CPACK_SET_DESTDIR ON)
 set(CPACK_PACKAGE_RELOCATABLE FALSE)
 set(CPACK_STRIP_FILES FALSE)
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale - The Dynamic Data Routing Platform")
 set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
 set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
 set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
-set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
-# If building devel package, change the description. Deb- and rpm-specific parameters are set in their
-# dedicated files "package_(deb/rpm).cmake"
-if (TARGET_COMPONENT STREQUAL "devel")
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale plugin development headers")
-  set(DESCRIPTION_TEXT "\
- This package contains header files required for plugin module development for MariaDB MaxScale. \
-The source of MariaDB MaxScale is not required.")
+# Descriptions for the main packages
+set(core_PACKAGE_SUMMARY "MaxScale - An intelligent database proxy")
+set(core_PACKAGE_DESCRIPTION "
+The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
+database statements to one or more database servers using complex rules,
+a semantic understanding of the database statements and the roles of
+the various servers within the backend cluster of databases.
+
+MaxScale is designed to provide load balancing and high availability
+functionality transparently to the applications. In addition it provides
+a highly scalable and flexible architecture, with plugin components to
+support different protocols and routing decisions.")
+
+set(devel_PACKAGE_SUMMARY "MaxScale plugin development headers")
+set(devel_PACKAGE_DESCRIPTION "
+This package contains header files required for plugin module development for
+MariaDB MaxScale. The source of MariaDB MaxScale is not required.")
+
+set(experimental_PACKAGE_SUMMARY "MaxScale experimental modules")
+set(experimental_PACKAGE_DESCRIPTION "
+This package contains experimental and community contributed modules for MariaDB
+MaxScale. The packages are not fully supported parts of MaxScale and should be
+considered as alpha quality software.")
+
+set(all_PACKAGE_SUMMARY ${core_PACKAGE_SUMMARY})
+set(all_PACKAGE_DESCRIPTION ${core_PACKAGE_DESCRIPTION})
+
+# Set the package description for this component
+if (${TARGET_COMPONENT}_PACKAGE_DESCRIPTION AND ${TARGET_COMPONENT}_PACKAGE_SUMMARY)
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${${TARGET_COMPONENT}_PACKAGE_SUMMARY})
+  set(CPACK_PACKAGE_DESCRIPTION ${${TARGET_COMPONENT}_PACKAGE_DESCRIPTION})
+  set(DESCRIPTION_TEXT ${${TARGET_COMPONENT}_PACKAGE_DESCRIPTION})
+
+elseif((${TARGET_COMPONENT}_PACKAGE_DESCRIPTION OR ${TARGET_COMPONENT}_PACKAGE_SUMMARY))
+  message(FATAL_ERROR "Component '${TARGET_COMPONENT}' does not define both "
+    "${TARGET_COMPONENT}_PACKAGE_DESCRIPTION and ${TARGET_COMPONENT}_PACKAGE_SUMMARY variables.")
 endif()
 
 # If we're building something other than the main package, append the target name
