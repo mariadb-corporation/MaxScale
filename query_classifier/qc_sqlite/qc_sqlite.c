@@ -2887,7 +2887,7 @@ static QUERY_CLASSIFIER qc =
 MODULE_INFO info =
 {
     MODULE_API_QUERY_CLASSIFIER,
-    MODULE_BETA_RELEASE,
+    MODULE_GA,
     QUERY_CLASSIFIER_VERSION,
     "Query classifier using sqlite.",
 };

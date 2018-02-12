@@ -2237,7 +2237,7 @@ static QUERY_CLASSIFIER qc =
 MODULE_INFO info =
 {
     MODULE_API_QUERY_CLASSIFIER,
-    MODULE_IN_DEVELOPMENT,
+    MODULE_GA,
     QUERY_CLASSIFIER_VERSION,
     const_cast<char*>("Query classifier based upon MySQL Embedded"),
 };
