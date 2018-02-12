@@ -3587,7 +3587,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_MODULE info =
     {
         MXS_MODULE_API_QUERY_CLASSIFIER,
-        MXS_MODULE_BETA_RELEASE,
+        MXS_MODULE_GA,
         QUERY_CLASSIFIER_VERSION,
         "Query classifier using sqlite.",
         "V1.0.0",
