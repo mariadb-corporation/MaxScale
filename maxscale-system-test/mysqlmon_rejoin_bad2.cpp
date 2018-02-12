@@ -129,9 +129,9 @@ int main(int argc, char** argv)
         return test.global_result;
     }
 
-    // Manually set current master to replicate from the old master to quickly fix the cluster.
-    cout << "Setting server " << master_id_new << " to replicate from server 1. Auto-rejoin should redirect "
-        "servers so that in the end server 1 is master and all others are slaves." << endl;
+    // Set current master to replicate from the old master. The old master should remain as the current master.
+    cout << "Setting server " << master_id_new << " to replicate from server 1. Server " << master_id_new
+         << " should remain as the master because server 1 doesn't have the latest event it has." << endl;
     const char CHANGE_CMD_FMT[] = "CHANGE MASTER TO MASTER_HOST = '%s', MASTER_PORT = %d, "
         "MASTER_USE_GTID = current_pos, MASTER_USER='repl', MASTER_PASSWORD = 'repl';";
     char cmd[256];
@@ -143,9 +143,10 @@ int main(int argc, char** argv)
     sleep(5);
     get_output(test);
 
-    expect(test, "server1", "Master", "Running");
-    expect(test, "server2", "Slave", "Running");
+    expect(test, "server1", "Running");
+    expect(test, "server2", "Master", "Running");
     expect(test, "server3", "Slave", "Running");
     expect(test, "server4", "Slave", "Running");
+    test.repl->fix_replication();
     return test.global_result;
 }
