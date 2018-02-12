@@ -3892,6 +3892,12 @@ static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
                     MXS_WARNING("Replicating from external master, skipping final check.");
                     rval = true;
                 }
+                else if (redirected_slaves.empty())
+                {
+                    // No slaves to check. Assume success.
+                    rval = true;
+                    MXS_DEBUG("Failover: no slaves to redirect, skipping stabilization check.");
+                }
                 else if (wait_cluster_stabilization(mon, new_master, redirected_slaves, seconds_remaining))
                 {
                     rval = true;
