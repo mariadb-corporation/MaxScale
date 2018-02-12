@@ -48,6 +48,13 @@
 #endif
 
 /**
+ * Needs to be defined for INT32_MAX and others
+ */
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
+#endif
+
+/**
  * Define intended for use with strerror.
  *
  * char errbuf[MXS_STRERROR_BUFLEN];
