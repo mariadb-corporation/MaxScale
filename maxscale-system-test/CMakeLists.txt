@@ -533,6 +533,9 @@ add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACK
 # Execute given SQL through readwritesplit (with temporary tables usage)
 add_test_executable(mxs957.cpp mxs957 replication LABELS readwritesplit REPL_BACKEND)
 
+# Proxy protocol test
+add_test_executable(proxy_protocol.cpp proxy_protocol proxy_protocol LABELS MySQLAuth MySQLProtocol)
+
 # Regression case for the bug "Defunct processes after maxscale have executed script during failover"
 add_test_executable(mxs1045.cpp mxs1045 mxs1045 LABELS maxscale REPL_BACKEND)
 
