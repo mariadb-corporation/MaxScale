@@ -10,6 +10,21 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### MaxCtrl Moved to `maxscale` Package
+
+The MaxCtrl client is now a part of the main MaxScale package, `maxscale`. This
+means that the `maxctrl` executable is now immediately available upon the
+installation of MaxScale.
+
+In the 2.2.1 beta version MaxCtrl was in its own package. If you have a previous
+installation of MaxCtrl, please remove it before upgrading to MaxScale 2.2.2.
+
+### MaxScale C++ CDC Connector Integration
+
+The MaxScale C++ CDC Connector is now distributed as a part of MaxScale. The
+connector libraries are in a separate package, `maxscale-cdc-connector`. Refer
+to the [CDC Connector documentation](../Connectors/CDC-Connector.md) for more details.
+
 ## Dropped Features
 
 ## New Features

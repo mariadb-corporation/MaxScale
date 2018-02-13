@@ -26,3 +26,9 @@ string in slashes, e.g. `match=/^select/` defines the pattern `^select`.
 
 Binlog server automatically accepts GTID connection from MariaDB 10 slave servers
 by saving all incoming GTIDs into a SQLite map database.
+
+### MaxCtrl Included in Main Package
+
+In the 2.2.1 beta version MaxCtrl was in its own package whereas in 2.2.2
+it is in the main `maxscale` package. If you have a previous installation
+of MaxCtrl, please remove it before upgrading to MaxScale 2.2.2.
