@@ -4,7 +4,6 @@
 ## About MariaDB MaxScale
 
  - [About MariaDB MaxScale](About/About-MaxScale.md)
- - [Release Notes](Release-Notes/MaxScale-2.1.5-Release-Notes.md)
  - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
 
@@ -53,7 +52,6 @@ These tutorials are for specific use cases and module combinations.
 
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
- - [MariaDB MaxScale HA with Corosync-Pacemaker](Tutorials/MaxScale-HA-with-Corosync-Pacemaker.md)
  - [MariaDB MaxScale HA with Lsyncd](Tutorials/MaxScale-HA-with-lsyncd.md)
  - [Nagios Plugins for MariaDB MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
 
