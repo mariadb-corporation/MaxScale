@@ -275,7 +275,7 @@ function pingCluster(hosts) {
     var promises = []
 
     hosts.forEach(function(i) {
-        promises.push(request(getUri(i, false, '')))
+        promises.push(request(getUri(i, this.argv.secure, '')))
     })
 
     return Promise.all(promises)
