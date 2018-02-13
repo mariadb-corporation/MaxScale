@@ -1,12 +1,18 @@
-# maxscale-cdc-connector
+# Maxscale CDC Connector
 
 The C++ connector for the [MariaDB MaxScale](https://mariadb.com/products/technology/maxscale)
 [CDC system](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-22-avrorouter-tutorial/).
 
 ## Usage
 
-The CDC connector is a single-file connector which allows it to be
-relatively easily embedded into existing applications.
+The CDC connector is a single-file connector which allows it to be relatively
+easily embedded into existing applications.
+
+## Examples
+
+The source code
+[contains an example](https://github.com/mariadb-corporation/MaxScale/blob/2.2/connectors/cdc-connector/examples/main.cpp)
+that demonstrates basic usage of the MaxScale CDC Connector.
 
 ## Dependencies
 
@@ -45,5 +51,5 @@ sudo zypper install -y libjansson-devel openssl-devel cmake make gcc-c++ git
 ## Building and Packaging
 
 To build and package the connector as a library, follow MaxScale build
-instructions with the exception of adding `-DTARGET_COMPONENT=devel` to
-the CMake call.
+instructions with the exception of adding `-DTARGET_COMPONENT=devel` to the
+CMake call.

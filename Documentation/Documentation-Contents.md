@@ -113,6 +113,10 @@ Documentation for MaxScale protocol modules.
  - [Change Data Capture (CDC) Protocol](Protocols/CDC.md)
  - [Change Data Capture (CDC) Users](Protocols/CDC_users.md)
 
+The MaxScale CDC Connector provides a C++ API for consuming data from a CDC system.
+
+ - [CDC Connector](Connectors/CDC-Connector.md)
+
 ## Authenticators
 
 A short description of the authentication module type can be found in the
