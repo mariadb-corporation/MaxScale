@@ -43,10 +43,17 @@ All command accept the following global options.
   -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format
                   and each value must be separated by a comma.
                                             [string] [default: "localhost:8989"]
-  -s, --secure    Enable HTTPS requests             [boolean] [default: "false"]
-  -t, --timeout   Request timeout in milliseconds    [number] [default: "10000"]
-  -q, --quiet     Silence all output                [boolean] [default: "false"]
-  --tsv           Print tab separated output        [boolean] [default: "false"]
+  -t, --timeout   Request timeout in milliseconds      [number] [default: 10000]
+  -q, --quiet     Silence all output                  [boolean] [default: false]
+  --tsv           Print tab separated output          [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure              Enable HTTPS requests     [boolean] [default: false]
+  --tls-key                 Path to TLS private key                     [string]
+  --tls-cert                Path to TLS public certificate              [string]
+  --tls-ca-cert             Path to TLS CA certificate                  [string]
+  --tls-verify-server-cert  Whether to verify server TLS certificates
+                                                       [boolean] [default: true]
 
 Options:
   --version  Show version number                                       [boolean]

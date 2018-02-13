@@ -16,6 +16,7 @@ var colors = require('colors/safe');
 var Table = require('cli-table');
 var consoleLib = require('console')
 var os = require('os')
+var fs = require('fs')
 
 module.exports = function() {
 
@@ -57,6 +58,13 @@ module.exports = function() {
                         argv.reject(err)
                     })
             }, function(err) {
+
+                if (err.error.cert) {
+                    // TLS errors cause extremely verbose errors, truncate the certifiate details
+                    // from the error output
+                    delete err.error.cert
+                }
+
                 // One of the HTTP request pings to the cluster failed, log the error
                 argv.reject(JSON.stringify(err.error, null, 4))
             })
@@ -181,6 +189,31 @@ module.exports = function() {
         return Promise.resolve(colors.green('OK'))
     }
 
+
+    this.setTlsCerts = function(args) {
+        args.agentOptions = {}
+        if (this.argv['tls-key']) {
+            args.agentOptions.key = fs.readFileSync(this.argv['tls-key'])
+        }
+
+        if (this.argv['tls-cert']) {
+            args.agentOptions.cert = fs.readFileSync(this.argv['tls-cert'])
+        }
+
+        if (this.argv['tls-ca-cert']) {
+            args.agentOptions.ca = fs.readFileSync(this.argv['tls-ca-cert'])
+        }
+
+        if (this.argv['tls-passphrase']) {
+            args.agentOptions.passphrase = this.argv['tls-passphrase']
+        }
+
+        if (!this.argv['tls-verify-server-cert']) {
+            args.agentOptions.checkServerIdentity = function() {
+            }
+        }
+    }
+
     // Helper for executing requests and handling their responses, returns a
     // promise that is fulfilled when all requests successfully complete. The
     // promise is rejected if any of the requests fails.
@@ -189,6 +222,7 @@ module.exports = function() {
         args.uri = getUri(host, this.argv.secure, resource)
         args.json = true
         args.timeout = this.argv.timeout
+        setTlsCerts(args)
 
         return request(args)
             .then(function(res) {
@@ -275,7 +309,11 @@ function pingCluster(hosts) {
     var promises = []
 
     hosts.forEach(function(i) {
-        promises.push(request(getUri(i, this.argv.secure, '')))
+        args = {}
+        args.uri = getUri(i, this.argv.secure, '')
+        args.json = true
+        setTlsCerts(args)
+        promises.push(request(args))
     })
 
     return Promise.all(promises)
