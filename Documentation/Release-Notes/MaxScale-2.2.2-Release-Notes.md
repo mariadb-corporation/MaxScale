@@ -40,6 +40,9 @@ for more information.
 * [MXS-1661](https://jira.mariadb.org/browse/MXS-1661) Excessive logging by MySQLAuth at authentication error (was: MySQLAuth SQLite database can be permanently locked)
 * [MXS-1660](https://jira.mariadb.org/browse/MXS-1660) Failure to resolve hostname is considered an error
 * [MXS-1654](https://jira.mariadb.org/browse/MXS-1654) MaxScale crashes if env-variables are used without substitute_variables=1 having been defined
+* [MXS-1653](https://jira.mariadb.org/browse/MXS-1653) sysbench failed to initialize w/ MaxScale read/write splitter
+* [MXS-1647](https://jira.mariadb.org/browse/MXS-1647) Module API version is not checked
+* [MXS-1643](https://jira.mariadb.org/browse/MXS-1643) Too many monitor events are triggered
 * [MXS-1641](https://jira.mariadb.org/browse/MXS-1641) Fix overflow in master id
 * [MXS-1633](https://jira.mariadb.org/browse/MXS-1633) Need remove mutex in sqlite
 * [MXS-1630](https://jira.mariadb.org/browse/MXS-1630) MaxCtrl binary are not included by default in MaxScale package
@@ -53,6 +56,7 @@ for more information.
 * [MXS-1586](https://jira.mariadb.org/browse/MXS-1586) Mysqlmon switchover does not immediately detect bad new master
 * [MXS-1583](https://jira.mariadb.org/browse/MXS-1583) Database firewall filter failing with multiple users statements in rules file
 * [MXS-1539](https://jira.mariadb.org/browse/MXS-1539) Authentication data should be thread specific
+* [MXS-1508](https://jira.mariadb.org/browse/MXS-1508) Failover is sometimes triggered on non-simple topologies
 
 ## Known Issues and Limitations
 
