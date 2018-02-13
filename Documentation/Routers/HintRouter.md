@@ -1,5 +1,7 @@
 # HintRouter
 
+HintRouter was introduced in 2.2 and is still beta.
+
 ## Overview
 
 The **HintRouter** module is a simple router intended to operate in conjunction
