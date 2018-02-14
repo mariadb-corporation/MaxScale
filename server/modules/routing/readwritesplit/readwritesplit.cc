@@ -485,18 +485,7 @@ static bool route_stored_query(RWSplitSession *rses)
         if (!routeQuery((MXS_ROUTER*)rses->router, (MXS_ROUTER_SESSION*)rses, query_queue))
         {
             rval = false;
-            char* sql = modutil_get_SQL(query_queue);
-
-            if (sql)
-            {
-                MXS_ERROR("Routing query \"%s\" failed.", sql);
-                MXS_FREE(sql);
-            }
-            else
-            {
-                MXS_ERROR("Failed to route query.");
-            }
-            gwbuf_free(query_queue);
+            MXS_ERROR("Failed to route queued query.");
         }
 
         if (rses->query_queue == NULL)
