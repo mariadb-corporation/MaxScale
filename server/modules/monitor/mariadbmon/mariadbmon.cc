@@ -2563,7 +2563,8 @@ monitorMain(void *arg)
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (handle->auto_rejoin && !failover_performed && cluster_can_be_joined(handle))
+        if (!config_get_global_options()->passive && handle->auto_rejoin &&
+            !failover_performed && cluster_can_be_joined(handle))
         {
             // Check if any servers should be autojoined to the cluster
             ServerVector joinable_servers;
