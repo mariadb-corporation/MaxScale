@@ -19,6 +19,7 @@
 #include <utils.h>
 #include <netinet/tcp.h>
 #include <gw.h>
+#include <mysqld_error.h>
 
 /* The following can be compared using memcmp to detect a null password */
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN]="";
@@ -86,7 +87,7 @@ static int gw_read_reply_or_error(DCB *dcb, MYSQL_session local_session);
 static int gw_read_and_write(DCB *dcb, MYSQL_session local_session);
 static int gw_read_backend_handshake(MySQLProtocol *conn);
 static int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload);
-static int gw_receive_backend_auth(MySQLProtocol *protocol);
+static int gw_receive_backend_auth(MySQLProtocol *protocol, uint16_t *code);
 static mysql_auth_state_t gw_send_authentication_to_backend(char *dbname,
                                       char *user,
                                       uint8_t *passwd,
@@ -883,12 +884,13 @@ gw_read_reply_or_error(DCB *dcb, MYSQL_session local_session)
         }
         CHK_SESSION(session);
 
+        uint16_t code = 0;
         if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV)
         {
             /**
              * Read backend's reply to authentication message
              */
-            int receive_rc = gw_receive_backend_auth(backend_protocol);
+            int receive_rc = gw_receive_backend_auth(backend_protocol, &code);
 
             switch (receive_rc)
             {
@@ -945,7 +947,12 @@ gw_read_reply_or_error(DCB *dcb, MYSQL_session local_session)
             if (backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED &&
                 dcb->session->state != SESSION_STATE_STOPPING)
             {
-                service_refresh_users(dcb->session->service);
+                // If the authentication failed due to too many connections,
+                // we do not refresh the users as it would not change anything.
+                if (code != ER_TOO_MANY_USER_CONNECTIONS)
+                {
+                    service_refresh_users(dcb->session->service);
+                }
             }
 #if defined(SS_DEBUG)
             MXS_DEBUG("%lu [gw_read_backend_event] "
@@ -2224,11 +2231,14 @@ gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
  * Receive the MySQL authentication packet from backend, packet # is 2
  *
  * @param protocol The MySQL protocol structure
- * @return -1 in case of failure, 0 if there was nothing to read, 1 if read
- * was successful.
+ * @param code     [out] The protocol error code, if -1 is returned.
+
+ * @return -1 in case of failure,
+ *          0 if there was nothing to read,
+ *          1 if read was successful.
  */
 static int
-gw_receive_backend_auth(MySQLProtocol *protocol)
+gw_receive_backend_auth(MySQLProtocol *protocol, uint16_t *code)
 {
     int n = -1;
     GWBUF *head = NULL;
@@ -2258,6 +2268,7 @@ gw_receive_backend_auth(MySQLProtocol *protocol)
         else if (ptr[4] == 0xff)
         {
             size_t len = MYSQL_GET_PACKET_LEN(ptr);
+            *code = MYSQL_GET_ERRCODE(ptr);
             char* err = strndup(&((char *)ptr)[8], 5);
             char* bufstr = strndup(&((char *)ptr)[13], len - 4 - 5);
 
