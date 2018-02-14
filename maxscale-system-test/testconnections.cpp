@@ -546,7 +546,10 @@ void TestConnections::process_template(int m, const char *template_name, const c
     tprintf("Template file is %s\n", template_file);
 
     sprintf(str, "cp %s maxscale.cnf", template_file);
-    tprintf("Executing '%s' command\n", str);
+    if (verbose)
+    {
+        tprintf("Executing '%s' command\n", str);
+    }
     if (system(str) != 0)
     {
         tprintf("Error copying maxscale.cnf template\n");
