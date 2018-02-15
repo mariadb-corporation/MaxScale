@@ -8,6 +8,20 @@ The C++ connector for the [MariaDB MaxScale](https://mariadb.com/products/techno
 The CDC connector is a single-file connector which allows it to be relatively
 easily embedded into existing applications.
 
+## API Overview
+
+A CDC connection object is prepared by instantiating the `CDC::Connection`
+class. To create the actual connection, call the `CDC::Connection::connect`
+method of the class.
+
+After the connection has been created, call the `CDC::Connection::read` method
+to get a row of data. The `CDC::Row::length` method tells how many values a row
+has and `CDC::Row::value` is used to access that value. The field name of a
+value can be extracted with the `CDC::Row::key` method and the current GTID of a
+row of data is retrieved with the `CDC::Row::gtid` method.
+
+To close the connection, destroy the instantiated object.
+
 ## Examples
 
 The source code
