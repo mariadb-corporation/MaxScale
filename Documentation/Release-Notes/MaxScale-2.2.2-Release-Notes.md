@@ -25,6 +25,12 @@ The MaxScale C++ CDC Connector is now distributed as a part of MaxScale. The
 connector libraries are in a separate package, `maxscale-cdc-connector`. Refer
 to the [CDC Connector documentation](../Connectors/CDC-Connector.md) for more details.
 
+### Output of `show threads` has changed.
+
+For each thread is shown what state it is in, how many descriptors are currently
+in the thread's epoll instance and how many descriptors in total have been in the
+thread's epoll instance.
+
 ## Dropped Features
 
 ## New Features
