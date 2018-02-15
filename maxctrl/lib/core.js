@@ -21,7 +21,7 @@ program
     .strict()
     .exitProcess(false)
     .showHelpOnFail(false)
-    .group(['u', 'p', 'h', 's', 't', 'q', 'tsv'], 'Global Options:')
+    .group(['u', 'p', 'h', 't', 'q', 'tsv'], 'Global Options:')
     .option('u', {
         alias:'user',
         global: true,
@@ -42,27 +42,45 @@ program
         default: 'localhost:8989',
         type: 'string'
     })
-    .option('s', {
-        alias: 'secure',
-        describe: 'Enable HTTPS requests',
-        default: 'false',
-        type: 'boolean'
-    })
     .option('t', {
         alias: 'timeout',
         describe: 'Request timeout in milliseconds',
-        default: '10000',
+        default: 10000,
         type: 'number'
     })
     .option('q', {
         alias: 'quiet',
         describe: 'Silence all output',
-        default: 'false',
+        default: false,
         type: 'boolean'
     })
     .option('tsv', {
         describe: 'Print tab separated output',
-        default: 'false',
+        default: false,
+        type: 'boolean'
+    })
+    .group(['s', 'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-verify-server-cert'], 'HTTPS/TLS Options:')
+    .option('s', {
+        alias: 'secure',
+        describe: 'Enable HTTPS requests',
+        default: false,
+        type: 'boolean'
+    })
+    .option('tls-key', {
+        describe: 'Path to TLS private key',
+        type: 'string'
+    })
+    .option('tls-cert', {
+        describe: 'Path to TLS public certificate',
+        type: 'string'
+    })
+    .option('tls-ca-cert', {
+        describe: 'Path to TLS CA certificate',
+        type: 'string'
+    })
+    .option('tls-verify-server-cert', {
+        describe: 'Whether to verify server TLS certificates',
+        default: true,
         type: 'boolean'
     })
 

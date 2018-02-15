@@ -489,7 +489,15 @@ void check_server_statuses(TestConnections& test)
     masters += check_server_status(test, 3);
     masters += check_server_status(test, 4);
 
-    test.assert(masters == 1, "Unpexpected number of masters: %d", masters);
+    if (masters == 0)
+    {
+        test.tprintf("No master, checking that autofail has been turned off.");
+        test.log_includes(0, "disabling automatic failover");
+    }
+    else if (masters != 1)
+    {
+        test.assert(!true, "Unexpected number of masters: %d", masters);
+    }
 }
 
 void run(TestConnections& test)

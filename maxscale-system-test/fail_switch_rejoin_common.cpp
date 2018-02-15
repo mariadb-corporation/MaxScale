@@ -147,13 +147,16 @@ bool generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
     timespec short_sleep;
     short_sleep.tv_sec = 0;
     short_sleep.tv_nsec = 100000000;
+
+    mysql_query(conn, "BEGIN");
+
     for (int i = 0; i < insert_count; i++)
     {
         test.try_query(conn, INSERT, inserts++);
         nanosleep(&short_sleep, NULL);
     }
-    sleep(1);
     bool rval = false;
+
     mysql_query(conn, SELECT);
     MYSQL_RES *res = mysql_store_result(conn);
     test.assert(res != NULL, "Query did not return a result set");
@@ -184,6 +187,7 @@ bool generate_traffic_and_check(TestConnections& test, MYSQL* conn, int insert_c
         }
         mysql_free_result(res);
     }
+    mysql_query(conn, "COMMIT");
     return rval;
 }
 

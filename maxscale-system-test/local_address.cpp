@@ -278,6 +278,7 @@ void run_test(TestConnections& test, const vector<string>& ips)
     create_user_and_grants(test, zUser1, zPassword1, local_ip);
     create_user_and_grants(test, zUser2, zPassword2, ip2);
     create_user_and_grants(test, zUser2, zPassword2, local_ip);
+    test.repl->sync_slaves();
 
     test.tprintf("\n");
     test.tprintf("Testing default; alice should be able to access, bob not.");

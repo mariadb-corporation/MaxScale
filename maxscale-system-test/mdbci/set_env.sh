@@ -20,6 +20,7 @@ export maxscale_log_dir="/var/log/maxscale/"
 # Number of nodes
 export galera_N=`cat "$MDBCI_VM_PATH/$config_name"_network_config | grep galera | grep network | wc -l`
 export node_N=`cat "$MDBCI_VM_PATH/$config_name"_network_config | grep node | grep network | wc -l`
+export maxscale_N=`cat "$MDBCI_VM_PATH/$config_name"_network_config | grep maxscale | grep network | wc -l`
 sed "s/^/export /g" "$MDBCI_VM_PATH/$config_name"_network_config > "$curr_dir"/"$config_name"_network_config_export
 source "$curr_dir"/"$config_name"_network_config_export
 
@@ -40,7 +41,7 @@ export maxscale_password="skysql"
 
 export maxadmin_password="mariadb"
 
-for prefix in "node" "galera"
+for prefix in "node" "galera" "maxscale"
 do
 	N_var="$prefix"_N
 	Nx=${!N_var}
@@ -77,8 +78,8 @@ do
 			eval 'export $stop_cmd_var="$mysql_exe stop "'
 		fi
 
-		eval 'export "$prefix"_"$num"_start_vm_command="cd $mdbci_dir/$config_name;vagrant up node_$num --provider=$provider; cd $curr_dir"'
-		eval 'export "$prefix"_"$num"_kill_vm_command="cd $mdbci_dir/$config_name;vagrant halt node_$num --provider=$provider; cd $curr_dir"'
+		eval 'export "$prefix"_"$num"_start_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant resume ${prefix}_$num ; cd $curr_dir"'
+		eval 'export "$prefix"_"$num"_stop_vm_command="cd ${MDBCI_VM_PATH}/$config_name;vagrant suspend ${prefix}_$num ; cd $curr_dir"'
 	done
 done
 

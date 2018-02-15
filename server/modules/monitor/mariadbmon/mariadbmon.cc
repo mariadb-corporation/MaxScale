@@ -12,7 +12,7 @@
  */
 
 /**
- * @file mysql_mon.c - A MySQL replication cluster monitor
+ * @file A MariaDB replication cluster monitor
  */
 
 #define MXS_MODULE_NAME "mariadbmon"
@@ -811,8 +811,8 @@ extern "C"
 
     MXS_MODULE* MXS_CREATE_MODULE()
     {
-        MXS_NOTICE("Initialise the MySQL Monitor module.");
-        static const char ARG_MONITOR_DESC[] = "MySQL Monitor name (from configuration file)";
+        MXS_NOTICE("Initialise the MariaDB Monitor module.");
+        static const char ARG_MONITOR_DESC[] = "Monitor name (from configuration file)";
         static modulecmd_arg_type_t switchover_argv[] =
         {
             {
@@ -865,7 +865,7 @@ extern "C"
             MXS_MODULE_API_MONITOR,
             MXS_MODULE_GA,
             MXS_MONITOR_VERSION,
-            "A MySQL Master/Slave replication monitor",
+            "A MariaDB Master/Slave replication monitor",
             "V1.5.0",
             MXS_NO_MODULE_CAPABILITIES,
             &MyObject,
@@ -939,7 +939,7 @@ void info_free_func(void *val)
 /**
  * @brief Helper function that initializes the server info hashtable
  *
- * @param handle MySQL monitor handle
+ * @param handle MariaDB monitor handle
  * @param database List of monitored databases
  * @return True on success, false if initialization failed. At the moment
  *         initialization can only fail if memory allocation fails.
@@ -1671,7 +1671,7 @@ static MXS_MONITORED_SERVER *build_mysql51_replication_tree(MXS_MONITOR *mon)
 /**
  * Monitor an individual server
  *
- * @param handle        The MySQL Monitor object
+ * @param handle    The Monitor object
  * @param database  The database to probe
  */
 static void
@@ -2534,7 +2534,7 @@ monitorMain(void *arg)
             }
         }
 
-        /* Do now the heartbeat replication set/get for MySQL Replication Consistency */
+        /* Generate the replication heartbeat event by performing an update */
         if (replication_heartbeat &&
             root_master &&
             (SERVER_IS_MASTER(root_master->server) ||
@@ -2563,7 +2563,8 @@ monitorMain(void *arg)
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (handle->auto_rejoin && !failover_performed && cluster_can_be_joined(handle))
+        if (!config_get_global_options()->passive && handle->auto_rejoin &&
+            !failover_performed && cluster_can_be_joined(handle))
         {
             // Check if any servers should be autojoined to the cluster
             ServerVector joinable_servers;
@@ -2598,11 +2599,12 @@ monitorMain(void *arg)
 }
 
 /**
- * Fetch a MySQL node by node_id
+ * Fetch a node by node_id
  *
- * @param ptr           The list of servers to monitor
- * @param node_id   The MySQL server_id to fetch
- * @return      The server with the required server_id
+ * @param ptr     The list of servers to monitor
+ * @param node_id The server_id to fetch
+ *
+ * @return The server with the required server_id
  */
 static MXS_MONITORED_SERVER *
 getServerByNodeId(MXS_MONITORED_SERVER *ptr, long node_id)
@@ -2621,10 +2623,10 @@ getServerByNodeId(MXS_MONITORED_SERVER *ptr, long node_id)
 }
 
 /**
- * Fetch a MySQL slave node from a node_id
+ * Fetch a slave node from a node_id
  *
  * @param ptr                The list of servers to monitor
- * @param node_id            The MySQL server_id to fetch
+ * @param node_id            The server_id to fetch
  * @param slave_down_setting Whether to accept or reject slaves which are down
  * @return                   The slave server of this node_id
  */
@@ -2899,9 +2901,8 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database
 
 /*******
  * This function computes the replication tree
- * from a set of MySQL Master/Slave monitored servers
- * and returns the root server with SERVER_MASTER bit.
- * The tree is computed even for servers in 'maintenance' mode.
+ * from a set of monitored servers and returns the root server with
+ * SERVER_MASTER bit. The tree is computed even for servers in 'maintenance' mode.
  *
  * @param handle    The monitor handle
  * @param num_servers   The number of servers monitored
@@ -3938,7 +3939,7 @@ static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, uns
         if (columns != expected_cols)
         {
             mysql_free_result(result);
-            MXS_ERROR("Unexpected result for '%s'. Expected %d columns, got %d. MySQL Version: %s",
+            MXS_ERROR("Unexpected result for '%s'. Expected %d columns, got %d. Server version: %s",
                       query, expected_cols, columns, database->server->version_string);
         }
         else
@@ -4248,7 +4249,7 @@ static bool switchover_start_slave(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* old
 }
 
 /**
- * Get MySQL connection error strings from all the given servers, form one string.
+ * Get MariaDB connection error strings from all the given servers, form one string.
  *
  * @param slaves Servers with errors
  * @return Concatenated string.

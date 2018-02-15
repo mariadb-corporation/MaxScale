@@ -10,6 +10,27 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### MaxCtrl Moved to `maxscale` Package
+
+The MaxCtrl client is now a part of the main MaxScale package, `maxscale`. This
+means that the `maxctrl` executable is now immediately available upon the
+installation of MaxScale.
+
+In the 2.2.1 beta version MaxCtrl was in its own package. If you have a previous
+installation of MaxCtrl, please remove it before upgrading to MaxScale 2.2.2.
+
+### MaxScale C++ CDC Connector Integration
+
+The MaxScale C++ CDC Connector is now distributed as a part of MaxScale. The
+connector libraries are in a separate package, `maxscale-cdc-connector`. Refer
+to the [CDC Connector documentation](../Connectors/CDC-Connector.md) for more details.
+
+### Output of `show threads` has changed.
+
+For each thread is shown what state it is in, how many descriptors are currently
+in the thread's epoll instance and how many descriptors in total have been in the
+thread's epoll instance.
+
 ## Dropped Features
 
 ## New Features
@@ -26,6 +47,13 @@ It is now possible to specify what local address MaxScale should
 use when connecting to servers. Please refer to the documentation
 for [details](../Getting-Started/Configuration-Guide.md#local_address).
 
+### External master support for failover/switchover
+
+Failover/switchover now tries to preserve replication from an external master
+server. Check
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md#external-master-support)
+for more information.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed in MaxScale 2.2.2.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.2)
@@ -33,6 +61,9 @@ for [details](../Getting-Started/Configuration-Guide.md#local_address).
 * [MXS-1661](https://jira.mariadb.org/browse/MXS-1661) Excessive logging by MySQLAuth at authentication error (was: MySQLAuth SQLite database can be permanently locked)
 * [MXS-1660](https://jira.mariadb.org/browse/MXS-1660) Failure to resolve hostname is considered an error
 * [MXS-1654](https://jira.mariadb.org/browse/MXS-1654) MaxScale crashes if env-variables are used without substitute_variables=1 having been defined
+* [MXS-1653](https://jira.mariadb.org/browse/MXS-1653) sysbench failed to initialize w/ MaxScale read/write splitter
+* [MXS-1647](https://jira.mariadb.org/browse/MXS-1647) Module API version is not checked
+* [MXS-1643](https://jira.mariadb.org/browse/MXS-1643) Too many monitor events are triggered
 * [MXS-1641](https://jira.mariadb.org/browse/MXS-1641) Fix overflow in master id
 * [MXS-1633](https://jira.mariadb.org/browse/MXS-1633) Need remove mutex in sqlite
 * [MXS-1630](https://jira.mariadb.org/browse/MXS-1630) MaxCtrl binary are not included by default in MaxScale package
@@ -46,6 +77,7 @@ for [details](../Getting-Started/Configuration-Guide.md#local_address).
 * [MXS-1586](https://jira.mariadb.org/browse/MXS-1586) Mysqlmon switchover does not immediately detect bad new master
 * [MXS-1583](https://jira.mariadb.org/browse/MXS-1583) Database firewall filter failing with multiple users statements in rules file
 * [MXS-1539](https://jira.mariadb.org/browse/MXS-1539) Authentication data should be thread specific
+* [MXS-1508](https://jira.mariadb.org/browse/MXS-1508) Failover is sometimes triggered on non-simple topologies
 
 ## Known Issues and Limitations
 
