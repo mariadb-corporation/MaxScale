@@ -23,13 +23,68 @@ exports.builder = function(yargs) {
                 .usage('Usage: list servers')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'servers', [
+                fields = [
                     {'Server': 'id'},
                     {'Address': 'attributes.parameters.address'},
                     {'Port': 'attributes.parameters.port'},
                     {'Connections': 'attributes.statistics.connections'},
-                    {'State': 'attributes.state'}
-                ])
+                    {'State': 'attributes.state'},
+                    {'GTID': 'attributes.gtid_current_pos'}
+                ]
+
+                // First, get the list of all servers
+                return getResource(host, 'servers')
+                    .then((res) => {
+
+                        promises = []
+
+                        // Iterate over all servers, fetching the monitor that "owns" the server
+                        res.data.forEach((i) => {
+
+                            // Assign an empty value so we always have something to print
+                            i.attributes.gtid_current_pos = ''
+
+                            owner = _.get(i, 'relationships.monitors.data[0].id')
+                            if (owner) {
+
+                                // This servers is monitored by a monitor, get the monitor resource
+                                promises.push(
+                                    getResource(host, 'monitors/' + owner)
+                                        .then((res) => {
+
+                                            // Check if the monitor defines a server_info object
+                                            info = _.get(res, 'data.attributes.monitor_diagnostics.server_info')
+
+                                            if (info) {
+
+                                                // Monitor defines it, see if we have a GTID value for this server
+                                                info.forEach((j) => {
+                                                    if (j.name == i.id && j.gtid_current_pos) {
+                                                        // Found the server_info object for this server, get the Gtid_Current_Pos from it
+                                                        i.attributes.gtid_current_pos = j.gtid_current_pos
+                                                    }
+                                                })
+                                            }
+                                        }))
+                            }
+                        })
+
+                        // We now have all servers as slightly modified resources and possibly a set
+                        // of promises that are getting the related monitor resources which need to
+                        // complete.
+                        return Promise.all(promises)
+                            .then(() => filterResource(res, fields))
+                            .then((res) => rawCollectionAsTable(res, fields))
+                    })
+
+                return getRawCollection(host, 'servers', fields)
+                    .then((res) => {
+                        res.forEach((i) => {
+                            // The server name will be first
+                            //console.log(i[0])
+                        })
+                        return rawCollectionAsTable(res, fields);
+                    })
             })
         })
         .command('services', 'List services', function(yargs) {
