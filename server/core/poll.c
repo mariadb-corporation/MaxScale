@@ -125,7 +125,7 @@ SPINLOCK pollqlock = SPINLOCK_INIT;
  * poll completion, a value of 1 or less is the ideal.
  */
 static double load_average = 0.0;
-static int load_samples = 0;
+static uint64_t load_samples = 0;
 static int load_nfds = 0;
 static double current_avg = 0.0;
 static double *avg_samples = NULL;
@@ -755,7 +755,7 @@ poll_waitevents(void *arg)
             pollStats.n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
 
             load_average = (load_average * load_samples + nfds) / (load_samples + 1);
-            atomic_add(&load_samples, 1);
+            atomic_add_uint64(&load_samples, 1);
             atomic_add(&load_nfds, nfds);
 
             /*
@@ -1368,7 +1368,7 @@ dShowThreads(DCB *dcb)
             dcb_printf(dcb,
                        " %2d | %-10s | %6d | %-16p | <%3lu00ms | %s\n",
                        i, state, thread_data[i].n_fds,
-                       thread_data[i].cur_dcb, 1 + hkheartbeat - dcb->evq.started,
+                       thread_data[i].cur_dcb, 1 + hkheartbeat - dcb->last_read,
                        event_string);
 
             if (from_heap)
@@ -1388,8 +1388,8 @@ dShowThreads(DCB *dcb)
 static void
 poll_loadav(void *data)
 {
-    static  int last_samples = 0, last_nfds = 0;
-    int new_samples, new_nfds;
+    static uint64_t last_samples = 0, last_nfds = 0;
+    uint64_t new_samples, new_nfds;
 
     new_samples = load_samples - last_samples;
     new_nfds = load_nfds - last_nfds;
