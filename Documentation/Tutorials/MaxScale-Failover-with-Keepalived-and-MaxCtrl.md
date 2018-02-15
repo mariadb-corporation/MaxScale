@@ -1,4 +1,4 @@
-# Failover with Keepalived
+# MaxScale Failover with Keepalived and MaxCtrl
 
 ## Introduction
 
