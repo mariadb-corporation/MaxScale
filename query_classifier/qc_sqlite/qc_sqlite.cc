@@ -3603,7 +3603,7 @@ static void log_invalid_data(GWBUF* query, const char* message)
                 length = (int)GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1;
             }
 
-            MXS_INFO("Parsing the query failed, %s: %*s", message, length, sql);
+            MXS_INFO("Parsing the query failed, %s: %.*s", message, length, sql);
         }
     }
 }
