@@ -94,7 +94,7 @@ module.exports = function() {
 
     // Get a resource as raw collection; a matrix of strings
     this.getRawCollection = function (host, resource, fields) {
-        return getResource(host, resource)
+        return getJson(host, resource)
             .then((res) => filterResource(res, fields))
     }
 
@@ -268,7 +268,7 @@ module.exports = function() {
         return doAsyncRequest(host, resource, cb, obj)
     }
 
-    this.getResource = function(host, resource) {
+    this.getJson = function(host, resource) {
         return doAsyncRequest(host, resource, (res) => {
             return res
         })

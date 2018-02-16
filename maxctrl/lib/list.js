@@ -33,7 +33,7 @@ exports.builder = function(yargs) {
                 ]
 
                 // First, get the list of all servers
-                return getResource(host, 'servers')
+                return getJson(host, 'servers')
                     .then((res) => {
 
                         promises = []
@@ -49,7 +49,7 @@ exports.builder = function(yargs) {
 
                                 // This servers is monitored by a monitor, get the monitor resource
                                 promises.push(
-                                    getResource(host, 'monitors/' + owner)
+                                    getJson(host, 'monitors/' + owner)
                                         .then((res) => {
 
                                             // Check if the monitor defines a server_info object
