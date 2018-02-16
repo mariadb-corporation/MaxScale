@@ -73,8 +73,10 @@ void* atomic_load_ptr(void * const *variable);
  * @param variable      Pointer the the variable to store to
  * @param value         Value to be stored
  */
-void atomic_store_int32(int *variable, int value);
+void atomic_store_int(int *variable, int value);
+void atomic_store_int32(int32_t *variable, int32_t value);
 void atomic_store_int64(int64_t *variable, int64_t value);
+void atomic_store_uint32(uint32_t *variable, uint32_t value);
 void atomic_store_uint64(uint64_t *variable, uint64_t value);
 void atomic_store_ptr(void **variable, void *value);
 

@@ -107,7 +107,18 @@ void* atomic_load_ptr(void * const *variable)
 #endif
 }
 
-void atomic_store_int32(int *variable, int value)
+void atomic_store_int(int *variable, int value)
+{
+#ifdef MXS_USE_ATOMIC_BUILTINS
+    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
+#else
+    __sync_synchronize();
+    *variable = value;
+    __sync_synchronize();
+#endif
+}
+
+void atomic_store_int32(int32_t *variable, int32_t value)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
@@ -119,6 +130,17 @@ void atomic_store_int32(int *variable, int value)
 }
 
 void atomic_store_int64(int64_t *variable, int64_t value)
+{
+#ifdef MXS_USE_ATOMIC_BUILTINS
+    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
+#else
+    __sync_synchronize();
+    *variable = value;
+    __sync_synchronize();
+#endif
+}
+
+void atomic_store_uint32(uint32_t *variable, uint32_t value)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
