@@ -36,43 +36,38 @@ exports.builder = function(yargs) {
                 return getJson(host, 'servers')
                     .then((res) => {
 
-                        promises = []
+                        // Build a set of unique monitors, flatten it into an array of strings and
+                        // filter out any duplicate or undefined values (from servers that aren't
+                        // monitored).
+                        var v = _.uniq(_.flatten(_.getPath(res, 'data[].relationships.monitors.data[].id'))).filter(i => i)
 
-                        // Iterate over all servers, fetching the monitor that "owns" the server
-                        res.data.forEach((i) => {
+                        // Get the server_info object for each monitor (if it defines one)
+                        var infos = []
+                        var promises = v.map((i) => getJson(host, 'monitors/' + i)
+                                             .then((j) => {
+                                                 info = _.get(j, 'data.attributes.monitor_diagnostics.server_info')
+                                                 if (info) {
+                                                     info.forEach((k) => infos.push(k))
+                                                 }
+                                             }))
 
-                            // Assign an empty value so we always have something to print
-                            i.attributes.gtid_current_pos = ''
-
-                            owner = _.get(i, 'relationships.monitors.data[0].id')
-                            if (owner) {
-
-                                // This servers is monitored by a monitor, get the monitor resource
-                                promises.push(
-                                    getJson(host, 'monitors/' + owner)
-                                        .then((res) => {
-
-                                            // Check if the monitor defines a server_info object
-                                            info = _.get(res, 'data.attributes.monitor_diagnostics.server_info')
-
-                                            if (info) {
-
-                                                // Monitor defines it, see if we have a GTID value for this server
-                                                info.forEach((j) => {
-                                                    if (j.name == i.id && j.gtid_current_pos) {
-                                                        // Found the server_info object for this server, get the Gtid_Current_Pos from it
-                                                        i.attributes.gtid_current_pos = j.gtid_current_pos
-                                                    }
-                                                })
-                                            }
-                                        }))
-                            }
-                        })
-
-                        // We now have all servers as slightly modified resources and possibly a set
-                        // of promises that are getting the related monitor resources which need to
-                        // complete.
+                        // Wait for promises to resolve
                         return Promise.all(promises)
+                            .then(() => {
+                                res.data.forEach((i) => {
+
+                                    // Get the gtid_current_pos value for each server from the server_info list
+                                    var idx = infos.findIndex((info) => info.name == i.id)
+
+                                    if (idx != -1 && infos[idx].gtid_current_pos) {
+                                        // Found the GTID position of this server
+                                        i.attributes.gtid_current_pos = infos[idx].gtid_current_pos
+                                    } else {
+                                        // Assign an empty value so we always have something to print
+                                        i.attributes.gtid_current_pos = ''
+                                    }
+                                })
+                            })
                             .then(() => filterResource(res, fields))
                             .then((res) => rawCollectionAsTable(res, fields))
                     })
