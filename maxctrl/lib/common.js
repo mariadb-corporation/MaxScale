@@ -92,6 +92,15 @@ module.exports = function() {
         return table
     }
 
+    this.tableToString = function(table) {
+        str = table.toString()
+        if (this.argv.tsv) {
+            // Based on the regex found in: https://github.com/jonschlinkert/strip-color
+            str = str.replace( /\x1B\[[(?);]{0,2}(;?\d)*./g, '')
+        }
+        return str
+    }
+
     // Get a resource as raw collection; a matrix of strings
     this.getRawCollection = function (host, resource, fields) {
         return getJson(host, resource)
@@ -110,7 +119,7 @@ module.exports = function() {
         arr.forEach((row) => {
             table.push(row)
         })
-        return table.toString()
+        return tableToString(table)
     }
 
     // Request a resource collection and format it as a table
@@ -148,7 +157,7 @@ module.exports = function() {
                 table.push(row)
             })
 
-            return table.toString()
+            return tableToString(table)
         })
     }
 
@@ -174,7 +183,7 @@ module.exports = function() {
                 table.push(o)
             })
 
-            return table.toString()
+            return tableToString(table)
         })
     }
 
