@@ -1,6 +1,5 @@
 #pragma once
-#ifndef _MYSQLMON_H
-#define _MYSQLMON_H
+
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,10 +11,6 @@
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
- */
-
-/**
- * @file mysqlmon.h - The MySQL monitor
  */
 
 #include <maxscale/cdefs.h>
@@ -37,7 +32,7 @@
 MXS_BEGIN_DECLS
 
 /**
- * The handle for an instance of a MySQL Monitor module
+ * MariaDB Monitor instance data
  */
 typedef struct
 {
@@ -82,5 +77,3 @@ typedef struct
 } MYSQL_MONITOR;
 
 MXS_END_DECLS
-
-#endif

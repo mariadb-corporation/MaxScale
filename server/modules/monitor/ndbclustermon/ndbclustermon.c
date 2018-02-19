@@ -17,7 +17,7 @@
 
 #define MXS_MODULE_NAME "ndbclustermon"
 
-#include "../mysqlmon.h"
+#include "ndbclustermon.h"
 #include <maxscale/alloc.h>
 #include <maxscale/mysql_utils.h>
 
@@ -103,7 +103,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static void *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
-    MYSQL_MONITOR *handle = mon->handle;
+    NDBC_MONITOR *handle = mon->handle;
     bool have_events = false, script_error = false;
 
     if (handle != NULL)
@@ -113,7 +113,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
     }
     else
     {
-        if ((handle = (MYSQL_MONITOR *) MXS_MALLOC(sizeof(MYSQL_MONITOR))) == NULL)
+        if ((handle = (NDBC_MONITOR *) MXS_MALLOC(sizeof(NDBC_MONITOR))) == NULL)
         {
             return NULL;
         }
@@ -154,7 +154,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 static void
 stopMonitor(MXS_MONITOR *mon)
 {
-    MYSQL_MONITOR *handle = (MYSQL_MONITOR *) mon->handle;
+    NDBC_MONITOR *handle = (NDBC_MONITOR *) mon->handle;
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
@@ -306,7 +306,7 @@ monitorDatabase(MXS_MONITORED_SERVER *database, char *defaultUser, char *default
 static void
 monitorMain(void *arg)
 {
-    MYSQL_MONITOR *handle = (MYSQL_MONITOR*)arg;
+    NDBC_MONITOR *handle = (NDBC_MONITOR*)arg;
     MXS_MONITOR* mon = handle->monitor;
     MXS_MONITORED_SERVER *ptr;
     size_t nrounds = 0;
