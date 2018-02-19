@@ -223,6 +223,16 @@ This parameter is intended to be used with multiple MaxScale instances that use
 failover functionality to manipulate the cluster in some form. Passive nodes
 only observe the clusters being monitored and take no direct actions.
 
+The following functionality is disabled when passive mode is enabled:
+
+ * Automatic failover in the `mariadbmon` module
+ * Automatic rejoin in the `mariadbmon` module
+ * Launching of monitor scripts
+
+**NOTE:** Even if MaxScale is in passive mode, it will still accept clients and
+  route any traffic sent to it. The **only** operations affected by the passive
+  mode are the ones listed above.
+
 #### `ms_timestamp`
 
 Enable or disable the high precision timestamps in logfiles. Enabling this adds
