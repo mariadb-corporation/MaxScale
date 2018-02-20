@@ -41,6 +41,7 @@
 #define WORKER_ABSENT_ID -1
 
 using maxscale::Worker;
+using maxscale::WorkerLoad;
 using maxscale::Closer;
 using maxscale::Semaphore;
 using std::vector;
@@ -153,6 +154,49 @@ void poll_resolve_error(int fd, int errornum, int op)
 
 static bool modules_thread_init();
 static void modules_thread_finish();
+
+WorkerLoad::WorkerLoad()
+    : m_start_time(0)
+    , m_wait_start(0)
+    , m_wait_time(0)
+    , m_load_1_minute(&m_load_1_hour)
+    , m_load_10_seconds(&m_load_1_minute)
+{
+}
+
+void WorkerLoad::about_to_work(uint64_t now)
+{
+    uint64_t duration = now - m_start_time;
+
+    m_wait_time += (now - m_wait_start);
+
+    if (duration > TEN_SECONDS)
+    {
+        int load_percentage = 100 * ((duration - m_wait_time) / (double)duration);
+
+        m_start_time = now;
+        m_wait_time = 0;
+
+        m_load_10_seconds.add_value(load_percentage);
+    }
+}
+
+WorkerLoad::Average::~Average()
+{
+}
+
+//static
+uint64_t WorkerLoad::get_time()
+{
+    uint64_t now;
+
+    timespec t;
+
+    ss_debug(int rv=)clock_gettime(CLOCK_MONOTONIC, &t);
+    ss_dassert(rv == 0);
+
+    return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
+}
 
 Worker::Worker(int id,
                int epoll_fd)
@@ -1112,13 +1156,31 @@ void Worker::poll_waitevents()
 
     m_state = IDLE;
 
+    m_load.reset();
+
     while (!should_shutdown())
     {
+        int nfds;
+
         m_state = POLLING;
 
         atomic_add_int64(&m_statistics.n_polls, 1);
-        int nfds;
-        if ((nfds = epoll_wait(m_epoll_fd, events, MAX_EVENTS, -1)) == -1)
+
+        uint64_t now = Load::get_time();
+        int timeout = Load::GRANULARITY - (now - m_load.start_time());
+
+        if (timeout < 0)
+        {
+            // If the processing of the last batch of events took us past the next
+            // time boundary, we ensure we return immediately.
+            timeout = 0;
+        }
+
+        m_load.about_to_wait(now);
+        nfds = epoll_wait(m_epoll_fd, events, MAX_EVENTS, timeout);
+        m_load.about_to_work();
+
+        if (nfds == -1)
         {
             int eno = errno;
             errno = 0;
