@@ -15,25 +15,36 @@
 
 #include <maxscale/cppdefs.hh>
 #include <string>
+#include <tr1/unordered_map>
+#include <vector>
 
-#include <maxscale/config.h>
-#include <maxscale/dcb.h>
-#include <maxscale/hashtable.h>
 #include <maxscale/monitor.h>
 #include <maxscale/thread.h>
 
-using std::string;
+#include "utilities.hh"
+
+extern const int PORT_UNKNOWN;
+extern const int64_t SERVER_ID_UNKNOWN;
+
+typedef std::tr1::unordered_map<const MXS_MONITORED_SERVER*, MySqlServerInfo> ServerInfoMap;
+typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
 
 // MariaDB Monitor instance data
-class MYSQL_MONITOR
+class MariaDBMonitor
 {
+private:
+    MariaDBMonitor(const MariaDBMonitor&);
+    MariaDBMonitor& operator = (const MariaDBMonitor&);
 public:
+    MariaDBMonitor();
+    ~MariaDBMonitor();
+
     MXS_MONITOR* monitor;          /**< Generic monitor object */
     THREAD thread;                 /**< Monitor thread */
     int shutdown;                  /**< Flag to shutdown the monitor thread */
     int status;                    /**< Monitor status */
     MXS_MONITORED_SERVER *master;  /**< Master server for MySQL Master/Slave replication */
-    HASHTABLE *server_info;        /**< Contains server specific information */
+    ServerInfoMap server_info;     /**< Contains server specific information */
     bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
     unsigned long id;              /**< Monitor ID */
 
@@ -63,8 +74,7 @@ public:
     bool auto_failover;            /**< If automatic master failover is enabled */
     bool auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
                                     *   replicating from the wrong master automatically. */
-    MXS_MONITORED_SERVER** excluded_servers; /**< Servers banned for master promotion during auto-failover. */
-    int n_excluded;                /**< Number of excluded servers */
+    ServerVector excluded_servers; /**< Servers banned for master promotion during auto-failover. */
 
     // Other settings
     string script;                 /**< Script to call when state changes occur on servers */
