@@ -142,7 +142,12 @@ const int64_t SERVER_ID_UNKNOWN = -1;
 /** Default port */
 const int PORT_UNKNOWN = 0;
 
-MariaDBMonitor::MariaDBMonitor()
+MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
+    : monitor(monitor_base)
+    , id(config_get_global_options()->id)
+    , warn_set_standalone_master(true)
+    , master_gtid_domain(-1)
+    , external_master_port(PORT_UNKNOWN)
 {}
 
 MariaDBMonitor::~MariaDBMonitor()
@@ -824,98 +829,114 @@ static bool server_is_excluded(const MariaDBMonitor *handle, const MXS_MONITORED
     return false;
 }
 
-/**
- * Start the instance of the monitor, returning a handle on the monitor.
- *
- * This function creates a thread to execute the actual monitoring.
- *
- * @param arg   The current handle - NULL if first start
- * @param opt   Configuration parameters
- * @return A handle to use when interacting with the monitor
- */
-static void *
-startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
+MariaDBMonitor* MariaDBMonitor::start_monitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
-    MariaDBMonitor *handle = (MariaDBMonitor*) monitor->handle;
-    if (handle)
+    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(monitor->handle);
+    if (handle == NULL)
     {
-        handle->shutdown = 0;
-        handle->script.clear();
-        handle->excluded_servers.clear();
-    }
-    else
-    {
-        handle = new MariaDBMonitor;
-        handle->shutdown = 0;
-        handle->id = config_get_global_options()->id;
-        handle->warn_set_standalone_master = true;
-        handle->master_gtid_domain = -1;
-        handle->external_master_port = PORT_UNKNOWN;
-        handle->monitor = monitor;
+        handle = new MariaDBMonitor(monitor);
     }
 
-    /** This should always be reset to NULL */
-    handle->master = NULL;
+    /** Always reset these values */
+    handle->shutdown = 0;
+    handle->master = NULL; // TODO: Is this correct? May not be ok to delete this info every time monitor
+                           // restarts.
+    init_server_info(handle); // The above question also applies to this.
 
-    handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
-    handle->detectStaleSlave = config_get_bool(params, "detect_stale_slave");
-    handle->replicationHeartbeat = config_get_bool(params, "detect_replication_lag");
-    handle->multimaster = config_get_bool(params, "multimaster");
-    handle->ignore_external_masters = config_get_bool(params, "ignore_external_masters");
-    handle->detect_standalone_master = config_get_bool(params, "detect_standalone_master");
-    handle->failcount = config_get_integer(params, CN_FAILCOUNT);
-    handle->allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
-    handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
-    handle->script = config_get_string(params, "script");
-    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
-    handle->failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
-    handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
-    handle->auto_failover = config_get_bool(params, CN_AUTO_FAILOVER);
-    handle->auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
-    handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
-    handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
-
-    MXS_MONITORED_SERVER** excluded_array = NULL;
-    int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, monitor, &excluded_array);
-    for (int i = 0; i < n_excluded; i++)
+    if (!handle->load_config_params(params))
     {
-        handle->excluded_servers.push_back(excluded_array[i]);
-    }
-    MXS_FREE(excluded_array);
-
-    if (!handle->set_replication_credentials(params))
-    {
-        MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
         error = true;
     }
 
     if (!check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
     {
-        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         error = true;
     }
 
-    init_server_info(handle);
-
-    if (error)
+    if (!error)
     {
-        delete handle;
-        handle = NULL;
-    }
-    else
-    {
-        handle->status = MXS_MONITOR_RUNNING;
-
-        if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
+        if (thread_start(&handle->m_thread, monitorMain, handle, 0) == NULL)
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
-            delete handle;
-            handle = NULL;
+            error = true;
+        }
+        else
+        {
+            handle->status = MXS_MONITOR_RUNNING;
         }
     }
 
+    if (error)
+    {
+        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        delete handle;
+        handle = NULL;
+    }
     return handle;
+}
+
+/**
+ * Load config parameters
+ *
+ * @param params Config parameters
+ * @return True if settings are ok
+ */
+bool MariaDBMonitor::load_config_params(const MXS_CONFIG_PARAMETER* params)
+{
+    detectStaleMaster = config_get_bool(params, "detect_stale_master");
+    detectStaleSlave = config_get_bool(params, "detect_stale_slave");
+    replicationHeartbeat = config_get_bool(params, "detect_replication_lag");
+    multimaster = config_get_bool(params, "multimaster");
+    ignore_external_masters = config_get_bool(params, "ignore_external_masters");
+    detect_standalone_master = config_get_bool(params, "detect_standalone_master");
+    failcount = config_get_integer(params, CN_FAILCOUNT);
+    allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
+    mysql51_replication = config_get_bool(params, "mysql51_replication");
+    script = config_get_string(params, "script");
+    events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+    failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
+    switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
+    auto_failover = config_get_bool(params, CN_AUTO_FAILOVER);
+    auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
+    verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
+    master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
+
+    excluded_servers.clear();
+    MXS_MONITORED_SERVER** excluded_array = NULL;
+    int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, monitor, &excluded_array);
+    for (int i = 0; i < n_excluded; i++)
+    {
+        excluded_servers.push_back(excluded_array[i]);
+    }
+    MXS_FREE(excluded_array);
+
+    bool settings_ok = true;
+    if (!set_replication_credentials(params))
+    {
+        MXS_ERROR("Both '%s' and '%s' must be defined", CN_REPLICATION_USER, CN_REPLICATION_PASSWORD);
+        settings_ok = false;
+    }
+    return settings_ok;
+}
+
+/**
+ * Start the monitor instance and return the instance data. This function creates a thread to
+ * execute the monitoring. Use stopMonitor() to stop the thread.
+ *
+ * @param monitor General monitor data
+ * @param params Configuration parameters
+ * @return A pointer to MariaDBMonitor specific data. Should be stored in MXS_MONITOR's "handle"-field.
+ */
+static void* startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
+{
+    return MariaDBMonitor::start_monitor(monitor, params);
+}
+
+void MariaDBMonitor::stop_monitor()
+{
+    shutdown = 1;
+    thread_wait(m_thread);
 }
 
 /**
@@ -923,13 +944,10 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
  *
  * @param mon  The monitor that should be stopped.
  */
-static void
-stopMonitor(MXS_MONITOR *mon)
+static void stopMonitor(MXS_MONITOR *mon)
 {
-    MariaDBMonitor *handle = (MariaDBMonitor *) mon->handle;
-
-    handle->shutdown = 1;
-    thread_wait(handle->thread);
+    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(mon->handle);
+    handle->stop_monitor();
 }
 
 /**

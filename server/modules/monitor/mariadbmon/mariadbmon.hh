@@ -51,8 +51,21 @@ private:
     MariaDBMonitor(const MariaDBMonitor&);
     MariaDBMonitor& operator = (const MariaDBMonitor&);
 public:
-    MariaDBMonitor();
-    ~MariaDBMonitor();
+
+    /**
+     * Start the monitor instance and return the instance data, creating it if starting for the first time.
+     * This function creates a thread to execute the monitoring.
+     *
+     * @param monitor General monitor data
+     * @param params Configuration parameters
+     * @return A pointer to MariaDBMonitor specific data.
+     */
+    static MariaDBMonitor* start_monitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params);
+
+    /**
+     * Stop the monitor. Waits until monitor has stopped.
+     */
+    void stop_monitor();
 
     /**
      * (Re)join given servers to the cluster. The servers in the array are assumed to be joinable.
@@ -71,13 +84,13 @@ public:
     bool cluster_can_be_joined();
 
     MXS_MONITOR* monitor;          /**< Generic monitor object */
-    THREAD thread;                 /**< Monitor thread */
-    int shutdown;                  /**< Flag to shutdown the monitor thread */
-    int status;                    /**< Monitor status */
+    volatile int shutdown;         /**< Flag to shutdown the monitor thread.
+                                    *   Accessed from multiple threads. */
+    int status;                    /**< Monitor status. TODO: This should be in MXS_MONITOR */
     MXS_MONITORED_SERVER *master;  /**< Master server for MySQL Master/Slave replication */
     ServerInfoMap server_info;     /**< Contains server specific information */
-    bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
     unsigned long id;              /**< Monitor ID */
+    bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
 
     // Values updated by monitor
     int64_t master_gtid_domain;    /**< Gtid domain currently used by the master */
@@ -111,9 +124,15 @@ public:
     bool allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
 
 private:
+    THREAD m_thread;               /**< Monitor thread */
+
     // Failover, switchover and rejoin settings
     string m_replication_user;     /**< Replication user for CHANGE MASTER TO-commands */
     string m_replication_password; /**< Replication password for CHANGE MASTER TO-commands */
+
+    MariaDBMonitor(MXS_MONITOR* monitor_base);
+    ~MariaDBMonitor();
+    bool load_config_params(const MXS_CONFIG_PARAMETER* params);
 
 public:
     // Following methods should be private, change it once refactoring is done.
