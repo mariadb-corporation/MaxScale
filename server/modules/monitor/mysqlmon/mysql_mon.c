@@ -457,7 +457,7 @@ static inline void monitor_mysql_db(MXS_MONITOR_SERVERS* database, MYSQL_SERVER_
                  * root master server.
                  * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
                  */
-                if (serv_info->slave_io && server_version != MYSQL_SERVER_VERSION_51)
+                if (server_version != MYSQL_SERVER_VERSION_51)
                 {
                     /* Get Master_Server_Id */
                     master_id = atol(row[i_master_id]);
