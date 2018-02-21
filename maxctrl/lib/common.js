@@ -70,35 +70,62 @@ module.exports = function() {
             })
     }
 
+    this.filterResource = function (res, fields) {
+        table = []
+
+        res.data.forEach(function(i) {
+            row = []
+
+            fields.forEach(function(p) {
+                var v = _.getPath(i, p[Object.keys(p)[0]], '')
+
+                if (Array.isArray(v)) {
+                    v = v.join(', ')
+                }
+
+                row.push(v)
+            })
+
+            table.push(row)
+        })
+
+        return table
+    }
+
+    this.tableToString = function(table) {
+        str = table.toString()
+        if (this.argv.tsv) {
+            // Based on the regex found in: https://github.com/jonschlinkert/strip-color
+            str = str.replace( /\x1B\[[(?);]{0,2}(;?\d)*./g, '')
+        }
+        return str
+    }
+
+    // Get a resource as raw collection; a matrix of strings
+    this.getRawCollection = function (host, resource, fields) {
+        return getJson(host, resource)
+            .then((res) => filterResource(res, fields))
+    }
+
+    this.rawCollectionAsTable = function (arr, fields) {
+        var header = []
+
+        fields.forEach(function(i) {
+            header.push(Object.keys(i))
+        })
+
+        var table = getTable(header)
+
+        arr.forEach((row) => {
+            table.push(row)
+        })
+        return tableToString(table)
+    }
+
     // Request a resource collection and format it as a table
     this.getCollection = function (host, resource, fields) {
-        return doRequest(host, resource, function(res) {
-
-            var header = []
-
-            fields.forEach(function(i) {
-                header.push(Object.keys(i))
-            })
-
-            var table = getTable(header)
-
-            res.data.forEach(function(i) {
-                row = []
-
-                fields.forEach(function(p) {
-                    var v = _.getPath(i, p[Object.keys(p)[0]], '')
-
-                    if (Array.isArray(v)) {
-                        v = v.join(', ')
-                    }
-                    row.push(v)
-                })
-
-                table.push(row)
-            })
-
-            return table.toString()
-        })
+        return getRawCollection(host, resource, fields)
+            .then((res) => rawCollectionAsTable(res, fields))
     }
 
     // Request a part of a resource as a collection
@@ -130,7 +157,7 @@ module.exports = function() {
                 table.push(row)
             })
 
-            return table.toString()
+            return tableToString(table)
         })
     }
 
@@ -156,7 +183,7 @@ module.exports = function() {
                 table.push(o)
             })
 
-            return table.toString()
+            return tableToString(table)
         })
     }
 
@@ -248,6 +275,12 @@ module.exports = function() {
 
     this.doRequest = function(host, resource, cb, obj) {
         return doAsyncRequest(host, resource, cb, obj)
+    }
+
+    this.getJson = function(host, resource) {
+        return doAsyncRequest(host, resource, (res) => {
+            return res
+        })
     }
 
     this.error = function(err) {

@@ -1,4 +1,4 @@
-# Failover with Keepalived
+# MaxScale Failover with Keepalived and MaxCtrl
 
 ## Introduction
 
@@ -188,3 +188,68 @@ Aug 11 10:51:57 maxscale2 Keepalived_vrrp[20257]: VRRP_Instance(VI_1) Entering F
 Aug 11 10:51:57 maxscale2 Keepalived_vrrp[20257]: VRRP_Instance(VI_1) removing protocol VIPs.
 Aug 11 10:51:57 maxscale2 Keepalived_vrrp[20257]: VRRP_Instance(VI_1) Now in FAULT state
 ```
+
+## MaxScale active/passive-setting
+
+When using multiple MaxScales with replication cluster management features
+(failover, switchover, rejoin), only one MaxScale instance should be allowed to
+modify the cluster at any given time. This instance should be the one with
+MASTER Keepalived status. MaxScale itself does not know its state, but MaxCtrl
+(a replacement for MaxAdmin) can set a MaxScale instance to passive mode. As of
+version 2.2.2, a passive MaxScale behaves similar to an active one with the
+distinction that it won't perform failover, switchover or rejoin. Even manual
+versions of these commands will end in error. The passive/active mode
+differences may be expanded in the future.
+
+To have Keepalived modify the MaxScale operating mode, a notify script is
+needed. This script is ran whenever Keepalived changes its state. The script
+file is defined in the Keepalived configuration file as `notify`.
+
+```
+...
+virtual_ipaddress {
+  192.168.1.13
+}
+track_script {
+  chk_myscript
+}
+notify /home/user/notify_script.sh
+...
+```
+Keepalived calls the script with three parameters. In our case, only the third
+parameter, STATE, is relevant. An example script is below.
+
+```
+#!/bin/bash
+
+TYPE=$1
+NAME=$2
+STATE=$3
+
+OUTFILE=/home/user/state.txt
+
+case $STATE in
+  "MASTER") echo "Setting this MaxScale node to active mode" > $OUTFILE
+                  maxctrl alter maxscale passive false
+                  exit 0
+                  ;;
+  "BACKUP") echo "Setting this MaxScale node to passive mode" > $OUTFILE
+                  maxctrl alter maxscale passive true
+                  exit 0
+                  ;;
+  "FAULT")  echo "MaxScale failed the status check." > $OUTFILE
+                  maxctrl alter maxscale passive true
+                  exit 0
+                  ;;
+        *)        echo "Unknown state" > $OUTFILE
+                  exit 1
+                  ;;
+esac
+
+```
+The script logs the current state to a text file and sets the operating mode of
+MaxScale. The FAULT case also attempts to set MaxScale to passive mode,
+although the MaxCtrl command will likely fail.
+
+If all MaxScale/Keepalived instances have a similar notify script, only one
+MaxScale should ever be in active mode.
