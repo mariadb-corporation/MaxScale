@@ -530,6 +530,10 @@ add_test_executable(mxs1543.cpp mxs1543 avro LABELS REPL_BACKEND)
  # https://jira.mariadb.org/browse/MXS-1585
 add_test_executable(mxs1585.cpp mxs1585 mxs1585 LABELS REPL_BACKEND)
 
+# MXS-1678: Stopping IO thread on relay master causes it to be promoted as master
+# https://jira.mariadb.org/browse/MXS-1678
+add_test_executable(mxs1678_relay_master.cpp mxs1678_relay_master replication LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
