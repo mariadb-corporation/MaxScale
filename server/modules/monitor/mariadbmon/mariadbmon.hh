@@ -22,16 +22,31 @@
 #include <tr1/unordered_map>
 #include <vector>
 
+#include <maxscale/json_api.h>
 #include <maxscale/monitor.h>
 #include <maxscale/thread.h>
 
 #include "utilities.hh"
 
+/** Utility macro for printing both MXS_ERROR and json error */
+#define PRINT_MXS_JSON_ERROR(err_out, format, ...)\
+    do {\
+       MXS_ERROR(format, ##__VA_ARGS__);\
+       if (err_out)\
+       {\
+            *err_out = mxs_json_error_append(*err_out, format, ##__VA_ARGS__);\
+       }\
+    } while (false)
+
 extern const int PORT_UNKNOWN;
 extern const int64_t SERVER_ID_UNKNOWN;
+class MariaDBMonitor;
 
 typedef std::tr1::unordered_map<const MXS_MONITORED_SERVER*, MySqlServerInfo> ServerInfoMap;
 typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
+
+MySqlServerInfo* get_server_info(MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db);
+const MySqlServerInfo* get_server_info(const MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db);
 
 // MySQL Monitor module instance
 class MariaDBMonitor
@@ -42,6 +57,22 @@ private:
 public:
     MariaDBMonitor();
     ~MariaDBMonitor();
+
+    /**
+     * (Re)join given servers to the cluster. The servers in the array are assumed to be joinable.
+     * Usually the list is created by get_joinable_servers().
+     *
+     * @param joinable_servers Which servers to rejoin
+     * @return The number of servers successfully rejoined
+     */
+    uint32_t do_rejoin(const ServerVector& joinable_servers);
+
+    /**
+     * Check if the cluster is a valid rejoin target.
+     *
+     * @return True if master and gtid domain are known
+     */
+    bool cluster_can_be_joined();
 
     MXS_MONITOR* monitor;          /**< Generic monitor object */
     THREAD thread;                 /**< Monitor thread */
@@ -67,8 +98,6 @@ public:
     bool replicationHeartbeat;     /**< Monitor flag for MySQL replication heartbeat */
 
     // Failover, switchover and rejoin settings
-    string replication_user;       /**< Replication user for CHANGE MASTER TO-commands */
-    string replication_password;   /**< Replication password for CHANGE MASTER TO-commands */
     int failcount;                 /**< How many monitoring cycles master must be down before auto-failover
                                     *   begins */
     uint32_t failover_timeout;     /**< Timeout in seconds for the master failover */
@@ -84,4 +113,20 @@ public:
     string script;                 /**< Script to call when state changes occur on servers */
     uint64_t events;               /**< enabled events */
     bool allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
+
+private:
+    // Failover, switchover and rejoin settings
+    string m_replication_user;     /**< Replication user for CHANGE MASTER TO-commands */
+    string m_replication_password; /**< Replication password for CHANGE MASTER TO-commands */
+
+public:
+    // Following methods should be private, change it once refactoring is done.
+    string generate_change_master_cmd(const string& master_host, int master_port);
+    int redirect_slaves(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
+                        ServerVector* redirected_slaves);
+    bool set_replication_credentials(const MXS_CONFIG_PARAMETER* params);
+    bool start_external_replication(MXS_MONITORED_SERVER* new_master, json_t** err_out);
+    bool switchover_start_slave(MXS_MONITORED_SERVER* old_master, SERVER* new_master);
+    bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd);
+    bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
 };
