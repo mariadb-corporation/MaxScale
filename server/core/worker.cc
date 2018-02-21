@@ -160,7 +160,7 @@ WorkerLoad::WorkerLoad()
     , m_wait_start(0)
     , m_wait_time(0)
     , m_load_1_minute(&m_load_1_hour)
-    , m_load_10_seconds(&m_load_1_minute)
+    , m_load_1_second(&m_load_1_minute)
 {
 }
 
@@ -170,14 +170,14 @@ void WorkerLoad::about_to_work(uint64_t now)
 
     m_wait_time += (now - m_wait_start);
 
-    if (duration > TEN_SECONDS)
+    if (duration > ONE_SECOND)
     {
         int load_percentage = 100 * ((duration - m_wait_time) / (double)duration);
 
         m_start_time = now;
         m_wait_time = 0;
 
-        m_load_10_seconds.add_value(load_percentage);
+        m_load_1_second.add_value(load_percentage);
     }
 }
 

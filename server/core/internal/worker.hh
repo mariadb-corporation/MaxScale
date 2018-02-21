@@ -79,14 +79,14 @@ class WorkerLoad
 public:
     enum counter_t
     {
-        TEN_SECONDS = 10 * 1000,
-        ONE_MINUTE  = 6 * TEN_SECONDS,
-        ONE_HOUR    = 60 * ONE_MINUTE,
+        ONE_SECOND = 1000,
+        ONE_MINUTE = 60 * ONE_SECOND,
+        ONE_HOUR   = 60 * ONE_MINUTE,
     };
 
     enum
     {
-        GRANULARITY = TEN_SECONDS
+        GRANULARITY = ONE_SECOND
     };
 
     /**
@@ -143,8 +143,8 @@ public:
     {
         switch (counter)
         {
-        case TEN_SECONDS:
-            return m_load_10_seconds.value();
+        case ONE_SECOND:
+            return m_load_1_second.value();
 
         case ONE_MINUTE:
             return m_load_1_minute.value();
@@ -159,7 +159,7 @@ public:
     }
 
     /**
-     * When was the last 10 second period started.
+     * When was the last 1 second period started.
      *
      * @return The start time.
      */
@@ -414,12 +414,12 @@ private:
         uint32_t   m_nValues;   /*< How many values the buffer contains. */
     };
 
-    uint64_t      m_start_time;       /*< When was a new 10-second period started. */
-    uint64_t      m_wait_start;       /*< The time when the worker entered epoll_wait(). */
-    uint64_t      m_wait_time;        /*< How much time the worker has spent in epoll_wait(). */
-    AverageN<60>  m_load_1_hour;      /*< The average load during the last hour. */
-    AverageN<6>   m_load_1_minute;    /*< The average load during the last minute. */
-    Average1      m_load_10_seconds;  /*< The load during the last 10-second period. */
+    uint64_t      m_start_time;     /*< When was the current 1-second period started. */
+    uint64_t      m_wait_start;     /*< The time when the worker entered epoll_wait(). */
+    uint64_t      m_wait_time;      /*< How much time the worker has spent in epoll_wait(). */
+    AverageN<60>  m_load_1_hour;    /*< The average load during the last hour. */
+    AverageN<60>  m_load_1_minute;  /*< The average load during the last minute. */
+    Average1      m_load_1_second;  /*< The load during the last 1-second period. */
 };
 
 
