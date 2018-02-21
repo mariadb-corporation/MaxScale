@@ -50,7 +50,7 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
-  blob_test.cpp
+  blob_test.cpp keepalived_func
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/cdc_connector.cpp)
 target_link_libraries(testcore ${MYSQL_CLIENT} ${JANSSON_LIBRARIES} z nsl m pthread ssl dl rt crypto crypt)
@@ -825,6 +825,8 @@ add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssa
 # Configures 'keepalived' on two Maxscale machines and tried failover
 add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND TWO_MAXSCALES)
 
+# Configures 'keepalived' on two Maxscale machines and tried failover
+add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_masterdown LABELS REPL_BACKEND TWO_MAXSCALES)
 
 # enable after fixing MXS-419
 # add_test_executable(mxs419_lots_of_connections.cpp mxs419_lots_of_connections replication LABELS REPL_BACKEND)
