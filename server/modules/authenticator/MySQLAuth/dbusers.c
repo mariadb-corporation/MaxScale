@@ -627,6 +627,25 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         }
     }
 
+    // Check whether the current user has the SHOW DATABASES privilege
+    if (mxs_mysql_query(mysql, "SELECT show_db_priv FROM mysql.user "
+                        "WHERE CONCAT(user, '@', host) = CURRENT_USER()") == 0)
+    {
+        MYSQL_RES* res = mysql_use_result(mysql);
+        if (res)
+        {
+            MYSQL_ROW row = mysql_fetch_row(res);
+
+            if (row && strcasecmp(row[0], "Y") != 0)
+            {
+                MXS_WARNING("[%s] User '%s' is missing the SHOW DATABASES privilege.",
+                            service->name, user);
+            }
+
+            mysql_free_result(res);
+        }
+    }
+
     mysql_close(mysql);
 
     return rval;
