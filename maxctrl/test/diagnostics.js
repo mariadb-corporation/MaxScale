@@ -33,3 +33,34 @@ describe("Diagnostic Commands", function() {
 
     after(stopMaxScale)
 });
+
+describe("MXS-1656: `list servers` with GTIDs", function() {
+    before(startMaxScale)
+
+    doCheck = function() {
+        return doCommand('list servers --tsv')
+            .then((res) => {
+                // Check that at least 5 columns are returned with the last column consisting of
+                // empty strings. This is because the test setup uses file and position based
+                // replication.
+                res = res.split('\n').map(i => i.split('\t')).map(i => i[5])
+                _.uniq(res).should.deep.equal([''])
+            })
+    }
+
+    it('Lists monitored servers', function() {
+        return doCheck()
+    });
+
+    it('Lists unmonitored servers', function() {
+        return doCommand('unlink monitor MariaDB-Monitor server1 server2 server3 server4')
+            .then(() => doCheck())
+    });
+
+    it('Lists partially monitored servers', function() {
+        return doCommand('link monitor MariaDB-Monitor server1 server3')
+            .then(() => doCheck())
+    });
+
+    after(stopMaxScale)
+});

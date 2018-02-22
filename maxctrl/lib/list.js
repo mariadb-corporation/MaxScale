@@ -23,13 +23,63 @@ exports.builder = function(yargs) {
                 .usage('Usage: list servers')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'servers', [
+                fields = [
                     {'Server': 'id'},
                     {'Address': 'attributes.parameters.address'},
                     {'Port': 'attributes.parameters.port'},
                     {'Connections': 'attributes.statistics.connections'},
-                    {'State': 'attributes.state'}
-                ])
+                    {'State': 'attributes.state'},
+                    {'GTID': 'attributes.gtid_current_pos'}
+                ]
+
+                // First, get the list of all servers
+                return getJson(host, 'servers')
+                    .then((res) => {
+
+                        // Build a set of unique monitors, flatten it into an array of strings and
+                        // filter out any duplicate or undefined values (from servers that aren't
+                        // monitored).
+                        var v = _.uniq(_.flatten(_.getPath(res, 'data[].relationships.monitors.data[].id'))).filter(i => i)
+
+                        // Get the server_info object for each monitor (if it defines one)
+                        var infos = []
+                        var promises = v.map((i) => getJson(host, 'monitors/' + i)
+                                             .then((j) => {
+                                                 info = _.get(j, 'data.attributes.monitor_diagnostics.server_info')
+                                                 if (info) {
+                                                     info.forEach((k) => infos.push(k))
+                                                 }
+                                             }))
+
+                        // Wait for promises to resolve
+                        return Promise.all(promises)
+                            .then(() => {
+                                res.data.forEach((i) => {
+
+                                    // Get the gtid_current_pos value for each server from the server_info list
+                                    var idx = infos.findIndex((info) => info.name == i.id)
+
+                                    if (idx != -1 && infos[idx].gtid_current_pos) {
+                                        // Found the GTID position of this server
+                                        i.attributes.gtid_current_pos = infos[idx].gtid_current_pos
+                                    } else {
+                                        // Assign an empty value so we always have something to print
+                                        i.attributes.gtid_current_pos = ''
+                                    }
+                                })
+                            })
+                            .then(() => filterResource(res, fields))
+                            .then((res) => rawCollectionAsTable(res, fields))
+                    })
+
+                return getRawCollection(host, 'servers', fields)
+                    .then((res) => {
+                        res.forEach((i) => {
+                            // The server name will be first
+                            //console.log(i[0])
+                        })
+                        return rawCollectionAsTable(res, fields);
+                    })
             })
         })
         .command('services', 'List services', function(yargs) {

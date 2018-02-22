@@ -1773,7 +1773,7 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
                 master_up = true;
             }
 
-            if (script && (events & event))
+            if (script && *script && (events & event))
             {
                 monitor_launch_script(monitor, ptr, script, monitor->script_timeout);
             }
