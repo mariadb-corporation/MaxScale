@@ -40,9 +40,29 @@ class MariaDBMonitor;
 
 typedef std::tr1::unordered_map<const MXS_MONITORED_SERVER*, MySqlServerInfo> ServerInfoMap;
 typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
+typedef std::vector<string> StringVector;
 
+enum print_repl_warnings_t
+{
+    WARNINGS_ON,
+    WARNINGS_OFF
+};
+
+// TODO: Most of following should be class methods
 MySqlServerInfo* get_server_info(MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db);
 const MySqlServerInfo* get_server_info(const MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db);
+
+bool can_replicate_from(MariaDBMonitor* mon,
+                               MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
+                               MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info);
+MySqlServerInfo* update_slave_info(MariaDBMonitor* mon, MXS_MONITORED_SERVER* server);
+void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers, json_t** err_out);
+bool do_show_slave_status(MariaDBMonitor* mon, MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database);
+string generate_master_gtid_wait_cmd(const Gtid& gtid, double timeout);
+bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
+                   StringVector* output);
+bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info,
+                                print_repl_warnings_t print_warnings = WARNINGS_ON);
 
 // MariaDB Monitor instance data
 class MariaDBMonitor
@@ -51,6 +71,7 @@ private:
     MariaDBMonitor(const MariaDBMonitor&);
     MariaDBMonitor& operator = (const MariaDBMonitor&);
 public:
+    // TODO: Once done refactoring, see which of these can be moved to private.
 
     /**
      * Start the monitor instance and return the instance data, creating it if starting for the first time.
@@ -66,6 +87,36 @@ public:
      * Stop the monitor. Waits until monitor has stopped.
      */
     void stop_monitor();
+
+    /**
+     * Performs switchover for a simple topology (1 master, N slaves, no intermediate masters). If an intermediate
+     * step fails, the cluster may be left without a master.
+     *
+     * @param err_out json object for error printing. Can be NULL.
+     * @return True if successful. If false, the cluster can be in various situations depending on which step
+     * failed. In practice, manual intervention is usually required on failure.
+     */
+    bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
+                       json_t** err_out);
+
+    /**
+     * Performs failover for a simple topology (1 master, N slaves, no intermediate masters).
+     *
+     * @param mon Server cluster monitor
+     * @param err_out Json output
+     * @return True if successful
+     */
+    bool do_failover(json_t** err_out);
+
+    /**
+     * Checks if a server is a possible rejoin candidate. A true result from this function is not yet sufficient
+     * criteria and another call to can_replicate_from() should be made.
+     *
+     * @param server Server to check.
+     * @param master_info Master server info
+     * @return True, if server is a rejoin suspect.
+     */
+    bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MySqlServerInfo* master_info);
 
     /**
      * (Re)join given servers to the cluster. The servers in the array are assumed to be joinable.
@@ -133,9 +184,24 @@ private:
     MariaDBMonitor(MXS_MONITOR* monitor_base);
     ~MariaDBMonitor();
     bool load_config_params(const MXS_CONFIG_PARAMETER* params);
+    bool failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, int seconds_remaining, json_t** err_out);
+    bool switchover_demote_master(MXS_MONITORED_SERVER* current_master, MySqlServerInfo* info,
+                                  json_t** err_out);
+    bool switchover_wait_slaves_catchup(const ServerVector& slaves, const Gtid& gtid, int total_timeout,
+                                        int read_timeout, json_t** err_out);
+    bool switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, const Gtid& gtid,
+                                       int total_timeout, int read_timeout, json_t** err_out);
+    bool wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
+                                    int seconds_remaining);
+    bool switchover_check_preferred_master(MXS_MONITORED_SERVER* preferred, json_t** err_out);
+    bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out);
+    MXS_MONITORED_SERVER* select_new_master(ServerVector* slaves_out, json_t** err_out);
+    bool server_is_excluded(const MXS_MONITORED_SERVER* server);
+    bool is_candidate_better(const MySqlServerInfo* current_best_info, const MySqlServerInfo* candidate_info);
 
 public:
     // Following methods should be private, change it once refactoring is done.
+    bool update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
     string generate_change_master_cmd(const string& master_host, int master_port);
     int redirect_slaves(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
                         ServerVector* redirected_slaves);
@@ -143,5 +209,6 @@ public:
     bool start_external_replication(MXS_MONITORED_SERVER* new_master, json_t** err_out);
     bool switchover_start_slave(MXS_MONITORED_SERVER* old_master, SERVER* new_master);
     bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd);
+    bool get_joinable_servers(ServerVector* output);
     bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
 };
