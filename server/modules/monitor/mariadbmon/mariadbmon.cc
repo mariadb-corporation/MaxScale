@@ -35,7 +35,6 @@
 #include <maxscale/utils.h>
 // TODO: For monitorAddParameters
 #include "../../../core/internal/monitor.h"
-#include "utilities.hh"
 
 /** Column positions for SHOW SLAVE STATUS */
 #define MYSQL55_STATUS_MASTER_LOG_POS 5
@@ -70,9 +69,16 @@
     } while (false)
 
 using std::string;
+typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
 typedef std::vector<string> StringVector;
 class MySqlServerInfo;
-class MariaDBMonitor;
+
+enum mysql_server_version
+{
+    MYSQL_SERVER_VERSION_100,
+    MYSQL_SERVER_VERSION_55,
+    MYSQL_SERVER_VERSION_51
+};
 
 enum slave_down_setting_t
 {
@@ -95,37 +101,36 @@ static json_t* diagnostics_json(const MXS_MONITOR *);
 static MXS_MONITORED_SERVER *getServerByNodeId(MXS_MONITORED_SERVER *, long);
 static MXS_MONITORED_SERVER *getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
 static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *, int);
-static void set_master_heartbeat(MariaDBMonitor *, MXS_MONITORED_SERVER *);
+static void set_master_heartbeat(MYSQL_MONITOR *, MXS_MONITORED_SERVER *);
 static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
 static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
-static MySqlServerInfo* get_server_info(MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db);
-static const MySqlServerInfo* get_server_info(const MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db);
-static bool mon_process_failover(MariaDBMonitor*, uint32_t, bool*);
-static bool do_failover(MariaDBMonitor* mon, json_t** output);
-static bool do_switchover(MariaDBMonitor* mon, MXS_MONITORED_SERVER* current_master,
+static MySqlServerInfo* get_server_info(const MYSQL_MONITOR* handle, const MXS_MONITORED_SERVER* db);
+static bool mon_process_failover(MYSQL_MONITOR*, uint32_t, bool*);
+static bool do_failover(MYSQL_MONITOR* mon, json_t** output);
+static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
                           MXS_MONITORED_SERVER* new_master, json_t** err_out);
-static bool update_gtids(MariaDBMonitor* mon, MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
+static bool update_gtids(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
                           StringVector* output);
 static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info);
-static bool server_is_rejoin_suspect(MariaDBMonitor* mon, MXS_MONITORED_SERVER* server,
+static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server,
                                      MySqlServerInfo* master_info);
-static bool get_joinable_servers(MariaDBMonitor* mon, ServerVector* output);
-static uint32_t do_rejoin(MariaDBMonitor* mon, const ServerVector& servers);
+static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output);
+static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& servers);
 static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
-static void disable_setting(MariaDBMonitor* mon, const char* setting);
-static bool cluster_can_be_joined(MariaDBMonitor* mon);
-static bool can_replicate_from(MariaDBMonitor* mon,
+static void disable_setting(MYSQL_MONITOR* mon, const char* setting);
+static bool cluster_can_be_joined(MYSQL_MONITOR* mon);
+static bool can_replicate_from(MYSQL_MONITOR* mon,
                                MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
                                MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info);
-static bool wait_cluster_stabilization(MariaDBMonitor* mon, MXS_MONITORED_SERVER* new_master,
+static bool wait_cluster_stabilization(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master,
                                        const ServerVector& slaves, int seconds_remaining);
 static string get_connection_errors(const ServerVector& servers);
 static int64_t scan_server_id(const char* id_string);
-static string generate_change_master_cmd(MariaDBMonitor* mon, const string& master_host, int master_port);
+static string generate_change_master_cmd(MYSQL_MONITOR* mon, const string& master_host, int master_port);
 
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
@@ -155,18 +160,185 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 #define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
 
 /** Server id default value */
-const int64_t SERVER_ID_UNKNOWN = -1;
+static const int64_t SERVER_ID_UNKNOWN = -1;
 
 /** Default port */
-const int PORT_UNKNOWN = 0;
+static const int PORT_UNKNOWN = 0;
 
-MariaDBMonitor::MariaDBMonitor()
-{}
+class Gtid
+{
+public:
+    uint32_t domain;
+    int64_t server_id; // Is actually 32bit unsigned. 0 is only used by server versions  <= 10.1
+    uint64_t sequence;
+    Gtid()
+        : domain(0)
+        , server_id(SERVER_ID_UNKNOWN)
+        , sequence(0)
+    {}
 
-MariaDBMonitor::~MariaDBMonitor()
-{}
+    /**
+     * Parse a Gtid-triplet from a string. In case of a multi-triplet value, only the triplet with
+     * the given domain is returned.
+     *
+     * @param str Gtid string
+     * @param search_domain The Gtid domain whose triplet should be returned. Negative domain stands for
+     * autoselect, which is only allowed when the string contains one triplet.
+     */
+    Gtid(const char* str, int64_t search_domain = -1)
+        : domain(0)
+        , server_id(SERVER_ID_UNKNOWN)
+        , sequence(0)
+    {
+        // Autoselect only allowed with one triplet
+        ss_dassert(search_domain >= 0 || strchr(str, ',') == NULL);
+        parse_triplet(str);
+        if (search_domain >= 0 && domain != search_domain)
+        {
+            // Search for the correct triplet.
+            bool found = false;
+            for (const char* next_triplet = strchr(str, ',');
+                 next_triplet != NULL && !found;
+                 next_triplet = strchr(next_triplet, ','))
+            {
+                parse_triplet(++next_triplet);
+                if (domain == search_domain)
+                {
+                    found = true;
+                }
+            }
+            ss_dassert(found);
+        }
+    }
+    bool operator == (const Gtid& rhs) const
+    {
+        return domain == rhs.domain &&
+            server_id != SERVER_ID_UNKNOWN && server_id == rhs.server_id &&
+            sequence == rhs.sequence;
+    }
+    string to_string() const
+    {
+        std::stringstream ss;
+        if (server_id != SERVER_ID_UNKNOWN)
+        {
+            ss << domain << "-" << server_id << "-" << sequence;
+        }
+        return ss.str();
+    }
+private:
+    void parse_triplet(const char* str)
+    {
+        ss_debug(int rv = ) sscanf(str, "%" PRIu32 "-%" PRId64 "-%" PRIu64, &domain, &server_id, &sequence);
+        ss_dassert(rv == 3);
+    }
+};
 
-bool uses_gtid(MariaDBMonitor* mon, MXS_MONITORED_SERVER* mon_server, json_t** error_out)
+// Contains data returned by one row of SHOW ALL SLAVES STATUS
+class SlaveStatusInfo
+{
+public:
+    int64_t master_server_id;       /**< The master's server_id value. Valid ids are 32bit unsigned. -1 is
+                                     *   unread/error. */
+    string master_host;             /**< Master server host name. */
+    int master_port;                /**< Master server port. */
+    bool slave_io_running;          /**< Whether the slave I/O thread is running and connected. */
+    bool slave_sql_running;         /**< Whether or not the SQL thread is running. */
+    string master_log_file;         /**< Name of the master binary log file that the I/O thread is currently
+                                     *   reading from. */
+    uint64_t read_master_log_pos;   /**< Position up to which the I/O thread has read in the current master
+                                     *   binary log file. */
+    Gtid gtid_io_pos;               /**< Gtid I/O position of the slave thread. Only shows the triplet with
+                                     *   the current master domain. */
+    string last_error;              /**< Last IO or SQL error encountered. */
+
+    SlaveStatusInfo()
+        : master_server_id(SERVER_ID_UNKNOWN)
+        , master_port(0)
+        , slave_io_running(false)
+        , slave_sql_running(false)
+        , read_master_log_pos(0)
+    {}
+};
+
+// This class groups some miscellaneous replication related settings together.
+class ReplicationSettings
+{
+public:
+    bool gtid_strict_mode;      /**< Enable additional checks for replication */
+    bool log_bin;               /**< Is binary logging enabled */
+    bool log_slave_updates;     /**< Does the slave log replicated events to binlog */
+    ReplicationSettings()
+        : gtid_strict_mode(false)
+        , log_bin(false)
+        , log_slave_updates(false)
+    {}
+};
+
+/**
+ * Monitor specific information about a server
+ *
+ * Note: These are initialized in @c init_server_info
+ */
+class MySqlServerInfo
+{
+public:
+    int64_t          server_id;             /**< Value of @@server_id. Valid values are 32bit unsigned. */
+    int              group;                 /**< Multi-master group where this server belongs,
+                                             *   0 for servers not in groups */
+    bool             read_only;             /**< Value of @@read_only */
+    bool             slave_configured;      /**< Whether SHOW SLAVE STATUS returned rows */
+    bool             binlog_relay;          /** Server is a Binlog Relay */
+    int              n_slaves_configured;   /**< Number of configured slave connections*/
+    int              n_slaves_running;      /**< Number of running slave connections */
+    int              slave_heartbeats;      /**< Number of received heartbeats */
+    double           heartbeat_period;      /**< The time interval between heartbeats */
+    time_t           latest_event;          /**< Time when latest event was received from the master */
+    int64_t          gtid_domain_id;        /**< The value of gtid_domain_id, the domain which is used for
+                                             *   new non-replicated events. */
+    Gtid             gtid_current_pos;      /**< Gtid of latest event. Only shows the triplet
+                                             *   with the current master domain. */
+    Gtid             gtid_binlog_pos;       /**< Gtid of latest event written to binlog. Only shows
+                                             *   the triplet with the current master domain. */
+    SlaveStatusInfo  slave_status;          /**< Data returned from SHOW SLAVE STATUS */
+    ReplicationSettings rpl_settings;       /**< Miscellaneous replication related settings */
+    mysql_server_version version;           /**< Server version, 10.X, 5.5 or 5.1 */
+
+    MySqlServerInfo()
+        : server_id(SERVER_ID_UNKNOWN)
+        , group(0)
+        , read_only(false)
+        , slave_configured(false)
+        , binlog_relay(false)
+        , n_slaves_configured(0)
+        , n_slaves_running(0)
+        , slave_heartbeats(0)
+        , heartbeat_period(0)
+        , latest_event(0)
+        , gtid_domain_id(-1)
+        , version(MYSQL_SERVER_VERSION_51)
+    {}
+
+    /**
+     * Calculate how many events are left in the relay log. If gtid_current_pos is ahead of Gtid_IO_Pos,
+     * or a server_id is unknown, an error value is returned.
+     *
+     * @return Number of events in relay log according to latest queried info. A negative value signifies
+     * an error in the gtid-values.
+     */
+    int64_t relay_log_events()
+    {
+        if (slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN &&
+            gtid_current_pos.server_id != SERVER_ID_UNKNOWN &&
+            slave_status.gtid_io_pos.domain == gtid_current_pos.domain &&
+            slave_status.gtid_io_pos.sequence >= gtid_current_pos.sequence)
+        {
+            return slave_status.gtid_io_pos.sequence - gtid_current_pos.sequence;
+        }
+        return -1;
+    }
+};
+
+bool uses_gtid(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* mon_server, json_t** error_out)
 {
     bool rval = false;
     const MySqlServerInfo* info = get_server_info(mon, mon_server);
@@ -182,7 +354,6 @@ bool uses_gtid(MariaDBMonitor* mon, MXS_MONITORED_SERVER* mon_server, json_t** e
     }
     return rval;
 }
-
 /**
  * Check that the given server is a master and it's the only master.
  *
@@ -193,7 +364,7 @@ bool uses_gtid(MariaDBMonitor* mon, MXS_MONITORED_SERVER* mon_server, json_t** e
  * @return False, if there is some error with the specified current master,
  *         True otherwise.
  */
-bool mysql_switchover_check_current(const MariaDBMonitor* mon,
+bool mysql_switchover_check_current(const MYSQL_MONITOR* mon,
                                     const MXS_MONITORED_SERVER* suggested_curr_master,
                                     json_t** error_out)
 {
@@ -265,7 +436,7 @@ bool mysql_switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, js
  * @param error_out JSON error out
  * @return True if failover may proceed
  */
-bool failover_check(MariaDBMonitor* mon, json_t** error_out)
+bool failover_check(MYSQL_MONITOR* mon, json_t** error_out)
 {
     // Check that there is no running master and that there is at least one running server in the cluster.
     // Also, all slaves must be using gtid-replication.
@@ -337,7 +508,7 @@ bool mysql_switchover(MXS_MONITOR* mon, MXS_MONITORED_SERVER* new_master, MXS_MO
     }
 
     bool rval = false;
-    MariaDBMonitor* handle = static_cast<MariaDBMonitor*>(mon->handle);
+    MYSQL_MONITOR* handle = static_cast<MYSQL_MONITOR*>(mon->handle);
 
     bool current_ok = mysql_switchover_check_current(handle, current_master, error_out);
     bool new_ok = mysql_switchover_check_new(new_master, error_out);
@@ -428,7 +599,7 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
     else
     {
         // Autoselect current master
-        MariaDBMonitor* handle = static_cast<MariaDBMonitor*>(mon->handle);
+        MYSQL_MONITOR* handle = static_cast<MYSQL_MONITOR*>(mon->handle);
         if (handle->master)
         {
             mon_curr_master = handle->master;
@@ -479,7 +650,7 @@ bool mysql_failover(MXS_MONITOR* mon, json_t** output)
     }
 
     bool rv = true;
-    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(mon->handle);
+    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
     rv = failover_check(handle, output);
     if (rv)
     {
@@ -548,7 +719,7 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
     }
 
     bool rval = false;
-    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(mon->handle);
+    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
     if (cluster_can_be_joined(handle))
     {
         MXS_MONITORED_SERVER* mon_server = mon_get_monitored_server(mon, rejoin_server);
@@ -770,34 +941,41 @@ void info_free_func(void *val)
  * @brief Helper function that initializes the server info hashtable
  *
  * @param handle MariaDB monitor handle
+ * @param database List of monitored databases
  * @return True on success, false if initialization failed. At the moment
  *         initialization can only fail if memory allocation fails.
  */
-void init_server_info(MariaDBMonitor *handle)
+bool init_server_info(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database)
 {
-    ServerInfoMap& infos = handle->server_info;
-    infos.clear();
+    bool rval = true;
 
-    for (MXS_MONITORED_SERVER* server = handle->monitor->monitored_servers; server; server = server->next)
+    MySqlServerInfo info;
+
+    while (database)
     {
-        ServerInfoMap::value_type new_val(server, MySqlServerInfo());
-        infos.insert(new_val);
+        /** Delete any existing structures and replace them with empty ones */
+        hashtable_delete(handle->server_info, database->server->unique_name);
+
+        if (!hashtable_add(handle->server_info, database->server->unique_name, &info))
+        {
+            rval = false;
+            break;
+        }
+
+        database = database->next;
     }
+
+    return rval;
 }
 
-static MySqlServerInfo* get_server_info(MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db)
+static MySqlServerInfo* get_server_info(const MYSQL_MONITOR* handle, const  MXS_MONITORED_SERVER* db)
 {
-    ServerInfoMap::iterator iter = handle->server_info.find(db);
-    ss_dassert(iter != handle->server_info.end());
-    return &iter->second;
+    void* value = hashtable_fetch(handle->server_info, db->server->unique_name);
+    ss_dassert(value);
+    return static_cast<MySqlServerInfo*>(value);
 }
 
-static const MySqlServerInfo* get_server_info(const MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db)
-{
-    return get_server_info(const_cast<MariaDBMonitor*>(handle), db);
-}
-
-static bool set_replication_credentials(MariaDBMonitor *handle, const MXS_CONFIG_PARAMETER* params)
+static bool set_replication_credentials(MYSQL_MONITOR *handle, const MXS_CONFIG_PARAMETER* params)
 {
     bool rval = false;
     const char* repl_user = config_get_string(params, CN_REPLICATION_USER);
@@ -829,10 +1007,9 @@ static bool set_replication_credentials(MariaDBMonitor *handle, const MXS_CONFIG
  * @param server Server to test
  * @return True if server is in the excluded-list of the monitor.
  */
-static bool server_is_excluded(const MariaDBMonitor *handle, const MXS_MONITORED_SERVER* server)
+static bool server_is_excluded(const MYSQL_MONITOR *handle, const MXS_MONITORED_SERVER* server)
 {
-    size_t n_excluded = handle->excluded_servers.size();
-    for (size_t i = 0; i < n_excluded; i++)
+    for (int i = 0; i < handle->n_excluded; i++)
     {
         if (handle->excluded_servers[i] == server)
         {
@@ -855,18 +1032,33 @@ static void *
 startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
     bool error = false;
-    MariaDBMonitor *handle = (MariaDBMonitor*) monitor->handle;
+    MYSQL_MONITOR *handle = (MYSQL_MONITOR*) monitor->handle;
     if (handle)
     {
         handle->shutdown = 0;
         handle->script.clear();
         handle->replication_user.clear();
         handle->replication_password.clear();
-        handle->excluded_servers.clear();
+        MXS_FREE(handle->excluded_servers);
+        handle->excluded_servers = NULL;
+        handle->n_excluded = 0;
     }
     else
     {
-        handle = new MariaDBMonitor;
+        handle = new MYSQL_MONITOR;
+        HASHTABLE *server_info = hashtable_alloc(MAX_NUM_SLAVES,
+                                                 hashtable_item_strhash, hashtable_item_strcmp);
+
+        if (server_info == NULL)
+        {
+            delete handle;
+            hashtable_free(server_info);
+            return NULL;
+        }
+
+        hashtable_memory_fns(server_info, hashtable_item_strdup, info_copy_func,
+                             hashtable_item_free, info_free_func);
+        handle->server_info = server_info;
         handle->shutdown = 0;
         handle->id = config_get_global_options()->id;
         handle->warn_set_standalone_master = true;
@@ -895,14 +1087,13 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
     handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
     handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
-
-    MXS_MONITORED_SERVER** excluded_array = NULL;
-    int n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, monitor, &excluded_array);
-    for (int i = 0; i < n_excluded; i++)
+    handle->excluded_servers = NULL;
+    handle->n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, monitor,
+                                                &handle->excluded_servers);
+    if (handle->n_excluded < 0)
     {
-        handle->excluded_servers.push_back(excluded_array[i]);
+        error = true;
     }
-    MXS_FREE(excluded_array);
 
     if (!set_replication_credentials(handle, params))
     {
@@ -916,10 +1107,15 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         error = true;
     }
 
-    init_server_info(handle);
+    if (!init_server_info(handle, monitor->monitored_servers))
+    {
+        error = true;
+    }
 
     if (error)
     {
+        hashtable_free(handle->server_info);
+        MXS_FREE(handle->excluded_servers);
         delete handle;
         handle = NULL;
     }
@@ -930,6 +1126,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         if (thread_start(&handle->thread, monitorMain, handle, 0) == NULL)
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
+            hashtable_free(handle->server_info);
             delete handle;
             handle = NULL;
         }
@@ -946,7 +1143,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 static void
 stopMonitor(MXS_MONITOR *mon)
 {
-    MariaDBMonitor *handle = (MariaDBMonitor *) mon->handle;
+    MYSQL_MONITOR *handle = (MYSQL_MONITOR *) mon->handle;
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
@@ -967,7 +1164,7 @@ static bool stop_monitor(MXS_MONITOR* mon)
 
     bool actually_stopped = false;
 
-    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(mon->handle);
+    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
 
     if (handle->status == MXS_MONITOR_RUNNING)
     {
@@ -978,10 +1175,9 @@ static bool stop_monitor(MXS_MONITOR* mon)
     return actually_stopped;
 }
 
-static string monitored_servers_to_string(const ServerVector& array)
+static string monitored_servers_to_string(MXS_MONITORED_SERVER** array, size_t array_size)
 {
     string rval;
-    size_t array_size = array.size();
     if (array_size > 0)
     {
         const char* separator = "";
@@ -1002,7 +1198,7 @@ static string monitored_servers_to_string(const ServerVector& array)
  */
 static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
-    const MariaDBMonitor *handle = (const MariaDBMonitor *)mon->handle;
+    const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
 
     dcb_printf(dcb, "Automatic failover:     %s\n", handle->auto_failover ? "Enabled" : "Disabled");
     dcb_printf(dcb, "Failcount:              %d\n", handle->failcount);
@@ -1013,16 +1209,17 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     dcb_printf(dcb, "Detect replication lag: %s\n", (handle->replicationHeartbeat) ? "Enabled" : "Disabled");
     dcb_printf(dcb, "Detect stale master:    %s\n", (handle->detectStaleMaster == 1) ?
                "Enabled" : "Disabled");
-    if (handle->excluded_servers.size() > 0)
+    if (handle->n_excluded > 0)
     {
         dcb_printf(dcb, "Non-promotable servers (failover): ");
-        dcb_printf(dcb, "%s\n", monitored_servers_to_string(handle->excluded_servers).c_str());
+        dcb_printf(dcb, "%s\n",
+                   monitored_servers_to_string(handle->excluded_servers, handle->n_excluded).c_str());
     }
 
     dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
     for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
     {
-        const MySqlServerInfo* serv_info = get_server_info(handle, db);
+        MySqlServerInfo *serv_info = get_server_info(handle, db);
         dcb_printf(dcb, "Server:                 %s\n", db->server->unique_name);
         dcb_printf(dcb, "Server ID:              %" PRId64 "\n", serv_info->server_id);
         dcb_printf(dcb, "Read only:              %s\n", serv_info->read_only ? "YES" : "NO");
@@ -1068,7 +1265,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
 {
     json_t* rval = json_object();
 
-    const MariaDBMonitor *handle = (const MariaDBMonitor *)mon->handle;
+    const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
     json_object_set_new(rval, "monitor_id", json_integer(handle->id));
     json_object_set_new(rval, "detect_stale_master", json_boolean(handle->detectStaleMaster));
     json_object_set_new(rval, "detect_stale_slave", json_boolean(handle->detectStaleSlave));
@@ -1087,9 +1284,9 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     {
         json_object_set_new(rval, "script", json_string(handle->script.c_str()));
     }
-    if (handle->excluded_servers.size() > 0)
+    if (handle->n_excluded > 0)
     {
-        string list = monitored_servers_to_string(handle->excluded_servers);
+        string list = monitored_servers_to_string(handle->excluded_servers, handle->n_excluded);
         json_object_set_new(rval, CN_NO_PROMOTE_SERVERS, json_string(list.c_str()));
     }
     if (mon->monitored_servers)
@@ -1099,7 +1296,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
         for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
         {
             json_t* srv = json_object();
-            const MySqlServerInfo* serv_info = get_server_info(handle, db);
+            MySqlServerInfo *serv_info = get_server_info(handle, db);
             json_object_set_new(srv, "name", json_string(db->server->unique_name));
             json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
             json_object_set_new(srv, "master_id", json_integer(serv_info->slave_status.master_server_id));
@@ -1151,7 +1348,7 @@ static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
     return MYSQL_SERVER_VERSION_51;
 }
 
-static bool do_show_slave_status(MariaDBMonitor* mon,
+static bool do_show_slave_status(MYSQL_MONITOR* mon,
                                  MySqlServerInfo* serv_info,
                                  MXS_MONITORED_SERVER* database)
 {
@@ -1313,7 +1510,7 @@ static bool do_show_slave_status(MariaDBMonitor* mon,
  * @param handle Cluster monitor
  * @return True, if a slave has an event more recent than master_failure_timeout.
  */
-static bool slave_receiving_events(MariaDBMonitor* handle)
+static bool slave_receiving_events(MYSQL_MONITOR* handle)
 {
     ss_dassert(handle->master);
     bool received_event = false;
@@ -1337,7 +1534,7 @@ static bool slave_receiving_events(MariaDBMonitor* handle)
     return received_event;
 }
 
-static inline void monitor_mysql_db(MariaDBMonitor* mon,
+static inline void monitor_mysql_db(MYSQL_MONITOR* mon,
                                     MXS_MONITORED_SERVER* database,
                                     MySqlServerInfo *serv_info)
 {
@@ -1372,7 +1569,7 @@ static MXS_MONITORED_SERVER *build_mysql51_replication_tree(MXS_MONITOR *mon)
     MXS_MONITORED_SERVER* database = mon->monitored_servers;
     MXS_MONITORED_SERVER *ptr, *rval = NULL;
     int i;
-    MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(mon->handle);
+    MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
 
     while (database)
     {
@@ -1478,7 +1675,7 @@ static MXS_MONITORED_SERVER *build_mysql51_replication_tree(MXS_MONITOR *mon)
 static void
 monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
 {
-    MariaDBMonitor* handle = static_cast<MariaDBMonitor*>(mon->handle);
+    MYSQL_MONITOR* handle = static_cast<MYSQL_MONITOR*>(mon->handle);
 
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))
@@ -1706,7 +1903,7 @@ static void visit_node(struct graph_node *node, struct graph_node **stack,
  * member. Nodes in a group get a positive group ID where the nodes not in a
  * group get a group ID of 0.
  */
-void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, int nservers)
+void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database, int nservers)
 {
     struct graph_node graph[nservers];
     struct graph_node *stack[nservers];
@@ -1812,7 +2009,7 @@ void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, i
  *
  * @return True if standalone master should be used
  */
-bool standalone_master_required(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db)
+bool standalone_master_required(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 {
     int candidates = 0;
 
@@ -1849,7 +2046,7 @@ bool standalone_master_required(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db
  * @param handle Monitor instance
  * @param db     Monitor servers
  */
-bool set_standalone_master(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db)
+bool set_standalone_master(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *db)
 {
     bool rval = false;
 
@@ -1883,7 +2080,7 @@ bool set_standalone_master(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db)
     return rval;
 }
 
-bool failover_not_possible(MariaDBMonitor* handle)
+bool failover_not_possible(MYSQL_MONITOR* handle)
 {
     bool rval = false;
 
@@ -1910,7 +2107,7 @@ bool failover_not_possible(MariaDBMonitor* handle)
 static void
 monitorMain(void *arg)
 {
-    MariaDBMonitor *handle  = (MariaDBMonitor *) arg;
+    MYSQL_MONITOR *handle  = (MYSQL_MONITOR *) arg;
     MXS_MONITOR* mon = handle->monitor;
     MXS_MONITORED_SERVER *ptr;
     bool replication_heartbeat;
@@ -2480,7 +2677,7 @@ static int get_row_count(MXS_MONITORED_SERVER *database, const char* query)
  * @param handle    The monitor handle
  * @param database      The number database server
  */
-static void set_master_heartbeat(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database)
+static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITORED_SERVER *database)
 {
     unsigned long id = handle->id;
     time_t heartbeat;
@@ -2601,7 +2798,7 @@ static void set_master_heartbeat(MariaDBMonitor *handle, MXS_MONITORED_SERVER *d
  */
 static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
 {
-    MariaDBMonitor *handle = (MariaDBMonitor*) mon->handle;
+    MYSQL_MONITOR *handle = (MYSQL_MONITOR*) mon->handle;
     unsigned long id = handle->id;
     time_t heartbeat;
     char select_heartbeat_query[256] = "";
@@ -2711,7 +2908,7 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database
 
 static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_servers)
 {
-    MariaDBMonitor* handle = (MariaDBMonitor*) mon->handle;
+    MYSQL_MONITOR* handle = (MYSQL_MONITOR*) mon->handle;
     MXS_MONITORED_SERVER *ptr;
     MXS_MONITORED_SERVER *backend;
     SERVER *current;
@@ -3111,7 +3308,7 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
  * @todo Currently this only works with flat replication topologies and
  *       needs to be moved inside mysqlmon as it is MariaDB specific code.
  */
-bool mon_process_failover(MariaDBMonitor* monitor, uint32_t failover_timeout, bool* cluster_modified_out)
+bool mon_process_failover(MYSQL_MONITOR* monitor, uint32_t failover_timeout, bool* cluster_modified_out)
 {
     ss_dassert(*cluster_modified_out == false);
     bool rval = true;
@@ -3192,7 +3389,7 @@ bool mon_process_failover(MariaDBMonitor* monitor, uint32_t failover_timeout, bo
  * @param server Slave to update
  * @return Slave server info. NULL on error, or if server is not a slave.
  */
-static MySqlServerInfo* update_slave_info(MariaDBMonitor* mon, MXS_MONITORED_SERVER* server)
+static MySqlServerInfo* update_slave_info(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server)
 {
     MySqlServerInfo* info = get_server_info(mon, server);
     if (info->slave_status.slave_sql_running &&
@@ -3256,7 +3453,7 @@ static bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySql
  * @param err_out Json object for error printing. Can be NULL.
  * @return True, if given slave is a valid promotion candidate.
  */
-bool switchover_check_preferred_master(MariaDBMonitor* mon, MXS_MONITORED_SERVER* preferred, json_t** err_out)
+bool switchover_check_preferred_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* preferred, json_t** err_out)
 {
     ss_dassert(preferred);
     bool rval = true;
@@ -3315,7 +3512,7 @@ bool is_candidate_better(const MySqlServerInfo* current_best_info, const MySqlSe
  * @param err_out json object for error printing. Can be NULL.
  * @return The found master, or NULL if not found
  */
-MXS_MONITORED_SERVER* select_new_master(MariaDBMonitor* mon, ServerVector* slaves_out, json_t** err_out)
+MXS_MONITORED_SERVER* select_new_master(MYSQL_MONITOR* mon, ServerVector* slaves_out, json_t** err_out)
 {
     ss_dassert(slaves_out && slaves_out->size() == 0);
     /* Select a new master candidate. Selects the one with the latest event in relay log.
@@ -3408,7 +3605,7 @@ MXS_MONITORED_SERVER* select_new_master(MariaDBMonitor* mon, ServerVector* slave
  * @param err_out Json error output
  * @return True if relay log was processed within time limit, or false if time ran out or an error occurred.
  */
-bool failover_wait_relay_log(MariaDBMonitor* mon, MXS_MONITORED_SERVER* new_master, int seconds_remaining,
+bool failover_wait_relay_log(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, int seconds_remaining,
                              json_t** err_out)
 {
     MySqlServerInfo* master_info = get_server_info(mon, new_master);
@@ -3461,7 +3658,7 @@ bool failover_wait_relay_log(MariaDBMonitor* mon, MXS_MONITORED_SERVER* new_mast
     return rval;
 }
 
-bool start_external_replication(MariaDBMonitor* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
+bool start_external_replication(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
     bool rval = false;
     string change_cmd = generate_change_master_cmd(mon, mon->external_master_host, mon->external_master_port);
@@ -3488,7 +3685,7 @@ bool start_external_replication(MariaDBMonitor* mon, MXS_MONITORED_SERVER* new_m
  * @param err_out json object for error printing. Can be NULL.
  * @return True if successful
  */
-bool promote_new_master(MariaDBMonitor* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
+bool promote_new_master(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
     bool success = false;
     MXS_NOTICE("Promoting server '%s' to master.", new_master->server->unique_name);
@@ -3529,7 +3726,7 @@ bool promote_new_master(MariaDBMonitor* mon, MXS_MONITORED_SERVER* new_master, j
  * @param master_port Master port
  * @return Generated query
  */
-string generate_change_master_cmd(MariaDBMonitor* mon, const string& master_host, int master_port)
+string generate_change_master_cmd(MYSQL_MONITOR* mon, const string& master_host, int master_port)
 {
     std::stringstream change_cmd;
     change_cmd << "CHANGE MASTER TO MASTER_HOST = '" << master_host << "', ";
@@ -3583,7 +3780,7 @@ bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd)
  * @param redirected_slaves A vector where to insert successfully redirected slaves. Can be NULL.
  * @return The number of slaves successfully redirected.
  */
-int redirect_slaves(MariaDBMonitor* mon, MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
+int redirect_slaves(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
                     ServerVector* redirected_slaves = NULL)
 {
     MXS_NOTICE("Redirecting slaves to new master.");
@@ -3641,7 +3838,7 @@ void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVecto
  * @param err_out Json output
  * @return True if successful
  */
-static bool do_failover(MariaDBMonitor* mon, json_t** err_out)
+static bool do_failover(MYSQL_MONITOR* mon, json_t** err_out)
 {
     // Topology has already been tested to be simple.
     if (mon->master_gtid_domain < 0)
@@ -3796,7 +3993,7 @@ static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlSer
  * @param info Server info structure for saving result
  * @return True if successful
  */
-static bool update_gtids(MariaDBMonitor* mon, MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
+static bool update_gtids(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
 {
     StringVector row;
     const char query[] = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
@@ -3826,7 +4023,7 @@ static bool update_gtids(MariaDBMonitor* mon, MXS_MONITORED_SERVER *database, My
  * @param err_out json object for error printing. Can be NULL.
  * @return True if successful.
  */
-static bool switchover_demote_master(MariaDBMonitor* mon,
+static bool switchover_demote_master(MYSQL_MONITOR* mon,
                                      MXS_MONITORED_SERVER* current_master,
                                      MySqlServerInfo* info,
                                      json_t** err_out)
@@ -4029,7 +4226,7 @@ static bool switchover_wait_slaves_catchup(const ServerVector& slaves, const Gti
  * @return True if commands were accepted. This does not guarantee that replication proceeds
  * successfully.
  */
-static bool switchover_start_slave(MariaDBMonitor* mon, MXS_MONITORED_SERVER* old_master, SERVER* new_master)
+static bool switchover_start_slave(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* old_master, SERVER* new_master)
 {
     bool rval = false;
     std::string change_cmd = generate_change_master_cmd(mon, new_master->name, new_master->port);
@@ -4080,7 +4277,7 @@ static string get_connection_errors(const ServerVector& servers)
  * @param seconds_remaining How long can we wait
  * @return True, if at least one slave got the new event within the time limit
  */
-static bool wait_cluster_stabilization(MariaDBMonitor* mon,
+static bool wait_cluster_stabilization(MYSQL_MONITOR* mon,
                                        MXS_MONITORED_SERVER* new_master,
                                        const ServerVector& slaves,
                                        int seconds_remaining)
@@ -4174,7 +4371,7 @@ static bool wait_cluster_stabilization(MariaDBMonitor* mon,
  * @return True if successful. If false, the cluster can be in various situations depending on which step
  * failed. In practice, manual intervention is usually required on failure.
  */
-static bool do_switchover(MariaDBMonitor* mon, MXS_MONITORED_SERVER* current_master,
+static bool do_switchover(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* current_master,
                           MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
     MXS_MONITORED_SERVER* demotion_target = current_master ? current_master : mon->master;
@@ -4371,7 +4568,7 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
  * @param master_info Master info
  * @return True if slave can replicate from master
  */
-static bool can_replicate_from(MariaDBMonitor* mon,
+static bool can_replicate_from(MYSQL_MONITOR* mon,
                                MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
                                MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info)
 {
@@ -4402,7 +4599,7 @@ static bool can_replicate_from(MariaDBMonitor* mon,
  * @param master_info Master server info
  * @return True, if server is a rejoin suspect.
  */
-static bool server_is_rejoin_suspect(MariaDBMonitor* mon, MXS_MONITORED_SERVER* server,
+static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server,
                                      MySqlServerInfo* master_info)
 {
     bool is_suspect = false;
@@ -4446,7 +4643,7 @@ static bool server_is_rejoin_suspect(MariaDBMonitor* mon, MXS_MONITORED_SERVER* 
  * @return False, if there were possible rejoinable servers but communications error to master server
  * prevented final checks.
  */
-static bool get_joinable_servers(MariaDBMonitor* mon, ServerVector* output)
+static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output)
 {
     ss_dassert(output);
     MXS_MONITORED_SERVER* master = mon->master;
@@ -4497,7 +4694,7 @@ static bool get_joinable_servers(MariaDBMonitor* mon, ServerVector* output)
  * @param joinable_servers Which servers to rejoin
  * @return The number of servers successfully rejoined
  */
-static uint32_t do_rejoin(MariaDBMonitor* mon, const ServerVector& joinable_servers)
+static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& joinable_servers)
 {
     SERVER* master = mon->master->server;
     uint32_t servers_joined = 0;
@@ -4567,7 +4764,7 @@ static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd)
  * @param mon Cluster monitor
  * @param setting_name Setting to disable
  */
-static void disable_setting(MariaDBMonitor* mon, const char* setting)
+static void disable_setting(MYSQL_MONITOR* mon, const char* setting)
 {
     MXS_CONFIG_PARAMETER p = {};
     p.name = const_cast<char*>(setting);
@@ -4581,7 +4778,7 @@ static void disable_setting(MariaDBMonitor* mon, const char* setting)
  * @param mon Cluster monitor
  * @return True, if cluster can be joined
  */
-static bool cluster_can_be_joined(MariaDBMonitor* mon)
+static bool cluster_can_be_joined(MYSQL_MONITOR* mon)
 {
     return (mon->master != NULL && SERVER_IS_MASTER(mon->master->server) && mon->master_gtid_domain >= 0);
 }
