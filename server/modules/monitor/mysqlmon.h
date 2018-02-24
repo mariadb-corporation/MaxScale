@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _MARIADBMON_H
-#define _MARIADBMON_H
+#ifndef _MYSQLMON_H
+#define _MYSQLMON_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
