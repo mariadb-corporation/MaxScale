@@ -15,28 +15,31 @@
  */
 
 /**
- * @file mysqlmon.hh - The MySQL monitor
+ * @file mysqlmon.h - The MySQL monitor
  */
 
-#include <maxscale/cppdefs.hh>
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-
-#include <maxscale/config.h>
-#include <maxscale/dcb.h>
-#include <maxscale/hashtable.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/modinfo.h>
 #include <maxscale/monitor.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/secrets.h>
 #include <maxscale/thread.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/config.h>
+#include <maxscale/hashtable.h>
 
-// MySQL Monitor module instance
-struct MYSQL_MONITOR
+MXS_BEGIN_DECLS
+
+/**
+ * The handle for an instance of a MySQL Monitor module
+ */
+typedef struct
 {
     THREAD thread;                 /**< Monitor thread */
     int shutdown;                  /**< Flag to shutdown the monitor thread */
@@ -76,6 +79,8 @@ struct MYSQL_MONITOR
     MXS_MONITORED_SERVER** excluded_servers; /**< Servers banned for master promotion during auto-failover. */
 
     MXS_MONITOR* monitor;
-};
+} MYSQL_MONITOR;
+
+MXS_END_DECLS
 
 #endif

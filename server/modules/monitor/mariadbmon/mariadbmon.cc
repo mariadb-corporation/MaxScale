@@ -17,7 +17,7 @@
 
 #define MXS_MODULE_NAME "mariadbmon"
 
-#include "mariadbmon.hh"
+#include "mariadbmon.h"
 #include <inttypes.h>
 #include <limits>
 #include <string>
