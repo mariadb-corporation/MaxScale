@@ -31,7 +31,6 @@
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
-#include <maxscale/secrets.h>
 #include <maxscale/utils.h>
 // TODO: For monitorAddParameters
 #include "../../../core/internal/monitor.h"
@@ -990,10 +989,8 @@ static bool set_replication_credentials(MYSQL_MONITOR *handle, const MXS_CONFIG_
 
     if (*repl_user && *repl_pw)
     {
-        handle->replication_user = repl_user;
-        char* decrypted = decrypt_password(repl_pw);
-        handle->replication_password = decrypted;
-        MXS_FREE(decrypted);
+        handle->replication_user = MXS_STRDUP_A(repl_user);
+        handle->replication_password = decrypt_password(repl_pw);
         rval = true;
     }
 
@@ -1036,22 +1033,22 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     if (handle)
     {
         handle->shutdown = 0;
-        handle->script.clear();
-        handle->replication_user.clear();
-        handle->replication_password.clear();
+        MXS_FREE(handle->script);
+        MXS_FREE(handle->replication_user);
+        MXS_FREE(handle->replication_password);
         MXS_FREE(handle->excluded_servers);
         handle->excluded_servers = NULL;
         handle->n_excluded = 0;
     }
     else
     {
-        handle = new MYSQL_MONITOR;
+        handle = (MYSQL_MONITOR *) MXS_MALLOC(sizeof(MYSQL_MONITOR));
         HASHTABLE *server_info = hashtable_alloc(MAX_NUM_SLAVES,
                                                  hashtable_item_strhash, hashtable_item_strcmp);
 
-        if (server_info == NULL)
+        if (handle == NULL || server_info == NULL)
         {
-            delete handle;
+            MXS_FREE(handle);
             hashtable_free(server_info);
             return NULL;
         }
@@ -1063,6 +1060,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->id = config_get_global_options()->id;
         handle->warn_set_standalone_master = true;
         handle->master_gtid_domain = -1;
+        handle->external_master_host[0] = '\0';
         handle->external_master_port = PORT_UNKNOWN;
         handle->monitor = monitor;
     }
@@ -1079,14 +1077,15 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->failcount = config_get_integer(params, CN_FAILCOUNT);
     handle->allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
     handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
-    handle->script = config_get_string(params, "script");
+    handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+    handle->auto_failover = config_get_bool(params, CN_AUTO_FAILOVER);
     handle->failover_timeout = config_get_integer(params, CN_FAILOVER_TIMEOUT);
     handle->switchover_timeout = config_get_integer(params, CN_SWITCHOVER_TIMEOUT);
-    handle->auto_failover = config_get_bool(params, CN_AUTO_FAILOVER);
-    handle->auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
     handle->verify_master_failure = config_get_bool(params, CN_VERIFY_MASTER_FAILURE);
     handle->master_failure_timeout = config_get_integer(params, CN_MASTER_FAILURE_TIMEOUT);
+    handle->auto_rejoin = config_get_bool(params, CN_AUTO_REJOIN);
+
     handle->excluded_servers = NULL;
     handle->n_excluded = mon_config_get_servers(params, CN_NO_PROMOTE_SERVERS, monitor,
                                                 &handle->excluded_servers);
@@ -1115,8 +1114,9 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     if (error)
     {
         hashtable_free(handle->server_info);
+        MXS_FREE(handle->script);
         MXS_FREE(handle->excluded_servers);
-        delete handle;
+        MXS_FREE(handle);
         handle = NULL;
     }
     else
@@ -1127,7 +1127,8 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
             hashtable_free(handle->server_info);
-            delete handle;
+            MXS_FREE(handle->script);
+            MXS_FREE(handle);
             handle = NULL;
         }
     }
@@ -1206,7 +1207,8 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     dcb_printf(dcb, "Switchover timeout:     %u\n", handle->switchover_timeout);
     dcb_printf(dcb, "Automatic rejoin:       %s\n", handle->auto_rejoin ? "Enabled" : "Disabled");
     dcb_printf(dcb, "MaxScale monitor ID:    %lu\n", handle->id);
-    dcb_printf(dcb, "Detect replication lag: %s\n", (handle->replicationHeartbeat) ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Detect replication lag: %s\n", (handle->replicationHeartbeat == 1) ?
+               "Enabled" : "Disabled");
     dcb_printf(dcb, "Detect stale master:    %s\n", (handle->detectStaleMaster == 1) ?
                "Enabled" : "Disabled");
     if (handle->n_excluded > 0)
@@ -1280,9 +1282,9 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(handle->switchover_timeout));
     json_object_set_new(rval, CN_AUTO_REJOIN, json_boolean(handle->auto_rejoin));
 
-    if (!handle->script.empty())
+    if (handle->script)
     {
-        json_object_set_new(rval, "script", json_string(handle->script.c_str()));
+        json_object_set_new(rval, "script", json_string(handle->script));
     }
     if (handle->n_excluded > 0)
     {
@@ -2110,7 +2112,7 @@ monitorMain(void *arg)
     MYSQL_MONITOR *handle  = (MYSQL_MONITOR *) arg;
     MXS_MONITOR* mon = handle->monitor;
     MXS_MONITORED_SERVER *ptr;
-    bool replication_heartbeat;
+    int replication_heartbeat;
     bool detect_stale_master;
     int num_servers = 0;
     MXS_MONITORED_SERVER *root_master = NULL;
@@ -2283,20 +2285,21 @@ monitorMain(void *arg)
                 if (master_info->slave_status.master_host != handle->external_master_host ||
                     master_info->slave_status.master_port != handle->external_master_port)
                 {
-                    const string new_ext_host =  master_info->slave_status.master_host;
+                    const char* new_ext_host =  master_info->slave_status.master_host.c_str();
                     const int new_ext_port = master_info->slave_status.master_port;
                     if (handle->external_master_port == PORT_UNKNOWN)
                     {
                         MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",
-                                   new_ext_host.c_str(), new_ext_port);
+                                   new_ext_host, new_ext_port);
                     }
                     else
                     {
                         MXS_NOTICE("The external master of the cluster has changed: %s:%d -> %s:%d.",
-                                   handle->external_master_host.c_str(), handle->external_master_port,
-                                   new_ext_host.c_str(), new_ext_port);
+                                   handle->external_master_host, handle->external_master_port,
+                                   new_ext_host, new_ext_port);
                     }
-                    handle->external_master_host = new_ext_host;
+                    snprintf(handle->external_master_host, sizeof(handle->external_master_host),
+                             "%s", new_ext_host);
                     handle->external_master_port = new_ext_port;
                 }
             }
@@ -2306,7 +2309,7 @@ monitorMain(void *arg)
                 {
                     MXS_NOTICE("Cluster lost the external master.");
                 }
-                handle->external_master_host.clear();
+                handle->external_master_host[0] = '\0';
                 handle->external_master_port = PORT_UNKNOWN;
             }
         }
@@ -2467,7 +2470,7 @@ monitorMain(void *arg)
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(mon, handle->script.c_str(), handle->events);
+        mon_process_state_changes(mon, handle->script, handle->events);
         bool failover_performed = false; // Has an automatic failover been performed this loop?
 
         if (handle->auto_failover)
@@ -3666,7 +3669,7 @@ bool start_external_replication(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* new_ma
         mxs_mysql_query(new_master->con, "START SLAVE;") == 0)
     {
         MXS_NOTICE("New master starting replication from external master %s:%d.",
-                   mon->external_master_host.c_str(), mon->external_master_port);
+                   mon->external_master_host, mon->external_master_port);
         rval = true;
     }
     else
