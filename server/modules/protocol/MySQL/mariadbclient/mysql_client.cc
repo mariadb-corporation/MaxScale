@@ -37,7 +37,8 @@
 #include <maxscale/utils.h>
 #include <maxscale/worker.h>
 
-#include "setsqlmodeparser.hh"
+#include "setparser.hh"
+#include "sqlmodeparser.hh"
 
 /** Return type of process_special_commands() */
 typedef enum spec_com_res_t
@@ -873,52 +874,58 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
 }
 
 /**
- * Sets the query classifier mode.
+ * Handle relevant variables
  *
  * @param session      The session for which the query classifier mode is adjusted.
  * @param read_buffer  Pointer to a buffer, assumed to contain a statement.
  *                     May be reallocated if not contiguous.
  */
-void set_qc_mode(MXS_SESSION* session, GWBUF** read_buffer)
+void handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
 {
-    SetSqlModeParser parser;
-    SetSqlModeParser::sql_mode_t sql_mode;
+    SetParser set_parser;
+    SetParser::Result result;
 
-    switch (parser.get_sql_mode(read_buffer, &sql_mode))
+    switch (set_parser.check(read_buffer, &result))
     {
-    case SetSqlModeParser::ERROR:
+    case SetParser::ERROR:
         // In practice only OOM.
         break;
 
-    case SetSqlModeParser::IS_SET_SQL_MODE:
-        switch (sql_mode)
+    case SetParser::IS_SET_SQL_MODE:
         {
-        case SetSqlModeParser::ORACLE:
-            session_set_autocommit(session, false);
-            session->client_protocol_data = QC_SQL_MODE_ORACLE;
-            break;
+            SqlModeParser sql_mode_parser;
 
-        case SetSqlModeParser::DEFAULT:
-            session_set_autocommit(session, true);
-            session->client_protocol_data = QC_SQL_MODE_DEFAULT;
-            break;
+            switch (sql_mode_parser.get_sql_mode(result.value_begin(), result.value_end()))
+            {
+            case SqlModeParser::ORACLE:
+                session_set_autocommit(session, false);
+                session->client_protocol_data = QC_SQL_MODE_ORACLE;
+                break;
 
-        case SetSqlModeParser::SOMETHING:
-            break;
+            case SqlModeParser::DEFAULT:
+                session_set_autocommit(session, true);
+                session->client_protocol_data = QC_SQL_MODE_DEFAULT;
+                break;
 
-        default:
-            ss_dassert(!true);
+            case SqlModeParser::SOMETHING:
+                break;
+
+            default:
+                ss_dassert(!true);
+            }
         }
         break;
 
-    case SetSqlModeParser::NOT_SET_SQL_MODE:
+    case SetParser::IS_SET_MAXSCALE:
+        // TODO: Handle "set @MAXSCALE...=...";
+        break;
+
+    case SetParser::NOT_RELEVANT:
         break;
 
     default:
         ss_dassert(!true);
     }
-
-    qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
 }
 
 /**
@@ -976,7 +983,10 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             return 0;
         }
 
-        set_qc_mode(session, &read_buffer);
+        handle_variables(session, &read_buffer);
+        // Must be done whether or not there were any changes, as the query classifier
+        // is thread and not session specific.
+        qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
     }
     /** Update the current protocol command being executed */
     else if (!process_client_commands(dcb, nbytes_read, &read_buffer))
