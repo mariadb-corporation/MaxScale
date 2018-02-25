@@ -11,7 +11,8 @@
  * Public License.
  */
 
-#include "../setsqlmodeparser.hh"
+#include "../setparser.hh"
+#include "../sqlmodeparser.hh"
 #include <stdlib.h>
 #include <time.h>
 #include <iostream>
@@ -46,149 +47,153 @@ GWBUF* gwbuf_create_com_query(const char* zStmt)
 namespace
 {
 
-typedef SetSqlModeParser P;
+typedef SetParser     P1;
+typedef SqlModeParser P2;
 
 struct TEST_CASE
 {
-    const char*                  zStmt;
-    SetSqlModeParser::result_t   result;
-    SetSqlModeParser::sql_mode_t sql_mode;
+    const char*               zStmt;
+    SetParser::status_t       status;
+    SqlModeParser::sql_mode_t sql_mode;
 } test_cases[] =
 {
     {
         "SET SQL_MODE=DEFAULT",
-        P::IS_SET_SQL_MODE,
-        P::DEFAULT
+        P1::IS_SET_SQL_MODE,
+        P2::DEFAULT
     },
     {
         "SET SQL_MODE=DEFAULT;",
-        P::IS_SET_SQL_MODE,
-        P::DEFAULT
+        P1::IS_SET_SQL_MODE,
+        P2::DEFAULT
     },
     {
         "SET SQL_MODE=DEFAULT;   ",
-        P::IS_SET_SQL_MODE,
-        P::DEFAULT
+        P1::IS_SET_SQL_MODE,
+        P2::DEFAULT
     },
     {
         "-- This is a comment\nSET SQL_MODE=DEFAULT",
-        P::IS_SET_SQL_MODE,
-        P::DEFAULT
+        P1::IS_SET_SQL_MODE,
+        P2::DEFAULT
     },
     {
         "#This is a comment\nSET SQL_MODE=DEFAULT",
-        P::IS_SET_SQL_MODE,
-        P::DEFAULT
+        P1::IS_SET_SQL_MODE,
+        P2::DEFAULT
     },
     {
         "/*blah*/ SET /*blah*/ SQL_MODE /*blah*/ = /*blah*/ DEFAULT /*blah*/ ",
-        P::IS_SET_SQL_MODE,
-        P::DEFAULT
+        P1::IS_SET_SQL_MODE,
+        P2::DEFAULT
     },
     {
         "SET SQL_MODE=ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
-        "SET SQL_MODE=BLAH",              // So short that it cannot be DEFAULT|ORACLE
-        P::NOT_SET_SQL_MODE,
-        P::ORACLE
+        "SET SQL_MODE=BLAH",
+        P1::IS_SET_SQL_MODE,
+        P2::SOMETHING
     },
     {
         "SET SQL_MODE='BLAH'",
-        P::IS_SET_SQL_MODE,
-        P::SOMETHING
+        P1::IS_SET_SQL_MODE,
+        P2::SOMETHING
     },
     {
         "SET SQL_MODE=BLAHBLAH",
-        P::IS_SET_SQL_MODE,
-        P::SOMETHING
+        P1::IS_SET_SQL_MODE,
+        P2::SOMETHING
     },
     {
         "SET SQL_MODE='ORACLE'",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET SQL_MODE='BLAH, A, B, ORACLE'",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET SQL_MODE='BLAH, A, B, XYZ_123'",
-        P::IS_SET_SQL_MODE,
-        P::SOMETHING
+        P1::IS_SET_SQL_MODE,
+        P2::SOMETHING
     },
     {
         "SET VAR1=1234, VAR2=3456, SQL_MODE='A,B, ORACLE'",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET SQL_MODE=ORACLE, VAR1=3456, VAR2='A=b, c=d', SQL_MODE='A,B, ORACLE'",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET GLOBAL SQL_MODE=ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET SESSION SQL_MODE=ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET LOCAL SQL_MODE=ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET @@GLOBAL.SQL_MODE=ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET @@SESSION.SQL_MODE=ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET @@LOCAL.SQL_MODE=ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET @@LOCAL . SQL_MODE = ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
     {
         "SET @@SESSION.blah = 1234, @@GLOBAL.blahblah = something, sql_mode=ORACLE",
-        P::IS_SET_SQL_MODE,
-        P::ORACLE
+        P1::IS_SET_SQL_MODE,
+        P2::ORACLE
     },
 };
 
 const int N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
 
 int test(GWBUF** ppStmt,
-         SetSqlModeParser::sql_mode_t expected_sql_mode,
-         SetSqlModeParser::result_t expected_result)
+         SqlModeParser::sql_mode_t expected_sql_mode,
+         SetParser::status_t expected_status)
 {
     int rv = EXIT_SUCCESS;
 
-    SetSqlModeParser parser;
+    SetParser set_parser;
+    SetParser::Result result;
 
-    SetSqlModeParser::sql_mode_t sql_mode;
-    SetSqlModeParser::result_t result = parser.get_sql_mode(ppStmt, &sql_mode);
+    SetParser::status_t status = set_parser.check(ppStmt, &result);
 
-    if (result == expected_result)
+    if (status == expected_status)
     {
-        if (result == SetSqlModeParser::IS_SET_SQL_MODE)
+        if (status == SetParser::IS_SET_SQL_MODE)
         {
+            SqlModeParser sql_mode_parser;
+            SqlModeParser::sql_mode_t sql_mode = sql_mode_parser.get_sql_mode(result.value_begin(), result.value_end());
+
             if (sql_mode == expected_sql_mode)
             {
                 cout << "OK";
@@ -196,9 +201,9 @@ int test(GWBUF** ppStmt,
             else
             {
                 cout << "ERROR: Expected "
-                     << "'" << SetSqlModeParser::to_string(expected_sql_mode) << "'"
+                     << "'" << SqlModeParser::to_string(expected_sql_mode) << "'"
                      << ", got "
-                     << "'" << SetSqlModeParser::to_string(sql_mode) << "'"
+                     << "'" << SqlModeParser::to_string(sql_mode) << "'"
                      << ".";
                 rv = EXIT_FAILURE;
             }
@@ -211,9 +216,9 @@ int test(GWBUF** ppStmt,
     else
     {
         cout << "ERROR: Expected "
-             << "'" << SetSqlModeParser::to_string(expected_result) << "'"
+             << "'" << SetParser::to_string(expected_status) << "'"
              << ", got "
-             << "'" << SetSqlModeParser::to_string(result) << "'"
+             << "'" << SetParser::to_string(status) << "'"
              << ".";
         rv = EXIT_FAILURE;
     }
@@ -232,7 +237,7 @@ int test(const TEST_CASE& test_case)
     GWBUF* pStmt = gwbuf_create_com_query(test_case.zStmt);
     ss_dassert(pStmt);
 
-    rv = test(&pStmt, test_case.sql_mode, test_case.result);
+    rv = test(&pStmt, test_case.sql_mode, test_case.status);
 
     gwbuf_free(pStmt);
 
@@ -294,7 +299,7 @@ int test_non_contiguous()
 
         cout << "): " << flush;
 
-        if (test(&pStmt, test_case.sql_mode, test_case.result) == EXIT_FAILURE)
+        if (test(&pStmt, test_case.sql_mode, test_case.status) == EXIT_FAILURE)
         {
             rv = EXIT_FAILURE;
         }
