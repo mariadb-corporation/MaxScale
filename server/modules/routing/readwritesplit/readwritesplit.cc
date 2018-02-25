@@ -1174,10 +1174,12 @@ static void clientReply(MXS_ROUTER *instance,
         rses->expected_responses--;
         ss_dassert(rses->expected_responses >= 0);
         ss_dassert(backend->get_reply_state() == REPLY_STATE_DONE);
+        MXS_INFO("Reply complete, last reply from %s", backend->name());
     }
     else
     {
-        MXS_DEBUG("Reply not yet complete, waiting for %d replies", rses->expected_responses);
+        MXS_INFO("Reply not yet complete. Waiting for %d replies, got one from %s",
+                 rses->expected_responses, backend->name());
     }
 
     /**
