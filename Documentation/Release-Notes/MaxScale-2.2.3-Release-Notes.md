@@ -17,6 +17,13 @@ being monitored by the mariadbmon monitor, the current GTID position will be
 displayed in the newly added column. If no GTID is available, an empty value is
 returned.
 
+### MaxAdmin input from scripts
+
+The failure to set terminal attributes for MaxScale is no longer considered an
+error as scripts most often do not have an actual terminal that control the
+process. This means that passwords and other commands can be passed to MaxAdmin
+without a controlling terminal.
+
 ## Dropped Features
 
 ## New Features

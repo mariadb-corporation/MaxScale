@@ -937,8 +937,7 @@ read_inifile(char **socket,
  */
 bool getPassword(char *passwd, size_t len)
 {
-    bool gotten = false;
-
+    bool err = false;
     struct termios tty_attr;
     tcflag_t c_lflag;
 
@@ -948,36 +947,48 @@ bool getPassword(char *passwd, size_t len)
         tty_attr.c_lflag &= ~ICANON;
         tty_attr.c_lflag &= ~ECHO;
 
-        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
+        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) != 0)
         {
-            printf("Password: ");
-            if (fgets(passwd, len, stdin) == NULL)
-            {
-                printf("Failed to read password\n");
-            }
+            err = true;
+        }
+    }
+    else
+    {
+        err = true;
+    }
 
-            tty_attr.c_lflag = c_lflag;
+    if (err)
+    {
+        fprintf(stderr,
+                "Warning: Could not configure terminal. Terminal echo is still enabled. This\n"
+                "means that the password will be visible on the controlling terminal when\n"
+                "it is written!\n");
+    }
 
-            if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
-            {
-                int i = strlen(passwd);
+    printf("Password: ");
+    if (fgets(passwd, len, stdin) == NULL)
+    {
+        printf("Failed to read password\n");
+    }
 
-                if (i > 1)
-                {
-                    passwd[i - 1] = '\0';
-                }
+    if (!err)
+    {
+        tty_attr.c_lflag = c_lflag;
 
-                printf("\n");
-
-                gotten = true;
-            }
+        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) != 0)
+        {
+            err = true;
         }
     }
 
-    if (!gotten)
+    int i = strlen(passwd);
+
+    if (i > 0)
     {
-        fprintf(stderr, "Could not configure terminal.\n");
+        passwd[i - 1] = '\0';
     }
 
-    return gotten;
+    printf("\n");
+
+    return *passwd;
 }
