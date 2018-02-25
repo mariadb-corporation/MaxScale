@@ -31,7 +31,7 @@ program
     })
     .option('p', {
         alias: 'password',
-        describe: 'Password for the user',
+        describe: 'Password for the user. To input the password manually, give -p as the last argument or use --password=\'\'',
         default: 'mariadb',
         type: 'string'
     })

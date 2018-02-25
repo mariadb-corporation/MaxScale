@@ -24,6 +24,11 @@ error as scripts most often do not have an actual terminal that control the
 process. This means that passwords and other commands can be passed to MaxAdmin
 without a controlling terminal.
 
+### MaxCtrl password input
+
+MaxCtrl can now query the password from the user. This allows passwords to be
+given without giving them as process arguments.
+
 ## Dropped Features
 
 ## New Features
