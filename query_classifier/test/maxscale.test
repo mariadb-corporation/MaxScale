@@ -87,3 +87,11 @@ select names from t;
 
 call p1();
 call p1(@var);
+
+# MXS-1688
+select id from db2.t1 where DATE_SUB("2017-06-15", INTERVAL 10 DAY) < "2017-06-15";
+select id from db2.t1 where SUBDATE("2017-06-15", INTERVAL 10 DAY) < "2017-06-15";
+select id from db2.t1 where DATE_ADD("2017-06-15", INTERVAL 10 DAY) < "2017-06-15";
+select id from db2.t1 where ADDDATE("2017-06-15", INTERVAL 10 DAY) < "2017-06-15";
+SELECT '2008-12-31 23:59:59' + INTERVAL 1 SECOND;
+SELECT '2005-01-01' - INTERVAL 1 SECOND;
