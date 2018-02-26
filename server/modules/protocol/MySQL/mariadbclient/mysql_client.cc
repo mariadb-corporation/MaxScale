@@ -917,7 +917,9 @@ void handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
         break;
 
     case SetParser::IS_SET_MAXSCALE:
-        // TODO: Handle "set @MAXSCALE...=...";
+        session_set_variable_value(session,
+                                   result.variable_begin(), result.variable_end(),
+                                   result.value_begin(), result.value_end());
         break;
 
     case SetParser::NOT_RELEVANT:

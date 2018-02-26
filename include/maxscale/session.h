@@ -27,6 +27,11 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/jansson.h>
 
+#ifdef __cplusplus
+#include <tr1/unordered_map>
+#include <string>
+#endif
+
 MXS_BEGIN_DECLS
 
 struct dcb;
@@ -121,6 +126,34 @@ typedef struct mxs_upstream
 } MXS_UPSTREAM;
 
 /**
+ * Handler function for MaxScale specific session variables.
+ *
+ * Note that the provided value string is exactly as it appears in
+ * the received SET-statement. Only leading and trailing whitespace
+ * has been removed. The handler must itself parse the value string.
+ *
+ * @param context      Context provided when handler was registered.
+ * @param name         The variable that is being set.
+ * @param value_begin  The beginning of the value as specified in the
+ *                     "set @maxscale.x.y = VALUE" statement.
+ * @param value_end    One past the end of the VALUE.
+ */
+typedef void (*session_variable_handler_t)(void* context,
+                                           const char* name,
+                                           const char* value_begin,
+                                           const char* value_end);
+
+#ifdef __cplusplus
+typedef struct session_variable
+{
+    session_variable_handler_t handler;
+    void*                      context;
+} SESSION_VARIABLE;
+
+typedef std::tr1::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
+#endif
+
+/**
  * The session status block
  *
  * A session status block is created for each user (client) connection
@@ -154,7 +187,12 @@ typedef struct session
         const struct server *target; /**< Where the statement was sent */
     } stmt;  /**< Current statement being executed */
     bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
-    skygw_chk_t     ses_chk_tail;
+#ifdef __cplusplus
+    SessionVarsByName*      variables;        /*< @maxscale variables associated with this session */
+#else
+    void*                   variables;
+#endif
+    skygw_chk_t             ses_chk_tail;
 } MXS_SESSION;
 
 /**
@@ -481,5 +519,66 @@ MXS_SESSION* session_get_current();
  * @return The id of the current session or 0 if there is no current session.
  **/
 uint64_t session_get_current_id();
+
+/**
+ * @brief Add new MaxScale specific user variable to the session.
+ *
+ * The name of the variable must be of the following format:
+ *
+ *     "@maxscale\.[a-zA-Z_]+(\.[a-zA-Z_])*"
+ *
+ * e.g. "@maxscale.cache.enabled". A strong suggestion is that the first
+ * sub-scope is the same as the module name of the component registering the
+ * variable. The sub-scope "core" is reserved by MaxScale.
+ *
+ * The variable name will be converted to all lowercase when added.
+ *
+ * @param session   The session in question.
+ * @param name      The name of the variable, must start with "@MAXSCALE.".
+ * @param handler   The handler function for the variable.
+ * @param context   Context that will be passed to the handler function.
+ *
+ * @return True, if the variable could be added, false otherwise.
+ */
+bool session_add_variable(MXS_SESSION*               session,
+                          const char*                name,
+                          session_variable_handler_t handler,
+                          void*                      context);
+
+/**
+ * @brief Remove MaxScale specific user variable from the session.
+ *
+ * With this function a particular MaxScale specific user variable
+ * can be removed. Note that it is *not* mandatory to remove a
+ * variable when a session is closed, but have to be done in case
+ * the context object must manually be deleted.
+ *
+ * @param session   The session in question.
+ * @param name      The name of the variable.
+ * @param context   On successful return, if non-NULL, the context object
+ *                  that was provided when the variable was added.
+ *
+ * @return True, if the variable existed, false otherwise.
+ */
+bool session_remove_variable(MXS_SESSION* session,
+                             const char*  name,
+                             void**       context);
+/**
+ * @brief Set value of maxscale session variable.
+ *
+ * @param session      The session.
+ * @param name_begin   Should point to the beginning of the variable name.
+ * @param name_end     Should point one past the end of the variable name.
+ * @param value_begin  Should point to the beginning of the value.
+ * @param value_end    Should point one past the end of the value.
+ *
+ * @note Should only be called from the protocol module that scans
+ *       incoming statements.
+ */
+void session_set_variable_value(MXS_SESSION* session,
+                                const char* name_begin,
+                                const char* name_end,
+                                const char* value_begin,
+                                const char* value_end);
 
 MXS_END_DECLS

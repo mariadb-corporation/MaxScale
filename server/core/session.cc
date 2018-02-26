@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <algorithm>
 #include <string>
 #include <sstream>
 
@@ -91,24 +92,23 @@ session_initialize(MXS_SESSION *session)
 
 MXS_SESSION* session_alloc(SERVICE *service, DCB *client_dcb)
 {
-    MXS_SESSION *session = (MXS_SESSION *)(MXS_MALLOC(sizeof(*session)));
-    if (NULL == session)
-    {
-        return NULL;
-    }
-
-    session_initialize(session);
-    session->ses_id = session_get_next_id();
-    return session_alloc_body(service, client_dcb, session);
+    return session_alloc_with_id(service, client_dcb, session_get_next_id());
 }
 
 MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint64_t id)
 {
     MXS_SESSION *session = (MXS_SESSION *)(MXS_MALLOC(sizeof(*session)));
-    if (session == NULL)
+    SessionVarsByName *session_variables = new (std::nothrow) SessionVarsByName;
+
+    if ((session == NULL) || (session_variables == NULL))
     {
+        MXS_FREE(session);
+        delete session_variables;
+
         return NULL;
     }
+
+    session->variables = session_variables;
 
     session_initialize(session);
     session->ses_id = id;
@@ -389,6 +389,7 @@ static void
 session_final_free(MXS_SESSION *session)
 {
     gwbuf_free(session->stmt.buffer);
+    delete session->variables;
     MXS_FREE(session);
 }
 
@@ -1104,4 +1105,85 @@ uint64_t session_get_current_id()
     MXS_SESSION* session = session_get_current();
 
     return session ? session->ses_id : 0;
+}
+
+bool session_add_variable(MXS_SESSION*               session,
+                          const char*                name,
+                          session_variable_handler_t handler,
+                          void*                      context)
+{
+    bool added = false;
+
+    static const char PREFIX[] = "@MAXSCALE.";
+
+    if (strncasecmp(name, PREFIX, sizeof(PREFIX) - 1) == 0)
+    {
+        string key(name);
+
+        std::transform(key.begin(), key.end(), key.begin(), toupper);
+
+        if (session->variables->find(key) != session->variables->end())
+        {
+            SESSION_VARIABLE variable;
+            variable.handler = handler;
+            variable.context = context;
+
+            session->variables->insert(std::make_pair(key, variable));
+            added = true;
+        }
+        else
+        {
+            MXS_ERROR("Session variable '%s' has been added already.", name);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Session variable '%s' is not of the correct format.", name);
+    }
+
+    return added;
+}
+
+void session_set_variable_value(MXS_SESSION* session,
+                                const char* name_begin,
+                                const char* name_end,
+                                const char* value_begin,
+                                const char* value_end)
+{
+    string key(name_begin, name_end - name_begin);
+
+    transform(key.begin(), key.end(), key.begin(), toupper);
+
+    SessionVarsByName::iterator i = session->variables->find(key);
+
+    if (i != session->variables->end())
+    {
+        i->second.handler(i->second.context, key.c_str(), value_begin, value_end);
+    }
+}
+
+bool session_remove_variable(MXS_SESSION* session,
+                             const char*  name,
+                             void**       context)
+{
+    bool removed = false;
+
+    string key(name);
+
+    transform(key.begin(), key.end(), key.begin(), toupper);
+
+    SessionVarsByName::iterator i = session->variables->find(key);
+
+    if (i != session->variables->end())
+    {
+        if (context)
+        {
+            *context = i->second.context;
+        }
+
+        session->variables->erase(i);
+        removed = true;
+    }
+
+    return removed;
 }
