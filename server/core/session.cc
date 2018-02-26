@@ -108,9 +108,8 @@ MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint64_t i
         return NULL;
     }
 
-    session->variables = session_variables;
-
     session_initialize(session);
+    session->variables = session_variables;
     session->ses_id = id;
     return session_alloc_body(service, client_dcb, session);
 }
@@ -1144,12 +1143,14 @@ bool session_add_variable(MXS_SESSION*               session,
     return added;
 }
 
-void session_set_variable_value(MXS_SESSION* session,
-                                const char* name_begin,
-                                const char* name_end,
-                                const char* value_begin,
-                                const char* value_end)
+char* session_set_variable_value(MXS_SESSION* session,
+                                 const char* name_begin,
+                                 const char* name_end,
+                                 const char* value_begin,
+                                 const char* value_end)
 {
+    char* rv = NULL;
+
     string key(name_begin, name_end - name_begin);
 
     transform(key.begin(), key.end(), key.begin(), toupper);
@@ -1158,8 +1159,26 @@ void session_set_variable_value(MXS_SESSION* session,
 
     if (i != session->variables->end())
     {
-        i->second.handler(i->second.context, key.c_str(), value_begin, value_end);
+        rv = i->second.handler(i->second.context, key.c_str(), value_begin, value_end);
     }
+    else
+    {
+        const char FORMAT[] = "Attempt to set unknown MaxScale user variable %.*s";
+
+        int name_length = name_end - name_begin;
+        int len = snprintf(NULL, 0, FORMAT, name_length, name_begin);
+
+        rv = static_cast<char*>(MXS_MALLOC(len + 1));
+
+        if (rv)
+        {
+            sprintf(rv, FORMAT, name_length, name_begin);
+        }
+
+        MXS_WARNING(FORMAT, name_length, name_begin);
+    }
+
+    return rv;
 }
 
 bool session_remove_variable(MXS_SESSION* session,

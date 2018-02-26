@@ -879,9 +879,13 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
  * @param session      The session for which the query classifier mode is adjusted.
  * @param read_buffer  Pointer to a buffer, assumed to contain a statement.
  *                     May be reallocated if not contiguous.
+ *
+ * @return NULL if successful, otherwise dynamically allocated error message.
  */
-void handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
+char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
 {
+    char* message = NULL;
+
     SetParser set_parser;
     SetParser::Result result;
 
@@ -917,9 +921,9 @@ void handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
         break;
 
     case SetParser::IS_SET_MAXSCALE:
-        session_set_variable_value(session,
-                                   result.variable_begin(), result.variable_end(),
-                                   result.value_begin(), result.value_end());
+        message = session_set_variable_value(session,
+                                             result.variable_begin(), result.variable_end(),
+                                             result.value_begin(), result.value_end());
         break;
 
     case SetParser::NOT_RELEVANT:
@@ -928,6 +932,8 @@ void handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
     default:
         ss_dassert(!true);
     }
+
+    return message;
 }
 
 /**
@@ -985,10 +991,20 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             return 0;
         }
 
-        handle_variables(session, &read_buffer);
-        // Must be done whether or not there were any changes, as the query classifier
-        // is thread and not session specific.
-        qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
+        char* message = handle_variables(session, &read_buffer);
+
+        if (message)
+        {
+            int rv = dcb->func.write(dcb, modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
+            MXS_FREE(message);
+            return rv;
+        }
+        else
+        {
+            // Must be done whether or not there were any changes, as the query classifier
+            // is thread and not session specific.
+            qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
+        }
     }
     /** Update the current protocol command being executed */
     else if (!process_client_commands(dcb, nbytes_read, &read_buffer))

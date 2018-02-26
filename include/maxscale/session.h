@@ -137,11 +137,14 @@ typedef struct mxs_upstream
  * @param value_begin  The beginning of the value as specified in the
  *                     "set @maxscale.x.y = VALUE" statement.
  * @param value_end    One past the end of the VALUE.
+ *
+ * @return  NULL if successful, otherwise a dynamically allocated string
+ *          containing an end-user friendly error message.
  */
-typedef void (*session_variable_handler_t)(void* context,
-                                           const char* name,
-                                           const char* value_begin,
-                                           const char* value_end);
+typedef char* (*session_variable_handler_t)(void* context,
+                                            const char* name,
+                                            const char* value_begin,
+                                            const char* value_end);
 
 #ifdef __cplusplus
 typedef struct session_variable
@@ -572,13 +575,16 @@ bool session_remove_variable(MXS_SESSION* session,
  * @param value_begin  Should point to the beginning of the value.
  * @param value_end    Should point one past the end of the value.
  *
+ * @return NULL if successful, otherwise a dynamically allocated string
+ *         containing an end-user friendly error message.
+ *
  * @note Should only be called from the protocol module that scans
  *       incoming statements.
  */
-void session_set_variable_value(MXS_SESSION* session,
-                                const char* name_begin,
-                                const char* name_end,
-                                const char* value_begin,
-                                const char* value_end);
+char* session_set_variable_value(MXS_SESSION* session,
+                                 const char* name_begin,
+                                 const char* name_end,
+                                 const char* value_begin,
+                                 const char* value_end);
 
 MXS_END_DECLS
