@@ -303,6 +303,48 @@ Default is `0`. To log everything, give `debug` a value of `31`.
 debug=31
 ```
 
+#### `enabled`
+
+Specifies whether the cache is initially enabled or disabled.
+```
+enabled=false
+```
+Default is `true`.
+
+Note that this affects only whether data from the cache is returned; the
+cache will be populated normally. Please see
+[Runtime Configuration](#runtime-configuation)
+for how to enable/disable the cache at runtime.
+
+## Runtime Configuration
+
+Using the variable `@maxscale.cache.enabled` it is possible to specify at
+runtime whether the cache should be used or not. Its initial value is the
+value of the configuration parameter `enabled`. That is, by default the
+value is `true`.
+
+The purpose of this variable is make it possible for an application to decide
+statement by statement whether data from the cache can be returned.
+```
+set @maxscale.cache.enabled=false;
+SELECT a, b FROM tbl;
+set @maxscale.cache.enabled=true;
+select c, d FROM tbl;
+```
+In the example above, the first `SELECT` will always be sent to the
+server, while the latter will be served from the cache, unless the data is
+stale.
+
+Note that the value of `@maxscale.cache.enabled` has no impact on the
+population of the cache; if a `SELECT` matches the rules then the data
+returned from the cache will be populated.
+
+The value of `@maxscale.cache.enabled` can be queried
+```
+select @maxscale.cache.enabled;
+```
+but only after it has been set once.
+
 # Rules
 
 The caching rules are expressed as a JSON object.
