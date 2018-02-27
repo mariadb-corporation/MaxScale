@@ -243,6 +243,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_NONE,
                 parameter_cache_in_trxs_values
             },
+            {
+                "enabled",
+                MXS_MODULE_PARAM_BOOL,
+                CACHE_DEFAULT_ENABLED
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -351,6 +356,7 @@ bool CacheFilter::process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParam
     config.cache_in_trxs = static_cast<cache_in_trxs_t>(config_get_enum(ppParams,
                                                                         "cache_in_transactions",
                                                                         parameter_cache_in_trxs_values));
+    config.enabled = config_get_bool(ppParams, "enabled");
 
     if (!config.storage)
     {

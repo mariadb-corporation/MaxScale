@@ -60,6 +60,8 @@
 #define CACHE_DEFAULT_STORAGE            "storage_inmemory"
 // Transaction behaviour
 #define CACHE_DEFAULT_CACHE_IN_TRXS      "all_transactions"
+// Enabled
+#define CACHE_DEFAULT_ENABLED            "true"
 
 typedef enum cache_selects
 {
@@ -92,4 +94,5 @@ typedef struct cache_config
     cache_thread_model_t thread_model; /**< Thread model. */
     cache_selects_t selects;           /**< Assume/verify that selects are cacheable. */
     cache_in_trxs_t cache_in_trxs;     /**< To cache or not to cache inside transactions. */
+    bool enabled;                      /**< Whether the cache is enabled or not. */
 } CACHE_CONFIG;

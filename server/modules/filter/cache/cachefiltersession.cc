@@ -187,7 +187,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     , m_zUseDb(NULL)
     , m_refreshing(false)
     , m_is_read_only(true)
-    , m_enabled(true) // TODO: Add configuration variable for initial mode.
+    , m_enabled(pCache->config().enabled)
     , m_variable_added(false)
 {
     m_key.data = 0;
