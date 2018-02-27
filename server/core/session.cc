@@ -1121,7 +1121,7 @@ bool session_add_variable(MXS_SESSION*               session,
 
         std::transform(key.begin(), key.end(), key.begin(), toupper);
 
-        if (session->variables->find(key) != session->variables->end())
+        if (session->variables->find(key) == session->variables->end())
         {
             SESSION_VARIABLE variable;
             variable.handler = handler;

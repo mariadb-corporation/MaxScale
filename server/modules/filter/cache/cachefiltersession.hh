@@ -21,6 +21,9 @@
 
 class CacheFilterSession : public maxscale::FilterSession
 {
+    CacheFilterSession(const CacheFilterSession&);
+    CacheFilterSession& operator = (const CacheFilterSession&);
+
 public:
     enum cache_session_state_t
     {
@@ -138,11 +141,17 @@ private:
     routing_action_t route_COM_QUERY(GWBUF* pPacket);
     routing_action_t route_SELECT(cache_action_t action, GWBUF* pPacket);
 
+    char* handle_session_variable(const char* zName,
+                                  const char* pValue_begin,
+                                  const char* pValue_end);
+
+    static char* session_variable_handler(void* pContext,
+                                          const char* zName,
+                                          const char* pValue_begin,
+                                          const char* pValue_end);
+
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
-
-    CacheFilterSession(const CacheFilterSession&);
-    CacheFilterSession& operator = (const CacheFilterSession&);
 
 private:
     cache_session_state_t m_state;       /**< What state is the session in, what data is expected. */
@@ -153,5 +162,7 @@ private:
     char*                 m_zUseDb;      /**< Pending default database. Needs server response. */
     bool                  m_refreshing;  /**< Whether the session is updating a stale cache entry. */
     bool                  m_is_read_only;/**< Whether the current trx has been read-only in pratice. */
+    bool                  m_enabled;     /**< Whether caching is enabled for this session. */
+    bool                  m_variable_added; /*<< Whether the variable was added or not. */
 };
 

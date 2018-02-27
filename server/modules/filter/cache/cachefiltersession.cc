@@ -38,6 +38,8 @@ inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64
 namespace
 {
 
+const char SV_MAXSCALE_CACHE_ENABLED[] = "@maxscale.cache.enabled";
+
 const char* NON_CACHEABLE_FUNCTIONS[] =
 {
     "benchmark",
@@ -185,14 +187,32 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     , m_zUseDb(NULL)
     , m_refreshing(false)
     , m_is_read_only(true)
+    , m_enabled(true) // TODO: Add configuration variable for initial mode.
+    , m_variable_added(false)
 {
     m_key.data = 0;
 
     reset_response_state();
+
+    if (session_add_variable(pSession, SV_MAXSCALE_CACHE_ENABLED,
+                             &CacheFilterSession::session_variable_handler, this))
+    {
+        m_variable_added = true;
+    }
+    else
+    {
+        MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
+                  "enabling/disabling caching not possible.", SV_MAXSCALE_CACHE_ENABLED);
+    }
 }
 
 CacheFilterSession::~CacheFilterSession()
 {
+    if (m_variable_added)
+    {
+        session_remove_variable(m_pSession, SV_MAXSCALE_CACHE_ENABLED, NULL);
+    }
+
     MXS_FREE(m_zUseDb);
     MXS_FREE(m_zDefaultDb);
 }
@@ -953,7 +973,8 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
  *         (as the data is obtained from the cache) or
  *         ROUTING_CONTINUE if the normal processing should continue.
  */
-CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_action_t cache_action, GWBUF* pPacket)
+CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_action_t cache_action,
+                                                                      GWBUF* pPacket)
 {
     routing_action_t routing_action = ROUTING_CONTINUE;
 
@@ -1041,4 +1062,61 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
     }
 
     return routing_action;
+}
+
+
+char* CacheFilterSession::handle_session_variable(const char* zName,
+                                                  const char* pValue_begin,
+                                                  const char* pValue_end)
+{
+    static const char TRUE[] = "true";
+    static const char FALSE[] = "false";
+
+    static const size_t nTrue = sizeof(TRUE) - 1;
+    static const size_t nFalse = sizeof(FALSE) - 1;
+
+    char* message = NULL;
+
+    int len = (pValue_end - pValue_begin);
+
+    if (((len == nTrue) && (strncasecmp(pValue_begin, TRUE, nTrue) == 0)) ||
+        ((len == 1) && (*pValue_begin == '1')))
+    {
+        MXS_INFO("Caching enabled.");
+        m_enabled = true;
+    }
+    else if (((len == nFalse) && (strncasecmp(pValue_begin, FALSE, nFalse) == 0)) ||
+             ((len == 1) && (*pValue_begin == '0')))
+    {
+        MXS_INFO("Caching disabled.");
+        m_enabled = false;
+    }
+    else
+    {
+        static const char FORMAT[] = "The variable %s can only have the values true/false/1/0";
+        int n = snprintf(NULL, 0, FORMAT, SV_MAXSCALE_CACHE_ENABLED) + 1;
+
+        message = static_cast<char*>(MXS_MALLOC(n));
+
+        if (message)
+        {
+            sprintf(message, FORMAT, SV_MAXSCALE_CACHE_ENABLED);
+        }
+
+        MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
+                    SV_MAXSCALE_CACHE_ENABLED, len, pValue_begin);
+    }
+
+    return message;
+}
+
+//static
+char* CacheFilterSession::session_variable_handler(void* pContext,
+                                                   const char* zName,
+                                                   const char* pValue_begin,
+                                                   const char* pValue_end)
+{
+    CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
+
+    return pThis->handle_session_variable(zName, pValue_begin, pValue_end);
 }
