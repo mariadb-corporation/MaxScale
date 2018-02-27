@@ -890,6 +890,12 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         }
     }
 
+    if (!m_enabled && (action == CACHE_USE_AND_POPULATE))
+    {
+        action = CACHE_POPULATE;
+        zReason = "usage disabled";
+    }
+
     if (log_decisions())
     {
         char* pSql;
