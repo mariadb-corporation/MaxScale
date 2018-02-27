@@ -36,7 +36,7 @@ USTR        [%-_[:alnum:][:punct:]]+
 CMP         [=<>!]+
 
 %%
-"\n"+           return '\n';
+{SPACE}"\n"+    return '\n';
 {COMMENT}       return FWTOK_COMMENT;
 deny|allow      return FWTOK_DENY; /** This should be removed at some point */
 rule            return FWTOK_RULE;
