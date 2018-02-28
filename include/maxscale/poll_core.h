@@ -61,11 +61,6 @@ typedef struct mxs_poll_data
 #define MXS_WORKER_ALL -1
 
 /**
- * A file descriptor should be added to the poll set of some worker.
- */
-#define MXS_WORKER_ANY -2
-
-/**
  * Add a file descriptor with associated data to the poll set.
  *
  * @param wid      `MXS_WORKER_ALL` if the file descriptor should be added to the

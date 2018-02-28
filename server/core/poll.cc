@@ -40,7 +40,6 @@
 
 using maxscale::Worker;
 
-static int next_epoll_fd = 0;              /*< Which thread handles the next DCB */
 static int n_threads;                      /*< Number of threads */
 
 /**
@@ -100,13 +99,7 @@ bool poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data
 {
     bool rv;
 
-    if (wid == MXS_WORKER_ANY)
-    {
-        wid = (int)atomic_add(&next_epoll_fd, 1) % n_threads;
-
-        rv = add_fd_to_worker(wid, fd, events, data);
-    }
-    else if (wid == MXS_WORKER_ALL)
+    if (wid == MXS_WORKER_ALL)
     {
         rv = add_fd_to_workers(fd, events, data);
     }
