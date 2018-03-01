@@ -1435,7 +1435,7 @@ static bool do_show_slave_status(MYSQL_MONITOR* mon,
                  * root master server.
                  * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
                  */
-                if (serv_info->slave_status.slave_io_running && server_version != MYSQL_SERVER_VERSION_51)
+                if (server_version != MYSQL_SERVER_VERSION_51)
                 {
                     /* Get Master_Server_Id */
                     master_server_id = scan_server_id(row[i_master_server_id]);
