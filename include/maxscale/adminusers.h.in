@@ -1,0 +1,61 @@
+#pragma once
+/*
+ * Copyright (c) 2016 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2019-07-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
+/**
+ * @file adminusers.h - Administration users support routines
+ */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/dcb.h>
+
+MXS_BEGIN_DECLS
+
+#define ADMIN_SALT "$1$MXS"
+
+/* Max length of fields in for admin users */
+#define ADMIN_USER_MAXLEN       128
+#define ADMIN_PASSWORD_MAXLEN   128
+
+/** Default user for the administrative interface */
+#define DEFAULT_ADMIN_USER "@DEFAULT_ADMIN_USER@"
+
+/*
+ * MySQL session specific data
+ *
+ */
+typedef struct admin_session
+{
+#if defined(SS_DEBUG)
+    skygw_chk_t adminses_chk_top;
+#endif
+    char user[ADMIN_USER_MAXLEN + 1];               /*< username       */
+    bool validated;                                 /* Was user validated? */
+#if defined(SS_DEBUG)
+    skygw_chk_t adminses_chk_tail;
+#endif
+} ADMIN_session;
+
+extern const char *admin_enable_linux_account(const char *uname);
+extern const char *admin_disable_linux_account(const char *uname);
+extern bool        admin_linux_account_enabled(const char *uname);
+
+extern const char *admin_add_inet_user(const char *uname, const char *password);
+extern const char *admin_remove_inet_user(const char *uname, const char *password);
+extern bool        admin_inet_user_exists(const char *uname);
+
+extern bool        admin_verify_inet_user(const char *uname, const char *password);
+
+extern void        dcb_PrintAdminUsers(DCB *dcb);
+
+MXS_END_DECLS

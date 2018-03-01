@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -31,19 +31,20 @@
 #undef NDEBUG
 #endif
 #define FAILTEST(s) printf("TEST FAILED: " s "\n");return 1;
-#include <my_config.h>
 #include <mysql.h>
 #include <stdio.h>
-#include <notification.h>
+#include <maxscale/notification.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
-#include <housekeeper.h>
-#include <buffer.h>
+#include <maxscale/alloc.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/buffer.h>
 #include <regex.h>
-#include <modules.h>
-#include <maxscale_test.h>
+#include <maxscale/maxscale_test.h>
+
+#include "../load_utils.c"
 
 static char* server_options[] =
 {
@@ -71,7 +72,6 @@ static char* server_groups[] =
 
 int config_load(char *);
 void config_enable_feedback_task(void);
-int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
 int do_http_post(GWBUF *buffer, void *cfg);
 
 int main(int argc, char** argv)
@@ -84,7 +84,8 @@ int main(int argc, char** argv)
 
     hkinit();
 
-    cnf = malloc(sizeof(char) * (strlen(TEST_DIR) + strlen("/maxscale.cnf") + 1));
+    cnf = MXS_MALLOC(sizeof(char) * (strlen(TEST_DIR) + strlen("/maxscale.cnf") + 1));
+    MXS_ABORT_IF_NULL(cnf);
     sprintf(cnf, "%s/maxscale.cnf", TEST_DIR);
 
     printf("Config: %s\n", cnf);

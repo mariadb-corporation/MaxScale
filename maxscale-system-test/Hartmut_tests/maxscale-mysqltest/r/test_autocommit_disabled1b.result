@@ -1,0 +1,9 @@
+USE test;
+drop table if exists t1;
+create table t1 (id integer);
+set autocommit=OFF;
+insert into t1 values(1);
+select count(*) from t1;
+count(*)
+1
+drop table t1;

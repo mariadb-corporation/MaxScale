@@ -2,32 +2,40 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <log_manager.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <maxscale/log_manager.h>
 
-#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <sched.h>
+#include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <syslog.h>
-#include <atomic.h>
+#include <unistd.h>
 
-#include <mlist.h>
-#include <skygw_debug.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/config.h>
+#include <maxscale/debug.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/platform.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/utils.h>
+#include "maxscale/mlist.h"
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250
@@ -95,20 +103,24 @@ static simple_mutex_t msg_mutex;
  * Default augmentation.
  */
 static int DEFAULT_LOG_AUGMENTATION = 0;
+// A message that is logged 10 times in 1 second will be suppressed for 10 seconds.
+static MXS_LOG_THROTTLING DEFAULT_LOG_THROTTLING = { 10, 1000, 10000 };
 
 static struct
 {
-    int  augmentation;     // Can change during the lifetime of log_manager.
-    bool do_highprecision; // Can change during the lifetime of log_manager.
-    bool do_syslog;        // Can change during the lifetime of log_manager.
-    bool do_maxlog;        // Can change during the lifetime of log_manager.
-    bool use_stdout;       // Can NOT changed during the lifetime of log_manager.
+    int                augmentation;     // Can change during the lifetime of log_manager.
+    bool               do_highprecision; // Can change during the lifetime of log_manager.
+    bool               do_syslog;        // Can change during the lifetime of log_manager.
+    bool               do_maxlog;        // Can change during the lifetime of log_manager.
+    MXS_LOG_THROTTLING throttling;       // Can change during the lifetime of log_manager.
+    bool               use_stdout;       // Can NOT change during the lifetime of log_manager.
 } log_config =
 {
     DEFAULT_LOG_AUGMENTATION, // augmentation
     false,                    // do_highprecision
     true,                     // do_syslog
     true,                     // do_maxlog
+    DEFAULT_LOG_THROTTLING,   // throttling
     false                     // use_stdout
 };
 
@@ -117,18 +129,6 @@ static struct
  * Used from logging macros.
  */
 int mxs_log_enabled_priorities = 0;
-
-/**
- * Thread-specific struct variable for storing current session id and currently
- * enabled log files for the session.
- */
-__thread mxs_log_info_t mxs_log_tls = {0, 0};
-
-/**
- * Global counter for each log file type. It indicates for how many sessions
- * each log type is currently enabled.
- */
-ssize_t mxs_log_session_count[LOG_DEBUG + 1] = {0};
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -140,7 +140,7 @@ ssize_t mxs_log_session_count[LOG_DEBUG + 1] = {0};
  * Path to directory in which all files are stored to shared memory
  * by the OS.
  */
-const char* shm_pathname_prefix = "/dev/shm/";
+static const char SHM_PATHNAME_PREFIX[] = "/dev/shm/";
 
 /** Forward declarations
  */
@@ -158,6 +158,7 @@ static logmanager_t* lm;
 static bool flushall_flag;
 static bool flushall_started_flag;
 static bool flushall_done_flag;
+static HASHTABLE* message_stats;
 
 /** This is used to detect if the initialization of the log manager has failed
  * and that it isn't initialized again after a failure has occurred. */
@@ -182,6 +183,144 @@ struct filewriter
     skygw_chk_t        fwr_chk_tail;
 #endif
 };
+
+typedef struct lm_message_key
+{
+    const char* filename; /** The filename where the error was reported. Must be a
+                              statically allocated buffer, e.g. __FILE__ */
+    int linenumber;       /** The linenumber where the error was reported. */
+} LM_MESSAGE_KEY;
+
+typedef struct lm_message_stats
+{
+    SPINLOCK lock;
+    uint64_t first_ms; /** The time when the error was logged the first time in this window. */
+    uint64_t last_ms;  /** The time when the error was logged the last time. */
+    size_t   count;    /** How many times the error has been reported within this window. */
+} LM_MESSAGE_STATS;
+
+static const int LM_MESSAGE_HASH_SIZE = 293; /** A prime, and roughly a quarter of current
+                                                 number of MXS_{ERROR|WARNING|NOTICE} calls. */
+
+/**
+ * Returns the current time.
+ *
+ * @return Current monotonic raw time in milliseconds.
+ */
+static uint64_t time_monotonic_ms()
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    return now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
+/**
+ * Hash-function for lm_message_key.
+ *
+ * This is an implementation of the Jenkin's one-at-a-time hash function.
+ * https://en.wikipedia.org/wiki/Jenkins_hash_function
+ *
+ * @param v A pointer to a LM_MESSAGE_KEY
+ * @return Hash for the contents of the LM_MESSAGE_KEY structure.
+ */
+int lm_message_key_hash(const void *v)
+{
+    const LM_MESSAGE_KEY* key = (const LM_MESSAGE_KEY*)v;
+
+    uint64_t key1 = (uint64_t)key->filename;
+    uint16_t key2 = (uint16_t)key->linenumber; // The first 48 bits are likely to be 0.
+
+    uint32_t hash = 0;
+    size_t i;
+
+    for (i = 0; i < sizeof(key1); ++i)
+    {
+        hash += (key1 >> i * 8) & 0xff;
+        hash += (hash << 10);
+        hash ^= (hash >> 6);
+    }
+
+    for (i = 0; i < sizeof(key2); ++i)
+    {
+        hash += (key1 >> i * 8) & 0xff;
+        hash += (hash << 10);
+        hash ^= (hash >> 6);
+    }
+
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+    return hash;
+}
+
+/**
+ * Compares two LM_MESSAGE_KEY structures
+ *
+ * @param v1 Pointer to a LM_MESSAGE_KEY struct.
+ * @param v2 Pointer to a LM_MESSAGE_KEY struct.
+ * @return  0 if the structures are equal.
+ *         -1 if v1 is less than v2
+ *          1 if v1 is greater than v2
+ */
+static int lm_message_key_cmp(const void* v1, const void* v2)
+{
+    const LM_MESSAGE_KEY* key1 = (const LM_MESSAGE_KEY*)v1;
+    const LM_MESSAGE_KEY* key2 = (const LM_MESSAGE_KEY*)v2;
+
+    int cmp = (int64_t)key1->filename - (int64_t)key2->filename;
+
+    if (cmp == 0)
+    {
+        cmp = key1->linenumber - key2->linenumber;
+    }
+
+    return cmp == 0 ? 0 : (cmp < 0 ? -1 : 1);
+}
+
+/**
+ * Clone a LM_MESSAGE_KEY
+ *
+ * @param v Pointer to a LM_MESSAGE_KEY structure
+ * @return A copy of v or NULL if memory allocation fails.
+ */
+static void* lm_message_key_clone(const void* v)
+{
+    const LM_MESSAGE_KEY* src = (const LM_MESSAGE_KEY*)v;
+    LM_MESSAGE_KEY* dst = (LM_MESSAGE_KEY*)MXS_MALLOC(sizeof(LM_MESSAGE_KEY));
+
+    if (dst)
+    {
+        dst->filename = src->filename;
+        dst->linenumber = src->linenumber;
+    }
+
+    return dst;
+}
+
+/**
+ * Clone a LM_MESSAGE_STATS
+ *
+ * @param v Pointer to a LM_MESSAGE_STATS structure
+ * @return A copy of v or NULL if memory allocation fails.
+ */
+static void* lm_message_stats_clone(const void* v)
+{
+    const LM_MESSAGE_STATS* src = (const LM_MESSAGE_STATS*)v;
+    LM_MESSAGE_STATS* dst = (LM_MESSAGE_STATS*)MXS_MALLOC(sizeof(LM_MESSAGE_STATS));
+
+    if (dst)
+    {
+        // Somewhat questionable to copy a lock, but in this context we
+        // know that src is stack allocated and will not be used after this.
+        dst->lock = src->lock;
+        dst->first_ms = src->first_ms;
+        dst->last_ms = src->last_ms;
+        dst->count = src->count;
+    }
+
+    return dst;
+}
 
 /**
  * Log client's string is copied to block-sized log buffer, which is passed
@@ -215,7 +354,6 @@ struct logfile
     skygw_chk_t      lf_chk_top;
 #endif
     flat_obj_state_t lf_state;
-    bool             lf_init_started;
     bool             lf_store_shmem;
     logmanager_t*    lf_lmgr;
     /** fwr_logmes is for messages from log clients */
@@ -224,18 +362,14 @@ struct logfile
     char*            lf_linkpath; /**< path to symlink file.  */
     const char*      lf_name_prefix;
     const char*      lf_name_suffix;
-    int              lf_name_seqno;
     char*            lf_full_file_name; /**< complete log file name */
     char*            lf_full_link_name; /**< complete symlink name */
-    int              lf_nfiles_max;
-    size_t           lf_file_size;
     /** list of block-sized log buffers */
     mlist_t          lf_blockbuf_list;
     size_t           lf_buf_size;
     bool             lf_flushflag;
-    bool                 lf_rotateflag;
+    bool             lf_rotateflag;
     int              lf_spinlock; /**< lf_flushflag & lf_rotateflag */
-    int              lf_npending_writes;
 #if defined(SS_DEBUG)
     skygw_chk_t      lf_chk_tail;
 #endif
@@ -276,19 +410,13 @@ struct logmanager
 };
 
 /**
- * Type definition for string part. It is used in forming the log file name
- * from string parts provided by the client of log manager, as arguments.
+ * Error logging the the log-manager itself.
+ *
+ * For obvious reasons, the log cannot use its own functions for reporting errors.
  */
-
-typedef struct strpart
-{
-    const char*     sp_string;
-    struct strpart* sp_next;
-} strpart_t;
-
+#define LOG_ERROR(format, ...) do { fprintf(stderr, format, ##__VA_ARGS__); } while (false)
 
 /** Static function declarations */
-static bool logfiles_init(logmanager_t* lmgr);
 static bool logfile_init(logfile_t*     logfile,
                          logmanager_t*  logmanager,
                          bool           store_shmem);
@@ -297,12 +425,18 @@ static void logfile_free_memory(logfile_t* lf);
 static void logfile_flush(logfile_t* lf);
 static void logfile_rotate(logfile_t* lf);
 static bool logfile_build_name(logfile_t* lf);
-static bool logfile_open_file(filewriter_t* fw, logfile_t* lf);
-static char* form_full_file_name(strpart_t* parts, logfile_t* lf, int seqnoidx);
+static bool logfile_open_file(filewriter_t* fw,
+                              logfile_t* lf,
+                              skygw_open_mode_t mode,
+                              bool write_header);
+static char* form_full_file_name(const char* directory,
+                                 const char* prefix,
+                                 const char* suffix);
 
 static bool filewriter_init(logmanager_t* logmanager,
-                            filewriter_t* fw);
-static void filewriter_done(filewriter_t* filewriter);
+                            filewriter_t* fw,
+                            bool write_header);
+static void filewriter_done(filewriter_t* filewriter, bool write_footer);
 static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir);
 static void fnames_conf_done(fnames_conf_t* fn);
 static void fnames_conf_free_memory(fnames_conf_t* fn);
@@ -312,7 +446,8 @@ static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
 static bool logmanager_init_nomutex(const char* ident,
                                     const char* logdir,
-                                    mxs_log_target_t target);
+                                    mxs_log_target_t target,
+                                    bool write_header);
 static void logmanager_done_nomutex(void);
 
 static int logmanager_write_log(int            priority,
@@ -331,25 +466,23 @@ static void blockbuf_register(blockbuf_t* bb);
 static void blockbuf_unregister(blockbuf_t* bb);
 static char* add_slash(char* str);
 
-static bool check_file_and_path(char* filename,
-                                bool* writable,
-                                bool  do_log);
+static bool check_file_and_path(const char* filename, bool* writable);
 
-static bool file_is_symlink(char* filename);
-static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
+static bool file_is_symlink(const char* filename);
 void flushall_logfiles(bool flush);
 bool thr_flushall_check();
 
 static bool logmanager_init_nomutex(const char* ident,
                                     const char* logdir,
-                                    mxs_log_target_t target)
+                                    mxs_log_target_t target,
+                                    bool write_header)
 {
     fnames_conf_t* fn;
     filewriter_t*  fw;
     int            err;
     bool           succ = false;
 
-    lm = (logmanager_t *)calloc(1, sizeof(logmanager_t));
+    lm = (logmanager_t *)MXS_CALLOC(1, sizeof(logmanager_t));
 
     if (lm == NULL)
     {
@@ -397,8 +530,8 @@ static bool logmanager_init_nomutex(const char* ident,
         goto return_succ;
     }
 
-    /** Initialize logfiles */
-    if (!logfiles_init(lm))
+    /** Initialize logfile */
+    if (!logfile_init(&lm->lm_logfile, lm, (lm->lm_target == MXS_LOG_TARGET_SHMEM)))
     {
         err = 1;
         goto return_succ;
@@ -407,13 +540,13 @@ static bool logmanager_init_nomutex(const char* ident,
     /**
      * Set global variable
      */
-    mxs_log_enabled_priorities = MXS_LOG_ERR | MXS_LOG_NOTICE | MXS_LOG_WARNING;
+    mxs_log_enabled_priorities = (1 << LOG_ERR) | (1 << LOG_NOTICE) | (1 << LOG_WARNING);
 
     /**
      * Initialize filewriter data and open the log file
      * for each log file type.
      */
-    if (!filewriter_init(lm, fw))
+    if (!filewriter_init(lm, fw, write_header))
     {
         err = 1;
         goto return_succ;
@@ -469,7 +602,29 @@ bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target
 
     if (!lm)
     {
-        succ = logmanager_init_nomutex(ident, logdir, target);
+        ss_dassert(!message_stats);
+
+        message_stats = hashtable_alloc(LM_MESSAGE_HASH_SIZE,
+                                        lm_message_key_hash,
+                                        lm_message_key_cmp);
+        if (message_stats)
+        {
+            // As entries are added to the hashtable they will be cloned,
+            // so stack allocated keys and values are ok.
+            hashtable_memory_fns(message_stats,
+                                 lm_message_key_clone,
+                                 lm_message_stats_clone,
+                                 hashtable_item_free,
+                                 hashtable_item_free);
+
+            succ = logmanager_init_nomutex(ident, logdir, target, log_config.do_maxlog);
+
+            if (!succ)
+            {
+                hashtable_free(message_stats);
+                message_stats = NULL;
+            }
+        }
     }
     else
     {
@@ -508,7 +663,7 @@ static void logmanager_done_nomutex(void)
     }
 
     /** Free filewriter memory. */
-    filewriter_done(fwr);
+    filewriter_done(fwr, log_config.do_maxlog);
 
     lf = logmanager_get_logfile(lm);
     /** Release logfile memory */
@@ -522,8 +677,11 @@ static void logmanager_done_nomutex(void)
     skygw_message_done(lm->lm_logmes);
 
     /** Set global pointer NULL to prevent access to freed data. */
-    free(lm);
+    MXS_FREE(lm);
     lm = NULL;
+
+    hashtable_free(message_stats);
+    message_stats = NULL;
 }
 
 /**
@@ -584,8 +742,6 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr)
  * @param priority      Syslog priority
  * @param flush         indicates whether log string must be written to disk
  *                      immediately
- * @param rotate        if set, closes currently open log file and opens a
- *                      new one
  * @param prefix_len    length of prefix to be stripped away when syslogging
  * @param str_len       length of formatted string (including terminating NULL).
  * @param str           string to be written to log
@@ -599,11 +755,11 @@ static int logmanager_write_log(int            priority,
                                 size_t         str_len,
                                 const char*    str)
 {
-    logfile_t*   lf;
-    char*        wp;
+    logfile_t*   lf = NULL;
+    char*        wp = NULL;
     int          err = 0;
-    blockbuf_t*  bb;
-    blockbuf_t*  bb_c;
+    blockbuf_t*  bb = NULL;
+    blockbuf_t*  bb_c = NULL;
     size_t       timestamp_len;
     int          i;
 
@@ -624,22 +780,7 @@ static int logmanager_write_log(int            priority,
 
     /** Length of string that will be written, limited by bufsize */
     size_t safe_str_len;
-    /** Length of session id */
-    size_t sesid_str_len;
-    size_t cmplen = 0;
-    /**
-     * 2 braces, 2 spaces and terminating char
-     * If session id is stored to mxs_log_tls structure, allocate
-     * room for session id too.
-     */
-    if ((priority == LOG_INFO) && (mxs_log_tls.li_sesid != 0))
-    {
-        sesid_str_len = 5 * sizeof(char) + get_decimal_len(mxs_log_tls.li_sesid);
-    }
-    else
-    {
-        sesid_str_len = 0;
-    }
+
     if (do_highprecision)
     {
         timestamp_len = get_timestamp_len_hp();
@@ -648,18 +789,17 @@ static int logmanager_write_log(int            priority,
     {
         timestamp_len = get_timestamp_len();
     }
-    cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 
     bool overflow = false;
     /** Find out how much can be safely written with current block size */
-    if (timestamp_len - sizeof(char) + cmplen + str_len > lf->lf_buf_size)
+    if (timestamp_len - sizeof(char) + str_len > lf->lf_buf_size)
     {
         safe_str_len = lf->lf_buf_size;
         overflow = true;
     }
     else
     {
-        safe_str_len = timestamp_len - sizeof(char) + cmplen + str_len;
+        safe_str_len = timestamp_len - sizeof(char) + str_len;
     }
     /**
      * Seek write position and register to block buffer.
@@ -672,7 +812,7 @@ static int logmanager_write_log(int            priority,
         int tokval;
 
         simple_mutex_lock(&msg_mutex, true);
-        copy = strdup(str);
+        copy = MXS_STRDUP_A(str);
         tok = strtok(copy, "|");
         tok = strtok(NULL, "|");
 
@@ -686,7 +826,7 @@ static int logmanager_write_log(int            priority,
             }
             prevval = tokval;
         }
-        free(copy);
+        MXS_FREE(copy);
         simple_mutex_unlock(&msg_mutex);
     }
 #endif
@@ -698,7 +838,7 @@ static int logmanager_write_log(int            priority,
     }
     else
     {
-        wp = (char*)malloc(sizeof(char) * (timestamp_len - sizeof(char) + cmplen + str_len + 1));
+        wp = (char*)MXS_MALLOC(sizeof(char) * (timestamp_len - sizeof(char) + str_len + 1));
     }
 
     if (wp == NULL)
@@ -726,20 +866,13 @@ static int logmanager_write_log(int            priority,
     {
         timestamp_len = snprint_timestamp(wp, timestamp_len);
     }
-    if (sesid_str_len != 0)
-    {
-        /**
-         * Write session id
-         */
-        snprintf(wp + timestamp_len, sesid_str_len, "[%lu]  ", mxs_log_tls.li_sesid);
-        sesid_str_len -= 1; /*< don't calculate terminating char anymore */
-    }
+
     /**
      * Write next string to overwrite terminating null character
      * of the timestamp string.
      */
-    snprintf(wp + timestamp_len + sesid_str_len,
-             safe_str_len - timestamp_len - sesid_str_len,
+    snprintf(wp + timestamp_len,
+             safe_str_len - timestamp_len,
              "%s",
              str);
 
@@ -756,18 +889,18 @@ static int logmanager_write_log(int            priority,
 
         switch (priority)
         {
-            case LOG_EMERG:
-            case LOG_ALERT:
-            case LOG_CRIT:
-            case LOG_ERR:
-            case LOG_WARNING:
-            case LOG_NOTICE:
-                syslog(priority, "%s", message);
-                break;
+        case LOG_EMERG:
+        case LOG_ALERT:
+        case LOG_CRIT:
+        case LOG_ERR:
+        case LOG_WARNING:
+        case LOG_NOTICE:
+            syslog(priority, "%s", message);
+            break;
 
-            default:
-                // LOG_INFO and LOG_DEBUG messages are never written to syslog.
-                break;
+        default:
+            // LOG_INFO and LOG_DEBUG messages are never written to syslog.
+            break;
         }
     }
     /** remove double line feed */
@@ -783,7 +916,7 @@ static int logmanager_write_log(int            priority,
     }
     else
     {
-        free(wp);
+        MXS_FREE(wp);
     }
 
     return err;
@@ -1112,7 +1245,7 @@ static blockbuf_t* blockbuf_init()
 {
     blockbuf_t* bb;
 
-    if ((bb = (blockbuf_t *) calloc(1, sizeof (blockbuf_t))))
+    if ((bb = (blockbuf_t *) MXS_CALLOC(1, sizeof (blockbuf_t))))
     {
 #if defined(SS_DEBUG)
         bb->bb_chk_top = CHK_NUM_BLOCKBUF;
@@ -1127,10 +1260,6 @@ static blockbuf_t* blockbuf_init()
         bb->bb_buf_left -= strlen(bb->bb_buf);
 #endif
         CHK_BLOCKBUF(bb);
-    }
-    else
-    {
-        fprintf(stderr, "Error: Memory allocation failed when initializing log manager block buffers.");
     }
     return bb;
 }
@@ -1235,7 +1364,7 @@ static bool logmanager_register(bool writep)
             // If someone is logging before the log manager has been inited,
             // or after the log manager has been finished, the messages are
             // written to stdout.
-            succ = logmanager_init_nomutex(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
+            succ = logmanager_init_nomutex(NULL, NULL, MXS_LOG_TARGET_DEFAULT, true);
         }
     }
     /** if logmanager existed or was succesfully restarted, increase link */
@@ -1315,7 +1444,7 @@ static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir)
         dir = "/tmp";
     }
 
-    fn->fn_logpath = strdup(dir);
+    fn->fn_logpath = MXS_STRDUP_A(dir);
 
     if (fn->fn_logpath)
     {
@@ -1327,38 +1456,6 @@ static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir)
     return succ;
 }
 
-
-/**
- * @node Calls logfile initializer for each logfile.
- *
- *
- * Parameters:
- * @param lm            Log manager pointer
- *
- * @return true if succeed, otherwise false.
- *
- *
- * @details If logfile is supposed to be located to shared memory
- * it is specified here. In the case of shared memory file, a soft
- * link is created to log directory.
- *
- * Motivation is performance. LOGFILE_DEBUG, for example, has so much data
- * that writing it to disk slows execution down remarkably.
- *
- */
-static bool logfiles_init(logmanager_t* lm)
-{
-    bool store_shmem = (lm->lm_target == MXS_LOG_TARGET_SHMEM);
-
-    bool succ = logfile_init(&lm->lm_logfile, lm, store_shmem);
-
-    if (!succ)
-    {
-        fprintf(stderr, "*\n* Error : Initializing log files failed.\n");
-    }
-
-    return succ;
-}
 
 static void logfile_flush(logfile_t* lf)
 {
@@ -1399,76 +1496,74 @@ static void logfile_rotate(logfile_t* lf)
  */
 static bool logfile_build_name(logfile_t* lf)
 {
-    bool namecreatefail;
-    bool nameconflicts;
-    bool store_shmem;
-    bool writable;
-    bool succ;
-    strpart_t spart[3]; /*< string parts of which the file is composed of */
+    bool succ = false;
 
     if (log_config.use_stdout)
     {
         // TODO: Refactor so that lf_full_file_name can be NULL in this case.
-        lf->lf_full_file_name = strdup("stdout");
+        lf->lf_full_file_name = MXS_STRDUP_A("stdout");
         succ = true;
         // TODO: Refactor to get rid of the gotos.
         goto return_succ;
     }
+
     /**
-     * sparts is an array but next pointers are used to walk through
-     * the list of string parts.
+     * Create name for log file.
      */
-    spart[0].sp_next = &spart[1];
-    spart[1].sp_next = &spart[2];
-    spart[2].sp_next = NULL;
+    lf->lf_full_file_name = form_full_file_name(lf->lf_filepath,
+                                                lf->lf_name_prefix,
+                                                lf->lf_name_suffix);
 
-    spart[1].sp_string = lf->lf_name_prefix;
-    spart[2].sp_string = lf->lf_name_suffix;
-
-    store_shmem = lf->lf_store_shmem;
-
-    do
+    if (lf->lf_store_shmem)
     {
-        namecreatefail = false;
-        nameconflicts  = false;
-
-        spart[0].sp_string = lf->lf_filepath;
         /**
-         * Create name for log file. Seqno is added between prefix &
-         * suffix (index == 2)
+         * Create name for link file
          */
-        lf->lf_full_file_name = form_full_file_name(spart, lf, 2);
+        lf->lf_full_link_name = form_full_file_name(lf->lf_linkpath,
+                                                    lf->lf_name_prefix,
+                                                    lf->lf_name_suffix);
+    }
+    /**
+     * At least one of the files couldn't be created. Either
+     * memory allocation failed or the filename is too long.
+     */
+    if (!lf->lf_full_file_name || (lf->lf_store_shmem && !lf->lf_full_link_name))
+    {
+        goto return_succ;
+    }
 
-        if (store_shmem)
+    /**
+     * If file exists but is different type, create fails.
+     */
+    bool writable;
+    if (check_file_and_path(lf->lf_full_file_name, &writable))
+    {
+        /** Found similarly named file which isn't writable */
+        if (!writable || file_is_symlink(lf->lf_full_file_name))
         {
-            spart[0].sp_string = lf->lf_linkpath;
-            /**
-             * Create name for link file
-             */
-            lf->lf_full_link_name = form_full_file_name(spart, lf, 2);
+            goto return_succ;
         }
+    }
+    else
+    {
         /**
-         * At least one of the files couldn't be created. Increase
-         * sequence number and retry until succeeds.
+         * Opening the file failed for some other reason than
+         * existing non-writable file. Shut down.
          */
-        if (lf->lf_full_file_name == NULL ||
-            (store_shmem && lf->lf_full_link_name == NULL))
+        if (!writable)
         {
-            namecreatefail = true;
-            goto file_create_fail;
+            goto return_succ;
         }
+    }
 
-        /**
-         * If file exists but is different type, create fails and
-         * new, increased sequence number is added to file name.
-         */
-        if (check_file_and_path(lf->lf_full_file_name, &writable, true))
+    if (lf->lf_store_shmem)
+    {
+        if (check_file_and_path(lf->lf_full_link_name, &writable))
         {
-            /** Found similarly named file which isn't writable */
-            if (!writable || file_is_symlink(lf->lf_full_file_name))
+            /** Found similarly named link which isn't writable */
+            if (!writable)
             {
-                nameconflicts = true;
-                goto file_create_fail;
+                goto return_succ;
             }
         }
         else
@@ -1479,52 +1574,10 @@ static bool logfile_build_name(logfile_t* lf)
              */
             if (!writable)
             {
-                succ = false;
                 goto return_succ;
             }
         }
-
-        if (store_shmem)
-        {
-            if (check_file_and_path(lf->lf_full_link_name, &writable, true))
-            {
-                /** Found similarly named link which isn't writable */
-                if (!writable)
-                {
-                    nameconflicts = true;
-                }
-            }
-            else
-            {
-                /**
-                 * Opening the file failed for some other reason than
-                 * existing non-writable file. Shut down.
-                 */
-                if (!writable)
-                {
-                    succ = false;
-                    goto return_succ;
-                }
-            }
-        }
-    file_create_fail:
-        if (namecreatefail || nameconflicts)
-        {
-            lf->lf_name_seqno += 1;
-
-            if (lf->lf_full_file_name != NULL)
-            {
-                free(lf->lf_full_file_name);
-                lf->lf_full_file_name = NULL;
-            }
-            if (lf->lf_full_link_name != NULL)
-            {
-                free(lf->lf_full_link_name);
-                lf->lf_full_link_name = NULL;
-            }
-        }
     }
-    while (namecreatefail || nameconflicts);
 
     succ = true;
 
@@ -1532,19 +1585,60 @@ return_succ:
     return succ;
 }
 
+static bool logfile_write_header(skygw_file_t* file)
+{
+    CHK_FILE(file);
+
+    bool written = true;
+    time_t t = time(NULL);
+    struct tm tm;
+    localtime_r(&t, &tm);
+
+    const char PREFIX[] = "MariaDB MaxScale  "; // sizeof(PREFIX) includes the NULL.
+    char time_string[32]; // 26 would be enough, according to "man asctime".
+    asctime_r(&tm, time_string);
+
+    size_t size = sizeof(PREFIX) + strlen(file->sf_fname) + 2 * sizeof(' ') + strlen(time_string);
+
+    char header[size + 2]; // For the 2 newlines.
+    sprintf(header, "\n\n%s%s  %s", PREFIX, file->sf_fname, time_string);
+
+    char line[sizeof(header) - 1];
+    memset(line, '-', sizeof(line) - 1);
+    line[sizeof(line) - 1] = '\n';
+
+    size_t header_items = fwrite(header, sizeof(header) - 1, 1, file->sf_file);
+    size_t line_items = fwrite(line, sizeof(line), 1, file->sf_file);
+
+    if ((header_items != 1) || (line_items != 1))
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        LOG_ERROR("MaxScale Log: Writing header failed due to %d, %s\n",
+                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        written = false;
+    }
+
+    return written;
+}
+
 /**
  * Opens a log file and writes header to the beginning of it. File name, FILE*,
  * and file descriptor are stored to skygw_file_t struct which is stored in
  * filewriter strcuture passed as parameter.
  *
- * @param fw    filewriter pointer
- * @param lf    logfile pointer
+ * @param fw           filewriter pointer
+ * @param lf           logfile pointer
+ * @param mode         Wheather the file should be truncated or appended to.
+ * @param write_header Wheather a file header should be written.
  *
  * @return true if succeed; the resulting skygw_file_t is written in filewriter,
  * false if failed.
  *
  */
-static bool logfile_open_file(filewriter_t* fw, logfile_t* lf)
+static bool logfile_open_file(filewriter_t* fw,
+                              logfile_t* lf,
+                              skygw_open_mode_t mode,
+                              bool write_header)
 {
     bool rv = true;
 
@@ -1553,15 +1647,17 @@ static bool logfile_open_file(filewriter_t* fw, logfile_t* lf)
         fw->fwr_file = skygw_file_alloc(lf->lf_full_file_name);
         fw->fwr_file->sf_file = stdout;
     }
-    else if (lf->lf_store_shmem)
-    {
-        /** Create symlink pointing to log file */
-        fw->fwr_file = skygw_file_init(lf->lf_full_file_name, lf->lf_full_link_name);
-    }
     else
     {
-        /** Create normal disk-resident log file */
-        fw->fwr_file = skygw_file_init(lf->lf_full_file_name, NULL);
+        const char* full_link_name = lf->lf_store_shmem ? lf->lf_full_link_name : NULL;
+
+        /** Create symlink pointing to log file */
+        fw->fwr_file = skygw_file_init(lf->lf_full_file_name, full_link_name, mode);
+
+        if (fw->fwr_file && write_header)
+        {
+            logfile_write_header(fw->fwr_file);
+        }
     }
 
     if (fw->fwr_file == NULL)
@@ -1575,114 +1671,38 @@ static bool logfile_open_file(filewriter_t* fw, logfile_t* lf)
 
 
 /**
- * @node Combine all name parts from left to right.
+ * @brief Form the complete file path.
  *
- * Parameters:
- * @param parts
- *
- * @param seqno specifies the the sequence number which will be added as a part
- * of full file name. seqno == -1 indicates that sequence number won't be used.
- *
- * @param seqnoidx Specifies the seqno position in the 'array' of name parts.
- * If seqno == -1 seqnoidx will be set -1 as well.
+ * @param directory The directory component containing a trailing '/'.
+ * @param prefix The prefix part of the filename.
+ * @param suffix The suffix part of the filename.
  *
  * @return Pointer to filename, of NULL if failed.
  *
  */
-static char* form_full_file_name(strpart_t* parts, logfile_t* lf, int seqnoidx)
+static char* form_full_file_name(const char* directory,
+                                 const char* prefix,
+                                 const char* suffix)
 {
-    int    i;
-    int    seqno;
-    size_t s;
-    size_t fnlen;
-    char*  filename = NULL;
-    char*  seqnostr = NULL;
-    strpart_t* p;
+    char* filename = NULL;
 
-    if (lf->lf_name_seqno != -1)
+    size_t len = strlen(directory) + strlen(prefix) + strlen(suffix) + 1;
+
+    if (len <= NAME_MAX)
     {
-        int   file_sn;
-        int   link_sn = 0;
-        const char* tmp = parts[0].sp_string;
+        filename = (char*)MXS_CALLOC(1, len);
 
-        file_sn = find_last_seqno(parts, lf->lf_name_seqno, seqnoidx);
-
-        if (lf->lf_linkpath != NULL)
+        if (filename)
         {
-            tmp = parts[0].sp_string;
-            parts[0].sp_string = lf->lf_linkpath;
-            link_sn = find_last_seqno(parts, lf->lf_name_seqno, seqnoidx);
-            parts[0].sp_string = tmp;
+            strcat(filename, directory);
+            strcat(filename, prefix);
+            strcat(filename, suffix);
         }
-        lf->lf_name_seqno = MAX(file_sn, link_sn);
-
-        seqno = lf->lf_name_seqno;
-        s = UINTLEN(seqno);
-        seqnostr = (char *)malloc((int)s + 1);
     }
     else
     {
-        /**
-         * These magic numbers are needed to indicate this and
-         * in subroutines that sequence number is not used.
-         */
-        s = 0;
-        seqnoidx = -1;
-        seqno = lf->lf_name_seqno;
-    }
-
-    if (parts == NULL || parts->sp_string == NULL)
-    {
-        goto return_filename;
-    }
-    /**
-     * Length of path, file name, separating slash, sequence number and
-     * terminating character.
-     */
-    fnlen = sizeof('/') + s + sizeof('\0');
-    p = parts;
-    /** Calculate the combined length of all parts put together */
-    while (p->sp_string != NULL)
-    {
-        fnlen += strnlen(p->sp_string, NAME_MAX);
-
-        if (p->sp_next == NULL)
-        {
-            break;
-        }
-        p = p->sp_next;
-    }
-
-    if (fnlen > NAME_MAX)
-    {
-        fprintf(stderr, "Error : Too long file name= %d.\n", (int)fnlen);
-        goto return_filename;
-    }
-    filename = (char*)calloc(1, fnlen);
-
-    if (seqnostr != NULL)
-    {
-        snprintf(seqnostr, s + 1, "%d", seqno);
-    }
-
-    for (i = 0, p = parts; p->sp_string != NULL; i++, p = p->sp_next)
-    {
-        if (seqnostr != NULL && i == seqnoidx)
-        {
-            strcat(filename, seqnostr); /*< add sequence number */
-        }
-        strcat(filename, p->sp_string);
-
-        if (p->sp_next == NULL)
-        {
-            break;
-        }
-    }
-
-return_filename:
-    if (seqnostr != NULL)
-    {
-        free(seqnostr);
+        LOG_ERROR("MaxScale Log: Error, filename too long %s%s%s.\n",
+                  directory, prefix, suffix);
     }
 
     return filename;
@@ -1711,9 +1731,10 @@ static char* add_slash(char* str)
     /** Add slash if missing */
     if (p[plen - 1] != '/')
     {
-        str = (char *)malloc(plen + 2);
+        str = (char *)MXS_MALLOC(plen + 2);
+        MXS_ABORT_IF_NULL(str);
         snprintf(str, plen + 2, "%s/", p);
-        free(p);
+        MXS_FREE(p);
     }
     return str;
 }
@@ -1724,10 +1745,9 @@ static char* add_slash(char* str)
  * check if they are accessible and writable.
  *
  * Parameters:
- * @param filename      file to be checked
- *
+ * @param filename      File to be checked
  * @param writable      flag indicating whether file was found writable or not
- * if writable is NULL, check is skipped.
+ *                      if writable is NULL, check is skipped.
  *
  * @return true & writable if file exists and it is writable,
  *      true & not writable if file exists but it can't be written,
@@ -1738,7 +1758,7 @@ static char* add_slash(char* str)
  * TODO: recall what was the reason for not succeeding with simply
  * calling access, and fstat. vraa 26.11.13
  */
-static bool check_file_and_path(char* filename, bool* writable, bool do_log)
+static bool check_file_and_path(const char* filename, bool* writable)
 {
     bool exists;
 
@@ -1767,25 +1787,17 @@ static bool check_file_and_path(char* filename, bool* writable, bool do_log)
             }
             else
             {
-
-                if (do_log && file_is_symlink(filename))
+                if (file_is_symlink(filename))
                 {
-                    char errbuf[STRERROR_BUFLEN];
-                    fprintf(stderr,
-                            "*\n* Error : Can't access "
-                            "file pointed to by %s due "
-                            "to %s.\n",
-                            filename,
-                            strerror_r(errno, errbuf, sizeof(errbuf)));
+                    char errbuf[MXS_STRERROR_BUFLEN];
+                    LOG_ERROR("MaxScale Log: Error, Can't access file pointed to by %s due to %d, %s.\n",
+                              filename, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
                 }
-                else if (do_log)
+                else
                 {
-                    char errbuf[STRERROR_BUFLEN];
-                    fprintf(stderr,
-                            "*\n* Error : Can't access %s due "
-                            "to %s.\n",
-                            filename,
-                            strerror_r(errno, errbuf, sizeof(errbuf)));
+                    char errbuf[MXS_STRERROR_BUFLEN];
+                    LOG_ERROR("MaxScale Log: Error, Can't access %s due to %d, %s.\n",
+                              filename, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
                 }
 
                 if (writable)
@@ -1809,7 +1821,7 @@ static bool check_file_and_path(char* filename, bool* writable, bool do_log)
 
 
 
-static bool file_is_symlink(char* filename)
+static bool file_is_symlink(const char* filename)
 {
     int  rc;
     bool succ = false;
@@ -1854,8 +1866,6 @@ static bool logfile_init(logfile_t*    logfile,
     logfile->lf_logmes = logmanager->lm_logmes;
     logfile->lf_name_prefix = LOGFILE_NAME_PREFIX;
     logfile->lf_name_suffix = LOGFILE_NAME_SUFFIX;
-    logfile->lf_npending_writes = 0;
-    logfile->lf_name_seqno = 1;
     logfile->lf_lmgr = logmanager;
     logfile->lf_flushflag = false;
     logfile->lf_rotateflag = false;
@@ -1869,34 +1879,34 @@ static bool logfile_init(logfile_t*    logfile,
      */
     if (store_shmem)
     {
-        char* c;
-        pid_t pid = getpid();
-        int   len = strlen(shm_pathname_prefix)
-                    + strlen("maxscale.") +
-                    get_decimal_len((size_t)pid) + 1;
+        char* dir;
+        int   len = sizeof(SHM_PATHNAME_PREFIX) + sizeof(LOGFILE_NAME_PREFIX);
 
-        c = (char *)calloc(len, sizeof(char));
+        dir = (char *)MXS_CALLOC(len, sizeof(char));
 
-        if (c == NULL)
+        if (dir == NULL)
         {
             succ = false;
             goto return_with_succ;
         }
-        sprintf(c, "%smaxscale.%d", shm_pathname_prefix, pid);
-        logfile->lf_filepath = c;
+        sprintf(dir, "%s%s", SHM_PATHNAME_PREFIX, LOGFILE_NAME_PREFIX);
+        logfile->lf_filepath = dir;
 
-        if (mkdir(c, S_IRWXU | S_IRWXG) != 0 &&
-            errno != EEXIST)
+        if (mkdir(dir, S_IRWXU | S_IRWXG) != 0 && (errno != EEXIST))
         {
+            char errbuf[MXS_STRERROR_BUFLEN];
+            LOG_ERROR("MaxScale Log: Error, creating directory %s failed due to %d, %s.\n",
+                      dir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+
             succ = false;
             goto return_with_succ;
         }
-        logfile->lf_linkpath = strdup(fn->fn_logpath);
+        logfile->lf_linkpath = MXS_STRDUP_A(fn->fn_logpath);
         logfile->lf_linkpath = add_slash(logfile->lf_linkpath);
     }
     else
     {
-        logfile->lf_filepath = strdup(fn->fn_logpath);
+        logfile->lf_filepath = MXS_STRDUP_A(fn->fn_logpath);
     }
     logfile->lf_filepath = add_slash(logfile->lf_filepath);
 
@@ -1910,13 +1920,11 @@ static bool logfile_init(logfile_t*    logfile,
      */
     if (mlist_init(&logfile->lf_blockbuf_list,
                    NULL,
-                   strdup("logfile block buffer list"),
+                   MXS_STRDUP_A("logfile block buffer list"),
                    blockbuf_node_done,
                    MAXNBLOCKBUFS) == NULL)
     {
-        ss_dfprintf(stderr,
-                    "*\n* Error : Initializing buffers for log files "
-                    "failed.");
+        LOG_ERROR("MaxScale Log: Error, Initializing buffers for log files failed.\n");
         logfile_free_memory(logfile);
         goto return_with_succ;
     }
@@ -1957,23 +1965,22 @@ static void logfile_done(logfile_t* lf)
 {
     switch (lf->lf_state)
     {
-        case RUN:
-            CHK_LOGFILE(lf);
-            ss_dassert(lf->lf_npending_writes == 0);
-        /** fallthrough */
-        case INIT:
-            /** Test if list is initialized before freeing it */
-            if (lf->lf_blockbuf_list.mlist_versno != 0)
-            {
-                mlist_done(&lf->lf_blockbuf_list);
-            }
-            logfile_free_memory(lf);
-            lf->lf_state = DONE;
-        /** fallthrough */
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+    case RUN:
+        CHK_LOGFILE(lf);
+    /** fallthrough */
+    case INIT:
+        /** Test if list is initialized before freeing it */
+        if (lf->lf_blockbuf_list.mlist_versno != 0)
+        {
+            mlist_done(&lf->lf_blockbuf_list);
+        }
+        logfile_free_memory(lf);
+        lf->lf_state = DONE;
+    /** fallthrough */
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
@@ -1981,32 +1988,33 @@ static void logfile_free_memory(logfile_t* lf)
 {
     if (lf->lf_filepath != NULL)
     {
-        free(lf->lf_filepath);
+        MXS_FREE(lf->lf_filepath);
     }
     if (lf->lf_linkpath != NULL)
     {
-        free(lf->lf_linkpath);
+        MXS_FREE(lf->lf_linkpath);
     }
     if (lf->lf_full_link_name != NULL)
     {
-        free(lf->lf_full_link_name);
+        MXS_FREE(lf->lf_full_link_name);
     }
     if (lf->lf_full_file_name != NULL)
     {
-        free(lf->lf_full_file_name);
+        MXS_FREE(lf->lf_full_file_name);
     }
 }
 
 /**
  * @node Initialize filewriter data and open the log file for each log file type.
  *
- * @param logmanager Log manager struct
- * @param fw         File writer struct
+ * @param logmanager   Log manager struct
+ * @param fw           File writer struct
+ * @param write_header Wheather a file header should be written.
  *
  * @return true if succeed, false if failed
  *
  */
-static bool filewriter_init(logmanager_t* logmanager, filewriter_t* fw)
+static bool filewriter_init(logmanager_t* logmanager, filewriter_t* fw, bool write_header)
 {
     bool succ = false;
 
@@ -2027,7 +2035,7 @@ static bool filewriter_init(logmanager_t* logmanager, filewriter_t* fw)
 
     logfile_t* lf = logmanager_get_logfile(logmanager);
 
-    if (logfile_open_file(fw, lf))
+    if (logfile_open_file(fw, lf, SKYGW_OPEN_APPEND, write_header))
     {
         fw->fwr_state = RUN;
         CHK_FILEWRITER(fw);
@@ -2035,37 +2043,79 @@ static bool filewriter_init(logmanager_t* logmanager, filewriter_t* fw)
     }
     else
     {
-        // Error logged already to stderr.
-        filewriter_done(fw);
+        filewriter_done(fw, write_header);
     }
 
     ss_dassert(fw->fwr_state == RUN || fw->fwr_state == DONE);
     return succ;
 }
 
-static void filewriter_done(filewriter_t* fw)
+static bool logfile_write_footer(skygw_file_t* file, const char* suffix)
+{
+    CHK_FILE(file);
+
+    bool written = true;
+    time_t t = time(NULL);
+    struct tm tm;
+    localtime_r(&t, &tm);
+
+    const char FORMAT[] = "%04d-%02d-%02d %02d:%02d:%02d";
+    char time_string[20]; // 19 chars + NULL.
+
+    sprintf(time_string, FORMAT,
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    size_t size = sizeof(time_string) + 3 * sizeof(' ') + strlen(suffix) + sizeof('\n');
+
+    char header[size];
+    sprintf(header, "%s   %s\n", time_string, suffix);
+
+    char line[sizeof(header) - 1];
+    memset(line, '-', sizeof(line) - 1);
+    line[sizeof(line) - 1] = '\n';
+
+    size_t header_items = fwrite(header, sizeof(header) - 1, 1, file->sf_file);
+    size_t line_items = fwrite(line, sizeof(line), 1, file->sf_file);
+
+    if ((header_items != 1) || (line_items != 1))
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        LOG_ERROR("MaxScale Log: Writing footer failed due to %d, %s\n",
+                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        written = false;
+    }
+
+    return written;
+}
+
+static void filewriter_done(filewriter_t* fw, bool write_footer)
 {
     switch (fw->fwr_state)
     {
-        case RUN:
-            CHK_FILEWRITER(fw);
-            if (log_config.use_stdout)
+    case RUN:
+        CHK_FILEWRITER(fw);
+        if (log_config.use_stdout)
+        {
+            skygw_file_free(fw->fwr_file);
+        }
+        else
+        {
+            if (write_footer)
             {
-                skygw_file_free(fw->fwr_file);
+                logfile_write_footer(fw->fwr_file, "MariaDB MaxScale is shut down.");
             }
-            else
-            {
-                skygw_file_close(fw->fwr_file, true);
-            }
-        case INIT:
-            fw->fwr_logmes = NULL;
-            fw->fwr_clientmes = NULL;
-            fw->fwr_state = DONE;
-            break;
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+
+            skygw_file_close(fw->fwr_file);
+        }
+    case INIT:
+        fw->fwr_logmes = NULL;
+        fw->fwr_clientmes = NULL;
+        fw->fwr_state = DONE;
+        break;
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
@@ -2075,7 +2125,6 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
      * Get file pointer of current logfile.
      */
     bool do_flushall = thr_flushall_check();
-    skygw_file_t *file = fwr->fwr_file;
     logfile_t *lf = &lm->lm_logfile;
 
     /**
@@ -2087,42 +2136,34 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
     lf->lf_flushflag  = false;
     lf->lf_rotateflag = false;
     release_lock(&lf->lf_spinlock);
-    /**
-     * Log rotation :
-     * Close current, and open a new file for the log.
-     */
-    if (rotate_logfile)
+
+    // fwr->fwr_file may be NULL if an earlier log-rotation failed.
+    if (rotate_logfile || !fwr->fwr_file)
     {
-        bool succ;
-
-        lf->lf_name_seqno += 1; /*< new sequence number */
-
-        if (!(succ = logfile_build_name(lf)))
+        /**
+         * Log rotation: Close file, and reopen in truncate mode.
+         */
+        if (!log_config.use_stdout)
         {
-            lf->lf_name_seqno -= 1; /*< restore */
-        }
-        else if ((succ = logfile_open_file(fwr, lf)))
-        {
-            if (log_config.use_stdout)
+            if (log_config.do_maxlog)
             {
-                skygw_file_free(file);
+                logfile_write_footer(fwr->fwr_file, "File closed due to log rotation.");
             }
-            else
+
+            skygw_file_close(fwr->fwr_file);
+            fwr->fwr_file = NULL;
+
+            if (!logfile_open_file(fwr, lf, SKYGW_OPEN_TRUNCATE, log_config.do_maxlog))
             {
-                skygw_file_close(file, false); /*< close old file */
+                LOG_ERROR("MaxScale Log: Error, could not re-open log file %s.\n",
+                          lf->lf_full_file_name);
             }
         }
 
-        if (!succ)
-        {
-            MXS_ERROR("Log rotation failed. "
-                      "Creating replacement file %s "
-                      "failed. Continuing "
-                      "logging to existing file.",
-                      lf->lf_full_file_name);
-        }
         return true;
     }
+
+    skygw_file_t *file = fwr->fwr_file;
     /**
      * get logfile's block buffer list
      */
@@ -2166,13 +2207,10 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             if (err)
             {
                 // TODO: Log this to syslog.
-                char errbuf[STRERROR_BUFLEN];
-                fprintf(stderr,
-                        "Error : Writing to the log-file %s failed due to (%d, %s). "
-                        "Disabling writing to the log.",
-                        lf->lf_full_file_name,
-                        err,
-                        strerror_r(err, errbuf, sizeof(errbuf)));
+                char errbuf[MXS_STRERROR_BUFLEN];
+                LOG_ERROR("MaxScale Log: Error, writing to the log-file %s failed due to %d, %s. "
+                          "Disabling writing to the log.\n",
+                          lf->lf_full_file_name, err, strerror_r(err, errbuf, sizeof(errbuf)));
 
                 mxs_log_set_maxlog_enabled(false);
             }
@@ -2283,7 +2321,9 @@ static void* thr_filewriter_fun(void* data)
 
     /** Inform log manager about the state. */
     skygw_message_send(fwr->fwr_clientmes);
-    while (!skygw_thread_must_exit(thr))
+    bool running = true;
+
+    do
     {
         /**
          * Wait until new log arrival message appears.
@@ -2309,14 +2349,23 @@ static void* thr_filewriter_fun(void* data)
             }
         }
 
+        bool send_message = false;
+
         if (flushall_done_flag)
         {
             flushall_done_flag = false;
             flushall_logfiles(false);
-            skygw_message_send(fwr->fwr_clientmes);
+            send_message = true;
         }
 
-    } /* while (!skygw_thread_must_exit) */
+        running = !skygw_thread_must_exit(thr);
+
+        if (running && send_message)
+        {
+            skygw_message_send(fwr->fwr_clientmes);
+        }
+    }
+    while (running);
 
     ss_debug(skygw_thread_set_state(thr, THR_STOPPED));
     /** Inform log manager that file writer thread has stopped. */
@@ -2329,82 +2378,22 @@ static void fnames_conf_done(fnames_conf_t* fn)
 {
     switch (fn->fn_state)
     {
-        case RUN:
-            CHK_FNAMES_CONF(fn);
-        case INIT:
-            fnames_conf_free_memory(fn);
-            fn->fn_state = DONE;
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+    case RUN:
+        CHK_FNAMES_CONF(fn);
+    case INIT:
+        fnames_conf_free_memory(fn);
+        fn->fn_state = DONE;
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
 
 static void fnames_conf_free_memory(fnames_conf_t* fn)
 {
-    free(fn->fn_logpath);
-}
-
-/**
- * Find the file with biggest sequence number from given directory and return
- * the sequence number.
- *
- * @param parts string parts of which the file name is composed of
- * @param seqno the sequence number to start with, if seqno is -1 just return
- *
- * @return the biggest sequence number used
- */
-static int find_last_seqno(strpart_t* parts,
-                           int        seqno,
-                           int        seqnoidx)
-{
-    strpart_t* p;
-    char*      snstr;
-    int        snstrlen;
-
-    if (seqno == -1)
-    {
-        return seqno;
-    }
-    snstrlen = UINTLEN(INT_MAX);
-    snstr = (char *)calloc(1, snstrlen);
-    p = parts;
-
-    while (true)
-    {
-        int  i;
-        char filename[NAME_MAX] = {0};
-        /** Form name with next seqno */
-        snprintf(snstr, snstrlen, "%d", seqno + 1);
-
-        for (i = 0, p = parts; p->sp_string != NULL; i++, p = p->sp_next)
-        {
-            if (snstr != NULL && i == seqnoidx)
-            {
-                strncat(filename, snstr, NAME_MAX - 1); /*< add sequence number */
-            }
-            strncat(filename, p->sp_string, NAME_MAX - 1);
-
-            if (p->sp_next == NULL)
-            {
-                break;
-            }
-        }
-
-        if (check_file_and_path(filename, NULL, false))
-        {
-            seqno++;
-        }
-        else
-        {
-            break;
-        }
-    }
-    free(snstr);
-
-    return seqno;
+    MXS_FREE(fn->fn_logpath);
 }
 
 bool thr_flushall_check()
@@ -2463,6 +2452,45 @@ void mxs_log_set_maxlog_enabled(bool enabled)
     MXS_NOTICE("maxlog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
+/**
+ * Set the log throttling parameters.
+ *
+ * @param throttling The throttling parameters.
+ */
+void mxs_log_set_throttling(const MXS_LOG_THROTTLING* throttling)
+{
+    // No locking; it does not have any real impact, even if the struct
+    // is used right when its values are modified.
+    log_config.throttling = *throttling;
+
+    if ((log_config.throttling.count == 0) ||
+        (log_config.throttling.window_ms == 0) ||
+        (log_config.throttling.suppress_ms == 0))
+    {
+        MXS_NOTICE("Log throttling has been disabled.");
+    }
+    else
+    {
+        MXS_NOTICE("A message that is logged %lu times in %lu milliseconds, "
+                   "will be suppressed for %lu milliseconds.",
+                   log_config.throttling.count,
+                   log_config.throttling.window_ms,
+                   log_config.throttling.suppress_ms);
+    }
+}
+
+/**
+ * Get the log throttling parameters.
+ *
+ * @param throttling The throttling parameters.
+ */
+void mxs_log_get_throttling(MXS_LOG_THROTTLING* throttling)
+{
+    // No locking; this is used only from maxadmin and an inconsistent set
+    // may be returned only if mxs_log_set_throttling() is called via an
+    // other instance of maxadmin at the very same moment.
+    *throttling = log_config.throttling;
+}
 
 /**
  * Explicitly ensure that all pending log messages are flushed.
@@ -2491,7 +2519,7 @@ int mxs_log_flush()
     }
     else
     {
-        ss_dfprintf(stderr, "Can't register to logmanager, flushing failed.\n");
+        LOG_ERROR("MaxScale Log: Error, can't register to logmanager, flushing failed.\n");
     }
 
     return err;
@@ -2567,7 +2595,7 @@ int mxs_log_rotate()
     }
     else
     {
-        ss_dfprintf(stderr, "Can't register to logmanager, rotating failed.\n");
+        LOG_ERROR("MaxScale Log: Error, Can't register to logmanager, rotating failed.\n");
     }
 
     return err;
@@ -2577,25 +2605,25 @@ static const char* priority_name(int priority)
 {
     switch (priority)
     {
-        case LOG_EMERG:
-            return "emercency";
-        case LOG_ALERT:
-            return "alert";
-        case LOG_CRIT:
-            return "critical";
-        case LOG_ERR:
-            return "error";
-        case LOG_WARNING:
-            return "warning";
-        case LOG_NOTICE:
-            return "notice";
-        case LOG_INFO:
-            return "informational";
-        case LOG_DEBUG:
-            return "debug";
-        default:
-            assert(!true);
-            return "unknown";
+    case LOG_EMERG:
+        return "emercency";
+    case LOG_ALERT:
+        return "alert";
+    case LOG_CRIT:
+        return "critical";
+    case LOG_ERR:
+        return "error";
+    case LOG_WARNING:
+        return "warning";
+    case LOG_NOTICE:
+        return "notice";
+    case LOG_INFO:
+        return "informational";
+    case LOG_DEBUG:
+        return "debug";
+    default:
+        assert(!true);
+        return "unknown";
     }
 }
 
@@ -2659,51 +2687,51 @@ static log_prefix_t priority_to_prefix(int priority)
 
     switch (priority)
     {
-        case LOG_EMERG:
-            prefix.text = PREFIX_EMERG;
-            prefix.len = sizeof(PREFIX_EMERG);
-            break;
+    case LOG_EMERG:
+        prefix.text = PREFIX_EMERG;
+        prefix.len = sizeof(PREFIX_EMERG);
+        break;
 
-        case LOG_ALERT:
-            prefix.text = PREFIX_ALERT;
-            prefix.len = sizeof(PREFIX_ALERT);
-            break;
+    case LOG_ALERT:
+        prefix.text = PREFIX_ALERT;
+        prefix.len = sizeof(PREFIX_ALERT);
+        break;
 
-        case LOG_CRIT:
-            prefix.text = PREFIX_CRIT;
-            prefix.len = sizeof(PREFIX_CRIT);
-            break;
+    case LOG_CRIT:
+        prefix.text = PREFIX_CRIT;
+        prefix.len = sizeof(PREFIX_CRIT);
+        break;
 
-        case LOG_ERR:
-            prefix.text = PREFIX_ERROR;
-            prefix.len = sizeof(PREFIX_ERROR);
-            break;
+    case LOG_ERR:
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
 
-        case LOG_WARNING:
-            prefix.text = PREFIX_WARNING;
-            prefix.len = sizeof(PREFIX_WARNING);
-            break;
+    case LOG_WARNING:
+        prefix.text = PREFIX_WARNING;
+        prefix.len = sizeof(PREFIX_WARNING);
+        break;
 
-        case LOG_NOTICE:
-            prefix.text = PREFIX_NOTICE;
-            prefix.len = sizeof(PREFIX_NOTICE);
-            break;
+    case LOG_NOTICE:
+        prefix.text = PREFIX_NOTICE;
+        prefix.len = sizeof(PREFIX_NOTICE);
+        break;
 
-        case LOG_INFO:
-            prefix.text = PREFIX_INFO;
-            prefix.len = sizeof(PREFIX_INFO);
-            break;
+    case LOG_INFO:
+        prefix.text = PREFIX_INFO;
+        prefix.len = sizeof(PREFIX_INFO);
+        break;
 
-        case LOG_DEBUG:
-            prefix.text = PREFIX_DEBUG;
-            prefix.len = sizeof(PREFIX_DEBUG);
-            break;
+    case LOG_DEBUG:
+        prefix.text = PREFIX_DEBUG;
+        prefix.len = sizeof(PREFIX_DEBUG);
+        break;
 
-        default:
-            assert(!true);
-            prefix.text = PREFIX_ERROR;
-            prefix.len = sizeof(PREFIX_ERROR);
-            break;
+    default:
+        assert(!true);
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
     }
 
     --prefix.len; // Remove trailing NULL.
@@ -2717,26 +2745,138 @@ static enum log_flush priority_to_flush(int priority)
 
     switch (priority)
     {
-        case LOG_EMERG:
-        case LOG_ALERT:
-        case LOG_CRIT:
-        case LOG_ERR:
-            return LOG_FLUSH_YES;
+    case LOG_EMERG:
+    case LOG_ALERT:
+    case LOG_CRIT:
+    case LOG_ERR:
+        return LOG_FLUSH_YES;
 
-        default:
-            assert(!true);
-        case LOG_WARNING:
-        case LOG_NOTICE:
-        case LOG_INFO:
-        case LOG_DEBUG:
-            return LOG_FLUSH_NO;
+    default:
+        assert(!true);
+    case LOG_WARNING:
+    case LOG_NOTICE:
+    case LOG_INFO:
+    case LOG_DEBUG:
+        return LOG_FLUSH_NO;
     }
+}
+
+typedef enum message_suppression
+{
+    MESSAGE_NOT_SUPPRESSED,   // Message is not suppressed.
+    MESSAGE_SUPPRESSED,       // Message is suppressed for the first time (for this round)
+    MESSAGE_STILL_SUPPRESSED  // Message is still suppressed (for this round)
+} message_suppression_t;
+
+static message_suppression_t message_status(const char* file, int line)
+{
+    message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
+
+    // Copy the config to prevent the values from changing while we are using
+    // them. It does not matter if they are changed just when we are copying
+    // them, but we want to use one set of values throughout the function.
+    MXS_LOG_THROTTLING t = log_config.throttling;
+
+    if ((t.count != 0) && (t.window_ms != 0) && (t.suppress_ms != 0))
+    {
+        LM_MESSAGE_KEY key = { file, line };
+        LM_MESSAGE_STATS *value;
+
+        errno = 0;
+
+        // Since the hashtable can not be externally locked, the lookup/creation
+        // must be done in a loop to ensure that everything works even if two
+        // threads logs the same message at the very same time.
+        do
+        {
+            value = (LM_MESSAGE_STATS*) hashtable_fetch(message_stats, &key);
+
+            if (!value)
+            {
+                LM_MESSAGE_STATS stats;
+                spinlock_init(&stats.lock);
+                stats.first_ms = time_monotonic_ms();
+                stats.last_ms = 0;
+                stats.count = 0;
+
+                // hashtable_add may fail for two reasons; the key exists
+                // already or it runs out of memory. In the latter case
+                // errno is set.
+                hashtable_add(message_stats, &key, &stats);
+            }
+        }
+        while (!value && (errno == 0));
+
+        if (value)
+        {
+            uint64_t now_ms = time_monotonic_ms();
+
+            spinlock_acquire(&value->lock);
+
+            ++value->count;
+
+            // Less that t.window_ms milliseconds since the message was logged
+            // the last time. May have to be throttled.
+            if (value->count < t.count)
+            {
+                // t.count times has not been reached, still ok to log.
+            }
+            else if (value->count == t.count)
+            {
+                // t.count times has been reached. Was it within the window?
+                if (now_ms - value->first_ms < t.window_ms)
+                {
+                    // Within the window, suppress the message.
+                    rv = MESSAGE_SUPPRESSED;
+                }
+                else
+                {
+                    // Not within the window, reset the situation.
+
+                    // The flooding situation is analyzed window by window.
+                    // That means that if there in each of two consequtive
+                    // windows are not enough messages for throttling to take
+                    // effect, but there would be if the window was placed at a
+                    // slightly different position (e.g. starting in the middle
+                    // of the first and ending in the middle of the second) it
+                    // will go undetected and no throttling will be made.
+                    // However, if that's the case, it was a spike so the
+                    // flooding will stop anyway.
+
+                    value->first_ms = now_ms;
+                    value->count = 1;
+                }
+            }
+            else
+            {
+                // In suppression mode.
+                if (now_ms - value->first_ms < (t.window_ms + t.suppress_ms))
+                {
+                    // Still in the suppression window.
+                    rv = MESSAGE_STILL_SUPPRESSED;
+                }
+                else
+                {
+                    // We have exited the suppression window, reset the situation.
+                    value->first_ms = now_ms;
+                    value->count = 1;
+                }
+            }
+
+            value->last_ms = now_ms;
+
+            spinlock_release(&value->lock);
+        }
+    }
+
+    return rv;
 }
 
 /**
  * Log a message of a particular priority.
  *
  * @param priority One of the syslog constants: LOG_ERR, LOG_WARNING, ...
+ * @param modname  The name of the module.
  * @param file     The name of the file where the message was logged.
  * @param line     The line where the message was logged.
  * @param function The function where the message was logged.
@@ -2744,6 +2884,7 @@ static enum log_flush priority_to_flush(int priority)
  * @param ...      Optional arguments according to the format.
  */
 int mxs_log_message(int priority,
+                    const char* modname,
                     const char* file, int line, const char* function,
                     const char* format, ...)
 {
@@ -2753,9 +2894,50 @@ int mxs_log_message(int priority,
 
     if ((priority & ~LOG_PRIMASK) == 0) // Check that the priority is ok,
     {
-        if (MXS_LOG_PRIORITY_IS_ENABLED(priority))
+        message_suppression_t status = MESSAGE_NOT_SUPPRESSED;
+
+        // We only throttle errors and warnings. Info and debug messages
+        // are never on during normal operation, so if they are enabled,
+        // we are presumably debugging something. Notice messages are
+        // assumed to be logged for a reason and always in a context where
+        // flooding cannot be caused.
+        if ((priority == LOG_ERR) || (priority == LOG_WARNING))
+        {
+            status = message_status(file, line);
+        }
+
+        if (status != MESSAGE_STILL_SUPPRESSED)
         {
             va_list valist;
+
+            uint64_t session_id = session_get_current_id();
+            int session_len = 0;
+
+            char session[20]; // Enough to fit "9223372036854775807"
+
+            if (session_id != 0)
+            {
+                sprintf(session, "%" PRIu64, session_id);
+                session_len = strlen(session) + 3; // +3 due to "() "
+            }
+            else
+            {
+                session_len = 0;
+            }
+
+            int modname_len = modname ? strlen(modname) + 3 : 0; // +3 due to "[...] "
+
+            static const char SUPPRESSION[] =
+                " (subsequent similar messages suppressed for %lu milliseconds)";
+            int suppression_len = 0;
+            size_t suppress_ms = log_config.throttling.suppress_ms;
+
+            if (status == MESSAGE_SUPPRESSED)
+            {
+                suppression_len += sizeof(SUPPRESSION) - 1; // Remove trailing NULL
+                suppression_len -= 3; // Remove the %lu
+                suppression_len += UINTLEN(suppress_ms);
+            }
 
             /**
              * Find out the length of log string (to be formatted str).
@@ -2776,33 +2958,58 @@ int mxs_log_message(int priority,
 
                 switch (augmentation)
                 {
-                    case MXS_LOG_AUGMENT_WITH_FUNCTION:
-                        augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
-                        augmentation_len -= 2; // Remove the %s
-                        augmentation_len += strlen(function);
-                        break;
+                case MXS_LOG_AUGMENT_WITH_FUNCTION:
+                    augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
+                    augmentation_len -= 2; // Remove the %s
+                    augmentation_len += strlen(function);
+                    break;
 
-                    default:
-                        break;
+                default:
+                    break;
                 }
 
-                int buffer_len = prefix.len + augmentation_len + message_len + 1; // Trailing NULL
+                int buffer_len = 0;
+                buffer_len += prefix.len;
+                buffer_len += session_len;
+                buffer_len += modname_len;
+                buffer_len += augmentation_len;
+                buffer_len += message_len;
+                buffer_len += suppression_len;
+                buffer_len += 1; // Trailing NULL
 
                 if (buffer_len > MAX_LOGSTRLEN)
                 {
                     message_len -= (buffer_len - MAX_LOGSTRLEN);
                     buffer_len = MAX_LOGSTRLEN;
 
-                    assert(prefix.len + augmentation_len + message_len + 1 == buffer_len);
+                    ss_dassert(prefix.len + session_len + modname_len +
+                               augmentation_len + message_len + suppression_len + 1 == buffer_len);
                 }
 
                 char buffer[buffer_len];
 
                 char *prefix_text = buffer;
-                char *augmentation_text = buffer + prefix.len;
-                char *message_text = buffer + prefix.len + augmentation_len;
+                char *session_text = prefix_text + prefix.len;
+                char *modname_text = session_text + session_len;
+                char *augmentation_text = modname_text + modname_len;
+                char *message_text = augmentation_text + augmentation_len;
+                char *suppression_text = message_text + message_len;
 
                 strcpy(prefix_text, prefix.text);
+
+                if (session_len)
+                {
+                    strcpy(session_text, "(");
+                    strcat(session_text, session);
+                    strcat(session_text, ") ");
+                }
+
+                if (modname_len)
+                {
+                    strcpy(modname_text, "[");
+                    strcat(modname_text, modname);
+                    strcat(modname_text, "] ");
+                }
 
                 if (augmentation_len)
                 {
@@ -2810,20 +3017,26 @@ int mxs_log_message(int priority,
 
                     switch (augmentation)
                     {
-                        case MXS_LOG_AUGMENT_WITH_FUNCTION:
-                            len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
-                            break;
+                    case MXS_LOG_AUGMENT_WITH_FUNCTION:
+                        len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
+                        break;
 
-                        default:
-                            assert(!true);
+                    default:
+                        assert(!true);
                     }
 
-                    assert(len == augmentation_len);
+                    (void)len;
+                    ss_dassert(len == augmentation_len);
                 }
 
                 va_start(valist, format);
                 vsnprintf(message_text, message_len + 1, format, valist);
                 va_end(valist);
+
+                if (suppression_len)
+                {
+                    sprintf(suppression_text, SUPPRESSION, suppress_ms);
+                }
 
                 enum log_flush flush = priority_to_flush(priority);
 
@@ -2837,4 +3050,11 @@ int mxs_log_message(int priority,
     }
 
     return err;
+}
+
+const char* mxs_strerror(int error)
+{
+    static thread_local char errbuf[MXS_STRERROR_BUFLEN];
+
+    return strerror_r(error, errbuf, sizeof(errbuf));
 }

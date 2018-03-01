@@ -1,0 +1,205 @@
+[maxscale]
+threads=###threads###
+log_warning=1
+
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+###repl51###
+servers= server1, server2,server3  ,server4
+user=maxskysql
+passwd= skysql
+monitor_interval=1000
+backend_connect_timeout=10
+backend_read_timeout=10
+
+[RW Split Router]
+type=service
+router= readwritesplit
+servers=server1,     server2,              server3,server4
+user=maxskysql
+passwd=skysql
+router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
+max_slave_connections=1
+#filters=duplicate|hints|regex|ccrfilter|MaxRows|Masking|Cache|namedserverfilter|Database Firewall
+filters=duplicate
+#filters=hints|regex|ccrfilter|MaxRows|Masking|Cache|namedserverfilter|Database Firewall
+
+
+[Read Connection Router Slave]
+type=service
+router=readconnroute
+router_options= slave
+servers=server1,server2,server3,server4
+user=maxskysql
+passwd=skysql
+
+[Read Connection Router Master]
+type=service
+router=readconnroute
+router_options=master
+servers=server1,server2,server3,server4
+user=maxskysql
+passwd=skysql
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+#socket=/tmp/rwsplit.sock
+
+[Read Connection Listener Slave]
+type=listener
+service=Read Connection Router Slave
+protocol=MySQLClient
+port=4009
+
+[Read Connection Listener Master]
+type=listener
+service=Read Connection Router Master
+protocol=MySQLClient
+port=4008
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+#address=localhost
+socket=default
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
+protocol=MySQLBackend
+
+[server3]
+type=server
+address=###node_server_IP_3###
+port=###node_server_port_3###
+protocol=MySQLBackend
+
+[server4]
+type=server
+address=###node_server_IP_4###
+port=###node_server_port_4###
+protocol=MySQLBackend
+
+[duplicate]
+type=filter
+module=tee
+service=RW Split Router Galera
+
+[hints]
+type=filter
+module=hintfilter
+
+[regex]
+type=filter
+module=regexfilter
+match=fetch
+replace=select
+
+[ccrfilter]
+type=filter
+module=ccrfilter
+time=1000
+###count=3
+###match=t2
+###ignore=t1
+
+[MaxRows]
+type=filter
+module=maxrows
+max_resultset_rows=20
+max_resultset_size=900000000
+debug=3
+
+[Masking]
+type=filter
+module=masking
+rules=/###access_homedir###/masking_rules.json
+large_payload=ignore
+
+[Cache]
+type=filter
+module=cache
+storage=storage_inmemory
+# NOTE: If you adjust the TTL values, ensure that test programs dependent
+# NOTE: on the TTL are ajusted as well.
+hard_ttl=10
+soft_ttl=5
+max_size=10M
+rules=/###access_homedir###/cache_rules.json
+
+[namedserverfilter]
+type=filter
+module=namedserverfilter
+match=SELECT
+server=server2
+
+[Database Firewall]
+type=filter
+module=dbfwfilter
+rules=/###access_homedir###/rules/rules.txt
+log_match=true
+log_no_match=true
+
+[Galera Monitor]
+type=monitor
+module=galeramon
+servers=gserver1,gserver2,gserver3,gserver4
+user=maxskysql
+passwd=skysql
+monitor_interval=100
+root_node_as_master=false
+
+[RW Split Router Galera]
+type=service
+router= readwritesplit
+servers=gserver1,gserver2,gserver3,gserver4
+user=maxskysql
+passwd=skysql
+router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
+
+[RW Split Listener Galera]
+type=listener
+service=RW Split Router Galera
+protocol=MySQLClient
+port=4016
+
+[gserver1]
+type=server
+address=###galera_server_IP_1###
+port=###galera_server_port_1###
+protocol=MySQLBackend
+
+[gserver2]
+type=server
+address=###galera_server_IP_2###
+port=###galera_server_port_2###
+protocol=MySQLBackend
+
+[gserver3]
+type=server
+address=###galera_server_IP_3###
+port=###galera_server_port_3###
+protocol=MySQLBackend
+
+[gserver4]
+type=server
+address=###galera_server_IP_4###
+port=###galera_server_port_4###
+protocol=MySQLBackend
+

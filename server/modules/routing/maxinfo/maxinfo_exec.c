@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -18,32 +18,38 @@
  * @verbatim
  * Revision History
  *
- * Date     Who     Description
- * 17/02/15 Mark Riddoch    Initial implementation
+ * Date     Who           Description
+ * 17/02/15 Mark Riddoch  Initial implementation
  *
  * @endverbatim
  */
+
+#include "maxinfo.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <service.h>
-#include <session.h>
-#include <router.h>
-#include <modules.h>
-#include <monitor.h>
-#include <version.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
-#include <maxscale.h>
-#include <maxscale/poll.h>
-#include <maxinfo.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <resultset.h>
-#include <maxconfig.h>
+#include <inttypes.h>
+
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/resultset.h>
+#include <maxscale/router.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/version.h>
+
+#include "../../../core/maxscale/maxscale.h"
+#include "../../../core/maxscale/modules.h"
+#include "../../../core/maxscale/monitor.h"
+#include "../../../core/maxscale/poll.h"
+#include "../../../core/maxscale/session.h"
 
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
@@ -67,37 +73,37 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 {
     switch (tree->op)
     {
-        case MAXOP_SHOW:
-            exec_show(dcb, tree);
-            break;
-        case MAXOP_SELECT:
-            exec_select(dcb, tree);
-            break;
+    case MAXOP_SHOW:
+        exec_show(dcb, tree);
+        break;
+    case MAXOP_SELECT:
+        exec_select(dcb, tree);
+        break;
 
-        case MAXOP_FLUSH:
-            exec_flush(dcb, tree);
-            break;
-        case MAXOP_SET:
-            exec_set(dcb, tree);
-            break;
-        case MAXOP_CLEAR:
-            exec_clear(dcb, tree);
-            break;
-        case MAXOP_SHUTDOWN:
-            exec_shutdown(dcb, tree);
-            break;
-        case MAXOP_RESTART:
-            exec_restart(dcb, tree);
-            break;
+    case MAXOP_FLUSH:
+        exec_flush(dcb, tree);
+        break;
+    case MAXOP_SET:
+        exec_set(dcb, tree);
+        break;
+    case MAXOP_CLEAR:
+        exec_clear(dcb, tree);
+        break;
+    case MAXOP_SHUTDOWN:
+        exec_shutdown(dcb, tree);
+        break;
+    case MAXOP_RESTART:
+        exec_restart(dcb, tree);
+        break;
 
-        case MAXOP_TABLE:
-        case MAXOP_COLUMNS:
-        case MAXOP_LITERAL:
-        case MAXOP_PREDICATE:
-        case MAXOP_LIKE:
-        case MAXOP_EQUAL:
-        default:
-            maxinfo_send_error(dcb, 0, "Unexpected operator in parse tree");
+    case MAXOP_TABLE:
+    case MAXOP_COLUMNS:
+    case MAXOP_LITERAL:
+    case MAXOP_PREDICATE:
+    case MAXOP_LIKE:
+    case MAXOP_EQUAL:
+    default:
+        maxinfo_send_error(dcb, 0, "Unexpected operator in parse tree");
     }
 }
 
@@ -110,7 +116,7 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET   *set;
+    RESULTSET *set;
 
     if ((set = serviceGetList()) == NULL)
     {
@@ -130,7 +136,7 @@ exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET   *set;
+    RESULTSET *set;
 
     if ((set = serviceGetListenerList()) == NULL)
     {
@@ -150,7 +156,7 @@ exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET   *set;
+    RESULTSET *set;
 
     if ((set = sessionGetList(SESSION_LIST_ALL)) == NULL)
     {
@@ -170,7 +176,7 @@ exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET   *set;
+    RESULTSET *set;
 
     if ((set = sessionGetList(SESSION_LIST_CONNECTION)) == NULL)
     {
@@ -190,7 +196,7 @@ exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET   *set;
+    RESULTSET *set;
 
     if ((set = serverGetList()) == NULL)
     {
@@ -210,7 +216,7 @@ exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET   *set;
+    RESULTSET *set;
 
     if ((set = moduleGetList()) == NULL)
     {
@@ -230,7 +236,7 @@ exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET   *set;
+    RESULTSET *set;
 
     if ((set = monitorGetList()) == NULL)
     {
@@ -250,7 +256,7 @@ exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
 static void
 exec_show_eventTimes(DCB *dcb, MAXINFO_TREE *tree)
 {
-    RESULTSET   *set;
+    RESULTSET *set;
 
     if ((set = eventTimesGetList()) == NULL)
     {
@@ -266,7 +272,7 @@ exec_show_eventTimes(DCB *dcb, MAXINFO_TREE *tree)
  */
 static struct
 {
-    char    *name;
+    char *name;
     void (*func)(DCB *, MAXINFO_TREE *);
 } show_commands[] =
 {
@@ -293,7 +299,7 @@ static void
 exec_show(DCB *dcb, MAXINFO_TREE *tree)
 {
     int i;
-    char    errmsg[120];
+    char errmsg[120];
 
     for (i = 0; show_commands[i].name; i++)
     {
@@ -348,6 +354,13 @@ exec_flush(DCB *dcb, MAXINFO_TREE *tree)
     int i;
     char errmsg[120];
 
+    sprintf(errmsg, "Unsupported flush command '%s'", tree->value);
+    if(!tree)
+    {
+        maxinfo_send_error(dcb, 0, errmsg);
+        MXS_ERROR("%s", errmsg);
+        return;
+    }
     for (i = 0; flush_commands[i].name; i++)
     {
         if (strcasecmp(flush_commands[i].name, tree->value) == 0)
@@ -360,7 +373,6 @@ exec_flush(DCB *dcb, MAXINFO_TREE *tree)
     {
         tree->value[80] = 0;
     }
-    sprintf(errmsg, "Unsupported flush command '%s'", tree->value);
     maxinfo_send_error(dcb, 0, errmsg);
     MXS_ERROR("%s", errmsg);
 }
@@ -527,8 +539,6 @@ exec_clear(DCB *dcb, MAXINFO_TREE *tree)
     MXS_ERROR("%s", errmsg);
 }
 
-extern void shutdown_server();
-
 /**
  * MaxScale shutdown
  * @param dcb Client DCB
@@ -536,7 +546,7 @@ extern void shutdown_server();
  */
 void exec_shutdown_maxscale(DCB *dcb, MAXINFO_TREE *tree)
 {
-    shutdown_server();
+    maxscale_shutdown();
     maxinfo_send_ok(dcb);
 }
 
@@ -550,7 +560,7 @@ void exec_shutdown_monitor(DCB *dcb, MAXINFO_TREE *tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        MONITOR* monitor = monitor_find(tree->value);
+        MXS_MONITOR* monitor = monitor_find(tree->value);
         if (monitor)
         {
             monitorStop(monitor);
@@ -660,10 +670,10 @@ void exec_restart_monitor(DCB *dcb, MAXINFO_TREE *tree)
     char errmsg[120];
     if (tree && tree->value)
     {
-        MONITOR* monitor = monitor_find(tree->value);
+        MXS_MONITOR* monitor = monitor_find(tree->value);
         if (monitor)
         {
-            monitorStart(monitor, NULL);
+            monitorStart(monitor, monitor->parameters);
             maxinfo_send_ok(dcb);
         }
         else
@@ -696,7 +706,7 @@ void exec_restart_service(DCB *dcb, MAXINFO_TREE *tree)
         SERVICE* service = service_find(tree->value);
         if (service)
         {
-            serviceRestart(service);
+            serviceStart(service);
             maxinfo_send_ok(dcb);
         }
         else
@@ -803,8 +813,8 @@ typedef void *(*STATSFUNC)();
  */
 static struct
 {
-    char        *name;
-    int     type;
+    char *name;
+    int  type;
     STATSFUNC   func;
 } variables[] =
 {
@@ -822,8 +832,8 @@ static struct
 
 typedef struct
 {
-    int index;
-    char    *like;
+    int  index;
+    char *like;
 } VARCONTEXT;
 /**
  * Callback function to populate rows of the show variable
@@ -835,7 +845,7 @@ typedef struct
 static RESULT_ROW *
 variable_row(RESULTSET *result, void *data)
 {
-    VARCONTEXT *context = (VARCONTEXT *) data;
+    VARCONTEXT *context = (VARCONTEXT *)data;
     RESULT_ROW *row;
     char buf[80];
 
@@ -852,31 +862,31 @@ variable_row(RESULTSET *result, void *data)
         resultset_row_set(row, 0, variables[context->index].name);
         switch (variables[context->index].type)
         {
-            case VT_STRING:
-                resultset_row_set(row, 1,
-                                  (char *)(*variables[context->index].func)());
-                break;
-            case VT_INT:
-                snprintf(buf, 80, "%ld",
-                         (long)(*variables[context->index].func)());
-                resultset_row_set(row, 1, buf);
-                break;
-            default:
-                ss_dassert(!true);
+        case VT_STRING:
+            resultset_row_set(row, 1,
+                              (char *)(*variables[context->index].func)());
+            break;
+        case VT_INT:
+            snprintf(buf, 80, "%ld",
+                     (long)(*variables[context->index].func)());
+            resultset_row_set(row, 1, buf);
+            break;
+        default:
+            ss_dassert(!true);
         }
         context->index++;
         return row;
     }
     // We only get to this point once all variables have been printed
-    free(data);
+    MXS_FREE(data);
     return NULL;
 }
 
 /**
  * Execute a show variables command applying an optional filter
  *
- * @param dcb       The DCB connected to the client
- * @param filter    A potential like clause or NULL
+ * @param dcb     The DCB connected to the client
+ * @param filter  A potential like clause or NULL
  */
 static void
 exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
@@ -884,7 +894,7 @@ exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
     RESULTSET *result;
     VARCONTEXT *context;
 
-    if ((context = malloc(sizeof(VARCONTEXT))) == NULL)
+    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
     {
         return;
     }
@@ -902,7 +912,7 @@ exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
     if ((result = resultset_create(variable_row, context)) == NULL)
     {
         maxinfo_send_error(dcb, 0, "No resources available");
-        free(context);
+        MXS_FREE(context);
         return;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
@@ -921,7 +931,7 @@ maxinfo_variables()
 {
     RESULTSET *result;
     VARCONTEXT *context;
-    if ((context = malloc(sizeof(VARCONTEXT))) == NULL)
+    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
     {
         return NULL;
     }
@@ -930,7 +940,7 @@ maxinfo_variables()
 
     if ((result = resultset_create(variable_row, context)) == NULL)
     {
-        free(context);
+        MXS_FREE(context);
         return NULL;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
@@ -995,7 +1005,7 @@ maxinfo_zombie_dcbs()
 /**
  * Interface to poll stats for reads
  */
-static int
+static int64_t
 maxinfo_read_events()
 {
     return poll_get_stat(POLL_STAT_READ);
@@ -1004,7 +1014,7 @@ maxinfo_read_events()
 /**
  * Interface to poll stats for writes
  */
-static int
+static int64_t
 maxinfo_write_events()
 {
     return poll_get_stat(POLL_STAT_WRITE);
@@ -1013,7 +1023,7 @@ maxinfo_write_events()
 /**
  * Interface to poll stats for errors
  */
-static int
+static int64_t
 maxinfo_error_events()
 {
     return poll_get_stat(POLL_STAT_ERROR);
@@ -1022,7 +1032,7 @@ maxinfo_error_events()
 /**
  * Interface to poll stats for hangup
  */
-static int
+static int64_t
 maxinfo_hangup_events()
 {
     return poll_get_stat(POLL_STAT_HANGUP);
@@ -1031,7 +1041,7 @@ maxinfo_hangup_events()
 /**
  * Interface to poll stats for accepts
  */
-static int
+static int64_t
 maxinfo_accept_events()
 {
     return poll_get_stat(POLL_STAT_ACCEPT);
@@ -1040,25 +1050,16 @@ maxinfo_accept_events()
 /**
  * Interface to poll stats for event queue length
  */
-static int
+static int64_t
 maxinfo_event_queue_length()
 {
     return poll_get_stat(POLL_STAT_EVQ_LEN);
 }
 
 /**
- * Interface to poll stats for event pending queue length
- */
-static int
-maxinfo_event_pending_queue_length()
-{
-    return poll_get_stat(POLL_STAT_EVQ_PENDING);
-}
-
-/**
  * Interface to poll stats for max event queue length
  */
-static int
+static int64_t
 maxinfo_max_event_queue_length()
 {
     return poll_get_stat(POLL_STAT_EVQ_MAX);
@@ -1067,7 +1068,7 @@ maxinfo_max_event_queue_length()
 /**
  * Interface to poll stats for max queue time
  */
-static int
+static int64_t
 maxinfo_max_event_queue_time()
 {
     return poll_get_stat(POLL_STAT_MAX_QTIME);
@@ -1076,7 +1077,7 @@ maxinfo_max_event_queue_time()
 /**
  * Interface to poll stats for max event execution time
  */
-static int
+static int64_t
 maxinfo_max_event_exec_time()
 {
     return poll_get_stat(POLL_STAT_MAX_EXECTIME);
@@ -1087,9 +1088,9 @@ maxinfo_max_event_exec_time()
  */
 static struct
 {
-    char        *name;
-    int     type;
-    STATSFUNC   func;
+    char      *name;
+    int       type;
+    STATSFUNC func;
 } status[] =
 {
     { "Uptime", VT_INT, (STATSFUNC)maxscale_uptime },
@@ -1110,7 +1111,6 @@ static struct
     { "Error_events", VT_INT, (STATSFUNC)maxinfo_error_events },
     { "Accept_events", VT_INT, (STATSFUNC)maxinfo_accept_events },
     { "Event_queue_length", VT_INT, (STATSFUNC)maxinfo_event_queue_length },
-    { "Pending_events", VT_INT, (STATSFUNC)maxinfo_event_pending_queue_length },
     { "Max_event_queue_length", VT_INT, (STATSFUNC)maxinfo_max_event_queue_length },
     { "Max_event_queue_time", VT_INT, (STATSFUNC)maxinfo_max_event_queue_time },
     { "Max_event_execution_time", VT_INT, (STATSFUNC)maxinfo_max_event_exec_time },
@@ -1127,9 +1127,9 @@ static struct
 static RESULT_ROW *
 status_row(RESULTSET *result, void *data)
 {
-    VARCONTEXT  *context = (VARCONTEXT *)data;
-    RESULT_ROW  *row;
-    char        buf[80];
+    VARCONTEXT *context = (VARCONTEXT *)data;
+    RESULT_ROW *row;
+    char buf[80];
 
     if (status[context->index].name)
     {
@@ -1149,8 +1149,8 @@ status_row(RESULTSET *result, void *data)
                                   (char *)(*status[context->index].func)());
                 break;
             case VT_INT:
-                snprintf(buf, 80, "%ld",
-                         (long)(*status[context->index].func)());
+                snprintf(buf, 80, "%" PRId64,
+                         (int64_t)(*status[context->index].func)());
                 resultset_row_set(row, 1, buf);
                 break;
             default:
@@ -1160,7 +1160,7 @@ status_row(RESULTSET *result, void *data)
         return row;
     }
     // We only get to this point once all status elements have been printed
-    free(data);
+    MXS_FREE(data);
     return NULL;
 }
 
@@ -1176,7 +1176,7 @@ exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
     RESULTSET *result;
     VARCONTEXT *context;
 
-    if ((context = malloc(sizeof(VARCONTEXT))) == NULL)
+    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
     {
         return;
     }
@@ -1194,7 +1194,7 @@ exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
     if ((result = resultset_create(status_row, context)) == NULL)
     {
         maxinfo_send_error(dcb, 0, "No resources available");
-        free(context);
+        MXS_FREE(context);
         return;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
@@ -1213,7 +1213,7 @@ maxinfo_status()
 {
     RESULTSET   *result;
     VARCONTEXT   *context;
-    if ((context = malloc(sizeof(VARCONTEXT))) == NULL)
+    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
     {
         return NULL;
     }
@@ -1222,7 +1222,7 @@ maxinfo_status()
 
     if ((result = resultset_create(status_row, context)) == NULL)
     {
-        free(context);
+        MXS_FREE(context);
         return NULL;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
@@ -1255,8 +1255,7 @@ static int
 maxinfo_pattern_match(char *pattern, char *str)
 {
     int anchor = 0, len, trailing;
-    char    *fixed;
-    extern  char *strcasestr();
+    char *fixed;
 
     if (*pattern != '%')
     {
@@ -1286,12 +1285,13 @@ maxinfo_pattern_match(char *pattern, char *str)
     }
     else
     {
-        char *portion = malloc(len + 1);
+        char *portion = MXS_MALLOC(len + 1);
+        MXS_ABORT_IF_NULL(portion);
         int rval;
         strncpy(portion, fixed, len - trailing);
         portion[len - trailing] = 0;
         rval = (strcasestr(str, portion) != NULL ? 0 : 1);
-        free(portion);
+        MXS_FREE(portion);
         return rval;
     }
 }

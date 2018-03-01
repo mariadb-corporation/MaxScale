@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -24,11 +24,13 @@
  *
  * @endverbatim
  */
-#include <buffer.h>
+#include <maxscale/buffer.h>
 #include <string.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <modutil.h>
+#include <maxscale/modutil.h>
+#include <maxscale/platform.h>
 #include <strings.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
@@ -189,7 +191,7 @@ int modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing)
         len = 0;
         goto retblock;
     }
-    len = MYSQL_GET_PACKET_LEN((uint8_t *)GWBUF_DATA(buf));
+    len = MYSQL_GET_PAYLOAD_LEN((uint8_t *)GWBUF_DATA(buf));
     *nbytes_missing = len - 1;
     buflen = gwbuf_length(buf);
 
@@ -283,7 +285,9 @@ modutil_get_SQL(GWBUF *buf)
         length += (*ptr++ << 8);
         length += (*ptr++ << 16);
 
-        if ((rval = (char *) malloc(length + 1)))
+        rval = (char *) MXS_MALLOC(length + 1);
+
+        if (rval)
         {
             dptr = rval;
             ptr += 2; // Skip sequence id  and COM_QUERY byte
@@ -332,7 +336,7 @@ modutil_get_query(GWBUF *buf)
     {
     case MYSQL_COM_QUIT:
         len = strlen("[Quit msg]") + 1;
-        if ((query_str = (char *)malloc(len + 1)) == NULL)
+        if ((query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
             goto retblock;
         }
@@ -341,9 +345,13 @@ modutil_get_query(GWBUF *buf)
         break;
 
     case MYSQL_COM_QUERY:
-        len = MYSQL_GET_PACKET_LEN(packet) - 1; /*< distract 1 for packet type byte */
-        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)malloc(len + 1)) == NULL)
+        len = MYSQL_GET_PAYLOAD_LEN(packet) - 1; /*< distract 1 for packet type byte */
+        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
+            if (len >= 1 && len <= ~(size_t)0 - 1)
+            {
+                ss_dassert(!query_str);
+            }
             goto retblock;
         }
         memcpy(query_str, &packet[5], len);
@@ -352,8 +360,12 @@ modutil_get_query(GWBUF *buf)
 
     default:
         len = strlen(STRPACKETTYPE(packet_type)) + 1;
-        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)malloc(len + 1)) == NULL)
+        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
+            if (len >= 1 && len <= ~(size_t)0 - 1)
+            {
+                ss_dassert(!query_str);
+            }
             goto retblock;
         }
         memcpy(query_str, STRPACKETTYPE(packet_type), len);
@@ -480,72 +492,52 @@ int modutil_send_mysql_err_packet(DCB        *dcb,
 }
 
 /**
- * Buffer contains at least one of the following:
- * complete [complete] [partial] mysql packet
+ * Return the first packet from a buffer.
  *
- * return pointer to gwbuf containing a complete packet or
- *   NULL if no complete packet was found.
+ * @param p_readbuf Pointer to pointer to GWBUF. If the GWBUF contains a
+ *                  complete packet, after the call it will have been updated
+ *                  to begin at the byte following the packet.
+ *
+ * @return Pointer to GWBUF if the buffer contained at least one complete packet,
+ *         otherwise NULL.
+ *
+ * @attention The returned GWBUF is not necessarily contiguous.
  */
 GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
 {
-    GWBUF*   packetbuf;
-    GWBUF*   readbuf;
-    size_t   buflen;
-    size_t   packetlen;
-    size_t   totalbuflen;
-    uint8_t* data;
-    size_t   nbytes_copied = 0;
-    uint8_t* target;
+    GWBUF *packet = NULL;
+    GWBUF *readbuf = *p_readbuf;
 
-    readbuf = *p_readbuf;
-
-    if (readbuf == NULL)
+    if (readbuf)
     {
-        packetbuf = NULL;
-        goto return_packetbuf;
-    }
-    CHK_GWBUF(readbuf);
+        CHK_GWBUF(readbuf);
 
-    if (GWBUF_EMPTY(readbuf))
-    {
-        packetbuf = NULL;
-        goto return_packetbuf;
-    }
-    totalbuflen = gwbuf_length(readbuf);
-    data        = (uint8_t *)GWBUF_DATA((readbuf));
-    packetlen   = MYSQL_GET_PACKET_LEN(data) + 4;
+        size_t totalbuflen = gwbuf_length(readbuf);
+        if (totalbuflen >= MYSQL_HEADER_LEN)
+        {
+            size_t packetlen;
 
-    /** packet is incomplete */
-    if (packetlen > totalbuflen)
-    {
-        packetbuf = NULL;
-        goto return_packetbuf;
+            if (GWBUF_LENGTH(readbuf) >= 3) // The length is in the 3 first bytes.
+            {
+                uint8_t *data = (uint8_t *)GWBUF_DATA((readbuf));
+                packetlen = MYSQL_GET_PAYLOAD_LEN(data) + 4;
+            }
+            else
+            {
+                // The header is split between two GWBUFs.
+                uint8_t data[3];
+                gwbuf_copy_data(readbuf, 0, 3, data);
+                packetlen = MYSQL_GET_PAYLOAD_LEN(data) + 4;
+            }
+
+            if (packetlen <= totalbuflen)
+            {
+                packet = gwbuf_split(p_readbuf, packetlen);
+            }
+        }
     }
 
-    packetbuf = gwbuf_alloc(packetlen);
-    target    = GWBUF_DATA(packetbuf);
-    packetbuf->gwbuf_type = readbuf->gwbuf_type; /*< Copy the type too */
-    /**
-     * Copy first MySQL packet to packetbuf and leave posible other
-     * packets to read buffer.
-     */
-    while (nbytes_copied < packetlen && totalbuflen > 0)
-    {
-        uint8_t* src = GWBUF_DATA((*p_readbuf));
-        size_t   bytestocopy;
-
-        buflen = GWBUF_LENGTH((*p_readbuf));
-        bytestocopy = MIN(buflen, packetlen - nbytes_copied);
-
-        memcpy(target + nbytes_copied, src, bytestocopy);
-        *p_readbuf = gwbuf_consume((*p_readbuf), bytestocopy);
-        totalbuflen = gwbuf_length((*p_readbuf));
-        nbytes_copied += bytestocopy;
-    }
-    ss_dassert(buflen == 0 || nbytes_copied == packetlen);
-
-return_packetbuf:
-    return packetbuf;
+    return packet;
 }
 
 /**
@@ -664,7 +656,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok,  int n_found, int* more)
     bool moreresults = false;
     while (ptr < end)
     {
-        pktlen = MYSQL_GET_PACKET_LEN(ptr) + 4;
+        pktlen = MYSQL_GET_PAYLOAD_LEN(ptr) + 4;
 
         if ((iserr = PTR_IS_ERR(ptr)) || (iseof = PTR_IS_EOF(ptr)))
         {
@@ -777,7 +769,7 @@ static void modutil_reply_routing_error(DCB*     backend_dcb,
     CHK_DCB(backend_dcb);
 
     buf = modutil_create_mysql_err_msg(1, 0, error, state, errstr);
-    free(errstr);
+    MXS_FREE(errstr);
 
     if (buf == NULL)
     {
@@ -805,7 +797,7 @@ char* strnchr_esc(char* ptr, char c, int len)
     char* p = (char*)ptr;
     char* start = p;
     bool quoted = false, escaped = false;
-    char qc;
+    char qc = 0;
 
     while (p < start + len)
     {
@@ -851,7 +843,7 @@ char* strnchr_esc_mysql(char* ptr, char c, int len)
     char* p = (char*) ptr;
     char* start = p, *end = start + len;
     bool quoted = false, escaped = false, backtick = false, comment = false;
-    char qc;
+    char qc = 0;
 
     while (p < end)
     {
@@ -864,56 +856,56 @@ char* strnchr_esc_mysql(char* ptr, char c, int len)
         {
             switch (*p)
             {
-                case '\\':
-                    escaped = true;
-                    break;
+            case '\\':
+                escaped = true;
+                break;
 
-                case '\'':
-                case '"':
-                    if (!quoted)
-                    {
-                        quoted = true;
-                        qc = *p;
-                    }
-                    else if (*p == qc)
-                    {
-                        quoted = false;
-                    }
-                    break;
+            case '\'':
+            case '"':
+                if (!quoted)
+                {
+                    quoted = true;
+                    qc = *p;
+                }
+                else if (*p == qc)
+                {
+                    quoted = false;
+                }
+                break;
 
-                case '/':
-                    if (p + 1 < end && *(p + 1) == '*')
-                    {
-                        comment = true;
-                        p += 1;
-                    }
-                    break;
+            case '/':
+                if (p + 1 < end && *(p + 1) == '*')
+                {
+                    comment = true;
+                    p += 1;
+                }
+                break;
 
-                case '*':
-                    if (comment && p + 1 < end && *(p + 1) == '/')
-                    {
-                        comment = false;
-                        p += 1;
-                    }
-                    break;
+            case '*':
+                if (comment && p + 1 < end && *(p + 1) == '/')
+                {
+                    comment = false;
+                    p += 1;
+                }
+                break;
 
-                case '`':
-                    backtick = !backtick;
-                    break;
+            case '`':
+                backtick = !backtick;
+                break;
 
-                case '#':
+            case '#':
+                return NULL;
+
+            case '-':
+                if (p + 2 < end && *(p + 1) == '-' &&
+                    isspace(*(p + 2)))
+                {
                     return NULL;
+                }
+                break;
 
-                case '-':
-                    if (p + 2 < end && *(p + 1) == '-' &&
-                        isspace(*(p + 2)))
-                    {
-                        return NULL;
-                    }
-                    break;
-
-                default:
-                    break;
+            default:
+                break;
             }
 
             if (*p == c && !escaped && !quoted && !comment && !backtick)
@@ -949,23 +941,23 @@ bool is_mysql_statement_end(const char* start, int len)
     {
         switch (*ptr)
         {
-            case '-':
-                if (ptr < start + len - 2 && *(ptr + 1) == '-' && isspace(*(ptr + 2)))
-                {
-                    rval = true;
-                }
-                break;
-
-            case '#':
+        case '-':
+            if (ptr < start + len - 2 && *(ptr + 1) == '-' && isspace(*(ptr + 2)))
+            {
                 rval = true;
-                break;
+            }
+            break;
 
-            case '/':
-                if (ptr < start + len - 1 && *(ptr + 1) == '*')
-                {
-                    rval = true;
-                }
-                break;
+        case '#':
+            rval = true;
+            break;
+
+        case '/':
+            if (ptr < start + len - 1 && *(ptr + 1) == '*')
+            {
+                rval = true;
+            }
+            break;
         }
     }
     else
@@ -996,25 +988,20 @@ bool is_mysql_sp_end(const char* start, int len)
 /**
  * Create a COM_QUERY packet from a string.
  * @param query Query to create.
- * @return Pointer to GWBUF with the query or NULL if an error occurred.
+ * @return Pointer to GWBUF with the query or NULL if memory allocation failed
  */
-GWBUF* modutil_create_query(char* query)
+GWBUF* modutil_create_query(const char* query)
 {
-    if (query == NULL)
-    {
-        return NULL;
-    }
-
-    GWBUF* rval = gwbuf_alloc(strlen(query) + 5);
-    int pktlen = strlen(query) + 1;
-    unsigned char* ptr;
+    ss_dassert(query);
+    size_t len = strlen(query) + 1; // Query plus the command byte
+    GWBUF* rval = gwbuf_alloc(len + MYSQL_HEADER_LEN);
 
     if (rval)
     {
-        ptr = (unsigned char*)rval->start;
-        *ptr++ = (pktlen);
-        *ptr++ = (pktlen) >> 8;
-        *ptr++ = (pktlen) >> 16;
+        uint8_t *ptr = (uint8_t*)rval->start;
+        *ptr++ = (len);
+        *ptr++ = (len) >> 8;
+        *ptr++ = (len) >> 16;
         *ptr++ = 0x0;
         *ptr++ = 0x03;
         memcpy(ptr, query, strlen(query));
@@ -1031,28 +1018,33 @@ GWBUF* modutil_create_query(char* query)
  */
 int modutil_count_statements(GWBUF* buffer)
 {
-    char* ptr = ((char*)(buffer)->start + 5);
+    char* start = ((char*)(buffer)->start + 5);
+    char* ptr = start;
     char* end = ((char*)(buffer)->end);
     int num = 1;
 
     while (ptr < end && (ptr = strnchr_esc(ptr, ';', end - ptr)))
     {
         num++;
-        while (*ptr == ';')
+        while (ptr < end && *ptr == ';')
         {
             ptr++;
         }
     }
 
     ptr = end - 1;
-    while (isspace(*ptr))
-    {
-        ptr--;
-    }
 
-    if (*ptr == ';')
+    if (ptr >= start && ptr < end)
     {
-        num--;
+        while (ptr > start && isspace(*ptr))
+        {
+            ptr--;
+        }
+
+        if (*ptr == ';')
+        {
+            num--;
+        }
     }
 
     return num;
@@ -1068,7 +1060,7 @@ void prepare_pcre2_patterns()
     {
         int err;
         size_t erroff;
-        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+        PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
 
         if ((re_percent = pcre2_compile(pattern_percent, PCRE2_ZERO_TERMINATED,
                                         0, &err, &erroff, NULL)) &&
@@ -1108,7 +1100,7 @@ void prepare_pcre2_patterns()
  * @param string String to match
  * @return MXS_PCRE2_MATCH if the pattern matches, MXS_PCRE2_NOMATCH if it does
  * not match and MXS_PCRE2_ERROR if an error occurred
- * @see maxscale_pcre2.h
+ * @see maxscale/pcre2.h
  */
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string)
 {
@@ -1117,56 +1109,61 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
     bool err = false;
     PCRE2_SIZE matchsize = strlen(string) + 1;
     PCRE2_SIZE tempsize = matchsize;
-    char* matchstr = (char*) malloc(matchsize);
-    char* tempstr = (char*) malloc(tempsize);
+    char* matchstr = (char*) MXS_MALLOC(matchsize);
+    char* tempstr = (char*) MXS_MALLOC(tempsize);
 
-    pcre2_match_data *mdata_percent = pcre2_match_data_create_from_pattern(re_percent, NULL);
-    pcre2_match_data *mdata_single = pcre2_match_data_create_from_pattern(re_single, NULL);
-    pcre2_match_data *mdata_escape = pcre2_match_data_create_from_pattern(re_escape, NULL);
-
-    if (matchstr && tempstr && mdata_percent && mdata_single && mdata_escape)
+    if (matchstr && tempstr)
     {
-        if (mxs_pcre2_substitute(re_escape, pattern, sub_escape,
-                                 &matchstr, &matchsize) == MXS_PCRE2_ERROR ||
-            mxs_pcre2_substitute(re_single, matchstr, sub_single,
-                                 &tempstr, &tempsize) == MXS_PCRE2_ERROR ||
-            mxs_pcre2_substitute(re_percent, tempstr, sub_percent,
-                                 &matchstr, &matchsize) == MXS_PCRE2_ERROR)
+        pcre2_match_data *mdata_percent = pcre2_match_data_create_from_pattern(re_percent, NULL);
+        pcre2_match_data *mdata_single = pcre2_match_data_create_from_pattern(re_single, NULL);
+        pcre2_match_data *mdata_escape = pcre2_match_data_create_from_pattern(re_escape, NULL);
+
+        if (mdata_percent && mdata_single && mdata_escape)
+        {
+            if (mxs_pcre2_substitute(re_escape, pattern, sub_escape,
+                                     &matchstr, &matchsize) == MXS_PCRE2_ERROR ||
+                mxs_pcre2_substitute(re_single, matchstr, sub_single,
+                                     &tempstr, &tempsize) == MXS_PCRE2_ERROR ||
+                mxs_pcre2_substitute(re_percent, tempstr, sub_percent,
+                                     &matchstr, &matchsize) == MXS_PCRE2_ERROR)
+            {
+                err = true;
+            }
+
+            if (!err)
+            {
+                int errcode;
+                rval = mxs_pcre2_simple_match(matchstr, string, PCRE2_CASELESS, &errcode);
+                if (rval == MXS_PCRE2_ERROR)
+                {
+                    if (errcode != 0)
+                    {
+                        PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
+                        pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
+                        MXS_ERROR("Failed to match pattern: %s", errbuf);
+                    }
+                    err = true;
+                }
+            }
+        }
+        else
         {
             err = true;
         }
 
-        if (!err)
+        if (err)
         {
-            int errcode;
-            rval = mxs_pcre2_simple_match(matchstr, string, PCRE2_CASELESS, &errcode);
-            if (rval == MXS_PCRE2_ERROR)
-            {
-                if (errcode != 0)
-                {
-                    PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
-                    pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-                    MXS_ERROR("Failed to match pattern: %s", errbuf);
-                }
-                err = true;
-            }
+            MXS_ERROR("Fatal error when matching wildcard patterns.");
         }
-    }
-    else
-    {
-        err = true;
+
+        pcre2_match_data_free(mdata_percent);
+        pcre2_match_data_free(mdata_single);
+        pcre2_match_data_free(mdata_escape);
     }
 
-    if (err)
-    {
-        MXS_ERROR("Fatal error when matching wildcard patterns.");
-    }
+    MXS_FREE(matchstr);
+    MXS_FREE(tempstr);
 
-    pcre2_match_data_free(mdata_percent);
-    pcre2_match_data_free(mdata_single);
-    pcre2_match_data_free(mdata_escape);
-    free(matchstr);
-    free(tempstr);
     return rval;
 }
 
@@ -1205,20 +1202,204 @@ char* modutil_get_canonical(GWBUF* querybuf)
                 if (replace_values((const char**)&dest, &destsize, &src, &srcsize))
                 {
                     querystr = squeeze_whitespace(src);
-                    free(dest);
+                    MXS_FREE(dest);
                 }
                 else
                 {
-                    free(src);
-                    free(dest);
+                    MXS_FREE(src);
+                    MXS_FREE(dest);
                 }
             }
             else
             {
-                free(src);
+                MXS_FREE(src);
             }
         }
     }
 
     return querystr;
+}
+
+
+char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
+{
+    char *i = sql;
+    char *end = i + len;
+
+    while (i != end)
+    {
+        if (isspace(*i))
+        {
+            ++i;
+        }
+        else if (*i == '/') // Might be a comment
+        {
+            if ((i + 1 != end) && (*(i + 1) == '*')) // Indeed it was
+            {
+                i += 2;
+
+                while (i != end)
+                {
+                    if (*i == '*') // Might be the end of the comment
+                    {
+                        ++i;
+
+                        if (i != end)
+                        {
+                            if (*i == '/') // Indeed it was
+                            {
+                                ++i;
+                                break; // Out of this inner while.
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // It was not the end of the comment.
+                        ++i;
+                    }
+                }
+            }
+            else
+            {
+                // Was not a comment, so we'll bail out.
+                break;
+            }
+        }
+        else if (*i == '-') // Might be the start of a comment to the end of line
+        {
+            bool is_comment = false;
+
+            if (i + 1 != end)
+            {
+                if (*(i + 1) == '-') // Might be, yes.
+                {
+                    if (i + 2 != end)
+                    {
+                        if (isspace(*(i + 2))) // Yes, it is.
+                        {
+                            is_comment = true;
+
+                            i += 3;
+
+                            while ((i != end) && (*i != '\n'))
+                            {
+                                ++i;
+                            }
+
+                            if (i != end)
+                            {
+                                ss_dassert(*i == '\n');
+                                ++i;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!is_comment)
+            {
+                break;
+            }
+        }
+        else if (*i == '#')
+        {
+            ++i;
+
+            while ((i != end) && (*i != '\n'))
+            {
+                ++i;
+            }
+
+            if (i != end)
+            {
+                ss_dassert(*i == '\n');
+                ++i;
+            }
+            break;
+        }
+        else
+        {
+            // Neither whitespace not start of a comment, so we bail out.
+            break;
+        }
+    }
+
+    return i;
+}
+
+const char format_str[] = "COM_UNKNOWN(%02x)";
+
+// The message always fits inside the buffer
+thread_local char unknow_type[sizeof(format_str)] = "";
+
+const char* STRPACKETTYPE(int p)
+{
+    switch (p)
+    {
+        case MYSQL_COM_SLEEP:
+            return "MYSQL_COM_SLEEP";
+        case MYSQL_COM_QUIT:
+            return "MYSQL_COM_QUIT";
+        case MYSQL_COM_INIT_DB:
+            return "MYSQL_COM_INIT_DB";
+        case MYSQL_COM_QUERY:
+            return "MYSQL_COM_QUERY";
+        case MYSQL_COM_FIELD_LIST:
+            return "MYSQL_COM_FIELD_LIST";
+        case MYSQL_COM_CREATE_DB:
+            return "MYSQL_COM_CREATE_DB";
+        case MYSQL_COM_DROP_DB:
+            return "MYSQL_COM_DROP_DB";
+        case MYSQL_COM_REFRESH:
+            return "MYSQL_COM_REFRESH";
+        case MYSQL_COM_SHUTDOWN:
+            return "MYSQL_COM_SHUTDOWN";
+        case MYSQL_COM_STATISTICS:
+            return "MYSQL_COM_STATISTICS";
+        case MYSQL_COM_PROCESS_INFO:
+            return "MYSQL_COM_PROCESS_INFO";
+        case MYSQL_COM_CONNECT:
+            return "MYSQL_COM_CONNECT";
+        case MYSQL_COM_PROCESS_KILL:
+            return "MYSQL_COM_PROCESS_KILL";
+        case MYSQL_COM_DEBUG:
+            return "MYSQL_COM_DEBUG";
+        case MYSQL_COM_PING:
+            return "MYSQL_COM_PING";
+        case MYSQL_COM_TIME:
+            return "MYSQL_COM_TIME";
+        case MYSQL_COM_DELAYED_INSERT:
+            return "MYSQL_COM_DELAYED_INSERT";
+        case MYSQL_COM_CHANGE_USER:
+            return "MYSQL_COM_CHANGE_USER";
+        case MYSQL_COM_BINLOG_DUMP:
+            return "MYSQL_COM_BINLOG_DUMP";
+        case MYSQL_COM_TABLE_DUMP:
+            return "MYSQL_COM_TABLE_DUMP";
+        case MYSQL_COM_CONNECT_OUT:
+            return "MYSQL_COM_CONNECT_OUT";
+        case MYSQL_COM_REGISTER_SLAVE:
+            return "MYSQL_COM_REGISTER_SLAVE";
+        case MYSQL_COM_STMT_PREPARE:
+            return "MYSQL_COM_STMT_PREPARE";
+        case MYSQL_COM_STMT_EXECUTE:
+            return "MYSQL_COM_STMT_EXECUTE";
+        case MYSQL_COM_STMT_SEND_LONG_DATA:
+            return "MYSQL_COM_STMT_SEND_LONG_DATA";
+        case MYSQL_COM_STMT_CLOSE:
+            return "MYSQL_COM_STMT_CLOSE";
+        case MYSQL_COM_STMT_RESET:
+            return "MYSQL_COM_STMT_RESET";
+        case MYSQL_COM_SET_OPTION:
+            return "MYSQL_COM_SET_OPTION";
+        case MYSQL_COM_STMT_FETCH:
+            return "MYSQL_COM_STMT_FETCH";
+        case MYSQL_COM_DAEMON:
+            return "MYSQL_COM_DAEMON";
+    }
+
+    snprintf(unknow_type, sizeof(unknow_type), format_str, p);
+
+    return unknow_type;
 }

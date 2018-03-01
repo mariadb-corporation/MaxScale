@@ -8,11 +8,9 @@ The readconnroute router provides simple and lightweight load balancing across a
 
 ## Configuration
 
-Readconnroute router-specific settings are specified in the configuration file of MariaDB MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section.
-
 For more details about the standard service parameters, refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
-## Router Options
+### Router Options
 
 **`router_options`** can contain a list of valid server roles. These roles are used as the valid types of servers the router will form connections to when new sessions are created.
 ```

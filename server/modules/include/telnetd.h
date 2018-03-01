@@ -1,12 +1,13 @@
+#pragma once
 #ifndef _TELNETD_H
 #define _TELNETD_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -24,8 +25,13 @@
  *
  * @endverbatim
  */
-#include <dcb.h>
-#include <housekeeper.h>
+
+#include <maxscale/cdefs.h>
+#include <maxscale/dcb.h>
+#include <maxscale/housekeeper.h>
+
+MXS_BEGIN_DECLS
+
 /**
  * The telnetd specific protocol structure to put in the DCB.
  */
@@ -57,4 +63,7 @@ typedef struct telnetd
 #define TELNET_IAC               255
 #define TELNET_ECHO              1
 #define TELNET_SUPPRESS_GO_AHEAD 3
+
+MXS_END_DECLS
+
 #endif

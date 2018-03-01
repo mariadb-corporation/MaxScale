@@ -1,0 +1,3 @@
+[mysqld]
+gssapi-keytab-path=/etc/krb5.keytab
+gssapi-principal-name=mariadb/maxscale.test@MAXSCALE.TEST

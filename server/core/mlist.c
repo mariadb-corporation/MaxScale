@@ -2,16 +2,17 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
 
-#include <mlist.h>
+#include "maxscale/mlist.h"
+#include <maxscale/alloc.h>
 
 static void mlist_free_memory(mlist_t* ml, char* name);
 static mlist_node_t* mlist_node_init(void* data, mlist_cursor_t* cursor);
@@ -79,7 +80,7 @@ mlist_t* mlist_init(mlist_t* listp, mlist_cursor_t** cursor, char* name,
     /** listp is not NULL if caller wants flat list */
     if (listp == NULL)
     {
-        list = (mlist_t*) calloc(1, sizeof (mlist_t));
+        list = (mlist_t*) MXS_CALLOC(1, sizeof (mlist_t));
     }
     else
     {
@@ -91,7 +92,6 @@ mlist_t* mlist_init(mlist_t* listp, mlist_cursor_t** cursor, char* name,
 
     if (list == NULL)
     {
-        fprintf(stderr, "* Allocating memory for mlist failed\n");
         mlist_free_memory(list, name);
         goto return_list;
     }
@@ -161,7 +161,7 @@ static void mlist_free_memory(mlist_t* ml, char* name)
     /** name */
     if (name != NULL)
     {
-        free(name);
+        MXS_FREE(name);
     }
     if (ml != NULL)
     {
@@ -177,7 +177,7 @@ static void mlist_free_memory(mlist_t* ml, char* name)
         /** list structure */
         if (!ml->mlist_flat)
         {
-            free(ml);
+            MXS_FREE(ml);
         }
     }
 }
@@ -197,9 +197,9 @@ void mlist_node_done(mlist_node_t* n)
         {
             (n->mlnode_list->mlist_datadel(n->mlnode_data));
         }
-        free(n->mlnode_data);
+        MXS_FREE(n->mlnode_data);
     }
-    free(n);
+    MXS_FREE(n);
 }
 
 /**
@@ -254,7 +254,8 @@ static mlist_node_t* mlist_node_init(void* data, mlist_cursor_t* cursor)
 {
     mlist_node_t* node;
 
-    node = (mlist_node_t*) calloc(1, sizeof (mlist_node_t));
+    node = (mlist_node_t*) MXS_CALLOC(1, sizeof (mlist_node_t));
+    MXS_ABORT_IF_NULL(node);
     node->mlnode_chk_top = CHK_NUM_MLIST_NODE;
     node->mlnode_chk_tail = CHK_NUM_MLIST_NODE;
     node->mlnode_data = data;
@@ -358,7 +359,7 @@ mlist_cursor_t* mlist_cursor_init(mlist_t* list)
     /** acquire shared lock to the list */
     simple_mutex_lock(&list->mlist_mutex, true);
 
-    c = (mlist_cursor_t *) calloc(1, sizeof (mlist_cursor_t));
+    c = (mlist_cursor_t *) MXS_CALLOC(1, sizeof (mlist_cursor_t));
 
     if (c == NULL)
     {

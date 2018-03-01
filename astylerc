@@ -1,6 +1,6 @@
 --style=allman
 --indent=spaces=4
---indent-switches
+--indent-cases
 --indent-labels
 --min-conditional-indent=0
 --pad-oper

@@ -21,6 +21,11 @@ SET @x:= (SELECT h FROM t1 WHERE (a,b,c,d,e,f,g)=(1,2,3,4,5,6,7));
 # REMOVE: expr(A) ::= LP expr(X) COMMA(OP) expr(Y) RP. {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
 # ADD   : expr(A) ::= LP exprlist RP. { ... }
 
+insert into t1 values (2, 2) on duplicate key update data= data + 10;
+# Problem: warning: [qc_sqlite] Statement was only partially parsed (Sqlite3 error: SQL logic error
+#          or missing database, near "on": syntax error): "insert into t1 values (2, 2) on duplicate
+#          key update data= data + 10;"
+
 SET @`a b`='hello';
 set @`test`=1;
 set @"tEST"=3;
@@ -29,3 +34,22 @@ set @`TeST`=4;
 # (Sqlite3 error: SQL logic error or missing database, unrecognized token: "@"): "set @=4"
 #
 # sqlite3GetToken needs to be modified to accept a quoted variable name.
+
+SAVEPOINT sa_savepoint_1
+#warning: [qc_sqlite] Statement was neither parsed nor recognized from keywords
+# (Sqlite3 error: SQL logic error or missing database, near "SNAPSHOT": syntax error): "SNAPSHOT s"
+
+RELEASE SAVEPOINT sa_savepoint_1
+# warning: [qc_sqlite] Statement was neither parsed nor recognized from keywords
+# (Sqlite3 error: SQL logic error or missing database, near "RELEASE": syntax error): "RELEASE SNAPSHOT s"
+
+INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a);
+# warning: [qc_sqlite] Statement was only partially parsed
+# (Sqlite3 error: SQL logic error or missing database, near "ON": syntax error):
+# "INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a)"
+
+PREPARE stmt FROM 'UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1';
+# warning: [qc_sqlite] Statement was classified only based on keywords
+# (Sqlite3 error: SQL logic error or missing database, near "SET": syntax error):
+# "UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1"
+

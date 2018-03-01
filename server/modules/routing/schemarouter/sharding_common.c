@@ -2,16 +2,17 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
 
-#include <sharding_common.h>
+#include "sharding_common.h"
+#include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 
 /**
@@ -62,7 +63,7 @@ bool extract_database(GWBUF* buf, char* str)
         memset(str + plen, 0, 1);
     }
 retblock:
-    free(query);
+    MXS_FREE(query);
     return succp;
 }
 
@@ -71,15 +72,15 @@ retblock:
  * @param fail_str Custom error message
  * @param dcb DCB to use as the origin of the error
  */
-void create_error_reply(char* fail_str,DCB* dcb)
+void create_error_reply(char* fail_str, DCB* dcb)
 {
     MXS_INFO("change_current_db: failed to change database: %s", fail_str);
     GWBUF* errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
 
     if (errbuf == NULL)
     {
-	MXS_ERROR("Creating buffer for error message failed.");
-	return;
+        MXS_ERROR("Creating buffer for error message failed.");
+        return;
     }
     /** Set flags that help router to identify session commands reply */
     gwbuf_set_type(errbuf, GWBUF_TYPE_MYSQL);
@@ -87,7 +88,7 @@ void create_error_reply(char* fail_str,DCB* dcb)
     gwbuf_set_type(errbuf, GWBUF_TYPE_RESPONSE_END);
 
     poll_add_epollin_event_to_dcb(dcb,
-				  errbuf);
+                                  errbuf);
 }
 
 /**
@@ -96,55 +97,55 @@ void create_error_reply(char* fail_str,DCB* dcb)
  *
  * @param dest Destination where the database name will be written
  * @param dbhash Hashtable containing valid databases
- * @param buf	Buffer containing the database change query
+ * @param buf   Buffer containing the database change query
  *
  * @return true if new database is set, false if non-existent database was tried
  * to be set
  */
 bool change_current_db(char* dest,
-			      HASHTABLE* dbhash,
-			      GWBUF* buf)
+                       HASHTABLE* dbhash,
+                       GWBUF* buf)
 {
     char* target;
     bool succp;
-    char db[MYSQL_DATABASE_MAXLEN+1];
-    if(GWBUF_LENGTH(buf) <= MYSQL_DATABASE_MAXLEN - 5)
+    char db[MYSQL_DATABASE_MAXLEN + 1];
+    if (GWBUF_LENGTH(buf) <= MYSQL_DATABASE_MAXLEN - 5)
     {
-	/** Copy database name from MySQL packet to session */
-	if(!extract_database(buf,db))
-	{
-	    succp = false;
-	    goto retblock;
-	}
-	MXS_INFO("change_current_db: INIT_DB with database '%s'", db);
-	/**
-	 * Update the session's active database only if it's in the hashtable.
-	 * If it isn't found, send a custom error packet to the client.
-	 */
+        /** Copy database name from MySQL packet to session */
+        if (!extract_database(buf, db))
+        {
+            succp = false;
+            goto retblock;
+        }
+        MXS_INFO("change_current_db: INIT_DB with database '%s'", db);
+        /**
+         * Update the session's active database only if it's in the hashtable.
+         * If it isn't found, send a custom error packet to the client.
+         */
 
-	if((target = (char*)hashtable_fetch(dbhash,(char*)db)) == NULL)
-	{
-	    succp = false;
-	    goto retblock;
-	}
-	else
-	{
-	    strcpy(dest,db);
-	    MXS_INFO("change_current_db: database is on server: '%s'.",target);
-	    succp = true;
-	    goto retblock;
-	}
+        if ((target = (char*)hashtable_fetch(dbhash, (char*)db)) == NULL)
+        {
+            succp = false;
+            goto retblock;
+        }
+        else
+        {
+            strcpy(dest, db);
+            MXS_INFO("change_current_db: database is on server: '%s'.", target);
+            succp = true;
+            goto retblock;
+        }
     }
     else
     {
-	/** Create error message */
-	MXS_ERROR("change_current_db: failed to change database: Query buffer too large");
-	MXS_INFO("change_current_db: failed to change database: "
+        /** Create error message */
+        MXS_ERROR("change_current_db: failed to change database: Query buffer too large");
+        MXS_INFO("change_current_db: failed to change database: "
                  "Query buffer too large [%ld bytes]", GWBUF_LENGTH(buf));
-	succp = false;
-	goto retblock;
+        succp = false;
+        goto retblock;
     }
-    
-    retblock:
+
+retblock:
     return succp;
 }

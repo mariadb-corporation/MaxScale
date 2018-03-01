@@ -12,7 +12,7 @@ Once you have MariaDB MaxScale installed and the database users created, we can 
 
 ## Creating Your MariaDB MaxScale Configuration
 
-MariaDB MaxScale configuration is held in an ini file that is located in the file maxscale.cnf in the directory /etc, if you have installed in the default location then this file is available in /etc/maxscale.cnf. This is not created as part of the installation process and must be manually created. A template file does exist within the /usr/share/maxscale directory that may be use as a basis for your configuration.
+MariaDB MaxScale configuration is held in an ini file that is located in the file `maxscale.cnf` in the directory `/etc`, if you have installed in the default location then this file is available in `/etc/maxscale.cnf`. This is not created as part of the installation process and must be manually created. A template file does exist within the `/usr/share/maxscale` directory that may be use as a basis for your configuration.
 
 A global, maxscale, section is included within every MariaDB MaxScale configuration file; this is used to set the values of various MariaDB MaxScale wide parameters, perhaps the most important of these is the number of threads that MariaDB MaxScale will use to execute the code that forwards requests and handles responses for clients.
 
@@ -71,7 +71,7 @@ type=listener
 service=Splitter Service
 ```
 
-A listener must also define the protocol module it will use for the incoming network protocol, currently this should be the MySQLClient protocol for all database listeners. The listener may then supply a network port to listen on and/or a socket within the file system.
+A listener must also define the protocol module it will use for the incoming network protocol, currently this should be the `MySQLClient` protocol for all database listeners. The listener may then supply a network port to listen on and/or a socket within the file system.
 
 ```
 [Splitter Listener]
@@ -84,7 +84,7 @@ socket=/tmp/ClusterMaster
 
 An address parameter may be given if the listener is required to bind to a particular network address when using hosts with multiple network addresses. The default behavior is to listen on all network interfaces.
 
-The next stage is the configuration is to define the server information. This defines how to connect to each of the servers within the cluster, again a section is created for each server, with the type set to server, the network address and port to connect to and the protocol to use to connect to the server. Currently the protocol module for all database connections in MySQLBackend.
+The next stage is the configuration is to define the server information. This defines how to connect to each of the servers within the cluster, again a section is created for each server, with the type set to server, the network address and port to connect to and the protocol to use to connect to the server. Currently the protocol module for all database connections in `MySQLBackend`.
 
 ```
 [dbserv1]
@@ -119,7 +119,7 @@ passwd=96F99AA1315BDC3604B006F427DD9484
 
 As with the password definition in the server either plain text or encrypted passwords may be used.
 
-This monitor module will assign one node within the Galera Cluster as the current master and other nodes as slave. Only those nodes that are active members of the cluster are considered when making the choice of master node. Normally the master node will be the node with the lowest value of the status variable, WSREP_LOCAL_INDEX. When cluster membership changes a new master may be elected. In order to prevent changes of the node that is currently master, a parameter can be added to the monitor that will result in the current master remaining as master even if a node with a lower value of WSREP_LOCAL_INDEX joins the cluster. This parameter is called disable_master_failback.
+This monitor module will assign one node within the Galera Cluster as the current master and other nodes as slave. Only those nodes that are active members of the cluster are considered when making the choice of master node. Normally the master node will be the node with the lowest value of the status variable, `WSREP_LOCAL_INDEX`. When cluster membership changes a new master may be elected. In order to prevent changes of the node that is currently master, a parameter can be added to the monitor that will result in the current master remaining as master even if a node with a lower value of `WSREP_LOCAL_INDEX` joins the cluster. This parameter is called `disable_master_failback`.
 
 ```
 [Galera Monitor]
@@ -159,7 +159,7 @@ or
 % service maxscale start
 ```
 
-Check the error log in /var/log/maxscale to see if any errors are detected in the configuration file and to confirm MariaDB MaxScale has been started. Also the maxadmin command may be used to confirm that MariaDB MaxScale is running and the services, listeners etc have been correctly configured.
+Check the error log in `/var/log/maxscale` to see if any errors are detected in the configuration file and to confirm MariaDB MaxScale has been started. Also the maxadmin command may be used to confirm that MariaDB MaxScale is running and the services, listeners etc have been correctly configured.
 
 ```
 % maxadmin list services
@@ -175,7 +175,7 @@ CLI                       | cli                  |      2 |     2
 % maxadmin list servers
 Servers.
 -------------------+-----------------+-------+-------------+--------------------
-Server             | Address         | Port  | Connections | Status              
+Server             | Address         | Port  | Connections | Status
 -------------------+-----------------+-------+-------------+--------------------
 dbserv1            | 192.168.2.1     |  3306 |           0 | Running, Synced, Master
 dbserv2            | 192.168.2.2     |  3306 |           0 | Running, Synced, Slave
@@ -183,7 +183,7 @@ dbserv3            | 192.168.2.3     |  3306 |           0 | Running, Synced, Sl
 -------------------+-----------------+-------+-------------+--------------------
 ```
 
-A Galera Cluster is a multi-master clustering technology, however the monitor is able to impose false notions of master and slave roles within a Galera Cluster in order to facilitate the use of Galera as if it were a standard MySQL Replication setup. This is merely an internal MariaDB MaxScale convenience and has no impact on the behavior of the cluster but does allow the monitor to create these pseudo roles which are utilized by the Read/Write Splitter.
+A Galera Cluster is a multi-master clustering technology, however the monitor is able to impose false notions of master and slave roles within a Galera Cluster in order to facilitate the use of Galera as if it were a standard MariaDB Replication setup. This is merely an internal MariaDB MaxScale convenience and has no impact on the behavior of the cluster but does allow the monitor to create these pseudo roles which are utilized by the Read/Write Splitter.
 
 You can control which Galera node is the master server by using the _priority_ mechanism of the Galera Monitor module. For more details, read the [Galera Monitor](../Monitors/Galera-Monitor.md) documentation.
 
@@ -199,4 +199,4 @@ CLI                  | maxscaled          | localhost       |  6603 | Running
 ---------------------+--------------------+-----------------+-------+--------
 ```
 
-MariaDB MaxScale is now ready to start accepting client connections and routing them to the master or slaves within your cluster. Other configuration options are available that can alter the criteria used for routing, these include monitoring the replication lag within the cluster and routing only to slaves that are within a predetermined delay from the current master or using weights to obtain unequal balancing operations. These options may be found in the MariaDB MaxScale Configuration Guide. More detail on the use of maxadmin can be found in the document "MaxAdmin - The MariaDB MaxScale Administration & Monitoring Client Application".
+MariaDB MaxScale is now ready to start accepting client connections and routing them to the master or slaves within your cluster. Other configuration options are available that can alter the criteria used for routing, these include monitoring the replication lag within the cluster and routing only to slaves that are within a predetermined delay from the current master or using weights to obtain unequal balancing operations. These options may be found in the MariaDB MaxScale Configuration Guide. More details on the use of maxadmin can be found in the document _MaxAdmin - The MariaDB MaxScale Administration & Monitoring Client Application_.

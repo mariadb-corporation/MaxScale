@@ -1,0 +1,56 @@
+#!/bin/bash
+#
+# Copyright (c) 2016 MariaDB Corporation Ab
+#
+#  Use of this software is governed by the Business Source License included
+#  in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+#
+#  Change Date: 2019-07-01
+#
+#  On the date above, in accordance with the Business Source License, use
+#  of this software will be governed by version 2 or later of the General
+#  Public License.
+#
+
+function print_usage_and_exit
+{
+    echo "update-change-date from to"
+    echo
+    echo "  from: Old change date, e.g. 2019-01-01"
+    echo "  to  : New change date, e.g. 2019-07-01"
+
+    exit 1
+}
+
+function run
+{
+    local from="Change Date: "$1
+    local to="Change Date: "$2
+
+    local files=`find . -type f`
+
+    for f in $files
+    do
+        fgrep -q "$from" $f 2> /dev/null
+        if [ $? -eq 0 ]
+        then
+            echo $f
+            sed -i -e "s/$from/$to/" $f
+        fi
+    done
+}
+
+function main
+{
+    if [ $# -ne 2 ]
+    then
+        print_usage_and_exit
+    fi
+
+    run $1 $2
+
+    echo
+    echo "Remeber to update LICENSE.TXT as well."
+}
+
+main $*

@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -34,9 +34,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gwdirs.h>
-#include <adminusers.h>
-
+#include <maxscale/paths.h>
+#include <maxscale/adminusers.h>
+#include <maxscale/alloc.h>
+#include <maxscale/utils.h>
 
 /**
  * test1    default user
@@ -247,7 +248,7 @@ main(int argc, char **argv)
     char    *home, buf[1024];
 
     /** Set datadir to /tmp */
-    set_datadir(strdup("/tmp"));
+    set_datadir(MXS_STRDUP_A("/tmp"));
 
     /* Unlink any existing password file before running this test */
     sprintf(buf, "%s/maxadmin-users", get_datadir());

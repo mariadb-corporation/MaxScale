@@ -1,4 +1,4 @@
-#SchemaRouter Router
+# SchemaRouter Router
 
 The SchemaRouter router provides an easy and manageable sharding solution by building a single logical database server from multiple separate ones. Each database is shown to the client and queries targeting unique databases are routed to their respective servers. In addition to providing simple database-based sharding, the schemarouter router also enables cross-node session variable usage by routing all queries that modify the session to all nodes.
 
@@ -21,16 +21,15 @@ router=schemarouter
 servers=server1,server2
 user=myuser
 passwd=mypwd
-auth_all_servers=1
 ```
 
 The module generates the list of databases based on the servers parameter using the connecting client's credentials. The user and passwd parameters define the credentials that are used to fetch the authentication data from the database servers. The credentials used only require the same grants as mentioned in the configuration documentation.
 
-The list of databases is built by sending a SHOW DATABASES query to all the servers. This requires the user to have at least USAGE and SELECT grants on the databases that need be sharded. 
+The list of databases is built by sending a SHOW DATABASES query to all the servers. This requires the user to have at least USAGE and SELECT grants on the databases that need be sharded.
 
 If you are connecting directly to a database or have different users on some of the servers, you need to get the authentication data from all the servers. You can control this with the `auth_all_servers` parameter. With this parameter, MariaDB MaxScale forms a union of all the users and their grants from all the servers. By default, the schemarouter will fetch the authentication data from all servers.
 
-For example, if two servers have the database 'shard' and the following rights are granted only on one server, all queries targeting the database 'shard' would be routed to the server where the grants were given.
+For example, if two servers have the database `shard` and the following rights are granted only on one server, all queries targeting the database `shard` would be routed to the server where the grants were given.
 
 ```
 # Execute this on both servers
@@ -42,11 +41,7 @@ GRANT SELECT,USAGE ON shard.* TO 'john'@'%';
 
 This would in effect allow the user 'john' to only see the database 'shard' on this server. Take notice that these grants are matched against MariaDB MaxScale's hostname instead of the client's hostname. Only user authentication uses the client's hostname and all other grants use MariaDB MaxScale's hostname.
 
-## Router options
-
-The following options are options for the `router_options` parameter of the
-service. Multiple router options are given as a comma separated list of key
-value pairs.
+## Router Parameters
 
 ### `ignore_databases`
 
@@ -56,7 +51,39 @@ List of databases to ignore when checking for duplicate databases.
 
 Regular expression that is matched against database names when checking for duplicate databases.
 
-## Router options
+### `preferred_server`
+
+The name of a server in MaxScale which will be used as the preferred server when
+a database is found on more than one server. If a database exists on two
+servers, of which neither is the server referred by this parameter, the server
+that replies first will be assigned as the location of the database.
+
+This parameter allows deterministic conflict resolution when a sharded cluster
+has a central database server and one or more sharded databases spread across
+multiple servers which replicate from the central database server.
+
+**Note:** As of version 2.1 of MaxScale, all of the router options can also be
+defined as parameters. The values defined in _router_options_ will have priority
+over the parameters.
+
+```
+[Shard Router]
+type=service
+router=schemarouter
+servers=server1,server2
+user=myuser
+passwd=mypwd
+refresh_databases=true
+refresh_interval=60
+```
+
+## Router Options
+
+**Note:** Router options for the Schemarouter were deprecated in MaxScale 2.1.
+
+The following options are options for the `router_options` parameter of the
+service. Multiple router options are given as a comma separated list of key
+value pairs.
 
 ### `max_sescmd_history`
 
@@ -73,7 +100,7 @@ will not be consistent anymore.
 ### `refresh_databases`
 
 Enable database map refreshing mid-session. These are triggered by a failure to
-change the database i.e. `USE ...``queries.
+change the database i.e. `USE ...` queries.
 
 ### `refresh_interval`
 

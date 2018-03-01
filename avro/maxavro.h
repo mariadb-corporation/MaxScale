@@ -4,9 +4,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <jansson.h>
-#include <buffer.h>
+#include <maxscale/buffer.h>
 
 /** File magic and sync marker sizes block sizes */
 #define AVRO_MAGIC_SIZE 4
@@ -139,7 +139,7 @@ bool maxavro_datablock_add_double(MAXAVRO_DATABLOCK *file, double val);
 
 /** Reading primitives */
 bool maxavro_read_integer(MAXAVRO_FILE *file, uint64_t *val);
-char* maxavro_read_string(MAXAVRO_FILE *file);
+char* maxavro_read_string(MAXAVRO_FILE *file, size_t *size);
 bool maxavro_skip_string(MAXAVRO_FILE* file);
 bool maxavro_read_float(MAXAVRO_FILE *file, float *dest);
 bool maxavro_read_double(MAXAVRO_FILE *file, double *dest);

@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -27,38 +27,40 @@
  *
  * @endverbatim
  */
+#include <maxscale/monitor.h>
+
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <monitor.h>
-#include <spinlock.h>
-#include <modules.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <maxscale_pcre2.h>
-#include <externcmd.h>
+
+#include <maxscale/alloc.h>
 #include <mysqld_error.h>
-#include <mysql_utils.h>
+#include <maxscale/paths.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/mysql_utils.h>
+#include <maxscale/pcre2.h>
+#include <maxscale/secrets.h>
+#include <maxscale/spinlock.h>
 
-/*
- *  Create declarations of the enum for monitor events and also the array of
- *  structs containing the matching names. The data is taken from def_monitor_event.h
- *
- */
+#include "maxscale/config.h"
+#include "maxscale/externcmd.h"
+#include "maxscale/monitor.h"
+#include "maxscale/modules.h"
 
-#undef ADDITEM
-#define ADDITEM( _event_type, _event_name ) { #_event_name }
-const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
-{
-#include "def_monitor_event.h"
-};
-#undef ADDITEM
-
-static MONITOR  *allMonitors = NULL;
+static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 
-static void monitor_servers_free(MONITOR_SERVERS *servers);
+static void monitor_server_free_all(MXS_MONITOR_SERVERS *servers);
+
+/** Server type specific bits */
+static unsigned int server_type_bits = SERVER_MASTER | SERVER_SLAVE |
+                                       SERVER_JOINED | SERVER_NDB;
+
+/** All server bits */
+static unsigned int all_server_bits = SERVER_RUNNING |  SERVER_MAINT |
+                                      SERVER_MASTER | SERVER_SLAVE |
+                                      SERVER_JOINED | SERVER_NDB;
 
 /**
  * Allocate a new monitor, load the associated module for the monitor
@@ -68,34 +70,43 @@ static void monitor_servers_free(MONITOR_SERVERS *servers);
  * @param module        The module to load
  * @return      The newly created monitor
  */
-MONITOR *
+MXS_MONITOR *
 monitor_alloc(char *name, char *module)
 {
-    MONITOR *mon;
+    name = MXS_STRDUP(name);
+    char *my_module = MXS_STRDUP(module);
 
-    if ((mon = (MONITOR *)malloc(sizeof(MONITOR))) == NULL)
+    MXS_MONITOR *mon = (MXS_MONITOR *)MXS_MALLOC(sizeof(MXS_MONITOR));
+
+    if (!name || !mon || !my_module)
     {
+        MXS_FREE(name);
+        MXS_FREE(mon);
+        MXS_FREE(my_module);
         return NULL;
     }
 
     if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
     {
         MXS_ERROR("Unable to load monitor module '%s'.", name);
-        free(mon);
+        MXS_FREE(name);
+        MXS_FREE(mon);
         return NULL;
     }
     mon->state = MONITOR_STATE_ALLOC;
-    mon->name = strdup(name);
+    mon->name = name;
+    mon->module_name = my_module;
     mon->handle = NULL;
     mon->databases = NULL;
-    mon->password = NULL;
-    mon->user = NULL;
-    mon->password = NULL;
+    *mon->password = '\0';
+    *mon->user = '\0';
     mon->read_timeout = DEFAULT_READ_TIMEOUT;
     mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
     mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-    mon->interval = MONITOR_INTERVAL;
+    mon->interval = MONITOR_DEFAULT_INTERVAL;
     mon->parameters = NULL;
+    mon->created_online = false;
+    mon->server_pending_changes = false;
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
     mon->next = allMonitors;
@@ -112,9 +123,9 @@ monitor_alloc(char *name, char *module)
  * @param mon   The monitor to free
  */
 void
-monitor_free(MONITOR *mon)
+monitor_free(MXS_MONITOR *mon)
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     mon->module->stopMonitor(mon);
     mon->state = MONITOR_STATE_FREED;
@@ -136,10 +147,11 @@ monitor_free(MONITOR *mon)
         }
     }
     spinlock_release(&monLock);
-    free_config_parameter(mon->parameters);
-    monitor_servers_free(mon->databases);
-    free(mon->name);
-    free(mon);
+    config_parameter_free(mon->parameters);
+    monitor_server_free_all(mon->databases);
+    MXS_FREE(mon->name);
+    MXS_FREE(mon->module_name);
+    MXS_FREE(mon);
 }
 
 
@@ -149,7 +161,7 @@ monitor_free(MONITOR *mon)
  * @param monitor The Monitor that should be started
  */
 void
-monitorStart(MONITOR *monitor, void* params)
+monitorStart(MXS_MONITOR *monitor, void* params)
 {
     spinlock_acquire(&monitor->lock);
 
@@ -170,7 +182,7 @@ monitorStart(MONITOR *monitor, void* params)
  */
 void monitorStartAll()
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -188,7 +200,7 @@ void monitorStartAll()
  * @param monitor       The monitor to stop
  */
 void
-monitorStop(MONITOR *monitor)
+monitorStop(MXS_MONITOR *monitor)
 {
     spinlock_acquire(&monitor->lock);
 
@@ -199,7 +211,7 @@ monitorStop(MONITOR *monitor)
         monitor->module->stopMonitor(monitor);
         monitor->state = MONITOR_STATE_STOPPED;
 
-        MONITOR_SERVERS* db = monitor->databases;
+        MXS_MONITOR_SERVERS* db = monitor->databases;
         while (db)
         {
             // TODO: Create a generic entry point for this or move it inside stopMonitor
@@ -218,7 +230,7 @@ monitorStop(MONITOR *monitor)
 void
 monitorStopAll()
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -237,58 +249,137 @@ monitorStopAll()
  * @param mon           The Monitor instance
  * @param server        The Server to add to the monitoring
  */
-void
-monitorAddServer(MONITOR *mon, SERVER *server)
+bool monitorAddServer(MXS_MONITOR *mon, SERVER *server)
 {
-    MONITOR_SERVERS     *ptr, *db;
+    bool rval = false;
 
-    if ((db = (MONITOR_SERVERS *)malloc(sizeof(MONITOR_SERVERS))) == NULL)
+    if (monitor_server_in_use(server))
     {
-        return;
-    }
-    db->server = server;
-    db->con = NULL;
-    db->next = NULL;
-    db->mon_err_count = 0;
-    db->log_version_err = true;
-    /** Server status is uninitialized */
-    db->mon_prev_status = -1;
-    /* pending status is updated by get_replication_tree */
-    db->pending_status = 0;
-
-    spinlock_acquire(&mon->lock);
-
-    if (mon->databases == NULL)
-    {
-        mon->databases = db;
+        MXS_ERROR("Server '%s' is already monitored.", server->unique_name);
     }
     else
     {
-        ptr = mon->databases;
-        while (ptr->next != NULL)
+        rval = true;
+        MXS_MONITOR_SERVERS *db = (MXS_MONITOR_SERVERS *)MXS_MALLOC(sizeof(MXS_MONITOR_SERVERS));
+        MXS_ABORT_IF_NULL(db);
+
+        db->server = server;
+        db->con = NULL;
+        db->next = NULL;
+        db->mon_err_count = 0;
+        db->log_version_err = true;
+        /** Server status is uninitialized */
+        db->mon_prev_status = -1;
+        /* pending status is updated by get_replication_tree */
+        db->pending_status = 0;
+
+        monitor_state_t old_state = mon->state;
+
+        if (old_state == MONITOR_STATE_RUNNING)
         {
-            ptr = ptr->next;
+            monitorStop(mon);
         }
-        ptr->next = db;
+
+        spinlock_acquire(&mon->lock);
+
+        if (mon->databases == NULL)
+        {
+            mon->databases = db;
+        }
+        else
+        {
+            MXS_MONITOR_SERVERS *ptr = mon->databases;
+            while (ptr->next != NULL)
+            {
+                ptr = ptr->next;
+            }
+            ptr->next = db;
+        }
+        spinlock_release(&mon->lock);
+
+        if (old_state == MONITOR_STATE_RUNNING)
+        {
+            monitorStart(mon, mon->parameters);
+        }
     }
-    spinlock_release(&mon->lock);
+
+    return rval;
+}
+
+static void monitor_server_free(MXS_MONITOR_SERVERS *tofree)
+{
+    if (tofree)
+    {
+        if (tofree->con)
+        {
+            mysql_close(tofree->con);
+        }
+        MXS_FREE(tofree);
+    }
 }
 
 /**
  * Free monitor server list
  * @param servers Servers to free
  */
-static void monitor_servers_free(MONITOR_SERVERS *servers)
+static void monitor_server_free_all(MXS_MONITOR_SERVERS *servers)
 {
     while (servers)
     {
-        MONITOR_SERVERS *tofree = servers;
+        MXS_MONITOR_SERVERS *tofree = servers;
         servers = servers->next;
-        if (tofree->con)
+        monitor_server_free(tofree);
+    }
+}
+
+/**
+ * Remove a server from a monitor.
+ *
+ * @param mon           The Monitor instance
+ * @param server        The Server to remove
+ */
+void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server)
+{
+    monitor_state_t old_state = mon->state;
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStop(mon);
+    }
+
+    spinlock_acquire(&mon->lock);
+
+    MXS_MONITOR_SERVERS *ptr = mon->databases;
+
+    if (ptr && ptr->server == server)
+    {
+        mon->databases = mon->databases->next;
+    }
+    else
+    {
+        MXS_MONITOR_SERVERS *prev = ptr;
+
+        while (ptr)
         {
-            mysql_close(tofree->con);
+            if (ptr->server == server)
+            {
+                prev->next = ptr->next;
+                break;
+            }
+            prev = ptr;
+            ptr = ptr->next;
         }
-        free(tofree);
+    }
+    spinlock_release(&mon->lock);
+
+    if (ptr)
+    {
+        monitor_server_free(ptr);
+    }
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStart(mon, mon->parameters);
     }
 }
 
@@ -301,10 +392,17 @@ static void monitor_servers_free(MONITOR_SERVERS *servers)
  * @param passwd        The default password associated to the default user.
  */
 void
-monitorAddUser(MONITOR *mon, char *user, char *passwd)
+monitorAddUser(MXS_MONITOR *mon, char *user, char *passwd)
 {
-    mon->user = strdup(user);
-    mon->password = strdup(passwd);
+    if (user != mon->user)
+    {
+        snprintf(mon->user, sizeof(mon->user), "%s", user);
+    }
+
+    if (passwd != mon->password)
+    {
+        snprintf(mon->password, sizeof(mon->password), "%s", passwd);
+    }
 }
 
 /**
@@ -315,7 +413,7 @@ monitorAddUser(MONITOR *mon, char *user, char *passwd)
 void
 monitorShowAll(DCB *dcb)
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -333,11 +431,48 @@ monitorShowAll(DCB *dcb)
  * @param dcb   DCB for printing output
  */
 void
-monitorShow(DCB *dcb, MONITOR *monitor)
+monitorShow(DCB *dcb, MXS_MONITOR *monitor)
 {
+    const char *state;
 
-    dcb_printf(dcb, "Monitor: %p\n", monitor);
-    dcb_printf(dcb, "\tName:                   %s\n", monitor->name);
+    switch (monitor->state)
+    {
+    case MONITOR_STATE_RUNNING:
+        state = "Running";
+        break;
+    case MONITOR_STATE_STOPPING:
+        state = "Stopping";
+        break;
+    case MONITOR_STATE_STOPPED:
+        state = "Stopped";
+        break;
+    case MONITOR_STATE_ALLOC:
+        state = "Allocated";
+        break;
+    default:
+        state = "Unknown";
+        break;
+    }
+
+    dcb_printf(dcb, "Monitor:           %p\n", monitor);
+    dcb_printf(dcb, "Name:              %s\n", monitor->name);
+    dcb_printf(dcb, "State:             %s\n", state);
+    dcb_printf(dcb, "Sampling interval: %lu milliseconds\n", monitor->interval);
+    dcb_printf(dcb, "Connect Timeout:   %i seconds\n", monitor->connect_timeout);
+    dcb_printf(dcb, "Read Timeout:      %i seconds\n", monitor->read_timeout);
+    dcb_printf(dcb, "Write Timeout:     %i seconds\n", monitor->write_timeout);
+    dcb_printf(dcb, "Monitored servers: ");
+
+    const char *sep = "";
+
+    for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+    {
+        dcb_printf(dcb, "%s[%s]:%d", sep, db->server->name, db->server->port);
+        sep = ", ";
+    }
+
+    dcb_printf(dcb, "\n");
+
     if (monitor->handle)
     {
         if (monitor->module->diagnostics)
@@ -353,6 +488,7 @@ monitorShow(DCB *dcb, MONITOR *monitor)
     {
         dcb_printf(dcb, "\tMonitor failed\n");
     }
+    dcb_printf(dcb, "\n");
 }
 
 /**
@@ -363,7 +499,7 @@ monitorShow(DCB *dcb, MONITOR *monitor)
 void
 monitorList(DCB *dcb)
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -387,10 +523,10 @@ monitorList(DCB *dcb)
  * @param       name    The name of the monitor
  * @return      Pointer to the monitor or NULL
  */
-MONITOR *
-monitor_find(char *name)
+MXS_MONITOR *
+monitor_find(const char *name)
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -413,7 +549,7 @@ monitor_find(char *name)
  * @param interval      The sampling interval in milliseconds
  */
 void
-monitorSetInterval(MONITOR *mon, unsigned long interval)
+monitorSetInterval(MXS_MONITOR *mon, unsigned long interval)
 {
     mon->interval = interval;
 }
@@ -426,7 +562,7 @@ monitorSetInterval(MONITOR *mon, unsigned long interval)
  * @param value         The timeout to set
  */
 bool
-monitorSetNetworkTimeout(MONITOR *mon, int type, int value)
+monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value)
 {
     bool rval = true;
 
@@ -434,22 +570,22 @@ monitorSetNetworkTimeout(MONITOR *mon, int type, int value)
     {
         switch (type)
         {
-            case MONITOR_CONNECT_TIMEOUT:
-                mon->connect_timeout = value;
-                break;
+        case MONITOR_CONNECT_TIMEOUT:
+            mon->connect_timeout = value;
+            break;
 
-            case MONITOR_READ_TIMEOUT:
-                mon->read_timeout = value;
-                break;
+        case MONITOR_READ_TIMEOUT:
+            mon->read_timeout = value;
+            break;
 
-            case MONITOR_WRITE_TIMEOUT:
-                mon->write_timeout = value;
-                break;
+        case MONITOR_WRITE_TIMEOUT:
+            mon->write_timeout = value;
+            break;
 
-            default:
-                MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
-                rval = false;
-                break;
+        default:
+            MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
+            rval = false;
+            break;
         }
     }
     else
@@ -474,7 +610,7 @@ monitorRowCallback(RESULTSET *set, void *data)
     int i = 0;;
     char buf[20];
     RESULT_ROW *row;
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -486,7 +622,7 @@ monitorRowCallback(RESULTSET *set, void *data)
     if (ptr == NULL)
     {
         spinlock_release(&monLock);
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     (*rowno)++;
@@ -509,14 +645,14 @@ monitorGetList()
     RESULTSET *set;
     int *data;
 
-    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
     {
         return NULL;
     }
     *data = 0;
     if ((set = resultset_create(monitorRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Monitor", 20, COL_TYPE_VARCHAR);
@@ -532,88 +668,75 @@ monitorGetList()
  * @param query Query to execute
  * @return True on success, false if monitor credentials lack permissions
  */
-bool check_monitor_permissions(MONITOR* monitor, const char* query)
+bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
 {
-    if (monitor->databases == NULL)
+    if (monitor->databases == NULL || // No servers to check
+        config_get_global_options()->skip_permission_checks)
     {
-        MXS_ERROR("[%s] Monitor is missing the servers parameter.", monitor->name);
-        return false;
+        return true;
     }
 
     char *user = monitor->user;
-    char *dpasswd = decryptPassword(monitor->password);
-    GATEWAY_CONF* cnf = config_get_global_options();
+    char *dpasswd = decrypt_password(monitor->password);
+    MXS_CONFIG* cnf = config_get_global_options();
     bool rval = false;
 
-    for (MONITOR_SERVERS *mondb = monitor->databases; mondb; mondb = mondb->next)
+    for (MXS_MONITOR_SERVERS *mondb = monitor->databases; mondb; mondb = mondb->next)
     {
-        MYSQL *mysql = mysql_init(NULL);
-
-        if (mysql == NULL)
+        if (mon_connect_to_db(monitor, mondb) != MONITOR_CONN_OK)
         {
-            MXS_ERROR("[%s] Error: MySQL connection initialization failed.", __FUNCTION__);
-            break;
-        }
-
-        mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
-        mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
-        mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
-
-        if (mxs_mysql_real_connect(mysql, mondb->server, user, dpasswd) == NULL)
-        {
-            MXS_ERROR("[%s] Failed to connect to server '%s' (%s:%d) when"
+            MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
                       monitor->name, mondb->server->unique_name, mondb->server->name,
-                      mondb->server->port, mysql_error(mysql));
-            switch (mysql_errno(mysql))
+                      mondb->server->port, mysql_error(mondb->con));
+            switch (mysql_errno(mondb->con))
             {
-                case ER_ACCESS_DENIED_ERROR:
-                case ER_DBACCESS_DENIED_ERROR:
-                case ER_ACCESS_DENIED_NO_PASSWORD_ERROR:
-                    break;
-                default:
-                    rval = true;
-                    break;
+            case ER_ACCESS_DENIED_ERROR:
+            case ER_DBACCESS_DENIED_ERROR:
+            case ER_ACCESS_DENIED_NO_PASSWORD_ERROR:
+                break;
+            default:
+                rval = true;
+                break;
             }
         }
-        else if (mysql_query(mysql, query) != 0)
+        else if (mxs_mysql_query(mondb->con, query) != 0)
         {
-            switch (mysql_errno(mysql))
+            switch (mysql_errno(mondb->con))
             {
-                case ER_TABLEACCESS_DENIED_ERROR:
-                case ER_COLUMNACCESS_DENIED_ERROR:
-                case ER_SPECIFIC_ACCESS_DENIED_ERROR:
-                case ER_PROCACCESS_DENIED_ERROR:
-                case ER_KILL_DENIED_ERROR:
-                    rval = false;
-                    break;
+            case ER_TABLEACCESS_DENIED_ERROR:
+            case ER_COLUMNACCESS_DENIED_ERROR:
+            case ER_SPECIFIC_ACCESS_DENIED_ERROR:
+            case ER_PROCACCESS_DENIED_ERROR:
+            case ER_KILL_DENIED_ERROR:
+                rval = false;
+                break;
 
-                default:
-                    rval = true;
-                    break;
+            default:
+                rval = true;
+                break;
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      monitor->name, query, user, mysql_error(mysql));
+                      monitor->name, query, user, mysql_error(mondb->con));
         }
         else
         {
             rval = true;
-            MYSQL_RES *res = mysql_use_result(mysql);
+            MYSQL_RES *res = mysql_use_result(mondb->con);
             if (res == NULL)
             {
                 MXS_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
-                          monitor->name, mysql_error(mysql));
+                          monitor->name, mysql_error(mondb->con));
             }
             else
             {
                 mysql_free_result(res);
             }
         }
-        mysql_close(mysql);
     }
 
-    free(dpasswd);
+    MXS_FREE(dpasswd);
     return rval;
 }
 
@@ -622,11 +745,11 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
  * @param monitor Monitor
  * @param params Config parameters
  */
-void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
+void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
 {
     while (params)
     {
-        CONFIG_PARAMETER* clone = config_clone_param(params);
+        MXS_CONFIG_PARAMETER* clone = config_clone_param(params);
         if (clone)
         {
             clone->next = monitor->parameters;
@@ -636,6 +759,32 @@ void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
     }
 }
 
+bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key)
+{
+    MXS_CONFIG_PARAMETER *prev = NULL;
+
+    for (MXS_CONFIG_PARAMETER *p = monitor->parameters; p; p = p->next)
+    {
+        if (strcmp(p->name, key) == 0)
+        {
+            if (p == monitor->parameters)
+            {
+                monitor->parameters = monitor->parameters->next;
+                p->next = NULL;
+            }
+            else
+            {
+                prev->next = p->next;
+                p->next = NULL;
+            }
+            config_parameter_free(p);
+            return true;
+        }
+        prev = p;
+    }
+    return false;
+}
+
 /**
  * Set a pending status bit in the monitor server
  *
@@ -643,7 +792,7 @@ void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
  * @param bit           The bit to clear for the server
  */
 void
-monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit)
+monitor_set_pending_status(MXS_MONITOR_SERVERS *ptr, int bit)
 {
     ptr->pending_status |= bit;
 }
@@ -655,7 +804,7 @@ monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit)
  * @param bit           The bit to clear for the server
  */
 void
-monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
+monitor_clear_pending_status(MXS_MONITOR_SERVERS *ptr, int bit)
 {
     ptr->pending_status &= ~bit;
 }
@@ -667,8 +816,7 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
  * @param   node                The monitor server data for a particular server
  * @result  monitor_event_t     A monitor event (enum)
  */
-monitor_event_t
-mon_get_event_type(MONITOR_SERVERS* node)
+static mxs_monitor_event_t mon_get_event_type(MXS_MONITOR_SERVERS* node)
 {
     typedef enum
     {
@@ -681,15 +829,14 @@ mon_get_event_type(MONITOR_SERVERS* node)
 
     general_event_type event_type = UNSUPPORTED_EVENT;
 
-    unsigned int prev = node->mon_prev_status
-                        & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB);
-    unsigned int present = node->server->status
-                           & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB);
+    unsigned int prev = node->mon_prev_status & all_server_bits;
+    unsigned int present = node->server->status & all_server_bits;
 
     if (prev == present)
     {
-        /* No change in the bits we're interested in */
-        return UNDEFINED_MONITOR_EVENT;
+        /* This should never happen */
+        ss_dassert(false);
+        return UNDEFINED_EVENT;
     }
 
     if ((prev & SERVER_RUNNING) == 0)
@@ -699,8 +846,11 @@ mon_get_event_type(MONITOR_SERVERS* node)
         {
             event_type = UP_EVENT;
         }
-        /* Otherwise, was not running and still is not running */
-        /* - this is not a recognised event */
+        else
+        {
+            /* Otherwise, was not running and still is not running. This should never happen. */
+            ss_dassert(false);
+        }
     }
     else
     {
@@ -718,7 +868,7 @@ mon_get_event_type(MONITOR_SERVERS* node)
 
             /* Was running and still is */
             if ((!prev_bits || !present_bits || prev_bits == present_bits) &&
-                     prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
+                (prev & server_type_bits))
             {
                 /* We used to know what kind of server it was */
                 event_type = LOSS_EVENT;
@@ -731,33 +881,50 @@ mon_get_event_type(MONITOR_SERVERS* node)
         }
     }
 
+    mxs_monitor_event_t rval = UNDEFINED_EVENT;
+
     switch (event_type)
     {
-        case UP_EVENT:
-            return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
-                   (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
-                   (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
-                   (present & SERVER_NDB) ? NDB_UP_EVENT :
-                   SERVER_UP_EVENT;
-        case DOWN_EVENT:
-            return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
-                   (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
-                   (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
-                   (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
-                   SERVER_DOWN_EVENT;
-        case LOSS_EVENT:
-            return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
-                   (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
-                   (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
-                   LOST_NDB_EVENT;
-        case NEW_EVENT:
-            return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
-                   (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
-                   (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
-                   NEW_NDB_EVENT;
-        default:
-            return UNDEFINED_MONITOR_EVENT;
+    case UP_EVENT:
+        rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT :
+               (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
+               (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
+               (present & SERVER_NDB) ? NDB_UP_EVENT :
+               SERVER_UP_EVENT;
+        break;
+
+    case DOWN_EVENT:
+        rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
+               (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
+               (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+               (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
+               SERVER_DOWN_EVENT;
+        break;
+
+    case LOSS_EVENT:
+        rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
+               (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
+               (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
+               (prev & SERVER_NDB) ? LOST_NDB_EVENT :
+               UNDEFINED_EVENT;
+        break;
+
+    case NEW_EVENT:
+        rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
+               (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
+               (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
+               (present & SERVER_NDB) ? NEW_NDB_EVENT :
+               UNDEFINED_EVENT;
+        break;
+
+    default:
+        /* This should never happen */
+        ss_dassert(false);
+        break;
     }
+
+    ss_dassert(rval != UNDEFINED_EVENT);
+    return rval;
 }
 
 /*
@@ -765,31 +932,20 @@ mon_get_event_type(MONITOR_SERVERS* node)
  * @param   node    The monitor server data whose event is wanted
  * @result  string  The name of the monitor event for the server
  */
-const char*
-mon_get_event_name(MONITOR_SERVERS* node)
+static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
 {
-    return monitor_event_definitions[mon_get_event_type(node)].name;
-}
+    mxs_monitor_event_t event = mon_get_event_type(node);
 
-/*
- * Given the text version of a monitor event, determine the event (enum)
- *
- * @param   event_name          String containing the event name
- * @result  monitor_event_t     Monitor event corresponding to name
- */
-monitor_event_t
-mon_name_to_event(const char *event_name)
-{
-    monitor_event_t event;
-
-    for (event = 0; event < MAX_MONITOR_EVENT; event++)
+    for (int i = 0; mxs_monitor_event_enum_values[i].name; i++)
     {
-        if (0 == strcasecmp(monitor_event_definitions[event].name, event_name))
+        if (mxs_monitor_event_enum_values[i].enum_value & event)
         {
-            return event;
+            return mxs_monitor_event_enum_values[i].name;
         }
     }
-    return UNDEFINED_MONITOR_EVENT;
+
+    ss_dassert(false);
+    return "undefined_event";
 }
 
 /**
@@ -799,20 +955,26 @@ mon_name_to_event(const char *event_name)
  * @param dest Destination where the string is appended, must be null terminated
  * @param len Length of @c dest
  */
-static void mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len, int status)
+static void mon_append_node_names(MXS_MONITOR_SERVERS* servers, char* dest, int len, int status)
 {
     char *separator = "";
-    char arr[MAX_SERVER_NAME_LEN + 32]; // Some extra space for port
+    char arr[MAX_SERVER_NAME_LEN + 64]; // Some extra space for port and separator
     dest[0] = '\0';
 
-    while (servers && strlen(dest) < (len - strlen(separator)))
+    while (servers && len)
     {
         if (status == 0 || servers->server->status & status)
         {
-            strncat(dest, separator, len);
+            snprintf(arr, sizeof(arr), "%s[%s]:%d", separator, servers->server->name,
+                     servers->server->port);
             separator = ",";
-            snprintf(arr, sizeof(arr), "%s:%d", servers->server->name, servers->server->port);
-            strncat(dest, arr, len - strlen(dest) - 1);
+            int arrlen = strlen(arr);
+
+            if (arrlen < len)
+            {
+                strcat(dest, arr);
+                len -= arrlen;
+            }
         }
         servers = servers->next;
     }
@@ -824,14 +986,31 @@ static void mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len,
  * @param mon_srv       The monitored server
  * @return              true if status has changed or false
  */
-bool
-mon_status_changed(MONITOR_SERVERS* mon_srv)
+bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
 {
+    bool rval = false;
+
     /* Previous status is -1 if not yet set */
-    return (mon_srv->mon_prev_status != -1
-            && mon_srv->mon_prev_status != mon_srv->server->status
-            /** If the server is going into maintenance or coming out of it, don't trigger a state change */
-            && ((mon_srv->mon_prev_status | mon_srv->server->status) & SERVER_MAINT) == 0);
+    if (mon_srv->mon_prev_status != -1)
+    {
+
+        unsigned int old_status = mon_srv->mon_prev_status & all_server_bits;
+        unsigned int new_status = mon_srv->server->status & all_server_bits;
+
+        /**
+         * The state has changed if the relevant state bits are not the same,
+         * the server is either running, stopping or starting and the server is
+         * not going into maintenance or coming out of it
+         */
+        if (old_status != new_status &&
+            ((old_status | new_status) & SERVER_MAINT) == 0 &&
+            ((old_status | new_status) & SERVER_RUNNING) == SERVER_RUNNING)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 /**
@@ -841,7 +1020,7 @@ mon_status_changed(MONITOR_SERVERS* mon_srv)
  * @return              true if failed status can be logged or false
  */
 bool
-mon_print_fail_status(MONITOR_SERVERS* mon_srv)
+mon_print_fail_status(MXS_MONITOR_SERVERS* mon_srv)
 {
     return (SERVER_IS_DOWN(mon_srv->server) && mon_srv->mon_err_count == 0);
 }
@@ -853,9 +1032,12 @@ mon_print_fail_status(MONITOR_SERVERS* mon_srv)
  * @param script Script to execute
  */
 void
-monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
+monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* script)
 {
-    EXTERNCMD* cmd = externcmd_allocate(script);
+    char arg[strlen(script) + 1];
+    strcpy(arg, script);
+
+    EXTERNCMD* cmd = externcmd_allocate(arg);
 
     if (cmd == NULL)
     {
@@ -867,7 +1049,7 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
     if (externcmd_matches(cmd, "$INITIATOR"))
     {
         char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
-        snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
+        snprintf(initiator, sizeof(initiator), "[%s]:%d", ptr->server->name, ptr->server->port);
         externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
     }
 
@@ -915,53 +1097,51 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
     }
     else
     {
+        ss_dassert(cmd->argv != NULL && cmd->argv[0] != NULL);
+        // Construct a string with the script + arguments
+        char *scriptStr = NULL;
+        int totalStrLen = 0;
+        bool memError = false;
+        for (int i = 0; cmd->argv[i]; i++)
+        {
+            totalStrLen += strlen(cmd->argv[i]) + 1; // +1 for space and one \0
+        }
+        int spaceRemaining = totalStrLen;
+        if ((scriptStr = MXS_CALLOC(totalStrLen, sizeof(char))) != NULL)
+        {
+            char *currentPos = scriptStr;
+            // The script name should not begin with a space
+            int len = snprintf(currentPos, spaceRemaining, "%s", cmd->argv[0]);
+            currentPos += len;
+            spaceRemaining -= len;
+
+            for (int i = 1; cmd->argv[i]; i++)
+            {
+                if ((cmd->argv[i])[0] == '\0')
+                {
+                    continue; // Empty argument, print nothing
+                }
+                len = snprintf(currentPos, spaceRemaining, " %s", cmd->argv[i]);
+                currentPos += len;
+                spaceRemaining -= len;
+            }
+            ss_dassert(spaceRemaining > 0);
+            *currentPos = '\0';
+        }
+        else
+        {
+            memError = true;
+            scriptStr = cmd->argv[0]; // print at least something
+        }
         MXS_NOTICE("Executed monitor script '%s' on event '%s'.",
-                   script, mon_get_event_name(ptr));
+                   scriptStr, mon_get_event_name(ptr));
+        if (!memError)
+        {
+            MXS_FREE(scriptStr);
+        }
     }
 
     externcmd_free(cmd);
-}
-
-/**
- * Parse a string of event names to an array with enabled events.
- * @param events Pointer to an array of boolean values
- * @param count Size of the array
- * @param string String to parse
- * @return 0 on success. 1 when an error has occurred or an unexpected event was
- * found.
- */
-int
-mon_parse_event_string(bool* events, size_t count, char* given_string)
-{
-    char *tok, *saved, *string = strdup(given_string);
-    monitor_event_t event;
-
-    tok = strtok_r(string, ",| ", &saved);
-
-    if (tok == NULL)
-    {
-        free(string);
-        return -1;
-    }
-
-    while (tok)
-    {
-        event = mon_name_to_event(tok);
-        if (event == UNDEFINED_MONITOR_EVENT)
-        {
-            MXS_ERROR("Invalid event name %s", tok);
-            free(string);
-            return -1;
-        }
-        if (event < count)
-        {
-            events[event] = true;
-            tok = strtok_r(NULL, ",| ", &saved);
-        }
-    }
-
-    free(string);
-    return 0;
 }
 
 /**
@@ -972,10 +1152,10 @@ mon_parse_event_string(bool* events, size_t count, char* given_string)
  * @param database Monitored database
  * @return MONITOR_CONN_OK if the connection is OK else the reason for the failure
  */
-connect_result_t
-mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
+mxs_connect_result_t
+mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 {
-    connect_result_t rval = MONITOR_CONN_OK;
+    mxs_connect_result_t rval = MONITOR_CONN_OK;
 
     /** Return if the connection is OK */
     if (database->con && mysql_ping(database->con) == 0)
@@ -990,14 +1170,21 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
 
     if ((database->con = mysql_init(NULL)))
     {
-        char *uname = database->server->monuser ? database->server->monuser : mon->user;
-        char *passwd = database->server->monpw ? database->server->monpw : mon->password;
-        char *dpwd = decryptPassword(passwd);
+        char *uname = mon->user;
+        char *passwd = mon->password;
 
-        mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &mon->connect_timeout);
-        mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &mon->read_timeout);
-        mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &mon->write_timeout);
+        if (database->server->monuser[0] && database->server->monpw[0])
+        {
+            uname = database->server->monuser;
+            passwd = database->server->monpw;
+        }
 
+        char *dpwd = decrypt_password(passwd);
+
+        mysql_optionsv(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &mon->connect_timeout);
+        mysql_optionsv(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &mon->read_timeout);
+        mysql_optionsv(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &mon->write_timeout);
+        mysql_optionsv(database->con, MYSQL_PLUGIN_DIR, get_connector_plugindir());
         time_t start = time(NULL);
         bool result = (mxs_mysql_real_connect(database->con, database->server, uname, dpwd) != NULL);
         time_t end = time(NULL);
@@ -1014,7 +1201,7 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
             }
         }
 
-        free(dpwd);
+        MXS_FREE(dpwd);
     }
     else
     {
@@ -1031,19 +1218,16 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
  * @param rval Return value of mon_connect_to_db
  */
 void
-mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
+mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval)
 {
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
-              "Monitor timed out when connecting to "
-              "server %s:%d : \"%s\"" :
-              "Monitor was unable to connect to "
-              "server %s:%d : \"%s\"",
-              database->server->name,
-              database->server->port,
+              "Monitor timed out when connecting to server [%s]:%d : \"%s\"" :
+              "Monitor was unable to connect to server [%s]:%d : \"%s\"",
+              database->server->name, database->server->port,
               mysql_error(database->con));
 }
 
-void mon_log_state_change(MONITOR_SERVERS *ptr)
+static void mon_log_state_change(MXS_MONITOR_SERVERS *ptr)
 {
     SERVER srv;
     srv.status = ptr->mon_prev_status;
@@ -1052,19 +1236,216 @@ void mon_log_state_change(MONITOR_SERVERS *ptr)
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
                ptr->server->unique_name, ptr->server->name, ptr->server->port,
                mon_get_event_name(ptr), prev, next);
-    free(prev);
-    free(next);
+    MXS_FREE(prev);
+    MXS_FREE(next);
 }
 
-void mon_hangup_failed_servers(MONITOR *monitor)
+MXS_MONITOR* monitor_server_in_use(const SERVER *server)
 {
-    for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+    MXS_MONITOR *rval = NULL;
+
+    spinlock_acquire(&monLock);
+
+    for (MXS_MONITOR *mon = allMonitors; mon && !rval; mon = mon->next)
+    {
+        spinlock_acquire(&mon->lock);
+
+        for (MXS_MONITOR_SERVERS *db = mon->databases; db && !rval; db = db->next)
+        {
+            if (db->server == server)
+            {
+                rval = mon;
+            }
+        }
+
+        spinlock_release(&mon->lock);
+    }
+
+    spinlock_release(&monLock);
+
+    return rval;
+}
+
+static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
+                  filename, monitor->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    /**
+     * Only additional parameters are added to the configuration. This prevents
+     * duplication or addition of parameters that don't support it.
+     *
+     * TODO: Check for return values on all of the dprintf calls
+     */
+    dprintf(file, "[%s]\n", monitor->name);
+
+    if (monitor->created_online)
+    {
+        dprintf(file, "type=monitor\n");
+        dprintf(file, "module=%s\n", monitor->module_name);
+        dprintf(file, "user=%s\n", monitor->user);
+        dprintf(file, "password=%s\n", monitor->password);
+        dprintf(file, "monitor_interval=%lu\n", monitor->interval);
+        dprintf(file, "backend_connect_timeout=%d\n", monitor->connect_timeout);
+        dprintf(file, "backend_write_timeout=%d\n", monitor->write_timeout);
+        dprintf(file, "backend_read_timeout=%d\n", monitor->read_timeout);
+    }
+
+    if (monitor->databases)
+    {
+        dprintf(file, "servers=");
+        for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+        {
+            if (db != monitor->databases)
+            {
+                dprintf(file, ",");
+            }
+            dprintf(file, "%s", db->server->unique_name);
+        }
+        dprintf(file, "\n");
+    }
+
+    close(file);
+
+    return true;
+}
+
+bool monitor_serialize(const MXS_MONITOR *monitor)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             monitor->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_monitor_config(monitor, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
+    return rval;
+}
+
+void mon_hangup_failed_servers(MXS_MONITOR *monitor)
+{
+    for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
     {
         if (mon_status_changed(ptr) &&
             (!(SERVER_IS_RUNNING(ptr->server)) ||
              !(SERVER_IS_IN_CLUSTER(ptr->server))))
         {
             dcb_hangup_foreach(ptr->server);
+        }
+    }
+}
+
+void mon_report_query_error(MXS_MONITOR_SERVERS* db)
+{
+    MXS_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
+              db->server->unique_name, db->server->name,
+              db->server->port, mysql_error(db->con));
+}
+
+/**
+  * Acquire locks on all servers monitored by this monitor. There should
+  * only be max 1 monitor per server.
+  * @param monitor The target monitor
+  */
+void lock_monitor_servers(MXS_MONITOR *monitor)
+{
+    MXS_MONITOR_SERVERS *ptr = monitor->databases;
+    while (ptr)
+    {
+        spinlock_acquire(&ptr->server->lock);
+        ptr = ptr->next;
+    }
+}
+/**
+  * Release locks on all servers monitored by this monitor. There should
+  * only be max 1 monitor per server.
+  * @param monitor The target monitor
+  */
+void release_monitor_servers(MXS_MONITOR *monitor)
+{
+    MXS_MONITOR_SERVERS *ptr = monitor->databases;
+    while (ptr)
+    {
+        spinlock_release(&ptr->server->lock);
+        ptr = ptr->next;
+    }
+}
+/**
+  * Sets the current status of all servers monitored by this monitor to
+  * the pending status. This should only be called at the beginning of
+  * a monitor loop, after the servers are locked.
+  * @param monitor The target monitor
+  */
+void servers_status_pending_to_current(MXS_MONITOR *monitor)
+{
+    MXS_MONITOR_SERVERS *ptr = monitor->databases;
+    while (ptr)
+    {
+        ptr->server->status = ptr->server->status_pending;
+        ptr = ptr->next;
+    }
+    monitor->server_pending_changes = false;
+}
+/**
+  *  Sets the pending status of all servers monitored by this monitor to
+  *  the current status. This should only be called at the end of
+  *  a monitor loop, before the servers are released.
+  *  @param monitor The target monitor
+  */
+void servers_status_current_to_pending(MXS_MONITOR *monitor)
+{
+    MXS_MONITOR_SERVERS *ptr = monitor->databases;
+    while (ptr)
+    {
+        ptr->server->status_pending = ptr->server->status;
+        ptr = ptr->next;
+    }
+}
+
+void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_t events)
+{
+    for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+    {
+        if (mon_status_changed(ptr))
+        {
+            mon_log_state_change(ptr);
+
+            if (script && (events & mon_get_event_type(ptr)))
+            {
+                monitor_launch_script(monitor, ptr, script);
+            }
         }
     }
 }

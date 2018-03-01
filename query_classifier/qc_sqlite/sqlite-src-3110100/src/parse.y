@@ -59,6 +59,22 @@
 %include {
 #include "sqliteInt.h"
 
+// Copied from query_classifier.h
+enum
+{
+  QUERY_TYPE_READ               = 0x000002, /*< Read database data:any */
+  QUERY_TYPE_WRITE              = 0x000004, /*< Master data will be  modified:master */
+};
+
+typedef enum qc_field_usage
+{
+    QC_USED_IN_SELECT    = 0x01, /*< SELECT fld FROM... */
+    QC_USED_IN_SUBSELECT = 0x02, /*< SELECT 1 FROM ... SELECT fld ... */
+    QC_USED_IN_WHERE     = 0x04, /*< SELECT ... FROM ... WHERE fld = ... */
+    QC_USED_IN_SET       = 0x08, /*< UPDATE ... SET fld = ... */
+    QC_USED_IN_GROUP_BY  = 0x10, /*< ... GROUP BY fld */
+} qc_field_usage_t;
+
 // MaxScale naming convention:
 //
 // - A function that "overloads" a sqlite3 function has the same name
@@ -83,14 +99,15 @@ extern void mxs_sqlite3DropTable(Parse*, SrcList*, int, int, int);
 extern void mxs_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*, SrcList*);
 extern void mxs_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int,ExprList*);
 extern void mxs_sqlite3RollbackTransaction(Parse*);
+extern void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName);
 extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
 extern void mxs_sqlite3StartTable(Parse*,Token*,Token*,int,int,int,int);
 extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 
-extern void maxscaleCollectInfoFromSelect(Parse*, Select*);
+extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
 
 extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
-extern void maxscaleCall(Parse*, SrcList* pName);
+extern void maxscaleCall(Parse*, SrcList* pName, ExprList* pExprList);
 extern void maxscaleCheckTable(Parse*, SrcList* pTables);
 extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
@@ -108,6 +125,8 @@ extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
+
+extern void maxscale_update_function_info(const char* name, unsigned usage);
 
 // Exposed utility functions
 void exposed_sqlite3ExprDelete(sqlite3 *db, Expr *pExpr)
@@ -294,11 +313,12 @@ cmdx ::= cmd.           { sqlite3FinishCoding(pParse); }
 //
 
 %ifdef MAXSCALE
-cmd ::= BEGIN transtype(Y) trans_opt.  {mxs_sqlite3BeginTransaction(pParse, Y);}
+work_opt ::= WORK.
+work_opt ::= .
+cmd ::= BEGIN work_opt. {mxs_sqlite3BeginTransaction(pParse, 0);} // BEGIN [WORK]
 %endif
 %ifndef MAXSCALE
 cmd ::= BEGIN transtype(Y) trans_opt.  {sqlite3BeginTransaction(pParse, Y);}
-%endif
 trans_opt ::= .
 trans_opt ::= TRANSACTION.
 trans_opt ::= TRANSACTION nm.
@@ -307,10 +327,10 @@ transtype(A) ::= .             {A = TK_DEFERRED;}
 transtype(A) ::= DEFERRED(X).  {A = @X;}
 transtype(A) ::= IMMEDIATE(X). {A = @X;}
 transtype(A) ::= EXCLUSIVE(X). {A = @X;}
+%endif
 %ifdef MAXSCALE
-cmd ::= COMMIT trans_opt.      {mxs_sqlite3CommitTransaction(pParse);}
-cmd ::= END trans_opt.         {mxs_sqlite3CommitTransaction(pParse);}
-cmd ::= ROLLBACK trans_opt.    {mxs_sqlite3RollbackTransaction(pParse);}
+cmd ::= COMMIT work_opt.       {mxs_sqlite3CommitTransaction(pParse);}
+cmd ::= ROLLBACK work_opt.     {mxs_sqlite3RollbackTransaction(pParse);}
 %endif
 %ifndef MAXSCALE
 cmd ::= COMMIT trans_opt.      {sqlite3CommitTransaction(pParse);}
@@ -318,6 +338,21 @@ cmd ::= END trans_opt.         {sqlite3CommitTransaction(pParse);}
 cmd ::= ROLLBACK trans_opt.    {sqlite3RollbackTransaction(pParse);}
 %endif
 
+%ifdef MAXSCALE
+savepoint_opt ::= SAVEPOINT.
+savepoint_opt ::= .
+cmd ::= SAVEPOINT nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_BEGIN, &X);
+}
+cmd ::= RELEASE savepoint_opt nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_RELEASE, &X);
+}
+cmd ::= ROLLBACK work_opt TO savepoint_opt nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_ROLLBACK, &X);
+}
+%endif
+
+%ifndef MAXSCALE
 savepoint_opt ::= SAVEPOINT.
 savepoint_opt ::= .
 cmd ::= SAVEPOINT nm(X). {
@@ -329,6 +364,7 @@ cmd ::= RELEASE savepoint_opt nm(X). {
 cmd ::= ROLLBACK trans_opt TO savepoint_opt nm(X). {
   sqlite3Savepoint(pParse, SAVEPOINT_ROLLBACK, &X);
 }
+%endif
 
 ///////////////////// The CREATE TABLE statement ////////////////////////////
 //
@@ -568,6 +604,7 @@ columnid(A) ::= nm(X). {
   /*KEY*/
   /*LIKE_KW*/
   MASTER /*MATCH*/ MERGE
+  NAMES
   NO
   OF OFFSET OPEN
   QUICK
@@ -580,6 +617,7 @@ columnid(A) ::= nm(X). {
   UNSIGNED
   VALUE VIEW /*VIRTUAL*/
   /*WITH*/
+  WORK
 %endif
   .
 %wildcard ANY.
@@ -1129,6 +1167,8 @@ selcollist(A) ::= sclp(P) DEFAULT LP nm RP as. {
   A = P;
 }
 selcollist(A) ::= sclp(P) MATCH LP id(X) RP AGAINST LP expr(Y) RP. {
+  // Could be a subselect as well, but we just don't know it at this point.
+  maxscale_update_function_info("match", QC_USED_IN_SELECT);
   sqlite3ExprDelete(pParse->db, Y.pExpr);
   Expr *p = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
   A = sqlite3ExprListAppend(pParse, P, p);
@@ -1432,7 +1472,7 @@ table_factor(A) ::= nm(X) DOT nm(Y) as_opt id(Z). {
 }
 
 table_factor(A) ::= LP oneselect(S) RP as_opt id. {
-  maxscaleCollectInfoFromSelect(pParse, S);
+    maxscaleCollectInfoFromSelect(pParse, S, 1);
   sqlite3SelectDelete(pParse->db, S);
   A = 0;
 }
@@ -2651,21 +2691,12 @@ default_opt ::= DEFAULT.
 //
 cmd ::= call.
 
-call_arg ::= INTEGER.
-call_arg ::= FLOAT.
-call_arg ::= STRING.
-call_arg ::= id.
-call_arg ::= VARIABLE.
+%type call_args_opt {ExprList*}
+call_args_opt(A) ::= . {A=0;}
+call_args_opt(A) ::= LP exprlist(X) RP. {A=X;}
 
-call_args ::= call_arg.
-call_args ::= call_args COMMA call_arg.
-
-call_args_opt ::= .
-call_args_opt ::= LP RP.
-call_args_opt ::= LP call_args RP.
-
-call ::= CALL fullname(X) call_args_opt. {
-  maxscaleCall(pParse, X);
+call ::= CALL fullname(X) call_args_opt(Y). {
+    maxscaleCall(pParse, X, Y);
 }
 
 //////////////////////// DROP FUNCTION statement ////////////////////////////////////
@@ -2815,7 +2846,7 @@ execute_variables ::= VARIABLE.
 execute_variables ::= execute_variables COMMA VARIABLE.
 
 execute_variables_opt ::= .
-execute_variables_opt ::= execute_variables.
+execute_variables_opt ::= USING execute_variables.
 
 execute ::= EXECUTE nm(X) execute_variables_opt. {
   maxscaleExecute(pParse, &X);
@@ -3148,8 +3179,39 @@ show(A) ::= SHOW WARNINGS show_warnings_options. {
 //////////////////////// The START TRANSACTION statement ////////////////////////////////////
 //
 
-cmd ::= START TRANSACTION. {
-  mxs_sqlite3BeginTransaction(pParse, 0);
+%type start_transaction_characteristic {int}
+
+start_transaction_characteristic(A) ::= READ WRITE. {
+  A = QUERY_TYPE_WRITE;
+}
+
+start_transaction_characteristic(A) ::= READ id. { // READ ONLY
+  A = QUERY_TYPE_READ;
+}
+
+start_transaction_characteristic(A) ::= WITH id id. { // WITH CONSISTENT SNAPSHOT
+  A = 0;
+}
+
+%type start_transaction_characteristics {int}
+
+start_transaction_characteristics(A) ::= .
+{
+  A = 0;
+}
+
+start_transaction_characteristics(A) ::= start_transaction_characteristic(X).
+{
+  A = X;
+}
+
+start_transaction_characteristics(A) ::=
+    start_transaction_characteristics(X) COMMA start_transaction_characteristic(Y). {
+  A = X | Y;
+}
+
+cmd ::= START TRANSACTION start_transaction_characteristics(X). {
+  mxs_sqlite3BeginTransaction(pParse, X);
 }
 
 //////////////////////// The TRUNCATE statement ////////////////////////////////////

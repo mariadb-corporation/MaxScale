@@ -1,0 +1,2 @@
+rule test3 deny columns x1
+users %@% match all rules test3

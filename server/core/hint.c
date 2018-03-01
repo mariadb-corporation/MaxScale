@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -13,7 +13,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hint.h>
+#include <maxscale/hint.h>
+#include <maxscale/alloc.h>
 
 /**
  * @file hint.c generic support routines for hints.
@@ -44,14 +45,14 @@ hint_dup(HINT *hint)
     ptr1 = hint;
     while (ptr1)
     {
-        if ((ptr2 = (HINT *)malloc(sizeof(HINT))) == NULL)
+        if ((ptr2 = (HINT *)MXS_MALLOC(sizeof(HINT))) == NULL)
         {
             return nlhead;
         }
         ptr2->type = ptr1->type;
         if (ptr1->data)
         {
-            ptr2->data = strdup(ptr1->data);
+            ptr2->data = MXS_STRDUP_A(ptr1->data);
         }
         else
         {
@@ -59,7 +60,7 @@ hint_dup(HINT *hint)
         }
         if (ptr1->value)
         {
-            ptr2->value = strdup(ptr1->value);
+            ptr2->value = MXS_STRDUP_A(ptr1->value);
         }
         else
         {
@@ -94,7 +95,7 @@ hint_create_route(HINT *head, HINT_TYPE type, char *data)
 {
     HINT *hint;
 
-    if ((hint = (HINT *)malloc(sizeof(HINT))) == NULL)
+    if ((hint = (HINT *)MXS_MALLOC(sizeof(HINT))) == NULL)
     {
         return head;
     }
@@ -102,7 +103,7 @@ hint_create_route(HINT *head, HINT_TYPE type, char *data)
     hint->type = type;
     if (data)
     {
-        hint->data = strdup(data);
+        hint->data = MXS_STRDUP_A(data);
     }
     else
     {
@@ -125,14 +126,14 @@ hint_create_parameter(HINT *head, char *pname, char *value)
 {
     HINT *hint;
 
-    if ((hint = (HINT *)malloc(sizeof(HINT))) == NULL)
+    if ((hint = (HINT *)MXS_MALLOC(sizeof(HINT))) == NULL)
     {
         return head;
     }
     hint->next = head;
     hint->type = HINT_PARAMETER;
-    hint->data = strdup(pname);
-    hint->value = strdup(value);
+    hint->data = MXS_STRDUP_A(pname);
+    hint->value = MXS_STRDUP_A(value);
     return hint;
 }
 
@@ -146,13 +147,13 @@ hint_free(HINT *hint)
 {
     if (hint->data)
     {
-        free(hint->data);
+        MXS_FREE(hint->data);
     }
     if (hint->value)
     {
-        free(hint->value);
+        MXS_FREE(hint->value);
     }
-    free(hint);
+    MXS_FREE(hint);
 }
 
 bool hint_exists(HINT**    p_hint,

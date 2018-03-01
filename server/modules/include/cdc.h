@@ -1,10 +1,13 @@
+#pragma once
+#ifndef _CDC_H
+#define _CDC_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -18,22 +21,24 @@
  * 11-01-2016   Massimiliano Pinto  First Implementation
  */
 
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dcb.h>
-#include <buffer.h>
-#include <service.h>
-#include <session.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <router.h>
-#include <poll.h>
-#include <atomic.h>
-#include <gw.h>
+#include <maxscale/router.h>
+#include <maxscale/poll.h>
+#include <maxscale/atomic.h>
+
+MXS_BEGIN_DECLS
 
 #define CDC_SMALL_BUFFER       1024
 #define CDC_METHOD_MAXLEN      128
@@ -87,3 +92,7 @@ typedef struct  cdc_protocol
 
 /* routines */
 extern int gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+
+MXS_END_DECLS
+
+#endif

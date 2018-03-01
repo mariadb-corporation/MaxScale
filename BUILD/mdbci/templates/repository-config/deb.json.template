@@ -1,0 +1,10 @@
+[
+{
+   "product":		"maxscale",
+   "version":           "default",
+   "repo":		"${ci_url}/${web_prefix}/${platform_family} ${platform_version} main",
+   "repo_key":		"$deb_repo_key70E4618A8167EE24",
+   "platform":		"$platform",
+   "platform_version":  "${platform_version}"
+}
+]

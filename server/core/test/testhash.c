@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -35,7 +35,9 @@
 #include <math.h>
 #include <time.h>
 
-#include <hashtable.h>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/hashtable.h>
 
 static void
 read_lock(HASHTABLE *table)
@@ -58,27 +60,24 @@ read_unlock(HASHTABLE *table)
     atomic_add(&table->n_readers, -1);
 }
 
-static int hfun(void* key);
-static int cmpfun (void *, void *);
+static int hfun(const void* key);
+static int cmpfun(const void *, const void *);
 
-static int hfun(
-    void* key)
+static int hfun(const void* key)
 {
-    int *i = (int *)key;
+    const int *i = (const int *)key;
     int j = (*i * 23) + 41;
     return j;
     /*    return *(int *)key;   */
 }
 
-static int cmpfun(
-    void* v1,
-    void* v2)
+static int cmpfun(const void* v1, const void* v2)
 {
     int i1;
     int i2;
 
-    i1 = *(int *)v1;
-    i2 = *(int *)v2;
+    i1 = *(const int *)v1;
+    i2 = *(const int *)v2;
 
     return (i1 < i2 ? -1 : (i1 > i2 ? 1 : 0));
 }
@@ -116,7 +115,8 @@ static bool do_hashtest(
                 argelems,
                 (double)clock() - start);
 
-    val_arr = (int *)malloc(sizeof(void *)*argelems);
+    val_arr = (int *)MXS_MALLOC(sizeof(void *)*argelems);
+    MXS_ABORT_IF_NULL(val_arr);
 
     h = hashtable_alloc(argsize, hfun, cmpfun);
 
@@ -176,7 +176,7 @@ static bool do_hashtest(
     hashtable_free(h);
 
 
-    free(val_arr);
+    MXS_FREE(val_arr);
     return succp;
 }
 

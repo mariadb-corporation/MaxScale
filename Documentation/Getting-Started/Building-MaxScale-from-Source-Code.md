@@ -5,7 +5,7 @@ requirements are as follows:
 
 * CMake version 2.8 or later (Packaging requires version 2.8.12 or later)
 * GCC version 4.4.7 or later
-* libaio
+* SQLite3 version 3.3 or later
 * libcurl
 * OpenSSL
 * Bison 2.7 or later
@@ -20,33 +20,35 @@ The following packages are required on CentOS/RHEL 7. Older releases may require
 other packages in addition to these.
 
 ```
-git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl make libtool \
-openssl-devel libaio libaio-devel libcurl-devel pcre-devel tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel
+git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl make \
+libtool openssl openssl-devel libcurl-devel pcre-devel tcl tcl-devel \
+systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel
 ```
 
 You can install the packages with the following commands.
 
 ```
-sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl \
-     make libtool openssl-devel libaio libaio-devel librabbitmq-devel \
-     libcurl-devel pcre-devel tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel
+sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake \
+     libgcc perl make libtool openssl openssl-devel libcurl-devel pcre-devel \
+     tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel
 ```
 
 ### Required packages on Ubuntu and Debian systems
 
-The following packages are required on Ubuntu 14.04. Different releases may require
-other packages in addition to these.
+The following packages are required on Ubuntu 16.04. Different releases may
+require other packages in addition to these.
 
 ```
-git build-essential libssl-dev libaio-dev ncurses-dev bison flex \
-cmake perl libtool libcurl4-openssl-dev libpcre3-dev tlc tcl-dev uuid uuid-dev
+git build-essential libssl-dev ncurses-dev bison flex cmake perl libtool \
+libcurl4-openssl-dev libpcre3-dev tlc tcl-dev uuid uuid-dev sqlite3-dev
 ```
 
 You can install the packages with the following command.
 
 ```
-sudo apt-get install git build-essential libssl-dev libaio-dev ncurses-dev \
-bison flex cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid uuid-dev
+sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
+     cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
+     uuid-dev libsqlite3-dev
 ```
 
 ## Preparing the MariaDB MaxScale build
@@ -88,6 +90,7 @@ _NAME_=_VALUE_ format (e.g. `-DBUILD_TESTS=Y`).
 |BUILD_TESTS|Build tests|
 |WITH_SCRIPTS|Install systemd and init.d scripts|
 |PACKAGE|Enable building of packages|
+|TARGET_COMPONENT|Which component to install, default is the 'core' package. Other targets are 'experimental', which installs experimental packages, 'devel' which installs development headers and 'all' which installs all components.|
 |TARBALL|Build tar.gz packages, requires PACKAGE=Y|
 
 **Note**: You can look into [defaults.cmake](../../cmake/defaults.cmake) for a
@@ -103,7 +106,13 @@ make test
 sudo make install
 ```
 
-Other useful targets for Make are `documentation`, which generates the Doxygen documentation, and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
+Other useful targets for Make are `documentation`, which generates the Doxygen documentation,
+and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
+
+**Note**: If you configure CMake multiple times, it's possible that you will run
+  into problems when building MaxScale. Most of the time this manifests as a
+  missing _pcre2.h_ header file. When this happens, delete everything in the
+  build directory and run the CMake command again.
 
 # Building MariaDB MaxScale packages
 
@@ -143,14 +152,13 @@ which allows us to build packages. The `-DCMAKE_INSTALL_PREFIX` was removed sinc
 we aren't installing MariaDB MaxScale, only packaging it.
 
 ```
-cmake ../MaxScale -DPACKAGE=Y -DBUILD_TESTS=Y
+cmake ../MaxScale -DPACKAGE=Y
 ```
 
-Next step is to test and build the package.
+Next step is to build the package.
 
 ```
 make
-make test
 make package
 ```
 
@@ -167,4 +175,41 @@ the LD_LIBRARY_PATH environment variable.
 ```
 make
 LD_LIBRARY_PATH=$PWD/server/core/ make package
+```
+
+## Installing optional components
+
+MaxScale is split into multiple components. The main component is the core MaxScale
+package which contains MaxScale and all the modules. This is the default component
+that is build, installed and packaged. There exist two other components, the _experimental_
+and the _devel_ components. The former contains all experimental modules which are
+not considered as part of the core MaxScale package and they can be alpha or beta
+quality modules. The latter of the optional components, _devel_, contains the
+development files required for MaxScale module development.
+
+The component which is build is controlled by the TARGET_COMPONENT CMake variable.
+The default value for this is _core_ which builds the core MaxScale package.
+
+To build other components, you will need to set value of the TARGET_COMPONENT
+CMake variable to the component name you wish to install or package.
+
+### Install experimental modules
+
+To install the experimental modules, invoke CMake with
+_-DTARGET_COMPONENT=experimental_:
+
+```
+cmake ../MaxScale -DTARGET_COMPONENT=experimental
+make
+make install
+```
+
+### Creating a monolithic package
+
+To create a monolithic package with all the components, set the
+value of _TARGET_COMPONENT_ to 'all', _PACKAGE_ to Y and build the package:
+
+```
+cmake ../MaxScale -DPACKAGE=Y -DTARGET_COMPONENT=all
+make package
 ```

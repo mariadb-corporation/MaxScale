@@ -2,7 +2,7 @@
 
 ## Overview
 
-The regex filter is a filter module for MariaDB MaxScale that is able to rewrite query content using regular expression matches and text substitution. It uses the PCRE2 syntax which differs from the POSIX regular expressions used in MariaDB MaxScale versions prior to 1.3.0.
+The Regex filter is a filter module for MariaDB MaxScale that is able to rewrite query content using regular expression matches and text substitution. It uses the PCRE2 syntax which differs from the POSIX regular expressions used in MariaDB MaxScale versions prior to 1.3.0.
 
 For all details about the PCRE2 syntax, please read the [PCRE2 syntax documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
 
@@ -10,7 +10,7 @@ Please note that the PCRE2 library uses a different syntax to refer to capture g
 
 ## Configuration
 
-The configuration block for the Regex filter requires the minimal filter options in it’s section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
+The configuration block for the Regex filter requires the minimal filter options in its section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
 
 ```
 [MyRegexFilter]
@@ -30,7 +30,7 @@ filters=MyRegexfilter
 
 ## Filter Options
 
-The regex filter accepts the options ignorecase or case. These define if the pattern text should take the case of the string it is matching against into consideration or not. 
+The Regex filter accepts the options ignorecase or case. These define if the pattern text should take the case of the string it is matching against into consideration or not.
 
 ## Filter Parameters
 

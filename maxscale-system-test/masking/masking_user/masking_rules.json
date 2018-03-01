@@ -1,0 +1,76 @@
+{
+    "rules": [
+        {
+            "replace": {
+                "column": "a"
+            },
+            "with": {
+                "fill": "X"
+            }
+        },
+        {
+            "replace": {
+                "column": "b"
+            },
+            "with": {
+                "fill": "X"
+            },
+	    "applies_to" : [ "'skysql'" ]
+        },
+        {
+            "replace": {
+                "column": "c"
+            },
+            "with": {
+                "fill": "X"
+            },
+	    "applies_to" : [ "'maxskysql'" ]
+        },
+        {
+            "replace": {
+                "column": "d"
+            },
+            "with": {
+                "fill": "X"
+            },
+	    "exempted" : [ "'skysql'" ]
+        },
+        {
+            "replace": {
+                "column": "e"
+            },
+            "with": {
+                "fill": "X"
+            },
+	    "exempted" : [ "'maxskysql'" ]
+        },
+        {
+            "replace": {
+                "column": "f"
+            },
+            "with": {
+                "fill": "X"
+            },
+	    "applies_to" : [ "'skysql'", "'maxskysql'" ]
+        },
+        {
+            "replace": {
+                "column": "g"
+            },
+            "with": {
+                "fill": "X"
+            },
+	    "exempted" : [ "'skysql'", "'maxskysql'" ]
+        },
+        {
+            "replace": {
+                "column": "h"
+            },
+            "with": {
+                "fill": "X"
+            },
+	    "applies_to" : [ "'skysql'" ],
+	    "exempted" : [ "'maxskysql'" ]
+        }
+    ]
+}

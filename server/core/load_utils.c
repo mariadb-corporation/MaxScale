@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -34,29 +34,38 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
-#include <modules.h>
-#include <modinfo.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <version.h>
-#include <notification.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/version.h>
+#include <maxscale/notification.h>
 #include <curl/curl.h>
 #include <sys/utsname.h>
 #include <openssl/sha.h>
-#include <gw.h>
-#include <gwdirs.h>
+#include <maxscale/paths.h>
+#include <maxscale/alloc.h>
 
-static MODULES *registered = NULL;
+#include "maxscale/modules.h"
 
-static MODULES *find_module(const char *module);
-static void register_module(const char *module,
-                            const char  *type,
-                            void        *dlhandle,
-                            char        *version,
-                            void        *modobj,
-                            MODULE_INFO *info);
+typedef struct loaded_module
+{
+    char    *module;       /**< The name of the module */
+    char    *type;         /**< The module type */
+    char    *version;      /**< Module version */
+    void    *handle;       /**< The handle returned by dlopen */
+    void    *modobj;       /**< The module "object" this is the set of entry points */
+    MXS_MODULE *info;     /**< The module information */
+    struct  loaded_module *next; /**< Next module in the linked list */
+} LOADED_MODULE;
+
+static LOADED_MODULE *registered = NULL;
+
+static LOADED_MODULE *find_module(const char *module);
+static LOADED_MODULE* register_module(const char *module,
+                                      const char *type,
+                                      void *dlhandle,
+                                      MXS_MODULE *mod_info);
 static void unregister_module(const char *module);
-int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
+int module_create_feedback_report(GWBUF **buffer, LOADED_MODULE *modules, FEEDBACK_CONF *cfg);
 int do_http_post(GWBUF *buffer, void *cfg);
 
 struct MemoryStruct
@@ -81,14 +90,14 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
     size_t realsize = size * nmemb;
     struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
-    mem->data = realloc(mem->data, mem->size + realsize + 1);
-    if (mem->data == NULL)
+    void *data = MXS_REALLOC(mem->data, mem->size + realsize + 1);
+
+    if (data == NULL)
     {
-        /* out of memory! */
-        MXS_ERROR("Error in module_feedback_send(), not enough memory for realloc");
         return 0;
     }
 
+    mem->data = data;
     memcpy(&(mem->data[mem->size]), contents, realsize);
     mem->size += realsize;
     mem->data[mem->size] = 0;
@@ -96,46 +105,70 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
     return realsize;
 }
 
-/**
- * Load the dynamic library related to a gateway module. The routine
- * will look for library files in the current directory,
- * the configured folder and /usr/lib64/maxscale.
- *
- * Note that a number of entry points are standard for any module, as is
- * the data structure named "info".  They are only accessed by explicit
- * reference to the module, and so the fact that they are duplicated in
- * every module is not a problem.  The declarations are protected from
- * lint by suppressing error 14, since the duplication is a feature and
- * not an error.
- *
- * @param module        Name of the module to load
- * @param type          Type of module, used purely for registration
- * @return              The module specific entry point structure or NULL
- */
-void *
-load_module(const char *module, const char *type)
+static bool check_module(const MXS_MODULE *mod_info, const char *type, const char *module)
 {
-    char *home, *version;
-    char fname[MAXPATHLEN + 1];
-    void *dlhandle, *sym;
-    char *(*ver)();
-    void *(*ep)(), *modobj;
-    MODULES *mod;
-    MODULE_INFO *mod_info = NULL;
+    bool success = true;
 
-    if (NULL == module || NULL == type)
+    if (strcmp(type, MODULE_PROTOCOL) == 0
+        && mod_info->modapi != MXS_MODULE_API_PROTOCOL)
     {
-        return NULL;
+        MXS_ERROR("Module '%s' does not implement the protocol API.", module);
+        success = false;
     }
+    if (strcmp(type, MODULE_AUTHENTICATOR) == 0
+        && mod_info->modapi != MXS_MODULE_API_AUTHENTICATOR)
+    {
+        MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_ROUTER) == 0
+        && mod_info->modapi != MXS_MODULE_API_ROUTER)
+    {
+        MXS_ERROR("Module '%s' does not implement the router API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_MONITOR) == 0
+        && mod_info->modapi != MXS_MODULE_API_MONITOR)
+    {
+        MXS_ERROR("Module '%s' does not implement the monitor API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_FILTER) == 0
+        && mod_info->modapi != MXS_MODULE_API_FILTER)
+    {
+        MXS_ERROR("Module '%s' does not implement the filter API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
+        && mod_info->modapi != MXS_MODULE_API_QUERY_CLASSIFIER)
+    {
+        MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
+        success = false;
+    }
+    if (mod_info->version == NULL)
+    {
+        MXS_ERROR("Module '%s' does not define a version string", module);
+        success = false;
+    }
+
+    if (mod_info->module_object == NULL)
+    {
+        MXS_ERROR("Module '%s' does not define a module object", module);
+        success = false;
+    }
+
+    return success;
+}
+
+void *load_module(const char *module, const char *type)
+{
+    ss_dassert(module && type);
+    LOADED_MODULE *mod;
 
     if ((mod = find_module(module)) == NULL)
     {
-        /*<
-         * The module is not already loaded
-         *
-         * Search of the shared object.
-         */
-
+        /** The module is not already loaded, search for the shared object */
+        char fname[MAXPATHLEN + 1];
         snprintf(fname, MAXPATHLEN + 1, "%s/lib%s.so", get_libdir(), module);
 
         if (access(fname, F_OK) == -1)
@@ -146,135 +179,54 @@ load_module(const char *module, const char *type)
             return NULL;
         }
 
-        if ((dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL)) == NULL)
+        void *dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL);
+
+        if (dlhandle == NULL)
         {
             MXS_ERROR("Unable to load library for module: "
                       "%s\n\n\t\t      %s."
                       "\n\n",
-                      module,
-                      dlerror());
+                      module, dlerror());
             return NULL;
         }
 
-        if ((sym = dlsym(dlhandle, "version")) == NULL)
-        {
-            MXS_ERROR("Version interface not supported by "
-                      "module: %s\n\t\t\t      %s.",
-                      module,
-                      dlerror());
-            dlclose(dlhandle);
-            return NULL;
-        }
-        ver = sym;
-        version = ver();
+        void *sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
 
-        /*
-         * If the module has a ModuleInit function cal it now.
-         */
-        if ((sym = dlsym(dlhandle, "ModuleInit")) != NULL)
-        {
-            void (*ModuleInit)() = sym;
-            ModuleInit();
-        }
-
-        if ((sym = dlsym(dlhandle, "info")) != NULL)
-        {
-            int fatal = 0;
-            mod_info = sym;
-            if (strcmp(type, MODULE_PROTOCOL) == 0
-                && mod_info->modapi != MODULE_API_PROTOCOL)
-            {
-                MXS_ERROR("Module '%s' does not implement the protocol API.", module);
-                fatal = 1;
-            }
-            if (strcmp(type, MODULE_AUTHENTICATOR) == 0
-                && mod_info->modapi != MODULE_API_AUTHENTICATOR)
-            {
-                MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
-                fatal = 1;
-            }
-            if (strcmp(type, MODULE_ROUTER) == 0
-                && mod_info->modapi != MODULE_API_ROUTER)
-            {
-                MXS_ERROR("Module '%s' does not implement the router API.", module);
-                fatal = 1;
-            }
-            if (strcmp(type, MODULE_MONITOR) == 0
-                && mod_info->modapi != MODULE_API_MONITOR)
-            {
-                MXS_ERROR("Module '%s' does not implement the monitor API.", module);
-                fatal = 1;
-            }
-            if (strcmp(type, MODULE_FILTER) == 0
-                && mod_info->modapi != MODULE_API_FILTER)
-            {
-                MXS_ERROR("Module '%s' does not implement the filter API.", module);
-                fatal = 1;
-            }
-            if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
-                && mod_info->modapi != MODULE_API_QUERY_CLASSIFIER)
-            {
-                MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
-                fatal = 1;
-            }
-            if (fatal)
-            {
-                dlclose(dlhandle);
-                return NULL;
-            }
-        }
-
-        if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
+        if (sym == NULL)
         {
             MXS_ERROR("Expected entry point interface missing "
                       "from module: %s\n\t\t\t      %s.",
-                      module,
-                      dlerror());
+                      module, dlerror());
             dlclose(dlhandle);
             return NULL;
         }
-        ep = sym;
-        modobj = ep();
 
-        MXS_NOTICE("Loaded module %s: %s from %s",
-                   module,
-                   version,
-                   fname);
-        register_module(module, type, dlhandle, version, modobj, mod_info);
-    }
-    else
-    {
-        /*
-         * The module is already loaded, get the entry points again and
-         * return a reference to the already loaded module.
-         */
-        modobj = mod->modobj;
+        void *(*entry_point)() = sym;
+        MXS_MODULE *mod_info = entry_point();
+
+        if (!check_module(mod_info, type, module) ||
+            (mod = register_module(module, type, dlhandle, mod_info)) == NULL)
+        {
+            dlclose(dlhandle);
+            return NULL;
+        }
+
+        MXS_NOTICE("Loaded module %s: %s from %s", module, mod_info->version, fname);
     }
 
-    return modobj;
+    return mod->modobj;
 }
 
-/**
- * Unload a module.
- *
- * No errors are returned since it is not clear that much can be done
- * to fix issues relating to unloading modules.
- *
- * @param module        The name of the module
- */
-void
-unload_module(const char *module)
+void unload_module(const char *module)
 {
-    MODULES *mod = find_module(module);
-    void *handle;
+    LOADED_MODULE *mod = find_module(module);
 
-    if (!mod)
+    if (mod)
     {
-        return;
+        void *handle = mod->handle;
+        unregister_module(module);
+        dlclose(handle);
     }
-    handle = mod->handle;
-    unregister_module(module);
-    dlclose(handle);
 }
 
 /**
@@ -284,10 +236,10 @@ unload_module(const char *module)
  * @param module        The name of the module
  * @return              The module handle or NULL if it was not found
  */
-static MODULES *
+static LOADED_MODULE *
 find_module(const char *module)
 {
-    MODULES *mod = registered;
+    LOADED_MODULE *mod = registered;
 
     if (module)
     {
@@ -316,29 +268,37 @@ find_module(const char *module)
  * @param version       The version string returned by the module
  * @param modobj        The module object
  * @param mod_info      The module information
+ * @return The new registered module or NULL on memory allocation failure
  */
-static void
-register_module(const char *module,
-                const char *type,
-                void *dlhandle,
-                char *version,
-                void *modobj,
-                MODULE_INFO *mod_info)
+static LOADED_MODULE* register_module(const char *module,
+                                      const char *type,
+                                      void *dlhandle,
+                                      MXS_MODULE *mod_info)
 {
-    MODULES *mod;
+    module = MXS_STRDUP(module);
+    type = MXS_STRDUP(type);
+    char *version = MXS_STRDUP(mod_info->version);
 
-    if ((mod = malloc(sizeof(MODULES))) == NULL)
+    LOADED_MODULE *mod = (LOADED_MODULE *)MXS_MALLOC(sizeof(LOADED_MODULE));
+
+    if (!module || !type || !version || !mod)
     {
-        return;
+        MXS_FREE((void*)module);
+        MXS_FREE((void*)type);
+        MXS_FREE(version);
+        MXS_FREE(mod);
+        return NULL;
     }
-    mod->module = strdup(module);
-    mod->type = strdup(type);
+
+    mod->module = (char*)module;
+    mod->type = (char*)type;
     mod->handle = dlhandle;
-    mod->version = strdup(version);
-    mod->modobj = modobj;
+    mod->version = version;
+    mod->modobj = mod_info->module_object;
     mod->next = registered;
     mod->info = mod_info;
     registered = mod;
+    return mod;
 }
 
 /**
@@ -349,8 +309,8 @@ register_module(const char *module,
 static void
 unregister_module(const char *module)
 {
-    MODULES *mod = find_module(module);
-    MODULES *ptr;
+    LOADED_MODULE *mod = find_module(module);
+    LOADED_MODULE *ptr;
 
     if (!mod)
     {
@@ -382,20 +342,13 @@ unregister_module(const char *module)
      * memory related to it can be freed
      */
     dlclose(mod->handle);
-    free(mod->module);
-    free(mod->type);
-    free(mod->version);
-    free(mod);
+    MXS_FREE(mod->module);
+    MXS_FREE(mod->type);
+    MXS_FREE(mod->version);
+    MXS_FREE(mod);
 }
 
-/**
- * Unload all modules
- *
- * Remove all the modules from the system, called during shutdown
- * to allow termination hooks to be called.
- */
-void
-unload_all_modules()
+void unload_all_modules()
 {
     while (registered)
     {
@@ -403,15 +356,9 @@ unload_all_modules()
     }
 }
 
-/**
- * Print Modules
- *
- * Diagnostic routine to display all the loaded modules
- */
-void
-printModules()
+void printModules()
 {
-    MODULES *ptr = registered;
+    LOADED_MODULE *ptr = registered;
 
     printf("%-15s | %-11s | Version\n", "Module Name", "Module Type");
     printf("-----------------------------------------------------\n");
@@ -422,15 +369,9 @@ printModules()
     }
 }
 
-/**
- * Print Modules to a DCB
- *
- * Diagnostic routine to display all the loaded modules
- */
-void
-dprintAllModules(DCB *dcb)
+void dprintAllModules(DCB *dcb)
 {
-    MODULES *ptr = registered;
+    LOADED_MODULE *ptr = registered;
 
     dcb_printf(dcb, "Modules.\n");
     dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n");
@@ -444,15 +385,15 @@ dprintAllModules(DCB *dcb)
                        ptr->info->api_version.major,
                        ptr->info->api_version.minor,
                        ptr->info->api_version.patch,
-                       ptr->info->status == MODULE_IN_DEVELOPMENT
+                       ptr->info->status == MXS_MODULE_IN_DEVELOPMENT
                        ? "In Development"
-                       : (ptr->info->status == MODULE_ALPHA_RELEASE
+                       : (ptr->info->status == MXS_MODULE_ALPHA_RELEASE
                           ? "Alpha"
-                          : (ptr->info->status == MODULE_BETA_RELEASE
+                          : (ptr->info->status == MXS_MODULE_BETA_RELEASE
                              ? "Beta"
-                             : (ptr->info->status == MODULE_GA
+                             : (ptr->info->status == MXS_MODULE_GA
                                 ? "GA"
-                                : (ptr->info->status == MODULE_EXPERIMENTAL
+                                : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
                                    ? "Experimental" : "Unknown")))));
         dcb_printf(dcb, "\n");
         ptr = ptr->next;
@@ -460,16 +401,10 @@ dprintAllModules(DCB *dcb)
     dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n\n");
 }
 
-/**
- * Print Modules to a DCB
- *
- * Diagnostic routine to display all the loaded modules
- */
-void
-moduleShowFeedbackReport(DCB *dcb)
+void moduleShowFeedbackReport(DCB *dcb)
 {
     GWBUF *buffer;
-    MODULES *modules_list = registered;
+    LOADED_MODULE *modules_list = registered;
     FEEDBACK_CONF *feedback_config = config_get_feedback_data();
 
     if (!module_create_feedback_report(&buffer, modules_list, feedback_config))
@@ -496,7 +431,7 @@ moduleRowCallback(RESULTSET *set, void *data)
     int i = 0;;
     char *stat, buf[20];
     RESULT_ROW *row;
-    MODULES *ptr;
+    LOADED_MODULE *ptr;
 
     ptr = registered;
     while (i < *rowno && ptr)
@@ -506,7 +441,7 @@ moduleRowCallback(RESULTSET *set, void *data)
     }
     if (ptr == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     (*rowno)++;
@@ -519,38 +454,32 @@ moduleRowCallback(RESULTSET *set, void *data)
              ptr->info->api_version.patch);
     buf[19] = '\0';
     resultset_row_set(row, 3, buf);
-    resultset_row_set(row, 4, ptr->info->status == MODULE_IN_DEVELOPMENT
+    resultset_row_set(row, 4, ptr->info->status == MXS_MODULE_IN_DEVELOPMENT
                       ? "In Development"
-                      : (ptr->info->status == MODULE_ALPHA_RELEASE
+                      : (ptr->info->status == MXS_MODULE_ALPHA_RELEASE
                          ? "Alpha"
-                         : (ptr->info->status == MODULE_BETA_RELEASE
+                         : (ptr->info->status == MXS_MODULE_BETA_RELEASE
                             ? "Beta"
-                            : (ptr->info->status == MODULE_GA
+                            : (ptr->info->status == MXS_MODULE_GA
                                ? "GA"
-                               : (ptr->info->status == MODULE_EXPERIMENTAL
+                               : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
                                   ? "Experimental" : "Unknown")))));
     return row;
 }
 
-/**
- * Return a resultset that has the current set of modules in it
- *
- * @return A Result set
- */
-RESULTSET *
-moduleGetList()
+RESULTSET *moduleGetList()
 {
     RESULTSET       *set;
     int             *data;
 
-    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
     {
         return NULL;
     }
     *data = 0;
     if ((set = resultset_create(moduleRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Module Name", 18, COL_TYPE_VARCHAR);
@@ -562,15 +491,9 @@ moduleGetList()
     return set;
 }
 
-/**
- * Send loaded modules info to notification service
- *
- *  @param data The configuration details of notification service
- */
-void
-module_feedback_send(void* data)
+void module_feedback_send(void* data)
 {
-    MODULES *modules_list = registered;
+    LOADED_MODULE *modules_list = registered;
     CURL *curl = NULL;
     CURLcode res;
     struct curl_httppost *formpost = NULL;
@@ -688,9 +611,9 @@ module_feedback_send(void* data)
  */
 
 int
-module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg)
+module_create_feedback_report(GWBUF **buffer, LOADED_MODULE *modules, FEEDBACK_CONF *cfg)
 {
-    MODULES *ptr = modules;
+    LOADED_MODULE *ptr = modules;
     int n_mod = 0;
     char *data_ptr = NULL;
     char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1] = "";
@@ -768,15 +691,15 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
             data_ptr += strlen(data_ptr);
             snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "module_%s_releasestatus\t%s\n",
                      ptr->module,
-                     ptr->info->status == MODULE_IN_DEVELOPMENT
+                     ptr->info->status == MXS_MODULE_IN_DEVELOPMENT
                      ? "In Development"
-                     : (ptr->info->status == MODULE_ALPHA_RELEASE
+                     : (ptr->info->status == MXS_MODULE_ALPHA_RELEASE
                         ? "Alpha"
-                        : (ptr->info->status == MODULE_BETA_RELEASE
+                        : (ptr->info->status == MXS_MODULE_BETA_RELEASE
                            ? "Beta"
-                           : (ptr->info->status == MODULE_GA
+                           : (ptr->info->status == MXS_MODULE_GA
                               ? "GA"
-                              : (ptr->info->status == MODULE_EXPERIMENTAL
+                              : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
                                  ? "Experimental" : "Unknown")))));
             data_ptr += strlen(data_ptr);
         }
@@ -807,7 +730,8 @@ do_http_post(GWBUF *buffer, void *cfg)
     FEEDBACK_CONF *feedback_config = (FEEDBACK_CONF *) cfg;
 
     /* allocate first memory chunck for httpd servr reply */
-    chunk.data = malloc(1);  /* will be grown as needed by the realloc above */
+    chunk.data = MXS_MALLOC(1);  /* will be grown as needed by the realloc above */
+    MXS_ABORT_IF_NULL(chunk.data);
     chunk.size = 0;    /* no data at this point */
 
     /* Initializing curl library for data send via HTTP */
@@ -901,7 +825,7 @@ cleanup:
 
     if (chunk.data)
     {
-        free(chunk.data);
+        MXS_FREE(chunk.data);
     }
 
     if (curl)
@@ -915,3 +839,56 @@ cleanup:
     return ret_code;
 }
 
+const MXS_MODULE *get_module(const char *name, const char *type)
+{
+    LOADED_MODULE *mod = find_module(name);
+
+    if (mod == NULL && load_module(name, type))
+    {
+        mod = find_module(name);
+    }
+
+    return mod ? mod->info : NULL;
+}
+
+MXS_MODULE_ITERATOR mxs_module_iterator_get(const char* type)
+{
+    LOADED_MODULE* module = registered;
+
+    while (module && type && (strcmp(module->type, type) != 0))
+    {
+        module = module->next;
+    }
+
+    MXS_MODULE_ITERATOR iterator;
+    iterator.type = type;
+    iterator.position = module;
+
+    return iterator;
+}
+
+bool mxs_module_iterator_has_next(const MXS_MODULE_ITERATOR* iterator)
+{
+    return iterator->position != NULL;
+}
+
+MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator)
+{
+    MXS_MODULE* module = NULL;
+    LOADED_MODULE* loaded_module = (LOADED_MODULE*)iterator->position;
+
+    if (loaded_module)
+    {
+        module = loaded_module->info;
+
+        do
+        {
+            loaded_module = loaded_module->next;
+        }
+        while (loaded_module && iterator->type && (strcmp(loaded_module->type, iterator->type) != 0));
+
+        iterator->position = loaded_module;
+    }
+
+    return module;
+}

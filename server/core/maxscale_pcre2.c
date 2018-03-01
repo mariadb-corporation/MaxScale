@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -24,7 +24,8 @@
  * @endverbatim
  */
 
-#include <maxscale_pcre2.h>
+#include <maxscale/pcre2.h>
+#include <maxscale/alloc.h>
 
 /**
  * Utility wrapper for PCRE2 library function call pcre2_substitute.
@@ -38,7 +39,7 @@
  * @param subject Subject string
  * @param replace Replacement string
  * @param dest Destination buffer
- * @param size Size of the desination buffer
+ * @param size Size of the destination buffer
  * @return MXS_PCRE2_MATCH if replacements were made, MXS_PCRE2_NOMATCH if nothing
  * was replaced or MXS_PCRE2_ERROR if memory reallocation failed
  */
@@ -51,18 +52,20 @@ mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code *re, const char *subject, con
 
     if (mdata)
     {
+        size_t size_tmp = *size;
         while ((rc = pcre2_substitute(re, (PCRE2_SPTR) subject, PCRE2_ZERO_TERMINATED, 0,
                                       PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                       (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
-                                      (PCRE2_UCHAR*) *dest, size)) == PCRE2_ERROR_NOMEMORY)
+                                      (PCRE2_UCHAR*) *dest, &size_tmp)) == PCRE2_ERROR_NOMEMORY)
         {
-            char *tmp = realloc(*dest, *size * 2);
+            size_tmp = 2 * (*size);
+            char *tmp = MXS_REALLOC(*dest, size_tmp);
             if (tmp == NULL)
             {
                 break;
             }
             *dest = tmp;
-            *size *= 2;
+            *size = size_tmp;
         }
 
         if (rc > 0)

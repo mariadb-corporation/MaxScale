@@ -1,0 +1,107 @@
+[maxscale]
+threads=1
+log_warning=1
+
+[MySQL Monitor]
+type=monitor
+module=galeramon
+servers=server1,server2,server3
+#user=maxmon
+#passwd=maxpwd
+user=maxskysql
+passwd=skysql
+root_node_as_master=false
+
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1,server2,server3
+#user=maxpriv
+#passwd=maxpwd
+user=maxskysql
+passwd=skysql
+filters=MyLogFilter
+version_string=MariaDBEC-10.0.14
+localhost_match_wildcard_host=1
+max_slave_connections=10%
+#max_slave_replication_lag=30
+#router_options=slave_selection_criteria=LEAST_BEHIND_MASTER
+
+[Read Connection Router]
+type=service
+router=readconnroute
+router_options=synced
+servers=server1,server2,server3
+#user=maxpriv
+#passwd=maxpwd
+user=maxskysql
+passwd=skysql
+
+[Read Connection Listener Slave]
+type=listener
+service=Read Connection Router Slave
+protocol=MySQLClient
+port=4009
+
+[Read Connection Router Slave]
+type=service
+router=readconnroute
+router_options= slave
+servers=server1,server2,server3
+user=maxskysql
+passwd=skysql
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+#socket=/tmp/rwsplit.sock
+
+[Read Connection Listener]
+type=listener
+service=Read Connection Router
+protocol=MySQLClient
+port=4008
+#socket=/tmp/readconn.sock
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+#address=localhost
+socket=default
+
+[MyLogFilter]
+type=filter
+module=qlafilter
+filebase=/tmp/QueryLog
+
+[server1]
+type=server
+address=###galera_server_IP_1###
+port=###galera_server_port_1###
+protocol=MySQLBackend
+
+[server2]
+type=server
+address=###galera_server_IP_2###
+port=###galera_server_port_2###
+protocol=MySQLBackend
+
+[server3]
+type=server
+address=###galera_server_IP_3###
+port=###galera_server_port_3###
+protocol=MySQLBackend
+
+#[server4]
+#type=server
+#address=###galera_server_IP_4###
+#port=###galera_server_port_4###
+#protocol=MySQLBackend
+

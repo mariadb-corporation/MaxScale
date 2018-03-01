@@ -16,9 +16,12 @@ include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100/tsrc)
 include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100)
 include_directories(${MARIADB_CONNECTOR_INCLUDE_DIR})
 
+# GCC thinks there is an array-bounds error in sqlite code.
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=array-bounds")
+
 add_library(qc_sqlite SHARED qc_sqlite.c qc_sqlite3.c builtin_functions.c)
 add_dependencies(qc_sqlite maxscale_sqlite)
-add_definitions(-DMAXSCALE -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_OMIT_ATTACH -DSQLITE_OMIT_REINDEX -DSQLITE_OMIT_AUTOVACUUM -DSQLITE_OMIT_PRAGMA)
+add_definitions(-DMAXSCALE -DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_OMIT_ATTACH -DSQLITE_OMIT_REINDEX -DSQLITE_OMIT_AUTOVACUUM -DSQLITE_OMIT_PRAGMA)
 
 set_target_properties(qc_sqlite PROPERTIES VERSION "1.0.0")
 set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/qc_sqlite.map)
@@ -30,4 +33,5 @@ set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,--version-script=${CMA
 #
 # target_link_libraries(qc_sqlite maxscale-common)
 # set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,-z,defs)
-install(TARGETS qc_sqlite COMPONENT lib DESTINATION ${MAXSCALE_LIBDIR})
+
+install_module(qc_sqlite core)

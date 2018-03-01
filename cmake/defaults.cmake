@@ -22,7 +22,7 @@ set(BUILD_RABBITMQ TRUE CACHE BOOL "Build RabbitMQ components")
 set(BUILD_BINLOG TRUE CACHE BOOL "Build binlog router")
 
 # Build the Avro router
-set(BUILD_AVRO FALSE CACHE BOOL "Build Avro router")
+set(BUILD_CDC TRUE CACHE BOOL "Build Avro router")
 
 # Build the multimaster monitor
 set(BUILD_MMMON TRUE CACHE BOOL "Build multimaster monitor")
@@ -53,3 +53,12 @@ set(WITH_TCMALLOC FALSE CACHE BOOL "Use tcmalloc as the memory allocator")
 
 # Use jemalloc as the memory allocator
 set(WITH_JEMALLOC FALSE CACHE BOOL "Use jemalloc as the memory allocator")
+
+# Install experimental modules
+set(INSTALL_EXPERIMENTAL TRUE CACHE BOOL "Install experimental modules")
+
+# Default package name
+set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
+
+# Which component to build (core, experimental, devel)
+set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel, all)")

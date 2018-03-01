@@ -1,0 +1,126 @@
+#
+# Masking Smoke
+#
+# We expect the masking rules to be as follows:
+#
+# {
+#     "rules": [
+#         {
+#             "replace": {
+#                 "column": "a"
+#             },
+#             "with": {
+#                 "fill": "X"
+#             }
+#         }
+#     ]
+# }
+
+--disable_warnings
+drop database if exists maskingdb;
+--enable_warnings
+
+create database maskingdb;
+use maskingdb;
+
+#
+# Each table contains a single column 'a' of a type subject
+# to masking.
+#
+create table masking_BINARY     (a BINARY(3));
+create table masking_VARBINARY  (a VARBINARY(8));
+create table masking_CHAR       (a CHAR(3));
+create table masking_VARCHAR    (a VARCHAR(13));
+create table masking_BLOB       (a BLOB);
+create table masking_TINYBLOB   (a TINYBLOB);
+create table masking_MEDIUMBLOB (a MEDIUMBLOB);
+create table masking_LONGBLOB   (a LONGBLOB);
+create table masking_TEXT       (a TEXT);
+create table masking_TINYTEXT   (a TINYTEXT);
+create table masking_MEDIUMTEXT (a MEDIUMTEXT);
+create table masking_LONGTEXT   (a LONGTEXT);
+create table masking_ENUM       (a ENUM('aaa', 'bbb', 'ccc'));
+create table masking_SET        (a SET('aaa', 'bbb', 'ccc'));
+
+insert into masking_BINARY     values ("aaa");
+insert into masking_VARBINARY  values ("aaa");
+insert into masking_CHAR       values ("aaa");
+insert into masking_VARCHAR    values ("aaa");
+insert into masking_BLOB       values ("aaa");
+insert into masking_TINYBLOB   values ("aaa");
+insert into masking_MEDIUMBLOB values ("aaa");
+insert into masking_LONGBLOB   values ("aaa");
+insert into masking_TEXT       values ("aaa");
+insert into masking_TINYTEXT   values ("aaa");
+insert into masking_MEDIUMTEXT values ("aaa");
+insert into masking_LONGTEXT   values ("aaa");
+insert into masking_ENUM       values ("aaa");
+insert into masking_SET        values ("aaa");
+
+#
+# In masking_smoke.result, we should have:
+#
+#   a
+#   XXX
+#
+# for each following select.
+#
+select * from masking_BINARY;
+select * from masking_VARBINARY;
+select * from masking_CHAR;
+select * from masking_VARCHAR;
+select * from masking_BLOB;
+select * from masking_TINYBLOB;
+select * from masking_MEDIUMBLOB;
+select * from masking_LONGBLOB;
+select * from masking_TEXT;
+select * from masking_TINYTEXT;
+select * from masking_MEDIUMTEXT;
+select * from masking_LONGTEXT;
+select * from masking_ENUM;
+select * from masking_SET;
+
+#
+# Each table contains a single column 'a' of a type NOT subject
+# to masking.
+#
+create table masking_INT       (a INT);
+create table masking_REAL      (a REAL(3, 2));
+create table masking_DECIMAL   (a DECIMAL(3, 2));
+create table masking_FLOAT     (a FLOAT(3, 2));
+create table masking_DOUBLE    (a DOUBLE(3, 2));
+create table masking_DATE      (a DATE);
+create table masking_TIME      (a TIME);
+create table masking_DATETIME  (a DATETIME);
+create table masking_TIMESTAMP (a TIMESTAMP);
+create table masking_YEAR      (a YEAR);
+
+insert into masking_INT       values (4711);
+insert into masking_REAL      values (3.14);
+insert into masking_DECIMAL   values (3.14);
+insert into masking_FLOAT     values (3.14);
+insert into masking_DOUBLE    values (3.14);
+insert into masking_DATE      values ('2017-01-24');
+insert into masking_TIME      values ('13:52:21');
+insert into masking_DATETIME  values ('2017-01-24 13:52:21');
+insert into masking_TIMESTAMP values ('2017-01-24 13:52:21');
+insert into masking_YEAR      values ('2001');
+
+#
+# In masking_smoke.result, we should have:
+#
+#   a
+#   <whatever-we-put-there>
+#
+# for each following select.
+#
+select * from masking_INT;
+select * from masking_REAL;
+select * from masking_DECIMAL;
+select * from masking_FLOAT;
+select * from masking_DOUBLE;
+select * from masking_DATE;
+select * from masking_TIME;
+select * from masking_DATETIME;
+select * from masking_TIMESTAMP;
+select * from masking_YEAR;

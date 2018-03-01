@@ -1,24 +1,21 @@
-# Maxbinlogcheck
-
-# The MySQL/MariaDB binlog check utility 
-
-Massimiliano Pinto
-
-Last Updated: 08th September 2015
+# Maxbinlogcheck, the MariaDB binlog check utility
 
 # Overview
 
-Maxbinlogcheck is a command line utility for checking binlogfiles downloaded by MariaDB MaxScale binlog router or the MySQL/MariaDB binlog files stored in a database server acting as a master in a replication environment.  
-It checks the binlog file against any corruption and incomplete transaction stored and reports a transaction summary after reading all the events.  
-It may optionally truncate binlog file.
+Maxbinlogcheck is a command line utility for checking binlogfiles. The files may
+have been downloaded by the MariaDB MaxScale binlog router or they may be
+MariaDB binlog files stored in a database server acting as a master in a
+replication environment. Maxbinlogcheck checks the binlog files against any
+corruption and stored incomplete transactions and reports a transaction summary
+after reading all the events. It may optionally truncate the binlog file.
 
-Maxbinlogcheck supports
+Maxbinlogcheck supports:
 
 * MariaDB 5.5 and MySQL 5.6
-
-* MariaDB 10.0 with a command line option
+* MariaDB 10.0 and 10.1 with a command line option
 
 # Running maxbinlogcheck
+
 ```
 # /usr/local/bin/maxbinlogcheck /path_to_file/bin.000002
 ```
@@ -34,29 +31,45 @@ The maxbinlogcheck command accepts a number of switches
     <td>Description</td>
   </tr>
   <tr>
-    <td>-f</td>
-    <td>--fix</td>
-    <td>If the option is set the binlog file will be truncated at last safe transaction pos in case of any error</td>
+    <td>-f</td> <td>--fix</td> <td>If set the binlog file will be truncated at
+    last safe transaction pos in case of any error</td>
   </tr>
   <tr>
     <td>-M</td>
     <td>--mariadb10</td>
-    <td>Check the current binlog against MariaDB 10.0.x events</td>
+    <td>Checks the current binlog against MariaDB 10.0.x events</td>
   </tr>
   <tr>
     <td>-d</td>
     <td>--debug</td>
-    <td>Set the debug mode. If set the FD Events, Rotate events and opening/closing transactions are displayed.</td>
+    <td>Sets the debug mode. If set the FD Events, Rotate events and
+    opening/closing transactions are displayed.</td>
   </tr>
   <tr>
     <td>-?</td>
     <td>--help</td>
-    <td>Print usage information regarding maxbinlogcheck</td>
+    <td>Prints usage information regarding maxbinlogcheck</td>
   </tr>
   <tr>
     <td>-V</td>
     <td>--version</td>
-    <td>Print the maxbinlogcheck version information</td>
+    <td>Prints the maxbinlogcheck version information</td>
+  </tr>
+  <tr>
+    <td>-K</td>
+    <td>--key_file</td>
+    <td>AES Key file for MariaDB 10.1 binlog file decryption</td>
+  </tr>
+  <tr>
+    <td>-A</td>
+    <td>--aes_algo</td>
+    <td>AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC,
+    AES_CTR)</td>
+  </tr>
+    <tr>
+    <td>-H</td>
+    <td>--header</td>
+    <td>Prints the binlog event header</td>
   </tr>
 </table>
 
@@ -160,7 +173,7 @@ The maxbinlogcheck command accepts a number of switches
 This file is corrupted, as reported by the utility:
 
 ```
-[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002 
+[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002
 2015-09-08 10:03:16   maxbinlogcheck 1.0.0
 2015-09-08 10:03:16   Checking /servers/binlogs/new-trx/bin.000002 (bin.000002), size 109498 bytes
 2015-09-08 10:03:16   Event size error: size 0 at 290.
@@ -168,7 +181,7 @@ This file is corrupted, as reported by the utility:
 2015-09-08 10:03:16   Check retcode: 1, Binlog Pos = 245
 ```
 
-The suggested safe pos is 245
+The suggested safe pos is 245.
 
 Use -f option for fix with debug:
 
@@ -190,7 +203,7 @@ Use -f option for fix with debug:
 Check it again, last pos will be 245 and no errors will be reported:
 
 ```
-[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002 -d 
+[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002 -d
 2015-09-08 09:56:56   maxbinlogcheck 1.0.0
 2015-09-08 09:56:56   Checking /servers/binlogs/new-trx/bin.000002 (bin.000002), size 245 bytes
 2015-09-08 09:56:56   - Format Description event FDE @ 4, size 241
@@ -266,8 +279,10 @@ And finally big transaction is now done.
 2015-09-08 10:17:16   Check retcode: 0, Binlog Pos = 590760698
 ```
 
-**Note**  
-with current maxbinlogcheck it's not possible to fix a binlog with incomplete transaction and no other errors
+**Note**
+
+With current maxbinlogcheck it's not possible to fix a binlog with incomplete
+transaction and no other errors
 
 If that is really desired it will be possible with UNIX command line:
 
@@ -327,4 +342,61 @@ Check result:
 			No. of Bytes                    1.2M             1.2M             1.2M
 2015-09-08 12:49:18   Check retcode: 0, Binlog Pos = 1215327
 ```
+### MariaDB 10.1 encrypted binlogs
 
+```
+[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck -M -d /mariadb-10.1.16/data/mysql-bin.000008 -K /var/binlogs/key_file.txt -A AES_CTR
+2016-12-07 16:18:35   notice : maxbinlogcheck 2.1.0
+2016-12-07 16:18:35   notice : Decrypting binlog file with algorithm: aes_cbc, KEY len 256 bits
+2016-12-07 16:18:35   notice : Checking /mariadb-10.1.16/data/mysql-bin.000008 (mysql-bin.000008), size 418 bytes
+2016-12-07 16:18:35   debug  : - Format Description event FDE @ 4, size 245, time 1481044895 (Tue Dec  6 18:21:35 2016)
+2016-12-07 16:18:35   debug  :        FDE ServerVersion [                                   10.1.16-MariaDB]
+2016-12-07 16:18:35   debug  :        FDE Header EventLength 19, N. of supported MySQL/MariaDB events 164
+2016-12-07 16:18:35   debug  :        FDE Checksum alg desc 1, alg type BINLOG_CHECKSUM_ALG_CRC32
+2016-12-07 16:18:35   debug  : - START_ENCRYPTION event @ 249, size 40, next pos is @ 289, flags 0
+2016-12-07 16:18:35   debug  :         Encryption scheme: 1, key_version: 1, nonce: 6732673744475A1F5852575C
+2016-12-07 16:18:35   debug  : End of binlog file [mysql-bin.000003] at 418.
+2016-12-07 16:18:35   notice : 1481044895 @ 249, Start Encryption Event, (Tue Dec  6 18:21:35 2016), First EventTime
+2016-12-07 16:18:35   notice : 0 @ 375, Binlog Checkpoint Event, (Thu Jan  1 01:00:00 1970), Last EventTime
+2016-12-07 16:18:35   notice : Check retcode: 0, Binlog Pos = 418
+```
+Key File content example: /var/binlogs/key_file.txt
+
+First two bytes are: the encryption scheme, it must be 1, and the ';' separator.
+Following bytes are the HEX representation of the key (length must be 16, 24 or
+32). The example shows a 32 bytes key in HEX format (64 bytes):
+
+```
+1;666f6f62617220676f657320746f207468652062617220666f7220636f66666565
+```
+
+### Binlog event header
+
+```
+[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck -M -d /mysql.5.6.17/data/mysql-bin.000001 -H
+2016-12-07 16:23:02   notice : maxbinlogcheck 2.1.0
+2016-12-07 16:23:02   notice : Checking /mysql.5.6.17/data/mysql-bin.000001 (mysql-bin.000001), size 173 bytes
+2016-12-07 16:23:02   debug  : - Format Description event FDE @ 4, size 116, time 1455024737 (Tue Feb  9 14:32:17 2016)
+2016-12-07 16:23:02   debug  :        FDE ServerVersion [                                        5.6.17-log]
+2016-12-07 16:23:02   debug  :        FDE Header EventLength 19, N. of supported MySQL/MariaDB events 35
+2016-12-07 16:23:02   debug  :        FDE Checksum alg desc 1, alg type BINLOG_CHECKSUM_ALG_CRC32
+2016-12-07 16:23:02   debug  :         ==== Event Header ====
+                                       Event time 1455024737
+                                       Event Type 15 (Format Description Event)
+                                       Server Id 1
+                                       NextPos 120
+                                       Flags 0
+2016-12-07 16:23:02   debug  :         CRC32 0xdc0879e8
+2016-12-07 16:23:02   debug  :         ==== Event Header ====
+                                       Event time 1455025495
+                                       Event Type 4 (Rotate Event)
+                                       Server Id 1
+                                       NextPos 173
+                                       Flags 0
+2016-12-07 16:23:02   debug  :         CRC32 0xfff32f78
+2016-12-07 16:23:02   debug  : - Rotate event @ 120, next file is [mysql-bin.000002] @ 4
+2016-12-07 16:23:02   debug  : End of binlog file [mysql-bin.000001] at 173.
+2016-12-07 16:23:02   notice : 1455025495 @ 120, Rotate Event, (Tue Feb  9 14:44:55 2016), First EventTime
+2016-12-07 16:23:02   notice : 1455025495 @ 120, Rotate Event, (Tue Feb  9 14:44:55 2016), Last EventTime
+2016-12-07 16:23:02   notice : Check retcode: 0, Binlog Pos = 173
+```

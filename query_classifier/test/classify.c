@@ -2,26 +2,25 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
 
-#include <my_config.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include <query_classifier.h>
-#include <buffer.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/buffer.h>
 #include <mysql.h>
 #include <unistd.h>
-#include <gwdirs.h>
-#include <log_manager.h>
+#include <maxscale/paths.h>
+#include <maxscale/log_manager.h>
 
 char* append(char* types, const char* type_name, size_t* lenp)
 {
@@ -196,17 +195,19 @@ int test(FILE* input, FILE* expected)
         {
             tok = strpbrk(strbuff, ";");
             unsigned int qlen = tok - strbuff + 1;
-            GWBUF* buff = gwbuf_alloc(qlen + 6);
-            *((unsigned char*)(GWBUF_DATA(buff))) = qlen;
-            *((unsigned char*)(GWBUF_DATA(buff) + 1)) = (qlen >> 8);
-            *((unsigned char*)(GWBUF_DATA(buff) + 2)) = (qlen >> 16);
+            unsigned int payload_len = qlen + 1;
+            unsigned int buf_len = payload_len + 4;
+            GWBUF* buff = gwbuf_alloc(buf_len);
+            *((unsigned char*)(GWBUF_DATA(buff))) = payload_len;
+            *((unsigned char*)(GWBUF_DATA(buff) + 1)) = (payload_len >> 8);
+            *((unsigned char*)(GWBUF_DATA(buff) + 2)) = (payload_len >> 16);
             *((unsigned char*)(GWBUF_DATA(buff) + 3)) = 0x00;
             *((unsigned char*)(GWBUF_DATA(buff) + 4)) = 0x03;
             memcpy(GWBUF_DATA(buff) + 5, strbuff, qlen);
             memmove(strbuff, tok + 1, strsz - qlen);
             strsz -= qlen;
             memset(strbuff + strsz, 0, buffsz - strsz);
-            qc_query_type_t type = qc_get_type(buff);
+            qc_query_type_t type = qc_get_type_mask(buff);
             char expbuff[256];
             int expos = 0;
 
@@ -312,10 +313,10 @@ int main(int argc, char** argv)
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_init(lib, NULL))
+            if (qc_setup(lib, NULL) && qc_process_init(QC_INIT_BOTH))
             {
                 rc = run(input_name, expected_name);
-                qc_end();
+                qc_process_end(QC_INIT_BOTH);
             }
             else
             {

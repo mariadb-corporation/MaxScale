@@ -1,0 +1,2 @@
+rule test1 deny wildcard1
+users %@% match all rules test1

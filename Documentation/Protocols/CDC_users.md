@@ -3,7 +3,7 @@
 Change Data Capture (CDC) is a new MaxScale protocol that allows compatible
 clients to authenticate and register for Change Data Capture events.  The new
 protocol must be use in conjunction with AVRO router which currently converts
-MySQL binlog events into AVRO records.  Clients connect to CDC listener and
+MariaDB binlog events into AVRO records.  Clients connect to CDC listener and
 authenticate using credentials provided in a format described in the [CDC Protocol documentation](CDC.md).
 
 **Note**: If no users are found in that file or if it doesn't exist, the only
@@ -19,6 +19,15 @@ password=cdc_password
 ```
 
 ## Creating new CDC users
+
+Starting with MaxScale 2.1, users can also be created through MaxAdmin:
+
+```
+maxadmin call command cdc add_user <service> <name> <password>
+```
+
+The _<name>_ should be the service name where the user is created. Older
+versions of MaxScale should use the _cdc_users.py_ script.
 
 ```
 bash$ cdc_users.py [-h] USER PASSWORD

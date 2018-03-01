@@ -1,0 +1,108 @@
+[maxscale]
+threads=###threads###
+log_warning=1
+
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+###repl51###
+servers= server1, server2,server3  ,server4
+user=maxskysql
+passwd= skysql
+
+[RW_Router]
+type=service
+router=readconnroute
+servers=server1
+user=maxskysql
+passwd=skysql
+version_string=5.1-OLD-Bored-Mysql
+filters=DuplicaFilter
+
+[RW_Split]
+type=service
+router=readwritesplit
+servers=server1,server3,server2
+user=maxskysql
+passwd=skysql
+
+[DuplicaFilter]
+type=filter
+module=tee
+service=RW_Split
+
+[RW_Listener]
+type=listener
+service=RW_Router
+protocol=MySQLClient
+port=4006
+
+[RW_Split_list]
+type=listener
+service=RW_Split
+protocol=MySQLClient
+port=4016
+
+[Read Connection Router Slave]
+type=service
+router=readconnroute
+router_options= slave
+servers=server1,server2,server3,server4
+user=maxskysql
+passwd=skysql
+
+[Read Connection Router Master]
+type=service
+router=readconnroute
+router_options=master
+servers=server1,server2,server3,server4
+user=maxskysql
+passwd=skysql
+
+[Read Connection Listener Slave]
+type=listener
+service=Read Connection Router Slave
+protocol=MySQLClient
+port=4009
+
+[Read Connection Listener Master]
+type=listener
+service=Read Connection Router Master
+protocol=MySQLClient
+port=4008
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+
+socket=default
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
+protocol=MySQLBackend
+
+[server3]
+type=server
+address=###node_server_IP_3###
+port=###node_server_port_3###
+protocol=MySQLBackend
+
+[server4]
+type=server
+address=###node_server_IP_4###
+port=###node_server_port_4###
+protocol=MySQLBackend
+

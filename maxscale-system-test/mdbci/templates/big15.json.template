@@ -1,0 +1,229 @@
+{
+  "node_000" :
+  {
+        "hostname" : "node_000",
+        "box" : "centos_7_aws_large",
+	"product" : {
+      		"name": "${product}",
+		"version": "${version}",
+                "cnf_template" : "server1.cnf",
+                "cnf_template_path": "${cnf_path}"
+	}
+
+  },
+
+  "node_001" :
+  {
+        "hostname" : "node_001",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server2.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_002" :
+  {
+        "hostname" : "node_002",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server3.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "node_003" :
+  {
+        "hostname" : "node_003",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server4.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_004" :
+  {
+        "hostname" : "node_004",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server5.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_005" :
+  {
+        "hostname" : "node_005",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server6.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_006" :
+  {
+        "hostname" : "node_006",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server7.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_007" :
+  {
+        "hostname" : "node_007",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server8.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_008" :
+  {
+        "hostname" : "node_008",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server9.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_009" :
+  {
+        "hostname" : "node_009",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server10.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_010" :
+  {
+        "hostname" : "node_0010",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server11.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_011" :
+  {
+        "hostname" : "node_0011",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server12.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_012" :
+  {
+        "hostname" : "node_0012",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server13.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_013" :
+  {
+        "hostname" : "node_0013",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server14.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+  "node_014" :
+  {
+        "hostname" : "node_0014",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "${product}",
+                "version": "${version}",
+                "cnf_template" : "server15.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "galera_000" :
+  {
+        "hostname" : "galera_000",
+        "box" : "centos_7_aws",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server1.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "galera_001" :
+  {
+        "hostname" : "galera_001",
+        "box" : "centos_7_aws",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server2.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "galera_002" :
+  {
+        "hostname" : "galera_002",
+        "box" : "centos_7_aws",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server3.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "galera_003" :
+  {
+        "hostname" : "galera_003",
+        "box" : "centos_7_aws",
+        "product" : {
+                "name": "galera",
+                "version": "${galera_version}",
+                "cnf_template" : "galera_server4.cnf",
+                "cnf_template_path": "${cnf_path}"
+        }
+  },
+
+  "maxscale" :
+  {
+        "hostname" : "maxscale",
+        "box" : "centos_7_aws_large",
+        "product" : {
+                "name": "maxscale"
+        }
+
+  }
+}

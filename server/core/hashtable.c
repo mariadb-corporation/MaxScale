@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -17,7 +17,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <hashtable.h>
+#include <errno.h>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/hashtable.h>
 
 /**
  * @file hashtable.c General purpose hashtable routines
@@ -65,11 +68,11 @@ static  void hashtable_write_lock(HASHTABLE *table);
 static  void hashtable_write_unlock(HASHTABLE *table);
 static HASHTABLE *hashtable_alloc_real(HASHTABLE* target,
                                        int size,
-                                       int (*hashfn)(),
-                                       int (*cmpfn)());
+                                       HASHHASHFN hashfn,
+                                       HASHCMPFN cmpfn);
 
 /**
- * Special null function used as default memory allfunctions in the hashtable
+ * Special identity function used as default key/value copy function in the hashtable
  * implementation. This avoids having to special case the code that manipulates
  * the keys and values
  *
@@ -77,9 +80,21 @@ static HASHTABLE *hashtable_alloc_real(HASHTABLE* target,
  * @return      Return the value we were called with
  */
 static void *
+identityfn(const void *data)
+{
+    return (void*)data;
+}
+
+/**
+ * Special null function used as default free function in the hashtable
+ * implementation. This avoids having to special case the code that manipulates
+ * the keys and values
+ *
+ * @param       data    The data pointer
+ */
+static void
 nullfn(void *data)
 {
-    return data;
 }
 
 /**
@@ -95,15 +110,15 @@ nullfn(void *data)
  * @return The hashtable table
  */
 HASHTABLE *
-hashtable_alloc(int size, int (*hashfn)(), int (*cmpfn)())
+hashtable_alloc(int size, HASHHASHFN hashfn, HASHCMPFN cmpfn)
 {
     return hashtable_alloc_real(NULL, size, hashfn, cmpfn);
 }
 
 HASHTABLE* hashtable_alloc_flat(HASHTABLE* target,
                                 int size,
-                                int (*hashfn)(),
-                                int (*cmpfn)())
+                                HASHHASHFN hashfn,
+                                HASHCMPFN cmpfn)
 {
     return hashtable_alloc_real(target, size, hashfn, cmpfn);
 }
@@ -111,14 +126,14 @@ HASHTABLE* hashtable_alloc_flat(HASHTABLE* target,
 static HASHTABLE *
 hashtable_alloc_real(HASHTABLE* target,
                      int        size,
-                     int (*hashfn)(),
-                     int (*cmpfn)())
+                     HASHHASHFN hashfn,
+                     HASHCMPFN  cmpfn)
 {
     HASHTABLE *rval;
 
     if (target == NULL)
     {
-        if ((rval = malloc(sizeof(HASHTABLE))) == NULL)
+        if ((rval = MXS_MALLOC(sizeof(HASHTABLE))) == NULL)
         {
             return NULL;
         }
@@ -137,17 +152,17 @@ hashtable_alloc_real(HASHTABLE* target,
     rval->hashsize = size > 0 ? size : 1;
     rval->hashfn = hashfn;
     rval->cmpfn = cmpfn;
-    rval->kcopyfn = nullfn;
-    rval->vcopyfn = nullfn;
+    rval->kcopyfn = identityfn;
+    rval->vcopyfn = identityfn;
     rval->kfreefn = nullfn;
     rval->vfreefn = nullfn;
     rval->n_readers = 0;
     rval->writelock = 0;
     rval->n_elements = 0;
     spinlock_init(&rval->spin);
-    if ((rval->entries = (HASHENTRIES **)calloc(rval->hashsize, sizeof(HASHENTRIES *))) == NULL)
+    if ((rval->entries = (HASHENTRIES **)MXS_CALLOC(rval->hashsize, sizeof(HASHENTRIES *))) == NULL)
     {
-        free(rval);
+        MXS_FREE(rval);
         return NULL;
     }
     memset(rval->entries, 0, rval->hashsize * sizeof(HASHENTRIES *));
@@ -180,16 +195,16 @@ hashtable_free(HASHTABLE *table)
             ptr = entry->next;
             table->kfreefn(entry->key);
             table->vfreefn(entry->value);
-            free(entry);
+            MXS_FREE(entry);
             entry = ptr;
         }
     }
-    free(table->entries);
+    MXS_FREE(table->entries);
 
     hashtable_write_unlock(table);
     if (!table->ht_isflat)
     {
-        free(table);
+        MXS_FREE(table);
     }
 }
 
@@ -205,11 +220,11 @@ hashtable_free(HASHTABLE *table)
  * @param vfreefn       The free function for the value
  */
 void
-hashtable_memory_fns(HASHTABLE   *table,
-                     HASHMEMORYFN kcopyfn,
-                     HASHMEMORYFN vcopyfn,
-                     HASHMEMORYFN kfreefn,
-                     HASHMEMORYFN vfreefn)
+hashtable_memory_fns(HASHTABLE  *table,
+                     HASHCOPYFN kcopyfn,
+                     HASHCOPYFN vcopyfn,
+                     HASHFREEFN kfreefn,
+                     HASHFREEFN vfreefn)
 {
     if (kcopyfn != NULL)
     {
@@ -270,7 +285,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
     }
     else
     {
-        HASHENTRIES *ptr = (HASHENTRIES *)malloc(sizeof(HASHENTRIES));
+        HASHENTRIES *ptr = (HASHENTRIES *)MXS_MALLOC(sizeof(HASHENTRIES));
         if (ptr == NULL)
         {
             hashtable_write_unlock(table);
@@ -283,7 +298,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
         /* check succesfull key copy */
         if (ptr->key  == NULL)
         {
-            free(ptr);
+            MXS_FREE(ptr);
             hashtable_write_unlock(table);
 
             return 0;
@@ -297,7 +312,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
         {
             /* remove the key ! */
             table->kfreefn(ptr->key);
-            free(ptr);
+            MXS_FREE(ptr);
 
             /* value not copied, return */
             hashtable_write_unlock(table);
@@ -363,7 +378,7 @@ hashtable_delete(HASHTABLE *table, void *key)
             entry->key = NULL;
             entry->value = NULL;
         }
-        free(entry);
+        MXS_FREE(entry);
     }
     else
     {
@@ -380,7 +395,7 @@ hashtable_delete(HASHTABLE *table, void *key)
         ptr->next = entry->next;
         table->kfreefn(entry->key);
         table->vfreefn(entry->value);
-        free(entry);
+        MXS_FREE(entry);
     }
     table->n_elements--;
     assert(table->n_elements >= 0);
@@ -552,10 +567,11 @@ hashtable_read_lock(HASHTABLE *table)
     while (table->writelock)
     {
         spinlock_release(&table->spin);
-        while (table->writelock)
+        while (atomic_add(&table->writelock, 1) != 0)
         {
-            ;
+            atomic_add(&table->writelock, -1);
         }
+        atomic_add(&table->writelock, -1);
         spinlock_acquire(&table->spin);
     }
     atomic_add(&table->n_readers, 1);
@@ -599,10 +615,11 @@ hashtable_write_lock(HASHTABLE *table)
     spinlock_acquire(&table->spin);
     do
     {
-        while (table->n_readers)
+        while (atomic_add(&table->n_readers, 1) != 0)
         {
-            ;
+            atomic_add(&table->n_readers, -1);
         }
+        atomic_add(&table->n_readers, -1);
         available = atomic_add(&table->writelock, 1);
         if (available != 0)
         {
@@ -633,9 +650,9 @@ hashtable_write_unlock(HASHTABLE *table)
 HASHITERATOR *
 hashtable_iterator(HASHTABLE *table)
 {
-    HASHITERATOR *rval;
+    HASHITERATOR *rval = (HASHITERATOR *)MXS_MALLOC(sizeof(HASHITERATOR));
 
-    if ((rval = (HASHITERATOR *)malloc(sizeof(HASHITERATOR))) != NULL)
+    if (rval)
     {
         rval->table = table;
         rval->chain = 0;
@@ -697,7 +714,7 @@ hashtable_next(HASHITERATOR *iter)
 void
 hashtable_iterator_free(HASHITERATOR *iter)
 {
-    free(iter);
+    MXS_FREE(iter);
 }
 
 /**
@@ -727,7 +744,12 @@ hashtable_save(HASHTABLE *table, const char *filename,
         close(fd);
         return -1;
     }
-    write(fd, &rval, sizeof(rval)); // Write zero counter, will be overrwriten at end
+    if (write(fd, &rval, sizeof(rval)) == -1) // Write zero counter, will be overrwriten at end
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to write hashtable item count: %d, %s", errno,
+                  strerror_r(errno, err, sizeof(err)));
+    }
     if ((iter = hashtable_iterator(table)) != NULL)
     {
         while ((key = hashtable_next(iter)) != NULL)
@@ -752,7 +774,12 @@ hashtable_save(HASHTABLE *table, const char *filename,
     /* Now go back and write the count of entries */
     if (lseek(fd, 7L, SEEK_SET) != -1)
     {
-        write(fd, &rval, sizeof(rval));
+        if (write(fd, &rval, sizeof(rval)) == -1)
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to write hashtable item count: %d, %s", errno,
+                      strerror_r(errno, err, sizeof(err)));
+        }
     }
 
     close(fd);
@@ -825,4 +852,77 @@ int hashtable_size(HASHTABLE *table)
     int rval = table->n_elements;
     spinlock_release(&table->spin);
     return rval;
+}
+
+/**
+ * Frees memory assumed to have been allocated using one of the MaxScale
+ * allocation functions. Intended to be used together with a hashtable
+ * copy function that merely makes a straight memory copy of the key/value,
+ * e.g. hashtable_item_strdup.
+ * @param data The memory to be freed.
+ */
+void hashtable_item_free(void *data)
+{
+    MXS_FREE(data);
+}
+
+/**
+ * Convenience function intended for use as the comparison function of a hashtable,
+ * when the key is a NULL terminated string. Behaves as strcasecmp.
+ * @param str1 Pointer to string.
+ * @param str2 Pointer to string.
+ * @return Same as strcasecmp.
+ */
+int hashtable_item_strcasecmp(const void *str1, const void *str2)
+{
+    return strcasecmp((const char*)str1, (const char*)str2);
+}
+
+/**
+ * Convenience function intended for use as the comparison function of a hashtable,
+ * when the key is a NULL terminated string. Behaves as strcmp.
+ * @param str1 Pointer to string.
+ * @param str2 Pointer to string.
+ * @return Same as strcmp.
+ */
+int hashtable_item_strcmp(const void *str1, const void *str2)
+{
+    return strcmp((const char*)str1, (const char*)str2);
+}
+
+/**
+ * Convenience function intended for use as the copy function of a hashtable,
+ * when the key/value is a NULL terminated string.
+ * @param data A pointer to a NULL terminated string.
+ * @return A copy of the provided string or NULL if memory
+ *         allocation fails.
+ */
+void* hashtable_item_strdup(const void* data)
+{
+    return MXS_STRDUP((const char*)data);
+}
+
+/**
+ * Convenience function intended for use as the hash function of a hashtable,
+ * when the key is a NULL terminated string.
+ * @param data A pointer to a NULL terminated string.
+ * @return A hash of the string.
+ */
+int hashtable_item_strhash(const void* data)
+{
+    int hash = 0;
+
+    if (data)
+    {
+        const char* key = (const char*)data;
+
+        int c;
+
+        while ((c = *key++))
+        {
+            hash = c + (hash << 6) + (hash << 16) - hash;
+        }
+    }
+
+    return hash;
 }

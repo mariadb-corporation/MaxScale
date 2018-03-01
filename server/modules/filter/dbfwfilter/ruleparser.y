@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -19,8 +19,8 @@
 
 %{
 #include <lex.yy.h>
-#include <dbfwfilter.h>
-#include <log_manager.h>
+#include "dbfwfilter.h"
+#include <maxscale/log_manager.h>
 %}
 
 /** We need a reentrant scanner so no global variables are used */
@@ -37,7 +37,7 @@
 %token FWTOK_RULE <strval>FWTOK_RULENAME FWTOK_USERS <strval>FWTOK_USER FWTOK_RULES FWTOK_MATCH FWTOK_ANY FWTOK_ALL FWTOK_STRICT_ALL FWTOK_DENY
 %token FWTOK_WILDCARD FWTOK_COLUMNS FWTOK_REGEX FWTOK_LIMIT_QUERIES FWTOK_WHERE_CLAUSE FWTOK_AT_TIMES FWTOK_ON_QUERIES
 %token <strval>FWTOK_SQLOP FWTOK_COMMENT <intval>FWTOK_INT <floatval>FWTOK_FLOAT FWTOK_PIPE <strval>FWTOK_TIME
-%token <strval>FWTOK_BTSTR <strval>FWTOK_QUOTEDSTR <strval>FWTOK_STR
+%token <strval>FWTOK_BTSTR <strval>FWTOK_QUOTEDSTR <strval>FWTOK_STR FWTOK_FUNCTION <strval>FWTOK_CMP
 
 /** Non-terminal symbols */
 %type <strval>rulename
@@ -113,6 +113,7 @@ mandatory:
         {if (!define_limit_queries_rule(scanner, $2, $3, $4)){YYERROR;}}
     | FWTOK_REGEX FWTOK_QUOTEDSTR {if (!define_regex_rule(scanner, $2)){YYERROR;}}
     | FWTOK_COLUMNS columnlist
+    | FWTOK_FUNCTION functionlist
     ;
 
 columnlist:
@@ -120,6 +121,17 @@ columnlist:
     | FWTOK_STR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
     | columnlist FWTOK_BTSTR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
     | columnlist FWTOK_STR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
+    ;
+
+functionlist:
+    functionvalue
+    | functionlist functionvalue
+    ;
+
+functionvalue:
+    FWTOK_CMP {if (!define_function_rule(scanner, $1)){YYERROR;}}
+    | FWTOK_STR {if (!define_function_rule(scanner, $1)){YYERROR;}}
+    | FWTOK_BTSTR  {if (!define_function_rule(scanner, $1)){YYERROR;}}
     ;
 
 optional:

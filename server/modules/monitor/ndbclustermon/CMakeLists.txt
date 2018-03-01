@@ -1,0 +1,5 @@
+add_library(ndbclustermon SHARED ndbclustermon.c)
+target_link_libraries(ndbclustermon maxscale-common)
+add_dependencies(ndbclustermon pcre2)
+set_target_properties(ndbclustermon PROPERTIES VERSION "2.1.0")
+install_module(ndbclustermon core)

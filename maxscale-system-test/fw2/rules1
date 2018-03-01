@@ -1,0 +1,4 @@
+rule test1 deny regex '.*' on_queries drop
+rule test2 deny regex '.*' on_queries create
+rule test3 deny regex '.*' on_queries alter
+users %@% match any rules test1 test2 test3

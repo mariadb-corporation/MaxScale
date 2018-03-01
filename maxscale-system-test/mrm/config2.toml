@@ -1,0 +1,81 @@
+# config.toml
+# Example replication-manager configuration file
+
+[Default]
+hosts = "node-000:3306,node-001:3306,node-002:3306"
+user = "skysql:skysql"
+rpluser = "skysql:skysql"
+title = "Cluster01"
+connect-timeout = 1
+prefmaster = "node-000:3306"
+interactive = false
+log-level=1
+
+#
+# These are the options that were changed, the rest are set to the default
+# values of the replication-manager.
+#
+monitoring-ticker = 1
+autorejoin = true
+autorejoin-mysqldump = true
+autorejoin-backup-binlog = false
+autorejoin-semisync = false
+autorejoin-flashback = false
+failover-at-sync = false
+switchover-at-sync = false
+failover-falsepositive-heartbeat = false
+
+# This needs to point to the 10.2.4 release candidate binaries
+mariadb-binary-path = "/usr/mariadb-10.2/bin/"
+
+# LOG
+# ---
+
+logfile = "/var/log/replication-manager.log"
+verbose = true
+
+# TOPOLOGY
+# --------
+
+
+# Automatically rejoin a failed server to the current master
+# Slaves will re enter with read-only
+
+readonly = true
+failover-event-scheduler = false
+failover-event-status = false
+
+# FAILOVER
+# --------
+
+# Timeout in seconds between consecutive monitoring
+# check type can be tcp or agent
+check-type = "tcp"
+check-replication-filters = true
+check-binlog-filters = true
+check-replication-state = true
+
+# Failover after N failures detection
+# Reset number of failure if server auto recover after N seconds
+failcount = 1
+failcount-reset-time = 300
+
+# Cancel failover if already N failover
+# Cancel failover if last failover was N seconds before
+# Cancel failover in semi-sync when one slave is not in sync
+# Cancel failover when replication delay is more than N seconds
+failover-limit = 0
+failover-time-limit = 0
+maxdelay = 30
+
+# SWITCHOVER
+# ----------
+
+# In switchover Wait N milliseconds before killing long running transactions
+# Cancel switchover if transaction running more than N seconds
+# Cancel switchover if write query running more than N seconds
+# Cancel switchover if one of the slaves is not synced based on GTID equality
+wait-kill = 5000
+wait-trx = 10
+wait-write-query = 10
+gtidcheck = true

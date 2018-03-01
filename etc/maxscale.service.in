@@ -5,9 +5,18 @@ After=network.target
 [Service]
 Type=forking
 Restart=on-abort
-PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
+
+# Make sure /var/run/maxscale exists
+PermissionsStartOnly=true
 ExecStartPre=/usr/bin/install -d @MAXSCALE_VARDIR@/run/maxscale -o maxscale -g maxscale
-ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale
+
+PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
+
+# Use the default user and group
+User=maxscale
+Group=maxscale
+
+ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale
 TimeoutStartSec=120
 LimitNOFILE=65535
 

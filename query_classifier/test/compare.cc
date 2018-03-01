@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -20,10 +20,14 @@
 #include <set>
 #include <string>
 #include <sstream>
-#include <gwdirs.h>
-#include <log_manager.h>
-#include <mysql_client_server_protocol.h>
-#include <query_classifier.h>
+#define MYSQL_COM_QUIT        COM_QUIT
+#define MYSQL_COM_INIT_DB     COM_INIT_DB
+#define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
+#include <maxscale/paths.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/query_classifier.h>
+#include "testreader.hh"
 using std::cerr;
 using std::cin;
 using std::cout;
@@ -76,6 +80,7 @@ struct State
     size_t n_errors;
     struct timespec time1;
     struct timespec time2;
+    string indent;
 } global = { false,            // query_printed
              "",               // query
              VERBOSITY_NORMAL, // verbosity
@@ -86,7 +91,9 @@ struct State
              0,                // n_statements
              0,                // n_errors
              { 0, 0 },         // time1
-             { 0,  0} };       // time2
+             { 0,  0},         // time2
+             ""                // indent
+};
 
 ostream& operator << (ostream& out, qc_parse_result_t x)
 {
@@ -117,17 +124,18 @@ ostream& operator << (ostream& out, qc_parse_result_t x)
 
 GWBUF* create_gwbuf(const string& s)
 {
-    size_t len = s.length() + 1;
-    size_t gwbuf_len = len + MYSQL_HEADER_LEN + 1;
+    size_t len = s.length();
+    size_t payload_len = len + 1;
+    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* gwbuf = gwbuf_alloc(gwbuf_len);
 
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = len;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (len >> 16);
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = payload_len;
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
     *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 3)) = 0x00;
     *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(gwbuf) + 5, s.c_str(), s.length() + 1);
+    memcpy((char*)GWBUF_DATA(gwbuf) + 5, s.c_str(), len);
 
     return gwbuf;
 }
@@ -158,9 +166,10 @@ QUERY_CLASSIFIER* get_classifier(const char* zName, const char* zArgs)
 
     if (pClassifier)
     {
-        if (!pClassifier->qc_init(zArgs))
+        if ((pClassifier->qc_setup(zArgs) != QC_RESULT_OK) ||
+            ((pClassifier->qc_process_init() != QC_RESULT_OK)))
         {
-            cerr << "error: Could not init classifier " << zName << "." << endl;
+            cerr << "error: Could not setup or init classifier " << zName << "." << endl;
             qc_unload(pClassifier);
             pClassifier = 0;
         }
@@ -173,7 +182,7 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
 {
     if (pClassifier)
     {
-        pClassifier->qc_end();
+        pClassifier->qc_process_end();
         qc_unload(pClassifier);
     }
 }
@@ -231,7 +240,7 @@ void report(bool success, const string& s)
 
                 if (global.verbosity >= VERBOSITY_MAX)
                 {
-                    cout << s << endl;
+                    cout << global.indent << s << endl;
                     global.result_printed = true;
                 }
             }
@@ -246,7 +255,7 @@ void report(bool success, const string& s)
                 report_query();
             }
 
-            cout << s << endl;
+            cout << global.indent << s << endl;
             global.result_printed = true;
         }
     }
@@ -298,15 +307,27 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_parse                 : ";
 
-    qc_parse_result_t rv1 = pClassifier1->qc_parse(pCopy1);
-    qc_parse_result_t rv2 = pClassifier2->qc_parse(pCopy2);
+    struct timespec start;
+    struct timespec finish;
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    int32_t rv1;
+    pClassifier1->qc_parse(pCopy1, QC_COLLECT_ESSENTIALS, &rv1);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
+    update_time(&global.time1, start, finish);
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    int32_t rv2;
+    pClassifier2->qc_parse(pCopy2, QC_COLLECT_ESSENTIALS, &rv2);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
+    update_time(&global.time2, start, finish);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << rv1;
+        ss << "Ok : " << static_cast<qc_parse_result_t>(rv1);
         success = true;
     }
     else
@@ -321,7 +342,7 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
             success = true;
         }
 
-        ss << rv1 << " != " << rv2;
+        ss << static_cast<qc_parse_result_t>(rv1) << " != " << static_cast<qc_parse_result_t>(rv2);
     }
 
     report(success, ss.str());
@@ -333,29 +354,19 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
                       QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
 {
     bool success = false;
-    const char HEADING[] = "qc_get_type              : ";
+    const char HEADING[] = "qc_get_type_mask         : ";
 
-    struct timespec start;
-    struct timespec finish;
-
-    // As long as we cannot explicitly parse a query, we rely upon the
-    // knowledge that it will be parsed the first time a qc-function is called.
-    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    uint32_t rv1 = pClassifier1->qc_get_type(pCopy1);
-    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
-    update_time(&global.time1, start, finish);
-
-    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    uint32_t rv2 = pClassifier2->qc_get_type(pCopy2);
-    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
-    update_time(&global.time2, start, finish);
+    uint32_t rv1;
+    pClassifier1->qc_get_type_mask(pCopy1, &rv1);
+    uint32_t rv2;
+    pClassifier2->qc_get_type_mask(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        char* types = qc_types_to_string(rv1);
+        char* types = qc_typemask_to_string(rv1);
         ss << "Ok : " << types;
         free(types);
         success = true;
@@ -386,8 +397,8 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
             rv2b &= ~(uint32_t)QUERY_TYPE_LOCAL_READ;
         }
 
-        char* types1 = qc_types_to_string(rv1);
-        char* types2 = qc_types_to_string(rv2);
+        char* types1 = qc_typemask_to_string(rv1);
+        char* types2 = qc_typemask_to_string(rv2);
 
         if (rv1b == rv2b)
         {
@@ -413,20 +424,25 @@ bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_get_operation         : ";
 
-    qc_query_op_t rv1 = pClassifier1->qc_get_operation(pCopy1);
-    qc_query_op_t rv2 = pClassifier2->qc_get_operation(pCopy2);
+    int32_t rv1;
+    pClassifier1->qc_get_operation(pCopy1, &rv1);
+    int32_t rv2;
+    pClassifier2->qc_get_operation(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << qc_op_to_string(rv1);
+        ss << "Ok : " << qc_op_to_string(static_cast<qc_query_op_t>(rv1));
         success = true;
     }
     else
     {
-        ss << "ERR: " << qc_op_to_string(rv1) << " != " << qc_op_to_string(rv2);
+        ss << "ERR: "
+           << qc_op_to_string(static_cast<qc_query_op_t>(rv1))
+           << " != "
+           << qc_op_to_string(static_cast<qc_query_op_t>(rv2));
     }
 
     report(success, ss.str());
@@ -440,8 +456,10 @@ bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy
     bool success = false;
     const char HEADING[] = "qc_get_created_table_name: ";
 
-    char* rv1 = pClassifier1->qc_get_created_table_name(pCopy1);
-    char* rv2 = pClassifier2->qc_get_created_table_name(pCopy2);
+    char* rv1;
+    pClassifier1->qc_get_created_table_name(pCopy1, &rv1);
+    char* rv2;
+    pClassifier2->qc_get_created_table_name(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -470,47 +488,22 @@ bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_is_drop_table_query   : ";
 
-    bool rv1 = pClassifier1->qc_is_drop_table_query(pCopy1);
-    bool rv2 = pClassifier2->qc_is_drop_table_query(pCopy2);
+    int32_t rv1;
+    pClassifier1->qc_is_drop_table_query(pCopy1, &rv1);
+    int32_t rv2;
+    pClassifier2->qc_is_drop_table_query(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << rv1;
+        ss << "Ok : " << static_cast<bool>(rv1);
         success = true;
     }
     else
     {
-        ss << "ERR: " << rv1 << " != " << rv2;
-    }
-
-    report(success, ss.str());
-
-    return success;
-}
-
-bool compare_is_real_query(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                           QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
-{
-    bool success = false;
-    const char HEADING[] = "qc_is_real_query         : ";
-
-    bool rv1 = pClassifier1->qc_is_real_query(pCopy1);
-    bool rv2 = pClassifier2->qc_is_real_query(pCopy2);
-
-    stringstream ss;
-    ss << HEADING;
-
-    if (rv1 == rv2)
-    {
-        ss << "Ok : " << rv1;
-        success = true;
-    }
-    else
-    {
-        ss << "ERR: " << rv1 << " != " << rv2;
+        ss << "ERR: " << static_cast<bool>(rv1) << " != " << static_cast<bool>(rv2);
     }
 
     report(success, ss.str());
@@ -585,8 +578,10 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     int n1 = 0;
     int n2 = 0;
 
-    char** rv1 = pClassifier1->qc_get_table_names(pCopy1, &n1, full);
-    char** rv2 = pClassifier2->qc_get_table_names(pCopy2, &n2, full);
+    char** rv1;
+    pClassifier1->qc_get_table_names(pCopy1, full, &rv1, &n1);
+    char** rv2;
+    pClassifier2->qc_get_table_names(pCopy2, full, &rv2, &n2);
 
     // The order need not be the same, so let's compare a set.
     std::set<string> names1;
@@ -644,20 +639,22 @@ bool compare_query_has_clause(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_query_has_clause      : ";
 
-    bool rv1 = pClassifier1->qc_query_has_clause(pCopy1);
-    bool rv2 = pClassifier2->qc_query_has_clause(pCopy2);
+    int32_t rv1;
+    pClassifier1->qc_query_has_clause(pCopy1, &rv1);
+    int32_t rv2;
+    pClassifier2->qc_query_has_clause(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << rv1;
+        ss << "Ok : " << static_cast<bool>(rv1);
         success = true;
     }
     else
     {
-        ss << "ERR: " << rv1 << " != " << rv2;
+        ss << "ERR: " << static_cast<bool>(rv1) << " != " << static_cast<bool>(rv2);
     }
 
     report(success, ss.str());
@@ -716,68 +713,6 @@ ostream& operator << (ostream& o, const std::set<string>& s)
     return o;
 }
 
-bool compare_get_affected_fields(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                                 QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
-{
-    bool success = false;
-    const char HEADING[] = "qc_get_affected_fields   : ";
-
-    char* rv1 = pClassifier1->qc_get_affected_fields(pCopy1);
-    char* rv2 = pClassifier2->qc_get_affected_fields(pCopy2);
-
-    std::set<string> fields1;
-    std::set<string> fields2;
-
-    if (rv1)
-    {
-        add_fields(fields1, rv1);
-    }
-
-    if (rv2)
-    {
-        add_fields(fields2, rv2);
-    }
-
-    stringstream ss;
-    ss << HEADING;
-
-    if ((!rv1 && !rv2) || (rv1 && rv2 && (fields1 == fields2)))
-    {
-        ss << "Ok : " << fields1;
-        success = true;
-    }
-    else
-    {
-        ss << "ERR: ";
-        if (rv1)
-        {
-            ss << fields1;
-        }
-        else
-        {
-            ss << "NULL";
-        }
-
-        ss << " != ";
-
-        if (rv2)
-        {
-            ss << fields2;
-        }
-        else
-        {
-            ss << "NULL";
-        }
-    }
-
-    report(success, ss.str());
-
-    free(rv1);
-    free(rv2);
-
-    return success;
-}
-
 bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
                                 QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
 {
@@ -787,8 +722,10 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     int n1 = 0;
     int n2 = 0;
 
-    char** rv1 = pClassifier1->qc_get_database_names(pCopy1, &n1);
-    char** rv2 = pClassifier2->qc_get_database_names(pCopy2, &n2);
+    char** rv1;
+    pClassifier1->qc_get_database_names(pCopy1, &rv1, &n1);
+    char** rv2;
+    pClassifier2->qc_get_database_names(pCopy2, &rv2, &n2);
 
     stringstream ss;
     ss << HEADING;
@@ -815,34 +752,479 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& s)
+bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
+                              QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
 {
-    GWBUF* pCopy1 = create_gwbuf(s);
-    GWBUF* pCopy2 = create_gwbuf(s);
+    bool success = false;
+    const char HEADING[] = "qc_get_prepare_name      : ";
 
+    char* rv1;
+    pClassifier1->qc_get_prepare_name(pCopy1, &rv1);
+    char* rv2;
+    pClassifier2->qc_get_prepare_name(pCopy2, &rv2);
+
+    stringstream ss;
+    ss << HEADING;
+
+    if ((!rv1 && !rv2) || (rv1 && rv2 && (strcmp(rv1, rv2) == 0)))
+    {
+        ss << "Ok : " << (rv1 ? rv1 : "NULL");
+        success = true;
+    }
+    else
+    {
+        ss << "ERR: " << (rv1 ? rv1 : "NULL") << " != " << (rv2 ? rv2 : "NULL");
+    }
+
+    report(success, ss.str());
+
+    free(rv1);
+    free(rv2);
+
+    return success;
+}
+
+bool operator == (const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
+{
+    bool rv = false;
+    if (lhs.column && rhs.column && (strcasecmp(lhs.column, rhs.column) == 0))
+    {
+        if (!lhs.table && !rhs.table)
+        {
+            rv = true;
+        }
+        else if (lhs.table && rhs.table && (strcmp(lhs.table, rhs.table) == 0))
+        {
+            if (!lhs.database && !rhs.database)
+            {
+                rv = true;
+            }
+            else if (lhs.database && rhs.database && (strcmp(lhs.database, rhs.database) == 0))
+            {
+                rv = true;
+            }
+        }
+    }
+
+    return rv;
+}
+
+ostream& operator << (ostream& out, const QC_FIELD_INFO& x)
+{
+    if (x.database)
+    {
+        out << x.database;
+        out << ".";
+        ss_dassert(x.table);
+    }
+
+    if (x.table)
+    {
+        out << x.table;
+        out << ".";
+    }
+
+    ss_dassert(x.column);
+    out << x.column;
+
+    return out;
+}
+
+class QcFieldInfo
+{
+public:
+    QcFieldInfo(const QC_FIELD_INFO& info)
+        : m_database(info.database ? info.database : "")
+        , m_table(info.table ? info.table : "")
+        , m_column(info.column ? info.column : "")
+        , m_usage(info.usage)
+    {}
+
+    bool eq(const QcFieldInfo& rhs) const
+    {
+        return
+            m_database == rhs.m_database &&
+            m_table == rhs.m_table &&
+            m_column == rhs.m_column &&
+            m_usage == rhs.m_usage;
+    }
+
+    bool lt(const QcFieldInfo& rhs) const
+    {
+        bool rv = false;
+
+        if (m_database < rhs.m_database)
+        {
+            rv = true;
+        }
+        else if (m_database > rhs.m_database)
+        {
+            rv = false;
+        }
+        else
+        {
+            if (m_table < rhs.m_table)
+            {
+                rv = true;
+            }
+            else if (m_table > rhs.m_table)
+            {
+                rv = false;
+            }
+            else
+            {
+                if (m_column < rhs.m_column)
+                {
+                    rv = true;
+                }
+                else if (m_column > rhs.m_column)
+                {
+                    rv = false;
+                }
+                else
+                {
+                    rv = (m_usage < rhs.m_usage);
+                }
+            }
+        }
+
+        return rv;
+    }
+
+    void print(ostream& out) const
+    {
+        if (!m_database.empty())
+        {
+            out << m_database;
+            out << ".";
+        }
+
+        if (!m_table.empty())
+        {
+            out << m_table;
+            out << ".";
+        }
+
+        out << m_column;
+
+        out << "(";
+        char* s = qc_field_usage_mask_to_string(m_usage);
+        out << s;
+        free(s);
+        out << ")";
+    }
+
+private:
+    std::string m_database;
+    std::string m_table;
+    std::string m_column;
+    uint32_t    m_usage;
+};
+
+ostream& operator << (ostream& out, const QcFieldInfo& x)
+{
+    x.print(out);
+    return out;
+}
+
+ostream& operator << (ostream& out, std::set<QcFieldInfo>& x)
+{
+    std::set<QcFieldInfo>::iterator i = x.begin();
+    std::set<QcFieldInfo>::iterator end = x.end();
+
+    while (i != end)
+    {
+        out << *i++;
+        if (i != end)
+        {
+            out << " ";
+        }
+    }
+
+    return out;
+}
+
+bool operator < (const QcFieldInfo& lhs, const QcFieldInfo& rhs)
+{
+    return lhs.lt(rhs);
+}
+
+bool operator == (const QcFieldInfo& lhs, const QcFieldInfo& rhs)
+{
+    return lhs.eq(rhs);
+}
+
+bool are_equal(const QC_FIELD_INFO* fields1, size_t n_fields1,
+               const QC_FIELD_INFO* fields2, size_t n_fields2)
+{
+    bool rv = (n_fields1 == n_fields2);
+
+    if (rv)
+    {
+
+        size_t i = 0;
+        while (rv && (i < n_fields1))
+        {
+            rv = *fields1 == *fields2;
+            ++i;
+        }
+    }
+
+    return rv;
+}
+
+ostream& print(ostream& out, const QC_FIELD_INFO* fields, size_t n_fields)
+{
+    size_t i = 0;
+    while (i < n_fields)
+    {
+        out << fields[i++];
+
+        if (i != n_fields)
+        {
+            out << " ";
+        }
+    }
+
+    return out;
+}
+
+bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
+                            QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+{
+    bool success = false;
+    const char HEADING[] = "qc_get_field_info        : ";
+
+    const QC_FIELD_INFO* infos1;
+    const QC_FIELD_INFO* infos2;
+    uint32_t n_infos1;
+    uint32_t n_infos2;
+
+    pClassifier1->qc_get_field_info(pCopy1, &infos1, &n_infos1);
+    pClassifier2->qc_get_field_info(pCopy2, &infos2, &n_infos2);
+
+    stringstream ss;
+    ss << HEADING;
+
+    int i;
+
+    std::set<QcFieldInfo> f1;
+    f1.insert(infos1, infos1 + n_infos1);
+
+    std::set<QcFieldInfo> f2;
+    f2.insert(infos2, infos2 + n_infos2);
+
+    if (f1 == f2)
+    {
+        ss << "Ok : ";
+        ss << f1;
+        success = true;
+    }
+    else
+    {
+        ss << "ERR: " << f1 << " != " << f2;
+    }
+
+    report(success, ss.str());
+
+    return success;
+}
+
+
+class QcFunctionInfo
+{
+public:
+    QcFunctionInfo(const QC_FUNCTION_INFO& info)
+        : m_name(info.name)
+        , m_usage(info.usage)
+    {
+        // We want case-insensitive comparisons.
+        std::transform(m_name.begin(), m_name.end(), m_name.begin(), tolower);
+    }
+
+    bool eq(const QcFunctionInfo& rhs) const
+    {
+        return
+            m_name == rhs.m_name &&
+            m_usage == rhs.m_usage;
+    }
+
+    bool lt(const QcFunctionInfo& rhs) const
+    {
+        bool rv = false;
+
+        if (m_name < rhs.m_name)
+        {
+            rv = true;
+        }
+        else if (m_name > rhs.m_name)
+        {
+            rv = false;
+        }
+        else
+        {
+            rv = (m_usage < rhs.m_usage);
+        }
+
+        return rv;
+    }
+
+    void print(ostream& out) const
+    {
+        out << m_name;
+
+        out << "(";
+        char* s = qc_field_usage_mask_to_string(m_usage);
+        out << s;
+        free(s);
+        out << ")";
+    }
+
+private:
+    std::string m_name;
+    uint32_t    m_usage;
+};
+
+ostream& operator << (ostream& out, const QcFunctionInfo& x)
+{
+    x.print(out);
+    return out;
+}
+
+ostream& operator << (ostream& out, std::set<QcFunctionInfo>& x)
+{
+    std::set<QcFunctionInfo>::iterator i = x.begin();
+    std::set<QcFunctionInfo>::iterator end = x.end();
+
+    while (i != end)
+    {
+        out << *i++;
+        if (i != end)
+        {
+            out << " ";
+        }
+    }
+
+    return out;
+}
+
+bool operator < (const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
+{
+    return lhs.lt(rhs);
+}
+
+bool operator == (const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
+{
+    return lhs.eq(rhs);
+}
+
+bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
+                               QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+{
+    bool success = false;
+    const char HEADING[] = "qc_get_function_info     : ";
+
+    const QC_FUNCTION_INFO* infos1;
+    const QC_FUNCTION_INFO* infos2;
+    uint32_t n_infos1;
+    uint32_t n_infos2;
+
+    pClassifier1->qc_get_function_info(pCopy1, &infos1, &n_infos1);
+    pClassifier2->qc_get_function_info(pCopy2, &infos2, &n_infos2);
+
+    stringstream ss;
+    ss << HEADING;
+
+    int i;
+
+    std::set<QcFunctionInfo> f1;
+    f1.insert(infos1, infos1 + n_infos1);
+
+    std::set<QcFunctionInfo> f2;
+    f2.insert(infos2, infos2 + n_infos2);
+
+    if (f1 == f2)
+    {
+        ss << "Ok : ";
+        ss << f1;
+        success = true;
+    }
+    else
+    {
+        ss << "ERR: " << f1 << " != " << f2;
+    }
+
+    report(success, ss.str());
+
+    return success;
+}
+
+
+bool compare(QUERY_CLASSIFIER* pClassifier1, GWBUF* pBuf1,
+             QUERY_CLASSIFIER* pClassifier2, GWBUF* pBuf2)
+{
     int errors = 0;
 
-    errors += !compare_parse(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_type(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_operation(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_created_table_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_is_drop_table_query(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_is_real_query(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_table_names(pClassifier1, pCopy1, pClassifier2, pCopy2, false);
-    errors += !compare_get_table_names(pClassifier1, pCopy1, pClassifier2, pCopy2, true);
-    errors += !compare_query_has_clause(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_affected_fields(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_database_names(pClassifier1, pCopy1, pClassifier2, pCopy2);
-
-    gwbuf_free(pCopy1);
-    gwbuf_free(pCopy2);
+    errors += !compare_parse(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_operation(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_created_table_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_is_drop_table_query(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2, false);
+    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2, true);
+    errors += !compare_query_has_clause(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_database_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_prepare_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_field_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_function_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
 
     if (global.result_printed)
     {
         cout << endl;
     }
 
-    return errors == 0;
+    bool success = (errors == 0);
+
+    uint32_t type_mask1;
+    pClassifier1->qc_get_type_mask(pBuf1, &type_mask1);
+
+    uint32_t type_mask2;
+    pClassifier2->qc_get_type_mask(pBuf2, &type_mask2);
+
+    if ((type_mask1 == type_mask2) &&
+        ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))
+    {
+        GWBUF* pPreparable1;
+        pClassifier1->qc_get_preparable_stmt(pBuf1, &pPreparable1);
+        ss_dassert(pPreparable1);
+
+        GWBUF* pPreparable2;
+        pClassifier2->qc_get_preparable_stmt(pBuf2, &pPreparable2);
+        ss_dassert(pPreparable2);
+
+        string indent = global.indent;
+        global.indent += string(4, ' ');
+
+        success = compare(pClassifier1, pPreparable1,
+                          pClassifier2, pPreparable2);
+
+        global.indent = indent;
+    }
+
+    return success;
+}
+
+bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& s)
+{
+    GWBUF* pCopy1 = create_gwbuf(s);
+    GWBUF* pCopy2 = create_gwbuf(s);
+
+    bool success = compare(pClassifier1, pCopy1, pClassifier2, pCopy2);
+
+    gwbuf_free(pCopy1);
+    gwbuf_free(pCopy2);
+
+    return success;
 }
 
 inline void ltrim(std::string &s)
@@ -862,312 +1244,39 @@ static void trim(std::string &s)
     rtrim(s);
 }
 
-enum skip_action_t
-{
-    SKIP_NOTHING,        // Skip nothing.
-    SKIP_BLOCK,          // Skip until the end of next { ... }
-    SKIP_DELIMITER,      // Skip the new delimiter.
-    SKIP_LINE,           // Skip current line.
-    SKIP_NEXT_STATEMENT, // Skip statement starting on line following this line.
-    SKIP_STATEMENT,      // Skip statment starting on this line.
-    SKIP_TERMINATE,      // Cannot handle this, terminate.
-};
-
-typedef std::map<std::string, skip_action_t> KeywordActionMapping;
-
-static KeywordActionMapping mtl_keywords;
-
-void init_keywords()
-{
-    struct Keyword
-    {
-        const char* z_keyword;
-        skip_action_t action;
-    };
-
-    static const Keyword KEYWORDS[] =
-    {
-        { "append_file",                SKIP_LINE },
-        { "cat_file",                   SKIP_LINE },
-        { "change_user",                SKIP_LINE },
-        { "character_set",              SKIP_LINE },
-        { "chmod",                      SKIP_LINE },
-        { "connect",                    SKIP_LINE },
-        { "connection",                 SKIP_LINE },
-        { "copy_file",                  SKIP_LINE },
-        { "dec",                        SKIP_LINE },
-        { "delimiter",                  SKIP_DELIMITER },
-        { "die",                        SKIP_LINE },
-        { "diff_files",                 SKIP_LINE },
-        { "dirty_close",                SKIP_LINE },
-        { "disable_abort_on_error",     SKIP_LINE },
-        { "disable_connect_log",        SKIP_LINE },
-        { "disable_info",               SKIP_LINE },
-        { "disable_metadata",           SKIP_LINE },
-        { "disable_parsing",            SKIP_LINE },
-        { "disable_ps_protocol",        SKIP_LINE },
-        { "disable_query_log",          SKIP_LINE },
-        { "disable_reconnect",          SKIP_LINE },
-        { "disable_result_log",         SKIP_LINE },
-        { "disable_rpl_parse",          SKIP_LINE },
-        { "disable_session_track_info", SKIP_LINE },
-        { "disable_warnings",           SKIP_LINE },
-        { "disconnect",                 SKIP_LINE },
-        { "echo",                       SKIP_LINE },
-        { "enable_abort_on_error",      SKIP_LINE },
-        { "enable_connect_log",         SKIP_LINE },
-        { "enable_info",                SKIP_LINE },
-        { "enable_metadata",            SKIP_LINE },
-        { "enable_parsing",             SKIP_LINE },
-        { "enable_ps_protocol",         SKIP_LINE },
-        { "enable_query_log",           SKIP_LINE },
-        { "enable_reconnect",           SKIP_LINE },
-        { "enable_result_log",          SKIP_LINE },
-        { "enable_rpl_parse",           SKIP_LINE },
-        { "enable_session_track_info",  SKIP_LINE },
-        { "enable_warnings",            SKIP_LINE },
-        { "end_timer",                  SKIP_LINE },
-        { "error",                      SKIP_NEXT_STATEMENT },
-        { "eval",                       SKIP_STATEMENT },
-        { "exec",                       SKIP_LINE },
-        { "exit",                       SKIP_LINE },
-        { "file_exists",                SKIP_LINE },
-        { "horizontal_results",         SKIP_LINE },
-        { "if",                         SKIP_BLOCK },
-        { "inc",                        SKIP_LINE },
-        { "let",                        SKIP_LINE },
-        { "let",                        SKIP_LINE },
-        { "list_files",                 SKIP_LINE },
-        { "list_files_append_file",     SKIP_LINE },
-        { "list_files_write_file",      SKIP_LINE },
-        { "lowercase_result",           SKIP_LINE },
-        { "mkdir",                      SKIP_LINE },
-        { "move_file",                  SKIP_LINE },
-        { "output",                     SKIP_LINE },
-        { "perl",                       SKIP_TERMINATE },
-        { "ping",                       SKIP_LINE },
-        { "print",                      SKIP_LINE },
-        { "query",                      SKIP_LINE },
-        { "query_get_value",            SKIP_LINE },
-        { "query_horizontal",           SKIP_LINE },
-        { "query_vertical",             SKIP_LINE },
-        { "real_sleep",                 SKIP_LINE },
-        { "reap",                       SKIP_LINE },
-        { "remove_file",                SKIP_LINE },
-        { "remove_files_wildcard",      SKIP_LINE },
-        { "replace_column",             SKIP_LINE },
-        { "replace_regex",              SKIP_LINE },
-        { "replace_result",             SKIP_LINE },
-        { "require",                    SKIP_LINE },
-        { "reset_connection",           SKIP_LINE },
-        { "result",                     SKIP_LINE },
-        { "result_format",              SKIP_LINE },
-        { "rmdir",                      SKIP_LINE },
-        { "same_master_pos",            SKIP_LINE },
-        { "send",                       SKIP_LINE },
-        { "send_eval",                  SKIP_LINE },
-        { "send_quit",                  SKIP_LINE },
-        { "send_shutdown",              SKIP_LINE },
-        { "skip",                       SKIP_LINE },
-        { "sleep",                      SKIP_LINE },
-        { "sorted_result",              SKIP_LINE },
-        { "source",                     SKIP_LINE },
-        { "start_timer",                SKIP_LINE },
-        { "sync_slave_with_master",     SKIP_LINE },
-        { "sync_with_master",           SKIP_LINE },
-        { "system",                     SKIP_LINE },
-        { "vertical_results",           SKIP_LINE },
-        { "while",                      SKIP_BLOCK },
-        { "write_file",                 SKIP_LINE },
-    };
-
-    const size_t N_KEYWORDS = sizeof(KEYWORDS)/sizeof(KEYWORDS[0]);
-
-    for (size_t i = 0; i < N_KEYWORDS; ++i)
-    {
-        mtl_keywords[KEYWORDS[i].z_keyword] = KEYWORDS[i].action;
-    }
-}
-
-skip_action_t get_action(const string& keyword)
-{
-    skip_action_t action = SKIP_NOTHING;
-
-    string key(keyword);
-
-    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-
-    KeywordActionMapping::iterator i = mtl_keywords.find(key);
-
-    if (i != mtl_keywords.end())
-    {
-        action = i->second;
-    }
-
-    return action;
-}
-
-void skip_block(istream& in)
-{
-    int c;
-
-    // Find first '{'
-    while (in && ((c = in.get()) != '{'))
-    {
-        if (c == '\n')
-        {
-            ++global.line;
-        }
-    }
-
-    int n = 1;
-
-    while ((n > 0) && in)
-    {
-        c = in.get();
-
-        switch (c)
-        {
-        case '{':
-            ++n;
-            break;
-
-        case '}':
-            --n;
-            break;
-
-        case '\n':
-            ++global.line;
-            break;
-
-        default:
-            ;
-        }
-    }
-}
-
-
 int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, istream& in)
 {
     bool stop = false; // Whether we should exit.
-    bool skip = false; // Whether next statement should be skipped.
-    char delimiter = ';';
-    string query;
 
-    while (!stop && std::getline(in, query))
+    maxscale::TestReader reader(in);
+
+    while (!stop && (reader.get_statement(global.query) == maxscale::TestReader::RESULT_STMT))
     {
-        trim(query);
+        global.line = reader.line();
+        global.query_printed = false;
+        global.result_printed = false;
 
-        global.line++;
+        ++global.n_statements;
 
-        if (!query.empty() && (query.at(0) != '#'))
+        if (global.verbosity >= VERBOSITY_EXTENDED)
         {
-            if (!skip)
+            // In case the execution crashes, we want the query printed.
+            report_query();
+        }
+
+        bool success = compare(pClassifier1, pClassifier2, global.query);
+
+        if (!success)
+        {
+            ++global.n_errors;
+
+            if (global.stop_at_error)
             {
-                if (query.substr(0, 2) == "--")
-                {
-                    query = query.substr(2);
-                    trim(query);
-                }
-
-                string::iterator i = std::find_if(query.begin(), query.end(),
-                                                  std::ptr_fun<int,int>(std::isspace));
-                string keyword = query.substr(0, i - query.begin());
-
-                skip_action_t action = get_action(keyword);
-
-                switch (action)
-                {
-                case SKIP_NOTHING:
-                    break;
-
-                case SKIP_BLOCK:
-                    skip_block(in);
-                    continue;
-
-                case SKIP_DELIMITER:
-                    query = query.substr(i - query.begin());
-                    trim(query);
-                    if (query.length() > 0)
-                    {
-                        delimiter = query.at(0);
-                    }
-                    continue;
-
-                case SKIP_LINE:
-                    continue;
-
-                case SKIP_NEXT_STATEMENT:
-                    skip = true;
-                    continue;
-
-                case SKIP_STATEMENT:
-                    skip = true;
-                    break;
-
-                case SKIP_TERMINATE:
-                    cout << "error: Cannot handle line " << global.line
-                         << ", terminating: " << query << endl;
-                    stop = true;
-                    break;
-                }
-            }
-
-            global.query += query;
-
-            char c = query.at(query.length() - 1);
-
-            if (c == delimiter)
-            {
-                if (c != ';')
-                {
-                    // If the delimiter was something else but ';' we need to
-                    // remove that before giving the query to the classifiers.
-                    global.query.erase(global.query.length() - 1);
-                }
-
-                if (!skip)
-                {
-                    global.query_printed = false;
-                    global.result_printed = false;
-
-                    ++global.n_statements;
-
-                    if (global.verbosity >= VERBOSITY_EXTENDED)
-                    {
-                        // In case the execution crashes, we want the query printed.
-                        report_query();
-                    }
-
-                    bool success = compare(pClassifier1, pClassifier2, global.query);
-
-                    if (!success)
-                    {
-                        ++global.n_errors;
-
-                        if (global.stop_at_error)
-                        {
-                            stop = true;
-                        }
-                    }
-                }
-                else
-                {
-                    skip = false;
-                }
-
-                global.query.clear();
-            }
-            else
-            {
-                global.query += " ";
+                stop = true;
             }
         }
-        else if (query.substr(0, 7) == "--error")
-        {
-            // Next statement is supposed to fail, no need to check.
-            skip = true;
-        }
+
+        global.query.clear();
     }
 
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -1256,8 +1365,6 @@ int main(int argc, char* argv[])
 
     if ((rc == EXIT_SUCCESS) && (v >= VERBOSITY_MIN && v <= VERBOSITY_MAX))
     {
-        init_keywords();
-
         rc = EXIT_FAILURE;
         global.verbosity = static_cast<verbosity_t>(v);
 

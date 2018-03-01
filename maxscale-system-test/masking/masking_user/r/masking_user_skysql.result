@@ -1,0 +1,8 @@
+drop database if exists maskingdb;
+create database maskingdb;
+use maskingdb;
+create table masking (a TEXT, b TEXT, c TEXT, d TEXT, e TEXT, f TEXT, g TEXT, h TEXT);
+insert into masking values ("hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello");
+select * from masking;
+a	b	c	d	e	f	g	h
+XXXXX	XXXXX	hello	hello	XXXXX	XXXXX	hello	XXXXX

@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -47,14 +47,15 @@
 #include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <pwd.h>
 
-#include <version.h>
+#include <maxscale/version.h>
 
 #ifdef HISTORY
 #include <histedit.h>
 #endif
 
-#include <maxadmin.h>
+#include <maxscale/maxadmin.h>
 /*
  * We need a common.h file that is included by every component.
  */
@@ -91,23 +92,24 @@ prompt(EditLine *el __attribute__((__unused__)))
 }
 
 #endif
-
 static struct option long_options[] =
 {
     {"host", required_argument, 0, 'h'},
     {"user", required_argument, 0, 'u'},
-    {"password", required_argument, 0, 'p'},
+    {"password", optional_argument, 0, 'p'},
     {"port", required_argument, 0, 'P'},
     {"socket", required_argument, 0, 'S'},
     {"version", no_argument, 0, 'v'},
     {"help", no_argument, 0, '?'},
     {"emacs", no_argument, 0, 'e'},
+    {"vim", no_argument, 0, 'i'},
     {0, 0, 0, 0}
 };
 
 #define MAXADMIN_DEFAULT_HOST "localhost"
 #define MAXADMIN_DEFAULT_PORT "6603"
 #define MAXADMIN_DEFAULT_USER "admin"
+#define MAXADMIN_BUFFER_SIZE 2048
 
 /**
  * The main for the maxadmin client
@@ -125,14 +127,14 @@ main(int argc, char **argv)
     History *hist;
     HistEvent ev;
 #else
-    char buf[1024];
+    char buf[MAXADMIN_BUFFER_SIZE];
 #endif
     char *hostname = NULL;
     char *port = NULL;
     char *user = NULL;
     char *passwd = NULL;
     char *socket_path = NULL;
-    int use_emacs = 0;
+    int use_emacs = 1;
 
     read_inifile(&socket_path, &hostname, &port, &user, &passwd, &use_emacs);
 
@@ -141,48 +143,56 @@ main(int argc, char **argv)
 
     int option_index = 0;
     char c;
-    while ((c = getopt_long(argc, argv, "h:p:P:u:S:v?e",
+    while ((c = getopt_long(argc, argv, "h:p::P:u:S:v?ei",
                             long_options, &option_index)) >= 0)
     {
         switch (c)
         {
-            case 'h':
-                use_inet_socket = true;
-                hostname = strdup(optarg);
-                break;
+        case 'h':
+            use_inet_socket = true;
+            hostname = strdup(optarg);
+            break;
 
-            case 'p':
-                use_inet_socket = true;
+        case 'p':
+            use_inet_socket = true;
+            // If password was not given, ask for it later
+            if (optarg != NULL)
+            {
                 passwd = strdup(optarg);
                 memset(optarg, '\0', strlen(optarg));
-                break;
+            }
+            break;
 
-            case 'P':
-                use_inet_socket = true;
-                port = strdup(optarg);
-                break;
+        case 'P':
+            use_inet_socket = true;
+            port = strdup(optarg);
+            break;
 
-            case 'u':
-                use_inet_socket = true;
-                user = strdup(optarg);
-                break;
+        case 'u':
+            use_inet_socket = true;
+            user = strdup(optarg);
+            break;
 
-            case 'S':
-                use_unix_socket = true;
-                socket_path = strdup(optarg);
-                break;
+        case 'S':
+            use_unix_socket = true;
+            socket_path = strdup(optarg);
+            break;
 
-            case 'v':
-                PrintVersion(*argv);
-                exit(EXIT_SUCCESS);
+        case 'v':
+            PrintVersion(*argv);
+            exit(EXIT_SUCCESS);
 
-            case 'e':
-                use_emacs = 1;
-                break;
+        case 'e':
+            use_emacs = 1;
+            break;
 
-            case '?':
-                DoUsage(argv[0]);
-                exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
+        case 'i':
+            use_emacs = 0;
+            break;
+
+        case '?':
+            DoUsage(argv[0]);
+            exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
         }
     }
 
@@ -190,6 +200,7 @@ main(int argc, char **argv)
     {
         // Both unix socket path and at least of the internet socket
         // options have been provided.
+        printf("\nError: Both socket and network options are provided\n\n");
         DoUsage(argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -255,6 +266,11 @@ main(int argc, char **argv)
 
         if ((so = connectUsingInetSocket(hostname, port, user, passwd)) == -1)
         {
+            if (access(MAXADMIN_DEFAULT_SOCKET, R_OK) == 0)
+            {
+                fprintf(stderr, "Found default MaxAdmin socket in: %s\n", MAXADMIN_DEFAULT_SOCKET);
+                fprintf(stderr, "Try connecting with:\n\n\tmaxadmin -S %s\n\n", MAXADMIN_DEFAULT_SOCKET);
+            }
             exit(EXIT_FAILURE);
         }
     }
@@ -354,7 +370,6 @@ main(int argc, char **argv)
         }
 
 #ifdef HISTORY
-        el_line(el);
         history(hist, &ev, H_ENTER, buf);
 #endif
 
@@ -608,7 +623,13 @@ authUnixSocket(int so)
 
     if (!authenticated)
     {
-        fprintf(stderr, "Could connect to MaxScale, but was not authorized.\n");
+        uid_t id = geteuid();
+        struct passwd* pw = getpwuid(id);
+        fprintf(stderr, "Could connect to MaxScale, but was not authorized.\n"
+                "Check that the current user is added to the list of allowed users.\n"
+                "To add this user to the list, execute:\n\n"
+                "\tsudo maxadmin enable account %s\n\n"
+                "This assumes that the root user account is enabled in MaxScale.\n", pw->pw_name);
     }
 
     return authenticated;
@@ -763,7 +784,7 @@ DoSource(int so, char *file)
             pe--;
         }
 
-        if (*ptr != '#') /* Comment */
+        if (*ptr != '#' && *ptr != '\0') /* Comment or empty */
         {
             if (!sendCommand(so, ptr))
             {
@@ -792,8 +813,8 @@ DoUsage(const char *progname)
 {
     PrintVersion(progname);
     printf("The MaxScale administrative and monitor client.\n\n");
-    printf("Usage: %s [(-S socket)|([-u user] [-p password] [-h hostname] [-P port])]"
-           "[<command file> | <command>]\n\n", progname);
+    printf("Usage: %s [-S socket] <command>\n", progname);
+    printf("       %s [-u user] [-p password] [-h hostname] [-P port] <command>\n\n", progname);
     printf("  -S|--socket=...   The UNIX domain socket to connect to, The default is\n");
     printf("                    %s\n", MAXADMIN_DEFAULT_SOCKET);
     printf("  -u|--user=...     The user name to use for the connection, default\n");
@@ -986,7 +1007,10 @@ bool getPassword(char *passwd, size_t len)
         if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
         {
             printf("Password: ");
-            fgets(passwd, len, stdin);
+            if (fgets(passwd, len, stdin) == NULL)
+            {
+                printf("Failed to read password\n");
+            }
 
             tty_attr.c_lflag = c_lflag;
 

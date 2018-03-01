@@ -1,21 +1,26 @@
-#ifndef BINLOG_COMMON_H
-#define BINLOG_COMMON_H
+#pragma once
+#ifndef _BINLOG_COMMON_H
+#define _BINLOG_COMMON_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
+
+MXS_BEGIN_DECLS
+
 /**
  * Packet header for replication messages
  */
@@ -44,5 +49,7 @@ int blr_file_get_next_binlogname(const char *binlog_name);
 bool binlog_next_file_exists(const char* binlogdir, const char* binlog);
 uint32_t extract_field(uint8_t *src, int bits);
 const char* binlog_event_name(int type);
+
+MXS_END_DECLS
 
 #endif /* BINLOG_COMMON_H */

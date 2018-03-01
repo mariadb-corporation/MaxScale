@@ -1,32 +1,15 @@
-if(BUILD_TESTS)
-  add_library(testroute SHARED testroute.c)
-  target_link_libraries(testroute maxscale-common)
-  set_target_properties(testroute PROPERTIES VERSION "1.0.0")
-  install(TARGETS testroute DESTINATION ${MAXSCALE_LIBDIR})
-endif()
-
-add_library(readconnroute SHARED readconnroute.c)
-target_link_libraries(readconnroute maxscale-common)
-set_target_properties(readconnroute PROPERTIES VERSION "1.1.0")
-install(TARGETS readconnroute DESTINATION ${MAXSCALE_LIBDIR})
-
-add_library(debugcli SHARED debugcli.c debugcmd.c)
-target_link_libraries(debugcli maxscale-common)
-set_target_properties(debugcli PROPERTIES VERSION "1.1.1")
-install(TARGETS debugcli DESTINATION ${MAXSCALE_LIBDIR})
-
-add_library(cli SHARED cli.c debugcmd.c)
-target_link_libraries(cli maxscale-common)
-set_target_properties(cli PROPERTIES VERSION "1.0.0")
-install(TARGETS cli DESTINATION ${MAXSCALE_LIBDIR})
-
-add_subdirectory(readwritesplit)
-add_subdirectory(schemarouter)
-if(BUILD_AVRO)
-  add_subdirectory(avro)
+if(BUILD_CDC)
+  add_subdirectory(avrorouter)
 endif()
 if(BUILD_BINLOG)
-  add_subdirectory(binlog)
+  add_subdirectory(binlogrouter)
 endif()
+
+add_subdirectory(cli)
+add_subdirectory(debugcli)
 add_subdirectory(maxinfo)
+add_subdirectory(readconnroute)
+add_subdirectory(readwritesplit)
+add_subdirectory(schemarouter)
+
 

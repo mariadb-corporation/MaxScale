@@ -1,0 +1,2 @@
+rule testrule deny limit_queries 10 7 5
+users skysql@% match strict_all rules testrule

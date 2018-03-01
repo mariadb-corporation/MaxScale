@@ -29,6 +29,9 @@ chmod 0755 @MAXSCALE_VARDIR@/lib/maxscale
 chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
 chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 
+# Create the module configuration directory (default: /etc/maxscale.modules.d/)
+mkdir -p @DEFAULT_MODULE_CONFIGDIR@
+
 # Install ldconfig files
 if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" ]
 then
@@ -50,7 +53,7 @@ then
         systemctl daemon-reload
     fi
 else
-    if [ -d "/etc/init/" ]
+    if [ -d "/etc/init/" ] && [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf" ]
     then
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf /etc/init/
     fi

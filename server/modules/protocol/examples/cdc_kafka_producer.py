@@ -3,9 +3,9 @@
 # Copyright (c) 2016 MariaDB Corporation Ab
 #
 # Use of this software is governed by the Business Source License included
-# in the LICENSE.TXT file and at www.mariadb.com/bsl.
+# in the LICENSE.TXT file and at www.mariadb.com/bsl11.
 #
-# Change Date: 2019-01-01
+# Change Date: 2019-07-01
 #
 # On the date above, in accordance with the Business Source License, use
 # of this software will be governed by version 2 or later of the General
@@ -16,7 +16,6 @@
 #     pip install kafka-python
 #
 
-import json
 import sys
 import argparse
 from kafka import KafkaProducer
@@ -30,9 +29,8 @@ parser.add_argument("-T", "--kafka-topic", dest="kafka_topic",
                     default=None, required=True)
 
 opts = parser.parse_args(sys.argv[1:])
-decoder = json.JSONDecoder()
-rbuf = bytes()
 producer = KafkaProducer(bootstrap_servers=[opts.kafka_broker])
+sys.stdin = sys.stdin.detach()
 
 while True:
    try:
@@ -41,18 +39,9 @@ while True:
       if len(buf) == 0:
          break
 
-      rbuf += buf.encode()
-
-      while True:
-         rbuf = rbuf.lstrip()
-         data = decoder.raw_decode(rbuf.decode('ascii'))
-         rbuf = rbuf[data[1]:]
-         producer.send(topic=opts.kafka_topic, value=json.dumps(data[0]).encode())
-         producer.flush()
-
-   # JSONDecoder will return a ValueError if a partial JSON object is read
-   except ValueError as err:
-      pass
+      data = buf[:-1]
+      producer.send(topic=opts.kafka_topic, value=data)
+      producer.flush()
 
    # All other errors should interrupt the processing
    except Exception as ex:

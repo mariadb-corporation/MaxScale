@@ -57,6 +57,25 @@ router=avrorouter
 source=replication-router
 ```
 
+**Note:** Since the 2.1 version of MaxScale, all of the router options can also
+be defined as parameters.
+
+```
+[replication-router]
+type=service
+router=binlogrouter
+router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
+user=maxuser
+passwd=maxpwd
+
+[avro-router]
+type=service
+router=avrorouter
+binlogdir=/var/lib/mysql
+filestem=binlog
+avrodir=/var/lib/maxscale
+```
+
 ## Router Options
 
 The avrorouter is configured with a comma-separated list of key-value pairs.
@@ -87,9 +106,10 @@ will be used to store the Avro files, plain-text Avro schemas and other files
 needed by the avrorouter. The user running MariaDB MaxScale will need both read and
 write access to this directory.
 
-The avrorouter will also use the _avrodir_ to store various internal files. These
-files are named _avro.index_ and _avro-conversion.ini_. By default, the same directory
-where the binlog files are stored is used.
+The avrorouter will also use the _avrodir_ to store various internal
+files. These files are named _avro.index_ and _avro-conversion.ini_. By default,
+the default data directory, _/var/lib/maxscale/_, is used. Before version 2.1 of
+MaxScale, the value of _binlogdir_ was used as the default value for _avrodir_.
 
 #### `filestem`
 
@@ -142,6 +162,35 @@ data block. The default value is 1 transaction.
 Controls the number of row events that are grouped into a single Avro
 data block. The default value is 1000 row events.
 
+#### `block_size`
+
+The Avro data block size in bytes. The default is 16 kilobytes. Increase this
+value if individual events in the binary logs are very large.
+
+## Module commands
+
+Read [Module Commands](../Reference/Module-Commands.md) documentation for details about module commands.
+
+The avrorouter supports the following module commands.
+
+### `avrorouter::convert SERVICE {start | stop}`
+
+Start or stop the binary log to Avro conversion. The first parameter is the name
+of the service to stop and the second parameter tells whether to start the
+conversion process or to stop it.
+
+### `avrorouter::purge SERVICE`
+
+This command will delete all files created by the avrorouter. This includes all
+.avsc schema files and .avro data files as well as the internal state tracking
+files. Use this to completely reset the conversion process.
+
+**Note:** Once the command has completed, MaxScale must be restarted to restart
+the conversion process. Issuing a `convert start` command **will not work**.
+
+**WARNING:** You will lose any and all converted data when this command is
+  executed.
+
 # Files Created by the Avrorouter
 
 The avrorouter creates two files in the location pointed by _avrodir_:
@@ -149,6 +198,14 @@ _avro.index_ and _avro-conversion.ini_. The _avro.index_ file is used to store
 the locations of the GTIDs in the .avro files. The _avro-conversion.ini_ contains
 the last converted position and GTID in the binlogs. If you need to reset the
 conversion process, delete these two files and restart MaxScale.
+
+# Resetting the Conversion Process
+
+To reset the binlog conversion process, issue the `purge` module command by
+executing it via MaxAdmin and stop MaxScale. If manually created schema files
+were used, they need to be recreated once MaxScale is stopped. After stopping
+MaxScale and optionally creating the schema files, the conversion process can be
+started by starting MaxScale.
 
 # Example Client
 
@@ -165,6 +222,25 @@ Read the output of `cdc.py --help` for a full list of supported options
 and a short usage description of the client program.
 
 # Avro Schema Generator
+
+If the CREATE TABLE statements for the tables aren't present in the current
+binary logs, the schema files must be generated with a schema file
+generator. There are currently two methods to generate the .avsc schema files.
+
+## Python Schema Generator
+
+```
+usage: cdc_schema.py [--help] [-h HOST] [-P PORT] [-u USER] [-p PASSWORD] DATABASE
+```
+
+The _cdc_schema.py_ executable is installed as a part of MaxScale. This is a
+Python 3 script that generates Avro schema files from an existing database.
+
+The script will generate the .avsc schema files into the current directory. Run
+the script for all required databases copy the generated .avsc files to the
+directory where the avrorouter stores the .avro files (the value of `avrodir`).
+
+## Go Schema Generator
 
 The _cdc_schema.go_ example Go program is provided with MaxScale. This file
 can be used to create Avro schemas for the avrorouter by connecting to a
@@ -225,8 +301,14 @@ For more information on how to use these scripts, see the output of `cdc.py -h` 
 
 To build the avrorouter from source, you will need the [Avro C](https://avro.apache.org/docs/current/api/c/)
 library, liblzma, [the Jansson library](http://www.digip.org/jansson/) and sqlite3 development headers. When
-configuring MaxScale with CMake, you will need to add `-DBUILD_AVRO=Y
--DBUILD_CDC=Y` to build the avrorouter and the CDC protocol module.
+configuring MaxScale with CMake, you will need to add `-DBUILD_CDC=Y` to build the CDC module set.
+
+The Avro C library needs to be build with position independent code enabled. You can do this by
+adding the following flags to the CMake invocation when configuring the Avro C library.
+
+```
+-DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC
+```
 
 For more details about building MaxScale from source, please refer to the
 [Building MaxScale from Source Code](../Getting-Started/Building-MaxScale-from-Source-Code.md) document.

@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -15,7 +15,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "maxavro.h"
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 #include <errno.h>
 
 /** Maximum byte size of an integer value */
@@ -103,7 +103,7 @@ uint64_t avro_length_integer(uint64_t val)
  *
  * @see maxavro_get_error
  */
-char* maxavro_read_string(MAXAVRO_FILE* file)
+char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
 {
     char *key = NULL;
     uint64_t len;
@@ -117,6 +117,7 @@ char* maxavro_read_string(MAXAVRO_FILE* file)
             if (nread == len)
             {
                 key[len] = '\0';
+                *size = len;
             }
             else
             {
@@ -261,8 +262,9 @@ MAXAVRO_MAP* maxavro_map_read(MAXAVRO_FILE *file)
     {
         for (long i = 0; i < blocks; i++)
         {
+            size_t size;
             MAXAVRO_MAP* val = calloc(1, sizeof(MAXAVRO_MAP));
-            if (val && (val->key = maxavro_read_string(file)) && (val->value = maxavro_read_string(file)))
+            if (val && (val->key = maxavro_read_string(file, &size)) && (val->value = maxavro_read_string(file, &size)))
             {
                 val->next = rval;
                 rval = val;

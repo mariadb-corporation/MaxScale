@@ -3,7 +3,7 @@
 This document describes upgrading MaxScale from version 1.2.1 to 1.3.
 
 The major changes can be found in the [changelog](../Changelog.md) and more
-detailed information in the [release notes](../Release-Notes/MaxScale-1.3.0-Release-Notes.md).
+detailed information in the MaxScale 1.3.0 release notes.
 
 ## Installation
 

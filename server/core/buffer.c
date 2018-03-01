@@ -2,53 +2,27 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
 
-/**
- * @file buffer.h  - The MaxScale buffer management functions
- *
- * The buffer management is based on the principle of a linked list
- * of variable size buffer, the intention being to allow longer
- * content to be buffered in a list and minimise any need to copy
- * data between buffers.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 10/06/13     Mark Riddoch            Initial implementation
- * 11/07/13     Mark Riddoch            Add reference count mechanism
- * 16/07/2013   Massimiliano Pinto      Added command type to gwbuf struct
- * 24/06/2014   Mark Riddoch            Addition of gwbuf_trim
- * 15/07/2014   Mark Riddoch            Addition of properties
- * 28/08/2014   Mark Riddoch            Adition of tail pointer to speed
- *                                      the gwbuf_append process
- * 09/11/2015   Martin Brampton         Add buffer tracing (conditional compilation),
- *                                      accessed by "show buffers" maxadmin command
- * 20/12/2015   Martin Brampton         Change gwbuf_free to free the whole list; add the
- *                                      gwbuf_count and gwbuf_alloc_and_load functions.
- *
- * @endverbatim
- */
-#include <stdlib.h>
-#include <buffer.h>
-#include <atomic.h>
-#include <skygw_debug.h>
-#include <skygw_utils.h>
-#include <spinlock.h>
-#include <hint.h>
-#include <log_manager.h>
+#include <maxscale/buffer.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/debug.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/hint.h>
+#include <maxscale/log_manager.h>
 
 #if defined(BUFFER_TRACE)
-#include <hashtable.h>
+#include <maxscale/hashtable.h>
 #include <execinfo.h>
 
 static HASHTABLE *buffer_hashtable = NULL;
@@ -83,45 +57,45 @@ gwbuf_alloc(unsigned int size)
     SHARED_BUF *sbuf;
 
     /* Allocate the buffer header */
-    if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
+    if ((rval = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
     {
         goto retblock;
     }
 
     /* Allocate the shared data buffer */
-    if ((sbuf = (SHARED_BUF *)malloc(sizeof(SHARED_BUF))) == NULL)
+    if ((sbuf = (SHARED_BUF *)MXS_MALLOC(sizeof(SHARED_BUF))) == NULL)
     {
-        free(rval);
+        MXS_FREE(rval);
         rval = NULL;
         goto retblock;
     }
 
     /* Allocate the space for the actual data */
-    if ((sbuf->data = (unsigned char *)malloc(size)) == NULL)
+    if ((sbuf->data = (unsigned char *)MXS_MALLOC(size)) == NULL)
     {
-        ss_dassert(sbuf->data != NULL);
-        free(rval);
-        free(sbuf);
+        MXS_FREE(rval);
+        MXS_FREE(sbuf);
         rval = NULL;
         goto retblock;
     }
+    sbuf->refcount = 1;
+    sbuf->info = GWBUF_INFO_NONE;
+    sbuf->bufobj = NULL;
+
     spinlock_init(&rval->gwbuf_lock);
     rval->start = sbuf->data;
     rval->end = (void *)((char *)rval->start + size);
-    sbuf->refcount = 1;
     rval->sbuf = sbuf;
     rval->next = NULL;
     rval->tail = rval;
     rval->hint = NULL;
     rval->properties = NULL;
     rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
-    rval->gwbuf_info = GWBUF_INFO_NONE;
-    rval->gwbuf_bufobj = NULL;
     CHK_GWBUF(rval);
 retblock:
     if (rval == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Memory allocation failed due to %s.",
                   strerror_r(errno, errbuf, sizeof(errbuf)));
     }
@@ -143,7 +117,7 @@ retblock:
  *              be allocated.
  */
 GWBUF *
-gwbuf_alloc_and_load(unsigned int size, void *data)
+gwbuf_alloc_and_load(unsigned int size, const void *data)
 {
     GWBUF      *rval;
     if ((rval = gwbuf_alloc(size)) != NULL)
@@ -174,7 +148,7 @@ gwbuf_add_to_hashtable(GWBUF *buf)
     {
         total += strlen(strings[i]);
     }
-    tracetext = (char *)malloc(total);
+    tracetext = (char *)MXS_MALLOC(total);
     if (tracetext)
     {
         char *ptr = tracetext;
@@ -188,7 +162,7 @@ gwbuf_add_to_hashtable(GWBUF *buf)
         if (NULL == buffer_hashtable)
         {
             buffer_hashtable = hashtable_alloc(10000, bhashfn, bcmpfn);
-            hashtable_memory_fns(buffer_hashtable, NULL, NULL, NULL, (HASHMEMORYFN)free);
+            hashtable_memory_fns(buffer_hashtable, NULL, NULL, NULL, hashtable_item_free);
         }
         hashtable_add(buffer_hashtable, buf, (void *)tracetext);
     }
@@ -283,23 +257,24 @@ gwbuf_free_one(GWBUF *buf)
 
     if (atomic_add(&buf->sbuf->refcount, -1) == 1)
     {
-        free(buf->sbuf->data);
-        free(buf->sbuf);
-        bo = buf->gwbuf_bufobj;
+        bo = buf->sbuf->bufobj;
 
         while (bo != NULL)
         {
             bo = gwbuf_remove_buffer_object(buf, bo);
         }
 
+        MXS_FREE(buf->sbuf->data);
+        MXS_FREE(buf->sbuf);
     }
+
     while (buf->properties)
     {
         prop = buf->properties;
         buf->properties = prop->next;
-        free(prop->name);
-        free(prop->value);
-        free(prop);
+        MXS_FREE(prop->name);
+        MXS_FREE(prop->value);
+        MXS_FREE(prop);
     }
     /** Release the hint */
     while (buf->hint)
@@ -311,7 +286,7 @@ gwbuf_free_one(GWBUF *buf)
 #if defined(BUFFER_TRACE)
     gwbuf_remove_from_hashtable(buf);
 #endif
-    free(buf);
+    MXS_FREE(buf);
 }
 
 /**
@@ -324,17 +299,13 @@ gwbuf_free_one(GWBUF *buf)
  * @param buf The buffer to use
  * @return A new GWBUF structure
  */
-GWBUF *
-gwbuf_clone(GWBUF *buf)
+static GWBUF *
+gwbuf_clone_one(GWBUF *buf)
 {
     GWBUF *rval;
 
-    if ((rval = (GWBUF *)calloc(1, sizeof(GWBUF))) == NULL)
+    if ((rval = (GWBUF *)MXS_CALLOC(1, sizeof(GWBUF))) == NULL)
     {
-        ss_dassert(rval != NULL);
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
         return NULL;
     }
 
@@ -343,8 +314,6 @@ gwbuf_clone(GWBUF *buf)
     rval->start = buf->start;
     rval->end = buf->end;
     rval->gwbuf_type = buf->gwbuf_type;
-    rval->gwbuf_info = buf->gwbuf_info;
-    rval->gwbuf_bufobj = buf->gwbuf_bufobj;
     rval->tail = rval;
     rval->next = NULL;
     CHK_GWBUF(rval);
@@ -354,32 +323,34 @@ gwbuf_clone(GWBUF *buf)
     return rval;
 }
 
-/**
- * Clone whole GWBUF list instead of single buffer.
- *
- * @param buf   head of the list to be cloned till the tail of it
- *
- * @return head of the cloned list or NULL if the list was empty.
- */
-GWBUF* gwbuf_clone_all(GWBUF* buf)
+GWBUF* gwbuf_clone(GWBUF* buf)
 {
-    GWBUF* rval;
-    GWBUF* clonebuf;
-
     if (buf == NULL)
     {
         return NULL;
     }
-    /** Store the head of the list to rval. */
-    clonebuf = gwbuf_clone(buf);
-    rval = clonebuf;
 
-    while (buf->next)
+    GWBUF *rval = gwbuf_clone_one(buf);
+
+    if (rval)
     {
-        buf = buf->next;
-        clonebuf->next = gwbuf_clone(buf);
-        clonebuf = clonebuf->next;
+        GWBUF* clonebuf = rval;
+
+        while (clonebuf && buf->next)
+        {
+            buf = buf->next;
+            clonebuf->next = gwbuf_clone_one(buf);
+            clonebuf = clonebuf->next;
+        }
+
+        if (!clonebuf && buf->next)
+        {
+            // A gwbuf_clone failed, we need to free everything cloned sofar.
+            gwbuf_free(rval);
+            rval = NULL;
+        }
     }
+
     return rval;
 }
 
@@ -393,12 +364,8 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
     CHK_GWBUF(buf);
     ss_dassert(start_offset + length <= GWBUF_LENGTH(buf));
 
-    if ((clonebuf = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
+    if ((clonebuf = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
     {
-        ss_dassert(clonebuf != NULL);
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
         return NULL;
     }
     atomic_add(&buf->sbuf->refcount, 1);
@@ -409,8 +376,6 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
     clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */
     clonebuf->properties = NULL;
     clonebuf->hint = NULL;
-    clonebuf->gwbuf_info = buf->gwbuf_info;
-    clonebuf->gwbuf_bufobj = buf->gwbuf_bufobj;
     clonebuf->next = NULL;
     clonebuf->tail = clonebuf;
     CHK_GWBUF(clonebuf);
@@ -420,16 +385,6 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
     return clonebuf;
 }
 
-/**
- * @brief Split a buffer in two
- *
- * The returned value will be @c length bytes long. If the length of @c buf
- * exceeds @c length, the remaining buffers are stored in @buf.
- *
- * @param buf Buffer chain to split
- * @param length Number of bytes that the returned buffer should contain
- * @return Head of the buffer chain.
- */
 GWBUF* gwbuf_split(GWBUF **buf, size_t length)
 {
     GWBUF* head = NULL;
@@ -483,65 +438,121 @@ GWBUF* gwbuf_split(GWBUF **buf, size_t length)
 }
 
 /**
- * Returns pointer to GWBUF of a requested type.
- * As of 10.3.14 only MySQL to plain text conversion is supported.
- * Return NULL if conversion between types is not supported or due lacking
- * type information.
+ * Get a byte from a GWBUF at a particular offset. Intended to be use like:
+ *
+ *     GWBUF *buf = ...;
+ *     size_t offset = 0;
+ *     uint8_t c;
+ *
+ *     while (gwbuf_get_byte(&buf, &offset, &c))
+ *     {
+ *         printf("%c", c);
+ *     }
+ *
+ * @param buf     Pointer to pointer to GWBUF. The GWBUF pointed to may be adjusted
+ *                as a result of the call.
+ * @param offset  Pointer to variable containing the offset. Value of variable will
+ *                incremented as a result of the call.
+ * @param b       Pointer to variable that upon successful return will contain the
+ *                next byte.
+ *
+ * @return True, if offset refers to a byte in the GWBUF.
  */
-GWBUF *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t targettype)
+static inline bool gwbuf_get_byte(const GWBUF** buf, size_t* offset, uint8_t* b)
 {
-    gwbuf_type_t src_type;
-    GWBUF*       clonebuf;
+    bool rv = false;
 
-    CHK_GWBUF(head);
-    src_type = head->gwbuf_type;
-
-    if (targettype == GWBUF_TYPE_UNDEFINED ||
-        src_type == GWBUF_TYPE_UNDEFINED ||
-        src_type == GWBUF_TYPE_PLAINSQL ||
-        targettype == src_type)
+    // Ignore NULL buffer and walk past empty or too short buffers.
+    while (*buf && (GWBUF_LENGTH(*buf) <= *offset))
     {
-        clonebuf = NULL;
-        goto return_clonebuf;
+        *offset -= GWBUF_LENGTH(*buf);
+        *buf = (*buf)->next;
     }
 
-    if (GWBUF_IS_TYPE_MYSQL(head))
+    ss_dassert(!*buf || (GWBUF_LENGTH(*buf) > *offset));
+
+    if (*buf)
     {
-        if (GWBUF_TYPE_PLAINSQL == targettype)
-        {
-            /** Crete reference to string part of buffer */
-            clonebuf = gwbuf_clone_portion(head,
-                                           5,
-                                           GWBUF_LENGTH(head) - 5);
-            ss_dassert(clonebuf != NULL);
-            /** Overwrite the type with new format */
-            gwbuf_set_type(clonebuf, targettype);
-        }
-        else
-        {
-            clonebuf = NULL;
-        }
+        *b = *(GWBUF_DATA(*buf) + *offset);
+        *offset += 1;
+
+        rv = true;
+    }
+
+    return rv;
+}
+
+int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
+{
+    int rv;
+
+    if ((lhs == NULL) && (rhs == NULL))
+    {
+        rv = 0;
+    }
+    else if (lhs == NULL)
+    {
+        ss_dassert(rhs);
+        rv = -1;
+    }
+    else if (rhs == NULL)
+    {
+        ss_dassert(lhs);
+        rv = 1;
     }
     else
     {
-        clonebuf = NULL;
+        ss_dassert(lhs && rhs);
+
+        size_t llen = gwbuf_length(lhs);
+        size_t rlen = gwbuf_length(rhs);
+
+        if (llen < rlen)
+        {
+            rv = -1;
+        }
+        else if (rlen < llen)
+        {
+            rv = 1;
+        }
+        else
+        {
+            ss_dassert(llen == rlen);
+
+            rv = 0;
+            size_t i = 0;
+            size_t loffset = 0;
+            size_t roffset = 0;
+
+            while ((rv == 0) && (i < llen))
+            {
+                uint8_t lc = 0;
+                uint8_t rc = 0;
+
+                ss_debug(bool rv1 = ) gwbuf_get_byte(&lhs, &loffset, &lc);
+                ss_debug(bool rv2 = ) gwbuf_get_byte(&rhs, &roffset, &rc);
+
+                ss_dassert(rv1 && rv2);
+
+                rv = (int)lc - (int)rc;
+
+                ++i;
+            }
+
+            if (rv < 0)
+            {
+                rv = -1;
+            }
+            else if (rv > 0)
+            {
+                rv = 1;
+            }
+        }
     }
 
-return_clonebuf:
-    return clonebuf;
+    return rv;
 }
 
-
-/**
- * Append a buffer onto a linked list of buffer structures.
- *
- * This call should be made with the caller holding the lock for the linked
- * list.
- *
- * @param head  The current head of the linked list
- * @param tail  The new buffer to make the tail of the linked list
- * @return      The new head of the linked list
- */
 GWBUF *
 gwbuf_append(GWBUF *head, GWBUF *tail)
 {
@@ -560,18 +571,6 @@ gwbuf_append(GWBUF *head, GWBUF *tail)
     return head;
 }
 
-/**
- * @brief Consume data from buffer chain
- *
- * Data is consumed from @p head until either @p length bytes have been
- * processed or @p head is empty. If @p head points to a chain of buffers,
- * those buffers are counted as a part of @p head and will also be consumed if
- * @p length exceeds the size of the first buffer.
- *
- * @param head   The head of the linked list
- * @param length Number of bytes to consume
- * @return       The head of the linked list or NULL if everything was consumed
- */
 GWBUF *
 gwbuf_consume(GWBUF *head, unsigned int length)
 {
@@ -599,14 +598,8 @@ gwbuf_consume(GWBUF *head, unsigned int length)
     return head;
 }
 
-/**
- * Return the number of bytes of data in the linked list.
- *
- * @param head  The current head of the linked list
- * @return The number of bytes of data in the linked list
- */
 unsigned int
-gwbuf_length(GWBUF *head)
+gwbuf_length(const GWBUF *head)
 {
     int rval = 0;
 
@@ -622,16 +615,8 @@ gwbuf_length(GWBUF *head)
     return rval;
 }
 
-/**
- * Return the number of individual buffers in the linked list.
- *
- * Currently not used, provided mainly for use during debugging sessions.
- *
- * @param head  The current head of the linked list
- * @return The number of bytes of data in the linked list
- */
 int
-gwbuf_count(GWBUF *head)
+gwbuf_count(const GWBUF *head)
 {
     int result = 0;
     while (head)
@@ -642,41 +627,6 @@ gwbuf_count(GWBUF *head)
     return result;
 }
 
-/**
- * Trim bytes form the end of a GWBUF structure. If the
- * buffer has n_bytes or less then it will be freed and
- * NULL will be returned.
- *
- * This routine assumes the buffer is not part of a chain
- *
- * @param buf           The buffer to trim
- * @param n_bytes       The number of bytes to trim off
- * @return              The buffer chain or NULL if buffer has <= n_bytes
- */
-GWBUF *
-gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
-{
-    ss_dassert(buf->next == NULL);
-
-    if (GWBUF_LENGTH(buf) <= n_bytes)
-    {
-        gwbuf_consume(buf, GWBUF_LENGTH(buf));
-        return NULL;
-    }
-    buf->end = (void *)((char *)buf->end - n_bytes);
-
-    return buf;
-}
-
-/**
- * Trim bytes from the end of a GWBUF structure that may be the first
- * in a list. If the buffer has n_bytes or less then it will be freed and
- * the next buffer in the list will be returned, or if none, NULL.
- *
- * @param head          The buffer to trim
- * @param n_bytes       The number of bytes to trim off
- * @return              The buffer chain or NULL if buffer chain now empty
- */
 GWBUF *
 gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
 {
@@ -688,20 +638,12 @@ gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
     if (GWBUF_EMPTY(head))
     {
         rval = head->next;
-        gwbuf_free(head);
+        gwbuf_free_one(head);
     }
     return rval;
 }
 
-/**
- * Set given type to all buffers on the list.
- * *
- * @param buf           The shared buffer
- * @param type          Type to be added
- */
-void gwbuf_set_type(
-    GWBUF*       buf,
-    gwbuf_type_t type)
+void gwbuf_set_type(GWBUF* buf, gwbuf_type_t type)
 {
     /** Set type consistenly to all buffers on the list */
     while (buf != NULL)
@@ -712,14 +654,6 @@ void gwbuf_set_type(
     }
 }
 
-/**
- * Add a buffer object to GWBUF buffer.
- *
- * @param buf           GWBUF where object is added
- * @param id            Type identifier for object
- * @param data          Object data
- * @param donefun_fp    Clean-up function to be executed before buffer is freed.
- */
 void gwbuf_add_buffer_object(GWBUF* buf,
                              bufobj_id_t id,
                              void*  data,
@@ -729,23 +663,16 @@ void gwbuf_add_buffer_object(GWBUF* buf,
     buffer_object_t*  newb;
 
     CHK_GWBUF(buf);
-    newb = (buffer_object_t *)malloc(sizeof(buffer_object_t));
-    ss_dassert(newb != NULL);
+    newb = (buffer_object_t *)MXS_MALLOC(sizeof(buffer_object_t));
+    MXS_ABORT_IF_NULL(newb);
 
-    if (newb == NULL)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        return;
-    }
     newb->bo_id = id;
     newb->bo_data = data;
     newb->bo_donefun_fp = donefun_fp;
     newb->bo_next = NULL;
     /** Lock */
     spinlock_acquire(&buf->gwbuf_lock);
-    p_b = &buf->gwbuf_bufobj;
+    p_b = &buf->sbuf->bufobj;
     /** Search the end of the list and add there */
     while (*p_b != NULL)
     {
@@ -753,19 +680,11 @@ void gwbuf_add_buffer_object(GWBUF* buf,
     }
     *p_b = newb;
     /** Set flag */
-    buf->gwbuf_info |= GWBUF_INFO_PARSED;
+    buf->sbuf->info |= GWBUF_INFO_PARSED;
     /** Unlock */
     spinlock_release(&buf->gwbuf_lock);
 }
 
-/**
- * Search buffer object which matches with the id.
- *
- * @param buf   GWBUF to be searched
- * @param id    Identifier for the object
- *
- * @return Searched buffer object or NULL if not found
- */
 void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
 {
     buffer_object_t* bo;
@@ -773,7 +692,7 @@ void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
     CHK_GWBUF(buf);
     /** Lock */
     spinlock_acquire(&buf->gwbuf_lock);
-    bo = buf->gwbuf_bufobj;
+    bo = buf->sbuf->bufobj;
 
     while (bo != NULL && bo->bo_id != id)
     {
@@ -798,46 +717,35 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
     next = bufobj->bo_next;
     /** Call corresponding clean-up function to clean buffer object's data */
     bufobj->bo_donefun_fp(bufobj->bo_data);
-    free(bufobj);
+    MXS_FREE(bufobj);
     return next;
 }
 
-/**
- * Add a property to a buffer.
- *
- * @param buf   The buffer to add the property to
- * @param name  The property name
- * @param value The property value
- * @return      Non-zero on success
- */
-int
+bool
 gwbuf_add_property(GWBUF *buf, char *name, char *value)
 {
-    BUF_PROPERTY *prop;
+    name = MXS_STRDUP(name);
+    value = MXS_STRDUP(value);
 
-    if ((prop = malloc(sizeof(BUF_PROPERTY))) == NULL)
+    BUF_PROPERTY *prop = (BUF_PROPERTY *)MXS_MALLOC(sizeof(BUF_PROPERTY));
+
+    if (!name || !value || !prop)
     {
-        ss_dassert(prop != NULL);
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        return 0;
+        MXS_FREE(name);
+        MXS_FREE(value);
+        MXS_FREE(prop);
+        return false;
     }
-    prop->name = strdup(name);
-    prop->value = strdup(value);
+
+    prop->name = name;
+    prop->value = value;
     spinlock_acquire(&buf->gwbuf_lock);
     prop->next = buf->properties;
     buf->properties = prop;
     spinlock_release(&buf->gwbuf_lock);
-    return 1;
+    return true;
 }
 
-/**
- * Return the value of a buffer property
- * @param buf   The buffer itself
- * @param name  The name of the property to return
- * @return The property value or NULL if the property was not found.
- */
 char *
 gwbuf_get_property(GWBUF *buf, char *name)
 {
@@ -857,19 +765,12 @@ gwbuf_get_property(GWBUF *buf, char *name)
     return NULL;
 }
 
-
-/**
- * Convert a chain of GWBUF structures into a single GWBUF structure
- *
- * @param orig          The chain to convert
- * @return              The contiguous buffer
- */
 GWBUF *
 gwbuf_make_contiguous(GWBUF *orig)
 {
-    GWBUF *newbuf;
-    char  *ptr;
-    int   len;
+    GWBUF   *newbuf;
+    uint8_t *ptr;
+    int     len;
 
     if (orig == NULL)
     {
@@ -897,14 +798,7 @@ gwbuf_make_contiguous(GWBUF *orig)
     return newbuf;
 }
 
-/**
- * Add hint to a buffer.
- *
- * @param buf   The buffer to add the hint to
- * @param hint  The hint itself
- * @return      Non-zero on success
- */
-int
+void
 gwbuf_add_hint(GWBUF *buf, HINT *hint)
 {
     HINT *ptr;
@@ -924,22 +818,9 @@ gwbuf_add_hint(GWBUF *buf, HINT *hint)
         buf->hint = hint;
     }
     spinlock_release(&buf->gwbuf_lock);
-    return 1;
 }
 
-/**
- * @brief Copy bytes from a buffer
- *
- * Copy bytes from a chain of buffers. Supports copying data from buffers where
- * the data is spread across multiple buffers.
- *
- * @param buffer Buffer to copy from
- * @param offset Offset into the buffer
- * @param bytes Number of bytes to copy
- * @param dest Destination where the bytes are copied
- * @return Number of bytes copied
- */
-size_t gwbuf_copy_data(GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest)
+size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest)
 {
     uint32_t buflen;
 
@@ -976,7 +857,7 @@ size_t gwbuf_copy_data(GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest
 
                 if (buffer)
                 {
-                    bytes_left = MIN(GWBUF_LENGTH(buffer), bytes);
+                    bytes_left = MXS_MIN(GWBUF_LENGTH(buffer), bytes);
                     ptr = (uint8_t*) GWBUF_DATA(buffer);
                 }
             }

@@ -1,9 +1,0 @@
--- maxscale route to master:3000
--- maxscale route to server server1:3000
--- maxscale route to server server2:3001
--- maxscale route to server server3:3002
--- maxscale route to server server4:3003
--- maxscale max_slave_replication_lag = 100: 
--- maxscale max_slave_replication_lag= 100: 
--- maxscale max_slave_replication_lag =100: 
--- maxscale max_slave_replication_lag=100: 

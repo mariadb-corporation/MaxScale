@@ -1,0 +1,9 @@
+{
+    "store": [
+        {
+            "attribute": "table",
+            "op": "=",
+            "value": "caching"
+        }
+    ]
+}

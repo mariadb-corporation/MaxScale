@@ -2,7 +2,7 @@
 
 CDC is a new protocol that allows compatible clients to authenticate and
 register for Change Data Capture events. The new protocol must be use in
-conjunction with AVRO router which currently converts MySQL binlog events into
+conjunction with AVRO router which currently converts MariaDB binlog events into
 AVRO records. Change Data Capture protocol is used by clients in order to
 interact with stored AVRO file and also allows registered clients to be notified
 with the new events coming from MariaDB 10.0/10.1 database.

@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# Copyright (c) 2016 MariaDB Corporation Ab
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+#
+# Change Date: 2019-07-01
+#
+# On the date above, in accordance with the Business Source License, use
+# of this software will be governed by version 2 or later of the General
+# Public License.
+
+function runQuery(){
+    mysql -s -s -h "$host" -P "$port" -u "$user" -p"$password" -e "$1"
+    if [ $? -ne 0 ]
+    then
+        echo "Failed to execute query: $1"
+        exit
+    fi
+}
+
+# Transform grants to from external hosts to MaxScale's host
+function getGrants(){
+    result=$(runQuery "show grants for $1"|sed -e "s/@[^ ]*/@'$maxscalehost'/" -e "s/ *IDENTIFIED BY.*//" -e "s/$/;/")
+    echo "$result"
+}
+
+user=$(whoami)
+host=$(hostname)
+port=3306
+include_root="and user <> 'root'"
+
+if [ "$1" == "--help" ] || [ $# -eq 0 ]
+then
+    echo "Transform grants from original host to this host"
+    echo ""
+    echo "This script queries the backend database for a list of grants and outputs "
+    echo "copies of them with the hostnames replaced with the current server's hostname."
+    echo "The value of the hostname is the same you would get by doing a 'SELECT USER()'"
+    echo "query from this server."
+    echo ""
+    echo "Usage: $0 -u USER -p PASSWORD -h HOST -P PORT [-r]"
+    echo "-u USER        Username"
+    echo "-p PASSWORD    Password"
+    echo "-h HOST        Database address ($host)"
+    echo "-P PORT        Database port ($port)"
+    echo "-r             Include root user in the grants"
+    exit
+fi
+
+while getopts "u:p:h:P:r" var
+do
+    case $var in
+        u)
+            user=$OPTARG
+            ;;
+
+        p)
+            password=$OPTARG
+            ;;
+
+        h)
+            host=$OPTARG
+            ;;
+
+        P)
+            port=$OPTARG
+            ;;
+        r)
+            include_root=""
+            ;;
+    esac
+done
+
+# Get the MaxScale hostname from the backend server
+maxscalehost=$(runQuery "select user()")
+maxscalehost=${maxscalehost#*@}
+
+# List all the users
+runQuery "select concat(\"'\", user, \"'\", '@', \"'\", host, \"'\") from mysql.user where user <> '' and host <> '%' $include_root"|while read i
+do
+    getGrants "$i"
+done

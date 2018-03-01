@@ -104,7 +104,7 @@ user=john
 
 You have an order system and believe the updates of the PRODUCTS table is causing some performance issues for the rest of your application. You would like to know which of the many updates in your application is causing the issue.
 
-Add a filter with the following definition;
+Add a filter with the following definition:
 
 ```
 [ProductsUpdateTop20]
@@ -120,9 +120,9 @@ Note the exclude entry, this is to prevent updates to the PRODUCTS_STOCK table f
 
 ### Example 2 - One Application Server is Slow
 
-One of your applications servers is slower than the rest, you believe it is related to database access but you not not sure what is taking the time.
+One of your applications servers is slower than the rest, you believe it is related to database access but you are not sure what is taking the time.
 
-Add a filter with the following definition;
+Add a filter with the following definition:
 
 ```
 [SlowAppServer]
@@ -210,6 +210,6 @@ Average statement execution time     1.488 seconds
 
 Total connection time               46.500 seconds
 
--bash-4.1$ 
+-bash-4.1$
 
 ```

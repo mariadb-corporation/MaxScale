@@ -1,0 +1,118 @@
+DROP TABLE IF EXISTS test.t1;
+CREATE TABLE test.t1(id INT);
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+COMMIT;
+SHOW STATUS LIKE 'COM_INSERT';
+Variable_name	Value
+Com_insert	0
+SHOW STATUS LIKE 'COM_LOAD';
+Variable_name	Value
+Com_load	1
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+1
+DELETE FROM test.t1;
+FLUSH STATUS;
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (2);
+INSERT INTO test.t1 VALUES (3);
+COMMIT;
+SHOW STATUS LIKE 'COM_INSERT';
+Variable_name	Value
+Com_insert	0
+SHOW STATUS LIKE 'COM_LOAD';
+Variable_name	Value
+Com_load	1
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+3
+DELETE FROM test.t1;
+FLUSH STATUS;
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1), (2), (3);
+COMMIT;
+SHOW STATUS LIKE 'COM_INSERT';
+Variable_name	Value
+Com_insert	0
+SHOW STATUS LIKE 'COM_LOAD';
+Variable_name	Value
+Com_load	1
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+3
+DELETE FROM test.t1;
+FLUSH STATUS;
+INSERT INTO test.t1 VALUES (1);
+SHOW STATUS LIKE 'COM_INSERT';
+Variable_name	Value
+Com_insert	1
+SHOW STATUS LIKE 'COM_LOAD';
+Variable_name	Value
+Com_load	0
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+1
+DELETE FROM test.t1;
+FLUSH STATUS;
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t1 VALUES (2);
+INSERT INTO test.t1 VALUES (3);
+SHOW STATUS LIKE 'COM_INSERT';
+Variable_name	Value
+Com_insert	3
+SHOW STATUS LIKE 'COM_LOAD';
+Variable_name	Value
+Com_load	0
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+3
+DELETE FROM test.t1;
+FLUSH STATUS;
+DROP TABLE IF EXISTS test.t2;
+CREATE TABLE test.t2(id int);
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+INSERT INTO test.t2 VALUES (1);
+ERROR HY000: Invalid insert target
+COMMIT;
+SELECT COUNT(*) FROM test.t2;
+COUNT(*)
+0
+DROP TABLE test.t2;
+SHOW STATUS LIKE 'COM_INSERT';
+Variable_name	Value
+Com_insert	0
+SHOW STATUS LIKE 'COM_LOAD';
+Variable_name	Value
+Com_load	1
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+1
+DELETE FROM test.t1;
+FLUSH STATUS;
+CREATE TABLE test.t2(id int);
+START TRANSACTION;
+INSERT INTO test.t1 VALUES (1);
+SELECT 1;
+1
+1
+INSERT INTO test.t2 VALUES (1);
+COMMIT;
+SELECT COUNT(*) FROM test.t2;
+COUNT(*)
+1
+DROP TABLE test.t2;
+SHOW STATUS LIKE 'COM_INSERT';
+Variable_name	Value
+Com_insert	0
+SHOW STATUS LIKE 'COM_LOAD';
+Variable_name	Value
+Com_load	2
+SELECT COUNT(*) FROM test.t1;
+COUNT(*)
+1
+DELETE FROM test.t1;
+FLUSH STATUS;
+DROP TABLE test.t1;

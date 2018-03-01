@@ -1,0 +1,47 @@
+[maxscale]
+threads=###threads###
+
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+###repl51###
+servers=server1
+user=maxskysql
+passwd=skysql
+monitor_interval=1000
+
+[insertstream]
+type=filter
+module=insertstream
+
+[RW Split Router]
+type=service
+router=readconnroute
+servers=server1
+user=maxskysql
+passwd=skysql
+filters=insertstream
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+#address=localhost
+socket=default
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+

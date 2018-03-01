@@ -1,9 +1,9 @@
 # Data archiving with Mqfilter and Tee filters
 
-This tutorial gives a quick look into how you can combine various filters to create 
+This tutorial gives a quick look into how you can combine various filters to create
 systems for archiving data for analysis. The aim of this tutorial is to show
 what can be done with MariaDB MaxScale's filters rather than demonstrate a proven method
-of archiving data. For this tutorial you will need two MariaDB/MySQL servers, one for
+of archiving data. For this tutorial you will need two MariaDB servers, one for
 archiving the data and one for actual use, a RabbitMQ server and a MariaDB MaxScale server.
 For testing purposes some of these can locate on the same server but for actual
 use, an HA solution is recommended.
@@ -21,14 +21,15 @@ making the archive server a true archive of all data.
 
 The installation of MariaDB MaxScale is covered in the Installation chapter of the [MariaDB MaxScale Tutorial](MaxScale-Tutorial.md).
 
-## Setting up the MariaDB/MySQL servers
+## Setting up the MariaDB servers
 
 Since the archive server will not replicate from the main server, we don't need to
 set up replication between the two. The only thing we need to do is to create the
 users we will use for monitoring and authentication.
 
-The process of creating monitoring and authentication users for MariaDB MaxScale is described 
-in the Creating Database Users section of the [MariaDB MaxScale Tutorial](MaxScale-Tutorial.md).
+The process of creating monitoring and authentication users for MariaDB MaxScale is described
+in the Creating Database Users section of the
+[MariaDB MaxScale Tutorial](MaxScale-Tutorial.md#creating-database-users).
 
 ## Setting up RabbitMQ server
 
@@ -301,7 +302,7 @@ router=cli
 type=listener
 service=MaxAdmin Service
 protocol=maxscaled
-port=6603
+socket=default
 ```
 
 ## Testing the setup
@@ -317,11 +318,11 @@ sudo systemctl start maxscale
 We can see the state of the two servers with MaxAdmin:
 
 ```
-maxadmin list servers
+sudo maxadmin list servers
 
 Servers.
 -------------------+-----------------+-------+-------------+--------------------
-Server             | Address         | Port  | Connections | Status              
+Server             | Address         | Port  | Connections | Status
 -------------------+-----------------+-------+-------------+--------------------
 production-1       | 192.168.0.200   |  3306 |           0 | Running
 archive-1          | 192.168.0.201   |  3000 |           0 | Running

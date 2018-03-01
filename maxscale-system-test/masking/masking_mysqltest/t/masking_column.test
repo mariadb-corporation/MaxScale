@@ -1,0 +1,75 @@
+#
+# Masking column handling
+#
+# Whether the column to be masked is first, in the middle or
+# last should not matter.
+#
+# See ../masking_rules.json
+
+--disable_warnings
+drop database if exists maskingdb;
+--enable_warnings
+
+create database maskingdb;
+use maskingdb;
+
+create table masking (a TEXT, x TEXT, y TEXT);
+insert into masking values ("hello", "hello",  "hello");
+insert into masking values (NULL,    "hello",  "hello");
+insert into masking values ("hello",  NULL,    "hello");
+insert into masking values ("hello",  "hello", NULL);
+insert into masking values (NULL,     NULL,    "hello");
+insert into masking values ("hello",  NULL,    NULL);
+insert into masking values (NULL,     NULL,    NULL);
+select * from masking;
+#a     x     y
+#XXXXX hello hello
+#NULL  hello hello
+#XXXXX NULL  hello
+#XXXXX hello NULL
+#NULL  NULL  hello
+#XXXXX NULL  NULL
+#NULL  NULL  NULL
+
+drop table masking;
+
+create table masking (x TEXT, a TEXT, y TEXT);
+insert into masking values ("hello", "hello", "hello");
+insert into masking values (NULL,    "hello",  "hello");
+insert into masking values ("hello",  NULL,    "hello");
+insert into masking values ("hello",  "hello", NULL);
+insert into masking values (NULL,     NULL,    "hello");
+insert into masking values ("hello",  NULL,    NULL);
+insert into masking values (NULL,     NULL,    NULL);
+select * from masking;
+#x     a     y
+#hello XXXXX hello
+#hello XXXXX hello
+#NULL  XXXXX hello
+#hello NULL  hello
+#hello XXXXX NULL
+#NULL  NULL  hello
+#hello NULL  NULL
+#NULL  NULL  NULL
+
+drop table masking;
+
+create table masking (x TEXT, y TEXT, a TEXT);
+insert into masking values ("hello", "hello", "hello");
+insert into masking values (NULL,    "hello",  "hello");
+insert into masking values ("hello",  NULL,    "hello");
+insert into masking values ("hello",  "hello", NULL);
+insert into masking values (NULL,     NULL,    "hello");
+insert into masking values ("hello",  NULL,    NULL);
+insert into masking values (NULL,     NULL,    NULL);
+select * from masking;
+#x     y     a
+#hello hello XXXXX
+#NULL  hello XXXXX
+#hello NULL  XXXXX
+#hello hello NULL
+#NULL  NULL  XXXXX
+#hello NULL  NULL
+#NULL  NULL  NULL
+
+drop table masking;

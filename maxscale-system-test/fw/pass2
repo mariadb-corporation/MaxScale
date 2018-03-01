@@ -1,0 +1,2 @@
+select user from mysql.user;
+delete from t1 where x1 like '_';

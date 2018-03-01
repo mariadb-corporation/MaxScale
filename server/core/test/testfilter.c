@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <filter.h>
+#include "../maxscale/filter.h"
 
 
 /**
@@ -43,22 +43,22 @@
 static int
 test1()
 {
-    FILTER_DEF  *f1, *f2;
+    MXS_FILTER_DEF  *f1, *f2;
 
     if ((f1 = filter_alloc("test1", "module")) == NULL)
     {
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
     }
-    if ((f2 = filter_find("test1")) == NULL)
+    if ((f2 = filter_def_find("test1")) == NULL)
     {
-        fprintf(stderr, "filter_find: test 2 failed.\n");
+        fprintf(stderr, "filter_def_find: test 2 failed.\n");
         return 1;
     }
     filter_free(f1);
-    if ((f2 = filter_find("test1")) != NULL)
+    if ((f2 = filter_def_find("test1")) != NULL)
     {
-        fprintf(stderr, "filter_find: test 3 failed delete.\n");
+        fprintf(stderr, "filter_def_find: test 3 failed delete.\n");
         return 1;
     }
 
@@ -76,19 +76,21 @@ test1()
 static int
 test2()
 {
-    FILTER_DEF  *f1;
+    MXS_FILTER_DEF  *f1;
 
     if ((f1 = filter_alloc("test1", "module")) == NULL)
     {
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
     }
-    filterAddOption(f1, "option1");
-    filterAddOption(f1, "option2");
-    filterAddOption(f1, "option3");
-    filterAddParameter(f1, "name1", "value1");
-    filterAddParameter(f1, "name2", "value2");
-    filterAddParameter(f1, "name3", "value3");
+    filter_add_option(f1, "option1");
+    filter_add_option(f1, "option2");
+    filter_add_option(f1, "option3");
+    filter_add_parameter(f1, "name1", "value1");
+    filter_add_parameter(f1, "name2", "value2");
+    filter_add_parameter(f1, "name3", "value3");
+
+    filter_free(f1);
     return 0;
 }
 
@@ -100,7 +102,7 @@ test2()
 static int
 test3()
 {
-    FILTER_DEF  *f1;
+    MXS_FILTER_DEF  *f1;
     char        name[40];
     int     i, n_filters = 1000;
 
@@ -117,25 +119,25 @@ test3()
     for (i = 0; i < n_filters; i++)
     {
         sprintf(name, "filter%d", i);
-        if ((f1 = filter_find(name)) == NULL)
+        if ((f1 = filter_def_find(name)) == NULL)
         {
-            fprintf(stderr, "filter_find: test 3 failed.\n");
+            fprintf(stderr, "filter_def_find: test 3 failed.\n");
             return 1;
         }
     }
     for (i = 0; i < n_filters; i++)
     {
         sprintf(name, "filter%d", i);
-        if ((f1 = filter_find(name)) == NULL)
+        if ((f1 = filter_def_find(name)) == NULL)
         {
-            fprintf(stderr, "filter_find: test 3 failed.\n");
+            fprintf(stderr, "filter_def_find: test 3 failed.\n");
             return 1;
         }
         filter_free(f1);
-        if ((f1 = filter_find(name)) != NULL)
+        if ((f1 = filter_def_find(name)) != NULL)
         {
             fprintf(stderr,
-                    "filter_find: test 3 failed - found deleted filter.\n");
+                    "filter_def_find: test 3 failed - found deleted filter.\n");
             return 1;
         }
     }

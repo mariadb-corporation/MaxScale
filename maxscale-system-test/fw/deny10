@@ -1,0 +1,4 @@
+load data infile;
+LOAD data infile;
+LOAD DATA infile;
+LOAD DATA INFILE;

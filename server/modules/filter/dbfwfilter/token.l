@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,12 +33,14 @@ USER        [^[:space:]]*[@]
 IP          [0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}
 BTSTR       `[^`]*`
 USTR        [%-_[:alnum:][:punct:]]+
+CMP         [=<>!]+
 
 %%
 "\n"+           return '\n';
 {COMMENT}       return FWTOK_COMMENT;
 deny|allow      return FWTOK_DENY; /** This should be removed at some point */
 rule            return FWTOK_RULE;
+function        return FWTOK_FUNCTION;
 no_where_clause return FWTOK_WHERE_CLAUSE;
 wildcard        return FWTOK_WILDCARD;
 columns         return FWTOK_COLUMNS;
@@ -52,6 +54,7 @@ match           return FWTOK_MATCH;
 any             return FWTOK_ANY;
 all             return FWTOK_ALL;
 strict_all      return FWTOK_STRICT_ALL;
+{CMP}           yylval->strval = yytext;return FWTOK_CMP;
 {USTR}@{USTR}   yylval->strval = yytext;return FWTOK_USER;
 {BTSTR}@{BTSTR} yylval->strval = yytext;return FWTOK_USER;
 {QSTR}@{QSTR}   yylval->strval = yytext;return FWTOK_USER;

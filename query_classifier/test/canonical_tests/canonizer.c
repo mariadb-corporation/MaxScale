@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -15,9 +15,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include <query_classifier.h>
-#include <buffer.h>
-#include <gwdirs.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/buffer.h>
+#include <maxscale/paths.h>
+#include <maxscale/utils.h>
 
 int main(int argc, char** argv)
 {
@@ -45,11 +46,12 @@ int main(int argc, char** argv)
     set_langdir(strdup("."));
     set_process_datadir(strdup("/tmp"));
 
-    qc_init("qc_sqlite", NULL);
-    qc_thread_init();
+    qc_setup("qc_sqlite", NULL);
+    qc_process_init(QC_INIT_BOTH);
+    qc_thread_init(QC_INIT_BOTH);
 
-    infile = fopen(argv[1],"rb");
-    outfile = fopen(argv[2],"wb");
+    infile = fopen(argv[1], "rb");
+    outfile = fopen(argv[2], "wb");
 
     if (infile == NULL || outfile == NULL)
     {
@@ -82,7 +84,6 @@ int main(int argc, char** argv)
     }
     fclose(infile);
     fclose(outfile);
-    qc_thread_end();
-    qc_end();
+    qc_process_end(QC_INIT_BOTH);
     return 0;
 }

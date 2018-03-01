@@ -1,6 +1,6 @@
 # MaxScale by MariaDB Corporation
 
-[![Build Status](https://travis-ci.org/mariadb-corporation/MaxScale.svg?branch=2.0)](https://travis-ci.org/mariadb-corporation/MaxScale)
+[![Build Status](https://travis-ci.org/mariadb-corporation/MaxScale.svg?branch=develop)](https://travis-ci.org/mariadb-corporation/MaxScale)
 
 The MariaDB Corporation MaxScale is an intelligent proxy that allows
 forwarding of database statements to one or more database servers using
@@ -41,6 +41,7 @@ For information about installing and using MaxScale, please refer to the
 documentation. The official documentation can be found on the
 [MariaDB Knowledge Base](https://mariadb.com/kb/en/mariadb-enterprise/maxscale/).
 
+- [MariaDB MaxScale 2.1 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/6308/)
 - [MariaDB MaxScale 2.0 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-20-contents/)
 - [MariaDB MaxScale 1.4 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-14/maxscale-maxscale-contents/)
 

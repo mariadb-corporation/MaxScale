@@ -1,0 +1,29 @@
+{
+    "rules": [
+        {
+            "replace": {
+                "column": "a"
+            },
+            "with": {
+                "fill": "Y"
+            }
+        },
+        {
+            "replace": {
+                "column": "b"
+            },
+            "with": {
+                "value": "012345-ABCD"
+            }
+        },
+        {
+            "replace": {
+                "column": "c"
+            },
+            "with": {
+                "value": "012345-ABCD",
+                "fill": "Y"
+            }
+        }
+    ]
+}

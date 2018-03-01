@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS t1;
+CREATE TABLE t1 (x1 int, fl int);
+select sleep(5);
+delete from t1;
+SELECT fl FROM t1;
+UPDATE t1 SET fl=1 WHERE x1=0;

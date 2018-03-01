@@ -6,7 +6,7 @@ The Query Log All (QLA) filter is a filter module for MariaDB MaxScale that is a
 
 ## Configuration
 
-The configuration block for the QLA filter requires the minimal filter options in it's section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
+The configuration block for the QLA filter requires the minimal filter options in its section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
 ```
 [MyLogFilter]
 type=filter
@@ -14,7 +14,7 @@ module=qlafilter
 
 [MyService]
 type=service
-router=readconnrouter
+router=readconnroute
 servers=server1
 user=myuser
 passwd=mypasswd
@@ -25,13 +25,13 @@ filters=MyLogFilter
 
 The QLA filter accepts the following options.
 
-|Option |Description |
-|----------|--------------------------------------------|
-|ignorecase|Use case-insensitive matching |
-|case |Use case-sensitive matching |
-|extended |Use extended regular expression syntax (ERE)|
+ Option | Description
+ -------| -----------
+ ignorecase | Use case-insensitive matching
+ case | Use case-sensitive matching
+ extended | Use extended regular expression syntax (ERE)
 
-To use multiple filter options, list them in a comma-separated list.
+To use multiple filter options, list them in a comma-separated list. If no options are given, default will be used. Multiple options can be enabled simultaneously.
 
 ```
 options=case,extended
@@ -45,7 +45,7 @@ anymore and the `filebase` parameter should be used instead.
 
 The QLA filter has one mandatory parameter, `filebase`, and a number of optional parameters. These were introduced in the 1.0 release of MariaDB MaxScale.
 
-### Filebase
+### `filebase`
 
 The basename of the output file created for each session. A session index is added to the filename for each file written. This is a mandatory parameter.
 
@@ -53,9 +53,9 @@ The basename of the output file created for each session. A session index is add
 filebase=/tmp/SqlQueryLog
 ```
 
-The filebase may also be set as the filter, the mechanism to set the filebase via the filter option is superseded by the parameter. If both are set the parameter setting will be used and the filter option ignored.
+The filebase may also be set as the filter option, the mechanism to set the filebase via the filter option is superseded by the parameter. If both are set the parameter setting will be used and the filter option ignored.
 
-### Match
+### `match`
 
 An optional parameter that can be used to limit the queries that will be logged by the QLA filter. The parameter value is a regular expression that is used to match against the SQL text. Only SQL statements that matches the text passed as the value of this parameter will be logged.
 
@@ -65,7 +65,7 @@ match=select.*from.*customer.*where
 
 All regular expressions are evaluated with the option to ignore the case of the text, therefore a match option of select will match both select, SELECT and any form of the word with upper or lowercase characters.
 
-### Exclude
+### `exclude`
 
 An optional parameter that can be used to limit the queries that will be logged by the QLA filter. The parameter value is a regular expression that is used to match against the SQL text. SQL statements that match the text passed as the value of this parameter will be excluded from the log output.
 
@@ -75,7 +75,7 @@ exclude=where
 
 All regular expressions are evaluated with the option to ignore the case of the text, therefore an exclude option of select will exclude statements that contain both select, SELECT or any form of the word with upper or lowercase characters.
 
-### Source
+### `source`
 
 The optional source parameter defines an address that is used to match against the address from which the client connection to MariaDB MaxScale originates. Only sessions that originate from this address will be logged.
 
@@ -83,12 +83,65 @@ The optional source parameter defines an address that is used to match against t
 source=127.0.0.1
 ```
 
-### User
+### `user`
 
 The optional user parameter defines a user name that is used to match against the user from which the client connection to MariaDB MaxScale originates. Only sessions that are connected using this username are logged.
 
 ```
 user=john
+```
+
+-----------------------------------------------------------
+
+**The following parameters were added in MaxScale 2.1.0**
+
+-----------------------------------------------------------
+
+### `log_type`
+
+The type of log file to use. The default value is _session_.
+
+|Value   | Description                    |
+|--------|--------------------------------|
+|session |Write to session-specific files |
+|unified |Use one file for all sessions   |
+
+```
+log_type=session
+```
+
+### `log_data`
+
+Type of data to log in the log files. Parameter value is a comma separated list
+of the following values. By default the _date_, _user_ and _query_ options are
+enabled.
+
+|Value   | Description                                       |
+|--------|---------------------------------------------------|
+|service | Log service name                                  |
+|session | Log unique session id (ignored for session-files) |
+|date    | Log timestamp                                     |
+|user    | Log user and hostname of client                   |
+|query   | Log the actual query                              |
+
+```
+log_data=date, user, query
+```
+
+### `flush`
+
+Flush log files after every write. The default is false.
+
+```
+flush=true
+```
+
+### `append`
+
+Append new entries to log files instead of overwriting them. The default is false.
+
+```
+append=true
 ```
 
 ## Examples

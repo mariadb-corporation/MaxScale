@@ -1,0 +1,12 @@
+[mysqld]
+plugin-load-add=file_key_management.so
+file_key_management_encryption_algorithm=aes_cbc
+file_key_management_filename = /etc/mariadb_binlog_keys.txt
+encrypt-binlog=1
+
+# Enable checksum
+binlog_checksum=CRC32
+
+#Enable large packets handling
+max_allowed_packet=1042M
+innodb_log_file_size=142M

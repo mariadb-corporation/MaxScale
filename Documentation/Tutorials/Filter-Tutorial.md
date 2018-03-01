@@ -121,7 +121,7 @@ When the session ends a report will be written for the session into the logfile 
 
 ### Duplicate Data From Your Application Into Cassandra
 
-The scenario we are using in this example is one in which you have an online gaming application that is designed to work with a MariaDB/MySQL database. The database schema includes a high score table which you would like to have access to in a Cassandra cluster. The application is already using MariaDB MaxScale to connect to a MariaDB Galera cluster, using a service names BubbleGame. The definition of that service is as follows
+The scenario we are using in this example is one in which you have an online gaming application that is designed to work with a MariaDB database. The database schema includes a high score table which you would like to have access to in a Cassandra cluster. The application is already using MariaDB MaxScale to connect to a MariaDB Galera cluster, using a service names BubbleGame. The definition of that service is as follows
 ```
 [BubbleGame]
 type=service
@@ -130,13 +130,16 @@ servers=dbbubble1,dbbubble2,dbbubble3,dbbubble4,dbbubble5
 user=maxscale
 passwd=6628C50E07CCE1F0392EDEEB9D1203F3
 ```
-The table you wish to store in Cassandra in called HighScore and will contain the same columns in both the MariaDB table and the Cassandra table. The first step is to install a MariaDB instance with the Cassandra storage engine to act as a bridge server between the relational database and Cassandra. In this bridge server add a table definition for the HighScore table with the engine type set to cassandra. Add this server into the MariaDB MaxScale configuration and create a service that will connect to this server.
+The table you wish to store in Cassandra in called HighScore and will contain the same columns in both the MariaDB table and the Cassandra table. The first step is to install a MariaDB instance with the Cassandra storage engine to act as a bridge server between the relational database and Cassandra. In this bridge server add a table definition for the HighScore table with the engine type set to Cassandra.
+See [Cassandra Storage Engine Overview]( https://mariadb.com/kb/en/mariadb/cassandra-storage-engine-overview/) for details.
+Add this server into the MariaDB MaxScale configuration and create a service that will connect to this server.
 ```
 [CassandraDB]
 type=server
 address=192.168.4.28
 port=3306
 protocol=MySQLBackend
+
 [Cassandra]
 type=service
 router=readconnrouter

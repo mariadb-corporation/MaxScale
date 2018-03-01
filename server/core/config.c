@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -44,105 +44,103 @@
  *
  * @endverbatim
  */
-#include <my_config.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <ini.h>
-#include <maxconfig.h>
-#include <service.h>
-#include <server.h>
-#include <users.h>
-#include <monitor.h>
-#include <modules.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <mysql.h>
-#include <sys/utsname.h>
-#include <sys/fcntl.h>
-#include <glob.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <housekeeper.h>
-#include <notification.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <sys/utsname.h>
-#include <dbusers.h>
-#include <gw.h>
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2.h>
+#include <maxscale/config.h>
 
-extern int setipaddress(struct in_addr *, char *);
-static bool process_config_context(CONFIG_CONTEXT   *);
-static int process_config_update(CONFIG_CONTEXT *);
-static void free_config_context(CONFIG_CONTEXT      *);
-static char *config_get_value(CONFIG_PARAMETER *, const char *);
-static char *config_get_password(CONFIG_PARAMETER *);
-static const char *config_get_value_string(CONFIG_PARAMETER *, const char *);
+#include <ctype.h>
+#include <ftw.h>
+#include <fcntl.h>
+#include <glob.h>
+#include <net/if.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <ini.h>
+
+#include <maxscale/alloc.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/limits.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/notification.h>
+#include <maxscale/pcre2.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/utils.h>
+#include <maxscale/paths.h>
+
+#include "maxscale/config.h"
+#include "maxscale/filter.h"
+#include "maxscale/service.h"
+#include "maxscale/monitor.h"
+#include "maxscale/modules.h"
+
+typedef struct duplicate_context
+{
+    HASHTABLE        *hash;
+    pcre2_code       *re;
+    pcre2_match_data *mdata;
+} DUPLICATE_CONTEXT;
+
+static bool duplicate_context_init(DUPLICATE_CONTEXT* context);
+static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
+
+static bool process_config_context(CONFIG_CONTEXT *);
+static bool process_config_update(CONFIG_CONTEXT *);
+static char *config_get_value(MXS_CONFIG_PARAMETER *, const char *);
+static char *config_get_password(MXS_CONFIG_PARAMETER *);
+static const char* config_get_value_string(const MXS_CONFIG_PARAMETER *params, const char *name);
 static int handle_global_item(const char *, const char *);
 static int handle_feedback_item(const char *, const char *);
 static void global_defaults();
 static void feedback_defaults();
 static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
-static SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
 
-int config_truth_value(char *str);
 int config_get_ifaddr(unsigned char *output);
-int config_get_release_string(char* release);
+static int config_get_release_string(char* release);
 FEEDBACK_CONF *config_get_feedback_data();
-void config_add_param(CONFIG_CONTEXT*, char*, char*);
-bool config_has_duplicate_sections(const char* config);
+bool config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
 int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
 int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash);
-int create_new_listener(CONFIG_CONTEXT *obj, bool startnow);
+int create_new_listener(CONFIG_CONTEXT *obj);
 int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
 
-static char          *config_file = NULL;
-static GATEWAY_CONF  gateway;
+static const char *config_file = NULL;
+static MXS_CONFIG gateway;
 static FEEDBACK_CONF feedback;
-char                 *version_string = NULL;
+char *version_string = NULL;
+static bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
 
-
-static char *service_params[] =
+static const char *service_params[] =
 {
     "type",
     "router",
     "router_options",
     "servers",
+    "monitor",
     "user",
     "passwd", // DEPRECATE: See config_get_password.
     "password",
     "enable_root_user",
     "max_connections",
-    /* "max_queued_connections", */
-    /* "queued_connection_timeout", */
+    "max_queued_connections",
+    "queued_connection_timeout",
     "connection_timeout",
     "auth_all_servers",
     "strip_db_esc",
     "localhost_match_wildcard_host",
-    "max_slave_connections",
-    "max_slave_replication_lag",
-    "use_sql_variables_in",         /*< rwsplit only */
-    "subservices",
     "version_string",
     "filters",
     "weightby",
-    "ignore_databases",
-    "ignore_databases_regex",
     "log_auth_warnings",
-    "source", /**< Avrorouter only */
     "retry_on_failure",
     NULL
 };
 
-static char *listener_params[] =
+static const char *listener_params[] =
 {
+    "authenticator_options",
     "type",
     "service",
     "protocol",
@@ -156,10 +154,11 @@ static char *listener_params[] =
     "ssl_key",
     "ssl_version",
     "ssl_cert_verify_depth",
+    "ssl_verify_peer_certificate",
     NULL
 };
 
-static char *monitor_params[] =
+static const char *monitor_params[] =
 {
     "type",
     "module",
@@ -169,26 +168,28 @@ static char *monitor_params[] =
     "password",
     "script",
     "events",
-    "mysql51_replication",
     "monitor_interval",
-    "detect_replication_lag",
-    "detect_stale_master",
-    "disable_master_failback",
     "backend_connect_timeout",
     "backend_read_timeout",
     "backend_write_timeout",
-    "available_when_donor",
-    "disable_master_role_setting",
-    "use_priority",
     NULL
 };
 
-static char *server_params[] =
+static const char *filter_params[] =
+{
+    "type",
+    "module",
+    NULL
+};
+
+static const char *server_params[] =
 {
     "type",
     "protocol",
     "port",
     "address",
+    "authenticator",
+    "authenticator_options",
     "monitoruser",
     "monitorpw",
     "persistpoolmax",
@@ -199,8 +200,64 @@ static char *server_params[] =
     "ssl_key",
     "ssl_version",
     "ssl_cert_verify_depth",
+    "ssl_verify_peer_certificate",
     NULL
 };
+
+/**
+ * Initialize the context object used for tracking duplicate sections.
+ *
+ * @param context The context object to be initialized.
+ *
+ * @return True, if the object could be initialized.
+ */
+static bool duplicate_context_init(DUPLICATE_CONTEXT* context)
+{
+    bool rv = false;
+
+    const int table_size = 10;
+    HASHTABLE *hash = hashtable_alloc(table_size, hashtable_item_strhash, hashtable_item_strcmp);
+    int errcode;
+    PCRE2_SIZE erroffset;
+    pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
+                                   0, &errcode, &erroffset, NULL);
+    pcre2_match_data *mdata = NULL;
+
+    if (hash && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
+    {
+        hashtable_memory_fns(hash, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
+
+        context->hash = hash;
+        context->re = re;
+        context->mdata = mdata;
+        rv = true;
+    }
+    else
+    {
+        pcre2_match_data_free(mdata);
+        pcre2_code_free(re);
+        hashtable_free(hash);
+    }
+
+    return rv;
+}
+
+/**
+ * Finalize the context object used for tracking duplicate sections.
+ *
+ * @param context The context object to be initialized.
+ */
+static void duplicate_context_finish(DUPLICATE_CONTEXT* context)
+{
+    pcre2_match_data_free(context->mdata);
+    pcre2_code_free(context->re);
+    hashtable_free(context->hash);
+
+    context->mdata = NULL;
+    context->re = NULL;
+    context->hash = NULL;
+}
+
 
 /**
  * Remove extra commas and whitespace from a string. This string is interpreted
@@ -208,11 +265,12 @@ static char *server_params[] =
  * @param strptr String to clean
  * @return pointer to a new string or NULL if an error occurred
  */
-char* config_clean_string_list(char* str)
+char* config_clean_string_list(const char* str)
 {
-    char *dest;
     size_t destsize = strlen(str) + 1;
-    if ((dest = malloc(destsize)) != NULL)
+    char *dest = MXS_MALLOC(destsize);
+
+    if (dest)
     {
         pcre2_code* re;
         pcre2_match_data* data;
@@ -223,31 +281,33 @@ char* config_clean_string_list(char* str)
                                 PCRE2_ZERO_TERMINATED, 0, &re_err, &err_offset, NULL)) == NULL ||
             (data = pcre2_match_data_create_from_pattern(re, NULL)) == NULL)
         {
-            PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+            PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
             pcre2_get_error_message(re_err, errbuf, sizeof(errbuf));
             MXS_ERROR("[%s] Regular expression compilation failed at %d: %s",
                       __FUNCTION__, (int)err_offset, errbuf);
             pcre2_code_free(re);
-            free(dest);
+            MXS_FREE(dest);
             return NULL;
         }
 
         const char *replace = "$1,";
         int rval = 0;
+        size_t destsize_tmp = destsize;
         while ((rval = pcre2_substitute(re, (PCRE2_SPTR) str, PCRE2_ZERO_TERMINATED, 0,
                                         PCRE2_SUBSTITUTE_GLOBAL, data, NULL,
                                         (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
-                                        (PCRE2_UCHAR*) dest, &destsize)) == PCRE2_ERROR_NOMEMORY)
+                                        (PCRE2_UCHAR*) dest, &destsize_tmp)) == PCRE2_ERROR_NOMEMORY)
         {
-            char* tmp = realloc(dest, destsize * 2);
+            destsize_tmp = 2 * destsize;
+            char* tmp = MXS_REALLOC(dest, destsize_tmp);
             if (tmp == NULL)
             {
-                free(dest);
+                MXS_FREE(dest);
                 dest = NULL;
                 break;
             }
             dest = tmp;
-            destsize *= 2;
+            destsize = destsize_tmp;
         }
 
         /** Remove the trailing comma */
@@ -259,12 +319,23 @@ char* config_clean_string_list(char* str)
         pcre2_code_free(re);
         pcre2_match_data_free(data);
     }
-    else
-    {
-        MXS_ERROR("[%s] Memory allocation failed.", __FUNCTION__);
-    }
 
     return dest;
+}
+
+CONFIG_CONTEXT* config_context_create(const char *section)
+{
+    CONFIG_CONTEXT* ctx = (CONFIG_CONTEXT *)MXS_MALLOC(sizeof(CONFIG_CONTEXT));
+    if (ctx)
+    {
+        ctx->object = MXS_STRDUP_A(section);
+        ctx->was_persisted = is_persisted_config;
+        ctx->parameters = NULL;
+        ctx->next = NULL;
+        ctx->element = NULL;
+    }
+
+    return ctx;
 }
 
 /**
@@ -277,11 +348,10 @@ char* config_clean_string_list(char* str)
  * @return zero on error
  */
 static int
-handler(void *userdata, const char *section, const char *name, const char *value)
+ini_handler(void *userdata, const char *section, const char *name, const char *value)
 {
     CONFIG_CONTEXT   *cntxt = (CONFIG_CONTEXT *)userdata;
     CONFIG_CONTEXT   *ptr = cntxt;
-    CONFIG_PARAMETER *param, *p1;
 
     if (strcmp(section, "gateway") == 0 || strcasecmp(section, "MaxScale") == 0)
     {
@@ -309,156 +379,375 @@ handler(void *userdata, const char *section, const char *name, const char *value
 
     if (!ptr)
     {
-        if ((ptr = (CONFIG_CONTEXT *)malloc(sizeof(CONFIG_CONTEXT))) == NULL)
+        if ((ptr = config_context_create(section)) == NULL)
         {
             return 0;
         }
 
-        ptr->object = strdup(section);
-        ptr->parameters = NULL;
         ptr->next = cntxt->next;
-        ptr->element = NULL;
         cntxt->next = ptr;
     }
-    /* Check to see if the parameter already exists for the section */
-    p1 = ptr->parameters;
-    while (p1)
+
+    if (config_get_param(ptr->parameters, name))
     {
-        if (!strcmp(p1->name, name))
+        if (!config_append_param(ptr, name, value))
         {
-            char *tmp;
-            int paramlen = strlen(p1->value) + strlen(value) + 2;
-
-            if ((tmp = realloc(p1->value, sizeof(char) * (paramlen))) == NULL)
-            {
-                MXS_ERROR("[%s] Memory allocation failed.", __FUNCTION__);
-                return 0;
-            }
-            strcat(tmp, ",");
-            strcat(tmp, value);
-            if ((p1->value = config_clean_string_list(tmp)) == NULL)
-            {
-                p1->value = tmp;
-                MXS_ERROR("[%s] Cleaning configuration parameter failed.", __FUNCTION__);
-                return 0;
-            }
-            free(tmp);
-            return 1;
+            return 0;
         }
-        p1 = p1->next;
     }
-
-    if ((param = (CONFIG_PARAMETER *)malloc(sizeof(CONFIG_PARAMETER))) == NULL)
+    else if (!config_add_param(ptr, name, value))
     {
         return 0;
     }
-
-    param->name = strdup(name);
-    param->value = strdup(value);
-    param->next = ptr->parameters;
-    param->qfd_param_type = UNDEFINED_TYPE;
-    ptr->parameters = param;
 
     return 1;
 }
 
 /**
- * @brief Load the configuration file for the MaxScale
+ * Load single configuration file.
+ *
+ * @param file     The file to load.
+ * @param dcontext The context object used when tracking duplicate sections.
+ * @param ccontext The context object used when parsing.
+ *
+ * @return True if the file could be parsed, false otherwise.
+ */
+static bool config_load_single_file(const char* file,
+                                    DUPLICATE_CONTEXT* dcontext,
+                                    CONFIG_CONTEXT* ccontext)
+{
+    int rval = -1;
+
+    // With multiple configuration files being loaded, we need to log the file
+    // currently being loaded so that the context is clear in case of errors.
+    MXS_NOTICE("Loading %s.", file);
+
+    if (!config_has_duplicate_sections(file, dcontext))
+    {
+        if ((rval = ini_parse(file, ini_handler, ccontext)) != 0)
+        {
+            char errorbuffer[1024 + 1];
+
+            if (rval > 0)
+            {
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Failed to parse configuration file %s. Error on line %d.", file, rval);
+            }
+            else if (rval == -1)
+            {
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Failed to parse configuration file %s. Could not open file.", file);
+            }
+            else
+            {
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Failed to parse configuration file %s. Memory allocation failed.", file);
+            }
+
+            MXS_ERROR("%s", errorbuffer);
+        }
+    }
+
+    return rval == 0;
+}
+
+/**
+ * The current parsing contexts must be managed explicitly since the ftw callback
+ * can not have user data.
+ */
+static CONFIG_CONTEXT *current_ccontext;
+static DUPLICATE_CONTEXT *current_dcontext;
+
+/**
+ * The nftw callback.
+ *
+ * @see man ftw
+ */
+int config_cb(const char* fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+    int rval = 0;
+
+    if (typeflag == FTW_F) // We are only interested in files,
+    {
+        const char* filename = fpath + ftwbuf->base;
+        const char* dot = strrchr(filename, '.');
+
+        if (dot) // that must have a suffix,
+        {
+            const char* suffix = dot + 1;
+
+            if (strcmp(suffix, "cnf") == 0) // that is ".cnf".
+            {
+                ss_dassert(current_dcontext);
+                ss_dassert(current_ccontext);
+
+                if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
+                {
+                    rval = -1;
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * Loads all configuration files in a directory hierarchy.
+ *
+ * Only files with the suffix ".cnf" are considered to be configuration files.
+ *
+ * @param dir      The directory.
+ * @param dcontext The duplicate section context.
+ * @param ccontext The configuration context.
+ *
+ * @return True, if all configuration files in the directory hierarchy could be loaded,
+ *         otherwise false.
+ */
+static bool config_load_dir(const char *dir, DUPLICATE_CONTEXT *dcontext, CONFIG_CONTEXT *ccontext)
+{
+    // Since there is no way to pass userdata to the callback, we need to store
+    // the current context into a static variable. Consequently, we need lock.
+    // Should not matter since config_load() is called once at startup.
+    static SPINLOCK lock = SPINLOCK_INIT;
+
+    int nopenfd = 5; // Maximum concurrently opened directory descriptors
+
+    spinlock_acquire(&lock);
+    current_dcontext = dcontext;
+    current_ccontext = ccontext;
+    int rv = nftw(dir, config_cb, nopenfd, FTW_PHYS);
+    current_ccontext = NULL;
+    current_dcontext = NULL;
+    spinlock_release(&lock);
+
+    return rv == 0;
+}
+
+/**
+ * Check if a directory exists
+ *
+ * This function also logs warnings if the directory cannot be accessed or if
+ * the file is not a directory.
+ * @param dir Directory to check
+ * @return True if the file is an existing directory
+ */
+static bool is_directory(const char *dir)
+{
+    bool rval = false;
+    struct stat st;
+    if (stat(dir, &st) == -1)
+    {
+        if (errno == ENOENT)
+        {
+            MXS_NOTICE("%s does not exist, not reading.", dir);
+        }
+        else
+        {
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_WARNING("Could not access %s, not reading: %s",
+                        dir, strerror_r(errno, errbuf, sizeof(errbuf)));
+        }
+    }
+    else
+    {
+        if (S_ISDIR(st.st_mode))
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * @brief Check if a directory contains .cnf files
+ *
+ * @param path Path to a directory
+ * @return True if the directory contained one or more .cnf files
+ */
+static bool contains_cnf_files(const char *path)
+{
+    bool rval = false;
+    glob_t matches;
+    const char suffix[] = "/*.cnf";
+    char pattern[strlen(path) + sizeof(suffix)];
+
+    strcpy(pattern, path);
+    strcat(pattern, suffix);
+    int rc = glob(pattern, GLOB_NOSORT, NULL, &matches);
+
+    switch (rc)
+    {
+    case 0:
+        rval = true;
+        break;
+
+    case GLOB_NOSPACE:
+        MXS_OOM();
+        break;
+
+    case GLOB_ABORTED:
+        MXS_ERROR("Failed to read directory '%s'", path);
+        break;
+
+    default:
+        ss_dassert(rc == GLOB_NOMATCH);
+        break;
+    }
+
+    globfree(&matches);
+
+    return rval;
+}
+
+/**
+ * @brief Load the specified configuration file for MaxScale
  *
  * This function will parse the configuration file, check for duplicate sections,
  * validate the module parameters and finally turn it into a set of objects.
  *
- * @param file The filename of the configuration file
+ * @param filename        The filename of the configuration file
+ * @param process_config  The function using which the successfully loaded
+ *                        configuration should be processed.
+ *
+ * @return True on success, false on fatal error
+ */
+static bool
+config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONTEXT*))
+{
+    bool rval = false;
+
+    DUPLICATE_CONTEXT dcontext;
+
+    if (duplicate_context_init(&dcontext))
+    {
+        CONFIG_CONTEXT ccontext = {.object = ""};
+
+        if (config_load_single_file(filename, &dcontext, &ccontext))
+        {
+            const char DIR_SUFFIX[] = ".d";
+
+            char dir[strlen(filename) + sizeof(DIR_SUFFIX)];
+            strcpy(dir, filename);
+            strcat(dir, DIR_SUFFIX);
+
+            rval = true;
+
+            if (is_directory(dir))
+            {
+                rval = config_load_dir(dir, &dcontext, &ccontext);
+            }
+
+            /** Create the persisted configuration directory if it doesn't exist */
+            const char* persist_cnf = get_config_persistdir();
+            mxs_mkdir_all(persist_cnf, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+            if (is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
+            {
+                /**
+                 * Set the global flag that we are processing a persisted configuration.
+                 * This will tell the modules whether it is OK to completely overwrite
+                 * the persisted configuration when changes are made.
+                 *
+                 * TODO: Figure out a cleaner way to do this
+                 */
+                is_persisted_config = true;
+
+                MXS_NOTICE("Loading generated configuration files from '%s'", persist_cnf);
+                DUPLICATE_CONTEXT p_dcontext;
+                /**
+                 * We need to initialize a second duplicate context for the
+                 * generated configuration files as the monitors and services will
+                 * have duplicate sections. The duplicate sections are used to
+                 * store changes to the list of servers the services and monitors
+                 * use, and thus should not be treated as errors.
+                 */
+                if (duplicate_context_init(&p_dcontext))
+                {
+                    rval = config_load_dir(persist_cnf, &p_dcontext, &ccontext);
+                    duplicate_context_finish(&p_dcontext);
+                }
+                else
+                {
+                    rval = false;
+                }
+                is_persisted_config = false;
+            }
+
+            if (rval)
+            {
+                if (!check_config_objects(ccontext.next) || !process_config(ccontext.next))
+                {
+                    rval = false;
+                    if (contains_cnf_files(persist_cnf))
+                    {
+                        MXS_WARNING("One or more generated configurations were found at '%s'. "
+                                    "If the error relates to any of the files located there, "
+                                    "remove the offending configurations from this directory.",
+                                    persist_cnf);
+                    }
+                }
+            }
+        }
+
+        config_context_free(ccontext.next);
+
+        duplicate_context_finish(&dcontext);
+    }
+    return rval;
+}
+
+/**
+ * @brief Load the configuration file for the MaxScale
+ *
+ * @param filename The filename of the configuration file
  * @return True on success, false on fatal error
  */
 bool
-config_load(char *file)
+config_load(const char *filename)
 {
-    CONFIG_CONTEXT config = {.object = ""};
-    int ini_rval;
-    bool rval = false;
-
-    if (config_has_duplicate_sections(file))
-    {
-        return false;
-    }
+    ss_dassert(!config_file);
 
     global_defaults();
     feedback_defaults();
 
-    if ((ini_rval = ini_parse(file, handler, &config)) != 0)
-    {
-        char errorbuffer[1024 + 1];
+    config_file = filename;
+    bool rval = config_load_and_process(filename, process_config_context);
 
-        if (ini_rval > 0)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to parse configuration file. Error on line %d.", ini_rval);
-        }
-        else if (ini_rval == -1)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to parse configuration file. Failed to open file.");
-        }
-        else
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to parse configuration file. Memory allocation failed.");
-        }
-
-        MXS_ERROR("%s", errorbuffer);
-        return 0;
-    }
-
-    config_file = file;
-
-    if (check_config_objects(config.next) && process_config_context(config.next))
-    {
-        rval = true;
-    }
-
-    free_config_context(config.next);
     return rval;
 }
 
 /**
  * Reload the configuration file for the MaxScale
  *
- * @return A zero return indicates a fatal error reading the configuration
+ * @return True on success, false on fatal error.
  */
-int
-config_reload()
+bool config_reload()
 {
-    CONFIG_CONTEXT  config;
-    int             rval;
+    bool rval = false;
 
-    if (!config_file)
+    if (config_file)
     {
-        return 0;
-    }
+        if (gateway.version_string)
+        {
+            MXS_FREE(gateway.version_string);
+        }
 
-    if (config_has_duplicate_sections(config_file))
+        global_defaults();
+        feedback_defaults();
+
+        rval = config_load_and_process(config_file, process_config_update);
+    }
+    else
     {
-        return 0;
+        MXS_ERROR("config_reload() called without the configuration having "
+                  "been loaded first.");
     }
-
-    if (gateway.version_string)
-    {
-        free(gateway.version_string);
-    }
-
-    global_defaults();
-
-    config.object = "";
-    config.next = NULL;
-
-    if (ini_parse(config_file, handler, &config) < 0)
-    {
-        return 0;
-    }
-
-    rval = process_config_update(config.next);
-    free_config_context(config.next);
 
     return rval;
 }
@@ -476,13 +765,12 @@ process_config_context(CONFIG_CONTEXT *context)
     int             error_count = 0;
     HASHTABLE*      monitorhash;
 
-    if ((monitorhash = hashtable_alloc(5, simple_str_hash, strcmp)) == NULL)
+    if ((monitorhash = hashtable_alloc(5, hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
     {
         MXS_ERROR("Failed to allocate, monitor configuration check hashtable.");
         return 0;
     }
-    hashtable_memory_fns(monitorhash, (HASHMEMORYFN) strdup, NULL,
-                         (HASHMEMORYFN) free, NULL);
+    hashtable_memory_fns(monitorhash, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
 
     /**
      * Process the data and create the services and servers defined
@@ -534,7 +822,7 @@ process_config_context(CONFIG_CONTEXT *context)
                 }
                 else if (!strcmp(type, "listener"))
                 {
-                    error_count += create_new_listener(obj, false);
+                    error_count += create_new_listener(obj);
                 }
                 else if (!strcmp(type, "monitor"))
                 {
@@ -581,7 +869,7 @@ process_config_context(CONFIG_CONTEXT *context)
  * @return the parameter value or NULL if not found
  */
 static char *
-config_get_value(CONFIG_PARAMETER *params, const char *name)
+config_get_value(MXS_CONFIG_PARAMETER *params, const char *name)
 {
     while (params)
     {
@@ -606,7 +894,7 @@ config_get_value(CONFIG_PARAMETER *params, const char *name)
  * @return the parameter value or NULL if not found
  */
 static char *
-config_get_password(CONFIG_PARAMETER *params)
+config_get_password(MXS_CONFIG_PARAMETER *params)
 {
     char *password = config_get_value(params, "password");
     char *passwd = config_get_value(params, "passwd");
@@ -626,8 +914,7 @@ config_get_password(CONFIG_PARAMETER *params)
  * @param name          The parameter to return
  * @return the parameter value or null string if not found
  */
-static const char *
-config_get_value_string(CONFIG_PARAMETER *params, const char *name)
+static const char* config_get_value_string(const MXS_CONFIG_PARAMETER *params, const char *name)
 {
     while (params)
     {
@@ -641,10 +928,7 @@ config_get_value_string(CONFIG_PARAMETER *params, const char *name)
     return "";
 }
 
-
-CONFIG_PARAMETER* config_get_param(
-    CONFIG_PARAMETER* params,
-    const char*       name)
+MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name)
 {
     while (params)
     {
@@ -658,137 +942,151 @@ CONFIG_PARAMETER* config_get_param(
     return NULL;
 }
 
-config_param_type_t config_get_paramtype(
-    CONFIG_PARAMETER* param)
+bool config_get_bool(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
-    return param->qfd_param_type;
+    const char *value = config_get_value_string(params, key);
+    return *value ? config_truth_value(value) : false;
 }
 
-bool config_get_valint(
-    int*                val,
-    CONFIG_PARAMETER*   param,
-    const char*         name, /*< if NULL examine current param only */
-    config_param_type_t ptype)
+int config_get_integer(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
-    bool succp = false;;
+    const char *value = config_get_value_string(params, key);
+    return *value ? strtol(value, NULL, 10) : 0;
+}
 
-    ss_dassert((ptype == COUNT_TYPE || ptype == PERCENT_TYPE) && param != NULL);
+uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    char *end;
+    uint64_t size = strtoll(value, &end, 10);
 
-    while (param)
+    switch (*end)
     {
-        if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
+    case 'T':
+    case 't':
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
         {
-            switch (ptype)
+            size *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL * 1000ULL * 1000ULL;
+        }
+        break;
+
+    case 'G':
+    case 'g':
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
+        {
+            size *= 1024ULL * 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL * 1000ULL;
+        }
+        break;
+
+    case 'M':
+    case 'm':
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
+        {
+            size *= 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL;
+        }
+        break;
+
+    case 'K':
+    case 'k':
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
+        {
+            size *= 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return size;
+}
+
+const char* config_get_string(const MXS_CONFIG_PARAMETER *params, const char *key)
+{
+    return config_get_value_string(params, key);
+}
+
+int config_get_enum(const MXS_CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *enum_values)
+{
+    const char *value = config_get_value_string(params, key);
+    char tmp_val[strlen(value) + 1];
+    strcpy(tmp_val, value);
+
+    int rv = 0;
+    bool found = false;
+    char *endptr;
+    const char *delim = ", \t";
+    char *tok = strtok_r(tmp_val, delim, &endptr);
+
+    while (tok)
+    {
+        for (int i = 0; enum_values[i].name; i++)
+        {
+            if (strcmp(enum_values[i].name, tok) == 0)
             {
-                case COUNT_TYPE:
-                    *val = param->qfd.valcount;
-                    succp = true;
-                    goto return_succp;
-
-                case PERCENT_TYPE:
-                    *val = param->qfd.valpercent;
-                    succp  = true;
-                    goto return_succp;
-
-                default:
-                    goto return_succp;
+                found = true;
+                rv |= enum_values[i].enum_value;
             }
         }
-        param = param->next;
+        tok = strtok_r(NULL, delim, &endptr);
     }
-return_succp:
-    return succp;
+
+    return found ? rv : -1;
 }
 
-
-bool config_get_valbool(
-    bool*               val,
-    CONFIG_PARAMETER*   param,
-    const char*         name,
-    config_param_type_t ptype)
+SERVICE* config_get_service(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
-    bool succp;
-
-    ss_dassert(ptype == BOOL_TYPE);
-    ss_dassert(param != NULL);
-
-    if (ptype != BOOL_TYPE || param == NULL)
-    {
-        succp = false;
-        goto return_succp;
-    }
-
-    while (param)
-    {
-        if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
-        {
-            *val = param->qfd.valbool;
-            succp = true;
-            goto return_succp;
-        }
-        param = param->next;
-    }
-    succp = false;
-
-return_succp:
-    return succp;
+    const char *value = config_get_value_string(params, key);
+    return service_find(value);
 }
 
-
-bool config_get_valtarget(
-    target_t*           val,
-    CONFIG_PARAMETER*   param,
-    const char*         name,
-    config_param_type_t ptype)
+SERVER* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
-    bool succp;
-
-    ss_dassert(ptype == SQLVAR_TARGET_TYPE);
-    ss_dassert(param != NULL);
-
-    if (ptype != SQLVAR_TARGET_TYPE || param == NULL)
-    {
-        succp = false;
-        goto return_succp;
-    }
-
-    while (param)
-    {
-        if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
-        {
-            *val = param->qfd.valtarget;
-            succp = true;
-            goto return_succp;
-        }
-        param = param->next;
-    }
-    succp = false;
-
-return_succp:
-    return succp;
+    const char *value = config_get_value_string(params, key);
+    return server_find_by_unique_name(value);
 }
 
-CONFIG_PARAMETER* config_clone_param(
-    CONFIG_PARAMETER* param)
+char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
-    CONFIG_PARAMETER* p2;
+    const char *value = config_get_value_string(params, key);
 
-    p2 = (CONFIG_PARAMETER*) malloc(sizeof(CONFIG_PARAMETER));
+    char *rval = NULL;
 
-    if (p2 == NULL)
+    if (*value)
     {
-        goto return_p2;
-    }
-    memcpy(p2, param, sizeof(CONFIG_PARAMETER));
-    p2->name = strndup(param->name, MAX_PARAM_LEN);
-    p2->value = strndup(param->value, MAX_PARAM_LEN);
-
-    if (param->qfd_param_type == STRING_TYPE)
-    {
-        p2->qfd.valstr = strndup(param->qfd.valstr, MAX_PARAM_LEN);
+        rval = MXS_STRDUP_A(value);
     }
 
-return_p2:
+    return rval;
+}
+
+MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
+{
+    MXS_CONFIG_PARAMETER *p2 = MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER));
+
+    if (p2)
+    {
+        p2->name = MXS_STRDUP_A(param->name);
+        p2->value = MXS_STRDUP_A(param->value);
+        p2->next = NULL;
+    }
+
     return p2;
 }
 
@@ -796,35 +1094,28 @@ return_p2:
  * Free a configuration parameter
  * @param p1 Parameter to free
  */
-void free_config_parameter(CONFIG_PARAMETER* p1)
+void config_parameter_free(MXS_CONFIG_PARAMETER* p1)
 {
     while (p1)
     {
-        free(p1->name);
-        free(p1->value);
-        CONFIG_PARAMETER* p2 = p1->next;
-        free(p1);
+        MXS_FREE(p1->name);
+        MXS_FREE(p1->value);
+        MXS_CONFIG_PARAMETER* p2 = p1->next;
+        MXS_FREE(p1);
         p1 = p2;
     }
 }
 
-/**
- * Free a config tree
- *
- * @param context       The configuration data
- */
-static  void
-free_config_context(CONFIG_CONTEXT *context)
+void config_context_free(CONFIG_CONTEXT *context)
 {
     CONFIG_CONTEXT   *obj;
-    CONFIG_PARAMETER *p1, *p2;
 
     while (context)
     {
-        free(context->object);
-        free_config_parameter(context->parameters);
         obj = context->next;
-        free(context);
+        config_parameter_free(context->parameters);
+        MXS_FREE(context->object);
+        MXS_FREE(context);
         context = obj;
     }
 }
@@ -921,8 +1212,8 @@ handle_global_item(const char *name, const char *value)
                 int processor_count = get_processor_count();
                 if (thrcount > processor_count)
                 {
-                    MXS_WARNING("Number of threads set to %d which is greater than"
-                                " the number of processors available: %d",
+                    MXS_WARNING("Number of threads set to %d, which is greater than "
+                                "the number of processors available: %d",
                                 thrcount, processor_count);
                 }
             }
@@ -931,6 +1222,14 @@ handle_global_item(const char *name, const char *value)
                 MXS_WARNING("Invalid value for 'threads': %s.", value);
                 return 0;
             }
+        }
+
+        if (gateway.n_threads > MXS_MAX_THREADS)
+        {
+            MXS_WARNING("Number of threads set to %d, which is greater than the "
+                        "hard maximum of %d. Number of threads adjusted down "
+                        "accordingly.", gateway.n_threads, MXS_MAX_THREADS);
+            gateway.n_threads = MXS_MAX_THREADS;
         }
     }
     else if (strcmp(name, "non_blocking_polls") == 0)
@@ -944,6 +1243,10 @@ handle_global_item(const char *name, const char *value)
     else if (strcmp(name, "ms_timestamp") == 0)
     {
         mxs_log_set_highprecision_enabled(config_truth_value((char*)value));
+    }
+    else if (strcmp(name, "skip_permission_checks") == 0)
+    {
+        gateway.skip_permission_checks = config_truth_value((char*)value);
     }
     else if (strcmp(name, "auth_connect_timeout") == 0)
     {
@@ -1002,7 +1305,143 @@ handle_global_item(const char *name, const char *value)
     }
     else if (strcmp(name, "query_classifier_args") == 0)
     {
-        gateway.qc_args = strdup(value);
+        gateway.qc_args = MXS_STRDUP_A(value);
+    }
+    else if (strcmp(name, "query_retries") == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval >= 0)
+        {
+            gateway.query_retries = intval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid timeout value for 'query_retries': %s", value);
+            return 0;
+        }
+    }
+    else if (strcmp(name, "query_retry_timeout") == 0)
+    {
+        char* endptr;
+        int intval = strtol(value, &endptr, 0);
+        if (*endptr == '\0' && intval > 0)
+        {
+            gateway.query_retries = intval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid timeout value for 'query_retry_timeout': %s", value);
+            return 0;
+        }
+    }
+    else if (strcmp(name, "log_throttling") == 0)
+    {
+        if (*value == 0)
+        {
+            MXS_LOG_THROTTLING throttling = { 0, 0, 0 };
+
+            mxs_log_set_throttling(&throttling);
+        }
+        else
+        {
+            char *v = MXS_STRDUP_A(value);
+
+            char *count = v;
+            char *window_ms = NULL;
+            char *suppress_ms = NULL;
+
+            window_ms = strchr(count, ',');
+            if (window_ms)
+            {
+                *window_ms = 0;
+                ++window_ms;
+
+                suppress_ms = strchr(window_ms, ',');
+                if (suppress_ms)
+                {
+                    *suppress_ms = 0;
+                    ++suppress_ms;
+                }
+            }
+
+            if (!count || !window_ms || !suppress_ms)
+            {
+                MXS_ERROR("Invalid value for the `log_throttling` configuration entry: \"%s\". "
+                          "No throttling will now be performed.", value);
+                MXS_NOTICE("The format of the value for 'log_throttling' is \"X, Y, Z\", where "
+                           "X is the maximum number of times a particular error can be logged "
+                           "in the time window of Y milliseconds, before the logging is suppressed "
+                           "for Z milliseconds.");
+            }
+            else
+            {
+                int c = atoi(count);
+                int w = atoi(window_ms);
+                int s = atoi(suppress_ms);
+
+                if ((c >= 0) && (w >= 0) && (s >= 0))
+                {
+                    MXS_LOG_THROTTLING throttling;
+                    throttling.count = c;
+                    throttling.window_ms = w;
+                    throttling.suppress_ms = s;
+
+                    mxs_log_set_throttling(&throttling);
+                }
+                else
+                {
+                    MXS_ERROR("Invalid value for the `log_throttling` configuration entry: \"%s\". "
+                              "No throttling will now be performed.", value);
+                    MXS_NOTICE("The configuration entry 'log_throttling' requires as value three positive "
+                               "integers (or 0).");
+                }
+            }
+
+            MXS_FREE(v);
+        }
+    }
+    else if (strcmp(name, "local_address") == 0)
+    {
+        gateway.local_address = MXS_STRDUP_A(value);
+    }
+    else if (strcmp(name, "users_refresh_time") == 0)
+    {
+        char* endptr;
+        long users_refresh_time = strtol(value, &endptr, 0);
+        if (*endptr == '\0')
+        {
+            if (users_refresh_time < 0)
+            {
+                MXS_NOTICE("Value of 'users_refresh_time' is less than 0, users will "
+                           "not be automatically refreshed.");
+                // Strictly speaking they will be refreshed once every 68 years,
+                // but I just don't beleave the uptime will be that long.
+                users_refresh_time = INT32_MAX;
+            }
+            else if (users_refresh_time < USERS_REFRESH_TIME_MIN)
+            {
+                MXS_WARNING("%s is less than the allowed minimum value of %d for the "
+                            "configuration option 'users_refresh_time', using the minimum value.",
+                            value, USERS_REFRESH_TIME_MIN);
+                users_refresh_time = USERS_REFRESH_TIME_MIN;
+            }
+
+            if (users_refresh_time > INT32_MAX)
+            {
+                // To ensure that there will be no overflows when
+                // we later do arithmetic.
+                users_refresh_time = INT32_MAX;
+            }
+
+            gateway.users_refresh_time = users_refresh_time;
+        }
+        else
+        {
+            MXS_ERROR("%s is an invalid value for 'users_refresh_time', "
+                      "using default %d instead.", value, USERS_REFRESH_TIME_DEFAULT);
+            gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
+        }
     }
     else
     {
@@ -1017,7 +1456,7 @@ handle_global_item(const char *name, const char *value)
                                 lognames[i].name, lognames[i].replacement);
                 }
 
-                mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value((char*)value));
+                mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value(value));
             }
         }
     }
@@ -1035,10 +1474,10 @@ free_ssl_structure(SSL_LISTENER *ssl)
     if (ssl)
     {
         SSL_CTX_free(ssl->ctx);
-        free(ssl->ssl_key);
-        free(ssl->ssl_cert);
-        free(ssl->ssl_ca_cert);
-        free(ssl);
+        MXS_FREE(ssl->ssl_key);
+        MXS_FREE(ssl->ssl_cert);
+        MXS_FREE(ssl->ssl_ca_cert);
+        MXS_FREE(ssl);
     }
 }
 
@@ -1050,8 +1489,7 @@ free_ssl_structure(SSL_LISTENER *ssl)
  * @param *error_count  An error count which may be incremented
  * @return SSL_LISTENER structure or NULL
  */
-static SSL_LISTENER *
-make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
+SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
 {
     char *ssl, *ssl_version, *ssl_cert, *ssl_key, *ssl_ca_cert, *ssl_cert_verify_depth;
     int local_errors = 0;
@@ -1063,7 +1501,7 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
     {
         if (!strcmp(ssl, "required"))
         {
-            if ((new_ssl = calloc(1, sizeof(SSL_LISTENER))) == NULL)
+            if ((new_ssl = MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
             {
                 return NULL;
             }
@@ -1072,8 +1510,11 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
             ssl_key = config_get_value(obj->parameters, "ssl_key");
             ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
             ssl_version = config_get_value(obj->parameters, "ssl_version");
+            char* ssl_verify_peer_certificate = config_get_value(obj->parameters, "ssl_verify_peer_certificate");
             ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
             new_ssl->ssl_init_done = false;
+            new_ssl->ssl_cert_verify_depth = 9; // Default of 9 as per Linux man page
+            new_ssl->ssl_verify_peer_certificate = true;
 
             if (ssl_version)
             {
@@ -1096,12 +1537,20 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
                     local_errors++;
                 }
             }
-            else
+
+            if (ssl_verify_peer_certificate)
             {
-                /**
-                 * Default of 9 as per Linux man page
-                 */
-                new_ssl->ssl_cert_verify_depth = 9;
+                int rv = config_truth_value(ssl_verify_peer_certificate);
+                if (rv == -1)
+                {
+                    MXS_ERROR("Invalid parameter value for 'ssl_verify_peer_certificate"
+                              " for service '%s': %s", obj->object, ssl_verify_peer_certificate);
+                    local_errors++;
+                }
+                else
+                {
+                    new_ssl->ssl_verify_peer_certificate = rv;
+                }
             }
 
             listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);
@@ -1161,7 +1610,7 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
                 return new_ssl;
             }
             *error_count += local_errors;
-            free(new_ssl);
+            MXS_FREE(new_ssl);
         }
         else if (strcmp(ssl, "disabled") != 0)
         {
@@ -1184,15 +1633,15 @@ handle_feedback_item(const char *name, const char *value)
     int i;
     if (strcmp(name, "feedback_enable") == 0)
     {
-        feedback.feedback_enable = config_truth_value((char *)value);
+        feedback.feedback_enable = config_truth_value(value);
     }
     else if (strcmp(name, "feedback_user_info") == 0)
     {
-        feedback.feedback_user_info = strdup(value);
+        feedback.feedback_user_info = MXS_STRDUP_A(value);
     }
     else if (strcmp(name, "feedback_url") == 0)
     {
-        feedback.feedback_url = strdup(value);
+        feedback.feedback_url = MXS_STRDUP_A(value);
     }
     if (strcmp(name, "feedback_timeout") == 0)
     {
@@ -1223,9 +1672,13 @@ global_defaults()
     gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;
     gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
+    gateway.skip_permission_checks = false;
+    gateway.query_retries = DEFAULT_QUERY_RETRIES;
+    gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
+
     if (version_string != NULL)
     {
-        gateway.version_string = strdup(version_string);
+        gateway.version_string = MXS_STRDUP_A(version_string);
     }
     else
     {
@@ -1257,7 +1710,7 @@ global_defaults()
     }
     else
     {
-        strncpy(gateway.sysname, uname_data.sysname, _SYSNAME_STR_LENGTH);
+        strcpy(gateway.sysname, uname_data.sysname);
     }
 
     /* query_classifier */
@@ -1288,7 +1741,7 @@ feedback_defaults()
  *
  * @param context       The configuration data
  */
-static  int
+static bool
 process_config_update(CONFIG_CONTEXT *context)
 {
     CONFIG_CONTEXT *obj;
@@ -1352,25 +1805,13 @@ process_config_update(CONFIG_CONTEXT *context)
                         service->log_auth_warnings = (bool)truthval;
                     }
 
-                    CONFIG_PARAMETER* param;
-
-                    if ((param = config_get_param(obj->parameters, "ignore_databases")))
-                    {
-                        service_set_param_value(service, param, param->value, 0, STRING_TYPE);
-                    }
-
-                    if ((param = config_get_param(obj->parameters, "ignore_databases_regex")))
-                    {
-                        service_set_param_value(service, param, param->value, 0, STRING_TYPE);
-                    }
-
                     if (version_string)
                     {
                         if (service->version_string)
                         {
-                            free(service->version_string);
+                            MXS_FREE(service->version_string);
                         }
-                        service->version_string = strdup(version_string);
+                        service->version_string = MXS_STRDUP_A(version_string);
                     }
 
                     if (user && auth)
@@ -1397,9 +1838,6 @@ process_config_update(CONFIG_CONTEXT *context)
                         if (auth_all_servers)
                         {
                             serviceAuthAllServers(service, config_truth_value(auth_all_servers));
-                            service_set_param_value(service,
-                                                    config_get_param(obj->parameters, "auth_all_servers"),
-                                                    auth_all_servers, 0, BOOL_TYPE);
                         }
 
                         if (strip_db_esc)
@@ -1408,98 +1846,15 @@ process_config_update(CONFIG_CONTEXT *context)
                         }
 
                         if (allow_localhost_match_wildcard_host)
+                        {
                             serviceEnableLocalhostMatchWildcardHost(
                                 service,
                                 config_truth_value(allow_localhost_match_wildcard_host));
-
-                        /** Read, validate and set max_slave_connections */
-                        max_slave_conn_str =
-                            config_get_value(obj->parameters, "max_slave_connections");
-
-                        if (max_slave_conn_str != NULL)
-                        {
-                            CONFIG_PARAMETER* param;
-                            bool              succp;
-
-                            param = config_get_param(obj->parameters,
-                                                     "max_slave_connections");
-
-                            if (param == NULL)
-                            {
-                                succp = false;
-                            }
-                            else
-                            {
-                                succp = service_set_param_value(service, param,
-                                                                max_slave_conn_str,
-                                                                COUNT_ATMOST,
-                                                                (PERCENT_TYPE | COUNT_TYPE));
-                            }
-
-                            if (!succp && param != NULL)
-                            {
-                                MXS_WARNING("Invalid value type "
-                                            "for parameter \'%s.%s = %s\'\n\tExpected "
-                                            "type is either <int> for slave connection "
-                                            "count or\n\t<int>%% for specifying the "
-                                            "maximum percentage of available the "
-                                            "slaves that will be connected.",
-                                            service->name,
-                                            param->name,
-                                            param->value);
-                            }
                         }
-                        /** Read, validate and set max_slave_replication_lag */
-                        max_slave_rlag_str =
-                            config_get_value(obj->parameters, "max_slave_replication_lag");
 
-                        if (max_slave_rlag_str != NULL)
-                        {
-                            CONFIG_PARAMETER* param;
-                            bool              succp;
-
-                            param = config_get_param(obj->parameters,
-                                                     "max_slave_replication_lag");
-
-                            if (param == NULL)
-                            {
-                                succp = false;
-                            }
-                            else
-                            {
-                                succp = service_set_param_value(service,
-                                                                param,
-                                                                max_slave_rlag_str,
-                                                                COUNT_ATMOST,
-                                                                COUNT_TYPE);
-                            }
-
-                            if (!succp)
-                            {
-                                if (param)
-                                {
-                                    MXS_WARNING("Invalid value type "
-                                                "for parameter \'%s.%s = %s\'\n\tExpected "
-                                                "type is <int> for maximum "
-                                                "slave replication lag.",
-                                                service->name,
-                                                param->name,
-                                                param->value);
-                                }
-                                else
-                                {
-                                    MXS_ERROR("Parameter was NULL");
-                                }
-                            }
-                        }
                     }
 
                     obj->element = service;
-                }
-                else
-                {
-                    MXS_NOTICE("New services can't be started while MaxScale is running."
-                               " Please restart MaxScale to start the new services.");
                 }
             }
             else
@@ -1516,10 +1871,9 @@ process_config_update(CONFIG_CONTEXT *context)
             if (address && port &&
                 (server = server_find(address, atoi(port))) != NULL)
             {
-                char *protocol = config_get_value(obj->parameters, "protocol");
                 char *monuser = config_get_value(obj->parameters, "monuser");
                 char *monpw = config_get_value(obj->parameters, "monpw");
-                server_update(server, protocol, monuser, monpw);
+                server_update_credentials(server, monuser, monpw);
                 obj->element = server;
             }
             else
@@ -1530,7 +1884,71 @@ process_config_update(CONFIG_CONTEXT *context)
         obj = obj->next;
     }
 
-    return 1;
+    return true;
+}
+
+/**
+ * @brief Check if required parameters are missing
+ *
+ * @param name Module name
+ * @param type Module type
+ * @param params List of parameters for the object
+ * @return True if at least one of the required parameters is missing
+ */
+static bool missing_required_parameters(const MXS_MODULE_PARAM *mod_params,
+                                        MXS_CONFIG_PARAMETER *params)
+{
+    bool rval = false;
+
+    if (mod_params)
+    {
+        for (int i = 0; mod_params[i].name; i++)
+        {
+            if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) &&
+                config_get_param(params, mod_params[i].name) == NULL)
+            {
+                MXS_ERROR("Mandatory parameter '%s' is not defined.", mod_params[i].name);
+                rval = true;
+            }
+        }
+    }
+
+    return rval;
+}
+
+static bool is_path_parameter(const MXS_MODULE_PARAM *params, const char *name)
+{
+    bool rval = false;
+
+    if (params)
+    {
+        for (int i = 0; params[i].name; i++)
+        {
+            if (strcmp(params[i].name, name) == 0 && params[i].type == MXS_MODULE_PARAM_PATH)
+            {
+                rval = true;
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
+static void process_path_parameter(MXS_CONFIG_PARAMETER *param)
+{
+    if (*param->value != '/')
+    {
+        const char *mod_dir = get_module_configdir();
+        size_t size = strlen(param->value) + strlen(mod_dir) + 3;
+        char *value = MXS_MALLOC(size);
+        MXS_ABORT_IF_NULL(value);
+
+        sprintf(value, "/%s/%s", mod_dir, param->value);
+        clean_up_pathname(value);
+        MXS_FREE(param->value);
+        param->value = value;
+    }
 }
 
 /**
@@ -1542,20 +1960,23 @@ process_config_update(CONFIG_CONTEXT *context)
 static bool
 check_config_objects(CONFIG_CONTEXT *context)
 {
-    CONFIG_CONTEXT   *obj;
-    CONFIG_PARAMETER *params;
-    char             *type, **param_set;
-    bool              rval = true;
+    bool rval = true;
+    CONFIG_CONTEXT *obj = context;
 
-    obj = context;
     while (obj)
     {
-        param_set = NULL;
+        const char **param_set = NULL;
+        const char *module = NULL;
+        const char *type;
+        const char *module_type = NULL;
+
         if (obj->parameters && (type = config_get_value(obj->parameters, "type")))
         {
             if (!strcmp(type, "service"))
             {
                 param_set = service_params;
+                module = config_get_value(obj->parameters, "router");
+                module_type = MODULE_ROUTER;
             }
             else if (!strcmp(type, "listener"))
             {
@@ -1564,12 +1985,22 @@ check_config_objects(CONFIG_CONTEXT *context)
             else if (!strcmp(type, "monitor"))
             {
                 param_set = monitor_params;
+                module = config_get_value(obj->parameters, "module");
+                module_type = MODULE_MONITOR;
+            }
+            else if (!strcmp(type, "filter"))
+            {
+                param_set = filter_params;
+                module = config_get_value(obj->parameters, "module");
+                module_type = MODULE_FILTER;
             }
         }
 
+        const MXS_MODULE *mod = module ? get_module(module, module_type) : NULL;
+
         if (param_set != NULL)
         {
-            params = obj->parameters;
+            MXS_CONFIG_PARAMETER *params = obj->parameters;
             while (params)
             {
                 int found = 0;
@@ -1583,75 +2014,36 @@ check_config_objects(CONFIG_CONTEXT *context)
 
                 if (found == 0)
                 {
-                    MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s'.",
-                              params->name, obj->object, type);
-                    rval = false;
+                    if (mod == NULL ||
+                        !config_param_is_valid(mod->parameters, params->name, params->value, context))
+                    {
+                        MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s', "
+                                  "or '%s' is an invalid value for parameter '%s'.",
+                                  params->name, obj->object, type, params->value, params->name);
+                        rval = false;
+                    }
+                    else if (is_path_parameter(mod->parameters, params->name))
+                    {
+                        process_path_parameter(params);
+                    }
                 }
                 params = params->next;
             }
         }
+
+        if (mod && missing_required_parameters(mod->parameters, obj->parameters))
+        {
+            rval = false;
+        }
+
         obj = obj->next;
     }
 
     return rval;
 }
 
-/**
- * Set qualified parameter value to CONFIG_PARAMETER struct.
- */
-bool config_set_qualified_param(CONFIG_PARAMETER* param,
-                                void* val,
-                                config_param_type_t type)
-{
-    bool succp;
-
-    switch (type)
-    {
-        case STRING_TYPE:
-            param->qfd.valstr = strndup((const char *)val, MAX_PARAM_LEN);
-            succp = true;
-            break;
-
-        case COUNT_TYPE:
-            param->qfd.valcount = *(int *)val;
-            succp = true;
-            break;
-
-        case PERCENT_TYPE:
-            param->qfd.valpercent = *(int *)val;
-            succp = true;
-            break;
-
-        case BOOL_TYPE:
-            param->qfd.valbool = *(bool *)val;
-            succp = true;
-            break;
-
-        case SQLVAR_TARGET_TYPE:
-            param->qfd.valtarget = *(target_t *)val;
-            succp = true;
-            break;
-        default:
-            succp = false;
-            break;
-    }
-
-    if (succp)
-    {
-        param->qfd_param_type = type;
-    }
-    return succp;
-}
-
-/**
- * Used for boolean settings where values may be 1, yes or true
- * to enable a setting or -, no, false to disable a setting.
- *
- * @param       str     String to convert to a boolean
- * @return      Truth value
- */
 int
-config_truth_value(char *str)
+config_truth_value(const char *str)
 {
     if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 ||
         strcasecmp(str, "yes") == 0 || strcasecmp(str, "1") == 0)
@@ -1663,29 +2055,8 @@ config_truth_value(char *str)
     {
         return 0;
     }
-    MXS_ERROR("Not a boolean value: %s", str);
+
     return -1;
-}
-
-
-/**
- * Converts a string into a floating point representation of a percentage value.
- * For example 75% is converted to 0.75 and -10% is converted to -0.1.
- * @param       str     String to convert
- * @return      String converted to a floating point percentage
- */
-double
-config_percentage_value(char *str)
-{
-    double value = 0;
-
-    value = strtod(str, NULL);
-    if (value != 0)
-    {
-        value /= 100.0;
-    }
-
-    return value;
 }
 
 static char *InternalRouters[] =
@@ -1790,12 +2161,12 @@ config_get_ifaddr(unsigned char *output)
 /**
  * Get the linux distribution info
  *
- * @param release       The allocated buffer where
- *                      the found distribution is copied into.
- * @return 1 on success, 0 on failure
+ * @param release The buffer where the found distribution is copied.
+ *                Assumed to be at least _RELEASE_STR_LENGTH bytes.
  *
+ * @return 1 on success, 0 on failure
  */
-int
+static int
 config_get_release_string(char* release)
 {
     const char *masks[] =
@@ -1807,8 +2178,6 @@ config_get_release_string(char* release)
     bool have_distribution;
     char distribution[_RELEASE_STR_LENGTH] = "";
     int fd;
-    int i;
-    char *to;
 
     have_distribution = false;
 
@@ -1833,7 +2202,7 @@ config_get_release_string(char* release)
                 {
                     end = distribution + len;
                 }
-                found += 20;
+                found += 20; // strlen("DISTRIB_DESCRIPTION=")
 
                 if (*found == '"' && end[-1] == '"')
                 {
@@ -1842,10 +2211,10 @@ config_get_release_string(char* release)
                 }
                 *end = 0;
 
-                to = strcpy(distribution, "lsb: ");
+                char *to = strcpy(distribution, "lsb: ");
                 memmove(to, found, end - found + 1 < INT_MAX ? end - found + 1 : INT_MAX);
 
-                strncpy(release, to, _RELEASE_STR_LENGTH);
+                strcpy(release, to);
 
                 return 1;
             }
@@ -1853,7 +2222,7 @@ config_get_release_string(char* release)
     }
 
     /* if not an LSB-compliant distribution */
-    for (i = 0; !have_distribution && i < 4; i++)
+    for (int i = 0; !have_distribution && i < 4; i++)
     {
         glob_t found;
         char *new_to;
@@ -1978,74 +2347,100 @@ unsigned long config_get_gateway_id()
     return gateway.id;
 }
 
-void config_add_param(CONFIG_CONTEXT* obj, char* key, char* value)
+bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    CONFIG_PARAMETER* nptr = malloc(sizeof(CONFIG_PARAMETER));
+    ss_dassert(config_get_param(obj->parameters, key) == NULL);
+    bool rval = false;
+    char *my_key = MXS_STRDUP(key);
+    char *my_value = MXS_STRDUP(value);
+    MXS_CONFIG_PARAMETER* param = (MXS_CONFIG_PARAMETER *)MXS_MALLOC(sizeof(*param));
 
-    if (nptr == NULL)
+    if (my_key && my_value && param)
     {
-        MXS_ERROR("Memory allocation failed when adding configuration parameters.");
-        return;
+        param->name = my_key;
+        param->value = my_value;
+        param->next = obj->parameters;
+        obj->parameters = param;
+        rval = true;
+    }
+    else
+    {
+        MXS_FREE(my_key);
+        MXS_FREE(my_value);
+        MXS_FREE(param);
     }
 
-    nptr->name = strdup(key);
-    nptr->value = strdup(value);
-    nptr->next = obj->parameters;
-    obj->parameters = nptr;
+    return rval;
 }
-/**
- * Return the pointer to the global options for MaxScale.
- * @return Pointer to the GATEWAY_CONF structure. This is a static structure and
- * should not be modified.
- */
-GATEWAY_CONF* config_get_global_options()
+
+bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
+{
+    MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
+    ss_dassert(param);
+    int paramlen = strlen(param->value) + strlen(value) + 2;
+    char tmp[paramlen];
+    bool rval = false;
+
+    strcpy(tmp, param->value);
+    strcat(tmp, ",");
+    strcat(tmp, value);
+
+    char *new_value = config_clean_string_list(tmp);
+
+    if (new_value)
+    {
+        MXS_FREE(param->value);
+        param->value = new_value;
+        rval = true;
+    }
+
+    return rval;
+}
+
+MXS_CONFIG* config_get_global_options()
 {
     return &gateway;
 }
 
 /**
  * Check if sections are defined multiple times in the configuration file.
- * @param config Path to the configuration file
+ *
+ * @param filename Path to the configuration file
+ * @param context  The context object used for tracking the duplication
+ *                 section information.
+ *
  * @return True if duplicate sections were found or an error occurred
  */
-bool config_has_duplicate_sections(const char* config)
+bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* context)
 {
     bool rval = false;
-    const int table_size = 10;
-    int errcode;
-    PCRE2_SIZE erroffset;
-    HASHTABLE *hash = hashtable_alloc(table_size, simple_str_hash, strcmp);
-    pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
-                                   0, &errcode, &erroffset, NULL);
-    pcre2_match_data *mdata = NULL;
-    int size = 1024;
-    char *buffer = malloc(size * sizeof(char));
 
-    if (buffer && hash && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
+    int size = 1024;
+    char *buffer = MXS_MALLOC(size * sizeof(char));
+
+    if (buffer)
     {
-        hashtable_memory_fns(hash, (HASHMEMORYFN) strdup, NULL,
-                             (HASHMEMORYFN) free, NULL);
-        FILE* file = fopen(config, "r");
+        FILE* file = fopen(filename, "r");
 
         if (file)
         {
             while (maxscale_getline(&buffer, &size, file) > 0)
             {
-                if (pcre2_match(re, (PCRE2_SPTR) buffer,
+                if (pcre2_match(context->re, (PCRE2_SPTR) buffer,
                                 PCRE2_ZERO_TERMINATED, 0, 0,
-                                mdata, NULL) > 0)
+                                context->mdata, NULL) > 0)
                 {
                     /**
                      * Neither of the PCRE2 calls will fail since we know the pattern
                      * beforehand and we allocate enough memory from the stack
                      */
                     PCRE2_SIZE len;
-                    pcre2_substring_length_bynumber(mdata, 1, &len);
+                    pcre2_substring_length_bynumber(context->mdata, 1, &len);
                     len += 1; /** one for the null terminator */
                     PCRE2_UCHAR section[len];
-                    pcre2_substring_copy_bynumber(mdata, 1, section, &len);
+                    pcre2_substring_copy_bynumber(context->mdata, 1, section, &len);
 
-                    if (hashtable_add(hash, section, "") == 0)
+                    if (hashtable_add(context->hash, section, "") == 0)
                     {
                         MXS_ERROR("Duplicate section found: %s", section);
                         rval = true;
@@ -2056,23 +2451,20 @@ bool config_has_duplicate_sections(const char* config)
         }
         else
         {
-            char errbuf[STRERROR_BUFLEN];
-            MXS_ERROR("Failed to open file '%s': %s", config,
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to open file '%s': %s", filename,
                       strerror_r(errno, errbuf, sizeof(errbuf)));
             rval = true;
         }
     }
     else
     {
-        MXS_ERROR("Failed to allocate enough memory when checking"
-                  " for duplicate sections in configuration file.");
+        MXS_OOM_MESSAGE("Failed to allocate enough memory when checking"
+                        " for duplicate sections in configuration file.");
         rval = true;
     }
 
-    hashtable_free(hash);
-    pcre2_code_free(re);
-    pcre2_match_data_free(mdata);
-    free(buffer);
+    MXS_FREE(buffer);
     return rval;
 }
 
@@ -2097,7 +2489,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     char* destptr = *dest;
     int offset = 0;
 
-    if (feof(file))
+    if (feof(file) || ferror(file))
     {
         return 0;
     }
@@ -2106,7 +2498,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     {
         if (*size <= offset)
         {
-            char* tmp = (char*) realloc(destptr, *size * 2);
+            char* tmp = (char*) MXS_REALLOC(destptr, *size * 2);
             if (tmp)
             {
                 destptr = tmp;
@@ -2114,20 +2506,24 @@ int maxscale_getline(char** dest, int* size, FILE* file)
             }
             else
             {
-                MXS_ERROR("Failed to reallocate memory from %d"
-                          " bytes to %d bytes when reading from file.",
-                          *size, *size * 2);
                 destptr[offset - 1] = '\0';
                 *dest = destptr;
                 return -1;
             }
         }
 
-        if ((destptr[offset] = fgetc(file)) == '\n' || feof(file))
+        int c = fgetc(file);
+
+        if ((c == '\n') || (c == EOF))
         {
             destptr[offset] = '\0';
             break;
         }
+        else
+        {
+            destptr[offset] = c;
+        }
+
         offset++;
     }
 
@@ -2192,6 +2588,31 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
 }
 
 /**
+ * @brief Add default parameters for a module to the configuration context
+ *
+ * Only parameters that aren't defined are added to the configuration context.
+ * This allows users to override the default values.
+ *
+ * @param ctx Configuration context where the default parameters are added
+ * @param module Name of the module
+ */
+void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params)
+{
+    if (params)
+    {
+        for (int i = 0; params[i].name; i++)
+        {
+            if (params[i].default_value &&
+                config_get_param(ctx->parameters, params[i].name) == NULL)
+            {
+                bool rv = config_add_param(ctx, params[i].name, params[i].default_value);
+                MXS_ABORT_IF_FALSE(rv);
+            }
+        }
+    }
+}
+
+/**
  * Create a new router for a service
  * @param obj Service configuration context
  * @return True if configuration was successful, false if an error occurred.
@@ -2213,7 +2634,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
 
     SERVICE* service = (SERVICE*) obj->element;
     int error_count = 0;
-    CONFIG_PARAMETER* param;
+    MXS_CONFIG_PARAMETER* param;
 
     char *retry = config_get_value(obj->parameters, "retry_on_failure");
     if (retry)
@@ -2246,9 +2667,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
     if (auth_all_servers)
     {
         serviceAuthAllServers(obj->element, config_truth_value(auth_all_servers));
-        service_set_param_value(service,
-                                config_get_param(obj->parameters, "auth_all_servers"),
-                                auth_all_servers, 0, BOOL_TYPE);
     }
 
     char *strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
@@ -2286,18 +2704,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
                   auth ? "" : "the 'password' or 'passwd' parameter");
     }
 
-    char *subservices = config_get_value(obj->parameters, "subservices");
-    if (subservices)
-    {
-        service_set_param_value(obj->element, obj->parameters, subservices, 1, STRING_TYPE);
-    }
-
-    CONFIG_PARAMETER *src = config_get_param(obj->parameters, "source");
-    if (src)
-    {
-        service_set_param_value(obj->element, src, src->value, 1, STRING_TYPE);
-    }
-
     char *log_auth_warnings = config_get_value(obj->parameters, "log_auth_warnings");
     if (log_auth_warnings)
     {
@@ -2312,80 +2718,47 @@ int create_new_service(CONFIG_CONTEXT *obj)
         }
     }
 
-    if ((param = config_get_param(obj->parameters, "ignore_databases")))
-    {
-        service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
-    }
-
-    if ((param = config_get_param(obj->parameters, "ignore_databases_regex")))
-    {
-        service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
-    }
-
-
     char *version_string = config_get_value(obj->parameters, "version_string");
     if (version_string)
     {
         /** Add the 5.5.5- string to the start of the version string if
          * the version string starts with "10.".
          * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
-        if (strncmp(version_string, "10.", 3) == 0)
+        if (version_string[0] != '5')
         {
             size_t len = strlen(version_string) + strlen("5.5.5-") + 1;
-            service->version_string = malloc(len);
+            service->version_string = MXS_MALLOC(len);
+            MXS_ABORT_IF_NULL(service->version_string);
             strcpy(service->version_string, "5.5.5-");
             strcat(service->version_string, version_string);
         }
         else
         {
-            service->version_string = strdup(version_string);
+            service->version_string = MXS_STRDUP_A(version_string);
         }
     }
     else
     {
         if (gateway.version_string)
         {
-            service->version_string = strdup(gateway.version_string);
+            service->version_string = MXS_STRDUP_A(gateway.version_string);
         }
     }
 
-    /** Parameters for rwsplit router only */
-    if (strcmp(router, "readwritesplit") == 0)
+
+    /** Store the configuration parameters for the service */
+    const MXS_MODULE *mod = get_module(router, MODULE_ROUTER);
+
+    if (mod)
     {
-        if ((param = config_get_param(obj->parameters, "max_slave_connections")))
-        {
-            if (!service_set_param_value(obj->element, param, param->value,
-                                         COUNT_ATMOST, (COUNT_TYPE | PERCENT_TYPE)))
-            {
-                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
-                            "type is either <int> for slave connection count or\n\t<int>%% for specifying the "
-                            "maximum percentage of available the slaves that will be connected.",
-                            service->name, param->name, param->value);
-            }
-        }
-
-        if ((param = config_get_param(obj->parameters, "max_slave_replication_lag")))
-        {
-            if (!service_set_param_value(obj->element, param, param->value,
-                                         COUNT_ATMOST, COUNT_TYPE))
-            {
-                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
-                            "type is <int> for maximum slave replication lag.",
-                            service->name, param->name, param->value);
-            }
-        }
-
-        if ((param = config_get_param(obj->parameters, "use_sql_variables_in")))
-        {
-            if (!service_set_param_value(obj->element, param, param->value,
-                                         COUNT_NONE, SQLVAR_TARGET_TYPE))
-            {
-                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
-                            "type is [master|all] for use sql variables in.",
-                            service->name, param->name, param->value);
-            }
-        }
+        config_add_defaults(obj, mod->parameters);
+        service_add_parameters(obj->element, obj->parameters);
     }
+    else
+    {
+        error_count++;
+    }
+
     return error_count;
 }
 
@@ -2419,14 +2792,12 @@ int create_new_server(CONFIG_CONTEXT *obj)
     char *protocol = config_get_value(obj->parameters, "protocol");
     char *monuser = config_get_value(obj->parameters, "monitoruser");
     char *monpw = config_get_value(obj->parameters, "monitorpw");
+    char *auth = config_get_value(obj->parameters, "authenticator");
+    char *auth_opts = config_get_value(obj->parameters, "authenticator_options");
 
     if (address && port && protocol)
     {
-        if ((obj->element = server_alloc(address, protocol, atoi(port))))
-        {
-            server_set_unique_name(obj->element, obj->object);
-        }
-        else
+        if ((obj->element = server_alloc(obj->object, address, atoi(port), protocol, auth, auth_opts)) == NULL)
         {
             MXS_ERROR("Failed to create a new server, memory allocation failed.");
             error_count++;
@@ -2446,7 +2817,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
 
         if (monuser && monpw)
         {
-            serverAddMonUser(server, monuser, monpw);
+            server_add_mon_user(server, monuser, monpw);
         }
         else if (monuser && monpw == NULL)
         {
@@ -2488,7 +2859,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
             }
         }
 
-        CONFIG_PARAMETER *params = obj->parameters;
+        MXS_CONFIG_PARAMETER *params = obj->parameters;
 
         server->server_ssl = make_ssl_structure(obj, false, &error_count);
         if (server->server_ssl && listener_init_SSL(server->server_ssl) != 0)
@@ -2500,7 +2871,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
         {
             if (!is_normal_server_parameter(params->name))
             {
-                serverAddParameter(obj->element, params->name, params->value);
+                server_add_parameter(obj->element, params->name, params->value);
             }
             params = params->next;
         }
@@ -2521,16 +2892,45 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
     int error_count = 0;
     char *filters = config_get_value(obj->parameters, "filters");
     char *servers = config_get_value(obj->parameters, "servers");
+    char *monitor = config_get_value(obj->parameters, "monitor");
     char *roptions = config_get_value(obj->parameters, "router_options");
-    char *router = config_get_value(obj->parameters, "router");
     SERVICE *service = obj->element;
 
     if (service)
     {
+        if (monitor)
+        {
+            if (servers)
+            {
+                MXS_WARNING("Both `monitor` and `servers` are defined. Only the "
+                            "value of `monitor` will be used.");
+            }
+
+            /** `monitor` takes priority over `servers` */
+            servers = NULL;
+
+            for (CONFIG_CONTEXT *ctx = context; ctx; ctx = ctx->next)
+            {
+                if (strcmp(ctx->object, monitor) == 0)
+                {
+                    servers = config_get_value(ctx->parameters, "servers");
+                    break;
+                }
+            }
+
+            if (servers == NULL)
+            {
+                MXS_ERROR("Unable to find monitor '%s'.", monitor);
+                error_count++;
+            }
+        }
+
         if (servers)
         {
+            char srv_list[strlen(servers) + 1];
+            strcpy(srv_list, servers);
             char *lasts;
-            char *s = strtok_r(servers, ",", &lasts);
+            char *s = strtok_r(srv_list, ",", &lasts);
             while (s)
             {
                 CONFIG_CONTEXT *obj1 = context;
@@ -2541,6 +2941,7 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                     {
                         found = 1;
                         serviceAddBackend(service, obj1->element);
+                        break;
                     }
                     obj1 = obj1->next;
                 }
@@ -2553,12 +2954,6 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                 }
                 s = strtok_r(NULL, ",", &lasts);
             }
-        }
-        else if (servers == NULL && !is_internal_service(router))
-        {
-            MXS_ERROR("The service '%s' is missing a definition of the servers "
-                      "that provide the service.", obj->object);
-            error_count++;
         }
 
         if (roptions)
@@ -2603,6 +2998,13 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             MXS_ERROR("Failed to create monitor '%s'.", obj->object);
             error_count++;
         }
+
+        if (obj->was_persisted)
+        {
+            /** Not the cleanest way of figuring out whether the configuration
+             * was stored but it should be OK for now */
+            ((MXS_MONITOR*)obj->element)->created_online = true;
+        }
     }
     else
     {
@@ -2612,16 +3014,20 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
     }
 
     char *servers = config_get_value(obj->parameters, "servers");
-    if (servers == NULL)
-    {
-        MXS_ERROR("Monitor '%s' is missing the 'servers' parameter that "
-                  "lists the servers that it monitors.", obj->object);
-        error_count++;
-    }
 
     if (error_count == 0)
     {
-        monitorAddParameters(obj->element, obj->parameters);
+        const MXS_MODULE *mod = get_module(module, MODULE_MONITOR);
+
+        if (mod)
+        {
+            config_add_defaults(obj, mod->parameters);
+            monitorAddParameters(obj->element, obj->parameters);
+        }
+        else
+        {
+            error_count++;
+        }
 
         char *interval_str = config_get_value(obj->parameters, "monitor_interval");
         if (interval_str)
@@ -2638,14 +3044,14 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             {
                 MXS_NOTICE("Invalid 'monitor_interval' parameter for monitor '%s', "
                            "using default value of %d milliseconds.",
-                           obj->object, MONITOR_INTERVAL);
+                           obj->object, MONITOR_DEFAULT_INTERVAL);
             }
         }
         else
         {
             MXS_NOTICE("Monitor '%s' is missing the 'monitor_interval' parameter, "
                        "using default value of %d milliseconds.",
-                       obj->object, MONITOR_INTERVAL);
+                       obj->object, MONITOR_DEFAULT_INTERVAL);
         }
 
         char *connect_timeout = config_get_value(obj->parameters, "backend_connect_timeout");
@@ -2678,36 +3084,39 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             }
         }
 
-        /* get the servers to monitor */
-        char *s, *lasts;
-        s = strtok_r(servers, ",", &lasts);
-        while (s)
+        if (servers)
         {
-            CONFIG_CONTEXT *obj1 = context;
-            int found = 0;
-            while (obj1)
+            /* get the servers to monitor */
+            char *s, *lasts;
+            s = strtok_r(servers, ",", &lasts);
+            while (s)
             {
-                if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
+                CONFIG_CONTEXT *obj1 = context;
+                int found = 0;
+                while (obj1)
                 {
-                    found = 1;
-                    if (hashtable_add(monitorhash, obj1->object, "") == 0)
+                    if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
                     {
-                        MXS_WARNING("Multiple monitors are monitoring server [%s]. "
-                                    "This will cause undefined behavior.",
-                                    obj1->object);
+                        found = 1;
+                        if (hashtable_add(monitorhash, obj1->object, "") == 0)
+                        {
+                            MXS_WARNING("Multiple monitors are monitoring server [%s]. "
+                                        "This will cause undefined behavior.",
+                                        obj1->object);
+                        }
+                        monitorAddServer(obj->element, obj1->element);
                     }
-                    monitorAddServer(obj->element, obj1->element);
+                    obj1 = obj1->next;
                 }
-                obj1 = obj1->next;
-            }
-            if (!found)
-            {
-                MXS_ERROR("Unable to find server '%s' that is "
-                          "configured in the monitor '%s'.", s, obj->object);
-                error_count++;
-            }
+                if (!found)
+                {
+                    MXS_ERROR("Unable to find server '%s' that is "
+                              "configured in the monitor '%s'.", s, obj->object);
+                    error_count++;
+                }
 
-            s = strtok_r(NULL, ",", &lasts);
+                s = strtok_r(NULL, ",", &lasts);
+            }
         }
 
         char *user = config_get_value(obj->parameters, "user");
@@ -2733,7 +3142,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
  * @param startnow If true, start the listener now
  * @return Number of errors
  */
-int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
+int create_new_listener(CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
     char *service_name = config_get_value(obj->parameters, "service");
@@ -2742,6 +3151,7 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
     char *protocol = config_get_value(obj->parameters, "protocol");
     char *socket = config_get_value(obj->parameters, "socket");
     char *authenticator = config_get_value(obj->parameters, "authenticator");
+    char *authenticator_options = config_get_value(obj->parameters, "authenticator_options");
 
     if (service_name && protocol && (socket || port))
     {
@@ -2751,7 +3161,7 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
             SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
             if (socket)
             {
-                if (serviceHasProtocol(service, protocol, address, 0))
+                if (serviceHasListener(service, protocol, address, 0))
                 {
                     MXS_ERROR("Listener '%s' for service '%s' already has a socket at '%s.",
                               obj->object, service_name, socket);
@@ -2759,17 +3169,14 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                 }
                 else
                 {
-                    serviceAddProtocol(service, protocol, socket, 0, authenticator, ssl_info);
-                    if (startnow)
-                    {
-                        serviceStartProtocol(service, protocol, 0);
-                    }
+                    serviceCreateListener(service, obj->object, protocol, socket, 0,
+                                          authenticator, authenticator_options, ssl_info);
                 }
             }
 
             if (port)
             {
-                if (serviceHasProtocol(service, protocol, address, atoi(port)))
+                if (serviceHasListener(service, protocol, address, atoi(port)))
                 {
                     MXS_ERROR("Listener '%s', for service '%s', already have port %s.",
                               obj->object,
@@ -2779,11 +3186,8 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                 }
                 else
                 {
-                    serviceAddProtocol(service, protocol, address, atoi(port), authenticator, ssl_info);
-                    if (startnow)
-                    {
-                        serviceStartProtocol(service, protocol, atoi(port));
-                    }
+                    serviceCreateListener(service, obj->object, protocol, address, atoi(port),
+                                          authenticator, authenticator_options, ssl_info);
                 }
             }
 
@@ -2830,19 +3234,25 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 char *s = strtok_r(options, ",", &lasts);
                 while (s)
                 {
-                    filterAddOption(obj->element, s);
+                    filter_add_option(obj->element, s);
                     s = strtok_r(NULL, ",", &lasts);
                 }
             }
 
-            CONFIG_PARAMETER *params = obj->parameters;
-            while (params)
+            const MXS_MODULE *mod = get_module(module, MODULE_FILTER);
+
+            if (mod)
             {
-                if (strcmp(params->name, "module") && strcmp(params->name, "options"))
-                {
-                    filterAddParameter(obj->element, params->name, params->value);
-                }
-                params = params->next;
+                config_add_defaults(obj, mod->parameters);
+            }
+            else
+            {
+                error_count++;
+            }
+
+            for (MXS_CONFIG_PARAMETER *p = obj->parameters; p; p = p->next)
+            {
+                filter_add_parameter(obj->element, p->name, p->value);
             }
         }
         else
@@ -2859,4 +3269,261 @@ int create_new_filter(CONFIG_CONTEXT *obj)
     }
 
     return error_count;
+}
+
+bool config_have_required_ssl_params(CONFIG_CONTEXT *obj)
+{
+    MXS_CONFIG_PARAMETER *param = obj->parameters;
+
+    return config_get_param(param, "ssl") &&
+           config_get_param(param, "ssl_key") &&
+           config_get_param(param, "ssl_cert") &&
+           config_get_param(param, "ssl_ca_cert") &&
+           strcmp(config_get_value_string(param, "ssl"), "required") == 0;
+}
+
+bool config_is_ssl_parameter(const char *key)
+{
+    const char *ssl_params[] =
+    {
+        "ssl_cert",
+        "ssl_ca_cert",
+        "ssl",
+        "ssl_key",
+        "ssl_version",
+        "ssl_cert_verify_depth",
+        NULL
+    };
+
+    for (int i = 0; ssl_params[i]; i++)
+    {
+        if (strcmp(key, ssl_params[i]) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool check_path_parameter(const MXS_MODULE_PARAM *params, const char *value)
+{
+    bool valid = false;
+
+    if (params->options & (MXS_MODULE_OPT_PATH_W_OK |
+                           MXS_MODULE_OPT_PATH_R_OK |
+                           MXS_MODULE_OPT_PATH_X_OK |
+                           MXS_MODULE_OPT_PATH_F_OK))
+    {
+        char buf[strlen(get_module_configdir()) + strlen(value) + 3];
+
+        if (*value != '/')
+        {
+            sprintf(buf, "/%s/%s", get_module_configdir(), value);
+            clean_up_pathname(buf);
+        }
+        else
+        {
+            strcpy(buf, value);
+        }
+
+        int mode = F_OK;
+
+        if (params->options & MXS_MODULE_OPT_PATH_W_OK)
+        {
+            mode |= W_OK;
+        }
+        if (params->options & MXS_MODULE_OPT_PATH_R_OK)
+        {
+            mode |= R_OK;
+        }
+        if (params->options & MXS_MODULE_OPT_PATH_X_OK)
+        {
+            mode |= X_OK;
+        }
+
+        if (access(buf, mode) == 0)
+        {
+            valid = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s", value,
+                      buf, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+    else
+    {
+        /** No checks for the path are required */
+        valid = true;
+    }
+
+    return valid;
+}
+
+static bool config_contains_type(const CONFIG_CONTEXT *ctx, const char *name, const char *type)
+{
+    while (ctx)
+    {
+        if (strcmp(ctx->object, name) == 0 &&
+            strcmp(type, config_get_value_string(ctx->parameters, "type")) == 0)
+        {
+            return true;
+        }
+
+        ctx = ctx->next;
+    }
+
+    return false;
+}
+
+bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
+                           const char *value, const CONFIG_CONTEXT *context)
+{
+    bool valid = false;
+
+    for (int i = 0; params[i].name && !valid; i++)
+    {
+        if (strcmp(params[i].name, key) == 0)
+        {
+            char *endptr;
+
+            switch (params[i].type)
+            {
+            case MXS_MODULE_PARAM_COUNT:
+                if ((strtol(value, &endptr, 10)) >= 0 && endptr != value && *endptr == '\0')
+                {
+                    valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_INT:
+                {
+                    errno = 0;
+                    long int v = strtol(value, &endptr, 10);
+                    (void)v; // error: ignoring return value of 'strtol'
+                    if ((errno == 0) && (endptr != value) && (*endptr == '\0'))
+                    {
+                        valid = true;
+                    }
+                }
+                break;
+
+            case MXS_MODULE_PARAM_SIZE:
+                {
+                    errno = 0;
+                    long long int v = strtoll(value, &endptr, 10);
+                    (void)v; // error: ignoring return value of 'strtoll'
+                    if (errno == 0)
+                    {
+                        if (endptr != value)
+                        {
+                            switch (*endptr)
+                            {
+                            case 'T':
+                            case 't':
+                            case 'G':
+                            case 'g':
+                            case 'M':
+                            case 'm':
+                            case 'K':
+                            case 'k':
+                                if (*(endptr + 1) == '\0' ||
+                                    ((*(endptr + 1) == 'i' || *(endptr + 1) == 'I') && *(endptr + 2) == '\0'))
+                                {
+                                    valid = true;
+                                }
+                                break;
+
+                            case '\0':
+                                valid = true;
+                                break;
+
+                            default:
+                                break;
+                            }
+                        }
+                    }
+                }
+                break;
+
+            case MXS_MODULE_PARAM_BOOL:
+                if (config_truth_value(value) != -1)
+                {
+                    valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_STRING:
+                if (*value)
+                {
+                    valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_ENUM:
+                if (params[i].accepted_values)
+                {
+                    char *endptr;
+                    const char *delim = ", \t";
+                    char buf[strlen(value) + 1];
+                    strcpy(buf, value);
+                    char *tok = strtok_r(buf, delim, &endptr);
+
+                    while (tok)
+                    {
+                        valid = false;
+
+                        for (int j = 0; params[i].accepted_values[j].name; j++)
+                        {
+                            if (strcmp(params[i].accepted_values[j].name, tok) == 0)
+                            {
+                                valid = true;
+                                break;
+                            }
+                        }
+
+                        tok = strtok_r(NULL, delim, &endptr);
+
+                        if ((params[i].options & MXS_MODULE_OPT_ENUM_UNIQUE) && (tok || !valid))
+                        {
+                            /** Either the only defined enum value is not valid
+                             * or multiple values were defined */
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
+                break;
+
+            case MXS_MODULE_PARAM_SERVICE:
+                if ((context && config_contains_type(context, value, "service")) ||
+                    service_find(value))
+                {
+                    valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_SERVER:
+                if ((context && config_contains_type(context, value, "server")) ||
+                    server_find_by_unique_name(value))
+                {
+                    valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_PATH:
+                valid = check_path_parameter(&params[i], value);
+                break;
+
+            default:
+                MXS_ERROR("Unexpected module parameter type: %d", params[i].type);
+                ss_dassert(false);
+                break;
+            }
+        }
+    }
+
+    return valid;
 }

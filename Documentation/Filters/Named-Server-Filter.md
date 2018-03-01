@@ -6,7 +6,7 @@ The **namedserverfilter** is a filter module for MariaDB MaxScale which is able 
 
 ## Configuration
 
-The configuration block for the Named Server filter requires the minimal filter options in it’s section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
+The configuration block for the Named Server filter requires the minimal filter options in its section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
 
 ```
 [NamedServerFilter]
@@ -40,6 +40,9 @@ To use multiple filter options, list them in a comma-separated list.
 options=case,extended
 ```
 
+**Note:** The _ignorecase_ and _case_ options are mutually exclusive and only
+one of them should be used.
+
 ## Filter Parameters
 
 The named server filter requires two mandatory parameters to be defined.
@@ -64,11 +67,19 @@ server=server2
 
 ### `source`
 
-The optional source parameter defines an address that is used to match against the address from which the client connection to MariaDB MaxScale originates. Only sessions that originate from this address will have the match and replacement applied to them.
+The optional source parameter defines an IP address that is used to match against the address from which the client connection to MariaDB MaxScale originates. Only sessions that originate from this IP address will have the match and replacement applied to them.
 
 ```
 source=127.0.0.1
 ```
+Since MaxScale 2.1 it's also possible to use % wildcards:
+
+```
+source=192.%.%.%
+source=192.168.%.%
+source=192.168.10.%
+```
+Please note that using source=% to match any IP it's not allowed.
 
 ### `user`
 

@@ -24,11 +24,11 @@ module=hintfilter
 
 ## Comments and comment types
 
-The client connection will need to have comments enabled. For example the `mysql` command line client has comments disabled by default.
+The client connection will need to have comments enabled. For example the `mysql` command line client has comments disabled by default and they need to be enabled by passing the `-c` option.
 
-For comment types, use either `-- ` (notice the whitespace) or `#` after the semicolon or `/* .. */` before the semicolon. All comment types work with routing hints.
+For comment types, use either `-- ` (notice the whitespace after the double hyphen) or `#` after the semicolon or `/* .. */` before the semicolon.
 
-The MySQL manual doesn`t specify if comment blocks, i.e. `/* .. */`, should contain a w
+The MySQL manual doesn't specify if comment blocks, i.e. `/* .. */`, should contain a
 whitespace character before or after the tags, so adding whitespace at both the start and the end is advised.
 
 ## Hint body
@@ -37,12 +37,12 @@ All hints must start with the `maxscale` tag.
 
 ```
 -- maxscale <hint body>
-```	
+```
 
-The hints have two types, ones that route to a server and others that contain
+The hints have two types, ones that define a server type and others that contain
 name-value pairs.
 
-###Routing destination hints
+### Routing destination hints
 
 These hints will instruct the router to route a query to a certain type of a server.
 ```

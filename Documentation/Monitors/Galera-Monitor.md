@@ -40,7 +40,7 @@ disable_master_failback=true
 
 ### `available_when_donor`
 
-This option only has an effect if there is a single Galera node being backed up an XtraBackup instance. This causes the initial node to go into Donor state which would normally prevent if from being marked as a valid server inside MaxScale. If this option is enabled, a single node in Donor state where the method is XtraBackup will be kept in Synced state. 
+This option only has an effect if there is a single Galera node being backed up an XtraBackup instance. This causes the initial node to go into Donor state which would normally prevent if from being marked as a valid server inside MaxScale. If this option is enabled, a single node in Donor state where the method is XtraBackup will be kept in Synced state.
 
 ```
 available_when_donor=true
@@ -62,11 +62,61 @@ Enable interaction with server priorities. This will allow the monitor to determ
 use_priority=true
 ```
 
+### `root_node_as_master`
+
+This option controls whether the write master Galera node requires a
+_wsrep_local_index_ value of 0. This option was introduced in MaxScale 2.1.0 and
+it is disabled by default in versions 2.1.5 and newer. In versions 2.1.4 and
+older, the option was enabled by default.
+
+A Galera cluster will always have a node which has a _wsrep_local_index_ value
+of 0. Based on this information, multiple MaxScale instances can always pick the
+same node for writes.
+
+If the `root_node_as_master` option is disabled for galeramon, the node with the
+lowest index will always be chosen as the master. If it is enabled, only the
+node with a a _wsrep_local_index_ value of 0 can be chosen as the master.
+
+### `set_donor_nodes`
+
+This option controls whether the global variable _wsrep_sst_donor_ should be set
+in each cluster node with _slave' status_.
+The variable contains a list of slave servers, automatically sorted, with
+possible master candidates at its end.
+
+The sorting is based either on _wsrep_local_index_ or node server _priority_
+depending on the value of _use_priority_ option.
+If no server has _priority_ defined the sorting switches to _wsrep_local_index_.
+Node names are collected by fetching the result of the variable _wsrep_node_name_.
+
+Example of variable being set in all slave nodes, assuming three nodes:
+```
+SET GLOBAL wsrep_sst_donor = "galera001,galera000"
+```
+
+**Note**:
+in order to set the global variable _wsrep_sst_donor_, proper privileges are
+required for the monitor user that connects to cluster nodes.
+This option is disabled by default and was introduced in MaxScale 2.1.0.
+
+```
+set_donor_nodes=true
+```
+
 ## Interaction with Server Priorities
 
-If the `use_priority` option is set and a server is configured with the `priority=<int>` parameter, galeramon will use that as the basis on which the master node is chosen. This requires the `disable_master_role_setting` to be undefined or disabled. The server with the lowest value in `priority` will be chosen as the master node when a replacement Galera node is promoted to a master server inside MaxScale.
+If the `use_priority` option is set and a server is configured with the
+`priority=<int>` parameter, galeramon will use that as the basis on which the
+master node is chosen. This requires the `disable_master_role_setting` to be
+undefined or disabled. The server with the lowest positive value of _priority_
+will be chosen as the master node when a replacement Galera node is promoted to
+a master server inside MaxScale.
 
-Here is an example with two servers.
+Nodes with a non-positive value (_priority_ <= 0) will never be chosen as the master. This allows
+you to mark some servers as permanent slaves by assigning a non-positive value
+into _priority_.
+
+Here is an example.
 
 ```
 [node-1]
@@ -86,8 +136,21 @@ type=server
 address=192.168.122.103
 port=3306
 priority=2
+
+[node-4]
+type=server
+address=192.168.122.104
+port=3306
+priority=0
 ```
 
-In this example `node-1` is always used as the master if available. If `node-1` is not available, then the next node with the highest priority rank is used. In this case it would be `node-3`. If both `node-1` and `node-3` were down, then `node-2` would be used. Nodes without priority are considered as having the lowest priority rank and will be used only if all nodes with priority ranks are not available.
+In this example `node-1` is always used as the master if available. If `node-1`
+is not available, then the next node with the highest priority rank is used. In
+this case it would be `node-3`. If both `node-1` and `node-3` were down, then
+`node-2` would be used. Because `node-4` has a value of 0 in _priority_, it will
+never be the master. Nodes without _priority_ parameter are considered as
+having the lowest priority rank and will be used only if all nodes
+with _priority_ parameter are not available.
 
-With priority ranks you can control the order in which MaxScale chooses the master node. This will allow for a controlled failure and replacement of nodes.
+With priority ranks you can control the order in which MaxScale chooses the
+master node. This will allow for a controlled failure and replacement of nodes.

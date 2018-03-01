@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -30,10 +30,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <listener.h>
-#include <gw_ssl.h>
-#include <gw_protocol.h>
-#include <log_manager.h>
+#include <fcntl.h>
+#include <maxscale/listener.h>
+#include <maxscale/paths.h>
+#include <maxscale/ssl.h>
+#include <maxscale/protocol.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/alloc.h>
+#include <maxscale/users.h>
+#include <maxscale/service.h>
 
 static RSA *rsa_512 = NULL;
 static RSA *rsa_1024 = NULL;
@@ -47,23 +52,111 @@ static RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength);
  * @param address       The address to listen with
  * @param port          The port to listen on
  * @param authenticator Name of the authenticator to be used
+ * @param options       Authenticator options
  * @param ssl           SSL configuration
  * @return      New listener object or NULL if unable to allocate
  */
 SERV_LISTENER *
-listener_alloc(char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl)
+listener_alloc(struct service* service, const char* name, const char *protocol,
+               const char *address, unsigned short port, const char *authenticator,
+               const char* auth_options, SSL_LISTENER *ssl)
 {
-    SERV_LISTENER   *proto = NULL;
-    if ((proto = (SERV_LISTENER *)malloc(sizeof(SERV_LISTENER))) != NULL)
+    char *my_address = NULL;
+    if (address)
     {
-        proto->listener = NULL;
-        proto->protocol = strdup(protocol);
-        proto->address = address ? strdup(address) : NULL;
-        proto->port = port;
-        proto->authenticator = authenticator ? strdup(authenticator) : NULL;
-        proto->ssl = ssl;
+        my_address = MXS_STRDUP(address);
+        if (!my_address)
+        {
+            return NULL;
+        }
     }
+
+    char *my_auth_options = NULL;
+
+    if (auth_options && (my_auth_options = MXS_STRDUP(auth_options)) == NULL)
+    {
+        MXS_FREE(my_address);
+        return NULL;
+    }
+
+    char *my_authenticator = NULL;
+
+    if (authenticator)
+    {
+        my_authenticator = MXS_STRDUP(authenticator);
+    }
+    else if ((authenticator = get_default_authenticator(protocol)) == NULL ||
+             (my_authenticator = MXS_STRDUP(authenticator)) == NULL)
+    {
+        MXS_ERROR("No authenticator defined for listener '%s' and could not get "
+                  "default authenticator for protocol '%s'.", name, protocol);
+        MXS_FREE(my_address);
+        return NULL;
+    }
+
+    void *auth_instance = NULL;
+
+    if (!authenticator_init(&auth_instance, my_authenticator, auth_options))
+    {
+        MXS_ERROR("Failed to initialize authenticator module '%s' for "
+                  "listener '%s'.", my_authenticator, name);
+        MXS_FREE(my_address);
+        MXS_FREE(my_authenticator);
+        return NULL;
+    }
+
+    char *my_protocol = MXS_STRDUP(protocol);
+    char *my_name = MXS_STRDUP(name);
+    SERV_LISTENER *proto = (SERV_LISTENER*)MXS_MALLOC(sizeof(SERV_LISTENER));
+
+    if (!my_protocol || !proto || !my_name || !my_authenticator)
+    {
+        MXS_FREE(my_authenticator);
+        MXS_FREE(my_protocol);
+        MXS_FREE(my_address);
+        MXS_FREE(my_name);
+        MXS_FREE(proto);
+        return NULL;
+    }
+
+    proto->name = my_name;
+    proto->listener = NULL;
+    proto->service = service;
+    proto->protocol = my_protocol;
+    proto->address = my_address;
+    proto->port = port;
+    proto->authenticator = my_authenticator;
+    proto->auth_options = my_auth_options;
+    proto->ssl = ssl;
+    proto->users = NULL;
+    proto->next = NULL;
+    proto->auth_instance = auth_instance;
+    spinlock_init(&proto->lock);
+
     return proto;
+}
+
+/**
+ * @brief Free a listener
+ *
+ * @param listener Listener to free
+ */
+void listener_free(SERV_LISTENER* listener)
+{
+    if (listener)
+    {
+        if (listener->users)
+        {
+            users_free(listener->users);
+        }
+
+        MXS_FREE(listener->address);
+        MXS_FREE(listener->authenticator);
+        MXS_FREE(listener->auth_options);
+        MXS_FREE(listener->name);
+        MXS_FREE(listener->protocol);
+        MXS_FREE(listener);
+    }
 }
 
 /**
@@ -75,10 +168,17 @@ listener_alloc(char *protocol, char *address, unsigned short port, char *authent
 int
 listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
 {
-    if (strcasecmp(version, "TLSV10") == 0)
+    if (strcasecmp(version, "MAX") == 0)
+    {
+        ssl_listener->ssl_method_type = SERVICE_SSL_TLS_MAX;
+    }
+#ifndef OPENSSL_1_1
+    else if (strcasecmp(version, "TLSV10") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS10;
     }
+#else
+#endif
 #ifdef OPENSSL_1_0
     else if (strcasecmp(version, "TLSV11") == 0)
     {
@@ -89,10 +189,6 @@ listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
         ssl_listener->ssl_method_type = SERVICE_TLS12;
     }
 #endif
-    else if (strcasecmp(version, "MAX") == 0)
-    {
-        ssl_listener->ssl_method_type = SERVICE_SSL_TLS_MAX;
-    }
     else
     {
         return -1;
@@ -111,14 +207,28 @@ listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
 void
 listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert)
 {
-    free(ssl_listener->ssl_cert);
-    ssl_listener->ssl_cert = cert ? strdup(cert) : NULL;
+    MXS_FREE(ssl_listener->ssl_cert);
+    ssl_listener->ssl_cert = cert ? MXS_STRDUP_A(cert) : NULL;
 
-    free(ssl_listener->ssl_key);
-    ssl_listener->ssl_key = key ? strdup(key) : NULL;
+    MXS_FREE(ssl_listener->ssl_key);
+    ssl_listener->ssl_key = key ? MXS_STRDUP_A(key) : NULL;
 
-    free(ssl_listener->ssl_ca_cert);
-    ssl_listener->ssl_ca_cert = ca_cert ? strdup(ca_cert) : NULL;
+    MXS_FREE(ssl_listener->ssl_ca_cert);
+    ssl_listener->ssl_ca_cert = ca_cert ? MXS_STRDUP_A(ca_cert) : NULL;
+}
+
+RSA* create_rsa(int bits)
+{
+#ifdef OPENSSL_1_1
+    BIGNUM* bn = BN_new();
+    BN_set_word(bn, RSA_F4);
+    RSA* rsa = RSA_new();
+    RSA_generate_key_ex(rsa, bits, bn, NULL);
+    BN_free(bn);
+    return rsa;
+#else
+    return RSA_generate_key(bits, RSA_F4, NULL, NULL);
+#endif
 }
 
 /**
@@ -136,11 +246,13 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
 
     if (!ssl_listener->ssl_init_done)
     {
-        switch(ssl_listener->ssl_method_type)
+        switch (ssl_listener->ssl_method_type)
         {
+#ifndef OPENSSL_1_1
         case SERVICE_TLS10:
             ssl_listener->method = (SSL_METHOD*)TLSv1_method();
             break;
+#endif
 #ifdef OPENSSL_1_0
         case SERVICE_TLS11:
             ssl_listener->method = (SSL_METHOD*)TLSv1_1_method();
@@ -149,7 +261,7 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
             ssl_listener->method = (SSL_METHOD*)TLSv1_2_method();
             break;
 #endif
-            /** Rest of these use the maximum available SSL/TLS methods */
+        /** Rest of these use the maximum available SSL/TLS methods */
         case SERVICE_SSL_MAX:
             ssl_listener->method = (SSL_METHOD*)SSLv23_method();
             break;
@@ -179,34 +291,24 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         SSL_CTX_set_options(ssl_listener->ctx, SSL_OP_NO_SSLv3);
 
         /** Generate the 512-bit and 1024-bit RSA keys */
-        if (rsa_512 == NULL)
+        if (rsa_512 == NULL && (rsa_512 = create_rsa(512)) == NULL)
         {
-            rsa_512 = RSA_generate_key(512, RSA_F4, NULL, NULL);
-            if (rsa_512 == NULL)
-            {
-                MXS_ERROR("512-bit RSA key generation failed.");
-                return -1;
-            }
+            MXS_ERROR("512-bit RSA key generation failed.");
+            return -1;
         }
-        if (rsa_1024 == NULL)
+        if (rsa_1024 == NULL && (rsa_1024 = create_rsa(1024)) == NULL)
         {
-            rsa_1024 = RSA_generate_key(1024, RSA_F4, NULL, NULL);
-            if (rsa_1024 == NULL)
-            {
-                MXS_ERROR("1024-bit RSA key generation failed.");
-                return -1;
-            }
+            MXS_ERROR("1024-bit RSA key generation failed.");
+            return -1;
         }
 
-        if (rsa_512 != NULL && rsa_1024 != NULL)
-        {
-            SSL_CTX_set_tmp_rsa_callback(ssl_listener->ctx, tmp_rsa_callback);
-        }
+        ss_dassert(rsa_512 && rsa_1024);
+        SSL_CTX_set_tmp_rsa_callback(ssl_listener->ctx, tmp_rsa_callback);
 
         if (ssl_listener->ssl_cert && ssl_listener->ssl_key)
         {
             /** Load the server certificate */
-            if (SSL_CTX_use_certificate_file(ssl_listener->ctx, ssl_listener->ssl_cert, SSL_FILETYPE_PEM) <= 0)
+            if (SSL_CTX_use_certificate_chain_file(ssl_listener->ctx, ssl_listener->ssl_cert) <= 0)
             {
                 MXS_ERROR("Failed to set server SSL certificate.");
                 return -1;
@@ -235,7 +337,7 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         }
 
         /* Set to require peer (client) certificate verification */
-        if (ssl_listener->ssl_cert_verify_depth)
+        if (ssl_listener->ssl_verify_peer_certificate)
         {
             SSL_CTX_set_verify(ssl_listener->ctx, SSL_VERIFY_PEER, NULL);
         }
@@ -257,9 +359,10 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
 static RSA *
 tmp_rsa_callback(SSL *s, int is_export, int keylength)
 {
-    RSA *rsa_tmp=NULL;
+    RSA *rsa_tmp = NULL;
 
-    switch (keylength) {
+    switch (keylength)
+    {
     case 512:
         if (rsa_512)
         {
@@ -268,26 +371,106 @@ tmp_rsa_callback(SSL *s, int is_export, int keylength)
         else
         {
             /* generate on the fly, should not happen in this example */
-            rsa_tmp = RSA_generate_key(keylength,RSA_F4,NULL,NULL);
+            rsa_tmp = create_rsa(keylength);
             rsa_512 = rsa_tmp; /* Remember for later reuse */
         }
         break;
     case 1024:
         if (rsa_1024)
         {
-            rsa_tmp=rsa_1024;
+            rsa_tmp = rsa_1024;
         }
         break;
     default:
         /* Generating a key on the fly is very costly, so use what is there */
         if (rsa_1024)
         {
-            rsa_tmp=rsa_1024;
+            rsa_tmp = rsa_1024;
         }
         else
         {
-            rsa_tmp=rsa_512; /* Use at least a shorter key */
+            rsa_tmp = rsa_512; /* Use at least a shorter key */
         }
     }
-    return(rsa_tmp);
+    return (rsa_tmp);
+}
+
+/**
+ * Creates a listener configuration at the location pointed by @c filename
+ *
+ * @param listener Listener to serialize into a configuration
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_listener_config(const SERV_LISTENER *listener, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing listener '%s': %d, %s",
+                  filename, listener->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    // TODO: Check for return values on all of the dprintf calls
+    dprintf(file, "[%s]\n", listener->name);
+    dprintf(file, "type=listener\n");
+    dprintf(file, "protocol=%s\n", listener->protocol);
+    dprintf(file, "service=%s\n", listener->service->name);
+    dprintf(file, "address=%s\n", listener->address);
+    dprintf(file, "port=%u\n", listener->port);
+    dprintf(file, "authenticator=%s\n", listener->authenticator);
+
+    if (listener->auth_options)
+    {
+        dprintf(file, "authenticator_options=%s\n", listener->auth_options);
+    }
+
+    if (listener->ssl)
+    {
+        write_ssl_config(file, listener->ssl);
+    }
+
+    close(file);
+
+    return true;
+}
+
+bool listener_serialize(const SERV_LISTENER *listener)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             listener->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary listener configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_listener_config(listener, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary listener configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
+    return rval;
 }

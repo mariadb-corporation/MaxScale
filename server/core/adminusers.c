@@ -2,28 +2,25 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 700
-#endif
 #include <unistd.h>
 #include <crypt.h>
-#include <users.h>
-#include <adminusers.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <gwdirs.h>
+#include <maxscale/users.h>
+#include <maxscale/adminusers.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/paths.h>
 #include <sys/stat.h>
 
 /**
@@ -263,8 +260,14 @@ static const char* admin_remove_user(USERS *users, const char* fname,
                 /** one step back */
                 MXS_ERROR("Unable to set stream position. ");
             }
-            fgets(line, LINELEN, fp);
-            fputs(line, fp_tmp);
+            if (fgets(line, LINELEN, fp))
+            {
+                fputs(line, fp_tmp);
+            }
+            else
+            {
+                MXS_ERROR("Failed to read line from admin users file");
+            }
         }
 
         if (fgetpos(fp, &rpos) != 0)

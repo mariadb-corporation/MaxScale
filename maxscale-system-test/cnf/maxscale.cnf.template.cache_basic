@@ -1,0 +1,76 @@
+[maxscale]
+threads=###threads###
+log_warning=1
+
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+###repl51###
+servers=server1,server2
+user=maxskysql
+passwd= skysql
+monitor_interval=1000
+detect_stale_master=false
+
+[Read Connection Router Slave]
+type=service
+router=readconnroute
+router_options= slave
+servers=server1,server2
+user=maxskysql
+passwd=skysql
+
+[Read Connection Router Master]
+type=service
+router=readconnroute
+router_options=master
+servers=server1,server2
+user=maxskysql
+passwd=skysql
+filters=Cache
+
+[Read Connection Listener Slave]
+type=listener
+service=Read Connection Router Slave
+protocol=MySQLClient
+port=4009
+
+[Read Connection Listener Master]
+type=listener
+service=Read Connection Router Master
+protocol=MySQLClient
+port=4008
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+#address=localhost
+socket=default
+
+[Cache]
+type=filter
+module=cache
+storage=storage_inmemory
+# NOTE: If you adjust the TTL values, ensure that test programs dependent
+# NOTE: on the TTL are ajusted as well.
+hard_ttl=10
+soft_ttl=5
+max_size=10M
+rules=/###access_homedir###/cache_rules.json
+
+[server1]
+type=server
+address=###node_server_IP_1###
+port=###node_server_port_1###
+protocol=MySQLBackend
+
+[server2]
+type=server
+address=###node_server_IP_2###
+port=###node_server_port_2###
+protocol=MySQLBackend

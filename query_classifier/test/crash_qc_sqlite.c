@@ -2,7 +2,7 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
  * Change Date: 2019-01-01
  *
@@ -12,9 +12,9 @@
  */
 
 #include <stdio.h>
-#include <buffer.h>
-#include <gwdirs.h>
-#include <query_classifier.h>
+#include <maxscale/buffer.h>
+#include <maxscale/paths.h>
+#include <maxscale/query_classifier.h>
 
 #define MYSQL_HEADER_LEN 4
 
@@ -41,7 +41,7 @@ int main()
 
     set_libdir(strdup("../qc_sqlite"));
 
-    if (qc_init("qc_sqlite", NULL))
+    if (qc_setup("qc_sqlite", NULL) && qc_process_init(QC_INIT_BOTH))
     {
         const char s[] = "SELECT @@global.max_allowed_packet";
 
@@ -51,9 +51,9 @@ int main()
         // being of the opinion that the statement was not the one to be
         // classified and hence an alien parse-tree being passed to sqlite3's
         // code generator.
-        qc_parse(stmt);
+        qc_parse(stmt, QC_COLLECT_ALL);
 
-        qc_end();
+        qc_process_end(QC_INIT_BOTH);
 
         rv = EXIT_SUCCESS;
     }

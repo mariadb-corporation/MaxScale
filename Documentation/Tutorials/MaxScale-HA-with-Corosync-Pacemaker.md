@@ -12,15 +12,15 @@ Please note the solution is a quick setup example that may not be suited for all
 
 ## Clustering Software installation
 
-On each node in the cluster do the following steps:
+On each node in the cluster do the following steps.
 
-(1) Add clustering repos to yum
+### Add clustering repos to yum
 
 ```
 # vi /etc/yum.repos.d/ha-clustering.repo
 ```
 
-Add the following to the file 
+Add the following to the file.
 
 ```
 [haclustering]
@@ -30,7 +30,7 @@ enabled=1
 gpgcheck=0
 ```
 
-(2) Install the software 
+### Install the software
 
 ```
 # yum install pacemaker corosync crmsh
@@ -44,7 +44,7 @@ Package corosync-1.4.5-2.4.x86_64
 Package crmsh-2.0+git46-1.1.x86_64
 ```
 
-(3) Assign hostname on each node
+### Assign hostname on each node
 
 In this example the three names used for the nodes are: node1,node,node3
 
@@ -56,7 +56,7 @@ In this example the three names used for the nodes are: node1,node,node3
 [root@server3 ~]# hostname node3
 ```
 
-(4) For each node add server names in /etc/hosts
+For each node, add all the server names into `/etc/hosts`.
 
 ```
 [root@node3 ~]# vi /etc/hosts
@@ -70,11 +70,11 @@ In this example the three names used for the nodes are: node1,node,node3
 10.35.15.26     node3
 ```
 
-**Please note**: add **current-node** as an alias for the current node in each of the /etc/hosts files.
+**Note**: add _current-node_ as an alias for the current node in each of the /etc/hosts files.
 
-(5) Prepare authkey for optional cryptographic use
+### Prepare authkey for optional cryptographic use
 
-On one of the nodes, say node2 run the corosync-keygen utility and follow 
+On one of the nodes, say node2 run the corosync-keygen utility and follow
 
 ```
 [root@node2 ~]# corosync-keygen
@@ -84,7 +84,7 @@ Corosync Cluster Engine Authentication key generator.       Gathering 1024 bits 
 After completion the key will be found in /etc/corosync/authkey.
 ```
 
-(6) Prepare the corosync configuration file
+### Prepare the corosync configuration file
 
 Using node2 as an example:
 
@@ -141,7 +141,7 @@ name: pacemaker
 }
 ```
 
-**Please note** in this example:
+**Note**: in this example:
 
 - unicast UDP is used
 
@@ -149,7 +149,7 @@ name: pacemaker
 
 - Pacemaker processes are started by the corosync daemon, so there is no need to launch it via /etc/init.d/pacemaker start
 
-(7) copy configuration files and auth key on each of the other nodes
+### Copy configuration files and auth key on each of the other nodes
 
 ```
 [root@node2 ~]# scp /etc/corosync/*  root@node1:/etc/corosync/
@@ -157,11 +157,7 @@ name: pacemaker
 [root@node2 ~]# scp /etc/corosync/*  root@nodeN:/etc/corosync/
 ```
 
-(8) Corosync needs port *5*405 to be opened:
-
-- configure any firewall or iptables accordingly
-
-For a quick start just disable iptables on each nodes:
+Corosync needs port 5405 to be opened. Configure any firewall or iptables accordingly. For a quick start just disable iptables on each nodes:
 
 ```
 [root@node2 ~]# service iptables stop
@@ -169,7 +165,7 @@ For a quick start just disable iptables on each nodes:
 [root@nodeN ~]# service iptables stop
 ```
 
-(9) Start Corosyn on each node:
+### Start Corosyn on each node
 
 ```
 [root@node2 ~] #/etc/init.d/corosync start
@@ -177,14 +173,14 @@ For a quick start just disable iptables on each nodes:
 [root@nodeN ~] #/etc/init.d/corosync start
 ```
 
-and check the corosync daemon is successfully bound to port 5405:
+Check that the corosync daemon is successfully bound to port 5405.
 
 ```
 [root@node2 ~] #netstat -na | grep 5405
 udp        0      0 10.228.103.72:5405        0.0.0.0:*
 ```
 
-Check if other nodes are reachable with nc utility and  option UDP (-u):
+Check if other nodes are reachable with nc utility and option UDP (-u).
 
 ```
 [root@node2 ~] #echo "check ..."  | nc -u node1 5405
@@ -194,19 +190,21 @@ Check if other nodes are reachable with nc utility and  option UDP (-u):
 [root@node1 ~] #echo "check ..."  | nc -u node3 5405
 ```
 
-If the following message is displayed
+If the following message is displayed, there is an issue with communication between the nodes.
 
-**nc: Write error: Connection refused**
+```
+nc: Write error: Connection refused
+```
 
-There is an issue with communication between the nodes, this is most likely to be an issue with the firewall configuration on your nodes. Check and resolve issues with your firewall configuration.
+This is most likely to be an issue with the firewall configuration on your nodes. Check and resolve any issues with your firewall configuration.
 
-(10) Check the cluster status, from any node
+### Check the cluster status from any node
 
 ```
 [root@node3 ~]# crm status
 ```
 
-After a while this will be the output:
+The command should produce the following.
 
 ```
 [root@node3 ~]# crm status
@@ -239,9 +237,9 @@ For additional information see:
 
 [http://clusterlabs.org/doc/](http://clusterlabs.org/doc/)
 
-The configuration is automatically updated on every node:
+The configuration is automatically updated on every node.
 
-Check it from another node, say node1
+Check it from another node, say node1:
 
 ```
 [root@node1 ~]# crm configure show
@@ -260,12 +258,12 @@ property cib-bootstrap-options: \
 
 The Corosync / Pacemaker cluster is ready to be configured to manage resources.
 
-## MariaDB MaxScale init script /etc/init.d/maxscale
+## MariaDB MaxScale init script
 
-The MariaDB MaxScale /etc/init.d./maxscale script allows to start/stop/restart and monitor MariaDB MaxScale process running in the system.
+The MariaDB MaxScale init script in `/etc/init.d./maxscale` allows to start, stop, restart and monitor the MariaDB MaxScale process running on the system.
 
 ```
-[root@node1 ~]# /etc/init.d/maxscale 
+[root@node1 ~]# /etc/init.d/maxscale
 Usage: /etc/init.d/maxscale {start|stop|status|restart|condrestart|reload}
 ```
 
@@ -315,14 +313,11 @@ Checking MaxScale status: MaxScale (pid  25953) is running.[  OK  ]
 
 The script exit code for "status" is 0
 
-
-Note: the MariaDB MaxScale script is LSB compatible and returns the proper exit code for each action:
-
-For additional information;
+Read the following for additional information about LSB init scripts:
 
 [http://www.linux-ha.org/wiki/LSB_Resource_Agents](http://www.linux-ha.org/wiki/LSB_Resource_Agents)
 
-After checking MariaDB MaxScale is well managed by the /etc/init.d/script is possible to configure the MariaDB MaxScale HA via Pacemaker.
+After checking that the init scripts for MariaDB MaxScale work, it is possible to configure MariaDB MaxScale for HA via Pacemaker.
 
 # Configure MariaDB MaxScale for HA with Pacemaker
 
@@ -333,7 +328,7 @@ op start interval="0” timeout=”15s” \
 op stop interval="0” timeout=”30s”
 ```
 
-MaxScale resource will be started:
+MaxScale resource will be started.
 
 ```
 [root@node2 ~]# crm status
@@ -351,11 +346,11 @@ Online: [ node1 node2 node3 ]
  MaxScale	(lsb:maxscale):	Started node1
 ```
 
-##Basic use cases:
+## Basic use cases
 
-### 1. Resource restarted after a failure:
+### Resource restarted after a failure
 
-In the example MariaDB MaxScale PID is 26114, kill the process immediately:
+In the example MariaDB MaxScale PID is 26114, kill the process immediately.
 
 ```
 [root@node2 ~]# kill -9 26114
@@ -377,9 +372,9 @@ Failed actions:
     MaxScale_monitor_15000 on node1 'not running' (7): call=19, status=complete, last-rc-change='Mon Jun 30 13:16:14 2014', queued=0ms, exec=0ms
 ```
 
-**Note** the **MaxScale_monitor** failed action
+**Note**: the _MaxScale_monitor_ failed action
 
-After a few seconds it will be started again:
+After a few seconds it will be started again.
 
 ```
 [root@node2 ~]# crm status
@@ -394,12 +389,12 @@ Version: 1.1.10-14.el6_5.3-368c726
 
 Online: [ node1 node2 node3 ]
 
- MaxScale	(lsb:maxscale):	Started node1 
+ MaxScale	(lsb:maxscale):	Started node1
 ```
 
-### 2. The resource cannot be migrated to node1 for a failure:
+### The resource cannot be migrated to node1 for a failure
 
-First, migrate the the resource to another node, say node3
+First, migrate the the resource to another node, say node3.
 
 ```
 [root@node1 ~]# crm resource migrate MaxScale node3
@@ -412,7 +407,7 @@ Failed actions:
     MaxScale_start_0 on node1 'not running' (7): call=76, status=complete, last-rc-change='Mon Jun 30 13:31:17 2014', queued=2015ms, exec=0ms
 ```
 
-Note the **MaxScale_start** failed action on node1, and after a few seconds
+**Note**: the _MaxScale_start_ failed action on node1, and after a few seconds.
 
 ```
 [root@node3 ~]# crm status
@@ -427,14 +422,14 @@ Version: 1.1.10-14.el6_5.3-368c726
 
 Online: [ node1 node2 node3 ]
 
- MaxScale	(lsb:maxscale):	Started node2 
+ MaxScale	(lsb:maxscale):	Started node2
 
 Failed actions:
 
     MaxScale_start_0 on node1 'not running' (7): call=76, status=complete, last-rc-change='Mon Jun 30 13:31:17 2014', queued=2015ms, exec=0ms
 ```
 
-Successfully, MaxScale has been started on a new node: node2.
+Successfully, MaxScale has been started on a new node (node2).
 
 **Note**: Failed actions remain in the output of crm status.
 
@@ -447,7 +442,7 @@ Cleaning up MaxScale on node2
 Cleaning up MaxScale on node3
 ```
 
-The cleaned status is visible from other nodes as well:
+The cleaned status is visible from other nodes as well.
 
 ```
 [root@node2 ~]# crm status
@@ -467,25 +462,21 @@ Online: [ node1 node2 node3 ]
 
 ## Add a Virtual IP (VIP) to the cluster
 
-It’s possible to add a virtual IP to the cluster:
+It’s possible to add a virtual IP to the cluster. MariaDB MaxScale process will be only contacted via this IP. The virtual IP can move across nodes in case one of them fails.
 
-MariaDB MaxScale process will be only contacted with this IP, that mat move across nodes with maxscale process as well.
-
-Setup is very easy:
-
-assuming an addition IP address is available and can be added to one of the nodes, this i the new configuration to add:
+The Setup is very easy. Assuming an addition IP address is available and can be added to one of the nodes, this is the new configuration to add.
 
 ```
 [root@node2 ~]# crm configure primitive maxscale_vip ocf:heartbeat:IPaddr2 params ip=192.168.122.125 op monitor interval=10s
 ```
 
-MariaDB MaxScale process and the VIP must be run in the same node, so it’s mandatory to add to the configuration the group ‘maxscale_service’.
+MariaDB MaxScale process and the VIP must be run in the same node, so it is mandatory to add to the configuration to the group ‘maxscale_service’.
 
 ```
 [root@node2 ~]# crm configure group maxscale_service maxscale_vip MaxScale
 ```
 
-The final configuration is, from another node:
+The following is the final configuration.
 
 ```
 [root@node3 ~]# crm configure show
@@ -511,7 +502,7 @@ property cib-bootstrap-options: \
 	last-lrm-refresh=1404125486
 ```
 
-Check the resource status:
+Check the resource status.
 
 ```
 [root@node1 ~]# crm status
@@ -528,10 +519,10 @@ Online: [ node1 node2 node3 ]
 
  Resource Group: maxscale_service
 
-     maxscale_vip	(ocf::heartbeat:IPaddr2):	Started node2 
+     maxscale_vip	(ocf::heartbeat:IPaddr2):	Started node2
 
-     MaxScale	(lsb:maxscale):	Started node2 
+     MaxScale	(lsb:maxscale):	Started node2
 ```
 
-With both resources on node2, now MariaDB MaxScale service will be reachable via the configured VIP address 192.168.122.125
+With both resources on node2, now MariaDB MaxScale service will be reachable via the configured VIP address 192.168.122.125.
 

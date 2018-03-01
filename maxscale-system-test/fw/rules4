@@ -1,0 +1,2 @@
+rule test4 deny columns x1 on_queries select
+users %@% match all rules test4

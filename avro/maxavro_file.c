@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -14,7 +14,7 @@
 #include "maxavro.h"
 #include <errno.h>
 #include <string.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 
 static bool maxavro_read_sync(FILE *file, uint8_t* sync)
 {
@@ -26,7 +26,7 @@ static bool maxavro_read_sync(FILE *file, uint8_t* sync)
 
         if (ferror(file))
         {
-            char err[STRERROR_BUFLEN];
+            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to read file sync marker: %d, %s", errno,
                       strerror_r(errno, err, sizeof(err)));
         }
@@ -49,11 +49,12 @@ bool maxavro_verify_block(MAXAVRO_FILE *file)
     int rc = fread(sync, 1, SYNC_MARKER_SIZE, file->file);
     if (rc != SYNC_MARKER_SIZE)
     {
-        if (rc == -1)
+        if (ferror(file->file))
         {
-            MXS_ERROR("Failed to read file: %d %s", errno, strerror(errno));
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to read file: %d %s", errno, strerror_r(errno, err, sizeof(err)));
         }
-        else
+        else if (rc > 0 || !feof(file->file))
         {
             MXS_ERROR("Short read when reading sync marker. Read %d bytes instead of %d",
                       rc, SYNC_MARKER_SIZE);
@@ -98,7 +99,7 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
         if (pos == -1)
         {
             rval = false;
-            char err[STRERROR_BUFLEN];
+            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to read datablock start: %d, %s", errno,
                       strerror_r(errno, err, sizeof(err)));
         }
@@ -257,20 +258,20 @@ const char* maxavro_get_error_string(MAXAVRO_FILE *file)
 {
     switch (file->last_error)
     {
-        case MAXAVRO_ERR_IO:
-            return "MAXAVRO_ERR_IO";
+    case MAXAVRO_ERR_IO:
+        return "MAXAVRO_ERR_IO";
 
-        case MAXAVRO_ERR_MEMORY:
-            return "MAXAVRO_ERR_MEMORY";
+    case MAXAVRO_ERR_MEMORY:
+        return "MAXAVRO_ERR_MEMORY";
 
-        case MAXAVRO_ERR_VALUE_OVERFLOW:
-            return "MAXAVRO_ERR_VALUE_OVERFLOW";
+    case MAXAVRO_ERR_VALUE_OVERFLOW:
+        return "MAXAVRO_ERR_VALUE_OVERFLOW";
 
-        case MAXAVRO_ERR_NONE:
-            return "MAXAVRO_ERR_NONE";
+    case MAXAVRO_ERR_NONE:
+        return "MAXAVRO_ERR_NONE";
 
-        default:
-            return "UNKNOWN ERROR";
+    default:
+        return "UNKNOWN ERROR";
     }
 }
 
@@ -311,7 +312,7 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE *file)
             {
                 if (ferror(file->file))
                 {
-                    char err[STRERROR_BUFLEN];
+                    char err[MXS_STRERROR_BUFLEN];
                     MXS_ERROR("Failed to read binary header: %d, %s", errno,
                               strerror_r(errno, err, sizeof(err)));
                 }
@@ -334,7 +335,7 @@ GWBUF* maxavro_file_binary_header(MAXAVRO_FILE *file)
     }
     else
     {
-        char err[STRERROR_BUFLEN];
+        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to read binary header: %d, %s", errno,
                   strerror_r(errno, err, sizeof(err)));
     }

@@ -2,20 +2,23 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#include <maxscale/housekeeper.h>
 #include <stdlib.h>
 #include <string.h>
-#include <housekeeper.h>
-#include <thread.h>
-#include <spinlock.h>
-#include <log_manager.h>
+#include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
+#include <maxscale/semaphore.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/thread.h>
+#include <maxscale/query_classifier.h>
 
 /**
  * @file housekeeper.c  Provide a mechanism to run periodic tasks
@@ -48,22 +51,37 @@ static HKTASK *tasks = NULL;
  */
 static SPINLOCK tasklock = SPINLOCK_INIT;
 
-static int do_shutdown = 0;
+static bool do_shutdown = 0;
+
 long hkheartbeat = 0; /*< One heartbeat is 100 milliseconds */
 static THREAD hk_thr_handle;
 
 static void hkthread(void *);
 
-/**
- * Initialise the housekeeper thread
- */
-void
+struct hkinit_result
+{
+    sem_t sem;
+    bool ok;
+};
+
+bool
 hkinit()
 {
-    if (thread_start(&hk_thr_handle, hkthread, NULL) == NULL)
+    struct hkinit_result res;
+    sem_init(&res.sem, 0, 0);
+    res.ok = false;
+
+    if (thread_start(&hk_thr_handle, hkthread, &res) != NULL)
     {
-        MXS_ERROR("Failed to start housekeeper thread.");
+        sem_wait(&res.sem);
     }
+    else
+    {
+        MXS_ALERT("Failed to start housekeeper thread.");
+    }
+
+    sem_destroy(&res.sem);
+    return res.ok;
 }
 
 /**
@@ -88,13 +106,13 @@ hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
 {
     HKTASK *task, *ptr;
 
-    if ((task = (HKTASK *)malloc(sizeof(HKTASK))) == NULL)
+    if ((task = (HKTASK *)MXS_MALLOC(sizeof(HKTASK))) == NULL)
     {
         return 0;
     }
-    if ((task->name = strdup(name)) == NULL)
+    if ((task->name = MXS_STRDUP(name)) == NULL)
     {
-        free(task);
+        MXS_FREE(task);
         return 0;
     }
     task->task = taskfn;
@@ -110,8 +128,8 @@ hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
         if (strcmp(ptr->name, name) == 0)
         {
             spinlock_release(&tasklock);
-            free(task->name);
-            free(task);
+            MXS_FREE(task->name);
+            MXS_FREE(task);
             return 0;
         }
         ptr = ptr->next;
@@ -121,8 +139,8 @@ hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
         if (strcmp(ptr->name, name) == 0)
         {
             spinlock_release(&tasklock);
-            free(task->name);
-            free(task);
+            MXS_FREE(task->name);
+            MXS_FREE(task);
             return 0;
         }
         ptr->next = task;
@@ -154,13 +172,13 @@ hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
 {
     HKTASK *task, *ptr;
 
-    if ((task = (HKTASK *)malloc(sizeof(HKTASK))) == NULL)
+    if ((task = (HKTASK *)MXS_MALLOC(sizeof(HKTASK))) == NULL)
     {
         return 0;
     }
-    if ((task->name = strdup(name)) == NULL)
+    if ((task->name = MXS_STRDUP(name)) == NULL)
     {
-        free(task);
+        MXS_FREE(task);
         return 0;
     }
     task->task = taskfn;
@@ -219,8 +237,8 @@ hktask_remove(const char *name)
 
     if (ptr)
     {
-        free(ptr->name);
-        free(ptr);
+        MXS_FREE(ptr->name);
+        MXS_FREE(ptr);
         return 1;
     }
     else
@@ -254,21 +272,27 @@ hkthread(void *data)
     void *taskdata;
     int i;
 
-    for (;;)
+    struct hkinit_result* res = (struct hkinit_result*)data;
+    res->ok = qc_thread_init(QC_INIT_BOTH);
+
+    if (!res->ok)
+    {
+        MXS_ERROR("Could not initialize housekeeper thread.");
+    }
+
+    sem_post(&res->sem);
+
+    while (!do_shutdown)
     {
         for (i = 0; i < 10; i++)
         {
-            if (do_shutdown)
-            {
-                return;
-            }
             thread_millisleep(100);
             hkheartbeat++;
         }
         now = time(0);
         spinlock_acquire(&tasklock);
         ptr = tasks;
-        while (ptr)
+        while (!do_shutdown && ptr)
         {
             if (ptr->nextdue <= now)
             {
@@ -296,16 +320,26 @@ hkthread(void *data)
         }
         spinlock_release(&tasklock);
     }
+
+    qc_thread_end(QC_INIT_BOTH);
+    MXS_NOTICE("Housekeeper shutting down.");
 }
 
-/**
- * Called to shutdown the housekeeper
- *
- */
 void
 hkshutdown()
 {
-    do_shutdown = 1;
+    do_shutdown = true;
+    atomic_synchronize();
+}
+
+void hkfinish()
+{
+    ss_dassert(do_shutdown);
+
+    MXS_NOTICE("Waiting for housekeeper to shut down.");
+    thread_wait(hk_thr_handle);
+    do_shutdown = false;
+    MXS_NOTICE("Housekeeper has shut down.");
 }
 
 /**

@@ -1,0 +1,1 @@
+create or replace table t1 (id int);

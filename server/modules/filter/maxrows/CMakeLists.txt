@@ -1,0 +1,5 @@
+add_library(maxrows SHARED maxrows.c)
+target_link_libraries(maxrows maxscale-common)
+set_target_properties(maxrows PROPERTIES VERSION "1.0.0")
+set_target_properties(maxrows PROPERTIES LINK_FLAGS -Wl,-z,defs)
+install_module(maxrows core)

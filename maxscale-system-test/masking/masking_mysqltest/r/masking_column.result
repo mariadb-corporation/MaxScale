@@ -1,0 +1,57 @@
+drop database if exists maskingdb;
+create database maskingdb;
+use maskingdb;
+create table masking (a TEXT, x TEXT, y TEXT);
+insert into masking values ("hello", "hello",  "hello");
+insert into masking values (NULL,    "hello",  "hello");
+insert into masking values ("hello",  NULL,    "hello");
+insert into masking values ("hello",  "hello", NULL);
+insert into masking values (NULL,     NULL,    "hello");
+insert into masking values ("hello",  NULL,    NULL);
+insert into masking values (NULL,     NULL,    NULL);
+select * from masking;
+a	x	y
+YYYYY	hello	hello
+NULL	hello	hello
+YYYYY	NULL	hello
+YYYYY	hello	NULL
+NULL	NULL	hello
+YYYYY	NULL	NULL
+NULL	NULL	NULL
+drop table masking;
+create table masking (x TEXT, a TEXT, y TEXT);
+insert into masking values ("hello", "hello", "hello");
+insert into masking values (NULL,    "hello",  "hello");
+insert into masking values ("hello",  NULL,    "hello");
+insert into masking values ("hello",  "hello", NULL);
+insert into masking values (NULL,     NULL,    "hello");
+insert into masking values ("hello",  NULL,    NULL);
+insert into masking values (NULL,     NULL,    NULL);
+select * from masking;
+x	a	y
+hello	YYYYY	hello
+NULL	YYYYY	hello
+hello	NULL	hello
+hello	YYYYY	NULL
+NULL	NULL	hello
+hello	NULL	NULL
+NULL	NULL	NULL
+drop table masking;
+create table masking (x TEXT, y TEXT, a TEXT);
+insert into masking values ("hello", "hello", "hello");
+insert into masking values (NULL,    "hello",  "hello");
+insert into masking values ("hello",  NULL,    "hello");
+insert into masking values ("hello",  "hello", NULL);
+insert into masking values (NULL,     NULL,    "hello");
+insert into masking values ("hello",  NULL,    NULL);
+insert into masking values (NULL,     NULL,    NULL);
+select * from masking;
+x	y	a
+hello	hello	YYYYY
+NULL	hello	YYYYY
+hello	NULL	YYYYY
+hello	hello	NULL
+NULL	NULL	YYYYY
+hello	NULL	NULL
+NULL	NULL	NULL
+drop table masking;

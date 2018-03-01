@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -22,21 +22,24 @@
  *
  * @endverbatim
  */
+#include <maxscale/filter.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <filter.h>
-#include <session.h>
-#include <modules.h>
-#include <spinlock.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/alloc.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+#include "maxscale/filter.h"
+
+#include "maxscale/config.h"
+#include "maxscale/modules.h"
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
-static FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
+static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
 
-static void filter_free_parameters(FILTER_DEF *filter);
+static void filter_free_parameters(MXS_FILTER_DEF *filter);
 
 /**
  * Allocate a new filter within MaxScale
@@ -47,17 +50,23 @@ static void filter_free_parameters(FILTER_DEF *filter);
  *
  * @return              The newly created filter or NULL if an error occured
  */
-FILTER_DEF *
-filter_alloc(char *name, char *module)
+MXS_FILTER_DEF *
+filter_alloc(const char *name, const char *module)
 {
-    FILTER_DEF *filter;
+    char* my_name = MXS_STRDUP(name);
+    char* my_module = MXS_STRDUP(module);
 
-    if ((filter = (FILTER_DEF *)malloc(sizeof(FILTER_DEF))) == NULL)
+    MXS_FILTER_DEF *filter = (MXS_FILTER_DEF *)MXS_MALLOC(sizeof(MXS_FILTER_DEF));
+
+    if (!my_name || !my_module || !filter)
     {
+        MXS_FREE(my_name);
+        MXS_FREE(my_module);
+        MXS_FREE(filter);
         return NULL;
     }
-    filter->name = strdup(name);
-    filter->module = strdup(module);
+    filter->name = my_name;
+    filter->module = my_module;
     filter->filter = NULL;
     filter->options = NULL;
     filter->obj = NULL;
@@ -81,9 +90,9 @@ filter_alloc(char *name, char *module)
  * @return      Returns true if the server was freed
  */
 void
-filter_free(FILTER_DEF *filter)
+filter_free(MXS_FILTER_DEF *filter)
 {
-    FILTER_DEF *ptr;
+    MXS_FILTER_DEF *ptr;
 
     if (filter)
     {
@@ -108,35 +117,28 @@ filter_free(FILTER_DEF *filter)
         spinlock_release(&filter_spin);
 
         /* Clean up session and free the memory */
-        free(filter->name);
-        free(filter->module);
+        MXS_FREE(filter->name);
+        MXS_FREE(filter->module);
 
         if (filter->options)
         {
             for (int i = 0; filter->options[i]; i++)
             {
-                free(filter->options[i]);
+                MXS_FREE(filter->options[i]);
             }
-            free(filter->options);
+            MXS_FREE(filter->options);
         }
 
         filter_free_parameters(filter);
 
-        free(filter);
+        MXS_FREE(filter);
     }
 }
 
-/**
- * Find an existing filter using the unique section name in
- * configuration file
- *
- * @param       name            The filter name
- * @return      The server or NULL if not found
- */
-FILTER_DEF *
-filter_find(char *name)
+MXS_FILTER_DEF *
+filter_def_find(const char *name)
 {
-    FILTER_DEF *filter;
+    MXS_FILTER_DEF *filter;
 
     spinlock_acquire(&filter_spin);
     filter = allFilters;
@@ -152,13 +154,28 @@ filter_find(char *name)
     return filter;
 }
 
+const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)
+{
+    return filter_def->name;
+}
+
+const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def)
+{
+    return filter_def->module;
+}
+
+MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
+{
+    return filter_def->filter;
+}
+
 /**
  * Check a parameter to see if it is a standard filter parameter
  *
  * @param name  Parameter name to check
  */
 int
-filter_standard_parameter(char *name)
+filter_standard_parameter(const char *name)
 {
     if (strcmp(name, "type") == 0 || strcmp(name, "module") == 0)
     {
@@ -176,7 +193,7 @@ filter_standard_parameter(char *name)
 void
 dprintAllFilters(DCB *dcb)
 {
-    FILTER_DEF *ptr;
+    MXS_FILTER_DEF *ptr;
     int        i;
 
     spinlock_acquire(&filter_spin);
@@ -214,7 +231,7 @@ dprintAllFilters(DCB *dcb)
  * to display all active filters in MaxScale
  */
 void
-dprintFilter(DCB *dcb, FILTER_DEF *filter)
+dprintFilter(DCB *dcb, const MXS_FILTER_DEF *filter)
 {
     int i;
 
@@ -242,7 +259,7 @@ dprintFilter(DCB *dcb, FILTER_DEF *filter)
 void
 dListFilters(DCB *dcb)
 {
-    FILTER_DEF      *ptr;
+    MXS_FILTER_DEF      *ptr;
     int     i;
 
     spinlock_acquire(&filter_spin);
@@ -281,15 +298,16 @@ dListFilters(DCB *dcb)
  * @param option        The option string
  */
 void
-filterAddOption(FILTER_DEF *filter, char *option)
+filter_add_option(MXS_FILTER_DEF *filter, const char *option)
 {
     int i;
 
     spinlock_acquire(&filter->spin);
     if (filter->options == NULL)
     {
-        filter->options = (char **)calloc(2, sizeof(char *));
-        filter->options[0] = strdup(option);
+        filter->options = (char **)MXS_CALLOC(2, sizeof(char *));
+        MXS_ABORT_IF_NULL(filter->options);
+        filter->options[0] = MXS_STRDUP_A(option);
         filter->options[1] = NULL;
     }
     else
@@ -298,8 +316,11 @@ filterAddOption(FILTER_DEF *filter, char *option)
         {
             ;
         }
-        filter->options = (char **)realloc(filter->options, (i + 2) * sizeof(char *));
-        filter->options[i] = strdup(option);
+
+        filter->options = (char **)MXS_REALLOC(filter->options, (i + 2) * sizeof(char *));
+        MXS_ABORT_IF_NULL(filter->options);
+        filter->options[i] = MXS_STRDUP_A(option);
+        MXS_ABORT_IF_NULL(filter->options[i]);
         filter->options[i + 1] = NULL;
     }
     spinlock_release(&filter->spin);
@@ -313,47 +334,22 @@ filterAddOption(FILTER_DEF *filter, char *option)
  * @param value         The parameter value
  */
 void
-filterAddParameter(FILTER_DEF *filter, char *name, char *value)
+filter_add_parameter(MXS_FILTER_DEF *filter, const char *name, const char *value)
 {
-    int i;
+    CONFIG_CONTEXT ctx = {.object = ""};
 
-    spinlock_acquire(&filter->spin);
-    if (filter->parameters == NULL)
-    {
-        filter->parameters = (FILTER_PARAMETER **)calloc(2, sizeof(FILTER_PARAMETER *));
-        i = 0;
-    }
-    else
-    {
-        for (i = 0; filter->parameters[i]; i++)
-        {
-            ;
-        }
-        filter->parameters = (FILTER_PARAMETER **)realloc(filter->parameters,
-                                                          (i + 2) * sizeof(FILTER_PARAMETER *));
-    }
-    filter->parameters[i] = (FILTER_PARAMETER *)calloc(1, sizeof(FILTER_PARAMETER));
-    filter->parameters[i]->name = strdup(name);
-    filter->parameters[i]->value = strdup(value);
-    filter->parameters[i + 1] = NULL;
-    spinlock_release(&filter->spin);
+    config_add_param(&ctx, name, value);
+    ctx.parameters->next = filter->parameters;
+    filter->parameters = ctx.parameters;
 }
 
 /**
  * Free filter parameters
  * @param filter Filter whose parameters are to be freed
  */
-static void filter_free_parameters(FILTER_DEF *filter)
+static void filter_free_parameters(MXS_FILTER_DEF *filter)
 {
-    if (filter->parameters)
-    {
-        for (int i = 0; filter->parameters[i]; i++)
-        {
-            free(filter->parameters[i]->name);
-            free(filter->parameters[i]->value);
-        }
-        free(filter->parameters);
-    }
+    config_parameter_free(filter->parameters);
 }
 
 /**
@@ -361,31 +357,43 @@ static void filter_free_parameters(FILTER_DEF *filter)
  * @param filter Filter definition
  * @return True if module was successfully loaded, false if an error occurred
  */
-bool filter_load(FILTER_DEF* filter)
+bool filter_load(MXS_FILTER_DEF* filter)
 {
     bool rval = false;
     if (filter)
     {
-        if (filter->obj == NULL)
+        if (filter->filter)
         {
-            /* Filter not yet loaded */
-            if ((filter->obj = load_module(filter->module, MODULE_FILTER)) == NULL)
-            {
-                MXS_ERROR("Failed to load filter module '%s'.", filter->module);
-                return false;
-            }
-        }
-
-        if ((filter->filter = (filter->obj->createInstance)(filter->options,
-                                                            filter->parameters)))
-        {
+            // Already loaded and created.
             rval = true;
         }
         else
         {
-            MXS_ERROR("Failed to create filter '%s' instance.", filter->name);
-        }
+            if (filter->obj == NULL)
+            {
+                /* Filter not yet loaded */
+                if ((filter->obj = load_module(filter->module, MODULE_FILTER)) == NULL)
+                {
+                    MXS_ERROR("Failed to load filter module '%s'.", filter->module);
+                }
+            }
 
+            if (filter->obj)
+            {
+                ss_dassert(!filter->filter);
+
+                if ((filter->filter = (filter->obj->createInstance)(filter->name,
+                                                                    filter->options,
+                                                                    filter->parameters)))
+                {
+                    rval = true;
+                }
+                else
+                {
+                    MXS_ERROR("Failed to create filter '%s' instance.", filter->name);
+                }
+            }
+        }
     }
     return rval;
 }
@@ -402,19 +410,13 @@ bool filter_load(FILTER_DEF* filter)
  * @return              The downstream component for the next filter or NULL
  *                      if the filter could not be created
  */
-DOWNSTREAM *
-filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
+MXS_DOWNSTREAM *
+filter_apply(MXS_FILTER_DEF *filter, MXS_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
-    DOWNSTREAM *me;
+    MXS_DOWNSTREAM *me;
 
-    if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
+    if ((me = (MXS_DOWNSTREAM *)MXS_CALLOC(1, sizeof(MXS_DOWNSTREAM))) == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation for filter session failed "
-                  "due to %d,%s.",
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-
         return NULL;
     }
     me->instance = filter->filter;
@@ -422,7 +424,7 @@ filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 
     if ((me->session = filter->obj->newSession(me->instance, session)) == NULL)
     {
-        free(me);
+        MXS_FREE(me);
         return NULL;
     }
     filter->obj->setDownstream(me->instance, me->session, downstream);
@@ -443,10 +445,10 @@ filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
  * @param upstream      The filter that should be upstream of this filter
  * @return              The upstream component for the next filter
  */
-UPSTREAM *
-filterUpstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
+MXS_UPSTREAM *
+filter_upstream(MXS_FILTER_DEF *filter, void *fsession, MXS_UPSTREAM *upstream)
 {
-    UPSTREAM *me = NULL;
+    MXS_UPSTREAM *me = NULL;
 
     /*
      * The the filter has no setUpstream entry point then is does
@@ -459,7 +461,7 @@ filterUpstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
 
     if (filter->obj->clientReply != NULL)
     {
-        if ((me = (UPSTREAM *)calloc(1, sizeof(UPSTREAM))) == NULL)
+        if ((me = (MXS_UPSTREAM *)MXS_CALLOC(1, sizeof(MXS_UPSTREAM))) == NULL)
         {
             return NULL;
         }

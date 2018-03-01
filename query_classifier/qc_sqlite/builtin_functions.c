@@ -5,7 +5,7 @@
 #include "builtin_functions.h"
 #include <stdlib.h>
 #include <string.h>
-#include <skygw_debug.h>
+#include <maxscale/debug.h>
 
 static struct
 {
@@ -206,6 +206,7 @@ static const char* BUILTIN_FUNCTIONS[] =
     "ST_AsText",
     "ST_ASWKT",
     "ST_GeomCollFromText",
+    "ST_GeometryFromText",
     "ST_LineFromText",
     "ST_PointFromText",
     "ST_PolyFromText",
@@ -358,6 +359,16 @@ static const char* BUILTIN_FUNCTIONS[] =
     "from_base64",
     "to_base64",
     "weight_string",
+
+    /*
+     * Regex functions
+     * https://mariadb.com/kb/en/mariadb/regular-expressions-functions/
+     */
+    "regexp",
+    "regexp_instr",
+    "regexp_replace",
+    "regexp_substr",
+    "rlike",
 
     /*
      * http://dev.mysql.com/doc/refman/5.7/en/row-subqueries.html

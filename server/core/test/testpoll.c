@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,10 +33,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <maxscale/poll.h>
-#include <dcb.h>
-#include <test_utils.h>
-#include <listener.h>
+#include <maxscale/dcb.h>
+#include <maxscale/listener.h>
+
+#include "test_utils.h"
 
 /**
  * test1    Allocate a service and do lots of other things
@@ -55,7 +55,6 @@ test1()
     ss_dfprintf(stderr,
                 "testpoll : Initialise the polling system.");
     init_test_env(NULL);
-    poll_init();
     ss_dfprintf(stderr, "\t..done\nAdd a DCB");
     dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, &dummy);
 
@@ -69,7 +68,7 @@ test1()
 
     if (dcb->fd < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n", errno, strerror_r(errno, errbuf,
                                                                                                       sizeof(errbuf)));
         return 1;

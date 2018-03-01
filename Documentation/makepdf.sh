@@ -37,7 +37,7 @@ filter(){
     # and we add the current date to the end of the 2 lines in the titleblock
     #date=$(date +"%B %e, %Y")
     printf -v date "%(%B %e, %Y)T"
-    #awk ' /^$/ {p++} p==1{printf "%% %s\n", "'"$date"'";p++} !p{printf "%% "} {print} ' 
+    #awk ' /^$/ {p++} p==1{printf "%% %s\n", "'"$date"'";p++} !p{printf "%% "} {print} '
     awk ' NR==1{ printf "%% " } # put % in front of first line
           NR==2{ printf "  " } # put some space in front of 2nd line. pandoc requires this to continue the title
           NR==3{ printf "%% %s", "'"$date"'" } # 3rd line becomes the date.
@@ -49,10 +49,10 @@ filter(){
 
 pandoc_vars=(
     -V fontsize=12pt
-    -V version=1.10 
-    -V geometry:margin=1in 
+    -V version=1.10
+    -V geometry:margin=1in
     --toc
-    -t latex 
+    -t latex
     --latex-engine=xelatex
     --template="$template"
 )

@@ -1,4 +1,4 @@
-#Simple Sharding with Two Servers
+# Simple Sharding with Two Servers
 
 ![Schema Based Sharding](images/Simple-Sharding.png)
 
@@ -8,27 +8,15 @@ MariaDB MaxScale will appear to the client as a database server with the combina
 
 ## Environment & Solution Space
 
-This document is designed as a simple tutorial on schema-based sharding using MariaDB MaxScale in an environment in which you have two servers. The object of this tutorial is to have a system that, to the client side, acts like a single MySQL database but actually is sharded between the two servers.
+This document is designed as a simple tutorial on schema-based sharding using MariaDB MaxScale in an environment in which you have two servers. The object of this tutorial is to have a system that, to the client side, acts like a single MariaDB database but actually is sharded between the two servers.
 
-The process of setting and configuring MariaDB MaxScale will be covered within this document. The installation and configuration of the MySQL servers will not be covered in-depth. The users should be configured according to the configuration guide.
+The database users should be configured according to [the configuration guide](../Getting-Started/Configuration-Guide.md). The [MaxScale Tutorial](MaxScale-Tutorial.md) contains easy to follow instructions on how to set up MaxScale.
 
-This tutorial will assume the user is running from one of the binary distributions available and has installed this in the default location. Building from source code in GitHub is covered in guides elsewhere as is installing to non-default locations.
+This tutorial will assume the user is using of the binary distributions available and has installed this in the default location. The process of configuring MariaDB MaxScale will be covered within this document. The installation and configuration of the MariaDB servers will not be covered in-depth.
 
-## Process
+## Preparing MaxScale
 
-The steps involved in creating a system from the binary distribution of MariaDB MaxScale are:
-
-* Install the package relevant to your distribution
-
-* Create the required users on your MariaDB or MySQL server
-
-* Create a MariaDB MaxScale configuration file
-
-### Installation
-
-The precise installation process will vary from one distribution to another details of what to do with the RPM and DEB packages can be found on the download site when you select the distribution you are downloading from. The process involves setting up your package manager to include the MariaDB repositories and then running the package manager for your distribution, RPM or apt-get.
-
-Upon successful completion of the installation command you will have MariaDB MaxScale installed and ready to be run but without a configuration. You must create a configuration file before you first run MariaDB MaxScale.
+Follow the [MaxScale Tutorial](MaxScale-Tutorial.md) to install and prepare the required database users for MaxScale. You don't need to create the configuration file  for MaxScale as it will be covered in the next section.
 
 ### Creating Your MariaDB MaxScale Configuration
 
@@ -92,7 +80,8 @@ After this we have a fully working configuration and we can move on to starting 
 
 Upon completion of the configuration process MariaDB MaxScale is ready to be started . This may either be done manually by running the maxscale command or via the service interface. The service scripts are located in the `/etc/init.d/` folder and are accessible through both the `service` and `systemctl` commands.
 
-After starting MariaDB MaxScale check the error log in /var/log/maxscale to see if any errors are detected in the configuration file. Also the maxadmin command may be used to confirm that MariaDB MaxScale is running and the services, listeners etc have been correctly configured.
-
 MariaDB MaxScale is now ready to start accepting client connections and routing them. Queries are routed to the right servers based on the database they target and switching between the shards is seamless since MariaDB MaxScale keeps the session state intact between servers.
 
+If MariaDB MaxScale fails to start, check the error log in `/var/log/maxscale` to see what sort of errors were detected.
+
+**Note:** As the sharding solution in MaxScale is relatively simple, cross-database queries between two or more shards are not supported.

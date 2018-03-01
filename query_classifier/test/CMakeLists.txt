@@ -4,7 +4,7 @@ if (BUILD_QC_MYSQLEMBEDDED)
   foreach(DIR ${MYSQL_INCLUDE_DIR_ALL})
     include_directories(${DIR})
   endforeach()
-  include_directories(${MYSQL_EMMBEDDED_INCLUDE_DIR}/..)
+  include_directories(${MYSQL_EMBEDDED_INCLUDE_DIR}/..)
 
   if(${ERRMSG} MATCHES "ERRMSG-NOTFOUND")
     message(FATAL_ERROR "The errmsg.sys file was not found, please define the path with -DERRMSG=<path>")
@@ -19,7 +19,7 @@ if (BUILD_QC_MYSQLEMBEDDED)
   add_executable(classify classify.c)
   target_link_libraries(classify maxscale-common)
 
-  add_executable(compare compare.cc)
+  add_executable(compare compare.cc testreader.cc)
   target_link_libraries(compare maxscale-common)
 
   add_executable(crash_qc_sqlite crash_qc_sqlite.c)

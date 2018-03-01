@@ -1,9 +1,9 @@
 // Copyright (c) 2016 MariaDB Corporation Ab
 //
 // Use of this software is governed by the Business Source License included
-// in the LICENSE.TXT file and at www.mariadb.com/bsl.
+// in the LICENSE.TXT file and at www.mariadb.com/bsl11.
 //
-// Change Date: 2019-01-01
+// Change Date: 2019-07-01
 //
 // On the date above, in accordance with the Business Source License, use
 // of this software will be governed by version 2 or later of the General
@@ -15,6 +15,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -29,10 +30,25 @@ var user = flag.String("user", "", "Server user")
 var passwd = flag.String("password", "", "Server password")
 var debug = flag.Bool("debug", false, "Debug output")
 
+func PrintUsage() {
+	fmt.Println(`Usage: cdc_schema [OPTIONS]
+
+This program generates CDC schema files for all the tables in a database. The
+schema files need to be generated if the binary log files do not contain the
+CREATE TABLE events that define the table layout.
+
+The "user" and "password" flags are required.
+`)
+
+	flag.PrintDefaults()
+}
+
 // Avro field
 type Field struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	RealType string `json:"real_type"`
+	Length   int    `json:"length"`
 }
 
 // Avro schema
@@ -54,22 +70,28 @@ func LogObject(obj interface{}) {
 }
 
 var field_re *regexp.Regexp
+var length_re *regexp.Regexp
 
 // Convert the SQL type to the appropriate Avro type
 func (f *Field) ToAvroType() {
+	orig := f.Type
 	f.Type = field_re.ReplaceAllString(f.Type, "")
+	f.Length = -1
+	f.RealType = f.Type
 	switch f.Type {
 	case "date", "datetime", "time", "timestamp", "year", "tinytext", "text",
-		"mediumtext", "longtext", "char", "varchar", "enum", "set":
+		"mediumtext", "longtext", "char", "varchar":
+		f.Type = "string"
+		f.Length, _ = strconv.Atoi(length_re.ReplaceAllString(orig, "$1"))
+	case "enum", "set":
 		f.Type = "string"
 	case "tinyblob", "blob", "mediumblob", "longblob", "binary", "varbinary":
 		f.Type = "bytes"
-	case "int", "smallint", "mediumint", "integer", "tinyint", "short",
-		"decimal", "bit":
+	case "int", "smallint", "mediumint", "integer", "tinyint", "short", "bit":
 		f.Type = "int"
 	case "float":
 		f.Type = "float"
-	case "double":
+	case "double", "decimal":
 		f.Type = "double"
 	case "null":
 		f.Type = "null"
@@ -114,11 +136,23 @@ func StoreSchema(db *sql.DB, schema, table string) {
 func main() {
 	var err error
 	field_re, err = regexp.Compile("[(].*")
+
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
 
+	length_re, err = regexp.Compile(".*[(](.*)[)].*")
+
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+
+	flag.Usage = PrintUsage
 	flag.Parse()
+
+	if len(*user) == 0 || len(*passwd) == 0 {
+		log.Fatal("Both the -user and -password flags are mandatory. See output of -help for more details.")
+	}
 
 	var connect_str string = *user + ":" + *passwd + "@tcp(" + *host + ":" + strconv.Itoa(*port) + ")/"
 

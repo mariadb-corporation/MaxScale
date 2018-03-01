@@ -2,9 +2,9 @@
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
- * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,8 +33,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <buffer.h>
-#include <hint.h>
+#include <maxscale/alloc.h>
+#include <maxscale/buffer.h>
+#include <maxscale/hint.h>
 
 /**
  * Generate predefined test data
@@ -44,7 +45,8 @@
  */
 uint8_t* generate_data(size_t count)
 {
-    uint8_t* data = malloc(count);
+    uint8_t* data = MXS_MALLOC(count);
+    MXS_ABORT_IF_NULL(data);
 
     srand(0);
 
@@ -82,6 +84,8 @@ GWBUF* create_test_buffer()
         head = gwbuf_append(head, gwbuf_alloc_and_load(buffers[i], data + total));
         total += buffers[i];
     }
+
+    MXS_FREE(data);
 
     return head;
 }
@@ -137,15 +141,14 @@ void copy_buffer(int n, int offset)
     ss_info_dassert(gwbuf_copy_data(buffer, 0, cutoff, dest) == cutoff, "All bytes should be read");
     ss_info_dassert(memcmp(data, dest, sizeof(dest)) == 0, "Data should be OK");
     gwbuf_free(buffer);
+    MXS_FREE(data);
 }
 
 /** gwbuf_split test - These tests assume allocation will always succeed */
 void test_split()
 {
     size_t headsize = 10;
-    GWBUF* head = gwbuf_alloc(headsize);
     size_t tailsize = 20;
-    GWBUF* tail = gwbuf_alloc(tailsize);
 
     GWBUF* oldchain = gwbuf_append(gwbuf_alloc(headsize), gwbuf_alloc(tailsize));
     ss_info_dassert(gwbuf_length(oldchain) == headsize + tailsize, "Allocated buffer should be 30 bytes");
@@ -176,6 +179,7 @@ void test_split()
     ss_info_dassert(newchain, "New chain should be non-NULL");
     ss_info_dassert(gwbuf_length(newchain) == headsize + tailsize, "New chain should be 30 bytes long");
     ss_info_dassert(oldchain == NULL, "Old chain should be NULL");
+    gwbuf_free(newchain);
 
     /** Splitting of contiguous memory */
     GWBUF* buffer = gwbuf_alloc(10);
@@ -187,6 +191,8 @@ void test_split()
     ss_info_dassert(newbuf->tail == newbuf, "New buffer's tail should point to itself");
     ss_info_dassert(buffer->next == NULL, "Old buffer's next pointer should be NULL");
     ss_info_dassert(newbuf->next == NULL, "New buffer's next pointer should be NULL");
+    gwbuf_free(buffer);
+    gwbuf_free(newbuf);
 
     /** Bad parameter tests */
     GWBUF* ptr = NULL;
@@ -196,7 +202,6 @@ void test_split()
     ss_info_dassert(gwbuf_split(&buffer, 0) == NULL, "gwbuf_split with length of 0 should return NULL");
     ss_info_dassert(gwbuf_length(buffer) == 10, "Buffer should be 10 bytes");
     gwbuf_free(buffer);
-    gwbuf_free(newbuf);
 
     /** Splitting near buffer boudaries */
     for (int i = 0; i < n_buffers - 1; i++)
@@ -314,6 +319,128 @@ void test_consume()
     consume_buffer(n_buffers - 1, -1);
 }
 
+void test_compare()
+{
+    static const uint8_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    ss_dfprintf(stderr, "testbuffer : testing GWBUF comparisons\n");
+
+    GWBUF* lhs = NULL;
+    GWBUF* rhs = NULL;
+
+    // Both NULL
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+
+    // Either (but not both) NULL
+    lhs = gwbuf_alloc_and_load(10, data);
+    ss_dassert(gwbuf_compare(lhs, rhs) > 0);
+    ss_dassert(gwbuf_compare(rhs, lhs) < 0);
+
+    // The same array
+    ss_dassert(gwbuf_compare(lhs, lhs) == 0);
+
+    // Identical array
+    gwbuf_free(rhs);
+    rhs = gwbuf_alloc_and_load(10, data);
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+
+    // One shorter
+    gwbuf_free(rhs);
+    rhs = gwbuf_alloc_and_load(9, data + 1);
+    ss_dassert(gwbuf_compare(lhs, rhs) > 0);
+    ss_dassert(gwbuf_compare(rhs, lhs) < 0);
+
+    // One segmented, but otherwise identical.
+    gwbuf_free(rhs);
+    rhs = NULL;
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(3, data));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(3, data + 3));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(4, data + 3 + 3));
+
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+    ss_dassert(gwbuf_compare(rhs, rhs) == 0);
+
+    // Both segmented, but otherwise identical.
+    gwbuf_free(lhs);
+    lhs = NULL;
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data));
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data + 5));
+
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+    ss_dassert(gwbuf_compare(rhs, lhs) == 0);
+
+    // Both segmented and of same length, but different.
+    gwbuf_free(lhs);
+    lhs = NULL;
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data + 5)); // Values in different order
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data));
+
+    ss_dassert(gwbuf_compare(lhs, rhs) > 0); // 5 > 1
+    ss_dassert(gwbuf_compare(rhs, lhs) < 0); // 5 > 1
+
+    // Identical, but one containing empty segments.
+    gwbuf_free(rhs);
+    rhs = NULL;
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(5, data + 5));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(5, data));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
+
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+    ss_dassert(gwbuf_compare(rhs, lhs) == 0);
+
+    gwbuf_free(lhs);
+    gwbuf_free(rhs);
+}
+
+
+
+void test_clone()
+{
+    GWBUF* original = gwbuf_alloc_and_load(1, "1");
+
+    original = gwbuf_append(original, gwbuf_alloc_and_load(1,  "1"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(2,  "12"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(3,  "123"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(5,  "12345"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(8,  "12345678"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(13, "1234567890123"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(21, "123456789012345678901"));
+
+    GWBUF* clone = gwbuf_clone(original);
+
+    GWBUF* o = original;
+    GWBUF* c = clone;
+
+    ss_dassert(gwbuf_length(o) == gwbuf_length(c));
+
+    while (o)
+    {
+        ss_dassert(c);
+        ss_dassert(GWBUF_LENGTH(o) == GWBUF_LENGTH(c));
+
+        const char* i = (char*)GWBUF_DATA(o);
+        const char* end = i + GWBUF_LENGTH(o);
+        const char* j = (char*)GWBUF_DATA(c);
+
+        while (i != end)
+        {
+            ss_dassert(*i == *j);
+            ++i;
+            ++j;
+        }
+
+        o = o->next;
+        c = c->next;
+    }
+
+    ss_dassert(c == NULL);
+
+    gwbuf_free(clone);
+    gwbuf_free(original);
+}
+
 /**
  * test1    Allocate a buffer and do lots of things
  *
@@ -321,7 +448,7 @@ void test_consume()
 static int
 test1()
 {
-    GWBUF   *buffer, *extra, *clone, *partclone, *transform;
+    GWBUF   *buffer, *extra, *clone, *partclone;
     HINT    *hint;
     int     size = 100;
     int     bite1 = 35;
@@ -347,24 +474,14 @@ test1()
     ss_dfprintf(stderr, "\t..done\nSet a property for the buffer");
     gwbuf_add_property(buffer, "name", "value");
     ss_info_dassert(0 == strcmp("value", gwbuf_get_property(buffer, "name")), "Should now have correct property");
-    strcpy(GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
+    strcpy((char*)GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
     ss_dfprintf(stderr, "\t..done\nLoad some data into the buffer");
     ss_info_dassert('q' == GWBUF_DATA_CHAR(buffer, 4), "Fourth character of buffer must be 'q'");
     ss_info_dassert(-1 == GWBUF_DATA_CHAR(buffer, 105), "Hundred and fifth character of buffer must return -1");
     ss_info_dassert(0 == GWBUF_IS_SQL(buffer), "Must say buffer is not SQL, as it does not have marker");
-    strcpy(GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
+    strcpy((char*)GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
     ss_dfprintf(stderr, "\t..done\nLoad SQL data into the buffer");
     ss_info_dassert(1 == GWBUF_IS_SQL(buffer), "Must say buffer is SQL, as it does have marker");
-    transform = gwbuf_clone_transform(buffer, GWBUF_TYPE_PLAINSQL);
-    ss_dfprintf(stderr, "\t..done\nAttempt to transform buffer to plain SQL - should fail");
-    ss_info_dassert(NULL == transform, "Buffer cannot be transformed to plain SQL");
-    gwbuf_set_type(buffer, GWBUF_TYPE_MYSQL);
-    ss_dfprintf(stderr, "\t..done\nChanged buffer type to MySQL");
-    ss_info_dassert(GWBUF_IS_TYPE_MYSQL(buffer), "Buffer type changed to MySQL");
-    transform = gwbuf_clone_transform(buffer, GWBUF_TYPE_PLAINSQL);
-    ss_dfprintf(stderr, "\t..done\nAttempt to transform buffer to plain SQL - should succeed");
-    ss_info_dassert((NULL != transform) &&
-                    (GWBUF_IS_TYPE_PLAINSQL(transform)), "Transformed buffer is plain SQL");
     clone = gwbuf_clone(buffer);
     ss_dfprintf(stderr, "\t..done\nCloned buffer");
     buflen = GWBUF_LENGTH(clone);
@@ -420,7 +537,7 @@ test1()
     ss_info_dassert(100000 == buflen, "Incorrect buffer size");
     ss_info_dassert(buffer == extra, "The buffer pointer should now point to the extra buffer");
     ss_dfprintf(stderr, "\t..done\n");
-
+    gwbuf_free(buffer);
     /** gwbuf_clone_all test  */
     size_t headsize = 10;
     GWBUF* head = gwbuf_alloc(headsize);
@@ -432,15 +549,19 @@ test1()
     ss_info_dassert(append == head, "gwbuf_append should return head");
     ss_info_dassert(append->next == tail, "After append tail should be in the next pointer of head");
     ss_info_dassert(append->tail == tail, "After append tail should be in the tail pointer of head");
-    GWBUF* all_clones = gwbuf_clone_all(head);
+    GWBUF* all_clones = gwbuf_clone(head);
     ss_info_dassert(all_clones && all_clones->next, "Cloning all should work");
     ss_info_dassert(GWBUF_LENGTH(all_clones) == headsize, "First buffer should be 10 bytes");
     ss_info_dassert(GWBUF_LENGTH(all_clones->next) == tailsize, "Second buffer should be 20 bytes");
     ss_info_dassert(gwbuf_length(all_clones) == headsize + tailsize, "Total buffer length should be 30 bytes");
+    gwbuf_free(all_clones);
+    gwbuf_free(head);
 
     test_split();
     test_load_and_copy();
     test_consume();
+    test_compare();
+    test_clone();
 
     return 0;
 }

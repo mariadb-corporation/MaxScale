@@ -1,0 +1,14 @@
+#
+# Cache basic
+#
+# See ../cache_rules.
+
+--disable_warnings
+drop database if exists cachingdb;
+--enable_warnings
+
+create database cachingdb;
+use cachingdb;
+
+create table caching (a INT, b TEXT, c FLOAT);
+

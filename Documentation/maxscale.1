@@ -1,11 +1,8 @@
 .TH maxscale 1
 .SH NAME
-maxscale - The Dynamic Data Routing Platform
-.SH SYNOPSIS
-.B maxscale
-[\fIOPTIONS...\fR]
+maxscale - An intelligent database proxy
 .SH DESCRIPTION
-MariaDB MaxScale is a dynamic data routing platform that allows the forwarding
+MariaDB MaxScale is an intelligent database proxy that allows the forwarding
 of database statements to one or more database servers using complex rules, a
 semantic understanding of the database statements and the roles of the various
 servers within the backend cluster of databases.
@@ -15,73 +12,24 @@ functionality transparently to the applications. In addition it provides
 a highly scalable and flexible architecture, with plugin components to
 support different protocols and routing decisions.
 
-.SH OPTIONS
-.TP
-.BR "-d, --nodaemon"
-Run MaxScale in the terminal process
-.TP
-.BR -f " \fIFILE\fB, --config=\fIFILE\fR"
-Relative or absolute pathname of MaxScale configuration file to load.
-.TP
-.BR -l "[\fIfile|shm|stdout\fB], --log=[\fIfile|shm|stdout\fB]"
-Log to file, shared memory or standard output. The default is to log to file.
-.TP
-.BR -L " \fIPATH\fB, --logdir=\fIPATH\fB"
-Path to log file directory.
-.TP
-.BR -D " \fIPATH\fB, --datadir=\fIPATH\fB"
-Path to data directory. This is where the embedded mysql tables are stored in addition to other MaxScale specific data.
-.TP
-.BR -C " \fIPATH\fB, --configdir=\fIPATH\fB"
-Path to configuration file directory. MaxScale will look for the \fImaxscale.cnf\fR file from this folder.
-.TP
-.BR -B " \fIPATH\fB, --libdir=\fIPATH\fB"
-Path to module directory. Modules are only searched from this folder.
-.TP
-.BR -A " \fIPATH\fB, --cachedir=\fIPATH\fB"
-Path to cache directory. This is where MaxScale stores cached authentication data.
-.TP
-.BR -P " \fIPATH\fB, --piddir=\fIPATH\fB"
-Location of MaxScale's PID file.
-.TP
-.BR -E " \fIPATH\fB, --execdir=\fIPATH\fB"
-Location of the executable files. When internal processes are launched from within MaxScale the binaries are assumed to be in this directory. If you have a custom location for binary executable files you need to add this parameter.
-.TP
-.BR -U " \fIUSER\fB, --user=\fIUSER\fB"
-Run MaxScale as another user. The user ID and group ID of this user are used to run MaxScale.
-.TP
-.BR -s " [\fIyes\fB|\fIno\fB], --syslog=[\fIyes\fB|\fIno\fB]"
-Log messages to syslog.
-.TP
-.BR -S " [\fIyes\fB|\fIno\fB], \fB--maxlog=[\fIyes\fB|\fIno\fB]"
-Log messages to MaxScale's own log files.
-.TP
-.BR "-v, --version"
-Print version information and exit.
-.TP
-.BR "-V, --version-full"
-Print full version information including the Git commit the binary was built from and exit.
-.TP
-.BR "-?, --help"
-Show the help information for MaxScale and exit.
-.SH EXAMPLES
-Tutorials on GitHub:
+Quickstart Guide:
 
 .RS
-.I https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md#tutorials
+.I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-21-setting-up-mariadb-maxscale/
 .RE
-.SH SEE ALSO
-The MariaDB MaxScale documentation on the MariaDB Knowledge Base:
+
+Installation Guide:
 
 .RS
-.I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale/
+.I https://mariadb.com/kb/en/mariadb-enterprise/maxscale-21-installation-guide/
 .RE
 
-The MariaDB MaxScale documentation on GitHub:
+MaxScale Documentation:
 
 .RS
-.I https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md
+.I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-21-maxscale-21-contents/
 .RE
+
 .SH BUGS
 You can see a list of known bugs and report new bugs at:
 
