@@ -3544,6 +3544,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
             {
                 MXS_ERROR("The provided buffer does not contain a COM_QUERY, but a %s.",
                           STRPACKETTYPE(MYSQL_GET_COMMAND(data)));
+                ss_dassert(!true);
             }
         }
         else

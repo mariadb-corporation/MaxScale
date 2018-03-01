@@ -1,6 +1,5 @@
-#pragma once
-#ifndef _NDBCMON_H
-#define _NDBCMON_H
+#ifndef _MYSQLMON_H
+#define _MYSQLMON_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,27 +13,39 @@
  * Public License.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <monitor.h>
+#include <spinlock.h>
+#include <thread.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <log_manager.h>
+#include <secrets.h>
+#include <dcb.h>
+#include <modinfo.h>
+#include <config.h>
+#include <externcmd.h>
+
 /**
  * @file ndbclustermon.h - The NDB Cluster monitor
  *
  */
 
-#include <maxscale/monitor.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/thread.h>
-
-// The handle for an instance of a NDB Cluster Monitor module
+/**
+ * The handle for an instance of a NDB Cluster Monitor module
+ */
 typedef struct
 {
-    THREAD thread; /**< Monitor thread */
     SPINLOCK lock; /**< The monitor spinlock */
-    unsigned long id; /**< Monitor ID */
-    uint64_t events; /*< enabled events */
+    pthread_t tid; /**< id of monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
     int status; /**< Monitor status */
-    MXS_MONITORED_SERVER *master; /**< Master server for MySQL Master/Slave replication */
+    unsigned long id; /**< Monitor ID */
+    MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
-    MXS_MONITOR* monitor;
-} NDBC_MONITOR;
+    bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+} MYSQL_MONITOR;
 
 #endif

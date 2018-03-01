@@ -35,7 +35,7 @@ USTR        [%-_[:alnum:][:punct:]]+
 CMP         [=<>!]+
 
 %%
-"\n"+           return '\n';
+{SPACE}"\n"+    return '\n';
 {COMMENT}       return FWTOK_COMMENT;
 deny|allow      MXS_WARNING("Use of '%s' is deprecated, use 'match' instead", yytext);return FWTOK_MATCH;
 rule            return FWTOK_RULE;

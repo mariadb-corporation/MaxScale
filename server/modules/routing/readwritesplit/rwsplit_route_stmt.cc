@@ -835,10 +835,10 @@ handle_multi_temp_and_load(RWSplitSession *rses, GWBUF *querybuf,
         /**
          * Check if the query has anything to do with temporary tables.
          */
-        if (rses->have_tmp_tables)
+        if (rses->have_tmp_tables && is_packet_a_query(packet_type))
         {
             check_drop_tmp_table(rses, querybuf);
-            if (is_packet_a_query(packet_type) && is_read_tmp_table(rses, querybuf, *qtype))
+            if (is_read_tmp_table(rses, querybuf, *qtype))
             {
                 *qtype |= QUERY_TYPE_MASTER_READ;
             }

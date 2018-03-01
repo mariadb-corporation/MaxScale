@@ -548,27 +548,20 @@ static inline bool connection_is_valid(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES*
     if (SERVER_IS_RUNNING(router_cli_ses->backend->server) &&
         (router_cli_ses->backend->server->status & inst->bitmask & inst->bitvalue))
     {
-        if (inst->bitvalue & SERVER_MASTER)
+        if ((inst->bitvalue & SERVER_MASTER) && router_cli_ses->backend->active)
         {
-            SERVER_REF* master = get_root_master(inst->service->dbref);
-
-            if (master)
-            {
-                /** Check that the master we are connected to and the one we
-                 * determined from the replication topology are one and the same */
-                rval = router_cli_ses->backend == get_root_master(inst->service->dbref);
-            }
-            else
-            {
-                /** No master is available but the one we are connected to is
-                 * still a master. This most likely means that the servers for
-                 * the service have been modified at runtime. */
-                rval = true;
-            }
+            // If we're using an active master server, verify that it is still a master
+            rval = router_cli_ses->backend == get_root_master(inst->service->dbref);
         }
         else
         {
-            // Not a master and bitmask check is OK, everything is OK
+            /**
+             * Either we don't use master type servers or the server reference
+             * is deactivated. We let deactivated connection close gracefully
+             * so we simply assume it is OK. This allows a server to be taken
+             * out of use in a manner that won't cause errors to the connected
+             * clients.
+             */
             rval = true;
         }
     }
