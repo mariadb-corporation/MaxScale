@@ -77,6 +77,7 @@ static spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, spec_com_r
                                         bool is_complete, unsigned int packet_len);
 static bool parse_kill_query(char *query, uint64_t *thread_id_out, kill_type_t *kt_out, std::string* user);
 static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data);
+static int downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -405,6 +406,7 @@ int MySQLSendHandshake(DCB* dcb)
 
 /**
  * Write function for client DCB: writes data from MaxScale to Client
+ * If writeqlen is above high water mark then ask downstream to throttle
  *
  * @param dcb   The DCB of the client
  * @param queue Queue of buffers to write
@@ -509,6 +511,9 @@ int gw_read_client_event(DCB* dcb)
             }
 
             return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
+            /* Enable callback after authentication is finished */
+            dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
+            dcb_add_callback(dcb, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
         }
         break;
 
@@ -1942,4 +1947,34 @@ static void parse_and_set_trx_state(MXS_SESSION *ses, GWBUF *data)
     }
     MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->trx_state));
     MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
+}
+
+/**
+ * @brief The client callback for throtting
+ *
+ * @param dcb Client DCB
+ * @param reason Why the callback was called
+ * @param userdata Data provided when the callback was added
+ * @return Always 0
+ */
+static int downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata)
+{
+    throttle_op_t op = THROTTLE_OP_NONE;
+    if (reason == DCB_REASON_HIGH_WATER)
+    {
+        op = THROTTLE_OP_BLOCK;
+    }
+    else if (reason == DCB_REASON_LOW_WATER)
+    {
+        op = THROTTLE_OP_RELEASE;
+    }
+
+    struct service *service = dcb->service;
+    MXS_SESSION *session = DCB_SESSION(dcb);
+    if (service->router->throttle != NULL)
+    {
+        service->router->throttle(service->router_instance, session->router_session, op);
+    }
+
+    return 0;
 }

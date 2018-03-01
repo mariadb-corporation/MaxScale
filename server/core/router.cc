@@ -48,4 +48,8 @@ void RouterSession::handleError(GWBUF*             pMessage,
 {
 }
 
+void RouterSession::throttle(throttle_op_t op)
+{
+}
+
 }

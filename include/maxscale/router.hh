@@ -60,6 +60,13 @@ public:
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
     /**
+     * Called when upstream's writeq is above high water mark
+     *
+     * @param op         Type of throttle operation
+     */
+    void throttle(throttle_op_t op);
+
+    /**
      *
      * @param pMessage  The rror message.
      * @param pProblem  The DCB on which the error occurred.
@@ -198,6 +205,13 @@ public:
         MXS_EXCEPTION_GUARD(pRouter_session->clientReply(pPacket, pBackend));
     }
 
+    static void throttle(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, throttle_op_t op)
+    {
+        RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
+
+        MXS_EXCEPTION_GUARD(pRouter_session->throttle(op));
+    }
+
     static void handleError(MXS_ROUTER*         pInstance,
                             MXS_ROUTER_SESSION* pData,
                             GWBUF*              pMessage,
@@ -251,6 +265,7 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
     &Router<RouterType, RouterSessionType>::diagnostics,
     &Router<RouterType, RouterSessionType>::diagnostics_json,
     &Router<RouterType, RouterSessionType>::clientReply,
+    &Router<RouterType, RouterSessionType>::throttle,
     &Router<RouterType, RouterSessionType>::handleError,
     &Router<RouterType, RouterSessionType>::getCapabilities,
     &Router<RouterType, RouterSessionType>::destroyInstance,

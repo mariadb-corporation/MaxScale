@@ -101,6 +101,13 @@ typedef struct
 struct mxs_filter;
 struct mxs_filter_session;
 
+typedef enum
+{
+    THROTTLE_OP_BLOCK = 0,
+    THROTTLE_OP_RELEASE,
+    THROTTLE_OP_NONE,
+} throttle_op_t;
+
 typedef struct mxs_downstream
 {
     struct mxs_filter *instance;

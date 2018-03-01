@@ -59,6 +59,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         diagnostic,
         diagnostic_json,
         clientReply,
+        NULL,
         handleError,
         getCapabilities,
         NULL

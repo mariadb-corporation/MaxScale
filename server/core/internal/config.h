@@ -28,7 +28,8 @@ MXS_BEGIN_DECLS
 #define DEFAULT_NTHREADS            1    /**< Default number of polling threads */
 #define DEFAULT_QUERY_RETRIES       0    /**< Number of retries for interrupted queries */
 #define DEFAULT_QUERY_RETRY_TIMEOUT 5    /**< Timeout for query retries */
-
+#define DEFAULT_WRITEQ_HIGH_WATER   8096 /**< Defalut high water mark of dcb write queue */
+#define DEFAULT_WRITEQ_LOW_WATER    1024 /**< Defalut low water mark of dcb write queue */
 /**
  * Maximum length for configuration parameter value.
  */

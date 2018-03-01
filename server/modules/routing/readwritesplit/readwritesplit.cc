@@ -31,6 +31,7 @@
 #include <maxscale/router.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/poll.h>
 
 #include "rwsplit_internal.hh"
 #include "rwsplitsession.hh"
@@ -973,6 +974,31 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
 }
 
 /**
+ * @brief Called from mariadb_client, block or release backend net traffic
+ *
+ * @param instance       Router instance
+ * @param router_session Router session associated with the client
+ * @param op             Type of throttle opertation
+ *
+ */
+static void throttle(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, throttle_op_t op)
+{
+    RWSplitSession *rses = (RWSplitSession *) router_session;
+    for (SRWBackendList::iterator it = rses->backends.begin(); it != rses->backends.end(); it++)
+    {
+        SRWBackend& backend = *it;
+        if (op == THROTTLE_OP_BLOCK)
+        {
+            poll_remove_dcb(backend->dcb());
+        }
+        else if (op == THROTTLE_OP_RELEASE)
+        {
+            poll_add_dcb(backend->dcb());
+        }
+    }
+}
+
+/**
  * @brief Diagnostics routine
  *
  * Print query router statistics to the DCB passed in
@@ -1456,6 +1482,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
         diagnostics,
         diagnostics_json,
         clientReply,
+        throttle,
         handleError,
         getCapabilities,
         NULL

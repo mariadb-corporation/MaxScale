@@ -81,6 +81,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         diagnostics_json,
         NULL,
         NULL,
+        NULL,
         getCapabilities,
         NULL
     };

@@ -86,6 +86,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/modutil.h>
+#include <maxscale/poll.h>
 
 /* The router entry points */
 static MXS_ROUTER *createInstance(SERVICE *service, char **options);
@@ -97,6 +98,7 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
 static json_t* diagnostics_json(const MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
+static void throttle(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, throttle_op_t op);
 static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *errbuf,
                         DCB *problem_dcb, mxs_error_action_t action, bool *succp);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
@@ -126,6 +128,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         diagnostics,
         diagnostics_json,
         clientReply,
+        throttle,
         handleError,
         getCapabilities,
         NULL
@@ -735,6 +738,27 @@ clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *que
 {
     ss_dassert(backend_dcb->session->client_dcb != NULL);
     MXS_SESSION_ROUTE_REPLY(backend_dcb->session, queue);
+}
+
+/**
+ * @brief Called from mariadb_client, block or release backend net traffic
+ *
+ * @param instance       Router instance
+ * @param router_session Router session associated with the client
+ * @param op             Type of throttle opertation
+ *
+ */
+static void throttle(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, throttle_op_t op)
+{
+    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
+    if (op == THROTTLE_OP_BLOCK)
+    {
+        poll_remove_dcb(router_cli_ses->backend_dcb);
+    }
+    else if (op == THROTTLE_OP_RELEASE)
+    {
+        poll_add_dcb(router_cli_ses->backend_dcb);
+    }
 }
 
 /**

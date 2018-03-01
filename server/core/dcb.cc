@@ -128,6 +128,9 @@ void dcb_global_init()
     this_unit.dcb_initialized.state = DCB_STATE_ALLOC;
     this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
     this_unit.dcb_initialized.poll.handler = dcb_poll_handler;
+    this_unit.dcb_initialized.high_warter_has_reached = false;
+    this_unit.dcb_initialized.low_water = 65536;
+    this_unit.dcb_initialized.high_water = 65536;
     this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
 
     int nthreads = config_threadcount();
@@ -206,6 +209,9 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
         ss_dassert(Worker::get_current_id() != -1);
         newdcb->poll.thread.id = Worker::get_current_id();
     }
+
+    DCB_SET_HIGH_WATER(newdcb, config_writeq_high_water());
+    DCB_SET_LOW_WATER(newdcb, config_writeq_low_water());
 
     return newdcb;
 }
@@ -878,6 +884,7 @@ dcb_log_errors_SSL(DCB *dcb, int ret)
 int
 dcb_write(DCB *dcb, GWBUF *queue)
 {
+    dcb->writeqlen += gwbuf_length(queue);
     // The following guarantees that queue is not NULL
     if (!dcb_write_parameter_check(dcb, queue))
     {
@@ -887,6 +894,13 @@ dcb_write(DCB *dcb, GWBUF *queue)
     dcb->writeq = gwbuf_append(dcb->writeq, queue);
     dcb->stats.n_buffered++;
     dcb_drain_writeq(dcb);
+
+    if (DCB_ABOVE_HIGH_WATER(dcb) && !dcb->high_warter_has_reached)
+    {
+        dcb_call_callback(dcb, DCB_REASON_HIGH_WATER);
+        dcb->high_warter_has_reached = true;
+        dcb->stats.n_high_water++;
+    }
 
     return 1;
 }
@@ -1014,6 +1028,15 @@ int dcb_drain_writeq(DCB *dcb)
     {
         /* The write queue has drained, potentially need to call a callback function */
         dcb_call_callback(dcb, DCB_REASON_DRAINED);
+    }
+
+    dcb->writeqlen -= total_written;
+
+    if (dcb->high_warter_has_reached && DCB_BELOW_LOW_WATER(dcb))
+    {
+        dcb_call_callback(dcb, DCB_REASON_LOW_WATER);
+        dcb->high_warter_has_reached = false;
+        dcb->stats.n_low_water++;
     }
 
     return total_written;
@@ -3415,8 +3438,6 @@ int poll_add_dcb(DCB *dcb)
     {
         ss_dassert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
                    dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-        ss_dassert(Worker::get_current_id() != -1);
-        ss_dassert(Worker::get_current_id() == dcb->poll.thread.id);
 
         new_state = DCB_STATE_POLLING;
         worker_id = dcb->poll.thread.id;
