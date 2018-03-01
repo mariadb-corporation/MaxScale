@@ -638,7 +638,8 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
             if (row && strcasecmp(row[0], "Y") != 0)
             {
-                MXS_WARNING("[%s] User '%s' is missing the SHOW DATABASES privilege.",
+                MXS_WARNING("[%s] User '%s' is missing the SHOW DATABASES privilege. "
+                            "This means that MaxScale cannot see all databases and authentication can fail.",
                             service->name, user);
             }
 
