@@ -154,6 +154,8 @@ typedef struct session_variable
 } SESSION_VARIABLE;
 
 typedef std::tr1::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
+#else
+typedef void SessionVarsByName;
 #endif
 
 /**
@@ -190,11 +192,7 @@ typedef struct session
         const struct server *target; /**< Where the statement was sent */
     } stmt;  /**< Current statement being executed */
     bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
-#ifdef __cplusplus
     SessionVarsByName*      variables;        /*< @maxscale variables associated with this session */
-#else
-    void*                   variables;
-#endif
     skygw_chk_t             ses_chk_tail;
 } MXS_SESSION;
 
