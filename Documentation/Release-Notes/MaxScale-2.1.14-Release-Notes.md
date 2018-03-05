@@ -44,13 +44,22 @@ for [details](../Getting-Started/Configuration-Guide.md#local_address).
 
 [Here is a list of bugs fixed in MaxScale 2.1.14.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.1.14)
 
+* [MXS-1688](https://jira.mariadb.org/browse/MXS-1688) Some date functions are not parsed properly with schemarouter
+* [MXS-1684](https://jira.mariadb.org/browse/MXS-1684) Empty space on a line in rule file confuses dbfwfilter which refuses to start
+* [MXS-1678](https://jira.mariadb.org/browse/MXS-1678) Stopping IO thread on relay master causes it to be promoted as master
+* [MXS-1669](https://jira.mariadb.org/browse/MXS-1669) maxadmin show threads counters are probably incorrect
+* [MXS-1661](https://jira.mariadb.org/browse/MXS-1661) Excessive logging by MySQLAuth at authentication error (was: MySQLAuth SQLite database can be permanently locked)
+* [MXS-1660](https://jira.mariadb.org/browse/MXS-1660) Failure to resolve hostname is considered an error
 * [MXS-1627](https://jira.mariadb.org/browse/MXS-1627) MySQLAuth loads users that use authentication plugins
+* [MXS-1621](https://jira.mariadb.org/browse/MXS-1621) ALTER TABLE with AFTER keyword doesn't work
 * [MXS-1620](https://jira.mariadb.org/browse/MXS-1620) CentOS package symbols are stripped
 * [MXS-1602](https://jira.mariadb.org/browse/MXS-1602) cannot connect to maxinfo with python client
 * [MXS-1601](https://jira.mariadb.org/browse/MXS-1601) maxinfo crash at execute query 'flush;'
 * [MXS-1600](https://jira.mariadb.org/browse/MXS-1600) maxscale it seen to not coop well with lower-case-table-names=1 on cnf
 * [MXS-1576](https://jira.mariadb.org/browse/MXS-1576) Maxscale crashes when starting if .avro and .avsc files are present
+* [MXS-1575](https://jira.mariadb.org/browse/MXS-1575) maxscale crashed with Avro conversion service
 * [MXS-1543](https://jira.mariadb.org/browse/MXS-1543) Avrorouter doesn't detect MIXED or STATEMENT format replication
+* [MXS-1534](https://jira.mariadb.org/browse/MXS-1534) Avrorouter not functioning
 * [MXS-1416](https://jira.mariadb.org/browse/MXS-1416) maxscale should not try to do anything when started with --config-check
 
 ## Packaging
