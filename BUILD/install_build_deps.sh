@@ -25,6 +25,8 @@ else
   if [ $? != 0 ]
   then
     # We need zypper here
+    sudo zypper -n refresh
+    sudo zypper -n update
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex libcurl-devel \
          pcre-devel git wget tcl libuuid-devel \
@@ -39,6 +41,7 @@ else
   else
     # YUM!
     sudo yum clean all
+    sudo yum update -y
     sudo yum install -y --nogpgcheck gcc gcc-c++ ncurses-devel bison glibc-devel \
          libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
          libedit-devel libcurl-devel curl-devel systemtap-sdt-devel rpm-sign wget \
