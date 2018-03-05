@@ -6,6 +6,13 @@
 
 #include "testconnections.h"
 
+void list_servers(TestConnections& test)
+{
+    char *output = test.ssh_maxscale_output(true, "maxadmin list servers");
+    test.tprintf("%s", output);
+    free(output);
+}
+
 void do_test(TestConnections& test, int master, int slave)
 {
     test.connect_maxscale();
@@ -15,24 +22,28 @@ void do_test(TestConnections& test, int master, int slave)
 
     test.tprintf("Stop a slave node and perform an insert");
     test.galera->block_node(slave);
-    sleep(5);
+    sleep(10);
+    list_servers(test);
     test.try_query(test.conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
 
     test.tprintf("Start the slave node and perform another insert");
     test.galera->unblock_node(slave);
-    sleep(5);
+    sleep(10);
+    list_servers(test);
     test.try_query(test.conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
     test.close_maxscale_connections();
 
     test.tprintf("Stop the master node and perform an insert");
     test.galera->block_node(master);
-    sleep(5);
+    sleep(10);
+    list_servers(test);
     test.connect_maxscale();
     test.try_query(test.conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
 
     test.tprintf("Start the master node and perform another insert (expecting failure)");
     test.galera->unblock_node(master);
-    sleep(5);
+    sleep(10);
+    list_servers(test);
     test.add_result(execute_query_silent(test.conn_rwsplit, "INSERT INTO test.t1 VALUES (1)") == 0, "Query should fail");
     test.close_maxscale_connections();
 
