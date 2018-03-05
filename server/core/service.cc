@@ -624,11 +624,21 @@ int service_launch_all()
     SERVICE *ptr;
     int n = 0, i;
     bool error = false;
+    int num_svc = 0;
 
+    for (ptr = allServices; ptr; ptr = ptr->next)
+    {
+        num_svc++;
+    }
+
+    MXS_NOTICE("Starting a total of %d services...", num_svc);
+
+    int curr_svc = 1;
     ptr = allServices;
     while (ptr && !ptr->svc_do_shutdown)
     {
         n += (i = serviceInitialize(ptr));
+        MXS_NOTICE("Service '%s' started (%d/%d)", ptr->name, curr_svc++, num_svc);
 
         if (i == 0)
         {
