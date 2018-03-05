@@ -62,6 +62,11 @@ int main(int argc, char *argv[])
                      "@@server_id is different: %s != %s", maxscale_id, real_id);
     test->close_maxscale_connections();
 
+    test->ssh_maxscale(true, "maxadmin clear server server1 maintenance");
+    test->ssh_maxscale(true, "maxadmin clear server server2 maintenance");
+    test->ssh_maxscale(true, "maxadmin clear server server3 maintenance");
+    test->repl->fix_replication();
+
     test->tprintf(" Check that MaxScale is running ");
     test->check_maxscale_alive();
 
