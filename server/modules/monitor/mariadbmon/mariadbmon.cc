@@ -206,7 +206,6 @@ public:
                     found = true;
                 }
             }
-            ss_dassert(found);
         }
     }
     bool operator == (const Gtid& rhs) const
