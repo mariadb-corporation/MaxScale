@@ -67,6 +67,10 @@ int main(int argc, char** argv)
     StringSet relay_master = {"Relay Master", "Slave", "Running"};
 
     test.tprintf("Checking before stopping IO thread");
+    char *output = test.ssh_maxscale_output(true, "maxadmin list servers");
+    test.tprintf("%s", output);
+    free(output);
+
     test.add_result(state(test, "server1") != master, "server1 is not a master");
     test.add_result(state(test, "server2") != slave, "server2 is not a slave");
     test.add_result(state(test, "server3") != relay_master, "server3 is not a relay master");
@@ -76,6 +80,9 @@ int main(int argc, char** argv)
     sleep(10);
 
     test.tprintf("Checking after stopping IO thread");
+    output = test.ssh_maxscale_output(true, "maxadmin list servers");
+    test.tprintf("%s", output);
+    free(output);
     test.add_result(state(test, "server1") != master, "server1 is not a master");
     test.add_result(state(test, "server2") != slave, "server2 is not a slave");
     test.add_result(state(test, "server3") != relay_master, "server3 is not a relay master");
