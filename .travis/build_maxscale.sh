@@ -9,14 +9,17 @@
 
 echo TRAVIS_BUILD_DIR: ${TRAVIS_BUILD_DIR}
 
+# Configure the build environment
+./BUILD/install_build_deps.sh
+
 mkdir build
 cd build
 
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=Y -DBUILD_AVRO=N
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=Y
 
 make
-make test
-sudo make install
+make test || exit 1
 
+sudo make install
 sudo ./postinst
 maxscale --version
