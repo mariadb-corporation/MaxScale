@@ -44,11 +44,11 @@
 
 #define NEW_LOAD_DBUSERS_QUERY "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
     FROM mysql.user AS u LEFT JOIN mysql.db AS d \
-    ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = '' %s \
+    ON (u.user = d.user AND u.host = d.host) WHERE u.plugin IN ('', 'mysql_native_password') %s \
     UNION \
     SELECT u.user, u.host, t.db, u.select_priv, u.%s \
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
-    ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = '' %s"
+    ON (u.user = t.user AND u.host = t.host) WHERE u.plugin IN ('', 'mysql_native_password') %s"
 
 static int get_users(SERV_LISTENER *listener, bool skip_local);
 static MYSQL *gw_mysql_init(void);
@@ -640,7 +640,8 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
             if (row && strcasecmp(row[0], "Y") != 0)
             {
-                MXS_WARNING("[%s] User '%s' is missing the SHOW DATABASES privilege.",
+                MXS_WARNING("[%s] User '%s' is missing the SHOW DATABASES privilege. "
+                            "This means that MaxScale cannot see all databases and authentication can fail.",
                             service->name, user);
             }
 

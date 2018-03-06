@@ -270,10 +270,14 @@ int Mariadb_nodes::change_master(int NewMaster, int OldMaster)
             execute_query(nodes[i], (char *) "stop slave;");
         }
     }
+    execute_query(nodes[NewMaster], "STOP SLAVE");
+    execute_query(nodes[NewMaster], "RESET SLAVE ALL");
     execute_query(nodes[NewMaster], create_repl_user);
-    execute_query(nodes[OldMaster], (char *) "reset master;");
-    find_field(nodes[NewMaster], (char *) "show master status", (char *) "File", &log_file[0]);
-    find_field(nodes[NewMaster], (char *) "show master status", (char *) "Position", &log_pos[0]);
+
+    execute_query(nodes[OldMaster], "reset master;");
+    find_field(nodes[NewMaster], "show master status", "File", &log_file[0]);
+    find_field(nodes[NewMaster], "show master status", "Position", &log_pos[0]);
+
     for (i = 0; i < N; i++)
     {
         if (i != NewMaster)

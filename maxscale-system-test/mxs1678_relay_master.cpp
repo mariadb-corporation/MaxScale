@@ -13,7 +13,9 @@ typedef std::set<std::string> StringSet;
 StringSet state(TestConnections& test, const char* name)
 {
     StringSet rval;
-    char* res = test.ssh_maxscale_output(true, "maxadmin list servers|grep \'%s\'", name);
+    int exit_code;
+    char* res = test.maxscales->ssh_node_output_f(0, true, &exit_code,
+                                                  "maxadmin list servers|grep \'%s\'", name);
     char* pipe = strrchr(res, '|');
 
     if (res && pipe)
@@ -67,6 +69,11 @@ int main(int argc, char** argv)
     StringSet relay_master = {"Relay Master", "Slave", "Running"};
 
     test.tprintf("Checking before stopping IO thread");
+    int exit_code;
+    char *output = test.maxscales->ssh_node_output(0, "maxadmin list servers", true, &exit_code);
+    test.tprintf("%s", output);
+    free(output);
+
     test.add_result(state(test, "server1") != master, "server1 is not a master");
     test.add_result(state(test, "server2") != slave, "server2 is not a slave");
     test.add_result(state(test, "server3") != relay_master, "server3 is not a relay master");
@@ -76,6 +83,9 @@ int main(int argc, char** argv)
     sleep(10);
 
     test.tprintf("Checking after stopping IO thread");
+    output = test.maxscales->ssh_node_output(0, "maxadmin list servers", true, &exit_code);
+    test.tprintf("%s", output);
+    free(output);
     test.add_result(state(test, "server1") != master, "server1 is not a master");
     test.add_result(state(test, "server2") != slave, "server2 is not a slave");
     test.add_result(state(test, "server3") != relay_master, "server3 is not a relay master");
