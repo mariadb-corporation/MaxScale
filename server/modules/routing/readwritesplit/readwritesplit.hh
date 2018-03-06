@@ -174,7 +174,8 @@ struct Config
         rw_max_slave_conn_percent(0),
         max_slave_connections(0),
         enable_causal_read(config_get_bool(params, "enable_causal_read")),
-        causal_read_timeout(config_get_string(params, "causal_read_timeout"))
+        causal_read_timeout(config_get_string(params, "causal_read_timeout")),
+        allow_master_change(config_get_bool(params, "allow_master_change"))
     {
         if (enable_causal_read)
         {
@@ -201,7 +202,7 @@ struct Config
     int               max_slave_connections;     /**< Maximum number of slaves for each connection*/
     bool              enable_causal_read;        /**< Enable causual read */
     std::string       causal_read_timeout;       /**< Timetout, second parameter of function master_wait_gtid */
-
+    bool              allow_master_change;       /**< Allow changes in master server */
 };
 
 /**

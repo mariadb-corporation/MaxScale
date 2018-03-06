@@ -105,6 +105,24 @@ connections alive even if they are not used. This is a common problem if the
 backend servers have a low _wait_timeout_ value and the client connections live
 for a long time.
 
+### `allow_master_change`
+
+Allow the master server to change mid-session. This feature was introduced in
+MaxScale 2.3.0 and is disabled by default.
+
+When a readwritesplit session starts, it will pick a master server as the
+current master server of that session. By default, when this master server
+changes mid-session, the connection will be closed.
+
+If the `allow_master_change` parameter is enabled, the master server is allowed
+to change as long as the session meets the following criteria:
+
+* The session is already connected to the slave that was chosen to be the new master
+* No transaction is open
+* Autocommit is enabled
+* No `LOAD DATA LOCAL INFILE` is in progress
+* There are no queries being actively routed to the old master
+
 ## Router options
 
 **`router_options`** may include multiple **readwritesplit**-specific options.

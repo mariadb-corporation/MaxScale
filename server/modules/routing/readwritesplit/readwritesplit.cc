@@ -1507,6 +1507,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},
             {"enable_causal_read", MXS_MODULE_PARAM_BOOL, "false"},
             {"causal_read_timeout", MXS_MODULE_PARAM_STRING, "0"},
+            {"allow_master_change", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };

@@ -180,6 +180,11 @@ route_target_t get_target_type(RWSplitSession *rses, GWBUF *buffer,
     return route_target;
 }
 
+static inline bool locked_to_master(RWSplitSession *rses)
+{
+    return rses->large_query || (rses->current_master && rses->target_node == rses->current_master);
+}
+
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).
@@ -197,8 +202,7 @@ bool route_single_stmt(RWSplit *inst, RWSplitSession *rses, GWBUF *querybuf, con
     uint8_t command = info.command;
     uint32_t qtype = info.type;
     route_target_t route_target = info.target;
-    bool not_locked_to_master = !rses->large_query &&
-                                (!rses->target_node || rses->target_node != rses->current_master);
+    bool not_locked_to_master = !locked_to_master(rses);
 
     if (not_locked_to_master && is_ps_command(command))
     {
@@ -1064,6 +1068,17 @@ static void log_master_routing_failure(RWSplitSession *rses, bool found,
                 rses->client_dcb->remote, errmsg);
 }
 
+bool should_replace_master(RWSplitSession *rses, SRWBackend& target)
+{
+    return rses->rses_config.allow_master_change &&
+        // We have a target server and it's not the current master
+        target && target != rses->current_master &&
+        // We are not inside a transaction (also checks for autocommit=1)
+        !session_trx_is_active(rses->client_dcb->session) &&
+        // We are not locked to the old master
+        !locked_to_master(rses);
+}
+
 /**
  * @brief Handle master is the target
  *
@@ -1080,6 +1095,13 @@ bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
 {
     SRWBackend target = get_target_backend(rses, BE_MASTER, NULL, MAX_RLAG_UNDEFINED);
     bool succp = true;
+
+    if (should_replace_master(rses, target))
+    {
+        MXS_INFO("Replacing old master '%s' with new master '%s'", rses->current_master ?
+                 rses->current_master->name() : "<no previous master>", target->name());
+        rses->current_master = target;
+    }
 
     if (target && target == rses->current_master)
     {
