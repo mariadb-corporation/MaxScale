@@ -76,18 +76,18 @@ else
 fi
 
 # cmake
-wget http://max-tst-01.mariadb.com/ci-repository/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+wget -q http://max-tst-01.mariadb.com/ci-repository/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
 if [ $? != 0 ] ; then
     echo "CMake can not be downloaded from Maxscale build server, trying from cmake.org"
-    wget https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
+    wget -q https://cmake.org/files/v3.7/cmake-3.7.1-Linux-x86_64.tar.gz --no-check-certificate
 fi
-sudo tar xzvf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
+sudo tar xzf cmake-3.7.1-Linux-x86_64.tar.gz -C /usr/ --strip-components=1
 
 cmake_version=`cmake --version | grep "cmake version" | awk '{ print $3 }'`
 if [ "$cmake_version" \< "3.7.1" ] ; then
     echo "cmake does not work! Trying to build from source"
-    wget https://cmake.org/files/v3.7/cmake-3.7.1.tar.gz --no-check-certificate
-    tar xzvf cmake-3.7.1.tar.gz
+    wget -q https://cmake.org/files/v3.7/cmake-3.7.1.tar.gz --no-check-certificate
+    tar xzf cmake-3.7.1.tar.gz
     cd cmake-3.7.1
 
     ./bootstrap
@@ -116,7 +116,7 @@ cd ../../
 # TCL
 mkdir tcl
 cd tcl
-wget --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-src.tar.gz
+wget -q --no-check-certificate http://prdownloads.sourceforge.net/tcl/tcl8.6.5-src.tar.gz
 
 if [ $? != 0 ]
 then
@@ -124,7 +124,7 @@ then
     exit 1
 fi
 
-tar xzvf tcl8.6.5-src.tar.gz
+tar xzf tcl8.6.5-src.tar.gz
 cd tcl8.6.5/unix
 ./configure
 sudo make install
@@ -149,7 +149,7 @@ sudo make install
 cd ../../
 
 # Avro C API
-wget -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories http://mirror.netinch.com/pub/apache/avro/stable/c
+wget -q -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories http://mirror.netinch.com/pub/apache/avro/stable/c
 if [ $? != 0 ]
 then
     echo "Error getting avro-c"
