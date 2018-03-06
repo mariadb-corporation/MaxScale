@@ -514,8 +514,11 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     }
     
     /* Register throttling callbacks */
-    dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, session_upstream_throttle_callback, NULL);
-    dcb_add_callback(dcb, DCB_REASON_LOW_WATER, session_upstream_throttle_callback, NULL);
+    if (dcb->high_water && dcb->low_water && dcb->high_water > dcb->low_water)
+    {
+        dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, session_upstream_throttle_callback, NULL);
+        dcb_add_callback(dcb, DCB_REASON_LOW_WATER, session_upstream_throttle_callback, NULL);
+    }
     /**
      * The dcb will be addded into poll set by dcb->func.connect
      */
@@ -1206,6 +1209,8 @@ void dcb_final_close(DCB* dcb)
         {
             dcb->user = MXS_STRDUP_A(user);
         }
+
+        session_unlink_backend_dcb(dcb->session, dcb);
 
         if (dcb_maybe_add_persistent(dcb))
         {
@@ -2478,9 +2483,12 @@ dcb_accept(DCB *dcb)
                 return NULL;
             }
 
-             /* Register downstream throttling callbacks */
-            dcb_add_callback(client_dcb, DCB_REASON_HIGH_WATER, session_downstream_throttle_callback, NULL);
-            dcb_add_callback(client_dcb, DCB_REASON_LOW_WATER, session_downstream_throttle_callback, NULL);
+            /* Register downstream throttling callbacks */
+            if (dcb->high_water && dcb->low_water && dcb->high_water > dcb->low_water)
+            {
+                dcb_add_callback(client_dcb, DCB_REASON_HIGH_WATER, session_downstream_throttle_callback, NULL);
+                dcb_add_callback(client_dcb, DCB_REASON_LOW_WATER, session_downstream_throttle_callback, NULL);
+            }     
 
             if (client_dcb->service->max_connections &&
                 client_dcb->service->client_count >= client_dcb->service->max_connections)

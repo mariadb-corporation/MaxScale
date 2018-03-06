@@ -488,6 +488,10 @@ uint64_t session_get_current_id();
 
 /**
  * @brief DCB callback for upstream throtting
+ * Called by any backend dcb when its writeq is above high water mark or
+ * it has reached high water mark and now it is below low water mark,
+ * Calling `poll_remove_dcb` or `poll_add_dcb' on client dcb to throttle
+ * network traffic from client to mxs.
  *
  * @param dcb      Backend dcb
  * @param reason   Why the callback was called
@@ -498,6 +502,10 @@ int session_upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userda
 
 /**
  * @brief DCB callback for downstream throtting
+ * Called by client dcb when its writeq is above high water mark or
+ * it has reached high water mark and now it is below low water mark,
+ * Calling `poll_remove_dcb` or `poll_add_dcb' on all backend dcbs to
+ * throttle network traffic from server to mxs.
  *
  * @param dcb      client dcb
  * @param reason   Why the callback was called

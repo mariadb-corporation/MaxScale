@@ -284,6 +284,31 @@ void session_link_backend_dcb(MXS_SESSION *session, DCB *dcb)
     session->backends.head = dcb;
 }
 
+void session_unlink_backend_dcb(MXS_SESSION *session, DCB *dcb)
+{
+    ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+
+    atomic_add(&session->refcount, -1);
+    dcb->session = NULL;
+    dcb->service = NULL;
+
+    DCB *pre = session->backends.head;
+    if (pre == dcb)
+    {
+        session->backends.head = dcb->next_backend;
+    }
+    else
+    {
+        while (pre)
+        {
+            if (pre->next_backend == dcb)
+            {
+                pre->next_backend = dcb->next_backend;
+            }
+        }
+    }
+}
+
 /**
  * Deallocate the specified session, minimal actions during session_alloc
  * Since changes to keep new session in existence until all related DCBs
