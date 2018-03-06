@@ -405,7 +405,6 @@ int MySQLSendHandshake(DCB* dcb)
 
 /**
  * Write function for client DCB: writes data from MaxScale to Client
- * If writeqlen is above high water mark then ask downstream to throttle
  *
  * @param dcb   The DCB of the client
  * @param queue Queue of buffers to write

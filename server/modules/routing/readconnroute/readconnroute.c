@@ -86,7 +86,6 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/modutil.h>
-#include <maxscale/poll.h>
 
 /* The router entry points */
 static MXS_ROUTER *createInstance(SERVICE *service, char **options);

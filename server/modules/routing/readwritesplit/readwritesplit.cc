@@ -31,7 +31,6 @@
 #include <maxscale/router.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/mysql_utils.h>
-#include <maxscale/poll.h>
 
 #include "rwsplit_internal.hh"
 #include "rwsplitsession.hh"

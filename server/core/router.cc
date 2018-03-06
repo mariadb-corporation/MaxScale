@@ -47,4 +47,5 @@ void RouterSession::handleError(GWBUF*             pMessage,
                                 bool*              pSuccess)
 {
 }
+
 }

@@ -57,7 +57,6 @@ static void gw_send_proxy_protocol_header(DCB *backend_dcb);
 static bool get_ip_string_and_port(struct sockaddr_storage *sa, char *ip, int iplen,
                                    in_port_t *port_out);
 static bool gw_connection_established(DCB* dcb);
-int upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
 
 /*
  * The module entry point routine. It is this routine that

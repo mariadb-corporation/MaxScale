@@ -25,7 +25,6 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/poll_core.h>
 #include <netinet/in.h>
-#include <sys/queue.h>
 
 MXS_BEGIN_DECLS
 
