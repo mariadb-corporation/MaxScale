@@ -128,9 +128,10 @@ void dcb_global_init()
     this_unit.dcb_initialized.state = DCB_STATE_ALLOC;
     this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
     this_unit.dcb_initialized.poll.handler = dcb_poll_handler;
-    this_unit.dcb_initialized.high_warter_has_reached = false;
-    this_unit.dcb_initialized.low_water = 65536;
-    this_unit.dcb_initialized.high_water = 65536;
+    this_unit.dcb_initialized.high_water_has_reached = false;
+    this_unit.dcb_initialized.low_water = 0;
+    this_unit.dcb_initialized.high_water = this_unit.dcb_initialized.low_water;
+    this_unit.dcb_initialized.next_backend = NULL;
     this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
 
     int nthreads = config_threadcount();
@@ -514,6 +515,10 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         dcb_free_all_memory(dcb);
         return NULL;
     }
+    
+    /* Register throttling callbacks */
+    dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, session_upstream_throttle_callback, NULL);
+    dcb_add_callback(dcb, DCB_REASON_LOW_WATER, session_upstream_throttle_callback, NULL);
     /**
      * The dcb will be addded into poll set by dcb->func.connect
      */
@@ -895,10 +900,10 @@ dcb_write(DCB *dcb, GWBUF *queue)
     dcb->stats.n_buffered++;
     dcb_drain_writeq(dcb);
 
-    if (DCB_ABOVE_HIGH_WATER(dcb) && !dcb->high_warter_has_reached)
+    if (DCB_ABOVE_HIGH_WATER(dcb) && !dcb->high_water_has_reached)
     {
         dcb_call_callback(dcb, DCB_REASON_HIGH_WATER);
-        dcb->high_warter_has_reached = true;
+        dcb->high_water_has_reached = true;
         dcb->stats.n_high_water++;
     }
 
@@ -1032,10 +1037,10 @@ int dcb_drain_writeq(DCB *dcb)
 
     dcb->writeqlen -= total_written;
 
-    if (dcb->high_warter_has_reached && DCB_BELOW_LOW_WATER(dcb))
+    if (dcb->high_water_has_reached && DCB_BELOW_LOW_WATER(dcb))
     {
         dcb_call_callback(dcb, DCB_REASON_LOW_WATER);
-        dcb->high_warter_has_reached = false;
+        dcb->high_water_has_reached = false;
         dcb->stats.n_low_water++;
     }
 
@@ -2476,6 +2481,10 @@ dcb_accept(DCB *dcb)
                 return NULL;
             }
 
+             /* Register downstream throttling callbacks */
+            dcb_add_callback(client_dcb, DCB_REASON_HIGH_WATER, session_downstream_throttle_callback, NULL);
+            dcb_add_callback(client_dcb, DCB_REASON_LOW_WATER, session_downstream_throttle_callback, NULL);
+
             if (client_dcb->service->max_connections &&
                 client_dcb->service->client_count >= client_dcb->service->max_connections)
             {
@@ -3438,6 +3447,8 @@ int poll_add_dcb(DCB *dcb)
     {
         ss_dassert(dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
                    dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
+        ss_dassert(Worker::get_current_id() != -1);
+        ss_dassert(Worker::get_current_id() == dcb->poll.thread.id);
 
         new_state = DCB_STATE_POLLING;
         worker_id = dcb->poll.thread.id;

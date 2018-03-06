@@ -101,13 +101,6 @@ typedef struct
 struct mxs_filter;
 struct mxs_filter_session;
 
-typedef enum
-{
-    THROTTLE_OP_BLOCK = 0,
-    THROTTLE_OP_RELEASE,
-    THROTTLE_OP_NONE,
-} throttle_op_t;
-
 typedef struct mxs_downstream
 {
     struct mxs_filter *instance;
@@ -143,6 +136,11 @@ typedef struct session
     mxs_session_state_t     state;            /*< Current descriptor state */
     uint64_t                ses_id;           /*< Unique session identifier */
     struct dcb              *client_dcb;      /*< The client connection */
+    struct 
+    {
+        struct dcb *head;
+    } backends;                                /*< The list of backend's DCBs) */
+
     struct mxs_router_session *router_session;  /*< The router instance data */
     MXS_SESSION_STATS       stats;            /*< Session statistics */
     struct service          *service;         /*< The service this session is using */
@@ -487,5 +485,25 @@ MXS_SESSION* session_get_current();
  * @return The id of the current session or 0 if there is no current session.
  **/
 uint64_t session_get_current_id();
+
+/**
+ * @brief DCB callback for upstream throtting
+ *
+ * @param dcb      Backend dcb
+ * @param reason   Why the callback was called
+ * @param userdata Data provided when the callback was added
+ * @return Always 0
+ */
+int session_upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
+
+/**
+ * @brief DCB callback for downstream throtting
+ *
+ * @param dcb      client dcb
+ * @param reason   Why the callback was called
+ * @param userdata Data provided when the callback was added
+ * @return Always 0
+ */
+int session_downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
 
 MXS_END_DECLS

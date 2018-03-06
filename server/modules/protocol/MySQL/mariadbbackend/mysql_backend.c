@@ -528,10 +528,6 @@ gw_read_backend_event(DCB *dcb)
                  * backend server. For 'mysql_native_password' it'll be an OK
                  * packet */
                 proto->protocol_auth_state = handle_server_response(dcb, readbuf);
-
-                /* Enable callback after authentication is finished */
-                dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
-                dcb_add_callback(dcb, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
             }
 
             if (proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
@@ -2137,26 +2133,4 @@ static bool gw_connection_established(DCB* dcb)
         proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE &&
         (proto->ignore_replies == 0)
         && !proto->stored_query;
-}
-
-/**
- * @brief The backend callback for throtting
- *
- * @param dcb      Backend DCB
- * @param reason   Why the callback was called
- * @param userdata Data provided when the callback was added
- * @return Always 0
- */
-int upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata)
-{
-    if (reason == DCB_REASON_HIGH_WATER)
-    {
-        poll_remove_dcb(dcb->session->client_dcb);
-    }
-    else if (reason == DCB_REASON_LOW_WATER)
-    {
-        poll_add_dcb(dcb->session->client_dcb);
-    }
-
-    return 0;
 }

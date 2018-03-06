@@ -179,15 +179,6 @@ typedef struct mxs_router_object
                             GWBUF *queue, DCB *backend_dcb);
 
     /**
-     * @brief For backpressure
-     *
-     * @param instance Filter instance
-     * @param fsession Filter session
-     * @param op       Type of Throttle operation
-     */
-    void (*throttle)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *fsession, throttle_op_t op);
-
-    /**
      * @brief Called when a backend DCB has failed
      *
      * @param instance       Router instance

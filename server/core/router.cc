@@ -47,9 +47,4 @@ void RouterSession::handleError(GWBUF*             pMessage,
                                 bool*              pSuccess)
 {
 }
-
-void RouterSession::throttle(throttle_op_t op)
-{
-}
-
 }
