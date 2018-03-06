@@ -37,6 +37,13 @@ given without giving them as process arguments.
 
 [Here is a list of bugs fixed in MaxScale 2.2.3.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.2.3)
 
+* [MXS-1698](https://jira.mariadb.org/browse/MXS-1698)  error:140940F5:SSL routines:ssl3_read_bytes:unexpected record
+* [MXS-1697](https://jira.mariadb.org/browse/MXS-1697) MaxScale 2.2.2 missing avrorouter library
+* [MXS-1693](https://jira.mariadb.org/browse/MXS-1693) In Maxscale 2.2.2 getting users with native password from mysql backends does not work
+* [MXS-1688](https://jira.mariadb.org/browse/MXS-1688) Some date functions are not parsed properly with schemarouter
+* [MXS-1684](https://jira.mariadb.org/browse/MXS-1684) Empty space on a line in rule file confuses dbfwfilter which refuses to start
+* [MXS-1683](https://jira.mariadb.org/browse/MXS-1683) Commands that take passwords should allow input from stdin and not just from controlling terminals
+
 ## Known Issues and Limitations
 
 There are some limitations and known issues within this version of MaxScale.
