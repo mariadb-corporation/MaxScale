@@ -209,7 +209,7 @@ typedef enum
 #define DCB_SET_HIGH_WATER(x, hi)       (x)->low_water = (hi);
 #define DCB_BELOW_LOW_WATER(x)          ((x)->low_water && (x)->writeqlen < (x)->low_water)
 #define DCB_ABOVE_HIGH_WATER(x)         ((x)->high_water && (x)->writeqlen > (x)->high_water)
-
+#define DCB_THROTTLING_ENABLED(x)       ((x)->high_water && (x)->low_water)
 /**
  * @brief DCB system initialization function
  *

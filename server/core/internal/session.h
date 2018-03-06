@@ -51,14 +51,6 @@ const char *session_state(mxs_session_state_t);
  */
 void session_link_backend_dcb(MXS_SESSION *session, struct dcb *dcb);
 
-/**
- * Unlink a backend DCB to a session.
- *
- * @param session  The session to link with the dcb
- * @param dcb      The backend DCB to be linked
- */
-void session_unlink_backend_dcb(MXS_SESSION *session, struct dcb *dcb);
-
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
 
 void printAllSessions();

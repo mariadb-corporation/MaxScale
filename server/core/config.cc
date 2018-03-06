@@ -596,8 +596,7 @@ static bool config_load_single_file(const char* file,
     }
 
     /* Check this after reading config is finished */
-    if (gateway.writeq_high_water &&
-        gateway.writeq_low_water &&
+    if ((gateway.writeq_high_water || gateway.writeq_low_water) &&
         gateway.writeq_high_water <= gateway.writeq_low_water)
     {
         rval = -1;

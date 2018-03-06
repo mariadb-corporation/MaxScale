@@ -515,7 +515,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     }
     
     /* Register upstream throttling callbacks */
-    if (dcb->high_water && dcb->low_water && dcb->high_water > dcb->low_water)
+    if (DCB_THROTTLING_ENABLED(dcb))
     {
         dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
         dcb_add_callback(dcb, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
@@ -2484,7 +2484,7 @@ dcb_accept(DCB *dcb)
             }
 
             /* Register downstream throttling callbacks */
-            if (dcb->high_water && dcb->low_water && dcb->high_water > dcb->low_water)
+            if (DCB_THROTTLING_ENABLED(dcb))
             {
                 dcb_add_callback(client_dcb, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
                 dcb_add_callback(client_dcb, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
