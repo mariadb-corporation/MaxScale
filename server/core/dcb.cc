@@ -129,8 +129,8 @@ void dcb_global_init()
     this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
     this_unit.dcb_initialized.poll.handler = dcb_poll_handler;
     this_unit.dcb_initialized.high_water_has_reached = false;
-    this_unit.dcb_initialized.low_water = 0;
-    this_unit.dcb_initialized.high_water = this_unit.dcb_initialized.low_water;
+    this_unit.dcb_initialized.low_water = config_writeq_low_water();
+    this_unit.dcb_initialized.high_water = config_writeq_high_water();
     this_unit.dcb_initialized.next_backend = NULL;
     this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
 
@@ -210,9 +210,6 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
         ss_dassert(Worker::get_current_id() != -1);
         newdcb->poll.thread.id = Worker::get_current_id();
     }
-
-    DCB_SET_HIGH_WATER(newdcb, config_writeq_high_water());
-    DCB_SET_LOW_WATER(newdcb, config_writeq_low_water());
 
     return newdcb;
 }
