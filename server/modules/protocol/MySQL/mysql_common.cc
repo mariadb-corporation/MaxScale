@@ -1376,7 +1376,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
                                               with_ssl, ssl_established);
     ss_dassert(buffer);
 
-    if (with_ssl)
+    if (with_ssl && !ssl_established)
     {
         if (dcb_write(dcb, buffer) && dcb_connect_SSL(dcb) >= 0)
         {

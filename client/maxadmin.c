@@ -43,6 +43,9 @@
 
 #ifdef HISTORY
 #include <histedit.h>
+#define USE_HIST 1
+#else
+#define USE_HIST 0
 #endif
 
 #define MAX_PASSWORD_LEN 80
@@ -62,6 +65,7 @@ static void read_inifile(char **socket,
                          char **hostname, char **port, char **user, char **passwd,
                          int *editor);
 static bool getPassword(char *password, size_t length);
+static void rtrim(char *str);
 
 #ifdef HISTORY
 
@@ -93,6 +97,128 @@ static struct option long_options[] =
 #define MAXADMIN_DEFAULT_USER "admin"
 #define MAXADMIN_BUFFER_SIZE 2048
 
+static bool term_error = false;
+
+bool process_command(int so, char* buf)
+{
+    bool rval = true;
+
+    if (isquit(buf))
+    {
+        rval = false;
+    }
+    else if (!strncasecmp(buf, "source", 6))
+    {
+        char *ptr;
+
+        /* Find the filename */
+        ptr = &buf[strlen("source")];
+        while (*ptr && isspace(*ptr))
+        {
+            ptr++;
+        }
+
+        DoSource(so, ptr);
+    }
+    else if (*buf)
+    {
+        if (!sendCommand(so, buf))
+        {
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
+void cmd_with_history(int so, char** argv, bool use_emacs)
+{
+#ifdef HISTORY
+    char *buf;
+    EditLine *el = NULL;
+    Tokenizer *tok;
+    History *hist;
+    HistEvent ev;
+
+    hist = history_init(); /* Init the builtin history  */
+
+    /* Remember 100 events      */
+    history(hist, &ev, H_SETSIZE, 100);
+
+    tok = tok_init(NULL); /* Initialize the tokenizer   */
+
+    /* Initialize editline      */
+    el = el_init(*argv, stdin, stdout, stderr);
+
+    if (use_emacs)
+    {
+        el_set(el, EL_EDITOR, "emacs"); /** Editor is emacs */
+    }
+    else
+    {
+        el_set(el, EL_EDITOR, "vi"); /* Default editor is vi      */
+    }
+    el_set(el, EL_SIGNAL, 1); /* Handle signals gracefully  */
+    el_set(el, EL_PROMPT, prompt); /* Set the prompt function */
+
+    /* Tell editline to use this history interface  */
+    el_set(el, EL_HIST, history, hist);
+
+    /*
+     * Bind j, k in vi command mode to previous and next line, instead
+     * of previous and next history.
+     */
+    el_set(el, EL_BIND, "-a", "k", "ed-prev-line", NULL);
+    el_set(el, EL_BIND, "-a", "j", "ed-next-line", NULL);
+
+    /*
+     * Source the user's defaults file.
+     */
+    el_source(el, NULL);
+
+    int num = 0;
+
+    while ((buf = (char *) el_gets(el, &num)))
+    {
+        rtrim(buf);
+        history(hist, &ev, H_ENTER, buf);
+        if (!strcasecmp(buf, "history"))
+        {
+            for (int rv = history(hist, &ev, H_LAST); rv != -1;
+                 rv = history(hist, &ev, H_PREV))
+            {
+                fprintf(stdout, "%4d %s\n", ev.num, ev.str);
+            }
+        }
+        else if (!process_command(so, buf))
+        {
+            break;
+        }
+    }
+
+    el_end(el);
+    tok_end(tok);
+    history_end(hist);
+#endif
+}
+
+void cmd_no_history(int so)
+{
+    char buf[MAXADMIN_BUFFER_SIZE];
+    while (printf("MaxScale> ") && fgets(buf, 1024, stdin) != NULL)
+    {
+        rtrim(buf);
+        if (!strcasecmp(buf, "history"))
+        {
+            fprintf(stderr, "History not supported in this version.\n");
+        }
+        else if (!process_command(so, buf))
+        {
+            break;
+        }
+    }
+}
+
 /**
  * The main for the maxadmin client
  *
@@ -102,15 +228,6 @@ static struct option long_options[] =
 int
 main(int argc, char **argv)
 {
-#ifdef HISTORY
-    char *buf;
-    EditLine *el = NULL;
-    Tokenizer *tok;
-    History *hist;
-    HistEvent ev;
-#else
-    char buf[MAXADMIN_BUFFER_SIZE];
-#endif
     char *hostname = NULL;
     char *port = NULL;
     char *user = NULL;
@@ -293,105 +410,16 @@ main(int argc, char **argv)
     }
 
     (void) setlocale(LC_CTYPE, "");
-#ifdef HISTORY
-    hist = history_init(); /* Init the builtin history  */
-    /* Remember 100 events      */
-    history(hist, &ev, H_SETSIZE, 100);
 
-    tok = tok_init(NULL); /* Initialize the tokenizer   */
-
-    /* Initialize editline      */
-    el = el_init(*argv, stdin, stdout, stderr);
-
-    if (use_emacs)
+    if (!term_error && USE_HIST)
     {
-        el_set(el, EL_EDITOR, "emacs"); /** Editor is emacs */
+        cmd_with_history(so, argv, use_emacs);
     }
     else
     {
-        el_set(el, EL_EDITOR, "vi"); /* Default editor is vi      */
-    }
-    el_set(el, EL_SIGNAL, 1); /* Handle signals gracefully  */
-    el_set(el, EL_PROMPT, prompt); /* Set the prompt function */
-
-    /* Tell editline to use this history interface  */
-    el_set(el, EL_HIST, history, hist);
-
-    /*
-     * Bind j, k in vi command mode to previous and next line, instead
-     * of previous and next history.
-     */
-    el_set(el, EL_BIND, "-a", "k", "ed-prev-line", NULL);
-    el_set(el, EL_BIND, "-a", "j", "ed-next-line", NULL);
-
-    /*
-     * Source the user's defaults file.
-     */
-    el_source(el, NULL);
-
-    int num;
-    while ((buf = (char *) el_gets(el, &num)) != NULL && num != 0)
-    {
-#else
-    while (printf("MaxScale> ") && fgets(buf, 1024, stdin) != NULL)
-    {
-        int num = strlen(buf);
-#endif
-        /* Strip trailing \n\r */
-        for (int i = num - 1; buf[i] == '\r' || buf[i] == '\n'; i--)
-        {
-            buf[i] = 0;
-        }
-
-#ifdef HISTORY
-        history(hist, &ev, H_ENTER, buf);
-#endif
-
-        if (isquit(buf))
-        {
-            break;
-        }
-        else if (!strcasecmp(buf, "history"))
-        {
-#ifdef HISTORY
-            int rv;
-            for (rv = history(hist, &ev, H_LAST); rv != -1;
-                 rv = history(hist, &ev, H_PREV))
-            {
-                fprintf(stdout, "%4d %s\n",
-                        ev.num, ev.str);
-            }
-#else
-            fprintf(stderr, "History not supported in this version.\n");
-#endif
-        }
-        else if (!strncasecmp(buf, "source", 6))
-        {
-            char *ptr;
-
-            /* Find the filename */
-            ptr = &buf[strlen("source")];
-            while (*ptr && isspace(*ptr))
-            {
-                ptr++;
-            }
-
-            DoSource(so, ptr);
-        }
-        else if (*buf)
-        {
-            if (!sendCommand(so, buf))
-            {
-                return 0;
-            }
-        }
+        cmd_no_history(so);
     }
 
-#ifdef HISTORY
-    el_end(el);
-    tok_end(tok);
-    history_end(hist);
-#endif
     close(so);
     return 0;
 }
@@ -937,8 +965,7 @@ read_inifile(char **socket,
  */
 bool getPassword(char *passwd, size_t len)
 {
-    bool gotten = false;
-
+    bool err = false;
     struct termios tty_attr;
     tcflag_t c_lflag;
 
@@ -948,36 +975,55 @@ bool getPassword(char *passwd, size_t len)
         tty_attr.c_lflag &= ~ICANON;
         tty_attr.c_lflag &= ~ECHO;
 
-        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
+        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) != 0)
         {
-            printf("Password: ");
-            if (fgets(passwd, len, stdin) == NULL)
-            {
-                printf("Failed to read password\n");
-            }
+            err = true;
+        }
+    }
+    else
+    {
+        err = true;
+    }
 
-            tty_attr.c_lflag = c_lflag;
+    if (err)
+    {
+        fprintf(stderr,
+                "Warning: Could not configure terminal. Terminal echo is still enabled. This\n"
+                "means that the password will be visible on the controlling terminal when\n"
+                "it is written!\n");
+    }
 
-            if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
-            {
-                int i = strlen(passwd);
+    printf("Password: ");
+    if (fgets(passwd, len, stdin) == NULL)
+    {
+        printf("Failed to read password\n");
+    }
 
-                if (i > 1)
-                {
-                    passwd[i - 1] = '\0';
-                }
+    if (!err)
+    {
+        tty_attr.c_lflag = c_lflag;
 
-                printf("\n");
-
-                gotten = true;
-            }
+        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) != 0)
+        {
+            err = true;
         }
     }
 
-    if (!gotten)
+    int i = strlen(passwd);
+
+    if (i > 0)
     {
-        fprintf(stderr, "Could not configure terminal.\n");
+        passwd[i - 1] = '\0';
     }
 
-    return gotten;
+    printf("\n");
+
+
+    // Store failure globally so that interactive parts are skipped
+    if (err)
+    {
+        term_error = true;
+    }
+
+    return *passwd;
 }

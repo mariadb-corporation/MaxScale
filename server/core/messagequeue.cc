@@ -176,6 +176,11 @@ bool MessageQueue::post(const Message& message) const
     {
         ssize_t n = write(m_write_fd, &message, sizeof(message));
         rv = (n == sizeof(message));
+
+        if (n == -1)
+        {
+            MXS_ERROR("Failed to write message: %d, %s", errno, mxs_strerror(errno));
+        }
     }
     else
     {

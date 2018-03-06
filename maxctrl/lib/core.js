@@ -31,7 +31,7 @@ program
     })
     .option('p', {
         alias: 'password',
-        describe: 'Password for the user',
+        describe: 'Password for the user. To input the password manually, give -p as the last argument or use --password=\'\'',
         default: 'mariadb',
         type: 'string'
     })
@@ -104,7 +104,7 @@ program
     .demandCommand(1, 'At least one command is required')
     .command('*', 'the default command', {}, function(argv) {
         maxctrl(argv, function() {
-            return error('Unknown command. See output of `help` for a list of commands.')
+            return error('Unknown command ' + JSON.stringify(argv._) + '. See output of `help` for a list of commands.')
         })
     })
 

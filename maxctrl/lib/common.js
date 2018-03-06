@@ -17,6 +17,7 @@ var Table = require('cli-table');
 var consoleLib = require('console')
 var os = require('os')
 var fs = require('fs')
+var readlineSync = require('readline-sync')
 
 module.exports = function() {
 
@@ -26,6 +27,13 @@ module.exports = function() {
     // cluster health checks and to propagate the commands to multiple
     // servers.
     this.maxctrl = function(argv, cb) {
+
+        // No password given, ask it from the command line
+        if (argv.p == '') {
+            argv.p = readlineSync.question('Enter password: ', {
+                hideEchoBack: true
+            })
+        }
 
         // Split the hostnames, separated by commas
         argv.hosts = argv.hosts.split(',')
@@ -209,7 +217,7 @@ module.exports = function() {
             base = 'https://'
         }
 
-        return base + argv.user + ':' + argv.password + '@' + host + '/v1/' + endpoint
+        return base + argv.u + ':' + argv.p + '@' + host + '/v1/' + endpoint
     }
 
     this.OK = function() {
