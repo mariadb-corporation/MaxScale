@@ -411,6 +411,9 @@ add_test_executable(mxs280_select_outfile.cpp mxs280_select_outfile replication 
 # Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
 add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol LIGHT GALERA_BACKEND)
 
+# Testing of the master replacement feature
+add_test_executable(mxs359_master_switch.cpp mxs359_master_switch mxs359_master_switch LABELS REPL_BACKEND)
+
 # Binary protocol prepared statement tests
 add_test_executable(binary_ps.cpp binary_ps replication LABELS readwritesplit LIGHT REPL_BACKEND)
 add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS readwritesplit LIGHT REPL_BACKEND)
