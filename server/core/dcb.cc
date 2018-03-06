@@ -120,6 +120,8 @@ static void dcb_remove_from_list(DCB *dcb);
 static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events);
 static uint32_t dcb_process_poll_events(DCB *dcb, uint32_t ev);
 static bool dcb_session_check(DCB *dcb, const char *);
+static int upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
+static int downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
 
 void dcb_global_init()
 {
@@ -128,10 +130,9 @@ void dcb_global_init()
     this_unit.dcb_initialized.state = DCB_STATE_ALLOC;
     this_unit.dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
     this_unit.dcb_initialized.poll.handler = dcb_poll_handler;
-    this_unit.dcb_initialized.high_water_has_reached = false;
+    this_unit.dcb_initialized.high_water_reached = false;
     this_unit.dcb_initialized.low_water = config_writeq_low_water();
     this_unit.dcb_initialized.high_water = config_writeq_high_water();
-    this_unit.dcb_initialized.next_backend = NULL;
     this_unit.dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
 
     int nthreads = config_threadcount();
@@ -516,8 +517,8 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     /* Register upstream throttling callbacks */
     if (dcb->high_water && dcb->low_water && dcb->high_water > dcb->low_water)
     {
-        dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, session_upstream_throttle_callback, NULL);
-        dcb_add_callback(dcb, DCB_REASON_LOW_WATER, session_upstream_throttle_callback, NULL);
+        dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
+        dcb_add_callback(dcb, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
     }
     /**
      * The dcb will be addded into poll set by dcb->func.connect
@@ -900,10 +901,10 @@ dcb_write(DCB *dcb, GWBUF *queue)
     dcb->stats.n_buffered++;
     dcb_drain_writeq(dcb);
 
-    if (DCB_ABOVE_HIGH_WATER(dcb) && !dcb->high_water_has_reached)
+    if (DCB_ABOVE_HIGH_WATER(dcb) && !dcb->high_water_reached)
     {
         dcb_call_callback(dcb, DCB_REASON_HIGH_WATER);
-        dcb->high_water_has_reached = true;
+        dcb->high_water_reached = true;
         dcb->stats.n_high_water++;
     }
 
@@ -1035,12 +1036,13 @@ int dcb_drain_writeq(DCB *dcb)
         dcb_call_callback(dcb, DCB_REASON_DRAINED);
     }
 
+    ss_dassert(dcb->writeqlen >= total_written);
     dcb->writeqlen -= total_written;
 
-    if (dcb->high_water_has_reached && DCB_BELOW_LOW_WATER(dcb))
+    if (dcb->high_water_reached && DCB_BELOW_LOW_WATER(dcb))
     {
         dcb_call_callback(dcb, DCB_REASON_LOW_WATER);
-        dcb->high_water_has_reached = false;
+        dcb->high_water_reached = false;
         dcb->stats.n_low_water++;
     }
 
@@ -1209,8 +1211,6 @@ void dcb_final_close(DCB* dcb)
         {
             dcb->user = MXS_STRDUP_A(user);
         }
-
-        session_unlink_backend_dcb(dcb->session, dcb);
 
         if (dcb_maybe_add_persistent(dcb))
         {
@@ -2486,8 +2486,8 @@ dcb_accept(DCB *dcb)
             /* Register downstream throttling callbacks */
             if (dcb->high_water && dcb->low_water && dcb->high_water > dcb->low_water)
             {
-                dcb_add_callback(client_dcb, DCB_REASON_HIGH_WATER, session_downstream_throttle_callback, NULL);
-                dcb_add_callback(client_dcb, DCB_REASON_LOW_WATER, session_downstream_throttle_callback, NULL);
+                dcb_add_callback(client_dcb, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
+                dcb_add_callback(client_dcb, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
             }     
 
             if (client_dcb->service->max_connections &&
@@ -3546,4 +3546,81 @@ int poll_remove_dcb(DCB *dcb)
 DCB* dcb_get_current()
 {
     return this_thread.current_dcb;
+}
+
+/**
+ * @brief DCB callback for upstream throtting
+ * Called by any backend dcb when its writeq is above high water mark or
+ * it has reached high water mark and now it is below low water mark,
+ * Calling `poll_remove_dcb` or `poll_add_dcb' on client dcb to throttle
+ * network traffic from client to mxs.
+ *
+ * @param dcb      Backend dcb
+ * @param reason   Why the callback was called
+ * @param userdata Data provided when the callback was added
+ * @return Always 0
+ */
+static int upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata)
+{
+    DCB *client_dcb = dcb->session->client_dcb;
+    if (reason == DCB_REASON_HIGH_WATER)
+    {
+        poll_remove_dcb(client_dcb);
+    }
+    else if (reason == DCB_REASON_LOW_WATER)
+    {
+        poll_add_dcb(client_dcb);
+    }
+
+    return 0;
+}
+
+bool backend_dcb_remove_func(DCB *dcb, void *data)
+{
+    MXS_SESSION* session = (MXS_SESSION*)data;
+
+    if (dcb->session == session && dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+    {
+        poll_remove_dcb(dcb);
+    }
+
+    return true;
+}
+
+bool backend_dcb_add_func(DCB *dcb, void *data)
+{
+    MXS_SESSION* session = (MXS_SESSION*)data;
+
+    if (dcb->session == session && dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+    {
+        poll_add_dcb(dcb);
+    }
+
+    return true;
+}
+
+/**
+ * @brief DCB callback for downstream throtting
+ * Called by client dcb when its writeq is above high water mark or
+ * it has reached high water mark and now it is below low water mark,
+ * Calling `poll_remove_dcb` or `poll_add_dcb' on all backend dcbs to
+ * throttle network traffic from server to mxs.
+ *
+ * @param dcb      client dcb
+ * @param reason   Why the callback was called
+ * @param userdata Data provided when the callback was added
+ * @return Always 0
+ */
+static int downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata)
+{
+    if (reason == DCB_REASON_HIGH_WATER)
+    {
+        dcb_foreach(backend_dcb_remove_func, dcb->session);
+    }
+    else if (reason == DCB_REASON_LOW_WATER)
+    {
+        dcb_foreach(backend_dcb_add_func, dcb->session);
+    }
+
+    return 0;
 }

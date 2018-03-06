@@ -136,10 +136,6 @@ typedef struct session
     mxs_session_state_t     state;            /*< Current descriptor state */
     uint64_t                ses_id;           /*< Unique session identifier */
     struct dcb              *client_dcb;      /*< The client connection */
-    struct 
-    {
-        struct dcb *head;
-    } backends;                                /*< The list of backend's DCBs */
 
     struct mxs_router_session *router_session;  /*< The router instance data */
     MXS_SESSION_STATS       stats;            /*< Session statistics */
@@ -485,33 +481,5 @@ MXS_SESSION* session_get_current();
  * @return The id of the current session or 0 if there is no current session.
  **/
 uint64_t session_get_current_id();
-
-/**
- * @brief DCB callback for upstream throtting
- * Called by any backend dcb when its writeq is above high water mark or
- * it has reached high water mark and now it is below low water mark,
- * Calling `poll_remove_dcb` or `poll_add_dcb' on client dcb to throttle
- * network traffic from client to mxs.
- *
- * @param dcb      Backend dcb
- * @param reason   Why the callback was called
- * @param userdata Data provided when the callback was added
- * @return Always 0
- */
-int session_upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
-
-/**
- * @brief DCB callback for downstream throtting
- * Called by client dcb when its writeq is above high water mark or
- * it has reached high water mark and now it is below low water mark,
- * Calling `poll_remove_dcb` or `poll_add_dcb' on all backend dcbs to
- * throttle network traffic from server to mxs.
- *
- * @param dcb      client dcb
- * @param reason   Why the callback was called
- * @param userdata Data provided when the callback was added
- * @return Always 0
- */
-int session_downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata);
 
 MXS_END_DECLS

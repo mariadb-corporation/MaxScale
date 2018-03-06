@@ -595,6 +595,15 @@ static bool config_load_single_file(const char* file,
         }
     }
 
+    /* Check this after reading config is finished */
+    if (gateway.writeq_high_water &&
+        gateway.writeq_low_water &&
+        gateway.writeq_high_water <= gateway.writeq_low_water)
+    {
+        rval = -1;
+        MXS_ERROR("Invaild configuration writeq_high_water should greater than writeq_low_water");
+    }
+
     return rval == 0;
 }
 
@@ -1713,29 +1722,21 @@ handle_global_item(const char *name, const char *value)
         }
         else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
         {
-            char* endptr;
-            int intval = strtol(value, &endptr, 0);
-            if (*endptr == '\0' && intval >= 0)
+            gateway.writeq_high_water = get_suffixed_size(value);
+            if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
             {
-                gateway.writeq_high_water = intval;
+                MXS_ERROR("Writeq high water mark should greater than %d", MIN_WRITEQ_HIGH_WATER);
             }
-            else
-            {
-                MXS_WARNING("Invalid value for 'writeq_high_water': %s", value);
-            }
+            MXS_NOTICE("Writeq high water mark set to: %d", gateway.writeq_high_water);
         }
         else if (strcmp(name, CN_WRITEQ_LOW_WATER) == 0)
         {
-            char* endptr;
-            int intval = strtol(value, &endptr, 0);
-            if (*endptr == '\0' && intval >= 0)
+            gateway.writeq_low_water = get_suffixed_size(value);
+            if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
             {
-                gateway.writeq_low_water = intval;
+                MXS_ERROR("Writeq low water mark should greater than:%d", MIN_WRITEQ_LOW_WATER);
             }
-            else
-            {
-                MXS_WARNING("Invalid value for 'writeq_low_water': %s", value);
-            }
+            MXS_NOTICE("Writeq low water mark set to: %d", gateway.writeq_low_water);
         }
         else
         {
@@ -1950,8 +1951,8 @@ void config_set_global_defaults()
     gateway.promoted_at = 0;
 
     gateway.thread_stack_size = 0;
-    gateway.writeq_high_water = DEFAULT_WRITEQ_HIGH_WATER;
-    gateway.writeq_low_water = DEFAULT_WRITEQ_LOW_WATER;
+    gateway.writeq_high_water = 0;
+    gateway.writeq_low_water = 0;
     pthread_attr_t attr;
     if (pthread_attr_init(&attr) == 0)
     {

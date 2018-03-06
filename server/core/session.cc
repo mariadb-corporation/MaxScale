@@ -87,7 +87,6 @@ session_initialize(MXS_SESSION *session)
     session->ses_chk_top = CHK_NUM_SESSION;
     session->state = SESSION_STATE_ALLOC;
     session->ses_chk_tail = CHK_NUM_SESSION;
-    session->backends.head = NULL;
 }
 
 MXS_SESSION* session_alloc(SERVICE *service, DCB *client_dcb)
@@ -279,34 +278,6 @@ void session_link_backend_dcb(MXS_SESSION *session, DCB *dcb)
     dcb->service = session->service;
     /** Move this DCB under the same thread */
     dcb->poll.thread.id = session->client_dcb->poll.thread.id;
-    /** Track session's backends */
-    dcb->next_backend = session->backends.head;
-    session->backends.head = dcb;
-}
-
-void session_unlink_backend_dcb(MXS_SESSION *session, DCB *dcb)
-{
-    ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
-
-    atomic_add(&session->refcount, -1);
-    dcb->session = NULL;
-    dcb->service = NULL;
-
-    DCB *pre = session->backends.head;
-    if (pre == dcb)
-    {
-        session->backends.head = dcb->next_backend;
-    }
-    else
-    {
-        while (pre)
-        {
-            if (pre->next_backend == dcb)
-            {
-                pre->next_backend = dcb->next_backend;
-            }
-        }
-    }
 }
 
 /**
@@ -1134,38 +1105,3 @@ uint64_t session_get_current_id()
 
     return session ? session->ses_id : 0;
 }
-
-int session_downstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata)
-{
-    DCB *backend = dcb->session->backends.head;
-    while (backend)
-    {
-        if (reason == DCB_REASON_HIGH_WATER)
-        {
-            poll_remove_dcb(backend);
-        }
-        else if (reason == DCB_REASON_LOW_WATER)
-        {
-            poll_add_dcb(backend);
-        }
-        backend = backend->next_backend;
-    }
-
-    return 0;
-}
-
-int session_upstream_throttle_callback(DCB *dcb, DCB_REASON reason, void *userdata)
-{
-    DCB *client_dcb = dcb->session->client_dcb;
-    if (reason == DCB_REASON_HIGH_WATER)
-    {
-        poll_remove_dcb(client_dcb);
-    }
-    else if (reason == DCB_REASON_LOW_WATER)
-    {
-        poll_add_dcb(client_dcb);
-    }
-
-    return 0;
-}
-

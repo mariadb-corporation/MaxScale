@@ -178,13 +178,12 @@ typedef struct dcb
     bool            ssl_write_want_read;    /*< Flag */
     bool            ssl_write_want_write;    /*< Flag */
     bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
-    bool            high_water_has_reached; /** High water mark has reached, to determine whether need release throttle */
+    bool            high_water_reached; /** High water mark reached, to determine whether need release throttle */
     struct
     {
         struct dcb *next; /**< Next DCB in owning thread's list */
         struct dcb *tail; /**< Last DCB in owning thread's list */
     } thread;
-    struct dcb *next_backend;        /** Next Backend DCB in owning session's list */
     uint32_t        n_close;         /** How many times dcb_close has been called. */
     char            *path;           /** If a Unix socket, the path it was bound to. */
     skygw_chk_t     dcb_chk_tail;
