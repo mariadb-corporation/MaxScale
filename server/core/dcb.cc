@@ -513,7 +513,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         return NULL;
     }
     
-    /* Register throttling callbacks */
+    /* Register upstream throttling callbacks */
     if (dcb->high_water && dcb->low_water && dcb->high_water > dcb->low_water)
     {
         dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, session_upstream_throttle_callback, NULL);

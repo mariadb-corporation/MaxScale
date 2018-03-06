@@ -139,7 +139,7 @@ typedef struct session
     struct 
     {
         struct dcb *head;
-    } backends;                                /*< The list of backend's DCBs) */
+    } backends;                                /*< The list of backend's DCBs */
 
     struct mxs_router_session *router_session;  /*< The router instance data */
     MXS_SESSION_STATS       stats;            /*< Session statistics */

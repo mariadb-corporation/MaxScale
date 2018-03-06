@@ -30,6 +30,7 @@ MXS_BEGIN_DECLS
 #define DEFAULT_QUERY_RETRY_TIMEOUT 5    /**< Timeout for query retries */
 #define DEFAULT_WRITEQ_HIGH_WATER   0    /**< Defalut high water mark of dcb write queue */
 #define DEFAULT_WRITEQ_LOW_WATER    0    /**< Defalut low water mark of dcb write queue */
+
 /**
  * Maximum length for configuration parameter value.
  */
