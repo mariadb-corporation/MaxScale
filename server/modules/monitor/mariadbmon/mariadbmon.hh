@@ -89,8 +89,17 @@ public:
     void stop_monitor();
 
     /**
-     * Performs switchover for a simple topology (1 master, N slaves, no intermediate masters). If an intermediate
-     * step fails, the cluster may be left without a master.
+     * Monitor a database with given server info.
+     *
+     * @param mon
+     * @param database Database to monitor
+     * @param serv_info Server info for database
+     */
+    void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info);
+
+    /**
+     * Performs switchover for a simple topology (1 master, N slaves, no intermediate masters). If an
+     * intermediate step fails, the cluster may be left without a master.
      *
      * @param err_out json object for error printing. Can be NULL.
      * @return True if successful. If false, the cluster can be in various situations depending on which step
@@ -98,6 +107,18 @@ public:
      */
     bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
                        json_t** err_out);
+
+    /**
+     * @brief Process possible failover event
+     *
+     * If a master failure has occurred and MaxScale is configured with failover functionality, this fuction
+     * executes failover to select and promote a new master server. This function should be called immediately
+     * after @c mon_process_state_changes.
+     *
+     * @param cluster_modified_out Set to true if modifying cluster
+     * @return True on success, false on error
+     */
+    bool mon_process_failover(bool* cluster_modified_out);
 
     /**
      * Performs failover for a simple topology (1 master, N slaves, no intermediate masters).
@@ -133,6 +154,25 @@ public:
      * @return True if master and gtid domain are known
      */
     bool cluster_can_be_joined();
+
+    /**
+     * Check that preconditions for a failover are met.
+     *
+    * @param mon Cluster monitor
+    * @param error_out JSON error out
+    * @return True if failover may proceed
+    */
+    bool failover_check(json_t** error_out);
+
+    /**
+     * Check if server is using gtid replication.
+     *
+     * @param mon_server Server to check
+     * @param error_out Error output
+     * @return True if using gtid-replication. False if not, or if server is not a slave or otherwise does
+     * not have a gtid_IO_Pos.
+     */
+    bool uses_gtid(MXS_MONITORED_SERVER* mon_server, json_t** error_out);
 
     MXS_MONITOR* monitor;          /**< Generic monitor object */
     volatile int shutdown;         /**< Flag to shutdown the monitor thread.
@@ -198,6 +238,9 @@ private:
     MXS_MONITORED_SERVER* select_new_master(ServerVector* slaves_out, json_t** err_out);
     bool server_is_excluded(const MXS_MONITORED_SERVER* server);
     bool is_candidate_better(const MySqlServerInfo* current_best_info, const MySqlServerInfo* candidate_info);
+    MySqlServerInfo* update_slave_info(MXS_MONITORED_SERVER* server);
+    bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database);
+    bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 
 public:
     // Following methods should be private, change it once refactoring is done.

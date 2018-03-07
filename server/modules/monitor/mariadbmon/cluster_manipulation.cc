@@ -336,7 +336,7 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
             {
                 if (slave != promotion_target)
                 {
-                    MySqlServerInfo* slave_info = update_slave_info(this, slave);
+                    MySqlServerInfo* slave_info = update_slave_info(slave);
                     // If master is replicating from external master, it is updated but not added to array.
                     if (slave_info && slave != current_master)
                     {
@@ -553,7 +553,7 @@ bool MariaDBMonitor::failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, i
         // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
         // It doesn't matter here, but is a general rule.
         query_ok = update_gtids(new_master, master_info) &&
-                   do_show_slave_status(this, master_info, new_master);
+                   do_show_slave_status(master_info, new_master);
         io_pos_stable = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
 
@@ -819,7 +819,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
             {
                 MXS_MONITORED_SERVER* slave = wait_list[i];
                 MySqlServerInfo* slave_info = get_server_info(this, slave);
-                if (update_gtids(slave, slave_info) && do_show_slave_status(this, slave_info, slave))
+                if (update_gtids(slave, slave_info) && do_show_slave_status(slave_info, slave))
                 {
                     if (!slave_info->slave_status.last_error.empty())
                     {
@@ -881,7 +881,7 @@ bool MariaDBMonitor::switchover_check_preferred_master(MXS_MONITORED_SERVER* pre
 {
     ss_dassert(preferred);
     bool rval = true;
-    MySqlServerInfo* preferred_info = update_slave_info(this, preferred);
+    MySqlServerInfo* preferred_info = update_slave_info(preferred);
     if (preferred_info == NULL || !check_replication_settings(preferred, preferred_info))
     {
         PRINT_MXS_JSON_ERROR(err_out, "The requested server '%s' is not a valid promotion candidate.",
@@ -953,7 +953,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(ServerVector* slaves_out
     {
         // If a server cannot be connected to, it won't be considered for promotion or redirected.
         // Do not worry about the exclusion list yet, querying the excluded servers is ok.
-        MySqlServerInfo* cand_info = update_slave_info(this, cand);
+        MySqlServerInfo* cand_info = update_slave_info(cand);
         // If master is replicating from external master, it is updated but not added to array.
         if (cand_info && cand != master)
         {
