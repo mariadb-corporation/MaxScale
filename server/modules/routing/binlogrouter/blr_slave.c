@@ -1480,7 +1480,7 @@ static int
 blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
     GWBUF *pkt;
-    char column[251] = "";
+    char column[MAX_SERVER_NAME_LEN + 1] = "";
     uint8_t *ptr;
     int len, actual_len, col_len, seqno, ncols, i;
     char *dyn_column = NULL;
