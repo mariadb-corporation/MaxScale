@@ -1036,7 +1036,7 @@ int dcb_drain_writeq(DCB *dcb)
         dcb_call_callback(dcb, DCB_REASON_DRAINED);
     }
 
-    ss_dassert(dcb->writeqlen >= total_written);
+    ss_dassert(dcb->writeqlen >= (uint32_t)total_written);
     dcb->writeqlen -= total_written;
 
     if (dcb->high_water_reached && DCB_BELOW_LOW_WATER(dcb))
