@@ -116,7 +116,7 @@ static bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, uns
                           StringVector* output);
 static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info);
 static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server,
-                                     MySqlServerInfo* master_info);
+                                     MySqlServerInfo* master_info, json_t** output);
 static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output);
 static uint32_t do_rejoin(MYSQL_MONITOR* mon, const ServerVector& servers);
 static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
@@ -720,39 +720,50 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
     MYSQL_MONITOR *handle = static_cast<MYSQL_MONITOR*>(mon->handle);
     if (cluster_can_be_joined(handle))
     {
+        const char* rejoin_serv_name = rejoin_server->unique_name;
         MXS_MONITORED_SERVER* mon_server = mon_get_monitored_server(mon, rejoin_server);
         if (mon_server)
         {
             MXS_MONITORED_SERVER* master = handle->master;
+            const char* master_name = master->server->unique_name;
             MySqlServerInfo* master_info = get_server_info(handle, master);
             MySqlServerInfo* server_info = get_server_info(handle, mon_server);
 
-            if (server_is_rejoin_suspect(handle, mon_server, master_info) &&
-                update_gtids(handle, master, master_info) &&
-                can_replicate_from(handle, mon_server, server_info, master, master_info))
+            if (server_is_rejoin_suspect(handle, mon_server, master_info, output))
             {
-                ServerVector joinable_server;
-                joinable_server.push_back(mon_server);
-                if (do_rejoin(handle, joinable_server) == 1)
+                if (update_gtids(handle, master, master_info))
                 {
-                    rval = true;
-                    MXS_NOTICE("Rejoin performed.");
+                    if (can_replicate_from(handle, mon_server, server_info, master, master_info))
+                    {
+                        ServerVector joinable_server;
+                        joinable_server.push_back(mon_server);
+                        if (do_rejoin(handle, joinable_server) == 1)
+                        {
+                            rval = true;
+                            MXS_NOTICE("Rejoin performed.");
+                        }
+                        else
+                        {
+                            PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but failed.");
+                        }
+                    }
+                    else
+                    {
+                        PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s' "
+                                             "or it could not be queried.", rejoin_serv_name, master_name);
+                    }
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but failed.");
+                    PRINT_MXS_JSON_ERROR(output, "Cluster master '%s' gtid info could not be updated.",
+                                         master_name);
                 }
-            }
-            else
-            {
-                PRINT_MXS_JSON_ERROR(output, "Server is not eligible for rejoin or eligibility could not be "
-                                     "ascertained.");
             }
         }
         else
         {
             PRINT_MXS_JSON_ERROR(output, "The given server '%s' is not monitored by this monitor.",
-                                 rejoin_server->unique_name);
+                                 rejoin_serv_name);
         }
     }
     else
@@ -4603,17 +4614,18 @@ static bool can_replicate_from(MYSQL_MONITOR* mon,
  * criteria and another call to can_replicate_from() should be made.
  *
  * @param mon Cluster monitor
- * @param server Server to check.
+ * @param rejoin_server Server to check
  * @param master_info Master server info
+ * @param output Error output. If NULL, no error is printed to log.
  * @return True, if server is a rejoin suspect.
  */
-static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* server,
-                                     MySqlServerInfo* master_info)
+static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* rejoin_server,
+                                     MySqlServerInfo* master_info, json_t** output)
 {
     bool is_suspect = false;
-    if (!SERVER_IS_MASTER(server->server) && SERVER_IS_RUNNING(server->server))
+    if (!SERVER_IS_MASTER(rejoin_server->server) && SERVER_IS_RUNNING(rejoin_server->server))
     {
-        MySqlServerInfo* server_info = get_server_info(mon, server);
+        MySqlServerInfo* server_info = get_server_info(mon, rejoin_server);
         SlaveStatusInfo* slave_status = &server_info->slave_status;
         // Has no slave connection, yet is not a master.
         if (server_info->n_slaves_configured == 0)
@@ -4638,6 +4650,11 @@ static bool server_is_rejoin_suspect(MYSQL_MONITOR* mon, MXS_MONITORED_SERVER* s
                 is_suspect = true;
             }
         }
+    }
+    else if (output != NULL)
+    {
+        PRINT_MXS_JSON_ERROR(output, "Server '%s' is master or not running.",
+                             rejoin_server->server->unique_name);
     }
     return is_suspect;
 }
@@ -4664,7 +4681,7 @@ static bool get_joinable_servers(MYSQL_MONITOR* mon, ServerVector* output)
          server != NULL;
          server = server->next)
     {
-        if (server_is_rejoin_suspect(mon, server, master_info))
+        if (server_is_rejoin_suspect(mon, server, master_info, NULL))
         {
             suspects.push_back(server);
         }
