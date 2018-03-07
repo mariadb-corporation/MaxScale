@@ -600,7 +600,7 @@ static bool config_load_single_file(const char* file,
         gateway.writeq_high_water <= gateway.writeq_low_water)
     {
         rval = -1;
-        MXS_ERROR("Invaild configuration writeq_high_water should greater than writeq_low_water");
+        MXS_ERROR("Invaild configuration, writeq_high_water should be greater than writeq_low_water");
     }
 
     return rval == 0;
@@ -1724,7 +1724,9 @@ handle_global_item(const char *name, const char *value)
             gateway.writeq_high_water = get_suffixed_size(value);
             if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
             {
-                MXS_ERROR("Writeq high water mark should greater than %d", MIN_WRITEQ_HIGH_WATER);
+                MXS_WARNING("The specified writeq high water mark %d, is smaller than the minimum allowed size %d. Changing to minimum.",
+                    gateway.writeq_high_water, MIN_WRITEQ_HIGH_WATER);
+                gateway.writeq_high_water = MIN_WRITEQ_HIGH_WATER;
             }
             MXS_NOTICE("Writeq high water mark set to: %d", gateway.writeq_high_water);
         }
@@ -1733,7 +1735,9 @@ handle_global_item(const char *name, const char *value)
             gateway.writeq_low_water = get_suffixed_size(value);
             if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
             {
-                MXS_ERROR("Writeq low water mark should greater than:%d", MIN_WRITEQ_LOW_WATER);
+                MXS_WARNING("The specified writeq low water mark %d, is smaller than the minimum allowed size %d. Changing to minimum.",
+                    gateway.writeq_low_water, MIN_WRITEQ_LOW_WATER);
+                gateway.writeq_low_water = MIN_WRITEQ_LOW_WATER;
             }
             MXS_NOTICE("Writeq low water mark set to: %d", gateway.writeq_low_water);
         }
