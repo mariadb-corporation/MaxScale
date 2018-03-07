@@ -3449,67 +3449,85 @@ int create_new_listener(CONFIG_CONTEXT *obj)
 
     if (raw_service_name && protocol && (socket || port))
     {
-        char service_name[strlen(raw_service_name) + 1];
-        strcpy(service_name, raw_service_name);
-        fix_section_name(service_name);
-
-        SERVICE *service = service_find(service_name);
-        if (service)
+        if (socket && port)
         {
-            SERV_LISTENER *listener;
-            SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
-            if (socket)
-            {
-                listener = service_find_listener(service, socket, NULL, 0);
-
-                if (listener)
-                {
-                    MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                              "listener '%s' already listens on the socket '%s'.",
-                              obj->object, raw_service_name, listener->name, socket);
-                    error_count++;
-                }
-                else
-                {
-                    serviceCreateListener(service, obj->object, protocol, socket, 0,
-                                          authenticator, authenticator_options, ssl_info);
-                }
-            }
-
-            if (port)
-            {
-                listener = service_find_listener(service, NULL, address, atoi(port));
-
-                if (listener)
-                {
-                    MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
-                              "listener '%s' already listens on the port %s.",
-                              obj->object, raw_service_name, listener->name, port);
-                    error_count++;
-                }
-                else
-                {
-                    serviceCreateListener(service, obj->object, protocol, address, atoi(port),
-                                          authenticator, authenticator_options, ssl_info);
-                }
-            }
-
-            if (ssl_info && error_count)
-            {
-                free_ssl_structure(ssl_info);
-            }
+            MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                      "both 'socket' and 'port' are defined. Only either one is allowed.",
+                      obj->object, raw_service_name);
+            error_count++;
         }
         else
         {
-            MXS_ERROR("Listener '%s', service '%s' not found.", obj->object,
-                      service_name);
-            error_count++;
+            char service_name[strlen(raw_service_name) + 1];
+            strcpy(service_name, raw_service_name);
+            fix_section_name(service_name);
+
+            SERVICE *service = service_find(service_name);
+            if (service)
+            {
+                SERV_LISTENER *listener;
+                SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
+                if (socket)
+                {
+                    if (address)
+                    {
+                        MXS_WARNING("In the definition of the listener `%s', the value of "
+                                    "'address' lacks meaning as the listener listens on a "
+                                    "domain socket ('%s') and not on a port.",
+                                    obj->object, socket);
+                    }
+
+                    listener = service_find_listener(service, socket, NULL, 0);
+
+                    if (listener)
+                    {
+                        MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                                  "listener '%s' already listens on the socket '%s'.",
+                                  obj->object, raw_service_name, listener->name, socket);
+                        error_count++;
+                    }
+                    else
+                    {
+                        serviceCreateListener(service, obj->object, protocol, socket, 0,
+                                              authenticator, authenticator_options, ssl_info);
+                    }
+                }
+
+                if (port)
+                {
+                    listener = service_find_listener(service, NULL, address, atoi(port));
+
+                    if (listener)
+                    {
+                        MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                                  "listener '%s' already listens on the port %s.",
+                                  obj->object, raw_service_name, listener->name, port);
+                        error_count++;
+                    }
+                    else
+                    {
+                        serviceCreateListener(service, obj->object, protocol, address, atoi(port),
+                                              authenticator, authenticator_options, ssl_info);
+                    }
+                }
+
+                if (ssl_info && error_count)
+                {
+                    free_ssl_structure(ssl_info);
+                }
+            }
+            else
+            {
+                MXS_ERROR("Listener '%s', service '%s' not found.", obj->object,
+                          service_name);
+                error_count++;
+            }
         }
     }
     else
     {
         MXS_ERROR("Listener '%s' is missing a required parameter. A Listener "
-                  "must have a service, port and protocol defined.", obj->object);
+                  "must have a service, protocol and port (or socket) defined.", obj->object);
         error_count++;
     }
 
