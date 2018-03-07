@@ -3456,13 +3456,17 @@ int create_new_listener(CONFIG_CONTEXT *obj)
         SERVICE *service = service_find(service_name);
         if (service)
         {
+            SERV_LISTENER *listener;
             SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
             if (socket)
             {
-                if (serviceHasListener(service, obj->object, protocol, address, 0))
+                listener = service_find_listener(service, socket, NULL, 0);
+
+                if (listener)
                 {
-                    MXS_ERROR("Listener '%s' for service '%s' already has a socket at '%s.",
-                              obj->object, service_name, socket);
+                    MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                              "listener '%s' already listens on the socket '%s'.",
+                              obj->object, raw_service_name, listener->name, socket);
                     error_count++;
                 }
                 else
@@ -3474,12 +3478,13 @@ int create_new_listener(CONFIG_CONTEXT *obj)
 
             if (port)
             {
-                if (serviceHasListener(service, obj->object, protocol, address, atoi(port)))
+                listener = service_find_listener(service, NULL, address, atoi(port));
+
+                if (listener)
                 {
-                    MXS_ERROR("Listener '%s', for service '%s', already have port %s.",
-                              obj->object,
-                              service_name,
-                              port);
+                    MXS_ERROR("Creation of listener '%s' for service '%s' failed, because "
+                              "listener '%s' already listens on the port %s.",
+                              obj->object, raw_service_name, listener->name, port);
                     error_count++;
                 }
                 else
