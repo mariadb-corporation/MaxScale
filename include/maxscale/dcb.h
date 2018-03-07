@@ -151,7 +151,9 @@ typedef struct dcb
     struct servlistener *listener;  /**< For a client DCB, the listener data */
     MXS_PROTOCOL    func;           /**< The protocol functions for this descriptor */
     MXS_AUTHENTICATOR authfunc;     /**< The authenticator functions for this descriptor */
-    int             writeqlen;      /**< Current number of byes in the write queue */
+    uint32_t        writeqlen;      /**< Current number of byes in the write queue */
+    uint32_t        high_water;     /**< High water mark of write queue */
+    uint32_t        low_water;      /**< Low water mark of write queue */
     GWBUF           *writeq;        /**< Write Data Queue */
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
     GWBUF           *readq;         /**< Read queue for storing incomplete reads */
@@ -176,6 +178,7 @@ typedef struct dcb
     bool            ssl_write_want_read;    /*< Flag */
     bool            ssl_write_want_write;    /*< Flag */
     bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
+    bool            high_water_reached; /** High water mark reached, to determine whether need release throttle */
     struct
     {
         struct dcb *next; /**< Next DCB in owning thread's list */
@@ -206,7 +209,7 @@ typedef enum
 #define DCB_SET_HIGH_WATER(x, hi)       (x)->low_water = (hi);
 #define DCB_BELOW_LOW_WATER(x)          ((x)->low_water && (x)->writeqlen < (x)->low_water)
 #define DCB_ABOVE_HIGH_WATER(x)         ((x)->high_water && (x)->writeqlen > (x)->high_water)
-
+#define DCB_THROTTLING_ENABLED(x)       ((x)->high_water && (x)->low_water)
 /**
  * @brief DCB system initialization function
  *

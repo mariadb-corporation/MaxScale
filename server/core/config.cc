@@ -150,6 +150,8 @@ const char CN_USERS_REFRESH_TIME[]            = "users_refresh_time";
 const char CN_VERSION_STRING[]                = "version_string";
 const char CN_WEIGHTBY[]                      = "weightby";
 const char CN_SESSION_TRACK_TRX_STATE[]       = "session_track_trx_state";
+const char CN_WRITEQ_HIGH_WATER[]             = "writeq_high_water";
+const char CN_WRITEQ_LOW_WATER[]              = "writeq_low_water";
 
 typedef struct duplicate_context
 {
@@ -591,6 +593,14 @@ static bool config_load_single_file(const char* file,
 
             MXS_ERROR("%s", errorbuffer);
         }
+    }
+
+    /* Check this after reading config is finished */
+    if ((gateway.writeq_high_water || gateway.writeq_low_water) &&
+        gateway.writeq_high_water <= gateway.writeq_low_water)
+    {
+        rval = -1;
+        MXS_ERROR("Invaild configuration, writeq_high_water should be greater than writeq_low_water");
     }
 
     return rval == 0;
@@ -1356,6 +1366,15 @@ config_nbpolls()
     return gateway.n_nbpoll;
 }
 
+uint32_t config_writeq_high_water()
+{
+    return gateway.writeq_high_water;
+}
+
+uint32_t config_writeq_low_water()
+{
+    return gateway.writeq_low_water;
+}
 /**
  * Return the configured number of milliseconds for which we wait when we do
  * a blocking poll call.
@@ -1700,6 +1719,28 @@ handle_global_item(const char *name, const char *value)
 
             gateway.users_refresh_time = users_refresh_time;
         }
+        else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
+        {
+            gateway.writeq_high_water = get_suffixed_size(value);
+            if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
+            {
+                MXS_WARNING("The specified writeq high water mark %d, is smaller than the minimum allowed size %d. Changing to minimum.",
+                    gateway.writeq_high_water, MIN_WRITEQ_HIGH_WATER);
+                gateway.writeq_high_water = MIN_WRITEQ_HIGH_WATER;
+            }
+            MXS_NOTICE("Writeq high water mark set to: %d", gateway.writeq_high_water);
+        }
+        else if (strcmp(name, CN_WRITEQ_LOW_WATER) == 0)
+        {
+            gateway.writeq_low_water = get_suffixed_size(value);
+            if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
+            {
+                MXS_WARNING("The specified writeq low water mark %d, is smaller than the minimum allowed size %d. Changing to minimum.",
+                    gateway.writeq_low_water, MIN_WRITEQ_LOW_WATER);
+                gateway.writeq_low_water = MIN_WRITEQ_LOW_WATER;
+            }
+            MXS_NOTICE("Writeq low water mark set to: %d", gateway.writeq_low_water);
+        }
         else
         {
             MXS_ERROR("%s is an invalid value for '%s', using default %d instead.",
@@ -1913,6 +1954,8 @@ void config_set_global_defaults()
     gateway.promoted_at = 0;
 
     gateway.thread_stack_size = 0;
+    gateway.writeq_high_water = 0;
+    gateway.writeq_low_water = 0;
     pthread_attr_t attr;
     if (pthread_attr_init(&attr) == 0)
     {
@@ -4051,6 +4094,8 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, "connector_plugindir", json_string(get_connector_plugindir()));
     json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
     json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
+    json_object_set_new(param, CN_WRITEQ_HIGH_WATER, json_integer(config_writeq_high_water()));
+    json_object_set_new(param, CN_WRITEQ_LOW_WATER, json_integer(config_writeq_low_water()));
 
     MXS_CONFIG* cnf = config_get_global_options();
 

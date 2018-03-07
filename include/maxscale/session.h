@@ -136,6 +136,7 @@ typedef struct session
     mxs_session_state_t     state;            /*< Current descriptor state */
     uint64_t                ses_id;           /*< Unique session identifier */
     struct dcb              *client_dcb;      /*< The client connection */
+
     struct mxs_router_session *router_session;  /*< The router instance data */
     MXS_SESSION_STATS       stats;            /*< Session statistics */
     struct service          *service;         /*< The service this session is using */

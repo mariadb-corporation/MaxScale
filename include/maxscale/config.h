@@ -168,6 +168,8 @@ extern const char CN_USER[];
 extern const char CN_USERS[];
 extern const char CN_VERSION_STRING[];
 extern const char CN_WEIGHTBY[];
+extern const char CN_WRITEQ_HIGH_WATER[];
+extern const char CN_WRITEQ_LOW_WATER[];
 
 /**
  * The config parameter
@@ -233,6 +235,8 @@ typedef struct
     bool          substitute_variables;                /**< Should environment variables be substituted */
     char*         local_address;                       /**< Local address to use when connecting */
     time_t        users_refresh_time;                  /**< How often the users can be refreshed */
+    uint32_t      writeq_high_water;                   /**< High water mark of dcb write queue */
+    uint32_t      writeq_low_water;                    /**< Low water mark of dcb write queue */
 } MXS_CONFIG;
 
 /**
@@ -502,5 +506,19 @@ bool config_reload(void);
  * @return JSON object representing the paths used by MaxScale
  */
 json_t* config_maxscale_to_json(const char* host);
+
+/**
+ * @brief  Get DCB write queue high water mark
+ * 
+ * @return  Number of high water mark in bytes
+ */
+uint32_t config_writeq_high_water();
+
+/**
+ * @brief  Get DCB write queue low water mark
+ * 
+ * @return @return  Number of low water mark in bytes
+ */
+uint32_t config_writeq_low_water();
 
 MXS_END_DECLS
