@@ -81,6 +81,25 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
 {
     ss_dassert(this_unit.initialized);
 
+    /* From "man 7 pipe"
+     * ----
+     *
+     * O_NONBLOCK enabled, n <= PIPE_BUF
+     *   If  there  is room to write n bytes to the pipe, then write(2)
+     *   succeeds immediately, writing all n bytes; otherwise write(2)
+     *   fails, with errno set to EAGAIN.
+     *
+     * ... (On Linux, PIPE_BUF is 4096 bytes.)
+     *
+     * ----
+     *
+     * As O_NONBLOCK is set and the messages are less than 4096 bytes,
+     * O_DIRECT should not be needed and we should be safe without it.
+     *
+     * However, to be in the safe side, we first try whether it is supported,
+     * and if not, we create the pipe without O_DIRECT.
+     */
+
     MessageQueue* pThis = NULL;
 
     int fds[2];
