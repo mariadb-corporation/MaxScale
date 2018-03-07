@@ -714,34 +714,10 @@ extern "C"
 
 }
 
-void* info_copy_func(const void *val)
-{
-    ss_dassert(val);
-    MySqlServerInfo *old_val = (MySqlServerInfo*)val;
-    MySqlServerInfo *new_val = new (std::nothrow) MySqlServerInfo;
-
-    if (new_val)
-    {
-        *new_val = *old_val;
-    }
-    return new_val;
-}
-
-void info_free_func(void *val)
-{
-    if (val)
-    {
-        MySqlServerInfo *old_val = (MySqlServerInfo*)val;
-        delete old_val;
-    }
-}
-
 /**
- * @brief Helper function that initializes the server info hashtable
+ * Initialize the server info hashtable
  *
  * @param handle MariaDB monitor handle
- * @return True on success, false if initialization failed. At the moment
- *         initialization can only fail if memory allocation fails.
  */
 void init_server_info(MariaDBMonitor *handle)
 {
