@@ -21,6 +21,7 @@
 #include <netinet/tcp.h>
 #include <sys/stat.h>
 #include <string>
+#include <vector>
 
 #include <maxscale/alloc.h>
 #include <maxscale/authenticator.h>
@@ -899,31 +900,55 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
         {
             SqlModeParser sql_mode_parser;
 
-            switch (sql_mode_parser.get_sql_mode(result.value_begin(), result.value_end()))
+            const SetParser::Result::Items& values = result.values();
+
+            for (SetParser::Result::Items::const_iterator i = values.begin(); i != values.end(); ++i)
             {
-            case SqlModeParser::ORACLE:
-                session_set_autocommit(session, false);
-                session->client_protocol_data = QC_SQL_MODE_ORACLE;
-                break;
+                const SetParser::Result::Item& value = *i;
 
-            case SqlModeParser::DEFAULT:
-                session_set_autocommit(session, true);
-                session->client_protocol_data = QC_SQL_MODE_DEFAULT;
-                break;
+                switch (sql_mode_parser.get_sql_mode(value.first, value.second))
+                {
+                case SqlModeParser::ORACLE:
+                    session_set_autocommit(session, false);
+                    session->client_protocol_data = QC_SQL_MODE_ORACLE;
+                    break;
 
-            case SqlModeParser::SOMETHING:
-                break;
+                case SqlModeParser::DEFAULT:
+                    session_set_autocommit(session, true);
+                    session->client_protocol_data = QC_SQL_MODE_DEFAULT;
+                    break;
 
-            default:
-                ss_dassert(!true);
+                case SqlModeParser::SOMETHING:
+                    break;
+
+                default:
+                    ss_dassert(!true);
+                }
             }
         }
         break;
 
     case SetParser::IS_SET_MAXSCALE:
-        message = session_set_variable_value(session,
-                                             result.variable_begin(), result.variable_end(),
-                                             result.value_begin(), result.value_end());
+        {
+            const SetParser::Result::Items& variables = result.variables();
+            const SetParser::Result::Items& values = result.values();
+
+            SetParser::Result::Items::const_iterator i = variables.begin();
+            SetParser::Result::Items::const_iterator j = values.begin();
+
+            while (!message && (i != variables.end()))
+            {
+                const SetParser::Result::Item& variable = *i;
+                const SetParser::Result::Item& value = *j;
+
+                message = session_set_variable_value(session,
+                                                     variable.first, variable.second,
+                                                     value.first, value.second);
+
+                ++i;
+                ++j;
+            }
+        }
         break;
 
     case SetParser::NOT_RELEVANT:

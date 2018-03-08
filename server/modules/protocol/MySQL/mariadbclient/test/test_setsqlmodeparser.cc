@@ -191,21 +191,28 @@ int test(GWBUF** ppStmt,
     {
         if (status == SetParser::IS_SET_SQL_MODE)
         {
-            SqlModeParser sql_mode_parser;
-            SqlModeParser::sql_mode_t sql_mode = sql_mode_parser.get_sql_mode(result.value_begin(), result.value_end());
+            const SetParser::Result::Items& values = result.values();
 
-            if (sql_mode == expected_sql_mode)
+            for (SetParser::Result::Items::const_iterator i = values.begin(); i != values.end(); ++i)
             {
-                cout << "OK";
-            }
-            else
-            {
-                cout << "ERROR: Expected "
-                     << "'" << SqlModeParser::to_string(expected_sql_mode) << "'"
-                     << ", got "
-                     << "'" << SqlModeParser::to_string(sql_mode) << "'"
-                     << ".";
-                rv = EXIT_FAILURE;
+                const SetParser::Result::Item& item = *i;
+
+                SqlModeParser sql_mode_parser;
+                SqlModeParser::sql_mode_t sql_mode = sql_mode_parser.get_sql_mode(item.first, item.second);
+
+                if (sql_mode == expected_sql_mode)
+                {
+                    cout << "OK";
+                }
+                else
+                {
+                    cout << "ERROR: Expected "
+                         << "'" << SqlModeParser::to_string(expected_sql_mode) << "'"
+                         << ", got "
+                         << "'" << SqlModeParser::to_string(sql_mode) << "'"
+                         << ".";
+                    rv = EXIT_FAILURE;
+                }
             }
         }
         else

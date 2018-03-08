@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <vector>
 #include <maxscale/customparser.hh>
 #include <maxscale/protocol/mysql.h>
 
@@ -47,28 +48,28 @@ public:
     class Result
     {
     public:
+        typedef std::pair<const char*, const char*> Item;
+        typedef std::vector<Item> Items;
+
         Result()
-            : m_pVariable_begin(NULL)
-            , m_pVariable_end(NULL)
-            , m_pValue_begin(NULL)
-            , m_pValue_end(NULL)
         {}
 
-        const char* variable_begin() const { return m_pVariable_begin; }
-        const char* variable_end() const { return m_pVariable_end; }
-        const char* value_begin() const { return m_pValue_begin; }
-        const char* value_end() const { return m_pValue_end; }
+        const Items& variables() const { return m_variables; }
+        const Items& values() const { return m_values; }
 
-        void set_variable_begin(const char* pVariable_begin) { m_pVariable_begin = pVariable_begin; }
-        void set_variable_end(const char* pVariable_end) { m_pVariable_end = pVariable_end; }
-        void set_value_begin(const char* pValue_begin) { m_pValue_begin = pValue_begin; }
-        void set_value_end(const char* pValue_end) { m_pValue_end = pValue_end; }
+        void add_variable(const char *begin, const char* end)
+        {
+            m_variables.push_back(Item(begin, end));
+        }
+
+        void add_value(const char* begin, const char* end)
+        {
+            m_values.push_back(Item(begin, end));
+        }
 
     private:
-        const char* m_pVariable_begin;
-        const char* m_pVariable_end;
-        const char* m_pValue_begin;
-        const char* m_pValue_end;
+        std::vector<Item> m_variables;
+        std::vector<Item> m_values;
     };
 
     /**
@@ -270,7 +271,8 @@ private:
 
             ++m_pI;
 
-            while ((m_pI < m_pEnd) && (is_alpha(*m_pI) || is_number(*m_pI) || (*m_pI == '.') || (*m_pI == '_')))
+            while ((m_pI < m_pEnd) &&
+                   (is_alpha(*m_pI) || is_number(*m_pI) || (*m_pI == '.') || (*m_pI == '_')))
             {
                 ++m_pI;
             }
@@ -385,8 +387,7 @@ private:
 
                     if (next_token() == '=')
                     {
-                        pResult->set_variable_begin(pVariable_begin);
-                        pResult->set_variable_end(pVariable_end);
+                        pResult->add_variable(pVariable_begin, pVariable_end);
 
                         bypass_whitespace();
 
@@ -395,8 +396,7 @@ private:
 
                         consume_value(&pValue_end);
 
-                        pResult->set_value_begin(pValue_begin);
-                        pResult->set_value_end(pValue_end);
+                        pResult->add_value(pValue_begin, pValue_end);
 
                         rv = IS_SET_SQL_MODE;
                     }
@@ -417,8 +417,7 @@ private:
 
                         if (next_token() == '=')
                         {
-                            pResult->set_variable_begin(pVariable_begin);
-                            pResult->set_variable_end(pVariable_end);
+                            pResult->add_variable(pVariable_begin, pVariable_end);
 
                             bypass_whitespace();
 
@@ -427,8 +426,7 @@ private:
 
                             consume_value(&pValue_end);
 
-                            pResult->set_value_begin(pValue_begin);
-                            pResult->set_value_end(pValue_end);
+                            pResult->add_value(pValue_begin, pValue_end);
 
                             rv = IS_SET_MAXSCALE;
                         }

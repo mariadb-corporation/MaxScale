@@ -52,183 +52,328 @@ struct TEST_CASE
 {
     const char*         zStmt;
     SetParser::status_t status;
-    const char*         zVariable;
-    const char*         zValue;
+    struct EXPECTATION
+    {
+        const char* zVariable;
+        const char* zValue;
+    } expectations[10];
 } test_cases[] =
 {
     {
         "SET SQL_MODE=DEFAULT",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "DEFAULT"
+        {
+            {
+                "SQL_MODE",
+                "DEFAULT"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET SQL_MODE=DEFAULT;",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "DEFAULT"
+        {
+            {
+                "SQL_MODE",
+                "DEFAULT"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET SQL_MODE=DEFAULT;   ",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "DEFAULT"
+        {
+            {
+                "SQL_MODE",
+                "DEFAULT"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "-- This is a comment\nSET SQL_MODE=DEFAULT",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "DEFAULT"
+        {
+            {
+                "SQL_MODE",
+                "DEFAULT"
+            },
+            { NULL, NULL }
+
+        }
     },
     {
         "#This is a comment\nSET SQL_MODE=DEFAULT",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "DEFAULT"
+        {
+            {
+                "SQL_MODE",
+                "DEFAULT"
+            },
+            { NULL, NULL }
+
+        }
     },
     {
         "/*blah*/ SET /*blah*/ SQL_MODE /*blah*/ = /*blah*/ DEFAULT /*blah*/ ",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "DEFAULT"
+        {
+            {
+                "SQL_MODE",
+                "DEFAULT"
+            },
+            { NULL, NULL }
+
+        }
     },
     {
         "SET SQL_MODE=ORACLE",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+
+        }
     },
     {
         "SET SQL_MODE=BLAH",              // So short that it cannot be DEFAULT|ORACLE
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "BLAH"
+        {
+            {
+                "SQL_MODE",
+                "BLAH"
+            },
+            { NULL, NULL }
+
+        }
     },
     {
         "SET SQL_MODE='BLAH'",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "'BLAH'"
+        {
+            {
+                "SQL_MODE",
+                "'BLAH'"
+            },
+            { NULL, NULL }
+
+        }
     },
     {
         "SET SQL_MODE=BLAHBLAH",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "BLAHBLAH"
+        {
+            {
+                "SQL_MODE",
+                "BLAHBLAH"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET SQL_MODE='ORACLE'",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "'ORACLE'"
+        {
+            {
+                "SQL_MODE",
+                "'ORACLE'"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET SQL_MODE='BLAH, A, B, ORACLE'",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "'BLAH, A, B, ORACLE'"
+        {
+            {
+                "SQL_MODE",
+                "'BLAH, A, B, ORACLE'"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET SQL_MODE='BLAH, A, B, XYZ_123'",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "'BLAH, A, B, XYZ_123'"
+        {
+            {
+                "SQL_MODE",
+                "'BLAH, A, B, XYZ_123'"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET VAR1=1234, VAR2=3456, SQL_MODE='A,B, ORACLE'",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "'A,B, ORACLE'"
+        {
+            {
+                "SQL_MODE",
+                "'A,B, ORACLE'"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET SQL_MODE=ORACLE, VAR1=3456, VAR2='A=b, c=d', SQL_MODE='A,B, ORACLE'",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET GLOBAL SQL_MODE=ORACLE",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET SESSION SQL_MODE=ORACLE",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET LOCAL SQL_MODE=ORACLE",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET @@GLOBAL.SQL_MODE=ORACLE",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET @@SESSION.SQL_MODE=ORACLE",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET @@LOCAL.SQL_MODE=ORACLE",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET @@LOCAL . SQL_MODE = ORACLE",
         P::IS_SET_SQL_MODE,
-        "SQL_MODE",
-        "ORACLE"
+        {
+            {
+                "SQL_MODE",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET @@SESSION.blah = 1234, @@GLOBAL.blahblah = something, sql_mode=ORACLE",
         P::IS_SET_SQL_MODE,
-        "sql_mode",
-        "ORACLE"
+        {
+            {
+                "sql_mode",
+                "ORACLE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET MAXSCALE=",
         P::NOT_RELEVANT,
-        NULL,
-        NULL
+        {
+            { NULL, NULL }
+        }
     },
     {
         "SET MAXSCALE.CACHE.ENABLED=TRUE",
         P::NOT_RELEVANT,
-        NULL,
-        NULL
+        {
+            { NULL, NULL }
+        }
     },
     {
         "SET @MAXSCALE.CACHE.ENABLED=TRUE",
         P::IS_SET_MAXSCALE,
-        "@MAXSCALE.CACHE.ENABLED",
-        "TRUE"
+        {
+            {
+                "@MAXSCALE.CACHE.ENABLED",
+                "TRUE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET @MAXSCALE.CACHE.ENABLED = TRUE /*blah*/",
         P::IS_SET_MAXSCALE,
-        "@MAXSCALE.CACHE.ENABLED",
-        "TRUE"
+        {
+            {
+                "@MAXSCALE.CACHE.ENABLED",
+                "TRUE"
+            },
+            { NULL, NULL }
+        }
     },
     {
         "SET @MAXSCALE.CACHE.ENABLED = TRUE, @maxscale.cache.enabled = FALSE",
         P::IS_SET_MAXSCALE,
-        "@maxscale.cache.enabled",
-        "FALSE"
+        {
+            {
+                "@MAXSCALE.CACHE.ENABLED",
+                "TRUE"
+            },
+            {
+                "@maxscale.cache.enabled",
+                "FALSE"
+            },
+            { NULL, NULL }
+        }
     },
 };
 
 const int N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
 
-int test(GWBUF** ppStmt, SetParser::status_t expected_status, const char* zVariable, const char* zValue)
+int test(GWBUF** ppStmt, SetParser::status_t expected_status, const TEST_CASE::EXPECTATION expectations[])
 {
     int rv = EXIT_SUCCESS;
 
@@ -241,33 +386,72 @@ int test(GWBUF** ppStmt, SetParser::status_t expected_status, const char* zVaria
     {
         if ((status != SetParser::ERROR) && (status != SetParser::NOT_RELEVANT))
         {
-            size_t l1 = result.variable_end() - result.variable_begin();
+            const SetParser::Result::Items& variables = result.variables();
+            const SetParser::Result::Items& values = result.values();
+            ss_dassert(variables.size() == values.size());
 
-            if ((l1 == strlen(zVariable)) && (memcmp(result.variable_begin(), zVariable, l1) == 0))
+            SetParser::Result::Items::const_iterator i = variables.begin();
+            SetParser::Result::Items::const_iterator j = values.begin();
+            int k = 0;
+
+            while (i != variables.end())
             {
-                size_t l2 = result.value_end() - result.value_begin();
+                const SetParser::Result::Item& variable = *i;
+                const SetParser::Result::Item& value = *j;
+                const TEST_CASE::EXPECTATION& expectation = expectations[k];
 
-                if ((l2 == strlen(zValue)) && (memcmp(result.value_begin(), zValue, l2) == 0))
+                if (expectation.zVariable)
                 {
-                    cout << "OK";
+                    size_t l1 = variable.second - variable.first;
+
+                    if ((l1 == strlen(expectation.zVariable)) &&
+                        (memcmp(variable.first, expectation.zVariable, l1) == 0))
+                    {
+                        size_t l2 = value.second - value.first;
+
+                        if ((l2 == strlen(expectation.zValue)) &&
+                            (memcmp(value.first, expectation.zValue, l2) == 0))
+                        {
+                            cout << "OK";
+                        }
+                        else
+                        {
+                            cout << "ERROR: Expected value "
+                                 << "'" << expectation.zValue << "'"
+                                 << ", got '";
+                            cout.write(value.first, l2);
+                            cout << "'.";
+                            rv = EXIT_FAILURE;
+                        }
+                    }
+                    else
+                    {
+                        cout << "ERROR: Expected variable "
+                             << "'" << expectation.zVariable << "'"
+                             << ", got '";
+                        cout.write(variable.first, l1);
+                        cout << "'.";
+                        rv = EXIT_FAILURE;
+                    }
                 }
                 else
                 {
-                    cout << "ERROR: Expected value "
-                         << "'" << zValue << "'"
-                         << ", got '";
-                    cout.write(result.value_begin(), l2);
-                    cout << "'.";
+                    cout << "ERROR: Nothing expected for variable '";
+                    cout.write(variable.first, variable.second - variable.first);
+                    cout << "'";
                     rv = EXIT_FAILURE;
                 }
+
+                ++i;
+                ++j;
+                ++k;
             }
-            else
+
+            if (expectations[k].zVariable)
             {
-                cout << "ERROR: Expected variable "
-                     << "'" << zVariable << "'"
-                     << ", got '";
-                cout.write(result.variable_begin(), l1);
-                cout << "'.";
+                cout << "ERROR: "
+                     << expectations[k].zVariable << " = " << expectations[k].zValue
+                     << " not reported.";
                 rv = EXIT_FAILURE;
             }
         }
@@ -300,7 +484,7 @@ int test(const TEST_CASE& test_case)
     GWBUF* pStmt = gwbuf_create_com_query(test_case.zStmt);
     ss_dassert(pStmt);
 
-    rv = test(&pStmt, test_case.status, test_case.zVariable, test_case.zValue);
+    rv = test(&pStmt, test_case.status, test_case.expectations);
 
     gwbuf_free(pStmt);
 
@@ -362,7 +546,7 @@ int test_non_contiguous()
 
         cout << "): " << flush;
 
-        if (test(&pStmt, test_case.status, test_case.zVariable, test_case.zValue) == EXIT_FAILURE)
+        if (test(&pStmt, test_case.status, test_case.expectations) == EXIT_FAILURE)
         {
             rv = EXIT_FAILURE;
         }
