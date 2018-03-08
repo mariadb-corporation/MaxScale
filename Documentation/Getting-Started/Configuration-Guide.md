@@ -21,6 +21,7 @@ plugin modules that tailor the behavior of the program.
 * [Diagnostic Modules](#diagnostic-modules)
 * [Monitor Modules](#monitor-modules)
 * [Filter Modules](#filter-modules)
+* [Encrypting Passwords](#encrypting-passwords)
 * [Reloading Configuration](#reloading-configuration)
 * [Authentication](#authentication)
 * [Error Reporting](#error-reporting)
@@ -1508,6 +1509,49 @@ can add a filter to a service and combine multiple filters in one service.
 * [Database Firewall Filter](../Filters/Database-Firewall-Filter.md)
 * [Query Redirection Filter](../Filters/Named-Server-Filter.md)
 * [RabbitMQ Filter](../Filters/RabbitMQ-Filter.md)
+
+
+## Encrypting Passwords
+
+Passwords stored in the maxscale.cnf file may optionally be encrypted for added security.
+This is done by creation of an encryption key on installation of MariaDB MaxScale.
+Encryption keys may be created manually by executing the maxkeys utility with the argument
+of the filename to store the key. The default location MariaDB MaxScale stores
+the keys is `/var/lib/maxscale`.
+
+```
+ # Usage: maxkeys [PATH]
+maxkeys /var/lib/maxscale/
+```
+
+Changing the encryption key for MariaDB MaxScale will invalidate any currently
+encrypted keys stored in the maxscale.cnf file.
+
+## Creating Encrypted Passwords
+
+Encrypted passwords are created by executing the maxpasswd command with the location
+of the .secrets file and the password you require to encrypt as an argument.
+
+```
+# Usage: maxpasswd PATH PASSWORD
+maxpasswd /var/lib/maxscale/ MaxScalePw001
+61DD955512C39A4A8BC4BB1E5F116705
+```
+
+The output of the maxpasswd command is a hexadecimal string, this should be inserted
+into the maxscale.cnf file in place of the ordinary, plain text, password.
+MariaDB MaxScale will determine this as an encrypted password and automatically decrypt
+it before sending it the database server.
+
+```
+[Split Service]
+type=service
+router=readwritesplit
+servers=server1,server2,server3,server4
+user=maxscale
+password=61DD955512C39A4A8BC4BB1E5F116705
+```
+
 
 ## Reloading Configuration
 
