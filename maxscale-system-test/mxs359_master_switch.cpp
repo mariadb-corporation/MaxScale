@@ -10,9 +10,11 @@ TestConnections* global_test;
 void change_master(int next, int current)
 {
     TestConnections& test = *global_test;
+    test.maxscales->ssh_node_f(0, true, "maxadmin shutdown monitor MySQL-Monitor");
     test.repl->connect();
     test.repl->change_master(current, next);
     test.repl->close_connections();
+    test.maxscales->ssh_node_f(0, true, "maxadmin restart monitor MySQL-Monitor");
 }
 
 struct Test
