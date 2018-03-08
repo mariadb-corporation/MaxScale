@@ -617,9 +617,9 @@ void check_and_log_backend_state(const SRWBackend& backend, DCB* problem_dcb)
         /** This is a valid DCB for a backend ref */
         if (backend->in_use() && backend->dcb() == problem_dcb)
         {
-            ss_dassert(false);
             MXS_ERROR("Backend '%s' is still in use and points to the problem DCB.",
                       backend->name());
+            ss_dassert(false);
         }
     }
     else
@@ -1370,17 +1370,17 @@ static void handleError(MXS_ROUTER *instance,
     case ERRACT_NEW_CONNECTION:
         {
             if (rses->current_master && rses->current_master->in_use() &&
-                rses->current_master->dcb() == problem_dcb)
+                rses->current_master == backend)
             {
                 /** The connection to the master has failed */
                 SERVER *srv = rses->current_master->server();
                 bool can_continue = false;
 
-                if (rses->rses_config.master_failure_mode != RW_FAIL_INSTANTLY &&
-                    (!backend || !backend->is_waiting_result()))
+                if (!backend->is_waiting_result())
                 {
                     /** The failure of a master is not considered a critical
-                     * failure as partial functionality still remains. Reads
+                     * failure as partial functionality still remains. If
+                     * master_failure_mode is not set to fail_instantly, reads
                      * are allowed as long as slave servers are available
                      * and writes will cause an error to be returned.
                      *
@@ -1392,34 +1392,28 @@ static void handleError(MXS_ROUTER *instance,
                 }
                 else if (!SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
                 {
-                    MXS_ERROR("Server %s:%d lost the master status. Readwritesplit "
-                              "service can't locate the master. Client sessions "
-                              "will be closed.", srv->name, srv->port);
-                    srv->master_err_is_logged = true;
+                    ss_dassert(backend);
+                    MXS_ERROR("Server %s (%s) lost the master status while waiting"
+                              " for a result. Client sessions will be closed.",
+                              backend->name(), backend->uri());
+                    backend->server()->master_err_is_logged = true;
                 }
 
                 *succp = can_continue;
-
-                if (backend)
-                {
-                    backend->close(mxs::Backend::CLOSE_FATAL);
-                }
-                else
-                {
-                    MXS_ERROR("Server %s:%d lost the master status but could not locate the "
-                              "corresponding backend ref.", srv->name, srv->port);
-                }
+                backend->close(mxs::Backend::CLOSE_FATAL);
             }
-            else if (backend)
+            else
             {
-                if (rses->target_node &&
-                    (rses->target_node->dcb() == problem_dcb &&
-                     session_trx_is_read_only(problem_dcb->session)))
+                if (rses->target_node && rses->target_node == backend &&
+                     session_trx_is_read_only(problem_dcb->session))
                 {
-                    /** The problem DCB is the current target of a READ ONLY transaction.
-                     * Reset the target and close the session. */
-                    rses->target_node.reset();
+                    /**
+                     * We were locked to a single node but the node died. Currently
+                     * this only happens with read-only transactions so the only
+                     * thing we can do is to close the connection.
+                     */
                     *succp = false;
+                    backend->close(mxs::Backend::CLOSE_FATAL);
                 }
                 else
                 {
