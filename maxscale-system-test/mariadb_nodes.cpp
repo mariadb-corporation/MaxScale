@@ -257,36 +257,29 @@ int Mariadb_nodes::find_master()
 
 int Mariadb_nodes::change_master(int NewMaster, int OldMaster)
 {
-    int i;
-    //int OldMaster = FindMaster();
-    char log_file[256];
-    char log_pos[256];
-    char str[1024];
-
-    for (i = 0; i < N; i++)
+    for (int i = 0; i < N; i++)
     {
-        if (i != OldMaster)
-        {
-            execute_query(nodes[i], (char *) "stop slave;");
-        }
+        execute_query(nodes[i], "STOP SLAVE");
     }
-    execute_query(nodes[NewMaster], "STOP SLAVE");
+
     execute_query(nodes[NewMaster], "RESET SLAVE ALL");
     execute_query(nodes[NewMaster], create_repl_user);
+    execute_query(nodes[OldMaster], "RESET MASTER");
 
-    execute_query(nodes[OldMaster], "reset master;");
+    char log_file[256];
+    char log_pos[256];
     find_field(nodes[NewMaster], "show master status", "File", &log_file[0]);
     find_field(nodes[NewMaster], "show master status", "Position", &log_pos[0]);
 
-    for (i = 0; i < N; i++)
+    for (int i = 0; i < N; i++)
     {
         if (i != NewMaster)
         {
+            char str[1024];
             sprintf(str, setup_slave, IP[NewMaster], log_file, log_pos, port[NewMaster]);
             execute_query(nodes[i], str);
         }
     }
-    //for (i = 0; i < N; i++) {if (i != NewMaster) {execute_query(nodes[i], (char *) "start slave;"); }}
 }
 
 int Mariadb_nodes::stop_node(int node)
