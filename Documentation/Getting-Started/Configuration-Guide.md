@@ -888,9 +888,6 @@ In versions of MySQL 5.7.6 and later, the `Password` column was replaced by
 `authentication_string`. Change `user.password` above with
 `user.authentication_string`.
 
-**Note**: If authentication fails, MaxScale will try to refresh the list of
-database users used by the service up to 4 times every 30 seconds.
-
 <a id="passwd"></a>
 #### `password`
 
