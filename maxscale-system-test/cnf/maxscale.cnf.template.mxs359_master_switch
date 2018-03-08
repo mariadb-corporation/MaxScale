@@ -16,7 +16,7 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
 passwd=skysql
-allow_master_replacement=true
+allow_master_change=true
 
 [RW-Split-Listener]
 type=listener
