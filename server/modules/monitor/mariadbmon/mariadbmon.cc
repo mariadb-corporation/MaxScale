@@ -1521,6 +1521,7 @@ static bool slave_receiving_events(MYSQL_MONITOR* handle)
         MySqlServerInfo* info = get_server_info(handle, server);
 
         if (info->slave_configured &&
+            info->slave_status.slave_io_running &&
             info->slave_status.master_server_id == master_id &&
             difftime(time(NULL), info->latest_event) < handle->master_failure_timeout)
         {
