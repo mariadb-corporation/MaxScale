@@ -106,7 +106,9 @@ type=listener
 service=Read-Service
 ```
 
-A listener must also define the protocol module it will use for the incoming network protocol, currently this should be the MariaDBClient protocol for all database listeners. The listener may then supply a network port to listen on and/or a socket within the file system.
+A listener must also define the protocol module it will use for the incoming
+network protocol, currently this must be the `MariaDBClient` protocol for all
+database listeners. The listener must also supply the network port to listen on.
 
 ```
 [Write-Listener]
@@ -114,7 +116,6 @@ type=listener
 service=Write-Service
 protocol=MariaDBClient
 port=4306
-socket=/tmp/ClusterMaster
 
 [Read-Listener]
 type=listener

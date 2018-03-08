@@ -106,9 +106,8 @@ service=Splitter Service
 ```
 
 A listener must also define the protocol module it will use for the incoming
-network protocol, currently this should be the `MariaDBClient` protocol for all
-database listeners. The listener may then supply a network port to listen on
-and/or a socket within the file system.
+network protocol, currently this must be the `MariaDBClient` protocol for all
+database listeners. The listener must also supply the network port to listen on.
 
 ```
 [Splitter Listener]
@@ -116,7 +115,6 @@ type=listener
 service=Splitter Service
 protocol=MariaDBClient
 port=3306
-socket=/tmp/ClusterMaster
 ```
 
 An address parameter may be given if the listener is required to bind to a
