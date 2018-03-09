@@ -238,6 +238,24 @@ bool serviceAddBackend(SERVICE *service, SERVER *server);
 bool serviceHasBackend(SERVICE *service, SERVER *server);
 
 /**
+ * @brief Find listener with specified properties.
+ *
+ * @param service Service to check
+ * @param socket  Listener socket path
+ * @param address Listener address
+ * @param port    Listener port number
+ *
+ * @note Either socket should be NULL and port non-zero or socket
+ *       non-NULL and port zero.
+ *
+ * @return True if service has the listener
+ */
+SERV_LISTENER* service_find_listener(SERVICE* service,
+                                     const char* socket,
+                                     const char* address,
+                                     unsigned short port);
+
+/**
  * @brief Check if a service has a listener
  *
  * @param service Service to check

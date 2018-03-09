@@ -806,6 +806,46 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const c
     return proto;
 }
 
+SERV_LISTENER* service_find_listener(SERVICE* service,
+                                     const char* socket,
+                                     const char* address, unsigned short port)
+{
+    LISTENER_ITERATOR iter;
+
+    for (SERV_LISTENER *listener = listener_iterator_init(service, &iter);
+         listener; listener = listener_iterator_next(&iter))
+    {
+        if (listener_is_active(listener))
+        {
+            bool is_same_port = false;
+
+            if (port && (port == listener->port) &&
+                ((address && listener->address && strcmp(listener->address, address) == 0) ||
+                 (address == NULL && listener->address == NULL)))
+            {
+                is_same_port = true;
+            }
+
+            bool is_same_socket = false;
+
+            if (!is_same_port)
+            {
+                if (socket && listener->address && strcmp(listener->address, socket) == 0)
+                {
+                    is_same_socket = true;
+                }
+            }
+
+            if (is_same_port || is_same_socket)
+            {
+                return listener;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 /**
  * Check if a protocol/port pair is part of the service
  *

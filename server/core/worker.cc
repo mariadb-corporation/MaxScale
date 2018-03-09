@@ -228,7 +228,6 @@ bool Worker::init()
 {
     ss_dassert(!this_unit.initialized);
 
-    this_unit.n_workers = config_threadcount();
     this_unit.number_poll_spins = config_nbpolls();
     this_unit.max_poll_sleep = config_pollsleep();
 
@@ -236,33 +235,37 @@ bool Worker::init()
 
     if (this_unit.epoll_listener_fd != -1)
     {
-        this_unit.ppWorkers = new (std::nothrow) Worker* [this_unit.n_workers] (); // Zero initialized array
+        int n_workers = config_threadcount();
+        Worker** ppWorkers = new (std::nothrow) Worker* [n_workers] (); // Zero initialized array
 
-        if (this_unit.ppWorkers)
+        if (ppWorkers)
         {
-            for (int i = 0; i < this_unit.n_workers; ++i)
+            for (int i = 0; i < n_workers; ++i)
             {
                 Worker* pWorker = Worker::create(i, this_unit.epoll_listener_fd);
 
                 if (pWorker)
                 {
-                    this_unit.ppWorkers[i] = pWorker;
+                    ppWorkers[i] = pWorker;
                 }
                 else
                 {
                     for (int j = i - 1; j >= 0; --j)
                     {
-                        delete this_unit.ppWorkers[j];
+                        delete ppWorkers[j];
                     }
 
-                    delete this_unit.ppWorkers;
-                    this_unit.ppWorkers = NULL;
+                    delete [] ppWorkers;
+                    ppWorkers = NULL;
                     break;
                 }
             }
 
-            if (this_unit.ppWorkers)
+            if (ppWorkers)
             {
+                this_unit.ppWorkers = ppWorkers;
+                this_unit.n_workers = n_workers;
+
                 this_unit.initialized = true;
             }
         }
@@ -977,10 +980,12 @@ void Worker::shutdown()
 void Worker::shutdown_all()
 {
     // NOTE: No logging here, this function must be signal safe.
+    ss_dassert((this_unit.n_workers == 0) || (this_unit.ppWorkers != NULL));
 
     for (int i = 0; i < this_unit.n_workers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
+        ss_dassert(pWorker);
 
         pWorker->shutdown();
     }

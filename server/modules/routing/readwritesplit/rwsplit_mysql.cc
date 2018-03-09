@@ -179,7 +179,7 @@ log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
         const char *hint = querybuf->hint == NULL ? "" : ", Hint:";
         const char *hint_type = querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type);
 
-        MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, pastmt: %.*s%s %s",
+        MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
                  autocommit, transaction, command, STRPACKETTYPE(command), plen,
                  querytype, len, sql, hint, hint_type);
 
