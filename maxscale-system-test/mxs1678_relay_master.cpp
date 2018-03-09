@@ -20,6 +20,7 @@ int main(int argc, char** argv)
     StringSet master = {"Master", "Running"};
     StringSet slave = {"Slave", "Running"};
     StringSet relay_master = {"Relay Master", "Slave", "Running"};
+    StringSet relay_master_only = {"Relay Master", "Running"};
 
     test.tprintf("Checking before stopping IO thread");
     int exit_code;
@@ -41,7 +42,7 @@ int main(int argc, char** argv)
     free(output);
     test.add_result(test.maxscales->get_server_status("server1") != master, "server1 is not a master");
     test.add_result(test.maxscales->get_server_status( "server2") != slave, "server2 is not a slave");
-    test.add_result(test.maxscales->get_server_status("server3") != relay_master, "server3 is not a relay master");
+    test.add_result(test.maxscales->get_server_status("server3") != relay_master_only, "server3 is not a relay master");
     test.add_result(test.maxscales->get_server_status("server4") != slave, "server4 is not a slave");
 
     test.repl->fix_replication();
