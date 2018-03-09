@@ -311,39 +311,118 @@ enabled=false
 ```
 Default is `true`.
 
-Note that this affects only whether data from the cache is returned; the
-cache will be populated normally. Please see
+The value affects the initial state of the MaxScale user
+variables using which the behaviour of the cache can be modified
+at runtime. Please see
 [Runtime Configuration](#runtime-configuation)
-for how to enable/disable the cache at runtime.
+for details.
 
 ## Runtime Configuration
 
-Using the variable `@maxscale.cache.enabled` it is possible to specify at
-runtime whether the cache should be used or not. Its initial value is the
-value of the configuration parameter `enabled`. That is, by default the
+### `@maxscale.cache.populate`
+Using the variable `@maxscale.cache.populate` it is possible to specify at
+runtime whether the cache should be populated or not. Its initial value is
+the value of the configuration parameter `enabled`. That is, by default the
 value is `true`.
 
 The purpose of this variable is make it possible for an application to decide
-statement by statement whether data from the cache can be returned.
+statement by statement whether the cache should be populated.
 ```
-set @maxscale.cache.enabled=false;
+SET @maxscale.cache.populate=true;
 SELECT a, b FROM tbl;
-set @maxscale.cache.enabled=true;
-select c, d FROM tbl;
+SET @maxscale.cache.populate=false;
+SELECT a, b FROM tbl;
 ```
 In the example above, the first `SELECT` will always be sent to the
-server, while the latter will be served from the cache, unless the data is
-stale.
+server and the result will be cached, provided the actual cache rules
+specifies that it should be. The second `SELECT` may be served from the
+cache, depending on the value of `@maxscale.cache.use` (and the cache
+rules).
 
-Note that the value of `@maxscale.cache.enabled` has no impact on the
-population of the cache; if a `SELECT` matches the rules then the data
-returned from the cache will be populated.
+The value of `@maxscale.cache.populate` can be queried
+```
+SELECT @maxscale.cache.populate;
+```
+but only _after_ it has been explicitly set once.
 
-The value of `@maxscale.cache.enabled` can be queried
+### `@maxscale.cache.use`
+Using the variable `@maxscale.cache.use` it is possible to specify at
+runtime whether the cache should be used or not. Its initial value is
+the value of the configuration parameter `enabled`. That is, by default the
+value is `true`.
+
+The purpose of this variable is make it possible for an application to decide
+statement by statement whether the cache should be used.
 ```
-select @maxscale.cache.enabled;
+SET @maxscale.cache.use=true;
+SELECT a, b FROM tbl;
+SET @maxscale.cache.use=false;
+SELECT a, b FROM tbl;
 ```
-but only after it has been set once.
+The first `SELECT` will be served from the cache, providing the rules
+specify that the statement should be cached, the cache indeed contains
+the result and the date is not stale (as specified by the _TTL_).
+
+If the data is stale, the `SELECT` will be sent to the server **and**
+the cache entry will be updated, irrespective of the value of
+`@maxscale.cache.populate`.
+
+If `@maxscale.cache.use` is `true` but the result is not found in the
+cache, and the result is subsequently fetched from the server, the
+result will **not** be added to the cache, unless
+`@maxscale.cache.populate` is also `true`.
+
+The value of `@maxscale.cache.use` can be queried
+```
+SELECT @maxscale.cache.use;
+```
+but only after it has explicitly been set once.
+
+### Client Driven Caching
+With `@maxscale.cache.populate` and `@maxscale.cache.use` is it possible
+to make the caching completely client driven.
+
+Provide no `rules` file, which means that _all_ `SELECT` statements are
+subject to caching and that all users receive data from the cache. Set
+the startup mode of the cache to _disabled_.
+```
+[TheCache]
+type=filter
+module=cache
+enabled=false
+```
+Now, in order to _mark_ statements that should be cached, set
+`@maxscale.cache.populate` to `true`, and perform those `SELECT`s.
+```
+SET @maxscale.cache.populate=true;
+SELECT a, b FROM tbl1;
+SELECT c, d FROM tbl2;
+SELECT e, f FROM tbl3;
+SET @maxscale.cache.populate=false;
+```
+Note that those `SELECT`s must return something in order for the
+statement to be _marked_ for caching.
+
+After this, the value of `@maxscale.cache.use` will decide whether
+or not the cache is considered.
+```
+SET @maxscale.cache.use=true;
+SELECT a, b FROM tbl1;
+SET @maxscale.cache.use=false;
+```
+With `@maxscale.cache.use` being `true`, the cache is considered
+and the result returned from there, if not stale. If it is stale,
+the result is fetched from the server and the cached entry is updated.
+
+By setting a very long _TTL_ it is possible to prevent the cache
+from ever considering an entry to be stale and instead manually
+cause the cache to be updated when needed.
+```
+UPDATE tbl1 SET a = ...;
+SET @maxscale.cache.populate=true;
+SELECT a, b FROM tbl1;
+SET @maxscale.cache.populate=false;
+```
 
 # Rules
 

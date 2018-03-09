@@ -1119,7 +1119,7 @@ bool session_add_variable(MXS_SESSION*               session,
     {
         string key(name);
 
-        std::transform(key.begin(), key.end(), key.begin(), toupper);
+        std::transform(key.begin(), key.end(), key.begin(), tolower);
 
         if (session->variables->find(key) == session->variables->end())
         {
@@ -1153,7 +1153,7 @@ char* session_set_variable_value(MXS_SESSION* session,
 
     string key(name_begin, name_end - name_begin);
 
-    transform(key.begin(), key.end(), key.begin(), toupper);
+    transform(key.begin(), key.end(), key.begin(), tolower);
 
     SessionVarsByName::iterator i = session->variables->find(key);
 

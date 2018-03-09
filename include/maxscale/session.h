@@ -133,7 +133,9 @@ typedef struct mxs_upstream
  * has been removed. The handler must itself parse the value string.
  *
  * @param context      Context provided when handler was registered.
- * @param name         The variable that is being set.
+ * @param name         The variable that is being set. Note that it
+ *                     will always be in all lower-case irrespective
+ *                     of the case used when registering.
  * @param value_begin  The beginning of the value as specified in the
  *                     "set @maxscale.x.y = VALUE" statement.
  * @param value_end    One past the end of the VALUE.

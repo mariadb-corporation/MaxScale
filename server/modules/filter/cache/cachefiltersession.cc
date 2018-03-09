@@ -38,7 +38,8 @@ inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64
 namespace
 {
 
-const char SV_MAXSCALE_CACHE_ENABLED[] = "@maxscale.cache.enabled";
+const char SV_MAXSCALE_CACHE_POPULATE[] = "@maxscale.cache.populate";
+const char SV_MAXSCALE_CACHE_USE[] = "@maxscale.cache.use";
 
 const char* NON_CACHEABLE_FUNCTIONS[] =
 {
@@ -187,32 +188,32 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     , m_zUseDb(NULL)
     , m_refreshing(false)
     , m_is_read_only(true)
-    , m_enabled(pCache->config().enabled)
-    , m_variable_added(false)
+    , m_use(pCache->config().enabled)
+    , m_populate(pCache->config().enabled)
 {
     m_key.data = 0;
 
     reset_response_state();
 
-    if (session_add_variable(pSession, SV_MAXSCALE_CACHE_ENABLED,
-                             &CacheFilterSession::session_variable_handler, this))
-    {
-        m_variable_added = true;
-    }
-    else
+    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_POPULATE,
+                              &CacheFilterSession::session_variable_handler, this))
     {
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "enabling/disabling caching not possible.", SV_MAXSCALE_CACHE_ENABLED);
+                  "enabling/disabling the populating of the cache is not possible.",
+                  SV_MAXSCALE_CACHE_POPULATE);
+    }
+
+    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_USE,
+                              &CacheFilterSession::session_variable_handler, this))
+    {
+        MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
+                  "enabling/disabling the using of the cache not possible.",
+                  SV_MAXSCALE_CACHE_USE);
     }
 }
 
 CacheFilterSession::~CacheFilterSession()
 {
-    if (m_variable_added)
-    {
-        session_remove_variable(m_pSession, SV_MAXSCALE_CACHE_ENABLED, NULL);
-    }
-
     MXS_FREE(m_zUseDb);
     MXS_FREE(m_zDefaultDb);
 }
@@ -766,161 +767,200 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 {
     cache_action_t action = CACHE_IGNORE;
 
-    uint32_t type_mask = qc_get_trx_type_mask(pPacket); // Note, only trx-related type mask
-
-    const char* zReason = NULL;
-    const CACHE_CONFIG& config = m_pCache->config();
-
-    if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
+    if (m_use || m_populate)
     {
-        if (log_decisions())
-        {
-            zReason = "transaction start";
-        }
+        uint32_t type_mask = qc_get_trx_type_mask(pPacket); // Note, only trx-related type mask
 
-        // When a transaction is started, we initially assume it is read-only.
-        m_is_read_only = true;
-    }
-    else if (!session_trx_is_active(m_pSession))
-    {
-        if (log_decisions())
-        {
-            zReason = "no transaction";
-        }
-        action = CACHE_USE_AND_POPULATE;
-    }
-    else if (session_trx_is_read_only(m_pSession))
-    {
-        if (config.cache_in_trxs >= CACHE_IN_TRXS_READ_ONLY)
+        const char* zReason = NULL;
+        const CACHE_CONFIG& config = m_pCache->config();
+
+        if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
             if (log_decisions())
             {
-                zReason = "explicitly read-only transaction";
+                zReason = "transaction start";
+            }
+
+            // When a transaction is started, we initially assume it is read-only.
+            m_is_read_only = true;
+        }
+        else if (!session_trx_is_active(m_pSession))
+        {
+            if (log_decisions())
+            {
+                zReason = "no transaction";
             }
             action = CACHE_USE_AND_POPULATE;
         }
+        else if (session_trx_is_read_only(m_pSession))
+        {
+            if (config.cache_in_trxs >= CACHE_IN_TRXS_READ_ONLY)
+            {
+                if (log_decisions())
+                {
+                    zReason = "explicitly read-only transaction";
+                }
+                action = CACHE_USE_AND_POPULATE;
+            }
+            else
+            {
+                ss_dassert(config.cache_in_trxs == CACHE_IN_TRXS_NEVER);
+
+                if (log_decisions())
+                {
+                    zReason = "populating but not using cache inside read-only transactions";
+                }
+                action = CACHE_POPULATE;
+            }
+        }
+        else if (m_is_read_only)
+        {
+            // There is a transaction and it is *not* explicitly read-only,
+            // although so far there has only been SELECTs.
+
+            if (config.cache_in_trxs >= CACHE_IN_TRXS_ALL)
+            {
+                if (log_decisions())
+                {
+                    zReason = "ordinary transaction that has so far been read-only";
+                }
+                action = CACHE_USE_AND_POPULATE;
+            }
+            else
+            {
+                ss_dassert((config.cache_in_trxs == CACHE_IN_TRXS_NEVER) ||
+                           (config.cache_in_trxs == CACHE_IN_TRXS_READ_ONLY));
+
+                if (log_decisions())
+                {
+                    zReason =
+                        "populating but not using cache inside transaction that is not "
+                        "explicitly read-only, but that has used only SELECTs sofar";
+                }
+                action = CACHE_POPULATE;
+            }
+        }
         else
         {
-            ss_dassert(config.cache_in_trxs == CACHE_IN_TRXS_NEVER);
-
             if (log_decisions())
             {
-                zReason = "populating but not using cache inside read-only transactions";
+                zReason = "ordinary transaction with non-read statements";
             }
-            action = CACHE_POPULATE;
         }
-    }
-    else if (m_is_read_only)
-    {
-        // There is a transaction and it is *not* explicitly read-only,
-        // although so far there has only been SELECTs.
 
-        if (config.cache_in_trxs >= CACHE_IN_TRXS_ALL)
+        if (action != CACHE_IGNORE)
         {
-            if (log_decisions())
+            if (is_select_statement(pPacket))
             {
-                zReason = "ordinary transaction that has so far been read-only";
+                if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
+                {
+                    // Note that the type mask must be obtained a new. A few lines
+                    // above we only got the transaction state related type mask.
+                    type_mask = qc_get_type_mask(pPacket);
+
+                    if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
+                    {
+                        action = CACHE_IGNORE;
+                        zReason = "user variables are read";
+                    }
+                    else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+                    {
+                        action = CACHE_IGNORE;
+                        zReason = "system variables are read";
+                    }
+                    else if (uses_non_cacheable_function(pPacket))
+                    {
+                        action = CACHE_IGNORE;
+                        zReason = "uses non-cacheable function";
+                    }
+                    else if (uses_non_cacheable_variable(pPacket))
+                    {
+                        action = CACHE_IGNORE;
+                        zReason = "uses non-cacheable variable";
+                    }
+                }
             }
-            action = CACHE_USE_AND_POPULATE;
+            else
+            {
+                // A bit broad, as e.g. SHOW will cause the read only state to be turned
+                // off. However, during normal use this will always be an UPDATE, INSERT
+                // or DELETE. Note that 'm_is_read_only' only affects transactions that
+                // are not explicitly read-only.
+                m_is_read_only = false;
+
+                action = CACHE_IGNORE;
+                zReason = "statement is not SELECT";
+            }
         }
-        else
-        {
-            ss_dassert((config.cache_in_trxs == CACHE_IN_TRXS_NEVER) ||
-                       (config.cache_in_trxs == CACHE_IN_TRXS_READ_ONLY));
 
-            if (log_decisions())
+        if (action == CACHE_USE_AND_POPULATE)
+        {
+            if (!m_use && !m_populate)
             {
-                zReason =
-                    "populating but not using cache inside transaction that is not "
-                    "explicitly read-only, but that has used only SELECTs sofar";
+                action = CACHE_IGNORE;
+                zReason = "usage and populating disabled";
             }
-            action = CACHE_POPULATE;
+            else if (!m_use)
+            {
+                action = CACHE_POPULATE;
+                zReason = "usage disabled";
+            }
+            else if (!m_populate)
+            {
+                action = CACHE_USE;
+                zReason = "populating disabled";
+            }
+        }
+        else if (action == CACHE_USE)
+        {
+            if (!m_use)
+            {
+                action = CACHE_IGNORE;
+                zReason = "usage disabled";
+            }
+        }
+        else if (action == CACHE_POPULATE)
+        {
+            if (!m_populate)
+            {
+                action = CACHE_IGNORE;
+                zReason = "populating disabled";
+            }
+        }
+
+        if (log_decisions())
+        {
+            char* pSql;
+            int length;
+            const int max_length = 40;
+
+            // At this point we know it's a COM_QUERY and that the buffer is contiguous
+            modutil_extract_SQL(pPacket, &pSql, &length);
+
+            const char* zFormat;
+
+            if (length <= max_length)
+            {
+                zFormat = "%s, \"%.*s\", %s.";
+            }
+            else
+            {
+                zFormat = "%s, \"%.*s...\", %s.";
+                length = max_length - 3; // strlen("...");
+            }
+
+            const char* zDecision = (action == CACHE_IGNORE) ? "IGNORE" : "CONSULT";
+
+            ss_dassert(zReason);
+            MXS_NOTICE(zFormat, zDecision, length, pSql, zReason);
         }
     }
     else
     {
         if (log_decisions())
         {
-            zReason = "ordinary transaction with non-read statements";
+            MXS_NOTICE("IGNORE: Both 'use' and 'populate' are disabled.");
         }
-    }
-
-    if (action != CACHE_IGNORE)
-    {
-        if (is_select_statement(pPacket))
-        {
-            if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
-            {
-                // Note that the type mask must be obtained a new. A few lines
-                // above we only got the transaction state related type mask.
-                type_mask = qc_get_type_mask(pPacket);
-
-                if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
-                {
-                    action = CACHE_IGNORE;
-                    zReason = "user variables are read";
-                }
-                else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
-                {
-                    action = CACHE_IGNORE;
-                    zReason = "system variables are read";
-                }
-                else if (uses_non_cacheable_function(pPacket))
-                {
-                    action = CACHE_IGNORE;
-                    zReason = "uses non-cacheable function";
-                }
-                else if (uses_non_cacheable_variable(pPacket))
-                {
-                    action = CACHE_IGNORE;
-                    zReason = "uses non-cacheable variable";
-                }
-            }
-        }
-        else
-        {
-            // A bit broad, as e.g. SHOW will cause the read only state to be turned
-            // off. However, during normal use this will always be an UPDATE, INSERT
-            // or DELETE. Note that 'm_is_read_only' only affects transactions that
-            // are not explicitly read-only.
-            m_is_read_only = false;
-
-            action = CACHE_IGNORE;
-            zReason = "statement is not SELECT";
-        }
-    }
-
-    if (!m_enabled && (action == CACHE_USE_AND_POPULATE))
-    {
-        action = CACHE_POPULATE;
-        zReason = "usage disabled";
-    }
-
-    if (log_decisions())
-    {
-        char* pSql;
-        int length;
-        const int max_length = 40;
-
-        // At this point we know it's a COM_QUERY and that the buffer is contiguous
-        modutil_extract_SQL(pPacket, &pSql, &length);
-
-        const char* zFormat;
-
-        if (length <= max_length)
-        {
-            zFormat = "%s, \"%.*s\", %s.";
-        }
-        else
-        {
-            zFormat = "%s, \"%.*s...\", %s.";
-            length = max_length - 3; // strlen("...");
-        }
-
-        const char* zDecision = (action == CACHE_IGNORE) ? "IGNORE" : "CONSULT";
-
-        ss_dassert(zReason);
-        MXS_NOTICE(zFormat, zDecision, length, pSql, zReason);
     }
 
     return action;
@@ -1040,7 +1080,14 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
 
         if (routing_action == ROUTING_CONTINUE)
         {
-            m_state = CACHE_EXPECTING_RESPONSE;
+            if (m_populate || m_refreshing)
+            {
+                m_state = CACHE_EXPECTING_RESPONSE;
+            }
+            else
+            {
+                m_state = CACHE_IGNORING_RESPONSE;
+            }
         }
         else
         {
@@ -1053,10 +1100,8 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
             dcb->func.write(dcb, pResponse);
         }
     }
-    else
+    else if (should_populate(cache_action))
     {
-        ss_dassert(should_populate(cache_action));
-
         // We will not use any value in the cache, but we will update
         // the existing value.
         if (log_decisions())
@@ -1066,54 +1111,91 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
         }
         m_state = CACHE_EXPECTING_RESPONSE;
     }
+    else
+    {
+        // We will not use any value in the cache and we will not
+        // update the existing value either.
+        if (log_decisions())
+        {
+            MXS_NOTICE("Fetching data from server, without storing to the cache.");
+        }
+        m_state = CACHE_IGNORING_RESPONSE;
+    }
 
     return routing_action;
 }
 
-
-char* CacheFilterSession::handle_session_variable(const char* zName,
-                                                  const char* pValue_begin,
-                                                  const char* pValue_end)
+namespace
 {
+
+bool get_truth_value(const char* begin, const char* end, bool* pValue)
+{
+    bool rv = false;
+
     static const char TRUE[] = "true";
     static const char FALSE[] = "false";
 
     static const size_t nTrue = sizeof(TRUE) - 1;
     static const size_t nFalse = sizeof(FALSE) - 1;
 
-    char* message = NULL;
+    int len = (end - begin);
 
-    int len = (pValue_end - pValue_begin);
-
-    if (((len == nTrue) && (strncasecmp(pValue_begin, TRUE, nTrue) == 0)) ||
-        ((len == 1) && (*pValue_begin == '1')))
+    if (((len == nTrue) && (strncasecmp(begin, TRUE, nTrue) == 0)) ||
+        ((len == 1) && (*begin == '1')))
     {
-        MXS_INFO("Caching enabled.");
-        m_enabled = true;
+        *pValue = true;
+        rv = true;
     }
-    else if (((len == nFalse) && (strncasecmp(pValue_begin, FALSE, nFalse) == 0)) ||
-             ((len == 1) && (*pValue_begin == '0')))
+    else if (((len == nFalse) && (strncasecmp(begin, FALSE, nFalse) == 0)) ||
+             ((len == 1) && (*begin == '0')))
     {
-        MXS_INFO("Caching disabled.");
-        m_enabled = false;
+
+        *pValue = false;
+        rv = true;
+    }
+
+    return rv;
+}
+
+}
+
+char* CacheFilterSession::handle_session_variable(const char* zName,
+                                                  const char* pValue_begin,
+                                                  const char* pValue_end)
+{
+    char* zMessage = NULL;
+
+    bool enabled;
+
+    if (get_truth_value(pValue_begin, pValue_end, &enabled))
+    {
+        if (strcmp(zName, SV_MAXSCALE_CACHE_POPULATE) == 0)
+        {
+            m_populate = enabled;
+        }
+        else
+        {
+            ss_dassert(strcmp(zName, SV_MAXSCALE_CACHE_USE) == 0);
+            m_use = enabled;
+        }
     }
     else
     {
         static const char FORMAT[] = "The variable %s can only have the values true/false/1/0";
-        int n = snprintf(NULL, 0, FORMAT, SV_MAXSCALE_CACHE_ENABLED) + 1;
+        int n = snprintf(NULL, 0, FORMAT, zName) + 1;
 
-        message = static_cast<char*>(MXS_MALLOC(n));
+        zMessage = static_cast<char*>(MXS_MALLOC(n));
 
-        if (message)
+        if (zMessage)
         {
-            sprintf(message, FORMAT, SV_MAXSCALE_CACHE_ENABLED);
+            sprintf(zMessage, FORMAT, zName);
         }
 
         MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
-                    SV_MAXSCALE_CACHE_ENABLED, len, pValue_begin);
+                    zName, n, pValue_begin);
     }
 
-    return message;
+    return zMessage;
 }
 
 //static

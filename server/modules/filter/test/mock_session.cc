@@ -37,11 +37,14 @@ Session::Session(Client* pClient)
 
     strcpy(m_mysql_session.db, "dummy");
 
+    pSession->variables = new SessionVarsByName;
+
     m_client_dcb.data = &m_mysql_session;
 }
 
 Session::~Session()
 {
+    delete variables;
 }
 
 Client& Session::client() const
