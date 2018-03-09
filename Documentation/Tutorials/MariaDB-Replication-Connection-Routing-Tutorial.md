@@ -177,21 +177,8 @@ document.
 
 ## Configuring the Administrative Interface
 
-The final stage in the configuration is to add the option service which is used
-by the maxadmin command to connect to MariaDB MaxScale for monitoring and
-administration purposes. This creates a service section and a listener section.
-
-```
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
-```
+The MaxAdmin configuration is described in the
+[Configuring MaxAdmin](Configuring-MaxAdmin.md) document.
 
 ## Starting MariaDB MaxScale
 
