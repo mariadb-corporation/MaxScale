@@ -52,16 +52,7 @@ in the configuration file (to be defined later) and not the physical hostnames
 or addresses of the servers.
 
 The final part of the service configuration is the `user` and `password`
-parameters that define the credentials that the service will use to populate the
-user authentication data. To create this user, execute the following SQL commands.
-
-```
-CREATE USER 'maxscale'@'%' IDENTIFIED BY 'maxscale_pw';
-GRANT SELECT ON mysql.user TO 'maxscale'@'%';
-GRANT SELECT ON mysql.db TO 'maxscale'@'%';
-GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'%';
-GRANT SHOW DATABASES ON *.* TO 'maxscale'@'%';
-```
+parameters that define the credentials that the service will use.
 
 **Note:** For increased security [encrypt your passwords in the configuration file](Encrypting-Passwords.md).
 
