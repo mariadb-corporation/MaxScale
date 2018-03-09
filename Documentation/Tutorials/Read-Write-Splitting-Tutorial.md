@@ -1,8 +1,9 @@
-# Connection Routing with MariaDB MaxScale
+# Read/Write Splitting with MariaDB MaxScale
 
-The object of this tutorial is to have a system that has two ports
-available, one for write connections and another for read connection that
-are load balanced across all servers.
+The object of this tutorial is to have a system that appears to the client as a
+single database. MariaDB MaxScale will split the statements such that write
+statements will be sent to the current master server in the replication cluster
+and read statements will be balanced across the rest of the servers.
 
 ## Setting up MariaDB MaxScale
 
@@ -29,46 +30,26 @@ thread count, use the `threads=auto` parameter.
 threads=auto
 ```
 
-We want two different ports to which the client application can connect; one
-that will be directed to a server where writes can be sent and another that will
-load balance between all servers. To achieve this, we need to define two
-services in the configuration file.
-
-Create the following two sections in your configuration file. The section
-names are the names of the services themselves and should be meaningful to
-the administrator. For this tutorial, we use the `Write-Service` and
-`Read-Service` names for our services.
+The first step is to create a Read/Write Splitter service. Create the following
+section in your configuration file. The section name is the names of the service
+and should be meaningful to the administrator. For this tutorial, we use the
+`Splitter-Service` name for our service.
 
 ```
-[Write-Service]
+[Splitter-Service]
 type=service
-router=readconnroute
-router_options=master
-servers=dbserv1, dbserv2, dbserv3
-user=maxscale
-password=maxscale_pw
-
-[Read-Service]
-type=service
-router=readconnroute
-router_options=slave
+router=readwritesplit
 servers=dbserv1, dbserv2, dbserv3
 user=maxscale
 password=maxscale_pw
 ```
 
-The router module for these two sections is identical, the `readconnroute`
-module.
+The router module we use for this service is `readwritesplit`.
 
 The services must be provided with the list of servers where queries
 will be routed to. The server names given here are the names of server sections
 in the configuration file (to be defined later) and not the physical hostnames
 or addresses of the servers.
-
-In order to instruct the router to which servers it should route we must add the
-`router_options` parameter to the service. This parameter tells what sort of
-servers the service will use. For the write service we use the _master_ type and
-for the read service we use the _slave_ type.
 
 The final part of the service configuration is the `user` and `password`
 parameters that define the credentials that the service will use to populate the
@@ -84,28 +65,21 @@ GRANT SHOW DATABASES ON *.* TO 'maxscale'@'%';
 
 **Note:** For increased security [encrypt your passwords in the configuration file](Encrypting-Passwords.md).
 
-This completes the definitions required by the services, however listening ports
-must be associated with the services in order to allow network connections. This
-is done by creating a set of listener sections. Each service may have multiple
-listeners but for this tutorial we will only need one per service.
+This completes the service definition, however listening ports must be
+associated with the service in order to allow network connections. This is done
+by creating a separate listener section in the configuration file. A service may
+have multiple listeners but for this tutorial we will only need one.
 
 ```
-[Write-Listener]
+[Splitter-Listener]
 type=listener
-service=Write-Service
+service=Splitter-Service
 protocol=MariaDBClient
 port=3306
-
-[Read-Listener]
-type=listener
-service=Read-Service
-protocol=MariaDBClient
-port=3307
 ```
 
 The `service` parameter tells to which service the listener connects to. For the
-`Write-Listener` we set it to `Write-Service` and for the `Read-Listener` we set
-it to `Read-Service`.
+`Splitter-Listener` we set it to `Splitter-Service`.
 
 A listener must also define the protocol module it will use for the incoming
 network protocol (must be the `MariaDBClient` protocol for all database
@@ -160,8 +134,7 @@ Services.
 --------------------------+-------------------+--------+----------------+-------------------
 Service Name              | Router Module     | #Users | Total Sessions | Backend databases
 --------------------------+-------------------+--------+----------------+-------------------
-Write-Service             | readconnroute     |      1 |              1 | dbserv1, dbserv2, dbserv3
-Read-Service              | readconnroute     |      1 |              1 | dbserv1, dbserv2, dbserv3
+Splitter-Service          | readwritesplit    |      1 |              1 | dbserv1, dbserv2, dbserv3
 CLI                       | cli               |      2 |              3 |
 --------------------------+-------------------+--------+----------------+-------------------
 
@@ -182,8 +155,7 @@ Listeners.
 ---------------------+---------------------+--------------------+-----------------+-------+--------
 Name                 | Service Name        | Protocol Module    | Address         | Port  | State
 ---------------------+---------------------+--------------------+-----------------+-------+--------
-Write-Listener       | Write-Service       | MariaDBClient      | *               |  3306 | Running
-Read-Listener        | Read-Service        | MariaDBClient      | *               |  3307 | Running
+Splitter-Listener    | Splitter-Service    | MariaDBClient      | *               |  3306 | Running
 CLI-Listener         | CLI                 | maxscaled          | default         |     0 | Running
 ---------------------+---------------------+--------------------+-----------------+-------+--------
 ```
@@ -191,7 +163,7 @@ CLI-Listener         | CLI                 | maxscaled          | default       
 MariaDB MaxScale is now ready to start accepting client connections and routing
 them to the cluster. More options may be found in the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md)
-and in the [readconnroute module documentation](../Routers/ReadConnRoute.md).
+and in the [readwritesplit module documentation](../Routers/ReadWriteSplit.md).
 
 More detail on the use of `maxadmin` can be found in the
 [MaxAdmin](../Reference/MaxAdmin.md) document.
