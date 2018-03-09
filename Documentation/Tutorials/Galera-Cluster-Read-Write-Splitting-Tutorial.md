@@ -85,54 +85,14 @@ port=3306
 
 An address parameter may be given if the listener is required to bind to a particular network address when using hosts with multiple network addresses. The default behavior is to listen on all network interfaces.
 
-The next stage is the configuration is to define the server information. This defines how to connect to each of the servers within the cluster, again a section is created for each server, with the type set to server, the network address and port to connect to and the protocol to use to connect to the server. Currently the protocol module for all database connections in `MariaDBBackend`.
+## Configuring the Monitor and Servers
 
-```
-[dbserv1]
-type=server
-address=192.168.2.1
-port=3306
-protocol=MariaDBBackend
+The next step is the configuration of the monitor and the servers that the
+service uses. This is process described in the
+[Configuring Galera Monitor](Configuring-Galera-Monitor.md)
+document.
 
-[dbserv2]
-type=server
-address=192.168.2.2
-port=3306
-protocol=MariaDBBackend
-
-[dbserv3]
-type=server
-address=192.168.2.3
-port=3306
-protocol=MariaDBBackend
-```
-
-In order for MariaDB MaxScale to monitor the servers using the correct monitoring mechanisms a section should be provided that defines the monitor to use and the servers to monitor. Once again a section is created with a symbolic name for the monitor, with the type set to monitor. Parameters are added for the module to use, the list of servers to monitor and the username and password to use when connecting to the the servers with the monitor.
-
-```
-[Galera Monitor]
-type=monitor
-module=galeramon
-servers=dbserv1, dbserv2, dbserv3
-user=maxscale
-passwd=96F99AA1315BDC3604B006F427DD9484
-```
-
-As with the password definition in the server either plain text or encrypted passwords may be used.
-
-This monitor module will assign one node within the Galera Cluster as the current master and other nodes as slave. Only those nodes that are active members of the cluster are considered when making the choice of master node. Normally the master node will be the node with the lowest value of the status variable, `WSREP_LOCAL_INDEX`. When cluster membership changes a new master may be elected. In order to prevent changes of the node that is currently master, a parameter can be added to the monitor that will result in the current master remaining as master even if a node with a lower value of `WSREP_LOCAL_INDEX` joins the cluster. This parameter is called `disable_master_failback`.
-
-```
-[Galera Monitor]
-type=monitor
-module=galeramon
-disable_master_failback=1
-servers=dbserv1, dbserv2, dbserv3
-user=maxscale
-passwd=96F99AA1315BDC3604B006F427DD9484
-```
-
-Using this option the master node will only change if there is a problem with the current master and never because other nodes have joined the cluster.
+## Configuring the Administrative Interface
 
 The final stage in the configuration is to add the option service which is used by the maxadmin command to connect to MariaDB MaxScale for monitoring and administration purposes. This creates a service section and a listener section.
 

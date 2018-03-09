@@ -126,41 +126,14 @@ port=4307
 
 An address parameter may be given if the listener is required to bind to a particular network address when using hosts with multiple network addresses. The default behavior is to listen on all network interfaces.
 
-The next stage is the configuration is to define the server information. This defines how to connect to each of the servers within the cluster, again a section is created for each server, with the type set to server, the network address and port to connect to and the protocol to use to connect to the server. Currently the protocol for all database connections in MariaDBBackend.
+## Configuring the Monitor and Servers
 
-```
-[dbserv1]
-type=server
-address=192.168.2.1
-port=3306
-protocol=MariaDBBackend
+The next step is the configuration of the monitor and the servers that the
+service uses. This is process described in the
+[Configuring MariaDB Monitor](Configuring-MariaDB-Monitor.md)
+document.
 
-[dbserv2]
-type=server
-address=192.168.2.2
-port=3306
-protocol=MariaDBBackend
-
-[dbserv3]
-type=server
-address=192.168.2.3
-port=3306
-protocol=MariaDBBackend
-```
-
-In order for MariaDB MaxScale to monitor the servers using the correct monitoring mechanisms a section should be provided that defines the monitor to use and the servers to monitor. Once again a section is created with a symbolic name for the monitor, with the type set to monitor. Parameters are added for the module to use, the list of servers to monitor and the username and password to use when connecting to the the servers with the monitor.
-
-```
-[Replication-Monitor]
-type=monitor
-module=mariadbmon
-servers=dbserv1, dbserv2, dbserv3
-user=maxscale
-passwd=96F99AA1315BDC3604B006F427DD9484
-monitor_interval=10000
-```
-
-As with the password definition in the server either plain text or encrypted passwords may be used.
+## Configuring the Administrative Interface
 
 The final stage in the configuration is to add the option service which is used by the maxadmin command to connect to MariaDB MaxScale for monitoring and administration purposes. This creates a service section and a listener section.
 

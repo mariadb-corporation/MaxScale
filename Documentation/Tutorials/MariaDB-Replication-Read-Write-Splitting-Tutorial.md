@@ -121,49 +121,14 @@ An address parameter may be given if the listener is required to bind to a
 particular network address when using hosts with multiple network addresses. The
 default behavior is to listen on all network interfaces.
 
-The next stage in the configuration is to define the backend servers. The
-definitions include how to connect to the servers. A section is created for each
-server and it contains: `type` set to `server`, the network address and port,
-and the protocol to use. Currently, the protocol module for all database
-connections is `MariaDBBackend`.
+## Configuring the Monitor and Servers
 
-```
-[dbserv1]
-type=server
-address=192.168.2.1
-port=3306
-protocol=MariaDBBackend
+The next step is the configuration of the monitor and the servers that the
+service uses. This is process described in the
+[Configuring MariaDB Monitor](Configuring-MariaDB-Monitor.md)
+document.
 
-[dbserv2]
-type=server
-address=192.168.2.2
-port=3306
-protocol=MariaDBBackend
-
-[dbserv3]
-type=server
-address=192.168.2.3
-port=3306
-protocol=MariaDBBackend
-```
-
-For MariaDB MaxScale to monitor the servers using the correct monitoring
-mechanisms a monitor section should be written. This section defines the monitor
-module to use and the monitored servers. The section `type` should be set to
-`monitor`. Parameters added include: the list of servers to monitor and the
-username and password the monitor module should use when connecting.
-
-```
-[Replication Monitor]
-type=monitor
-module=mariadbmon
-servers=dbserv1, dbserv2, dbserv3
-user=maxscale
-passwd=96F99AA1315BDC3604B006F427DD9484
-```
-
-Similarly to the password definition in the server either a plain text or an
-encrypted password may be used.
+## Configuring the Administrative Interface
 
 The final stage in the configuration is to add the service which used by the
 `maxadmin` command to connect to MariaDB MaxScale for monitoring and
