@@ -752,6 +752,7 @@ gw_read_and_write(DCB *dcb)
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) ||
         rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
+        proto->collect_result ||
         proto->ignore_replies != 0)
     {
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
