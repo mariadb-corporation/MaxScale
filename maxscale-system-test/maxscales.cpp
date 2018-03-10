@@ -417,3 +417,17 @@ StringSet Maxscales::get_server_status(const char* name, int m)
 
     return rval;
 }
+
+int Maxscales::port(enum service type, int m) const
+{
+    switch (type)
+    {
+    case RWSPLIT:
+        return rwsplit_port[m];
+    case READCONN_MASTER:
+        return readconn_master_port[m];
+    case READCONN_SLAVE:
+        return readconn_slave_port[m];
+    }
+    return -1;
+}

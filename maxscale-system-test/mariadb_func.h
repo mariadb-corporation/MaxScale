@@ -71,7 +71,7 @@ MYSQL* open_conn_db_timeout(int port, std::string ip, std::string db, std::strin
  * @return MYSQL struct
  */
 static MYSQL* open_conn_db(int port, std::string ip, std::string db, std::string user, std::string password,
-                     bool ssl)
+                     bool ssl = false)
 {
     return open_conn_db_flags(port, ip, db, user, password, CLIENT_MULTI_STATEMENTS, ssl);
 }
@@ -87,7 +87,7 @@ static MYSQL* open_conn_db(int port, std::string ip, std::string db, std::string
  *
  * @return MYSQL struct
  */
-static MYSQL* open_conn(int port, std::string ip, std::string user, std::string password, bool ssl)
+static MYSQL* open_conn(int port, std::string ip, std::string user, std::string password, bool ssl = false)
 {
     return open_conn_db(port, ip.c_str(), "test", user.c_str(), password.c_str(), ssl);
 }
@@ -103,7 +103,7 @@ static MYSQL* open_conn(int port, std::string ip, std::string user, std::string 
  *
  * @return MYSQL struct
  */
-static MYSQL* open_conn_no_db(int port, std::string ip, std::string user, std::string password, bool ssl)
+static MYSQL* open_conn_no_db(int port, std::string ip, std::string user, std::string password, bool ssl = false)
 {
     return open_conn_db_flags(port, ip, "", user, password, CLIENT_MULTI_STATEMENTS, ssl);
 }

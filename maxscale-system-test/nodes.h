@@ -93,7 +93,7 @@ public:
      *
      * @return The current IP address
      */
-    char* ip(int i) const;
+    const char* ip(int i = 0) const;
 
     /**
      * @brief Generate command line to execute command on the node via ssh
