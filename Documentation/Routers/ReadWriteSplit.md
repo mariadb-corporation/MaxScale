@@ -123,6 +123,14 @@ to change as long as the session meets the following criteria:
 * No `LOAD DATA LOCAL INFILE` is in progress
 * There are no queries being actively routed to the old master
 
+When `allow_master_change` is enabled in conjunction with either
+`master_failure_mode=fail_on_write` or `master_failure_mode=error_on_write`, the
+session can recover from the loss of a master server. This means that when a
+session starts without a master server and later a slave server that it is
+connected to is promoted as the master, the session will come out of the
+read-only mode (described in detail in the
+[`master_failure_mode`](#master_failure_mode) documentation).
+
 ## Router options
 
 **`router_options`** may include multiple **readwritesplit**-specific options.
@@ -285,8 +293,10 @@ that in _fail_on_write_ or _error_on_write_ mode, connections are accepted as
 long as slave servers are available.
 
 **Note:** If _master_failure_mode_ is set to _error_on_write_ and the connection
-to the master is lost, clients will not be able to execute write queries without
-reconnecting to MariaDB MaxScale once a new master is available.
+to the master is lost, by default, clients will not be able to execute write
+queries without reconnecting to MariaDB MaxScale once a new master is
+available. If [`allow_master_change`](#allow_master_change) is enabled, the
+session can recover if one of the slaves is promoted as the master.
 
 ### `retry_failed_reads`
 
