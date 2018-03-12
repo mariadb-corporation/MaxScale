@@ -163,6 +163,18 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
     mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
     mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
 
+    MXS_CONFIG* config = config_get_global_options();
+
+    if (config->local_address)
+    {
+        if (mysql_optionsv(con, MYSQL_OPT_BIND, config->local_address) != 0)
+        {
+            MXS_ERROR("'local_address' specified in configuration file, but could not "
+                      "configure MYSQL handle. MaxScale will try to connect using default "
+                      "address.");
+        }
+    }
+
     MYSQL* mysql = mysql_real_connect(con, server->name, user, passwd, NULL, server->port, NULL, 0);
 
     if (mysql)
