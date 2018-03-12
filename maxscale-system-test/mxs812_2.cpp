@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     }
 
     Test->stop_timeout();
-    sleep(5);
+    sleep(20);
     Test->check_maxscale_alive(0);
     Test->check_current_operations(0, 0);
 
