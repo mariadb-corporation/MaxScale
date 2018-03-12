@@ -259,13 +259,19 @@ int Mariadb_nodes::change_master(int NewMaster, int OldMaster)
 {
     for (int i = 0; i < N; i++)
     {
-        execute_query(nodes[i], "STOP SLAVE");
+        if (mysql_ping(nodes[i]) == 0)
+        {
+            execute_query(nodes[i], "STOP SLAVE");
+        }
     }
 
     execute_query(nodes[NewMaster], "RESET SLAVE ALL");
     execute_query(nodes[NewMaster], create_repl_user);
-    execute_query(nodes[OldMaster], "RESET MASTER");
 
+    if (mysql_ping(nodes[OldMaster]) == 0)
+    {
+        execute_query(nodes[OldMaster], "RESET MASTER");
+    }
     char log_file[256];
     char log_pos[256];
     find_field(nodes[NewMaster], "show master status", "File", &log_file[0]);
@@ -273,7 +279,7 @@ int Mariadb_nodes::change_master(int NewMaster, int OldMaster)
 
     for (int i = 0; i < N; i++)
     {
-        if (i != NewMaster)
+        if (i != NewMaster && mysql_ping(nodes[i]) == 0)
         {
             char str[1024];
             sprintf(str, setup_slave, IP[NewMaster], log_file, log_pos, port[NewMaster]);

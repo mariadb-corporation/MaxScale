@@ -414,6 +414,9 @@ add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol LIGHT GALERA_B
 # Testing of the master replacement feature
 add_test_executable(mxs359_master_switch.cpp mxs359_master_switch mxs359_master_switch LABELS REPL_BACKEND)
 
+# Test read-only connections with master replacement
+add_test_executable(mxs359_read_only.cpp mxs359_read_only mxs359_read_only LABELS REPL_BACKEND)
+
 # Binary protocol prepared statement tests
 add_test_executable(binary_ps.cpp binary_ps replication LABELS readwritesplit LIGHT REPL_BACKEND)
 add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS readwritesplit LIGHT REPL_BACKEND)
