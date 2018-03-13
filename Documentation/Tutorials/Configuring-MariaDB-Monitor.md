@@ -1,34 +1,11 @@
 # Configuring the MariaDB Monitor
 
-This document describes how to configure a MariaDB master-slave cluster monitor to be used with MaxScale.
-
-## Configuring the Servers
-
-The first step is to define the servers that make up the cluster. These servers will be used by the services and are monitored by the monitor.
-
-```
-[dbserv1]
-type=server
-address=192.168.2.1
-port=3306
-protocol=MariaDBBackend
-
-[dbserv2]
-type=server
-address=192.168.2.2
-port=3306
-protocol=MariaDBBackend
-
-[dbserv3]
-type=server
-address=192.168.2.3
-port=3306
-protocol=MariaDBBackend
-```
+This document describes how to configure a MariaDB master-slave cluster monitor
+to be used with MaxScale.
 
 ## Configuring the Monitor
 
-The next step is to define the monitor that monitors the servers.
+Define the monitor that monitors the servers.
 
 ```
 [Replication-Monitor]

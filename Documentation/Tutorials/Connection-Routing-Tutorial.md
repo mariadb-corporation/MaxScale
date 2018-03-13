@@ -107,10 +107,15 @@ to bind to a particular network interface when the host machine has multiple
 network interfaces. The default behavior is to listen on all network interfaces
 (the IPv6 address `::`).
 
+## Configuring Servers
+
+Read the [Configuring Servers](Configuring-Servers.md) mini-tutorial to see how
+the servers are configured.
+
 ## Configuring the Monitor and Servers
 
-The next step is the configuration of the monitor and the servers that the
-service uses. This depends on the type of cluster you use with MaxScale.
+The next step is the configuration of the monitor. This depends on the type of
+cluster you use with MaxScale.
 
 For master-slave clusters read the
 [Configuring MariaDB Monitor](Configuring-MariaDB-Monitor.md)
