@@ -23,11 +23,13 @@ int main(int argc, char *argv[])
     test->try_query(test->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
     test->close_maxscale_connections();
 
+    test->repl->connect();
+    test->repl->sync_slaves();
+
     test->tprintf(" Block all but one node ");
     test->repl->block_node(0);
     test->repl->block_node(1);
     test->repl->block_node(2);
-    test->repl->connect();
     execute_query(test->repl->nodes[3], "STOP SLAVE;RESET SLAVE ALL;");
 
     test->tprintf(" Wait for the monitor to detect it ");
