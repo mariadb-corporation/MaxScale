@@ -18,7 +18,7 @@ create the configuration file for MariaDB MaxScale.
 MariaDB MaxScale reads its configuration from `/etc/maxscale.cnf`. A template
 configuration is provided with the MaxScale installation.
 
-A global `[maxscale]` section is included within every MariaDB MaxScale
+A global `[maxscale]` section is included in every MariaDB MaxScale
 configuration file; this is used to set the values of various global parameters,
 perhaps the most important of these is the number of threads that MariaDB
 MaxScale will use to handle client requests. To automatically configure the
@@ -28,6 +28,24 @@ thread count, use the `threads=auto` parameter.
 [maxscale]
 threads=auto
 ```
+
+## Configuring Servers
+
+Read the [Configuring Servers](Configuring-Servers.md) mini-tutorial to see how
+the servers are configured.
+
+## Configuring the Monitor
+
+The next step is the configuration of the monitor. This depends on the type of
+cluster you use with MaxScale.
+
+For master-slave clusters read the
+[Configuring MariaDB Monitor](Configuring-MariaDB-Monitor.md)
+tutorial. If you are using a Galera cluster, read the
+[Configuring Galera Monitor](Configuring-Galera-Monitor.md)
+tutorial instead.
+
+## Configuring the Service
 
 We want two different ports to which the client application can connect; one
 that will be directed to a server where writes can be sent and another that will
@@ -71,14 +89,25 @@ servers the service will use. For the write service we use the _master_ type and
 for the read service we use the _slave_ type.
 
 The final part of the service configuration is the `user` and `password`
-parameters that define the credentials that the service will use.
+parameters that define the credentials that the service will use to populate the
+user authentication data. To create this user, execute the following SQL commands.
+
+```
+CREATE USER 'maxscale'@'%' IDENTIFIED BY 'maxscale_pw';
+GRANT SELECT ON mysql.user TO 'maxscale'@'%';
+GRANT SELECT ON mysql.db TO 'maxscale'@'%';
+GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'%';
+GRANT SHOW DATABASES ON *.* TO 'maxscale'@'%';
+```
 
 **Note:** For increased security [encrypt your passwords in the configuration file](Encrypting-Passwords.md).
 
-This completes the definitions required by the services, however listening ports
-must be associated with the services in order to allow network connections. This
-is done by creating a set of listener sections. Each service may have multiple
-listeners but for this tutorial we will only need one per service.
+## Configuring the Listener
+
+In order to allow network connections to the service, we must associate a network
+port with the service. This is done by creating a separate listener section in
+the configuration file. A service may have multiple listeners but for this
+tutorial we will only need one per service.
 
 ```
 [Write-Listener]
@@ -106,22 +135,6 @@ Additionally, the `address` parameter may be given if the listener is required
 to bind to a particular network interface when the host machine has multiple
 network interfaces. The default behavior is to listen on all network interfaces
 (the IPv6 address `::`).
-
-## Configuring Servers
-
-Read the [Configuring Servers](Configuring-Servers.md) mini-tutorial to see how
-the servers are configured.
-
-## Configuring the Monitor and Servers
-
-The next step is the configuration of the monitor. This depends on the type of
-cluster you use with MaxScale.
-
-For master-slave clusters read the
-[Configuring MariaDB Monitor](Configuring-MariaDB-Monitor.md)
-tutorial. If you are using a Galera cluster, read the
-[Configuring Galera Monitor](Configuring-Galera-Monitor.md)
-tutorial instead.
 
 ## Configuring the Administrative Interface
 
