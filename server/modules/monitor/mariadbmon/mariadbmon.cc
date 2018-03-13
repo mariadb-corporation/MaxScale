@@ -133,7 +133,7 @@ MariaDBMonitor::~MariaDBMonitor()
 bool MariaDBMonitor::uses_gtid(MXS_MONITORED_SERVER* mon_server, json_t** error_out)
 {
     bool rval = false;
-    const MySqlServerInfo* info = get_server_info(this, mon_server);
+    const MySqlServerInfo* info = get_server_info(mon_server);
     if (info->slave_status.gtid_io_pos.server_id == SERVER_ID_UNKNOWN)
     {
         string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
@@ -147,23 +147,12 @@ bool MariaDBMonitor::uses_gtid(MXS_MONITORED_SERVER* mon_server, json_t** error_
     return rval;
 }
 
-/**
- * Check that the given server is a master and it's the only master.
- *
- * @param mon                       Cluster monitor.
- * @param suggested_curr_master     The server to check, given by user.
- * @param error_out                 On output, error object if function failed.
- *
- * @return False, if there is some error with the specified current master,
- *         True otherwise.
- */
-bool mysql_switchover_check_current(const MariaDBMonitor* mon,
-                                    const MXS_MONITORED_SERVER* suggested_curr_master,
-                                    json_t** error_out)
+bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
+                                              json_t** error_out) const
 {
     bool server_is_master = false;
     MXS_MONITORED_SERVER* extra_master = NULL; // A master server which is not the suggested one
-    for (MXS_MONITORED_SERVER* mon_serv = mon->monitor->monitored_servers;
+    for (MXS_MONITORED_SERVER* mon_serv = monitor->monitored_servers;
          mon_serv != NULL && extra_master == NULL;
          mon_serv = mon_serv->next)
     {
@@ -201,7 +190,7 @@ bool mysql_switchover_check_current(const MariaDBMonitor* mon,
  *
  * @return True, if suggested new master is a viable promotion candidate.
  */
-bool mysql_switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error)
+bool MariaDBMonitor::switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error)
 {
     SERVER* server = monitored_server->server;
     const char* name = server->unique_name;
@@ -302,8 +291,8 @@ bool mysql_switchover(MXS_MONITOR* mon, MXS_MONITORED_SERVER* new_master, MXS_MO
     bool rval = false;
     MariaDBMonitor* handle = static_cast<MariaDBMonitor*>(mon->handle);
 
-    bool current_ok = mysql_switchover_check_current(handle, current_master, error_out);
-    bool new_ok = mysql_switchover_check_new(new_master, error_out);
+    bool current_ok = handle->switchover_check_current(current_master, error_out);
+    bool new_ok = handle->switchover_check_new(new_master, error_out);
     // Check that all slaves are using gtid-replication
     bool gtid_ok = true;
     for (MXS_MONITORED_SERVER* mon_serv = mon->monitored_servers; mon_serv != NULL; mon_serv = mon_serv->next)
@@ -520,14 +509,14 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
         {
             MXS_MONITORED_SERVER* master = handle->master;
             const char* master_name = master->server->unique_name;
-            MySqlServerInfo* master_info = get_server_info(handle, master);
-            MySqlServerInfo* server_info = get_server_info(handle, mon_server);
+            MySqlServerInfo* master_info = handle->get_server_info(master);
+            MySqlServerInfo* server_info = handle->get_server_info(mon_server);
 
             if (handle->server_is_rejoin_suspect(mon_server, master_info, output))
             {
                 if (handle->update_gtids(master, master_info))
                 {
-                    if (can_replicate_from(handle, mon_server, server_info, master, master_info))
+                    if (handle->can_replicate_from(mon_server, server_info, master_info))
                     {
                         ServerVector joinable_server;
                         joinable_server.push_back(mon_server);
@@ -719,32 +708,27 @@ extern "C"
 }
 
 /**
- * Initialize the server info hashtable
- *
- * @param handle MariaDB monitor handle
+ * Initialize the server info hashtable.
  */
-void init_server_info(MariaDBMonitor *handle)
+void MariaDBMonitor::init_server_info()
 {
-    ServerInfoMap& infos = handle->server_info;
-    infos.clear();
-
-    for (MXS_MONITORED_SERVER* server = handle->monitor->monitored_servers; server; server = server->next)
+    server_info.clear();
+    for (auto server = monitor->monitored_servers; server; server = server->next)
     {
         ServerInfoMap::value_type new_val(server, MySqlServerInfo());
-        infos.insert(new_val);
+        server_info.insert(new_val);
     }
 }
 
-MySqlServerInfo* get_server_info(MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db)
+MySqlServerInfo* MariaDBMonitor::get_server_info(const MXS_MONITORED_SERVER* db)
 {
-    ServerInfoMap::iterator iter = handle->server_info.find(db);
-    ss_dassert(iter != handle->server_info.end());
-    return &iter->second;
+    ss_dassert(server_info.count(db) == 1); // Should always exist in the map
+    return &server_info[db];
 }
 
-const MySqlServerInfo* get_server_info(const MariaDBMonitor* handle, const MXS_MONITORED_SERVER* db)
+const MySqlServerInfo* MariaDBMonitor::get_server_info(const MXS_MONITORED_SERVER* db) const
 {
-    return get_server_info(const_cast<MariaDBMonitor*>(handle), db);
+    return const_cast<MariaDBMonitor*>(this)->get_server_info(db);
 }
 
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
@@ -781,11 +765,11 @@ MariaDBMonitor* MariaDBMonitor::start_monitor(MXS_MONITOR *monitor, const MXS_CO
         handle = new MariaDBMonitor(monitor);
     }
 
-    /** Always reset these values */
+    /* Always reset these values. The server dependent values must be reset as servers could have been
+     * added and removed. */
     handle->shutdown = 0;
-    handle->master = NULL; // TODO: Is this correct? May not be ok to delete this info every time monitor
-                           // restarts.
-    init_server_info(handle); // The above question also applies to this.
+    handle->master = NULL;
+    handle->init_server_info();
 
     if (!handle->load_config_params(params))
     {
@@ -956,7 +940,7 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
     dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
     for (MXS_MONITORED_SERVER *db = monitor->monitored_servers; db; db = db->next)
     {
-        const MySqlServerInfo* serv_info = get_server_info(this, db);
+        const MySqlServerInfo* serv_info = get_server_info(db);
         dcb_printf(dcb, "Server:                 %s\n", db->server->unique_name);
         dcb_printf(dcb, "Server ID:              %" PRId64 "\n", serv_info->server_id);
         dcb_printf(dcb, "Read only:              %s\n", serv_info->read_only ? "YES" : "NO");
@@ -1038,7 +1022,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
         for (MXS_MONITORED_SERVER *db = monitor->monitored_servers; db; db = db->next)
         {
             json_t* srv = json_object();
-            const MySqlServerInfo* serv_info = get_server_info(this, db);
+            const MySqlServerInfo* serv_info = get_server_info(db);
             json_object_set_new(srv, "name", json_string(db->server->unique_name));
             json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
             json_object_set_new(srv, "master_id", json_integer(serv_info->slave_status.master_server_id));
@@ -1263,22 +1247,21 @@ bool MariaDBMonitor::do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITO
 /**
  * Check if a slave is receiving events from master.
  *
- * @param handle Cluster monitor
  * @return True, if a slave has an event more recent than master_failure_timeout.
  */
-static bool slave_receiving_events(MariaDBMonitor* handle)
+bool MariaDBMonitor::slave_receiving_events()
 {
-    ss_dassert(handle->master);
+    ss_dassert(master);
     bool received_event = false;
-    int64_t master_id = handle->master->server->node_id;
-    for (MXS_MONITORED_SERVER* server = handle->monitor->monitored_servers; server; server = server->next)
+    int64_t master_id = master->server->node_id;
+    for (MXS_MONITORED_SERVER* server = monitor->monitored_servers; server; server = server->next)
     {
-        MySqlServerInfo* info = get_server_info(handle, server);
+        MySqlServerInfo* info = get_server_info(server);
 
         if (info->slave_configured &&
             info->slave_status.slave_io_running &&
             info->slave_status.master_server_id == master_id &&
-            difftime(time(NULL), info->latest_event) < handle->master_failure_timeout)
+            difftime(time(NULL), info->latest_event) < master_failure_timeout)
         {
             /**
              * The slave is still connected to the correct master and has received events. This means that
@@ -1422,16 +1405,12 @@ static MXS_MONITORED_SERVER *build_mysql51_replication_tree(MXS_MONITOR *mon)
 }
 
 /**
- * Monitor an individual server
+ * Monitor an individual server.
  *
- * @param handle    The Monitor object
  * @param database  The database to probe
  */
-static void
-monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
+void MariaDBMonitor::monitorDatabase(MXS_MONITORED_SERVER *database)
 {
-    MariaDBMonitor* handle = static_cast<MariaDBMonitor*>(mon->handle);
-
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))
     {
@@ -1441,7 +1420,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     /** Store previous status */
     database->mon_prev_status = database->server->status;
 
-    mxs_connect_result_t rval = mon_ping_or_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor, database);
     if (rval == MONITOR_CONN_OK)
     {
         server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
@@ -1476,7 +1455,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     server_set_status_nolock(database->server, SERVER_RUNNING);
     monitor_set_pending_status(database, SERVER_RUNNING);
 
-    MySqlServerInfo *serv_info = get_server_info(handle, database);
+    MySqlServerInfo *serv_info = get_server_info(database);
     /* Check whether current server is MaxScale Binlog Server */
     MYSQL_RES *result;
     if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
@@ -1509,20 +1488,20 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITORED_SERVER *database)
     /* Query a few settings. */
     read_server_variables(database, serv_info);
     /* If gtid domain exists and server is 10.0, update gtid:s */
-    if (handle->master_gtid_domain >= 0 && serv_info->version == MYSQL_SERVER_VERSION_100)
+    if (master_gtid_domain >= 0 && serv_info->version == MYSQL_SERVER_VERSION_100)
     {
-        handle->update_gtids(database, serv_info);
+        update_gtids(database, serv_info);
     }
     /* Check for MariaDB 10.x.x and get status for multi-master replication */
     if (serv_info->version == MYSQL_SERVER_VERSION_100 || serv_info->version == MYSQL_SERVER_VERSION_55)
     {
-        handle->monitor_mysql_db(database, serv_info);
+        monitor_mysql_db(database, serv_info);
     }
     else
     {
-        if (handle->mysql51_replication)
+        if (mysql51_replication)
         {
-            handle->monitor_mysql_db(database, serv_info);
+            monitor_mysql_db(database, serv_info);
         }
         else if (report_version_err)
         {
@@ -1666,7 +1645,7 @@ void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, i
 
     for (MXS_MONITORED_SERVER *db = database; db; db = db->next)
     {
-        graph[nodes].info = get_server_info(handle, db);
+        graph[nodes].info = handle->get_server_info(db);
         graph[nodes].db = db;
         graph[nodes].index = graph[nodes].lowest_index = 0;
         graph[nodes].cycle = 0;
@@ -1755,16 +1734,15 @@ void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, i
 /**
  * @brief Check whether standalone master conditions have been met
  *
- * This function checks whether all the conditions to use a standalone master have
- * been met. For this to happen, only one server must be available and
- * other servers must have passed the configured tolerance level of failures.
+ * This function checks whether all the conditions to use a standalone master are met. For this to happen,
+ * only one server must be available and other servers must have passed the configured tolerance level of
+ * failures.
  *
- * @param handle Monitor instance
  * @param db     Monitor servers
  *
  * @return True if standalone master should be used
  */
-bool standalone_master_required(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db)
+bool MariaDBMonitor::standalone_master_required(MXS_MONITORED_SERVER *db)
 {
     int candidates = 0;
 
@@ -1773,14 +1751,14 @@ bool standalone_master_required(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db
         if (SERVER_IS_RUNNING(db->server))
         {
             candidates++;
-            MySqlServerInfo *server_info = get_server_info(handle, db);
+            MySqlServerInfo *server_info = get_server_info(db);
 
             if (server_info->read_only || server_info->slave_configured || candidates > 1)
             {
                 return false;
             }
         }
-        else if (db->mon_err_count < handle->failcount)
+        else if (db->mon_err_count < failcount)
         {
             return false;
         }
@@ -1794,14 +1772,13 @@ bool standalone_master_required(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db
 /**
  * @brief Use standalone master
  *
- * This function assigns the last remaining server the master status and sets all other
- * servers into maintenance mode. By setting the servers into maintenance mode, we
- * prevent any possible conflicts when the failed servers come back up.
+ * This function assigns the last remaining server the master status and sets all other servers into
+ * maintenance mode. By setting the servers into maintenance mode, we prevent any possible conflicts when
+ * the failed servers come back up.
  *
- * @param handle Monitor instance
  * @param db     Monitor servers
  */
-bool set_standalone_master(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db)
+bool MariaDBMonitor::set_standalone_master(MXS_MONITORED_SERVER *db)
 {
     bool rval = false;
 
@@ -1809,22 +1786,22 @@ bool set_standalone_master(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db)
     {
         if (SERVER_IS_RUNNING(db->server))
         {
-            if (!SERVER_IS_MASTER(db->server) && handle->warn_set_standalone_master)
+            if (!SERVER_IS_MASTER(db->server) && warn_set_standalone_master)
             {
                 MXS_WARNING("Setting standalone master, server '%s' is now the master.%s",
                             db->server->unique_name,
-                            handle->allow_cluster_recovery ?
+                            allow_cluster_recovery ?
                             "" : " All other servers are set into maintenance mode.");
-                handle->warn_set_standalone_master = false;
+                warn_set_standalone_master = false;
             }
 
             server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_set_pending_status(db, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_clear_pending_status(db, SERVER_SLAVE);
-            handle->master = db;
+            master = db;
             rval = true;
         }
-        else if (!handle->allow_cluster_recovery)
+        else if (!allow_cluster_recovery)
         {
             server_set_status_nolock(db->server, SERVER_MAINT);
             monitor_set_pending_status(db, SERVER_MAINT);
@@ -1835,13 +1812,13 @@ bool set_standalone_master(MariaDBMonitor *handle, MXS_MONITORED_SERVER *db)
     return rval;
 }
 
-bool failover_not_possible(MariaDBMonitor* handle)
+bool MariaDBMonitor::failover_not_possible()
 {
     bool rval = false;
 
-    for (MXS_MONITORED_SERVER* s = handle->monitor->monitored_servers; s; s = s->next)
+    for (MXS_MONITORED_SERVER* s = monitor->monitored_servers; s; s = s->next)
     {
-        MySqlServerInfo* info = get_server_info(handle, s);
+        MySqlServerInfo* info = get_server_info(s);
 
         if (info->n_slaves_configured > 1)
         {
@@ -1926,7 +1903,7 @@ void MariaDBMonitor::main_loop()
             ptr->pending_status = ptr->server->status;
 
             /* monitor current node */
-            monitorDatabase(monitor, ptr);
+            monitorDatabase(ptr);
 
             /* reset the slave list of current node */
             memset(&ptr->server->slaves, 0, sizeof(ptr->server->slaves));
@@ -2014,7 +1991,7 @@ void MariaDBMonitor::main_loop()
 
         if (master != NULL && SERVER_IS_MASTER(master->server))
         {
-            MySqlServerInfo* master_info = get_server_info(this, master);
+            MySqlServerInfo* master_info = get_server_info(master);
             // Update cluster gtid domain
             int64_t domain = master_info->gtid_domain_id;
             if (master_gtid_domain >= 0 && domain != master_gtid_domain)
@@ -2061,7 +2038,7 @@ void MariaDBMonitor::main_loop()
         ptr = monitor->monitored_servers;
         while (ptr)
         {
-            MySqlServerInfo *serv_info = get_server_info(this, ptr);
+            MySqlServerInfo *serv_info = get_server_info(ptr);
             ss_dassert(serv_info);
 
             if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
@@ -2090,7 +2067,7 @@ void MariaDBMonitor::main_loop()
         {
             if (!SERVER_IN_MAINT(ptr->server))
             {
-                MySqlServerInfo *serv_info = get_server_info(this, ptr);
+                MySqlServerInfo *serv_info = get_server_info(ptr);
 
                 /** If "detect_stale_master" option is On, let's use the previous master.
                  *
@@ -2172,10 +2149,10 @@ void MariaDBMonitor::main_loop()
             if we need to use standalone master. */
         if (detect_standalone_master)
         {
-            if (standalone_master_required(this, monitor->monitored_servers))
+            if (standalone_master_required(monitor->monitored_servers))
             {
                 // Other servers have died, set last remaining server as master
-                if (set_standalone_master(this, monitor->monitored_servers))
+                if (set_standalone_master(monitor->monitored_servers))
                 {
                     // Update the root_master to point to the standalone master
                     root_master = master;
@@ -2221,7 +2198,7 @@ void MariaDBMonitor::main_loop()
         {
             const char RE_ENABLE_FMT[] = "%s To re-enable failover, manually set '%s' to 'true' for monitor "
                                          "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
-            if (failover_not_possible(this))
+            if (failover_not_possible())
             {
                 const char PROBLEMS[] = "Failover is not possible due to one or more problems in the "
                                         "replication configuration, disabling automatic failover. Failover "
@@ -2233,7 +2210,7 @@ void MariaDBMonitor::main_loop()
             }
             // If master seems to be down, check if slaves are receiving events.
             else if (verify_master_failure && master &&
-                     SERVER_IS_DOWN(master->server) && slave_receiving_events(this))
+                     SERVER_IS_DOWN(master->server) && slave_receiving_events())
             {
                 MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
             }
@@ -2289,7 +2266,7 @@ void MariaDBMonitor::main_loop()
 
             while (ptr)
             {
-                MySqlServerInfo *serv_info = get_server_info(this, ptr);
+                MySqlServerInfo *serv_info = get_server_info(ptr);
 
                 if ((!SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
                 {
@@ -2754,7 +2731,7 @@ static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *mon, int num_serv
                         handle->master = master;
                     }
 
-                    MySqlServerInfo* info = get_server_info(handle, master);
+                    MySqlServerInfo* info = handle->get_server_info(master);
 
                     if (SERVER_IS_RUNNING(master->server))
                     {
@@ -3121,7 +3098,7 @@ bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
  */
 MySqlServerInfo* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
 {
-    MySqlServerInfo* info = get_server_info(this, server);
+    MySqlServerInfo* info = get_server_info(server);
     if (info->slave_status.slave_sql_running &&
         update_replication_settings(server, info) &&
         update_gtids(server, info) &&
@@ -3371,23 +3348,11 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
     }
 }
 
-/**
- * Checks if slave can replicate from master. Only considers gtid:s and only detects obvious errors. The
- * non-detected errors will mostly be detected once the slave tries to start replicating.
- *
- * @param mon Cluster monitor
- * @param slave Slave server candidate
- * @param slave_info Slave info
- * @param master Replication master
- * @param master_info Master info
- * @return True if slave can replicate from master
- */
-bool can_replicate_from(MariaDBMonitor* mon,
-                               MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
-                               MXS_MONITORED_SERVER* master, MySqlServerInfo* master_info)
+bool MariaDBMonitor::can_replicate_from(MXS_MONITORED_SERVER* slave,
+                                        MySqlServerInfo* slave_info, MySqlServerInfo* master_info)
 {
     bool rval = false;
-    if (mon->update_gtids(slave, slave_info))
+    if (update_gtids(slave, slave_info))
     {
         Gtid slave_gtid = slave_info->gtid_current_pos;
         Gtid master_gtid = master_info->gtid_binlog_pos;
