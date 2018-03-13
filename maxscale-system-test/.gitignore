@@ -89,9 +89,11 @@ delete_rds
 different_size_binlog
 different_size_rwsplit
 encrypted_passwords
+failover_mysqlmon
 false_monitor_state_change
 fwf
 fwf2
+fwf_MXS-1583
 fwf_actions
 fwf_com_ping
 fwf_duplicate_rules
@@ -99,8 +101,10 @@ fwf_logging
 fwf_prepared_stmt
 fwf_reload
 fwf_syntax
+fwf_users
 galera_priority
 include/
+keepalived
 kerberos_setup
 kill_master
 large_insert_hang
@@ -110,6 +114,7 @@ local_address
 long_sysbench
 longblob
 lots_of_rows
+maxctrl_basic
 max_connections
 maxscale_process_user
 mm
@@ -144,7 +149,15 @@ mxs1457_ignore_deleted
 mxs1468
 mxs1476
 mxs1509
+mxs1516
+mxs1542
+mxs1543
 mxs1583_fwf
+mxs1585
+mxs1643_extra_events
+mxs1653_ps_hang
+mxs1677_temp_table
+mxs1678_relay_master
 mxs244_prepared_stmt_loop
 mxs280_select_outfile
 mxs314
@@ -180,6 +193,7 @@ mxs922_scaling
 mxs922_server
 mxs951_utfmb4
 mxs957
+mysqlmon_external_master
 mysqlmon_failover_auto
 mysqlmon_failover_manual
 mysqlmon_rejoin_good
