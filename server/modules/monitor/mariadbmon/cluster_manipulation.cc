@@ -212,7 +212,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerVector* output)
          server != NULL;
          server = server->next)
     {
-        if (server_is_rejoin_suspect(server, master_info))
+        if (server_is_rejoin_suspect(server, master_info, NULL))
         {
             suspects.push_back(server);
         }
@@ -267,12 +267,13 @@ bool MariaDBMonitor::join_cluster(MXS_MONITORED_SERVER* server, const char* chan
     return rval;
 }
 
-bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MySqlServerInfo* master_info)
+bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* rejoin_server,
+                                              MySqlServerInfo* master_info, json_t** output)
 {
     bool is_suspect = false;
-    if (!SERVER_IS_MASTER(server->server) && SERVER_IS_RUNNING(server->server))
+    if (!SERVER_IS_MASTER(rejoin_server->server) && SERVER_IS_RUNNING(rejoin_server->server))
     {
-        MySqlServerInfo* server_info = get_server_info(this, server);
+        MySqlServerInfo* server_info = get_server_info(this, rejoin_server);
         SlaveStatusInfo* slave_status = &server_info->slave_status;
         // Has no slave connection, yet is not a master.
         if (server_info->n_slaves_configured == 0)
@@ -296,6 +297,11 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MySq
                 is_suspect = true;
             }
         }
+    }
+    else if (output != NULL)
+    {
+        PRINT_MXS_JSON_ERROR(output, "Server '%s' is master or not running.",
+                             rejoin_server->server->unique_name);
     }
     return is_suspect;
 }

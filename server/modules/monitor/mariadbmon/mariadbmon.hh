@@ -133,11 +133,13 @@ public:
      * Checks if a server is a possible rejoin candidate. A true result from this function is not yet sufficient
      * criteria and another call to can_replicate_from() should be made.
      *
-     * @param server Server to check.
+     * @param server Server to check
      * @param master_info Master server info
+     * @param output Error output. If NULL, no error is printed to log.
      * @return True, if server is a rejoin suspect.
      */
-    bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MySqlServerInfo* master_info);
+    bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MySqlServerInfo* master_info,
+                                  json_t** output);
 
     /**
      * (Re)join given servers to the cluster. The servers in the array are assumed to be joinable.

@@ -641,8 +641,6 @@ int diag_cb(void *data, int columns, char **row, char **field_names)
 
 void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port)
 {
-    dcb_printf(dcb, "User names: ");
-
     MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
     sqlite3* handle = get_handle(instance);
     char *err;
@@ -650,11 +648,10 @@ void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port)
     if (sqlite3_exec(handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
                      diag_cb, dcb, &err) != SQLITE_OK)
     {
-        dcb_printf(dcb, "Failed to print users: %s\n", err);
-        MXS_ERROR("Failed to print users: %s", err);
+        dcb_printf(dcb, "Could not access users: %s", err);
+        MXS_ERROR("Could not access users: %s", err);
         sqlite3_free(err);
     }
-    dcb_printf(dcb, "\n");
 }
 
 int diag_cb_json(void *data, int columns, char **row, char **field_names)

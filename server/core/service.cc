@@ -2485,7 +2485,11 @@ void service_print_users(DCB *dcb, const SERVICE *service)
         if (listener_is_active(listener) && listener->listener &&
             listener->listener->authfunc.diagnostic)
         {
+            dcb_printf(dcb, "User names (%s): ", listener->name);
+
             listener->listener->authfunc.diagnostic(dcb, listener);
+
+            dcb_printf(dcb, "\n");
         }
     }
 }

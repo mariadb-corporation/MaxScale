@@ -166,7 +166,6 @@ public:
                 dcb_printf(dcb, "%s%s", sep, it->first.c_str());
                 sep = ", ";
             }
-            dcb_printf(dcb, "\n");
         }
     }
 
@@ -324,17 +323,7 @@ void users_default_diagnostic(DCB* dcb, SERV_LISTENER* port)
 {
     if (port->users)
     {
-        Users* u = reinterpret_cast<Users*>(port->users);
-
-        if (u->empty())
-        {
-            dcb_printf(dcb, "Users table is empty\n");
-        }
-        else
-        {
-            dcb_printf(dcb, "User names: ");
-            users_diagnostic(dcb, port->users);
-        }
+        users_diagnostic(dcb, port->users);
     }
 }
 

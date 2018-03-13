@@ -518,39 +518,50 @@ bool mysql_rejoin(MXS_MONITOR* mon, SERVER* rejoin_server, json_t** output)
     MariaDBMonitor *handle = static_cast<MariaDBMonitor*>(mon->handle);
     if (handle->cluster_can_be_joined())
     {
+        const char* rejoin_serv_name = rejoin_server->unique_name;
         MXS_MONITORED_SERVER* mon_server = mon_get_monitored_server(mon, rejoin_server);
         if (mon_server)
         {
             MXS_MONITORED_SERVER* master = handle->master;
+            const char* master_name = master->server->unique_name;
             MySqlServerInfo* master_info = get_server_info(handle, master);
             MySqlServerInfo* server_info = get_server_info(handle, mon_server);
 
-            if (handle->server_is_rejoin_suspect(mon_server, master_info) &&
-                handle->update_gtids(master, master_info) &&
-                can_replicate_from(handle, mon_server, server_info, master, master_info))
+            if (handle->server_is_rejoin_suspect(mon_server, master_info, output))
             {
-                ServerVector joinable_server;
-                joinable_server.push_back(mon_server);
-                if (handle->do_rejoin(joinable_server) == 1)
+                if (handle->update_gtids(master, master_info))
                 {
-                    rval = true;
-                    MXS_NOTICE("Rejoin performed.");
+                    if (can_replicate_from(handle, mon_server, server_info, master, master_info))
+                    {
+                        ServerVector joinable_server;
+                        joinable_server.push_back(mon_server);
+                        if (handle->do_rejoin(joinable_server) == 1)
+                        {
+                            rval = true;
+                            MXS_NOTICE("Rejoin performed.");
+                        }
+                        else
+                        {
+                            PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but failed.");
+                        }
+                    }
+                    else
+                    {
+                        PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s' "
+                                             "or it could not be queried.", rejoin_serv_name, master_name);
+                    }
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but failed.");
+                    PRINT_MXS_JSON_ERROR(output, "Cluster master '%s' gtid info could not be updated.",
+                                         master_name);
                 }
-            }
-            else
-            {
-                PRINT_MXS_JSON_ERROR(output, "Server is not eligible for rejoin or eligibility could not be "
-                                     "ascertained.");
             }
         }
         else
         {
             PRINT_MXS_JSON_ERROR(output, "The given server '%s' is not monitored by this monitor.",
-                                 rejoin_server->unique_name);
+                                 rejoin_serv_name);
         }
     }
     else
@@ -1168,7 +1179,12 @@ bool MariaDBMonitor::do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITO
                  * root master server.
                  * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
                  */
-                if (serv_info->slave_status.slave_io_running && server_version != MYSQL_SERVER_VERSION_51)
+                const char* last_io_errno = mxs_mysql_get_value(result, row, "Last_IO_Errno");
+                int io_errno = last_io_errno ? atoi(last_io_errno) : 0;
+                const int connection_errno = 2003;
+
+                if ((io_errno == 0 || io_errno == connection_errno) &&
+                    server_version != MYSQL_SERVER_VERSION_51)
                 {
                     /* Get Master_Server_Id */
                     master_server_id = scan_server_id(row[i_master_server_id]);
