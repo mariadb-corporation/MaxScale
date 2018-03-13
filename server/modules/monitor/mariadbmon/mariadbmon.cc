@@ -76,16 +76,12 @@ static json_t* diagnostics_json(const MXS_MONITOR *);
 static MXS_MONITORED_SERVER *getServerByNodeId(MXS_MONITORED_SERVER *, long);
 static MXS_MONITORED_SERVER *getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
 static MXS_MONITORED_SERVER *get_replication_tree(MXS_MONITOR *, int);
-static void set_master_heartbeat(MariaDBMonitor *, MXS_MONITORED_SERVER *);
-static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITORED_SERVER *);
 static int add_slave_to_master(long *, int, long);
 static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
 
 static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
 static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info);
-
-static void disable_setting(MariaDBMonitor* mon, const char* setting);
 
 static string get_connection_errors(const ServerVector& servers);
 static int64_t scan_server_id(const char* id_string);
@@ -339,7 +335,7 @@ bool mysql_switchover(MXS_MONITOR* mon, MXS_MONITORED_SERVER* new_master, MXS_MO
             bool failover = config_get_bool(mon->parameters, CN_AUTO_FAILOVER);
             if (failover)
             {
-                disable_setting(handle, CN_AUTO_FAILOVER);
+                handle->disable_setting(CN_AUTO_FAILOVER);
                 format += ", failover has been disabled.";
             }
             format += ".";
@@ -2232,7 +2228,7 @@ monitorMain(void *arg)
                                         "fixed.";
                 MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, mon->name);
                 handle->auto_failover = false;
-                disable_setting(handle, CN_AUTO_FAILOVER);
+                handle->disable_setting(CN_AUTO_FAILOVER);
             }
             // If master seems to be down, check if slaves are receiving events.
             else if (handle->verify_master_failure && handle->master &&
@@ -2245,7 +2241,7 @@ monitorMain(void *arg)
                 const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
                 MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, mon->name);
                 handle->auto_failover = false;
-                disable_setting(handle, CN_AUTO_FAILOVER);
+                handle->disable_setting(CN_AUTO_FAILOVER);
             }
         }
 
@@ -2287,7 +2283,7 @@ monitorMain(void *arg)
             (SERVER_IS_MASTER(root_master->server) ||
              SERVER_IS_RELAY_SERVER(root_master->server)))
         {
-            set_master_heartbeat(handle, root_master);
+            handle->set_master_heartbeat(root_master);
             ptr = mon->monitored_servers;
 
             while (ptr)
@@ -2301,7 +2297,7 @@ monitorMain(void *arg)
                          SERVER_IS_RELAY_SERVER(ptr->server)) &&
                         !serv_info->binlog_relay)  // No select lag for Binlog Server
                     {
-                        set_slave_heartbeat(mon, ptr);
+                        handle->set_slave_heartbeat(ptr);
                     }
                 }
                 ptr = ptr->next;
@@ -2328,7 +2324,7 @@ monitorMain(void *arg)
                               "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
                               "the REST API.", CN_AUTO_REJOIN, mon->name);
                     handle->auto_rejoin = false;
-                    disable_setting(handle, CN_AUTO_REJOIN);
+                    handle->disable_setting(CN_AUTO_REJOIN);
                 }
             }
             else
@@ -2419,25 +2415,20 @@ static int get_row_count(MXS_MONITORED_SERVER *database, const char* query)
     return returned_rows;
 }
 
-/*******
- * This function sets the replication heartbeat
- * into the maxscale_schema.replication_heartbeat table in the current master.
- * The inserted values will be seen from all slaves replicating from this master.
+/**
+ * Write the replication heartbeat into the maxscale_schema.replication_heartbeat table in the current master.
+ * The inserted value will be seen from all slaves replicating from this master.
  *
- * @param handle    The monitor handle
  * @param database      The number database server
  */
-static void set_master_heartbeat(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database)
+void MariaDBMonitor::set_master_heartbeat(MXS_MONITORED_SERVER *database)
 {
-    unsigned long id = handle->id;
     time_t heartbeat;
     time_t purge_time;
     char heartbeat_insert_query[512] = "";
     char heartbeat_purge_query[512] = "";
-    MYSQL_RES *result;
-    long returned_rows;
 
-    if (handle->master == NULL)
+    if (master == NULL)
     {
         MXS_ERROR("set_master_heartbeat called without an available Master server");
         return;
@@ -2486,7 +2477,7 @@ static void set_master_heartbeat(MariaDBMonitor *handle, MXS_MONITORED_SERVER *d
     sprintf(heartbeat_insert_query,
             "UPDATE maxscale_schema.replication_heartbeat "
             "SET master_timestamp = %lu WHERE master_server_id = %li AND maxscale_id = %lu",
-            heartbeat, handle->master->server->node_id, id);
+            heartbeat, master->server->node_id, id);
 
     /* Try to insert MaxScale timestamp into master */
     if (mxs_mysql_query(database->con, heartbeat_insert_query))
@@ -2506,7 +2497,7 @@ static void set_master_heartbeat(MariaDBMonitor *handle, MXS_MONITORED_SERVER *d
             sprintf(heartbeat_insert_query,
                     "REPLACE INTO maxscale_schema.replication_heartbeat "
                     "(master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)",
-                    handle->master->server->node_id, id, heartbeat);
+                    master->server->node_id, id, heartbeat);
 
             if (mxs_mysql_query(database->con, heartbeat_insert_query))
             {
@@ -2538,24 +2529,20 @@ static void set_master_heartbeat(MariaDBMonitor *handle, MXS_MONITORED_SERVER *d
     }
 }
 
-/*******
- * This function gets the replication heartbeat
- * from the maxscale_schema.replication_heartbeat table in the current slave
- * and stores the timestamp and replication lag in the slave server struct
+/*
+ * This function gets the replication heartbeat from the maxscale_schema.replication_heartbeat table in
+ * the current slave and stores the timestamp and replication lag in the slave server struct.
  *
- * @param handle    The monitor handle
  * @param database      The number database server
  */
-static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database)
+void MariaDBMonitor::set_slave_heartbeat(MXS_MONITORED_SERVER *database)
 {
-    MariaDBMonitor *handle = (MariaDBMonitor*) mon->handle;
-    unsigned long id = handle->id;
     time_t heartbeat;
     char select_heartbeat_query[256] = "";
     MYSQL_ROW row;
     MYSQL_RES *result;
 
-    if (handle->master == NULL)
+    if (master == NULL)
     {
         MXS_ERROR("set_slave_heartbeat called without an available Master server");
         return;
@@ -2566,11 +2553,11 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database
     sprintf(select_heartbeat_query, "SELECT master_timestamp "
             "FROM maxscale_schema.replication_heartbeat "
             "WHERE maxscale_id = %lu AND master_server_id = %li",
-            id, handle->master->server->node_id);
+            id, master->server->node_id);
 
     /* if there is a master then send the query to the slave with master_id */
-    if (handle->master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
-                                   && (result = mysql_store_result(database->con)) != NULL))
+    if (master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
+                           && (result = mysql_store_result(database->con)) != NULL))
     {
         int rows_found = 0;
 
@@ -2602,7 +2589,7 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database
             if (rlag >= 0)
             {
                 /* store rlag only if greater than monitor sampling interval */
-                database->server->rlag = ((unsigned int)rlag > (mon->interval / 1000)) ? rlag : 0;
+                database->server->rlag = ((unsigned int)rlag > (monitor->interval / 1000)) ? rlag : 0;
             }
             else
             {
@@ -2627,7 +2614,7 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITORED_SERVER *database
         database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
         database->server->node_ts = 0;
 
-        if (handle->master->server->node_id < 0)
+        if (master->server->node_id < 0)
         {
             MXS_ERROR("error: replication heartbeat: "
                       "master_server_id NOT available for %s:%i",
@@ -3409,15 +3396,14 @@ bool can_replicate_from(MariaDBMonitor* mon,
  * Set a monitor config parameter to "false". The effect persists over stopMonitor/startMonitor but not
  * MaxScale restart. Only use on boolean config settings.
  *
- * @param mon Cluster monitor
  * @param setting_name Setting to disable
  */
-static void disable_setting(MariaDBMonitor* mon, const char* setting)
+void MariaDBMonitor::disable_setting(const char* setting)
 {
     MXS_CONFIG_PARAMETER p = {};
     p.name = const_cast<char*>(setting);
     p.value = const_cast<char*>("false");
-    monitorAddParameters(mon->monitor, &p);
+    monitorAddParameters(monitor, &p);
 }
 
 /**

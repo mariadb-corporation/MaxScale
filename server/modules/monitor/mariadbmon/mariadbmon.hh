@@ -256,4 +256,7 @@ public:
     bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd);
     bool get_joinable_servers(ServerVector* output);
     bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
+    void set_master_heartbeat(MXS_MONITORED_SERVER *);
+    void set_slave_heartbeat(MXS_MONITORED_SERVER *);
+    void disable_setting(const char* setting);
 };
