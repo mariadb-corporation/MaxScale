@@ -935,35 +935,28 @@ static string monitored_servers_to_string(const ServerVector& array)
     }
     return rval;
 }
-/**
- * Daignostic interface
- *
- * @param dcb   DCB to print diagnostics
- * @param arg   The monitor handle
- */
-static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
-{
-    const MariaDBMonitor *handle = (const MariaDBMonitor *)mon->handle;
 
-    dcb_printf(dcb, "Automatic failover:     %s\n", handle->auto_failover ? "Enabled" : "Disabled");
-    dcb_printf(dcb, "Failcount:              %d\n", handle->failcount);
-    dcb_printf(dcb, "Failover timeout:       %u\n", handle->failover_timeout);
-    dcb_printf(dcb, "Switchover timeout:     %u\n", handle->switchover_timeout);
-    dcb_printf(dcb, "Automatic rejoin:       %s\n", handle->auto_rejoin ? "Enabled" : "Disabled");
-    dcb_printf(dcb, "MaxScale monitor ID:    %lu\n", handle->id);
-    dcb_printf(dcb, "Detect replication lag: %s\n", (handle->replicationHeartbeat) ? "Enabled" : "Disabled");
-    dcb_printf(dcb, "Detect stale master:    %s\n", (handle->detectStaleMaster == 1) ?
+void MariaDBMonitor::diagnostics(DCB *dcb) const
+{
+    dcb_printf(dcb, "Automatic failover:     %s\n", auto_failover ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Failcount:              %d\n", failcount);
+    dcb_printf(dcb, "Failover timeout:       %u\n", failover_timeout);
+    dcb_printf(dcb, "Switchover timeout:     %u\n", switchover_timeout);
+    dcb_printf(dcb, "Automatic rejoin:       %s\n", auto_rejoin ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "MaxScale monitor ID:    %lu\n", id);
+    dcb_printf(dcb, "Detect replication lag: %s\n", (replicationHeartbeat) ? "Enabled" : "Disabled");
+    dcb_printf(dcb, "Detect stale master:    %s\n", (detectStaleMaster == 1) ?
                "Enabled" : "Disabled");
-    if (handle->excluded_servers.size() > 0)
+    if (excluded_servers.size() > 0)
     {
         dcb_printf(dcb, "Non-promotable servers (failover): ");
-        dcb_printf(dcb, "%s\n", monitored_servers_to_string(handle->excluded_servers).c_str());
+        dcb_printf(dcb, "%s\n", monitored_servers_to_string(excluded_servers).c_str());
     }
 
     dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
-    for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
+    for (MXS_MONITORED_SERVER *db = monitor->monitored_servers; db; db = db->next)
     {
-        const MySqlServerInfo* serv_info = get_server_info(handle, db);
+        const MySqlServerInfo* serv_info = get_server_info(this, db);
         dcb_printf(dcb, "Server:                 %s\n", db->server->unique_name);
         dcb_printf(dcb, "Server ID:              %" PRId64 "\n", serv_info->server_id);
         dcb_printf(dcb, "Read only:              %s\n", serv_info->read_only ? "YES" : "NO");
@@ -991,7 +984,7 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
             dcb_printf(dcb, "Gtid slave IO position: %s\n",
                        serv_info->slave_status.gtid_io_pos.to_string().c_str());
         }
-        if (handle->multimaster)
+        if (multimaster)
         {
             dcb_printf(dcb, "Master group:           %d\n", serv_info->group);
         }
@@ -1001,46 +994,51 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 }
 
 /**
- * Diagnostic interface
+ * Daignostic interface
  *
+ * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static json_t* diagnostics_json(const MXS_MONITOR *mon)
+static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+{
+    const MariaDBMonitor* handle = static_cast<const MariaDBMonitor*>(mon->handle);
+    handle->diagnostics(dcb);
+}
+
+json_t* MariaDBMonitor::diagnostics_json() const
 {
     json_t* rval = json_object();
+    json_object_set_new(rval, "monitor_id", json_integer(id));
+    json_object_set_new(rval, "detect_stale_master", json_boolean(detectStaleMaster));
+    json_object_set_new(rval, "detect_stale_slave", json_boolean(detectStaleSlave));
+    json_object_set_new(rval, "detect_replication_lag", json_boolean(replicationHeartbeat));
+    json_object_set_new(rval, "multimaster", json_boolean(multimaster));
+    json_object_set_new(rval, "detect_standalone_master", json_boolean(detect_standalone_master));
+    json_object_set_new(rval, CN_FAILCOUNT, json_integer(failcount));
+    json_object_set_new(rval, "allow_cluster_recovery", json_boolean(allow_cluster_recovery));
+    json_object_set_new(rval, "mysql51_replication", json_boolean(mysql51_replication));
+    json_object_set_new(rval, CN_AUTO_FAILOVER, json_boolean(auto_failover));
+    json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(failover_timeout));
+    json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(switchover_timeout));
+    json_object_set_new(rval, CN_AUTO_REJOIN, json_boolean(auto_rejoin));
 
-    const MariaDBMonitor *handle = (const MariaDBMonitor *)mon->handle;
-    json_object_set_new(rval, "monitor_id", json_integer(handle->id));
-    json_object_set_new(rval, "detect_stale_master", json_boolean(handle->detectStaleMaster));
-    json_object_set_new(rval, "detect_stale_slave", json_boolean(handle->detectStaleSlave));
-    json_object_set_new(rval, "detect_replication_lag", json_boolean(handle->replicationHeartbeat));
-    json_object_set_new(rval, "multimaster", json_boolean(handle->multimaster));
-    json_object_set_new(rval, "detect_standalone_master", json_boolean(handle->detect_standalone_master));
-    json_object_set_new(rval, CN_FAILCOUNT, json_integer(handle->failcount));
-    json_object_set_new(rval, "allow_cluster_recovery", json_boolean(handle->allow_cluster_recovery));
-    json_object_set_new(rval, "mysql51_replication", json_boolean(handle->mysql51_replication));
-    json_object_set_new(rval, CN_AUTO_FAILOVER, json_boolean(handle->auto_failover));
-    json_object_set_new(rval, CN_FAILOVER_TIMEOUT, json_integer(handle->failover_timeout));
-    json_object_set_new(rval, CN_SWITCHOVER_TIMEOUT, json_integer(handle->switchover_timeout));
-    json_object_set_new(rval, CN_AUTO_REJOIN, json_boolean(handle->auto_rejoin));
-
-    if (!handle->script.empty())
+    if (!script.empty())
     {
-        json_object_set_new(rval, "script", json_string(handle->script.c_str()));
+        json_object_set_new(rval, "script", json_string(script.c_str()));
     }
-    if (handle->excluded_servers.size() > 0)
+    if (excluded_servers.size() > 0)
     {
-        string list = monitored_servers_to_string(handle->excluded_servers);
+        string list = monitored_servers_to_string(excluded_servers);
         json_object_set_new(rval, CN_NO_PROMOTE_SERVERS, json_string(list.c_str()));
     }
-    if (mon->monitored_servers)
+    if (monitor->monitored_servers)
     {
         json_t* arr = json_array();
 
-        for (MXS_MONITORED_SERVER *db = mon->monitored_servers; db; db = db->next)
+        for (MXS_MONITORED_SERVER *db = monitor->monitored_servers; db; db = db->next)
         {
             json_t* srv = json_object();
-            const MySqlServerInfo* serv_info = get_server_info(handle, db);
+            const MySqlServerInfo* serv_info = get_server_info(this, db);
             json_object_set_new(srv, "name", json_string(db->server->unique_name));
             json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
             json_object_set_new(srv, "master_id", json_integer(serv_info->slave_status.master_server_id));
@@ -1062,7 +1060,7 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
                                 json_string(serv_info->gtid_binlog_pos.to_string().c_str()));
             json_object_set_new(srv, "gtid_io_pos",
                                     json_string(serv_info->slave_status.gtid_io_pos.to_string().c_str()));
-            if (handle->multimaster)
+            if (multimaster)
             {
                 json_object_set_new(srv, "master_group", json_integer(serv_info->group));
             }
@@ -1074,6 +1072,17 @@ static json_t* diagnostics_json(const MXS_MONITOR *mon)
     }
 
     return rval;
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
+{
+    const MariaDBMonitor *handle = (const MariaDBMonitor *)mon->handle;
+    return handle->diagnostics_json();
 }
 
 static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
@@ -1845,16 +1854,8 @@ bool failover_not_possible(MariaDBMonitor* handle)
     return rval;
 }
 
-/**
- * The entry point for the monitoring module thread
- *
- * @param arg   The handle of the monitor
- */
-static void
-monitorMain(void *arg)
+void MariaDBMonitor::main_loop()
 {
-    MariaDBMonitor *handle  = (MariaDBMonitor *) arg;
-    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITORED_SERVER *ptr;
     bool replication_heartbeat;
     bool detect_stale_master;
@@ -1864,33 +1865,33 @@ monitorMain(void *arg)
     int log_no_master = 1;
     bool heartbeat_checked = false;
 
-    replication_heartbeat = handle->replicationHeartbeat;
-    detect_stale_master = handle->detectStaleMaster;
+    replication_heartbeat = replicationHeartbeat;
+    detect_stale_master = detectStaleMaster;
 
     if (mysql_thread_init())
     {
         MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
-        handle->status = MXS_MONITOR_STOPPED;
+        status = MXS_MONITOR_STOPPED;
         return;
     }
 
-    load_server_journal(mon, &handle->master);
+    load_server_journal(monitor, &master);
 
     while (1)
     {
-        if (handle->shutdown)
+        if (shutdown)
         {
-            handle->status = MXS_MONITOR_STOPPING;
+            status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MXS_MONITOR_STOPPED;
+            status = MXS_MONITOR_STOPPED;
             return;
         }
         /** Wait base interval */
         thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
 
-        if (handle->replicationHeartbeat && !heartbeat_checked)
+        if (replicationHeartbeat && !heartbeat_checked)
         {
-            check_maxscale_schema_replication(mon);
+            check_maxscale_schema_replication(monitor);
             heartbeat_checked = true;
         }
 
@@ -1901,8 +1902,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
-             MXS_MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % monitor->interval) >=
+             MXS_MON_BASE_INTERVAL_MS) && (!monitor->server_pending_changes))
         {
             nrounds += 1;
             continue;
@@ -1911,11 +1912,11 @@ monitorMain(void *arg)
         /* reset num_servers */
         num_servers = 0;
 
-        lock_monitor_servers(mon);
-        servers_status_pending_to_current(mon);
+        lock_monitor_servers(monitor);
+        servers_status_pending_to_current(monitor);
 
         /* start from the first server in the list */
-        ptr = mon->monitored_servers;
+        ptr = monitor->monitored_servers;
 
         while (ptr)
         {
@@ -1925,7 +1926,7 @@ monitorMain(void *arg)
             ptr->pending_status = ptr->server->status;
 
             /* monitor current node */
-            monitorDatabase(mon, ptr);
+            monitorDatabase(monitor, ptr);
 
             /* reset the slave list of current node */
             memset(&ptr->server->slaves, 0, sizeof(ptr->server->slaves));
@@ -1972,7 +1973,7 @@ monitorMain(void *arg)
             ptr = ptr->next;
         }
 
-        ptr = mon->monitored_servers;
+        ptr = monitor->monitored_servers;
         /* if only one server is configured, that's is Master */
         if (num_servers == 1)
         {
@@ -1986,52 +1987,52 @@ monitorMain(void *arg)
                 monitor_set_pending_status(ptr, SERVER_MASTER);
 
                 ptr->server->depth = 0;
-                handle->master = ptr;
+                master = ptr;
                 root_master = ptr;
             }
         }
         else
         {
             /* Compute the replication tree */
-            if (handle->mysql51_replication)
+            if (mysql51_replication)
             {
-                root_master = build_mysql51_replication_tree(mon);
+                root_master = build_mysql51_replication_tree(monitor);
             }
             else
             {
-                root_master = get_replication_tree(mon, num_servers);
+                root_master = get_replication_tree(monitor, num_servers);
             }
         }
 
-        if (handle->multimaster && num_servers > 0)
+        if (multimaster && num_servers > 0)
         {
             /** Find all the master server cycles in the cluster graph. If
                 multiple masters are found, the servers with the read_only
                 variable set to ON will be assigned the slave status. */
-            find_graph_cycles(handle, mon->monitored_servers, num_servers);
+            find_graph_cycles(this, monitor->monitored_servers, num_servers);
         }
 
-        if (handle->master != NULL && SERVER_IS_MASTER(handle->master->server))
+        if (master != NULL && SERVER_IS_MASTER(master->server))
         {
-            MySqlServerInfo* master_info = get_server_info(handle, handle->master);
+            MySqlServerInfo* master_info = get_server_info(this, master);
             // Update cluster gtid domain
             int64_t domain = master_info->gtid_domain_id;
-            if (handle->master_gtid_domain >= 0 && domain != handle->master_gtid_domain)
+            if (master_gtid_domain >= 0 && domain != master_gtid_domain)
             {
                 MXS_NOTICE("Gtid domain id of master has changed: %" PRId64 " -> %" PRId64 ".",
-                         handle->master_gtid_domain, domain);
+                         master_gtid_domain, domain);
             }
-            handle->master_gtid_domain = domain;
+            master_gtid_domain = domain;
 
             // Update cluster external master
-            if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(handle->master->server))
+            if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(master->server))
             {
-                if (master_info->slave_status.master_host != handle->external_master_host ||
-                    master_info->slave_status.master_port != handle->external_master_port)
+                if (master_info->slave_status.master_host != external_master_host ||
+                    master_info->slave_status.master_port != external_master_port)
                 {
                     const string new_ext_host =  master_info->slave_status.master_host;
                     const int new_ext_port = master_info->slave_status.master_port;
-                    if (handle->external_master_port == PORT_UNKNOWN)
+                    if (external_master_port == PORT_UNKNOWN)
                     {
                         MXS_NOTICE("Cluster master server is replicating from an external master: %s:%d",
                                    new_ext_host.c_str(), new_ext_port);
@@ -2039,34 +2040,34 @@ monitorMain(void *arg)
                     else
                     {
                         MXS_NOTICE("The external master of the cluster has changed: %s:%d -> %s:%d.",
-                                   handle->external_master_host.c_str(), handle->external_master_port,
+                                   external_master_host.c_str(), external_master_port,
                                    new_ext_host.c_str(), new_ext_port);
                     }
-                    handle->external_master_host = new_ext_host;
-                    handle->external_master_port = new_ext_port;
+                    external_master_host = new_ext_host;
+                    external_master_port = new_ext_port;
                 }
             }
             else
             {
-                if (handle->external_master_port != PORT_UNKNOWN)
+                if (external_master_port != PORT_UNKNOWN)
                 {
                     MXS_NOTICE("Cluster lost the external master.");
                 }
-                handle->external_master_host.clear();
-                handle->external_master_port = PORT_UNKNOWN;
+                external_master_host.clear();
+                external_master_port = PORT_UNKNOWN;
             }
         }
 
-        ptr = mon->monitored_servers;
+        ptr = monitor->monitored_servers;
         while (ptr)
         {
-            MySqlServerInfo *serv_info = get_server_info(handle, ptr);
+            MySqlServerInfo *serv_info = get_server_info(this, ptr);
             ss_dassert(serv_info);
 
             if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
-                getSlaveOfNodeId(mon->monitored_servers, ptr->server->node_id, REJECT_DOWN) &&
-                getServerByNodeId(mon->monitored_servers, ptr->server->master_id) &&
-                (!handle->multimaster || serv_info->group == 0))
+                getSlaveOfNodeId(monitor->monitored_servers, ptr->server->node_id, REJECT_DOWN) &&
+                getServerByNodeId(monitor->monitored_servers, ptr->server->master_id) &&
+                (!multimaster || serv_info->group == 0))
             {
                 /** This server is both a slave and a master i.e. a relay master */
                 monitor_set_pending_status(ptr, SERVER_RELAY_MASTER);
@@ -2084,12 +2085,12 @@ monitorMain(void *arg)
 
         /* Update server status from monitor pending status on that server*/
 
-        ptr = mon->monitored_servers;
+        ptr = monitor->monitored_servers;
         while (ptr)
         {
             if (!SERVER_IN_MAINT(ptr->server))
             {
-                MySqlServerInfo *serv_info = get_server_info(handle, ptr);
+                MySqlServerInfo *serv_info = get_server_info(this, ptr);
 
                 /** If "detect_stale_master" option is On, let's use the previous master.
                  *
@@ -2099,7 +2100,7 @@ monitorMain(void *arg)
                  * the master status. An adequate solution would be to promote
                  * the stale master as a real master if it is the last running server.
                  */
-                if (detect_stale_master && root_master && !handle->multimaster &&
+                if (detect_stale_master && root_master && !multimaster &&
                     (strcmp(ptr->server->name, root_master->server->name) == 0 &&
                      ptr->server->port == root_master->server->port) &&
                     (ptr->server->status & SERVER_MASTER) &&
@@ -2125,7 +2126,7 @@ monitorMain(void *arg)
                     }
                 }
 
-                if (handle->detectStaleSlave)
+                if (detectStaleSlave)
                 {
                     unsigned int bits = SERVER_SLAVE | SERVER_RUNNING;
 
@@ -2169,20 +2170,20 @@ monitorMain(void *arg)
 
         /** Now that all servers have their status correctly set, we can check
             if we need to use standalone master. */
-        if (handle->detect_standalone_master)
+        if (detect_standalone_master)
         {
-            if (standalone_master_required(handle, mon->monitored_servers))
+            if (standalone_master_required(this, monitor->monitored_servers))
             {
                 // Other servers have died, set last remaining server as master
-                if (set_standalone_master(handle, mon->monitored_servers))
+                if (set_standalone_master(this, monitor->monitored_servers))
                 {
                     // Update the root_master to point to the standalone master
-                    root_master = handle->master;
+                    root_master = master;
                 }
             }
             else
             {
-                handle->warn_set_standalone_master = true;
+                warn_set_standalone_master = true;
             }
         }
 
@@ -2197,14 +2198,14 @@ monitorMain(void *arg)
              * This allows parts of a multi-tiered replication setup to be used
              * in MaxScale.
              */
-            if (handle->ignore_external_masters)
+            if (ignore_external_masters)
             {
                 monitor_clear_pending_status(root_master, SERVER_SLAVE_OF_EXTERNAL_MASTER);
                 server_clear_status_nolock(root_master->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
             }
         }
 
-        ss_dassert(root_master == NULL || handle->master == root_master);
+        ss_dassert(root_master == NULL || master == root_master);
         ss_dassert(!root_master ||
                    ((root_master->server->status & (SERVER_SLAVE | SERVER_MASTER))
                     != (SERVER_SLAVE | SERVER_MASTER)));
@@ -2213,35 +2214,35 @@ monitorMain(void *arg)
          * After updating the status of all servers, check if monitor events
          * need to be launched.
          */
-        mon_process_state_changes(mon, handle->script.c_str(), handle->events);
+        mon_process_state_changes(monitor, script.c_str(), events);
         bool failover_performed = false; // Has an automatic failover been performed this loop?
 
-        if (handle->auto_failover)
+        if (auto_failover)
         {
             const char RE_ENABLE_FMT[] = "%s To re-enable failover, manually set '%s' to 'true' for monitor "
                                          "'%s' via MaxAdmin or the REST API, or restart MaxScale.";
-            if (failover_not_possible(handle))
+            if (failover_not_possible(this))
             {
                 const char PROBLEMS[] = "Failover is not possible due to one or more problems in the "
                                         "replication configuration, disabling automatic failover. Failover "
                                         "should only be enabled after the replication configuration has been "
                                         "fixed.";
-                MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, mon->name);
-                handle->auto_failover = false;
-                handle->disable_setting(CN_AUTO_FAILOVER);
+                MXS_ERROR(RE_ENABLE_FMT, PROBLEMS, CN_AUTO_FAILOVER, monitor->name);
+                auto_failover = false;
+                disable_setting(CN_AUTO_FAILOVER);
             }
             // If master seems to be down, check if slaves are receiving events.
-            else if (handle->verify_master_failure && handle->master &&
-                     SERVER_IS_DOWN(handle->master->server) && slave_receiving_events(handle))
+            else if (verify_master_failure && master &&
+                     SERVER_IS_DOWN(master->server) && slave_receiving_events(this))
             {
                 MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
             }
-            else if (!handle->mon_process_failover(&failover_performed))
+            else if (!mon_process_failover(&failover_performed))
             {
                 const char FAILED[] = "Failed to perform failover, disabling automatic failover.";
-                MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, mon->name);
-                handle->auto_failover = false;
-                handle->disable_setting(CN_AUTO_FAILOVER);
+                MXS_ERROR(RE_ENABLE_FMT, FAILED, CN_AUTO_FAILOVER, monitor->name);
+                auto_failover = false;
+                disable_setting(CN_AUTO_FAILOVER);
             }
         }
 
@@ -2283,12 +2284,12 @@ monitorMain(void *arg)
             (SERVER_IS_MASTER(root_master->server) ||
              SERVER_IS_RELAY_SERVER(root_master->server)))
         {
-            handle->set_master_heartbeat(root_master);
-            ptr = mon->monitored_servers;
+            set_master_heartbeat(root_master);
+            ptr = monitor->monitored_servers;
 
             while (ptr)
             {
-                MySqlServerInfo *serv_info = get_server_info(handle, ptr);
+                MySqlServerInfo *serv_info = get_server_info(this, ptr);
 
                 if ((!SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
                 {
@@ -2297,7 +2298,7 @@ monitorMain(void *arg)
                          SERVER_IS_RELAY_SERVER(ptr->server)) &&
                         !serv_info->binlog_relay)  // No select lag for Binlog Server
                     {
-                        handle->set_slave_heartbeat(ptr);
+                        set_slave_heartbeat(ptr);
                     }
                 }
                 ptr = ptr->next;
@@ -2306,14 +2307,14 @@ monitorMain(void *arg)
 
         // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
         // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (!config_get_global_options()->passive && handle->auto_rejoin &&
-            !failover_performed && handle->cluster_can_be_joined())
+        if (!config_get_global_options()->passive && auto_rejoin &&
+            !failover_performed && cluster_can_be_joined())
         {
             // Check if any servers should be autojoined to the cluster
             ServerVector joinable_servers;
-            if (handle->get_joinable_servers(&joinable_servers))
+            if (get_joinable_servers(&joinable_servers))
             {
-                uint32_t joins = handle->do_rejoin(joinable_servers);
+                uint32_t joins = do_rejoin(joinable_servers);
                 if (joins > 0)
                 {
                     MXS_NOTICE("%d server(s) redirected or rejoined the cluster.", joins);
@@ -2322,23 +2323,34 @@ monitorMain(void *arg)
                 {
                     MXS_ERROR("A cluster join operation failed, disabling automatic rejoining. "
                               "To re-enable, manually set '%s' to 'true' for monitor '%s' via MaxAdmin or "
-                              "the REST API.", CN_AUTO_REJOIN, mon->name);
-                    handle->auto_rejoin = false;
-                    handle->disable_setting(CN_AUTO_REJOIN);
+                              "the REST API.", CN_AUTO_REJOIN, monitor->name);
+                    auto_rejoin = false;
+                    disable_setting(CN_AUTO_REJOIN);
                 }
             }
             else
             {
                 MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.",
-                          handle->master->server->unique_name);
+                          master->server->unique_name);
             }
         }
 
-        mon_hangup_failed_servers(mon);
-        servers_status_current_to_pending(mon);
-        store_server_journal(mon, handle->master);
-        release_monitor_servers(mon);
+        mon_hangup_failed_servers(monitor);
+        servers_status_current_to_pending(monitor);
+        store_server_journal(monitor, master);
+        release_monitor_servers(monitor);
     } /*< while (1) */
+}
+
+/**
+ * The entry point for the monitoring module thread
+ *
+ * @param arg   The handle of the monitor. Must be the object returned by startMonitor.
+ */
+static void monitorMain(void *arg)
+{
+    MariaDBMonitor* handle  = static_cast<MariaDBMonitor*>(arg);
+    handle->main_loop();
 }
 
 /**

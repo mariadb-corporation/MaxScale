@@ -74,6 +74,25 @@ public:
     // TODO: Once done refactoring, see which of these can be moved to private.
 
     /**
+     * Print diagnostics.
+     *
+     * @param dcb DCB to print to
+     */
+    void diagnostics(DCB *dcb) const;
+
+    /**
+     * Print diagnostics to json object.
+     *
+     * @return Diagnostics messages
+     */
+    json_t* diagnostics_json() const;
+
+    /**
+     * Runs the main monitor loop. Called from the static monitorMain()-function.
+     */
+    void main_loop();
+
+    /**
      * Start the monitor instance and return the instance data, creating it if starting for the first time.
      * This function creates a thread to execute the monitoring.
      *
