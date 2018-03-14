@@ -48,6 +48,12 @@ enum print_repl_warnings_t
     WARNINGS_OFF
 };
 
+enum slave_down_setting_t
+{
+    ACCEPT_DOWN,
+    REJECT_DOWN
+};
+
 // TODO: Most of following should be class methods
 void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers, json_t** err_out);
 string generate_master_gtid_wait_cmd(const Gtid& gtid, double timeout);
@@ -55,6 +61,10 @@ bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned i
                    StringVector* output);
 bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info,
                                 print_repl_warnings_t print_warnings = WARNINGS_ON);
+MXS_MONITORED_SERVER* getServerByNodeId(MXS_MONITORED_SERVER *, long);
+MXS_MONITORED_SERVER* getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
+int64_t scan_server_id(const char* id_string);
+void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, int nservers);
 
 // MariaDB Monitor instance data
 class MariaDBMonitor
@@ -300,7 +310,7 @@ private:
     bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
     void init_server_info();
     bool slave_receiving_events();
-    void monitorDatabase(MXS_MONITORED_SERVER *database);
+    void monitor_database(MXS_MONITORED_SERVER *database);
     bool standalone_master_required(MXS_MONITORED_SERVER *db);
     bool set_standalone_master(MXS_MONITORED_SERVER *db);
     bool failover_not_possible();
@@ -315,7 +325,8 @@ private:
     bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
     void set_master_heartbeat(MXS_MONITORED_SERVER *);
     void set_slave_heartbeat(MXS_MONITORED_SERVER *);
-
+    MXS_MONITORED_SERVER* build_mysql51_replication_tree();
+    MXS_MONITORED_SERVER* get_replication_tree(int num_servers);
 public:
     // Following methods should be private, change it once refactoring is done.
     bool update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
