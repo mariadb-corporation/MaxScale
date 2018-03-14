@@ -734,6 +734,8 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session,
     sent_sescmd(0),
     recv_sescmd(0),
     gtid_pos(""),
+    wait_gtid_state(EXPECTING_NOTHING),
+    next_seq(0),
     rses_chk_tail(CHK_NUM_ROUTER_SES)
 {
     if (rses_config.rw_max_slave_conn_percent)
@@ -1223,7 +1225,12 @@ static void clientReply(MXS_ROUTER *instance,
 
     if (rses->wait_gtid_state == EXPECTING_WAIT_GTID_RESULT)
     {
-        writebuf = discard_master_wait_gtid_result(writebuf, rses);
+        ss_dassert(rses->rses_config.enable_causal_read);
+        if ((writebuf = discard_master_wait_gtid_result(writebuf, rses)) == NULL)
+        {
+            // Nothing to route, return
+            return;
+        }
     }
     if (rses->wait_gtid_state == EXPECTING_REAL_RESULT)
     {
