@@ -88,13 +88,14 @@ int main(int argc, char *argv[])
     test.tprintf(" Create the test table and insert some data ");
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1 (id int)");
     test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES (1)");
-    sleep(2);
+    test.repl->sync_slaves();
+
     print_gtids(test);
 
     test.maxscales->close_maxscale_connections(0);
     if (test.global_result != 0)
     {
-	return test.global_result;
+        return test.global_result;
     }
 
     test.tprintf(" Block all but one node, stop slave on server 4 ");
