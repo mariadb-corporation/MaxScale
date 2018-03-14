@@ -616,6 +616,10 @@ add_test_executable(mxs1677_temp_table.cpp mxs1677_temp_table replication LABELS
 # https://jira.mariadb.org/browse/MXS-1678
 add_test_executable(mxs1678_relay_master.cpp mxs1678_relay_master replication LABELS REPL_BACKEND)
 
+# MXS-1713: SchemaRouter unable to process SHOW DATABASES for a lot of schemas
+# https://jira.mariadb.org/browse/MXS-1713
+add_test_executable(mxs1713_lots_of_databases.cpp mxs1713_lots_of_databases mxs1713_lots_of_databases LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 

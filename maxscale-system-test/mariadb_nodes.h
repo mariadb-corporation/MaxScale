@@ -160,6 +160,12 @@ public:
      */
     void close_connections();
 
+    // Alias for close_connections()
+    void disconnect()
+    {
+        close_connections();
+    }
+
     /**
      * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes (N) and  User/Password
      * @return 0

@@ -371,7 +371,6 @@ mxs_auth_state_t handle_server_response(DCB *dcb, GWBUF *buffer)
         }
     }
 
-    gwbuf_free(buffer);
     return rval;
 }
 
@@ -518,7 +517,6 @@ gw_read_backend_event(DCB *dcb)
                 }
 
                 proto->protocol_auth_state = state;
-                gwbuf_free(readbuf);
             }
             else if (proto->protocol_auth_state == MXS_AUTH_STATE_RESPONSE_SENT)
             {
@@ -548,6 +546,8 @@ gw_read_backend_event(DCB *dcb)
                 /** Authentication failed */
                 gw_reply_on_error(dcb, proto->protocol_auth_state);
             }
+
+            gwbuf_free(readbuf);
         }
         else if (proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED &&
                  dcb->ssl_state == SSL_ESTABLISHED)
@@ -752,6 +752,7 @@ gw_read_and_write(DCB *dcb)
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT) ||
         rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
+        proto->collect_result ||
         proto->ignore_replies != 0)
     {
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);

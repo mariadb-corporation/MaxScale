@@ -467,7 +467,7 @@ int Nodes::read_basic_env()
     return 0;
 }
 
-char* Nodes::ip(int i) const
+const char* Nodes::ip(int i) const
 {
-    return use_ipv6 ?  (char*)IP6[i] : (char*)IP[i];
+    return use_ipv6 ?  IP6[i] : IP[i];
 }

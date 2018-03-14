@@ -34,21 +34,19 @@ The main tutorial for MariaDB MaxScale consist of setting up MariaDB MaxScale fo
 
 These tutorials are for specific use cases and module combinations.
 
+ - [Connection Routing Tutorial](Tutorials/Connection-Routing-Tutorial.md)
+ - [Read Write Splitting Tutorial](Tutorials/Read-Write-Splitting-Tutorial
  - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
  - [Avro Router Tutorial](Tutorials/Avrorouter-Tutorial.md)
- - [Failover with Keepalived and MaxCtrl](Tutorials/MaxScale-Failover-with-Keepalived-and-MaxCtrl.md)
- - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
- - [Galera Cluster Connection Routing Tutorial](Tutorials/Galera-Cluster-Connection-Routing-Tutorial.md)
- - [Galera Gluster Read Write Splitting Tutorial](Tutorials/Galera-Cluster-Read-Write-Splitting-Tutorial.md)
- - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
- - [MariaDB Replication Connection Routing Tutorial](Tutorials/MariaDB-Replication-Connection-Routing-Tutorial.md)
- - [MariaDB Replication Read Write Splitting Tutorial](Tutorials/MariaDB-Replication-Read-Write-Splitting-Tutorial.md)
+ - [MaxScale Failover with Keepalived and MaxCtrl](Tutorials/MaxScale-Failover-with-Keepalived-and-MaxCtrl.md)
  - [MariaDB Monitor Failover Tutorial](Tutorials/MariaDB-Monitor-Failover.md)
  - [MariaDB MaxScale Information Schema Tutorial](Tutorials/MaxScale-Information-Schema.md)
- - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
- - [RabbitMQ Setup and MariaDB MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
+ - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
+ - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
+ - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
+ - [RabbitMQ Setup and MariaDB MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
 
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 

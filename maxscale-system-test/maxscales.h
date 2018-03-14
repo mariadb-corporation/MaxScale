@@ -8,6 +8,13 @@
 class Maxscales: public Nodes
 {
 public:
+    enum service
+    {
+        RWSPLIT,
+        READCONN_MASTER,
+        READCONN_SLAVE
+    };
+
     Maxscales(const char *pref, const char *test_cwd, bool verbose);
     int read_env();
 
@@ -25,6 +32,16 @@ public:
      * @brief readconn_slave_port ReadConnection in slave mode service port
      */
     int readconn_slave_port[256];
+
+    /**
+     * @brief Get port number of a MaxScale service
+     *
+     * @param type Type of service
+     * @param m    MaxScale instance to use
+     *
+     * @return Port number of the service
+     */
+    int port(enum service type = RWSPLIT, int m = 0) const;
 
     /**
      * @brief binlog_port binlog router service port
