@@ -79,12 +79,12 @@ int MariaDBMonitor::redirect_slaves(MXS_MONITORED_SERVER* new_master, const Serv
 bool MariaDBMonitor::start_external_replication(MXS_MONITORED_SERVER* new_master, json_t** err_out)
 {
     bool rval = false;
-    string change_cmd = generate_change_master_cmd(external_master_host, external_master_port);
+    string change_cmd = generate_change_master_cmd(m_external_master_host, m_external_master_port);
     if (mxs_mysql_query(new_master->con, change_cmd.c_str()) == 0 &&
         mxs_mysql_query(new_master->con, "START SLAVE;") == 0)
     {
         MXS_NOTICE("New master starting replication from external master %s:%d.",
-                   external_master_host.c_str(), external_master_port);
+                   m_external_master_host.c_str(), m_external_master_port);
         rval = true;
     }
     else
@@ -188,7 +188,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerVector& joinable_servers)
 
 bool MariaDBMonitor::cluster_can_be_joined()
 {
-    return (master != NULL && SERVER_IS_MASTER(master->server) && master_gtid_domain >= 0);
+    return (master != NULL && SERVER_IS_MASTER(master->server) && m_master_gtid_domain >= 0);
 }
 
 /**
@@ -208,7 +208,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerVector* output)
     // Whether a join operation should be attempted or not depends on several criteria. Start with the ones
     // easiest to test. Go though all slaves and construct a preliminary list.
     ServerVector suspects;
-    for (MXS_MONITORED_SERVER* server = monitor->monitored_servers;
+    for (MXS_MONITORED_SERVER* server = m_monitor_base->monitored_servers;
          server != NULL;
          server = server->next)
     {
@@ -315,14 +315,14 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
         PRINT_MXS_JSON_ERROR(err_out, "Cluster does not have a running master. Run failover instead.");
         return false;
     }
-    if (master_gtid_domain < 0)
+    if (m_master_gtid_domain < 0)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot switchover.");
         return false;
     }
     // Total time limit on how long this operation may take. Checked and modified after significant steps are
     // completed.
-    int seconds_remaining = switchover_timeout;
+    int seconds_remaining = m_switchover_timeout;
     time_t start_time = time(NULL);
     // Step 1: Select promotion candidate, save all slaves except promotion target to an array. If we have a
     // user-defined master candidate, check it. Otherwise, autoselect.
@@ -338,7 +338,7 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
              * path analogous with failover_select_new_master(). The later functions can then assume that
              * slave server info is up to date.
              */
-            for (MXS_MONITORED_SERVER* slave = monitor->monitored_servers; slave; slave = slave->next)
+            for (MXS_MONITORED_SERVER* slave = m_monitor_base->monitored_servers; slave; slave = slave->next)
             {
                 if (slave != promotion_target)
                 {
@@ -375,7 +375,7 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
         ServerVector catchup_slaves = redirectable_slaves;
         catchup_slaves.push_back(promotion_target);
         if (switchover_wait_slaves_catchup(catchup_slaves, curr_master_info->gtid_binlog_pos,
-                                           seconds_remaining, monitor->read_timeout, err_out))
+                                           seconds_remaining, m_monitor_base->read_timeout, err_out))
         {
             time_t step3_time = time(NULL);
             int seconds_step3 = difftime(step3_time, step2_time);
@@ -405,7 +405,7 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
                     // Step 6: Finally, add an event to the new master to advance gtid and wait for the slaves
                     // to receive it. If using external replication, skip this step. Come up with an
                     // alternative later.
-                    if (external_master_port != PORT_UNKNOWN)
+                    if (m_external_master_port != PORT_UNKNOWN)
                     {
                         MXS_WARNING("Replicating from external master, skipping final check.");
                         rval = true;
@@ -444,7 +444,7 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
             }
 
             // Try to reactivate external replication if any.
-            if (external_master_port != PORT_UNKNOWN)
+            if (m_external_master_port != PORT_UNKNOWN)
             {
                 start_external_replication(new_master, err_out);
             }
@@ -456,14 +456,14 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
 bool MariaDBMonitor::do_failover(json_t** err_out)
 {
     // Topology has already been tested to be simple.
-    if (master_gtid_domain < 0)
+    if (m_master_gtid_domain < 0)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Cluster gtid domain is unknown. Cannot failover.");
         return false;
     }
     // Total time limit on how long this operation may take. Checked and modified after significant steps are
     // completed.
-    int seconds_remaining = failover_timeout;
+    int seconds_remaining = m_failover_timeout;
     time_t start_time = time(NULL);
     // Step 1: Select new master. Also populate a vector with all slaves not the selected master.
     ServerVector redirectable_slaves;
@@ -500,7 +500,7 @@ bool MariaDBMonitor::do_failover(json_t** err_out)
                 // to receive it. seconds_remaining can be 0 or less at this point. Even in such a case
                 // wait_cluster_stabilization() may succeed if replication is fast enough. If using external
                 // replication, skip this step. Come up with an alternative later.
-                if (external_master_port != PORT_UNKNOWN)
+                if (m_external_master_port != PORT_UNKNOWN)
                 {
                     MXS_WARNING("Replicating from external master, skipping final check.");
                     rval = true;
@@ -929,7 +929,7 @@ bool MariaDBMonitor::promote_new_master(MXS_MONITORED_SERVER* new_master, json_t
     }
     // If the previous master was a slave to an external master, start the equivalent slave connection on
     // the new master. Success of replication is not checked.
-    else if (external_master_port != PORT_UNKNOWN && !start_external_replication(new_master, err_out))
+    else if (m_external_master_port != PORT_UNKNOWN && !start_external_replication(new_master, err_out))
     {
         success = false;
     }
@@ -955,7 +955,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(ServerVector* slaves_out
     // Index of the current best candidate in slaves_out
     int master_vector_index = -1;
 
-    for (MXS_MONITORED_SERVER *cand = monitor->monitored_servers; cand; cand = cand->next)
+    for (MXS_MONITORED_SERVER *cand = m_monitor_base->monitored_servers; cand; cand = cand->next)
     {
         // If a server cannot be connected to, it won't be considered for promotion or redirected.
         // Do not worry about the exclusion list yet, querying the excluded servers is ok.
@@ -1036,10 +1036,10 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(ServerVector* slaves_out
  */
 bool MariaDBMonitor::server_is_excluded(const MXS_MONITORED_SERVER* server)
 {
-    size_t n_excluded = excluded_servers.size();
+    size_t n_excluded = m_excluded_servers.size();
     for (size_t i = 0; i < n_excluded; i++)
     {
-        if (excluded_servers[i] == server)
+        if (m_excluded_servers[i] == server)
         {
             return true;
         }

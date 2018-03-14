@@ -234,52 +234,49 @@ public:
     bool can_replicate_from(MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
                             MySqlServerInfo* master_info);
 
-    MXS_MONITOR* monitor;          /**< Generic monitor object */
-    volatile int shutdown;         /**< Flag to shutdown the monitor thread.
-                                    *   Accessed from multiple threads. */
-    int status;                    /**< Monitor status. TODO: This should be in MXS_MONITOR */
-    MXS_MONITORED_SERVER *master;  /**< Master server for MySQL Master/Slave replication */
-    ServerInfoMap server_info;     /**< Contains server specific information */
-    unsigned long id;              /**< Monitor ID */
-    bool warn_set_standalone_master; /**< Log a warning when setting standalone master */
-
-    // Values updated by monitor
-    int64_t master_gtid_domain;    /**< Gtid domain currently used by the master */
-    string external_master_host;   /**< External master host, for fail/switchover */
-    int external_master_port;      /**< External master port */
-
-    // Replication topology detection settings
-    bool mysql51_replication;      /**< Use MySQL 5.1 replication */
+    int status;                      /**< Monitor status. TODO: This should be in MXS_MONITOR */
+    MXS_MONITORED_SERVER *master;    /**< Master server for MySQL Master/Slave replication */
     bool detectStaleMaster;        /**< Monitor flag for MySQL replication Stale Master detection */
-    bool detectStaleSlave;         /**< Monitor flag for MySQL replication Stale Master detection */
-    bool multimaster;              /**< Detect and handle multi-master topologies */
-    bool ignore_external_masters;  /**< Ignore masters outside of the monitor configuration */
-    bool detect_standalone_master; /**< If standalone master are detected */
-    bool replicationHeartbeat;     /**< Monitor flag for MySQL replication heartbeat */
-
-    // Failover, switchover and rejoin settings
-    int failcount;                 /**< How many monitoring cycles master must be down before auto-failover
-                                    *   begins */
-    uint32_t failover_timeout;     /**< Timeout in seconds for the master failover */
-    uint32_t switchover_timeout;   /**< Timeout in seconds for the master switchover */
-    bool verify_master_failure;    /**< Whether master failure is verified via slaves */
-    int master_failure_timeout;    /**< Master failure verification (via slaves) time in seconds */
-    bool auto_failover;            /**< If automatic master failover is enabled */
-    bool auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
-                                    *   replicating from the wrong master automatically. */
-    ServerVector excluded_servers; /**< Servers banned for master promotion during auto-failover. */
-
-    // Other settings
-    string script;                 /**< Script to call when state changes occur on servers */
-    uint64_t events;               /**< enabled events */
-    bool allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
 
 private:
-    THREAD m_thread;               /**< Monitor thread */
+    MXS_MONITOR* m_monitor_base;     /**< Generic monitor object */
+    THREAD m_thread;                 /**< Monitor thread */
+    unsigned long m_id;              /**< Monitor ID */
+    volatile int m_shutdown;         /**< Flag to shutdown the monitor thread. */
+    ServerInfoMap m_server_info;     /**< Contains server specific information */
+
+    // Values updated by monitor
+    int64_t m_master_gtid_domain;    /**< Gtid domain currently used by the master */
+    string m_external_master_host;   /**< External master host, for fail/switchover */
+    int m_external_master_port;      /**< External master port */
+
+    // Replication topology detection settings
+    bool m_mysql51_replication;      /**< Use MySQL 5.1 replication */
+    bool m_detect_stale_slave;       /**< Monitor flag for MySQL replication Stale Slave detection */
+    bool m_detect_multimaster;       /**< Detect and handle multi-master topologies */
+    bool m_ignore_external_masters;  /**< Ignore masters outside of the monitor configuration */
+    bool m_detect_standalone_master; /**< If standalone master are detected */
+    bool m_allow_cluster_recovery;   /**< Allow failed servers to rejoin the cluster */
+    bool m_warn_set_standalone_master; /**< Log a warning when setting standalone master */
 
     // Failover, switchover and rejoin settings
-    string m_replication_user;     /**< Replication user for CHANGE MASTER TO-commands */
-    string m_replication_password; /**< Replication password for CHANGE MASTER TO-commands */
+    string m_replication_user;       /**< Replication user for CHANGE MASTER TO-commands */
+    string m_replication_password;   /**< Replication password for CHANGE MASTER TO-commands */
+    int m_failcount;                 /**< How many monitoring cycles master must be down before auto-failover
+                                      *   begins */
+    uint32_t m_failover_timeout;     /**< Timeout in seconds for the master failover */
+    uint32_t m_switchover_timeout;   /**< Timeout in seconds for the master switchover */
+    bool m_verify_master_failure;    /**< Whether master failure is verified via slaves */
+    int m_master_failure_timeout;    /**< Master failure verification (via slaves) time in seconds */
+    bool m_auto_failover;            /**< If automatic master failover is enabled */
+    bool m_auto_rejoin;              /**< Attempt to start slave replication on standalone servers or servers
+                                      *   replicating from the wrong master automatically. */
+    ServerVector m_excluded_servers; /**< Servers banned for master promotion during auto-failover. */
+
+    // Other settings
+    string m_script;                 /**< Script to call when state changes occur on servers */
+    uint64_t m_events;               /**< enabled events */
+    bool m_detect_replication_lag;   /**< Monitor flag for MySQL replication heartbeat */
 
     MariaDBMonitor(MXS_MONITOR* monitor_base);
     ~MariaDBMonitor();
@@ -307,10 +304,6 @@ private:
     bool standalone_master_required(MXS_MONITORED_SERVER *db);
     bool set_standalone_master(MXS_MONITORED_SERVER *db);
     bool failover_not_possible();
-
-public:
-    // Following methods should be private, change it once refactoring is done.
-    bool update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
     string generate_change_master_cmd(const string& master_host, int master_port);
     int redirect_slaves(MXS_MONITORED_SERVER* new_master, const ServerVector& slaves,
                         ServerVector* redirected_slaves);
@@ -322,5 +315,9 @@ public:
     bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd);
     void set_master_heartbeat(MXS_MONITORED_SERVER *);
     void set_slave_heartbeat(MXS_MONITORED_SERVER *);
+
+public:
+    // Following methods should be private, change it once refactoring is done.
+    bool update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
     void disable_setting(const char* setting);
 };
