@@ -65,6 +65,7 @@ bug711
 bug729
 bug730
 bulk_insert
+cache_runtime
 ccrfilter
 cdc_client
 cdc_connector-prefix/

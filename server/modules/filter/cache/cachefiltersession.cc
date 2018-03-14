@@ -771,14 +771,15 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
     {
         uint32_t type_mask = qc_get_trx_type_mask(pPacket); // Note, only trx-related type mask
 
-        const char* zReason = NULL;
+        const char* zPrimary_reason = NULL;
+        const char* zSecondary_reason = "";
         const CACHE_CONFIG& config = m_pCache->config();
 
         if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
             if (log_decisions())
             {
-                zReason = "transaction start";
+                zPrimary_reason = "transaction start";
             }
 
             // When a transaction is started, we initially assume it is read-only.
@@ -788,7 +789,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         {
             if (log_decisions())
             {
-                zReason = "no transaction";
+                zPrimary_reason = "no transaction";
             }
             action = CACHE_USE_AND_POPULATE;
         }
@@ -798,7 +799,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             {
                 if (log_decisions())
                 {
-                    zReason = "explicitly read-only transaction";
+                    zPrimary_reason = "explicitly read-only transaction";
                 }
                 action = CACHE_USE_AND_POPULATE;
             }
@@ -808,7 +809,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                 if (log_decisions())
                 {
-                    zReason = "populating but not using cache inside read-only transactions";
+                    zPrimary_reason = "populating but not using cache inside read-only transactions";
                 }
                 action = CACHE_POPULATE;
             }
@@ -822,7 +823,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             {
                 if (log_decisions())
                 {
-                    zReason = "ordinary transaction that has so far been read-only";
+                    zPrimary_reason = "ordinary transaction that has so far been read-only";
                 }
                 action = CACHE_USE_AND_POPULATE;
             }
@@ -833,7 +834,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
                 if (log_decisions())
                 {
-                    zReason =
+                    zPrimary_reason =
                         "populating but not using cache inside transaction that is not "
                         "explicitly read-only, but that has used only SELECTs sofar";
                 }
@@ -844,7 +845,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         {
             if (log_decisions())
             {
-                zReason = "ordinary transaction with non-read statements";
+                zPrimary_reason = "ordinary transaction with non-read statements";
             }
         }
 
@@ -861,22 +862,22 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
                     {
                         action = CACHE_IGNORE;
-                        zReason = "user variables are read";
+                        zPrimary_reason = "user variables are read";
                     }
                     else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
                     {
                         action = CACHE_IGNORE;
-                        zReason = "system variables are read";
+                        zPrimary_reason = "system variables are read";
                     }
                     else if (uses_non_cacheable_function(pPacket))
                     {
                         action = CACHE_IGNORE;
-                        zReason = "uses non-cacheable function";
+                        zPrimary_reason = "uses non-cacheable function";
                     }
                     else if (uses_non_cacheable_variable(pPacket))
                     {
                         action = CACHE_IGNORE;
-                        zReason = "uses non-cacheable variable";
+                        zPrimary_reason = "uses non-cacheable variable";
                     }
                 }
             }
@@ -889,26 +890,21 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                 m_is_read_only = false;
 
                 action = CACHE_IGNORE;
-                zReason = "statement is not SELECT";
+                zPrimary_reason = "statement is not SELECT";
             }
         }
 
         if (action == CACHE_USE_AND_POPULATE)
         {
-            if (!m_use && !m_populate)
-            {
-                action = CACHE_IGNORE;
-                zReason = "usage and populating disabled";
-            }
-            else if (!m_use)
+            if (!m_use)
             {
                 action = CACHE_POPULATE;
-                zReason = "usage disabled";
+                zSecondary_reason = ", but usage disabled";
             }
             else if (!m_populate)
             {
                 action = CACHE_USE;
-                zReason = "populating disabled";
+                zSecondary_reason = ", but populating disabled";
             }
         }
         else if (action == CACHE_USE)
@@ -916,7 +912,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             if (!m_use)
             {
                 action = CACHE_IGNORE;
-                zReason = "usage disabled";
+                zSecondary_reason = ", but usage disabled";
             }
         }
         else if (action == CACHE_POPULATE)
@@ -924,7 +920,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             if (!m_populate)
             {
                 action = CACHE_IGNORE;
-                zReason = "populating disabled";
+                zSecondary_reason = ", but populating disabled";
             }
         }
 
@@ -941,18 +937,18 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
             if (length <= max_length)
             {
-                zFormat = "%s, \"%.*s\", %s.";
+                zFormat = "%s, \"%.*s\", %s%s.";
             }
             else
             {
-                zFormat = "%s, \"%.*s...\", %s.";
+                zFormat = "%s, \"%.*s...\", %s%s.";
                 length = max_length - 3; // strlen("...");
             }
 
             const char* zDecision = (action == CACHE_IGNORE) ? "IGNORE" : "CONSULT";
 
-            ss_dassert(zReason);
-            MXS_NOTICE(zFormat, zDecision, length, pSql, zReason);
+            ss_dassert(zPrimary_reason);
+            MXS_NOTICE(zFormat, zDecision, length, pSql, zPrimary_reason, zSecondary_reason);
         }
     }
     else
@@ -1075,6 +1071,10 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
         }
         else
         {
+            if (log_decisions())
+            {
+                MXS_NOTICE("Not found in cache, fetching data from server.");
+            }
             routing_action = ROUTING_CONTINUE;
         }
 
@@ -1086,11 +1086,20 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
             }
             else
             {
+                if (log_decisions())
+                {
+                    MXS_NOTICE("Neither populating, nor refreshing, fetching data "
+                               "but not adding to cache.");
+                }
                 m_state = CACHE_IGNORING_RESPONSE;
             }
         }
         else
         {
+            if (log_decisions())
+            {
+                MXS_NOTICE("Found in cache.");
+            }
             m_state = CACHE_EXPECTING_NOTHING;
             gwbuf_free(pPacket);
             DCB *dcb = m_pSession->client_dcb;
