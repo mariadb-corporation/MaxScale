@@ -1079,6 +1079,15 @@ bool should_replace_master(RWSplitSession *rses, SRWBackend& target)
         !locked_to_master(rses);
 }
 
+void replace_master(RWSplitSession *rses, SRWBackend& target)
+{
+    rses->current_master = target;
+
+    // As the master has changed, we can reset the temporary table information
+    rses->have_tmp_tables = false;
+    rses->temp_tables.clear();
+}
+
 /**
  * @brief Handle master is the target
  *
@@ -1100,7 +1109,7 @@ bool handle_master_is_target(RWSplit *inst, RWSplitSession *rses,
     {
         MXS_INFO("Replacing old master '%s' with new master '%s'", rses->current_master ?
                  rses->current_master->name() : "<no previous master>", target->name());
-        rses->current_master = target;
+        replace_master(rses, target);
     }
 
     if (target && target == rses->current_master)
