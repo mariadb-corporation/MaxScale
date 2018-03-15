@@ -20,6 +20,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
+#include <maxscale/buffer.hh>
 #include <maxscale/modutil.h>
 #include <maxscale/platform.h>
 #include <maxscale/poll.h>
@@ -1185,6 +1186,170 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
     return rval;
 }
 
+static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator it,
+                                                           mxs::Buffer::iterator end)
+{
+    ss_dassert(it != end);
+    ss_dassert(isdigit(*it));
+    std::pair<bool, mxs::Buffer::iterator> rval = std::make_pair(true, it);
+    bool is_hex = *it == '0';
+
+    // Skip the first character, we know it's a number
+    it++;
+
+    while (it != end)
+    {
+        if (!isdigit(*it))
+        {
+            if (is_hex && (*it == 'x' || *it == 'X'))
+            {
+                /** A hexadecimal literal, mark that we've seen the `x` so that
+                 * if another one is seen, it is treated as a normal character */
+                is_hex = false;
+            }
+            else if (*it == 'e')
+            {
+                // Possible scientific notation number
+                auto next_it = std::next(it);
+
+                if (next_it == end || (!isdigit(*next_it) && *next_it != '-'))
+                {
+                    rval.first = false;
+                    break;
+                }
+
+                // Skip over the minus if we have one
+                if (*next_it == '-')
+                {
+                    it++;
+                }
+            }
+            else if (*it == '.')
+            {
+                // Possible decimal number
+                auto next_it = std::next(it);
+
+                if (next_it != end && !isdigit(*next_it))
+                {
+                    /** No number after the period, not a decimal number.
+                     * The fractional part of the number is optional in MariaDB. */
+                    rval.first = false;
+                    break;
+                }
+                ss_dassert(isdigit(*next_it));
+            }
+            else
+            {
+                // If we have a non-text character, we treat it as a number
+                rval.first = !isalpha(*it);
+                break;
+            }
+        }
+
+        // Store the previous iterator
+        rval.second = it;
+        it++;
+    }
+
+    return rval;
+}
+
+char* modutil_get_new_canonical(GWBUF* querybuf)
+{
+    std::string rval;
+    mxs::Buffer buf(querybuf);
+
+    enum state
+    {
+        NONE,
+        SINGLE_QUOTE,
+        DOUBLE_QUOTE,
+        BACKTICK
+    } my_state = NONE;
+
+    char prev = ' ';
+
+    for (auto it = std::next(buf.begin(), MYSQL_HEADER_LEN + 1); // Skip packet header and command
+         it != buf.end(); it++)
+    {
+        if (*it == '\\')
+        {
+            // Jump over any escaped values
+            rval += *it;
+            it++;
+            rval += *it;
+            continue;
+        }
+
+        switch (my_state)
+        {
+            case BACKTICK:
+                rval += *it;
+                if (*it == '`')
+                {
+                    my_state = NONE;
+                }
+                break;
+
+            case SINGLE_QUOTE:
+                if (*it == '\'')
+                {
+                    rval += "'?'";
+                    my_state = NONE;
+                }
+                break;
+
+            case DOUBLE_QUOTE:
+                if (*it == '"')
+                {
+                    rval += "\"?\"";
+                    my_state = NONE;
+                }
+                break;
+
+            default:
+                if (isspace(*it))
+                {
+                    *it = ' ';
+                }
+                else if (isdigit(*it) && !isalpha(prev) && !isdigit(prev) && prev != '_')
+                {
+                     auto num_end = probe_number(it, buf.end());
+
+                     if (num_end.first)
+                     {
+                         rval += '?';
+                         it = num_end.second;
+                         continue;
+                     }
+                }
+
+                switch (*it)
+                {
+                    case '\'':
+                        my_state = SINGLE_QUOTE;
+                        break;
+                    case '"':
+                        my_state = DOUBLE_QUOTE;
+                        break;
+                    case '`':
+                        my_state = BACKTICK;
+                        /* falls through */
+                    default:
+                        rval += *it;
+                        break;
+                }
+
+                break;
+        }
+
+        prev = *it;
+    }
+
+    buf.release();
+    return MXS_STRDUP(rval.c_str());
+}
+
 /*
  * Replace user-provided literals with question marks.
  *
@@ -1237,7 +1402,6 @@ char* modutil_get_canonical(GWBUF* querybuf)
 
     return querystr;
 }
-
 
 char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
 {
