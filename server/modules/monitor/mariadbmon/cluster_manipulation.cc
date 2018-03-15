@@ -17,6 +17,175 @@
 #include <sstream>
 #include <maxscale/mysql_utils.h>
 
+bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master, json_t** error_out)
+{
+    bool stopped = stop();
+    if (stopped)
+    {
+        MXS_NOTICE("Stopped the monitor %s for the duration of switchover.", m_monitor_base->name);
+    }
+    else
+    {
+        MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor_base->name);
+    }
+
+    bool rval = false;
+    bool current_ok = switchover_check_current(current_master, error_out);
+    bool new_ok = switchover_check_new(new_master, error_out);
+    // Check that all slaves are using gtid-replication
+    bool gtid_ok = true;
+    for (auto mon_serv = m_monitor_base->monitored_servers; mon_serv != NULL; mon_serv = mon_serv->next)
+    {
+        if (SERVER_IS_SLAVE(mon_serv->server))
+        {
+            if (!uses_gtid(mon_serv, error_out))
+            {
+                gtid_ok = false;
+            }
+        }
+    }
+
+    if (current_ok && new_ok && gtid_ok)
+    {
+        bool switched = do_switchover(current_master, new_master, error_out);
+
+        const char* curr_master_name = current_master->server->unique_name;
+        const char* new_master_name = new_master->server->unique_name;
+
+        if (switched)
+        {
+            MXS_NOTICE("Switchover %s -> %s performed.", curr_master_name, new_master_name);
+            rval = true;
+        }
+        else
+        {
+            string format = "Switchover %s -> %s failed";
+            bool failover_setting = config_get_bool(m_monitor_base->parameters, CN_AUTO_FAILOVER);
+            if (failover_setting)
+            {
+                disable_setting(CN_AUTO_FAILOVER);
+                format += ", automatic failover has been disabled.";
+            }
+            format += ".";
+            PRINT_MXS_JSON_ERROR(error_out, format.c_str(), curr_master_name, new_master_name);
+        }
+    }
+
+    if (stopped)
+    {
+        MariaDBMonitor::start(m_monitor_base, m_monitor_base->parameters);
+    }
+    return rval;
+}
+
+bool MariaDBMonitor::manual_failover(json_t** output)
+{
+    bool stopped = stop();
+    if (stopped)
+    {
+        MXS_NOTICE("Stopped monitor %s for the duration of failover.", m_monitor_base->name);
+    }
+    else
+    {
+        MXS_NOTICE("Monitor %s already stopped, failover can proceed.", m_monitor_base->name);
+    }
+
+    bool rv = true;
+    rv = failover_check(output);
+    if (rv)
+    {
+        rv = do_failover(output);
+        if (rv)
+        {
+            MXS_NOTICE("Failover performed.");
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(output, "Failover failed.");
+        }
+    }
+
+    if (stopped)
+    {
+        MariaDBMonitor::start(m_monitor_base, m_monitor_base->parameters);
+    }
+    return rv;
+}
+
+bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
+{
+    bool stopped = stop();
+    if (stopped)
+    {
+        MXS_NOTICE("Stopped monitor %s for the duration of rejoin.", m_monitor_base->name);
+    }
+    else
+    {
+        MXS_NOTICE("Monitor %s already stopped, rejoin can proceed.", m_monitor_base->name);
+    }
+
+    bool rval = false;
+    if (cluster_can_be_joined())
+    {
+        const char* rejoin_serv_name = rejoin_server->unique_name;
+        MXS_MONITORED_SERVER* mon_server = mon_get_monitored_server(m_monitor_base, rejoin_server);
+        if (mon_server)
+        {
+            const char* master_name = master->server->unique_name;
+            MySqlServerInfo* master_info = get_server_info(master);
+            MySqlServerInfo* server_info = get_server_info(mon_server);
+
+            if (server_is_rejoin_suspect(mon_server, master_info, output))
+            {
+                if (update_gtids(master, master_info))
+                {
+                    if (can_replicate_from(mon_server, server_info, master_info))
+                    {
+                        ServerVector joinable_server;
+                        joinable_server.push_back(mon_server);
+                        if (do_rejoin(joinable_server) == 1)
+                        {
+                            rval = true;
+                            MXS_NOTICE("Rejoin performed.");
+                        }
+                        else
+                        {
+                            PRINT_MXS_JSON_ERROR(output, "Rejoin attempted but failed.");
+                        }
+                    }
+                    else
+                    {
+                        PRINT_MXS_JSON_ERROR(output, "Server '%s' cannot replicate from cluster master '%s' "
+                                             "or it could not be queried.", rejoin_serv_name, master_name);
+                    }
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(output, "Cluster master '%s' gtid info could not be updated.",
+                                         master_name);
+                }
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(output, "The given server '%s' is not monitored by this monitor.",
+                                 rejoin_serv_name);
+        }
+    }
+    else
+    {
+        const char BAD_CLUSTER[] = "The server cluster of monitor '%s' is not in a state valid for joining. "
+                                   "Either it has no master or its gtid domain is unknown.";
+        PRINT_MXS_JSON_ERROR(output, BAD_CLUSTER, m_monitor_base->name);
+    }
+
+    if (stopped)
+    {
+        MariaDBMonitor::start(m_monitor_base, m_monitor_base->parameters);
+    }
+    return rval;
+}
+
 /**
  * Generate a CHANGE MASTER TO-query.
  *
@@ -148,6 +317,13 @@ bool MariaDBMonitor::redirect_one_slave(MXS_MONITORED_SERVER* slave, const char*
     return rval;
 }
 
+/**
+ * (Re)join given servers to the cluster. The servers in the array are assumed to be joinable.
+ * Usually the list is created by get_joinable_servers().
+ *
+ * @param joinable_servers Which servers to rejoin
+ * @return The number of servers successfully rejoined
+ */
 uint32_t MariaDBMonitor::do_rejoin(const ServerVector& joinable_servers)
 {
     SERVER* master_server = master->server;
@@ -186,6 +362,11 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerVector& joinable_servers)
     return servers_joined;
 }
 
+/**
+ * Check if the cluster is a valid rejoin target.
+ *
+ * @return True if master and gtid domain are known
+ */
 bool MariaDBMonitor::cluster_can_be_joined()
 {
     return (master != NULL && SERVER_IS_MASTER(master->server) && m_master_gtid_domain >= 0);
@@ -267,6 +448,15 @@ bool MariaDBMonitor::join_cluster(MXS_MONITORED_SERVER* server, const char* chan
     return rval;
 }
 
+/**
+ * Checks if a server is a possible rejoin candidate. A true result from this function is not yet sufficient
+ * criteria and another call to can_replicate_from() should be made.
+ *
+ * @param server Server to check
+ * @param master_info Master server info
+ * @param output Error output. If NULL, no error is printed to log.
+ * @return True, if server is a rejoin suspect.
+ */
 bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* rejoin_server,
                                               MySqlServerInfo* master_info, json_t** output)
 {
@@ -306,6 +496,14 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* rejoin_serve
     return is_suspect;
 }
 
+/**
+ * Performs switchover for a simple topology (1 master, N slaves, no intermediate masters). If an
+ * intermediate step fails, the cluster may be left without a master.
+ *
+ * @param err_out json object for error printing. Can be NULL.
+ * @return True if successful. If false, the cluster can be in various situations depending on which step
+ * failed. In practice, manual intervention is usually required on failure.
+ */
 bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
                                    json_t** err_out)
 {
@@ -453,6 +651,12 @@ bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MON
     return rval;
 }
 
+/**
+ * Performs failover for a simple topology (1 master, N slaves, no intermediate masters).
+ *
+ * @param err_out Json output
+ * @return True if successful
+ */
 bool MariaDBMonitor::do_failover(json_t** err_out)
 {
     // Topology has already been tested to be simple.

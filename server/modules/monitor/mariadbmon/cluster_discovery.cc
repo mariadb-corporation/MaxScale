@@ -893,6 +893,12 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
     }
 }
 
+/**
+ * Monitor a database with given server info.
+ *
+ * @param database Database to monitor
+ * @param serv_info Server info for database
+ */
 void MariaDBMonitor::monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info)
 {
     /** Clear old states */

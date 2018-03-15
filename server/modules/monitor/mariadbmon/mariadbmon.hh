@@ -36,6 +36,8 @@
 
 extern const int PORT_UNKNOWN;
 extern const int64_t SERVER_ID_UNKNOWN;
+extern const char * const CN_AUTO_FAILOVER;
+
 class MariaDBMonitor;
 
 typedef std::tr1::unordered_map<const MXS_MONITORED_SERVER*, MySqlServerInfo> ServerInfoMap;
@@ -102,90 +104,40 @@ public:
      * @param params Configuration parameters
      * @return A pointer to MariaDBMonitor specific data.
      */
-    static MariaDBMonitor* start_monitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params);
+    static MariaDBMonitor* start(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params);
 
     /**
      * Stop the monitor. Waits until monitor has stopped.
      */
-    void stop_monitor();
+    bool stop();
 
     /**
-     * Monitor a database with given server info.
+     * Handle switchover
      *
-     * @param mon
-     * @param database Database to monitor
-     * @param serv_info Server info for database
+     * @new_master      The specified new master
+     * @current_master  The specified current master
+     * @output          Pointer where to place output object
+     *
+     * @return True, if switchover was performed, false otherwise.
      */
-    void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info);
+    bool manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master, json_t** error_out);
 
     /**
-     * Performs switchover for a simple topology (1 master, N slaves, no intermediate masters). If an
-     * intermediate step fails, the cluster may be left without a master.
+     * Perform user-activated failover.
      *
-     * @param err_out json object for error printing. Can be NULL.
-     * @return True if successful. If false, the cluster can be in various situations depending on which step
-     * failed. In practice, manual intervention is usually required on failure.
+     * @param output  Json error output
+     * @return True on success
      */
-    bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
-                       json_t** err_out);
+    bool manual_failover(json_t** output);
 
     /**
-     * @brief Process possible failover event
+     * Perform user-activated rejoin
      *
-     * If a master failure has occurred and MaxScale is configured with failover functionality, this fuction
-     * executes failover to select and promote a new master server. This function should be called immediately
-     * after @c mon_process_state_changes.
-     *
-     * @param cluster_modified_out Set to true if modifying cluster
-     * @return True on success, false on error
+     * @param rejoin_server     Server to join
+     * @param output            Json error output
+     * @return True on success
      */
-    bool mon_process_failover(bool* cluster_modified_out);
-
-    /**
-     * Performs failover for a simple topology (1 master, N slaves, no intermediate masters).
-     *
-     * @param mon Server cluster monitor
-     * @param err_out Json output
-     * @return True if successful
-     */
-    bool do_failover(json_t** err_out);
-
-    /**
-     * Checks if a server is a possible rejoin candidate. A true result from this function is not yet sufficient
-     * criteria and another call to can_replicate_from() should be made.
-     *
-     * @param server Server to check
-     * @param master_info Master server info
-     * @param output Error output. If NULL, no error is printed to log.
-     * @return True, if server is a rejoin suspect.
-     */
-    bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MySqlServerInfo* master_info,
-                                  json_t** output);
-
-    /**
-     * (Re)join given servers to the cluster. The servers in the array are assumed to be joinable.
-     * Usually the list is created by get_joinable_servers().
-     *
-     * @param joinable_servers Which servers to rejoin
-     * @return The number of servers successfully rejoined
-     */
-    uint32_t do_rejoin(const ServerVector& joinable_servers);
-
-    /**
-     * Check if the cluster is a valid rejoin target.
-     *
-     * @return True if master and gtid domain are known
-     */
-    bool cluster_can_be_joined();
-
-    /**
-     * Check that preconditions for a failover are met.
-     *
-    * @param mon Cluster monitor
-    * @param error_out JSON error out
-    * @return True if failover may proceed
-    */
-    bool failover_check(json_t** error_out);
+    bool manual_rejoin(SERVER* rejoin_server, json_t** output);
 
     /**
      * Check if server is using gtid replication.
@@ -327,8 +279,16 @@ private:
     void set_slave_heartbeat(MXS_MONITORED_SERVER *);
     MXS_MONITORED_SERVER* build_mysql51_replication_tree();
     MXS_MONITORED_SERVER* get_replication_tree(int num_servers);
-public:
-    // Following methods should be private, change it once refactoring is done.
+    void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info);
+    bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
+                       json_t** err_out);
+    bool do_failover(json_t** err_out);
+    uint32_t do_rejoin(const ServerVector& joinable_servers);
+    bool mon_process_failover(bool* cluster_modified_out);
+    bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MySqlServerInfo* master_info,
+                                  json_t** output);
+    bool cluster_can_be_joined();
+    bool failover_check(json_t** error_out);
     bool update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
     void disable_setting(const char* setting);
 };
