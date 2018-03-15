@@ -47,11 +47,13 @@ cache_result_t LRUStorageMT::get_info(uint32_t what,
 
 cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
+                                       uint32_t soft_ttl,
+                                       uint32_t hard_ttl,
                                        GWBUF** ppValue) const
 {
     SpinLockGuard guard(m_lock);
 
-    return do_get_value(key, flags, ppValue);
+    return do_get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
 cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key, const GWBUF* pValue)

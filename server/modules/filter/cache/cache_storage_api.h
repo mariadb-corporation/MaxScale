@@ -209,17 +209,26 @@ typedef struct cache_storage_api
      * @param storage    Pointer to a CACHE_STORAGE.
      * @param key        A key generated with get_key.
      * @param flags      Mask of cache_flags_t values.
+     * @param soft_ttl   The soft TTL. A value if CACHE_USE_CONFIG_TTL (-1) indicates
+     *                   that the value specfied in the config, used in the creation,
+     *                   should be used.
+     * @param hard_ttl   The hard TTL. A value if CACHE_USE_CONFIG_TTL (-1) indicates
+     *                   that the value specfied in the config, used in the creation,
+     *                   should be used.
      * @param result     Pointer to variable that after a successful return will
      *                   point to a GWBUF.
      *
      * @return CACHE_RESULT_OK if item was found, CACHE_RESULT_NOT_FOUND if
      *         item was not found or some other error code. In the OK an NOT_FOUND
-     *         cased, the bit CACHE_RESULT_STALE is set if the item exists but the
-     *         soft TTL has passed.
+     *         cases, the bit CACHE_RESULT_STALE is set if the item exists but the
+     *         soft TTL has passed. In the NOT_FOUND case, the but CACHE_RESULT_DISCARDED
+     *         if the item existed but the hard TTL had passed.
      */
     cache_result_t (*getValue)(CACHE_STORAGE* storage,
                                const CACHE_KEY* key,
                                uint32_t flags,
+                               uint32_t soft_ttl,
+                               uint32_t hard_ttl,
                                GWBUF** result);
 
     /**
@@ -330,6 +339,12 @@ typedef struct cache_storage_api
     cache_result_t (*getItems)(CACHE_STORAGE* storage,
                                uint64_t* items);
 } CACHE_STORAGE_API;
+
+#if defined __cplusplus
+const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);
+#else
+#define CACHE_USE_CONFIG_TTL ((uint32_t)-1)
+#endif
 
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"
 typedef CACHE_STORAGE_API* (*CacheGetStorageAPIFN)();

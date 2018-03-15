@@ -74,9 +74,11 @@ cache_result_t LRUStorage::do_get_info(uint32_t what,
 
 cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
                                         uint32_t flags,
+                                        uint32_t soft_ttl,
+                                        uint32_t hard_ttl,
                                         GWBUF** ppValue) const
 {
-    return access_value(APPROACH_GET, key, flags, ppValue);
+    return access_value(APPROACH_GET, key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
 cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalue)
@@ -171,7 +173,9 @@ cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue) const
     while (m_pHead && (CACHE_RESULT_IS_NOT_FOUND(result)))
     {
         ss_dassert(m_pHead->key());
-        result = do_get_value(*m_pHead->key(), CACHE_FLAGS_INCLUDE_STALE, ppValue);
+        result = do_get_value(*m_pHead->key(),
+                              CACHE_FLAGS_INCLUDE_STALE, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL,
+                              ppValue);
     }
 
     if (CACHE_RESULT_IS_OK(result))
@@ -216,6 +220,8 @@ cache_result_t LRUStorage::do_get_items(uint64_t* pItems) const
 cache_result_t LRUStorage::access_value(access_approach_t approach,
                                         const CACHE_KEY& key,
                                         uint32_t flags,
+                                        uint32_t soft_ttl,
+                                        uint32_t hard_ttl,
                                         GWBUF** ppValue) const
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
@@ -225,7 +231,7 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
 
     if (existed)
     {
-        result = m_pStorage->get_value(key, flags, ppValue);
+        result = m_pStorage->get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 
         if (CACHE_RESULT_IS_OK(result))
         {

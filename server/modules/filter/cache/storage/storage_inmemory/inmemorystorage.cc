@@ -128,7 +128,9 @@ cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppInfo) cons
     return *ppInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppResult)
+cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
+                                             uint32_t flags, uint32_t soft_ttl, uint32_t hard_ttl,
+                                             GWBUF** ppResult)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
@@ -138,12 +140,27 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
     {
         m_stats.hits += 1;
 
+        if (soft_ttl == CACHE_USE_CONFIG_TTL)
+        {
+            soft_ttl = m_config.soft_ttl;
+        }
+
+        if (hard_ttl == CACHE_USE_CONFIG_TTL)
+        {
+            hard_ttl = m_config.hard_ttl;
+        }
+
+        if (soft_ttl > hard_ttl)
+        {
+            soft_ttl = hard_ttl;
+        }
+
         Entry& entry = i->second;
 
         uint32_t now = time(NULL);
 
-        bool is_hard_stale = m_config.hard_ttl == 0 ? false : (now - entry.time > m_config.hard_ttl);
-        bool is_soft_stale = m_config.soft_ttl == 0 ? false : (now - entry.time > m_config.soft_ttl);
+        bool is_hard_stale = hard_ttl == 0 ? false : (now - entry.time > hard_ttl);
+        bool is_soft_stale = soft_ttl == 0 ? false : (now - entry.time > soft_ttl);
         bool include_stale = ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0);
 
         if (is_hard_stale)

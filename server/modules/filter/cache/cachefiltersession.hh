@@ -164,5 +164,7 @@ private:
     bool                  m_is_read_only;/**< Whether the current trx has been read-only in pratice. */
     bool                  m_use;         /**< Whether the cache should be used in this session. */
     bool                  m_populate;    /**< Whether the cache should be populated in this session. */
+    uint32_t              m_soft_ttl;    /**< The soft TTL used in the session. */
+    uint32_t              m_hard_ttl;    /**< The hard TTL used in the session. */
 };
 

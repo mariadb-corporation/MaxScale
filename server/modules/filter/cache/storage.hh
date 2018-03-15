@@ -47,19 +47,35 @@ public:
     /**
      * Get a value from the cache.
      *
-     * @param key      A key generated with get_key.
-     * @param flags    Mask of cache_flags_t values.
-     * @param ppValue  Pointer to variable that after a successful return will
-     *                 point to a GWBUF.
+     * @param key       A key generated with get_key.
+     * @param flags     Mask of cache_flags_t values.
+     * @param soft_ttl  The soft TTL. A value if CACHE_USE_CONFIG_TTL (-1) indicates
+     *                   that the value specfied in the config, used in the creation,
+     *                   should be used.
+     * @param hard_ttl  The hard TTL. A value if CACHE_USE_CONFIG_TTL (-1) indicates
+     *                   that the value specfied in the config, used in the creation,
+     *                   should be used.
+     * @param ppValue   Pointer to variable that after a successful return will
+     *                  point to a GWBUF.
      *
      * @return CACHE_RESULT_OK if item was found, CACHE_RESULT_NOT_FOUND if
      *         item was not found or some other error code. In the OK an NOT_FOUND
-     *         cased, the bit CACHE_RESULT_STALE is set if the item exists but the
-     *         soft TTL has passed.
+     *         cases, the bit CACHE_RESULT_STALE is set if the item exists but the
+     *         soft TTL has passed. In the NOT_FOUND case, the but CACHE_RESULT_DISCARDED
+     *         if the item existed but the hard TTL had passed.
      */
     virtual cache_result_t get_value(const CACHE_KEY& key,
                                      uint32_t flags,
+                                     uint32_t soft_ttl,
+                                     uint32_t hard_ttl,
                                      GWBUF** ppValue) const = 0;
+
+    cache_result_t get_value(const CACHE_KEY& key,
+                             uint32_t flags,
+                             GWBUF** ppValue) const
+    {
+        return get_value(key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue);
+    }
 
     /**
      * Put a value to the cache.

@@ -71,6 +71,8 @@ public:
     static cache_result_t getValue(CACHE_STORAGE* pCache_storage,
                                    const CACHE_KEY* pKey,
                                    uint32_t flags,
+                                   uint32_t soft_ttl,
+                                   uint32_t hard_ttl,
                                    GWBUF** ppResult)
     {
         ss_dassert(pCache_storage);
@@ -81,7 +83,7 @@ public:
 
         StorageType* pStorage = reinterpret_cast<StorageType*>(pCache_storage);
 
-        MXS_EXCEPTION_GUARD(result = pStorage->get_value(*pKey, flags, ppResult));
+        MXS_EXCEPTION_GUARD(result = pStorage->get_value(*pKey, flags, soft_ttl, hard_ttl, ppResult));
 
         return result;
     }

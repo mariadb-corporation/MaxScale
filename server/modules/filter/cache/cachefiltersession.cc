@@ -190,6 +190,8 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     , m_is_read_only(true)
     , m_use(pCache->config().enabled)
     , m_populate(pCache->config().enabled)
+    , m_soft_ttl(pCache->config().soft_ttl)
+    , m_hard_ttl(pCache->config().hard_ttl)
 {
     m_key.data = 0;
 
@@ -1024,7 +1026,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
     {
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
         GWBUF* pResponse;
-        cache_result_t result = m_pCache->get_value(m_key, flags, &pResponse);
+        cache_result_t result = m_pCache->get_value(m_key, flags, m_soft_ttl, m_hard_ttl, &pResponse);
 
         if (CACHE_RESULT_IS_OK(result))
         {

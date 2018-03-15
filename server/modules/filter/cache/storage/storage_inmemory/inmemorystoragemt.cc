@@ -42,11 +42,13 @@ cache_result_t InMemoryStorageMT::get_info(uint32_t what, json_t** ppInfo) const
     return do_get_info(what, ppInfo);
 }
 
-cache_result_t InMemoryStorageMT::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppResult)
+cache_result_t InMemoryStorageMT::get_value(const CACHE_KEY& key,
+                                            uint32_t flags, uint32_t soft_ttl, uint32_t hard_ttl,
+                                            GWBUF** ppResult)
 {
     SpinLockGuard guard(m_lock);
 
-    return do_get_value(key, flags, ppResult);
+    return do_get_value(key, flags, soft_ttl, hard_ttl, ppResult);
 }
 
 cache_result_t InMemoryStorageMT::put_value(const CACHE_KEY& key, const GWBUF& value)

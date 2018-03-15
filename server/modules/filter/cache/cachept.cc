@@ -130,9 +130,11 @@ cache_result_t CachePT::get_key(const char* zDefault_db, const GWBUF* pQuery, CA
     return thread_cache().get_key(zDefault_db, pQuery, pKey);
 }
 
-cache_result_t CachePT::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue) const
+cache_result_t CachePT::get_value(const CACHE_KEY& key,
+                                  uint32_t flags, uint32_t soft_ttl, uint32_t hard_ttl,
+                                  GWBUF** ppValue) const
 {
-    return thread_cache().get_value(key, flags, ppValue);
+    return thread_cache().get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
 cache_result_t CachePT::put_value(const CACHE_KEY& key, const GWBUF* pValue)

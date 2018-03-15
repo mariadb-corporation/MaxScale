@@ -27,6 +27,8 @@ public:
 
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
+                             uint32_t soft_ttl,
+                             uint32_t hard_ttl,
                              GWBUF** ppValue) const;
 
     cache_result_t put_value(const CACHE_KEY& key,
