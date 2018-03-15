@@ -542,6 +542,9 @@ add_test_script(cache_basic cache_basic.sh cache_basic LABELS cachefilter REPL_B
 # Test of Cache filter - runtime configuration
 add_test_executable(cache_runtime.cpp cache_runtime cache_runtime LABELS cachefilter REPL_BACKEND)
 
+# Test of Cache filter - ttl runtime configuration
+add_test_executable(cache_runtime_ttl.cpp cache_runtime_ttl cache_runtime_ttl LABELS cachefilter REPL_BACKEND)
+
 # Set utf8mb4 in the backend and restart Maxscale
 add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACKEND)
 
