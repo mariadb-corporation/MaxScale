@@ -104,7 +104,7 @@ void LocalClient::process(uint32_t events)
             {
                 if (gw_decode_mysql_server_handshake(&m_protocol, GWBUF_DATA(buf) + MYSQL_HEADER_LEN) == 0)
                 {
-                    GWBUF* response = gw_generate_auth_response(&m_client, &m_protocol, false, false);
+                    GWBUF* response = gw_generate_auth_response(&m_client, &m_protocol, false, false, 0);
                     m_queue.push_front(response);
                     m_state = VC_RESPONSE_SENT;
                 }

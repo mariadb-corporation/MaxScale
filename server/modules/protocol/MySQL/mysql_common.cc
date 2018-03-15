@@ -1215,7 +1215,7 @@ load_hashed_password(uint8_t *scramble, uint8_t *payload, uint8_t *passwd)
  * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
 static uint32_t
-create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool compress)
+create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, uint64_t capabilities)
 {
     uint32_t final_capabilities;
 
@@ -1230,8 +1230,6 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
         /* final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT; */
     }
 
-    uint64_t capabilities = service_get_capabilities(conn->owner_dcb->session->service);
-
     if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING))
     {
         /** add session track */
@@ -1240,13 +1238,6 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
 
     /** support multi statments  */
     final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-
-    /* Compression is not currently supported */
-    ss_dassert(!compress);
-    if (compress)
-    {
-        final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_COMPRESS;
-    }
 
     if (db_specified)
     {
@@ -1265,7 +1256,8 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
 }
 
 GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
-                                 bool with_ssl, bool ssl_established)
+                                 bool with_ssl, bool ssl_established,
+                                 uint64_t service_capabilities)
 {
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     uint8_t *curr_passwd = NULL;
@@ -1275,7 +1267,7 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client, MySQLProtocol *conn,
         curr_passwd = client->client_sha1;
     }
 
-    uint32_t capabilities = create_capabilities(conn, with_ssl, client->db[0], false);
+    uint32_t capabilities = create_capabilities(conn, with_ssl, client->db[0], service_capabilities);
     gw_mysql_set_byte4(client_capabilities, capabilities);
 
     /**
@@ -1379,7 +1371,8 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
 
     GWBUF* buffer = gw_generate_auth_response(&client, (MySQLProtocol*)dcb->protocol,
-                                              with_ssl, ssl_established);
+                                              with_ssl, ssl_established,
+                                              dcb->service->capabilities);
     ss_dassert(buffer);
 
     if (with_ssl && !ssl_established)
