@@ -41,7 +41,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    set_libdir(strdup("../../qc_sqlite/"));
+    set_libdir(strdup("../../../../query_classifier/qc_sqlite/"));
     set_datadir(strdup("/tmp"));
     set_langdir(strdup("."));
     set_process_datadir(strdup("/tmp"));

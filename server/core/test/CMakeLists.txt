@@ -95,3 +95,4 @@ add_test(test_utils test_utils)
 add_test(test_session_track test_session_track)
 
 add_subdirectory(rest-api)
+add_subdirectory(canonical_tests)

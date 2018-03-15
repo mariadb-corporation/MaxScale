@@ -1,5 +1,4 @@
 # This test no longer requires the query classifier for canonicalization
-# TODO: Move these tests to the core test set
 add_executable(canonizer canonizer.c)
 target_link_libraries(canonizer maxscale-common)
 add_test(NAME CanonicalQuery COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/canontest.sh

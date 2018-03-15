@@ -111,5 +111,3 @@ if (BUILD_QC_MYSQLEMBEDDED)
     add_test(TestQC_Oracle-type_variables    compare -v 2 ${CMAKE_CURRENT_SOURCE_DIR}/oracle/variables.test)
   endif()
 endif()
-
-add_subdirectory(canonical_tests)
