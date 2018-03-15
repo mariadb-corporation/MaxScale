@@ -1323,7 +1323,8 @@ static void clientReply(MXS_ROUTER *instance,
  */
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_PACKET_OUTPUT;
+    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING |
+        RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING;
 }
 
 /**
@@ -1469,7 +1470,8 @@ MXS_MODULE *MXS_CREATE_MODULE()
         MXS_MODULE_API_ROUTER, MXS_MODULE_GA, MXS_ROUTER_VERSION,
         "A Read/Write splitting router for enhancement read scalability",
         "V1.1.0",
-        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_PACKET_OUTPUT,
+        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING |
+        RCAP_TYPE_PACKET_OUTPUT | RCAP_TYPE_SESSION_STATE_TRACKING,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

@@ -1229,8 +1229,14 @@ create_capabilities(MySQLProtocol *conn, bool with_ssl, bool db_specified, bool 
         /* Maybe it should depend on whether CA certificate is provided */
         /* final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT; */
     }
-    /** add session track */
-    final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+
+    uint64_t capabilities = service_get_capabilities(conn->owner_dcb->session->service);
+
+    if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING))
+    {
+        /** add session track */
+        final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    }
 
     /** support multi statments  */
     final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
