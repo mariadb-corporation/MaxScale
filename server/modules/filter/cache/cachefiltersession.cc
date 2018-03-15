@@ -1080,7 +1080,11 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
 
         if (routing_action == ROUTING_CONTINUE)
         {
-            if (m_populate || m_refreshing)
+            // If we are populating or refreshing, or the result was discarded
+            // due to hard TTL having kicked in, then we fetch the result *and*
+            // update the cache. That is, as long as there is room in the cache
+            // an entry will stay there.
+            if (m_populate || m_refreshing || CACHE_RESULT_IS_DISCARDED(result))
             {
                 m_state = CACHE_EXPECTING_RESPONSE;
             }
