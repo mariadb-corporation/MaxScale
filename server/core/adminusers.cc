@@ -523,10 +523,7 @@ void dcb_PrintAdminUsers(DCB *dcb)
     {
         users_diagnostic(dcb, linux_users);
     }
-    else
-    {
-        dcb_printf(dcb, "\n");
-    }
+    dcb_printf(dcb, "\n");
 
     dcb_printf(dcb, "Created network accounts (insecure): ");
 
@@ -534,8 +531,5 @@ void dcb_PrintAdminUsers(DCB *dcb)
     {
         users_diagnostic(dcb, inet_users);
     }
-    else
-    {
-        dcb_printf(dcb, "\n");
-    }
+    dcb_printf(dcb, "\n");
 }
