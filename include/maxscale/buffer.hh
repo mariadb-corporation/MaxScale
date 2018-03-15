@@ -534,6 +534,19 @@ public:
     }
 
     /**
+     * Get the underlying GWBUF.
+     *
+     * @return  The underlying @c GWBUF.
+     *
+     * @attention This does not release ownership of the buffer. The returned pointer must never be
+     *            freed by the caller.
+     */
+    GWBUF* get()
+    {
+        return m_pBuffer;
+    }
+
+    /**
      * Resets the underlying GWBUF.
      *
      * @param pBuffer  The @c GWBUF the @c Buffer should be reset with.
