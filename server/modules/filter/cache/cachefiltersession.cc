@@ -39,7 +39,9 @@ namespace
 {
 
 const char SV_MAXSCALE_CACHE_POPULATE[] = "@maxscale.cache.populate";
-const char SV_MAXSCALE_CACHE_USE[] = "@maxscale.cache.use";
+const char SV_MAXSCALE_CACHE_USE[]      = "@maxscale.cache.use";
+const char SV_MAXSCALE_CACHE_SOFT_TTL[] = "@maxscale.cache.soft_ttl";
+const char SV_MAXSCALE_CACHE_HARD_TTL[] = "@maxscale.cache.hard_ttl";
 
 const char* NON_CACHEABLE_FUNCTIONS[] =
 {
@@ -198,19 +200,39 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     reset_response_state();
 
     if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_POPULATE,
-                              &CacheFilterSession::session_variable_handler, this))
+                              &CacheFilterSession::set_cache_populate, this))
     {
+        ss_dassert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "enabling/disabling the populating of the cache is not possible.",
                   SV_MAXSCALE_CACHE_POPULATE);
     }
 
     if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_USE,
-                              &CacheFilterSession::session_variable_handler, this))
+                              &CacheFilterSession::set_cache_use, this))
     {
+        ss_dassert(!true);
         MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
                   "enabling/disabling the using of the cache not possible.",
                   SV_MAXSCALE_CACHE_USE);
+    }
+
+    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_SOFT_TTL,
+                              &CacheFilterSession::set_cache_soft_ttl, this))
+    {
+        ss_dassert(!true);
+        MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
+                  "setting the soft TTL not possible.",
+                  SV_MAXSCALE_CACHE_SOFT_TTL);
+    }
+
+    if (!session_add_variable(pSession, SV_MAXSCALE_CACHE_HARD_TTL,
+                              &CacheFilterSession::set_cache_hard_ttl, this))
+    {
+        ss_dassert(!true);
+        MXS_ERROR("Could not add MaxScale user variable '%s', dynamically "
+                  "setting the hard TTL not possible.",
+                  SV_MAXSCALE_CACHE_HARD_TTL);
     }
 }
 
@@ -1172,54 +1194,200 @@ bool get_truth_value(const char* begin, const char* end, bool* pValue)
     return rv;
 }
 
+bool get_uint32_value(const char* begin, const char* end, uint32_t* pValue)
+{
+    bool rv = false;
+
+    size_t len = end - begin;
+    char copy[len + 1];
+
+    memcpy(copy, begin, len);
+    copy[len] = 0;
+
+    errno = 0;
+    char* p;
+    long int l = strtol(copy, &p, 10);
+
+    if ((errno == 0) && (*p == 0))
+    {
+        if (l >= 0)
+        {
+            *pValue = l;
+            rv = true;
+        }
+    }
+
+    return rv;
 }
 
-char* CacheFilterSession::handle_session_variable(const char* zName,
-                                                  const char* pValue_begin,
-                                                  const char* pValue_end)
+char* create_bool_error_message(const char* zName, const char* pValue_begin, const char* pValue_end)
 {
+    static const char FORMAT[] = "The variable %s can only have the values true/false/1/0";
+    int n = snprintf(NULL, 0, FORMAT, zName) + 1;
+
+    char* zMessage = static_cast<char*>(MXS_MALLOC(n));
+
+    if (zMessage)
+    {
+        sprintf(zMessage, FORMAT, zName);
+    }
+
+    int len = pValue_end - pValue_begin;
+    MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
+                zName, len, pValue_begin);
+
+    return zMessage;
+}
+
+char* create_uint32_error_message(const char* zName, const char* pValue_begin, const char* pValue_end)
+{
+    static const char FORMAT[] = "The variable %s can have as value 0 or a positive integer.";
+    int n = snprintf(NULL, 0, FORMAT, zName) + 1;
+
+    char* zMessage = static_cast<char*>(MXS_MALLOC(n));
+
+    if (zMessage)
+    {
+        sprintf(zMessage, FORMAT, zName);
+    }
+
+    int len = pValue_end - pValue_begin;
+    MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
+                zName, len, pValue_begin);
+
+    return zMessage;
+}
+
+}
+
+char* CacheFilterSession::set_cache_populate(const char* zName,
+                                             const char* pValue_begin,
+                                             const char* pValue_end)
+{
+    ss_dassert(strcmp(SV_MAXSCALE_CACHE_POPULATE, zName) == 0);
+
     char* zMessage = NULL;
 
     bool enabled;
 
     if (get_truth_value(pValue_begin, pValue_end, &enabled))
     {
-        if (strcmp(zName, SV_MAXSCALE_CACHE_POPULATE) == 0)
-        {
-            m_populate = enabled;
-        }
-        else
-        {
-            ss_dassert(strcmp(zName, SV_MAXSCALE_CACHE_USE) == 0);
-            m_use = enabled;
-        }
+        m_populate = enabled;
     }
     else
     {
-        static const char FORMAT[] = "The variable %s can only have the values true/false/1/0";
-        int n = snprintf(NULL, 0, FORMAT, zName) + 1;
+        zMessage = create_bool_error_message(zName, pValue_begin, pValue_end);
+    }
 
-        zMessage = static_cast<char*>(MXS_MALLOC(n));
+    return zMessage;
+}
 
-        if (zMessage)
-        {
-            sprintf(zMessage, FORMAT, zName);
-        }
+char* CacheFilterSession::set_cache_use(const char* zName,
+                                        const char* pValue_begin,
+                                        const char* pValue_end)
+{
+    ss_dassert(strcmp(SV_MAXSCALE_CACHE_USE, zName) == 0);
 
-        MXS_WARNING("Attempt to set the variable %s to the invalid value \"%.*s\".",
-                    zName, n, pValue_begin);
+    char* zMessage = NULL;
+
+    bool enabled;
+
+    if (get_truth_value(pValue_begin, pValue_end, &enabled))
+    {
+        m_use = enabled;
+    }
+    else
+    {
+        zMessage = create_bool_error_message(zName, pValue_begin, pValue_end);
+    }
+
+    return zMessage;
+}
+
+char* CacheFilterSession::set_cache_soft_ttl(const char* zName,
+                                             const char* pValue_begin,
+                                             const char* pValue_end)
+{
+    ss_dassert(strcmp(SV_MAXSCALE_CACHE_SOFT_TTL, zName) == 0);
+
+    char* zMessage = NULL;
+
+    uint32_t value;
+
+    if (get_uint32_value(pValue_begin, pValue_end, &value))
+    {
+        m_soft_ttl = value;
+    }
+    else
+    {
+        zMessage = create_uint32_error_message(zName, pValue_begin, pValue_end);
+    }
+
+    return zMessage;
+}
+
+char* CacheFilterSession::set_cache_hard_ttl(const char* zName,
+                                             const char* pValue_begin,
+                                             const char* pValue_end)
+{
+    ss_dassert(strcmp(SV_MAXSCALE_CACHE_HARD_TTL, zName) == 0);
+
+    char* zMessage = NULL;
+
+    uint32_t value;
+
+    if (get_uint32_value(pValue_begin, pValue_end, &value))
+    {
+        m_hard_ttl = value;
+    }
+    else
+    {
+        zMessage = create_uint32_error_message(zName, pValue_begin, pValue_end);
     }
 
     return zMessage;
 }
 
 //static
-char* CacheFilterSession::session_variable_handler(void* pContext,
-                                                   const char* zName,
-                                                   const char* pValue_begin,
-                                                   const char* pValue_end)
+char* CacheFilterSession::set_cache_populate(void* pContext,
+                                             const char* zName,
+                                             const char* pValue_begin,
+                                             const char* pValue_end)
 {
     CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
 
-    return pThis->handle_session_variable(zName, pValue_begin, pValue_end);
+    return pThis->set_cache_populate(zName, pValue_begin, pValue_end);
+}
+
+//static
+char* CacheFilterSession::set_cache_use(void* pContext,
+                                        const char* zName,
+                                        const char* pValue_begin,
+                                        const char* pValue_end)
+{
+    CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
+
+    return pThis->set_cache_use(zName, pValue_begin, pValue_end);
+}
+
+//static
+char* CacheFilterSession::set_cache_soft_ttl(void* pContext,
+                                             const char* zName,
+                                             const char* pValue_begin,
+                                             const char* pValue_end)
+{
+    CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
+
+    return pThis->set_cache_soft_ttl(zName, pValue_begin, pValue_end);
+}
+
+//static
+char* CacheFilterSession::set_cache_hard_ttl(void* pContext,
+                                             const char* zName,
+                                             const char* pValue_begin,
+                                             const char* pValue_end)
+{
+    CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
+
+    return pThis->set_cache_hard_ttl(zName, pValue_begin, pValue_end);
 }

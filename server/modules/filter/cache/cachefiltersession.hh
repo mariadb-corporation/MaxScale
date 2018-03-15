@@ -141,14 +141,35 @@ private:
     routing_action_t route_COM_QUERY(GWBUF* pPacket);
     routing_action_t route_SELECT(cache_action_t action, GWBUF* pPacket);
 
-    char* handle_session_variable(const char* zName,
-                                  const char* pValue_begin,
-                                  const char* pValue_end);
+    char* set_cache_populate(const char* zName,
+                             const char* pValue_begin,
+                             const char* pValue_end);
+    char* set_cache_use(const char* zName,
+                        const char* pValue_begin,
+                        const char* pValue_end);
+    char* set_cache_soft_ttl(const char* zName,
+                             const char* pValue_begin,
+                             const char* pValue_end);
+    char* set_cache_hard_ttl(const char* zName,
+                             const char* pValue_begin,
+                             const char* pValue_end);
 
-    static char* session_variable_handler(void* pContext,
-                                          const char* zName,
-                                          const char* pValue_begin,
-                                          const char* pValue_end);
+    static char* set_cache_populate(void* pContext,
+                                    const char* zName,
+                                    const char* pValue_begin,
+                                    const char* pValue_end);
+    static char* set_cache_use(void* pContext,
+                               const char* zName,
+                               const char* pValue_begin,
+                               const char* pValue_end);
+    static char* set_cache_soft_ttl(void* pContext,
+                                    const char* zName,
+                                    const char* pValue_begin,
+                                    const char* pValue_end);
+    static char* set_cache_hard_ttl(void* pContext,
+                                    const char* zName,
+                                    const char* pValue_begin,
+                                    const char* pValue_end);
 
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);

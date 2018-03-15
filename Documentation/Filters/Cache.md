@@ -378,6 +378,61 @@ SELECT @maxscale.cache.use;
 ```
 but only after it has explicitly been set once.
 
+### `@maxscale.cache.soft_ttl`
+Using the variable `@maxscale.cache.soft_ttl` it is possible to specify
+at runtime what _soft ttl_ should be applied. Its initial value is the
+value of the configuration parameter `soft_ttl`. That is, by default the
+value is 0.
+
+The purpose of this variable is make it possible for an application to decide
+statement by statement what _soft ttl_ should be applied.
+```
+set @maxscale.cache.soft_ttl=600;
+SELECT a, b FROM unimportant;
+set @maxscale.cache.soft_ttl=60;
+SELECT c, d FROM important;
+```
+When data is `SELECT`ed from the unimportant table `unimportant`, the data
+will be returned from the cache provided it is no older than 10 minutes,
+but when data is `SELECT`ed from the important table `important`, the
+data will be returned from the cache provided it is no older than 1 minute.
+
+Note that `@maxscale.cache.hard_ttl` overrules `@maxscale.cache.soft_ttl`
+in the sense that if the former is less that the latter, then _soft ttl_
+will, when used, be adjusted down to the value of _hard ttl_.
+
+The value of `@maxscale.cache.soft_ttl` can be queried
+```
+SELECT @maxscale.cache.soft_ttl;
+```
+but only after it has explicitly been set once.
+
+### `@maxscale.cache.hard_ttl`
+Using the variable `@maxscale.cache.hard_ttl` it is possible to specify
+at runtime what _hard ttl_ should be applied. Its initial value is the
+value of the configuration parameter `hard_ttl`. That is, by default the
+value is 0.
+
+The purpose of this variable is make it possible for an application to decide
+statement by statement what _hard ttl_ should be applied.
+
+Note that as `@maxscale.cache.hard_ttl` overrules `@maxscale.cache.soft_ttl`,
+is is important to ensure that the former is at least as large as the latter
+and for best overall performance that it is larger.
+
+```
+set @maxscale.cache.soft_ttl=600, @maxscale.cache.hard_ttl=610;
+SELECT a, b FROM unimportant;
+set @maxscale.cache.soft_ttl=60, @maxscale.cache.hard_ttl=65;
+SELECT c, d FROM important;
+```
+
+The value of `@maxscale.cache.hard_ttl` can be queried
+```
+SELECT @maxscale.cache.hard_ttl;
+```
+but only after it has explicitly been set once.
+
 ### Client Driven Caching
 With `@maxscale.cache.populate` and `@maxscale.cache.use` is it possible
 to make the caching completely client driven.
