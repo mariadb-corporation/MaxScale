@@ -259,9 +259,13 @@ int main(int argc, char *argv[])
     /** Prepare for tests */
     Test->stop_timeout();
     Test->maxscales->connect_maxscale(0);
-    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.readonly\n");
-    execute_query_silent(Test->maxscales->conn_rwsplit[0], "CREATE TABLE test.readonly(id int)\n");
+    execute_query_silent(Test->maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.readonly");
+    execute_query_silent(Test->maxscales->conn_rwsplit[0], "CREATE TABLE test.readonly(id int)");
     Test->maxscales->close_maxscale_connections(0);
+
+    Test->repl->connect();
+    Test->repl->sync_slaves();
+    Test->repl->disconnect();
 
     /** Basic tests */
     test_basic(Test);
