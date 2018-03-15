@@ -82,7 +82,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::build_mysql51_replication_tree()
             /* Set the Slave Role */
             if (ismaster)
             {
-                master = database;
+                m_master = database;
 
                 MXS_DEBUG("Master server found at [%s]:%d with %d slaves",
                           database->server->name,
@@ -123,7 +123,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::build_mysql51_replication_tree()
         }
         if (SERVER_IS_SLAVE(database->server) &&
             (database->server->master_id <= 0 ||
-             database->server->master_id != master->server->node_id))
+             database->server->master_id != m_master->server->node_id))
         {
 
             monitor_set_pending_status(database, SERVER_SLAVE);
@@ -200,7 +200,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
             if (current->depth > -1 && current->depth < root_level)
             {
                 root_level = current->depth;
-                master = ptr;
+                m_master = ptr;
             }
             backend = getServerByNodeId(m_monitor_base->monitored_servers, node_id);
 
@@ -231,12 +231,12 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
                                         current->node_id);
                     master_cand->server->depth = current->depth - 1;
 
-                    if (master && master_cand->server->depth < master->server->depth)
+                    if (m_master && master_cand->server->depth < m_master->server->depth)
                     {
                         /** A master with a lower depth was found, remove
                             the master status from the previous master. */
-                        monitor_clear_pending_status(master, SERVER_MASTER);
-                        master = master_cand;
+                        monitor_clear_pending_status(m_master, SERVER_MASTER);
+                        m_master = master_cand;
                     }
 
                     MySqlServerInfo* info = get_server_info(master_cand);
@@ -267,16 +267,16 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
      * Return the root master
      */
 
-    if (master != NULL)
+    if (m_master != NULL)
     {
         /* If the root master is in MAINT, return NULL */
-        if (SERVER_IN_MAINT(master->server))
+        if (SERVER_IN_MAINT(m_master->server))
         {
             return NULL;
         }
         else
         {
-            return master;
+            return m_master;
         }
     }
     else

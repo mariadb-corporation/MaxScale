@@ -106,7 +106,8 @@ public:
      *
      * @return True, if switchover was performed, false otherwise.
      */
-    bool manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master, json_t** error_out);
+    bool manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master,
+                           json_t** error_out);
 
     /**
      * Perform user-activated failover.
@@ -149,8 +150,6 @@ public:
      */
     const MySqlServerInfo* get_server_info(const MXS_MONITORED_SERVER* db) const;
 
-    int status;                      /**< Monitor status. TODO: This should be in MXS_MONITOR */
-    MXS_MONITORED_SERVER *master;    /**< Master server for MySQL Master/Slave replication */
     bool detectStaleMaster;          /**< Monitor flag for MySQL replication Stale Master detection */
 
 private:
@@ -158,12 +157,14 @@ private:
     THREAD m_thread;                 /**< Monitor thread */
     unsigned long m_id;              /**< Monitor ID */
     volatile int m_shutdown;         /**< Flag to shutdown the monitor thread. */
-    ServerInfoMap m_server_info;     /**< Contains server specific information */
+    volatile int m_status;           /**< Monitor status.  */
 
     // Values updated by monitor
     int64_t m_master_gtid_domain;    /**< Gtid domain currently used by the master */
     string m_external_master_host;   /**< External master host, for fail/switchover */
     int m_external_master_port;      /**< External master port */
+    MXS_MONITORED_SERVER *m_master;  /**< Master server for MySQL Master/Slave replication */
+    ServerInfoMap m_server_info;     /**< Contains server specific information */
 
     // Replication topology detection settings
     bool m_mysql51_replication;      /**< Use MySQL 5.1 replication */

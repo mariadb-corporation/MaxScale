@@ -39,29 +39,19 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor);
 
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
+// Config parameter names
 const char * const CN_AUTO_FAILOVER       = "auto_failover";
-static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
-static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 static const char CN_AUTO_REJOIN[]        = "auto_rejoin";
 static const char CN_FAILCOUNT[]          = "failcount";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
-
+static const char CN_FAILOVER_TIMEOUT[]   = "failover_timeout";
+static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
 // Parameters for master failure verification and timeout
 static const char CN_VERIFY_MASTER_FAILURE[]    = "verify_master_failure";
 static const char CN_MASTER_FAILURE_TIMEOUT[]   = "master_failure_timeout";
-
 // Replication credentials parameters for failover/switchover/join
 static const char CN_REPLICATION_USER[]     = "replication_user";
 static const char CN_REPLICATION_PASSWORD[] = "replication_password";
-
-/** Default failover timeout */
-#define DEFAULT_FAILOVER_TIMEOUT "90"
-
-/** Default switchover timeout */
-#define DEFAULT_SWITCHOVER_TIMEOUT "90"
-
-/** Default master failure verification timeout */
-#define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
 
 /** Default port */
 const int PORT_UNKNOWN = 0;
@@ -138,7 +128,7 @@ MariaDBMonitor* MariaDBMonitor::start(MXS_MONITOR *monitor, const MXS_CONFIG_PAR
     /* Always reset these values. The server dependent values must be reset as servers could have been
      * added and removed. */
     handle->m_shutdown = 0;
-    handle->master = NULL;
+    handle->m_master = NULL;
     handle->init_server_info();
 
     if (!handle->load_config_params(params))
@@ -157,10 +147,6 @@ MariaDBMonitor* MariaDBMonitor::start(MXS_MONITOR *monitor, const MXS_CONFIG_PAR
         {
             MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
             error = true;
-        }
-        else
-        {
-            handle->status = MXS_MONITOR_RUNNING;
         }
     }
 
@@ -227,7 +213,7 @@ bool MariaDBMonitor::stop()
     // There should be no race here as long as admin operations are performed
     // with the single admin lock locked.
     bool actually_stopped = false;
-    if (status == MXS_MONITOR_RUNNING)
+    if (m_status == MXS_MONITOR_RUNNING)
     {
         m_shutdown = 1;
         thread_wait(m_thread);
@@ -263,11 +249,16 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
         dcb_printf(dcb, "Slave configured:       %s\n", serv_info->slave_configured ? "YES" : "NO");
         if (serv_info->slave_configured)
         {
-            dcb_printf(dcb, "Slave IO running:       %s\n", serv_info->slave_status.slave_io_running ? "YES" : "NO");
-            dcb_printf(dcb, "Slave SQL running:      %s\n", serv_info->slave_status.slave_sql_running ? "YES" : "NO");
-            dcb_printf(dcb, "Master ID:              %" PRId64 "\n", serv_info->slave_status.master_server_id);
-            dcb_printf(dcb, "Master binlog file:     %s\n", serv_info->slave_status.master_log_file.c_str());
-            dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->slave_status.read_master_log_pos);
+            dcb_printf(dcb, "Slave IO running:       %s\n",
+                       serv_info->slave_status.slave_io_running ? "YES" : "NO");
+            dcb_printf(dcb, "Slave SQL running:      %s\n",
+                       serv_info->slave_status.slave_sql_running ? "YES" : "NO");
+            dcb_printf(dcb, "Master ID:              %" PRId64 "\n",
+                       serv_info->slave_status.master_server_id);
+            dcb_printf(dcb, "Master binlog file:     %s\n",
+                       serv_info->slave_status.master_log_file.c_str());
+            dcb_printf(dcb, "Master binlog position: %lu\n",
+                       serv_info->slave_status.read_master_log_pos);
         }
         if (serv_info->gtid_current_pos.server_id != SERVER_ID_UNKNOWN)
         {
@@ -429,7 +420,7 @@ bool MariaDBMonitor::set_standalone_master(MXS_MONITORED_SERVER *db)
             server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_set_pending_status(db, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_clear_pending_status(db, SERVER_SLAVE);
-            master = db;
+            m_master = db;
             rval = true;
         }
         else if (!m_allow_cluster_recovery)
@@ -445,6 +436,7 @@ bool MariaDBMonitor::set_standalone_master(MXS_MONITORED_SERVER *db)
 
 void MariaDBMonitor::main_loop()
 {
+    m_status = MXS_MONITOR_RUNNING;
     MXS_MONITORED_SERVER *ptr;
     bool replication_heartbeat;
     bool detect_stale_master;
@@ -460,19 +452,19 @@ void MariaDBMonitor::main_loop()
     if (mysql_thread_init())
     {
         MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
-        status = MXS_MONITOR_STOPPED;
+        m_status = MXS_MONITOR_STOPPED;
         return;
     }
 
-    load_server_journal(m_monitor_base, &master);
+    load_server_journal(m_monitor_base, &m_master);
 
     while (1)
     {
         if (m_shutdown)
         {
-            status = MXS_MONITOR_STOPPING;
+            m_status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            status = MXS_MONITOR_STOPPED;
+            m_status = MXS_MONITOR_STOPPED;
             return;
         }
         /** Wait base interval */
@@ -576,7 +568,7 @@ void MariaDBMonitor::main_loop()
                 monitor_set_pending_status(ptr, SERVER_MASTER);
 
                 ptr->server->depth = 0;
-                master = ptr;
+                m_master = ptr;
                 root_master = ptr;
             }
         }
@@ -601,9 +593,9 @@ void MariaDBMonitor::main_loop()
             find_graph_cycles(this, m_monitor_base->monitored_servers, num_servers);
         }
 
-        if (master != NULL && SERVER_IS_MASTER(master->server))
+        if (m_master != NULL && SERVER_IS_MASTER(m_master->server))
         {
-            MySqlServerInfo* master_info = get_server_info(master);
+            MySqlServerInfo* master_info = get_server_info(m_master);
             // Update cluster gtid domain
             int64_t domain = master_info->gtid_domain_id;
             if (m_master_gtid_domain >= 0 && domain != m_master_gtid_domain)
@@ -614,7 +606,7 @@ void MariaDBMonitor::main_loop()
             m_master_gtid_domain = domain;
 
             // Update cluster external master
-            if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(master->server))
+            if (SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(m_master->server))
             {
                 if (master_info->slave_status.master_host != m_external_master_host ||
                     master_info->slave_status.master_port != m_external_master_port)
@@ -767,7 +759,7 @@ void MariaDBMonitor::main_loop()
                 if (set_standalone_master(m_monitor_base->monitored_servers))
                 {
                     // Update the root_master to point to the standalone master
-                    root_master = master;
+                    root_master = m_master;
                 }
             }
             else
@@ -794,7 +786,7 @@ void MariaDBMonitor::main_loop()
             }
         }
 
-        ss_dassert(root_master == NULL || master == root_master);
+        ss_dassert(root_master == NULL || m_master == root_master);
         ss_dassert(!root_master ||
                    ((root_master->server->status & (SERVER_SLAVE | SERVER_MASTER))
                     != (SERVER_SLAVE | SERVER_MASTER)));
@@ -821,8 +813,8 @@ void MariaDBMonitor::main_loop()
                 disable_setting(CN_AUTO_FAILOVER);
             }
             // If master seems to be down, check if slaves are receiving events.
-            else if (m_verify_master_failure && master &&
-                     SERVER_IS_DOWN(master->server) && slave_receiving_events())
+            else if (m_verify_master_failure && m_master &&
+                     SERVER_IS_DOWN(m_master->server) && slave_receiving_events())
             {
                 MXS_INFO("Master failure not yet confirmed by slaves, delaying failover.");
             }
@@ -920,13 +912,13 @@ void MariaDBMonitor::main_loop()
             else
             {
                 MXS_ERROR("Query error to master '%s' prevented a possible rejoin operation.",
-                          master->server->unique_name);
+                          m_master->server->unique_name);
             }
         }
 
         mon_hangup_failed_servers(m_monitor_base);
         servers_status_current_to_pending(m_monitor_base);
-        store_server_journal(m_monitor_base, master);
+        store_server_journal(m_monitor_base, m_master);
         release_monitor_servers(m_monitor_base);
     } /*< while (1) */
 }
@@ -981,7 +973,7 @@ void MariaDBMonitor::set_master_heartbeat(MXS_MONITORED_SERVER *database)
     char heartbeat_insert_query[512] = "";
     char heartbeat_purge_query[512] = "";
 
-    if (master == NULL)
+    if (m_master == NULL)
     {
         MXS_ERROR("set_master_heartbeat called without an available Master server");
         return;
@@ -1030,7 +1022,7 @@ void MariaDBMonitor::set_master_heartbeat(MXS_MONITORED_SERVER *database)
     sprintf(heartbeat_insert_query,
             "UPDATE maxscale_schema.replication_heartbeat "
             "SET master_timestamp = %lu WHERE master_server_id = %li AND maxscale_id = %lu",
-            heartbeat, master->server->node_id, m_id);
+            heartbeat, m_master->server->node_id, m_id);
 
     /* Try to insert MaxScale timestamp into master */
     if (mxs_mysql_query(database->con, heartbeat_insert_query))
@@ -1050,7 +1042,7 @@ void MariaDBMonitor::set_master_heartbeat(MXS_MONITORED_SERVER *database)
             sprintf(heartbeat_insert_query,
                     "REPLACE INTO maxscale_schema.replication_heartbeat "
                     "(master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)",
-                    master->server->node_id, m_id, heartbeat);
+                    m_master->server->node_id, m_id, heartbeat);
 
             if (mxs_mysql_query(database->con, heartbeat_insert_query))
             {
@@ -1095,7 +1087,7 @@ void MariaDBMonitor::set_slave_heartbeat(MXS_MONITORED_SERVER *database)
     MYSQL_ROW row;
     MYSQL_RES *result;
 
-    if (master == NULL)
+    if (m_master == NULL)
     {
         MXS_ERROR("set_slave_heartbeat called without an available Master server");
         return;
@@ -1106,10 +1098,10 @@ void MariaDBMonitor::set_slave_heartbeat(MXS_MONITORED_SERVER *database)
     sprintf(select_heartbeat_query, "SELECT master_timestamp "
             "FROM maxscale_schema.replication_heartbeat "
             "WHERE maxscale_id = %lu AND master_server_id = %li",
-            m_id, master->server->node_id);
+            m_id, m_master->server->node_id);
 
     /* if there is a master then send the query to the slave with master_id */
-    if (master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
+    if (m_master != NULL && (mxs_mysql_query(database->con, select_heartbeat_query) == 0
                            && (result = mysql_store_result(database->con)) != NULL))
     {
         int rows_found = 0;
@@ -1167,7 +1159,7 @@ void MariaDBMonitor::set_slave_heartbeat(MXS_MONITORED_SERVER *database)
         database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
         database->server->node_ts = 0;
 
-        if (master->server->node_id < 0)
+        if (m_master->server->node_id < 0)
         {
             MXS_ERROR("error: replication heartbeat: "
                       "master_server_id NOT available for %s:%i",
@@ -1503,7 +1495,7 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
             error = true;
         }
 
-        // Check given old master or autoselect.
+        // Check given old master. If NULL, manual_switchover() will autoselect.
         MXS_MONITORED_SERVER* mon_curr_master = NULL;
         if (current_master)
         {
@@ -1511,20 +1503,6 @@ bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
             if (mon_curr_master == NULL)
             {
                 PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name, mon->name);
-                error = true;
-            }
-        }
-        else
-        {
-            // Autoselect current master
-            if (handle->master)
-            {
-                mon_curr_master = handle->master;
-            }
-            else
-            {
-                const char NO_MASTER[] = "Monitor '%s' has no master server.";
-                PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, mon->name);
                 error = true;
             }
         }
@@ -1685,12 +1663,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 mxs_monitor_event_enum_values
             },
             {CN_AUTO_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
-            {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
-            {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
+            {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, "90"},
+            {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, "90"},
             {CN_REPLICATION_USER, MXS_MODULE_PARAM_STRING},
             {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
             {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
-            {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
+            {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, "10"},
             {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
             {CN_NO_PROMOTE_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
             {MXS_END_MODULE_PARAMS}

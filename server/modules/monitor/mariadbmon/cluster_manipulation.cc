@@ -18,8 +18,25 @@
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/mysql_utils.h>
 
-bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master, json_t** error_out)
+bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master,
+                                       json_t** error_out)
 {
+    // Autoselect current master if not given as parameter.
+    MXS_MONITORED_SERVER* selected_current_master;
+    if (current_master == NULL)
+    {
+        if (m_master)
+        {
+            selected_current_master = m_master;
+        }
+        else
+        {
+            const char NO_MASTER[] = "Monitor '%s' has no master server.";
+            PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, m_monitor_base->name);
+            return false;
+        }
+    }
+
     bool stopped = stop();
     if (stopped)
     {
@@ -30,8 +47,7 @@ bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MON
         MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor_base->name);
     }
 
-    bool rval = false;
-    bool current_ok = switchover_check_current(current_master, error_out);
+    bool current_ok = switchover_check_current(selected_current_master, error_out);
     bool new_ok = switchover_check_new(new_master, error_out);
     // Check that all slaves are using gtid-replication
     bool gtid_ok = true;
@@ -46,11 +62,12 @@ bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MON
         }
     }
 
+    bool rval = false;
     if (current_ok && new_ok && gtid_ok)
     {
-        bool switched = do_switchover(current_master, new_master, error_out);
+        bool switched = do_switchover(selected_current_master, new_master, error_out);
 
-        const char* curr_master_name = current_master->server->unique_name;
+        const char* curr_master_name = selected_current_master->server->unique_name;
         const char* new_master_name = new_master->server->unique_name;
 
         if (switched)
@@ -132,13 +149,13 @@ bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_server, json_t** output)
         MXS_MONITORED_SERVER* mon_server = mon_get_monitored_server(m_monitor_base, rejoin_server);
         if (mon_server)
         {
-            const char* master_name = master->server->unique_name;
-            MySqlServerInfo* master_info = get_server_info(master);
+            const char* master_name = m_master->server->unique_name;
+            MySqlServerInfo* master_info = get_server_info(m_master);
             MySqlServerInfo* server_info = get_server_info(mon_server);
 
             if (server_is_rejoin_suspect(mon_server, master_info, output))
             {
-                if (update_gtids(master, master_info))
+                if (update_gtids(m_master, master_info))
                 {
                     if (can_replicate_from(mon_server, server_info, master_info))
                     {
@@ -327,7 +344,7 @@ bool MariaDBMonitor::redirect_one_slave(MXS_MONITORED_SERVER* slave, const char*
  */
 uint32_t MariaDBMonitor::do_rejoin(const ServerVector& joinable_servers)
 {
-    SERVER* master_server = master->server;
+    SERVER* master_server = m_master->server;
     uint32_t servers_joined = 0;
     if (!joinable_servers.empty())
     {
@@ -370,7 +387,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerVector& joinable_servers)
  */
 bool MariaDBMonitor::cluster_can_be_joined()
 {
-    return (master != NULL && SERVER_IS_MASTER(master->server) && m_master_gtid_domain >= 0);
+    return (m_master != NULL && SERVER_IS_MASTER(m_master->server) && m_master_gtid_domain >= 0);
 }
 
 /**
@@ -385,7 +402,7 @@ bool MariaDBMonitor::cluster_can_be_joined()
 bool MariaDBMonitor::get_joinable_servers(ServerVector* output)
 {
     ss_dassert(output);
-    MySqlServerInfo *master_info = get_server_info(master);
+    MySqlServerInfo *master_info = get_server_info(m_master);
 
     // Whether a join operation should be attempted or not depends on several criteria. Start with the ones
     // easiest to test. Go though all slaves and construct a preliminary list.
@@ -404,7 +421,7 @@ bool MariaDBMonitor::get_joinable_servers(ServerVector* output)
     bool comm_ok = true;
     if (!suspects.empty())
     {
-        if (update_gtids(master, master_info))
+        if (update_gtids(m_master, master_info))
         {
             for (size_t i = 0; i < suspects.size(); i++)
             {
@@ -482,8 +499,8 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* rejoin_serve
             }
             // or is disconnected but master host or port is wrong.
             else if (!slave_status->slave_io_running && slave_status->slave_sql_running &&
-                     (slave_status->master_host != master->server->name ||
-                      slave_status->master_port != master->server->port))
+                     (slave_status->master_host != m_master->server->name ||
+                      slave_status->master_port != m_master->server->port))
             {
                 is_suspect = true;
             }
@@ -508,7 +525,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(MXS_MONITORED_SERVER* rejoin_serve
 bool MariaDBMonitor::do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
                                    json_t** err_out)
 {
-    MXS_MONITORED_SERVER* demotion_target = current_master ? current_master : master;
+    MXS_MONITORED_SERVER* demotion_target = current_master ? current_master : m_master;
     if (demotion_target == NULL)
     {
         PRINT_MXS_JSON_ERROR(err_out, "Cluster does not have a running master. Run failover instead.");
@@ -1166,7 +1183,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::select_new_master(ServerVector* slaves_out
         // Do not worry about the exclusion list yet, querying the excluded servers is ok.
         MySqlServerInfo* cand_info = update_slave_info(cand);
         // If master is replicating from external master, it is updated but not added to array.
-        if (cand_info && cand != master)
+        if (cand_info && cand != m_master)
         {
             slaves_out->push_back(cand);
             // Check that server is not in the exclusion list while still being a valid choice.
@@ -1259,7 +1276,8 @@ bool MariaDBMonitor::server_is_excluded(const MXS_MONITORED_SERVER* server)
  * @param candidate_info Server info of new candidate
  * @return True if candidate is better
  */
-bool MariaDBMonitor::is_candidate_better(const MySqlServerInfo* current_best_info, const MySqlServerInfo* candidate_info)
+bool MariaDBMonitor::is_candidate_better(const MySqlServerInfo* current_best_info,
+                                         const MySqlServerInfo* candidate_info)
 {
     uint64_t cand_io = candidate_info->slave_status.gtid_io_pos.sequence;
     uint64_t cand_processed = candidate_info->gtid_current_pos.sequence;
@@ -1300,6 +1318,7 @@ bool MariaDBMonitor::is_candidate_better(const MySqlServerInfo* current_best_inf
 bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
                                               json_t** error_out) const
 {
+    ss_dassert(suggested_curr_master);
     bool server_is_master = false;
     MXS_MONITORED_SERVER* extra_master = NULL; // A master server which is not the suggested one
     for (MXS_MONITORED_SERVER* mon_serv = m_monitor_base->monitored_servers;
@@ -1503,7 +1522,7 @@ bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
 {
     ss_dassert(*cluster_modified_out == false);
     if (config_get_global_options()->passive ||
-        (master && SERVER_IS_MASTER(master->server)))
+        (m_master && SERVER_IS_MASTER(m_master->server)))
     {
         return true;
     }
@@ -1645,9 +1664,9 @@ bool MariaDBMonitor::failover_not_possible()
  */
 bool MariaDBMonitor::slave_receiving_events()
 {
-    ss_dassert(master);
+    ss_dassert(m_master);
     bool received_event = false;
-    int64_t master_id = master->server->node_id;
+    int64_t master_id = m_master->server->node_id;
     for (MXS_MONITORED_SERVER* server = m_monitor_base->monitored_servers; server; server = server->next)
     {
         MySqlServerInfo* info = get_server_info(server);
