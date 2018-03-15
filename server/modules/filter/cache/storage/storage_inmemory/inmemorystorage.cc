@@ -149,6 +149,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
         if (is_hard_stale)
         {
             m_entries.erase(i);
+            result |= CACHE_RESULT_DISCARDED;
         }
         else if (!is_soft_stale || include_stale)
         {
