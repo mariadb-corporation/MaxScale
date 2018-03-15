@@ -918,3 +918,71 @@ void MariaDBMonitor::monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServe
         database->server->master_id = serv_info->slave_status.master_server_id;
     }
 }
+
+/**
+ * Query gtid_current_pos and gtid_binlog_pos and save the values to the server info object.
+ * Only the cluster master domain is parsed.
+ *
+ * @param mon Cluster monitor
+ * @param database The server to query
+ * @param info Server info structure for saving result TODO: remove
+ * @return True if successful
+ */
+bool MariaDBMonitor::update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
+{
+    StringVector row;
+    const char query[] = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
+    const int ind_current_pos = 0;
+    const int ind_binlog_pos = 1;
+    int64_t domain = m_master_gtid_domain;
+    ss_dassert(domain >= 0);
+    bool rval = false;
+    if (query_one_row(database, query, 2, &row))
+    {
+        info->gtid_current_pos = (row[ind_current_pos] != "") ?
+                                 Gtid(row[ind_current_pos].c_str(), domain) : Gtid();
+        info->gtid_binlog_pos = (row[ind_binlog_pos] != "") ?
+                                Gtid(row[ind_binlog_pos].c_str(), domain) : Gtid();
+        rval = true;
+    }
+    return rval;
+}
+
+/**
+ * Update replication settings and gtid:s of the slave server.
+ *
+ * @param server Slave to update
+ * @return Slave server info. NULL on error, or if server is not a slave.
+ */
+MySqlServerInfo* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
+{
+    MySqlServerInfo* info = get_server_info(server);
+    if (info->slave_status.slave_sql_running &&
+        update_replication_settings(server, info) &&
+        update_gtids(server, info) &&
+        do_show_slave_status(info, server))
+    {
+        return info;
+    }
+    return NULL;
+}
+
+/**
+ * Query a few miscellaneous replication settings.
+ *
+ * @param database The slave server to query
+ * @param info Where to save results
+ * @return True on success
+ */
+bool MariaDBMonitor::update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
+{
+    StringVector row;
+    bool ok = query_one_row(database, "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;", 3, &row);
+    if (ok)
+    {
+        info->rpl_settings.gtid_strict_mode = (row[0] == "1");
+        info->rpl_settings.log_bin = (row[1] == "1");
+        info->rpl_settings.log_slave_updates = (row[2] == "1");
+    }
+    return ok;
+}

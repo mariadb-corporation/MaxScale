@@ -19,12 +19,10 @@
 
 #include "mariadbmon.hh"
 #include <inttypes.h>
-#include <limits>
 #include <sstream>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/debug.h>
-#include <maxscale/hk_heartbeat.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
@@ -36,18 +34,8 @@
 
 using std::string;
 
-class MySqlServerInfo;
-class MariaDBMonitor;
-
 static void monitorMain(void *);
-static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
-static void stopMonitor(MXS_MONITOR *);
-static void diagnostics(DCB *, const MXS_MONITOR *);
-static json_t* diagnostics_json(const MXS_MONITOR *);
-static bool isMySQLEvent(mxs_monitor_event_t event);
 void check_maxscale_schema_replication(MXS_MONITOR *monitor);
-static bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
-static string get_connection_errors(const ServerVector& servers);
 
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
@@ -75,9 +63,6 @@ static const char CN_REPLICATION_PASSWORD[] = "replication_password";
 /** Default master failure verification timeout */
 #define DEFAULT_MASTER_FAILURE_TIMEOUT "10"
 
-/** Server id default value */
-const int64_t SERVER_ID_UNKNOWN = -1;
-
 /** Default port */
 const int PORT_UNKNOWN = 0;
 
@@ -91,384 +76,6 @@ MariaDBMonitor::MariaDBMonitor(MXS_MONITOR* monitor_base)
 
 MariaDBMonitor::~MariaDBMonitor()
 {}
-
-bool MariaDBMonitor::uses_gtid(MXS_MONITORED_SERVER* mon_server, json_t** error_out)
-{
-    bool rval = false;
-    const MySqlServerInfo* info = get_server_info(mon_server);
-    if (info->slave_status.gtid_io_pos.server_id == SERVER_ID_UNKNOWN)
-    {
-        string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
-                                    " is not using gtid replication.";
-        PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
-    }
-    else
-    {
-        rval = true;
-    }
-    return rval;
-}
-
-bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
-                                              json_t** error_out) const
-{
-    bool server_is_master = false;
-    MXS_MONITORED_SERVER* extra_master = NULL; // A master server which is not the suggested one
-    for (MXS_MONITORED_SERVER* mon_serv = m_monitor_base->monitored_servers;
-         mon_serv != NULL && extra_master == NULL;
-         mon_serv = mon_serv->next)
-    {
-        if (SERVER_IS_MASTER(mon_serv->server))
-        {
-            if (mon_serv == suggested_curr_master)
-            {
-                server_is_master = true;
-            }
-            else
-            {
-                extra_master = mon_serv;
-            }
-        }
-    }
-
-    if (!server_is_master)
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is not the current master or it's in maintenance.",
-                             suggested_curr_master->server->unique_name);
-    }
-    else if (extra_master)
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "Cluster has an additional master server '%s'.",
-                             extra_master->server->unique_name);
-    }
-    return server_is_master && !extra_master;
-}
-
-/**
- * Check whether specified new master is acceptable.
- *
- * @param monitored_server      The server to check against.
- * @param error                 On output, error object if function failed.
- *
- * @return True, if suggested new master is a viable promotion candidate.
- */
-bool MariaDBMonitor::switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error)
-{
-    SERVER* server = monitored_server->server;
-    const char* name = server->unique_name;
-    bool is_master = SERVER_IS_MASTER(server);
-    bool is_slave = SERVER_IS_SLAVE(server);
-
-    if (is_master)
-    {
-        const char IS_MASTER[] = "Specified new master '%s' is already the current master.";
-        PRINT_MXS_JSON_ERROR(error, IS_MASTER, name);
-    }
-    else if (!is_slave)
-    {
-        const char NOT_SLAVE[] = "Specified new master '%s' is not a slave.";
-        PRINT_MXS_JSON_ERROR(error, NOT_SLAVE, name);
-    }
-
-    return !is_master && is_slave;
-}
-
-/**
- * Check that preconditions for a failover are met.
- *
- * @param error_out JSON error out
- * @return True if failover may proceed
- */
-bool MariaDBMonitor::failover_check(json_t** error_out)
-{
-    // Check that there is no running master and that there is at least one running server in the cluster.
-    // Also, all slaves must be using gtid-replication.
-    int slaves = 0;
-    bool error = false;
-
-    for (MXS_MONITORED_SERVER* mon_server = m_monitor_base->monitored_servers;
-         mon_server != NULL;
-         mon_server = mon_server->next)
-    {
-        uint64_t status_bits = mon_server->server->status;
-        uint64_t master_up = (SERVER_MASTER | SERVER_RUNNING);
-        if ((status_bits & master_up) == master_up)
-        {
-            string master_up_msg = string("Master server '") + mon_server->server->unique_name +
-                                   "' is running";
-            if (status_bits & SERVER_MAINT)
-            {
-                master_up_msg += ", although in maintenance mode";
-            }
-            master_up_msg += ".";
-            PRINT_MXS_JSON_ERROR(error_out, "%s", master_up_msg.c_str());
-            error = true;
-        }
-        else if (SERVER_IS_SLAVE(mon_server->server))
-        {
-            if (uses_gtid(mon_server, error_out))
-            {
-                 slaves++;
-            }
-            else
-            {
-                 error = true;
-            }
-        }
-    }
-
-    if (error)
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "Failover not allowed due to errors.");
-    }
-    else if (slaves == 0)
-    {
-        PRINT_MXS_JSON_ERROR(error_out, "No running slaves, cannot failover.");
-    }
-    return !error && slaves > 0;
-}
-
-/**
- * Command handler for 'switchover'
- *
- * @param args    The provided arguments.
- * @param output  Pointer where to place output object.
- *
- * @return True, if the command was executed, false otherwise.
- */
-bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
-{
-    ss_dassert((args->argc == 2) || (args->argc == 3));
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
-    ss_dassert((args->argc == 2) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
-
-    bool rval = false;
-    if (config_get_global_options()->passive)
-    {
-        const char MSG[] = "Switchover requested but not performed, as MaxScale is in passive mode.";
-        PRINT_MXS_JSON_ERROR(error_out, MSG);
-    }
-    else
-    {
-        MXS_MONITOR* mon = args->argv[0].value.monitor;
-        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
-        SERVER* new_master = args->argv[1].value.server;
-        SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
-        bool error = false;
-        const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
-
-        // Check given new master.
-        MXS_MONITORED_SERVER* mon_new_master = mon_get_monitored_server(mon, new_master);
-        if (mon_new_master == NULL)
-        {
-            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->unique_name, mon->name);
-            error = true;
-        }
-
-        // Check given old master or autoselect.
-        MXS_MONITORED_SERVER* mon_curr_master = NULL;
-        if (current_master)
-        {
-            mon_curr_master = mon_get_monitored_server(mon, current_master);
-            if (mon_curr_master == NULL)
-            {
-                PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name, mon->name);
-                error = true;
-            }
-        }
-        else
-        {
-            // Autoselect current master
-            if (handle->master)
-            {
-                mon_curr_master = handle->master;
-            }
-            else
-            {
-                const char NO_MASTER[] = "Monitor '%s' has no master server.";
-                PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, mon->name);
-                error = true;
-            }
-        }
-
-        if (!error)
-        {
-            rval = handle->manual_switchover(mon_new_master, mon_curr_master, error_out);
-        }
-    }
-    return rval;
-}
-
-/**
- * Command handler for 'failover'
- *
- * @param args Arguments given by user
- * @param output Json error output
- * @return True on success
- */
-bool mysql_handle_failover(const MODULECMD_ARG* args, json_t** output)
-{
-    ss_dassert(args->argc == 1);
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    bool rv = false;
-
-    if (config_get_global_options()->passive)
-    {
-        PRINT_MXS_JSON_ERROR(output, "Failover requested but not performed, as MaxScale is in passive mode.");
-    }
-    else
-    {
-        MXS_MONITOR* mon = args->argv[0].value.monitor;
-        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
-        rv = handle->manual_failover(output);
-    }
-    return rv;
-}
-
-/**
- * Command handler for 'rejoin'
- *
- * @param args Arguments given by user
- * @param output Json error output
- * @return True on success
- */
-bool mysql_handle_rejoin(const MODULECMD_ARG* args, json_t** output)
-{
-    ss_dassert(args->argc == 2);
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
-
-    bool rv = false;
-    if (config_get_global_options()->passive)
-    {
-        PRINT_MXS_JSON_ERROR(output, "Rejoin requested but not performed, as MaxScale is in passive mode.");
-    }
-    else
-    {
-        MXS_MONITOR* mon = args->argv[0].value.monitor;
-        SERVER* server = args->argv[1].value.server;
-        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
-        rv = handle->manual_rejoin(server, output);
-    }
-    return rv;
-}
-
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-extern "C"
-{
-
-    MXS_MODULE* MXS_CREATE_MODULE()
-    {
-        MXS_NOTICE("Initialise the MariaDB Monitor module.");
-        static const char ARG_MONITOR_DESC[] = "Monitor name (from configuration file)";
-        static modulecmd_arg_type_t switchover_argv[] =
-        {
-            {
-                MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-                ARG_MONITOR_DESC
-            },
-            { MODULECMD_ARG_SERVER, "New master" },
-            { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (optional)" }
-        };
-
-        modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
-                                   mysql_handle_switchover, MXS_ARRAY_NELEMS(switchover_argv),
-                                   switchover_argv, "Perform master switchover");
-
-        static modulecmd_arg_type_t failover_argv[] =
-        {
-            {
-                MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-                ARG_MONITOR_DESC
-            },
-        };
-
-        modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
-                                   mysql_handle_failover, MXS_ARRAY_NELEMS(failover_argv),
-                                   failover_argv, "Perform master failover");
-
-        static modulecmd_arg_type_t rejoin_argv[] =
-        {
-            {
-                MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-                ARG_MONITOR_DESC
-            },
-            { MODULECMD_ARG_SERVER, "Joining server" }
-        };
-
-        modulecmd_register_command(MXS_MODULE_NAME, "rejoin", MODULECMD_TYPE_ACTIVE,
-                                   mysql_handle_rejoin, MXS_ARRAY_NELEMS(rejoin_argv),
-                                   rejoin_argv, "Rejoin server to a cluster");
-
-        static MXS_MONITOR_OBJECT MyObject =
-        {
-            startMonitor,
-            stopMonitor,
-            diagnostics,
-            diagnostics_json
-        };
-
-        static MXS_MODULE info =
-        {
-            MXS_MODULE_API_MONITOR,
-            MXS_MODULE_GA,
-            MXS_MONITOR_VERSION,
-            "A MariaDB Master/Slave replication monitor",
-            "V1.5.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &MyObject,
-            NULL, /* Process init. */
-            NULL, /* Process finish. */
-            NULL, /* Thread init. */
-            NULL, /* Thread finish. */
-            {
-                {"detect_replication_lag", MXS_MODULE_PARAM_BOOL, "false"},
-                {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "true"},
-                {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
-                {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
-                {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
-                {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "true"},
-                {CN_FAILCOUNT, MXS_MODULE_PARAM_COUNT, "5"},
-                {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
-                {"ignore_external_masters", MXS_MODULE_PARAM_BOOL, "false"},
-                {
-                    "script",
-                    MXS_MODULE_PARAM_PATH,
-                    NULL,
-                    MXS_MODULE_OPT_PATH_X_OK
-                },
-                {
-                    "events",
-                    MXS_MODULE_PARAM_ENUM,
-                    MXS_MONITOR_EVENT_DEFAULT_VALUE,
-                    MXS_MODULE_OPT_NONE,
-                    mxs_monitor_event_enum_values
-                },
-                {CN_AUTO_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
-                {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
-                {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
-                {CN_REPLICATION_USER, MXS_MODULE_PARAM_STRING},
-                {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
-                {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
-                {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
-                {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
-                {CN_NO_PROMOTE_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
-
-        return &info;
-    }
-
-}
 
 /**
  * Initialize the server info hashtable.
@@ -611,30 +218,6 @@ bool MariaDBMonitor::load_config_params(const MXS_CONFIG_PARAMETER* params)
 }
 
 /**
- * Start the monitor instance and return the instance data. This function creates a thread to
- * execute the monitoring. Use stopMonitor() to stop the thread.
- *
- * @param monitor General monitor data
- * @param params Configuration parameters
- * @return A pointer to MariaDBMonitor specific data. Should be stored in MXS_MONITOR's "handle"-field.
- */
-static void* startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
-{
-    return MariaDBMonitor::start(monitor, params);
-}
-
-/**
- * Stop a running monitor
- *
- * @param mon  The monitor that should be stopped.
- */
-static void stopMonitor(MXS_MONITOR *mon)
-{
-    auto handle = static_cast<MariaDBMonitor*>(mon->handle);
-    handle->stop();
-}
-
-/**
  * Stop the monitor.
  *
  * @return True, if the monitor had to be stopped. False, if the monitor already was stopped.
@@ -651,23 +234,6 @@ bool MariaDBMonitor::stop()
         actually_stopped = true;
     }
     return actually_stopped;
-}
-
-static string monitored_servers_to_string(const ServerVector& array)
-{
-    string rval;
-    size_t array_size = array.size();
-    if (array_size > 0)
-    {
-        const char* separator = "";
-        for (size_t i = 0; i < array_size; i++)
-        {
-            rval += separator;
-            rval += array[i]->server->unique_name;
-            separator = ",";
-        }
-    }
-    return rval;
 }
 
 void MariaDBMonitor::diagnostics(DCB *dcb) const
@@ -725,18 +291,6 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
 
         dcb_printf(dcb, "\n");
     }
-}
-
-/**
- * Daignostic interface
- *
- * @param dcb   DCB to print diagnostics
- * @param arg   The monitor handle
- */
-static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
-{
-    const MariaDBMonitor* handle = static_cast<const MariaDBMonitor*>(mon->handle);
-    handle->diagnostics(dcb);
 }
 
 json_t* MariaDBMonitor::diagnostics_json() const
@@ -806,63 +360,6 @@ json_t* MariaDBMonitor::diagnostics_json() const
     }
 
     return rval;
-}
-
-/**
- * Diagnostic interface
- *
- * @param arg   The monitor handle
- */
-static json_t* diagnostics_json(const MXS_MONITOR *mon)
-{
-    const MariaDBMonitor *handle = (const MariaDBMonitor *)mon->handle;
-    return handle->diagnostics_json();
-}
-
-static enum mysql_server_version get_server_version(MXS_MONITORED_SERVER* db)
-{
-    unsigned long server_version = mysql_get_server_version(db->con);
-
-    if (server_version >= 100000)
-    {
-        return MYSQL_SERVER_VERSION_100;
-    }
-    else if (server_version >= 5 * 10000 + 5 * 100)
-    {
-        return MYSQL_SERVER_VERSION_55;
-    }
-
-    return MYSQL_SERVER_VERSION_51;
-}
-
-/**
- * Check if a slave is receiving events from master.
- *
- * @return True, if a slave has an event more recent than master_failure_timeout.
- */
-bool MariaDBMonitor::slave_receiving_events()
-{
-    ss_dassert(master);
-    bool received_event = false;
-    int64_t master_id = master->server->node_id;
-    for (MXS_MONITORED_SERVER* server = m_monitor_base->monitored_servers; server; server = server->next)
-    {
-        MySqlServerInfo* info = get_server_info(server);
-
-        if (info->slave_configured &&
-            info->slave_status.slave_io_running &&
-            info->slave_status.master_server_id == master_id &&
-            difftime(time(NULL), info->latest_event) < m_master_failure_timeout)
-        {
-            /**
-             * The slave is still connected to the correct master and has received events. This means that
-             * while MaxScale can't connect to the master, it's probably still alive.
-             */
-            received_event = true;
-            break;
-        }
-    }
-    return received_event;
 }
 
 /**
@@ -941,25 +438,6 @@ bool MariaDBMonitor::set_standalone_master(MXS_MONITORED_SERVER *db)
             monitor_set_pending_status(db, SERVER_MAINT);
         }
         db = db->next;
-    }
-
-    return rval;
-}
-
-bool MariaDBMonitor::failover_not_possible()
-{
-    bool rval = false;
-
-    for (MXS_MONITORED_SERVER* s = m_monitor_base->monitored_servers; s; s = s->next)
-    {
-        MySqlServerInfo* info = get_server_info(s);
-
-        if (info->n_slaves_configured > 1)
-        {
-            MXS_ERROR("Server '%s' is configured to replicate from multiple "
-                      "masters, failover is not possible.", s->server->unique_name);
-            rval = true;
-        }
     }
 
     return rval;
@@ -1927,330 +1405,6 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
 }
 
 /**
- * @brief Process possible failover event
- *
- * If a master failure has occurred and MaxScale is configured with failover functionality, this fuction
- * executes failover to select and promote a new master server. This function should be called immediately
- * after @c mon_process_state_changes.
- *
- * @param cluster_modified_out Set to true if modifying cluster
- * @return True on success, false on error
-*/
-bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
-{
-    ss_dassert(*cluster_modified_out == false);
-    if (config_get_global_options()->passive ||
-        (master && SERVER_IS_MASTER(master->server)))
-    {
-        return true;
-    }
-    bool rval = true;
-    MXS_MONITORED_SERVER* failed_master = NULL;
-
-    for (MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers; ptr; ptr = ptr->next)
-    {
-        if (ptr->new_event && ptr->server->last_event == MASTER_DOWN_EVENT)
-        {
-            if (failed_master)
-            {
-                MXS_ALERT("Multiple failed master servers detected: "
-                          "'%s' is the first master to fail but server "
-                          "'%s' has also triggered a master_down event.",
-                          failed_master->server->unique_name,
-                          ptr->server->unique_name);
-                return false;
-            }
-
-            if (ptr->server->active_event)
-            {
-                // MaxScale was active when the event took place
-                failed_master = ptr;
-            }
-            else if (m_monitor_base->master_has_failed)
-            {
-                /**
-                 * If a master_down event was triggered when this MaxScale was
-                 * passive, we need to execute the failover script again if no new
-                 * masters have appeared.
-                 */
-                int64_t timeout = SEC_TO_HB(m_failover_timeout);
-                int64_t t = hkheartbeat - ptr->server->triggered_at;
-
-                if (t > timeout)
-                {
-                    MXS_WARNING("Failover of server '%s' did not take place within "
-                                "%u seconds, failover needs to be re-triggered",
-                                ptr->server->unique_name, m_failover_timeout);
-                    failed_master = ptr;
-                }
-            }
-        }
-    }
-
-    if (failed_master)
-    {
-        if (m_failcount > 1 && failed_master->mon_err_count == 1)
-        {
-            MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
-                        "begins.", m_failcount - 1);
-        }
-        else if (failed_master->mon_err_count >= m_failcount)
-        {
-            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
-                       failed_master->server->unique_name);
-            failed_master->new_event = false;
-            rval = failover_check(NULL) && do_failover(NULL);
-            if (rval)
-            {
-                *cluster_modified_out = true;
-            }
-        }
-    }
-
-    return rval;
-}
-
-/**
- * Update replication settings and gtid:s of the slave server.
- *
- * @param server Slave to update
- * @return Slave server info. NULL on error, or if server is not a slave.
- */
-MySqlServerInfo* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
-{
-    MySqlServerInfo* info = get_server_info(server);
-    if (info->slave_status.slave_sql_running &&
-        update_replication_settings(server, info) &&
-        update_gtids(server, info) &&
-        do_show_slave_status(info, server))
-    {
-        return info;
-    }
-    return NULL;
-}
-
-/**
- * Check if server has binary log enabled. Print warnings if gtid_strict_mode or log_slave_updates is off.
- *
- * @param server Server to check
- * @param server_info Server info
- * @param print_on Print warnings or not
- * @return True if log_bin is on
- */
-bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info,
-                                print_repl_warnings_t print_warnings)
-{
-    bool rval = true;
-    const char* servername = server->server->unique_name;
-    if (server_info->rpl_settings.log_bin == false)
-    {
-        if (print_warnings == WARNINGS_ON)
-        {
-            const char NO_BINLOG[] =
-                "Slave '%s' has binary log disabled and is not a valid promotion candidate.";
-            MXS_WARNING(NO_BINLOG, servername);
-        }
-        rval = false;
-    }
-    else if (print_warnings == WARNINGS_ON)
-    {
-        if (server_info->rpl_settings.gtid_strict_mode == false)
-        {
-            const char NO_STRICT[] =
-                "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
-                "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
-            MXS_WARNING(NO_STRICT, servername);
-        }
-        if (server_info->rpl_settings.log_slave_updates == false)
-        {
-            const char NO_SLAVE_UPDATES[] =
-                "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
-                "will break for lagging slaves if '%s' is promoted.";
-            MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
-        }
-    }
-    return rval;
-}
-
-/**
- * Print a redirect error to logs. If err_out exists, generate a combined error message by querying all
- * the server parameters for connection errors and append these errors to err_out.
- *
- * @param demotion_target If not NULL, this is the first server to query.
- * @param redirectable_slaves Other servers to query for errors.
- * @param err_out If not null, the error output object.
- */
-void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers,
-                           json_t** err_out)
-{
-    // Individual server errors have already been printed to the log.
-    // For JSON, gather the errors again.
-    const char MSG[] = "Could not redirect any slaves to the new master.";
-    MXS_ERROR(MSG);
-    if (err_out)
-    {
-        ServerVector failed_slaves;
-        if (first_server)
-        {
-            failed_slaves.push_back(first_server);
-        }
-        failed_slaves.insert(failed_slaves.end(),
-                             servers.begin(), servers.end());
-        string combined_error = get_connection_errors(failed_slaves);
-        *err_out = mxs_json_error_append(*err_out,
-                                         "%s Errors: %s.", MSG, combined_error.c_str());
-    }
-}
-
-/**
- * Query one row of results, save strings to array. Any additional rows are ignored.
- *
- * @param database The database to query.
- * @param query The query to execute.
- * @param expected_cols How many columns the result should have.
- * @param output The output array to populate.
- * @return True on success.
- */
-bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
-                   StringVector* output)
-{
-    bool rval = false;
-    MYSQL_RES *result;
-    if (mxs_mysql_query(database->con, query) == 0 && (result = mysql_store_result(database->con)) != NULL)
-    {
-        unsigned int columns = mysql_field_count(database->con);
-        if (columns != expected_cols)
-        {
-            mysql_free_result(result);
-            MXS_ERROR("Unexpected result for '%s'. Expected %d columns, got %d. Server version: %s",
-                      query, expected_cols, columns, database->server->version_string);
-        }
-        else
-        {
-            MYSQL_ROW row = mysql_fetch_row(result);
-            if (row)
-            {
-                for (unsigned int i = 0; i < columns; i++)
-                {
-                    output->push_back((row[i] != NULL) ? row[i] : "");
-                }
-                rval = true;
-            }
-            else
-            {
-                MXS_ERROR("Query '%s' returned no rows.", query);
-            }
-            mysql_free_result(result);
-        }
-    }
-    else
-    {
-        mon_report_query_error(database);
-    }
-    return rval;
-}
-
-/**
- * Query a few miscellaneous replication settings.
- *
- * @param database The slave server to query
- * @param info Where to save results
- * @return True on success
- */
-bool MariaDBMonitor::update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
-{
-    StringVector row;
-    bool ok = query_one_row(database, "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;", 3, &row);
-    if (ok)
-    {
-        info->rpl_settings.gtid_strict_mode = (row[0] == "1");
-        info->rpl_settings.log_bin = (row[1] == "1");
-        info->rpl_settings.log_slave_updates = (row[2] == "1");
-    }
-    return ok;
-}
-
-/**
- * Query gtid_current_pos and gtid_binlog_pos and save the values to the server info object.
- * Only the cluster master domain is parsed.
- *
- * @param mon Cluster monitor
- * @param database The server to query
- * @param info Server info structure for saving result TODO: remove
- * @return True if successful
- */
-bool MariaDBMonitor::update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
-{
-    StringVector row;
-    const char query[] = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
-    const int ind_current_pos = 0;
-    const int ind_binlog_pos = 1;
-    int64_t domain = m_master_gtid_domain;
-    ss_dassert(domain >= 0);
-    bool rval = false;
-    if (query_one_row(database, query, 2, &row))
-    {
-        info->gtid_current_pos = (row[ind_current_pos] != "") ?
-                                 Gtid(row[ind_current_pos].c_str(), domain) : Gtid();
-        info->gtid_binlog_pos = (row[ind_binlog_pos] != "") ?
-                                Gtid(row[ind_binlog_pos].c_str(), domain) : Gtid();
-        rval = true;
-    }
-    return rval;
-}
-
-string generate_master_gtid_wait_cmd(const Gtid& gtid, double timeout)
-{
-    std::stringstream query_ss;
-    query_ss << "SELECT MASTER_GTID_WAIT(\"" << gtid.to_string() << "\", " << timeout << ");";
-    return query_ss.str();
-}
-
-/**
- * Get MariaDB connection error strings from all the given servers, form one string.
- *
- * @param slaves Servers with errors
- * @return Concatenated string.
- */
-static string get_connection_errors(const ServerVector& servers)
-{
-    // Get errors from all connections, form a string.
-    std::stringstream ss;
-    for (ServerVector::const_iterator iter = servers.begin(); iter != servers.end(); iter++)
-    {
-        const char* error = mysql_error((*iter)->con);
-        ss_dassert(*error); // Every connection should have an error.
-        ss << (*iter)->server->unique_name << ": '" << error << "'";
-        if (iter + 1 != servers.end())
-        {
-            ss << ", ";
-        }
-    }
-    return ss.str();
-}
-
-bool MariaDBMonitor::can_replicate_from(MXS_MONITORED_SERVER* slave,
-                                        MySqlServerInfo* slave_info, MySqlServerInfo* master_info)
-{
-    bool rval = false;
-    if (update_gtids(slave, slave_info))
-    {
-        Gtid slave_gtid = slave_info->gtid_current_pos;
-        Gtid master_gtid = master_info->gtid_binlog_pos;
-        // The following are not sufficient requirements for replication to work, they only cover the basics.
-        // If the servers have diverging histories, the redirection will seem to succeed but the slave IO
-        // thread will stop in error.
-        if (slave_gtid.server_id != SERVER_ID_UNKNOWN && master_gtid.server_id != SERVER_ID_UNKNOWN &&
-            slave_gtid.domain == master_gtid.domain &&
-            slave_gtid.sequence <= master_info->gtid_current_pos.sequence)
-        {
-            rval = true;
-        }
-    }
-    return rval;
-}
-
-/**
  * Set a monitor config parameter to "false". The effect persists over stopMonitor/startMonitor but not
  * MaxScale restart. Only use on boolean config settings.
  *
@@ -2265,23 +1419,284 @@ void MariaDBMonitor::disable_setting(const char* setting)
 }
 
 /**
- * Scan a server id from a string.
+ * Start the monitor instance and return the instance data. This function creates a thread to
+ * execute the monitoring. Use stopMonitor() to stop the thread.
  *
- * @param id_string
- * @return Server id, or -1 if scanning fails
+ * @param monitor General monitor data
+ * @param params Configuration parameters
+ * @return A pointer to MariaDBMonitor specific data. Should be stored in MXS_MONITOR's "handle"-field.
  */
-int64_t scan_server_id(const char* id_string)
+static void* startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
-    int64_t server_id = SERVER_ID_UNKNOWN;
-    ss_debug(int rv = ) sscanf(id_string, "%" PRId64, &server_id);
-    ss_dassert(rv == 1);
-    // Server id can be 0, which was even the default value until 10.2.1.
-    // KB is a bit hazy on this, but apparently when replicating, the server id should not be 0. Not sure,
-    // so MaxScale allows this.
-#if defined(SS_DEBUG)
-    const int64_t SERVER_ID_MIN = std::numeric_limits<uint32_t>::min();
-    const int64_t SERVER_ID_MAX = std::numeric_limits<uint32_t>::max();
-#endif
-    ss_dassert(server_id >= SERVER_ID_MIN && server_id <= SERVER_ID_MAX);
-    return server_id;
+    return MariaDBMonitor::start(monitor, params);
 }
+
+/**
+ * Stop a running monitor
+ *
+ * @param mon  The monitor that should be stopped.
+ */
+static void stopMonitor(MXS_MONITOR *mon)
+{
+    auto handle = static_cast<MariaDBMonitor*>(mon->handle);
+    handle->stop();
+}
+
+/**
+ * Daignostic interface
+ *
+ * @param dcb   DCB to print diagnostics
+ * @param arg   The monitor handle
+ */
+static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+{
+    const MariaDBMonitor* handle = static_cast<const MariaDBMonitor*>(mon->handle);
+    handle->diagnostics(dcb);
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
+{
+    const MariaDBMonitor *handle = (const MariaDBMonitor *)mon->handle;
+    return handle->diagnostics_json();
+}
+
+/**
+ * Command handler for 'switchover'
+ *
+ * @param args    The provided arguments.
+ * @param output  Pointer where to place output object.
+ *
+ * @return True, if the command was executed, false otherwise.
+ */
+bool mysql_handle_switchover(const MODULECMD_ARG* args, json_t** error_out)
+{
+    ss_dassert((args->argc == 2) || (args->argc == 3));
+    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
+    ss_dassert((args->argc == 2) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
+
+    bool rval = false;
+    if (config_get_global_options()->passive)
+    {
+        const char MSG[] = "Switchover requested but not performed, as MaxScale is in passive mode.";
+        PRINT_MXS_JSON_ERROR(error_out, MSG);
+    }
+    else
+    {
+        MXS_MONITOR* mon = args->argv[0].value.monitor;
+        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
+        SERVER* new_master = args->argv[1].value.server;
+        SERVER* current_master = (args->argc == 3) ? args->argv[2].value.server : NULL;
+        bool error = false;
+        const char NO_SERVER[] = "Server '%s' is not a member of monitor '%s'.";
+
+        // Check given new master.
+        MXS_MONITORED_SERVER* mon_new_master = mon_get_monitored_server(mon, new_master);
+        if (mon_new_master == NULL)
+        {
+            PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, new_master->unique_name, mon->name);
+            error = true;
+        }
+
+        // Check given old master or autoselect.
+        MXS_MONITORED_SERVER* mon_curr_master = NULL;
+        if (current_master)
+        {
+            mon_curr_master = mon_get_monitored_server(mon, current_master);
+            if (mon_curr_master == NULL)
+            {
+                PRINT_MXS_JSON_ERROR(error_out, NO_SERVER, current_master->unique_name, mon->name);
+                error = true;
+            }
+        }
+        else
+        {
+            // Autoselect current master
+            if (handle->master)
+            {
+                mon_curr_master = handle->master;
+            }
+            else
+            {
+                const char NO_MASTER[] = "Monitor '%s' has no master server.";
+                PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, mon->name);
+                error = true;
+            }
+        }
+
+        if (!error)
+        {
+            rval = handle->manual_switchover(mon_new_master, mon_curr_master, error_out);
+        }
+    }
+    return rval;
+}
+
+/**
+ * Command handler for 'failover'
+ *
+ * @param args Arguments given by user
+ * @param output Json error output
+ * @return True on success
+ */
+bool mysql_handle_failover(const MODULECMD_ARG* args, json_t** output)
+{
+    ss_dassert(args->argc == 1);
+    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    bool rv = false;
+
+    if (config_get_global_options()->passive)
+    {
+        PRINT_MXS_JSON_ERROR(output, "Failover requested but not performed, as MaxScale is in passive mode.");
+    }
+    else
+    {
+        MXS_MONITOR* mon = args->argv[0].value.monitor;
+        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
+        rv = handle->manual_failover(output);
+    }
+    return rv;
+}
+
+/**
+ * Command handler for 'rejoin'
+ *
+ * @param args Arguments given by user
+ * @param output Json error output
+ * @return True on success
+ */
+bool mysql_handle_rejoin(const MODULECMD_ARG* args, json_t** output)
+{
+    ss_dassert(args->argc == 2);
+    ss_dassert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    ss_dassert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
+
+    bool rv = false;
+    if (config_get_global_options()->passive)
+    {
+        PRINT_MXS_JSON_ERROR(output, "Rejoin requested but not performed, as MaxScale is in passive mode.");
+    }
+    else
+    {
+        MXS_MONITOR* mon = args->argv[0].value.monitor;
+        SERVER* server = args->argv[1].value.server;
+        auto handle = static_cast<MariaDBMonitor*>(mon->handle);
+        rv = handle->manual_rejoin(server, output);
+    }
+    return rv;
+}
+
+MXS_BEGIN_DECLS
+/**
+ * The module entry point routine. This routine populates the module object structure.
+ *
+ * @return The module object
+ */
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    MXS_NOTICE("Initialise the MariaDB Monitor module.");
+    static const char ARG_MONITOR_DESC[] = "Monitor name (from configuration file)";
+    static modulecmd_arg_type_t switchover_argv[] =
+    {
+        {
+            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            ARG_MONITOR_DESC
+        },
+        { MODULECMD_ARG_SERVER, "New master" },
+        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (optional)" }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
+                               mysql_handle_switchover, MXS_ARRAY_NELEMS(switchover_argv),
+                               switchover_argv, "Perform master switchover");
+
+    static modulecmd_arg_type_t failover_argv[] =
+    {
+        {
+            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            ARG_MONITOR_DESC
+        },
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
+                               mysql_handle_failover, MXS_ARRAY_NELEMS(failover_argv),
+                               failover_argv, "Perform master failover");
+
+    static modulecmd_arg_type_t rejoin_argv[] =
+    {
+        {
+            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            ARG_MONITOR_DESC
+        },
+        { MODULECMD_ARG_SERVER, "Joining server" }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "rejoin", MODULECMD_TYPE_ACTIVE,
+                               mysql_handle_rejoin, MXS_ARRAY_NELEMS(rejoin_argv),
+                               rejoin_argv, "Rejoin server to a cluster");
+
+    static MXS_MONITOR_OBJECT MyObject =
+    {
+        startMonitor,
+        stopMonitor,
+        diagnostics,
+        diagnostics_json
+    };
+
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_GA,
+        MXS_MONITOR_VERSION,
+        "A MariaDB Master/Slave replication monitor",
+        "V1.5.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {"detect_replication_lag", MXS_MODULE_PARAM_BOOL, "false"},
+            {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "true"},
+            {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
+            {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
+            {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
+            {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "true"},
+            {CN_FAILCOUNT, MXS_MODULE_PARAM_COUNT, "5"},
+            {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
+            {"ignore_external_masters", MXS_MODULE_PARAM_BOOL, "false"},
+            {
+                "script",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
+            {
+                "events",
+                MXS_MODULE_PARAM_ENUM,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MODULE_OPT_NONE,
+                mxs_monitor_event_enum_values
+            },
+            {CN_AUTO_FAILOVER, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_FAILOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_FAILOVER_TIMEOUT},
+            {CN_SWITCHOVER_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_SWITCHOVER_TIMEOUT},
+            {CN_REPLICATION_USER, MXS_MODULE_PARAM_STRING},
+            {CN_REPLICATION_PASSWORD, MXS_MODULE_PARAM_STRING},
+            {CN_VERIFY_MASTER_FAILURE, MXS_MODULE_PARAM_BOOL, "true"},
+            {CN_MASTER_FAILURE_TIMEOUT, MXS_MODULE_PARAM_COUNT, DEFAULT_MASTER_FAILURE_TIMEOUT},
+            {CN_AUTO_REJOIN, MXS_MODULE_PARAM_BOOL, "false"},
+            {CN_NO_PROMOTE_SERVERS, MXS_MODULE_PARAM_SERVERLIST},
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+    return &info;
+}
+
+MXS_END_DECLS

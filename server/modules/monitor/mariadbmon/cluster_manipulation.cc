@@ -15,6 +15,7 @@
 
 #include <inttypes.h>
 #include <sstream>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/mysql_utils.h>
 
 bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master, json_t** error_out)
@@ -1286,4 +1287,383 @@ bool MariaDBMonitor::is_candidate_better(const MySqlServerInfo* current_best_inf
         }
     }
     return is_better;
+}
+
+/**
+ * Check that the given server is a master and it's the only master.
+ *
+ * @param suggested_curr_master     The server to check, given by user.
+ * @param error_out                 On output, error object if function failed.
+ * @return True if current master seems ok. False, if there is some error with the
+ * specified current master.
+ */
+bool MariaDBMonitor::switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
+                                              json_t** error_out) const
+{
+    bool server_is_master = false;
+    MXS_MONITORED_SERVER* extra_master = NULL; // A master server which is not the suggested one
+    for (MXS_MONITORED_SERVER* mon_serv = m_monitor_base->monitored_servers;
+         mon_serv != NULL && extra_master == NULL;
+         mon_serv = mon_serv->next)
+    {
+        if (SERVER_IS_MASTER(mon_serv->server))
+        {
+            if (mon_serv == suggested_curr_master)
+            {
+                server_is_master = true;
+            }
+            else
+            {
+                extra_master = mon_serv;
+            }
+        }
+    }
+
+    if (!server_is_master)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Server '%s' is not the current master or it's in maintenance.",
+                             suggested_curr_master->server->unique_name);
+    }
+    else if (extra_master)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Cluster has an additional master server '%s'.",
+                             extra_master->server->unique_name);
+    }
+    return server_is_master && !extra_master;
+}
+
+/**
+ * Check whether specified new master is acceptable.
+ *
+ * @param monitored_server      The server to check against.
+ * @param error                 On output, error object if function failed.
+ *
+ * @return True, if suggested new master is a viable promotion candidate.
+ */
+bool MariaDBMonitor::switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error)
+{
+    SERVER* server = monitored_server->server;
+    const char* name = server->unique_name;
+    bool is_master = SERVER_IS_MASTER(server);
+    bool is_slave = SERVER_IS_SLAVE(server);
+
+    if (is_master)
+    {
+        const char IS_MASTER[] = "Specified new master '%s' is already the current master.";
+        PRINT_MXS_JSON_ERROR(error, IS_MASTER, name);
+    }
+    else if (!is_slave)
+    {
+        const char NOT_SLAVE[] = "Specified new master '%s' is not a slave.";
+        PRINT_MXS_JSON_ERROR(error, NOT_SLAVE, name);
+    }
+
+    return !is_master && is_slave;
+}
+
+/**
+ * Check that preconditions for a failover are met.
+ *
+ * @param error_out JSON error out
+ * @return True if failover may proceed
+ */
+bool MariaDBMonitor::failover_check(json_t** error_out)
+{
+    // Check that there is no running master and that there is at least one running server in the cluster.
+    // Also, all slaves must be using gtid-replication.
+    int slaves = 0;
+    bool error = false;
+
+    for (MXS_MONITORED_SERVER* mon_server = m_monitor_base->monitored_servers;
+         mon_server != NULL;
+         mon_server = mon_server->next)
+    {
+        uint64_t status_bits = mon_server->server->status;
+        uint64_t master_up = (SERVER_MASTER | SERVER_RUNNING);
+        if ((status_bits & master_up) == master_up)
+        {
+            string master_up_msg = string("Master server '") + mon_server->server->unique_name +
+                                   "' is running";
+            if (status_bits & SERVER_MAINT)
+            {
+                master_up_msg += ", although in maintenance mode";
+            }
+            master_up_msg += ".";
+            PRINT_MXS_JSON_ERROR(error_out, "%s", master_up_msg.c_str());
+            error = true;
+        }
+        else if (SERVER_IS_SLAVE(mon_server->server))
+        {
+            if (uses_gtid(mon_server, error_out))
+            {
+                 slaves++;
+            }
+            else
+            {
+                 error = true;
+            }
+        }
+    }
+
+    if (error)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Failover not allowed due to errors.");
+    }
+    else if (slaves == 0)
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "No running slaves, cannot failover.");
+    }
+    return !error && slaves > 0;
+}
+
+/**
+ * Check if server has binary log enabled. Print warnings if gtid_strict_mode or log_slave_updates is off.
+ *
+ * @param server Server to check
+ * @param server_info Server info
+ * @param print_on Print warnings or not
+ * @return True if log_bin is on
+ */
+bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info,
+                                print_repl_warnings_t print_warnings)
+{
+    bool rval = true;
+    const char* servername = server->server->unique_name;
+    if (server_info->rpl_settings.log_bin == false)
+    {
+        if (print_warnings == WARNINGS_ON)
+        {
+            const char NO_BINLOG[] =
+                "Slave '%s' has binary log disabled and is not a valid promotion candidate.";
+            MXS_WARNING(NO_BINLOG, servername);
+        }
+        rval = false;
+    }
+    else if (print_warnings == WARNINGS_ON)
+    {
+        if (server_info->rpl_settings.gtid_strict_mode == false)
+        {
+            const char NO_STRICT[] =
+                "Slave '%s' has gtid_strict_mode disabled. Enabling this setting is recommended. "
+                "For more information, see https://mariadb.com/kb/en/library/gtid/#gtid_strict_mode";
+            MXS_WARNING(NO_STRICT, servername);
+        }
+        if (server_info->rpl_settings.log_slave_updates == false)
+        {
+            const char NO_SLAVE_UPDATES[] =
+                "Slave '%s' has log_slave_updates disabled. It is a valid candidate but replication "
+                "will break for lagging slaves if '%s' is promoted.";
+            MXS_WARNING(NO_SLAVE_UPDATES, servername, servername);
+        }
+    }
+    return rval;
+}
+
+/**
+ * Checks if slave can replicate from master. Only considers gtid:s and only detects obvious errors. The
+ * non-detected errors will mostly be detected once the slave tries to start replicating.
+ *
+ * @param slave Slave server candidate
+ * @param slave_info Slave info
+ * @param master_info Master info
+ * @return True if slave can replicate from master
+ */
+bool MariaDBMonitor::can_replicate_from(MXS_MONITORED_SERVER* slave,
+                                        MySqlServerInfo* slave_info, MySqlServerInfo* master_info)
+{
+    bool rval = false;
+    if (update_gtids(slave, slave_info))
+    {
+        Gtid slave_gtid = slave_info->gtid_current_pos;
+        Gtid master_gtid = master_info->gtid_binlog_pos;
+        // The following are not sufficient requirements for replication to work, they only cover the basics.
+        // If the servers have diverging histories, the redirection will seem to succeed but the slave IO
+        // thread will stop in error.
+        if (slave_gtid.server_id != SERVER_ID_UNKNOWN && master_gtid.server_id != SERVER_ID_UNKNOWN &&
+            slave_gtid.domain == master_gtid.domain &&
+            slave_gtid.sequence <= master_info->gtid_current_pos.sequence)
+        {
+            rval = true;
+        }
+    }
+    return rval;
+}
+
+/**
+ * @brief Process possible failover event
+ *
+ * If a master failure has occurred and MaxScale is configured with failover functionality, this fuction
+ * executes failover to select and promote a new master server. This function should be called immediately
+ * after @c mon_process_state_changes.
+ *
+ * @param cluster_modified_out Set to true if modifying cluster
+ * @return True on success, false on error
+*/
+bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
+{
+    ss_dassert(*cluster_modified_out == false);
+    if (config_get_global_options()->passive ||
+        (master && SERVER_IS_MASTER(master->server)))
+    {
+        return true;
+    }
+    bool rval = true;
+    MXS_MONITORED_SERVER* failed_master = NULL;
+
+    for (MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers; ptr; ptr = ptr->next)
+    {
+        if (ptr->new_event && ptr->server->last_event == MASTER_DOWN_EVENT)
+        {
+            if (failed_master)
+            {
+                MXS_ALERT("Multiple failed master servers detected: "
+                          "'%s' is the first master to fail but server "
+                          "'%s' has also triggered a master_down event.",
+                          failed_master->server->unique_name,
+                          ptr->server->unique_name);
+                return false;
+            }
+
+            if (ptr->server->active_event)
+            {
+                // MaxScale was active when the event took place
+                failed_master = ptr;
+            }
+            else if (m_monitor_base->master_has_failed)
+            {
+                /**
+                 * If a master_down event was triggered when this MaxScale was
+                 * passive, we need to execute the failover script again if no new
+                 * masters have appeared.
+                 */
+                int64_t timeout = SEC_TO_HB(m_failover_timeout);
+                int64_t t = hkheartbeat - ptr->server->triggered_at;
+
+                if (t > timeout)
+                {
+                    MXS_WARNING("Failover of server '%s' did not take place within "
+                                "%u seconds, failover needs to be re-triggered",
+                                ptr->server->unique_name, m_failover_timeout);
+                    failed_master = ptr;
+                }
+            }
+        }
+    }
+
+    if (failed_master)
+    {
+        if (m_failcount > 1 && failed_master->mon_err_count == 1)
+        {
+            MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
+                        "begins.", m_failcount - 1);
+        }
+        else if (failed_master->mon_err_count >= m_failcount)
+        {
+            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                       failed_master->server->unique_name);
+            failed_master->new_event = false;
+            rval = failover_check(NULL) && do_failover(NULL);
+            if (rval)
+            {
+                *cluster_modified_out = true;
+            }
+        }
+    }
+    return rval;
+}
+
+/**
+ * Print a redirect error to logs. If err_out exists, generate a combined error message by querying all
+ * the server parameters for connection errors and append these errors to err_out.
+ *
+ * @param demotion_target If not NULL, this is the first server to query.
+ * @param redirectable_slaves Other servers to query for errors.
+ * @param err_out If not null, the error output object.
+ */
+void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers,
+                           json_t** err_out)
+{
+    // Individual server errors have already been printed to the log.
+    // For JSON, gather the errors again.
+    const char MSG[] = "Could not redirect any slaves to the new master.";
+    MXS_ERROR(MSG);
+    if (err_out)
+    {
+        ServerVector failed_slaves;
+        if (first_server)
+        {
+            failed_slaves.push_back(first_server);
+        }
+        failed_slaves.insert(failed_slaves.end(),
+                             servers.begin(), servers.end());
+        string combined_error = get_connection_errors(failed_slaves);
+        *err_out = mxs_json_error_append(*err_out,
+                                         "%s Errors: %s.", MSG, combined_error.c_str());
+    }
+}
+
+bool MariaDBMonitor::uses_gtid(MXS_MONITORED_SERVER* mon_server, json_t** error_out)
+{
+    bool rval = false;
+    const MySqlServerInfo* info = get_server_info(mon_server);
+    if (info->slave_status.gtid_io_pos.server_id == SERVER_ID_UNKNOWN)
+    {
+        string slave_not_gtid_msg = string("Slave server ") + mon_server->server->unique_name +
+                                    " is not using gtid replication.";
+        PRINT_MXS_JSON_ERROR(error_out, "%s", slave_not_gtid_msg.c_str());
+    }
+    else
+    {
+        rval = true;
+    }
+    return rval;
+}
+
+bool MariaDBMonitor::failover_not_possible()
+{
+    bool rval = false;
+
+    for (MXS_MONITORED_SERVER* s = m_monitor_base->monitored_servers; s; s = s->next)
+    {
+        MySqlServerInfo* info = get_server_info(s);
+
+        if (info->n_slaves_configured > 1)
+        {
+            MXS_ERROR("Server '%s' is configured to replicate from multiple "
+                      "masters, failover is not possible.", s->server->unique_name);
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * Check if a slave is receiving events from master.
+ *
+ * @return True, if a slave has an event more recent than master_failure_timeout.
+ */
+bool MariaDBMonitor::slave_receiving_events()
+{
+    ss_dassert(master);
+    bool received_event = false;
+    int64_t master_id = master->server->node_id;
+    for (MXS_MONITORED_SERVER* server = m_monitor_base->monitored_servers; server; server = server->next)
+    {
+        MySqlServerInfo* info = get_server_info(server);
+
+        if (info->slave_configured &&
+            info->slave_status.slave_io_running &&
+            info->slave_status.master_server_id == master_id &&
+            difftime(time(NULL), info->latest_event) < m_master_failure_timeout)
+        {
+            /**
+             * The slave is still connected to the correct master and has received events. This means that
+             * while MaxScale can't connect to the master, it's probably still alive.
+             */
+            received_event = true;
+            break;
+        }
+    }
+    return received_event;
 }

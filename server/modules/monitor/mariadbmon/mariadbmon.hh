@@ -24,25 +24,14 @@
 
 #include "utilities.hh"
 
-/** Utility macro for printing both MXS_ERROR and json error */
-#define PRINT_MXS_JSON_ERROR(err_out, format, ...)\
-    do {\
-       MXS_ERROR(format, ##__VA_ARGS__);\
-       if (err_out)\
-       {\
-            *err_out = mxs_json_error_append(*err_out, format, ##__VA_ARGS__);\
-       }\
-    } while (false)
+using std::string;
 
 extern const int PORT_UNKNOWN;
-extern const int64_t SERVER_ID_UNKNOWN;
 extern const char * const CN_AUTO_FAILOVER;
 
 class MariaDBMonitor;
 
 typedef std::tr1::unordered_map<const MXS_MONITORED_SERVER*, MySqlServerInfo> ServerInfoMap;
-typedef std::vector<MXS_MONITORED_SERVER*> ServerVector;
-typedef std::vector<string> StringVector;
 
 enum print_repl_warnings_t
 {
@@ -58,14 +47,11 @@ enum slave_down_setting_t
 
 // TODO: Most of following should be class methods
 void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers, json_t** err_out);
-string generate_master_gtid_wait_cmd(const Gtid& gtid, double timeout);
-bool query_one_row(MXS_MONITORED_SERVER *database, const char* query, unsigned int expected_cols,
-                   StringVector* output);
 bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info,
                                 print_repl_warnings_t print_warnings = WARNINGS_ON);
 MXS_MONITORED_SERVER* getServerByNodeId(MXS_MONITORED_SERVER *, long);
 MXS_MONITORED_SERVER* getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
-int64_t scan_server_id(const char* id_string);
+
 void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, int nservers);
 
 // MariaDB Monitor instance data
@@ -163,42 +149,9 @@ public:
      */
     const MySqlServerInfo* get_server_info(const MXS_MONITORED_SERVER* db) const;
 
-    /**
-     * Check that the given server is a master and it's the only master.
-     *
-     * @param suggested_curr_master     The server to check, given by user.
-     * @param error_out                 On output, error object if function failed.
-     * @return True if current master seems ok. False, if there is some error with the
-     * specified current master.
-     */
-    bool switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
-                                  json_t** error_out) const;
-
-    /**
-     * Check whether specified new master is acceptable.
-     *
-     * @param monitored_server      The server to check against.
-     * @param error                 On output, error object if function failed.
-     *
-     * @return True, if suggested new master is a viable promotion candidate.
-     */
-    bool switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error);
-
-    /**
-     * Checks if slave can replicate from master. Only considers gtid:s and only detects obvious errors. The
-     * non-detected errors will mostly be detected once the slave tries to start replicating.
-     *
-     * @param slave Slave server candidate
-     * @param slave_info Slave info
-     * @param master_info Master info
-     * @return True if slave can replicate from master
-     */
-    bool can_replicate_from(MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
-                            MySqlServerInfo* master_info);
-
     int status;                      /**< Monitor status. TODO: This should be in MXS_MONITOR */
     MXS_MONITORED_SERVER *master;    /**< Master server for MySQL Master/Slave replication */
-    bool detectStaleMaster;        /**< Monitor flag for MySQL replication Stale Master detection */
+    bool detectStaleMaster;          /**< Monitor flag for MySQL replication Stale Master detection */
 
 private:
     MXS_MONITOR* m_monitor_base;     /**< Generic monitor object */
@@ -291,4 +244,9 @@ private:
     bool failover_check(json_t** error_out);
     bool update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
     void disable_setting(const char* setting);
+    bool switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error);
+    bool switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
+                                  json_t** error_out) const;
+    bool can_replicate_from(MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
+                            MySqlServerInfo* master_info);
 };
