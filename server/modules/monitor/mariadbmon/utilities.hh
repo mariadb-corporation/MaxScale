@@ -104,35 +104,37 @@ public:
 };
 
 /**
- * Monitor specific information about a server
- *
- * Note: These are initialized in @c init_server_info
+ * Monitor specific information about a server. Eventually, this will be the primary data structure handled
+ * by the monitor. These are initialized in @c init_server_info.
  */
-class MySqlServerInfo
+class MariaDBServer
 {
 public:
-    int64_t          server_id;             /**< Value of @@server_id. Valid values are 32bit unsigned. */
-    int              group;                 /**< Multi-master group where this server belongs,
-                                             *   0 for servers not in groups */
-    bool             read_only;             /**< Value of @@read_only */
-    bool             slave_configured;      /**< Whether SHOW SLAVE STATUS returned rows */
-    bool             binlog_relay;          /** Server is a Binlog Relay */
-    int              n_slaves_configured;   /**< Number of configured slave connections*/
-    int              n_slaves_running;      /**< Number of running slave connections */
-    int              slave_heartbeats;      /**< Number of received heartbeats */
-    double           heartbeat_period;      /**< The time interval between heartbeats */
-    time_t           latest_event;          /**< Time when latest event was received from the master */
-    int64_t          gtid_domain_id;        /**< The value of gtid_domain_id, the domain which is used for
-                                             *   new non-replicated events. */
-    Gtid             gtid_current_pos;      /**< Gtid of latest event. Only shows the triplet
-                                             *   with the current master domain. */
-    Gtid             gtid_binlog_pos;       /**< Gtid of latest event written to binlog. Only shows
-                                             *   the triplet with the current master domain. */
-    SlaveStatusInfo  slave_status;          /**< Data returned from SHOW SLAVE STATUS */
-    ReplicationSettings rpl_settings;       /**< Miscellaneous replication related settings */
+    MXS_MONITORED_SERVER* const server_base; /**< Monitored server base class/struct. MariaDBServer does not
+                                               *  own the struct, it is not freed (or connection closed) when
+                                               *  a MariaDBServer is destroyed. */
     mysql_server_version version;           /**< Server version, 10.X, 5.5 or 5.1 */
+    int64_t         server_id;              /**< Value of @@server_id. Valid values are 32bit unsigned. */
+    int             group;                  /**< Multi-master group where this server belongs,
+                                              *  0 for servers not in groups */
+    bool            read_only;              /**< Value of @@read_only */
+    bool            slave_configured;       /**< Whether SHOW SLAVE STATUS returned rows */
+    bool            binlog_relay;           /** Server is a Binlog Relay */
+    int             n_slaves_configured;    /**< Number of configured slave connections*/
+    int             n_slaves_running;       /**< Number of running slave connections */
+    int             slave_heartbeats;       /**< Number of received heartbeats */
+    double          heartbeat_period;       /**< The time interval between heartbeats */
+    time_t          latest_event;           /**< Time when latest event was received from the master */
+    int64_t         gtid_domain_id;         /**< The value of gtid_domain_id, the domain which is used for
+                                              *  new non-replicated events. */
+    Gtid            gtid_current_pos;       /**< Gtid of latest event. Only shows the triplet
+                                              *  with the current master domain. */
+    Gtid            gtid_binlog_pos;        /**< Gtid of latest event written to binlog. Only shows
+                                              *  the triplet with the current master domain. */
+    SlaveStatusInfo slave_status;           /**< Data returned from SHOW SLAVE STATUS */
+    ReplicationSettings rpl_settings;       /**< Miscellaneous replication related settings */
 
-    MySqlServerInfo();
+    MariaDBServer(MXS_MONITORED_SERVER* monitored_server);
 
     /**
      * Calculate how many events are left in the relay log. If gtid_current_pos is ahead of Gtid_IO_Pos,

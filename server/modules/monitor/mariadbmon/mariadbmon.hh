@@ -31,7 +31,10 @@ extern const char * const CN_AUTO_FAILOVER;
 
 class MariaDBMonitor;
 
-typedef std::tr1::unordered_map<const MXS_MONITORED_SERVER*, MySqlServerInfo> ServerInfoMap;
+// Map of base struct to MariaDBServer. Does not own the server objects. May not be needed at the end.
+typedef std::tr1::unordered_map<MXS_MONITORED_SERVER*, MariaDBServer*> ServerInfoMap;
+// Server container, owns the server objects.
+typedef std::vector<MariaDBServer> ServerContainer; // TODO: Rename/get rid of ServerVector typedef!
 
 enum print_repl_warnings_t
 {
@@ -47,7 +50,7 @@ enum slave_down_setting_t
 
 // TODO: Most of following should be class methods
 void print_redirect_errors(MXS_MONITORED_SERVER* first_server, const ServerVector& servers, json_t** err_out);
-bool check_replication_settings(const MXS_MONITORED_SERVER* server, MySqlServerInfo* server_info,
+bool check_replication_settings(const MXS_MONITORED_SERVER* server, MariaDBServer* server_info,
                                 print_repl_warnings_t print_warnings = WARNINGS_ON);
 MXS_MONITORED_SERVER* getServerByNodeId(MXS_MONITORED_SERVER *, long);
 MXS_MONITORED_SERVER* getSlaveOfNodeId(MXS_MONITORED_SERVER *, long, slave_down_setting_t);
@@ -143,12 +146,12 @@ public:
      * @param db Server to get info for. Must be a valid server or function crashes.
      * @return The server info.
      */
-    MySqlServerInfo* get_server_info(const MXS_MONITORED_SERVER* db);
+    MariaDBServer* get_server_info(MXS_MONITORED_SERVER* db);
 
     /**
      * Constant version of get_server_info().
      */
-    const MySqlServerInfo* get_server_info(const MXS_MONITORED_SERVER* db) const;
+    const MariaDBServer* get_server_info(const MXS_MONITORED_SERVER* db) const;
 
     bool detectStaleMaster;          /**< Monitor flag for MySQL replication Stale Master detection */
 
@@ -158,13 +161,14 @@ private:
     unsigned long m_id;              /**< Monitor ID */
     volatile int m_shutdown;         /**< Flag to shutdown the monitor thread. */
     volatile int m_status;           /**< Monitor status.  */
+    ServerContainer m_servers;       /**< Servers of the monitor. */
+    ServerInfoMap m_server_info;     /**< Contains server specific information */
 
     // Values updated by monitor
     int64_t m_master_gtid_domain;    /**< Gtid domain currently used by the master */
     string m_external_master_host;   /**< External master host, for fail/switchover */
     int m_external_master_port;      /**< External master port */
     MXS_MONITORED_SERVER *m_master;  /**< Master server for MySQL Master/Slave replication */
-    ServerInfoMap m_server_info;     /**< Contains server specific information */
 
     // Replication topology detection settings
     bool m_mysql51_replication;      /**< Use MySQL 5.1 replication */
@@ -198,7 +202,7 @@ private:
     ~MariaDBMonitor();
     bool load_config_params(const MXS_CONFIG_PARAMETER* params);
     bool failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, int seconds_remaining, json_t** err_out);
-    bool switchover_demote_master(MXS_MONITORED_SERVER* current_master, MySqlServerInfo* info,
+    bool switchover_demote_master(MXS_MONITORED_SERVER* current_master, MariaDBServer* info,
                                   json_t** err_out);
     bool switchover_wait_slaves_catchup(const ServerVector& slaves, const Gtid& gtid, int total_timeout,
                                         int read_timeout, json_t** err_out);
@@ -210,13 +214,13 @@ private:
     bool promote_new_master(MXS_MONITORED_SERVER* new_master, json_t** err_out);
     MXS_MONITORED_SERVER* select_new_master(ServerVector* slaves_out, json_t** err_out);
     bool server_is_excluded(const MXS_MONITORED_SERVER* server);
-    bool is_candidate_better(const MySqlServerInfo* current_best_info, const MySqlServerInfo* candidate_info);
-    MySqlServerInfo* update_slave_info(MXS_MONITORED_SERVER* server);
-    bool do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database);
-    bool update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
+    bool is_candidate_better(const MariaDBServer* current_best_info, const MariaDBServer* candidate_info);
+    MariaDBServer* update_slave_info(MXS_MONITORED_SERVER* server);
+    bool do_show_slave_status(MariaDBServer* serv_info, MXS_MONITORED_SERVER* database);
+    bool update_replication_settings(MXS_MONITORED_SERVER *database, MariaDBServer* info);
     void init_server_info();
     bool slave_receiving_events();
-    void monitor_database(MXS_MONITORED_SERVER *database);
+    void monitor_database(MariaDBServer* param_db);
     bool standalone_master_required(MXS_MONITORED_SERVER *db);
     bool set_standalone_master(MXS_MONITORED_SERVER *db);
     bool failover_not_possible();
@@ -233,21 +237,21 @@ private:
     void set_slave_heartbeat(MXS_MONITORED_SERVER *);
     MXS_MONITORED_SERVER* build_mysql51_replication_tree();
     MXS_MONITORED_SERVER* get_replication_tree(int num_servers);
-    void monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info);
+    void monitor_mysql_db(MariaDBServer *serv_info);
     bool do_switchover(MXS_MONITORED_SERVER* current_master, MXS_MONITORED_SERVER* new_master,
                        json_t** err_out);
     bool do_failover(json_t** err_out);
     uint32_t do_rejoin(const ServerVector& joinable_servers);
     bool mon_process_failover(bool* cluster_modified_out);
-    bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MySqlServerInfo* master_info,
+    bool server_is_rejoin_suspect(MXS_MONITORED_SERVER* server, MariaDBServer* master_info,
                                   json_t** output);
     bool cluster_can_be_joined();
     bool failover_check(json_t** error_out);
-    bool update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info);
+    bool update_gtids(MariaDBServer* info);
     void disable_setting(const char* setting);
     bool switchover_check_new(const MXS_MONITORED_SERVER* monitored_server, json_t** error);
     bool switchover_check_current(const MXS_MONITORED_SERVER* suggested_curr_master,
                                   json_t** error_out) const;
-    bool can_replicate_from(MXS_MONITORED_SERVER* slave, MySqlServerInfo* slave_info,
-                            MySqlServerInfo* master_info);
+    bool can_replicate_from(MXS_MONITORED_SERVER* slave, MariaDBServer* slave_info,
+                            MariaDBServer* master_info);
 };

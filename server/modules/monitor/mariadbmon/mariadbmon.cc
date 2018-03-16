@@ -72,21 +72,30 @@ MariaDBMonitor::~MariaDBMonitor()
  */
 void MariaDBMonitor::init_server_info()
 {
-    m_server_info.clear();
+    m_servers.clear();
     for (auto server = m_monitor_base->monitored_servers; server; server = server->next)
     {
-        ServerInfoMap::value_type new_val(server, MySqlServerInfo());
+        m_servers.push_back(MariaDBServer(server));
+    }
+
+    // All servers have been inserted into the vector. The data in the vector should no longer move so it's
+    // safe to take addresses.
+    m_server_info.clear();
+    for (auto iter = m_servers.begin(); iter != m_servers.end(); iter++)
+    {
+        ss_dassert(m_server_info.count(iter->server_base) == 0);
+        ServerInfoMap::value_type new_val(iter->server_base, &*iter);
         m_server_info.insert(new_val);
     }
 }
 
-MySqlServerInfo* MariaDBMonitor::get_server_info(const MXS_MONITORED_SERVER* db)
+MariaDBServer* MariaDBMonitor::get_server_info(MXS_MONITORED_SERVER* db)
 {
     ss_dassert(m_server_info.count(db) == 1); // Should always exist in the map
-    return &m_server_info[db];
+    return m_server_info[db];
 }
 
-const MySqlServerInfo* MariaDBMonitor::get_server_info(const MXS_MONITORED_SERVER* db) const
+const MariaDBServer* MariaDBMonitor::get_server_info(const MXS_MONITORED_SERVER* db) const
 {
     return const_cast<MariaDBMonitor*>(this)->get_server_info(db);
 }
@@ -242,7 +251,7 @@ void MariaDBMonitor::diagnostics(DCB *dcb) const
     dcb_printf(dcb, "\nServer information:\n-------------------\n\n");
     for (MXS_MONITORED_SERVER *db = m_monitor_base->monitored_servers; db; db = db->next)
     {
-        const MySqlServerInfo* serv_info = get_server_info(db);
+        const MariaDBServer* serv_info = get_server_info(db);
         dcb_printf(dcb, "Server:                 %s\n", db->server->unique_name);
         dcb_printf(dcb, "Server ID:              %" PRId64 "\n", serv_info->server_id);
         dcb_printf(dcb, "Read only:              %s\n", serv_info->read_only ? "YES" : "NO");
@@ -317,7 +326,7 @@ json_t* MariaDBMonitor::diagnostics_json() const
         for (MXS_MONITORED_SERVER *db = m_monitor_base->monitored_servers; db; db = db->next)
         {
             json_t* srv = json_object();
-            const MySqlServerInfo* serv_info = get_server_info(db);
+            const MariaDBServer* serv_info = get_server_info(db);
             json_object_set_new(srv, "name", json_string(db->server->unique_name));
             json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
             json_object_set_new(srv, "master_id", json_integer(serv_info->slave_status.master_server_id));
@@ -373,7 +382,7 @@ bool MariaDBMonitor::standalone_master_required(MXS_MONITORED_SERVER *db)
         if (SERVER_IS_RUNNING(db->server))
         {
             candidates++;
-            MySqlServerInfo *server_info = get_server_info(db);
+            MariaDBServer *server_info = get_server_info(db);
 
             if (server_info->read_only || server_info->slave_configured || candidates > 1)
             {
@@ -507,7 +516,7 @@ void MariaDBMonitor::main_loop()
             ptr->pending_status = ptr->server->status;
 
             /* monitor current node */
-            monitor_database(ptr);
+            monitor_database(get_server_info(ptr));
 
             /* reset the slave list of current node */
             memset(&ptr->server->slaves, 0, sizeof(ptr->server->slaves));
@@ -595,7 +604,7 @@ void MariaDBMonitor::main_loop()
 
         if (m_master != NULL && SERVER_IS_MASTER(m_master->server))
         {
-            MySqlServerInfo* master_info = get_server_info(m_master);
+            MariaDBServer* master_info = get_server_info(m_master);
             // Update cluster gtid domain
             int64_t domain = master_info->gtid_domain_id;
             if (m_master_gtid_domain >= 0 && domain != m_master_gtid_domain)
@@ -642,7 +651,7 @@ void MariaDBMonitor::main_loop()
         ptr = m_monitor_base->monitored_servers;
         while (ptr)
         {
-            MySqlServerInfo *serv_info = get_server_info(ptr);
+            MariaDBServer *serv_info = get_server_info(ptr);
             ss_dassert(serv_info);
 
             if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
@@ -671,7 +680,7 @@ void MariaDBMonitor::main_loop()
         {
             if (!SERVER_IN_MAINT(ptr->server))
             {
-                MySqlServerInfo *serv_info = get_server_info(ptr);
+                MariaDBServer *serv_info = get_server_info(ptr);
 
                 /** If "detect_stale_master" option is On, let's use the previous master.
                  *
@@ -870,7 +879,7 @@ void MariaDBMonitor::main_loop()
 
             while (ptr)
             {
-                MySqlServerInfo *serv_info = get_server_info(ptr);
+                MariaDBServer *serv_info = get_server_info(ptr);
 
                 if ((!SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
                 {

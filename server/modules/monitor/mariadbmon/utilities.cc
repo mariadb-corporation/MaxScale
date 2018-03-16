@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string>
 #include <sstream>
+#include <maxscale/dcb.h>
 #include <maxscale/debug.h>
 #include <maxscale/mysql_utils.h>
 
@@ -87,8 +88,10 @@ SlaveStatusInfo::SlaveStatusInfo()
     , read_master_log_pos(0)
 {}
 
-MySqlServerInfo::MySqlServerInfo()
-    : server_id(SERVER_ID_UNKNOWN)
+MariaDBServer::MariaDBServer(MXS_MONITORED_SERVER* monitored_server)
+    : server_base(monitored_server)
+    , version(MYSQL_SERVER_VERSION_51)
+    , server_id(SERVER_ID_UNKNOWN)
     , group(0)
     , read_only(false)
     , slave_configured(false)
@@ -99,10 +102,9 @@ MySqlServerInfo::MySqlServerInfo()
     , heartbeat_period(0)
     , latest_event(0)
     , gtid_domain_id(-1)
-    , version(MYSQL_SERVER_VERSION_51)
 {}
 
-int64_t MySqlServerInfo::relay_log_events()
+int64_t MariaDBServer::relay_log_events()
 {
     if (slave_status.gtid_io_pos.server_id != SERVER_ID_UNKNOWN &&
         gtid_current_pos.server_id != SERVER_ID_UNKNOWN &&

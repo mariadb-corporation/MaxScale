@@ -16,7 +16,7 @@
 #include <maxscale/mysql_utils.h>
 
 static int add_slave_to_master(long *slaves_list, int list_size, long node_id);
-static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info);
+static void read_server_variables(MariaDBServer* serv_info);
 
 static bool report_version_err = true;
 
@@ -239,7 +239,7 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
                         m_master = master_cand;
                     }
 
-                    MySqlServerInfo* info = get_server_info(master_cand);
+                    MariaDBServer* info = get_server_info(master_cand);
 
                     if (SERVER_IS_RUNNING(master_cand->server))
                     {
@@ -354,7 +354,7 @@ MXS_MONITORED_SERVER* getSlaveOfNodeId(MXS_MONITORED_SERVER *ptr, long node_id,
     return NULL;
 }
 
-bool MariaDBMonitor::do_show_slave_status(MySqlServerInfo* serv_info, MXS_MONITORED_SERVER* database)
+bool MariaDBMonitor::do_show_slave_status(MariaDBServer* serv_info, MXS_MONITORED_SERVER* database)
 {
     /** Column positions for SHOW SLAVE STATUS */
     const size_t MYSQL55_STATUS_MASTER_LOG_POS = 5;
@@ -537,7 +537,7 @@ struct graph_node
     int cycle;
     bool active;
     struct graph_node *parent;
-    MySqlServerInfo *info;
+    MariaDBServer *info;
     MXS_MONITORED_SERVER *db;
 };
 
@@ -746,12 +746,13 @@ void find_graph_cycles(MariaDBMonitor *handle, MXS_MONITORED_SERVER *database, i
 }
 
 /**
- * Monitor an individual server.
+ * Monitor an individual server. TODO: this will likely end up as method of MariaDBServer class.
  *
  * @param database  The database to probe
  */
-void MariaDBMonitor::monitor_database(MXS_MONITORED_SERVER *database)
+void MariaDBMonitor::monitor_database(MariaDBServer* serv_info)
 {
+    MXS_MONITORED_SERVER* database = serv_info->server_base;
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))
     {
@@ -796,7 +797,6 @@ void MariaDBMonitor::monitor_database(MXS_MONITORED_SERVER *database)
     server_set_status_nolock(database->server, SERVER_RUNNING);
     monitor_set_pending_status(database, SERVER_RUNNING);
 
-    MySqlServerInfo *serv_info = get_server_info(database);
     /* Check whether current server is MaxScale Binlog Server */
     MYSQL_RES *result;
     if (mxs_mysql_query(database->con, "SELECT @@maxscale_version") == 0 &&
@@ -827,22 +827,22 @@ void MariaDBMonitor::monitor_database(MXS_MONITORED_SERVER *database)
         serv_info->version = MYSQL_SERVER_VERSION_51;
     }
     /* Query a few settings. */
-    read_server_variables(database, serv_info);
+    read_server_variables(serv_info);
     /* If gtid domain exists and server is 10.0, update gtid:s */
     if (m_master_gtid_domain >= 0 && serv_info->version == MYSQL_SERVER_VERSION_100)
     {
-        update_gtids(database, serv_info);
+        update_gtids(serv_info);
     }
     /* Check for MariaDB 10.x.x and get status for multi-master replication */
     if (serv_info->version == MYSQL_SERVER_VERSION_100 || serv_info->version == MYSQL_SERVER_VERSION_55)
     {
-        monitor_mysql_db(database, serv_info);
+        monitor_mysql_db(serv_info);
     }
     else
     {
         if (m_mysql51_replication)
         {
-            monitor_mysql_db(database, serv_info);
+            monitor_mysql_db(serv_info);
         }
         else if (report_version_err)
         {
@@ -855,13 +855,13 @@ void MariaDBMonitor::monitor_database(MXS_MONITORED_SERVER *database)
 }
 
 /**
- * Read server_id, read_only and (if 10.X) gtid_domain_id.
+ * Read server_id, read_only and (if 10.X) gtid_domain_id. TODO: Move to MariaDBServer
  *
- * @param database Database to update
  * @param serv_info Where to save results
  */
-static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInfo* serv_info)
+static void read_server_variables(MariaDBServer* serv_info)
 {
+    MXS_MONITORED_SERVER* database = serv_info->server_base;
     string query = "SELECT @@global.server_id, @@read_only;";
     int columns = 2;
     if (serv_info->version ==  MYSQL_SERVER_VERSION_100)
@@ -896,11 +896,11 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
 /**
  * Monitor a database with given server info.
  *
- * @param database Database to monitor
  * @param serv_info Server info for database
  */
-void MariaDBMonitor::monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServerInfo *serv_info)
+void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
 {
+    MXS_MONITORED_SERVER* database = serv_info->server_base;
     /** Clear old states */
     monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
                                  SERVER_SLAVE_OF_EXTERNAL_MASTER);
@@ -923,13 +923,12 @@ void MariaDBMonitor::monitor_mysql_db(MXS_MONITORED_SERVER* database, MySqlServe
  * Query gtid_current_pos and gtid_binlog_pos and save the values to the server info object.
  * Only the cluster master domain is parsed.
  *
- * @param mon Cluster monitor
- * @param database The server to query
- * @param info Server info structure for saving result TODO: remove
+ * @param info Server info structure for saving result TODO: move to MariaDBServer
  * @return True if successful
  */
-bool MariaDBMonitor::update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
+bool MariaDBMonitor::update_gtids(MariaDBServer* info)
 {
+    MXS_MONITORED_SERVER* database = info->server_base;
     StringVector row;
     const char query[] = "SELECT @@gtid_current_pos, @@gtid_binlog_pos;";
     const int ind_current_pos = 0;
@@ -954,12 +953,12 @@ bool MariaDBMonitor::update_gtids(MXS_MONITORED_SERVER *database, MySqlServerInf
  * @param server Slave to update
  * @return Slave server info. NULL on error, or if server is not a slave.
  */
-MySqlServerInfo* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
+MariaDBServer* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
 {
-    MySqlServerInfo* info = get_server_info(server);
+    MariaDBServer* info = get_server_info(server);
     if (info->slave_status.slave_sql_running &&
         update_replication_settings(server, info) &&
-        update_gtids(server, info) &&
+        update_gtids(info) &&
         do_show_slave_status(info, server))
     {
         return info;
@@ -974,7 +973,7 @@ MySqlServerInfo* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
  * @param info Where to save results
  * @return True on success
  */
-bool MariaDBMonitor::update_replication_settings(MXS_MONITORED_SERVER *database, MySqlServerInfo* info)
+bool MariaDBMonitor::update_replication_settings(MXS_MONITORED_SERVER *database, MariaDBServer* info)
 {
     StringVector row;
     bool ok = query_one_row(database, "SELECT @@gtid_strict_mode, @@log_bin, @@log_slave_updates;", 3, &row);
