@@ -1186,6 +1186,20 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
     return rval;
 }
 
+static inline bool is_next(mxs::Buffer::iterator it, mxs::Buffer::iterator end, const std::string& str)
+{
+    ss_dassert(it != end);
+    for (auto s_it = str.begin(); s_it != str.end(); s_it++, it++)
+    {
+        if (it == end || *it != *s_it)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator it,
                                                            mxs::Buffer::iterator end)
 {
@@ -1296,7 +1310,9 @@ char* modutil_get_canonical(GWBUF* querybuf)
         NONE,
         SINGLE_QUOTE,
         DOUBLE_QUOTE,
-        BACKTICK
+        BACKTICK,
+        UNTIL_NEWLINE,
+        INLINE_COMMENT
     } my_state = NONE;
 
     for (auto it = std::next(buf.begin(), MYSQL_HEADER_LEN + 1); // Skip packet header and command
@@ -1339,6 +1355,27 @@ char* modutil_get_canonical(GWBUF* querybuf)
                 }
                 break;
 
+            case INLINE_COMMENT:
+                if (is_next(it, buf.end(), "*/"))
+                {
+                    // Comment end marker, return to normal parsing
+                    it++;
+                    my_state = NONE;
+                }
+                break;
+
+            case UNTIL_NEWLINE:
+                if (is_next(it, buf.end(), "\r\n"))
+                {
+                    it++;
+                    my_state = NONE;
+                }
+                else if (is_next(it, buf.end(), "\n") || is_next(it, buf.end(), "\r"))
+                {
+                    my_state = NONE;
+                }
+                break;
+
             default:
                 if (isspace(*it))
                 {
@@ -1348,6 +1385,24 @@ char* modutil_get_canonical(GWBUF* querybuf)
                         continue;
                     }
                     *it = ' ';
+                }
+                else if (is_next(it, buf.end(), "/*"))
+                {
+                    auto comment_start = std::next(it, 2);
+                    if (comment_start != buf.end() &&
+                        *comment_start != '!' &&
+                        *comment_start != 'M')
+                    {
+                        // Non-executable comment
+                        my_state = INLINE_COMMENT;
+                        continue;
+                    }
+                }
+                else if (is_next(it, buf.end(), "# ") || is_next(it, buf.end(), "-- "))
+                {
+                    // End-of-line comment, jump to the next line if one exists
+                    my_state = UNTIL_NEWLINE;
+                    continue;
                 }
                 else if (isdigit(*it) && !isalpha(prev) && !isdigit(prev) && prev != '_')
                 {

@@ -46,7 +46,7 @@ SELECT v1.a, v2. b FROM v1 LEFT OUTER JOIN v2 ON (v1.a=v2.b) AND (v1.a >= ?) GRO
 SELECT v1.f4 FROM v1 WHERE f1<>? OR f2<>? AND f4=? AND (f2<>? OR f3<>? AND f5<>? OR f4 LIKE ?);
 select v1.r_object_id, v2.users_names from v1, v2where (v1.group_name=?) and v2.r_object_id=v1.r_object_idorder by users_names;
 SELECT v2 FROM t1 WHERE v1 IN (?, ?, ?, ? ) AND i = ?;
-select ? as ?;# this should be removed
+select ? as ?;
 SELECT @@tx_isolation;
 select @ujis4 = CONVERT(@utf84 USING ujis);
 SELECT @user_var;
