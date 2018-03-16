@@ -1193,19 +1193,27 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
     ss_dassert(isdigit(*it));
     std::pair<bool, mxs::Buffer::iterator> rval = std::make_pair(true, it);
     bool is_hex = *it == '0';
+    bool allow_hex = false;
 
     // Skip the first character, we know it's a number
     it++;
 
     while (it != end)
     {
-        if (!isdigit(*it))
+        if (isdigit(*it) || (allow_hex && isxdigit(*it)))
         {
+            // Digit or hex-digit, skip it
+        }
+        else
+        {
+            // Non-digit character
+
             if (is_hex && (*it == 'x' || *it == 'X'))
             {
                 /** A hexadecimal literal, mark that we've seen the `x` so that
                  * if another one is seen, it is treated as a normal character */
                 is_hex = false;
+                allow_hex = true;
             }
             else if (*it == 'e')
             {
@@ -1318,7 +1326,7 @@ char* modutil_get_new_canonical(GWBUF* querybuf)
             case SINGLE_QUOTE:
                 if (*it == '\'')
                 {
-                    rval += "'?'";
+                    rval += '?';
                     my_state = NONE;
                 }
                 break;
@@ -1326,7 +1334,7 @@ char* modutil_get_new_canonical(GWBUF* querybuf)
             case DOUBLE_QUOTE:
                 if (*it == '"')
                 {
-                    rval += "\"?\"";
+                    rval += '?';
                     my_state = NONE;
                 }
                 break;
@@ -1334,6 +1342,11 @@ char* modutil_get_new_canonical(GWBUF* querybuf)
             default:
                 if (isspace(*it))
                 {
+                    if (isspace(prev))
+                    {
+                        // Repeating space, skip it
+                        continue;
+                    }
                     *it = ' ';
                 }
                 else if (isdigit(*it) && !isalpha(prev) && !isdigit(prev) && prev != '_')
