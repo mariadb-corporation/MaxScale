@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <math.h>
 #include <fcntl.h>
+#include <map>
 #include <string>
 #include <set>
 #include <vector>
@@ -1960,12 +1961,13 @@ static SERV_LISTENER* service_destroy_listener(SERV_LISTENER* sl)
     return next;
 }
 
+typedef std::map<MXS_FILTER*, void(*)(MXS_FILTER*)> DestructorsByFilter;
 /**
  * Destroy one service instance
  *
  * @param svc  The service to destroy.
  */
-static void service_destroy_instance(SERVICE* svc)
+static void service_destroy_instance(SERVICE* svc, DestructorsByFilter* filters_to_delete)
 {
     SERV_LISTENER* sl = svc->ports;
 
@@ -1986,8 +1988,12 @@ static void service_destroy_instance(SERVICE* svc)
         {
             if (filters[i]->obj->destroyInstance && filters[i]->filter)
             {
-                /* Call destroyInstance hook for filters */
-                filters[i]->obj->destroyInstance(filters[i]->filter);
+                if (filters_to_delete->find(filters[i]->filter) == filters_to_delete->end())
+                {
+                    auto entry = std::make_pair(filters[i]->filter, filters[i]->obj->destroyInstance);
+
+                    filters_to_delete->insert(entry);
+                }
             }
         }
     }
@@ -1996,14 +2002,21 @@ static void service_destroy_instance(SERVICE* svc)
 void service_destroy_instances(void)
 {
     spinlock_acquire(&service_spin);
+    DestructorsByFilter filters_to_delete;
     SERVICE* svc = allServices;
     while (svc != NULL)
     {
         ss_dassert(svc->svc_do_shutdown);
-        service_destroy_instance(svc);
+        service_destroy_instance(svc, &filters_to_delete);
 
         svc = svc->next;
     }
+
+    for (auto i = filters_to_delete.begin(); i != filters_to_delete.end(); ++i)
+    {
+        i->second(i->first);
+    }
+
     spinlock_release(&service_spin);
 }
 
