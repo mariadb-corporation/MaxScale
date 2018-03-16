@@ -1286,7 +1286,7 @@ bool is_negation(const std::string& str)
     return rval;
 }
 
-char* modutil_get_new_canonical(GWBUF* querybuf)
+char* modutil_get_canonical(GWBUF* querybuf)
 {
     std::string rval;
     mxs::Buffer buf(querybuf);
@@ -1388,59 +1388,6 @@ char* modutil_get_new_canonical(GWBUF* querybuf)
 
     buf.release();
     return MXS_STRDUP(rval.c_str());
-}
-
-/*
- * Replace user-provided literals with question marks.
- *
- * TODO: Make the canonicalization allocate only one buffer of memory
- *
- * @param querybuf GWBUF with a COM_QUERY statement
- * @return A copy of the query in its canonical form or NULL if an error occurred.
- */
-char* modutil_get_canonical(GWBUF* querybuf)
-{
-    char *querystr = NULL;
-
-    if (GWBUF_LENGTH(querybuf) > MYSQL_HEADER_LEN + 1 && GWBUF_IS_SQL(querybuf))
-    {
-        size_t srcsize = GWBUF_LENGTH(querybuf) - MYSQL_HEADER_LEN - 1;
-        char *src = (char*)GWBUF_DATA(querybuf) + MYSQL_HEADER_LEN + 1;
-        size_t destsize = 0;
-        char *dest = NULL;
-
-        if (replace_quoted((const char**)&src, &srcsize, &dest, &destsize))
-        {
-            /** Reset the buffers so that the old result is reused and a new
-             * result is created.*/
-            src = dest;
-            srcsize = destsize;
-            dest = NULL;
-            destsize = 0;
-
-            if (remove_mysql_comments((const char**)&src, &srcsize, &dest, &destsize))
-            {
-                /** Both buffers now contain allocated memory so all we need
-                 * to do is to swap them */
-                if (replace_values((const char**)&dest, &destsize, &src, &srcsize))
-                {
-                    querystr = squeeze_whitespace(src);
-                    MXS_FREE(dest);
-                }
-                else
-                {
-                    MXS_FREE(src);
-                    MXS_FREE(dest);
-                }
-            }
-            else
-            {
-                MXS_FREE(src);
-            }
-        }
-    }
-
-    return querystr;
 }
 
 char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
