@@ -12,12 +12,21 @@
  */
 #include"pam_auth.hh"
 
+#include <string>
 #include <maxscale/authenticator.h>
 #include <maxscale/users.h>
 
 #include "pam_instance.hh"
 #include "pam_client_session.hh"
 #include "../pam_auth_common.hh"
+
+using std::string;
+const string FIELD_USER = "user";
+const string FIELD_HOST = "host";
+const string FIELD_DB = "db";
+const string FIELD_ANYDB = "anydb";
+const string FIELD_AUTHSTR = "authentication_string";
+const int NUM_FIELDS = 5;
 
 /**
  * Initialize PAM authenticator
@@ -131,6 +140,18 @@ static int pam_auth_load_users(SERV_LISTENER *listener)
     return inst->load_users(listener->service);
 }
 
+static void pam_auth_diagnostic(DCB *dcb, SERV_LISTENER *listener)
+{
+    PamInstance *inst = static_cast<PamInstance*>(listener->auth_instance);
+    inst->diagnostic(dcb);
+}
+
+static json_t* pam_auth_diagnostic_json(const SERV_LISTENER *listener)
+{
+    PamInstance *inst = static_cast<PamInstance*>(listener->auth_instance);
+    return inst->diagnostic_json();
+}
+
 MXS_BEGIN_DECLS
 /**
  * Module handle entry point
@@ -147,8 +168,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         pam_auth_free_data,           /* Free the client data held in DCB */
         pam_auth_free,                /* Free authenticator data */
         pam_auth_load_users,          /* Load database users */
-        users_default_diagnostic,        /* Default user diagnostic */
-        users_default_diagnostic_json,   /* Default user diagnostic */
+        pam_auth_diagnostic,          /* Default user diagnostic */
+        pam_auth_diagnostic_json,   /* Default user diagnostic */
         NULL                             /* No user reauthentication */
     };
 

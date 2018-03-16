@@ -26,6 +26,8 @@ public:
     static PamInstance* create(char **options);
     ~PamInstance();
     int load_users(SERVICE* service);
+    void diagnostic(DCB* dcb);
+    json_t* diagnostic_json();
 
     const std::string m_dbname; /**< Name of the in-memory database */
     const std::string m_tablename; /**< The table where users are stored */

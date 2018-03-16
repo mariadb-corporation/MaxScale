@@ -231,11 +231,11 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
 void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
                                              StringVector* services_out)
 {
-    string services_query = string("SELECT authentication_string FROM ") +
-                            m_instance.m_tablename + " WHERE user = '" + session->user +
-                            "' AND '" + dcb->remote + "' LIKE host AND (anydb = '1' OR '" +
-                            session->db + "' = '' OR '" + session->db +
-                            "' LIKE db) ORDER BY authentication_string";
+    string services_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename +
+                            " WHERE " + FIELD_USER + " = '" + session->user + "' AND '" + dcb->remote +
+                            "' LIKE " + FIELD_HOST + " AND (" + FIELD_ANYDB + " = '1' OR '" + session->db +
+                            "' = '' OR '" + session->db + "' LIKE " + FIELD_DB +
+                            ") ORDER BY authentication_string;";
     MXS_DEBUG("PAM services search sql: '%s'.", services_query.c_str());
     char *err;
     if (sqlite3_exec(m_dbhandle, services_query.c_str(), user_services_cb,
