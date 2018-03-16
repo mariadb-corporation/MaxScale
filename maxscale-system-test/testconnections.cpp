@@ -827,16 +827,15 @@ int TestConnections::copy_all_logs()
 
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
     tprintf("Executing %s\n", str);
+
     if (system(str) != 0)
     {
         tprintf("copy_logs.sh executing FAILED!\n");
-        return 1;
+        exit(1);
     }
-    else
-    {
-        tprintf("copy_logs.sh OK!\n");
-        return 0;
-    }
+
+    tprintf("copy_logs.sh OK!\n");
+    return 0;
 }
 
 int TestConnections::copy_all_logs_periodic()
