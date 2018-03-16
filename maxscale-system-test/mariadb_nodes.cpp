@@ -699,7 +699,6 @@ static bool wrong_replication_type(MYSQL *conn)
         }
         sleep(1);
     }
-
     return rval;
 }
 
