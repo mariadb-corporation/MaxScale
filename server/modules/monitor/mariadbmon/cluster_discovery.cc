@@ -221,30 +221,30 @@ MXS_MONITORED_SERVER* MariaDBMonitor::get_replication_tree(int num_servers)
             }
             else
             {
-                MXS_MONITORED_SERVER *master;
+                MXS_MONITORED_SERVER *master_cand;
                 current->depth = depth;
 
-                master = getServerByNodeId(m_monitor_base->monitored_servers, current->master_id);
-                if (master && master->server && master->server->node_id > 0)
+                master_cand = getServerByNodeId(m_monitor_base->monitored_servers, current->master_id);
+                if (master_cand && master_cand->server && master_cand->server->node_id > 0)
                 {
-                    add_slave_to_master(master->server->slaves, sizeof(master->server->slaves),
+                    add_slave_to_master(master_cand->server->slaves, sizeof(master_cand->server->slaves),
                                         current->node_id);
-                    master->server->depth = current->depth - 1;
+                    master_cand->server->depth = current->depth - 1;
 
-                    if (master && master->server->depth < master->server->depth)
+                    if (master && master_cand->server->depth < master->server->depth)
                     {
                         /** A master with a lower depth was found, remove
                             the master status from the previous master. */
                         monitor_clear_pending_status(master, SERVER_MASTER);
-                        master = master;
+                        master = master_cand;
                     }
 
-                    MySqlServerInfo* info = get_server_info(master);
+                    MySqlServerInfo* info = get_server_info(master_cand);
 
-                    if (SERVER_IS_RUNNING(master->server))
+                    if (SERVER_IS_RUNNING(master_cand->server))
                     {
                         /** Only set the Master status if read_only is disabled */
-                        monitor_set_pending_status(master, info->read_only ? SERVER_SLAVE : SERVER_MASTER);
+                        monitor_set_pending_status(master_cand, info->read_only ? SERVER_SLAVE : SERVER_MASTER);
                     }
                 }
                 else
