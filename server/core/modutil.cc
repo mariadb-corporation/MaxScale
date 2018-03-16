@@ -1254,6 +1254,30 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
     return rval;
 }
 
+bool is_negation(const std::string& str)
+{
+    bool rval = false;
+
+    if (!str.empty() && str[str.size() - 1] == '-')
+    {
+        // Possibly a negative number
+        rval = true;
+
+        for (auto it = std::next(str.rbegin()); it != str.rend(); it++)
+        {
+            if (!isspace(*it))
+            {
+                /** If we find a previously converted value, we know that it
+                 * is not a negation but a subtraction. */
+                rval = *it != '?';
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
 char* modutil_get_new_canonical(GWBUF* querybuf)
 {
     std::string rval;
@@ -1267,8 +1291,6 @@ char* modutil_get_new_canonical(GWBUF* querybuf)
         BACKTICK
     } my_state = NONE;
 
-    char prev = ' ';
-
     for (auto it = std::next(buf.begin(), MYSQL_HEADER_LEN + 1); // Skip packet header and command
          it != buf.end(); it++)
     {
@@ -1280,6 +1302,8 @@ char* modutil_get_new_canonical(GWBUF* querybuf)
             rval += *it;
             continue;
         }
+
+        char prev = rval.empty() ? ' ' : rval[rval.size() - 1];
 
         switch (my_state)
         {
@@ -1318,6 +1342,11 @@ char* modutil_get_new_canonical(GWBUF* querybuf)
 
                      if (num_end.first)
                      {
+                         if (is_negation(rval))
+                         {
+                             // Remove the sign
+                             rval.resize(rval.size() - 1);
+                         }
                          rval += '?';
                          it = num_end.second;
                          continue;
@@ -1342,8 +1371,6 @@ char* modutil_get_new_canonical(GWBUF* querybuf)
 
                 break;
         }
-
-        prev = *it;
     }
 
     buf.release();
