@@ -87,7 +87,7 @@ if (HAVE_LIBDL)
   target_link_libraries(maxscale-common dl)
 endif()
 
-add_dependencies(maxscale-common pcre2 connector-c libmicrohttpd)
+add_dependencies(maxscale-common pcre2 connector-c libmicrohttpd jansson)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 install_module(maxscale-common core)
 
