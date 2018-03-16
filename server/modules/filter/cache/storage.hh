@@ -49,10 +49,10 @@ public:
      *
      * @param key       A key generated with get_key.
      * @param flags     Mask of cache_flags_t values.
-     * @param soft_ttl  The soft TTL. A value if CACHE_USE_CONFIG_TTL (-1) indicates
+     * @param soft_ttl  The soft TTL. A value of CACHE_USE_CONFIG_TTL (-1) indicates
      *                   that the value specfied in the config, used in the creation,
      *                   should be used.
-     * @param hard_ttl  The hard TTL. A value if CACHE_USE_CONFIG_TTL (-1) indicates
+     * @param hard_ttl  The hard TTL. A value of CACHE_USE_CONFIG_TTL (-1) indicates
      *                   that the value specfied in the config, used in the creation,
      *                   should be used.
      * @param ppValue   Pointer to variable that after a successful return will
