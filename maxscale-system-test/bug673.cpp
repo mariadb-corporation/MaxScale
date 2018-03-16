@@ -18,9 +18,9 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 2; i++)
     {
         char result[1024];
-        test.add_result(test.maxscales->get_maxadmin_param(0, "show dbusers \"RW Split Router\"", "User names:", result),
+        test.add_result(test.maxscales->ssh_node_f(0, true, "maxadmin show dbusers \"RW Split Router\"|grep 'User names'"),
                         "Old style objects in maxadmin commands should succeed");
-        test.add_result(test.maxscales->get_maxadmin_param(0, "show dbusers RW-Split-Router", "User names:", result),
+        test.add_result(test.maxscales->ssh_node_f(0, true, "maxadmin show dbusers RW-Split-Router|grep 'User names'"),
                         "New style objects in maxadmin commands should succeed");
     }
 

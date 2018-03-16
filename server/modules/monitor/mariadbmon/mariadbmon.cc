@@ -1939,48 +1939,49 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
 bool MariaDBMonitor::mon_process_failover(bool* cluster_modified_out)
 {
     ss_dassert(*cluster_modified_out == false);
+    if (config_get_global_options()->passive ||
+        (master && SERVER_IS_MASTER(master->server)))
+    {
+        return true;
+    }
     bool rval = true;
-    MXS_CONFIG* cnf = config_get_global_options();
     MXS_MONITORED_SERVER* failed_master = NULL;
 
-    if (!cnf->passive)
+    for (MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers; ptr; ptr = ptr->next)
     {
-        for (MXS_MONITORED_SERVER *ptr = m_monitor_base->monitored_servers; ptr; ptr = ptr->next)
+        if (ptr->new_event && ptr->server->last_event == MASTER_DOWN_EVENT)
         {
-            if (ptr->new_event && ptr->server->last_event == MASTER_DOWN_EVENT)
+            if (failed_master)
             {
-                if (failed_master)
-                {
-                    MXS_ALERT("Multiple failed master servers detected: "
-                              "'%s' is the first master to fail but server "
-                              "'%s' has also triggered a master_down event.",
-                              failed_master->server->unique_name,
-                              ptr->server->unique_name);
-                    return false;
-                }
+                MXS_ALERT("Multiple failed master servers detected: "
+                          "'%s' is the first master to fail but server "
+                          "'%s' has also triggered a master_down event.",
+                          failed_master->server->unique_name,
+                          ptr->server->unique_name);
+                return false;
+            }
 
-                if (ptr->server->active_event)
+            if (ptr->server->active_event)
+            {
+                // MaxScale was active when the event took place
+                failed_master = ptr;
+            }
+            else if (m_monitor_base->master_has_failed)
+            {
+                /**
+                 * If a master_down event was triggered when this MaxScale was
+                 * passive, we need to execute the failover script again if no new
+                 * masters have appeared.
+                 */
+                int64_t timeout = SEC_TO_HB(m_failover_timeout);
+                int64_t t = hkheartbeat - ptr->server->triggered_at;
+
+                if (t > timeout)
                 {
-                    // MaxScale was active when the event took place
+                    MXS_WARNING("Failover of server '%s' did not take place within "
+                                "%u seconds, failover needs to be re-triggered",
+                                ptr->server->unique_name, m_failover_timeout);
                     failed_master = ptr;
-                }
-                else if (m_monitor_base->master_has_failed)
-                {
-                    /**
-                     * If a master_down event was triggered when this MaxScale was
-                     * passive, we need to execute the failover script again if no new
-                     * masters have appeared.
-                     */
-                    int64_t timeout = SEC_TO_HB(m_failover_timeout);
-                    int64_t t = hkheartbeat - ptr->server->triggered_at;
-
-                    if (t > timeout)
-                    {
-                        MXS_WARNING("Failover of server '%s' did not take place within "
-                                    "%u seconds, failover needs to be re-triggered",
-                                    ptr->server->unique_name, m_failover_timeout);
-                        failed_master = ptr;
-                    }
                 }
             }
         }
