@@ -814,6 +814,9 @@ add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd 
 # Regression case for crash if long host name is used for binlog router (in 'change master to ...')
 add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog LABELS binlogrouter BREAKS_REPL)
 
+# Test that masking filter can handle multi-statements.
+add_test_executable(mxs1719.cpp mxs1719 mxs1719 LABELS masking REPL_BACKEND)
+
 # configure binlog router setup, execute queries and transactions, check data;
 add_test_executable(setup_binlog.cpp setup_binlog setup_binlog LABELS binlogrouter BREAKS_REPL)
 
