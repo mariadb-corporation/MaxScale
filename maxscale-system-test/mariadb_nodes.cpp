@@ -1571,7 +1571,7 @@ int Mariadb_nodes::prepare_server(int i)
     char str1[1024];
     char str2[1024];
 
-    ssh_node(i, true, stop_db_command[i]);
+    ssh_node(i, true, "%s", stop_db_command[i]);
     sleep(5);
     ssh_node(i, true, "sed -i \"s/bind-address/#bind-address/g\" /etc/mysql/my.cnf.d/*.cnf");
     ssh_node(i, true, "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld; sudo service apparmor restart");
