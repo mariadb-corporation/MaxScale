@@ -174,12 +174,12 @@ int PamInstance::load_users(SERVICE* service)
     /** Query that gets all users that authenticate via the pam plugin */
     const char PAM_USERS_QUERY[] =
         "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
-        "mysql.user AS u LEFT JOIN mysql.db AS d "
-        "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'pam' "
+        "mysql.user AS u LEFT JOIN mysql.db AS d ON (u.user = d.user AND u.host = d.host) WHERE "
+        "(u.plugin = 'pam' AND (d.db IS NOT NULL OR u.select_priv = 'Y')) "
         "UNION "
         "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
-        "mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-        "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'pam' "
+        "mysql.user AS u LEFT JOIN mysql.tables_priv AS t ON (u.user = t.user AND u.host = t.host) WHERE "
+        "(u.plugin = 'pam' AND t.db IS NOT NULL AND u.select_priv = 'N') "
         "ORDER BY user";
 #if defined(SS_DEBUG)
     const unsigned int PAM_USERS_QUERY_NUM_FIELDS  = 5;
