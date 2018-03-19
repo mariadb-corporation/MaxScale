@@ -160,6 +160,7 @@ mxs1643_extra_events
 mxs1653_ps_hang
 mxs1677_temp_table
 mxs1678_relay_master
+mxs1719
 mxs244_prepared_stmt_loop
 mxs280_select_outfile
 mxs314
