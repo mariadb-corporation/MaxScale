@@ -48,6 +48,9 @@ else
          gnupg pcre-devel flex rpmdevtools git wget tcl openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils
 
+    # Attempt to install libasan, it'll only work on CentOS 7
+    sudo yum install -y --nogpgcheck libasan
+
     cat /etc/redhat-release | grep "release 5"
     if [ $? == 0 ]
     then
