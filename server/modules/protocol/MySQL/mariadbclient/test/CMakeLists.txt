@@ -6,6 +6,6 @@ target_link_libraries(test_setsqlmodeparser maxscale-common)
 target_link_libraries(test_setparser maxscale-common)
 target_link_libraries(test_sqlmodeparser maxscale-common)
 
-add_test(test_setparser test_setarser)
+add_test(test_setparser test_setparser)
 add_test(test_setsqlmodeparser test_setsqlmodeparser)
 add_test(test_sqlmodeparser test_sqlmodeparser)
