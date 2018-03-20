@@ -1185,7 +1185,7 @@ void Worker::poll_waitevents()
         nfds = epoll_wait(m_epoll_fd, events, MAX_EVENTS, timeout);
         m_load.about_to_work();
 
-        if (nfds == -1)
+        if (nfds == -1 && errno != EINTR)
         {
             int eno = errno;
             errno = 0;
