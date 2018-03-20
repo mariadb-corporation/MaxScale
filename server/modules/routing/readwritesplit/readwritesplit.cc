@@ -538,11 +538,10 @@ bool reply_is_complete(SRWBackend& backend, GWBUF *buffer)
             ss_dassert(mxs_mysql_is_ok_packet(buffer) &&
                 mxs_mysql_more_results_after_ok(buffer));
 
-            LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
-            backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
-
             if (have_next_packet(buffer))
             {
+                LOG_RS(backend, REPLY_STATE_RSET_COLDEF);
+                backend->set_reply_state(REPLY_STATE_RSET_COLDEF);
                 return reply_is_complete(backend, buffer);
             }
         }
