@@ -1169,21 +1169,21 @@ bool get_truth_value(const char* begin, const char* end, bool* pValue)
 {
     bool rv = false;
 
-    static const char TRUE[] = "true";
-    static const char FALSE[] = "false";
+    static const char ZTRUE[] = "true";
+    static const char ZFALSE[] = "false";
 
-    static const size_t nTrue = sizeof(TRUE) - 1;
-    static const size_t nFalse = sizeof(FALSE) - 1;
+    static const size_t nTrue = sizeof(ZTRUE) - 1;
+    static const size_t nFalse = sizeof(ZFALSE) - 1;
 
     int len = (end - begin);
 
-    if (((len == nTrue) && (strncasecmp(begin, TRUE, nTrue) == 0)) ||
+    if (((len == nTrue) && (strncasecmp(begin, ZTRUE, nTrue) == 0)) ||
         ((len == 1) && (*begin == '1')))
     {
         *pValue = true;
         rv = true;
     }
-    else if (((len == nFalse) && (strncasecmp(begin, FALSE, nFalse) == 0)) ||
+    else if (((len == nFalse) && (strncasecmp(begin, ZFALSE, nFalse) == 0)) ||
              ((len == 1) && (*begin == '0')))
     {
 
