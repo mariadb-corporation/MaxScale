@@ -584,7 +584,7 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
 
             lua_pushlstring(my_instance->global_lua_state, fullquery, strlen(fullquery));
 
-            if (lua_pcall(my_instance->global_lua_state, 1, 0, 0))
+            if (lua_pcall(my_instance->global_lua_state, 1, 1, 0))
             {
                 MXS_ERROR("Global scope call to 'routeQuery' failed: '%s'.",
                           lua_tostring(my_instance->global_lua_state, -1));
