@@ -516,7 +516,7 @@ json_t* filter_json_data(const MXS_FILTER_DEF* filter, const char* host)
 
         if (diag)
         {
-            json_object_set_new(attr, "filter_diagnostics", diag);
+            json_object_set_new(attr, CN_FILTER_DIAGNOSTICS, diag);
         }
     }
 

@@ -1864,13 +1864,13 @@ json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
     /** Monitor parameters */
     json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
 
-    if (monitor->handle && monitor->module->diagnostics)
+    if (monitor->handle && monitor->module->diagnostics_json)
     {
         json_t* diag = monitor->module->diagnostics_json(monitor);
 
         if (diag)
         {
-            json_object_set_new(attr, "monitor_diagnostics", diag);
+            json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
         }
     }
 

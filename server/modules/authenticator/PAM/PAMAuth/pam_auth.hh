@@ -19,9 +19,17 @@
 
 #include <maxscale/cppdefs.hh>
 
+#include <string>
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.h>
 #include <maxscale/protocol/mysql.h>
 
+using std::string;
 
+extern const string FIELD_USER;
+extern const string FIELD_HOST;
+extern const string FIELD_DB;
+extern const string FIELD_ANYDB;
+extern const string FIELD_AUTHSTR;
+extern const int NUM_FIELDS;

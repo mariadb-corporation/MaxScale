@@ -476,7 +476,6 @@ int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value
     unsigned int ret = 1;
     unsigned long long int filed_i = 0;
     unsigned long long int i = 0;
-
     if (conn != NULL )
     {
         if (mysql_query(conn, sql) != 0)
@@ -494,7 +493,6 @@ int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value
             else
             {
                 num_fields = mysql_num_fields(res);
-
                 while ((field = mysql_fetch_field(res)) && ret != 0)
                 {
                     if (strstr(field->name, field_name) != NULL)
@@ -508,6 +506,11 @@ int find_field(MYSQL* conn, const char* sql, const char* field_name, char* value
                 {
                     row = mysql_fetch_row(res);
                     sprintf(value, "%s", row[filed_i]);
+                }
+                else
+                {
+                    sprintf(value, "%s", "");
+                    ret = 1;
                 }
             }
             mysql_free_result(res);

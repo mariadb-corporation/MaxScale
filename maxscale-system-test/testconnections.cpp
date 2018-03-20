@@ -636,19 +636,22 @@ int TestConnections::init_maxscale(int m)
     maxscales->copy_to_node_legacy(str, dtr, m);
     sprintf(str, "cp %s/ssl-cert/* .", test_dir);
     system(str);
-
     maxscales->ssh_node_f(m, true,
                           "chown maxscale:maxscale -R %s/certs;"
                           "chmod 664 %s/certs/*.pem;"
-                          " chmod a+x %s;"
+                          "chmod a+x %s;"
                           "%s"
                           "iptables -I INPUT -p tcp --dport 4001 -j ACCEPT;"
-                          "rm -f %s/maxscale.log %s/maxscale1.log;"
+                          "rm -f %s/maxscale.log;"
+                          "rm -f %s/maxscale1.log;"
                           "rm -rf /tmp/core* /dev/shm/* /var/lib/maxscale/maxscale.cnf.d/ /var/lib/maxscale/*;"
                           "%s",
-                          maxscales->access_homedir[m], maxscales->access_homedir[m], maxscales->access_homedir[m],
+                          maxscales->access_homedir[m],
+                          maxscales->access_homedir[m],
+                          maxscales->access_homedir[m],
                           maxscale::start ? "killall -9 maxscale;" : "",
-                          maxscales->maxscale_log_dir[m], maxscales->maxscale_log_dir[m],
+                          maxscales->maxscale_log_dir[m],
+                          maxscales->maxscale_log_dir[m],
                           maxscale::start ? "service maxscale restart" : "");
 
     fflush(stdout);
@@ -763,6 +766,10 @@ int TestConnections::copy_maxscale_logs(double timestamp)
             maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i], log_dir_i);
             maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
         }
+
+        const char* command = "for i in `find /tmp/ -name 'core*'`; do test -e $i && exit 1; done";
+        int rc = maxscales->ssh_node_f(i, true, command);
+        assert(rc == 0, "Test should not generate core files");
     }
     return 0;
 }

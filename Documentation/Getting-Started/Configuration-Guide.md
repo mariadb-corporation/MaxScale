@@ -1259,7 +1259,6 @@ service=<Service name>]
 protocol=[MariaDBClient|HTTPD]
 address=[IP|hostname]
 port=<Listen port number>
-socket=<Socket path>
 ```
 
 #### `service`
@@ -1291,8 +1290,9 @@ The `socket` option may be included in a listener definition, this configures
 the listener to use Unix domain sockets to listen for incoming connections. The
 parameter value given is the name of the socket to use.
 
-If a socket option and an address option is given then the listener will listen
-on both the specific IP address and the Unix socket.
+**Note:** If you want to use both network ports and UNIX domain sockets
+  with a service, define two separate listeners that connect to the same
+  service.
 
 #### `authenticator`
 

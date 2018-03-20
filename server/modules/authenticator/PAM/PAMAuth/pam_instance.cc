@@ -15,6 +15,7 @@
 
 #include <string>
 #include <string.h>
+#include <maxscale/jansson.hh>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
 #include <maxscale/mysql_utils.h>
@@ -36,9 +37,10 @@ PamInstance* PamInstance::create(char **options)
     /** The table name where we store the users */
     const string pam_table_name = DEFAULT_PAM_TABLE_NAME;
     /** CREATE TABLE statement for the in-memory table */
-    const string create_sql = "CREATE TABLE IF NOT EXISTS " + pam_table_name +
-                              " (user varchar(255), host varchar(255), db varchar(255), "
-                              "anydb boolean, authentication_string text)";
+    const string create_sql = string("CREATE TABLE IF NOT EXISTS ") + pam_table_name +
+                              " (" + FIELD_USER + " varchar(255), " + FIELD_HOST + " varchar(255), " +
+                              FIELD_DB + " varchar(255), " + FIELD_ANYDB + " boolean, " +
+                              FIELD_AUTHSTR + " text);";
     if (sqlite3_threadsafe() == 0)
     {
         MXS_WARNING("SQLite3 was compiled with thread safety off. May cause "
@@ -172,12 +174,12 @@ int PamInstance::load_users(SERVICE* service)
     /** Query that gets all users that authenticate via the pam plugin */
     const char PAM_USERS_QUERY[] =
         "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
-        "mysql.user AS u LEFT JOIN mysql.db AS d "
-        "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'pam' "
+        "mysql.user AS u LEFT JOIN mysql.db AS d ON (u.user = d.user AND u.host = d.host) WHERE "
+        "(u.plugin = 'pam' AND (d.db IS NOT NULL OR u.select_priv = 'Y')) "
         "UNION "
         "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
-        "mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-        "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'pam' "
+        "mysql.user AS u LEFT JOIN mysql.tables_priv AS t ON (u.user = t.user AND u.host = t.host) WHERE "
+        "(u.plugin = 'pam' AND t.db IS NOT NULL AND u.select_priv = 'N') "
         "ORDER BY user";
 #if defined(SS_DEBUG)
     const unsigned int PAM_USERS_QUERY_NUM_FIELDS  = 5;
@@ -228,5 +230,60 @@ int PamInstance::load_users(SERVICE* service)
         }
         MXS_FREE(pw);
     }
+    return rval;
+}
+
+void PamInstance::diagnostic(DCB* dcb)
+{
+    json_t* array = diagnostic_json();
+    ss_dassert(json_is_array(array));
+
+    string result, separator;
+    size_t index;
+    json_t* value;
+    json_array_foreach(array, index, value)
+    {
+        // Only print user@host for the non-json version, as this should fit nicely on the console. Add the
+        // other fields if deemed useful.
+        const char* user = json_string_value(json_object_get(value, FIELD_USER.c_str()));
+        const char* host = json_string_value(json_object_get(value, FIELD_HOST.c_str()));
+        if (user && host)
+        {
+            result += separator + user + "@" + host;
+            separator = " ";
+        }
+    }
+
+    if (!result.empty())
+    {
+        dcb_printf(dcb, "%s", result.c_str());
+    }
+    json_decref(array);
+}
+
+static int diag_cb_json(void *data, int columns, char **row, char **field_names)
+{
+    ss_dassert(columns == NUM_FIELDS);
+    json_t* obj = json_object();
+    for (int i = 0; i < columns; i++)
+    {
+        json_object_set_new(obj, field_names[i], json_string(row[i]));
+    }
+    json_t* arr = static_cast<json_t*>(data);
+    json_array_append_new(arr, obj);
+    return 0;
+}
+
+json_t* PamInstance::diagnostic_json()
+{
+    json_t* rval = json_array();
+    char *err;
+    string select = "SELECT * FROM " + m_tablename + ";";
+    if (sqlite3_exec(m_dbhandle, select.c_str(), diag_cb_json, rval, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to print users: %s", err);
+        sqlite3_free(err);
+    }
+
     return rval;
 }

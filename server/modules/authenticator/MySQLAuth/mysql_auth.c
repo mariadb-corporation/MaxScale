@@ -674,7 +674,7 @@ json_t* mysql_auth_diagnostic_json(const SERV_LISTENER *port)
     sqlite3* handle = get_handle(instance);
 
     if (sqlite3_exec(handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
-                     diag_cb, rval, &err) != SQLITE_OK)
+                     diag_cb_json, rval, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to print users: %s", err);
         sqlite3_free(err);

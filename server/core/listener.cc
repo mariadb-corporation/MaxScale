@@ -526,6 +526,16 @@ json_t* listener_to_json(const SERV_LISTENER* listener)
     json_t* attr = json_object();
     json_object_set_new(attr, CN_PARAMETERS, param);
 
+    if (listener->listener->authfunc.diagnostic_json)
+    {
+        json_t* diag = listener->listener->authfunc.diagnostic_json(listener);
+
+        if (diag)
+        {
+            json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
+        }
+    }
+
     json_t* rval = json_object();
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
     json_object_set_new(rval, CN_ID, json_string(listener->name));
