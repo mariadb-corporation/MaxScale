@@ -22,22 +22,6 @@ bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master,
                                        MXS_MONITORED_SERVER* given_current_master,
                                        json_t** error_out)
 {
-    // Autoselect current master if not given as parameter.
-    MXS_MONITORED_SERVER* current_master = given_current_master;
-    if (given_current_master == NULL)
-    {
-        if (m_master)
-        {
-            current_master = m_master;
-        }
-        else
-        {
-            const char NO_MASTER[] = "Monitor '%s' has no master server.";
-            PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, m_monitor_base->name);
-            return false;
-        }
-    }
-
     bool stopped = stop();
     if (stopped)
     {
@@ -48,7 +32,22 @@ bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master,
         MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor_base->name);
     }
 
-    bool current_ok = switchover_check_current(current_master, error_out);
+    // Autoselect current master if not given as parameter.
+    MXS_MONITORED_SERVER* current_master = given_current_master;
+    if (current_master == NULL)
+    {
+        if (m_master)
+        {
+            current_master = m_master;
+        }
+        else
+        {
+            const char NO_MASTER[] = "Monitor '%s' has no master server.";
+            PRINT_MXS_JSON_ERROR(error_out, NO_MASTER, m_monitor_base->name);
+        }
+    }
+
+    bool current_ok = (current_master != NULL) ? switchover_check_current(current_master, error_out) : false;
     bool new_ok = switchover_check_new(new_master, error_out);
     // Check that all slaves are using gtid-replication
     bool gtid_ok = true;
