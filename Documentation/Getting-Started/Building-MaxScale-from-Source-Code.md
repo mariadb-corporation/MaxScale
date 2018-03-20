@@ -42,7 +42,7 @@ sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
 git clone https://github.com/mariadb-corporation/MaxScale
 mkdir build
 cd build
-cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr
+cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CDC=N -DBUILD_MAXCTRL=N -DBUILD_LUA=N
 make
 sudo make install
 sudo ./postinst
@@ -96,10 +96,10 @@ The next step is to configure MariaDB MaxScale. You only need to execute the fol
 command to configure the build.
 
 ```
-cmake ../MaxScale -DBUILD_TESTS=Y
+cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CDC=N -DBUILD_MAXCTRL=N -DBUILD_LUA=N
 ```
 
-This will install MariaDB MaxScale into `/usr/local/` and build the tests. The tests and
+This will install MariaDB MaxScale into `/usr/` and build the tests. The tests and
 other parts of the installation can be controlled via CMake arguments.
 
 Here is a small table with the names of the most common parameters and what
