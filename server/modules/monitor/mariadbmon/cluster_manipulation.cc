@@ -18,16 +18,17 @@
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/mysql_utils.h>
 
-bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MONITORED_SERVER* current_master,
+bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master,
+                                       MXS_MONITORED_SERVER* given_current_master,
                                        json_t** error_out)
 {
     // Autoselect current master if not given as parameter.
-    MXS_MONITORED_SERVER* selected_current_master;
-    if (current_master == NULL)
+    MXS_MONITORED_SERVER* current_master = given_current_master;
+    if (given_current_master == NULL)
     {
         if (m_master)
         {
-            selected_current_master = m_master;
+            current_master = m_master;
         }
         else
         {
@@ -47,7 +48,7 @@ bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MON
         MXS_NOTICE("Monitor %s already stopped, switchover can proceed.", m_monitor_base->name);
     }
 
-    bool current_ok = switchover_check_current(selected_current_master, error_out);
+    bool current_ok = switchover_check_current(current_master, error_out);
     bool new_ok = switchover_check_new(new_master, error_out);
     // Check that all slaves are using gtid-replication
     bool gtid_ok = true;
@@ -65,9 +66,9 @@ bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master, MXS_MON
     bool rval = false;
     if (current_ok && new_ok && gtid_ok)
     {
-        bool switched = do_switchover(selected_current_master, new_master, error_out);
+        bool switched = do_switchover(current_master, new_master, error_out);
 
-        const char* curr_master_name = selected_current_master->server->unique_name;
+        const char* curr_master_name = current_master->server->unique_name;
         const char* new_master_name = new_master->server->unique_name;
 
         if (switched)

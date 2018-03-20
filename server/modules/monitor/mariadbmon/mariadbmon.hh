@@ -101,7 +101,7 @@ public:
      * Handle switchover
      *
      * @new_master      The specified new master
-     * @current_master  The specified current master
+     * @current_master  The specified current master. If NULL, monitor will autoselect.
      * @output          Pointer where to place output object
      *
      * @return True, if switchover was performed, false otherwise.
