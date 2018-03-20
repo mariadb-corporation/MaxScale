@@ -51,3 +51,7 @@ else
 	rsync -a --no-o --no-g LOGS $logs_publish_dir
 fi
 
+for i in `find $logs_dir -name 'core*'`
+do
+    test -e $i && echo "Test failed: core files generated" && exit 1
+done

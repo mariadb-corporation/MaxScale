@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 {
     TestConnections * test = new TestConnections(argc, argv);
 
-    test->tprintf(" Create the test table and insert some data ");
+    test->tprintf("Create the test table and insert some data ");
     test->connect_maxscale();
     test->try_query(test->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1 (id int)");
     test->try_query(test->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
@@ -26,16 +26,16 @@ int main(int argc, char *argv[])
     test->repl->connect();
     test->repl->sync_slaves();
 
-    test->tprintf(" Block all but one node ");
+    test->tprintf("Block all but one node ");
     test->repl->block_node(0);
     test->repl->block_node(1);
     test->repl->block_node(2);
     execute_query(test->repl->nodes[3], "STOP SLAVE;RESET SLAVE ALL;");
 
-    test->tprintf(" Wait for the monitor to detect it ");
+    test->tprintf("Wait for the monitor to detect it ");
     sleep(15);
 
-    test->tprintf(" Connect and insert should work ");
+    test->tprintf("Connect and insert should work ");
     char *output = test->ssh_maxscale_output(true, "maxadmin list servers");
     test->tprintf("%s", output);
     free(output);
@@ -43,12 +43,12 @@ int main(int argc, char *argv[])
     test->try_query(test->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
     test->close_maxscale_connections();
 
-    test->tprintf(" Unblock nodes ");
+    test->tprintf("Unblock nodes ");
     test->repl->unblock_node(0);
     test->repl->unblock_node(1);
     test->repl->unblock_node(2);
 
-    test->tprintf(" Wait for the monitor to detect it ");
+    test->tprintf("Wait for the monitor to detect it ");
     sleep(15);
 
     test->tprintf("Check that we are still using the last node to which we failed over "
@@ -64,12 +64,11 @@ int main(int argc, char *argv[])
                      "@@server_id is different: %s != %s", maxscale_id, real_id);
     test->close_maxscale_connections();
 
-    test->ssh_maxscale(true, "maxadmin clear server server1 maintenance");
-    test->ssh_maxscale(true, "maxadmin clear server server2 maintenance");
-    test->ssh_maxscale(true, "maxadmin clear server server3 maintenance");
+    test->stop_maxscale();
     test->repl->fix_replication();
+    test->start_maxscale();
 
-    test->tprintf(" Check that MaxScale is running ");
+    test->tprintf("Check that MaxScale is running ");
     test->check_maxscale_alive();
 
     int rval = test->global_result;
