@@ -1389,7 +1389,10 @@ static void handleError(MXS_ROUTER *instance,
                      * can't be sure whether it was executed or not. In this
                      * case the safest thing to do is to close the client
                      * connection. */
-                    can_continue = true;
+                    if (rses->rses_config.master_failure_mode != RW_FAIL_INSTANTLY)
+                    {
+                        can_continue = true;
+                    }
                 }
                 else if (!SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
                 {
