@@ -169,6 +169,25 @@ static int lua_qc_get_operation(lua_State* state)
     return 1;
 }
 
+static int lua_get_canonical(lua_State* state)
+{
+    int ibuf = lua_upvalueindex(1);
+    GWBUF *buf = *((GWBUF**)lua_touserdata(state, ibuf));
+
+    if (buf)
+    {
+        char* canon = modutil_get_canonical(buf);
+        lua_pushstring(state, canon);
+        MXS_FREE(canon);
+    }
+    else
+    {
+        lua_pushliteral(state, "");
+    }
+
+    return 1;
+}
+
 /**
  * The Lua filter instance.
  */
@@ -192,6 +211,26 @@ typedef struct
     MXS_DOWNSTREAM down;
     MXS_UPSTREAM up;
 } LUA_SESSION;
+
+void expose_functions(lua_State* state, GWBUF** active_buffer)
+{
+    /** Expose an ID generation function */
+    lua_pushcfunction(state, id_gen);
+    lua_setglobal(state, "id_gen");
+
+    /** Expose a part of the query classifier API */
+    lua_pushlightuserdata(state, active_buffer);
+    lua_pushcclosure(state, lua_qc_get_type_mask, 1);
+    lua_setglobal(state, "lua_qc_get_type_mask");
+
+    lua_pushlightuserdata(state, active_buffer);
+    lua_pushcclosure(state, lua_qc_get_operation, 1);
+    lua_setglobal(state, "lua_qc_get_operation");
+
+    lua_pushlightuserdata(state, active_buffer);
+    lua_pushcclosure(state, lua_get_canonical, 1);
+    lua_setglobal(state, "lua_get_canonical");
+}
 
 /**
  * Create a new instance of the Lua filter.
@@ -244,15 +283,7 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
                     lua_pop(my_instance->global_lua_state, -1); // Pop the error off the stack
                 }
 
-                /** Expose a part of the query classifier API */
-                lua_pushlightuserdata(my_instance->global_lua_state, &current_global_query);
-                lua_pushcclosure(my_instance->global_lua_state, lua_qc_get_type_mask, 1);
-                lua_setglobal(my_instance->global_lua_state, "lua_qc_get_type_mask");
-
-                lua_pushlightuserdata(my_instance->global_lua_state, &current_global_query);
-                lua_pushcclosure(my_instance->global_lua_state, lua_qc_get_operation, 1);
-                lua_setglobal(my_instance->global_lua_state, "lua_qc_get_operation");
-
+                expose_functions(my_instance->global_lua_state, &current_global_query);
             }
         }
         else
@@ -311,18 +342,7 @@ static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session
         }
         else
         {
-            /** Expose an ID generation function */
-            lua_pushcfunction(my_session->lua_state, id_gen);
-            lua_setglobal(my_session->lua_state, "id_gen");
-
-            /** Expose a part of the query classifier API */
-            lua_pushlightuserdata(my_session->lua_state, &my_session->current_query);
-            lua_pushcclosure(my_session->lua_state, lua_qc_get_type_mask, 1);
-            lua_setglobal(my_session->lua_state, "lua_qc_get_type_mask");
-
-            lua_pushlightuserdata(my_session->lua_state, &my_session->current_query);
-            lua_pushcclosure(my_session->lua_state, lua_qc_get_operation, 1);
-            lua_setglobal(my_session->lua_state, "lua_qc_get_operation");
+            expose_functions(my_session->lua_state, &my_session->current_query);
 
             /** Call the newSession entry point */
             lua_getglobal(my_session->lua_state, "newSession");

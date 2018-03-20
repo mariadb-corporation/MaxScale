@@ -90,6 +90,12 @@ The luafilter exposes three functions that can be called from the Lua script.
 
     This function can only be called from the `routeQuery` entry point.
 
+- `string lua_get_canonical()`
+
+  - Returns the canonical version of a query by replacing all user-defined constant values with question marks.
+
+    This function can only be called from the `routeQuery` entry point.
+
 - `number id_gen()`
 
   - This function generates unique integers that can be used to distinct
