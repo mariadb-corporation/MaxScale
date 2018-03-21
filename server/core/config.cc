@@ -459,6 +459,19 @@ void fix_section_name(char *section)
     replace_whitespace(section);
 }
 
+static bool is_empty_string(const char* str)
+{
+    for (const char* p = str; *p; p++)
+    {
+        if (!isspace(*p))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 /**
  * Config item handler for the ini file reader
  *
@@ -472,6 +485,12 @@ static int ini_handler(void *userdata, const char *section, const char *name, co
 {
     CONFIG_CONTEXT *cntxt = (CONFIG_CONTEXT *)userdata;
     CONFIG_CONTEXT *ptr = cntxt;
+
+    if (is_empty_string(value))
+    {
+        MXS_ERROR("Empty value given to parameter '%s'", name);
+        return 0;
+    }
 
     if (config_get_global_options()->substitute_variables)
     {

@@ -1911,8 +1911,8 @@ bool TestConnections::test_bad_config(int m, const char *config)
     // Set the timeout to prevent hangs with configurations that work
     set_timeout(20);
 
-    return maxscales->ssh_node(m, "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
-                               "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale", false) == 0;
+    return maxscales->ssh_node_f(m, true, "cp maxscale.cnf /etc/maxscale.cnf; service maxscale stop; "
+                                 "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale") == 0;
 }
 
 std::string dump_status(const StringSet& current, const StringSet& expected)
