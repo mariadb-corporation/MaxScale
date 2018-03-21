@@ -830,7 +830,7 @@ bool MariaDBMonitor::switchover_demote_master(MXS_MONITORED_SERVER* current_mast
     bool success = false;
     bool query_error = false;
     MYSQL* conn = current_master->con;
-    const char* query = "";
+    const char* query = ""; // The next query to execute. Used also for error printing.
     // The presence of an external master changes several things.
     const bool external_master = SERVER_IS_SLAVE_OF_EXTERNAL_MASTER(current_master->server);
 
@@ -846,6 +846,7 @@ bool MariaDBMonitor::switchover_demote_master(MXS_MONITORED_SERVER* current_mast
         }
     }
 
+    bool error_fetched = false;
     string error_desc;
     if (!query_error)
     {
@@ -879,27 +880,39 @@ bool MariaDBMonitor::switchover_demote_master(MXS_MONITORED_SERVER* current_mast
             {
                 // Somehow, a step after "SET read_only" failed. Try to set read_only back to 0. It may not
                 // work since the connection is likely broken.
-                error_desc = mysql_error(conn);
+                error_desc = mysql_error(conn); // Read connection error before next step.
+                error_fetched = true;
                 mxs_mysql_query(conn, "SET GLOBAL read_only=0;");
             }
         }
     }
 
-    if (query_error)
+    if (query_error && !error_fetched)
     {
         error_desc = mysql_error(conn);
     }
 
     if (!success)
     {
-        if (error_desc.empty())
+        if (query_error)
         {
-            PRINT_MXS_JSON_ERROR(err_out, "Demotion failed due to an error in updating gtid:s.");
+            if (error_desc.empty())
+            {
+                const char UNKNOWN_ERROR[] = "Demotion failed due to an unknown error when executing "
+                                             "a query. Query: '%s'.";
+                PRINT_MXS_JSON_ERROR(err_out, UNKNOWN_ERROR, query);
+            }
+            else
+            {
+                const char KNOWN_ERROR[] = "Demotion failed due to a query error: '%s'. Query: '%s'.";
+                PRINT_MXS_JSON_ERROR(err_out, KNOWN_ERROR, error_desc.c_str(), query);
+            }
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(err_out, "Demotion failed due to a query error: '%s'. Query: '%s'.",
-                                 error_desc.c_str(), query);
+            const char GTID_ERROR[] = "Demotion failed due to an error in updating gtid:s. "
+                                      "Check log for more details.";
+            PRINT_MXS_JSON_ERROR(err_out, GTID_ERROR);
         }
     }
     return success;
