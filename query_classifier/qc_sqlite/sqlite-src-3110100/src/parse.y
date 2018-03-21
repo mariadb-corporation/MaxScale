@@ -596,7 +596,7 @@ columnid(A) ::= nm(X). {
   BINARY
   /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/
   DATA /*DATABASE*/ DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
-  /*EACH*/ END ENUM EXCLUSIVE /*EXPLAIN*/
+  /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/
   FIRST FLUSH /*FOR*/
   GLOBAL
   // TODO: IF is a reserved word and should not automatically convert into an identifer.
