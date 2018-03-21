@@ -390,7 +390,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             pValue = NULL;
             result = storage.get_value(cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
 
-            if (result != CACHE_RESULT_NOT_FOUND)
+            if (!CACHE_RESULT_IS_NOT_FOUND(result))
             {
                 out() << "Expected not to be found, and without stale bit." << endl;
                 rv = EXIT_FAILURE;
@@ -401,7 +401,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             pValue = NULL;
             result = storage.get_value(cache_item.first, 0, &pValue);
 
-            if (result != CACHE_RESULT_NOT_FOUND)
+            if (!CACHE_RESULT_IS_NOT_FOUND(result))
             {
                 out() << "Expected not to be found, and without stale bit." << endl;
                 rv = EXIT_FAILURE;
