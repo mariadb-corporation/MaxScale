@@ -254,4 +254,15 @@ private:
                                   json_t** error_out) const;
     bool can_replicate_from(MXS_MONITORED_SERVER* slave, MariaDBServer* slave_info,
                             MariaDBServer* master_info);
+    void monitor_one_server(MariaDBServer& server);
+    void find_root_master(MXS_MONITORED_SERVER** root_master);
+    void update_gtid_domain();
+    void update_external_master();
+    void assign_relay_master(MariaDBServer& serv_info);
+    void update_server_states(MariaDBServer& db_server, MXS_MONITORED_SERVER* root_master,
+                              bool detect_stale_master);
+    void log_master_changes(MXS_MONITORED_SERVER* root_master, int* log_no_master);
+    void handle_auto_failover(bool* failover_performed);
+    void measure_replication_lag(MXS_MONITORED_SERVER* root_master);
+    void handle_auto_rejoin();
 };
