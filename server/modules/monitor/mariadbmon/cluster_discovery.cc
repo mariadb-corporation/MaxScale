@@ -14,6 +14,7 @@
 #include "mariadbmon.hh"
 #include <inttypes.h>
 #include <maxscale/mysql_utils.h>
+#include "utilities.hh"
 
 static int add_slave_to_master(long *slaves_list, int list_size, long node_id);
 static void read_server_variables(MariaDBServer* serv_info);

@@ -17,6 +17,7 @@
 #include <sstream>
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/mysql_utils.h>
+#include "utilities.hh"
 
 bool MariaDBMonitor::manual_switchover(MXS_MONITORED_SERVER* new_master,
                                        MXS_MONITORED_SERVER* given_current_master,
@@ -982,14 +983,14 @@ bool MariaDBMonitor::switchover_wait_slave_catchup(MXS_MONITORED_SERVER* slave, 
     // Determine a reasonable timeout for the MASTER_GTID_WAIT-function depending on the
     // backend_read_timeout setting (should be >= 1) and time remaining.
     double loop_timeout = double(read_timeout) - 0.5;
-    string cmd = generate_master_gtid_wait_cmd(gtid, loop_timeout);
+    string cmd = gtid.generate_master_gtid_wait_cmd(loop_timeout);
 
     while (seconds_remaining > 0 && !gtid_reached && !error)
     {
         if (loop_timeout > seconds_remaining)
         {
             // For the last iteration, change the wait timeout.
-            cmd = generate_master_gtid_wait_cmd(gtid, seconds_remaining);
+            cmd = gtid.generate_master_gtid_wait_cmd(seconds_remaining);
         }
         seconds_remaining -= loop_timeout;
 

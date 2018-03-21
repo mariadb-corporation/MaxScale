@@ -22,6 +22,7 @@
 #include <maxscale/monitor.h>
 #include <maxscale/thread.h>
 
+#include "mariadbserver.hh"
 #include "utilities.hh"
 
 using std::string;
