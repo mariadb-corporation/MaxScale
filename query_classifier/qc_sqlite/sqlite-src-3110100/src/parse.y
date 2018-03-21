@@ -616,7 +616,6 @@ columnid(A) ::= nm(X). {
   /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/
   DATA /*DATABASE*/ DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
   /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/
-  /*EACH*/ END ENUM EXCLUSIVE /*EXPLAIN*/
   FIRST FLUSH /*FOR*/ FORMAT
   GLOBAL
   // TODO: IF is a reserved word and should not automatically convert into an identifer.
