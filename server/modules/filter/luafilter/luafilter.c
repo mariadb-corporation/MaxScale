@@ -207,7 +207,6 @@ typedef struct
     MXS_SESSION* session;
     lua_State* lua_state;
     GWBUF* current_query;
-    SPINLOCK lock;
     MXS_DOWNSTREAM down;
     MXS_UPSTREAM up;
 } LUA_SESSION;
@@ -323,7 +322,6 @@ static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session
         return NULL;
     }
 
-    spinlock_init(&my_session->lock);
     my_session->session = session;
 
     if (my_instance->session_script)
@@ -397,8 +395,6 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 
     if (my_session->lua_state)
     {
-        spinlock_acquire(&my_session->lock);
-
         lua_getglobal(my_session->lua_state, "closeSession");
 
         if (lua_pcall(my_session->lua_state, 0, 0, 0))
@@ -408,7 +404,6 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
                         lua_tostring(my_session->lua_state, -1));
             lua_pop(my_session->lua_state, -1);
         }
-        spinlock_release(&my_session->lock);
     }
 
     if (my_instance->global_lua_state)
@@ -488,8 +483,6 @@ static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GW
 
     if (my_session->lua_state)
     {
-        spinlock_acquire(&my_session->lock);
-
         lua_getglobal(my_session->lua_state, "clientReply");
 
         if (lua_pcall(my_session->lua_state, 0, 0, 0))
@@ -498,9 +491,8 @@ static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GW
                       lua_tostring(my_session->lua_state, -1));
             lua_pop(my_session->lua_state, -1);
         }
-
-        spinlock_release(&my_session->lock);
     }
+
     if (my_instance->global_lua_state)
     {
         spinlock_acquire(&my_instance->lock);
@@ -555,8 +547,6 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
 
         if (fullquery && my_session->lua_state)
         {
-            spinlock_acquire(&my_session->lock);
-
             /** Store the current query being processed */
             my_session->current_query = queue;
 
@@ -583,8 +573,6 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
                 }
             }
             my_session->current_query = NULL;
-
-            spinlock_release(&my_session->lock);
         }
 
         if (my_instance->global_lua_state)
