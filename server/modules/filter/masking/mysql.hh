@@ -285,6 +285,14 @@ public:
     }
 
     /**
+     * @return True if the string is empty, false otherwise.
+     */
+    bool empty() const
+    {
+        return m_length == 0;
+    }
+
+    /**
      * Compare for equality.
      *
      * @param s  The string to compare with.
