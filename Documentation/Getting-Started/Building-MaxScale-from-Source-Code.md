@@ -12,95 +12,32 @@ requirements are as follows:
 * libuuid
 * GNUTLS
 
+This is the minimum set of requirements that must be met to build the MaxScale
+core package.
+
 ## Quickstart
 
-This installs MaxScale as if it was installed from a package.
-
-### Install dependencies
-
-CentOS 7:
-
-```
-sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake \
-     libgcc perl make libtool openssl openssl-devel pcre-devel \
-     tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel \
-     gnutls-devel libgcrypt-devel
-```
-
-Ubuntu 16.04:
-
-```
-sudo apt-get update
-sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
-     cmake perl libtool libpcre3-dev tcl tcl-dev uuid \
-     uuid-dev libsqlite3-dev gnutls-dev libgcrypt20-dev
-```
-
-### Build and Install MaxScale
+This installs MaxScale as if it was installed from a package. Install `git` before running the following commands.
 
 ```
 git clone https://github.com/mariadb-corporation/MaxScale
 mkdir build
 cd build
-cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CDC=N -DBUILD_MAXCTRL=N -DBUILD_LUA=N
+../MaxScale/BUILD/install_build_deps.sh
+cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr
 make
 sudo make install
 sudo ./postinst
 ```
 
-## Required packages
+## Required Packages
 
-###  Required packages on CentOS/RHEL systems
+For a definitive list of packages, consult the
+[install_build_deps.sh](../../BUILD/install_build_deps.sh) script.
 
-The following packages are required on CentOS/RHEL 7. Older releases may require
-other packages in addition to these.
+## Configuring the Build
 
-```
-git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake libgcc perl make \
-libtool openssl openssl-devel pcre-devel tcl tcl-devel \
-systemtap-sdt-devel libuuid libuuid-devel sqlite sqlite-devel
-gnutls-devel libgcrypt-devel
-```
-
-### Required packages on Ubuntu and Debian systems
-
-The following packages are required on Ubuntu 16.04. Different releases may
-require other packages in addition to these.
-
-```
-git build-essential libssl-dev ncurses-dev bison flex cmake perl libtool \
- libpcre3-dev tlc tcl-dev uuid uuid-dev sqlite3-dev
-libgnutls30 libgcrypt20
-```
-
-## Preparing the MariaDB MaxScale build
-
-Clone the MariaDB MaxScale repository from GitHub.
-
-```
-git clone https://github.com/mariadb-corporation/MaxScale
-```
-
-Create a separate build directory where you can safely build MariaDB MaxScale
-without altering the source code. Change the working directory to the
-directory we just created.
-
-```
-mkdir build
-cd build
-```
-
-## Configuring the build
-
-The next step is to configure MariaDB MaxScale. You only need to execute the following
-command to configure the build.
-
-```
-cmake ../MaxScale -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_CDC=N -DBUILD_MAXCTRL=N -DBUILD_LUA=N
-```
-
-This will install MariaDB MaxScale into `/usr/` and build the tests. The tests and
-other parts of the installation can be controlled via CMake arguments.
+The tests and other parts of the build can be controlled via CMake arguments.
 
 Here is a small table with the names of the most common parameters and what
 they control. These should all be given as parameters to the -D switch in
@@ -118,15 +55,10 @@ _NAME_=_VALUE_ format (e.g. `-DBUILD_TESTS=Y`).
 **Note**: You can look into [defaults.cmake](../../cmake/defaults.cmake) for a
 list of the CMake variables.
 
-## Building MariaDB MaxScale
+## `make test` and Other Useful Targets
 
-Once the configuration is complete, you can compile, test and install MariaDB MaxScale.
-
-```
-make
-make test
-sudo make install
-```
+To run the MaxScale unit test suite, configure the build with `-DBUILD_TESTS=Y`,
+compile and then run the `make test` command.
 
 Other useful targets for Make are `documentation`, which generates the Doxygen documentation,
 and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
@@ -138,53 +70,10 @@ and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
 
 # Building MariaDB MaxScale packages
 
-In addition to the packages needed to build MariaDB MaxScale, you will need the
-packaging libraries for your system and CMake version 2.8.12 or later.
-
-### CentOS/RHEL systems
-
-```
-sudo yum install rpm-build
-```
-
-### Ubuntu and Debian systems
-
-```
-sudo apt-get install dpkg-dev
-```
-
-Next step is to clone the MariaDB MaxScale repository from GitHub. If you already
-cloned it when building MariaDB MaxScale, this step can be skipped.
-
-```
-git clone https://github.com/mariadb-corporation/MaxScale
-```
-
-Create a packaging directory and change the working directory to the
-directory we just created.
-
-```
-mkdir packaging
-cd packaging
-```
-
-Configure the build, giving it the same arguments we gave in the previous
-section with a few changes. The only new thing is the `-DPACKAGE=Y` argument
-which allows us to build packages. The `-DCMAKE_INSTALL_PREFIX` was removed since
-we aren't installing MariaDB MaxScale, only packaging it.
-
-```
-cmake ../MaxScale -DPACKAGE=Y
-```
-
-Next step is to build the package.
-
-```
-make
-make package
-```
-
-This will create a RPM/DEB package.
+If you wish to build packages, just add `-DPACKAGE=Y` to the CMake invocation
+and build the package with `make package` instead of installing MaxScale with
+`make install`. This process will create a RPM/DEB package depending on your
+system.
 
 To build a tarball, add `-DTARBALL=Y` to the cmake invokation. This will create
 a _maxscale-x.y.z.tar.gz_ file where _x.y.z_ is the version number.
