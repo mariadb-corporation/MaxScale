@@ -198,22 +198,42 @@ typedef struct session
     skygw_chk_t             ses_chk_tail;
 } MXS_SESSION;
 
+
+/**
+ * Function to be used by protocol module for routing incoming data
+ * to the first component in the pipeline of filters and a router.
+ *
+ * @param session  The session.
+ * @param buffer   A buffer.
+ *
+ * @return True, if the routing should continue, false otherwise.
+ */
+bool session_route_query(MXS_SESSION *session, GWBUF *buffer);
+
+/**
+ * Function to be used by the router module to route the replies to
+ * the first element in the pipeline of filters and a protocol.
+ *
+ * @param session  The session.
+ * @param buffer   A buffer.
+ *
+ * @return True, if the routing should continue, false otherwise.
+ */
+bool session_route_reply(MXS_SESSION *session, GWBUF *buffer);
+
 /**
  * A convenience macro that can be used by the protocol modules to route
  * the incoming data to the first element in the pipeline of filters and
  * routers.
  */
-#define MXS_SESSION_ROUTE_QUERY(sess, buf)                          \
-    ((sess)->head.routeQuery)((sess)->head.instance,            \
-                              (sess)->head.session, (buf))
+#define MXS_SESSION_ROUTE_QUERY(sess, buf) session_route_query(sess, buf)
+
 /**
  * A convenience macro that can be used by the router modules to route
  * the replies to the first element in the pipeline of filters and
  * the protocol.
  */
-#define MXS_SESSION_ROUTE_REPLY(sess, buf)                          \
-    ((sess)->tail.clientReply)((sess)->tail.instance,           \
-                               (sess)->tail.session, (buf))
+#define MXS_SESSION_ROUTE_REPLY(sess, buf) session_route_reply(sess, buf)
 
 /**
  * Allocate a new session for a new client of the specified service.

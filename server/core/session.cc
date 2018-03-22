@@ -702,30 +702,47 @@ session_get_remote(const MXS_SESSION *session)
     return NULL;
 }
 
-bool session_route_query(MXS_SESSION* ses, GWBUF* buf)
+bool session_route_query(MXS_SESSION* session, GWBUF* buffer)
 {
-    bool succp;
+    ss_dassert(session);
+    ss_dassert(session->head.routeQuery);
+    ss_dassert(session->head.instance);
+    ss_dassert(session->head.session);
 
-    if (ses->head.routeQuery == NULL ||
-        ses->head.instance == NULL ||
-        ses->head.session == NULL)
-    {
-        succp = false;
-        goto return_succp;
-    }
+    bool rv;
 
-    if (ses->head.routeQuery(ses->head.instance, ses->head.session, buf) == 1)
+    if (session->head.routeQuery(session->head.instance, session->head.session, buffer) == 1)
     {
-        succp = true;
+        rv = true;
     }
     else
     {
-        succp = false;
+        rv = false;
     }
-return_succp:
-    return succp;
+
+    return rv;
 }
 
+bool session_route_reply(MXS_SESSION *session, GWBUF *buffer)
+{
+    ss_dassert(session);
+    ss_dassert(session->tail.clientReply);
+    ss_dassert(session->tail.instance);
+    ss_dassert(session->tail.session);
+
+    bool rv;
+
+    if (session->tail.clientReply(session->tail.instance, session->tail.session, buffer) == 1)
+    {
+        rv = true;
+    }
+    else
+    {
+        rv = false;
+    }
+
+    return rv;
+}
 
 /**
  * Return the username of the user connected to the client side of the
