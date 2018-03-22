@@ -15,7 +15,7 @@
 
 #include <inttypes.h>
 #include <sstream>
-
+#include <maxscale/mysql_utils.h>
 #include "utilities.hh"
 
 Gtid::Gtid()
@@ -116,3 +116,18 @@ int64_t MariaDBServer::relay_log_events()
     return -1;
 }
 
+std::auto_ptr<QueryResult> MariaDBServer::execute_query(const string& query)
+{
+    auto conn = server_base->con;
+    std::auto_ptr<QueryResult> rval;
+    MYSQL_RES *result = NULL;
+    if (mxs_mysql_query(conn, query.c_str()) == 0 && (result = mysql_store_result(conn)) != NULL)
+    {
+        rval = std::auto_ptr<QueryResult>(new QueryResult(result));
+    }
+    else
+    {
+        mon_report_query_error(server_base);
+    }
+    return rval;
+}

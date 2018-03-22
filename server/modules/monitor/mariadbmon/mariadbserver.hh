@@ -16,10 +16,10 @@
 #include <maxscale/cppdefs.hh>
 
 #include <string>
-
+#include <memory>
 #include <maxscale/monitor.h>
+#include "utilities.hh"
 
-using std::string;
 enum mysql_server_version
 {
     MYSQL_SERVER_VERSION_100,
@@ -47,7 +47,7 @@ public:
 
     bool operator == (const Gtid& rhs) const;
 
-    string to_string() const;
+    std::string to_string() const;
 
     /**
      * Generate a MASTER_GTID_WAIT()-query to this gtid.
@@ -55,7 +55,7 @@ public:
      * @param timeout Maximum wait time in seconds
      * @return The query
      */
-    string generate_master_gtid_wait_cmd(double timeout) const;
+    std::string generate_master_gtid_wait_cmd(double timeout) const;
 
 private:
     void parse_triplet(const char* str);
@@ -67,17 +67,17 @@ class SlaveStatusInfo
 public:
     int64_t master_server_id;       /**< The master's server_id value. Valid ids are 32bit unsigned. -1 is
                                      *   unread/error. */
-    string master_host;             /**< Master server host name. */
+    std::string master_host;        /**< Master server host name. */
     int master_port;                /**< Master server port. */
     bool slave_io_running;          /**< Whether the slave I/O thread is running and connected. */
     bool slave_sql_running;         /**< Whether or not the SQL thread is running. */
-    string master_log_file;         /**< Name of the master binary log file that the I/O thread is currently
+    std::string master_log_file;    /**< Name of the master binary log file that the I/O thread is currently
                                      *   reading from. */
     uint64_t read_master_log_pos;   /**< Position up to which the I/O thread has read in the current master
                                      *   binary log file. */
     Gtid gtid_io_pos;               /**< Gtid I/O position of the slave thread. Only shows the triplet with
                                      *   the current master domain. */
-    string last_error;              /**< Last IO or SQL error encountered. */
+    std::string last_error;         /**< Last IO or SQL error encountered. */
 
     SlaveStatusInfo();
 };
@@ -137,4 +137,14 @@ public:
      * an error in the gtid-values.
      */
     int64_t relay_log_events();
+
+    /**
+     * Execute a query which returns data. The results are returned as an auto-pointer to a QueryResult
+     * object.
+     *
+     * @param query The query
+     * @return Pointer to query results, or an empty auto-ptr on failure. Currently, the column names of the
+     * results are assumed unique.
+     */
+    std::auto_ptr<QueryResult> execute_query(const std::string& query);
 };
