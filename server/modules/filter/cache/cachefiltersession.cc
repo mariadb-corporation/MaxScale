@@ -1175,7 +1175,7 @@ bool get_truth_value(const char* begin, const char* end, bool* pValue)
     static const size_t nTrue = sizeof(ZTRUE) - 1;
     static const size_t nFalse = sizeof(ZFALSE) - 1;
 
-    int len = (end - begin);
+    size_t len = (end - begin);
 
     if (((len == nTrue) && (strncasecmp(begin, ZTRUE, nTrue) == 0)) ||
         ((len == 1) && (*begin == '1')))
