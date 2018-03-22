@@ -27,6 +27,14 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/jansson.h>
 
+#if defined(__cplusplus)
+#include <deque>
+#include <vector>
+typedef std::deque<std::vector<uint8_t> > SessionStmtQueue;
+#else
+typedef void SessionStmtQueue;
+#endif
+
 MXS_BEGIN_DECLS
 
 struct dcb;
@@ -153,6 +161,7 @@ typedef struct session
         const struct server *target; /**< Where the statement was sent */
     } stmt;  /**< Current statement being executed */
     bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
+    SessionStmtQueue*      last_statements;  /*< The N last statements by the client */
     skygw_chk_t     ses_chk_tail;
 } MXS_SESSION;
 
@@ -480,5 +489,28 @@ MXS_SESSION* session_get_current();
  * @return The id of the current session or 0 if there is no current session.
  **/
 uint64_t session_get_current_id();
+
+/**
+ * @brief Specify how many statements each session should retain for
+ *        debugging purposes.
+ *
+ * @param n  The number of statements.
+ */
+void session_retain_last_statements(uint32_t n);
+
+/**
+ * @brief Retain provided statement, if configured to do so.
+ *
+ * @param session  The session.
+ * @param buffer   Buffer assumed to contain a full statement.
+ */
+void session_retain_statement(MXS_SESSION* session, GWBUF* buffer);
+
+/**
+ * @brief Dump the last statements, if statements have been retained.
+ *
+ * @param session  The session.
+ */
+void session_dump_statements(MXS_SESSION* pSession);
 
 MXS_END_DECLS

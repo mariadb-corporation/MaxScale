@@ -192,6 +192,7 @@ static void enable_module_unloading(const char* arg);
 static void enable_statement_logging(const char* arg);
 static void disable_statement_logging(const char* arg);
 static void redirect_output_to_file(const char* arg);
+static void retain_last_statements(const char* arg);
 static bool user_is_acceptable(const char* specified_user);
 static bool init_sqlite3();
 
@@ -227,6 +228,11 @@ const DEBUG_ARGUMENT debug_arguments[] =
     {
         "disable-statement-logging", disable_statement_logging,
         "disable the logging of SQL statements sent by MaxScale to the servers"
+    },
+    {
+        "retain-last-statements", retain_last_statements,
+        "retain the specified number of client statements\n"
+        SPACER "allows statements to be logged in problem situations"
     },
     {NULL, NULL, NULL}
 };
@@ -3204,6 +3210,18 @@ static void enable_statement_logging(const char* arg)
 static void disable_statement_logging(const char* arg)
 {
     mxs_mysql_set_log_statements(false);
+}
+
+static void retain_last_statements(const char* arg)
+{
+    int n = atoi(arg);
+
+    if (n < 0)
+    {
+        n = 0;
+    }
+
+    session_retain_last_statements(n);
 }
 
 static void redirect_output_to_file(const char* arg)

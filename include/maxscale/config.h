@@ -142,6 +142,7 @@ extern const char CN_QUERY_RETRY_TIMEOUT[];
 extern const char CN_RELATIONSHIPS[];
 extern const char CN_LINKS[];
 extern const char CN_REQUIRED[];
+extern const char CN_RETAIN_LAST_STATEMENTS[];
 extern const char CN_RETRY_ON_FAILURE[];
 extern const char CN_ROUTER[];
 extern const char CN_ROUTER_DIAGNOSTICS[];

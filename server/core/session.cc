@@ -36,6 +36,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/json_api.h>
+#include <maxscale/protocol/mysql.h>
 
 #include "internal/dcb.h"
 #include "internal/session.h"
@@ -50,6 +51,8 @@ using std::stringstream;
  *  dummy/unused sessions.
  */
 static uint64_t next_session_id = 1;
+
+static uint32_t retain_last_statements = 0;
 
 static struct session session_dummy_struct;
 
@@ -86,6 +89,7 @@ session_initialize(MXS_SESSION *session)
 
     session->ses_chk_top = CHK_NUM_SESSION;
     session->state = SESSION_STATE_ALLOC;
+    session->last_statements = new SessionStmtQueue;
     session->ses_chk_tail = CHK_NUM_SESSION;
 }
 
@@ -389,6 +393,7 @@ static void
 session_final_free(MXS_SESSION *session)
 {
     gwbuf_free(session->stmt.buffer);
+    delete session->last_statements;
     MXS_FREE(session);
 }
 
@@ -1104,4 +1109,85 @@ uint64_t session_get_current_id()
     MXS_SESSION* session = session_get_current();
 
     return session ? session->ses_id : 0;
+}
+
+void session_retain_last_statements(uint32_t n)
+{
+    retain_last_statements = n;
+}
+
+void session_retain_statement(MXS_SESSION* pSession, GWBUF* pBuffer)
+{
+    if (retain_last_statements)
+    {
+        size_t len = gwbuf_length(pBuffer);
+
+        if (len > MYSQL_HEADER_LEN)
+        {
+            uint8_t header[MYSQL_HEADER_LEN + 1];
+            uint8_t* pHeader = NULL;
+
+            if (GWBUF_LENGTH(pBuffer) > MYSQL_HEADER_LEN)
+            {
+                pHeader = GWBUF_DATA(pBuffer);
+            }
+            else
+            {
+                gwbuf_copy_data(pBuffer, 0, MYSQL_HEADER_LEN + 1, header);
+                pHeader = header;
+            }
+
+            if (MYSQL_GET_COMMAND(pHeader) == MXS_COM_QUERY)
+            {
+                ss_dassert(pSession->last_statements->size() <= retain_last_statements);
+
+                if (pSession->last_statements->size() == retain_last_statements)
+                {
+                    pSession->last_statements->pop_back();
+                }
+
+                std::vector<uint8_t> stmt(len - MYSQL_HEADER_LEN - 1);
+                gwbuf_copy_data(pBuffer, MYSQL_HEADER_LEN + 1, len - (MYSQL_HEADER_LEN + 1), &stmt.front());
+
+                pSession->last_statements->push_front(stmt);
+            }
+        }
+    }
+}
+
+void session_dump_statements(MXS_SESSION* pSession)
+{
+    if (retain_last_statements)
+    {
+        int n = pSession->last_statements->size();
+
+        uint64_t id = session_get_current_id();
+
+        if ((id != 0) && (id != pSession->ses_id))
+        {
+            MXS_WARNING("Current session is %" PRIu64 ", yet statements are dumped for %" PRIu64 ". "
+                        "The session id in the subsequent dumped statements is the wrong one.",
+                        id, pSession->ses_id);
+        }
+
+        for (auto i = pSession->last_statements->rbegin(); i != pSession->last_statements->rend(); ++i)
+        {
+            int len = i->size();
+            const char* pStmt = (char*) &i->front();
+
+            if (id != 0)
+            {
+                MXS_NOTICE("Stmt %d: %.*s", n, len, pStmt);
+            }
+            else
+            {
+                // We are in a context where we do not have a current session, so we need to
+                // log the session id ourselves.
+
+                MXS_NOTICE("(%" PRIu64 ") Stmt %d: %.*s", pSession->ses_id, n, len, pStmt);
+            }
+
+            --n;
+        }
+    }
 }
