@@ -62,6 +62,7 @@ static MXS_SESSION *session_find_free();
 static void session_final_free(MXS_SESSION *session);
 static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
                                        MXS_SESSION* session);
+static void session_deliver_response(MXS_SESSION* session);
 
 /**
  * The clientReply of the session.
@@ -720,6 +721,10 @@ bool session_route_query(MXS_SESSION* session, GWBUF* buffer)
         rv = false;
     }
 
+    // In case some filter has short-circuited the request processing we need
+    // to deliver that now to the client.
+    session_deliver_response(session);
+
     return rv;
 }
 
@@ -1222,4 +1227,52 @@ bool session_remove_variable(MXS_SESSION* session,
     }
 
     return removed;
+}
+
+void session_set_response(MXS_SESSION *session, MXS_UPSTREAM *up, GWBUF *buffer)
+{
+    // Valid arguments.
+    ss_dassert(session && up && buffer);
+
+    // Valid state. Only one filter may terminate the execution and exactly once.
+    ss_dassert(!session->response.up.instance &&
+               !session->response.up.session &&
+               !session->response.buffer);
+
+    session->response.up = *up;
+    session->response.buffer = buffer;
+}
+
+/**
+ * Delivers a provided response to the upstream filter that should
+ * receive it.
+ *
+ * @param session  The session.
+ */
+static void session_deliver_response(MXS_SESSION* session)
+{
+    MXS_FILTER* filter_instance = session->response.up.instance;
+
+    if (filter_instance)
+    {
+        MXS_FILTER_SESSION* filter_session = session->response.up.session;
+        GWBUF* buffer = session->response.buffer;
+
+        ss_dassert(filter_session);
+        ss_dassert(buffer);
+
+        session->response.up.clientReply(filter_instance, filter_session, buffer);
+
+        session->response.up.instance = NULL;
+        session->response.up.session = NULL;
+        session->response.up.clientReply = NULL;
+        session->response.up.error = NULL;
+        session->response.buffer = NULL;
+    }
+
+    ss_dassert(!session->response.up.instance);
+    ss_dassert(!session->response.up.session);
+    ss_dassert(!session->response.up.clientReply);
+    ss_dassert(!session->response.up.error);
+    ss_dassert(!session->response.buffer);
 }

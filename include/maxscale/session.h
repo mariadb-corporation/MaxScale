@@ -195,9 +195,25 @@ typedef struct session
     } stmt;  /**< Current statement being executed */
     bool qualifies_for_pooling; /**< Whether this session qualifies for the connection pool */
     SessionVarsByName*      variables;        /*< @maxscale variables associated with this session */
+    struct
+    {
+        MXS_UPSTREAM up; /*< Upward component to receive buffer. */
+        GWBUF* buffer;   /*< Buffer to deliver to up. */
+    } response;                               /*< Shortcircuited response */
     skygw_chk_t             ses_chk_tail;
 } MXS_SESSION;
 
+/**
+ * A filter that terminates the request processing and delivers a response
+ * directly should specify the response using this function. After having
+ * called this function, the module must not deliver the request further
+ * in the request processing pipeline.
+ *
+ * @param session  The session.
+ * @param up       The filter that should receive the response.
+ * @param buffer   The response.
+ */
+void session_set_response(MXS_SESSION *session, MXS_UPSTREAM *up, GWBUF *buffer);
 
 /**
  * Function to be used by protocol module for routing incoming data
