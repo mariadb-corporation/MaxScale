@@ -147,4 +147,12 @@ public:
      * results are assumed unique.
      */
     std::auto_ptr<QueryResult> execute_query(const std::string& query);
+
+    /**
+     * Update server slave connection information.
+     *
+     * @param gtid_domain Which gtid domain should be parsed.
+     * @return True on success
+     */
+    bool do_show_slave_status(int64_t gtid_domain);
 };

@@ -355,179 +355,6 @@ MXS_MONITORED_SERVER* getSlaveOfNodeId(MXS_MONITORED_SERVER *ptr, long node_id,
     return NULL;
 }
 
-bool MariaDBMonitor::do_show_slave_status(MariaDBServer* serv_info, MXS_MONITORED_SERVER* database)
-{
-    /** Column positions for SHOW SLAVE STATUS */
-    const size_t MYSQL55_STATUS_MASTER_LOG_POS = 5;
-    const size_t MYSQL55_STATUS_MASTER_LOG_FILE = 6;
-    const size_t MYSQL55_STATUS_IO_RUNNING = 10;
-    const size_t MYSQL55_STATUS_SQL_RUNNING = 11;
-    const size_t MYSQL55_STATUS_MASTER_ID = 39;
-
-    /** Column positions for SHOW SLAVE STATUS */
-    const size_t MARIA10_STATUS_MASTER_LOG_FILE = 7;
-    const size_t MARIA10_STATUS_MASTER_LOG_POS = 8;
-    const size_t MARIA10_STATUS_IO_RUNNING = 12;
-    const size_t MARIA10_STATUS_SQL_RUNNING = 13;
-    const size_t MARIA10_STATUS_MASTER_ID = 41;
-
-    bool rval = true;
-    unsigned int columns;
-    int i_slave_io_running, i_slave_sql_running, i_read_master_log_pos, i_master_server_id, i_master_log_file;
-    const char *query;
-    mysql_server_version server_version = serv_info->version;
-
-    if (server_version == MYSQL_SERVER_VERSION_100)
-    {
-        columns = 42;
-        query = "SHOW ALL SLAVES STATUS";
-        i_slave_io_running = MARIA10_STATUS_IO_RUNNING;
-        i_slave_sql_running = MARIA10_STATUS_SQL_RUNNING;
-        i_master_log_file = MARIA10_STATUS_MASTER_LOG_FILE;
-        i_read_master_log_pos = MARIA10_STATUS_MASTER_LOG_POS;
-        i_master_server_id = MARIA10_STATUS_MASTER_ID;
-    }
-    else
-    {
-        columns = server_version == MYSQL_SERVER_VERSION_55 ? 40 : 38;
-        query = "SHOW SLAVE STATUS";
-        i_slave_io_running = MYSQL55_STATUS_IO_RUNNING;
-        i_slave_sql_running = MYSQL55_STATUS_SQL_RUNNING;
-        i_master_log_file = MYSQL55_STATUS_MASTER_LOG_FILE;
-        i_read_master_log_pos = MYSQL55_STATUS_MASTER_LOG_POS;
-        i_master_server_id = MYSQL55_STATUS_MASTER_ID;
-    }
-
-    MYSQL_RES* result;
-    int64_t master_server_id = SERVER_ID_UNKNOWN;
-    int nconfigured = 0;
-    int nrunning = 0;
-
-    if (mxs_mysql_query(database->con, query) == 0
-        && (result = mysql_store_result(database->con)) != NULL)
-    {
-        if (mysql_field_count(database->con) < columns)
-        {
-            mysql_free_result(result);
-            MXS_ERROR("\"%s\" returned less than the expected amount of columns. "
-                      "Expected %u columns.", query, columns);
-            return false;
-        }
-
-        MYSQL_ROW row = mysql_fetch_row(result);
-
-        if (row)
-        {
-            serv_info->slave_configured = true;
-
-            do
-            {
-                /* get Slave_IO_Running and Slave_SQL_Running values*/
-                serv_info->slave_status.slave_io_running = strncmp(row[i_slave_io_running], "Yes", 3) == 0;
-                serv_info->slave_status.slave_sql_running = strncmp(row[i_slave_sql_running], "Yes", 3) == 0;
-
-                if (serv_info->slave_status.slave_io_running && serv_info->slave_status.slave_sql_running)
-                {
-                    if (nrunning == 0)
-                    {
-                        /** Only check binlog name for the first running slave */
-                        uint64_t read_master_log_pos = atol(row[i_read_master_log_pos]);
-                        char* master_log_file = row[i_master_log_file];
-                        if (serv_info->slave_status.master_log_file != master_log_file ||
-                            read_master_log_pos != serv_info->slave_status.read_master_log_pos)
-                        {
-                            // IO thread is reading events from the master
-                            serv_info->latest_event = time(NULL);
-                        }
-
-                        serv_info->slave_status.master_log_file = master_log_file;
-                        serv_info->slave_status.read_master_log_pos = read_master_log_pos;
-                    }
-
-                    nrunning++;
-                }
-
-                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
-                 * the replication tree, slaves ids will be added to master(s) and we will have at least the
-                 * root master server.
-                 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-                 */
-                const char* last_io_errno = mxs_mysql_get_value(result, row, "Last_IO_Errno");
-                int io_errno = last_io_errno ? atoi(last_io_errno) : 0;
-                const int connection_errno = 2003;
-
-                if ((io_errno == 0 || io_errno == connection_errno) &&
-                    server_version != MYSQL_SERVER_VERSION_51)
-                {
-                    /* Get Master_Server_Id */
-                    master_server_id = scan_server_id(row[i_master_server_id]);
-                }
-
-                if (server_version == MYSQL_SERVER_VERSION_100)
-                {
-                    const char* beats = mxs_mysql_get_value(result, row, "Slave_received_heartbeats");
-                    const char* period = mxs_mysql_get_value(result, row, "Slave_heartbeat_period");
-                    const char* using_gtid = mxs_mysql_get_value(result, row, "Using_Gtid");
-                    const char* master_host = mxs_mysql_get_value(result, row, "Master_Host");
-                    const char* master_port = mxs_mysql_get_value(result, row, "Master_Port");
-                    const char* last_io_error = mxs_mysql_get_value(result, row, "Last_IO_Error");
-                    const char* last_sql_error = mxs_mysql_get_value(result, row, "Last_SQL_Error");
-                    ss_dassert(beats && period && using_gtid && master_host && master_port &&
-                               last_io_error && last_sql_error);
-                    serv_info->slave_status.master_host = master_host;
-                    serv_info->slave_status.master_port = atoi(master_port);
-                    serv_info->slave_status.last_error = *last_io_error ? last_io_error :
-                                                         (*last_sql_error ? last_sql_error : "");
-
-                    int heartbeats = atoi(beats);
-                    if (serv_info->slave_heartbeats < heartbeats)
-                    {
-                        serv_info->latest_event = time(NULL);
-                        serv_info->slave_heartbeats = heartbeats;
-                        serv_info->heartbeat_period = atof(period);
-                    }
-                    if (m_master_gtid_domain >= 0 &&
-                        (strcmp(using_gtid, "Current_Pos") == 0 || strcmp(using_gtid, "Slave_Pos") == 0))
-                    {
-                        const char* gtid_io_pos = mxs_mysql_get_value(result, row, "Gtid_IO_Pos");
-                        ss_dassert(gtid_io_pos);
-                        serv_info->slave_status.gtid_io_pos = gtid_io_pos[0] != '\0' ?
-                                                              Gtid(gtid_io_pos, m_master_gtid_domain) :
-                                                              Gtid();
-                    }
-                    else
-                    {
-                        serv_info->slave_status.gtid_io_pos = Gtid();
-                    }
-                }
-
-                nconfigured++;
-                row = mysql_fetch_row(result);
-            }
-            while (row);
-        }
-        else
-        {
-            /** Query returned no rows, replication is not configured */
-            serv_info->slave_configured = false;
-            serv_info->slave_heartbeats = 0;
-            serv_info->slave_status = SlaveStatusInfo();
-        }
-
-        serv_info->slave_status.master_server_id = master_server_id;
-        mysql_free_result(result);
-    }
-    else
-    {
-        mon_report_query_error(database);
-    }
-
-    serv_info->n_slaves_configured = nconfigured;
-    serv_info->n_slaves_running = nrunning;
-
-    return rval;
-}
-
 /**
  * @brief A node in a graph
  */
@@ -906,7 +733,7 @@ void MariaDBMonitor::monitor_mysql_db(MariaDBServer* serv_info)
     monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
                                  SERVER_SLAVE_OF_EXTERNAL_MASTER);
 
-    if (do_show_slave_status(serv_info, database))
+    if (serv_info->do_show_slave_status(m_master_gtid_domain))
     {
         /* If all configured slaves are running set this node as slave */
         if (serv_info->slave_configured && serv_info->n_slaves_running > 0 &&
@@ -960,7 +787,7 @@ MariaDBServer* MariaDBMonitor::update_slave_info(MXS_MONITORED_SERVER* server)
     if (info->slave_status.slave_sql_running &&
         update_replication_settings(server, info) &&
         update_gtids(info) &&
-        do_show_slave_status(info, server))
+        info->do_show_slave_status(m_master_gtid_domain))
     {
         return info;
     }

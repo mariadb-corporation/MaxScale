@@ -782,7 +782,7 @@ bool MariaDBMonitor::failover_wait_relay_log(MXS_MONITORED_SERVER* new_master, i
         // Update gtid:s first to make sure Gtid_IO_Pos is the more recent value.
         // It doesn't matter here, but is a general rule.
         query_ok = update_gtids(master_info) &&
-                   do_show_slave_status(master_info, new_master);
+                   master_info->do_show_slave_status(m_master_gtid_domain);
         io_pos_stable = (old_gtid_io_pos == master_info->slave_status.gtid_io_pos);
     }
 
@@ -1061,7 +1061,7 @@ bool MariaDBMonitor::wait_cluster_stabilization(MXS_MONITORED_SERVER* new_master
             {
                 MXS_MONITORED_SERVER* slave = wait_list[i];
                 MariaDBServer* slave_info = get_server_info(slave);
-                if (update_gtids(slave_info) && do_show_slave_status(slave_info, slave))
+                if (update_gtids(slave_info) && slave_info->do_show_slave_status(m_master_gtid_domain))
                 {
                     if (!slave_info->slave_status.last_error.empty())
                     {

@@ -217,7 +217,6 @@ private:
     bool server_is_excluded(const MXS_MONITORED_SERVER* server);
     bool is_candidate_better(const MariaDBServer* current_best_info, const MariaDBServer* candidate_info);
     MariaDBServer* update_slave_info(MXS_MONITORED_SERVER* server);
-    bool do_show_slave_status(MariaDBServer* serv_info, MXS_MONITORED_SERVER* database);
     bool update_replication_settings(MXS_MONITORED_SERVER *database, MariaDBServer* info);
     void init_server_info();
     bool slave_receiving_events();
