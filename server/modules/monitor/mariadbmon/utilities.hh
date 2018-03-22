@@ -110,9 +110,9 @@ public:
 class MariaDBServer
 {
 public:
-    MXS_MONITORED_SERVER* const server_base; /**< Monitored server base class/struct. MariaDBServer does not
-                                               *  own the struct, it is not freed (or connection closed) when
-                                               *  a MariaDBServer is destroyed. */
+    MXS_MONITORED_SERVER* server_base;      /**< Monitored server base class/struct. MariaDBServer does not
+                                              *  own the struct, it is not freed (or connection closed) when
+                                              *  a MariaDBServer is destroyed. Can be const on gcc 4.8 */
     mysql_server_version version;           /**< Server version, 10.X, 5.5 or 5.1 */
     int64_t         server_id;              /**< Value of @@server_id. Valid values are 32bit unsigned. */
     int             group;                  /**< Multi-master group where this server belongs,
