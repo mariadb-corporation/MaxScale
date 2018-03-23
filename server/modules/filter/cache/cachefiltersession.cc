@@ -1128,13 +1128,11 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
             {
                 MXS_NOTICE("Found in cache.");
             }
+
             m_state = CACHE_EXPECTING_NOTHING;
             gwbuf_free(pPacket);
-            DCB *dcb = m_pSession->client_dcb;
 
-            // TODO: This is not ok. Any filters before this filter, will not
-            // TODO: see this data.
-            dcb->func.write(dcb, pResponse);
+            set_response(pResponse);
         }
     }
     else if (should_populate(cache_action))

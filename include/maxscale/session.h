@@ -213,7 +213,7 @@ typedef struct session
  * @param up       The filter that should receive the response.
  * @param buffer   The response.
  */
-void session_set_response(MXS_SESSION *session, MXS_UPSTREAM *up, GWBUF *buffer);
+void session_set_response(MXS_SESSION *session, const MXS_UPSTREAM *up, GWBUF *buffer);
 
 /**
  * Function to be used by protocol module for routing incoming data

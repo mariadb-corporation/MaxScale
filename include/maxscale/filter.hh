@@ -157,6 +157,18 @@ public:
 protected:
     FilterSession(MXS_SESSION* pSession);
 
+    /**
+     * To be called by a filter that short-circuits the request processing.
+     * If this function is called (in routeQuery), the filter must return
+     * without passing the request further.
+     *
+     * @param pResponse  The response to be sent to the client.
+     */
+    void set_response(GWBUF* pResponse) const
+    {
+        session_set_response(m_pSession, &m_up.m_data, pResponse);
+    }
+
 protected:
     MXS_SESSION*   m_pSession; /*< The MXS_SESSION this filter session is associated with. */
     Downstream     m_down;     /*< The downstream component. */
@@ -361,6 +373,5 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &Filter<FilterType, FilterSessionType>::getCapabilities,
     &Filter<FilterType, FilterSessionType>::destroyInstance,
 };
-
 
 }

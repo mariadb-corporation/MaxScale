@@ -1229,7 +1229,7 @@ bool session_remove_variable(MXS_SESSION* session,
     return removed;
 }
 
-void session_set_response(MXS_SESSION *session, MXS_UPSTREAM *up, GWBUF *buffer)
+void session_set_response(MXS_SESSION *session, const MXS_UPSTREAM *up, GWBUF *buffer)
 {
     // Valid arguments.
     ss_dassert(session && up && buffer);
