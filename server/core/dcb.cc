@@ -1235,7 +1235,7 @@ void dcb_final_close(DCB* dcb)
                 MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
             }
 
-            if (dcb->path)
+            if (dcb->path && (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER))
             {
                 if (unlink(dcb->path) != 0)
                 {
@@ -2396,7 +2396,9 @@ dcb_accept(DCB *dcb)
             if (client_conn.ss_family == AF_UNIX)
             {
                 // client address
+                client_dcb->ip.ss_family = AF_UNIX;
                 client_dcb->remote = MXS_STRDUP_A("localhost");
+                client_dcb->path = MXS_STRDUP_A(dcb->path);
             }
             else
             {
