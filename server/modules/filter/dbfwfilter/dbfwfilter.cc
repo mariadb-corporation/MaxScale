@@ -1390,7 +1390,6 @@ fw_actions DbfwSession::get_action() const
 int DbfwSession::send_error()
 {
     ss_dassert(m_session && m_session->client_dcb);
-    DCB* dcb = m_session->client_dcb;
     const char* db = mxs_mysql_get_current_db(m_session);
     std::stringstream ss;
     ss << "Access denied for user '" << user() << "'@'" << remote() << "'";
@@ -1406,8 +1405,9 @@ int DbfwSession::send_error()
         clear_error();
     }
 
-    return dcb->func.write(dcb, modutil_create_mysql_err_msg(1, 0, 1141,
-                                                             "HY000", ss.str().c_str()));
+    GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", ss.str().c_str());
+    set_response(err);
+    return 1;
 }
 
 int DbfwSession::routeQuery(GWBUF* buffer)
