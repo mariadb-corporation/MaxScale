@@ -30,8 +30,11 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
     Test->repl->sync_slaves();
 
-    Test->set_timeout(60);
+    // Increase connection limits and wait a few seconds for the server to catch up
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 2000;");
+    sleep(10);
+
+    Test->set_timeout(60);
     Test->add_result(Test->create_connections(0, 70 , true, true, true, true),
                      "Connections creation error \n");
 
