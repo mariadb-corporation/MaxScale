@@ -1,0 +1,17 @@
+#
+# MXS-1733
+#
+# See ../masking_rules.json
+
+--disable_warnings
+drop database if exists maskingdb;
+--enable_warnings
+
+create database maskingdb;
+use maskingdb;
+
+create table masking_mxs1733 (email TEXT);
+insert into masking_mxs1733 values ("john@example.com");
+
+select * from masking_mxs1733;
+select * from masking_mxs1733 UNION select * from masking_mxs1733;

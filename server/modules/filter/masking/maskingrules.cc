@@ -1071,10 +1071,18 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
                                  const char* zUser,
                                  const char* zHost) const
 {
+    const LEncString& table = column_def.org_table();
+    const LEncString& database = column_def.schema();
+
+    // If the resultset does not contain table and database names, as will
+    // be the case in e.g. "SELECT * FROM table UNION SELECT * FROM table",
+    // we consider it a match if a table or database have been provided.
+    // Otherwise it would be easy to bypass a table/database rule.
+
     bool match =
         (m_column == column_def.org_name()) &&
-        (m_table.empty() || (m_table == column_def.org_table())) &&
-        (m_database.empty() || (m_database == column_def.schema()));
+        (m_table.empty() || table.empty() || (m_table == table)) &&
+        (m_database.empty() || database.empty() || (m_database == database));
 
     if (match)
     {

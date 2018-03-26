@@ -197,6 +197,31 @@ specified name.
 
 ```
 
+**NOTE** If a rule contains a table/database then if the resultset
+does _not_ contain table/database information, it will always be
+considered a match if the column matches. For instance, given the
+rule above, if there is a table `person2`, also containing an `ssn`
+field, then a query like
+```
+SELECT ssn FROM person2;
+```
+will not return masked values, but a query like
+```
+SELECT ssn FROM person UNION SELECT ssn FROM person2;
+```
+will _only_ return masked values, even if the `ssn` values from
+`person2` in principle should not be masked. The same effect is
+observed even with a non-sensical query like
+```
+SELECT ssn FROM person2 UNION SELECT ssn FROM person2;
+```
+even if nothing from `person2` should be masked. The reason is that
+as the resultset contains no table information, the values must be
+masked if the column name matches, as otherwise the masking could
+easily be circumvented with a query like
+```
+SELECT ssn FROM person UNION SELECT ssn FROM person;
+```
 
 The optional key `match` makes partial replacement of the original
 value possible: only the matched part would be replaced

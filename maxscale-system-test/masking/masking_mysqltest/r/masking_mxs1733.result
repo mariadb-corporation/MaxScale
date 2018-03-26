@@ -1,0 +1,11 @@
+drop database if exists maskingdb;
+create database maskingdb;
+use maskingdb;
+create table masking_mxs1733 (email TEXT);
+insert into masking_mxs1733 values ("john@example.com");
+select * from masking_mxs1733;
+email
+****************
+select * from masking_mxs1733 UNION select * from masking_mxs1733;
+email
+****************

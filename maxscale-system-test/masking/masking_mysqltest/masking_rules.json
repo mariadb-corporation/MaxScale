@@ -39,6 +39,15 @@
                 "value": "01234-BCD",
                 "fill": "X#@"
             }
+        },
+        {
+            "replace": {
+                "table": "masking_mxs1733",
+                "column": "email"
+            },
+            "with": {
+                "fill": "*"
+            }
         }
     ]
 }

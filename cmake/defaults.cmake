@@ -31,7 +31,7 @@ set(BUILD_MMMON TRUE CACHE BOOL "Build multimaster monitor")
 set(BUILD_MAXCTRL TRUE CACHE BOOL "Build MaxCtrl")
 
 # Build Luafilter
-set(BUILD_LUAFILTER FALSE CACHE BOOL "Build Luafilter")
+set(BUILD_LUAFILTER TRUE CACHE BOOL "Build Luafilter")
 
 # Use gcov build flags
 set(GCOV FALSE CACHE BOOL "Use gcov build flags")

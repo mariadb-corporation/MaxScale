@@ -2392,10 +2392,18 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     dprintf(file, "%s=%s\n", CN_STRIP_DB_ESC, service->strip_db_esc ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST,
             service->localhost_match_wildcard_host ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_VERSION_STRING, service->version_string);
-    dprintf(file, "%s=%s\n", CN_WEIGHTBY, service->weightby);
     dprintf(file, "%s=%s\n", CN_LOG_AUTH_WARNINGS, service->log_auth_warnings ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_RETRY_ON_FAILURE, service->retry_start ? "true" : "false");
+
+    if (*service->version_string)
+    {
+        dprintf(file, "%s=%s\n", CN_VERSION_STRING, service->version_string);
+    }
+
+    if (*service->weightby)
+    {
+        dprintf(file, "%s=%s\n", CN_WEIGHTBY, service->weightby);
+    }
 
     if (service->dbref)
     {
