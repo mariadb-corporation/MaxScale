@@ -488,8 +488,19 @@ static int ini_handler(void *userdata, const char *section, const char *name, co
 
     if (is_empty_string(value))
     {
-        MXS_ERROR("Empty value given to parameter '%s'", name);
-        return 0;
+        if (is_persisted_config)
+        {
+            /**
+             * Found old-style persisted configuration. These will be automatically
+             * upgraded on the next modification so we can safely ignore it.
+             */
+            return 1;
+        }
+        else
+        {
+            MXS_ERROR("Empty value given to parameter '%s'", name);
+            return 0;
+        }
     }
 
     if (config_get_global_options()->substitute_variables)
