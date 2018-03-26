@@ -3221,7 +3221,7 @@ static void retain_last_statements(const char* arg)
         n = 0;
     }
 
-    session_retain_last_statements(n);
+    session_set_retain_last_statements(n);
 }
 
 static void redirect_output_to_file(const char* arg)

@@ -83,6 +83,13 @@ typedef enum
     SESSION_TRX_READ_WRITE_ENDING = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_WRITE),
 } mxs_session_trx_state_t;
 
+typedef enum
+{
+    SESSION_DUMP_STATEMENTS_NEVER,
+    SESSION_DUMP_STATEMENTS_ON_CLOSE,
+    SESSION_DUMP_STATEMENTS_ON_ERROR,
+} session_dump_statements_t;
+
 /**
  * The session statistics structure
  */
@@ -496,7 +503,7 @@ uint64_t session_get_current_id();
  *
  * @param n  The number of statements.
  */
-void session_retain_last_statements(uint32_t n);
+void session_set_retain_last_statements(uint32_t n);
 
 /**
  * @brief Retain provided statement, if configured to do so.
@@ -512,5 +519,19 @@ void session_retain_statement(MXS_SESSION* session, GWBUF* buffer);
  * @param session  The session.
  */
 void session_dump_statements(MXS_SESSION* pSession);
+
+/**
+ * @brief Specify whether statements should be dumped or not.
+ *
+ * @param value    Whether and when to dump statements.
+ */
+void session_set_dump_statements(session_dump_statements_t value);
+
+/**
+ * @brief Returns in what contexts statements should be dumped.
+ *
+ * @return Whether and when to dump statements.
+ */
+session_dump_statements_t session_get_dump_statements();
 
 MXS_END_DECLS

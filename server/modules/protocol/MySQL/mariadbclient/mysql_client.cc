@@ -1410,7 +1410,11 @@ static int gw_client_hangup_event(DCB *dcb)
         CHK_SESSION(session);
         if (session->state != SESSION_STATE_DUMMY && !session_valid_for_pool(session))
         {
-            session_dump_statements(session);
+            if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
+            {
+                session_dump_statements(session);
+            }
+
             // The client did not send a COM_QUIT packet
             modutil_send_mysql_err_packet(dcb, 0, 0, 1927, "08S01", "Connection killed by MaxScale");
         }

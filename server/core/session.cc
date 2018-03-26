@@ -53,6 +53,7 @@ using std::stringstream;
 static uint64_t next_session_id = 1;
 
 static uint32_t retain_last_statements = 0;
+static session_dump_statements_t dump_statements = SESSION_DUMP_STATEMENTS_NEVER;
 
 static struct session session_dummy_struct;
 
@@ -392,6 +393,11 @@ static void session_free(MXS_SESSION *session)
 static void
 session_final_free(MXS_SESSION *session)
 {
+    if (dump_statements == SESSION_DUMP_STATEMENTS_ON_CLOSE)
+    {
+        session_dump_statements(session);
+    }
+
     gwbuf_free(session->stmt.buffer);
     delete session->last_statements;
     MXS_FREE(session);
@@ -1111,9 +1117,19 @@ uint64_t session_get_current_id()
     return session ? session->ses_id : 0;
 }
 
-void session_retain_last_statements(uint32_t n)
+void session_set_retain_last_statements(uint32_t n)
 {
     retain_last_statements = n;
+}
+
+void session_set_dump_statements(session_dump_statements_t value)
+{
+    dump_statements = value;
+}
+
+session_dump_statements_t session_get_dump_statements()
+{
+    return dump_statements;
 }
 
 void session_retain_statement(MXS_SESSION* pSession, GWBUF* pBuffer)
