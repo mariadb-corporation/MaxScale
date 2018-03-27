@@ -97,7 +97,7 @@ MariaDBServer* MariaDBMonitor::get_server_info(MXS_MONITORED_SERVER* db)
 
 const MariaDBServer* MariaDBMonitor::get_server_info(const MXS_MONITORED_SERVER* db) const
 {
-    return const_cast<MariaDBMonitor*>(this)->get_server_info(db);
+    return const_cast<MariaDBMonitor*>(this)->get_server_info(const_cast<MXS_MONITORED_SERVER*>(db));
 }
 
 bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
