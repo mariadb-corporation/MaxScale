@@ -36,10 +36,10 @@
  *
  * @return True if this server is a valid slave candidate
  */
-static bool valid_for_slave(const SERVER *server, const SERVER *master)
+static bool valid_for_slave(const SRWBackend& backend, const SERVER_REF *master)
 {
-    return (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) &&
-           (master == NULL || (server != master));
+    return (backend->is_slave() || backend->is_relay()) &&
+           (master == NULL || (backend->server() != master->server));
 }
 
 /**
@@ -54,8 +54,8 @@ static bool valid_for_slave(const SERVER *server, const SERVER *master)
  *
  * @return The best slave backend reference or NULL if no candidates could be found
  */
-SRWBackend get_slave_candidate(const SRWBackendList& backends, const SERVER *master,
-                               int (*cmpfun)(const SRWBackend&, const SRWBackend&))
+static SRWBackend get_slave_candidate(const SRWBackendList& backends, const SERVER_REF *master,
+                                      int (*cmpfun)(const SRWBackend&, const SRWBackend&))
 {
     SRWBackend candidate;
 
@@ -65,7 +65,7 @@ SRWBackend get_slave_candidate(const SRWBackendList& backends, const SERVER *mas
         const SRWBackend& backend = *it;
 
         if (!backend->in_use() && backend->can_connect() &&
-            valid_for_slave(backend->server(), master))
+            valid_for_slave(backend, master))
         {
             if (candidate)
             {
@@ -269,6 +269,38 @@ static SERVER_REF* get_root_master(const SRWBackendList& backends)
 }
 
 /**
+ * Get the total number of slaves and number of connected slaves
+ *
+ * @param backends List of backend servers
+ * @param master   The master server or NULL for no master
+ *
+ * @return the total number of slaves and the connected slave count
+ */
+std::pair<int, int> get_slave_counts(SRWBackendList& backends, SERVER_REF* master)
+{
+    int slaves_found = 0;
+    int slaves_connected = 0;
+
+    /** Calculate how many connections we already have */
+    for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
+    {
+        const SRWBackend& backend = *it;
+
+        if (backend->can_connect() && valid_for_slave(backend, master))
+        {
+            slaves_found += 1;
+
+            if (backend->in_use())
+            {
+                slaves_connected += 1;
+            }
+        }
+    }
+
+    return std::make_pair(slaves_found, slaves_connected);
+}
+
+/**
  * @brief Search suitable backend servers from those of router instance
  *
  * It is assumed that there is only one master among servers of a router instance.
@@ -296,12 +328,9 @@ bool select_connect_backend_servers(int router_nservers,
                                     int* expected_responses,
                                     connection_type type)
 {
-    /* get the root Master */
-    SERVER_REF *master_backend = get_root_master(backends);
-    SERVER  *master_host = master_backend ? master_backend->server : NULL;
+    SERVER_REF *master = get_root_master(backends);
 
-    if (config.master_failure_mode == RW_FAIL_INSTANTLY &&
-        (master_host == NULL || SERVER_IS_DOWN(master_host)))
+    if (!master && config.master_failure_mode == RW_FAIL_INSTANTLY)
     {
         MXS_ERROR("Couldn't find suitable Master from %d candidates.", router_nservers);
         return false;
@@ -329,11 +358,6 @@ bool select_connect_backend_servers(int router_nservers,
         log_server_connections(select_criteria, backends);
     }
 
-    int slaves_found = 0;
-    int slaves_connected = 0;
-    const int min_nslaves = 0; /*< not configurable at the time */
-    bool succp = false;
-
     if (!master_connected)
     {
         /** Find a master server */
@@ -341,38 +365,27 @@ bool select_connect_backend_servers(int router_nservers,
         {
             const SRWBackend& backend = *it;
 
-            if (backend->can_connect() && master_host && backend->server() == master_host)
+            if (backend->can_connect() && master && backend->server() == master->server)
             {
                 if (backend->connect(session))
                 {
                     current_master = backend;
                 }
+                break;
             }
         }
     }
 
-    /** Calculate how many connections we already have */
-    for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
-    {
-        const SRWBackend& backend = *it;
-
-        if (backend->can_connect() && valid_for_slave(backend->server(), master_host))
-        {
-            slaves_found += 1;
-
-            if (backend->in_use())
-            {
-                slaves_connected += 1;
-            }
-        }
-    }
+    auto counts = get_slave_counts(backends, master);
+    int slaves_found = counts.first;
+    int slaves_connected = counts.second;
 
     ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
 
     /** Connect to all possible slaves */
-    for (SRWBackend backend(get_slave_candidate(backends, master_host, cmpfun));
+    for (SRWBackend backend(get_slave_candidate(backends, master, cmpfun));
          backend && slaves_connected < max_nslaves;
-         backend = get_slave_candidate(backends, master_host, cmpfun))
+         backend = get_slave_candidate(backends, master, cmpfun))
     {
         if (backend->can_connect() && backend->connect(session))
         {
@@ -396,37 +409,25 @@ bool select_connect_backend_servers(int router_nservers,
         }
     }
 
-    if (slaves_connected >= min_nslaves && slaves_connected <= max_nslaves)
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
     {
-        succp = true;
-
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        if (slaves_connected < max_nslaves)
         {
-            if (slaves_connected < max_nslaves)
-            {
-                MXS_INFO("Couldn't connect to maximum number of "
-                         "slaves. Connected successfully to %d slaves "
-                         "of %d of them.", slaves_connected, slaves_found);
-            }
+            MXS_INFO("Couldn't connect to maximum number of "
+                     "slaves. Connected successfully to %d slaves "
+                     "of %d of them.", slaves_connected, slaves_found);
+        }
 
-            for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
+        for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
+        {
+            const SRWBackend& backend = *it;
+            if (backend->in_use())
             {
-                const SRWBackend& backend = *it;
-                if (backend->in_use())
-                {
-                    MXS_INFO("Selected %s in \t%s", STRSRVSTATUS(backend->server()),
-                             backend->uri());
-                }
+                MXS_INFO("Selected %s in \t%s", STRSRVSTATUS(backend->server()),
+                         backend->uri());
             }
         }
     }
-    else
-    {
-        MXS_ERROR("Couldn't establish required amount of slave connections for "
-                  "router session. Would need between %d and %d slaves but only have %d.",
-                  min_nslaves, max_nslaves, slaves_connected);
-        close_all_connections(backends);
-    }
 
-    return succp;
+    return true;
 }
