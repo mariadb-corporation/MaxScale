@@ -93,15 +93,13 @@ enum connection_type
     SLAVE
 };
 
-bool select_connect_backend_servers(int router_nservers,
-                                    int max_nslaves,
-                                    MXS_SESSION *session,
-                                    const Config& config,
+bool select_connect_backend_servers(RWSplit *inst, MXS_SESSION *session,
                                     SRWBackendList& backends,
                                     SRWBackend& current_master,
                                     mxs::SessionCommandList* sescmd,
                                     int* expected_responses,
                                     connection_type type);
+SRWBackend get_root_master(const SRWBackendList& backends);
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */

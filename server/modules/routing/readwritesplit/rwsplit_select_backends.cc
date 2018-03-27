@@ -36,10 +36,10 @@
  *
  * @return True if this server is a valid slave candidate
  */
-static bool valid_for_slave(const SRWBackend& backend, const SERVER_REF *master)
+static bool valid_for_slave(const SRWBackend& backend, const SRWBackend& master)
 {
     return (backend->is_slave() || backend->is_relay()) &&
-           (master == NULL || (backend->server() != master->server));
+           (!master || backend != master);
 }
 
 /**
@@ -54,7 +54,7 @@ static bool valid_for_slave(const SRWBackend& backend, const SERVER_REF *master)
  *
  * @return The best slave backend reference or NULL if no candidates could be found
  */
-static SRWBackend get_slave_candidate(const SRWBackendList& backends, const SERVER_REF *master,
+static SRWBackend get_slave_candidate(const SRWBackendList& backends, const SRWBackend& master,
                                       int (*cmpfun)(const SRWBackend&, const SRWBackend&))
 {
     SRWBackend candidate;
@@ -239,44 +239,25 @@ static void log_server_connections(select_criteria_t criteria, const SRWBackendL
         }
     }
 }
-/**
- * @brief Find the master server that is at the root of the replication tree
- *
- * @param rses Router client session
- *
- * @return The root master reference or NULL if no master is found
- */
-static SERVER_REF* get_root_master(const SRWBackendList& backends)
+
+SRWBackend get_root_master(const SRWBackendList& backends)
 {
-    SERVER_REF *master_host = NULL;
+    SRWBackend master;
 
-    for (SRWBackendList::const_iterator it = backends.begin();
-         it != backends.end(); it++)
+    for (auto it = backends.begin(); it != backends.end(); it++)
     {
-        SERVER_REF* b = (*it)->backend();
+        auto b = *it;
 
-        if (SERVER_IS_MASTER(b->server))
+        if (b->is_master() && (!master || b->server()->depth < master->server()->depth))
         {
-            if (master_host == NULL ||
-                (b->server->depth < master_host->server->depth))
-            {
-                master_host = b;
-            }
+            master = b;
         }
     }
 
-    return master_host;
+    return master;
 }
 
-/**
- * Get the total number of slaves and number of connected slaves
- *
- * @param backends List of backend servers
- * @param master   The master server or NULL for no master
- *
- * @return the total number of slaves and the connected slave count
- */
-std::pair<int, int> get_slave_counts(SRWBackendList& backends, SERVER_REF* master)
+std::pair<int, int> get_slave_counts(SRWBackendList& backends, SRWBackend& master)
 {
     int slaves_found = 0;
     int slaves_connected = 0;
@@ -301,55 +282,35 @@ std::pair<int, int> get_slave_counts(SRWBackendList& backends, SERVER_REF* maste
 }
 
 /**
- * @brief Search suitable backend servers from those of router instance
+ * Select and connect to backend servers
  *
- * It is assumed that there is only one master among servers of a router instance.
- * As a result, the first master found is chosen. There will possibly be more
- * backend references than connected backends because only those in correct state
- * are connected to.
+ * @param inst               Router instance
+ * @param session            Client session
+ * @param backends           List of backend servers
+ * @param current_master     The current master server
+ * @param sescmd_list        List of session commands to execute
+ * @param expected_responses Pointer where number of expected responses are written
+ * @param type               Connection type, ALL for all types, SLAVE for slaves only
  *
- * @param router_nservers Number of backend servers
- * @param max_nslaves     Upper limit for the number of slaves
- * @param select_criteria Slave selection criteria
- * @param session         Client session
- * @param router          Router instance
- * @param rses            Router client session
- * @param type            Connection type, ALL for all types, SLAVE for slaves only
- *
- * @return True if at least one master and one slave was found
+ * @return True if session can continue
  */
-bool select_connect_backend_servers(int router_nservers,
-                                    int max_nslaves,
-                                    MXS_SESSION *session,
-                                    const Config& config,
+bool select_connect_backend_servers(RWSplit *inst, MXS_SESSION *session,
                                     SRWBackendList& backends,
                                     SRWBackend& current_master,
                                     mxs::SessionCommandList* sescmd_list,
                                     int* expected_responses,
                                     connection_type type)
 {
-    SERVER_REF *master = get_root_master(backends);
+    SRWBackend master = get_root_master(backends);
 
-    if (!master && config.master_failure_mode == RW_FAIL_INSTANTLY)
+    if (!master && inst->config().master_failure_mode == RW_FAIL_INSTANTLY)
     {
-        MXS_ERROR("Couldn't find suitable Master from %d candidates.", router_nservers);
+        MXS_ERROR("Couldn't find suitable Master from %lu candidates.", backends.size());
         return false;
     }
 
-    /**
-     * New session:
-     *
-     * Connect to both master and slaves
-     *
-     * Existing session:
-     *
-     * Master is already connected or we don't have a master. The function was
-     * called because new slaves must be selected to replace failed ones.
-     */
-    bool master_connected = type == SLAVE || current_master;
-
     /** Check slave selection criteria and set compare function */
-    select_criteria_t select_criteria = config.slave_selection_criteria;
+    select_criteria_t select_criteria = inst->config().slave_selection_criteria;
     int (*cmpfun)(const SRWBackend&, const SRWBackend&) = criteria_cmpfun[select_criteria];
     ss_dassert(cmpfun);
 
@@ -358,14 +319,14 @@ bool select_connect_backend_servers(int router_nservers,
         log_server_connections(select_criteria, backends);
     }
 
-    if (!master_connected)
+    if (type == ALL)
     {
         /** Find a master server */
         for (SRWBackendList::const_iterator it = backends.begin(); it != backends.end(); it++)
         {
             const SRWBackend& backend = *it;
 
-            if (backend->can_connect() && master && backend->server() == master->server)
+            if (backend->can_connect() && master && backend == master)
             {
                 if (backend->connect(session))
                 {
@@ -379,6 +340,7 @@ bool select_connect_backend_servers(int router_nservers,
     auto counts = get_slave_counts(backends, master);
     int slaves_found = counts.first;
     int slaves_connected = counts.second;
+    int max_nslaves = inst->max_slave_count();
 
     ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
 
@@ -387,25 +349,17 @@ bool select_connect_backend_servers(int router_nservers,
          backend && slaves_connected < max_nslaves;
          backend = get_slave_candidate(backends, master, cmpfun))
     {
-        if (backend->can_connect() && backend->connect(session))
+        if (backend->can_connect() && backend->connect(session, sescmd_list))
         {
             if (sescmd_list && sescmd_list->size())
             {
-                backend->append_session_command(*sescmd_list);
-
-                if (backend->execute_session_command())
+                if (expected_responses)
                 {
-                    if (expected_responses)
-                    {
-                        (*expected_responses)++;
-                    }
-                    slaves_connected++;
+                    (*expected_responses)++;
                 }
             }
-            else
-            {
-                slaves_connected++;
-            }
+
+            slaves_connected++;
         }
     }
 

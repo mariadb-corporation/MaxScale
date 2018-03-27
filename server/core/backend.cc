@@ -176,7 +176,7 @@ void Backend::set_state(backend_state state)
     m_state |= state;
 }
 
-bool Backend::connect(MXS_SESSION* session)
+bool Backend::connect(MXS_SESSION* session, SessionCommandList* sescmd)
 {
     bool rval = false;
 
@@ -186,6 +186,16 @@ bool Backend::connect(MXS_SESSION* session)
         m_state = IN_USE;
         atomic_add(&m_backend->connections, 1);
         rval = true;
+
+        if (sescmd && sescmd->size())
+        {
+            append_session_command(*sescmd);
+
+            if (!execute_session_command())
+            {
+                rval = false;
+            }
+        }
     }
     else
     {

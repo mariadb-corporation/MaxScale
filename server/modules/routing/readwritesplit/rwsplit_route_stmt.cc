@@ -35,8 +35,6 @@
 
 extern int (*criteria_cmpfun[LAST_CRITERIA])(const SRWBackend&, const SRWBackend&);
 
-static SRWBackend get_root_master_backend(RWSplitSession *rses);
-
 /**
  * Find out which of the two backend servers has smaller value for select
  * criteria property.
@@ -345,9 +343,6 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
         return rses->target_node;
     }
 
-    /** get root master from available servers */
-    SRWBackend master = get_root_master_backend(rses);
-
     if (name) /*< Choose backend by name from a hint */
     {
         ss_dassert(btype != BE_MASTER); /*< Master dominates and no name should be passed with it */
@@ -462,33 +457,25 @@ SRWBackend get_target_backend(RWSplitSession *rses, backend_type_t btype,
      */
     else if (btype == BE_MASTER)
     {
-        if (master)
-        {
-            /** It is possible for the server status to change at any point in time
-             * so copying it locally will make possible error messages
-             * easier to understand */
-            SERVER server;
-            server.status = master->server()->status;
+        /** get root master from available servers */
+        SRWBackend master = get_root_master(rses->backends);
 
-            if (master->in_use())
+        if (master && master->in_use())
+        {
+            if (master->is_master())
             {
-                if (SERVER_IS_MASTER(&server))
-                {
-                    rval = master;
-                }
-                else
-                {
-                    MXS_ERROR("Server '%s' should be master but is %s instead "
-                              "and can't be chosen as the master.",
-                              master->name(),
-                              STRSRVSTATUS(&server));
-                }
+                rval = master;
             }
             else
             {
-                MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
-                          master->name());
+                MXS_ERROR("Server '%s' does not have the master state and "
+                          "can't be chosen as the master.", master->name());
             }
+        }
+        else
+        {
+            MXS_ERROR("Server '%s' is not in use and can't be chosen as the master.",
+                      master->name());
         }
     }
 
@@ -942,53 +929,4 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
         MXS_ERROR("Routing query failed.");
         return false;
     }
-}
-
-/**
- * @brief Get the root master server from MySQL replication tree
- *
- * Finds the server with the lowest replication depth level which has the master
- * status. Servers are checked even if they are in 'maintenance'.
- *
- * @param rses Router client session
- *
- * @return The backend that points to the master server or an empty reference
- * if the master cannot be found
- */
-static SRWBackend get_root_master_backend(RWSplitSession *rses)
-{
-    SRWBackend candidate;
-    SERVER master = {};
-
-    for (SRWBackendList::iterator it = rses->backends.begin();
-         it != rses->backends.end(); it++)
-    {
-        SRWBackend& backend = *it;
-        if (backend->in_use())
-        {
-            if (backend == rses->current_master)
-            {
-                /** Store master state for better error reporting */
-                master.status = backend->server()->status;
-            }
-
-            if (backend->is_master())
-            {
-                if (!candidate ||
-                    (backend->server()->depth < candidate->server()->depth))
-                {
-                    candidate = backend;
-                }
-            }
-        }
-    }
-
-    if (!candidate && rses->rses_config.master_failure_mode == RW_FAIL_INSTANTLY &&
-        rses->current_master && rses->current_master->in_use())
-    {
-        MXS_ERROR("Could not find master among the backend servers. "
-                  "Previous master's state : %s", STRSRVSTATUS(&master));
-    }
-
-    return candidate;
 }

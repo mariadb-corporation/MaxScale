@@ -441,8 +441,7 @@ static bool handle_error_new_connection(RWSplit *inst,
     }
     else
     {
-        succp = select_connect_backend_servers(myrses->rses_nbackends, max_nslaves,
-                                               ses, inst->config(), myrses->backends,
+        succp = select_connect_backend_servers(inst, ses, myrses->backends,
                                                myrses->current_master, &myrses->sescmd_list,
                                                &myrses->expected_responses,
                                                connection_type::SLAVE);
@@ -770,8 +769,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session)
 
         SRWBackend master;
 
-        if (select_connect_backend_servers(router->service()->n_dbref, router->max_slave_count(),
-                                           session, router->config(), backends, master,
+        if (select_connect_backend_servers(router, session, backends, master,
                                            NULL, NULL, connection_type::ALL))
         {
             if ((rses = new RWSplitSession(router, session, backends, master)))

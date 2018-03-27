@@ -143,10 +143,11 @@ public:
      * @brief Create a new connection
      *
      * @param session The session to which the connection is linked
+     * @param sescmd  Pointer to a list of session commands to execute
      *
      * @return True if connection was successfully created
      */
-    bool connect(MXS_SESSION* session);
+    bool connect(MXS_SESSION* session, SessionCommandList* sescmd = NULL);
 
     /**
      * @brief Close the backend
