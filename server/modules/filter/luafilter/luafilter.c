@@ -614,7 +614,7 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
     {
         gwbuf_free(queue);
         GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1045, "28000", "Access denied.");
-        session_set_response(my_session, &my_session->up, err);
+        session_set_response(my_session->session, &my_session->up, err);
         rc = 1;
     }
     else
