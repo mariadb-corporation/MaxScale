@@ -623,6 +623,8 @@ int TestConnections::init_maxscale(int m)
 {
     const char * template_name = get_template_name(test_name);
 
+    stop_maxscale(m);
+
     process_template(m, template_name, maxscales->access_homedir[m]);
     maxscales->ssh_node_f(m, true,
                           "cp maxscale.cnf %s;rm -rf %s/certs;mkdir -m a+wrx %s/certs;",
