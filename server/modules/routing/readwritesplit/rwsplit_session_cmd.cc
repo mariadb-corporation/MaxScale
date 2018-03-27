@@ -52,13 +52,9 @@ static std::string extract_error(GWBUF* buffer)
  * @param backend    The slave Backend
  * @param master_cmd Master's reply
  * @param slave_cmd  Slave's reply
- *
- * @return True if the responses were different and connection was discarded
  */
-static bool discard_if_response_differs(SRWBackend backend, uint8_t master_cmd, uint8_t slave_cmd)
+static void discard_if_response_differs(SRWBackend backend, uint8_t master_cmd, uint8_t slave_cmd)
 {
-    bool rval = false;
-
     if (master_cmd != slave_cmd)
     {
         MXS_WARNING("Slave server '%s': response (0x%02hhx) differs "
@@ -66,14 +62,10 @@ static bool discard_if_response_differs(SRWBackend backend, uint8_t master_cmd, 
                     "connection due to inconsistent session state.",
                     backend->name(), slave_cmd, master_cmd);
         backend->close(mxs::Backend::CLOSE_FATAL);
-        rval = true;
     }
-
-    return rval;
 }
 
-void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
-                             GWBUF** ppPacket, bool* pReconnect)
+void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend, GWBUF** ppPacket)
 {
     if (backend->session_command_count())
     {
@@ -124,10 +116,7 @@ void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
                     for (SlaveResponseList::iterator it = rses->slave_responses.begin();
                          it != rses->slave_responses.end(); it++)
                     {
-                        if (discard_if_response_differs(it->first, cmd, it->second))
-                        {
-                            *pReconnect = true;
-                        }
+                        discard_if_response_differs(it->first, cmd, it->second);
                     }
 
                     rses->slave_responses.clear();
@@ -139,9 +128,9 @@ void process_sescmd_response(RWSplitSession* rses, SRWBackend& backend,
                     rses->slave_responses.push_back(std::make_pair(backend, cmd));
                 }
             }
-            else if (discard_if_response_differs(backend, rses->sescmd_responses[id], cmd))
+            else
             {
-                *pReconnect = true;
+                discard_if_response_differs(backend, rses->sescmd_responses[id], cmd);
             }
 
             if (discard)

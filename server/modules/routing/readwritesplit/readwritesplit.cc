@@ -1268,26 +1268,10 @@ static void clientReply(MXS_ROUTER *instance,
                  rses->expected_responses, backend->name());
     }
 
-    /**
-     * Active cursor means that reply is from session command
-     * execution.
-     */
     if (backend->session_command_count())
     {
-        /** This discards all responses that have already been sent to the client */
-        bool rconn = false;
-        process_sescmd_response(rses, backend, &writebuf, &rconn);
-
-        if (rconn && !rses->router->config().disable_sescmd_history)
-        {
-            select_connect_backend_servers(
-                rses->rses_nbackends,
-                rses->rses_config.max_slave_connections,
-                rses->client_dcb->session,
-                rses->router->config(), rses->backends, rses->current_master,
-                &rses->sescmd_list, &rses->expected_responses,
-                connection_type::SLAVE);
-        }
+        /** Reply to an executed session command */
+        process_sescmd_response(rses, backend, &writebuf);
     }
 
     bool queue_routed = false;

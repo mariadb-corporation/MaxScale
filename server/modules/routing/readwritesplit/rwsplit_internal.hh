@@ -81,8 +81,7 @@ bool handle_got_target(RWSplit *inst, RWSplitSession *rses,
 bool route_session_write(RWSplitSession *rses, GWBUF *querybuf,
                          uint8_t command, uint32_t type);
 
-void process_sescmd_response(RWSplitSession* rses, SRWBackend& bref,
-                             GWBUF** ppPacket, bool* reconnect);
+void process_sescmd_response(RWSplitSession* rses, SRWBackend& bref, GWBUF** ppPacket);
 /*
  * The following are implemented in rwsplit_select_backends.c
  */
