@@ -13,6 +13,7 @@
 
 #include "rwsplitsession.hh"
 #include "rwsplit_internal.hh"
+#include "routeinfo.hh"
 
 RWBackend::RWBackend(SERVER_REF* ref):
     mxs::Backend(ref),
@@ -97,13 +98,4 @@ uint32_t get_internal_ps_id(RWSplitSession* rses, GWBUF* buffer)
     }
 
     return rval;
-}
-
-RouteInfo::RouteInfo(RWSplitSession* rses, GWBUF* buffer):
-    target(TARGET_UNDEFINED),
-    command(0xff),
-    type(QUERY_TYPE_UNKNOWN),
-    stmt_id(0)
-{
-    target = get_target_type(rses, buffer, &command, &type, &stmt_id);
 }

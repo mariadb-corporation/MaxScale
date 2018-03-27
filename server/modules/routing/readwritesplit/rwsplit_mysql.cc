@@ -29,8 +29,6 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 
-#define RWSPLIT_TRACE_MSG_LEN 1000
-
 /**
  * Functions within the read-write split router that are specific to
  * MySQL. The aim is to either remove these into a separate module or to
@@ -50,148 +48,13 @@
  *
  */
 
-/**
- * @brief Determine the type of a query
- *
- * @param querybuf      GWBUF containing the query
- * @param packet_type   Integer denoting DB specific enum
- * @param non_empty_packet  Boolean to be set by this function
- *
- * @return uint32_t the query type; also the non_empty_packet bool is set
- */
-uint32_t determine_query_type(GWBUF *querybuf, int command)
-{
-    uint32_t type = QUERY_TYPE_UNKNOWN;
-
-    switch (command)
-    {
-    case MXS_COM_QUIT: /*< 1 QUIT will close all sessions */
-    case MXS_COM_INIT_DB: /*< 2 DDL must go to the master */
-    case MXS_COM_REFRESH: /*< 7 - I guess this is session but not sure */
-    case MXS_COM_DEBUG: /*< 0d all servers dump debug info to stdout */
-    case MXS_COM_PING: /*< 0e all servers are pinged */
-    case MXS_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
-    case MXS_COM_SET_OPTION: /*< 1b send options to all servers */
-        type = QUERY_TYPE_SESSION_WRITE;
-        break;
-
-    case MXS_COM_CREATE_DB: /**< 5 DDL must go to the master */
-    case MXS_COM_DROP_DB: /**< 6 DDL must go to the master */
-    case MXS_COM_STMT_CLOSE: /*< free prepared statement */
-    case MXS_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-    case MXS_COM_STMT_RESET: /*< resets the data of a prepared statement */
-        type = QUERY_TYPE_WRITE;
-        break;
-
-    case MXS_COM_QUERY:
-        type = qc_get_type_mask(querybuf);
-        break;
-
-    case MXS_COM_STMT_PREPARE:
-        type = qc_get_type_mask(querybuf);
-        type |= QUERY_TYPE_PREPARE_STMT;
-        break;
-
-    case MXS_COM_STMT_EXECUTE:
-        /** Parsing is not needed for this type of packet */
-        type = QUERY_TYPE_EXEC_STMT;
-        break;
-
-    case MXS_COM_SHUTDOWN: /**< 8 where should shutdown be routed ? */
-    case MXS_COM_STATISTICS: /**< 9 ? */
-    case MXS_COM_PROCESS_INFO: /**< 0a ? */
-    case MXS_COM_CONNECT: /**< 0b ? */
-    case MXS_COM_PROCESS_KILL: /**< 0c ? */
-    case MXS_COM_TIME: /**< 0f should this be run in gateway ? */
-    case MXS_COM_DELAYED_INSERT: /**< 10 ? */
-    case MXS_COM_DAEMON: /**< 1d ? */
-    default:
-        break;
-    }
-
-    return type;
-}
-
 /*
  * This appears to be MySQL specific
  */
-/**
- * @brief Determine if a packet contains a SQL query
- *
- * Packet type tells us this, but in a DB specific way. This function is
- * provided so that code that is not DB specific can find out whether a packet
- * contains a SQL query. Clearly, to be effective different functions must be
- * called for different DB types.
- *
- * @param packet_type   Type of packet (integer)
- * @return bool indicating whether packet contains a SQL query
- */
-bool
-is_packet_a_query(int packet_type)
-{
-    return (packet_type == MXS_COM_QUERY);
-}
-
 /*
  * This one is problematic because it is MySQL specific, but also router
  * specific.
  */
-/**
- * @brief Log the transaction status
- *
- * The router session and the query buffer are used to log the transaction
- * status, along with the query type (which is a generic description that
- * should be usable across all DB types).
- *
- * @param rses      Router session
- * @param querybuf  Query buffer
- * @param qtype     Query type
- */
-void
-log_transaction_status(RWSplitSession *rses, GWBUF *querybuf, uint32_t qtype)
-{
-    if (rses->large_query)
-    {
-        MXS_INFO("> Processing large request with more than 2^24 bytes of data");
-    }
-    else if (rses->load_data_state == LOAD_DATA_INACTIVE)
-    {
-        uint8_t *packet = GWBUF_DATA(querybuf);
-        unsigned char command = packet[4];
-        int len = 0;
-        char* sql;
-        char *qtypestr = qc_typemask_to_string(qtype);
-        if (!modutil_extract_SQL(querybuf, &sql, &len))
-        {
-            sql = (char*)"<non-SQL>";
-        }
-
-        if (len > RWSPLIT_TRACE_MSG_LEN)
-        {
-            len = RWSPLIT_TRACE_MSG_LEN;
-        }
-
-        MXS_SESSION *ses = rses->client_dcb->session;
-        const char *autocommit = session_is_autocommit(ses) ? "[enabled]" : "[disabled]";
-        const char *transaction = session_trx_is_active(ses) ? "[open]" : "[not open]";
-        uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
-        const char *querytype = qtypestr == NULL ? "N/A" : qtypestr;
-        const char *hint = querybuf->hint == NULL ? "" : ", Hint:";
-        const char *hint_type = querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type);
-
-        MXS_INFO("> Autocommit: %s, trx is %s, cmd: (0x%02x) %s, plen: %u, type: %s, stmt: %.*s%s %s",
-                 autocommit, transaction, command, STRPACKETTYPE(command), plen,
-                 querytype, len, sql, hint, hint_type);
-
-        MXS_FREE(qtypestr);
-    }
-    else
-    {
-        MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.",
-                 rses->rses_load_data_sent);
-    }
-}
-
 /*
  * This is mostly router code, but it contains MySQL specific operations that
  * maybe could be moved to the protocol module. The modutil functions are mostly

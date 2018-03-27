@@ -1,5 +1,6 @@
 add_library(readwritesplit SHARED
 readwritesplit.cc
+routeinfo.cc
 rwsplitsession.cc
 rwsplit_mysql.cc
 rwsplit_route_stmt.cc

@@ -34,6 +34,7 @@
 
 #include "rwsplit_internal.hh"
 #include "rwsplitsession.hh"
+#include "routeinfo.hh"
 
 /**
  * The entry points for the read/write query splitting router module.
