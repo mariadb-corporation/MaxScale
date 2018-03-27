@@ -52,6 +52,12 @@ if [ "${try_already_running}" == "yes" ]; then
 fi
 
 if [ "$already_running" != "ok" ]; then
+	# destroying existing box
+	if [ -d "$MDBCI_VM_PATH/${name}" ]; then
+		${mdbci_dir}/mdbci destroy $name
+	fi
+        # Just in case some old lock file left
+        rm -rf ${snapshot_lock_file}
 
   eval "cat <<EOF
 $(<${script_dir}/templates/build.json.template)
@@ -63,11 +69,6 @@ $(<${script_dir}/templates/build.json.template)
 	done
 	touch ~/vagrant_lock
 	echo $JOB_NAME-$BUILD_NUMBER >> ~/vagrant_lock
-
-	# destroying existing box
-	if [ -d "$MDBCI_VM_PATH/${name}" ]; then
-		${mdbci_dir}/mdbci destroy $name
-	fi
 
 	# starting VM for build
 	echo "Generating build VM template"
@@ -104,14 +105,11 @@ if [ $? -eq 0 ] ; then
 #        exit 1
 fi
 
-
 ${script_dir}/create_remote_repo.sh
-
 ${script_dir}/copy_repos.sh
 
-
 echo "Removing locks and destroying VM"
-cd $MDBCI_VM_PATH/$name
+
 if [ "$try_already_running" == "yes" ] ; then
   echo "Release lock for already running VM"
   rm $snapshot_lock_file

@@ -632,6 +632,10 @@ add_test_executable(mxs1678_relay_master.cpp mxs1678_relay_master replication LA
 # https://jira.mariadb.org/browse/MXS-1713
 add_test_executable(mxs1713_lots_of_databases.cpp mxs1713_lots_of_databases mxs1713_lots_of_databases LABELS REPL_BACKEND)
 
+# MXS-1731: Empty version_string is not detected
+# https://jira.mariadb.org/browse/MXS-1731
+add_test_executable(mxs1731_old_persisted_config.cpp mxs1731_old_persisted_config replication LABELS REPL_BACKEND)
+
 # 'namedserverfilter' test
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter LABELS namedserverfilter LIGHT REPL_BACKEND)
 
