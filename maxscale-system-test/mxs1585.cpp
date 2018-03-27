@@ -20,9 +20,8 @@ void* query_thr(void* data)
 
         while (running)
         {
-            if (mysql_query(mysql, "SET sql_log_bin = 0") ||
-                mysql_query(mysql, "INSERT INTO test.mxs1585 VALUES (1)") ||
-                mysql_query(mysql, "DELETE FROM test.mxs1585"))
+            if (mysql_query(mysql, "INSERT INTO test.mxs1585 VALUES (1)") ||
+                mysql_query(mysql, "DELETE FROM test.mxs1585 LIMIT 100"))
             {
                 break;
             }
@@ -66,6 +65,7 @@ int main(int argc, char** argv)
 
     for (auto& a: threads)
     {
+        test.set_timeout(60);
         pthread_join(a, NULL);
     }
 
