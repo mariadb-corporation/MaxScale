@@ -4564,7 +4564,7 @@ static void read_server_variables(MXS_MONITORED_SERVER* database, MySqlServerInf
     if (serv_info->version ==  MYSQL_SERVER_VERSION_100)
     {
         query.erase(query.end() - 1);
-        query += ", @@gtid_domain_id;";
+        query += ", @@global.gtid_domain_id;";
         columns = 3;
     }
 
