@@ -3774,21 +3774,32 @@ string generate_change_master_cmd(MYSQL_MONITOR* mon, const string& master_host,
  */
 bool redirect_one_slave(MXS_MONITORED_SERVER* slave, const char* change_cmd)
 {
-    bool rval = false;
-    if (mxs_mysql_query(slave->con, "STOP SLAVE;") == 0 &&
-        mxs_mysql_query(slave->con, "RESET SLAVE;") == 0 && // To erase any old I/O or SQL errors
-        mxs_mysql_query(slave->con, change_cmd) == 0 &&
-        mxs_mysql_query(slave->con, "START SLAVE;") == 0)
+    bool success = false;
+    const char* query = "STOP SLAVE;";
+    if (mxs_mysql_query(slave->con, query) == 0)
     {
-        rval = true;
-        MXS_NOTICE("Slave '%s' redirected to new master.", slave->server->unique_name);
+        query = "RESET SLAVE;"; // To erase any old I/O or SQL errors
+        if (mxs_mysql_query(slave->con, query) == 0)
+        {
+            query = "CHANGE MASTER TO ..."; // Don't show the real query as it contains a password.
+            if (mxs_mysql_query(slave->con, change_cmd) == 0)
+            {
+                query = "START SLAVE;";
+                if (mxs_mysql_query(slave->con, query) == 0)
+                {
+                    success = true;
+                    MXS_NOTICE("Slave '%s' redirected to new master.", slave->server->unique_name);
+                }
+            }
+        }
     }
-    else
+
+    if (!success)
     {
-        MXS_WARNING("Slave '%s' redirection failed: '%s'.", slave->server->unique_name,
-                    mysql_error(slave->con));
+        MXS_WARNING("Slave '%s' redirection failed: '%s'. Query: '%s'.", slave->server->unique_name,
+                    mysql_error(slave->con), query);
     }
-    return rval;
+    return success;
 }
 
 /**
@@ -4782,18 +4793,40 @@ static bool join_cluster(MXS_MONITORED_SERVER* server, const char* change_cmd)
 {
     /* Server does not have slave connections. This operation can fail, or the resulting
      * replication may end up broken. */
-    bool rval = false;
-    if (mxs_mysql_query(server->con, "SET GLOBAL read_only=1;") == 0 &&
-        mxs_mysql_query(server->con, change_cmd) == 0 &&
-        mxs_mysql_query(server->con, "START SLAVE;") == 0)
+    bool success = false;
+    string error_msg;
+    const char* query = "SET GLOBAL read_only=1;";
+    if (mxs_mysql_query(server->con, query) == 0)
     {
-        rval = true;
+        query = "CHANGE MASTER TO ..."; // Don't show the real query as it contains a password.
+        if (mxs_mysql_query(server->con, change_cmd) == 0)
+        {
+            query = "START SLAVE;";
+            if (mxs_mysql_query(server->con, query) == 0)
+            {
+                success = true;
+                MXS_NOTICE("Standalone server '%s' starting replication.", server->server->unique_name);
+            }
+        }
+
+        if (!success)
+        {
+            // A step after "SET GLOBAL read_only=1" failed, try to undo. First, backup error message.
+            error_msg = mysql_error(server->con);
+            mxs_mysql_query(server->con, "SET GLOBAL read_only=0;");
+        }
     }
-    else
+
+    if (!success)
     {
-        mxs_mysql_query(server->con, "SET GLOBAL read_only=0;");
+        if (error_msg.empty())
+        {
+            error_msg = mysql_error(server->con);
+        }
+        MXS_WARNING("Standalone server '%s' failed to start replication: '%s'. Query: '%s'.",
+                    server->server->unique_name, error_msg.c_str(), query);
     }
-    return rval;
+    return success;
 }
 
 /**
